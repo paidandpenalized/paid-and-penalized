@@ -17,21 +17,17 @@ test('the pinned crosswalk parses, with CMS text kept verbatim', () => {
 
 test('every footnote code in the emitted HACRP file has CMS text', () => {
   const map = parseFootnotes(readPinned('y9us-9xdf'));
+  // footnoteList throws on a code with no crosswalk text, so building every list is the check.
   const codes = new Set();
-  const add = (field) => {
-    for (const code of String(field).split(',').map((c) => c.trim())) if (code) codes.add(code);
-  };
   for (const h of emitted.hospitals) {
-    for (const m of Object.values(h.measures)) {
-      add(m.valueFootnote);
-      add(m.zFootnote);
+    const fields = [h.totalFootnote, h.paymentReductionFootnote, ...Object.values(h.measures).flatMap((m) => [m.valueFootnote, m.zFootnote])];
+    for (const { code, text } of footnoteList(map, fields.join(','))) {
+      assert.ok(text.length > 0, `text for "${code}"`);
+      codes.add(code);
     }
-    add(h.totalFootnote);
-    add(h.paymentReductionFootnote);
   }
   assert.ok(codes.has('a'), 'the Maryland code is in use');
   assert.ok(codes.size > 1);
-  for (const code of codes) assert.ok(footnoteText(map, code).length > 0, `text for "${code}"`);
 });
 
 test('an unknown code throws a RangeError naming it', () => {

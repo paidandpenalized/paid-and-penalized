@@ -2,23 +2,15 @@
 // well formed. (Each id resolving to a checked row of CLAIMS.md is added with the claims register.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT } from '../../../pipeline/files.js';
+import { REPO_ROOT, repoFiles } from '../../../pipeline/files.js';
 import { CLAIMS } from '../web/constants.js';
 
 const CLAIM = /^HACRP-\d{2}$/;
 
-function copyFiles() {
-  const found = existsSync(REPO_ROOT + 'web/copy.js') ? ['web/copy.js'] : [];
-  for (const dir of ['sites', 'hub']) {
-    if (!existsSync(REPO_ROOT + dir)) continue;
-    for (const p of readdirSync(REPO_ROOT + dir, { recursive: true })) {
-      if (p.split('/').at(-1) === 'copy.js') found.push(`${dir}/${p}`);
-    }
-  }
-  return found;
-}
+const copyFiles = () => ['web/', 'sites/', 'hub/']
+  .flatMap((dir) => repoFiles(dir, { untracked: true }))
+  .filter((p) => p.split('/').at(-1) === 'copy.js');
 
 // A copy entry is a plain string (shared page chrome) or { text, claim }.
 const entries = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? { text: v, claim: null } : v]);

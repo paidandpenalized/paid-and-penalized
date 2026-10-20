@@ -7,7 +7,7 @@ import { SITE } from '../../../web/site.js';
 import { loadHacrp } from './data.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
-import { hospitalView } from './view.js';
+import { HOSPITALS_PATH, hospitalView } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
 
@@ -18,6 +18,17 @@ export function a1Summary({ ok, a, b, info }) {
     `(b) ${b.n} scored Yes/No hospitals: ${b.mismatches.length} decision mismatches`,
     `info: p75 of all scored totals ${dp5(info.pctAllScored)}; of Yes/No totals ${dp5(info.pctDecided)}`,
   ].join('\n  ');
+}
+
+// The hospitals asset (/assets/hacrp-hospitals.<hash>.json) the program page's client reads: { hospitalPath, rows },
+// one row per hospital, [ccn, name, city, state, total, decision]: the CCN as CMS writes it (a page is at
+// hospitalPath + the CCN in lowercase + "/"), names from the hospital master, CMS's Total HAC Score text (true minus;
+// "N/A" when none) and CMS's payment reduction text. Rows sort by name, then state, then city: the search's order.
+export function hospitalRows(views) {
+  const rows = views
+    .map((v) => [v.ccn, v.name, v.city, v.state, v.score.text, v.decision.text])
+    .sort((x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en'));
+  return { hospitalPath: HOSPITALS_PATH, rows };
 }
 
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass
@@ -43,9 +54,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       boundaryText,
       measures: views[0].measures.map(({ id, label, short }) => ({ id, label, short })),
       periods,
-      search: views
-        .map((v) => [v.ccn.toLowerCase(), v.name, v.city, v.state])
-        .sort((x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en')),
+      searchUrl: ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views))),
       source,
       robots: programRobots,
       assets,

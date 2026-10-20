@@ -12,7 +12,7 @@ import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count } from '../../../web/render/format.js';
 import { loadHacrp } from '../web/data.js';
-import { HACRP, generateHacrp } from '../web/generate.js';
+import { HACRP, generateHacrp, hospitalRows } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { hospitalView } from '../web/view.js';
@@ -147,15 +147,33 @@ test('hostile text in a hospital name renders as text in the page, the title and
   assert.equal(JSON.parse(ld).name.startsWith(name), true);
 });
 
-test('the program page search data escapes "<" so no name can close its script', () => {
+test('the program page links the hospitals asset and inlines no hospital data; hostile names stay data', () => {
+  const name = '</script><script>alert(1)</script> & "Sons"';
+  const views = [CASES.yes, CASES.noScore].map((h) => hospitalView(inputs(h, { master: master(h.ccn, { name: h.ccn === '990001' ? name : 'A' }) })));
+  const asset = JSON.parse(JSON.stringify(hospitalRows(views)));
+  assert.deepEqual(asset, {
+    hospitalPath: '/hacrp/hospital/',
+    rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i]]),
+  });
   const text = programPage({
     fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
-    measures: hospitalView(inputs(CASES.yes)).measures, periods: DATA.periods,
-    search: [['990001', '</script><script>alert(1)</script>', 'Exampleton', 'AL']],
+    measures: views[0].measures, periods: DATA.periods, searchUrl: '/assets/hacrp-hospitals.0000abcd.json',
     source: DATA.source, robots: 'noindex', assets: ASSETS,
   });
-  const json = /<script type="application\/json" id="hacrp-search-data">(.*?)<\/script>/s.exec(text)[1];
-  assert.ok(!json.includes('<'));
-  assert.equal(JSON.parse(json)[0][1], '</script><script>alert(1)</script>');
+  assert.match(text, /<section class="block search" aria-labelledby="search-h" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  assert.doesNotMatch(text, /application\/json/);
   assert.match(text, /CMS cut hospitals with a published Total HAC Score of 0\.2507 or higher; none at 0\.2500 or lower\./);
 });
+
+test('the build writes the hospitals asset with one row per hospital, sorted by name', () =>
+  temp(async (dir) => {
+    await generate(dir, undefined, { data: SLICE });
+    const url = /data-src="([^"]+)"/.exec(read(dir, '/hacrp/'))[1];
+    assert.match(url, /^\/assets\/hacrp-hospitals\.[0-9a-f]{8}\.json$/);
+    const { hospitalPath, rows } = JSON.parse(readFileSync(join(dir, url), 'utf8'));
+    assert.equal(hospitalPath, '/hacrp/hospital/');
+    assert.deepEqual(rows.map((r) => r[0]).sort(), SLICE.hospitals.map((h) => h.ccn).sort());
+    const names = rows.map((r) => r[1]);
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
+    for (const [ccn, , , , total] of rows) assert.ok(read(dir, `${hospitalPath}${ccn.toLowerCase()}/`).includes(`cms">${total}<`));
+  }));

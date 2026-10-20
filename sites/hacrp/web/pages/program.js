@@ -1,6 +1,6 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, this year's counts,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
-import { html, jsonScript } from '../../../../web/render/html.js';
+import { html } from '../../../../web/render/html.js';
 import { count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -10,13 +10,13 @@ import { LINKS } from '../links.js';
 import { asofBar, sourceLine, t } from './parts.js';
 
 export const PATH = SITE.sites.hacrp.path;
-export const SEARCH_ID = 'hacrp-search-data';
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
 // counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. measures: [{ id, label,
-// short }]. search: [[ccn (lowercase), name, city, state]]. robots: null for an indexable page.
-export function programPage({ fy, counts, boundaryText, measures, periods, search, source, robots, assets }) {
+// short }]. searchUrl: the hospitals asset the search reads (generate.js, hospitalRows). robots: null for an
+// indexable page.
+export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => m.short).join(', ');
@@ -28,7 +28,7 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
 <p class="subtitle">${subtitle}</p>
 <p class="dek">${t('dek')}</p>
 </header>
-<section class="block search" aria-labelledby="search-h" hidden>
+<section class="block search" aria-labelledby="search-h" data-src="${searchUrl}" hidden>
 <h2 id="search-h" class="h-sm">${t('searchHeading')}</h2>
 <label for="hospital-search">${t('searchLabel')}</label>
 <input id="hospital-search" type="search" list="hospital-names" autocomplete="off" aria-describedby="search-hint">
@@ -75,8 +75,7 @@ ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </section>
 ${asofBar({ fy, periods, source })}
 ${sourceLine({ fy, source })}
-</article>
-${jsonScript(SEARCH_ID, search)}`;
+</article>`;
 
   return page({
     title: `${fill('programTitle', { fy: fyText })} · ${SITE.name}`,
