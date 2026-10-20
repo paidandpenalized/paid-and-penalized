@@ -1,0 +1,13 @@
+{
+  "schema": "common.schema.json",
+  "def": "schemaVersion",
+  "description": "JSON types, not a language's: 1.0 is the integer 1, and true is not an integer.",
+  "cases": [
+    { "name": "1", "valid": true, "data": 1 },
+    { "name": "1.0 is a whole number", "valid": true, "data": 1.0 },
+    { "name": "true is a boolean, not an integer", "valid": false, "data": true },
+    { "name": "text", "valid": false, "data": "1" },
+    { "name": "zero, below the minimum", "valid": false, "data": 0 },
+    { "name": "a fraction", "valid": false, "data": 1.5 }
+  ]
+}

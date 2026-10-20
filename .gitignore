@@ -5,3 +5,6 @@ node_modules/
 .superpowers/
 *.swp
 ._*
+__pycache__/
+*.pyc
+*.egg-info/

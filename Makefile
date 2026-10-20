@@ -1,5 +1,6 @@
 test:
 	npm test
+	python3 -I pipeline/py/run.py test
 
 hooks:
 	git config core.hooksPath .githooks

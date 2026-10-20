@@ -1,0 +1,11 @@
+{
+  "schema": "common.schema.json",
+  "def": "builtAt",
+  "description": "Patterns use ASCII classes: \\d matches 0-9 only, as in JavaScript's u mode.",
+  "cases": [
+    { "name": "UTC whole seconds", "valid": true, "data": "2026-10-20T00:00:00Z" },
+    { "name": "Arabic-Indic digits are not \\d", "valid": false, "data": "٢٠٢٦-10-20T00:00:00Z" },
+    { "name": "fractional seconds", "valid": false, "data": "2026-10-20T00:00:00.000Z" },
+    { "name": "no Z", "valid": false, "data": "2026-10-20T00:00:00" }
+  ]
+}

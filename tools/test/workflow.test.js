@@ -47,3 +47,9 @@ test('the gitleaks download is checked against a pinned SHA-256', () => {
   assert.match(text, /GITLEAKS_SHA256: [0-9a-f]{64}\b/);
   assert.match(text, /sha256sum -c/);
 });
+
+test('the python job pins setup-python to an exact version and runs the tests isolated', () => {
+  assert.match(text, /^ {6}- uses: actions\/setup-python@[0-9a-f]{40} # v\d+\.\d+\.\d+$/m);
+  assert.match(text, /^ {10}python-version: '\d+\.\d+\.\d+'$/m);
+  assert.match(text, /^ {8}run: python -I pipeline\/py\/run\.py test$/m);
+});

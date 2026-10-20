@@ -1,0 +1,17 @@
+# The Python side of the pipeline: stdlib only, no runtime dependencies. Repo commands need no install
+# (`python3 -I pipeline/py/run.py <command>` puts the packages on the path); `pip install -e .` is optional.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pp_engine"
+version = "0.0.0"
+description = "Paid & Penalized data pipeline: hospital master, data-contract validator"
+requires-python = ">=3.9"
+dependencies = []
+license = { text = "MIT" }
+
+[tool.setuptools.packages.find]
+where = ["engine/py", "pipeline/py"]
+include = ["pp_engine", "pp_pipeline"]
