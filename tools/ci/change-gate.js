@@ -1,7 +1,7 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. A new corrections entry covers the whole change: an added, non-empty corrections/YYYY-MM-DD-<slug>.md
-// whose content isn't already an entry at the merge base, in a change that edits, retypes or deletes no existing
-// entry (the log is append-only). Otherwise each changed emitted file needs one of:
+// change. A new corrections entry covers the whole change: an added regular file corrections/YYYY-MM-DD-<slug>.md
+// whose text, whitespace aside, is non-empty and not already an entry at the merge base, in a change that edits,
+// retypes or deletes no existing entry (the log is append-only). Otherwise each changed emitted file needs one of:
 //   - added: a first emission (nothing published to differ from);
 //   - re-pinned: one of its inputs has a new SHA-256 in this change's manifest diff, its sources and
 //     methods_version are unchanged, and its new source_manifest is the true hash of those inputs at HEAD. Pin and
@@ -18,18 +18,21 @@ import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/';
 const CORRECTIONS = 'corrections/';
-const ENTRY = /^corrections\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/;
+export const ENTRY = /^corrections\/\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-[a-z0-9][a-z0-9-]*\.md$/;
 const MANIFEST = 'data/pinned/manifest.json';
 
 // changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
-// with a per-file reason (see above). freshEntries: added corrections paths whose content is non-empty and not
-// already an entry at the base.
+// with a per-file reason (see above). freshEntries: entry paths whose text, whitespace aside, is non-empty and
+// not already an entry at the base (main() checks only added regular files; this function re-checks status).
 export function changeGate({ changed, explained = new Set(), freshEntries = new Set() }) {
   const changedEmitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  const rewritesLog = changed.some(({ status, path }) => status !== 'A' && path.startsWith(CORRECTIONS));
+  const rewrites = changed.filter(({ status, path }) => status !== 'A' && ENTRY.test(path)).map(({ path }) => path);
   const newEntry = changed.some(({ status, path }) => status === 'A' && ENTRY.test(path) && freshEntries.has(path));
-  if (newEntry && !rewritesLog) return { ok: true, reason: 'emitted data changed with a new corrections entry' };
+  if (newEntry && rewrites.length === 0) return { ok: true, reason: 'emitted data changed with a new corrections entry' };
+  if (newEntry) {
+    return { ok: false, reason: `the new corrections entry doesn't count: the change also edits or removes ${rewrites.join(', ')} (entries are append-only)` };
+  }
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
@@ -84,18 +87,20 @@ function main() {
   const freshEntries = new Set();
   if (emitted.length > 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // path → blob id under corrections/ at a revision ("<mode> blob <id>\t<path>" per -z record).
-    const blobsAt = (rev) =>
-      new Map(
-        git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS)
-          .split('\0')
-          .filter(Boolean)
-          .map((l) => [l.slice(l.indexOf('\t') + 1), l.split(/\s+/)[2]]),
-      );
-    const oldBlobs = new Set(blobsAt(mergeBase).values());
-    const EMPTY_BLOB = execFileSync('git', ['hash-object', '--stdin'], { input: '', encoding: 'utf8' }).trim(); // the empty file's id
-    for (const [path, blob] of blobsAt('HEAD')) {
-      if (blob !== EMPTY_BLOB && !oldBlobs.has(blob)) freshEntries.add(path);
+    // Entry texts, whitespace-normalized, so a copy with a stray newline is still a copy.
+    const normal = (text) => text.replace(/\s+/g, ' ').trim();
+    const entriesAt = (rev) =>
+      git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS)
+        .split('\0')
+        .filter(Boolean)
+        .map((record) => ({ mode: record.split(' ')[0], path: record.slice(record.indexOf('\t') + 1) }))
+        .filter(({ path }) => ENTRY.test(path));
+    const oldTexts = new Set(entriesAt(mergeBase).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
+    const added = new Set(changed.filter(({ status }) => status === 'A').map(({ path }) => path));
+    for (const { mode, path } of entriesAt('HEAD')) {
+      if (!added.has(path) || (mode !== '100644' && mode !== '100755')) continue; // symlinks and submodules aren't entries
+      const text = normal(git('show', `HEAD:${path}`));
+      if (text !== '' && !oldTexts.has(text)) freshEntries.add(path);
     }
     const parse = (text) => {
       try {
@@ -117,10 +122,10 @@ function main() {
       (latest[site] ??= { now: latestMethodsVersion(logs.now, site), before: latestMethodsVersion(logs.before, site) });
     for (const { status, path } of emitted) {
       if (status === 'D') continue; // a deletion needs a corrections entry
-      const added = status === 'A';
-      const before = added ? undefined : parse(git('show', `${mergeBase}:${path}`));
+      const isNew = status === 'A';
+      const before = isNew ? undefined : parse(git('show', `${mergeBase}:${path}`));
       const now = parse(git('show', `HEAD:${path}`));
-      if (reasonFor({ added, before, now, pins, latest: latestFor(path.slice(EMITTED.length).split('/')[0]) })) explained.add(path);
+      if (reasonFor({ added: isNew, before, now, pins, latest: latestFor(path.slice(EMITTED.length).split('/')[0]) })) explained.add(path);
     }
   }
   const result = changeGate({ changed, explained, freshEntries });

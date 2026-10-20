@@ -141,6 +141,10 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 
 ### Task 5: CI skeleton + change gate
 
+> **Superseded in part:** the label, `PR_LABELS` and "any change under `corrections/`" below were replaced
+> during execution. The rule as built is in § Amendments, *Change gate (final form)*, and in the header of
+> `tools/ci/change-gate.js`.
+
 **Files:** Create `tools/ci/change-gate.js`, `.github/workflows/ci.yml`, `.github/CODEOWNERS` (`* @daltonhaslam`; enforced once branch protection is on at the public flip), `tools/test/change-gate.test.js`, `tools/test/workflow.test.js`; modify `README.md`, `CLAUDE.md`.
 
 **Interfaces:**

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
@@ -24,13 +24,14 @@ function repo() {
   };
   const mv = (from, to) => git('mv', from, to);
   const rm = (path) => git('rm', '-q', path);
+  const symlink = (target, path) => symlinkSync(target, join(dir, path));
   const commit = (msg) => {
     git('add', '-A');
     git('commit', '-q', '-m', msg);
     return git('rev-parse', 'HEAD');
   };
   const gate = (base) => spawnSync('node', [GATE], { cwd: dir, encoding: 'utf8', env: { ...process.env, GATE_BASE: base } });
-  return { dir, write, mv, rm, commit, gate };
+  return { dir, write, mv, rm, symlink, commit, gate };
 }
 
 const hashOf = (sha256) => sourceManifestHash([{ id: 'pin-a', sha256 }]);
@@ -95,10 +96,11 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   r.mv(OLDER, 'data/emitted/hacrp/fy2025/hacrp-final.json');
   const renamed = r.commit('a rename is a delete plus an add');
   assert.equal(r.gate(withOld).status, 1, 'the delete half needs a corrections entry');
-  r.write('corrections/2026-11-02-copy.md', 'an old correction\n');
-  r.write('corrections/2026-11-03-empty.md', '');
-  r.commit('a copy of an old correction, and an empty one');
-  assert.equal(r.gate(withOld).status, 1, 'old or empty content under a new name is not a new correction');
+  r.write('corrections/2026-11-02-copy.md', 'an  old\ncorrection\n\n');
+  r.write('corrections/2026-11-03-empty.md', ' \n\t\n');
+  r.symlink('2026-11-01-old.md', 'corrections/2026-11-03-link.md');
+  r.commit('a copy of an old correction (whitespace aside), a blank one, and a symlink');
+  assert.equal(r.gate(withOld).status, 1, 'old, blank or linked content under a new name is not a new correction');
   r.write('corrections/2026-11-04-hacrp.md', 'renamed fy2025\n');
   r.write('data/emitted/hacrp/notes.txt', 'not json\n');
   const corrected = r.commit('a real correction, plus a stray non-JSON file');
@@ -113,11 +115,17 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   r.commit('the entry for it');
   assert.equal(r.gate(corrected).status, 0, 'a deletion with a new entry passes');
 
-  r.write('corrections/2026-11-01-old.md', 'an old correction, rewritten\n');
   r.write(FILE, emitted(3, ['{"v":7}'], 'cc'));
   r.write('corrections/2026-11-06-hacrp.md', 'another\n');
+  const appended = r.commit('a new entry on its own');
+  assert.equal(r.gate(`${appended}~1`).status, 0, 'appending passes');
+  r.write(FILE, emitted(3, ['{"v":8}'], 'cc'));
+  r.write('corrections/2026-11-01-old.md', 'an old correction, rewritten\n');
+  r.write('corrections/2026-11-07-hacrp.md', 'yet another\n');
   const rewritten = r.commit('a new entry while rewriting an old one');
-  assert.equal(r.gate(`${rewritten}~1`).status, 1, 'the log is append-only');
+  const verdict = r.gate(`${rewritten}~1`);
+  assert.equal(verdict.status, 1);
+  assert.match(verdict.stdout, /also edits or removes corrections\/2026-11-01-old\.md/, 'it fails because the log is append-only');
 
   const lost = r.gate('f'.repeat(40));
   assert.equal(lost.status, 1, 'an unreachable base (force-push) fails closed');
