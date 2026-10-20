@@ -36,10 +36,6 @@ class CountyKeyTest(unittest.TestCase):
         self.assertEqual(geo.county_key("ZZ", None), ("ZZ", ""))
 
 
-# (state, Care Compare's county, impact-file FIPS, label) that the rules check (no doubt): the known cases, misspellings,
-# and the collisions. CountyDoubtTest runs them on CountyLabelTest's fixture, RealAtlasCountyTest on the pinned atlas.
-
-
 class ReadCountiesTest(unittest.TestCase):
     """geo.read_counties on a hand-made topology: quantized, delta-encoded arcs; a county's centroid is its largest
     polygon's."""

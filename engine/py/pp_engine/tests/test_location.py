@@ -3,6 +3,7 @@ import random
 import unittest
 
 from pp_engine import geo, location
+from pp_engine.tests.fixtures import CHECKED_COUNTIES
 
 SQUARE = [[(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]]  # ~111 km square county at the equator
 
@@ -18,7 +19,7 @@ class CountyLabelTest(unittest.TestCase):
              "17099": "LaSalle", "22059": "LaSalle", "29186": "Ste. Genevieve", "35013": "Doña Ana", "48201": "Harris",
              "09003": "Hartford", "51019": "Bedford", "29051": "Cole", "29099": "Jefferson", "19193": "Woodbury",
              "19167": "Sioux", "49011": "Davis", "51161": "Roanoke", "51770": "Roanoke", "51510": "Alexandria",
-             "32005": "Douglas", "48201": "Harris"}
+             "32005": "Douglas"}
     COUNTIES = geo.Counties(centroid={}, by_name={geo.county_key(geo.STATE_FIPS[f[:2]], n): (0, 0) for f, n in NAMES.items()},
                             shape={"51059": [SQUARE], "29189": [SQUARE], "51510": [[[(x + 1.2, y) for x, y in SQUARE[0]]]],
                                    "29510": [[[(x + 1.2, y) for x, y in SQUARE[0]]]]},
@@ -141,29 +142,6 @@ class StrayPointTest(unittest.TestCase):
     def test_fips_missing_from_atlas_keeps_zip(self):
         self.assertEqual(self.locate((5.0, 5.0), {"fips": "09110"}), (5.0, 5.0, "zip", None))
         self.assertEqual(self.locate((5.0, 5.0), {"fips": "99002"}), (5.0, 5.0, "zip", None))  # centroid known, no shape
-
-
-CHECKED_COUNTIES = [
-    ("IL", "DE KALB", "17037", "DeKalb County"), ("IL", "DEKALB  ", "17037", "DeKalb County"), ("IL", "De-Kalb", "17037", "DeKalb County"),
-    ("GA", "DE KALB", "13089", "DeKalb County"), ("IL", "DU PAGE", "17043", "DuPage County"),
-    ("WI", "FOND DU LAC", "55039", "Fond du Lac County"), ("NM", "DONA ANA", "35013", "Doña Ana County"),
-    ("IL", "LA SALLE", "17099", "LaSalle County"), ("IL", "LA  SALLE", "17099", "LaSalle County"),
-    ("LA", "LA SALLE", "22059", "LaSalle Parish"), ("LA", "LA SALLE", "17099", "LaSalle Parish"),  # the state decides
-    ("MO", "ST. LOUIS", "29189", "St. Louis County"), ("MO", "SAINT LOUIS", "29189", "St. Louis County"),
-    ("MO", "ST. LOUIS COUNTY", "29189", "St. Louis County"), ("VA", "RICHMONDCITY", "51760", "Richmond City"),
-    ("VA", "RICHMOND CITY.", "51760", "Richmond City"), ("VA", "RICHMOND-CITY", "51760", "Richmond City"),
-    ("MO", "SAINT-LOUIS", "29189", "St. Louis County"), ("MO", "ST LOUIS", "29189", "St. Louis County"),
-    ("MO", "ST. LOUIS CITY", "29510", "St. Louis City"),
-    ("MO", "SAINT LOUIS CITY", "29510", "St. Louis City"), ("MO", "STE. GENEVIEVE", "29186", "Ste. Genevieve County"),
-    ("MO", "SAINTE GENEVIEVE", "29186", "Ste. Genevieve County"), ("LA", "EAST BATON ROUGE", "22033", "East Baton Rouge Parish"),
-    ("AK", "FAIRBANKS NORTH STAR BOROUGH", "02090", "Fairbanks North Star"), ("VA", "RICHMOND CITY", "51760", "Richmond City"),
-    ("VA", "JAMES CITY", "51830", "James City County"), ("NV", "CARSON CITY", "32510", "Carson City"),
-    ("VA", "FAIRFAX", "51059", "Fairfax County"), ("VA", "ROANOKE CITY", "51770", "Roanoke City"),
-    ("UT", "SALT LAKE CITY", "49035", "Salt Lake County"), ("DC", "DISTRICT OF COLUMBIA", "11001", "District of Columbia"),
-    ("CT", "HARTFORD", "09110", "Hartford County"),  # a planning-region FIPS the atlas lacks; Care Compare's county is known
-    ("MO", "ST. LOUIS COUNTY.", "29189", "St. Louis County"), ("TX", "HARRIS-COUNTY", "48201", "Harris County"),
-    ("MO", "ST. LOUIS COUNTY.", None, "St. Louis County"), ("TX", "HARRIS-COUNTY", None, "Harris County"),  # no FIPS
-]
 
 
 class HospitalCountyTest(unittest.TestCase):
@@ -297,6 +275,7 @@ class CountyDoubtTest(unittest.TestCase):
             self.assertEqual(self.county(st, cc, fips, moved="county"), (want, doubt), (st, cc, fips))
         self.assertEqual(self.county("MO", "JEFFERSON", "29051", moved="address"), ("Cole County", None))  # the address decides
 
+
 class FallbackOrderProperty(unittest.TestCase):
     """locate() over random mixes of evidence: a street-address point, else the ZIP centroid, else Care Compare's
     county, else the impact-file county; a point more than STRAY_KM outside the impact-file county never stands."""
@@ -334,24 +313,14 @@ class FallbackOrderProperty(unittest.TestCase):
 
     def test_fallback_order(self):
         for case in self.cases():
-            lat, lon, src, _ = self.run_case(*case)
+            lat, lon, src, label = self.run_case(*case)
             want_src, want_pt = self.expected(*case)
             self.assertEqual((src, (lat, lon) if src else None), (want_src, want_pt if want_src else None), case)
-
-    def test_coordinates_null_exactly_when_source_is(self):
-        for case in self.cases():
-            lat, lon, src, label = self.run_case(*case)
-            self.assertEqual(lat is None, src is None, case)
-            self.assertEqual(lon is None, src is None, case)
+            self.assertEqual((lat is None, lon is None), (src is None, src is None), case)  # never half a point
             if src is None:
                 self.assertIsNone(label, case)
-
-    def test_a_far_point_lands_on_the_fips_centroid(self):
-        for case in self.cases():
-            lat, lon, src, label = self.run_case(*case)
-            if label is not None and src == "county":
-                self.assertEqual((lat, lon), self.COUNTIES.centroid[case[3]], case)
-                self.assertEqual(label, self.COUNTIES.name[case[3]], case)
+            elif src == "county" and label is not None:  # moved to the impact-file county: its centroid and name
+                self.assertEqual(((lat, lon), label), (self.COUNTIES.centroid[case[3]], self.COUNTIES.name[case[3]]), case)
 
 
 if __name__ == "__main__":

@@ -32,8 +32,11 @@ class Helpers(unittest.TestCase):
         text = "FIPS County Code\tFY 2025 CBSA Name\tFY 2025 CBSA\n01001\tx\t33860\n"
         self.assertEqual(table(rows(text, "\t"), "FIPS County Code", {"code": "*cbsa", "name": "*cbsa name"}, "f"),
                          [{"code": "33860", "name": "x"}])
-        with self.assertRaisesRegex(SchemaError, "'\\*metro'"):
+        with self.assertRaisesRegex(SchemaError, "'\\*metro', found 0"):
             table(rows(text, "\t"), "FIPS County Code", {"x": "*metro"}, "f")
+        two_years = "FIPS County Code\tFY 2025 CBSA\tFY 2026 CBSA\n"
+        with self.assertRaisesRegex(SchemaError, "found 2"):  # never silently the older year
+            table(rows(two_years, "\t"), "FIPS County Code", {"code": "*cbsa"}, "f")
 
     def test_missing_column_or_header_raises(self):
         with self.assertRaisesRegex(SchemaError, "'Other'"):
@@ -98,6 +101,8 @@ class GeoFiles(unittest.TestCase):
         text = ("GEOID\tALAND\tAWATER\tALAND_SQMI\tAWATER_SQMI\tINTPTLAT\tINTPTLONG                                  \n"
                 "00601\t1\t2\t3\t4\t18.180555\t     -66.749961\n99999\t1\t2\t3\t4\t-1.5\t2.25\n")
         self.assertEqual(read_zcta(text), {"00601": (18.180555, -66.749961), "99999": (-1.5, 2.25)})
+        with self.assertRaises(SchemaError):
+            read_zcta(text.replace("-1.5", "nan"))
 
     def test_cbsa_names(self):
         text = ("FY 2027 FR Crosswalk\t\t\t\t\r\nFIPS County Code\tCounty Name\tState\tFY 2025 CBSA \tFY 2025 CBSA Name \r\n"
@@ -115,7 +120,7 @@ class Points(unittest.TestCase):
 
     def test_bad_rows_raise(self):
         for row in ("990001,x,2,Exact,hgi", "990001,1,2,Exact,hgi\n990001,1,2,Exact,hgi", "99001,1,2,Exact,hgi",
-                    "990001,nan,2,Exact,hgi", "990001,1,inf,Exact,hgi", "990001,91,2,Exact,hgi", "990001,1,181,Exact,hgi"):
+                    "990001,nan,2,Exact,hgi", "990001,1,inf,Exact,hgi", "AB0001,1,2,Exact,hgi", "990001,91,2,Exact,hgi", "990001,1,181,Exact,hgi"):
             with self.assertRaises(SchemaError, msg=row):
                 read_points(self.HEADER + row + "\n")
         with self.assertRaises(SchemaError):

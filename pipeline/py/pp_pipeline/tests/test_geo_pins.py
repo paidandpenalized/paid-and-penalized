@@ -1,21 +1,23 @@
 """The location rules and readers against the pinned geography files (no hospital data)."""
 import unittest
 
-from pp_engine import geo
-from pp_engine.tests import test_location as loc  # a module import, so its test classes don't run twice
+from pp_engine import geo, location
+from pp_engine.tests.fixtures import CHECKED_COUNTIES
 from pp_pipeline.emit_hospital import cbsa_names, counties, zcta
 
 
 class RealAtlasCountyTest(unittest.TestCase):
     """CHECKED_COUNTIES against the pinned us-atlas, whose spellings Care Compare's must reach."""
-    county = loc.CountyLabelTest.county
 
     @classmethod
     def setUpClass(cls):
         cls.COUNTIES = counties()
 
+    def county(self, st, name, fips):
+        return location.county_label({"county": name}, st, fips, self.COUNTIES)
+
     def test_known_names_misspellings_and_collisions_are_checked(self):
-        for st, cc, fips, want in loc.CHECKED_COUNTIES:
+        for st, cc, fips, want in CHECKED_COUNTIES:
             self.assertEqual(self.county(st, cc, fips), (want, None), (st, cc, fips))
         impact = "unknown county; the impact-file county's name"
         self.assertEqual(self.county("TX", "NARNIA", "48201"), ("Harris County", impact))
@@ -32,10 +34,11 @@ class RealAtlasCountyTest(unittest.TestCase):
 
 class GeoPins(unittest.TestCase):
     def test_zcta_and_cbsa_files_parse(self):
-        self.assertGreater(len(zcta()), 30000)
-        self.assertEqual(len(zcta()["84101"]), 2)
-        self.assertEqual(cbsa_names()["41620"], "Salt Lake City-Murray, UT")
-        self.assertTrue(all(len(c) == 5 and c.isdigit() for c in cbsa_names()))
+        points, names = zcta(), cbsa_names()
+        self.assertGreater(len(points), 30000)
+        self.assertEqual(len(points["84101"]), 2)
+        self.assertEqual(names["41620"], "Salt Lake City-Murray, UT")
+        self.assertTrue(all(len(c) == 5 and c.isdigit() for c in names))
 
 
 if __name__ == "__main__":

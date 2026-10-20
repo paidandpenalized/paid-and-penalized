@@ -67,8 +67,8 @@ def rows(text, delimiter):
 def table(rows_, anchor, columns, label):
     """Records (dicts keyed by `columns` keys, stripped strings) from the table whose header row starts with `anchor`.
     `columns` maps output key -> header text, matched case- and space-insensitively; a header text starting with '*'
-    matches the first header that ends with the rest (year-stamped names like 'FY 2025 CBSA'). `label` names the file
-    in errors."""
+    matches the one header that ends with the rest (year-stamped names like 'FY 2025 CBSA'), and two such headers
+    raise rather than pick a year. `label` names the file in errors."""
     target = _norm(anchor)
     it = iter(rows_)
     for row in it:
@@ -78,8 +78,8 @@ def table(rows_, anchor, columns, label):
             for key, name in columns.items():
                 n = _norm(name)
                 hits = [j for j, h in enumerate(header) if (h.endswith(n[1:]) if n.startswith("*") else h == n)]
-                if not hits:
-                    raise SchemaError(f"{label}: expected column {name!r} not found")
+                if len(hits) != 1:
+                    raise SchemaError(f"{label}: expected one column {name!r}, found {len(hits)}")
                 idx[key] = hits[0]
             return [{k: (r[j] if j < len(r) else "").strip() for k, j in idx.items()} for r in it if r and r[0].strip()]
     raise SchemaError(f"{label}: header row starting with {anchor!r} not found")
@@ -158,10 +158,22 @@ def read_pos(text):
     return index_by_ccn(table(rows(text, ","), "PRVDR_NUM", columns, "POS"), build, "POS")
 
 
+def _latlon(lat, lon, label):
+    """(lat, lon) as floats; SchemaError unless both are finite and in range."""
+    try:
+        pt = (float(lat), float(lon))
+    except ValueError:
+        raise SchemaError(f"{label}: malformed coordinate") from None
+    if not (-90 <= pt[0] <= 90 and -180 <= pt[1] <= 180):  # also refuses nan; inf is out of range
+        raise SchemaError(f"{label}: coordinate out of range")
+    return pt
+
+
 def read_zcta(text):
     """Census ZCTA gazetteer (tab-delimited) -> {zip5: (lat, lon)}: each ZIP code tabulation area's internal point."""
-    recs = table(rows(text, "\t"), "GEOID", {"zip": "GEOID", "lat": "INTPTLAT", "lon": "INTPTLONG"}, "ZCTA gazetteer")
-    return {r["zip"]: (float(r["lat"]), float(r["lon"])) for r in recs}
+    label = "ZCTA gazetteer"
+    recs = table(rows(text, "\t"), "GEOID", {"zip": "GEOID", "lat": "INTPTLAT", "lon": "INTPTLONG"}, label)
+    return {r["zip"]: _latlon(r["lat"], r["lon"], f"{label} {r['zip']}") for r in recs}
 
 
 def read_cbsa_names(text):
@@ -170,20 +182,12 @@ def read_cbsa_names(text):
     return {r["code"]: r["name"].strip('"') for r in recs if r["code"] and r["name"]}
 
 
-_COORD = re.compile(r"-?\d{1,3}(\.\d+)?", re.ASCII)
-
-
 def read_points(text):
-    """A street-address points CSV (ccn,lat,lon,match,source) -> {ccn: (lat, lon)}. A malformed CCN or coordinate, a
-    coordinate out of range, or a repeated CCN raises SchemaError."""
+    """A street-address points CSV (ccn,lat,lon,match,source) -> {ccn: (lat, lon)}. Unlike the CMS readers, which
+    skip footnote rows, any row that isn't a CCN, a repeated CCN, or a bad coordinate raises SchemaError."""
     out = {}
     for r in table(rows(text, ","), "ccn", {"ccn": "ccn", "lat": "lat", "lon": "lon"}, "points"):
-        if not re.fullmatch(r"[0-9A-Z]{6}", r["ccn"], re.ASCII) or r["ccn"] in out:
+        if not _is_ccn(r["ccn"]) or r["ccn"] in out:
             raise SchemaError(f"points: malformed or repeated CCN {r['ccn']!r}")
-        if not (_COORD.fullmatch(r["lat"]) and _COORD.fullmatch(r["lon"])):
-            raise SchemaError(f"points: malformed coordinate for {r['ccn']}")
-        lat, lon = float(r["lat"]), float(r["lon"])
-        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            raise SchemaError(f"points: coordinate out of range for {r['ccn']}")
-        out[r["ccn"]] = (lat, lon)
+        out[r["ccn"]] = _latlon(r["lat"], r["lon"], f"points {r['ccn']}")
     return out
