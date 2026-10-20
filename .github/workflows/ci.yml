@@ -28,6 +28,7 @@ jobs:
       - name: Tests (engine, pins, contract, golden snapshot, hooks, workflow rules)
         run: npm test
       - name: Change gate (emitted data needs a reason on record)
+        if: ${{ !cancelled() }}
         env:
           GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
