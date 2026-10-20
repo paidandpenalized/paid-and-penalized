@@ -340,5 +340,19 @@ emitters), `README.md`, `CLAUDE.md`.
     shape, not its provenance (by design: the raw file is 30 MB).
   - `reason_for` applies one rule list to every program; a non-IPPS program would need per-program rules.
   - The no-name placeholder is display text in the data (TDR's convention; the TDR check depends on it).
-  - Python and JS parse integers above 2^53 differently; no emitted value comes close.
+  - Python and JS parse integers above 2^53 differently (the writer now prints them as JS does); no emitted value
+    comes close.
+  - `state` comes from HGI, then POS: two impact-only CCNs (one with a blank name) have none. Session 2 adds the
+    impact file's FIPS state, which also lets the Maryland rule see them.
+  - Ten HACRP-listed hospitals that have since closed (in POS, not in HGI or the impact file) get kind `unknown`;
+    the POS subtype column could classify them once its codes are taken from CMS's record layout.
+  - POS code 07 ("change in provider status", e.g., a conversion under a new CCN) counts as `inactive`, as in TDR.
+  - `extract-pos` overwrites the pinned extract and prints its new hash; the pinned-file tests then flag a
+    mismatch until the manifest is updated (the re-pin flow).
+  - TDR's own behaviors kept by the port: an impact-only name keeps the impact file's casing; `zip5` assumes ZIPs
+    keep their leading zeros.
+- **Open question for Dalton:** HACRP's file lists Maryland's 43 hospitals with Payment Reduction "N/A", so the
+  master marks them `inProgram: true` for HACRP (in CMS's file) while HRRP marks them `maryland`. Whether
+  `inProgram` should mean "in CMS's file" (as built and logged) or "subject to the payment adjustment" is a
+  definition choice for the HACRP pages.
   - `test_shared_vectors` re-derives the pins list to check the canonical string separately (deliberate).

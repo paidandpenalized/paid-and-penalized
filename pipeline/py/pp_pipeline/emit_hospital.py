@@ -3,15 +3,13 @@
 `python3 -I pipeline/py/run.py emit` (or `make emit`). A rebuild that changes nothing keeps the committed built_at,
 so git stays clean.
 """
-import csv
 import functools
-import io
 import json
 from datetime import datetime, timezone
 
 from pp_engine.contract import format_emitted, keep_built_at
 from pp_engine.master import build_master
-from pp_engine.parse import impact_fy, read_hgi, read_impact, read_pos
+from pp_engine.parse import SchemaError, impact_fy, index_by_ccn, read_hgi, read_impact, read_pos, rows, table
 from pp_engine.schema import validate
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, load_schemas, read_json, read_manifest, read_pinned_bytes, read_zip_member
 
@@ -24,11 +22,14 @@ SCHEMA = "hospital.schema.json"
 
 
 def hacrp_program():
-    rows = list(csv.DictReader(io.StringIO(read_pinned_bytes(HACRP).decode("utf-8-sig"))))
-    years = {r["Fiscal Year"] for r in rows}
+    label = "HACRP file"
+    records = table(rows(read_pinned_bytes(HACRP).decode("utf-8"), ","), "Facility Name",
+                    {"ccn": "Facility ID", "name": "Facility Name", "fy": "Fiscal Year"}, label)
+    by_ccn = index_by_ccn(records, lambda r: r, label)
+    years = {r["fy"] for r in by_ccn.values()}
     if len(years) != 1:
-        raise ValueError(f"HACRP file: expected one fiscal year, found {sorted(years)}")
-    return {"fy": int(years.pop()), "names": {r["Facility ID"]: r["Facility Name"] for r in rows}}
+        raise SchemaError(f"{label}: expected one fiscal year, found {sorted(years)}")
+    return {"fy": int(years.pop()), "names": {c: r["name"] for c, r in by_ccn.items()}}
 
 
 @functools.lru_cache(maxsize=None)

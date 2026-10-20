@@ -25,6 +25,7 @@ class Contract(unittest.TestCase):
     def test_numbers_print_as_javascript_does(self):
         self.assertEqual(format_emitted({"beds": 12.0, "x": [5e-05, 1e21, -1.5e-7]}),
                          '{\n"beds": 12,\n"x": [\n0.00005,\n1e+21,\n-1.5e-7\n]\n}\n')
+        self.assertEqual(canonical_json([2**53, 12345678901234567891]), "[9007199254740992,12345678901234567000]")
         with self.assertRaises(ValueError):
             canonical_json(float("nan"))
 

@@ -12,7 +12,7 @@ from decimal import Decimal
 
 def _js_number(x):
     """A number as JavaScript prints it. Integral values print without a fraction; exponents outside 1e-7..1e21."""
-    if isinstance(x, int) and abs(x) < 10**21:
+    if isinstance(x, int) and abs(x) <= 2**53:  # beyond that JavaScript holds (and prints) the nearest double
         return str(x)
     x = float(x)
     if not math.isfinite(x):
