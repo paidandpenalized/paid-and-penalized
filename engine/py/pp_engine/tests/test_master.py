@@ -4,7 +4,7 @@ import random
 import unittest
 
 from pp_engine import geo, location, master
-from pp_engine.master import KINDS, REASONS, Place, build_master, build_record, kind_of, reason_for
+from pp_engine.master import KINDS, REASONS, Place, build_master, build_record, kind_of, no_place, reason_for
 from pp_engine.parse import SchemaError
 from pp_engine.schema import validate
 from pp_pipeline.files import load_schemas
@@ -41,7 +41,7 @@ def build(hgi=None, impact=None, pos=None, hacrp=(), hrrp=(), hacrp_exempt=(), p
                                    "subject": set(hacrp) - set(hacrp_exempt)},
                          "hrrp": {"fy": 2027, "names": {c: "Invented HRRP Name" for c in hrrp}, "subject": set(hrrp)}},
                         fy=2027, manifest=MANIFEST, sources=[m["id"] for m in MANIFEST], built_at="2026-10-20T00:00:00Z",
-                        place=place)
+                        place=place or no_place())
 
 
 class Universe(unittest.TestCase):
@@ -74,7 +74,7 @@ class Universe(unittest.TestCase):
 class Reasons(unittest.TestCase):
     STATES = ("MD", "VA", None)
 
-    def test_listed_always_wins(self):
+    def test_subject_always_wins(self):
         for kind, state, inactive in itertools.product([*KINDS.values(), "unknown"], self.STATES, (True, False)):
             self.assertIsNone(reason_for(True, kind, state, inactive), (kind, state, inactive))
 
@@ -212,7 +212,6 @@ class Attributes(unittest.TestCase):
         self.assertEqual(list(build_record("000001", hgi_row(), None, None, {"hacrp": True})), list(master.RECORD_KEYS))
 
 
-
 SQUARE = [[(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]]  # ~111 km square county at the equator
 
 
@@ -262,10 +261,12 @@ class Location(unittest.TestCase):
 
     def test_the_county_gate_lists_and_fails_above_the_limit(self):
         rows = [("000001", "THE DISTRICT", "Invented City", "unknown county"), ("000002", None, "Narnia County", "x")]
-        self.assertEqual(location.county_gate(rows, 2),
+        self.assertEqual(location.describe_unchecked(rows),
                          ["000001 'THE DISTRICT' -> Invented City (unknown county)", "000002 None -> Narnia County (x)"])
-        with self.assertRaisesRegex(SchemaError, r"^2 county names .* than 1: 000001 "):
-            location.county_gate(rows, 1)
+        location.county_gate(rows, 2, {"000001": True, "000002": True})
+        with self.assertRaisesRegex(SchemaError, r"^1 county names .* than 0: 000001 "):  # no name: reported, not gated
+            location.county_gate(rows, 0, {"000001": True, "000002": True})
+        location.county_gate(rows, 0, {"000001": False, "000002": True})  # a state the atlas lacks: not gated
 
 
 if __name__ == "__main__":

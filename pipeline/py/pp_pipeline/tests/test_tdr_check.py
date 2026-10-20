@@ -29,7 +29,6 @@ class TdrCheck(unittest.TestCase):
         self.assertEqual({c: (h["name"], h.get("alias")) for c, h in self.tdr.items()},
                          {c: (self.master[c]["name"], self.master[c]["alias"]) for c in self.tdr if c in self.master})
 
-
     def test_location_matches(self):
         diffs = [f"{c} {m}: master {self.master[c][m]!r}, TDR {h.get(t)!r}" for c, h in sorted(self.tdr.items())
                  if c in self.master for m, t in LOCATION if self.master[c][m] != h.get(t)]

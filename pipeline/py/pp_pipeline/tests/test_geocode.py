@@ -104,7 +104,7 @@ class GapTest(unittest.TestCase):
         self.assertTrue(gap)
         self.assertEqual(gap, sorted(gap))
         self.assertFalse(set(gap) & set(geocode.tdr_points()))
-        self.assertFalse(set(gap) & set(geocode.hrrp_ids()))
+        self.assertFalse(set(gap) & geocode.tables()["programs"]["hrrp"]["subject"])
 
 
 if __name__ == "__main__":

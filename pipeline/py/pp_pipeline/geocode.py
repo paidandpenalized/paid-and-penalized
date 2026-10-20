@@ -17,11 +17,12 @@ Who is sent: every master hospital with a street address, except those with a TD
 import csv
 import io
 import re
+from collections import Counter
 import urllib.request
 import uuid
 
 from pp_engine.master import universe
-from pp_pipeline.emit_hospital import tables, tdr_data, tdr_points
+from pp_pipeline.emit_hospital import tables, tdr_points
 from pp_pipeline.files import PINNED_DIR, REPO_ROOT
 
 URL = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
@@ -43,14 +44,10 @@ def in_us(lat, lon):
     return any(s <= lat <= n and w <= lon <= e for s, n, w, e in US_BOUNDS)
 
 
-def hrrp_ids():
-    return {h["id"] for h in tdr_data()["hospitals"]}
-
-
 def gap():
     """The master's CCNs with no TDR point that aren't HRRP hospitals, sorted."""
     t = tables()
-    return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - hrrp_ids())
+    return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - t["programs"]["hrrp"]["subject"])
 
 
 def candidates(ccns, hgi, pos):
@@ -92,9 +89,7 @@ def parse_response(text, batch):
     """{id: (lat, lon, match type)} from the service's CSV, keeping only well-formed, in-bounds, same-state matches
     for ids in `batch` that appear exactly once."""
     rows = [r for r in csv.reader(io.StringIO(text)) if r and r[0] in batch]
-    seen = {}
-    for r in rows:
-        seen[r[0]] = seen.get(r[0], 0) + 1
+    seen = Counter(r[0] for r in rows)
     out = {}
     for r in rows:
         if seen[r[0]] != 1 or len(r) < 6 or r[2] != "Match" or r[3] not in ("Exact", "Non_Exact"):
@@ -118,10 +113,10 @@ def geocode(cands, send=post):
     got = parse_response(send(batch), batch)
     found = {}
     for c, addrs in cands.items():
-        n = next((n for n in range(1, len(addrs) + 1) if f"{c}-{n}" in got), None)
-        if n:
-            lat, lon, kind = got[f"{c}-{n}"]
-            found[c] = (lat, lon, kind, addrs[n - 1][0])
+        for n, a in enumerate(addrs, 1):
+            if f"{c}-{n}" in got:
+                found[c] = (*got[f"{c}-{n}"], a[0])
+                break
     print(f"one request: {len(batch)} addresses for {len(cands)} hospitals; {len(found)} hospitals matched")
     return found
 
@@ -144,8 +139,7 @@ def main(send=post):
     cands = candidates(ccns, t["hgi"], t["pos"])
     found = geocode(cands, send)
     write(found, len(cands))
-    kinds = {k: sum(1 for v in found.values() if v[2] == k) for k in ("Exact", "Non_Exact")}
-    srcs = {k: sum(1 for v in found.values() if v[3] == k) for k in ("hgi", "pos")}
-    print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {kinds} {srcs}; "
+    kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
+    print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
           f"no address {len(ccns) - len(cands)}, unmatched {len(cands) - len(found)}")
     return 0

@@ -23,7 +23,7 @@ CBSA_MEMBER = "FY 2027 FR County to CBSA Crosswalk.txt"  # CMS text: Windows-125
 SOURCES = (HGI, IMPACT, POS, HACRP, TDR, ZCTA, COUNTIES, CBSA, TDR_POINTS, CENSUS_POINTS)
 # Counties the location rules can't check (location.county_label's doubt) across the whole master; more fails the
 # build so a new spelling is looked at before it ships. `make emit` prints them.
-MAX_UNCHECKED_COUNTIES = 73  # the 2026-10-20 build: 17 among HRRP hospitals (TDR's limit), 56 more elsewhere
+MAX_UNCHECKED_COUNTIES = 37  # the 2026-10-20 build (73 listed; the rest have no Care Compare county or no atlas)
 # The final rule's correction-notice values, the file Thirty Day Readmissions builds from. CMS writes it in
 # Windows-1252.
 IMPACT_MEMBER = "FY 2027 IPPS Impact File - Correction Notice.txt"
@@ -32,7 +32,7 @@ SCHEMA = "hospital.schema.json"
 
 # HACRP's Payment Reduction: Yes or No for a hospital subject to the adjustment; N/A for Maryland's hospitals, which
 # the file lists but the state's own payment model covers.
-SUBJECT, EXEMPT = ("Yes", "No"), "N/A"
+ADJUSTED, EXEMPT = ("Yes", "No"), "N/A"
 
 
 def hacrp_program(text=None):
@@ -46,11 +46,11 @@ def hacrp_program(text=None):
     years = {r["fy"] for r in by_ccn.values()}
     if len(years) != 1:
         raise SchemaError(f"{label}: expected one fiscal year, found {sorted(years)}")
-    odd = sorted(c for c, r in by_ccn.items() if r["pay"] not in SUBJECT and (r["pay"], r["state"]) != (EXEMPT, "MD"))
+    odd = sorted(c for c, r in by_ccn.items() if r["pay"] not in ADJUSTED and (r["pay"], r["state"]) != (EXEMPT, "MD"))
     if odd:
         raise SchemaError(f"{label}: Payment Reduction neither Yes/No nor Maryland's N/A for {odd[:5]}")
     return {"fy": int(years.pop()), "names": {c: r["name"] for c, r in by_ccn.items()},
-            "subject": {c for c, r in by_ccn.items() if r["pay"] in SUBJECT}}
+            "subject": {c for c, r in by_ccn.items() if r["pay"] in ADJUSTED}}
 
 
 @functools.lru_cache(maxsize=None)
@@ -129,8 +129,13 @@ def build_from_pins(built_at, ref=None):
         built_at=built_at,
         place=Place(ref, cbsa_names()),
     )
-    location.county_gate(ref.unchecked, MAX_UNCHECKED_COUNTIES)
+    location.county_gate(ref.unchecked, MAX_UNCHECKED_COUNTIES, atlas_states(master))
     return master
+
+
+def atlas_states(master):
+    """CCN -> whether the hospital's state is one the county atlas covers (the states, DC and Puerto Rico)."""
+    return {h["ccn"]: h["state"] in geo.STATE_NAMES for h in master["hospitals"]}
 
 
 def emitted_path(fy):
@@ -152,8 +157,9 @@ def report(master, ref):
         print(f"{what} ({len(hits)}): " + ("; ".join(hits) or "none"))
     set_aside = [h["ccn"] for h in hs if h["ccn"] in ref.points and h["geo"] != "address"]
     print(f"street-address points {len(ref.points)}; set aside (> {location.STRAY_KM} km outside): {set_aside}")
-    lines = location.county_gate(ref.unchecked, MAX_UNCHECKED_COUNTIES)
-    print(f"county names the rules cannot check ({len(lines)}, at most {MAX_UNCHECKED_COUNTIES}): "
+    lines = location.describe_unchecked(ref.unchecked)
+    counted = location.gated(ref.unchecked, {c for c, ok in atlas_states(master).items() if ok})
+    print(f"county names the rules cannot check ({len(lines)}; {len(counted)} gated, at most {MAX_UNCHECKED_COUNTIES}): "
           + ("; ".join(lines) or "none"))
 
 

@@ -225,3 +225,35 @@ sources, built_at, ref)`; `programs[pid] = {"fy", "names", "subject"}`; record k
 ---
 
 ## Amendments made during execution
+
+- **Census call (2026-10-20):** one request, 2,748 addresses for 2,536 hospitals, 12 seconds; 2,147 matched (1,648
+  Exact, 499 Non_Exact; 35 on the POS address). Unmatched 389 + 1 with no street address use ZIP/county placement.
+- **Result:** geo sources across 5,449 hospitals: 4,673 address, 740 ZIP, 34 county, 2 none (one Virgin Islands
+  hospital whose ZIP isn't a ZCTA and has no atlas county; one VA hospital outside the impact file whose ZIP isn't a
+  ZCTA). Every TDR hospital's state, county, point, source, CBSA, CBSA name, region and division equal the master's.
+  HACRP: 3,012 subject of 3,055 listed.
+- **County gate:** 73 unchecked across the master (17 among HRRP hospitals, TDR's own 17). After the final-gate
+  altitude review the gate counts only names Care Compare gave in a state the atlas covers (37; 16 of them HRRP):
+  a missing name or a territory can't be fixed by teaching a spelling, so those are printed but not counted.
+  `MAX_UNCHECKED_COUNTIES` is 37 in `emit_hospital.py`; `make emit` prints all 73.
+- **Final-gate simplify** (4 angles): `listed` renamed `subject`; `place` required in `build_master`; one gate run
+  per emit; the geocoder's gap reads the HRRP set from `tables()`; a test that the master gives every HACRP N/A row
+  reason `maryland`. Skipped: moving pin accessors to their own module, a namedtuple for addresses (ported code),
+  normalizing CBSA in the reader.
+- **Territories:** American Samoa, Guam, the Northern Mariana Islands and the Virgin Islands take no "County"
+  suffix (TDR's `NO_SUFFIX` had AK, DC, PR only; TDR lists no territory hospital, so the TDR check can't move).
+- **Universe** is one function, `master.universe`, shared by the build and the geocoder's gap.
+- **Stricter readers than TDR:** a `*` header pattern must match exactly one column (two year-stamped columns raise);
+  ZCTA and point coordinates must be finite and in range; CMS text that isn't valid Windows-1252 raises SchemaError.
+- **Order:** geo.py/location.py were ported with TDR's tests rather than test-first; the property test was checked by
+  a mutation (STRAY_KM 40 → 10 fails it).
+- **Checkpoints:** M1 `/simplify` (4 angles) and `/code-review` (an independent replay of the port on the pins: 0
+  differences from TDR on all 2,912) ran; its two Minors were fixed.
+- **Known Minor items (not fixed):**
+  - Encoding and zip member live as constants in `emit_hospital.py`, not in the manifest (a manifest-driven
+    `pinned_text(pin_id)` would put them with the pin).
+  - `atlas_fips` scans every atlas county per call (ported; under a second per build).
+  - us-atlas's ISC notice in NOTICE names the author without the copyright years; check against the package's
+    LICENSE before the repo goes public.
+  - The two hospitals with no location have no ZCTA for their ZIP; a county-name-only fallback (`city_stem` for
+    "X CITY") would place one, but TDR doesn't, so it waits for the fold-in.

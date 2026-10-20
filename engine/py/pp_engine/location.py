@@ -186,11 +186,22 @@ def merge_points(*sources):
     return out
 
 
-def county_gate(unchecked, limit):
-    """Report lines for every county the rules could not check ((ccn, Care Compare's county, label, doubt)); raises
-    SchemaError when there are more than `limit`, so a new spelling is looked at before it ships."""
-    lines = [f"{c} {raw!r} -> {label} ({doubt})" for c, raw, label, doubt in unchecked]
-    if len(unchecked) > limit:
-        raise SchemaError(f"{len(unchecked)} county names the rules cannot check, more than {limit}: "
-                          + "; ".join(lines) + ". Teach geo.county_key or county_label the new spelling, or raise the limit.")
-    return lines
+def describe_unchecked(unchecked):
+    """Report lines for counties the rules could not check ((ccn, Care Compare's county, label, doubt))."""
+    return [f"{c} {raw!r} -> {label} ({doubt})" for c, raw, label, doubt in unchecked]
+
+
+def gated(unchecked, states):
+    """The unchecked counties the gate counts: Care Compare named one, in a state the atlas covers (`states`). A missing
+    name, or a territory the atlas lacks, can't be fixed by teaching a spelling, so it is reported but not counted."""
+    return [u for u in unchecked if u[1] and u[0] in states]
+
+
+def county_gate(unchecked, limit, states):
+    """Raises SchemaError when more than `limit` counties Care Compare named can't be checked (see `gated`), so a new
+    spelling is looked at before it ships. `states`: CCN -> whether its state is in the atlas."""
+    counted = gated(unchecked, {c for c, ok in states.items() if ok})
+    if len(counted) > limit:
+        raise SchemaError(f"{len(counted)} county names the rules cannot check, more than {limit}: "
+                          + "; ".join(describe_unchecked(counted))
+                          + ". Teach geo.county_key or county_label the new spelling, or raise the limit.")

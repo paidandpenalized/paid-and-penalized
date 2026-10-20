@@ -69,11 +69,11 @@ def kind_of(hgi, in_impact):
     return KINDS[hgi["type"]]
 
 
-def reason_for(listed, kind, state, inactive):
-    """None when the program's file lists the hospital; otherwise the first rule that explains why it doesn't:
+def reason_for(subject, kind, state, inactive):
+    """None when the hospital is subject to the program's adjustment; otherwise the first rule that explains why not:
     a kind not paid under IPPS, Maryland (paid under the state's own model), ended Medicare participation, or
-    `not_listed` (CMS's file leaves it out without saying why)."""
-    if listed:
+    `not_listed` (CMS's file leaves it out, or lists it unadjusted, without saying why)."""
+    if subject:
         return None
     if kind in NOT_IPPS:
         return NOT_IPPS[kind]
@@ -94,8 +94,8 @@ def _first(*values):
     return next((v for v in values if v), None)
 
 
-def build_record(ccn, hgi, impact, pos, listed, program_names=(), place=None):
-    """One hospital's record from its HGI, impact and POS rows (each a dict or None), `listed` (program id -> whether
+def build_record(ccn, hgi, impact, pos, subject, program_names=(), place=None):
+    """One hospital's record from its HGI, impact and POS rows (each a dict or None), `subject` (program id -> whether
     the hospital is subject to that program's adjustment), `program_names` (names the program files give it, a
     last-resort name) and `place` (a Place; none: no location)."""
     g, imp, p = hgi or {}, impact or {}, pos or {}
@@ -148,7 +148,7 @@ def build_record(ccn, hgi, impact, pos, listed, program_names=(), place=None):
         "ownDetail": g.get("ownership") or None,
         "inactive": inactive,
         "programs": {pid: {"inProgram": on, "reason": reason_for(on, kind, state, inactive is not None)}
-                     for pid, on in listed.items()},
+                     for pid, on in subject.items()},
     }
 
 
@@ -161,10 +161,11 @@ def universe(hgi, impact, programs):
     return ccns
 
 
-def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at, place=None):
+def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at, place):
     """The master: envelope, each program's file year, and one record per CCN in HGI, the impact file or any
     program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name},
-    "subject": the CCNs subject to its payment adjustment}; a listed CCN outside `subject` is not in the program."""
+    "subject": the CCNs subject to its payment adjustment}; a listed CCN outside `subject` is not in the program.
+    `place` is a Place (no_place() for none)."""
     ccns = universe(hgi, impact, programs)
     order = sorted(programs)
     hospitals = [build_record(c, hgi.get(c), impact.get(c), pos.get(c),

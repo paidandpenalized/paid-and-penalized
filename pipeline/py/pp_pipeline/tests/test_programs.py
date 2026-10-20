@@ -2,7 +2,8 @@
 import unittest
 
 from pp_engine.parse import SchemaError
-from pp_pipeline.emit_hospital import hacrp_program, hrrp_program
+from pp_pipeline.emit_hospital import committed_path, hacrp_program
+from pp_pipeline.files import read_json
 
 HEADER = '"Facility Name","Facility ID","State","Fiscal Year","Payment Reduction"\n'
 
@@ -12,6 +13,8 @@ class Hacrp(unittest.TestCase):
         p = hacrp_program()
         exempt = set(p["names"]) - p["subject"]
         self.assertEqual((len(p["names"]), len(p["subject"]), len(exempt)), (3055, 3012, 43))
+        master = {h["ccn"]: h for h in read_json(committed_path())["hospitals"]}
+        self.assertEqual({master[c]["programs"]["hacrp"]["reason"] for c in exempt}, {"maryland"})  # the master agrees
 
     def test_only_marylands_na_is_exempt(self):
         rows = ('"INVENTED A","990001","ZZ","2026","Yes"\n"INVENTED B","990002","ZZ","2026","No"\n'
@@ -23,11 +26,6 @@ class Hacrp(unittest.TestCase):
             with self.assertRaisesRegex(SchemaError, "Payment Reduction"):
                 hacrp_program(HEADER + rows + bad)
 
-
-class Hrrp(unittest.TestCase):
-    def test_tdr_lists_only_adjusted_hospitals(self):
-        p = hrrp_program()
-        self.assertEqual(p["subject"], set(p["names"]))
 
 
 if __name__ == "__main__":
