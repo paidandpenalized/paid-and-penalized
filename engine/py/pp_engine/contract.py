@@ -3,13 +3,14 @@ import hashlib
 import json
 
 
-def _dumps(value, **kw):
+def compact_json(value, **kw):
+    """JSON with no whitespace and non-ASCII kept as UTF-8, as JavaScript's JSON.stringify writes it."""
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False, **kw)
 
 
 def canonical_json(value):
     """JSON with object keys sorted at every level; arrays keep their order; non-ASCII kept as UTF-8."""
-    return _dumps(value, sort_keys=True)
+    return compact_json(value, sort_keys=True)
 
 
 def source_manifest_hash(entries):
@@ -50,9 +51,9 @@ def format_emitted(obj):
     """One top-level key per line and one element of each top-level array per line (formatEmitted's layout)."""
     lines = []
     for key, value in obj.items():
-        name = _dumps(key)
+        name = compact_json(key)
         if isinstance(value, list) and value:
-            lines.append(f"{name}: [\n" + ",\n".join(_dumps(v) for v in value) + "\n]")
+            lines.append(f"{name}: [\n" + ",\n".join(compact_json(v) for v in value) + "\n]")
         else:
-            lines.append(f"{name}: {_dumps(value)}")
+            lines.append(f"{name}: {compact_json(value)}")
     return "{\n" + ",\n".join(lines) + "\n}\n"

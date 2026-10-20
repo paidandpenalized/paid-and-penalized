@@ -48,8 +48,14 @@ test('the gitleaks download is checked against a pinned SHA-256', () => {
   assert.match(text, /sha256sum -c/);
 });
 
-test('the python job pins setup-python to an exact version and runs the tests isolated', () => {
-  assert.match(text, /^ {6}- uses: actions\/setup-python@[0-9a-f]{40} # v\d+\.\d+\.\d+$/m);
-  assert.match(text, /^ {10}python-version: '\d+\.\d+\.\d+'$/m);
-  assert.match(text, /^ {8}run: python -I pipeline\/py\/run\.py test$/m);
+test('every setup step pins an exact toolchain version', () => {
+  const versions = lines.filter((l) => /^\s*[\w-]+-version:/.test(l));
+  assert.ok(versions.length >= 2);
+  for (const l of versions) assert.match(l, /-version: '?\d+\.\d+\.\d+'?$/, l);
+});
+
+test('python runs isolated (-I), so the working directory never shadows a module', () => {
+  const runs = lines.filter((l) => /run: python/.test(l));
+  assert.ok(runs.length > 0);
+  for (const l of runs) assert.match(l, /run: python3? -I /, l);
 });

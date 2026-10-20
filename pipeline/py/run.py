@@ -8,14 +8,13 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ROOTS = (REPO_ROOT / "engine" / "py", REPO_ROOT / "pipeline" / "py")
-for root in reversed(ROOTS):
-    sys.path.insert(0, str(root))
+PACKAGES = {"pp_engine": REPO_ROOT / "engine" / "py", "pp_pipeline": REPO_ROOT / "pipeline" / "py"}  # name -> root
+sys.path[:0] = [str(root) for root in PACKAGES.values()]
 
 
 def run_tests():
     suite = unittest.TestSuite()
-    for root, package in zip(ROOTS, ("pp_engine", "pp_pipeline")):
+    for package, root in PACKAGES.items():
         suite.addTests(unittest.defaultTestLoader.discover(str(root / package / "tests"), top_level_dir=str(root)))
     return 0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1
 

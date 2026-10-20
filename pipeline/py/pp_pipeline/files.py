@@ -1,4 +1,5 @@
 """Repo file access for the Python pipeline and its tests. pp_engine itself never reads files."""
+import functools
 import hashlib
 import io
 import json
@@ -27,6 +28,7 @@ def manifest_entry(pin_id, manifest=None):
     raise KeyError(f'no pinned input "{pin_id}" in the manifest')
 
 
+@functools.lru_cache(maxsize=None)
 def read_pinned_bytes(pin_id):
     """A pinned file's bytes, refused unless its size and SHA-256 match the manifest."""
     entry = manifest_entry(pin_id)
