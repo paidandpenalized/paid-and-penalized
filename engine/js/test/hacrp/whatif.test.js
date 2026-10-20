@@ -113,3 +113,33 @@ test('invalid changes throw RangeError', () => {
   assert.throws(() => whatIf(h, model, { [present]: Number.NaN }), RangeError);
   assert.throws(() => whatIf(h, model, { [present]: Infinity }), RangeError);
 });
+
+test('moving a measure past its cap lands exactly on CMS\'s maximum z and reads atCap; afterZ never leaves [zMin, zMax]', () => {
+  for (const { h, id } of submittedPairs(hospitals)) {
+    const p = model.params[id];
+    const up = whatIf(h, model, { [id]: p.cap * 2 + 1 }).measures[id];
+    assert.equal(up.atCap, true, `${h.ccn} ${id}`);
+    assert.equal(up.afterZ, p.zMax, `${h.ccn} ${id}`);
+    const down = whatIf(h, model, { [id]: 0 }).measures[id];
+    assert.ok(down.afterZ >= p.zMin && down.afterZ <= p.zMax, `${h.ccn} ${id}`);
+  }
+});
+
+test('an assigned measure entered above the cap is no change: score === CMS, band 0, CMS flag', () => {
+  for (const h of scored) {
+    for (const id of scoredMeasures(h).filter((x) => isAssigned(h.measures[x]))) {
+      const r = whatIf(h, model, { [id]: model.params[id].cap * 3 });
+      assert.equal(r.after.score, h.total, `${h.ccn} ${id}`);
+      assert.equal(r.band, 0, `${h.ccn} ${id}`);
+      assert.equal(r.after.flag, h.paymentReduction, `${h.ccn} ${id}`);
+    }
+  }
+});
+
+test('a move away from the line keeps CMS\'s flag: No stays No when a measure improves, Yes stays Yes when one worsens', () => {
+  for (const { h, id } of submittedPairs(hospitals, (x) => x.paymentReduction !== 'N/A')) {
+    const v = h.measures[id].value;
+    if (h.paymentReduction === 'No' && v > 0) assert.equal(whatIf(h, model, { [id]: Math.max(0, v - 0.00001) }).after.flag, 'No', `${h.ccn} ${id}`);
+    if (h.paymentReduction === 'Yes') assert.equal(whatIf(h, model, { [id]: v + 0.00001 }).after.flag, 'Yes', `${h.ccn} ${id}`);
+  }
+});

@@ -71,3 +71,17 @@ test('assigned measures, Maryland and unscored rows get notes, not answers; unkn
   const missing = MEASURE_IDS.find((id) => partial.measures[id].z === null);
   assert.throws(() => solveMeasure(partial, model, missing), RangeError);
 });
+
+test('cushion: a No hospital whose measure is already at or above the cap has unlimited room on it', () => {
+  const pairs = submittedPairs('No').filter(({ h, id }) => h.measures[id].value >= model.params[id].cap);
+  assert.ok(pairs.length > 0);
+  for (const { h, id } of pairs) assert.equal(solveMeasure(h, model, id).unlimited, true, `${h.ccn} ${id}`);
+});
+
+test('"no-cushion" only when the measure is below the cap and the answer is below the current value', () => {
+  for (const { h, id } of submittedPairs('No')) {
+    const r = solveMeasure(h, model, id);
+    if (r.note !== 'no-cushion') continue;
+    assert.ok(h.measures[id].value < model.params[id].cap && r.value < h.measures[id].value, `${h.ccn} ${id}`);
+  }
+});

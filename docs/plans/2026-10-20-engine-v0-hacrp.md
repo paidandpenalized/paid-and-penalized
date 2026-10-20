@@ -200,3 +200,15 @@
 
 ### Task 8: Planning-repo close-out (private repo)
 - [ ] INDEX + detail-file lines: OPS-11 (b), ARCH-50 (b), LEGAL-08 (a) decided 2026-10-20; tick the ROADMAP P2a boxes that are done; Done list; Now rewrite; `.project-status`; hours.
+
+---
+
+## Amendments made during execution (2026-10-20)
+
+- **Solver result:** `{ kind: 'needed'|'cushion'|null, id, possible, value, unlimited, note }`. There is no `atCap`: for a flagged hospital the value needed is always below its current value, so it can't reach the cap. "At or below the cap" is the cushion's `unlimited` answer. `kind` is null when `note` is `'assigned'` or `'not-applicable'`.
+- **Cushion at the cap:** an unflagged hospital whose measure is already at or past its cap has `unlimited` room on it.
+- **What-if z at the edges:** a value at or past the cap gets exactly CMS's maximum z, and a value at or below the floor gets its minimum. In between, the change-only step is kept inside [zMin, zMax]. A z move smaller than 1e-9 counts as no move.
+- **Flag direction:** a score that moves away from the line (a "No" hospital improving, a "Yes" hospital getting worse) keeps CMS's decision. Only a move toward the line is re-judged with the band.
+- **Parameter bounds:** zMin and zMax come from hospitals with a published value. A test checks the assigned z-scores against them.
+- **A1(a):** asserted for every scored hospital, which is stricter than the ≥ 99% in the spec, because FY2026 reaches 100%.
+- **Guards added:** the CSV parser rejects stray quotes and duplicate headers; numbers must be plain decimals; the fit, the cutoff boundary and the estimate tag throw on degenerate input instead of returning NaN or Infinity.

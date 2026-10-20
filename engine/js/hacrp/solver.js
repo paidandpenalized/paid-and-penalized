@@ -38,8 +38,8 @@ export function solveMeasure(hospital, model, id) {
     return result('needed', id, { possible: true, value });
   }
 
-  // The measure can rise to its cap, and past it, without crossing the line.
-  if (zNeeded >= p.zMax) return result('cushion', id, { possible: true, unlimited: true });
+  // Already at or past the cap, or able to reach it, without crossing the line: no rise can cross it.
+  if (m.value >= p.cap || zNeeded >= p.zMax) return result('cushion', id, { possible: true, unlimited: true });
   if (value < m.value || value < 0) return result('cushion', id, { value: Math.max(value, 0), note: 'no-cushion' });
   return result('cushion', id, { possible: true, value });
 }

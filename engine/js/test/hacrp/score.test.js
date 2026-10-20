@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { totalFromZ, cutoffBoundary, classify, noCeiling } from '../../hacrp/score.js';
 
-const boundary = { highestNo: 0.3792, lowestYes: 0.3799 };
+const boundary = { highestNo: 0.4, lowestYes: 0.41 }; // synthetic
 
 test('totalFromZ is the equally weighted mean', () => {
   assert.equal(totalFromZ([1, 0, -1, 2]), 0.5);
@@ -21,16 +21,16 @@ test('cutoffBoundary ignores N/A flags and unscored rows', () => {
 });
 
 test('classify: at or below highestNo is No, at or above lowestYes is Yes, between is too-close', () => {
-  assert.equal(classify(0.3792, boundary), 'No');
-  assert.equal(classify(0.3799, boundary), 'Yes');
-  assert.equal(classify(0.3795, boundary), 'too-close');
+  assert.equal(classify(0.4, boundary), 'No');
+  assert.equal(classify(0.41, boundary), 'Yes');
+  assert.equal(classify(0.405, boundary), 'too-close');
 });
 
 test('classify: a band widens the too-close zone on both sides', () => {
-  assert.equal(classify(0.3792, boundary, 0.0001), 'too-close');
-  assert.equal(classify(0.3791, boundary, 0.0001), 'No');
-  assert.equal(classify(0.3799, boundary, 0.0001), 'too-close');
-  assert.equal(classify(0.3800, boundary, 0.0001), 'Yes');
+  assert.equal(classify(0.4, boundary, 0.001), 'too-close');
+  assert.equal(classify(0.399, boundary, 0.001), 'No');
+  assert.equal(classify(0.41, boundary, 0.001), 'too-close');
+  assert.equal(classify(0.411, boundary, 0.001), 'Yes');
 });
 
 test('cutoffBoundary throws when either side of the line has no hospitals', () => {
@@ -39,6 +39,6 @@ test('cutoffBoundary throws when either side of the line has no hospitals', () =
 });
 
 test('noCeiling is the highest score that still reads No for a given band', () => {
-  assert.equal(noCeiling(boundary), 0.3792);
-  assert.equal(classify(noCeiling(boundary, 0.0001), boundary, 0.0001), 'No');
+  assert.equal(noCeiling(boundary), 0.4);
+  assert.equal(classify(noCeiling(boundary, 0.001), boundary, 0.001), 'No');
 });

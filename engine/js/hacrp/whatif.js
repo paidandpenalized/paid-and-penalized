@@ -5,6 +5,7 @@
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
+import { clamp } from '../stats.js';
 import { EDGE, baselineZ, zFromValue } from './params.js';
 import { classify } from './score.js';
 
@@ -37,10 +38,14 @@ export function whatIf(hospital, model, changes = {}) {
 
     let afterZ = m.z;
     if (changed) {
-      const d = zFromValue(afterValue, p) - baselineZ(m, p);
-      if (d !== 0) {
-        afterZ = m.z + d;
-        deltaZ += d;
+      // A value at or past the cap (or floor) gets exactly CMS's worst (or best) z; in between, the change-only
+      // step, kept inside CMS's z range. A move smaller than float noise is no move.
+      let z = clamp(m.z + zFromValue(afterValue, p) - baselineZ(m, p), p.zMin, p.zMax);
+      if (afterValue >= p.cap) z = p.zMax;
+      else if (afterValue <= p.floor) z = p.zMin;
+      if (Math.abs(z - m.z) >= EDGE) {
+        afterZ = z;
+        deltaZ += z - m.z;
         fitErrors += p.fitError;
       }
     }
@@ -52,22 +57,24 @@ export function whatIf(hospital, model, changes = {}) {
       beforeZ: m.z,
       afterZ,
       changed,
-      atCap: afterZ >= p.zMax - EDGE,
+      atCap: afterZ >= p.zMax,
       contribution: afterZ / n,
       leveragePerTenth: 0.1 / (n * p.sd),
     };
   }
 
   const band = fitErrors / n;
-  const score = hospital.total + deltaZ / n;
-  let flag = hospital.paymentReduction;
-  if (flag !== 'N/A' && deltaZ !== 0) flag = classify(score, model.boundary, band);
+  const cms = hospital.paymentReduction;
+  const score = Math.abs(deltaZ) < EDGE ? hospital.total : hospital.total + deltaZ / n;
+  // A score that moves away from the line keeps CMS's decision; only a move toward it is re-judged.
+  const awayFromLine = (cms === 'No' && score <= hospital.total) || (cms === 'Yes' && score >= hospital.total);
+  const flag = cms === 'N/A' || awayFromLine ? cms : classify(score, model.boundary, band);
 
   return {
     available: true,
     n,
     band,
-    before: { score: hospital.total, flag: hospital.paymentReduction },
+    before: { score: hospital.total, flag: cms },
     after: { score, flag },
     measures,
   };
