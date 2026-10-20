@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
+import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const GATE = join(REPO_ROOT, 'tools/ci/change-gate.js');
 
@@ -31,8 +32,10 @@ function repo() {
   return { dir, write, mv, commit, gate };
 }
 
-const emitted = (version, rows, source = 'aa') =>
-  `{\n"methods_version": ${version},\n"source_manifest": "${source}",\n"sources": ["pin-a"],\n"hospitals": [\n${rows.join(',\n')}\n]\n}\n`;
+const hashOf = (sha256) => sourceManifestHash([{ id: 'pin-a', sha256 }]);
+const manifest = (sha256, retrieved) => JSON.stringify([{ id: 'pin-a', sha256, retrieved }]);
+const emitted = (version, rows, sha256 = 'aa') =>
+  `{\n"methods_version": ${version},\n"source_manifest": "${hashOf(sha256)}",\n"sources": ["pin-a"],\n"hospitals": [\n${rows.join(',\n')}\n]\n}\n`;
 const FILE = 'data/emitted/hacrp/fy2026/hacrp.json';
 const OLDER = 'data/emitted/hacrp/fy2025/hacrp.json';
 const LOG_V1 = '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first\n';
@@ -41,6 +44,7 @@ const LOG_V2 = LOG_V1 + '\n## hacrp methods_version 2 (2026-11-02)\n- why\n';
 test('CLI: the gate reads git correctly for each reason, and fails without one', (t) => {
   const r = repo();
   t.after(() => rmSync(r.dir, { recursive: true, force: true }));
+  r.write('data/pinned/manifest.json', manifest('aa', '2026-10-20'));
   r.write('docs/METHODS-LOG.md', LOG_V1);
   r.write(FILE, emitted(1, ['{"v":1}']));
   r.write(OLDER, emitted(1, ['{"v":0}']));
@@ -55,7 +59,8 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   assert.equal(r.gate(start).status, 1);
 
   r.write('docs/METHODS-LOG.md', LOG_V1.replace('2026-10-20', '2026-10-21'));
-  r.commit('a heading date edit is not a reason');
+  r.write('data/pinned/manifest.json', manifest('aa', '2026-10-21'));
+  r.commit('a heading date edit and a manifest metadata edit are not reasons');
   assert.equal(r.gate(start).status, 1);
 
   r.write('docs/METHODS-LOG.md', LOG_V2);
@@ -69,6 +74,7 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   r.commit('a bump does not excuse an older year whose version stayed');
   assert.equal(r.gate(bumped).status, 1);
 
+  r.write('data/pinned/manifest.json', manifest('bb', '2026-11-03'));
   r.write(OLDER, emitted(1, ['{"v":0}'], 'bb'));
   r.write(FILE, emitted(3, ['{"v":5}'], 'bb'));
   const repinned = r.commit('re-pin both years (a shared input changed)');

@@ -47,7 +47,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   re-pinned (its `source_manifest`, a hash of its inputs' ids and SHA-256s, changed), or bumped (its own
   `methods_version` moved to its site's new newest `## <site> methods_version N` heading in
   `docs/METHODS-LOG.md`). Deleting or renaming an emitted file needs a corrections entry. Tests require the
-  newest year of each site to carry the newest version; older years keep theirs.
+  newest year of each site to carry the newest version; older years keep theirs. Run `make emit` after any engine
+  or pin change (the golden test fails until you do); it keeps `built_at` when nothing else changed.
 - **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MiB or more, strings from a
   private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist
   lives outside the repo (`~/.config/paid-and-penalized/blocklist.txt`, or `$PP_BLOCKLIST`) and is never copied

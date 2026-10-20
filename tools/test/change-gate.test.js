@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { changeGate, parseNameStatus, reasonFor } from '../ci/change-gate.js';
+import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
 const OLDER = 'data/emitted/hacrp/fy2025/hacrp.json';
@@ -27,35 +28,52 @@ test('a deletion (or the delete half of a rename) needs a corrections entry', ()
   assert.equal(changeGate({ changed: [...rename, { status: 'A', path: 'corrections/2026-11-01.md' }] }).ok, true);
 });
 
-test('a corrections entry covers the whole change; near-misses do not', () => {
+test('a new corrections entry covers the whole change; editing or deleting one, or near-misses, do not', () => {
   assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), { status: 'A', path: 'corrections/2026-11-01-hacrp.md' }] }).ok, true);
+  for (const status of ['M', 'D']) {
+    assert.equal(changeGate({ changed: [M(EMITTED), { status, path: 'corrections/2026-11-01-hacrp.md' }] }).ok, false, status);
+  }
   for (const p of ['corrections-old.md', 'docs/corrections/x.md', 'docs/METHODS-LOG.md']) {
-    assert.equal(changeGate({ changed: [M(EMITTED), M(p)] }).ok, false, p);
+    assert.equal(changeGate({ changed: [M(EMITTED), { status: 'A', path: p }] }).ok, false, p);
   }
 });
 
-const file = (source, version) => ({ source_manifest: source, methods_version: version, sources: ['a'] });
-const v = (now, before) => ({ now, before });
+const hash = (pins, ids) => sourceManifestHash(ids.map((id) => ({ id, sha256: pins.get(id) })));
+const OLD = new Map([['a', '1'], ['b', '2']]);
+const NEW = new Map([['a', '9'], ['b', '2']]);
+const file = (version, sources = ['a'], pins = OLD) => ({ source_manifest: hash(pins, sources), methods_version: version, sources });
+const ctx = (before, now, { pins = { before: OLD, now: OLD }, latest = { now: 1, before: 1 }, added = false } = {}) =>
+  reasonFor({ added, before, now, pins, latest });
 
 test('reasonFor: added, re-pinned, bumped, or nothing', () => {
-  assert.equal(reasonFor(null, file('x', 1), v(1, 1)), 'added');
-  assert.equal(reasonFor(file('x', 1), file('y', 1), v(1, 1)), 're-pinned');
-  assert.equal(reasonFor(file('x', 1), file('x', 2), v(2, 1)), 'bumped');
-  assert.equal(reasonFor(file('x', 1), file('x', 1), v(1, 1)), null, 'numbers moved, nothing else');
+  assert.equal(ctx(undefined, file(1), { added: true }), 'added');
+  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: { before: OLD, now: NEW } }), 're-pinned');
+  assert.equal(ctx(file(1), file(2), { latest: { now: 2, before: 1 } }), 'bumped');
+  assert.equal(ctx(file(1), file(1)), null, 'numbers moved, nothing else');
+});
+
+test('reasonFor: a re-pin needs a new SHA-256 for an existing input and a truthful source_manifest', () => {
+  const repinned = { pins: { before: OLD, now: NEW } };
+  assert.equal(ctx(file(1), { ...file(1, ['a'], NEW), source_manifest: 'f'.repeat(64) }, repinned), null, 'a forged hash');
+  assert.equal(ctx(file(1), file(1, ['a'], OLD), repinned), null, 'a stale hash');
+  assert.equal(ctx(file(1), file(1, ['a', 'b'])), null, 'adding an input is a methods change, not new data');
+  assert.equal(ctx(file(1, ['b']), file(1, ['b'], NEW), repinned), null, 'only another input changed');
+  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: { before: new Map(), now: NEW } }), null, 'the input is new to the manifest');
 });
 
 test('reasonFor: a bump counts only when the file moves to the new newest version', () => {
-  assert.equal(reasonFor(file('x', 1), file('x', 1), v(2, 1)), null, 'an older year that kept its version');
-  assert.equal(reasonFor(file('x', 1), file('x', 2), v(3, 1)), null, 'moved, but not to the newest');
-  assert.equal(reasonFor(file('x', 1), file('x', 2), v(2, 2)), null, 'the log did not go up');
-  assert.equal(reasonFor(file('x', 2), file('x', 1), v(1, 2)), null, 'a downgrade');
+  assert.equal(ctx(file(1), file(1), { latest: { now: 2, before: 1 } }), null, 'an older year that kept its version');
+  assert.equal(ctx(file(1), file(2), { latest: { now: 3, before: 1 } }), null, 'moved, but not to the newest');
+  assert.equal(ctx(file(1), file(2), { latest: { now: 2, before: 2 } }), null, 'the log did not go up');
+  assert.equal(ctx(file(2), file(1), { latest: { now: 1, before: 2 } }), null, 'a downgrade');
 });
 
 test('reasonFor: content that is not an emitted file explains nothing (and never throws)', () => {
-  for (const bad of [undefined, null, 42, 'text', [], { methods_version: 1 }]) {
-    assert.equal(reasonFor(file('x', 1), bad, v(1, 1)), null);
+  for (const bad of [undefined, null, 42, 'text', [], { methods_version: 1 }, { source_manifest: 'x' }]) {
+    assert.equal(ctx(file(1), bad), null);
+    assert.equal(ctx(undefined, bad, { added: true }), null);
   }
-  assert.equal(reasonFor(undefined, file('x', 1), v(1, 1)), null, 'unparseable before');
+  assert.equal(ctx(null, file(1)), null, 'a modified file whose old content was the literal null is not "added"');
 });
 
 test('parseNameStatus reads git -z output, paths with spaces and newlines included', () => {

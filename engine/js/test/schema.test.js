@@ -101,8 +101,8 @@ test('every schema file uses only supported keywords and has a matching $id', ()
 
 // A case is either { data } or { patch } against the suite's base: a list of { path: JSON Pointer, op, value }.
 // Ops (deliberately not RFC 6902's names, whose meanings differ): "set" replaces an existing key or array index,
-// "create" adds a key that must not exist, "delete" removes one that must. Anything else throws, so a stale case
-// can't pass by accident after the schema changes.
+// "create" adds an object key that must not exist, "delete" removes a key or array element that must. Arrays take
+// "set" and "delete" only. Anything else throws, so a stale case can't pass by accident after the schema changes.
 function applyPatch(base, patch) {
   const doc = structuredClone(base);
   for (const op of patch) {
@@ -114,9 +114,12 @@ function applyPatch(base, patch) {
     }, doc);
     if (!['set', 'create', 'delete'].includes(op.op)) throw new RangeError(`patch op "${op.op}" unknown`);
     if (parent === null || typeof parent !== 'object') throw new RangeError(`patch path ${op.path}: parent is not an object`);
+    const isArray = Array.isArray(parent);
+    if (isArray && (op.op === 'create' || !/^(0|[1-9]\d*)$/.test(last))) throw new RangeError(`patch ${op.op} at ${op.path}: not for arrays`);
     const has = Object.hasOwn(parent, last);
     if (op.op === 'create' ? has : !has) throw new RangeError(`patch ${op.op} at ${op.path}: key ${has ? 'exists' : 'missing'}`);
-    if (op.op === 'delete') delete parent[last];
+    if (op.op === 'delete' && isArray) parent.splice(Number(last), 1);
+    else if (op.op === 'delete') delete parent[last];
     else parent[last] = op.value;
   }
   return doc;
@@ -145,6 +148,12 @@ test('applyPatch: sets, removes, and refuses paths the base lacks', () => {
   ]);
   assert.deepEqual(patched, { a: { b: 2, c: 3 }, list: [{}] });
   assert.deepEqual(base, { a: { b: 1 }, list: [{ x: 1 }] });
+  const two = { list: [1, 2] };
+  assert.deepEqual(applyPatch(two, [{ path: '/list/0', op: 'delete' }]), { list: [2] });
+  assert.deepEqual(applyPatch(two, [{ path: '/list/1', op: 'set', value: 3 }]), { list: [1, 3] });
+  for (const bad of [{ path: '/list/-', op: 'create', value: 3 }, { path: '/list/2', op: 'set', value: 3 }, { path: '/list/01', op: 'delete' }]) {
+    assert.throws(() => applyPatch(two, [bad]), RangeError, JSON.stringify(bad));
+  }
   for (const bad of [
     { path: '/missing/b', op: 'set', value: 1 },
     { path: '/a/typo', op: 'set', value: 1 },

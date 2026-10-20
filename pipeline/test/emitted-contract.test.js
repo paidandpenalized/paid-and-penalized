@@ -14,7 +14,7 @@ const schemas = loadSchemas();
 const log = readFileSync(REPO_ROOT + METHODS_LOG, 'utf8');
 // Emitted files live at <site>/fy<YYYY>/<name>.json; anything else under data/emitted/ fails the layout test.
 const all = readdirSync(EMITTED_DIR, { recursive: true, withFileTypes: true })
-  .filter((e) => e.isFile())
+  .filter((e) => e.isFile() && !e.name.startsWith('.')) // dotfiles (.DS_Store) are gitignored and never emitted
   .map((e) => `${e.parentPath}/${e.name}`.slice(EMITTED_DIR.length).replace(/^\/+/, ''));
 const files = all
   .map((p) => /^([a-z0-9-]+)\/fy(\d{4})\/[^/]+\.json$/.exec(p))
