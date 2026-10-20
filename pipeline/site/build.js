@@ -8,7 +8,7 @@ import { REPO_ROOT } from '../files.js';
 import { buildAssets } from './assets.js';
 
 // Browser JS entries, { name: path }; each becomes /assets/<name>.<hash>.js.
-export const ENTRIES = {};
+export const ENTRIES = { theme: 'web/client/theme.js' };
 
 // Page generators, run in this order. Each is { name, generate(ctx) → Promise<{ pages, ... }> }, where ctx is
 // { outDir, env, assets, results } and results holds every earlier generator's return value by name.

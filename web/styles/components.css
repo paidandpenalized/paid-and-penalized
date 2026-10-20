@@ -32,3 +32,4 @@
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
 .pill--na { border-color: var(--line); background: var(--hatch-fill); }
 @media (forced-colors: active) { .pill { border-color: CanvasText; } }
+.foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
