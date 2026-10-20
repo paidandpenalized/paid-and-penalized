@@ -58,6 +58,69 @@ export const COPY = {
     claim: null,
   },
 
+  // The what-if: this site's arithmetic on CMS's values, always in the conditional.
+  whatifNone: { text: "These are CMS's values: a Total HAC Score of {score} and a payment reduction decision of {decision}.", claim: null },
+  whatifRise: { text: 'With {changes}, the Total HAC Score would rise from {before} to {after}.', claim: null },
+  whatifFall: { text: 'With {changes}, the Total HAC Score would fall from {before} to {after}.', claim: null },
+  whatifStay: { text: 'With {changes}, the Total HAC Score would stay at {score}.', claim: null },
+  whatifItem: { text: '{short} at {after} instead of {before}', claim: null },
+  whatifItemAssigned: { text: '{short} at {after} (had it been submitted)', claim: null },
+  // One change that doesn't move the score: past CMS's cap, or at or below its floor.
+  whatifCapLower: { text: 'Lowering {short} to {after} would not change the score: CMS caps {short} at {cap}.', claim: 'HACRP-03' },
+  whatifCapRaise: { text: 'Raising {short} to {after} would not change the score: CMS caps {short} at {cap}.', claim: 'HACRP-03' },
+  whatifCapAssigned: {
+    text: '{short} at {after} (had it been submitted) would not change the score: CMS caps {short} at {cap}.',
+    claim: 'HACRP-03',
+  },
+  whatifFloorLower: {
+    text: 'Lowering {short} to {after} would not change the score: CMS gives every {short} value at or below {floor} the same score.',
+    claim: 'HACRP-03',
+  },
+  whatifFloorRaise: {
+    text: 'Raising {short} to {after} would not change the score: CMS gives every {short} value at or below {floor} the same score.',
+    claim: 'HACRP-03',
+  },
+  // The same, for one change among several.
+  whatifCapNote: { text: 'CMS caps {short} at {cap}, so the change to {short} does not move the score.', claim: 'HACRP-03' },
+  whatifFloorNote: {
+    text: 'CMS gives every {short} value at or below {floor} the same score, so the change to {short} does not move the score.',
+    claim: 'HACRP-03',
+  },
+  whatifYes: {
+    text: "That would be above CMS's line, so the payment reduction decision would be Yes: a {pct} cut.",
+    claim: 'HACRP-01',
+  },
+  whatifNo: { text: "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.", claim: null },
+  whatifClose: {
+    text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}.",
+    claim: 'HACRP-01',
+  },
+  whatifCmsWas: { text: "CMS's decision was {decision}.", claim: null },
+  whatifNA: { text: 'The payment reduction decision would stay {decision}.', claim: null },
+  flagYes: { text: 'Yes', claim: null },
+  flagNo: { text: 'No', claim: null },
+  flagClose: { text: 'too close to call', claim: null },
+  flagNA: { text: 'N/A (not subject to the reduction)', claim: 'HACRP-13' },
+  cutEither: { text: '{none} or {pct}', claim: 'HACRP-01' },
+  // The solver, one measure on its own, from CMS's values.
+  solverNeeded: { text: '{value} or lower', claim: null },
+  solverNotPossible: { text: 'not possible with this measure alone', claim: null },
+  solverCushion: { text: 'up to {value}', claim: null },
+  solverUnlimited: { text: 'any value: CMS caps {short} at {cap}', claim: 'HACRP-03' },
+  solverNoCushion: { text: 'no cushion', claim: null },
+  solverNoCushionNote: { text: "CMS's value is already the highest that keeps the decision at No.", claim: null },
+  solverAssignedNote: { text: "CMS assigned this measure's score, so there is no submitted value to solve for.", claim: 'HACRP-05' },
+  solverNANote: { text: 'Not subject to the reduction.', claim: 'HACRP-13' },
+  // Copy for a slide: plain text lines.
+  slideScore: { text: 'Total HAC Score: {before} → {after} (Hypothetical)', claim: null },
+  slideDecision: { text: 'Payment reduction decision: {before} → {after} (Hypothetical)', claim: null },
+  slideDecisionOnly: { text: 'Payment reduction decision: {decision}', claim: null },
+  // Under every what-if, verbatim.
+  whatifStanding: {
+    text: "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals.",
+    claim: null,
+  },
+
   // Measure names, as they read mid-sentence.
   measurePSI90: { text: 'patient safety and adverse events composite', claim: 'HACRP-06' },
   measureCLABSI: { text: 'central line–associated bloodstream infections', claim: 'HACRP-07' },
