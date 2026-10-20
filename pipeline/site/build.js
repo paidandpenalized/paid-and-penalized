@@ -4,15 +4,21 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { generateHub } from '../../hub/pages.js';
+import { generateHacrp } from '../../sites/hacrp/web/generate.js';
 import { REPO_ROOT } from '../files.js';
 import { buildAssets } from './assets.js';
 
 // Browser JS entries, { name: path }; each becomes /assets/<name>.<hash>.js.
-export const ENTRIES = { theme: 'web/client/theme.js' };
+export const ENTRIES = { theme: 'web/client/theme.js', 'hacrp-program': 'sites/hacrp/client/program.js' };
 
 // Page generators, run in this order. Each is { name, generate(ctx) → Promise<{ pages, ... }> }, where ctx is
 // { outDir, env, assets, results } and results holds every earlier generator's return value by name.
-export const GENERATORS = [];
+export const GENERATORS = [
+  { name: 'hacrp', generate: generateHacrp },
+  // Last: the hub writes robots.txt and sitemap.xml, listing every page an earlier generator marked indexable.
+  { name: 'hub', generate: (ctx) => generateHub({ ...ctx, sitemap: Object.values(ctx.results).flatMap((r) => r.indexable ?? []) }) },
+];
 
 const DIST = resolve(REPO_ROOT, 'dist');
 const inside = (dir, parent) => {

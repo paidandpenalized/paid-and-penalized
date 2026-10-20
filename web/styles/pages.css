@@ -1,0 +1,49 @@
+/* Page content shared by the sites and the hub: headings, prose blocks, the score hero, the measure table's
+   extras, the as-of bar, footnote legends, link lists and search. Colors come only from tokens.css. */
+[hidden] { display: none !important; }
+
+.page { display: grid; gap: 28px; padding-block: 28px 0; }
+.page > * { min-width: 0; }
+.page__head { display: grid; gap: 8px; }
+.kicker a { color: var(--pen-ink); text-decoration: none; }
+.kicker a:hover { text-decoration: underline; }
+.place { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
+.subtitle { font: 700 var(--fs-md)/1.2 var(--font-type); letter-spacing: 0.04em; }
+.dek { font-size: var(--fs-md); color: var(--ink-2); }
+.h-sm { font: 700 var(--fs-md)/1.2 var(--font-body); }
+.prose, .block { display: grid; gap: 12px; }
+.short { font-family: var(--font-type); font-size: 0.92em; color: var(--ink-2); white-space: nowrap; }
+
+/* The hospital's score and CMS's decision. The number is IBM Plex Mono, never under 48px. */
+.hero { display: flex; flex-wrap: wrap; align-items: end; gap: 16px 48px; padding-block: 16px; border-block: var(--rule) solid var(--ink); }
+.hero__item { display: grid; gap: 6px; }
+.hero__num { font: 700 clamp(3rem, 12vw, 4.5rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.hero__pill .pill { padding: 4px 10px 3px; font-size: var(--fs-md); }
+
+.standing { padding-left: 12px; border-left: 3px solid var(--ink); font-weight: 600; }
+.note { padding-left: 12px; border-left: 3px solid var(--line); }
+.line { font: 600 var(--fs-md)/1.45 var(--font-body); }
+
+/* Measure table: row headers, right-aligned number columns, a notes column in body type. */
+.gb th.num { text-align: right; }
+.gb tbody th { min-width: 16ch; padding: 7px 10px; vertical-align: top; text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); }
+.gb .notes { min-width: 26ch; font-family: var(--font-body); }
+.gb .notes p + p { margin-top: 4px; }
+.fn { font-family: var(--font-type); color: var(--ink-2); }
+.tag { display: inline-block; padding: 0 6px; border: 1px dashed var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); text-decoration: none; }
+
+.asof { padding-top: 12px; border-top: var(--rule) solid var(--ink); }
+.asof__list { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
+.fnlist { display: grid; gap: 6px; margin: 0; font-size: var(--fs-sm); }
+.fnlist div { display: grid; grid-template-columns: 3ch minmax(0, 1fr); gap: 10px; }
+.fnlist dt { font: 700 var(--fs-sm)/1.55 var(--font-type); }
+.fnlist dd { margin: 0; max-width: var(--measure); }
+.source { font-size: var(--fs-sm); color: var(--ink-2); max-width: none; }
+
+.links, .measure-list { display: grid; gap: 8px; margin: 0; padding-left: 0; list-style: none; }
+.measure-list li { padding-left: 14px; border-left: 3px solid var(--line); }
+
+.search label { font-weight: 600; }
+.search input { width: 100%; max-width: 40rem; padding: 9px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); }
+
+.home__mark { font-size: clamp(2.5rem, 9vw, 4rem); }

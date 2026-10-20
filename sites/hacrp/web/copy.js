@@ -63,6 +63,94 @@ export const COPY = {
   measureSSI: { text: 'surgical site infections after colon surgery or abdominal hysterectomy', claim: 'HACRP-09' },
   measureCDI: { text: 'Clostridioides difficile (C. diff) infections', claim: 'HACRP-10' },
   measureMRSA: { text: 'MRSA bloodstream infections', claim: 'HACRP-11' },
+
+  // Hospital page.
+  hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
+  kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
+  place: { text: '{city}, {state} · CCN {ccn}', claim: null },
+  heroScore: { text: 'Total HAC Score, as CMS reports it', claim: null },
+  heroDecision: { text: 'Payment reduction', claim: null },
+  decisionCms: { text: "CMS's value: {decision}", claim: null },
+  pillYes: { text: '{pct} cut', claim: 'HACRP-01' },
+  pillNo: { text: 'No cut', claim: null },
+  pillNA: { text: 'N/A', claim: null },
+  measuresHeading: { text: 'The measures', claim: null },
+  measuresIntro: {
+    text: "CMS's published value and z-score for each measure. A higher z-score adds more to the Total HAC Score.",
+    claim: 'HACRP-04',
+  },
+  colMeasure: { text: 'Measure', claim: null },
+  colValue: { text: 'CMS value', claim: null },
+  colZ: { text: 'Z-score', claim: null },
+  colNotes: { text: 'Notes', claim: null },
+  noValue: { text: 'no value published', claim: null },
+  footnoteLead: { text: 'CMS footnote {code}:', claim: null },
+  estimateTag: { text: 'estimate', claim: null },
+  estimateTitle: {
+    text: "This site's what-if recomputes this measure's z-score from CMS's public data; the result can differ from CMS's by up to {maxError}.",
+    claim: null,
+  },
+  footnotesHeading: { text: "CMS's footnotes on this page", claim: null },
+  backToProgram: { text: 'How the program works, and every hospital in it', claim: null },
+
+  // As-of bar and source line (hospital and program pages).
+  asofHeading: { text: 'About this data', claim: null },
+  asofFy: { text: 'Fiscal year {fy}', claim: null },
+  asofPsi: { text: '{short} period: {start} to {end}', claim: null },
+  asofHai: { text: 'Infection measures period: {start} to {end}', claim: null },
+  asofLatest: { text: 'Latest public hospital results: FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
+  asofReleased: { text: 'CMS data released {date}', claim: null },
+  source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
+  datasetLink: { text: "CMS's dataset page", claim: null },
+
+  // Program page.
+  programTitle: { text: 'Hospital-Acquired Conditions (HACRP), FY{fy}', claim: null },
+  dek: { text: 'Infections and complications patients develop in the hospital.', claim: null },
+  whatHeading: { text: 'What the program is', claim: null },
+  whatScore: {
+    text: "Each year, CMS scores hospitals paid under Medicare's inpatient payment system on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.",
+    claim: 'HACRP-04',
+  },
+  whatCut: {
+    text: 'Hospitals whose score is above the {percentile} percentile of all scores have their Medicare inpatient payments cut by {pct} for the fiscal year.',
+    claim: 'HACRP-02',
+  },
+  whatRelative: {
+    text: "Each measure compares a hospital with all other hospitals, so the score reflects relative performance, not a fixed standard.",
+    claim: 'HACRP-04',
+  },
+  programMeasures: {
+    text: "The Total HAC Score is the average of a hospital's z-scores on these measures; each z-score compares the hospital with all hospitals scored on that measure.",
+    claim: 'HACRP-04',
+  },
+  periodsHeading: { text: 'When the data are from', claim: null },
+  periodPsi: { text: '{label} ({short}): {start} to {end}', claim: null },
+  periodHai: { text: 'Infection measures ({shorts}): {start} to {end}', claim: null },
+  lineHeading: { text: "CMS's line", claim: null },
+  line: {
+    text: 'CMS cut hospitals with a published Total HAC Score of {lowestYes} or higher; none at {highestNo} or lower.',
+    claim: null,
+  },
+  lineRelative: {
+    text: "The line is set by every hospital's scores, so a hospital can land above it without its own results getting worse.",
+    claim: 'HACRP-02',
+  },
+  countsHeading: { text: 'Fiscal year {fy} in counts', claim: null },
+  countDecided: {
+    text: 'CMS cut Medicare inpatient payments to {yes} of the {decided} hospitals it gave a payment decision of Yes or No.',
+    claim: null,
+  },
+  countScored: { text: 'CMS published a Total HAC Score for {scored} hospitals.', claim: null },
+  searchHeading: { text: 'Find a hospital', claim: null },
+  searchLabel: { text: 'Hospital name', claim: null },
+  searchHint: { text: "Pick a hospital from the list to open its page.", claim: null },
+  linksHeading: { text: 'Sources and related sites', claim: null },
+  linkCmsProgram: { text: "CMS: Hospital-Acquired Condition Reduction Program", claim: null },
+  linkPdc: { text: 'CMS Provider Data Catalog: the hospital file this site uses', claim: null },
+  linkCareCompare: { text: 'Medicare Care Compare', claim: null },
+  linkCareCompareNote: { text: "CMS's own site for comparing hospitals.", claim: null },
+  linkLeapfrog: { text: 'Leapfrog Hospital Safety Grade', claim: null },
+  linkLeapfrogNote: { text: 'Related, different: a separate rating with its own method.', claim: null },
 };
 
 const PLACEHOLDER = /\{(\w+)\}/g;
