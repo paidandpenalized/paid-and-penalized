@@ -29,8 +29,11 @@ export function percentileInc(sorted, p) {
 
 // SAS PROC UNIVARIATE PCTLDEF=5 (SAS's default): an observation, or the mean of two when n*p is a whole number.
 export function percentileSas5(sorted, p) {
+  if (sorted.length === 0) throw new RangeError('percentile of an empty array');
   const np = sorted.length * p;
   const j = Math.floor(np);
+  if (j === 0) return sorted[0];
+  if (j >= sorted.length) return sorted[sorted.length - 1];
   return np === j ? (sorted[j - 1] + sorted[j]) / 2 : sorted[j];
 }
 

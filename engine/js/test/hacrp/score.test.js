@@ -32,3 +32,8 @@ test('classify: a band widens the too-close zone on both sides', () => {
   assert.equal(classify(0.3799, boundary, 0.0001), 'too-close');
   assert.equal(classify(0.3800, boundary, 0.0001), 'Yes');
 });
+
+test('cutoffBoundary throws when either side of the line has no hospitals', () => {
+  assert.throws(() => cutoffBoundary([{ total: 0.1, paymentReduction: 'No' }]), RangeError);
+  assert.throws(() => cutoffBoundary([{ total: 0.5, paymentReduction: 'Yes' }]), RangeError);
+});

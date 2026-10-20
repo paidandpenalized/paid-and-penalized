@@ -17,6 +17,9 @@ export function cutoffBoundary(hospitals) {
     if (h.paymentReduction === 'No') highestNo = Math.max(highestNo, h.total);
     else if (h.paymentReduction === 'Yes') lowestYes = Math.min(lowestYes, h.total);
   }
+  if (!Number.isFinite(highestNo) || !Number.isFinite(lowestYes)) {
+    throw new RangeError('HACRP: need scored hospitals on both sides of the line to place the cutoff');
+  }
   return { highestNo, lowestYes };
 }
 

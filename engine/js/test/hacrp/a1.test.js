@@ -10,11 +10,15 @@ const hospitals = loadHacrpFy2026().rows.map(toHospital);
 const scored = hospitals.filter((h) => h.total !== null);
 const decided = scored.filter((h) => h.paymentReduction === 'Yes' || h.paymentReduction === 'No');
 
-test('A1(a): mean of published z = Total HAC Score within 0.0001 for at least 99% of scored hospitals', (t) => {
-  const errors = scored.map((h) => Math.abs(totalFromZ(scoredMeasures(h).map((id) => h.measures[id].z)) - h.total));
-  const share = errors.filter((e) => e < 0.0001).length / errors.length;
-  t.diagnostic(`${scored.length} scored; share within 0.0001 = ${share}; max error = ${Math.max(...errors)}`);
-  assert.ok(share >= 0.99);
+// A1(a) asks for >= 99% within 0.0001; FY2026 reaches 100%, so every hospital is asserted.
+test('A1(a): mean of published z = Total HAC Score within 0.0001 for every scored hospital', (t) => {
+  let max = 0;
+  for (const h of scored) {
+    const err = Math.abs(totalFromZ(scoredMeasures(h).map((id) => h.measures[id].z)) - h.total);
+    assert.ok(err < 0.0001, `${h.ccn}: ${err}`);
+    max = Math.max(max, err);
+  }
+  t.diagnostic(`${scored.length} scored; max error = ${max}`);
 });
 
 test('every scored hospital has at least one published z', () => {

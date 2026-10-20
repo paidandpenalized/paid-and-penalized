@@ -12,7 +12,7 @@ test('six measures in CMS column order', () => {
 
 test('CCN stays a string with its leading zero; numbers parse; CMS text is kept', () => {
   const h = toHospital(syntheticRow({ 'CLABSI SIR': '0.512' }));
-  assert.equal(h.ccn, '010001');
+  assert.equal(h.ccn, '000123');
   assert.equal(h.measures.CLABSI.value, 0.512);
   assert.equal(h.measures.CLABSI.valueText, '0.512');
   assert.equal(h.total, 0.1);
@@ -41,4 +41,11 @@ test('unexpected Payment Reduction or a non-numeric value throws (schema drift)'
   const missing = syntheticRow();
   delete missing['MRSA W Z Score'];
   assert.throws(() => toHospital(missing), /MRSA W Z Score/);
+});
+
+test('padded, blank-with-space, hex or exponent text is not a number (schema drift)', () => {
+  for (const bad of [' ', ' 0.5', '0x1A', '1e3', '.5', '1.']) {
+    assert.throws(() => toHospital(syntheticRow({ 'CDI SIR': bad })), /CDI SIR/, JSON.stringify(bad));
+  }
+  assert.equal(toHospital(syntheticRow({ 'CDI W Z Score': '-1.2345' })).measures.CDI.z, -1.2345);
 });

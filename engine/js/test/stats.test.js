@@ -39,3 +39,8 @@ test('clamp holds a value inside [lo, hi]', () => {
   assert.equal(clamp(-5, 0, 1), 0);
   assert.equal(clamp(0.5, 0, 1), 0.5);
 });
+
+test('percentileSas5 edges: p = 1 is the maximum; an empty array throws', () => {
+  assert.equal(percentileSas5([1, 2, 3, 4], 1), 4);
+  assert.throws(() => percentileSas5([], 0.5), RangeError);
+});

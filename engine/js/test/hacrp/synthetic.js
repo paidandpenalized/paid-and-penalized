@@ -4,7 +4,7 @@ import { MEASURES } from '../../hacrp/measures.js';
 export function syntheticRow(overrides = {}) {
   const row = {
     'Facility Name': 'SYNTHETIC GENERAL HOSPITAL',
-    'Facility ID': '010001',
+    'Facility ID': '000123', // state code 00 is unassigned, so no real hospital has this CCN
     State: 'AL',
     'Fiscal Year': '2026',
     'PSI 90 Start Date': '07/01/2022',

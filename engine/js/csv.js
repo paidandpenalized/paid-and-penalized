@@ -7,6 +7,7 @@ function parseRecords(text) {
   let record = [];
   let field = '';
   let inQuotes = false;
+  let quoted = false; // the current field was a quoted field that has closed
   let i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
 
   for (; i < text.length; i++) {
@@ -18,27 +19,33 @@ function parseRecords(text) {
           i++;
         } else {
           inQuotes = false;
+          quoted = true;
         }
       } else {
         field += c;
       }
-    } else if (c === '"') {
-      inQuotes = true;
     } else if (c === ',') {
       record.push(field);
       field = '';
+      quoted = false;
     } else if (c === '\n' || c === '\r') {
       if (c === '\r' && text[i + 1] === '\n') i++;
       record.push(field);
       records.push(record);
       record = [];
       field = '';
+      quoted = false;
+    } else if (quoted) {
+      throw new SyntaxError('CSV: text after a closing quote');
+    } else if (c === '"') {
+      if (field !== '') throw new SyntaxError('CSV: quote inside an unquoted field');
+      inQuotes = true;
     } else {
       field += c;
     }
   }
   if (inQuotes) throw new SyntaxError('CSV: unterminated quoted field');
-  if (field !== '' || record.length > 0) {
+  if (field !== '' || quoted || record.length > 0) {
     record.push(field);
     records.push(record);
   }

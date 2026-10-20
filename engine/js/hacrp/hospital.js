@@ -3,6 +3,7 @@
 import { MEASURES, MEASURE_IDS } from './measures.js';
 
 const FLAGS = new Set(['Yes', 'No', 'N/A']);
+const DECIMAL = /^-?\d+(\.\d+)?$/;
 
 function column(row, name) {
   const text = row[name];
@@ -13,9 +14,8 @@ function column(row, name) {
 function number(row, name) {
   const text = column(row, name);
   if (text === '' || text === 'N/A') return null;
-  const n = Number(text);
-  if (!Number.isFinite(n)) throw new RangeError(`HACRP: "${name}" is not a number: "${text}"`);
-  return n;
+  if (!DECIMAL.test(text)) throw new RangeError(`HACRP: "${name}" is not a number: "${text}"`);
+  return Number(text);
 }
 
 export function toHospital(row) {

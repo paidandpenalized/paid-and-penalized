@@ -47,3 +47,8 @@ test('a leading byte-order mark is ignored', () => {
 test('a repeated header name throws instead of silently dropping a column', () => {
   assert.throws(() => parseCsv('a,a\n1,2\n'), /duplicate header/);
 });
+
+test('a quote inside an unquoted field, or text after a closing quote, throws', () => {
+  assert.throws(() => parseCsv('a,b\nab"c,1\n'), /quote/);
+  assert.throws(() => parseCsv('a,b\n"ab"x,1\n'), /quote/);
+});

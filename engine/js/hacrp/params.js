@@ -24,7 +24,8 @@ export function zFromValue(value, p) {
 
 export function fitMeasureParams(hospitals, id) {
   const pairs = withValueAndZ(hospitals, id);
-  const zs = hospitals.map((h) => h.measures[id].z).filter((z) => z !== null);
+  // Bounds come from hospitals with a published value; assigned (non-submitted) z-scores are checked against them.
+  const zs = pairs.map(({ m }) => m.z);
   const zMin = Math.min(...zs);
   const zMax = Math.max(...zs);
   const inside = pairs.filter(({ m }) => m.z > zMin + EDGE && m.z < zMax - EDGE);
@@ -65,5 +66,6 @@ export function publicMethodZ(hospitals, id) {
 export function estimateTagged(hospitals, id) {
   const z = publicMethodZ(hospitals, id);
   const maxError = Math.max(...withValueAndZ(hospitals, id).map(({ ccn, m }) => Math.abs(z.get(ccn) - m.z)));
+  if (!Number.isFinite(maxError)) throw new RangeError(`${id}: public-method recompute is undefined (max error ${maxError})`);
   return { tagged: maxError > ESTIMATE_THRESHOLD, maxError };
 }
