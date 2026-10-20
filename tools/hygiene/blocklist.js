@@ -28,9 +28,12 @@ function entryPattern(entry) {
 export function findHits(text, entries) {
   const hits = [];
   entries.forEach((entry, i) => {
+    // Matches arrive in text order, so count only the newlines since the previous one.
+    let line = 1;
+    let from = 0;
     for (const m of text.matchAll(entryPattern(entry))) {
-      let line = 1;
-      for (let k = text.indexOf('\n'); k !== -1 && k < m.index; k = text.indexOf('\n', k + 1)) line++;
+      for (let k = text.indexOf('\n', from); k !== -1 && k < m.index; k = text.indexOf('\n', k + 1)) line++;
+      from = m.index;
       hits.push({ entry: i + 1, line });
     }
   });

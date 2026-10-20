@@ -20,6 +20,24 @@ export function sourceManifestHash(entries) {
   return createHash('sha256').update(canonicalJson(sorted)).digest('hex');
 }
 
+// The data-contract envelope every emitted file starts with. source_manifest hashes the manifest entries named
+// in sources, so re-pinning any of them changes the file.
+export function envelope({ schemaVersion, methodsVersion, sources, manifest, builtAt, fy }) {
+  const entries = sources.map((id) => {
+    const entry = manifest.find((e) => e.id === id);
+    if (!entry) throw new RangeError(`no manifest entry "${id}"`);
+    return entry;
+  });
+  return {
+    schema_version: schemaVersion,
+    methods_version: methodsVersion,
+    source_manifest: sourceManifestHash(entries),
+    sources,
+    built_at: builtAt,
+    fy,
+  };
+}
+
 const withoutBuiltAt = (obj) => canonicalJson({ ...obj, built_at: null });
 
 // A rebuild that changes nothing but the clock keeps the committed built_at, so git stays clean.

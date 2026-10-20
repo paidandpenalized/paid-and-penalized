@@ -1,12 +1,11 @@
 // The JSON Schema subset validator, and every shared conformance case in schemas/conformance/.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { validate } from '../schema.js';
-import { SCHEMAS_DIR, loadSchemas } from './fixtures.js';
+import { SCHEMAS_DIR, loadSchemas, readJson } from '../../../pipeline/files.js';
 
 const schemas = loadSchemas();
-const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
 const ok = (schema, data, opts) => assert.deepEqual(validate(schema, data, opts), []);
 const bad = (schema, data, pattern, opts) => {
@@ -37,6 +36,8 @@ test('properties, required and additionalProperties', () => {
   bad(s, { a: 'x', b: 1 }, /^: unexpected property "b"/);
   bad(s, { a: 1 }, /^\/a: /);
   ok({ type: 'object', additionalProperties: { type: 'integer' } }, { x: 1, y: 2 });
+  ok({ type: 'array', items: false }, []);
+  bad({ type: 'array', items: false }, [1], /^\/0: no value/);
   bad({ type: 'object', additionalProperties: { type: 'integer' } }, { x: 1.5 }, /^\/x: /);
 });
 

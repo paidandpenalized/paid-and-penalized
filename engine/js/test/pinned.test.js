@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { PINNED_DIR, readManifest, loadHacrpFy2026 } from './fixtures.js';
+import { PINNED_DIR, readManifest } from '../../../pipeline/files.js';
+import { loadHacrpFy2026 } from './fixtures.js';
 
 for (const entry of readManifest()) {
   test(`pinned file ${entry.id} is byte-identical to its manifest entry`, () => {

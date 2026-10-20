@@ -1,29 +1,20 @@
-// The committed HACRP emitted file: contract, provenance, and CMS's values for every hospital.
+// The committed HACRP emitted file against independent oracles: its schema, the methods log, and CMS's own values
+// for every hospital. (That it equals a fresh build is golden.test.js.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { validate } from '../../../engine/js/schema.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
-import { buildModel } from '../../../engine/js/hacrp/model.js';
-import { sourceManifestHash } from '../../../pipeline/contract.js';
-import { REPO_ROOT, loadSchemas, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
-import { SOURCES, emittedPath } from '../pipeline/build.js';
+import { REPO_ROOT, loadSchemas, readJson, readPinned } from '../../../pipeline/files.js';
+import { SOURCES, emittedPath, fiscalYear } from '../pipeline/build.js';
 
 const rows = parseCsv(readPinned(SOURCES[0]));
-const fy = Number(rows[0]['Fiscal Year']);
-const emitted = readJson(REPO_ROOT + emittedPath(fy));
+const emitted = readJson(REPO_ROOT + emittedPath(fiscalYear(rows)));
 
 test('the emitted file passes its schema', () => {
   const schemas = loadSchemas();
   assert.deepEqual(validate(schemas['hacrp.schema.json'], emitted, { schemas }), []);
-});
-
-test('provenance: source_manifest is the hash of the named pins, fy is the file\'s fiscal year', () => {
-  const entries = readManifest().filter((e) => emitted.sources.includes(e.id));
-  assert.equal(entries.length, emitted.sources.length);
-  assert.equal(emitted.source_manifest, sourceManifestHash(entries));
-  assert.equal(emitted.fy, fy);
 });
 
 test('methods_version has its heading in docs/METHODS-LOG.md', () => {
@@ -44,8 +35,4 @@ test('the emitted file reproduces CMS for every row', () => {
     assert.equal(r.after.flag, h.paymentReduction, h.ccn);
     assert.equal(String(h.total), String(Number(row['Total HAC Score'])));
   });
-});
-
-test('the emitted model is the model of the emitted hospitals', () => {
-  assert.deepEqual(buildModel(emitted.hospitals), emitted.model);
 });

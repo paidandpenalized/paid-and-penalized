@@ -1,11 +1,11 @@
 // make emit: rebuild the HACRP emitted data from the pinned inputs, validate it, and write it. A rebuild that
 // changes nothing keeps the committed built_at, so git stays clean.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { validate } from '../../../engine/js/schema.js';
 import { formatEmitted, keepBuiltAt } from '../../../pipeline/contract.js';
-import { REPO_ROOT, loadSchemas, readManifest, readPinned } from '../../../pipeline/files.js';
+import { REPO_ROOT, loadSchemas, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, buildHacrp, emittedPath } from './build.js';
 
 const builtAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -19,8 +19,8 @@ if (errors.length > 0) {
 }
 
 const out = REPO_ROOT + emittedPath(next.fy);
-const previous = existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : null;
+const previous = existsSync(out) ? readJson(out) : null;
 const data = keepBuiltAt(previous, next);
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, formatEmitted(data));
-console.log(`${emittedPath(next.fy)}: ${data.hospitals.length} hospitals, built_at ${data.built_at}${data === next ? '' : ' (unchanged)'}`);
+console.log(`${emittedPath(next.fy)}: ${data.hospitals.length} hospitals, built_at ${data.built_at}${data.built_at === next.built_at ? '' : ' (unchanged)'}`);

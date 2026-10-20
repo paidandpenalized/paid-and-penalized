@@ -13,7 +13,8 @@ export function blocklistPath(env, home) {
 // A list inside the repo could be committed, which would publish the names it protects.
 export function assertOutsideRepo(listPath, repoRoot) {
   const rel = relative(resolve(repoRoot), resolve(listPath));
-  if (rel === '' || !(rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel))) {
+  const outside = rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel);
+  if (!outside) {
     throw new RangeError('blocklist: the list must live outside the repository');
   }
 }
@@ -22,11 +23,11 @@ function isBinary(bytes) {
   return bytes.subarray(0, BINARY_SNIFF).includes(0);
 }
 
-// files: { path, bytes } or, for a file too large to read, { path, size }. Returns problem messages; empty = OK.
-// A hit names the file, line and entry number, never the entry itself.
+// files: { path, size, bytes }, where bytes may be left out of a file at or over the limit. Returns problem
+// messages; empty = OK. A hit names the file, line and entry number, never the entry itself.
 export function checkStaged({ files, entries, maxBytes = MAX_BYTES }) {
   const problems = [];
-  for (const { path, bytes, size = bytes.length } of files) {
+  for (const { path, size, bytes } of files) {
     if (size >= maxBytes) {
       problems.push(`${path}: ${size} bytes is at or over the ${maxBytes}-byte limit for files in git`);
       continue;

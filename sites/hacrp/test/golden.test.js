@@ -6,16 +6,11 @@ import assert from 'node:assert/strict';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { keepBuiltAt } from '../../../pipeline/contract.js';
 import { REPO_ROOT, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
-import { SOURCES, buildHacrp, emittedPath } from '../pipeline/build.js';
+import { SOURCES, buildHacrp, emittedPath, fiscalYear } from '../pipeline/build.js';
 
-const rows = parseCsv(readPinned(SOURCES[0]));
-const committed = readJson(REPO_ROOT + emittedPath(Number(rows[0]['Fiscal Year'])));
-const rebuild = (builtAt) => JSON.parse(JSON.stringify(buildHacrp({ rows, manifest: readManifest(), builtAt })));
-
-test('golden: a fresh build from the pins equals the committed file', () => {
-  assert.deepEqual(rebuild(committed.built_at), committed);
-});
-
-test('rebuilding with the same inputs keeps built_at', () => {
-  assert.deepEqual(keepBuiltAt(committed, rebuild('2099-01-01T00:00:00Z')), committed);
+test('golden: a fresh build from the pins equals the committed file, keeping its built_at', () => {
+  const rows = parseCsv(readPinned(SOURCES[0]));
+  const committed = readJson(REPO_ROOT + emittedPath(fiscalYear(rows)));
+  const fresh = JSON.parse(JSON.stringify(buildHacrp({ rows, manifest: readManifest(), builtAt: '2099-01-01T00:00:00Z' })));
+  assert.deepEqual(keepBuiltAt(committed, fresh), committed);
 });

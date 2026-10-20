@@ -1,7 +1,8 @@
 // Envelope helpers: canonical JSON, the source-manifest hash, built_at stability, the file layout.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalJson, formatEmitted, keepBuiltAt, sourceManifestHash } from '../contract.js';
+import { canonicalJson, envelope, formatEmitted, keepBuiltAt, sourceManifestHash } from '../contract.js';
+import { SCHEMAS_DIR, readJson } from '../files.js';
 
 test('canonicalJson ignores key order and keeps array order', () => {
   assert.equal(canonicalJson({ b: 1, a: { d: [2, 1], c: null } }), canonicalJson({ a: { c: null, d: [2, 1] }, b: 1 }));
@@ -29,4 +30,21 @@ test('formatEmitted: one record per line, and it parses back to the same object'
   assert.deepEqual(JSON.parse(text), obj);
   assert.ok(text.endsWith('}\n'));
   assert.ok(text.split('\n').includes('{"ccn":"010001","v":null},'));
+});
+
+test('known-answer vectors shared with other languages (schemas/conformance/source-manifest.vectors.json)', () => {
+  const { cases } = readJson(SCHEMAS_DIR + 'conformance/source-manifest.vectors.json');
+  for (const c of cases) {
+    const sorted = [...c.entries].sort((a, b) => (a.id < b.id ? -1 : 1));
+    assert.equal(canonicalJson(sorted), c.canonical, c.name);
+    assert.equal(sourceManifestHash(c.entries), c.sha256, c.name);
+  }
+});
+
+test('envelope: contract fields in order, hashing only the named pins; an unknown id throws', () => {
+  const manifest = [{ id: 'x', sha256: '1' }, { id: 'y', sha256: '2' }];
+  const e = envelope({ schemaVersion: 1, methodsVersion: 3, sources: ['y'], manifest, builtAt: '2026-10-20T00:00:00Z', fy: 2026 });
+  assert.deepEqual(Object.keys(e), ['schema_version', 'methods_version', 'source_manifest', 'sources', 'built_at', 'fy']);
+  assert.equal(e.source_manifest, sourceManifestHash([manifest[1]]));
+  assert.throws(() => envelope({ schemaVersion: 1, methodsVersion: 1, sources: ['z'], manifest, builtAt: '', fy: 2026 }), RangeError);
 });
