@@ -196,8 +196,9 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 - **CI:** each push to `main` gets its own concurrency group (GitHub drops queued runs in a shared group even
   without cancel-in-progress), so every push is gate-checked; a PR's newer run replaces its older one. A test fails on any tracked
   file of 10 MiB or more, since the hook can be skipped.
-- **Conformance cases:** one base document plus a JSON Pointer patch per case, with ops `replace` (the key
-  must exist), `add` (it must not) and `remove`. The Python runner must apply the same patches.
+- **Conformance cases:** one base document plus a JSON Pointer patch per case, with ops `set` (the key
+  must exist), `create` (it must not) and `delete`. These are deliberately not RFC 6902's names, whose meanings
+  differ. The Python runner must apply the same patches.
 - **Synthetic CCNs** (`000001`, `00001F`, `990001`) replace real ones in the contract fixtures.
 - **Verified on GitHub:** both CI jobs are green on `main`. A throwaway PR that changed one emitted value with
   no reason failed both the golden check and the change gate. The PR was closed unmerged and its branch
