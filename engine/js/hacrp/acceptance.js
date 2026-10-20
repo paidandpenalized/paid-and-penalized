@@ -7,6 +7,9 @@ import { percentileInc } from '../stats.js';
 
 const Z_TOLERANCE = 0.0001; // (a): mean of published z vs Total HAC Score
 const MIN_WITHIN = 0.99; // (a): share of scored hospitals that must be within tolerance
+// (a): no hospital may miss by this much or more. CMS publishes the totals at 4 decimals, so anything beyond
+// rounding is a reproduction failure, however few hospitals it touches.
+const MAX_ERROR = 0.001;
 
 const ascending = (xs) => [...xs].sort((x, y) => x - y);
 
@@ -29,7 +32,7 @@ export function checkA1(hospitals, model) {
   const pct = (hs) => (hs.length ? percentileInc(ascending(hs.map((h) => h.total)), 0.75) : null);
 
   return {
-    ok: scored.length > 0 && within / scored.length >= MIN_WITHIN && mismatches.length === 0,
+    ok: scored.length > 0 && within / scored.length >= MIN_WITHIN && maxError < MAX_ERROR && mismatches.length === 0,
     a: { n: scored.length, maxError, within },
     b: { n: decided.length, yes: decided.filter((h) => h.paymentReduction === 'Yes').length, mismatches },
     info: { pctAllScored: pct(scored), pctDecided: pct(decided) },

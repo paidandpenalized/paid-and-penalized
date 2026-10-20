@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
-import { build } from '../site/build.js';
+import { build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
 import { withTemp as inTemp } from './helpers.js';
@@ -31,6 +31,15 @@ test('build writes hashed CSS holding the tokens and the dark copy, the six font
     for (const f of FONTS) assert.ok(fonts.includes(`${f}.woff2`), f);
     assert.equal(fonts.filter((f) => f.startsWith('OFL-')).length, 3);
     assert.ok(existsSync(join(out, 'favicon.svg')));
+  }));
+
+test('two sites (or a site and the shared theme script) naming one JS entry fail the build', () =>
+  withTemp(async (dir) => {
+    assert.deepEqual(mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, {}), { theme: 'a.js', x: 'b.js' });
+    assert.throws(() => mergeEntries({ theme: 'a.js' }, { theme: 'b.js' }), /"theme" is defined twice/);
+    assert.throws(() => mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, { x: 'c.js' }), /"x" is defined twice/);
+    const clash = { id: 'clash', entries: { theme: 'web/client/theme.js' }, generate: () => {} };
+    await assert.rejects(build({ outDir: join(dir, 'dist'), sites: [clash] }), /"theme" is defined twice/);
   }));
 
 test('buildAssets bundles each JS entry as minified ESM under a content hash and returns the public paths', () =>

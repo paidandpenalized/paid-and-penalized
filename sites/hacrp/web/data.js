@@ -8,9 +8,17 @@ import { boundaryText } from './view.js';
 
 const FOOTNOTES_ID = 'y9us-9xdf';
 
+// The master's HACRP program year must be the year of the HACRP file the pages show (the newest master is not
+// necessarily the one built for this program year).
+export function checkMasterYear(masterFile, fy) {
+  const year = masterFile.programYears?.hacrp;
+  if (year !== fy) throw new RangeError(`HACRP: file is FY${fy} but the hospital master's HACRP year is ${year}`);
+}
+
 export function loadHacrp() {
   const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
+  checkMasterYear(masterFile, data.fy);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
 
   for (const h of data.hospitals) {

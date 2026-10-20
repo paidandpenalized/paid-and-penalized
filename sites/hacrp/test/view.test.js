@@ -29,22 +29,22 @@ test('a scored "Yes" hospital: the whole view', () => {
     oneMeasure: false,
     measures: [
       { id: 'PSI90', label: 'Patient safety and adverse events composite', short: 'PSI 90', valueText: '1.0600',
-        zText: '0.5000', assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.5 / 6,
+        zText: '0.5000', hasValue: true, hasZ: true, assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.5 / 6,
         contributionText: '+0.0833', footnotes: [] },
       { id: 'CLABSI', label: 'Central line–associated bloodstream infections', short: 'CLABSI', valueText: '0.990',
-        zText: '0.9000', assigned: false, tagged: false, maxErrorText: '0.0007', contribution: 0.9 / 6,
+        zText: '0.9000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0007', contribution: 0.9 / 6,
         contributionText: '+0.1500', footnotes: [] },
       { id: 'CAUTI', label: 'Catheter-associated urinary tract infections', short: 'CAUTI', valueText: '0.464',
-        zText: '−0.2000', assigned: false, tagged: false, maxErrorText: '0.0008', contribution: -0.2 / 6,
+        zText: '−0.2000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0008', contribution: -0.2 / 6,
         contributionText: '−0.0333', footnotes: [] },
       { id: 'SSI', label: 'Surgical site infections after colon surgery or abdominal hysterectomy', short: 'SSI',
-        valueText: '0.909', zText: '0.1000', assigned: false, tagged: false, maxErrorText: '0.0001',
+        valueText: '0.909', zText: '0.1000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001',
         contribution: 0.1 / 6, contributionText: '+0.0167', footnotes: [] },
       { id: 'CDI', label: 'Clostridioides difficile (C. diff) infections', short: 'CDI', valueText: '0.481',
-        zText: '0.4000', assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.4 / 6,
+        zText: '0.4000', hasValue: true, hasZ: true, assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.4 / 6,
         contributionText: '+0.0667', footnotes: [] },
       { id: 'MRSA', label: 'MRSA bloodstream infections', short: 'MRSA', valueText: '0.745', zText: '0.1000',
-        assigned: false, tagged: false, maxErrorText: '0.0001', contribution: 0.1 / 6, contributionText: '+0.0167',
+        hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001', contribution: 0.1 / 6, contributionText: '+0.0167',
         footnotes: [] },
     ],
     largest: { id: 'CLABSI', contributionText: '+0.1500' },
@@ -65,6 +65,15 @@ test('a scored "No" hospital: distance to the lowest Yes; an unscored measure ke
   assert.equal(byId(v, 'CDI').contribution, 0.2 / 5);
   assert.deepEqual(v.largest, { id: 'CDI', contributionText: '+0.0400' });
   assert.equal(v.scored, true);
+});
+
+test('hasValue and hasZ come from the parsed numbers: false for N/A, also for a CMS-assigned measure', () => {
+  const ssi = byId(view('noScore'), 'SSI');
+  assert.deepEqual([ssi.valueText, ssi.hasValue, ssi.zText, ssi.hasZ], ['N/A', false, 'N/A', false]);
+  const assigned = byId(view('assignedLargest'), 'SSI');
+  assert.equal(assigned.assigned, true);
+  assert.deepEqual([assigned.hasValue, assigned.hasZ], [false, true]);
+  assert.deepEqual([byId(view('yes'), 'PSI90').hasValue, byId(view('yes'), 'PSI90').hasZ], [true, true]);
 });
 
 test('Maryland: CMS\'s N/A decision and footnote a, no distance, what-if on the score', () => {

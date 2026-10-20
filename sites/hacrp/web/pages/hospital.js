@@ -8,23 +8,21 @@ import { distanceSentence, measureNote, smallNumber, summary } from '../sentence
 import { fill } from '../copy.js';
 import { asofBar, decisionPill, sourceLine, t } from './parts.js';
 
-const missing = (text) => text === '' || text === 'N/A';
-
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
-const value = (text) => (missing(text)
-  ? html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`
-  : text);
+const value = (text, published) => (published
+  ? text
+  : html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`);
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
 
 function measureRow(m) {
   const note = measureNote(m);
   // The tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
-  const tag = m.tagged && !missing(m.valueText) && html`<p><a class="tag" href="/methods/#estimate" title="${fill('estimateTitle', { maxError: m.maxErrorText })}">${t('estimateTag')}</a></p>`;
+  const tag = m.tagged && m.hasValue && html`<p><a class="tag" href="/methods/#estimate" title="${fill('estimateTitle', { maxError: m.maxErrorText })}">${t('estimateTag')}</a></p>`;
   return html`<tr>
 <th scope="row">${m.label} <span class="short">(${m.short})</span></th>
-<td class="num cms" data-label="${t('colValue')}">${value(m.valueText)}</td>
-<td class="num cms" data-label="${t('colZ')}">${value(m.zText)}</td>
+<td class="num cms" data-label="${t('colValue')}">${value(m.valueText, m.hasValue)}</td>
+<td class="num cms" data-label="${t('colZ')}">${value(m.zText, m.hasZ)}</td>
 <td class="notes">${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}</td>
 </tr>`;
 }

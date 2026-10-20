@@ -31,13 +31,25 @@ function checkOutDir(outDir) {
   throw new Error(`refusing to empty ${dir}: the build writes only to dist/ or under ${tmpdir()}`);
 }
 
+// The shared entries plus each site's, by name. Two entries with one name would overwrite each other's file.
+export function mergeEntries(...sets) {
+  const merged = {};
+  for (const set of sets) {
+    for (const [name, path] of Object.entries(set)) {
+      if (Object.hasOwn(merged, name)) throw new Error(`JS entry "${name}" is defined twice (${merged[name]} and ${path})`);
+      merged[name] = path;
+    }
+  }
+  return merged;
+}
+
 export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   const assets = await buildAssets({
     outDir: dir,
-    entries: Object.assign({}, SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
+    entries: mergeEntries(SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
     styles: sites.flatMap((s) => s.styles ?? []),
   });
   const ctx = createContext({ outDir: dir, env, assets });

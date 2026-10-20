@@ -63,6 +63,18 @@ test('a total that disagrees with its published z-scores fails (a)', () => {
   assert.equal(r.ok, false); // 4 of 5 within is below 99%
 });
 
+test('one hospital far off its z-scores fails (a) even when 99% are within tolerance', () => {
+  const many = Array.from({ length: 200 }, (_, i) => synthetic(String(990100 + i), '0.1000', 'No'));
+  assert.equal(checkA1(many, model).ok, true);
+  many[0] = synthetic('990300', '-0.4000', 'No');
+  many[0].total = 0.1; // published z-scores average -0.4: 0.5 off, decision still No; 199 of 200 are within tolerance
+  const r = checkA1(many, model);
+  assert.equal(r.a.within, 199);
+  assert.ok(r.a.within / r.a.n >= 0.99);
+  assert.ok(r.a.maxError > 0.4);
+  assert.equal(r.ok, false);
+});
+
 test('unscored rows are skipped: a "Yes" with no score is not a mismatch', () => {
   const none = toHospital(syntheticRow({ 'Facility ID': '990008', 'Total HAC Score': 'N/A', 'Payment Reduction': 'Yes' }));
   const r = checkA1([...base, none], model);
