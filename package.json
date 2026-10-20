@@ -6,6 +6,6 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test \"engine/js/test/**/*.test.js\" \"sites/*/test/**/*.test.js\" \"tools/test/**/*.test.js\""
+    "test": "node --test \"engine/js/test/**/*.test.js\" \"pipeline/test/**/*.test.js\" \"sites/*/test/**/*.test.js\" \"tools/test/**/*.test.js\""
   }
 }

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hacrp.schema.json",
+  "title": "HAC Reduction Program emitted data, one fiscal year",
+  "description": "CMS's published values for every hospital in the file (numbers parsed, CMS's text kept verbatim) plus the model the what-if and solver use.",
+  "type": "object",
+  "required": ["schema_version", "methods_version", "source_manifest", "sources", "built_at", "fy", "model", "estimate", "hospitals"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "methods_version": { "$ref": "common.schema.json#/$defs/methodsVersion" },
+    "source_manifest": { "$ref": "common.schema.json#/$defs/sha256" },
+    "sources": { "$ref": "common.schema.json#/$defs/sources" },
+    "built_at": { "$ref": "common.schema.json#/$defs/builtAt" },
+    "fy": { "$ref": "common.schema.json#/$defs/fy" },
+    "model": {
+      "type": "object",
+      "required": ["params", "boundary"],
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "type": "object",
+          "required": ["PSI90", "CLABSI", "CAUTI", "SSI", "CDI", "MRSA"],
+          "additionalProperties": false,
+          "properties": {
+            "PSI90": { "$ref": "#/$defs/params" },
+            "CLABSI": { "$ref": "#/$defs/params" },
+            "CAUTI": { "$ref": "#/$defs/params" },
+            "SSI": { "$ref": "#/$defs/params" },
+            "CDI": { "$ref": "#/$defs/params" },
+            "MRSA": { "$ref": "#/$defs/params" }
+          }
+        },
+        "boundary": {
+          "description": "The highest score CMS marked No and the lowest it marked Yes.",
+          "type": "object",
+          "required": ["highestNo", "lowestYes"],
+          "additionalProperties": false,
+          "properties": { "highestNo": { "type": "number" }, "lowestYes": { "type": "number" } }
+        }
+      }
+    },
+    "estimate": {
+      "description": "Per measure: whether the public-method recompute misses CMS's z by more than the tag threshold.",
+      "type": "object",
+      "required": ["PSI90", "CLABSI", "CAUTI", "SSI", "CDI", "MRSA"],
+      "additionalProperties": false,
+      "properties": {
+        "PSI90": { "$ref": "#/$defs/estimate" },
+        "CLABSI": { "$ref": "#/$defs/estimate" },
+        "CAUTI": { "$ref": "#/$defs/estimate" },
+        "SSI": { "$ref": "#/$defs/estimate" },
+        "CDI": { "$ref": "#/$defs/estimate" },
+        "MRSA": { "$ref": "#/$defs/estimate" }
+      }
+    },
+    "hospitals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hospital" } }
+  },
+  "$defs": {
+    "measureId": { "enum": ["PSI90", "CLABSI", "CAUTI", "SSI", "CDI", "MRSA"] },
+    "params": {
+      "type": "object",
+      "required": ["id", "n", "mean", "sd", "floor", "cap", "zMin", "zMax", "median", "decimals", "fitError"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/measureId" },
+        "n": { "type": "integer", "minimum": 2 },
+        "mean": { "type": "number" },
+        "sd": { "type": "number", "minimum": 0 },
+        "floor": { "type": "number" },
+        "cap": { "type": "number" },
+        "zMin": { "type": "number" },
+        "zMax": { "type": "number" },
+        "median": { "type": "number" },
+        "decimals": { "type": "integer", "minimum": 0 },
+        "fitError": { "type": "number", "minimum": 0 }
+      }
+    },
+    "estimate": {
+      "type": "object",
+      "required": ["tagged", "maxError"],
+      "additionalProperties": false,
+      "properties": { "tagged": { "type": "boolean" }, "maxError": { "type": "number", "minimum": 0 } }
+    },
+    "measure": {
+      "description": "Numbers are null where CMS publishes N/A or nothing; the text fields are CMS's own.",
+      "type": "object",
+      "required": ["value", "valueText", "valueFootnote", "z", "zText", "zFootnote"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "valueText": { "type": "string" },
+        "valueFootnote": { "type": "string" },
+        "z": { "type": ["number", "null"] },
+        "zText": { "type": "string" },
+        "zFootnote": { "type": "string" }
+      }
+    },
+    "period": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": { "start": { "type": "string" }, "end": { "type": "string" } }
+    },
+    "hospital": {
+      "type": "object",
+      "required": ["ccn", "name", "state", "fiscalYear", "measures", "total", "totalText", "totalFootnote", "paymentReduction", "paymentReductionFootnote", "periods"],
+      "additionalProperties": false,
+      "properties": {
+        "ccn": { "$ref": "common.schema.json#/$defs/ccn" },
+        "name": { "type": "string" },
+        "state": { "type": "string" },
+        "fiscalYear": { "type": "string", "pattern": "^\\d{4}$" },
+        "measures": {
+          "type": "object",
+          "required": ["PSI90", "CLABSI", "CAUTI", "SSI", "CDI", "MRSA"],
+          "additionalProperties": false,
+          "properties": {
+            "PSI90": { "$ref": "#/$defs/measure" },
+            "CLABSI": { "$ref": "#/$defs/measure" },
+            "CAUTI": { "$ref": "#/$defs/measure" },
+            "SSI": { "$ref": "#/$defs/measure" },
+            "CDI": { "$ref": "#/$defs/measure" },
+            "MRSA": { "$ref": "#/$defs/measure" }
+          }
+        },
+        "total": { "type": ["number", "null"] },
+        "totalText": { "type": "string" },
+        "totalFootnote": { "type": "string" },
+        "paymentReduction": { "enum": ["Yes", "No", "N/A"] },
+        "paymentReductionFootnote": { "type": "string" },
+        "periods": {
+          "type": "object",
+          "required": ["psi90", "hai"],
+          "additionalProperties": false,
+          "properties": { "psi90": { "$ref": "#/$defs/period" }, "hai": { "$ref": "#/$defs/period" } }
+        }
+      }
+    }
+  }
+}

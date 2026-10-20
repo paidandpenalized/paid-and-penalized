@@ -1,0 +1,2115 @@
+{
+  "schema": "hacrp.schema.json",
+  "def": null,
+  "cases": [
+    {
+      "name": "a minimal synthetic file",
+      "valid": true,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a CCN stored as a number",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": 990001,
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "an extra top-level key",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ],
+        "extra": 1
+      }
+    },
+    {
+      "name": "a payment reduction outside Yes/No/N/A",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "Maybe",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a missing measure",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a missing envelope field",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "built_at with milliseconds",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00.000Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a fiscal year given as a string",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": "2026",
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a measure value given as text",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": "1.2",
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "an unknown schema_version",
+      "valid": false,
+      "data": {
+        "schema_version": 2,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": [
+          {
+            "ccn": "990001",
+            "name": "SYNTHETIC TEST HOSPITAL",
+            "state": "ZZ",
+            "fiscalYear": "2026",
+            "measures": {
+              "PSI90": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CLABSI": {
+                "value": 1.2,
+                "valueText": "1.2",
+                "valueFootnote": "",
+                "z": 0.4,
+                "zText": "0.4",
+                "zFootnote": ""
+              },
+              "CAUTI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "SSI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "CDI": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              },
+              "MRSA": {
+                "value": null,
+                "valueText": "N/A",
+                "valueFootnote": "",
+                "z": null,
+                "zText": "N/A",
+                "zFootnote": ""
+              }
+            },
+            "total": 0.4,
+            "totalText": "0.4",
+            "totalFootnote": "",
+            "paymentReduction": "No",
+            "paymentReductionFootnote": "",
+            "periods": {
+              "psi90": {
+                "start": "07/01/2022",
+                "end": "06/30/2024"
+              },
+              "hai": {
+                "start": "01/01/2023",
+                "end": "12/31/2024"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "no hospitals",
+      "valid": false,
+      "data": {
+        "schema_version": 1,
+        "methods_version": 1,
+        "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sources": [
+          "synthetic"
+        ],
+        "built_at": "2026-10-20T00:00:00Z",
+        "fy": 2026,
+        "model": {
+          "params": {
+            "PSI90": {
+              "id": "PSI90",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CLABSI": {
+              "id": "CLABSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CAUTI": {
+              "id": "CAUTI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "SSI": {
+              "id": "SSI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "CDI": {
+              "id": "CDI",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            },
+            "MRSA": {
+              "id": "MRSA",
+              "n": 100,
+              "mean": 1,
+              "sd": 0.5,
+              "floor": 0,
+              "cap": 2,
+              "zMin": -2,
+              "zMax": 2,
+              "median": 0.9,
+              "decimals": 3,
+              "fitError": 0.0001
+            }
+          },
+          "boundary": {
+            "highestNo": 0.3,
+            "lowestYes": 0.31
+          }
+        },
+        "estimate": {
+          "PSI90": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CLABSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CAUTI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "SSI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "CDI": {
+            "tagged": false,
+            "maxError": 0.00001
+          },
+          "MRSA": {
+            "tagged": false,
+            "maxError": 0.00001
+          }
+        },
+        "hospitals": []
+      }
+    }
+  ]
+}

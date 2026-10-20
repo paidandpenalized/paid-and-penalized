@@ -4,4 +4,7 @@ test:
 hooks:
 	git config core.hooksPath .githooks
 
-.PHONY: test hooks
+emit:
+	node sites/hacrp/pipeline/emit.js
+
+.PHONY: test hooks emit
