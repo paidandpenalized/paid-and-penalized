@@ -189,9 +189,10 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   `corrections/YYYY-MM-DD-<slug>.md` (a real date; a regular file whose whitespace-normalized text is non-blank
   and not already a `.md` file under `corrections/` at the merge base; files of 1 MiB or more, such as evidence
   PDFs, are never read) covers the whole change, deletions included. The log is append-only, checked on its
-  own: any change that edits, retypes or deletes a dated entry fails, and removing one (e.g., for privacy) takes
-  one deliberate red run. Known limits: re-adding an entry deleted in an earlier change counts as new. A
-  branch's first push is checked against `HEAD~1` only, so the PR run (against `main`) is the full check. Otherwise each changed emitted file needs one
+  own: any change that edits, retypes or deletes a dated entry fails. Removing one (e.g., for privacy) is a
+  standalone change whose PR run and post-merge `main` run both fail. Known limits: re-adding an entry deleted
+  in an earlier change counts as new. Push runs happen only on `main`; other branches are checked by their PR
+  run. A first push of `main` (no `before`) is checked against `HEAD~1`. Otherwise each changed emitted file needs one
   of:
   - *added*: a first emission (by git status, not by content);
   - *re-pinned*: an input's SHA-256 changes in the same change, the file keeps its sources and `methods_version`,

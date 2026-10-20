@@ -1,8 +1,8 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
 // change. The corrections log is append-only: any change that edits, retypes or deletes a dated entry fails. A new
-// entry covers the whole change: an added regular file corrections/YYYY-MM-DD-<slug>.md (a real date) whose text,
-// whitespace aside, is non-empty and not already a file under corrections/ at the merge base. Otherwise each
-// changed emitted file needs one of:
+// entry covers the whole change: an added regular file corrections/YYYY-MM-DD-<slug>.md (a real date, under
+// 1 MiB) whose text, whitespace aside, is non-empty and not already a readable .md under corrections/ at the merge
+// base (readableMarkdown). Otherwise each changed emitted file needs one of:
 //   - added: a first emission (nothing published to differ from);
 //   - re-pinned: one of its inputs has a new SHA-256 in this change's manifest diff, its sources and
 //     methods_version are unchanged, and its new source_manifest is the true hash of those inputs at HEAD. Pin and
@@ -31,14 +31,32 @@ export function isEntry(path) {
 }
 const MANIFEST = 'data/pinned/manifest.json';
 
-// changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
-// with a per-file reason (see above). freshEntries: added regular-file entry paths whose text, whitespace aside, is
-// non-empty and not already a file under corrections/ at the base (this function re-checks status and the name).
 // Dated entries this change edits, retypes or deletes.
 export function entryRewrites(changed) {
   return changed.filter(({ status, path }) => status !== 'A' && isEntry(path)).map(({ path }) => path);
 }
 
+const MAX_ENTRY = 1024 * 1024; // a corrections entry is a short note
+
+// The files under corrections/ whose text the gate reads: regular .md files under 1 MiB. A symlink's "text" is
+// its target and a submodule has none; evidence such as PDFs is never an entry or a copy of one. records come
+// from `git ls-tree -r -l -z`.
+export function readableMarkdown(lsTree) {
+  return lsTree
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const [mode, , blob, size] = record.slice(0, record.indexOf('\t')).split(/\s+/);
+      return { mode, blob, size: Number(size), path: record.slice(record.indexOf('\t') + 1) };
+    })
+    .filter(({ mode, size, path }) => (mode === '100644' || mode === '100755') && path.endsWith('.md') && size < MAX_ENTRY);
+}
+
+const plural = (paths, one, many) => `${paths.join(', ')} ${paths.length === 1 ? one : many}`;
+
+// changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
+// with a per-file reason (see above). freshEntries: added entry paths whose text, whitespace aside, is non-empty
+// and not already a readable .md under corrections/ at the base (this function re-checks status and the name).
 export function changeGate({ changed, explained = new Set(), freshEntries = new Set() }) {
   const rewrites = entryRewrites(changed);
   if (rewrites.length > 0) {
@@ -49,14 +67,20 @@ export function changeGate({ changed, explained = new Set(), freshEntries = new 
   if (changed.some(({ status, path }) => status === 'A' && isEntry(path) && freshEntries.has(path))) {
     return { ok: true, reason: 'emitted data changed with a new corrections entry' };
   }
-  const misnamed = changed
-    .filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS) && path.endsWith('.md') && !isEntry(path))
+  const addedMarkdown = changed
+    .filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS) && /\.md$/i.test(path))
     .map(({ path }) => path);
+  const misnamed = addedMarkdown.filter((p) => !isEntry(p) && /^corrections\/\d/.test(p));
+  const unusable = addedMarkdown.filter((p) => isEntry(p) && !freshEntries.has(p));
+  const hints = [
+    misnamed.length > 0 && `${plural(misnamed, 'is not a dated entry', 'are not dated entries')} (corrections/YYYY-MM-DD-<slug>.md, a real date).`,
+    unusable.length > 0 && `${plural(unusable, "doesn't count", "don't count")}: blank, a copy of an earlier file, a link, or 1 MiB or more.`,
+  ].filter(Boolean);
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${misnamed.length > 0 ? `${misnamed.join(', ')} is not a dated entry (corrections/YYYY-MM-DD-<slug>.md, a real date). ` : ''}${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal)`,
+    reason: `${hints.map((h) => `${h} `).join('')}${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal)`,
   };
 }
 
@@ -87,7 +111,6 @@ export function parseNameStatus(text) {
 
 const ZERO_SHA = /^0{40}$/;
 const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB limit
-const MAX_ENTRY = 1024 * 1024; // a corrections entry is a short note
 
 function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
@@ -99,7 +122,9 @@ function main() {
   try {
     execFileSync('git', ['cat-file', '-e', `${base}^{commit}`], { stdio: 'ignore' });
   } catch {
-    throw new Error(`base ${base} is not in this history (force-push?); check the range by hand`);
+    throw new Error(
+      base === 'HEAD~1' ? 'HEAD has no parent commit; check this first commit by hand' : `base ${base} is not in this history (force-push?); check the range by hand`,
+    );
   }
   const changed = parseNameStatus(git('diff', '--name-status', '--no-renames', '-z', `${base}...HEAD`));
   const emitted = changed.filter(({ path }) => path.startsWith(EMITTED));
@@ -107,26 +132,29 @@ function main() {
   const freshEntries = new Set();
   if (emitted.length > 0 && entryRewrites(changed).length === 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // Markdown text under corrections/, whitespace-normalized, so a copy with a stray newline is still a copy.
-    // Only regular files count on either side (a symlink's "text" is its target; a submodule has none), and only
-    // .md files under 1 MiB are read: evidence files such as PDFs are never entries or their copies.
+    // Entry text, whitespace-normalized, so a copy with a stray newline is still a copy. All blobs are read in one
+    // `git cat-file --batch` ("<id> blob <size>\n<bytes>\n" per blob).
     const normal = (text) => text.replace(/\s+/g, ' ').trim();
-    const markdown = (rev, paths) =>
-      git('ls-tree', '-r', '-l', '-z', rev, '--', ...paths)
-        .split('\0')
-        .filter(Boolean)
-        .map((record) => {
-          const [mode, , , size] = record.slice(0, record.indexOf('\t')).split(/\s+/);
-          return { mode, size: Number(size), path: record.slice(record.indexOf('\t') + 1) };
-        })
-        .filter(({ mode, size, path }) => (mode === '100644' || mode === '100755') && path.endsWith('.md') && size < MAX_ENTRY);
+    const texts = (records) => {
+      if (records.length === 0) return [];
+      const out = execFileSync('git', ['cat-file', '--batch'], { input: records.map((r) => r.blob).join('\n') + '\n', maxBuffer: MAX_FILE });
+      const result = [];
+      let at = 0;
+      for (const { size } of records) {
+        at = out.indexOf(0x0a, at) + 1; // past the header line
+        result.push(normal(out.subarray(at, at + size).toString('utf8')));
+        at += size + 1;
+      }
+      return result;
+    };
+    const markdownAt = (rev, paths) => readableMarkdown(git('ls-tree', '-r', '-l', '-z', rev, '--', ...paths));
     const addedEntries = changed.filter(({ status, path }) => status === 'A' && isEntry(path)).map(({ path }) => path);
     if (addedEntries.length > 0) {
-      const oldTexts = new Set(markdown(mergeBase, [CORRECTIONS]).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
-      for (const { path } of markdown('HEAD', addedEntries)) {
-        const text = normal(git('show', `HEAD:${path}`));
-        if (text !== '' && !oldTexts.has(text)) freshEntries.add(path);
-      }
+      const oldTexts = new Set(texts(markdownAt(mergeBase, [CORRECTIONS])));
+      const added = markdownAt('HEAD', addedEntries);
+      texts(added).forEach((text, i) => {
+        if (text !== '' && !oldTexts.has(text)) freshEntries.add(added[i].path);
+      });
     }
     const parse = (text) => {
       try {

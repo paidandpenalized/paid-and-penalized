@@ -140,7 +140,8 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
 
   r.write('corrections/README.md', 'how to write an entry\n');
   r.write('corrections/evidence/letter.pdf', Buffer.alloc(2 * 1024 * 1024, 1));
-  const readme = r.commit('a README and a large evidence file');
+  r.write('corrections/2026-11-05-big.md', 'x'.repeat(1024 * 1024));
+  const readme = r.commit('a README, a large evidence file and an oversized entry');
   r.write('corrections/2026-11-08-copy-of-readme.md', 'how to write an entry\n');
   r.write(FILE, emitted(3, ['{"v":9}'], 'cc'));
   r.commit('a copy of a non-entry file is not new text');

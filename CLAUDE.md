@@ -45,7 +45,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
   (`tools/ci/change-gate.js` has the exact rule). The corrections log is append-only: a change that edits,
   retypes or deletes a dated entry fails, so a typo in an entry is fixed by a new entry. Removing an entry (e.g.,
-  private information pasted in by mistake) is Dalton's call and takes one deliberate red gate run. A new entry
+  private information pasted in by mistake) is Dalton's call: do it as a standalone change and expect the gate to
+  fail on its PR and on the push to `main` after the merge, then pass again. A new entry
   `corrections/YYYY-MM-DD-<slug>.md` (a real calendar date; a regular `.md` file with non-blank text that isn't
   a copy of any `.md` already under `corrections/`) covers the whole change. Otherwise each changed emitted file must be:
   - **new** (a first emission); or

@@ -1,7 +1,7 @@
 // The change gate's rule: emitted data may change only with a reason on record.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { changeGate, isEntry, parseNameStatus, reasonFor } from '../ci/change-gate.js';
+import { changeGate, isEntry, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
@@ -62,10 +62,32 @@ test('isEntry: a real calendar date and a slug that starts with a letter or digi
   }
 });
 
-test('a misdated entry name is named in the failure', () => {
-  const r = changeGate({ changed: [M(EMITTED), { status: 'A', path: 'corrections/2026-02-29-x.md' }], freshEntries: new Set(['corrections/2026-02-29-x.md']) });
+test('the failure says why an added entry did not count', () => {
+  const add = (path) => ({ status: 'A', path });
+  const r = changeGate({ changed: [M(EMITTED), add('corrections/2026-02-29-x.md'), add('corrections/README.md')], freshEntries: new Set() });
   assert.equal(r.ok, false);
-  assert.match(r.reason, /corrections\/2026-02-29-x\.md is not a dated entry/);
+  assert.match(r.reason, /^corrections\/2026-02-29-x\.md is not a dated entry/, 'a README is not called misnamed');
+  const two = changeGate({ changed: [M(EMITTED), add('corrections/2026-02-29-x.md'), add('corrections/2026-02-30-y.MD')] });
+  assert.match(two.reason, /2026-02-29-x\.md, corrections\/2026-02-30-y\.MD are not dated entries/);
+  const copy = changeGate({ changed: [M(EMITTED), add('corrections/2026-11-01-copy.md')], freshEntries: new Set() });
+  assert.match(copy.reason, /^corrections\/2026-11-01-copy\.md doesn't count: blank, a copy/);
+});
+
+test('readableMarkdown: regular .md files under 1 MiB only', () => {
+  const rec = (mode, size, path) => `${mode} blob ${'a'.repeat(40)} ${String(size).padStart(7)}\t${path}`;
+  const lsTree = [
+    rec('100644', 120, 'corrections/2026-11-01-a.md'),
+    rec('100755', 80, 'corrections/2026-11-02-b.md'),
+    rec('100644', 1024 * 1024, 'corrections/2026-11-03-big.md'),
+    rec('100644', 2 * 1024 * 1024, 'corrections/evidence/letter.pdf'),
+    rec('120000', 18, 'corrections/2026-11-04-link.md'),
+    rec('100644', 50, 'corrections/notes.txt'),
+  ].join('\0') + '\0';
+  assert.deepEqual(readableMarkdown(lsTree).map((r) => [r.path, r.size]), [
+    ['corrections/2026-11-01-a.md', 120],
+    ['corrections/2026-11-02-b.md', 80],
+  ]);
+  assert.deepEqual(readableMarkdown(''), []);
 });
 
 test('only a dated markdown entry directly under corrections/ counts', () => {
