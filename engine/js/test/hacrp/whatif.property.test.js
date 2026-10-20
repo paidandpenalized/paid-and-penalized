@@ -32,3 +32,29 @@ test('monotonic: a higher value never gives a lower score, and moves stay on the
     if (b > current) assert.ok(sb >= h.total - EPS, msg);
   }
 });
+
+const RANK = { No: 0, 'too-close': 1, Yes: 2 };
+
+test('with another measure already changed, improving a second measure never moves the flag toward Yes', async () => {
+  const { solveMeasure } = await import('../../hacrp/solver.js');
+  const { submittedMeasures } = await import('./helpers.js');
+  let checked = 0;
+  for (const h of hospitals.filter((x) => x.total !== null && x.paymentReduction === 'No' && submittedMeasures(x).length >= 2)) {
+    const ids = submittedMeasures(h);
+    for (const a of ids) {
+      const s = solveMeasure(h, model, a);
+      if (!s.possible || s.unlimited) continue;
+      const base = { [a]: s.value };
+      const before = whatIf(h, model, base).after.flag;
+      for (const b of ids.filter((x) => x !== a)) {
+        const unit = 10 ** -model.params[b].decimals;
+        const vb = h.measures[b].value;
+        if (vb < unit) continue;
+        const after = whatIf(h, model, { ...base, [b]: Math.round((vb - unit) / unit) * unit }).after.flag;
+        assert.ok(RANK[after] <= RANK[before], `${h.ccn} ${a}=${s.value} then ${b} ${vb}->${vb - unit}: ${before} -> ${after}`);
+        checked++;
+      }
+    }
+  }
+  assert.ok(checked > 100);
+});

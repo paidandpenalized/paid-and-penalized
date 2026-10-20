@@ -6,7 +6,6 @@
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
 import { EDGE, bandTerm, hypotheticalZ } from './params.js';
-import { classify } from './score.js';
 
 function validate(changes, ids) {
   for (const [id, value] of Object.entries(changes)) {
@@ -27,8 +26,11 @@ export function whatIf(hospital, model, changes = {}) {
 
   let deltaZ = 0;
   let fitErrors = 0;
-  let anyUp = false;
-  let anyDown = false;
+  let moves = 0;
+  // Bounds on CMS's true change in z, summed over the moves. Each move's true change lies within its band term
+  // of the estimate, and on the same side of zero as the move: CMS's own value -> z map only rises with the value.
+  let lowZ = 0;
+  let highZ = 0;
   const measures = {};
   for (const id of ids) {
     const m = hospital.measures[id];
@@ -40,14 +42,16 @@ export function whatIf(hospital, model, changes = {}) {
     let afterZ = m.z;
     if (changed) {
       const z = hypotheticalZ(m, p, afterValue);
-      // A move smaller than float noise is no move. The band term is the same for every move of this measure,
-      // so the flag changes in one direction only as a value rises.
-      if (Math.abs(z - m.z) >= EDGE) {
+      // A move smaller than float noise is no move.
+      const d = z - m.z;
+      if (Math.abs(d) >= EDGE) {
+        const b = bandTerm(m, p);
         afterZ = z;
-        deltaZ += z - m.z;
-        fitErrors += bandTerm(m, p);
-        if (z > m.z) anyUp = true;
-        else anyDown = true;
+        deltaZ += d;
+        fitErrors += b;
+        moves++;
+        lowZ += d > 0 ? Math.max(d - b, 0) : d - b;
+        highZ += d > 0 ? d + b : Math.min(d + b, 0);
       }
     }
 
@@ -65,19 +69,24 @@ export function whatIf(hospital, model, changes = {}) {
   }
 
   const cms = hospital.paymentReduction;
-  // Opposite moves that cancel are still moves: each can miss CMS's z, so they are re-judged with the band.
-  const moved = (anyUp && anyDown) || Math.abs(deltaZ) >= EDGE;
-  const band = moved ? fitErrors / n : 0;
-  const score = moved ? hospital.total + deltaZ / n : hospital.total;
-  // CMS's own value -> z map only rises with the value, so when every change moves away from the line (all
-  // lower for a "No", all higher for a "Yes"), CMS's decision stands. Anything else is re-judged with the band.
-  const awayFromLine = (cms === 'No' && !anyUp) || (cms === 'Yes' && !anyDown);
-  const flag = cms === 'N/A' || awayFromLine ? cms : classify(score, model.boundary, band);
+  const total = hospital.total;
+  const score = moves ? total + deltaZ / n : total;
+  // The range CMS's own score could take: "No" only if its top is at or below the highest "No" CMS gave,
+  // "Yes" only if its bottom is at or above the lowest "Yes"; otherwise too close to call. A hospital whose
+  // changes all move away from the line keeps CMS's decision this way, and cancelling moves still get a range.
+  const range = { low: total + lowZ / n, high: total + highZ / n };
+  let flag = cms;
+  if (cms !== 'N/A' && moves) {
+    if (range.high <= model.boundary.highestNo) flag = 'No';
+    else if (range.low >= model.boundary.lowestYes) flag = 'Yes';
+    else flag = 'too-close';
+  }
 
   return {
     available: true,
     n,
-    band,
+    band: fitErrors / n,
+    range,
     before: { score: hospital.total, flag: cms },
     after: { score, flag },
     measures,
