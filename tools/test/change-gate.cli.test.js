@@ -26,39 +26,41 @@ function repo() {
     git('commit', '-q', '-m', msg);
     return git('rev-parse', 'HEAD');
   };
-  const gate = (base, labels) =>
-    spawnSync('node', [GATE], { cwd: dir, encoding: 'utf8', env: { ...process.env, GATE_BASE: base, PR_LABELS: labels ?? '' } });
+  const gate = (base) => spawnSync('node', [GATE], { cwd: dir, encoding: 'utf8', env: { ...process.env, GATE_BASE: base } });
   return { dir, write, commit, gate };
 }
 
-const emitted = (source, rows) => `{\n"source_manifest": "${source}",\n"hospitals": [\n${rows.join(',\n')}\n]\n}\n`;
+const emitted = (rows) => `{\n"sources": ["pin-a"],\n"hospitals": [\n${rows.join(',\n')}\n]\n}\n`;
+const manifest = (sha256, retrieved) => JSON.stringify([{ id: 'pin-a', sha256, retrieved }]);
 const FILE = 'data/emitted/hacrp/fy2026/hacrp.json';
+const LOG_V1 = '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first\n';
 
 test('CLI: the gate reads git correctly for each reason, and fails without one', (t) => {
   const r = repo();
   t.after(() => rmSync(r.dir, { recursive: true, force: true }));
-  r.write('docs/METHODS-LOG.md', '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first\n');
-  r.write(FILE, emitted('aa', ['{"v":1}']));
+  r.write('data/pinned/manifest.json', manifest('aa', '2026-10-20'));
+  r.write('docs/METHODS-LOG.md', LOG_V1);
+  r.write(FILE, emitted(['{"v":1}']));
   const base = r.commit('base');
 
-  r.write(FILE, emitted('aa', ['{"v":2}']));
+  r.write(FILE, emitted(['{"v":2}']));
   const silent = r.commit('numbers move, no reason');
   assert.equal(r.gate(base).status, 1);
-  assert.equal(r.gate(base, '["new-cms-release"]').status, 0);
-  assert.equal(r.gate(base, 'null').status, 1);
 
-  r.write('docs/METHODS-LOG.md', '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first (typo fixed)\n');
-  r.commit('log typo only');
+  r.write('docs/METHODS-LOG.md', LOG_V1.replace('2026-10-20', '2026-10-21'));
+  r.write('data/pinned/manifest.json', manifest('aa', '2026-10-21'));
+  r.commit('heading date edit and manifest metadata edit: neither is a reason');
   assert.equal(r.gate(base).status, 1);
 
-  r.write('docs/METHODS-LOG.md', '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first (typo fixed)\n\n## hacrp methods_version 2 (2026-11-02)\n- why\n');
+  r.write('docs/METHODS-LOG.md', LOG_V1 + '\n## hacrp methods_version 2 (2026-11-02)\n- why\n');
   const bumped = r.commit('new methods version');
   assert.equal(r.gate(base).status, 0);
 
-  r.write(FILE, emitted('bb', ['{"v":3}']));
-  const repinned = r.commit('re-pin');
-  assert.equal(r.gate(bumped).status, 0, 'a source_manifest change is a reason on its own');
+  r.write('data/pinned/manifest.json', manifest('bb', '2026-11-03'));
+  r.write(FILE, emitted(['{"v":3}']));
+  r.commit('re-pin');
+  assert.equal(r.gate(bumped).status, 0, 'a new input SHA-256 is a reason on its own');
   assert.equal(r.gate(silent).status, 0);
   assert.equal(r.gate('0'.repeat(40)).status, 0, 'a new branch push compares with HEAD~1');
-  assert.equal(r.gate(repinned).status, 0, 'nothing changed');
+  assert.equal(r.gate('f'.repeat(40)).status, 0, 'an unreachable base (force-push) compares with HEAD~1');
 });

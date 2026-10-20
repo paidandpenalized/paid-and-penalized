@@ -21,9 +21,16 @@ test('the token is read-only and pull_request_target is never used', () => {
   assert.doesNotMatch(text.slice(jobsAt), /^\s+permissions:/m);
 });
 
-test('workflow passes labels through env only: ${{ }} appears only in if:, group: or an env value', () => {
-  for (const l of lines.filter((line) => line.includes('${{'))) {
-    assert.match(l, /^\s*(if: \$\{\{|group: |[A-Z_]+: \$\{\{)/, l);
+test('event data reaches scripts through env only: no ${{ }} inside run blocks, and only in known places elsewhere', () => {
+  let runIndent = -1; // indent of the current run: key, or -1 outside a run block
+  for (const l of lines) {
+    const indent = l.length - l.trimStart().length;
+    if (runIndent >= 0 && l.trim() !== '' && indent <= runIndent) runIndent = -1;
+    const run = /^(\s*)(?:- )?run:/.exec(l);
+    if (run) runIndent = run[1].length;
+    if (!l.includes('${{')) continue;
+    assert.ok(runIndent < 0, `\${{ }} inside a run block: ${l}`);
+    assert.match(l, /^\s*(if: \$\{\{|group: |cancel-in-progress: \$\{\{|[A-Z_]+: \$\{\{)/, l);
   }
 });
 

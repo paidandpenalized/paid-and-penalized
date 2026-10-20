@@ -19,7 +19,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   or clock) so the page build and the browser share one copy.
 - `sites/<program>/`, `hub/`: sites import the engine, never each other.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
-  A test fails if a pinned file changes. Files of 10 MB or more never go in git (the pre-commit hook blocks them).
+  A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
+  hook blocks them and a test fails on any tracked file that size.
 - `pipeline/`: build-time Node helpers (repo files, the data-contract envelope). File I/O and the clock live here
   and in `sites/*/pipeline/`, never in `engine/`.
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
@@ -44,10 +45,11 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails. Each changed
   emitted file needs new source data (its own `source_manifest` changed, i.e. a re-pin) or a new
   `## <site> methods_version N` heading for its site in `docs/METHODS-LOG.md`, with the matching bump (a test
-  requires the newest heading to equal the emitted `methods_version`). Alternatively, the whole change carries
-  the `new-cms-release` PR label or a file under `corrections/`. Run `make emit` after any engine or pin change; it keeps `built_at` when
+  requires the newest heading to equal the emitted `methods_version`; older years keep theirs), or the change
+  adds a file under `corrections/`. A re-pin means an input's SHA-256 changed; editing manifest metadata or an
+  existing heading isn't a reason. Run `make emit` after any engine or pin change; it keeps `built_at` when
   nothing else changed.
-- **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MB or more, strings from a
+- **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MiB or more, strings from a
   private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist
   lives outside the repo (`~/.config/paid-and-penalized/blocklist.txt`, or `$PP_BLOCKLIST`) and is never copied
   in, quoted, or echoed; hits report only an entry number. Tests use invented names.

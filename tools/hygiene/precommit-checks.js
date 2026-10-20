@@ -2,7 +2,7 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { findHits } from './blocklist.js';
 
-// Pinned inputs under 10 MB live in git; anything larger goes to a release or object storage instead.
+// Pinned inputs under 10 MiB live in git; anything larger goes to a release or object storage instead.
 export const MAX_BYTES = 10 * 1024 * 1024;
 const BINARY_SNIFF = 8000;
 

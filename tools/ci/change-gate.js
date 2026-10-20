@@ -1,25 +1,22 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. Per changed emitted file: its own source_manifest changed (new pinned inputs), or its site gained a
-// new methods_version heading in the methods log. For the whole change: the "new-cms-release" PR label, or a
-// corrections entry. The label exists only on PR runs; a re-pin also shows on the push to main after the merge.
+// change. Per changed emitted file: the SHA-256 of one of its pinned inputs changed (new source data), or its
+// site's newest methods_version in the methods log went up. For the whole change: a corrections entry. The
+// same evidence is in the tree on PR runs and on the push to main after the merge.
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { METHODS_LOG, sitesWithAddedHeading } from '../../pipeline/methods-log.js';
+import { METHODS_LOG, sitesBumped } from '../../pipeline/methods-log.js';
 
 const EMITTED = 'data/emitted/';
-const LABEL = 'new-cms-release';
 const CORRECTIONS = 'corrections/';
 
 // data/emitted/<site>/fy<YYYY>/<file>.json → <site>
 const siteOf = (path) => path.slice(EMITTED.length).split('/')[0];
 
-// repinned: emitted paths whose source_manifest differs from the base. logDiff: unified diff of the methods log.
-export function changeGate({ changed, labels, repinned = new Set(), logDiff = '' }) {
+// repinned: emitted paths with a pinned input whose SHA-256 changed. bumped: sites whose methods_version went up.
+export function changeGate({ changed, repinned = new Set(), bumped = new Set() }) {
   const changedEmitted = changed.filter((p) => p.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  if (labels.includes(LABEL)) return { ok: true, reason: `emitted data changed; PR labeled ${LABEL}` };
   if (changed.some((p) => p.startsWith(CORRECTIONS))) return { ok: true, reason: 'emitted data changed with a corrections entry' };
-  const bumped = sitesWithAddedHeading(logDiff);
   const unexplained = changedEmitted.filter((p) => !repinned.has(p) && !bumped.has(siteOf(p)));
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change has new pinned inputs or a new methods_version' };
   return {
@@ -28,49 +25,53 @@ export function changeGate({ changed, labels, repinned = new Set(), logDiff = ''
   };
 }
 
-// PR_LABELS comes from toJSON(github.event.pull_request.labels.*.name): a JSON array, or null on a push.
-export function parseLabels(text) {
-  if (text === undefined || text === '') return [];
-  let value;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    throw new RangeError('PR_LABELS is not JSON');
-  }
-  if (value === null) return [];
-  if (!Array.isArray(value) || !value.every((l) => typeof l === 'string')) throw new RangeError('PR_LABELS is not an array of strings');
-  return value;
-}
-
 const ZERO_SHA = /^0{40}$/;
 const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB limit
 
+const MANIFEST = 'data/pinned/manifest.json';
+
 function main() {
-  const given = process.env.GATE_BASE ?? '';
-  const base = given === '' || ZERO_SHA.test(given) ? 'HEAD~1' : given;
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
-  // source_manifest at a revision, or undefined when the file doesn't exist there (added or deleted).
-  const sourceAt = (rev, path) => {
+  const exists = (rev) => {
     try {
-      return JSON.parse(git('show', `${rev}:${path}`)).source_manifest;
+      git('cat-file', '-e', `${rev}^{commit}`);
+      return true;
     } catch {
-      return undefined;
+      return false;
     }
   };
+  const given = process.env.GATE_BASE ?? '';
+  // A new branch has no before; after a force-push the old tip is gone. Either way, check the last commit.
+  const base = given !== '' && !ZERO_SHA.test(given) && exists(given) ? given : 'HEAD~1';
+  const show = (rev, path, fallback) => {
+    try {
+      return git('show', `${rev}:${path}`);
+    } catch {
+      return fallback;
+    }
+  };
+  const json = (rev, path) => JSON.parse(show(rev, path, 'null'));
   const changed = git('diff', '--name-only', '-z', `${base}...HEAD`).split('\0').filter(Boolean);
   const mergeBase = git('merge-base', base, 'HEAD').trim();
+
+  // A file is re-pinned when one of its sources has a different SHA-256 (or the file is new). Metadata edits
+  // to a manifest entry (dates, titles) don't count.
+  const pins = (rev) => new Map((json(rev, MANIFEST) ?? []).map((e) => [e.id, e.sha256]));
+  const [pinsNow, pinsBefore] = [pins('HEAD'), pins(mergeBase)];
+  const inputs = (data, map) => (data?.sources ?? []).map((id) => map.get(id) ?? '').join(',');
   const repinned = new Set(
     changed.filter((p) => {
       if (!p.startsWith(EMITTED)) return false;
-      const now = sourceAt('HEAD', p);
-      return now !== undefined && now !== sourceAt(mergeBase, p);
+      const now = json('HEAD', p);
+      if (now === null) return false;
+      const before = json(mergeBase, p);
+      return before === null || inputs(now, pinsNow) !== inputs(before, pinsBefore);
     }),
   );
   const result = changeGate({
     changed,
-    labels: parseLabels(process.env.PR_LABELS),
     repinned,
-    logDiff: git('diff', '--unified=0', `${base}...HEAD`, '--', METHODS_LOG),
+    bumped: sitesBumped(show(mergeBase, METHODS_LOG, ''), show('HEAD', METHODS_LOG, '')),
   });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);

@@ -99,6 +99,26 @@ test('every schema file uses only supported keywords and has a matching $id', ()
   }
 });
 
+// A case is either { data } or { patch } against the suite's base: [{ path: JSON Pointer, value } | { path, remove }].
+// A patch whose parent path doesn't exist (or a remove of a missing key) throws, so a stale case can't pass by
+// accident.
+function applyPatch(base, patch) {
+  const doc = structuredClone(base);
+  for (const op of patch) {
+    const keys = op.path.split('/').slice(1).map((k) => k.replace(/~1/g, '/').replace(/~0/g, '~'));
+    const last = keys.pop();
+    const parent = keys.reduce((node, k) => {
+      if (node === null || typeof node !== 'object' || !Object.hasOwn(node, k)) throw new RangeError(`patch path ${op.path} not in base`);
+      return node[k];
+    }, doc);
+    if (op.remove) {
+      if (!Object.hasOwn(parent, last)) throw new RangeError(`patch removes missing ${op.path}`);
+      delete parent[last];
+    } else parent[last] = op.value;
+  }
+  return doc;
+}
+
 const conformanceDir = SCHEMAS_DIR + 'conformance/';
 for (const file of readdirSync(conformanceDir).filter((f) => f.endsWith('.cases.json'))) {
   const suite = readJson(conformanceDir + file);
@@ -107,7 +127,16 @@ for (const file of readdirSync(conformanceDir).filter((f) => f.endsWith('.cases.
   for (const c of suite.cases) {
     test(`conformance ${file}: ${c.name} is ${c.valid ? 'valid' : 'invalid'}`, () => {
       assert.ok(root, `no schema ${suite.schema}`);
-      assert.equal(validate(target, c.data, { schemas }).length === 0, c.valid);
+      const data = c.patch ? applyPatch(suite.base, c.patch) : c.data;
+      assert.equal(validate(target, data, { schemas }).length === 0, c.valid);
     });
   }
 }
+
+test('applyPatch: sets, removes, and refuses paths the base lacks', () => {
+  const base = { a: { b: 1 }, list: [{ x: 1 }] };
+  assert.deepEqual(applyPatch(base, [{ path: '/a/b', value: 2 }, { path: '/list/0/x', remove: true }]), { a: { b: 2 }, list: [{}] });
+  assert.deepEqual(base, { a: { b: 1 }, list: [{ x: 1 }] });
+  assert.throws(() => applyPatch(base, [{ path: '/missing/b', value: 1 }]), RangeError);
+  assert.throws(() => applyPatch(base, [{ path: '/a/missing', remove: true }]), RangeError);
+});

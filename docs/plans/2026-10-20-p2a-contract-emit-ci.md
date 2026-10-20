@@ -21,8 +21,8 @@
 - `fy` comes from the data (the CSV's `Fiscal Year`), never typed.
 - `source_manifest` = SHA-256 of `canonicalJson(entries)`, where entries are the manifest entries named in `sources`, sorted by `id`, and `canonicalJson` sorts object keys recursively.
 - **Golden:** the committed emitted file must equal a fresh rebuild from the pins, ignoring `built_at`. The emitter keeps the committed `built_at` when nothing else changed, so a no-op rebuild leaves git clean.
-- **Change gate:** a change under `data/emitted/` needs, in the same PR or push, a `new-cms-release` PR label, or a change to `docs/METHODS-LOG.md` or under `corrections/` (the source of the public corrections log). A `methods_version` must have a matching heading in `docs/METHODS-LOG.md`.
-- Pinned inputs under 10 MB live in `data/pinned/` with a manifest entry; the hook blocks any staged file ≥ 10 MB (10 × 1024 × 1024 bytes).
+- **Change gate:** a change under `data/emitted/` needs, in the same PR or push, a reason on record (final form in § Amendments: a re-pin, a methods_version bump, or a corrections entry). A `methods_version` must have a matching heading in `docs/METHODS-LOG.md`.
+- Pinned inputs under 10 MB live in `data/pinned/` with a manifest entry; the hook blocks any staged file ≥ 10 MiB (10 × 1024 × 1024 bytes).
 - TDR's `hrrp.json` is pinned byte-for-byte from TDR's public repo at commit `80f3659d1f6c850443bbc7d939f5f1dc9cd8153b` (2,604,301 bytes, SHA-256 `9541a509cda7f365504181b639fc314972ebe75aad181811e36c87323554f3c1`), read with `git show` from the local clone (no download).
 - **Actions:** every `uses:` pinned to a 40-hex SHA with a version comment; top-level `permissions: contents: read`; no `pull_request_target`; checkout with `persist-credentials: false`; PR labels reach scripts only through `env`, never interpolated into `run:`.
 - **Blocklist:** private names and strings live only in an untracked file outside the repo, `$PP_BLOCKLIST` or `~/.config/paid-and-penalized/blocklist.txt`. The hook refuses a list inside the repo and fails closed if the list is missing or empty. No real blocklisted string appears in code, tests, docs or output; tests use invented names. Hits report the file, line and entry number, not the entry.
@@ -178,16 +178,23 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   with a byte-order mark is decoded rather than skipped as binary. Type-changed files (`T`) are included. The
   outside-repo check uses `realpathSync.native`, so a differently cased path can't slip through on macOS.
 - **Validator:** NaN and ±Infinity fail `number` and `integer`, because JSON would write them as `null`.
-- **Change gate:** a PR label exists only on PR runs, so the push to `main` after merging a labeled PR would
-  fail. "New source data" is therefore also proven in-tree: the changed emitted file's own `source_manifest`
-  changed (a re-pin). The CLI reads that field as JSON at the merge base and at HEAD. The label still counts
-  on PRs. A methods-log edit explains a change only if it adds a `## <site> methods_version N` heading for
-  that file's own site. Reasons are checked per emitted file. `pipeline/methods-log.js` holds the one heading
-  format. A shared test, `pipeline/test/emitted-contract.test.js`, checks every emitted file of every site
-  against its schema and requires its `methods_version` to equal the newest heading for that site. The gate step runs even when tests fail, so both checks report. A test runs the gate CLI
-  against a throwaway git repo.
+- **Change gate (final form):** the `new-cms-release` label is gone (Dalton, 2026-10-20). Labels exist only on
+  PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. Reasons are checked
+  per changed emitted file:
+  - one of its sources' SHA-256s changed between the merge base and HEAD (or the file is new), or
+  - its site's newest `methods_version` in the log went up.
+  A file under `corrections/` covers the whole change. Editing manifest metadata, or editing or re-adding an
+  existing heading, isn't a reason. `pipeline/methods-log.js` holds the one heading format. If the base commit
+  is gone (new branch, force-push), the gate checks the last commit. The gate step runs even when tests fail,
+  and a test runs the gate CLI against a throwaway git repo.
+- **Methods versions by year:** `pipeline/test/emitted-contract.test.js` checks every emitted file of every
+  site against its schema and requires a log heading for its `methods_version`. Only a site's newest year must
+  carry the newest version; older years keep the version they were published under.
+- **CI:** only PR runs cancel each other, so every push to `main` is gate-checked. A test fails on any tracked
+  file of 10 MiB or more, since the hook can be skipped.
+- **Conformance cases:** one base document plus a JSON Pointer patch per case. A patch path missing from the
+  base throws, so a stale case can't pass by accident. The Python runner must apply the same patches.
 - **Synthetic CCNs** (`000001`, `00001F`, `990001`) replace real ones in the contract fixtures.
 - **Verified on GitHub:** both CI jobs are green on `main`. A throwaway PR that changed one emitted value with
-  no reason failed both the golden check and the change gate. With the `new-cms-release` label, the gate
-  passed and golden still failed. PR labels work with Issues turned off. The PR was closed unmerged and its
-  branch deleted.
+  no reason failed both the golden check and the change gate. The PR was closed unmerged and its branch
+  deleted. (A label test in that PR also passed; the label was dropped afterwards.)

@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Only PR runs cancel each other: every push to main must finish, or its commits would skip the gate.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -31,7 +31,6 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: node tools/ci/change-gate.js
 
   secrets:
