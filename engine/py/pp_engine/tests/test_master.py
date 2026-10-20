@@ -180,6 +180,14 @@ class Attributes(unittest.TestCase):
                         hacrp=[c] if rng.random() < 0.5 else [], hrrp=[c] if rng.random() < 0.5 else [])
             self.assertEqual(validate(SCHEMAS["hospital.schema.json"], out, SCHEMAS), [])
 
+    def test_schema_vocabularies_match_the_code(self):
+        h = SCHEMAS["hospital.schema.json"]["$defs"]
+        self.assertEqual(set(h["hospital"]["properties"]["kind"]["enum"]), {*KINDS.values(), "unknown"})
+        self.assertEqual(set(h["program"]["properties"]["reason"]["enum"]), {None, *REASONS})
+        self.assertEqual(set(h["hospital"]["properties"]["types"]["items"]["enum"]),
+                         {t for ts in master.PTYPES.values() for t in ts} | {"MDH"})
+        self.assertEqual(h["hospital"]["required"], list(master.RECORD_KEYS))
+
     def test_record_keys_in_order(self):
         self.assertEqual(list(build_record("000001", hgi_row(), None, None, {"hacrp": True})), list(master.RECORD_KEYS))
 

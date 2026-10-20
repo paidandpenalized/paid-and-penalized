@@ -36,7 +36,7 @@ class Helpers(unittest.TestCase):
 
 class Hgi(unittest.TestCase):
     def test_reads_rows_by_ccn_as_text(self):
-        text = "﻿" + HGI_HEADER + ('00001F,INVENTED GENERAL HOSPITAL,"1 MAIN  ST",SPRINGFIELD,ZZ,1234,X,'
+        text = "\ufeff" + HGI_HEADER + ('00001F,INVENTED GENERAL HOSPITAL,"1 MAIN  ST",SPRINGFIELD,ZZ,1234,X,'
                                         'Acute Care Hospitals,Government - State,4\n'
                                         'Footnote row,,,,,,,,,\n')
         hgi = read_hgi(text)

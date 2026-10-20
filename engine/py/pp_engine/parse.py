@@ -56,7 +56,7 @@ def zip5(s):
 
 
 def _norm(h):
-    return squash(str(h).replace("﻿", "")).lower()
+    return squash(str(h).replace("\ufeff", "")).lower()
 
 
 def rows(text, delimiter):

@@ -85,13 +85,18 @@ def build_record(ccn, hgi, impact, pos, listed, program_names=()):
     name = (names.display_name(g.get("name"), imp.get("name")) or names.smart_title(p.get("name"))
             or _first(*(names.display_name(n, None) for n in program_names))
             or f"Hospital {ccn} (name not in CMS files)")  # TDR's wording for a CCN no file names
-    kind = kind_of(hgi, impact is not None)
-    state = _first(g.get("state"), p.get("state"))
-    reason = POS_TERMINATION.get(p.get("term"))
-    inactive = {"date": p.get("termDate"), "reason": reason} if reason else None
-    beds, beds_source = (p["beds"], "pos") if p.get("beds") else (imp["beds"], "cr") if imp.get("beds") else (None, None)
     ipps = impact is not None
-    rec = {
+    kind = kind_of(hgi, ipps)
+    state = _first(g.get("state"), p.get("state"))
+    term_reason = POS_TERMINATION.get(p.get("term"))
+    inactive = {"date": p.get("termDate"), "reason": term_reason} if term_reason else None
+    beds, beds_source = (p["beds"], "pos") if p.get("beds") else (imp["beds"], "cr") if imp.get("beds") else (None, None)
+    types, teach, urban = [], None, None  # IPPS attributes, for hospitals in the impact file only
+    if ipps:
+        types = sorted(set(PTYPES.get(imp["ptype"], [])) | ({"MDH"} if imp["mdh"] else set()))
+        teach = "major" if imp["irb"] >= MAJOR_TEACHING else "minor" if imp["irb"] else "none"
+        urban = imp["urgeo"] in ("LURBAN", "OURBAN")
+    return {
         "ccn": ccn,
         "name": name,
         "alias": names.alias(name, imp.get("name")),
@@ -101,18 +106,17 @@ def build_record(ccn, hgi, impact, pos, listed, program_names=()):
         "zip": _first(g.get("zip"), p.get("zip")),
         "kind": kind,
         "ipps": ipps,
-        "types": sorted(set(PTYPES.get(imp["ptype"], [])) | ({"MDH"} if imp["mdh"] else set())) if ipps else [],
-        "teach": ("major" if imp["irb"] >= MAJOR_TEACHING else "minor" if imp["irb"] else "none") if ipps else None,
-        "urban": imp["urgeo"] in ("LURBAN", "OURBAN") if ipps else None,
+        "types": types,
+        "teach": teach,
+        "urban": urban,
         "beds": beds,
         "bedsSource": beds_source,
         "own": _ownership(g.get("ownership"), imp.get("own")),
         "ownDetail": g.get("ownership") or None,
         "inactive": inactive,
         "programs": {pid: {"inProgram": on, "reason": reason_for(on, kind, state, inactive is not None)}
-                     for pid, on in sorted(listed.items())},
+                     for pid, on in listed.items()},
     }
-    return rec
 
 
 def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at):
