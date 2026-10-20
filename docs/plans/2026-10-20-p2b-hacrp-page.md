@@ -449,4 +449,10 @@ Copy button.
   `.pill--rew` is 4.47:1 (fix before any bonus site); stacked-table semantics need an axe/VoiceOver pass at narrow width;
   column headers use `--pen-ink` text; the copy gate doesn't catch number words; the as-of "expected early" label goes
   stale without a refresh (the maintenance banner covers it).
+- **Design pass (after M1):** a separate design/AI-tell review; 14 fixes applied (hero alignment, table rules and
+  header ink, no empty what-if block, hatched "No score published" for unscored rows, CMS's literal decision once,
+  hero label, estimate note visible on tap, page titles/descriptions, the largest-contribution sentence shown, a
+  two-row phone header, toggle pressed state, kicker link). Owner-review items are kept in the private planning repo.
+  Open Minor, fix in M2: at ≤ 520px the header's visual order (wordmark, toggle, byline) differs from tab order; move
+  the toggle before the byline in the markup.
 
