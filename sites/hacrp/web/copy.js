@@ -132,8 +132,12 @@ export const COPY = {
   periodHai: { text: 'Infection measures ({shorts}): {start} to {end}', claim: null },
   lineHeading: { text: "CMS's line", claim: null },
   line: {
-    text: 'CMS cut hospitals with a published Total HAC Score of {lowestYes} or higher; none at {highestNo} or lower.',
+    text: 'Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of {lowestYes} or higher and none at {highestNo} or lower.',
     claim: null,
+  },
+  lineMaryland: {
+    text: "Maryland's hospitals are scored but not subject to the reduction.",
+    claim: 'HACRP-13',
   },
   lineRelative: {
     text: "The line is set by every hospital's scores, so a hospital can land above it without its own results getting worse.",

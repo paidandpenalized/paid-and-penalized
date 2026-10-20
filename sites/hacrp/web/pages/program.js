@@ -55,7 +55,7 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
 </section>
 <section class="block" aria-labelledby="line-h">
 <h2 id="line-h">${t('lineHeading')}</h2>
-<p class="line">${fill('line', boundaryText)}</p>
+<p class="line">${fill('line', boundaryText)} ${t('lineMaryland')}</p>
 <p>${t('lineRelative')}</p>
 </section>
 <section class="block" aria-labelledby="counts-h">

@@ -108,6 +108,12 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     // Penalty counts use A1(b)'s population: scored hospitals with a Yes/No decision.
     const decided = decidedHospitals(DATA.hospitals);
     const cut = decided.filter((h) => h.paymentReduction === 'Yes').length;
+    // The line is stated for Yes/No decisions only: Maryland hospitals score above it and were not cut.
+    const program = pages.get('/hacrp/');
+    assert.ok(DATA.hospitals.some((h) => h.paymentReduction === 'N/A' && h.total >= DATA.model.boundary.lowestYes), 'the scope matters in the pinned data');
+    assert.ok(program.includes(esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${bt.lowestYes} or higher and none at ${bt.highestNo} or lower.`)));
+    assert.ok(program.includes(esc("Maryland's hospitals are scored but not subject to the reduction.")));
+
     assert.ok(pages.get('/hacrp/').includes(`CMS cut Medicare inpatient payments to ${count(cut)} of the ${count(decided.length)} hospitals with a Total HAC Score`));
   }));
 
@@ -162,7 +168,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   });
   assert.match(text, /<section class="block search" aria-labelledby="search-h" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
   assert.doesNotMatch(text, /application\/json/);
-  assert.match(text, /CMS cut hospitals with a published Total HAC Score of 0\.2507 or higher; none at 0\.2500 or lower\./);
+  assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of 0\.2507 or higher and none at 0\.2500 or lower\./);
 });
 
 test('the build writes the hospitals asset with one row per hospital, sorted by name', () =>
