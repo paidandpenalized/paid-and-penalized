@@ -119,13 +119,19 @@ def build_record(ccn, hgi, impact, pos, listed, program_names=()):
     }
 
 
-def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at):
-    """The master: envelope, each program's file year, and one record per CCN in HGI, the impact file or any
-    program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name}}. A CCN
-    only in POS isn't added (POS lists every certified hospital, open or closed, with no program link)."""
+def universe(hgi, impact, programs):
+    """Every CCN in HGI, the impact file or any program's file (not POS: it lists every certified hospital, open or
+    closed, with no program link)."""
     ccns = set(hgi) | set(impact)
     for prog in programs.values():
         ccns |= set(prog["names"])
+    return ccns
+
+
+def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at):
+    """The master: envelope, each program's file year, and one record per CCN in HGI, the impact file or any
+    program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name}}."""
+    ccns = universe(hgi, impact, programs)
     order = sorted(programs)
     hospitals = [build_record(c, hgi.get(c), impact.get(c), pos.get(c),
                               {pid: c in programs[pid]["names"] for pid in order},

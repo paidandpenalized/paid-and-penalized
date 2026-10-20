@@ -67,12 +67,25 @@ def cbsa_names():
     return read_cbsa_names(read_zip_member(CBSA, CBSA_MEMBER).decode("cp1252"))
 
 
+@functools.lru_cache(maxsize=None)
+def tables():
+    """The parsed CMS tables the master joins: HGI, the impact file, POS, and each program's listing."""
+    return {"hgi": read_hgi(read_pinned_bytes(HGI).decode("utf-8")), "impact": read_impact(impact_text()),
+            "pos": read_pos(read_pinned_bytes(POS).decode("utf-8")),
+            "programs": {"hacrp": hacrp_program(), "hrrp": hrrp_program()}}
+
+
+def tdr_points():
+    return read_points(read_pinned_bytes(TDR_POINTS).decode("utf-8"))
+
+
 def build_from_pins(built_at):
+    t = tables()
     return build_master(
-        hgi=read_hgi(read_pinned_bytes(HGI).decode("utf-8")),
-        impact=read_impact(impact_text()),
-        pos=read_pos(read_pinned_bytes(POS).decode("utf-8")),
-        programs={"hacrp": hacrp_program(), "hrrp": hrrp_program()},
+        hgi=t["hgi"],
+        impact=t["impact"],
+        pos=t["pos"],
+        programs=t["programs"],
         fy=impact_fy(impact_text()),
         manifest=read_manifest(),
         sources=list(SOURCES),
