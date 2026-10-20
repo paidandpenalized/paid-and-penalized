@@ -187,10 +187,11 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   statuses from one `git diff --name-status --no-renames` (a rename is a delete plus an add) and runs from the
   repo root. A file under
   `corrections/YYYY-MM-DD-<slug>.md` (a real date; a regular file whose whitespace-normalized text is non-blank
-  and not already any file under `corrections/` at the merge base) covers the whole change, deletions included.
-  The log is append-only, checked on its own: any change that edits, retypes or deletes a dated entry fails.
-  Known limit: re-adding an entry deleted in an earlier change counts as new, but that deletion itself failed
-  the gate. Otherwise each changed emitted file needs one
+  and not already a `.md` file under `corrections/` at the merge base; files of 1 MiB or more, such as evidence
+  PDFs, are never read) covers the whole change, deletions included. The log is append-only, checked on its
+  own: any change that edits, retypes or deletes a dated entry fails, and removing one (e.g., for privacy) takes
+  one deliberate red run. Known limits: re-adding an entry deleted in an earlier change counts as new. A
+  branch's first push is checked against `HEAD~1` only, so the PR run (against `main`) is the full check. Otherwise each changed emitted file needs one
   of:
   - *added*: a first emission (by git status, not by content);
   - *re-pinned*: an input's SHA-256 changes in the same change, the file keeps its sources and `methods_version`,

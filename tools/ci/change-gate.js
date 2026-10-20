@@ -34,8 +34,13 @@ const MANIFEST = 'data/pinned/manifest.json';
 // changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
 // with a per-file reason (see above). freshEntries: added regular-file entry paths whose text, whitespace aside, is
 // non-empty and not already a file under corrections/ at the base (this function re-checks status and the name).
+// Dated entries this change edits, retypes or deletes.
+export function entryRewrites(changed) {
+  return changed.filter(({ status, path }) => status !== 'A' && isEntry(path)).map(({ path }) => path);
+}
+
 export function changeGate({ changed, explained = new Set(), freshEntries = new Set() }) {
-  const rewrites = changed.filter(({ status, path }) => status !== 'A' && isEntry(path)).map(({ path }) => path);
+  const rewrites = entryRewrites(changed);
   if (rewrites.length > 0) {
     return { ok: false, reason: `the corrections log is append-only: this change edits, retypes or removes ${rewrites.join(', ')}; add a new entry instead` };
   }
@@ -44,11 +49,14 @@ export function changeGate({ changed, explained = new Set(), freshEntries = new 
   if (changed.some(({ status, path }) => status === 'A' && isEntry(path) && freshEntries.has(path))) {
     return { ok: true, reason: 'emitted data changed with a new corrections entry' };
   }
+  const misnamed = changed
+    .filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS) && path.endsWith('.md') && !isEntry(path))
+    .map(({ path }) => path);
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal)`,
+    reason: `${misnamed.length > 0 ? `${misnamed.join(', ')} is not a dated entry (corrections/YYYY-MM-DD-<slug>.md, a real date). ` : ''}${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal)`,
   };
 }
 
@@ -79,6 +87,7 @@ export function parseNameStatus(text) {
 
 const ZERO_SHA = /^0{40}$/;
 const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB limit
+const MAX_ENTRY = 1024 * 1024; // a corrections entry is a short note
 
 function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
@@ -96,21 +105,25 @@ function main() {
   const emitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   const explained = new Set();
   const freshEntries = new Set();
-  if (emitted.length > 0 && !changed.some(({ status, path }) => status !== 'A' && isEntry(path))) {
+  if (emitted.length > 0 && entryRewrites(changed).length === 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // Text under corrections/, whitespace-normalized, so a copy with a stray newline is still a copy. Only regular
-    // files count on either side: a symlink's "text" is its target, and a submodule has none.
+    // Markdown text under corrections/, whitespace-normalized, so a copy with a stray newline is still a copy.
+    // Only regular files count on either side (a symlink's "text" is its target; a submodule has none), and only
+    // .md files under 1 MiB are read: evidence files such as PDFs are never entries or their copies.
     const normal = (text) => text.replace(/\s+/g, ' ').trim();
-    const regularFiles = (rev) =>
-      git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS)
+    const markdown = (rev, paths) =>
+      git('ls-tree', '-r', '-l', '-z', rev, '--', ...paths)
         .split('\0')
         .filter(Boolean)
-        .map((record) => ({ mode: record.split(' ')[0], path: record.slice(record.indexOf('\t') + 1) }))
-        .filter(({ mode }) => mode === '100644' || mode === '100755');
+        .map((record) => {
+          const [mode, , , size] = record.slice(0, record.indexOf('\t')).split(/\s+/);
+          return { mode, size: Number(size), path: record.slice(record.indexOf('\t') + 1) };
+        })
+        .filter(({ mode, size, path }) => (mode === '100644' || mode === '100755') && path.endsWith('.md') && size < MAX_ENTRY);
     const addedEntries = changed.filter(({ status, path }) => status === 'A' && isEntry(path)).map(({ path }) => path);
     if (addedEntries.length > 0) {
-      const oldTexts = new Set(regularFiles(mergeBase).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
-      for (const { path } of regularFiles('HEAD').filter(({ path }) => addedEntries.includes(path))) {
+      const oldTexts = new Set(markdown(mergeBase, [CORRECTIONS]).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
+      for (const { path } of markdown('HEAD', addedEntries)) {
         const text = normal(git('show', `HEAD:${path}`));
         if (text !== '' && !oldTexts.has(text)) freshEntries.add(path);
       }

@@ -44,9 +44,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   (the last when a change touches external input or credentials).
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
   (`tools/ci/change-gate.js` has the exact rule). The corrections log is append-only: a change that edits,
-  retypes or deletes a dated entry fails, so a typo in an entry is fixed by a new entry. A new entry
-  `corrections/YYYY-MM-DD-<slug>.md` (a regular file with non-blank text that isn't a copy of anything already
-  under `corrections/`) covers the whole change. Otherwise each changed emitted file must be:
+  retypes or deletes a dated entry fails, so a typo in an entry is fixed by a new entry. Removing an entry (e.g.,
+  private information pasted in by mistake) is Dalton's call and takes one deliberate red gate run. A new entry
+  `corrections/YYYY-MM-DD-<slug>.md` (a real calendar date; a regular `.md` file with non-blank text that isn't
+  a copy of any `.md` already under `corrections/`) covers the whole change. Otherwise each changed emitted file must be:
   - **new** (a first emission); or
   - **re-pinned**: an input's SHA-256 changes in the same change, with the same `sources` and `methods_version`
     and a `source_manifest` that is the true hash at HEAD. Pin and `make emit` go together. Adding or dropping

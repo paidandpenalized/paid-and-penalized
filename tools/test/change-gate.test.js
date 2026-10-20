@@ -62,6 +62,12 @@ test('isEntry: a real calendar date and a slug that starts with a letter or digi
   }
 });
 
+test('a misdated entry name is named in the failure', () => {
+  const r = changeGate({ changed: [M(EMITTED), { status: 'A', path: 'corrections/2026-02-29-x.md' }], freshEntries: new Set(['corrections/2026-02-29-x.md']) });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /corrections\/2026-02-29-x\.md is not a dated entry/);
+});
+
 test('only a dated markdown entry directly under corrections/ counts', () => {
   for (const p of ['corrections-old.md', 'docs/corrections/2026-11-01-x.md', 'corrections/README.md', 'corrections/.gitkeep',
     'corrections/2026-11-01-x.txt', 'corrections/sub/2026-11-01-x.md', 'docs/METHODS-LOG.md']) {

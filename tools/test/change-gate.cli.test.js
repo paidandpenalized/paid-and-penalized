@@ -126,7 +126,9 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   assert.equal(r.gate(`${executable}~1`).status, 0);
 
   r.write('corrections/2026-11-01-old.md', 'an old correction, rewritten\n');
-  const rewritten = r.commit('an old entry rewritten, nothing else');
+  r.write(FILE, emitted(3, ['{"v":8.5}'], 'cc'));
+  r.write('corrections/2026-11-07-another.md', 'with a fresh entry too\n');
+  const rewritten = r.commit('an old entry rewritten, alongside an emitted change and a fresh entry');
   const verdict = r.gate(`${rewritten}~1`);
   assert.equal(verdict.status, 1);
   assert.match(verdict.stdout, /append-only: this change edits, retypes or removes corrections\/2026-11-01-old\.md/);
@@ -137,11 +139,17 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   assert.match(r.gate(`${retyped}~1`).stdout, /append-only/, 'a type change is an edit');
 
   r.write('corrections/README.md', 'how to write an entry\n');
-  const readme = r.commit('a README');
+  r.write('corrections/evidence/letter.pdf', Buffer.alloc(2 * 1024 * 1024, 1));
+  const readme = r.commit('a README and a large evidence file');
   r.write('corrections/2026-11-08-copy-of-readme.md', 'how to write an entry\n');
   r.write(FILE, emitted(3, ['{"v":9}'], 'cc'));
   r.commit('a copy of a non-entry file is not new text');
-  assert.equal(r.gate(readme).status, 1);
+  const copied = r.gate(readme);
+  assert.equal(copied.status, 1);
+  assert.match(copied.stdout, /hacrp\.json changed without a reason on record/, 'fails on the reason, not a crash on the PDF');
+  r.write('corrections/2026-11-09-real.md', 'a real correction\n');
+  r.commit('a real entry');
+  assert.equal(r.gate(readme).status, 0, 'and passes with a real entry, the PDF notwithstanding');
 
   const lost = r.gate('f'.repeat(40));
   assert.equal(lost.status, 1, 'an unreachable base (force-push) fails closed');
