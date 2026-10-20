@@ -1,16 +1,17 @@
 // HACRP solver: for one measure on its own, the value that would clear CMS's line ("What would it take?",
 // for a hospital CMS flagged) or the highest value that would stay clear of it ("How much cushion?", for one
-// it didn't). Uses the same change-only math as the what-if, and targets the bottom of the too-close band so
-// applying the answer reads "No", not "too close to call".
+// it didn't). It inverts the what-if's own value -> z mapping and checks each answer against it, targeting the
+// bottom of the too-close band so applying the answer reads "No", not "too close to call".
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { baselineZ, valueFromZ } from './params.js';
+import { baselineZ, hypotheticalZ, valueFromZ } from './params.js';
 import { noCeiling } from './score.js';
 
-// Round down to the measure's display decimals. Lower is the safe direction for both questions: a lower value
-// never raises the score. The small nudge keeps an answer that is already exact from rounding back up.
-function floorTo(x, decimals) {
+// A first guess can land just past a snap point (the cap or floor); a few display units down always clears it.
+const MAX_STEPS = 3;
+
+function roundTo(x, decimals, round) {
   const scale = 10 ** decimals;
-  return Math.floor((x - 1e-9) * scale) / scale;
+  return round(x * scale + (round === Math.floor ? 1e-6 : 0)) / scale;
 }
 
 function result(kind, id, fields = {}) {
@@ -26,20 +27,29 @@ export function solveMeasure(hospital, model, id) {
 
   const p = model.params[id];
   const n = ids.length;
-  // The what-if's change-only math, run backward: the z this measure needs for the score to land on the
-  // highest value that still reads No, with the band a change to this measure carries.
-  const target = noCeiling(model.boundary, p.fitError / n);
-  const zNeeded = baselineZ(m, p) + (target - hospital.total) * n;
-  const value = floorTo(valueFromZ(zNeeded, p), p.decimals);
+  // The highest z this measure may take for the score to land on the highest value that still reads No.
+  const zLimit = m.z + (noCeiling(model.boundary, p.fitError / n) - hospital.total) * n;
+
+  // The highest display value whose what-if z stays within zLimit: invert the change-only step, round down,
+  // then step down until the what-if's own mapping agrees.
+  const highestFitting = () => {
+    const guess = valueFromZ(zLimit - (m.z - baselineZ(m, p)), p);
+    let v = Math.max(0, roundTo(guess, p.decimals, Math.floor));
+    for (let i = 0; i <= MAX_STEPS && v >= 0; i++) {
+      if (hypotheticalZ(m, p, v).z <= zLimit) return v;
+      v = roundTo(v - 10 ** -p.decimals, p.decimals, Math.round);
+    }
+    return null;
+  };
 
   if (hospital.paymentReduction === 'Yes') {
-    // total > target here, so zNeeded is below the current z and the answer is always under the cap.
-    if (zNeeded < p.zMin || value < 0) return result('needed', id);
-    return result('needed', id, { possible: true, value });
+    const value = highestFitting();
+    return value === null ? result('needed', id) : result('needed', id, { possible: true, value });
   }
 
-  // Already at or past the cap, or able to reach it, without crossing the line: no rise can cross it.
-  if (m.value >= p.cap || zNeeded >= p.zMax) return result('cushion', id, { possible: true, unlimited: true });
-  if (value < m.value || value < 0) return result('cushion', id, { value: Math.max(value, 0), note: 'no-cushion' });
+  // Already at CMS's worst z, or the worst z still fits: no rise can cross the line.
+  if (m.z >= p.zMax || p.zMax <= zLimit) return result('cushion', id, { possible: true, unlimited: true });
+  const value = highestFitting();
+  if (value === null || value < m.value) return result('cushion', id, { value, note: 'no-cushion' });
   return result('cushion', id, { possible: true, value });
 }

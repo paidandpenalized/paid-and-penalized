@@ -34,6 +34,15 @@ export function baselineZ(measure, p) {
   return measure.value === null ? measure.z : zFromValue(measure.value, p);
 }
 
+// The z a measure would have at a hypothetical value: CMS's exact worst (or best) z at or past the cap (or at or
+// below the floor, which for an SIR is 0), otherwise the change-only step from the published z, kept in CMS's
+// z range. `exact` is false only for the change-only step, which carries the fit error.
+export function hypotheticalZ(measure, p, value) {
+  if (value >= p.cap - p.boundTolerance) return { z: p.zMax, exact: true };
+  if (value <= Math.max(p.floor + p.boundTolerance, 0)) return { z: p.zMin, exact: true };
+  return { z: clamp(measure.z + zFromValue(value, p) - baselineZ(measure, p), p.zMin, p.zMax), exact: false };
+}
+
 export function fitMeasureParams(hospitals, id) {
   const pairs = withValueAndZ(hospitals, id);
   // Bounds come from hospitals with a published value; assigned (non-submitted) z-scores are checked against them.
@@ -58,6 +67,8 @@ export function fitMeasureParams(hospitals, id) {
     decimals: Math.max(...pairs.map(({ m }) => decimalsOf(m.valueText))),
   };
   p.fitError = Math.max(...pairs.map(({ m }) => Math.abs(zFromValue(m.value, p) - m.z)));
+  // How far, in the measure's own units, the fitted floor and cap can sit from CMS's.
+  p.boundTolerance = p.sd * p.fitError;
   return p;
 }
 

@@ -5,8 +5,7 @@
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { clamp } from '../stats.js';
-import { EDGE, baselineZ, zFromValue } from './params.js';
+import { EDGE, hypotheticalZ } from './params.js';
 import { classify } from './score.js';
 
 function validate(changes, ids) {
@@ -38,15 +37,12 @@ export function whatIf(hospital, model, changes = {}) {
 
     let afterZ = m.z;
     if (changed) {
-      // A value at or past the cap (or floor) gets exactly CMS's worst (or best) z; in between, the change-only
-      // step, kept inside CMS's z range. A move smaller than float noise is no move.
-      let z = clamp(m.z + zFromValue(afterValue, p) - baselineZ(m, p), p.zMin, p.zMax);
-      if (afterValue >= p.cap) z = p.zMax;
-      else if (afterValue <= p.floor) z = p.zMin;
+      const { z, exact } = hypotheticalZ(m, p, afterValue);
+      // A move smaller than float noise is no move. Only the fitted (inexact) part of a move carries fit error.
       if (Math.abs(z - m.z) >= EDGE) {
         afterZ = z;
         deltaZ += z - m.z;
-        fitErrors += p.fitError;
+        if (!exact) fitErrors += p.fitError;
       }
     }
 
@@ -57,15 +53,16 @@ export function whatIf(hospital, model, changes = {}) {
       beforeZ: m.z,
       afterZ,
       changed,
-      atCap: afterZ >= p.zMax,
+      atCap: afterValue === null ? afterZ >= p.zMax : afterValue >= p.cap - p.boundTolerance,
       contribution: afterZ / n,
       leveragePerTenth: 0.1 / (n * p.sd),
     };
   }
 
-  const band = fitErrors / n;
   const cms = hospital.paymentReduction;
-  const score = Math.abs(deltaZ) < EDGE ? hospital.total : hospital.total + deltaZ / n;
+  const moved = Math.abs(deltaZ) >= EDGE;
+  const band = moved ? fitErrors / n : 0;
+  const score = moved ? hospital.total + deltaZ / n : hospital.total;
   // A score that moves away from the line keeps CMS's decision; only a move toward it is re-judged.
   const awayFromLine = (cms === 'No' && score <= hospital.total) || (cms === 'Yes' && score >= hospital.total);
   const flag = cms === 'N/A' || awayFromLine ? cms : classify(score, model.boundary, band);

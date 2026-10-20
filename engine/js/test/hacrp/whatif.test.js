@@ -114,14 +114,14 @@ test('invalid changes throw RangeError', () => {
   assert.throws(() => whatIf(h, model, { [present]: Infinity }), RangeError);
 });
 
-test('moving a measure past its cap lands exactly on CMS\'s maximum z and reads atCap; afterZ never leaves [zMin, zMax]', () => {
+test('a value past the cap gets exactly CMS\'s maximum z and reads atCap; 0 gets exactly CMS\'s minimum z', () => {
   for (const { h, id } of submittedPairs(hospitals)) {
     const p = model.params[id];
     const up = whatIf(h, model, { [id]: p.cap * 2 + 1 }).measures[id];
     assert.equal(up.atCap, true, `${h.ccn} ${id}`);
     assert.equal(up.afterZ, p.zMax, `${h.ccn} ${id}`);
     const down = whatIf(h, model, { [id]: 0 }).measures[id];
-    assert.ok(down.afterZ >= p.zMin && down.afterZ <= p.zMax, `${h.ccn} ${id}`);
+    assert.equal(down.afterZ, p.zMin, `${h.ccn} ${id}`);
   }
 });
 
@@ -142,4 +142,18 @@ test('a move away from the line keeps CMS\'s flag: No stays No when a measure im
     if (h.paymentReduction === 'No' && v > 0) assert.equal(whatIf(h, model, { [id]: Math.max(0, v - 0.00001) }).after.flag, 'No', `${h.ccn} ${id}`);
     if (h.paymentReduction === 'Yes') assert.equal(whatIf(h, model, { [id]: v + 0.00001 }).after.flag, 'Yes', `${h.ccn} ${id}`);
   }
+});
+
+test('mixed changes: a net move away from the line keeps CMS\'s flag; a snapped move adds no band', () => {
+  const h = scored.find((x) => x.paymentReduction === 'No' && submitted(x).length === 6 && submitted(x).every((id) => x.measures[id].value < model.params[id].cap));
+  const [a, b] = submitted(h);
+  const pa = model.params[a];
+  const pb = model.params[b];
+  // a worsens a little, b improves to 0: net away from the line.
+  const r = whatIf(h, model, { [a]: h.measures[a].value + 0.001, [b]: 0 });
+  assert.ok(r.after.score < h.total);
+  assert.equal(r.after.flag, 'No');
+  assert.ok(Math.abs(r.band - pa.fitError / 6) < 1e-15, 'only the fitted move carries band');
+  assert.equal(whatIf(h, model, { [b]: 0 }).band, 0);
+  assert.ok(pb);
 });
