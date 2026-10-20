@@ -3,6 +3,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
+import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { CCN, loadHacrp } from './data.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
@@ -15,12 +16,14 @@ function writePage(outDir, path, text) {
   writeFileSync(join(dir, 'index.html'), text);
 }
 
+const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
+
 export function a1Summary({ ok, a, b, info }) {
   return [
     `A1 ${ok ? 'ok' : 'FAILED'}`,
-    `(a) ${a.within} of ${a.n} scored hospitals: mean published z equals the Total HAC Score; max error ${a.maxError}`,
+    `(a) ${a.within} of ${a.n} scored hospitals: mean published z equals the Total HAC Score; max error ${dp5(a.maxError)}`,
     `(b) ${b.n} scored Yes/No hospitals: ${b.mismatches.length} decision mismatches`,
-    `info: p75 of all scored totals ${info.pctAllScored}; of Yes/No totals ${info.pctDecided}`,
+    `info: p75 of all scored totals ${dp5(info.pctAllScored)}; of Yes/No totals ${dp5(info.pctDecided)}`,
   ].join('\n  ');
 }
 
@@ -45,7 +48,8 @@ export async function generateHacrp({ outDir, assets, env, released = SITE.sites
     if (!robots) indexable.push(view.path);
   }
 
-  const decided = hospitals.filter((h) => h.paymentReduction === 'Yes' || h.paymentReduction === 'No');
+  // Penalty counts use scored hospitals with a Yes/No decision: A1(b)'s population.
+  const decided = hospitals.filter((h) => h.total !== null && (h.paymentReduction === 'Yes' || h.paymentReduction === 'No'));
   const programRobots = production && released === true ? null : 'noindex';
   writePage(outDir, PROGRAM_PATH, programPage({
     fy,

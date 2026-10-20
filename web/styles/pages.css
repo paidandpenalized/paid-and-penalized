@@ -2,10 +2,14 @@
    extras, the as-of bar, footnote legends, link lists and search. Colors come only from tokens.css. */
 [hidden] { display: none !important; }
 
+/* Every grid here has one column that can shrink to the viewport, and no child may widen it: wide content (the
+   measure table) scrolls or stacks inside its own box, never the page. */
+.page, .prose, .block, .page__head, .hero__item { grid-template-columns: minmax(0, 1fr); }
 .page { display: grid; gap: 28px; padding-block: 28px 0; }
-.page > * { min-width: 0; }
+.page > *, .prose > *, .block > *, .page__head > *, .hero > * { min-width: 0; }
+.printout { max-width: 100%; }
 .page__head { display: grid; gap: 8px; }
-.kicker a { color: var(--pen-ink); text-decoration: none; }
+.kicker a { color: var(--ink-2); text-decoration: none; }
 .kicker a:hover { text-decoration: underline; }
 .place { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
 .subtitle { font: 700 var(--fs-md)/1.2 var(--font-type); letter-spacing: 0.04em; }
@@ -24,11 +28,28 @@
 .note { padding-left: 12px; border-left: 3px solid var(--line); }
 .line { font: 600 var(--fs-md)/1.45 var(--font-body); }
 
-/* Measure table: row headers, right-aligned number columns, a notes column in body type. */
+/* Measure table: row headers in ink (text never wears the data color), right-aligned number columns, and the
+   notes column taking the most room. */
 .gb th.num { text-align: right; }
-.gb tbody th { min-width: 16ch; padding: 7px 10px; vertical-align: top; text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); }
-.gb .notes { min-width: 26ch; font-family: var(--font-body); }
+.gb tbody th { position: static; background: transparent; padding: 7px 10px; vertical-align: top; text-align: left; color: var(--ink); font: 600 var(--fs-sm)/1.35 var(--font-body); letter-spacing: normal; text-transform: none; white-space: normal; }
+.gb--measures { table-layout: auto; }
+.gb--measures tbody th { width: 30%; }
+.gb--measures .num { width: 1%; }
+.gb .notes { font-family: var(--font-body); }
 .gb .notes p + p { margin-top: 4px; }
+
+/* Narrow screens: each measure row stacks into a block (name; CMS value · z-score; notes), so nothing scrolls
+   sideways. The header row is hidden visually; each number cell names itself. */
+@media (max-width: 640px) {
+  .gb--measures, .gb--measures tbody, .gb--measures tr { display: block; width: 100%; }
+  .gb--measures thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .gb--measures tr { display: flex; flex-wrap: wrap; gap: 2px 16px; padding: 10px 10px 12px; }
+  .gb--measures tbody th, .gb--measures td { display: block; padding: 0; }
+  .gb--measures tbody th, .gb--measures .notes { flex: 1 1 100%; width: auto; }
+  .gb--measures .num { width: auto; text-align: left; }
+  .gb--measures .num::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
+  .gb--measures .notes:empty { display: none; }
+}
 .fn { font-family: var(--font-type); color: var(--ink-2); }
 .tag { display: inline-block; padding: 0 6px; border: 1px dashed var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); text-decoration: none; }
 

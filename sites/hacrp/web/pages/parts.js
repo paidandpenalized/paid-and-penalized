@@ -6,12 +6,12 @@ import { COPY, fill } from '../copy.js';
 
 export const t = (key) => fill(key);
 
-// The word carries the decision; the ink repeats it. Yes (with or without a score) is the cut, N/A is hatched.
-export function decisionPill(status) {
+// The word carries the decision; the ink repeats it. N/A is hatched. The row CMS marked Yes with no score shows
+// CMS's literal value: nothing about the cut is inferred for it.
+export function decisionPill(status, decision) {
   if (status === 'maryland') return html`<span class="pill pill--na">${t('pillNA')}</span>`;
-  if (status === 'yes' || status === 'yes-no-score') {
-    return html`<span class="pill pill--pen">${fill('pillYes', { pct: pct(REDUCTION_PCT / 100, 0) })}</span>`;
-  }
+  if (status === 'yes-no-score') return html`<span class="pill pill--pen">${fill('pillCms', { decision })}</span>`;
+  if (status === 'yes') return html`<span class="pill pill--pen">${fill('pillYes', { pct: pct(REDUCTION_PCT / 100, 0) })}</span>`;
   return html`<span class="pill">${t('pillNo')}</span>`;
 }
 

@@ -12,6 +12,8 @@ export const PERIODS = {
   hai: { start: '01/01/2023', end: '12/31/2024' },
 };
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
+// CMS's text for the two boundary scores, as boundaryText() reads it from the file.
+export const BOUNDARY_TEXT = { highestNo: '0.2500', lowestYes: '0.2507' };
 export const ESTIMATE = {
   PSI90: { tagged: true, maxError: 0.00204 },
   CLABSI: { tagged: false, maxError: 0.00061 },
@@ -114,5 +116,5 @@ export const CASES = {
 // The view inputs for one case, as the page build passes them.
 export function inputs(h, overrides = {}) {
   return { hospital: h, model: MODEL, estimate: ESTIMATE, footnotes: FOOTNOTES, master: master(h.ccn, { state: h.state }), fy: FY,
-    periods: PERIODS, released: true, ...overrides };
+    periods: PERIODS, released: true, boundaryText: BOUNDARY_TEXT, ...overrides };
 }

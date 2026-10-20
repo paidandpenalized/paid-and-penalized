@@ -5,13 +5,15 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { generateHub } from '../../../hub/pages.js';
+import { count } from '../../../web/render/format.js';
 import { build } from '../../../pipeline/site/build.js';
 import { loadHacrp } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
-import { hospitalView } from '../web/view.js';
+import { boundaryText, hospitalView } from '../web/view.js';
 import { CASES, inputs, master } from './fixtures.js';
 
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-program': '/assets/hacrp-program.test.js' } };
@@ -42,10 +44,12 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     assert.equal(readdirSync(join(dir, 'hacrp', 'hospital')).length, DATA.hospitals.length);
 
     const pages = [['/hacrp/', read(dir, '/hacrp/')], ...DATA.hospitals.map((h) => [hospitalPath(h), read(dir, hospitalPath(h))])];
-    const cmsCell = /class="[^"]*\bcms\b[^"]*">([^<]*)</g;
+    const cmsCell = /class="[^"]*\bcms\b[^"]*"[^>]*>([^<]*)</g;
     for (const [path, text] of pages) {
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, `${path}: one h1`);
-      for (const [, cell] of text.matchAll(cmsCell)) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
+      const cells = [...text.matchAll(cmsCell)];
+      if (path !== '/hacrp/') assert.ok(cells.length >= 13, `${path}: CMS cells found`);
+      for (const [, cell] of cells) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
     }
 
     // Scored pages may be indexed; a page with no score never is, even in production on a released site.
@@ -63,9 +67,15 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     assert.doesNotMatch(maryland, /distance to CMS/);
     assert.match(maryland, /id="whatif"/);
 
-    const yesNoScore = read(dir, hospitalPath(pick((h) => h.total === null && h.paymentReduction === 'Yes', 'Yes with no score')));
+    const yesNoScoreRow = pick((h) => h.total === null && h.paymentReduction === 'Yes', 'Yes with no score');
+    const yesNoScore = read(dir, hospitalPath(yesNoScoreRow));
     assert.ok(yesNoScore.includes(esc("CMS's value: Yes")));
-    assert.ok(yesNoScore.includes(esc(FN('5'))), 'CMS score footnote');
+    assert.match(yesNoScore, /pill--pen">Payment reduction: Yes</);
+    assert.doesNotMatch(yesNoScore, /% cut/);
+    assert.ok(yesNoScoreRow.totalFootnote, 'the row carries a CMS score footnote');
+    for (const code of yesNoScoreRow.totalFootnote.split(',').map((c) => c.trim())) {
+      assert.ok(yesNoScore.includes(esc(FN(code))), `CMS score footnote ${code}`);
+    }
     assert.doesNotMatch(yesNoScore, /id="whatif"/);
     assert.doesNotMatch(yesNoScore, /distance to CMS/);
     assert.ok(yesNoScore.includes(NOINDEX));
@@ -76,6 +86,16 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     assert.match(yes, /"isBasedOn":"https:\/\/data\.cms\.gov\/provider-data\/dataset\/yq43-i98g"/);
     const no = read(dir, hospitalPath(pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No')));
     assert.match(no, /class="pill">No cut</);
+
+    // The distance sentence quotes CMS's own text for the boundary scores.
+    const bt = boundaryText(DATA.hospitals, DATA.model.boundary);
+    assert.ok(yes.includes(`above ${bt.highestNo}, the highest score CMS marked No.`));
+    assert.ok(no.includes(`below ${bt.lowestYes}, the lowest score CMS marked Yes.`));
+
+    // Penalty counts use A1(b)'s population: scored hospitals with a Yes/No decision.
+    const a1 = checkA1(DATA.hospitals, DATA.model, DATA.estimate);
+    const cut = DATA.hospitals.filter((h) => h.total !== null && h.paymentReduction === 'Yes').length;
+    assert.ok(read(dir, '/hacrp/').includes(`CMS cut Medicare inpatient payments to ${count(cut)} of the ${count(a1.b.n)} hospitals with a Total HAC Score`));
   }));
 
 test('released: false: every page is noindex in production and the sitemap lists none', () =>

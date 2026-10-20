@@ -74,6 +74,8 @@ export const COPY = {
   pillYes: { text: '{pct} cut', claim: 'HACRP-01' },
   pillNo: { text: 'No cut', claim: null },
   pillNA: { text: 'N/A', claim: null },
+  // The row CMS marked Yes with no score: CMS's literal value, nothing inferred.
+  pillCms: { text: 'Payment reduction: {decision}', claim: null },
   measuresHeading: { text: 'The measures', claim: null },
   measuresIntro: {
     text: "CMS's published value and z-score for each measure. A higher z-score adds more to the Total HAC Score.",
@@ -99,7 +101,7 @@ export const COPY = {
   asofPsi: { text: '{short} period: {start} to {end}', claim: null },
   asofHai: { text: 'Infection measures period: {start} to {end}', claim: null },
   asofLatest: { text: 'Latest public hospital results: FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
-  asofReleased: { text: 'CMS data released {date}', claim: null },
+  asofReleased: { text: 'Provider Data Catalog release: {date}', claim: null },
   source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
   datasetLink: { text: "CMS's dataset page", claim: null },
 
@@ -112,11 +114,11 @@ export const COPY = {
     claim: 'HACRP-04',
   },
   whatCut: {
-    text: 'Hospitals whose score is above the {percentile} percentile of all scores have their Medicare inpatient payments cut by {pct} for the fiscal year.',
+    text: 'Hospitals whose score is above the {percentile} percentile of Total HAC Scores, as CMS calculates it, have their Medicare inpatient payments cut by {pct} for the fiscal year.',
     claim: 'HACRP-02',
   },
   whatRelative: {
-    text: "Each measure compares a hospital with all other hospitals, so the score reflects relative performance, not a fixed standard.",
+    text: "Each measure compares a hospital with all hospitals scored on that measure, so the score reflects relative performance, not a fixed standard.",
     claim: 'HACRP-04',
   },
   programMeasures: {
@@ -137,7 +139,7 @@ export const COPY = {
   },
   countsHeading: { text: 'Fiscal year {fy} in counts', claim: null },
   countDecided: {
-    text: 'CMS cut Medicare inpatient payments to {yes} of the {decided} hospitals it gave a payment decision of Yes or No.',
+    text: 'CMS cut Medicare inpatient payments to {yes} of the {decided} hospitals with a Total HAC Score and a payment decision of Yes or No.',
     claim: null,
   },
   countScored: { text: 'CMS published a Total HAC Score for {scored} hospitals.', claim: null },

@@ -22,8 +22,8 @@ function measureRow(m) {
   const tag = m.tagged && !missing(m.valueText) && html`<p><a class="tag" href="/methods/#estimate" title="${fill('estimateTitle', { maxError: m.maxErrorText })}">${t('estimateTag')}</a></p>`;
   return html`<tr>
 <th scope="row">${m.label} <span class="short">(${m.short})</span></th>
-<td class="num cms">${value(m.valueText)}</td>
-<td class="num cms">${value(m.zText)}</td>
+<td class="num cms" data-label="${t('colValue')}">${value(m.valueText)}</td>
+<td class="num cms" data-label="${t('colZ')}">${value(m.zText)}</td>
 <td class="notes">${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}</td>
 </tr>`;
 }
@@ -58,7 +58,7 @@ export function hospitalPage({ view, source, robots, assets }) {
 <div class="prose">${sentences.map((s) => html`<p>${s}</p>`)}</div>
 <section class="hero" aria-label="${t('heroScore')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p><p class="hero__num cms">${score.text}</p></div>
-<div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status)}</p>
+<div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
 <p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p></div>
 </section>
 <div class="prose">
@@ -69,7 +69,7 @@ ${small && html`<p class="note">${small}</p>`}
 <section class="block" aria-labelledby="measures-h">
 <h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('measuresIntro')}</p>
-<div class="printout"><div class="printout__scroll"><table class="gb">
+<div class="printout"><div class="printout__scroll"><table class="gb gb--measures">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
 <tbody>${view.measures.map(measureRow)}</tbody>
 </table></div></div>
