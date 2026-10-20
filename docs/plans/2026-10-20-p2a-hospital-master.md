@@ -314,4 +314,31 @@ emitters), `README.md`, `CLAUDE.md`.
 
 ## Amendments made during execution
 
-(none yet)
+- **Tests live inside the packages** (`engine/py/pp_engine/tests/`, `pipeline/py/pp_pipeline/tests/`) so the two
+  suites don't collide as top-level `tests` packages. The launcher keeps one `{package: root}` table.
+- **JSON text matches JavaScript byte for byte** (M1 review): `compact_json` writes numbers per ECMAScript
+  Number::toString and sorts keys by UTF-16 code unit. New shared vectors (`canonical-json.vectors.json`) run in
+  both languages, and Python's `format_emitted` reproduces the JS-emitted HACRP file exactly.
+- **Patterns:** an unescaped `$` outside a class compiles to `\Z` (JS end-of-text); ASCII classes. Trailing-newline
+  conformance cases added for CCN and builtAt.
+- **Encodings:** CMS's raw POS file and the impact file are Windows-1252 (0x96 is an en dash), not latin-1 as TDR
+  reads them. The extract is re-derived as cp1252; a test refuses C1 control characters. HGI is UTF-8 with a BOM;
+  `rows()` drops a leading BOM so a quoted first header cell still parses.
+- **Names:** a CCN that HGI, the impact file and POS don't name falls back to the program files' names
+  (`display_name`, so mixed case stays), then to TDR's `Hospital <ccn> (name not in CMS files)` (one FY2027 impact
+  row has a blank name), instead of failing the build. `build_master`'s `programs` carry `{fy, names}`.
+- **pyproject.toml** installs only `pp_engine` (pure); `pp_pipeline` reads repo files by path and runs from the
+  checkout. No install step anywhere (ARCH-02 named an editable install; skipped so CI never downloads setuptools).
+- **Checkpoints:** M2 ran `/simplify` (two agents covering the four angles); its `/code-review` folded into the
+  final gate, which followed directly.
+- **Result:** 5,449 hospitals. HACRP: 3,055 listed; not listed: 1,382 critical access, 624 psychiatric, 164
+  federal, 94 children's, 72 not_listed, 43 rural emergency, 10 inactive, 5 long-term. HRRP: 2,912 listed (exactly
+  TDR's set); 43 maryland, 132 not_listed, 50 inactive, plus the kinds. Every TDR name and alias matches.
+  CI green on `50b2d2f` (test, python, secrets); Python 3.12.15 came from the runner cache.
+- **Known Minor items (not fixed):**
+  - The POS re-derivation check runs only where the raw file is present (`PP_RAW_POS`); CI checks the extract's
+    shape, not its provenance (by design: the raw file is 30 MB).
+  - `reason_for` applies one rule list to every program; a non-IPPS program would need per-program rules.
+  - The no-name placeholder is display text in the data (TDR's convention; the TDR check depends on it).
+  - Python and JS parse integers above 2^53 differently; no emitted value comes close.
+  - `test_shared_vectors` re-derives the pins list to check the canonical string separately (deliberate).

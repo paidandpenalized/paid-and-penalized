@@ -4,6 +4,7 @@
 so git stays clean.
 """
 import csv
+import functools
 import io
 import json
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from pp_engine.contract import format_emitted, keep_built_at
 from pp_engine.master import build_master
 from pp_engine.parse import impact_fy, read_hgi, read_impact, read_pos
 from pp_engine.schema import validate
-from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_manifest, read_pinned_bytes, read_zip_member
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, load_schemas, read_json, read_manifest, read_pinned_bytes, read_zip_member
 
 HGI, IMPACT, POS, HACRP, TDR = "hgi-2026-07", "ipps-impact-fy2027", "pos-q2-2026", "yq43-i98g", "tdr-hrrp-fy2027"
 SOURCES = (HGI, IMPACT, POS, HACRP, TDR)
@@ -30,19 +31,28 @@ def hacrp_program():
     return {"fy": int(years.pop()), "names": {r["Facility ID"]: r["Facility Name"] for r in rows}}
 
 
+@functools.lru_cache(maxsize=None)
+def tdr_data():
+    return json.loads(read_pinned_bytes(TDR))
+
+
 def hrrp_program():
-    data = json.loads(read_pinned_bytes(TDR))
+    data = tdr_data()
     return {"fy": data["meta"]["fy"], "names": {h["id"]: h["name"] for h in data["hospitals"]}}
 
 
+@functools.lru_cache(maxsize=None)
+def impact_text():
+    return read_zip_member(IMPACT, IMPACT_MEMBER).decode("cp1252")
+
+
 def build_from_pins(built_at):
-    impact_text = read_zip_member(IMPACT, IMPACT_MEMBER).decode("cp1252")
     return build_master(
         hgi=read_hgi(read_pinned_bytes(HGI).decode("utf-8")),
-        impact=read_impact(impact_text),
+        impact=read_impact(impact_text()),
         pos=read_pos(read_pinned_bytes(POS).decode("utf-8")),
         programs={"hacrp": hacrp_program(), "hrrp": hrrp_program()},
-        fy=impact_fy(impact_text),
+        fy=impact_fy(impact_text()),
         manifest=read_manifest(),
         sources=list(SOURCES),
         built_at=built_at,
@@ -51,6 +61,11 @@ def build_from_pins(built_at):
 
 def emitted_path(fy):
     return EMITTED_DIR / "hospital" / f"fy{fy}" / "hospital_master.json"
+
+
+def committed_path():
+    """Where the master for the pinned impact file's year lives."""
+    return emitted_path(impact_fy(impact_text()))
 
 
 def main():
@@ -64,5 +79,5 @@ def main():
         raise ValueError(f"{path.name} fails {SCHEMA}:\n" + "\n".join(errors[:20]))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(format_emitted(out), encoding="utf-8")
-    print(f"wrote {path.relative_to(EMITTED_DIR.parent.parent)}: {len(out['hospitals'])} hospitals, built_at {out['built_at']}")
+    print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, built_at {out['built_at']}")
     return 0
