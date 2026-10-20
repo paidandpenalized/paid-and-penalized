@@ -42,13 +42,12 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
-- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails. Each changed
-  emitted file needs new source data (its own `source_manifest` changed, i.e. a re-pin) or a new
-  `## <site> methods_version N` heading for its site in `docs/METHODS-LOG.md`, with the matching bump (a test
-  requires the newest heading to equal the emitted `methods_version`; older years keep theirs), or the change
-  adds a file under `corrections/`. A re-pin means an input's SHA-256 changed; editing manifest metadata or an
-  existing heading isn't a reason. Run `make emit` after any engine or pin change; it keeps `built_at` when
-  nothing else changed.
+- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails. A file under
+  `corrections/` covers the whole change. Otherwise each changed emitted file must be new (a first emission),
+  re-pinned (its `source_manifest`, a hash of its inputs' ids and SHA-256s, changed), or bumped (its own
+  `methods_version` moved to its site's new newest `## <site> methods_version N` heading in
+  `docs/METHODS-LOG.md`). Deleting or renaming an emitted file needs a corrections entry. Tests require the
+  newest year of each site to carry the newest version; older years keep theirs.
 - **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MiB or more, strings from a
   private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist
   lives outside the repo (`~/.config/paid-and-penalized/blocklist.txt`, or `$PP_BLOCKLIST`) and is never copied

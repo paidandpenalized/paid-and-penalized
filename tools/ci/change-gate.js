@@ -1,29 +1,49 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. Per changed emitted file, one of:
-//   - it is new (a first emission: nothing published to differ from);
-//   - one of its pinned inputs has a new SHA-256 (new source data);
-//   - its methods_version moved to its site's new newest version in the methods log (a methods change).
-// Or, for the whole change, a file under corrections/. The evidence is all in the tree, so PR runs and the push
-// to main after the merge reach the same verdict.
+// change. A file under corrections/ covers the whole change. Otherwise each changed emitted file needs one of:
+//   - added: a first emission (nothing published to differ from);
+//   - re-pinned: its source_manifest (a hash of its inputs' ids and SHA-256s) changed: new source data;
+//   - bumped: its own methods_version moved to its site's new newest version in the methods log.
+// A deleted or renamed file (git reports a rename as delete + add) needs a corrections entry. The evidence is all
+// in the tree, so PR runs and the push to main after the merge reach the same verdict.
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { METHODS_LOG, latestMethodsVersion } from '../../pipeline/methods-log.js';
 
 const EMITTED = 'data/emitted/';
 const CORRECTIONS = 'corrections/';
-const MANIFEST = 'data/pinned/manifest.json';
 
-// added, repinned, bumped: sets of emitted paths explained by each reason.
-export function changeGate({ changed, added = new Set(), repinned = new Set(), bumped = new Set() }) {
-  const changedEmitted = changed.filter((p) => p.startsWith(EMITTED));
+// changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
+// with a per-file reason (see above).
+export function changeGate({ changed, explained = new Set() }) {
+  const changedEmitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  if (changed.some((p) => p.startsWith(CORRECTIONS))) return { ok: true, reason: 'emitted data changed with a corrections entry' };
-  const unexplained = changedEmitted.filter((p) => !added.has(p) && !repinned.has(p) && !bumped.has(p));
+  if (changed.some(({ path }) => path.startsWith(CORRECTIONS))) return { ok: true, reason: 'emitted data changed with a corrections entry' };
+  const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction or removal)`,
   };
+}
+
+// Why one emitted file changed, given its parsed content before and after (null when absent): 'added',
+// 're-pinned', 'bumped', or null (no reason). Content that isn't an emitted file explains nothing.
+export function reasonFor(before, now, latest) {
+  const isFile = (d) => d !== null && typeof d === 'object' && typeof d.source_manifest === 'string';
+  if (now === undefined || !isFile(now)) return null;
+  if (before === null) return 'added';
+  if (!isFile(before)) return null;
+  if (now.source_manifest !== before.source_manifest) return 're-pinned';
+  if (now.methods_version !== before.methods_version && now.methods_version === latest.now && latest.now > (latest.before ?? 0)) return 'bumped';
+  return null;
+}
+
+// "A\0path\0M\0path\0" → [{ status, path }]
+export function parseNameStatus(text) {
+  const parts = text.split('\0').filter(Boolean);
+  const out = [];
+  for (let i = 0; i + 1 < parts.length; i += 2) out.push({ status: parts[i][0], path: parts[i + 1] });
+  return out;
 }
 
 const ZERO_SHA = /^0{40}$/;
@@ -31,50 +51,41 @@ const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB
 
 function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
-  const exists = (object) => {
-    try {
-      execFileSync('git', ['cat-file', '-e', object], { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
-  };
   const given = process.env.GATE_BASE ?? '';
   // Only the first push of a branch has no base. A base that can't be found (a force-push) fails the gate
   // rather than shrinking the range it checks.
   const base = given === '' || ZERO_SHA.test(given) ? 'HEAD~1' : given;
-  if (!exists(`${base}^{commit}`)) throw new Error(`base ${base} is not in this history (force-push?); check the range by hand`);
-  // A file's content at a revision, or null only when the path is absent there; other git errors throw.
-  const read = (rev, path) => (exists(`${rev}:${path}`) ? git('show', `${rev}:${path}`) : null);
-  const json = (rev, path) => JSON.parse(read(rev, path) ?? 'null');
-
-  const changed = git('diff', '--name-only', '-z', `${base}...HEAD`).split('\0').filter(Boolean);
-  const mergeBase = git('merge-base', base, 'HEAD').trim();
-  const pins = (rev) => new Map((json(rev, MANIFEST) ?? []).map((e) => [e.id, e.sha256]));
-  const [pinsNow, pinsBefore] = [pins('HEAD'), pins(mergeBase)];
-  const inputs = (data, map) => data.sources.map((id) => map.get(id) ?? '').join(',');
-  const logNow = read('HEAD', METHODS_LOG) ?? '';
-  const logBefore = read(mergeBase, METHODS_LOG) ?? '';
-
-  const added = new Set();
-  const repinned = new Set();
-  const bumped = new Set();
-  for (const p of changed.filter((path) => path.startsWith(EMITTED))) {
-    const now = json('HEAD', p);
-    const before = json(mergeBase, p);
-    if (now === null) continue; // deleted: needs a corrections entry
-    if (before === null) {
-      added.add(p);
-      continue;
-    }
-    if (inputs(now, pinsNow) !== inputs(before, pinsBefore)) repinned.add(p);
-    const site = p.slice(EMITTED.length).split('/')[0];
-    const latest = latestMethodsVersion(logNow, site);
-    if (now.methods_version !== before.methods_version && now.methods_version === latest && latest > (latestMethodsVersion(logBefore, site) ?? 0)) {
-      bumped.add(p);
-    }
+  try {
+    execFileSync('git', ['cat-file', '-e', `${base}^{commit}`], { stdio: 'ignore' });
+  } catch {
+    throw new Error(`base ${base} is not in this history (force-push?); check the range by hand`);
   }
-  const result = changeGate({ changed, added, repinned, bumped });
+  const changed = parseNameStatus(git('diff', '--name-status', '--no-renames', '-z', `${base}...HEAD`));
+  const mergeBase = git('merge-base', base, 'HEAD').trim();
+  // Statuses say which side a path exists on, so a failing git show is a real error and throws.
+  const parse = (text) => {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  };
+  const logAt = (rev, status) => (status === 'A' ? '' : git('show', `${rev}:${METHODS_LOG}`));
+  const logChange = changed.find(({ path }) => path === METHODS_LOG);
+  const logNow = logChange?.status === 'D' ? '' : git('show', `HEAD:${METHODS_LOG}`);
+  const logBefore = logChange ? logAt(mergeBase, logChange.status) : logNow;
+  const latest = {};
+  const latestFor = (site) =>
+    (latest[site] ??= { now: latestMethodsVersion(logNow, site), before: latestMethodsVersion(logBefore, site) });
+
+  const explained = new Set();
+  for (const { status, path } of changed) {
+    if (!path.startsWith(EMITTED) || status === 'D') continue;
+    const now = parse(git('show', `HEAD:${path}`));
+    const before = status === 'A' ? null : parse(git('show', `${mergeBase}:${path}`));
+    if (reasonFor(before, now, latestFor(path.slice(EMITTED.length).split('/')[0]))) explained.add(path);
+  }
+  const result = changeGate({ changed, explained });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);
 }
