@@ -1,7 +1,7 @@
 // The change gate's rule: emitted data may change only with a reason on record.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ENTRY, changeGate, parseNameStatus, reasonFor } from '../ci/change-gate.js';
+import { changeGate, isEntry, parseNameStatus, reasonFor } from '../ci/change-gate.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
@@ -38,21 +38,28 @@ test('a new corrections entry covers the whole change', () => {
   assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY] }).ok, false, 'old or empty content under a new name');
 });
 
-test('the corrections log is append-only: editing, retyping or deleting an entry voids the cover, and says so', () => {
+test('the corrections log is append-only: editing, retyping or deleting an entry fails any change, and says so', () => {
   for (const status of ['M', 'T', 'D']) {
     const other = { status, path: 'corrections/2026-10-01-old.md' };
-    const r = changeGate({ changed: [M(EMITTED), NEW_ENTRY, other], freshEntries: FRESH });
-    assert.equal(r.ok, false, status);
-    assert.match(r.reason, /also edits or removes corrections\/2026-10-01-old\.md/);
+    for (const changed of [[M(EMITTED), NEW_ENTRY, other], [other], [M('README.md'), other]]) {
+      const r = changeGate({ changed, freshEntries: FRESH, explained: new Set([EMITTED]) });
+      assert.equal(r.ok, false, `${status} ${changed.length}`);
+      assert.match(r.reason, /append-only: this change edits, retypes or removes corrections\/2026-10-01-old\.md/);
+    }
   }
   const readme = { status: 'M', path: 'corrections/README.md' };
   assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY, readme], freshEntries: FRESH }).ok, true, 'a non-entry file is not the log');
 });
 
-test('ENTRY: real calendar-shaped dates and a slug that starts with a letter or digit', () => {
-  for (const ok of ['corrections/2026-11-01-hacrp.md', 'corrections/2026-12-31-a.md', 'corrections/2027-02-28-x-y-2.md']) assert.match(ok, ENTRY);
-  for (const bad of ['corrections/2026-13-01-a.md', 'corrections/2026-00-10-a.md', 'corrections/2026-11-32-a.md', 'corrections/2026-11-00-a.md',
-    'corrections/9999-99-99--.md', 'corrections/2026-11-01--a.md', 'corrections/2026-11-01-A.md']) assert.doesNotMatch(bad, ENTRY);
+test('isEntry: a real calendar date and a slug that starts with a letter or digit', () => {
+  for (const ok of ['corrections/2026-11-01-hacrp.md', 'corrections/2026-12-31-a.md', 'corrections/2028-02-29-x-y-2.md']) {
+    assert.equal(isEntry(ok), true, ok);
+  }
+  for (const bad of ['corrections/2026-13-01-a.md', 'corrections/2026-00-10-a.md', 'corrections/2026-11-32-a.md',
+    'corrections/2026-11-00-a.md', 'corrections/2026-02-31-a.md', 'corrections/2026-04-31-a.md', 'corrections/2027-02-29-a.md',
+    'corrections/0000-01-01-a.md', 'corrections/9999-99-99--.md', 'corrections/2026-11-01--a.md', 'corrections/2026-11-01-A.md']) {
+    assert.equal(isEntry(bad), false, bad);
+  }
 });
 
 test('only a dated markdown entry directly under corrections/ counts', () => {

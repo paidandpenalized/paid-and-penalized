@@ -1,7 +1,8 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. A new corrections entry covers the whole change: an added regular file corrections/YYYY-MM-DD-<slug>.md
-// whose text, whitespace aside, is non-empty and not already an entry at the merge base, in a change that edits,
-// retypes or deletes no existing entry (the log is append-only). Otherwise each changed emitted file needs one of:
+// change. The corrections log is append-only: any change that edits, retypes or deletes a dated entry fails. A new
+// entry covers the whole change: an added regular file corrections/YYYY-MM-DD-<slug>.md (a real date) whose text,
+// whitespace aside, is non-empty and not already a file under corrections/ at the merge base. Otherwise each
+// changed emitted file needs one of:
 //   - added: a first emission (nothing published to differ from);
 //   - re-pinned: one of its inputs has a new SHA-256 in this change's manifest diff, its sources and
 //     methods_version are unchanged, and its new source_manifest is the true hash of those inputs at HEAD. Pin and
@@ -18,26 +19,36 @@ import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/';
 const CORRECTIONS = 'corrections/';
-export const ENTRY = /^corrections\/\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-[a-z0-9][a-z0-9-]*\.md$/;
+const ENTRY_NAME = /^corrections\/(\d{4})-(\d{2})-(\d{2})-[a-z0-9][a-z0-9-]*\.md$/;
+
+// A dated entry's path: corrections/YYYY-MM-DD-<slug>.md with a date that exists on the calendar.
+export function isEntry(path) {
+  const m = ENTRY_NAME.exec(path);
+  if (!m) return false;
+  const [y, mo, d] = m.slice(1).map(Number);
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  return y >= 2000 && date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
+}
 const MANIFEST = 'data/pinned/manifest.json';
 
 // changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
-// with a per-file reason (see above). freshEntries: entry paths whose text, whitespace aside, is non-empty and
-// not already an entry at the base (main() checks only added regular files; this function re-checks status).
+// with a per-file reason (see above). freshEntries: added regular-file entry paths whose text, whitespace aside, is
+// non-empty and not already a file under corrections/ at the base (this function re-checks status and the name).
 export function changeGate({ changed, explained = new Set(), freshEntries = new Set() }) {
+  const rewrites = changed.filter(({ status, path }) => status !== 'A' && isEntry(path)).map(({ path }) => path);
+  if (rewrites.length > 0) {
+    return { ok: false, reason: `the corrections log is append-only: this change edits, retypes or removes ${rewrites.join(', ')}; add a new entry instead` };
+  }
   const changedEmitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  const rewrites = changed.filter(({ status, path }) => status !== 'A' && ENTRY.test(path)).map(({ path }) => path);
-  const newEntry = changed.some(({ status, path }) => status === 'A' && ENTRY.test(path) && freshEntries.has(path));
-  if (newEntry && rewrites.length === 0) return { ok: true, reason: 'emitted data changed with a new corrections entry' };
-  if (newEntry) {
-    return { ok: false, reason: `the new corrections entry doesn't count: the change also edits or removes ${rewrites.join(', ')} (entries are append-only)` };
+  if (changed.some(({ status, path }) => status === 'A' && isEntry(path) && freshEntries.has(path))) {
+    return { ok: true, reason: 'emitted data changed with a new corrections entry' };
   }
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal; existing entries are never edited)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal)`,
   };
 }
 
@@ -85,22 +96,24 @@ function main() {
   const emitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   const explained = new Set();
   const freshEntries = new Set();
-  if (emitted.length > 0) {
+  if (emitted.length > 0 && !changed.some(({ status, path }) => status !== 'A' && isEntry(path))) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // Entry texts, whitespace-normalized, so a copy with a stray newline is still a copy.
+    // Text under corrections/, whitespace-normalized, so a copy with a stray newline is still a copy. Only regular
+    // files count on either side: a symlink's "text" is its target, and a submodule has none.
     const normal = (text) => text.replace(/\s+/g, ' ').trim();
-    const entriesAt = (rev) =>
+    const regularFiles = (rev) =>
       git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS)
         .split('\0')
         .filter(Boolean)
         .map((record) => ({ mode: record.split(' ')[0], path: record.slice(record.indexOf('\t') + 1) }))
-        .filter(({ path }) => ENTRY.test(path));
-    const oldTexts = new Set(entriesAt(mergeBase).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
-    const added = new Set(changed.filter(({ status }) => status === 'A').map(({ path }) => path));
-    for (const { mode, path } of entriesAt('HEAD')) {
-      if (!added.has(path) || (mode !== '100644' && mode !== '100755')) continue; // symlinks and submodules aren't entries
-      const text = normal(git('show', `HEAD:${path}`));
-      if (text !== '' && !oldTexts.has(text)) freshEntries.add(path);
+        .filter(({ mode }) => mode === '100644' || mode === '100755');
+    const addedEntries = changed.filter(({ status, path }) => status === 'A' && isEntry(path)).map(({ path }) => path);
+    if (addedEntries.length > 0) {
+      const oldTexts = new Set(regularFiles(mergeBase).map(({ path }) => normal(git('show', `${mergeBase}:${path}`))));
+      for (const { path } of regularFiles('HEAD').filter(({ path }) => addedEntries.includes(path))) {
+        const text = normal(git('show', `HEAD:${path}`));
+        if (text !== '' && !oldTexts.has(text)) freshEntries.add(path);
+      }
     }
     const parse = (text) => {
       try {

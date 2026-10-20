@@ -24,7 +24,8 @@ make hooks    # once per clone: commit hooks (need gitleaks and a private blockl
 ```
 
 A change to `data/emitted/` must say why: new pinned source data, a new methods version in
-`docs/METHODS-LOG.md`, or a file under `corrections/`. CI checks this.
+`docs/METHODS-LOG.md`, or a new dated entry `corrections/YYYY-MM-DD-<slug>.md`. The corrections log is
+append-only. CI checks this; `tools/ci/change-gate.js` has the exact rule.
 
 ## License
 

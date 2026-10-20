@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
@@ -120,12 +120,28 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   const appended = r.commit('a new entry on its own');
   assert.equal(r.gate(`${appended}~1`).status, 0, 'appending passes');
   r.write(FILE, emitted(3, ['{"v":8}'], 'cc'));
-  r.write('corrections/2026-11-01-old.md', 'an old correction, rewritten\n');
   r.write('corrections/2026-11-07-hacrp.md', 'yet another\n');
-  const rewritten = r.commit('a new entry while rewriting an old one');
+  chmodSync(join(r.dir, 'corrections/2026-11-07-hacrp.md'), 0o755);
+  const executable = r.commit('an executable entry still counts');
+  assert.equal(r.gate(`${executable}~1`).status, 0);
+
+  r.write('corrections/2026-11-01-old.md', 'an old correction, rewritten\n');
+  const rewritten = r.commit('an old entry rewritten, nothing else');
   const verdict = r.gate(`${rewritten}~1`);
   assert.equal(verdict.status, 1);
-  assert.match(verdict.stdout, /also edits or removes corrections\/2026-11-01-old\.md/, 'it fails because the log is append-only');
+  assert.match(verdict.stdout, /append-only: this change edits, retypes or removes corrections\/2026-11-01-old\.md/);
+
+  r.rm('corrections/2026-11-06-hacrp.md');
+  r.symlink('2026-11-04-hacrp.md', 'corrections/2026-11-06-hacrp.md');
+  const retyped = r.commit('an entry retyped to a symlink');
+  assert.match(r.gate(`${retyped}~1`).stdout, /append-only/, 'a type change is an edit');
+
+  r.write('corrections/README.md', 'how to write an entry\n');
+  const readme = r.commit('a README');
+  r.write('corrections/2026-11-08-copy-of-readme.md', 'how to write an entry\n');
+  r.write(FILE, emitted(3, ['{"v":9}'], 'cc'));
+  r.commit('a copy of a non-entry file is not new text');
+  assert.equal(r.gate(readme).status, 1);
 
   const lost = r.gate('f'.repeat(40));
   assert.equal(lost.status, 1, 'an unreachable base (force-push) fails closed');
