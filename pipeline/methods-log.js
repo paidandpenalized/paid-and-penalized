@@ -22,11 +22,3 @@ export function latestMethodsVersion(log, site) {
 export function hasMethodsVersion(log, site, version) {
   return (versionsBySite(log)[site] ?? []).includes(version);
 }
-
-// Sites whose newest methods_version went up between two versions of the log. Editing or re-adding an existing
-// heading is not a bump.
-export function sitesBumped(before, after) {
-  return new Set(
-    Object.keys(versionsBySite(after)).filter((site) => latestMethodsVersion(after, site) > (latestMethodsVersion(before, site) ?? 0)),
-  );
-}

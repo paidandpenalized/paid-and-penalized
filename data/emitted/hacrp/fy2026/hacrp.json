@@ -1,11 +1,11 @@
 {
 "schema_version": 1,
-"methods_version": 1,
-"source_manifest": "1e2757e21349c1a3f5e8c3e71642fa3513d94e4705f16dc32637067297e689b1",
+"methods_version": 2,
+"source_manifest": "1c3309c4120411002dda018191da2b72127523b2c45cafe04881c49ffdc36973",
 "sources": [
 "yq43-i98g"
 ],
-"built_at": "2026-10-20T15:32:26Z",
+"built_at": "2026-10-20T16:29:57Z",
 "fy": 2026,
 "model": {"params":{"PSI90":{"id":"PSI90","n":2809,"mean":0.9884652688836509,"sd":0.14324556559458348,"floor":0.776,"cap":1.3482,"zMin":-1.4834,"zMax":2.5111,"median":0.9623,"decimals":4,"fitError":0.0003989057061366541},"CLABSI":{"id":"CLABSI","n":2182,"mean":0.6062969898892413,"sd":0.43107480959239336,"floor":0,"cap":1.572,"zMin":-1.4065,"zMax":2.2402,"median":0.559,"decimals":3,"fitError":0.000050949531251065494},"CAUTI":{"id":"CAUTI","n":2355,"mean":0.5470267266526583,"sd":0.4148502600153455,"floor":0,"cap":1.537,"zMin":-1.3186,"zMax":2.3863,"median":0.489,"decimals":3,"fitError":0.00005033858432135219},"SSI":{"id":"SSI","n":2270,"mean":0.8502466511038356,"sd":0.5837703732347403,"floor":0,"cap":2.118,"zMin":-1.4565,"zMax":2.1717,"median":0.7945,"decimals":3,"fitError":0.00005234832140410539},"CDI":{"id":"CDI","n":2767,"mean":0.3776185869794703,"sd":0.25826129536157266,"floor":0,"cap":0.944,"zMin":-1.4622,"zMax":2.1931,"median":0.346,"decimals":3,"fitError":0.000050562420845112754},"MRSA":{"id":"MRSA","n":2068,"mean":0.6972911562381764,"sd":0.47849652197619114,"floor":0,"cap":1.762,"zMin":-1.4573,"zMax":2.2251,"median":0.6405000000000001,"decimals":3,"fitError":0.000051833116916366606}},"boundary":{"highestNo":0.3792,"lowestYes":0.3799}},
 "estimate": {"PSI90":{"tagged":true,"maxError":0.002035056227548626},"CLABSI":{"tagged":false,"maxError":0.0006100405463631553},"CAUTI":{"tagged":false,"maxError":0.0007983615074003136},"SSI":{"tagged":false,"maxError":0.00004997977841558754},"CDI":{"tagged":true,"maxError":0.007047380518097945},"MRSA":{"tagged":false,"maxError":0.000049969894275192495}},

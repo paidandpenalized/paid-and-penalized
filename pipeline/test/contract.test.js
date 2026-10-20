@@ -9,12 +9,14 @@ test('canonicalJson ignores key order and keeps array order', () => {
   assert.notEqual(canonicalJson([1, 2]), canonicalJson([2, 1]));
 });
 
-test('sourceManifestHash ignores the order of entries and changes with any field', () => {
+test('sourceManifestHash: order-independent, changes with an id or SHA-256, ignores metadata', () => {
   const a = { id: 'a', sha256: '1' };
   const b = { id: 'b', sha256: '2' };
   assert.match(sourceManifestHash([a, b]), /^[0-9a-f]{64}$/);
   assert.equal(sourceManifestHash([a, b]), sourceManifestHash([b, a]));
   assert.notEqual(sourceManifestHash([a, b]), sourceManifestHash([a, { ...b, sha256: '3' }]));
+  assert.notEqual(sourceManifestHash([a, b]), sourceManifestHash([a, { ...b, id: 'c' }]));
+  assert.equal(sourceManifestHash([a, b]), sourceManifestHash([a, { ...b, retrieved: '2026-10-21', title: 'x' }]));
 });
 
 test('keepBuiltAt keeps the old timestamp only when nothing else changed', () => {
@@ -35,8 +37,8 @@ test('formatEmitted: one record per line, and it parses back to the same object'
 test('known-answer vectors shared with other languages (schemas/conformance/source-manifest.vectors.json)', () => {
   const { cases } = readJson(SCHEMAS_DIR + 'conformance/source-manifest.vectors.json');
   for (const c of cases) {
-    const sorted = [...c.entries].sort((a, b) => (a.id < b.id ? -1 : 1));
-    assert.equal(canonicalJson(sorted), c.canonical, c.name);
+    const pins = c.entries.map(({ id, sha256 }) => ({ id, sha256 })).sort((a, b) => (a.id < b.id ? -1 : 1));
+    assert.equal(canonicalJson(pins), c.canonical, c.name);
     assert.equal(sourceManifestHash(c.entries), c.sha256, c.name);
   }
 });

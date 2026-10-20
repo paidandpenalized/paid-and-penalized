@@ -179,21 +179,25 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   outside-repo check uses `realpathSync.native`, so a differently cased path can't slip through on macOS.
 - **Validator:** NaN and ±Infinity fail `number` and `integer`, because JSON would write them as `null`.
 - **Change gate (final form):** the `new-cms-release` label is gone (Dalton, 2026-10-20). Labels exist only on
-  PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. Reasons are checked
-  per changed emitted file:
-  - one of its sources' SHA-256s changed between the merge base and HEAD (or the file is new), or
-  - its site's newest `methods_version` in the log went up.
-  A file under `corrections/` covers the whole change. Editing manifest metadata, or editing or re-adding an
-  existing heading, isn't a reason. `pipeline/methods-log.js` holds the one heading format. If the base commit
-  is gone (new branch, force-push), the gate checks the last commit. The gate step runs even when tests fail,
-  and a test runs the gate CLI against a throwaway git repo.
+  PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. Each changed emitted
+  file needs one of three reasons:
+  - it is new (a first emission);
+  - one of its sources has a new SHA-256 between the merge base and HEAD;
+  - its own `methods_version` moved to its site's new newest version in the log.
+  A file under `corrections/` covers the whole change. Neither a manifest metadata edit nor an edited or
+  re-added heading counts as a reason, and a bump doesn't excuse an older year whose version stayed. An
+  unreachable base (force-push) fails closed. Only "path absent" reads as a missing file; other git errors
+  throw. The gate step runs even when tests fail, and a test runs the CLI against a throwaway git repo.
+- **`source_manifest`** hashes only `{ id, sha256 }` per input, so metadata fixes don't change emitted data.
+  This was HACRP `methods_version` 2; no numbers changed.
 - **Methods versions by year:** `pipeline/test/emitted-contract.test.js` checks every emitted file of every
   site against its schema and requires a log heading for its `methods_version`. Only a site's newest year must
   carry the newest version; older years keep the version they were published under.
-- **CI:** only PR runs cancel each other, so every push to `main` is gate-checked. A test fails on any tracked
+- **CI:** each push to `main` gets its own concurrency group (GitHub drops queued runs in a shared group even
+  without cancel-in-progress), so every push is gate-checked; a PR's newer run replaces its older one. A test fails on any tracked
   file of 10 MiB or more, since the hook can be skipped.
-- **Conformance cases:** one base document plus a JSON Pointer patch per case. A patch path missing from the
-  base throws, so a stale case can't pass by accident. The Python runner must apply the same patches.
+- **Conformance cases:** one base document plus a JSON Pointer patch per case, with ops `replace` (the key
+  must exist), `add` (it must not) and `remove`. The Python runner must apply the same patches.
 - **Synthetic CCNs** (`000001`, `00001F`, `990001`) replace real ones in the contract fixtures.
 - **Verified on GitHub:** both CI jobs are green on `main`. A throwaway PR that changed one emitted value with
   no reason failed both the golden check and the change gate. The PR was closed unmerged and its branch

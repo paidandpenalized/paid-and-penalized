@@ -7,7 +7,7 @@ import { estimateTagged } from '../../../engine/js/hacrp/params.js';
 import { envelope } from '../../../pipeline/contract.js';
 
 export const SCHEMA_VERSION = 1;
-export const METHODS_VERSION = 1;
+export const METHODS_VERSION = 2;
 export const SOURCES = ['yq43-i98g'];
 
 export const emittedPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;

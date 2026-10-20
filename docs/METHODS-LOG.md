@@ -10,3 +10,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   unchanged: numbers parsed from CMS's text, the text itself kept verbatim.
 - It adds the model the what-if and solver use (measure parameters fit from CMS's own value and z pairs; the
   line between CMS's No and Yes decisions) and the per-measure estimate tag.
+
+## hacrp methods_version 2 (2026-10-20)
+- No number changes. `source_manifest` now hashes only each pinned input's id and SHA-256, so fixing a
+  manifest entry's dates, title or URLs no longer changes the emitted file.

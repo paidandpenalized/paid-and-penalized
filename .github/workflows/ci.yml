@@ -8,10 +8,11 @@ on:
 permissions:
   contents: read
 
+# A PR's newer run replaces its older one. Each push to main gets its own group, so none is queued behind
+# another and dropped: every push is gate-checked.
 concurrency:
-  group: ci-${{ github.ref }}
-  # Only PR runs cancel each other: every push to main must finish, or its commits would skip the gate.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   test:

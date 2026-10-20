@@ -14,10 +14,11 @@ export function canonicalJson(value) {
   return JSON.stringify(value);
 }
 
-// SHA-256 of the manifest entries a file was built from, independent of their order in the manifest.
+// SHA-256 over the id and SHA-256 of each pinned input a file was built from, in id order. Metadata (dates,
+// titles, URLs) is left out, so fixing it doesn't change emitted data.
 export function sourceManifestHash(entries) {
-  const sorted = [...entries].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  return createHash('sha256').update(canonicalJson(sorted)).digest('hex');
+  const pins = entries.map(({ id, sha256 }) => ({ id, sha256 })).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return createHash('sha256').update(canonicalJson(pins)).digest('hex');
 }
 
 // The data-contract envelope every emitted file starts with. source_manifest hashes the manifest entries named

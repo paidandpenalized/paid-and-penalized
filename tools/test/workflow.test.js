@@ -26,11 +26,11 @@ test('event data reaches scripts through env only: no ${{ }} inside run blocks, 
   for (const l of lines) {
     const indent = l.length - l.trimStart().length;
     if (runIndent >= 0 && l.trim() !== '' && indent <= runIndent) runIndent = -1;
-    const run = /^(\s*)(?:- )?run:/.exec(l);
-    if (run) runIndent = run[1].length;
+    const run = /^(\s*)(- )?run:/.exec(l);
+    if (run) runIndent = run[1].length + (run[2] ? 2 : 0); // a "- run:" step's sibling keys sit two deeper
     if (!l.includes('${{')) continue;
     assert.ok(runIndent < 0, `\${{ }} inside a run block: ${l}`);
-    assert.match(l, /^\s*(if: \$\{\{|group: |cancel-in-progress: \$\{\{|[A-Z_]+: \$\{\{)/, l);
+    assert.match(l, /^\s*(if: \$\{\{|group: |[A-Z_]+: \$\{\{)/, l);
   }
 });
 

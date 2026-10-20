@@ -1,31 +1,24 @@
 {
-  "description": "Known answers for canonicalJson and sourceManifestHash (pipeline/contract.js). Any language that emits data must reproduce them: keys sorted at every level, no whitespace, non-ASCII text kept as UTF-8 (not \\u escapes), entries sorted by id before hashing.",
+  "description": "Known answers for canonicalJson and sourceManifestHash (pipeline/contract.js). Any language that emits data must reproduce them: keep only id and sha256 of each entry, sort entries by id, sort keys at every level, no whitespace, non-ASCII kept as UTF-8 (not \\u escapes), then SHA-256 of the UTF-8 bytes.",
   "cases": [
     {
-      "name": "two entries given out of id order, with nesting, non-ASCII text and mixed numbers",
+      "name": "two entries out of id order, metadata to drop, a non-ASCII id",
       "entries": [
         {
           "id": "b-pin",
-          "nested": {
-            "z": "last",
-            "list": [
-              3,
-              1.5,
-              -0.25,
-              null,
-              true
-            ]
-          }
+          "sha256": "00ff",
+          "retrieved": "2026-10-20",
+          "title": "ignored"
         },
         {
-          "sha256": "00ff",
-          "note": "Café, \"quoted\"",
-          "id": "a-pin",
+          "title": "Café, \"quoted\" (ignored)",
+          "id": "a-pin-é",
+          "sha256": "abcd",
           "bytes": 2604301
         }
       ],
-      "canonical": "[{\"bytes\":2604301,\"id\":\"a-pin\",\"note\":\"Café, \\\"quoted\\\"\",\"sha256\":\"00ff\"},{\"id\":\"b-pin\",\"nested\":{\"list\":[3,1.5,-0.25,null,true],\"z\":\"last\"}}]",
-      "sha256": "0684c4b88be3ceb7ea7605b8883e60a086603a7864b28bec8af51d44b97f6b8e"
+      "canonical": "[{\"id\":\"a-pin-é\",\"sha256\":\"abcd\"},{\"id\":\"b-pin\",\"sha256\":\"00ff\"}]",
+      "sha256": "12bc384c4d4c51b1219019dc1ad178d92c3aed210c6c67c2f5518ab1e5beda18"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "schema": "hacrp.schema.json",
   "def": null,
-  "description": "Each case applies its patch (JSON Pointer path; set value or remove) to a copy of base.",
+  "description": "Each case applies its patch to a copy of base: JSON Pointer paths; op \"replace\" (key must exist), \"add\" (must not) or \"remove\" (must exist).",
   "base": {
     "schema_version": 1,
     "methods_version": 1,
@@ -209,6 +209,7 @@
       "patch": [
         {
           "path": "/hospitals/0/ccn",
+          "op": "replace",
           "value": 990001
         }
       ]
@@ -219,6 +220,7 @@
       "patch": [
         {
           "path": "/extra",
+          "op": "add",
           "value": 1
         }
       ]
@@ -229,6 +231,7 @@
       "patch": [
         {
           "path": "/hospitals/0/paymentReduction",
+          "op": "replace",
           "value": "Maybe"
         }
       ]
@@ -239,7 +242,7 @@
       "patch": [
         {
           "path": "/hospitals/0/measures/MRSA",
-          "remove": true
+          "op": "remove"
         }
       ]
     },
@@ -249,7 +252,7 @@
       "patch": [
         {
           "path": "/methods_version",
-          "remove": true
+          "op": "remove"
         }
       ]
     },
@@ -259,6 +262,7 @@
       "patch": [
         {
           "path": "/built_at",
+          "op": "replace",
           "value": "2026-10-20T00:00:00.000Z"
         }
       ]
@@ -269,6 +273,7 @@
       "patch": [
         {
           "path": "/fy",
+          "op": "replace",
           "value": "2026"
         }
       ]
@@ -279,6 +284,7 @@
       "patch": [
         {
           "path": "/hospitals/0/measures/PSI90/value",
+          "op": "replace",
           "value": "1.2"
         }
       ]
@@ -289,6 +295,7 @@
       "patch": [
         {
           "path": "/schema_version",
+          "op": "replace",
           "value": 2
         }
       ]
@@ -299,6 +306,7 @@
       "patch": [
         {
           "path": "/hospitals",
+          "op": "replace",
           "value": []
         }
       ]

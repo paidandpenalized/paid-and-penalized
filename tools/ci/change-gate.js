@@ -1,78 +1,80 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. Per changed emitted file: the SHA-256 of one of its pinned inputs changed (new source data), or its
-// site's newest methods_version in the methods log went up. For the whole change: a corrections entry. The
-// same evidence is in the tree on PR runs and on the push to main after the merge.
+// change. Per changed emitted file, one of:
+//   - it is new (a first emission: nothing published to differ from);
+//   - one of its pinned inputs has a new SHA-256 (new source data);
+//   - its methods_version moved to its site's new newest version in the methods log (a methods change).
+// Or, for the whole change, a file under corrections/. The evidence is all in the tree, so PR runs and the push
+// to main after the merge reach the same verdict.
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { METHODS_LOG, sitesBumped } from '../../pipeline/methods-log.js';
+import { METHODS_LOG, latestMethodsVersion } from '../../pipeline/methods-log.js';
 
 const EMITTED = 'data/emitted/';
 const CORRECTIONS = 'corrections/';
+const MANIFEST = 'data/pinned/manifest.json';
 
-// data/emitted/<site>/fy<YYYY>/<file>.json → <site>
-const siteOf = (path) => path.slice(EMITTED.length).split('/')[0];
-
-// repinned: emitted paths with a pinned input whose SHA-256 changed. bumped: sites whose methods_version went up.
-export function changeGate({ changed, repinned = new Set(), bumped = new Set() }) {
+// added, repinned, bumped: sets of emitted paths explained by each reason.
+export function changeGate({ changed, added = new Set(), repinned = new Set(), bumped = new Set() }) {
   const changedEmitted = changed.filter((p) => p.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
   if (changed.some((p) => p.startsWith(CORRECTIONS))) return { ok: true, reason: 'emitted data changed with a corrections entry' };
-  const unexplained = changedEmitted.filter((p) => !repinned.has(p) && !bumped.has(siteOf(p)));
-  if (unexplained.length === 0) return { ok: true, reason: 'every emitted change has new pinned inputs or a new methods_version' };
+  const unexplained = changedEmitted.filter((p) => !added.has(p) && !repinned.has(p) && !bumped.has(p));
+  if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), add a new methods_version heading for the site to ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction)`,
   };
 }
 
 const ZERO_SHA = /^0{40}$/;
 const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB limit
 
-const MANIFEST = 'data/pinned/manifest.json';
-
 function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
-  const exists = (rev) => {
+  const exists = (object) => {
     try {
-      git('cat-file', '-e', `${rev}^{commit}`);
+      git('cat-file', '-e', object);
       return true;
     } catch {
       return false;
     }
   };
   const given = process.env.GATE_BASE ?? '';
-  // A new branch has no before; after a force-push the old tip is gone. Either way, check the last commit.
-  const base = given !== '' && !ZERO_SHA.test(given) && exists(given) ? given : 'HEAD~1';
-  const show = (rev, path, fallback) => {
-    try {
-      return git('show', `${rev}:${path}`);
-    } catch {
-      return fallback;
-    }
-  };
-  const json = (rev, path) => JSON.parse(show(rev, path, 'null'));
+  // Only the first push of a branch has no base. A base that can't be found (a force-push) fails the gate
+  // rather than shrinking the range it checks.
+  const base = given === '' || ZERO_SHA.test(given) ? 'HEAD~1' : given;
+  if (!exists(`${base}^{commit}`)) throw new Error(`base ${base} is not in this history (force-push?); check the range by hand`);
+  // A file's content at a revision, or null only when the path is absent there; other git errors throw.
+  const read = (rev, path) => (exists(`${rev}:${path}`) ? git('show', `${rev}:${path}`) : null);
+  const json = (rev, path) => JSON.parse(read(rev, path) ?? 'null');
+
   const changed = git('diff', '--name-only', '-z', `${base}...HEAD`).split('\0').filter(Boolean);
   const mergeBase = git('merge-base', base, 'HEAD').trim();
-
-  // A file is re-pinned when one of its sources has a different SHA-256 (or the file is new). Metadata edits
-  // to a manifest entry (dates, titles) don't count.
   const pins = (rev) => new Map((json(rev, MANIFEST) ?? []).map((e) => [e.id, e.sha256]));
   const [pinsNow, pinsBefore] = [pins('HEAD'), pins(mergeBase)];
-  const inputs = (data, map) => (data?.sources ?? []).map((id) => map.get(id) ?? '').join(',');
-  const repinned = new Set(
-    changed.filter((p) => {
-      if (!p.startsWith(EMITTED)) return false;
-      const now = json('HEAD', p);
-      if (now === null) return false;
-      const before = json(mergeBase, p);
-      return before === null || inputs(now, pinsNow) !== inputs(before, pinsBefore);
-    }),
-  );
-  const result = changeGate({
-    changed,
-    repinned,
-    bumped: sitesBumped(show(mergeBase, METHODS_LOG, ''), show('HEAD', METHODS_LOG, '')),
-  });
+  const inputs = (data, map) => data.sources.map((id) => map.get(id) ?? '').join(',');
+  const logNow = read('HEAD', METHODS_LOG) ?? '';
+  const logBefore = read(mergeBase, METHODS_LOG) ?? '';
+
+  const added = new Set();
+  const repinned = new Set();
+  const bumped = new Set();
+  for (const p of changed.filter((path) => path.startsWith(EMITTED))) {
+    const now = json('HEAD', p);
+    const before = json(mergeBase, p);
+    if (now === null) continue; // deleted: needs a corrections entry
+    if (before === null) {
+      added.add(p);
+      continue;
+    }
+    if (inputs(now, pinsNow) !== inputs(before, pinsBefore)) repinned.add(p);
+    const site = p.slice(EMITTED.length).split('/')[0];
+    const latest = latestMethodsVersion(logNow, site);
+    if (now.methods_version !== before.methods_version && now.methods_version === latest && latest > (latestMethodsVersion(logBefore, site) ?? 0)) {
+      bumped.add(p);
+    }
+  }
+  const result = changeGate({ changed, added, repinned, bumped });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);
 }

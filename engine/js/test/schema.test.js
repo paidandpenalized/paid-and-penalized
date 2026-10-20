@@ -99,9 +99,9 @@ test('every schema file uses only supported keywords and has a matching $id', ()
   }
 });
 
-// A case is either { data } or { patch } against the suite's base: [{ path: JSON Pointer, value } | { path, remove }].
-// A patch whose parent path doesn't exist (or a remove of a missing key) throws, so a stale case can't pass by
-// accident.
+// A case is either { data } or { patch } against the suite's base: a list of { path: JSON Pointer, op, value }
+// with op "replace" (the key must exist), "add" (it must not) or "remove" (it must). Anything else throws, so a
+// stale case can't pass by accident after the schema changes.
 function applyPatch(base, patch) {
   const doc = structuredClone(base);
   for (const op of patch) {
@@ -111,10 +111,11 @@ function applyPatch(base, patch) {
       if (node === null || typeof node !== 'object' || !Object.hasOwn(node, k)) throw new RangeError(`patch path ${op.path} not in base`);
       return node[k];
     }, doc);
-    if (op.remove) {
-      if (!Object.hasOwn(parent, last)) throw new RangeError(`patch removes missing ${op.path}`);
-      delete parent[last];
-    } else parent[last] = op.value;
+    const has = parent !== null && typeof parent === 'object' && Object.hasOwn(parent, last);
+    if (op.op === 'add' ? has : !has) throw new RangeError(`patch ${op.op} at ${op.path}: key ${has ? 'exists' : 'missing'}`);
+    if (op.op === 'remove') delete parent[last];
+    else if (op.op === 'replace' || op.op === 'add') parent[last] = op.value;
+    else throw new RangeError(`patch op "${op.op}" unknown`);
   }
   return doc;
 }
@@ -135,8 +136,20 @@ for (const file of readdirSync(conformanceDir).filter((f) => f.endsWith('.cases.
 
 test('applyPatch: sets, removes, and refuses paths the base lacks', () => {
   const base = { a: { b: 1 }, list: [{ x: 1 }] };
-  assert.deepEqual(applyPatch(base, [{ path: '/a/b', value: 2 }, { path: '/list/0/x', remove: true }]), { a: { b: 2 }, list: [{}] });
+  const patched = applyPatch(base, [
+    { path: '/a/b', op: 'replace', value: 2 },
+    { path: '/a/c', op: 'add', value: 3 },
+    { path: '/list/0/x', op: 'remove' },
+  ]);
+  assert.deepEqual(patched, { a: { b: 2, c: 3 }, list: [{}] });
   assert.deepEqual(base, { a: { b: 1 }, list: [{ x: 1 }] });
-  assert.throws(() => applyPatch(base, [{ path: '/missing/b', value: 1 }]), RangeError);
-  assert.throws(() => applyPatch(base, [{ path: '/a/missing', remove: true }]), RangeError);
+  for (const bad of [
+    { path: '/missing/b', op: 'replace', value: 1 },
+    { path: '/a/typo', op: 'replace', value: 1 },
+    { path: '/a/b', op: 'add', value: 1 },
+    { path: '/a/missing', op: 'remove' },
+    { path: '/a/b', op: 'move' },
+  ]) {
+    assert.throws(() => applyPatch(base, [bad]), RangeError, JSON.stringify(bad));
+  }
 });

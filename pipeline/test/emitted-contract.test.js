@@ -12,16 +12,21 @@ import { REPO_ROOT, loadSchemas, readJson } from '../files.js';
 const EMITTED_DIR = REPO_ROOT + 'data/emitted/';
 const schemas = loadSchemas();
 const log = readFileSync(REPO_ROOT + METHODS_LOG, 'utf8');
-const files = readdirSync(EMITTED_DIR, { recursive: true })
-  .filter((p) => p.endsWith('.json'))
-  .map((p) => ({ path: p, site: p.split('/')[0], fy: p.split('/')[1] }));
+// Emitted files live at <site>/fy<YYYY>/<name>.json; anything else under data/emitted/ fails the layout test.
+const all = readdirSync(EMITTED_DIR, { recursive: true }).filter((p) => p.endsWith('.json'));
+const files = all
+  .map((p) => /^([a-z0-9-]+)\/fy(\d{4})\/[^/]+\.json$/.exec(p))
+  .filter(Boolean)
+  .map(([path, site, fy]) => ({ path, site, fy: Number(fy), data: readJson(EMITTED_DIR + path) }));
 const newestYear = {};
-for (const { site, fy } of files) if (!(newestYear[site] >= fy)) newestYear[site] = fy;
+for (const { site, fy } of files) newestYear[site] = Math.max(newestYear[site] ?? 0, fy);
+
+test('every emitted file sits at <site>/fy<YYYY>/<name>.json', () => assert.deepEqual(all.length, files.length));
 
 test('there is emitted data to check', () => assert.ok(files.length > 0));
 
-for (const { path, site, fy } of files) {
-  const data = readJson(EMITTED_DIR + path);
+for (const { path, site, fy, data } of files) {
+  test(`${path}: its fy field matches its folder`, () => assert.equal(data.fy, fy));
   test(`${path}: passes ${site}.schema.json`, () => {
     const schema = schemas[`${site}.schema.json`];
     assert.ok(schema, `no schemas/${site}.schema.json`);
