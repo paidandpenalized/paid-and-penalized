@@ -17,9 +17,11 @@ test('the emitted file passes its schema', () => {
   assert.deepEqual(validate(schemas['hacrp.schema.json'], emitted, { schemas }), []);
 });
 
-test('methods_version has its heading in docs/METHODS-LOG.md', () => {
+test('methods_version is the newest hacrp heading in docs/METHODS-LOG.md', () => {
   const log = readFileSync(REPO_ROOT + 'docs/METHODS-LOG.md', 'utf8');
-  assert.match(log, new RegExp(`^## hacrp methods_version ${emitted.methods_version} \\(\\d{4}-\\d{2}-\\d{2}\\)$`, 'm'));
+  const versions = [...log.matchAll(/^## hacrp methods_version (\d+) \(\d{4}-\d{2}-\d{2}\)$/gm)].map((m) => Number(m[1]));
+  assert.ok(versions.length > 0);
+  assert.equal(Math.max(...versions), emitted.methods_version);
 });
 
 test('the emitted file reproduces CMS for every row', () => {

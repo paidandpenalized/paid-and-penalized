@@ -19,7 +19,15 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   or clock) so the page build and the browser share one copy.
 - `sites/<program>/`, `hub/`: sites import the engine, never each other.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
-  A test fails if a pinned file changes.
+  A test fails if a pinned file changes. Files of 10 MB or more never go in git (the pre-commit hook blocks them).
+- `pipeline/`: build-time Node helpers (repo files, the data-contract envelope). File I/O and the clock live here
+  and in `sites/*/pipeline/`, never in `engine/`.
+- `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
+  validated by `engine/js/schema.js`, which throws on any keyword it doesn't support. `schemas/conformance/`
+  holds language-neutral test cases; the Python validator (with the hospital master) must pass the same set.
+- `data/emitted/<site>/fy<YYYY>/`: each site's emitted data, committed. It is the golden snapshot: a test
+  rebuilds it from the pins and must match. Every file carries `schema_version`, `methods_version`,
+  `source_manifest`, `sources`, `built_at`, `fy`.
 
 ## Rules
 - **Anchor on CMS.** Every reproduction must equal CMS's published values exactly where CMS publishes them.
@@ -33,8 +41,21 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
+- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails: new source
+  data (that file's `source_manifest` changed, i.e. a re-pin; or the `new-cms-release` PR label), a new
+  `## <site> methods_version N` heading in `docs/METHODS-LOG.md` with the matching bump (a test requires the
+  newest heading to equal the emitted `methods_version`), or a file under `corrections/`. Run `make emit` after any engine or pin change; it keeps `built_at` when
+  nothing else changed.
+- **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MB or more, strings from a
+  private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist
+  lives outside the repo (`~/.config/paid-and-penalized/blocklist.txt`, or `$PP_BLOCKLIST`) and is never copied
+  in, quoted, or echoed; hits report only an entry number. Tests use invented names.
+- **CI** (`.github/workflows/ci.yml`): actions pinned by full SHA, a read-only token, no `pull_request_target`,
+  no `${{ }}` inside `run:` (pass values through `env`). `tools/test/workflow.test.js` enforces these.
 - **Outward actions need Dalton's explicit OK in the session:** pushing to a public remote, changing repo
   visibility, deploys, DNS, GitHub Releases. The repo stays private until the first public launch.
 
 ## Commands
-- `npm test` (or `make test`): all engine tests.
+- `npm test` (or `make test`): all tests, including the golden check.
+- `make emit`: rebuild `data/emitted/` from the pins.
+- `make hooks`: point git at `.githooks/`.

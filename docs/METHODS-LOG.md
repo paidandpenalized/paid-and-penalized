@@ -1,8 +1,9 @@
 # Methods log
 
 One heading per site methods version. A change that moves a site's emitted numbers for any reason other than
-a new CMS release bumps that site's `methods_version` and adds an entry here (or a dated entry under
-`corrections/`). CI checks both.
+new source data bumps that site's `methods_version` and adds its heading here; a fix of an error gets a dated
+entry under `corrections/` instead. CI's change gate looks for one of these (or a re-pin) whenever emitted data
+changes, and a test requires the newest heading to match the emitted `methods_version`.
 
 ## hacrp methods_version 1 (2026-10-20)
 - `data/emitted/hacrp/fy2026/hacrp.json` holds CMS's published FY2026 values for every hospital in the file,
