@@ -1,7 +1,7 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. A corrections entry with new content (its text isn't already under corrections/) covers the whole
-// change, as long as the change deletes no entry: the corrections log is append-only. Otherwise each changed
-// emitted file needs one of:
+// change. A new corrections entry covers the whole change: an added, non-empty corrections/YYYY-MM-DD-<slug>.md
+// whose content isn't already an entry at the merge base, in a change that edits, retypes or deletes no existing
+// entry (the log is append-only). Otherwise each changed emitted file needs one of:
 //   - added: a first emission (nothing published to differ from);
 //   - re-pinned: one of its inputs has a new SHA-256 in this change's manifest diff, its sources and
 //     methods_version are unchanged, and its new source_manifest is the true hash of those inputs at HEAD. Pin and
@@ -18,23 +18,23 @@ import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/';
 const CORRECTIONS = 'corrections/';
+const ENTRY = /^corrections\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/;
 const MANIFEST = 'data/pinned/manifest.json';
 
 // changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
-// with a per-file reason (see above). newCorrection: an added file under corrections/ has content not already
-// there at the base.
-export function changeGate({ changed, explained = new Set(), newCorrection = false }) {
+// with a per-file reason (see above). freshEntries: added corrections paths whose content is non-empty and not
+// already an entry at the base.
+export function changeGate({ changed, explained = new Set(), freshEntries = new Set() }) {
   const changedEmitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  const deletesCorrection = changed.some(({ status, path }) => status === 'D' && path.startsWith(CORRECTIONS));
-  if (newCorrection && !deletesCorrection) {
-    return { ok: true, reason: 'emitted data changed with a new corrections entry' };
-  }
+  const rewritesLog = changed.some(({ status, path }) => status !== 'A' && path.startsWith(CORRECTIONS));
+  const newEntry = changed.some(({ status, path }) => status === 'A' && ENTRY.test(path) && freshEntries.has(path));
+  if (newEntry && !rewritesLog) return { ok: true, reason: 'emitted data changed with a new corrections entry' };
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry under ${CORRECTIONS} (correction or removal; entries are append-only)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry ${CORRECTIONS}YYYY-MM-DD-<slug>.md (correction or removal; existing entries are never edited)`,
   };
 }
 
@@ -79,17 +79,24 @@ function main() {
     throw new Error(`base ${base} is not in this history (force-push?); check the range by hand`);
   }
   const changed = parseNameStatus(git('diff', '--name-status', '--no-renames', '-z', `${base}...HEAD`));
-  const emitted = changed.filter(({ status, path }) => path.startsWith(EMITTED) && status !== 'D');
+  const emitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   const explained = new Set();
-  let newCorrection = false;
+  const freshEntries = new Set();
   if (emitted.length > 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // Blob ids under corrections/ at the base, against those of the entries this change adds.
+    // path → blob id under corrections/ at a revision ("<mode> blob <id>\t<path>" per -z record).
     const blobsAt = (rev) =>
-      new Set(git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS).split('\0').filter(Boolean).map((l) => l.split(/\s+/)[2]));
-    const oldBlobs = blobsAt(mergeBase);
-    const addedEntries = changed.filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS));
-    newCorrection = addedEntries.some(({ path }) => !oldBlobs.has(git('rev-parse', `HEAD:${path}`).trim()));
+      new Map(
+        git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS)
+          .split('\0')
+          .filter(Boolean)
+          .map((l) => [l.slice(l.indexOf('\t') + 1), l.split(/\s+/)[2]]),
+      );
+    const oldBlobs = new Set(blobsAt(mergeBase).values());
+    const EMPTY_BLOB = execFileSync('git', ['hash-object', '--stdin'], { input: '', encoding: 'utf8' }).trim(); // the empty file's id
+    for (const [path, blob] of blobsAt('HEAD')) {
+      if (blob !== EMPTY_BLOB && !oldBlobs.has(blob)) freshEntries.add(path);
+    }
     const parse = (text) => {
       try {
         return JSON.parse(text);
@@ -109,13 +116,14 @@ function main() {
     const latestFor = (site) =>
       (latest[site] ??= { now: latestMethodsVersion(logs.now, site), before: latestMethodsVersion(logs.before, site) });
     for (const { status, path } of emitted) {
+      if (status === 'D') continue; // a deletion needs a corrections entry
       const added = status === 'A';
       const before = added ? undefined : parse(git('show', `${mergeBase}:${path}`));
       const now = parse(git('show', `HEAD:${path}`));
       if (reasonFor({ added, before, now, pins, latest: latestFor(path.slice(EMITTED.length).split('/')[0]) })) explained.add(path);
     }
   }
-  const result = changeGate({ changed, explained, newCorrection });
+  const result = changeGate({ changed, explained, freshEntries });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);
 }

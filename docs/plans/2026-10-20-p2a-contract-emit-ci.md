@@ -182,8 +182,10 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. The gate reads
   statuses from one `git diff --name-status --no-renames` (a rename is a delete plus an add) and runs from the
   repo root. A file under
-  `corrections/` with new content (its blob isn't already there at the merge base; this catches renames and
-  copies) covers the whole change, unless the change deletes an entry (the log is append-only). Otherwise each changed emitted file needs one
+  `corrections/YYYY-MM-DD-<slug>.md` that is non-empty, with new content (its blob isn't already an entry at
+  the merge base, which catches renames and copies), covers the whole change, deletions included. The cover
+  doesn't apply if the change edits, retypes or deletes an existing entry (the log is append-only). Known limit:
+  re-adding an entry deleted in an earlier change counts as new. Otherwise each changed emitted file needs one
   of:
   - *added*: a first emission (by git status, not by content);
   - *re-pinned*: an input's SHA-256 changes in the same change, the file keeps its sources and `methods_version`,

@@ -22,22 +22,33 @@ test('an unexplained emitted change fails, naming only the unexplained files', (
   assert.equal(changeGate({ changed: [M(EMITTED)], explained: new Set([EMITTED]) }).ok, true);
 });
 
-const NEW_ENTRY = { status: 'A', path: 'corrections/2026-11-01-hacrp.md' };
+const ENTRY_PATH = 'corrections/2026-11-01-hacrp.md';
+const NEW_ENTRY = { status: 'A', path: ENTRY_PATH };
+const FRESH = new Set([ENTRY_PATH]);
 
 test('a deletion (or the delete half of a rename) needs a corrections entry', () => {
   const rename = [{ status: 'D', path: OLDER }, { status: 'A', path: 'data/emitted/hacrp/fy2025/hacrp-final.json' }];
   assert.equal(changeGate({ changed: rename, explained: new Set(['data/emitted/hacrp/fy2025/hacrp-final.json', OLDER]) }).ok, false);
-  assert.equal(changeGate({ changed: [...rename, NEW_ENTRY], newCorrection: true }).ok, true);
+  assert.equal(changeGate({ changed: [...rename, NEW_ENTRY], freshEntries: FRESH }).ok, true);
+  assert.equal(changeGate({ changed: [{ status: 'D', path: OLDER }, NEW_ENTRY], freshEntries: FRESH }).ok, true, 'a deletion alone');
 });
 
-test('a corrections entry with new content covers the whole change, unless the change deletes an entry', () => {
-  assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), NEW_ENTRY], newCorrection: true }).ok, true);
-  assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY], newCorrection: false }).ok, false, 'old content under a new name');
-  const deletes = { status: 'D', path: 'corrections/2026-10-01-old.md' };
-  assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY, deletes], newCorrection: true }).ok, false, 'append-only');
-  assert.equal(changeGate({ changed: [M(EMITTED), { status: 'M', path: NEW_ENTRY.path }] }).ok, false, 'an edit');
-  for (const p of ['corrections-old.md', 'docs/corrections/x.md', 'docs/METHODS-LOG.md']) {
-    assert.equal(changeGate({ changed: [M(EMITTED), { status: 'A', path: p }] }).ok, false, p);
+test('a new corrections entry covers the whole change', () => {
+  assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), NEW_ENTRY], freshEntries: FRESH }).ok, true);
+  assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY] }).ok, false, 'old or empty content under a new name');
+});
+
+test('the corrections log is append-only: editing, retyping or deleting an entry voids the cover', () => {
+  for (const status of ['M', 'T', 'D']) {
+    const other = { status, path: 'corrections/2026-10-01-old.md' };
+    assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY, other], freshEntries: FRESH }).ok, false, status);
+  }
+});
+
+test('only a dated markdown entry directly under corrections/ counts', () => {
+  for (const p of ['corrections-old.md', 'docs/corrections/2026-11-01-x.md', 'corrections/README.md', 'corrections/.gitkeep',
+    'corrections/2026-11-01-x.txt', 'corrections/sub/2026-11-01-x.md', 'docs/METHODS-LOG.md']) {
+    assert.equal(changeGate({ changed: [M(EMITTED), { status: 'A', path: p }], freshEntries: new Set([p]) }).ok, false, p);
   }
 });
 
