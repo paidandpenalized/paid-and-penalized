@@ -4,6 +4,7 @@ It supports only the keywords below and raises on any other, so a schema can nev
 checked. Types are JSON's, not Python's: a bool is never a number, 1.0 is an integer, and patterns use ASCII classes
 (as JavaScript's u mode does for \\d and \\w). Both validators run every case in schemas/conformance/.
 """
+import functools
 import math
 import re
 
@@ -13,6 +14,26 @@ ANNOTATIONS = {"$schema", "$id", "$defs", "title", "description"}
 ASSERTIONS = {"$ref", "type", "properties", "required", "additionalProperties", "items", "enum", "const",
               "pattern", "minimum", "maximum", "minItems", "minLength"}
 MAX_REF_DEPTH = 64
+
+
+@functools.lru_cache(maxsize=None)
+def _js_pattern(pattern):
+    """A JavaScript pattern compiled for Python: ASCII classes (as \\d in JS), and an unescaped $ outside a class
+    means end of text only (Python's $ also matches before a final newline)."""
+    out, escaped, in_class = [], False, False
+    for ch in pattern:
+        if escaped:
+            escaped = False
+        elif ch == "\\":
+            escaped = True
+        elif ch == "[":
+            in_class = True
+        elif ch == "]":
+            in_class = False
+        elif ch == "$" and not in_class:
+            ch = r"\Z"
+        out.append(ch)
+    return re.compile("".join(out), re.ASCII)
 
 
 def _check_keywords(schema, where):
@@ -126,7 +147,7 @@ def validate(schema, data, schemas=None):
 
         t = _type_of(value)
         if t == "string":
-            if "pattern" in s and not re.search(s["pattern"], value, re.ASCII):
+            if "pattern" in s and not _js_pattern(s["pattern"]).search(value):
                 fail(f"does not match {s['pattern']}")
             if "minLength" in s and len(value) < s["minLength"]:
                 fail(f"shorter than {s['minLength']}")

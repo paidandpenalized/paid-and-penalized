@@ -14,6 +14,7 @@ from pathlib import Path
 from pp_pipeline.files import PINNED_DIR, manifest_entry
 
 PIN_ID = "pos-q2-2026"
+RAW_ENCODING = "cp1252"  # CMS writes Windows-1252: 0x96 is an en dash, not a control character
 HOSPITAL = "01"  # PRVDR_CTGRY_CD for hospitals (short-term, critical access, psychiatric, children's and others)
 COLUMNS = ("PRVDR_NUM", "PRVDR_CTGRY_SBTYP_CD", "FAC_NAME", "ST_ADR", "CITY_NAME", "STATE_CD", "ZIP_CD",
            "CRTFD_BED_CNT", "PGM_TRMNTN_CD", "TRMNTN_EXPRTN_DT")
@@ -50,7 +51,7 @@ def main(raw_path):
     if (len(data), hashlib.sha256(data).hexdigest()) != (source["bytes"], source["sha256"]):
         print(f"{raw_path} is not the raw file the manifest names ({source['file']}, {source['sha256']})")
         return 1
-    out = extract(data.decode("latin-1")).encode("utf-8")  # read as latin-1, as Thirty Day Readmissions does
+    out = extract(data.decode(RAW_ENCODING)).encode("utf-8")
     (PINNED_DIR / entry["path"]).parent.mkdir(parents=True, exist_ok=True)
     (PINNED_DIR / entry["path"]).write_bytes(out)
     print(f"wrote {entry['path']}: {len(out)} bytes, sha256 {hashlib.sha256(out).hexdigest()}")

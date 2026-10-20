@@ -91,6 +91,12 @@ class Keywords(Base):
         self.ok({"type": "string", "pattern": "b"}, "abc")
         self.bad({"type": "string", "pattern": r"^\d$"}, "٣")
 
+    def test_dollar_is_end_of_text_outside_classes_and_escapes(self):
+        self.bad({"type": "string", "pattern": "^a$"}, "a\n")
+        self.ok({"type": "string", "pattern": "^a[$]$"}, "a$")
+        self.ok({"type": "string", "pattern": "^a\\$$"}, "a$")
+        self.bad({"type": "string", "pattern": "^a\\$$"}, "a$\n")
+
     def test_constraints_skip_other_types(self):
         self.ok({"type": ["string", "null"], "pattern": "^a$", "minLength": 1}, None)
         self.ok({"type": ["number", "null"], "minimum": 0}, None)

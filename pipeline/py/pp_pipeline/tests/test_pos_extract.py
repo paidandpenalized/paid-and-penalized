@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from pp_pipeline.files import PINNED_DIR, manifest_entry, read_pinned_bytes
-from pp_pipeline.pos_extract import COLUMNS, PIN_ID, extract
+from pp_pipeline.pos_extract import COLUMNS, PIN_ID, RAW_ENCODING, extract
 
 HEADER = ["PRVDR_CTGRY_SBTYP_CD", "PRVDR_CTGRY_CD", "OTHER", *[c for c in COLUMNS if c != "PRVDR_CTGRY_SBTYP_CD"]]
 
@@ -60,6 +60,7 @@ class Committed(unittest.TestCase):
         self.assertEqual(ccns, sorted(set(ccns)))
         self.assertTrue(all(re.fullmatch(r"[0-9A-Z]{6}", c) for c in ccns))
         self.assertTrue(all(len(r) == len(COLUMNS) for r in rows))
+        self.assertFalse([r[0] for r in rows if any("\x80" <= ch <= "\x9f" for cell in r for ch in cell)])  # no C1 controls
 
     @unittest.skipUnless(os.environ.get("PP_RAW_POS"), "set PP_RAW_POS to the raw POS file to re-derive the extract")
     def test_extract_rederives_from_raw(self):
@@ -67,7 +68,7 @@ class Committed(unittest.TestCase):
         source = manifest_entry(PIN_ID)["derivedFrom"]
         self.assertEqual((len(data), hashlib.sha256(data).hexdigest()), (source["bytes"], source["sha256"]))
         committed = (PINNED_DIR / manifest_entry(PIN_ID)["path"]).read_bytes()
-        self.assertEqual(extract(data.decode("latin-1")).encode("utf-8"), committed)
+        self.assertEqual(extract(data.decode(RAW_ENCODING)).encode("utf-8"), committed)
 
 
 if __name__ == "__main__":

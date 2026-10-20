@@ -8,6 +8,7 @@
     { "name": "five characters", "valid": false, "data": "00001" },
     { "name": "seven characters", "valid": false, "data": "0000001" },
     { "name": "a lower-case letter", "valid": false, "data": "00000a" },
-    { "name": "null", "valid": false, "data": null }
+    { "name": "null", "valid": false, "data": null },
+    { "name": "a trailing newline", "valid": false, "data": "000001\n" }
   ]
 }

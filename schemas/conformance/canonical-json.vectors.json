@@ -1,0 +1,20 @@
+{
+  "description": "Known answers for canonicalJson (pipeline/contract.js). Each case is JSON text; parse it, then canonicalJson must equal \"canonical\" exactly in every language.",
+  "cases": [
+    {
+      "name": "whole floats print as integers; JS exponent thresholds",
+      "json": "{\"b\":1.0,\"a\":[0.00005,0.000001,1e-7,1e21,1e20,123.456,-0.0,100,1.5e300,5.0949531251065494e-05]}",
+      "canonical": "{\"a\":[0.00005,0.000001,1e-7,1e+21,100000000000000000000,123.456,0,100,1.5e+300,0.000050949531251065494],\"b\":1}"
+    },
+    {
+      "name": "keys sort by UTF-16 code unit, not code point",
+      "json": "{\"\\uff21\":1,\"\\ud83d\\ude00\":2,\"é\":3,\"a\":4,\"B\":5}",
+      "canonical": "{\"B\":5,\"a\":4,\"é\":3,\"😀\":2,\"Ａ\":1}"
+    },
+    {
+      "name": "strings: UTF-8 kept, control characters escaped",
+      "json": "{\"s\":\"é\\u0001\\n\\t\\\"\\\\\\u007f\\u2028\"}",
+      "canonical": "{\"s\":\"é\\u0001\\n\\t\\\"\\\\ \"}"
+    }
+  ]
+}

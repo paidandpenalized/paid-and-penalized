@@ -48,8 +48,8 @@
     "id": "pos-q2-2026",
     "title": "Provider of Services file, Q2 2026: hospital rows and the columns the hospital master reads",
     "path": "pos-q2-2026/pos_hospitals.csv",
-    "bytes": 1212911,
-    "sha256": "809a7faa5b24ec5fca8184837d0f65d3a10c73689475bbb9133286ce96039970",
+    "bytes": 1212913,
+    "sha256": "68e74286646024820f0b84e73d8bba3ece6d7f1a157648c14413190fa69d40c3",
     "derivedFrom": {
       "file": "Hospital_and_other.DATA.Q2_2026.csv",
       "bytes": 30195693,

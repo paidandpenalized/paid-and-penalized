@@ -3,7 +3,7 @@ import json
 import unittest
 
 from pp_engine.contract import canonical_json, envelope, format_emitted, keep_built_at, source_manifest_hash
-from pp_pipeline.files import SCHEMAS_DIR, read_json
+from pp_pipeline.files import EMITTED_DIR, SCHEMAS_DIR, read_json
 
 
 class Contract(unittest.TestCase):
@@ -14,6 +14,23 @@ class Contract(unittest.TestCase):
             pins = sorted(({"id": e["id"], "sha256": e["sha256"]} for e in c["entries"]), key=lambda e: e["id"])
             self.assertEqual(canonical_json(pins), c["canonical"])
             self.assertEqual(source_manifest_hash(c["entries"]), c["sha256"])
+
+    def test_canonical_json_vectors(self):
+        cases = read_json(SCHEMAS_DIR / "conformance" / "canonical-json.vectors.json")["cases"]
+        self.assertTrue(cases)
+        for c in cases:
+            with self.subTest(c["name"]):
+                self.assertEqual(canonical_json(json.loads(c["json"])), c["canonical"])
+
+    def test_numbers_print_as_javascript_does(self):
+        self.assertEqual(format_emitted({"beds": 12.0, "x": [5e-05, 1e21, -1.5e-7]}),
+                         '{\n"beds": 12,\n"x": [\n0.00005,\n1e+21,\n-1.5e-7\n]\n}\n')
+        with self.assertRaises(ValueError):
+            canonical_json(float("nan"))
+
+    def test_format_emitted_reproduces_a_javascript_emitted_file_byte_for_byte(self):
+        path = EMITTED_DIR / "hacrp" / "fy2026" / "hacrp.json"
+        self.assertEqual(format_emitted(read_json(path)), path.read_text(encoding="utf-8"))
 
     def test_canonical_json(self):
         self.assertEqual(canonical_json({"b": 1, "a": [2, 1]}), canonical_json({"a": [2, 1], "b": 1}))

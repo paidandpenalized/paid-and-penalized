@@ -50,3 +50,9 @@ test('envelope: contract fields in order, hashing only the named pins; an unknow
   assert.equal(e.source_manifest, sourceManifestHash([manifest[1]]));
   assert.throws(() => envelope({ schemaVersion: 1, methodsVersion: 1, sources: ['z'], manifest, builtAt: '', fy: 2026 }), RangeError);
 });
+
+test('canonicalJson reproduces the shared JSON-text vectors (the Python twin runs the same file)', () => {
+  const { cases } = readJson(SCHEMAS_DIR + 'conformance/canonical-json.vectors.json');
+  assert.ok(cases.length > 0);
+  for (const c of cases) assert.equal(canonicalJson(JSON.parse(c.json)), c.canonical, c.name);
+});

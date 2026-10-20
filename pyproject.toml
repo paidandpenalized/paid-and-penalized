@@ -13,5 +13,5 @@ dependencies = []
 license = { text = "MIT" }
 
 [tool.setuptools.packages.find]
-where = ["engine/py", "pipeline/py"]
-include = ["pp_engine", "pp_pipeline"]
+where = ["engine/py"]
+include = ["pp_engine"]  # pp_pipeline reads repo files by path, so it runs from the checkout only

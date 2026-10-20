@@ -6,6 +6,7 @@
     { "name": "UTC whole seconds", "valid": true, "data": "2026-10-20T00:00:00Z" },
     { "name": "Arabic-Indic digits are not \\d", "valid": false, "data": "٢٠٢٦-10-20T00:00:00Z" },
     { "name": "fractional seconds", "valid": false, "data": "2026-10-20T00:00:00.000Z" },
-    { "name": "no Z", "valid": false, "data": "2026-10-20T00:00:00" }
+    { "name": "no Z", "valid": false, "data": "2026-10-20T00:00:00" },
+    { "name": "a trailing newline ($ is end of text)", "valid": false, "data": "2026-10-20T00:00:00Z\n" }
   ]
 }
