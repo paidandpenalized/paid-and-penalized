@@ -68,16 +68,22 @@ export const COPY = {
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
+  hospitalDescription: {
+    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, from public CMS data.",
+    claim: null,
+  },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
   place: { text: '{city}, {state} · CCN {ccn}', claim: null },
   heroScore: { text: 'Total HAC Score, as CMS reports it', claim: null },
+  heroLabel: { text: 'Score and payment decision', claim: null },
+  noScore: { text: 'No score published', claim: null },
   heroDecision: { text: 'Payment reduction', claim: null },
   decisionCms: { text: "CMS's value: {decision}", claim: null },
   pillYes: { text: '{pct} cut', claim: 'HACRP-01' },
   pillNo: { text: 'No cut', claim: null },
   pillNA: { text: 'N/A', claim: null },
   // The row CMS marked Yes with no score: CMS's literal value, nothing inferred.
-  pillCms: { text: 'Payment reduction: {decision}', claim: null },
+  pillCms: { text: '{decision}', claim: null },
   measuresHeading: { text: 'The measures', claim: null },
   measuresIntro: {
     text: "CMS's published value and z-score for each measure. A higher z-score adds more to the Total HAC Score.",
@@ -90,12 +96,13 @@ export const COPY = {
   noValue: { text: 'no value published', claim: null },
   footnoteLead: { text: 'CMS footnote {code}:', claim: null },
   estimateTag: { text: 'estimate', claim: null },
-  estimateTitle: {
-    text: "This site's what-if recomputes this measure's z-score from CMS's public data; the result can differ from CMS's by up to {maxError}.",
+  estimateNote: {
+    text: "This site recomputes this measure's z-score from CMS's published value. The recompute can differ from CMS's z-score by up to {maxError}.",
     claim: null,
   },
+  estimateMore: { text: 'How this site estimates', claim: null },
   footnotesHeading: { text: "CMS's footnotes on this page", claim: null },
-  backToProgram: { text: 'How the program works, and every hospital in it', claim: null },
+  backToProgram: { text: 'How the program works, and how to find another hospital', claim: null },
 
   // As-of bar and source line (hospital and program pages).
   asofHeading: { text: 'About this data', claim: null },
@@ -110,6 +117,10 @@ export const COPY = {
   // Program page.
   programTitle: { text: 'Hospital-Acquired Conditions (HACRP), FY{fy}', claim: null },
   dek: { text: 'Infections and complications patients develop in the hospital.', claim: null },
+  programDescription: {
+    text: "How Medicare's Hospital-Acquired Condition Reduction Program works, and CMS's FY{fy} scores and payment decisions for every hospital in its file.",
+    claim: null,
+  },
   whatHeading: { text: 'What the program is', claim: null },
   whatScore: {
     text: "Each year, CMS scores hospitals paid under Medicare's inpatient payment system on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.",

@@ -4,9 +4,9 @@ import { footnoteLegend, footnoteNote } from '../../../../web/render/components.
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { distanceSentence, measureNote, smallNumber, summary } from '../sentences.js';
+import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill } from '../copy.js';
-import { asofBar, decisionPill, sourceLine, t } from './parts.js';
+import { asofBar, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
 const value = (text, published) => (published
@@ -18,7 +18,8 @@ const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code
 function measureRow(m) {
   const note = measureNote(m);
   // The tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
-  const tag = m.tagged && m.hasValue && html`<p><a class="tag" href="/methods/#estimate" title="${fill('estimateTitle', { maxError: m.maxErrorText })}">${t('estimateTag')}</a></p>`;
+  const tag = m.tagged && m.hasValue && html`<details class="est"><summary>${t('estimateTag')}</summary>
+<p class="est__body small">${fill('estimateNote', { maxError: m.maxErrorText })} <a href="/methods/#estimate">${t('estimateMore')}</a></p></details>`;
   return html`<tr>
 <th scope="row">${m.label} <span class="short">(${m.short})</span></th>
 <td class="num cms" data-label="${t('colValue')}">${value(m.valueText, m.hasValue)}</td>
@@ -36,7 +37,9 @@ const legend = (view) => footnoteLegend({
 // robots: null for an indexable page, else the meta robots value.
 export function hospitalPage({ view, source, robots, assets }) {
   const fy = String(view.fy);
-  const title = fill('hospitalTitle', { name: view.name, city: view.city, state: view.state, fy });
+  const where = { name: view.name, city: view.city, state: view.state, fy };
+  const title = `${fill('hospitalTitle', where)} · ${SITE.name}`;
+  const largest = largestSentence(view);
   const sentences = summary(view);
   const distance = distanceSentence(view);
   const small = smallNumber(view);
@@ -49,10 +52,12 @@ export function hospitalPage({ view, source, robots, assets }) {
 <p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })}</p>
 </header>
 <div class="prose">${sentences.map((s) => html`<p>${s}</p>`)}</div>
-<section class="hero" aria-label="${t('heroScore')}">
-<div class="hero__item"><p class="cap">${t('heroScore')}</p><p class="hero__num cms">${view.score.text}</p></div>
+<section class="hero" aria-label="${t('heroLabel')}">
+<div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
+    ? html`<p class="hero__num cms">${view.score.text}</p>`
+    : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
-<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p></div>
+${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>
 </section>
 <div class="prose">
 ${distance && html`<p>${distance}</p>`}
@@ -62,12 +67,12 @@ ${small && html`<p class="note">${small}</p>`}
 <section class="block" aria-labelledby="measures-h">
 <h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('measuresIntro')}</p>
+${largest && html`<p>${largest}</p>`}
 <div class="printout"><div class="printout__scroll"><table class="gb gb--measures">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
 <tbody>${view.measures.map(measureRow)}</tbody>
 </table></div></div>
 </section>
-${view.scored && html`<section id="whatif" class="block"></section>`}
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
 ${legend(view)}
 <p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
@@ -76,7 +81,7 @@ ${sourceLine({ fy: view.fy, source })}
 
   return page({
     title,
-    description: sentences[0],
+    description: fill('hospitalDescription', where),
     path: view.path,
     robots,
     body,

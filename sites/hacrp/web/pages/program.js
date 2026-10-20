@@ -79,7 +79,7 @@ ${sourceLine({ fy, source })}
 
   return page({
     title: `${fill('programTitle', { fy: fyText })} · ${SITE.name}`,
-    description: t('dek'),
+    description: fill('programDescription', { fy: fyText }),
     path: PATH,
     robots,
     body,

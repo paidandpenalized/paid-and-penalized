@@ -3,8 +3,7 @@
 .page { gap: 28px; padding-block: 28px 0; }
 .printout { max-width: 100%; }
 .page__head { gap: 8px; }
-.kicker a { color: var(--ink-2); text-decoration: none; }
-.kicker a:hover { text-decoration: underline; }
+.kicker a { color: var(--ink-2); }
 .place { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
 .subtitle { font: 700 var(--fs-md)/1.2 var(--font-type); letter-spacing: 0.04em; }
 .dek { font-size: var(--fs-md); color: var(--ink-2); }

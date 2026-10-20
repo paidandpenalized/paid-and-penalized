@@ -16,6 +16,9 @@ export function decisionPill(status, decision) {
   return pill({ label: t('pillNo') });
 }
 
+// Whether the pill already shows CMS's literal decision text, so the page needn't repeat it beside the pill.
+export const pillShowsCmsValue = (status) => status === 'maryland' || status === 'yes-no-score';
+
 export function asofBar({ fy, periods, source }) {
   return asofShell({
     label: t('asofHeading'),

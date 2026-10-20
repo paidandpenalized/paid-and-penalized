@@ -9,6 +9,13 @@
 .byline { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
 .theme-toggle { margin-left: auto; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); font: 600 var(--fs-xs)/1 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--ink); }
+.theme-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+/* Narrow screens: the toggle sits on the wordmark's row and the byline wraps below, so the header is two rows. */
+@media (max-width: 520px) {
+  .wordmark { order: 1; }
+  .theme-toggle { order: 2; }
+  .byline { order: 3; flex: 1 1 100%; }
+}
 
 /* ---------- footer ---------- */
 .foot { position: relative; margin-top: 56px; padding-block: 20px 40px; border-top: 4px solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
@@ -22,10 +29,10 @@
 .printout { position: relative; border: var(--rule) solid var(--ink); background: var(--paper); }
 .printout__scroll { overflow-x: auto; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
-.gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
 .gb td, .gb tbody th { padding: 7px 10px; vertical-align: top; }
-/* Row headers read as text, in ink: left-aligned, in the body face, with the header row's rule under each. */
-.gb tbody th { text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); border-bottom: var(--rule) solid var(--ink); }
+/* Row headers read as text, in ink: left-aligned, in the body face. Rows are told apart by the green-bar banding. */
+.gb tbody th { text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); }
 .gb tbody tr:nth-child(4n+1), .gb tbody tr:nth-child(4n+2) { background: var(--paper-2); }
 .gb .num { text-align: right; white-space: nowrap; }
 
