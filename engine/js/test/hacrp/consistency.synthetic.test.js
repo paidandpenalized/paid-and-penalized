@@ -17,7 +17,7 @@ function mulberry32(seed) {
   };
 }
 
-const p = { mean: 0.5, sd: 0.25, zMin: -2, zMax: 2, floor: 0, cap: 1, decimals: 3, fitError: 0.0005, boundTolerance: 0.25 * 0.0005 };
+const p = { mean: 0.5, sd: 0.25, zMin: -2, zMax: 2, floor: 0, cap: 1, decimals: 3, fitError: 0.0005 };
 const model = { params: Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }])), boundary: { highestNo: 0.4, lowestYes: 0.41 } };
 
 function syntheticHospital(rand, i) {
@@ -43,21 +43,39 @@ function syntheticHospital(rand, i) {
 const rand = mulberry32(42);
 const hospitals = Array.from({ length: 4000 }, (_, i) => syntheticHospital(rand, i)).filter((h) => h.paymentReduction);
 
-test('synthetic: every solver answer round-trips through the what-if to No, and unlimited never crosses', () => {
+test('synthetic: solver answers agree with the what-if: they read No, are tight, and "unlimited" / "not possible" are true', () => {
   let answers = 0;
+  const flagAt = (h, id, v) => whatIf(h, model, { [id]: v }).after.flag;
   for (const h of hospitals) {
     for (const id of MEASURE_IDS.filter((x) => h.measures[x].z !== null)) {
       const r = solveMeasure(h, model, id);
       const msg = `${h.ccn} ${id} ${JSON.stringify(h.measures[id])} total ${h.total} -> ${JSON.stringify(r)}`;
       if (r.unlimited) {
-        assert.equal(whatIf(h, model, { [id]: p.cap * 2 }).after.flag, 'No', msg);
-      } else if (r.possible) {
-        answers++;
-        assert.equal(whatIf(h, model, { [id]: r.value }).after.flag, 'No', msg);
+        assert.equal(flagAt(h, id, p.cap * 2), 'No', msg);
+        continue;
       }
+      if (r.kind === 'cushion') assert.notEqual(flagAt(h, id, p.cap * 2), 'No', msg);
+      if (!r.possible) {
+        if (r.kind === 'needed') assert.notEqual(flagAt(h, id, 0), 'No', msg);
+        continue;
+      }
+      answers++;
+      assert.equal(flagAt(h, id, r.value), 'No', msg);
+      assert.notEqual(flagAt(h, id, r.value + 10 ** -p.decimals), 'No', msg);
     }
   }
   assert.ok(answers > 500);
+});
+
+test('synthetic: a finer display precision (6 decimals) still gives tight answers', () => {
+  const fine = { params: Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id, decimals: 6 }])), boundary: model.boundary };
+  for (const h of hospitals.slice(0, 300)) {
+    const id = MEASURE_IDS[0];
+    const r = solveMeasure(h, fine, id);
+    if (!r.possible || r.unlimited) continue;
+    assert.equal(whatIf(h, fine, { [id]: r.value }).after.flag, 'No', h.ccn);
+    assert.notEqual(whatIf(h, fine, { [id]: r.value + 1e-6 }).after.flag, 'No', h.ccn);
+  }
 });
 
 test('synthetic: the what-if never moves against the direction of a change', () => {

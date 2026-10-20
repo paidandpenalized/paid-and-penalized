@@ -78,10 +78,11 @@ test('cushion: a No hospital whose measure is already at or above the cap has un
   for (const { h, id } of pairs) assert.equal(solveMeasure(h, model, id).unlimited, true, `${h.ccn} ${id}`);
 });
 
-test('"no-cushion" only when the measure is below the cap and the answer is below the current value', () => {
+test('"no-cushion" means the current value is already the highest that reads No', () => {
   for (const { h, id } of submittedPairs('No')) {
     const r = solveMeasure(h, model, id);
     if (r.note !== 'no-cushion') continue;
-    assert.ok(h.measures[id].value < model.params[id].cap && r.value < h.measures[id].value, `${h.ccn} ${id}`);
+    assert.equal(r.value, h.measures[id].value, `${h.ccn} ${id}`);
+    assert.notEqual(flagAt(h, id, r.value + unit(id)), 'No', `${h.ccn} ${id}`);
   }
 });

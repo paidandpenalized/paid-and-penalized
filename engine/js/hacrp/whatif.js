@@ -37,12 +37,13 @@ export function whatIf(hospital, model, changes = {}) {
 
     let afterZ = m.z;
     if (changed) {
-      const { z, exact } = hypotheticalZ(m, p, afterValue);
-      // A move smaller than float noise is no move. Only the fitted (inexact) part of a move carries fit error.
+      const z = hypotheticalZ(m, p, afterValue);
+      // A move smaller than float noise is no move. Every real move carries its measure's fit error, so the
+      // flag changes in one direction only as a value rises.
       if (Math.abs(z - m.z) >= EDGE) {
         afterZ = z;
         deltaZ += z - m.z;
-        if (!exact) fitErrors += p.fitError;
+        fitErrors += p.fitError;
       }
     }
 
@@ -53,7 +54,7 @@ export function whatIf(hospital, model, changes = {}) {
       beforeZ: m.z,
       afterZ,
       changed,
-      atCap: afterValue === null ? afterZ >= p.zMax : afterValue >= p.cap - p.boundTolerance,
+      atCap: afterValue === null ? afterZ >= p.zMax : afterValue >= p.cap,
       contribution: afterZ / n,
       leveragePerTenth: 0.1 / (n * p.sd),
     };

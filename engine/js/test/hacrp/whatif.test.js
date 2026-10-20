@@ -144,7 +144,7 @@ test('a move away from the line keeps CMS\'s flag: No stays No when a measure im
   }
 });
 
-test('mixed changes: a net move away from the line keeps CMS\'s flag; a snapped move adds no band', () => {
+test('mixed changes: a net move away from the line keeps CMS\'s flag; every move carries its measure\'s fit error', () => {
   const h = scored.find((x) => x.paymentReduction === 'No' && submitted(x).length === 6 && submitted(x).every((id) => x.measures[id].value < model.params[id].cap));
   const [a, b] = submitted(h);
   const pa = model.params[a];
@@ -153,7 +153,13 @@ test('mixed changes: a net move away from the line keeps CMS\'s flag; a snapped 
   const r = whatIf(h, model, { [a]: h.measures[a].value + 0.001, [b]: 0 });
   assert.ok(r.after.score < h.total);
   assert.equal(r.after.flag, 'No');
-  assert.ok(Math.abs(r.band - pa.fitError / 6) < 1e-15, 'only the fitted move carries band');
-  assert.equal(whatIf(h, model, { [b]: 0 }).band, 0);
-  assert.ok(pb);
+  assert.ok(Math.abs(r.band - (pa.fitError + pb.fitError) / 6) < 1e-15);
+  assert.ok(Math.abs(whatIf(h, model, { [b]: 0 }).band - pb.fitError / 6) < 1e-15);
+});
+
+test('PSI-90 just above its fitted floor takes the change-only step, not the floor', () => {
+  const p = model.params.PSI90;
+  const v = Math.ceil(p.floor * 1e4) / 1e4; // the first 4-decimal value above the floor
+  const h = scored.find((x) => x.measures.PSI90.value !== null && x.measures.PSI90.value > v + 0.01);
+  assert.ok(whatIf(h, model, { PSI90: v }).measures.PSI90.afterZ > p.zMin);
 });
