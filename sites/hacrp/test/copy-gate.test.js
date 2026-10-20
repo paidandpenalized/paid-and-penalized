@@ -10,7 +10,7 @@ import { CLAIMS } from '../web/constants.js';
 const CLAIM = /^HACRP-\d{2}$/;
 
 function copyFiles() {
-  const found = ['web/copy.js'];
+  const found = existsSync(REPO_ROOT + 'web/copy.js') ? ['web/copy.js'] : [];
   for (const dir of ['sites', 'hub']) {
     if (!existsSync(REPO_ROOT + dir)) continue;
     for (const p of readdirSync(REPO_ROOT + dir, { recursive: true })) {

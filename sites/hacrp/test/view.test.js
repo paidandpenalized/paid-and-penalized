@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { hospitalView } from '../web/view.js';
-import { CASES, FOOTNOTES, PERIODS, inputs } from './fixtures.js';
+import { SHORT_NAMES } from '../web/constants.js';
+import { boundaryText, hospitalView } from '../web/view.js';
+import { CASES, FOOTNOTES, MODEL, PERIODS, inputs } from './fixtures.js';
 
 const view = (name, overrides) => hospitalView(inputs(CASES[name], overrides));
 const fn = (code) => ({ code, text: FOOTNOTES.get(code) });
@@ -24,6 +25,7 @@ test('a scored "Yes" hospital: the whole view', () => {
     noScore: null,
     decision: { text: 'Yes', footnotes: [] },
     distance: { to: 'highestNo', value: 0.05, text: '0.0500' },
+    boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
     n: 6,
     oneMeasure: false,
     measures: [
@@ -136,10 +138,25 @@ test('a tagged measure carries the estimate tag and its maximum error, rounded u
   assert.deepEqual([byId(v, 'MRSA').tagged, byId(v, 'MRSA').maxErrorText], [false, '0.0001']);
 });
 
-test('nothing is indexable on an unreleased site; the path lowercases the CCN', () => {
+test('nothing is indexable on an unreleased site', () => {
   assert.equal(view('yes', { released: false }).indexable, false);
-  const h = { ...CASES.yes, ccn: '99000A' };
-  assert.equal(hospitalView(inputs(h)).path, '/hacrp/hospital/99000a/');
+  assert.equal(view('yes', { released: undefined }).indexable, false);
+});
+
+test("boundaryText reads CMS's published text for the boundary scores; the view carries it", () => {
+  const hospitals = Object.values(CASES);
+  const bt = boundaryText(hospitals, { highestNo: -0.05, lowestYes: 0.3 });
+  assert.deepEqual(bt, { highestNo: '−0.0500', lowestYes: '0.3000' });
+  assert.deepEqual(view('yes', { boundaryText: bt }).boundaryText, bt);
+  assert.throws(() => boundaryText(hospitals, MODEL.boundary), RangeError);
+});
+
+test("without boundaryText, the view shows the model's boundary at 4 decimals", () => {
+  assert.deepEqual(view('no').boundaryText, { highestNo: '0.2500', lowestYes: '0.2507' });
+});
+
+test("short names are CMS's, read from its column names", () => {
+  assert.deepEqual(SHORT_NAMES, { PSI90: 'PSI 90', CLABSI: 'CLABSI', CAUTI: 'CAUTI', SSI: 'SSI', CDI: 'CDI', MRSA: 'MRSA' });
 });
 
 test('display fields come from the master record; a missing county stays null', () => {

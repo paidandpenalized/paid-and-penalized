@@ -1,6 +1,7 @@
 // HACRP method constants and measure short names: the only numbers the site's words may use that don't come from
 // CMS's file. Copy files hold no digits, so these arrive through placeholders. Each constant cites a claim in
 // sites/hacrp/CLAIMS.md.
+import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 
 // CMS reduces a flagged hospital's Medicare inpatient payments by this percentage.
 export const REDUCTION_PCT = 1;
@@ -17,12 +18,6 @@ export const CLAIMS = {
   WINSOR_HIGH: 'HACRP-03',
 };
 
-// CMS's short names for the measures (PSI 90 has a digit, so these live here, not in copy.js).
-export const SHORT_NAMES = Object.freeze({
-  PSI90: 'PSI 90',
-  CLABSI: 'CLABSI',
-  CAUTI: 'CAUTI',
-  SSI: 'SSI',
-  CDI: 'CDI',
-  MRSA: 'MRSA',
-});
+// CMS's short names for the measures, read from its column names ("PSI 90 W Z Score" -> "PSI 90"). PSI 90 has a
+// digit, so these can't live in copy.js.
+export const SHORT_NAMES = Object.freeze(Object.fromEntries(MEASURES.map((m) => [m.id, m.z.replace(/ W Z Score$/, '')])));

@@ -22,9 +22,11 @@ export const COPY = {
     claim: 'HACRP-01',
   },
   scoreIs: {
-    text: 'The Total HAC Score compares each hospital with all others on {measureCount} infection and patient-safety measures; it is not a grade of the quality of care.',
+    text: 'The Total HAC Score compares hospitals with each other on the infection and patient-safety measures each hospital was scored on.',
     claim: 'HACRP-04',
   },
+  // Site framing, not a claim about CMS's program.
+  notAGrade: { text: 'It is not a grade of the quality of care.', claim: null },
 
   // This site's arithmetic.
   distanceYes: {

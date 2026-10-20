@@ -31,7 +31,21 @@ function distance(st, total, { highestNo, lowestYes }) {
   return null;
 }
 
-export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, released }) {
+// CMS's own text for the two scores that bound the line: the published Total HAC Score of a hospital CMS marked No
+// at highestNo, and of one it marked Yes at lowestYes. The page build passes this to hospitalView.
+export function boundaryText(hospitals, { highestNo, lowestYes }) {
+  const find = (decision, total) => {
+    const h = hospitals.find((x) => x.paymentReduction === decision && x.total === total);
+    if (!h) throw new RangeError(`no hospital marked ${decision} at the boundary score ${total}`);
+    return cmsText(h.totalText);
+  };
+  return { highestNo: find('No', highestNo), lowestYes: find('Yes', lowestYes) };
+}
+
+const fallbackBoundary = ({ highestNo, lowestYes }) => ({ highestNo: decimal(highestNo, DP), lowestYes: decimal(lowestYes, DP) });
+
+// boundaryText (from boundaryText() above) is optional; without it the boundary shows at 4 decimals from the model.
+export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, released, boundaryText: bt }) {
   if (master.ccn !== h.ccn) throw new RangeError(`master record ${master.ccn} is not hospital ${h.ccn}`);
   const st = status(h);
   const n = scoredMeasures(h).length;
@@ -75,9 +89,10 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     periods,
     status: st,
     total: scored ? { text: cmsText(h.totalText), footnotes: totalFootnotes } : null,
-    noScore: scored ? null : { text: h.totalText, footnotes: totalFootnotes },
+    noScore: scored ? null : { text: cmsText(h.totalText), footnotes: totalFootnotes },
     decision: { text: h.paymentReduction, footnotes: footnoteList(footnotes, h.paymentReductionFootnote) },
     distance: scored ? distance(st, h.total, model.boundary) : null,
+    boundaryText: bt ?? fallbackBoundary(model.boundary),
     n,
     oneMeasure: n === 1,
     measures,
