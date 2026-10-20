@@ -142,7 +142,7 @@
 
 **Interfaces:**
 - Consumes: `Hospital`, `buildModel`, `zFromValue`, `classify`.
-- `whatIf(hospital, model, changes: { [id]: number } = {}) → WhatIfResult`:
+- `whatIf(hospital, model, changes: { [id]: number } = {}) → WhatIfResult` (*superseded in part: the flag comes from `range`, not `classify` with a band; see § Amendments*):
   - No score: `{ available: false, reason: 'no-score', cms: { totalText, paymentReduction, totalFootnote } }`.
   - Otherwise `{ available: true, n, band, before: { score, flag }, after: { score, flag }, measures: { [id]: { assigned, beforeValue, afterValue, beforeZ, afterZ, changed, atCap, contribution, leveragePerTenth } } }`.
   - `flag` ∈ `'Yes'|'No'|'N/A'|'too-close'`. `before` is always CMS's. `changed` is false when the new value `===` the published value.

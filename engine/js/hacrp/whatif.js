@@ -50,8 +50,9 @@ export function whatIf(hospital, model, changes = {}) {
         deltaZ += d;
         fitErrors += b;
         moves++;
-        lowZ += d > 0 ? Math.max(d - b, 0) : d - b;
-        highZ += d > 0 ? d + b : Math.min(d + b, 0);
+        // An assigned measure has no published value for CMS's map to rise from, so it gets no sign clamp.
+        lowZ += d > 0 && !assigned ? Math.max(d - b, 0) : d - b;
+        highZ += d < 0 && !assigned ? Math.min(d + b, 0) : d + b;
       }
     }
 
@@ -85,6 +86,7 @@ export function whatIf(hospital, model, changes = {}) {
   return {
     available: true,
     n,
+    // Informational: the summed band terms over n. The flag comes from `range`, which can be one-sided.
     band: fitErrors / n,
     range,
     before: { score: hospital.total, flag: cms },

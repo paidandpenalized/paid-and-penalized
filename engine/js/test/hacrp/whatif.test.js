@@ -149,10 +149,10 @@ test('a move away from the line keeps CMS\'s flag: No stays No when a measure im
   }
 });
 
-test('mixed changes are re-judged with the band; every move carries its band term', () => {
+test('mixed changes get a range; every move carries its band term', () => {
   const h = scored.find((x) => x.paymentReduction === 'No' && submitted(x).length === 6 && submitted(x).every((id) => x.measures[id].value < model.params[id].cap));
   const [a, b] = submitted(h);
-  // a worsens a little, b improves to 0: mixed directions, re-judged with the band, still clearly No.
+  // a worsens a little, b improves to 0: mixed directions, judged on the range, still clearly No.
   const r = whatIf(h, model, { [a]: h.measures[a].value + 0.001, [b]: 0 });
   assert.ok(r.after.score < h.total);
   assert.equal(r.after.flag, 'No');

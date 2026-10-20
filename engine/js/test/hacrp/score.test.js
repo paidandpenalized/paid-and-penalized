@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { totalFromZ, cutoffBoundary, classify, noCeiling } from '../../hacrp/score.js';
+import { totalFromZ, cutoffBoundary, classify } from '../../hacrp/score.js';
 
 const boundary = { highestNo: 0.4, lowestYes: 0.41 }; // synthetic
 
@@ -26,19 +26,7 @@ test('classify: at or below highestNo is No, at or above lowestYes is Yes, betwe
   assert.equal(classify(0.405, boundary), 'too-close');
 });
 
-test('classify: a band widens the too-close zone on both sides', () => {
-  assert.equal(classify(0.4, boundary, 0.001), 'too-close');
-  assert.equal(classify(0.399, boundary, 0.001), 'No');
-  assert.equal(classify(0.41, boundary, 0.001), 'too-close');
-  assert.equal(classify(0.411, boundary, 0.001), 'Yes');
-});
-
 test('cutoffBoundary throws when either side of the line has no hospitals', () => {
   assert.throws(() => cutoffBoundary([{ total: 0.1, paymentReduction: 'No' }]), RangeError);
   assert.throws(() => cutoffBoundary([{ total: 0.5, paymentReduction: 'Yes' }]), RangeError);
-});
-
-test('noCeiling is the highest score that still reads No for a given band', () => {
-  assert.equal(noCeiling(boundary), 0.4);
-  assert.equal(classify(noCeiling(boundary, 0.001), boundary, 0.001), 'No');
 });

@@ -68,7 +68,7 @@ test('a move off the cap carries the starting row\'s own miss; an uncapped move 
   assert.equal(whatIf(inside, { params, boundary: { highestNo: 0.39, lowestYes: 0.41 } }, { CDI: 0.595 }).after.flag, 'No');
 });
 
-test('opposite moves that cancel are still re-judged with the band, not handed CMS\'s flag', () => {
+test('opposite moves that cancel still get a range, not CMS\'s flag', () => {
   const p = { mean: 0.5, sd: 0.25, floor: 0, cap: 1, zMin: -2, zMax: 2, decimals: 3, fitError: 0.001 };
   const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }]));
   const [a, b] = MEASURE_IDS;
@@ -77,4 +77,28 @@ test('opposite moves that cancel are still re-judged with the band, not handed C
   const r = whatIf(h, { params, boundary: { highestNo: 0.4, lowestYes: 0.41 } }, { [a]: 0.6, [b]: 0.4 });
   assert.ok(Math.abs(r.band - 0.001) < 1e-15);
   assert.equal(r.after.flag, 'too-close');
+});
+
+test('an assigned measure below the max z gets no sign clamp: CMS has no starting value to rise from', () => {
+  const p = { mean: 0.5, sd: 0.25, floor: 0, cap: 1, zMin: -2, zMax: 2, decimals: 3, fitError: 0.001 };
+  const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }]));
+  const [a] = MEASURE_IDS;
+  const measures = Object.fromEntries(MEASURE_IDS.map((id) => [id, id === a ? { value: null, z: 1.5 } : { value: null, z: null }]));
+  const h = { ccn: 'S2', total: 1.5, paymentReduction: 'Yes', measures };
+  // 0.875125 maps to z 1.5005, within the band above the assigned 1.5: CMS's real change could be negative.
+  const r = whatIf(h, { params, boundary: { highestNo: 1.4, lowestYes: 1.5 } }, { [a]: 0.875125 });
+  assert.ok(r.range.low < 1.5);
+  assert.equal(r.after.flag, 'too-close');
+});
+
+test('range: no change is CMS\'s total exactly; cancelling synthetic moves give total ± band', () => {
+  const p = { mean: 0.5, sd: 0.25, floor: 0, cap: 1, zMin: -2, zMax: 2, decimals: 3, fitError: 0.001 };
+  const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }]));
+  const [a, b] = MEASURE_IDS;
+  const measures = Object.fromEntries(MEASURE_IDS.map((id) => [id, id === a || id === b ? { value: 0.5, z: 0 } : { value: null, z: null }]));
+  const h = { ccn: 'S3', total: 0.41, paymentReduction: 'Yes', measures };
+  const model = { params, boundary: { highestNo: 0.4, lowestYes: 0.41 } };
+  assert.deepEqual(whatIf(h, model).range, { low: 0.41, high: 0.41 });
+  const r = whatIf(h, model, { [a]: 0.6, [b]: 0.4 }).range;
+  assert.ok(Math.abs(r.low - 0.409) < 1e-12 && Math.abs(r.high - 0.411) < 1e-12, JSON.stringify(r));
 });
