@@ -1,9 +1,10 @@
 // What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, CMS's
-// footnote crosswalk and the dataset's manifest entry. File reads live here; views and pages stay pure.
+// footnote crosswalk and the dataset's manifest entry, plus CMS's text for the line's two scores. File reads live here; views and pages stay pure.
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
+import { boundaryText } from './view.js';
 
 const FOOTNOTES_ID = 'y9us-9xdf';
 
@@ -31,6 +32,7 @@ export function loadHacrp() {
     fy: data.fy,
     hospitals: data.hospitals,
     model: data.model,
+    boundaryText: boundaryText(data.hospitals, data.model.boundary),
     estimate: data.estimate,
     periods,
     master,

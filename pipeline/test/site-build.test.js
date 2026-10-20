@@ -1,28 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../files.js';
-import { buildAssets } from '../site/assets.js';
+import { buildAssets, hash8 } from '../site/assets.js';
 import { build } from '../site/build.js';
+import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
+import { withTemp as inTemp } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
-const hash8 = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8);
-
-function withTemp(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'pp-site-'));
-  return Promise.resolve(fn(dir)).finally(() => rmSync(dir, { recursive: true, force: true }));
-}
+const withTemp = (fn) => inTemp('pp-site-', fn);
 
 test('build writes hashed CSS holding the tokens and the dark copy, the six fonts, their licenses and the favicon', () =>
   withTemp(async (dir) => {
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, generators: [] }), { pages: 0 });
+    assert.deepEqual(await build({ outDir: out, sites: [] }), { pages: 0 });
     const css = readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css'));
     assert.equal(css.length, 1);
     assert.match(css[0], /^site\.[0-9a-f]{8}\.css$/);
@@ -52,23 +48,54 @@ test('buildAssets bundles each JS entry as minified ESM under a content hash and
     await assert.rejects(buildAssets({ outDir: out, entries: { '../x': entry } }), /entry name/);
   }));
 
-test('build runs the page generators in order, passing each the assets and earlier results', () =>
+test('build runs the sites in order with one context: assets, env, and what earlier sites emitted', () =>
   withTemp(async (dir) => {
     const seen = [];
-    const generators = [
-      { name: 'first', generate: async (ctx) => { seen.push(['first', ctx.assets.css, ctx.env]); return { pages: 2, list: ['/a/'] }; } },
-      { name: 'second', generate: async (ctx) => { seen.push(['second', ctx.results.first.list]); return { pages: 1 }; } },
+    const sites = [
+      { id: 'first', generate: async (ctx) => {
+        seen.push(['first', ctx.assets.css, ctx.env]);
+        ctx.emit({ path: '/a/', robots: null, text: 'a' });
+        ctx.emit({ path: '/b.html', robots: 'noindex', text: 'b' });
+      } },
+      { id: 'second', generate: async (ctx) => {
+        seen.push(['second', [...ctx.indexable]]);
+        ctx.emit({ path: '/robots.txt', text: 'r' });
+      } },
     ];
-    assert.deepEqual(await build({ outDir: join(dir, 'dist'), env: 'preview', generators }), { pages: 3 });
+    const out = join(dir, 'dist');
+    assert.deepEqual(await build({ outDir: out, env: 'preview', sites }), { pages: 2 });
     assert.equal(seen[0][0], 'first');
     assert.match(seen[0][1], /^\/assets\/site\./);
     assert.equal(seen[0][2], 'preview');
     assert.deepEqual(seen[1], ['second', ['/a/']]);
+    assert.equal(readFileSync(join(out, 'a', 'index.html'), 'utf8'), 'a');
+    assert.equal(readFileSync(join(out, 'robots.txt'), 'utf8'), 'r');
   }));
+
+test('emit refuses a path outside the site; asset writes a content-hashed file', () =>
+  withTemp(async (dir) => {
+    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
+    for (const path of ['a/', '/../x/', '/a/../../x/', '/A/', '/a b/', '//x/']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
+    const url = ctx.asset('demo', 'json', '[1]');
+    assert.equal(url, `/assets/demo.${hash8('[1]')}.json`);
+    assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
+  }));
+
+test('robotsFor: only a production build of a released site indexes, and only eligible pages', () => {
+  const cases = [
+    [{ env: 'production', released: true }, null],
+    [{ env: 'production', released: true, eligible: false }, 'noindex'],
+    [{ env: 'production', released: false }, 'noindex'],
+    [{ env: 'production', released: undefined }, 'noindex'],
+    [{ env: undefined, released: true }, 'noindex'],
+    [{ env: 'preview', released: true }, 'noindex'],
+  ];
+  for (const [input, want] of cases) assert.equal(robotsFor(input), want, JSON.stringify(input));
+});
 
 test('build refuses to empty a directory that is not dist/ or under the temp directory', async () => {
   for (const outDir of ['/', REPO_ROOT, REPO_ROOT + 'web', REPO_ROOT + '..', tmpdir(), join(tmpdir(), '..', 'elsewhere')]) {
-    await assert.rejects(build({ outDir, generators: [] }), /refusing/, outDir);
+    await assert.rejects(build({ outDir, sites: [] }), /refusing/, outDir);
   }
   assert.ok(existsSync(REPO_ROOT + 'web/styles/tokens.css'));
 });

@@ -1,21 +1,23 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createContext } from '../../pipeline/site/context.js';
+import { withTemp } from '../../pipeline/test/helpers.js';
 import { generateHub, sitemapXml } from '../pages.js';
 
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
 const NOINDEX = '<meta name="robots" content="noindex">';
 
-function withTemp(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'pp-hub-'));
-  return Promise.resolve(fn(dir)).finally(() => rmSync(dir, { recursive: true, force: true }));
-}
-
-test('the hub writes the stub root, /methods/, the 404 page, robots.txt and the sitemap it is given', () =>
-  withTemp(async (dir) => {
-    assert.deepEqual(await generateHub({ outDir: dir, assets: ASSETS, env: 'production', sitemap: ['/hacrp/', '/hacrp/hospital/990001/'] }), { pages: 3 });
+test('the hub writes the stub root, /methods/, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
+  withTemp('pp-hub-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    ctx.emit({ path: '/hacrp/', robots: null, text: 'a' });
+    ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
+    ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
+    await generateHub(ctx);
+    assert.equal(ctx.pages, 3 + 3);
+    assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
     const home = read('index.html');

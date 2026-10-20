@@ -8,11 +8,10 @@ const notes = (list) => list.map((f) => f.text).join(' ');
 // What CMS reports, CMS's notes, what the decision means (scored Yes/No only), then what the score is.
 export function summary(view) {
   const facts = { fy: String(view.fy), name: view.name, decision: view.decision.text };
-  const out = [view.total
-    ? fill('leadScored', { ...facts, total: view.total.text })
+  const out = [view.scored
+    ? fill('leadScored', { ...facts, total: view.score.text })
     : fill('leadNoScore', facts)];
-  const scoreNotes = (view.total ?? view.noScore).footnotes;
-  if (scoreNotes.length) out.push(fill('noteScore', { notes: notes(scoreNotes) }));
+  if (view.score.footnotes.length) out.push(fill('noteScore', { notes: notes(view.score.footnotes) }));
   if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
   if (view.status === 'yes') out.push(fill('whyYes', { pct: REDUCTION_TEXT }));
   if (view.status === 'no') out.push(fill('whyNo'));

@@ -17,12 +17,11 @@ test('a scored "Yes" hospital: the whole view', () => {
     state: 'AL',
     county: 'Example County',
     path: '/hacrp/hospital/990001/',
-    indexable: true,
     fy: 2026,
     periods: PERIODS,
     status: 'yes',
-    total: { text: '0.3000', footnotes: [] },
-    noScore: null,
+    scored: true,
+    score: { text: '0.3000', footnotes: [] },
     decision: { text: 'Yes', footnotes: [] },
     distance: { to: 'highestNo', value: 0.05, text: '0.0500' },
     boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
@@ -49,14 +48,13 @@ test('a scored "Yes" hospital: the whole view', () => {
         footnotes: [] },
     ],
     largest: { id: 'CLABSI', contributionText: '+0.1500' },
-    whatIf: true,
   });
 });
 
 test('a scored "No" hospital: distance to the lowest Yes; an unscored measure kept, in order, with its footnotes', () => {
   const v = view('no');
   assert.equal(v.status, 'no');
-  assert.equal(v.total.text, '−0.1000');
+  assert.equal(v.score.text, '−0.1000');
   assert.deepEqual(v.distance, { to: 'lowestYes', value: 0.3507, text: '0.3507' });
   assert.equal(v.n, 5);
   assert.deepEqual(v.measures.map((m) => m.id), MEASURE_IDS);
@@ -66,8 +64,7 @@ test('a scored "No" hospital: distance to the lowest Yes; an unscored measure ke
   assert.deepEqual(ssi.footnotes, [fn('12'), fn('5')]);
   assert.equal(byId(v, 'CDI').contribution, 0.2 / 5);
   assert.deepEqual(v.largest, { id: 'CDI', contributionText: '+0.0400' });
-  assert.equal(v.indexable, true);
-  assert.equal(v.whatIf, true);
+  assert.equal(v.scored, true);
 });
 
 test('Maryland: CMS\'s N/A decision and footnote a, no distance, what-if on the score', () => {
@@ -75,29 +72,28 @@ test('Maryland: CMS\'s N/A decision and footnote a, no distance, what-if on the 
   assert.equal(v.status, 'maryland');
   assert.equal(v.state, 'MD');
   assert.deepEqual(v.decision, { text: 'N/A', footnotes: [fn('a')] });
-  assert.equal(v.total.text, '0.4000');
+  assert.equal(v.score.text, '0.4000');
   assert.equal(v.distance, null);
-  assert.equal(v.indexable, true);
-  assert.equal(v.whatIf, true);
+  assert.equal(v.scored, true);
 });
 
-test('no score, decision No: not indexable, no what-if, no distance, CMS\'s score footnote kept', () => {
+test('no score, decision No: not scored (no what-if, never indexed), no distance, CMS\'s score footnote kept', () => {
   const v = view('noScore');
   assert.equal(v.status, 'no-score');
-  assert.equal(v.total, null);
-  assert.deepEqual(v.noScore, { text: 'N/A', footnotes: [fn('5')] });
+  assert.equal(v.scored, false);
+  assert.deepEqual(v.score, { text: 'N/A', footnotes: [fn('5')] });
   assert.deepEqual(v.decision, { text: 'No', footnotes: [] });
-  assert.deepEqual([v.distance, v.n, v.oneMeasure, v.largest, v.indexable, v.whatIf], [null, 0, false, null, false, false]);
+  assert.deepEqual([v.distance, v.n, v.oneMeasure, v.largest], [null, 0, false, null]);
   assert.ok(v.measures.every((m) => m.contribution === null && m.footnotes.length === 2));
 });
 
 test('the row reading Yes with no score: status yes-no-score, CMS\'s values only', () => {
   const v = view('yesNoScore');
   assert.equal(v.status, 'yes-no-score');
-  assert.equal(v.total, null);
-  assert.deepEqual(v.noScore, { text: 'N/A', footnotes: [fn('5')] });
+  assert.equal(v.scored, false);
+  assert.deepEqual(v.score, { text: 'N/A', footnotes: [fn('5')] });
   assert.deepEqual(v.decision, { text: 'Yes', footnotes: [] });
-  assert.deepEqual([v.distance, v.largest, v.indexable, v.whatIf], [null, null, false, false]);
+  assert.deepEqual([v.distance, v.largest], [null, null]);
 });
 
 test('a one-measure hospital is flagged oneMeasure; its measure carries the whole score', () => {
@@ -126,8 +122,8 @@ test('largest is null when every scored measure is CMS-assigned', () => {
 
 test('largest is null when no measure adds above zero; a scored hospital\'s total footnote is shown', () => {
   const v = view('totalFootnote');
-  assert.deepEqual(v.total, { text: '−0.0500', footnotes: [fn('23')] });
-  assert.equal(v.noScore, null);
+  assert.deepEqual(v.score, { text: '−0.0500', footnotes: [fn('23')] });
+  assert.equal(v.scored, true);
   assert.deepEqual(byId(v, 'PSI90').footnotes, [fn('23')]);
   assert.equal(v.largest, null);
 });
@@ -138,11 +134,6 @@ test('a tagged measure carries the estimate tag and its maximum error, rounded u
   assert.deepEqual([byId(v, 'MRSA').tagged, byId(v, 'MRSA').maxErrorText], [false, '0.0001']);
 });
 
-test('nothing is indexable on an unreleased site', () => {
-  assert.equal(view('yes', { released: false }).indexable, false);
-  assert.equal(view('yes', { released: undefined }).indexable, false);
-});
-
 test("boundaryText reads CMS's published text for the boundary scores; the view carries it", () => {
   const hospitals = Object.values(CASES);
   const bt = boundaryText(hospitals, { highestNo: -0.05, lowestYes: 0.3 });
@@ -151,8 +142,8 @@ test("boundaryText reads CMS's published text for the boundary scores; the view 
   assert.throws(() => boundaryText(hospitals, MODEL.boundary), RangeError);
 });
 
-test("without boundaryText, the view shows the model's boundary at 4 decimals", () => {
-  assert.deepEqual(view('no').boundaryText, { highestNo: '0.2500', lowestYes: '0.2507' });
+test('boundaryText is a required view input', () => {
+  assert.throws(() => view('no', { boundaryText: undefined }), TypeError);
 });
 
 test("short names are CMS's, read from its column names", () => {

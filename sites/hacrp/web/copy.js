@@ -1,6 +1,8 @@
 // The HACRP site's words. No digit characters: every number arrives through a {placeholder}, formatted before it
 // is filled. `claim` names the row of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
 // sentences that only restate CMS's file or this site's arithmetic).
+import { fillCopy } from '../../../web/render/components.js';
+
 export const COPY = {
   // Summary: what CMS reports, CMS's notes verbatim, then what the decision and the score mean.
   leadScored: {
@@ -155,21 +157,5 @@ export const COPY = {
   linkLeapfrogNote: { text: 'Related, different: a separate rating with its own method.', claim: null },
 };
 
-const PLACEHOLDER = /\{(\w+)\}/g;
-
-// COPY[key].text with each {placeholder} replaced. Values must be strings (format numbers first); a placeholder
-// with no value, or a value with no placeholder, throws.
-export function fill(key, values = {}) {
-  if (!Object.hasOwn(COPY, key)) throw new RangeError(`no copy key "${key}"`);
-  const { text } = COPY[key];
-  const used = new Set();
-  const out = text.replace(PLACEHOLDER, (_, name) => {
-    if (!Object.hasOwn(values, name)) throw new RangeError(`copy "${key}": no value for {${name}}`);
-    if (typeof values[name] !== 'string') throw new TypeError(`copy "${key}": {${name}} must be a formatted string`);
-    used.add(name);
-    return values[name];
-  });
-  const unused = Object.keys(values).filter((name) => !used.has(name));
-  if (unused.length) throw new RangeError(`copy "${key}": unused value(s) ${unused.join(', ')}`);
-  return out;
-}
+// COPY[key].text with each {placeholder} filled; see fillCopy for the rules.
+export const fill = (key, values) => fillCopy(COPY, key, values);

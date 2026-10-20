@@ -18,11 +18,16 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   Program formulas live in `engine/js/<program>/` as pure functions (data in, result out; no `fs`, network, DOM
   or clock) so the page build and the browser share one copy.
 - `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page.
-- `web/`: what every page shares: `site.js` (name, origin, each site's release state), `styles/` (`tokens.css` is
-  the only file under `web/` that may hold a color value), self-hosted fonts with their licenses, the favicon.
-- `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the shared assets (`assets.js`: one CSS file
-  and one ES module per JS entry, content-hashed), then runs each page generator in its list.
-  `serve.js` previews `dist/` locally. `dist/` is build output and gitignored.
+- `web/`: what every page shares: `site.js` (name, origin, each site's path, names and release state), `render/`
+  (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
+  `styles/` (`tokens.css` is the only file under `web/` that may hold a color value), self-hosted fonts with their
+  licenses, the favicon.
+- `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: one CSS file and
+  one ES module per JS entry, content-hashed), then runs each site in its `SITES` list (hub last). Each site exports
+  a manifest `{ id, entries, styles, generate }` from its generator (`sites/<program>/web/generate.js`,
+  `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
+  hashed data, `robotsFor`, the one indexing rule). `serve.js` previews `dist/` locally. `dist/` is build output and
+  gitignored.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
   A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
   hook blocks them and a test fails on any tracked file that size.

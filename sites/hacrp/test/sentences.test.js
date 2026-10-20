@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { COPY, fill } from '../web/copy.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
-import { CASES, MODEL, inputs } from './fixtures.js';
+import { CASES, inputs } from './fixtures.js';
 
 const view = (name, overrides) => hospitalView(inputs(CASES[name], overrides));
 const all = (name) => {
   const v = view(name);
-  return { summary: summary(v, MODEL), distance: distanceSentence(v, MODEL), small: smallNumber(v), largest: largestSentence(v) };
+  return { summary: summary(v), distance: distanceSentence(v), small: smallNumber(v), largest: largestSentence(v) };
 };
 
 const SCORE_IS = 'The Total HAC Score compares hospitals with each other on the infection and patient-safety measures '
@@ -146,11 +146,11 @@ test('a tagged measure changes no sentence: the whole output equals the untagged
   assert.deepEqual(summary(v), summary(view('yes', { estimate: untagged })));
 });
 
-test("the distance sentence quotes CMS's boundary text when the view has it", () => {
+test("the distance sentence quotes the view's boundary text (CMS's), whatever its decimals", () => {
   const v = view('totalFootnote', { boundaryText: { highestNo: '0.2500', lowestYes: '0.25070' } });
-  assert.equal(distanceSentence(v, MODEL),
+  assert.equal(distanceSentence(v),
     "This site recomputes the distance to CMS's line: the score is 0.3007 below 0.25070, the lowest score CMS marked Yes.");
-  assert.equal(distanceSentence(view('totalFootnote'), MODEL),
+  assert.equal(distanceSentence(view('totalFootnote')),
     "This site recomputes the distance to CMS's line: the score is 0.3007 below 0.2507, the lowest score CMS marked Yes.");
 });
 

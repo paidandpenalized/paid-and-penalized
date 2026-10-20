@@ -9,7 +9,7 @@ import { fill } from '../copy.js';
 import { LINKS } from '../links.js';
 import { asofBar, sourceLine, t } from './parts.js';
 
-export const PATH = '/hacrp/';
+export const PATH = SITE.sites.hacrp.path;
 export const SEARCH_ID = 'hacrp-search-data';
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;

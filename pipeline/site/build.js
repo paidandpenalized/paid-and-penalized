@@ -1,24 +1,21 @@
-// make build: write the static site to dist/. Empties the output directory, builds the shared assets, then runs
-// each page generator in order. PP_ENV=production is the only build that may be indexed.
+// make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
+// site's scripts and styles), then runs each site's generator in order. PP_ENV=production is the only build that may
+// be indexed (robotsFor in context.js holds the rule).
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { generateHub } from '../../hub/pages.js';
-import { generateHacrp } from '../../sites/hacrp/web/generate.js';
+import { HUB } from '../../hub/pages.js';
+import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { REPO_ROOT } from '../files.js';
 import { buildAssets } from './assets.js';
+import { createContext } from './context.js';
 
-// Browser JS entries, { name: path }; each becomes /assets/<name>.<hash>.js.
-export const ENTRIES = { theme: 'web/client/theme.js', 'hacrp-program': 'sites/hacrp/client/program.js' };
-
-// Page generators, run in this order. Each is { name, generate(ctx) → Promise<{ pages, ... }> }, where ctx is
-// { outDir, env, assets, results } and results holds every earlier generator's return value by name.
-export const GENERATORS = [
-  { name: 'hacrp', generate: generateHacrp },
-  // Last: the hub writes robots.txt and sitemap.xml, listing every page an earlier generator marked indexable.
-  { name: 'hub', generate: (ctx) => generateHub({ ...ctx, sitemap: Object.values(ctx.results).flatMap((r) => r.indexable ?? []) }) },
-];
+// Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx) }: entries are its browser
+// JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after web/styles/).
+// Last: the hub writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
+export const SITES = [HACRP, HUB];
+const SHARED_ENTRIES = { theme: 'web/client/theme.js' };
 
 const DIST = resolve(REPO_ROOT, 'dist');
 const inside = (dir, parent) => {
@@ -34,17 +31,18 @@ function checkOutDir(outDir) {
   throw new Error(`refusing to empty ${dir}: the build writes only to dist/ or under ${tmpdir()}`);
 }
 
-export async function build({ outDir = 'dist', env = process.env.PP_ENV, generators = GENERATORS } = {}) {
+export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  const ctx = { outDir: dir, env, assets: await buildAssets({ outDir: dir, entries: ENTRIES }), results: {} };
-  let pages = 0;
-  for (const { name, generate } of generators) {
-    ctx.results[name] = await generate(ctx);
-    pages += ctx.results[name].pages;
-  }
-  return { pages };
+  const assets = await buildAssets({
+    outDir: dir,
+    entries: Object.assign({}, SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
+    styles: sites.flatMap((s) => s.styles ?? []),
+  });
+  const ctx = createContext({ outDir: dir, env, assets });
+  for (const site of sites) await site.generate(ctx);
+  return { pages: ctx.pages };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

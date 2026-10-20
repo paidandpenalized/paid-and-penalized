@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
-import { COPY } from '../copy.js';
 import { SITE } from '../site.js';
 import { cmsText, count, isoDate, longDate, pct, signed } from '../render/format.js';
+import { fillCopy, footnoteLegend, pill } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -123,11 +123,6 @@ test('page rejects missing parts and a path without a leading slash', () => {
   assert.throws(() => page({ ...PAGE, assets: { css: '/x.css', js: {} } }), TypeError);
 });
 
-test('copy.js holds no digit characters', () => {
-  assert.ok(!/\d/.test(JSON.stringify(COPY)));
-  assert.ok(!/\d/.test(readFileSync(REPO_ROOT + 'web/copy.js', 'utf8')));
-});
-
 test('theme.js stores nothing and sets only data-theme', () => {
   const src = readFileSync(REPO_ROOT + 'web/client/theme.js', 'utf8');
   for (const word of ['localStorage', 'sessionStorage', 'cookie', 'indexedDB']) assert.ok(!src.includes(word), word);
@@ -158,4 +153,24 @@ test('theme.js flips data-theme from the device preference and keeps aria-presse
   clicks[0]();
   assert.equal(root.dataset.theme, 'dark');
   assert.equal(attrs['aria-pressed'], 'true');
+});
+
+test('fillCopy fills plain-string and { text } entries and refuses a missing, unused or unformatted value', () => {
+  const copy = { plain: 'Hello, {name}.', claimed: { text: 'Cut by {pct}.', claim: null } };
+  assert.equal(fillCopy(copy, 'plain', { name: 'A & B' }), 'Hello, A & B.');
+  assert.equal(fillCopy(copy, 'claimed', { pct: '1%' }), 'Cut by 1%.');
+  assert.throws(() => fillCopy(copy, 'plain', {}), /name/);
+  assert.throws(() => fillCopy(copy, 'plain', { name: 'x', extra: 'y' }), /extra/);
+  assert.throws(() => fillCopy(copy, 'plain', { name: 3 }), TypeError);
+  assert.throws(() => fillCopy(copy, 'toString'), RangeError);
+});
+
+test('pill and footnoteLegend: escaped text, each footnote once in first-seen order, nothing when empty', () => {
+  assert.equal(String(pill({ kind: 'pen', label: '<b>' })), '<span class="pill pill--pen">&lt;b&gt;</span>');
+  assert.equal(String(pill({ label: 'No' })), '<span class="pill">No</span>');
+  assert.equal(footnoteLegend({ heading: 'Notes', lists: [[], []] }), '');
+  const out = String(footnoteLegend({ heading: 'Notes', lists: [[{ code: '5', text: 'Five & <x>' }], [{ code: '1', text: 'One' }, { code: '5', text: 'Five & <x>' }]] }));
+  assert.equal(out.match(/<dt>/g).length, 2);
+  assert.ok(out.indexOf('<dt>5</dt>') < out.indexOf('<dt>1</dt>'));
+  assert.ok(out.includes('<dd>Five &amp; &lt;x&gt;</dd>'));
 });

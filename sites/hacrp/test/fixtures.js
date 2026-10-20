@@ -116,5 +116,5 @@ export const CASES = {
 // The view inputs for one case, as the page build passes them.
 export function inputs(h, overrides = {}) {
   return { hospital: h, model: MODEL, estimate: ESTIMATE, footnotes: FOOTNOTES, master: master(h.ccn, { state: h.state }), fy: FY,
-    periods: PERIODS, released: true, boundaryText: BOUNDARY_TEXT, ...overrides };
+    periods: PERIODS, boundaryText: BOUNDARY_TEXT, ...overrides };
 }

@@ -4,8 +4,12 @@ import { footnoteList } from '../../../engine/js/footnotes.js';
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { cmsText, decimal, signed } from '../../../web/render/format.js';
+import { SITE } from '../../../web/site.js';
 import { COPY } from './copy.js';
 import { SHORT_NAMES } from './constants.js';
+
+// Hospital pages live at <HOSPITALS_PATH><ccn, lowercase>/.
+export const HOSPITALS_PATH = `${SITE.sites.hacrp.path}hospital/`;
 
 const DP = 4;
 const round = (x) => Math.round(x * 10 ** DP) / 10 ** DP;
@@ -32,7 +36,7 @@ function distance(st, total, { highestNo, lowestYes }) {
 }
 
 // CMS's own text for the two scores that bound the line: the published Total HAC Score of a hospital CMS marked No
-// at highestNo, and of one it marked Yes at lowestYes. The page build passes this to hospitalView.
+// at highestNo, and of one it marked Yes at lowestYes. loadHacrp() reads it once; every view carries it.
 export function boundaryText(hospitals, { highestNo, lowestYes }) {
   const find = (decision, total) => {
     const h = hospitals.find((x) => x.paymentReduction === decision && x.total === total);
@@ -42,14 +46,11 @@ export function boundaryText(hospitals, { highestNo, lowestYes }) {
   return { highestNo: find('No', highestNo), lowestYes: find('Yes', lowestYes) };
 }
 
-const fallbackBoundary = ({ highestNo, lowestYes }) => ({ highestNo: decimal(highestNo, DP), lowestYes: decimal(lowestYes, DP) });
-
-// boundaryText (from boundaryText() above) is optional; without it the boundary shows at 4 decimals from the model.
-export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, released, boundaryText: bt }) {
+export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, boundaryText: bt }) {
   if (master.ccn !== h.ccn) throw new RangeError(`master record ${master.ccn} is not hospital ${h.ccn}`);
+  if (!bt) throw new TypeError('hospitalView: boundaryText is required (from boundaryText())');
   const st = status(h);
   const n = scoredMeasures(h).length;
-  const totalFootnotes = footnoteList(footnotes, h.totalFootnote);
 
   const measures = MEASURE_IDS.map((id) => {
     const m = h.measures[id];
@@ -83,20 +84,20 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     city: master.city,
     state: master.state,
     county: master.county,
-    path: `/hacrp/hospital/${h.ccn.toLowerCase()}/`,
-    indexable: released === true && scored,
+    path: `${HOSPITALS_PATH}${h.ccn.toLowerCase()}/`,
     fy,
     periods,
     status: st,
-    total: scored ? { text: cmsText(h.totalText), footnotes: totalFootnotes } : null,
-    noScore: scored ? null : { text: cmsText(h.totalText), footnotes: totalFootnotes },
+    // A hospital with a score gets the distance sentence, the what-if and (on a released site) indexing.
+    scored,
+    // CMS's Total HAC Score text ("N/A" when CMS published none) and its footnotes.
+    score: { text: cmsText(h.totalText), footnotes: footnoteList(footnotes, h.totalFootnote) },
     decision: { text: h.paymentReduction, footnotes: footnoteList(footnotes, h.paymentReductionFootnote) },
     distance: scored ? distance(st, h.total, model.boundary) : null,
-    boundaryText: bt ?? fallbackBoundary(model.boundary),
+    boundaryText: bt,
     n,
     oneMeasure: n === 1,
     measures,
     largest: largest && { id: largest.id, contributionText: largest.contributionText },
-    whatIf: scored,
   };
 }
