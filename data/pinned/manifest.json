@@ -59,5 +59,45 @@
     },
     "derivedBy": "pipeline/py/pp_pipeline/pos_extract.py",
     "retrieved": "2026-10-20"
+  },
+  {
+    "id": "zcta-2024",
+    "title": "U.S. Census Bureau 2024 Gazetteer: ZIP Code Tabulation Areas (ZIP centroids)",
+    "path": "zcta-2024/2024_Gaz_zcta_national.zip",
+    "bytes": 1013803,
+    "sha256": "7b85c04a131672f58b38a950eb82855d5fd4054f0bd9bc3f69aa28897a714e3d",
+    "downloadUrl": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_zcta_national.zip",
+    "landingPage": "https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "id": "us-atlas-counties-3.0.1",
+    "title": "us-atlas 3.0.1 county boundaries (TopoJSON from Census cartographic boundaries, 1:10m)",
+    "path": "us-atlas-3.0.1/counties-10m.json",
+    "bytes": 842143,
+    "sha256": "145aaf5d1433352a6a1d8e86b5f149c7c653f9171baf14aaf75ee66575def1b0",
+    "downloadUrl": "https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/counties-10m.json",
+    "landingPage": "https://github.com/topojson/us-atlas",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "id": "county-cbsa-fy2027",
+    "title": "FY2027 IPPS final rule county to CBSA crosswalk",
+    "path": "county-cbsa-fy2027/fy2027-ipps-fr-county-cbsa-crosswalk-file.zip",
+    "bytes": 211740,
+    "sha256": "5ad838ae4be012d26b28d07a82bebb162640217e6336d4d31eec7e85d2fe5d12",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy2027-ipps-fr-county-cbsa-crosswalk-file.zip",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "id": "tdr-geocodes",
+    "title": "Thirty Day Readmissions street-address points (U.S. Census Bureau Geocoder, Public_AR_Current, 2026-10-11)",
+    "path": "tdr/geocodes.csv",
+    "bytes": 93377,
+    "sha256": "58542c246c0e04976d9d665ebf3270f8999ddc37201b0f05453802f53aba5951",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/80f3659d1f6c850443bbc7d939f5f1dc9cd8153b/pipeline/content/geocodes.csv",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "80f3659d1f6c850443bbc7d939f5f1dc9cd8153b",
+    "retrieved": "2026-10-20"
   }
 ]
