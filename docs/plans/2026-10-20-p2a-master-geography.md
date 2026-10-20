@@ -255,5 +255,13 @@ sources, built_at, ref)`; `programs[pid] = {"fy", "names", "subject"}`; record k
   - `atlas_fips` scans every atlas county per call (ported; under a second per build).
   - us-atlas's ISC notice in NOTICE names the author without the copyright years; check against the package's
     LICENSE before the repo goes public.
+  - Plan documents in `docs/plans/` mention the private planning process (answers given in a session, the close-out
+    task); decide before launch whether `docs/plans/` ships or those lines are trimmed (security review).
+  - The geocoder follows HTTP redirects (urllib's default); a redirected answer still passes every row check, so the
+    worst case is a plausible wrong point in the right state, and only with a compromised endpoint.
   - The two hospitals with no location have no ZCTA for their ZIP; a county-name-only fallback (`city_stem` for
     "X CITY") would place one, but TDR doesn't, so it waits for the fold-in.
+- **Final gate:** `/simplify` (4 angles) → tests; `/code-review` clean (a fresh rebuild matched the committed master
+  record for record); `/security-review` clean (no Critical/Important; Minors above); `/verify` in a clean clone:
+  `make test` passes (231 JS, 139 Python), `make emit` leaves git clean, a hand-edited `lat` fails the golden and TDR
+  checks, a tampered points CSV is refused by its SHA check; the change gate passes against `main`.
