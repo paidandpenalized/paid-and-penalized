@@ -4,7 +4,8 @@
 // golden test checks that its current year equals a fresh build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { validate } from '../../engine/js/schema.js';
 import { hasMethodsVersion, latestMethodsVersion, METHODS_LOG } from '../methods-log.js';
 import { REPO_ROOT, loadSchemas, readJson } from '../files.js';
@@ -13,9 +14,11 @@ const EMITTED_DIR = REPO_ROOT + 'data/emitted/';
 const schemas = loadSchemas();
 const log = readFileSync(REPO_ROOT + METHODS_LOG, 'utf8');
 // Emitted files live at <site>/fy<YYYY>/<name>.json; anything else under data/emitted/ fails the layout test.
-const all = readdirSync(EMITTED_DIR, { recursive: true, withFileTypes: true })
-  .filter((e) => e.isFile() && e.name !== '.DS_Store') // Finder's files are gitignored; any other file must fit the layout
-  .map((e) => `${e.parentPath}/${e.name}`.slice(EMITTED_DIR.length).replace(/^\/+/, ''));
+// Tracked files only: editor swap files and Finder's .DS_Store never reach the repo.
+const all = execFileSync('git', ['ls-files', '-z', '--', 'data/emitted/'], { cwd: REPO_ROOT, encoding: 'utf8' })
+  .split('\0')
+  .filter(Boolean)
+  .map((p) => p.slice('data/emitted/'.length));
 const files = all
   .map((p) => /^([a-z0-9-]+)\/fy(\d{4})\/[^/]+\.json$/.exec(p))
   .filter(Boolean)

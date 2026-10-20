@@ -30,8 +30,9 @@ test('a deletion (or the delete half of a rename) needs a corrections entry', ()
 
 test('a new corrections entry covers the whole change; editing, deleting or renaming one, or near-misses, do not', () => {
   assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), { status: 'A', path: 'corrections/2026-11-01-hacrp.md' }] }).ok, true);
-  const renamed = [{ status: 'D', path: 'corrections/a.md' }, { status: 'A', path: 'corrections/b.md' }];
-  assert.equal(changeGate({ changed: [M(EMITTED), ...renamed] }).ok, false, 'a rename');
+  const moved = [{ status: 'D', path: 'corrections/a.md' }, { status: 'A', path: 'corrections/b.md' }];
+  assert.equal(changeGate({ changed: [M(EMITTED), ...moved], renamed: new Set(['corrections/b.md']) }).ok, false, 'an exact rename');
+  assert.equal(changeGate({ changed: [M(EMITTED), ...moved] }).ok, true, 'deleting an old entry while adding a new one');
   for (const status of ['M', 'D']) {
     assert.equal(changeGate({ changed: [M(EMITTED), { status, path: 'corrections/2026-11-01-hacrp.md' }] }).ok, false, status);
   }
@@ -44,24 +45,29 @@ const hash = (pins, ids) => sourceManifestHash(ids.map((id) => ({ id, sha256: pi
 const OLD = new Map([['a', '1'], ['b', '2']]);
 const NEW = new Map([['a', '9'], ['b', '2']]);
 const file = (version, sources = ['a'], pins = OLD) => ({ source_manifest: hash(pins, sources), methods_version: version, sources });
-const ctx = (before, now, { pins = OLD, latest = { now: 1, before: 1 }, added = false } = {}) =>
+const SAME = { before: OLD, now: OLD };
+const REPIN = { before: OLD, now: NEW };
+const ctx = (before, now, { pins = SAME, latest = { now: 1, before: 1 }, added = false } = {}) =>
   reasonFor({ added, before, now, pins, latest });
 
 test('reasonFor: added, re-pinned, bumped, or nothing', () => {
   assert.equal(ctx(undefined, file(1), { added: true }), 'added');
-  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: NEW }), 're-pinned');
+  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: REPIN }), 're-pinned');
   assert.equal(ctx(file(1), file(2), { latest: { now: 2, before: 1 } }), 'bumped');
   assert.equal(ctx(file(1), file(1)), null, 'numbers moved, nothing else');
 });
 
 test('reasonFor: a re-pin needs the same sources and a new, truthful source_manifest', () => {
-  assert.equal(ctx(file(1), { ...file(1, ['a'], NEW), source_manifest: 'f'.repeat(64) }, { pins: NEW }), null, 'a forged hash');
-  assert.equal(ctx(file(1), file(1, ['a'], OLD), { pins: NEW }), null, 'a stale hash');
-  assert.equal(ctx(file(1), file(1, ['a', 'b'], NEW), { pins: NEW }), null, 'adding an input during a re-pin is a methods change');
-  assert.equal(ctx(file(1, ['a', 'b']), file(1, ['a'], NEW), { pins: NEW }), null, 'dropping one, likewise');
-  assert.equal(ctx(file(1, ['b', 'a']), file(1, ['a', 'b'], NEW), { pins: NEW }), null, 'reordering, likewise');
-  assert.equal(ctx(file(1), file(1, ['c'], NEW), { pins: NEW }), null, 'an input missing from the manifest');
+  assert.equal(ctx(file(1), { ...file(1, ['a'], NEW), source_manifest: 'f'.repeat(64) }, { pins: REPIN }), null, 'a forged hash');
+  assert.equal(ctx(file(1), file(1, ['a'], OLD), { pins: REPIN }), null, 'a stale hash');
+  assert.equal(ctx(file(1), file(1, ['a', 'b'], NEW), { pins: REPIN }), null, 'adding an input during a re-pin is a methods change');
+  assert.equal(ctx(file(1, ['a', 'b']), file(1, ['a'], NEW), { pins: REPIN }), null, 'dropping one, likewise');
+  assert.equal(ctx(file(1, ['b', 'a']), file(1, ['a', 'b'], NEW), { pins: REPIN }), null, 'reordering, likewise');
+  assert.equal(ctx(file(1), file(1, ['c'], NEW), { pins: REPIN }), null, 'an input missing from the manifest');
   assert.equal(ctx(file(1), file(1)), null, 'the same hash');
+  assert.equal(ctx(file(1, ['a'], NEW), file(1, ['a'], NEW), { pins: { before: NEW, now: NEW } }), null, 'no SHA-256 changed in this change');
+  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: { before: NEW, now: NEW } }), null, 'a re-emit after a pin in an earlier push');
+  assert.equal(ctx(file(1), file(2, ['a'], NEW), { pins: REPIN, latest: { now: 2, before: 2 } }), null, 'a re-pin that also moves methods_version');
 });
 
 test('reasonFor: a bump counts only when the file moves to the new newest version', () => {
@@ -86,4 +92,5 @@ test('parseNameStatus reads git -z output, paths with spaces and newlines includ
     { status: 'T', path: 'z' },
   ]);
   assert.deepEqual(parseNameStatus(''), []);
+  assert.deepEqual(parseNameStatus('R100\0corrections/a.md\0corrections/b.md\0', 3), [{ status: 'R', path: 'corrections/b.md' }]);
 });

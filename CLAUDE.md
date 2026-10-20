@@ -43,13 +43,14 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
-  (`tools/ci/change-gate.js` has the exact rule). A new file under `corrections/` (not an edit or rename of an
-  old one) covers the whole change. Otherwise each changed emitted file must be:
+  (`tools/ci/change-gate.js` has the exact rule). A new file under `corrections/` (not an edit or exact
+  rename of an old one) covers the whole change. Otherwise each changed emitted file must be:
   - **new** (a first emission); or
-  - **re-pinned**: same `sources`, and a new `source_manifest` that is the true hash of those inputs' ids and
-    SHA-256s in the manifest. Adding or dropping an input doesn't count; that's a methods change; or
+  - **re-pinned**: an input's SHA-256 changes in the same change, with the same `sources` and `methods_version`
+    and a `source_manifest` that is the true hash at HEAD. Pin and `make emit` go together. Adding or dropping
+    an input doesn't count; that's a methods change; or
   - **bumped**: its own `methods_version` moved to its site's new newest `## <site> methods_version N` heading
-    in `docs/METHODS-LOG.md`.
+    in `docs/METHODS-LOG.md`, added in the same change.
   Deleting or renaming an emitted file needs a corrections entry. Tests require each site's newest year to carry
   the newest version; older years keep theirs. Run `make emit` after any engine or pin change (the golden test
   fails until you do); it keeps `built_at` when nothing else changed.

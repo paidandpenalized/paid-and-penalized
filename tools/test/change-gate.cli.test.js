@@ -83,14 +83,19 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
 
   r.write('data/pinned/manifest.json', manifest('cc', '2026-11-04'));
   const pinOnly = r.commit('push 1: the re-pin alone');
-  assert.equal(r.gate(repinned).status, 0, 'no emitted change yet');
   r.write(FILE, emitted(3, ['{"v":6}'], 'cc'));
   r.commit('push 2: make emit');
-  assert.equal(r.gate(pinOnly).status, 0, 'a re-pin split across two pushes still counts');
+  assert.equal(r.gate(pinOnly).status, 1, 'pin and re-emit belong in the same change');
+  assert.equal(r.gate(repinned).status, 0, 'together they pass');
 
+  r.write('corrections/2026-11-01-old.md', 'an old correction\n');
+  r.commit('an old correction');
   r.mv(OLDER, 'data/emitted/hacrp/fy2025/hacrp-final.json');
   const renamed = r.commit('a rename is a delete plus an add');
   assert.equal(r.gate(`${renamed}~1`).status, 1, 'the delete half needs a corrections entry');
+  r.mv('corrections/2026-11-01-old.md', 'corrections/2026-11-02-old.md');
+  r.commit('an exact rename of an old correction');
+  assert.equal(r.gate(`${renamed}~1`).status, 1, 'a renamed old correction is not a new one');
   r.write('corrections/2026-11-04-hacrp.md', 'renamed\n');
   r.write('data/emitted/hacrp/notes.txt', 'not json\n');
   r.commit('a correction, plus a stray non-JSON file');

@@ -181,12 +181,12 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 - **Change gate (final form):** the `new-cms-release` label is gone (Dalton, 2026-10-20). Labels exist only on
   PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. The gate reads
   statuses from one `git diff --name-status --no-renames`, so a rename is a delete plus an add. A file under
-  `corrections/` (a new file, not an edit or a rename) covers the whole change. Otherwise each changed emitted file needs one
+  `corrections/` (a new file, not an edit or an exact rename) covers the whole change. Otherwise each changed emitted file needs one
   of:
   - *added*: a first emission (by git status, not by content);
-  - *re-pinned*: the same sources, and a new `source_manifest` that is the true hash of those inputs in the
-    manifest at HEAD. A forged hash doesn't count, and neither does adding, dropping or reordering inputs. The
-    manifest change can come in an earlier push;
+  - *re-pinned*: an input's SHA-256 changes in the same change, the file keeps its sources and `methods_version`,
+    and its new `source_manifest` is the true hash at HEAD. Pin and re-emit go together, as `make refresh` will
+    do (a pin alone already fails the golden test);
   - *bumped*: its own `methods_version` moved to its site's new newest version in the log.
   A deletion needs a corrections entry. Content that isn't an emitted file explains nothing and never crashes
   the gate. An unreachable base (force-push) fails closed. The rule (`changeGate`, `reasonFor`) is pure and
