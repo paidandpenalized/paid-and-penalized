@@ -25,11 +25,11 @@ test('keepBuiltAt keeps the old timestamp only when nothing else changed', () =>
 });
 
 test('formatEmitted: one record per line, and it parses back to the same object', () => {
-  const obj = { schema_version: 1, empty: [], model: { a: 0.1 + 0.2 }, hospitals: [{ ccn: '010001', v: null }, { ccn: '010002', v: 1e-7 }] };
+  const obj = { schema_version: 1, empty: [], model: { a: 0.1 + 0.2 }, hospitals: [{ ccn: '000001', v: null }, { ccn: '000002', v: 1e-7 }] };
   const text = formatEmitted(obj);
   assert.deepEqual(JSON.parse(text), obj);
   assert.ok(text.endsWith('}\n'));
-  assert.ok(text.split('\n').includes('{"ccn":"010001","v":null},'));
+  assert.ok(text.split('\n').includes('{"ccn":"000001","v":null},'));
 });
 
 test('known-answer vectors shared with other languages (schemas/conformance/source-manifest.vectors.json)', () => {

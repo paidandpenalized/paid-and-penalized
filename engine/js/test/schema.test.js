@@ -25,6 +25,10 @@ test('type: each JSON type, arrays and null are not objects, integer means a who
   bad({ type: 'integer' }, 2.5);
   ok({ type: 'boolean' }, false);
   ok({ type: 'null' }, null);
+  for (const v of [NaN, Infinity, -Infinity]) {
+    bad({ type: ['number', 'null'] }, v, /non-finite/);
+    bad({ type: 'integer' }, v);
+  }
   ok({ type: ['number', 'null'] }, null);
   bad({ type: ['number', 'null'] }, '1');
 });
@@ -67,8 +71,8 @@ test('$ref: local $defs and another file by $id', () => {
   ok(local, { x: 1 });
   bad(local, { x: 'a' }, /^\/x: /);
   const s = { type: 'array', items: { $ref: 'common.schema.json#/$defs/ccn' } };
-  ok(s, ['010001'], { schemas });
-  bad(s, ['010001', 10001], /^\/1: /, { schemas });
+  ok(s, ['000001'], { schemas });
+  bad(s, ['000001', 1], /^\/1: /, { schemas });
   assert.throws(() => validate({ $ref: 'missing.schema.json#/$defs/x' }, 1, { schemas }), RangeError);
   assert.throws(() => validate({ $ref: '#/$defs/nope' }, 1), RangeError);
 });

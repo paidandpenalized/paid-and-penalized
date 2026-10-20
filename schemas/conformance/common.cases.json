@@ -2,12 +2,12 @@
   "schema": "common.schema.json",
   "def": "ccn",
   "cases": [
-    { "name": "six digits", "valid": true, "data": "010001" },
-    { "name": "letter in a valid position", "valid": true, "data": "21003F" },
-    { "name": "a number, not text", "valid": false, "data": 10001 },
-    { "name": "five characters", "valid": false, "data": "01000" },
-    { "name": "seven characters", "valid": false, "data": "0100011" },
-    { "name": "lower-case letter", "valid": false, "data": "01000a" },
+    { "name": "six digits, leading zeros kept", "valid": true, "data": "000001" },
+    { "name": "an upper-case letter", "valid": true, "data": "00001F" },
+    { "name": "a number, not text", "valid": false, "data": 1 },
+    { "name": "five characters", "valid": false, "data": "00001" },
+    { "name": "seven characters", "valid": false, "data": "0000001" },
+    { "name": "a lower-case letter", "valid": false, "data": "00000a" },
     { "name": "null", "valid": false, "data": null }
   ]
 }

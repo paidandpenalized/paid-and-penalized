@@ -6,26 +6,34 @@
 export function parseBlocklist(text) {
   const entries = text
     .split(/\r?\n/)
-    .map((line) => line.trim())
+    .map((line) => line.trim().normalize('NFC'))
     .filter((line) => line !== '' && !line.startsWith('#'));
   if (entries.length === 0) throw new RangeError('blocklist: no entries');
   return entries;
 }
 
 const SPECIALS = /[.*+?^${}()|[\]\\/]/g;
+const compiled = new Map();
 
-// Literal text, any case, any run of whitespace (line breaks included) where the entry has a space, and only
+// Literal text, any case, any run of whitespace, dots, dashes or underscores (as in file names and email
+// addresses; line breaks included) where the entry has a space, and only
 // where no letter or digit touches either end, so a surname inside a longer word doesn't count.
+// Both sides are compared in Unicode NFC, so a composed accent matches a decomposed one.
 function entryPattern(entry) {
-  const body = entry
-    .split(/\s+/)
-    .map((word) => word.replace(SPECIALS, '\\$&'))
-    .join('\\s+');
-  return new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, 'giu');
+  if (!compiled.has(entry)) {
+    const body = entry
+      .normalize('NFC')
+      .split(/\s+/)
+      .map((word) => word.replace(SPECIALS, '\\$&'))
+      .join('[\\s._-]+');
+    compiled.set(entry, new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, 'giu'));
+  }
+  return compiled.get(entry);
 }
 
 // Every match as { entry (1-based list index), line (1-based, where the match starts) }, ordered by line.
-export function findHits(text, entries) {
+export function findHits(raw, entries) {
+  const text = raw.normalize('NFC');
   const hits = [];
   entries.forEach((entry, i) => {
     // Matches arrive in text order, so count only the newlines since the previous one.

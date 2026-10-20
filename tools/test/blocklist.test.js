@@ -17,7 +17,16 @@ test('an empty list throws', () => {
 test('matches across whitespace and line breaks, any case', () => {
   assert.deepEqual(findHits('see jane\n  PLACEHOLDER here', ENTRIES), [{ entry: 1, line: 1 }]);
   assert.deepEqual(findHits('JANE\tplaceholder', ENTRIES), [{ entry: 1, line: 1 }]);
+  assert.deepEqual(findHits('notes/jane-placeholder_call.md and jane.placeholder@x.test', ENTRIES), [
+    { entry: 1, line: 1 },
+    { entry: 1, line: 1 },
+  ]);
   assert.deepEqual(findHits('émile EXEMPLE', ENTRIES), [{ entry: 4, line: 1 }]);
+});
+
+test('composed and decomposed accents match each other (NFC)', () => {
+  assert.deepEqual(findHits('E\u0301mile Exemple', ENTRIES), [{ entry: 4, line: 1 }]);
+  assert.deepEqual(findHits('Émile Exemple', ['E\u0301mile Exemple']), [{ entry: 1, line: 1 }]);
 });
 
 test('no hit inside a longer word', () => {

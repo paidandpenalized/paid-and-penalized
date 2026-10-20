@@ -29,6 +29,22 @@ test('a binary file skips the text scan but not the size check', () => {
   assert.equal(checkStaged({ files: [{ path: 'b.png', size: MAX_BYTES }], entries }).length, 1);
 });
 
+test('a blocklisted name in a file path is caught, even when the file is binary or too large', () => {
+  const problems = checkStaged({ files: [{ path: 'docs/jane-placeholder/notes.bin', size: MAX_BYTES }], entries });
+  assert.ok(problems.some((p) => /path matches blocklist entry 1/.test(p)), problems.join('\n'));
+});
+
+test('UTF-16 text with a byte-order mark is decoded and scanned, not skipped as binary', () => {
+  const le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('x\nJane Placeholder', 'utf16le')]);
+  const be = Buffer.from(le);
+  be.swap16();
+  for (const bytes of [le, be]) {
+    const problems = checkStaged({ files: [{ path: 'a.txt', size: bytes.length, bytes }], entries });
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /a\.txt:2/);
+  }
+});
+
 test('the blocklist must live outside the repo', () => {
   assert.throws(() => assertOutsideRepo('/r/repo/list.txt', '/r/repo'), RangeError);
   assert.throws(() => assertOutsideRepo('/r/repo/a/../b/list.txt', '/r/repo'), RangeError);

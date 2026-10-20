@@ -19,8 +19,11 @@ export function assertOutsideRepo(listPath, repoRoot) {
   }
 }
 
-function isBinary(bytes) {
-  return bytes.subarray(0, BINARY_SNIFF).includes(0);
+// Text to scan, or null for a binary file. UTF-16 with a byte-order mark is text (Windows "Unicode" exports).
+function textOf(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return bytes.subarray(2).toString('utf16le');
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return Buffer.from(bytes.subarray(2)).swap16().toString('utf16le');
+  return bytes.subarray(0, BINARY_SNIFF).includes(0) ? null : bytes.toString('utf8');
 }
 
 // files: { path, size, bytes }, where bytes may be left out of a file at or over the limit. Returns problem
@@ -28,12 +31,14 @@ function isBinary(bytes) {
 export function checkStaged({ files, entries, maxBytes = MAX_BYTES }) {
   const problems = [];
   for (const { path, size, bytes } of files) {
+    for (const { entry } of findHits(path, entries)) problems.push(`staged file path matches blocklist entry ${entry}`);
     if (size >= maxBytes) {
       problems.push(`${path}: ${size} bytes is at or over the ${maxBytes}-byte limit for files in git`);
       continue;
     }
-    if (isBinary(bytes)) continue;
-    for (const { entry, line } of findHits(bytes.toString('utf8'), entries)) {
+    const text = textOf(bytes);
+    if (text === null) continue;
+    for (const { entry, line } of findHits(text, entries)) {
       problems.push(`${path}:${line}: matches blocklist entry ${entry}`);
     }
   }

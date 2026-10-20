@@ -15,7 +15,8 @@ export function loadBlocklist(root = repoRoot()) {
   if (!existsSync(path)) {
     throw new Error(`blocklist not found at ${path}. Create it (one private name or string per line) or set PP_BLOCKLIST.`);
   }
-  assertOutsideRepo(realpathSync(path), realpathSync(root));
+  // .native returns the true letter case on case-insensitive disks, so a differently cased path can't slip by.
+  assertOutsideRepo(realpathSync.native(path), realpathSync.native(root));
   return parseBlocklist(readFileSync(path, 'utf8'));
 }
 

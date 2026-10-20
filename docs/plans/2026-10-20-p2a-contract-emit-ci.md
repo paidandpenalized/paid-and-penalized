@@ -101,7 +101,7 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 - `common.schema.json` (`$id: "common.schema.json"`), `$defs`: `ccn` (`^[0-9A-Z]{6}$`), `sha256` (`^[0-9a-f]{64}$`), `builtAt` (`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`), `envelope` fields: `schemaVersion` (integer ≥ 1), `methodsVersion` (integer ≥ 1), `sources` (array of non-empty strings, minItems 1), `fy` (integer, 2013–2100).
 - Corpus file format: `{ "schema": "<$id>", "def": "<$defs name or null>", "cases": [{ "name", "valid": boolean, "data" }] }`. The test validates every case in every `schemas/conformance/*.cases.json` against `schemas/<schema>` (or its `$defs/<def>`).
 
-- [ ] **Step 2.1: Failing tests:** each keyword, valid and invalid, on synthetic schemas; `unsupported keyword throws` (`format`, `oneOf`, `patternProperties`); `$ref` across files; error pointers name the failing path (`/hospitals/3/ccn`); CCN cases in the corpus: `"010001"` valid, `10001` (number) invalid, `"01000"` invalid, `"01000a"` invalid; corpus runner over all case files.
+- [ ] **Step 2.1: Failing tests:** each keyword, valid and invalid, on synthetic schemas; `unsupported keyword throws` (`format`, `oneOf`, `patternProperties`); `$ref` across files; error pointers name the failing path (`/hospitals/3/ccn`); CCN cases in the corpus (synthetic CCNs only): `"000001"` valid, `1` (number) invalid, `"00001"` invalid, `"00000a"` invalid; corpus runner over all case files.
 - [ ] **Step 2.2:** Run → FAIL. **Step 2.3:** Implement → PASS.
 - [ ] **Step 2.4:** Commit: `Data contract: JSON Schema subset validator, common envelope and CCN definitions, shared conformance cases`.
 

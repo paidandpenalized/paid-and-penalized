@@ -9,7 +9,7 @@ function git(args, encoding = 'utf8') {
 }
 
 function stagedFiles() {
-  const paths = git(['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z']).split('\0').filter(Boolean);
+  const paths = git(['diff', '--cached', '--name-only', '--diff-filter=ACMRT', '-z']).split('\0').filter(Boolean);
   return paths.map((path) => {
     const size = Number(git(['cat-file', '-s', `:${path}`]).trim());
     return { path, size, bytes: size >= MAX_BYTES ? undefined : git(['cat-file', 'blob', `:${path}`], 'buffer') };
