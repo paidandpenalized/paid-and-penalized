@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node tools/hygiene/commit-msg.js "$1"
