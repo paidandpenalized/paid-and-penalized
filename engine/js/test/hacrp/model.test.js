@@ -38,7 +38,7 @@ test('the cap comes from hospitals with a published value, not from assigned z-s
   assert.ok(Math.abs(p.cap - 0.9) < 1e-12);
 });
 
-test('fit error includes the line\'s miss at CMS\'s cap, where a move off the cap starts', () => {
+test('a move off the cap carries the starting row\'s own miss; moves between uncapped rows do not', () => {
   // z = (v - 0.5) / 0.25 exactly between the bounds; CMS's cap (1.495) falls between the observed 1.5 and 1.6.
   const rows = ['0.000', '0.300', '0.500', '0.700', '0.900', '1.100', '1.300'].map((v, i) =>
     syntheticRow({ 'Facility ID': `00010${i}`, 'CDI SIR': v, 'CDI W Z Score': ((Number(v) - 0.5) / 0.25).toFixed(4) }));
@@ -48,7 +48,7 @@ test('fit error includes the line\'s miss at CMS\'s cap, where a move off the ca
   const hs = rows.map(toHospital);
   const p = fitMeasureParams(hs, 'CDI');
   assert.equal(p.cap, 1.5);
-  assert.ok(Math.abs(p.fitError - 0.02) < 1e-9, `fitError ${p.fitError}`); // the line gives 4.00 at 1.5; CMS gave 3.98
+  assert.ok(p.fitError < 1e-9, `fitError ${p.fitError}`); // exact on uncapped rows; the line gives 4.00 at 1.5, CMS 3.98
 
   // A capped hospital moving to 1.3: the line says z 3.18, CMS's own map would say 3.20, past the line. The band
   // must cover that, so the flag reads too-close, not No.
@@ -59,4 +59,11 @@ test('fit error includes the line\'s miss at CMS\'s cap, where a move off the ca
   capped.paymentReduction = 'Yes';
   const r = whatIf(capped, { params, boundary: { highestNo: 3.19, lowestYes: 3.21 } }, { CDI: 1.3 });
   assert.equal(r.after.flag, 'too-close');
+
+  // An uncapped hospital moving between uncapped values is exact here: 0.300 -> 0.595 gives 0.38, at most 0.39.
+  const inside = { ...hs.find((h) => h.measures.CDI.value === 0.3) };
+  inside.measures = Object.fromEntries(MEASURE_IDS.map((id) => [id, id === 'CDI' ? inside.measures.CDI : { value: null, z: null }]));
+  inside.total = -0.8;
+  inside.paymentReduction = 'No';
+  assert.equal(whatIf(inside, { params, boundary: { highestNo: 0.39, lowestYes: 0.41 } }, { CDI: 0.595 }).after.flag, 'No');
 });

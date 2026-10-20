@@ -8,6 +8,8 @@ import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './hel
 
 const { hospitals, model } = loadHacrp();
 const scored = hospitals.filter((h) => h.total !== null);
+// A move's band term: the starting row's own miss from the fitted line plus the line's fit error.
+const moveBand = (h, id) => Math.abs(h.measures[id].z - baselineZ(h.measures[id], model.params[id])) + model.params[id].fitError;
 
 test('no change = CMS exactly, for every row in the file', () => {
   for (const h of hospitals) {
@@ -76,27 +78,28 @@ test('a one-measure hospital uses n = 1 for band and leverage', () => {
   const p = model.params[id];
   const r = whatIf(h, model, { [id]: p.median });
   assert.equal(r.n, 1);
-  assert.equal(r.band, p.fitError);
+  assert.ok(Math.abs(r.band - moveBand(h, id)) < 1e-15);
   assert.ok(Math.abs(r.measures[id].leveragePerTenth - 0.1 / p.sd) < 1e-12);
 });
 
-test('contribution is z / n and band sums the changed measures\' fit errors over n', () => {
+test('contribution is z / n and band sums the changed measures\' band terms over n', () => {
   const h = scored.find((x) => submitted(x).length === 6);
   const [a, b] = submitted(h);
   const r = whatIf(h, model, { [a]: model.params[a].median, [b]: model.params[b].median });
-  assert.ok(Math.abs(r.band - (model.params[a].fitError + model.params[b].fitError) / 6) < 1e-15);
+  assert.ok(Math.abs(r.band - (moveBand(h, a) + moveBand(h, b)) / 6) < 1e-15);
   for (const id of MEASURE_IDS) assert.ok(Math.abs(r.measures[id].contribution - r.measures[id].afterZ / 6) < 1e-15);
 });
 
 test('a hypothetical score between highestNo and lowestYes reads too-close', () => {
   const { highestNo, lowestYes } = model.boundary;
   const target = (highestNo + lowestYes) / 2;
-  const zFor = ({ h, id }) => baselineZ(h.measures[id], model.params[id]) + (target - h.total) * scoredMeasures(h).length;
+  const step = ({ h }) => (target - h.total) * scoredMeasures(h).length;
+  const zFor = (pair) => baselineZ(pair.h.measures[pair.id], model.params[pair.id]) + step(pair);
   const valueFor = (pair) => model.params[pair.id].mean + model.params[pair.id].sd * zFor(pair);
   const found = submittedPairs(hospitals, (h) => h.paymentReduction === 'Yes').find((pair) => {
     const p = model.params[pair.id];
     const v = valueFor(pair);
-    const applied = pair.h.measures[pair.id].z + (target - pair.h.total) * scoredMeasures(pair.h).length;
+    const applied = pair.h.measures[pair.id].z + step(pair);
     return v > p.floor && v < p.cap && applied > p.zMin && applied < p.zMax;
   });
   const { h, id } = found;
@@ -147,17 +150,15 @@ test('a move away from the line keeps CMS\'s flag: No stays No when a measure im
   }
 });
 
-test('mixed changes: a net move away from the line keeps CMS\'s flag; every move carries its measure\'s fit error', () => {
+test('mixed changes are re-judged with the band; every move carries its band term', () => {
   const h = scored.find((x) => x.paymentReduction === 'No' && submitted(x).length === 6 && submitted(x).every((id) => x.measures[id].value < model.params[id].cap));
   const [a, b] = submitted(h);
-  const pa = model.params[a];
-  const pb = model.params[b];
-  // a worsens a little, b improves to 0: net away from the line.
+  // a worsens a little, b improves to 0: mixed directions, re-judged with the band, still clearly No.
   const r = whatIf(h, model, { [a]: h.measures[a].value + 0.001, [b]: 0 });
   assert.ok(r.after.score < h.total);
   assert.equal(r.after.flag, 'No');
-  assert.ok(Math.abs(r.band - (pa.fitError + pb.fitError) / 6) < 1e-15);
-  assert.ok(Math.abs(whatIf(h, model, { [b]: 0 }).band - pb.fitError / 6) < 1e-15);
+  assert.ok(Math.abs(r.band - (moveBand(h, a) + moveBand(h, b)) / 6) < 1e-15);
+  assert.ok(Math.abs(whatIf(h, model, { [b]: 0 }).band - moveBand(h, b) / 6) < 1e-15);
 });
 
 test('no ties at the bounds: no row below CMS\'s max z sits at or past the cap, none above its min z at or below the floor', () => {
@@ -169,12 +170,11 @@ test('no ties at the bounds: no row below CMS\'s max z sits at or past the cap, 
   }
 });
 
-test('entering the value CMS capped at gives exactly CMS\'s maximum z', () => {
-  for (const { h, id } of submittedPairs(hospitals)) {
+test('the cap is the lowest value CMS published at its maximum z', () => {
+  for (const id of MEASURE_IDS) {
     const p = model.params[id];
-    const r = whatIf(h, model, { [id]: p.cap }).measures[id];
-    assert.equal(r.afterZ, p.zMax, `${h.ccn} ${id}`);
-    assert.equal(r.atCap, true, `${h.ccn} ${id}`);
+    const capped = submittedPairs(hospitals).filter((x) => x.id === id && x.h.measures[id].z === p.zMax).map((x) => x.h.measures[id].value);
+    assert.ok(capped.includes(p.cap) && capped.every((v) => v >= p.cap), id);
   }
 });
 
@@ -184,4 +184,31 @@ test('PSI-90 one display unit above its floor takes the change-only step, not th
   const rows = scored.filter((x) => x.measures.PSI90.value > v);
   assert.ok(rows.length > 0);
   for (const h of rows) assert.ok(whatIf(h, model, { PSI90: v }).measures.PSI90.afterZ > p.zMin, h.ccn);
+});
+
+test('near the line, the what-if flag never contradicts CMS\'s own z at the new value', () => {
+  // For each move to a value some hospital published, the score with CMS's z at that value is the truth the
+  // band must cover. Checked wherever that true score lands within 0.002 of either side of the line.
+  const { highestNo, lowestYes } = model.boundary;
+  let checked = 0;
+  for (const id of MEASURE_IDS) {
+    const zAt = new Map();
+    for (const { h } of submittedPairs(hospitals).filter((x) => x.id === id)) {
+      const { value, z } = h.measures[id];
+      zAt.set(value, zAt.has(value) && zAt.get(value) !== z ? NaN : z);
+    }
+    const published = [...zAt].filter(([, z]) => !Number.isNaN(z));
+    for (const { h } of submittedPairs(hospitals, (x) => x.paymentReduction !== 'N/A').filter((x) => x.id === id)) {
+      const n = scoredMeasures(h).length;
+      for (const [v, z] of published) {
+        const truth = h.total + (z - h.measures[id].z) / n;
+        if (Math.abs(truth - highestNo) > 0.002 && Math.abs(truth - lowestYes) > 0.002) continue;
+        checked++;
+        const flag = whatIf(h, model, { [id]: v }).after.flag;
+        if (flag === 'No') assert.ok(truth <= highestNo, `${h.ccn} ${id} -> ${v}: No but CMS z gives ${truth}`);
+        if (flag === 'Yes') assert.ok(truth >= lowestYes, `${h.ccn} ${id} -> ${v}: Yes but CMS z gives ${truth}`);
+      }
+    }
+  }
+  assert.ok(checked > 1000);
 });

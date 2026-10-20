@@ -5,7 +5,7 @@
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { EDGE, hypotheticalZ } from './params.js';
+import { EDGE, baselineZ, hypotheticalZ } from './params.js';
 import { classify } from './score.js';
 
 function validate(changes, ids) {
@@ -27,6 +27,8 @@ export function whatIf(hospital, model, changes = {}) {
 
   let deltaZ = 0;
   let fitErrors = 0;
+  let anyUp = false;
+  let anyDown = false;
   const measures = {};
   for (const id of ids) {
     const m = hospital.measures[id];
@@ -38,12 +40,15 @@ export function whatIf(hospital, model, changes = {}) {
     let afterZ = m.z;
     if (changed) {
       const z = hypotheticalZ(m, p, afterValue);
-      // A move smaller than float noise is no move. Every real move carries its measure's fit error, so the
-      // flag changes in one direction only as a value rises.
+      // A move smaller than float noise is no move. A real move can miss CMS's z by its starting row's own miss
+      // (known) plus the line's miss at the new value (at most fitError); the band carries both. It is the same
+      // for every move of this measure, so the flag changes in one direction only as a value rises.
       if (Math.abs(z - m.z) >= EDGE) {
         afterZ = z;
         deltaZ += z - m.z;
-        fitErrors += p.fitError;
+        fitErrors += Math.abs(m.z - baselineZ(m, p)) + p.fitError;
+        if (z > m.z) anyUp = true;
+        else anyDown = true;
       }
     }
 
@@ -64,8 +69,9 @@ export function whatIf(hospital, model, changes = {}) {
   const moved = Math.abs(deltaZ) >= EDGE;
   const band = moved ? fitErrors / n : 0;
   const score = moved ? hospital.total + deltaZ / n : hospital.total;
-  // A score that moves away from the line keeps CMS's decision; only a move toward it is re-judged.
-  const awayFromLine = (cms === 'No' && score <= hospital.total) || (cms === 'Yes' && score >= hospital.total);
+  // CMS's own value -> z map only rises with the value, so when every change moves away from the line (all
+  // lower for a "No", all higher for a "Yes"), CMS's decision stands. Anything else is re-judged with the band.
+  const awayFromLine = (cms === 'No' && !anyUp) || (cms === 'Yes' && !anyDown);
   const flag = cms === 'N/A' || awayFromLine ? cms : classify(score, model.boundary, band);
 
   return {
