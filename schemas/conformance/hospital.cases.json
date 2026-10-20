@@ -1,0 +1,191 @@
+{
+  "schema": "hospital.schema.json",
+  "def": null,
+  "description": "Each case applies its patch to a copy of base (ops as in hacrp.cases.json). Synthetic CCN and invented name.",
+  "base": {
+    "schema_version": 1,
+    "methods_version": 1,
+    "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sources": [
+      "synthetic"
+    ],
+    "built_at": "2026-10-20T00:00:00Z",
+    "fy": 2027,
+    "programYears": {
+      "hacrp": 2026,
+      "hrrp": 2027
+    },
+    "hospitals": [
+      {
+        "ccn": "000001",
+        "name": "Invented General Hospital",
+        "alias": null,
+        "street": "1 Main St",
+        "city": "Springfield",
+        "state": "ZZ",
+        "zip": "01234",
+        "kind": "acute",
+        "ipps": true,
+        "types": [
+          "SCH"
+        ],
+        "teach": "none",
+        "urban": false,
+        "beds": 40,
+        "bedsSource": "pos",
+        "own": "Nonprofit",
+        "ownDetail": "Voluntary non-profit - Private",
+        "inactive": null,
+        "programs": {
+          "hacrp": {
+            "inProgram": true,
+            "reason": null
+          },
+          "hrrp": {
+            "inProgram": false,
+            "reason": "not_listed"
+          }
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "the base document",
+      "valid": true,
+      "patch": []
+    },
+    {
+      "name": "an inactive hospital with a date",
+      "valid": true,
+      "patch": [
+        {
+          "path": "/hospitals/0/inactive",
+          "op": "set",
+          "value": {
+            "date": "2025-01-31",
+            "reason": "merger or closure"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a numeric CCN",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/ccn",
+          "op": "set",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "an unknown kind",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/kind",
+          "op": "set",
+          "value": "hospice"
+        }
+      ]
+    },
+    {
+      "name": "an unknown reason",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/programs/hrrp/reason",
+          "op": "set",
+          "value": "too_small"
+        }
+      ]
+    },
+    {
+      "name": "no hrrp entry",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/programs/hrrp",
+          "op": "delete"
+        }
+      ]
+    },
+    {
+      "name": "an extra record key",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/star",
+          "op": "create",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "beds as text",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/beds",
+          "op": "set",
+          "value": "12"
+        }
+      ]
+    },
+    {
+      "name": "zero beds",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/beds",
+          "op": "set",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "a ZIP+4",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/zip",
+          "op": "set",
+          "value": "01234-5678"
+        }
+      ]
+    },
+    {
+      "name": "an empty name",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/name",
+          "op": "set",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "no hospitals",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0",
+          "op": "delete"
+        }
+      ]
+    },
+    {
+      "name": "a missing programYears entry",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/programYears/hrrp",
+          "op": "delete"
+        }
+      ]
+    }
+  ]
+}
