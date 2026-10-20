@@ -10,5 +10,16 @@
     "pdcModified": "2026-01-26",
     "pdcReleased": "2026-08-13",
     "retrieved": "2026-10-20"
+  },
+  {
+    "id": "tdr-hrrp-fy2027",
+    "title": "Thirty Day Readmissions published data (HRRP FY2027)",
+    "path": "tdr/hrrp.json",
+    "bytes": 2604301,
+    "sha256": "9541a509cda7f365504181b639fc314972ebe75aad181811e36c87323554f3c1",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/80f3659d1f6c850443bbc7d939f5f1dc9cd8153b/web/src/data/hrrp.json",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "80f3659d1f6c850443bbc7d939f5f1dc9cd8153b",
+    "retrieved": "2026-10-20"
   }
 ]
