@@ -99,5 +99,25 @@
     "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
     "sourceCommit": "80f3659d1f6c850443bbc7d939f5f1dc9cd8153b",
     "retrieved": "2026-10-20"
+  },
+  {
+    "id": "census-geocodes-2026-10",
+    "title": "U.S. Census Bureau Geocoder results for the hospital master's hospitals not geocoded by Thirty Day Readmissions",
+    "path": "census-geocodes-2026-10/geocodes.csv",
+    "bytes": 79831,
+    "sha256": "fe91dd0450ebbfab7ba862fb1ad8141d4825dc4343ea25592b6bd76721d078cd",
+    "derivedBy": "pipeline/py/pp_pipeline/geocode.py",
+    "request": {
+      "url": "https://geocoding.geo.census.gov/geocoder/locations/addressbatch",
+      "benchmark": "Public_AR_Current",
+      "date": "2026-10-20",
+      "requests": 1,
+      "addresses": 2748,
+      "hospitals": 2536,
+      "matched": 2147
+    },
+    "note": "One batch request. The service's answers change as its address data does, so this result can't be re-fetched byte for byte; it is pinned as made.",
+    "landingPage": "https://geocoding.geo.census.gov/geocoder/",
+    "retrieved": "2026-10-20"
   }
 ]

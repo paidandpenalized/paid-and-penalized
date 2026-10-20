@@ -17,7 +17,8 @@ Not covered by either license:
 - data/pinned/tdr/hrrp.json is an unmodified copy of the data published by Thirty Day Readmissions, this
   project's MIT-licensed readmissions site, built from CMS files; it is re-pinned by hand at each of that
   site's refreshes. data/pinned/tdr/geocodes.csv, from the same site, holds its U.S. Census Bureau Geocoder
-  results for hospital street addresses.
+  results for hospital street addresses. data/pinned/census-geocodes-2026-10/geocodes.csv holds this project's own
+  results from the same public service (U.S. Census Bureau Geocoder) for the remaining hospitals.
 - The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
 - Third-party fonts, which carry their own licenses next to the font files.
 
