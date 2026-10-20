@@ -8,6 +8,7 @@ import re
 from collections import namedtuple
 
 from pp_engine import geo, names
+from pp_engine.parse import SchemaError
 
 STRAY_KM = 40  # a ZIP/county point farther than this outside the impact-file county is replaced by that county's centroid
 
@@ -46,7 +47,9 @@ def locate(g, imp, st, zcta, counties, point=None):
 
 
 CITY_STATES = ("MD", "MO", "NV", "VA")  # states with independent cities: FIPS county codes 500 and up
-NO_SUFFIX = ("AK", "DC", "PR")  # Alaska's boroughs and census areas, the District, Puerto Rico's municipios
+# Alaska's boroughs and census areas, the District, Puerto Rico's municipios, and the other territories' islands and
+# districts (TDR has only the first three: its hospitals are all in the states and DC)
+NO_SUFFIX = ("AK", "DC", "PR", "AS", "GU", "MP", "VI")
 
 
 def independent_city(fips):
@@ -170,3 +173,24 @@ def place_hospital(ccn, g, imp, st, ref):
     if doubt:
         ref.unchecked.append((ccn, g.get("county"), county, doubt))
     return lat, lon, gsrc, county
+
+
+def merge_points(*sources):
+    """One {ccn: (lat, lon)} from several point files; a CCN in two of them raises rather than one silently winning."""
+    out = {}
+    for points in sources:
+        both = sorted(out.keys() & points.keys())
+        if both:
+            raise SchemaError(f"street-address points: {len(both)} CCNs in two point files, e.g. {both[:5]}")
+        out.update(points)
+    return out
+
+
+def county_gate(unchecked, limit):
+    """Report lines for every county the rules could not check ((ccn, Care Compare's county, label, doubt)); raises
+    SchemaError when there are more than `limit`, so a new spelling is looked at before it ships."""
+    lines = [f"{c} {raw!r} -> {label} ({doubt})" for c, raw, label, doubt in unchecked]
+    if len(unchecked) > limit:
+        raise SchemaError(f"{len(unchecked)} county names the rules cannot check, more than {limit}: "
+                          + "; ".join(lines) + ". Teach geo.county_key or county_label the new spelling, or raise the limit.")
+    return lines

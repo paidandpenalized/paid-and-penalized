@@ -7,9 +7,9 @@ import functools
 import json
 from datetime import datetime, timezone
 
-from pp_engine import geo
+from pp_engine import geo, location
 from pp_engine.contract import format_emitted, keep_built_at
-from pp_engine.master import build_master
+from pp_engine.master import Place, build_master
 from pp_engine.parse import (SchemaError, impact_fy, index_by_ccn, read_cbsa_names, read_hgi, read_impact, read_points,
                              read_pos, read_zcta, rows, table)
 from pp_engine.schema import validate
@@ -17,24 +17,40 @@ from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, load_schemas, read_json, r
 
 HGI, IMPACT, POS, HACRP, TDR = "hgi-2026-07", "ipps-impact-fy2027", "pos-q2-2026", "yq43-i98g", "tdr-hrrp-fy2027"
 ZCTA, COUNTIES, CBSA, TDR_POINTS = "zcta-2024", "us-atlas-counties-3.0.1", "county-cbsa-fy2027", "tdr-geocodes"
+CENSUS_POINTS = "census-geocodes-2026-10"
 ZCTA_MEMBER = "2024_Gaz_zcta_national.txt"
 CBSA_MEMBER = "FY 2027 FR County to CBSA Crosswalk.txt"  # CMS text: Windows-1252
-SOURCES = (HGI, IMPACT, POS, HACRP, TDR)
+SOURCES = (HGI, IMPACT, POS, HACRP, TDR, ZCTA, COUNTIES, CBSA, TDR_POINTS, CENSUS_POINTS)
+# Counties the location rules can't check (location.county_label's doubt) across the whole master; more fails the
+# build so a new spelling is looked at before it ships. `make emit` prints them.
+MAX_UNCHECKED_COUNTIES = 73  # the 2026-10-20 build: 17 among HRRP hospitals (TDR's limit), 56 more elsewhere
 # The final rule's correction-notice values, the file Thirty Day Readmissions builds from. CMS writes it in
 # Windows-1252.
 IMPACT_MEMBER = "FY 2027 IPPS Impact File - Correction Notice.txt"
 SCHEMA = "hospital.schema.json"
 
 
-def hacrp_program():
+# HACRP's Payment Reduction: Yes or No for a hospital subject to the adjustment; N/A for Maryland's hospitals, which
+# the file lists but the state's own payment model covers.
+SUBJECT, EXEMPT = ("Yes", "No"), "N/A"
+
+
+def hacrp_program(text=None):
+    """{fy, names, subject} from the HACRP file (the pinned one unless `text` is given). An N/A row outside Maryland
+    raises: it would be a kind of exemption the reason codes don't have."""
     label = "HACRP file"
-    records = table(rows(read_pinned_bytes(HACRP).decode("utf-8"), ","), "Facility Name",
-                    {"ccn": "Facility ID", "name": "Facility Name", "fy": "Fiscal Year"}, label)
+    records = table(rows(text if text is not None else read_pinned_bytes(HACRP).decode("utf-8"), ","), "Facility Name",
+                    {"ccn": "Facility ID", "name": "Facility Name", "state": "State", "fy": "Fiscal Year",
+                     "pay": "Payment Reduction"}, label)
     by_ccn = index_by_ccn(records, lambda r: r, label)
     years = {r["fy"] for r in by_ccn.values()}
     if len(years) != 1:
         raise SchemaError(f"{label}: expected one fiscal year, found {sorted(years)}")
-    return {"fy": int(years.pop()), "names": {c: r["name"] for c, r in by_ccn.items()}}
+    odd = sorted(c for c, r in by_ccn.items() if r["pay"] not in SUBJECT and (r["pay"], r["state"]) != (EXEMPT, "MD"))
+    if odd:
+        raise SchemaError(f"{label}: Payment Reduction neither Yes/No nor Maryland's N/A for {odd[:5]}")
+    return {"fy": int(years.pop()), "names": {c: r["name"] for c, r in by_ccn.items()},
+            "subject": {c for c, r in by_ccn.items() if r["pay"] in SUBJECT}}
 
 
 @functools.lru_cache(maxsize=None)
@@ -44,12 +60,21 @@ def tdr_data():
 
 def hrrp_program():
     data = tdr_data()
-    return {"fy": data["meta"]["fy"], "names": {h["id"]: h["name"] for h in data["hospitals"]}}
+    names = {h["id"]: h["name"] for h in data["hospitals"]}
+    return {"fy": data["meta"]["fy"], "names": names, "subject": set(names)}  # TDR lists only adjusted hospitals
+
+
+def cp1252(data, label):
+    """CMS text as Windows-1252; a byte that encoding leaves undefined is a SchemaError, not a crash."""
+    try:
+        return data.decode("cp1252")
+    except UnicodeDecodeError as e:
+        raise SchemaError(f"{label}: not Windows-1252 text ({e.reason} at byte {e.start})") from None
 
 
 @functools.lru_cache(maxsize=None)
 def impact_text():
-    return read_zip_member(IMPACT, IMPACT_MEMBER).decode("cp1252")
+    return cp1252(read_zip_member(IMPACT, IMPACT_MEMBER), IMPACT_MEMBER)
 
 
 @functools.lru_cache(maxsize=None)
@@ -64,7 +89,7 @@ def counties():
 
 @functools.lru_cache(maxsize=None)
 def cbsa_names():
-    return read_cbsa_names(read_zip_member(CBSA, CBSA_MEMBER).decode("cp1252"))
+    return read_cbsa_names(cp1252(read_zip_member(CBSA, CBSA_MEMBER), CBSA_MEMBER))
 
 
 @functools.lru_cache(maxsize=None)
@@ -79,9 +104,21 @@ def tdr_points():
     return read_points(read_pinned_bytes(TDR_POINTS).decode("utf-8"))
 
 
-def build_from_pins(built_at):
+def points():
+    """Street-address points: TDR's, then this project's Census call for the rest (a CCN in both raises)."""
+    return location.merge_points(tdr_points(), read_points(read_pinned_bytes(CENSUS_POINTS).decode("utf-8")))
+
+
+def new_ref():
+    return location.Ref(zcta(), counties(), points(), [], [])
+
+
+def build_from_pins(built_at, ref=None):
+    """The master from the pins. `ref` (a location.Ref) collects the location report; the county gate runs here, so
+    the golden test fails too when there are more unchecked counties than allowed."""
+    ref = ref or new_ref()
     t = tables()
-    return build_master(
+    master = build_master(
         hgi=t["hgi"],
         impact=t["impact"],
         pos=t["pos"],
@@ -90,7 +127,10 @@ def build_from_pins(built_at):
         manifest=read_manifest(),
         sources=list(SOURCES),
         built_at=built_at,
+        place=Place(ref, cbsa_names()),
     )
+    location.county_gate(ref.unchecked, MAX_UNCHECKED_COUNTIES)
+    return master
 
 
 def emitted_path(fy):
@@ -102,9 +142,26 @@ def committed_path():
     return emitted_path(impact_fy(impact_text()))
 
 
+def report(master, ref):
+    """The location report TDR's build prints: geo sources, counties moved, points set aside, unchecked counties."""
+    hs = master["hospitals"]
+    print("geo", {k: sum(1 for h in hs if h["geo"] == k) for k in ("address", "zip", "county", None)})
+    for src, what in (("county", f"moved to the impact-file county centroid (point > {location.STRAY_KM} km outside it)"),
+                      ("address", "street address inside the impact-file county, not Care Compare's")):
+        hits = [f"{c} {old} -> {new}" for c, old, new, s in ref.moved if s == src]
+        print(f"{what} ({len(hits)}): " + ("; ".join(hits) or "none"))
+    set_aside = [h["ccn"] for h in hs if h["ccn"] in ref.points and h["geo"] != "address"]
+    print(f"street-address points {len(ref.points)}; set aside (> {location.STRAY_KM} km outside): {set_aside}")
+    lines = location.county_gate(ref.unchecked, MAX_UNCHECKED_COUNTIES)
+    print(f"county names the rules cannot check ({len(lines)}, at most {MAX_UNCHECKED_COUNTIES}): "
+          + ("; ".join(lines) or "none"))
+
+
 def main():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    fresh = build_from_pins(now)
+    ref = new_ref()
+    fresh = build_from_pins(now, ref)
+    report(fresh, ref)
     path = emitted_path(fresh["fy"])
     out = keep_built_at(read_json(path) if path.exists() else None, fresh)
     schemas = load_schemas()

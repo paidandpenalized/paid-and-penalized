@@ -3,8 +3,8 @@ import itertools
 import random
 import unittest
 
-from pp_engine import master
-from pp_engine.master import KINDS, REASONS, build_master, build_record, kind_of, reason_for
+from pp_engine import geo, location, master
+from pp_engine.master import KINDS, REASONS, Place, build_master, build_record, kind_of, reason_for
 from pp_engine.parse import SchemaError
 from pp_engine.schema import validate
 from pp_pipeline.files import load_schemas
@@ -17,12 +17,12 @@ NOT_IPPS = {"critical_access": "critical_access", "psychiatric": "psychiatric", 
 
 def hgi_row(name="INVENTED GENERAL HOSPITAL", kind="Acute Care Hospitals", state="ZZ", **kw):
     return {"name": name, "street": "1 MAIN ST", "city": "SPRINGFIELD", "state": state, "zip": "01234",
-            "type": kind, "ownership": "Voluntary non-profit - Private", **kw}
+            "county": "INVENTED", "type": kind, "ownership": "Voluntary non-profit - Private", **kw}
 
 
 def impact_row(**kw):
     return {"name": "Invented General Hosp", "urgeo": "RURAL", "irb": 0.0, "beds": 40, "own": "2", "ptype": 0,
-            "mdh": False, **kw}
+            "mdh": False, "fips": None, "cbsa_geo": "", **kw}
 
 
 def pos_row(term="00", **kw):
@@ -34,11 +34,14 @@ def ccn(rng):
     return "".join(rng.choice("0123456789") for _ in range(2)) + "".join(rng.choice("0123456789ABCDEFZ") for _ in range(4))
 
 
-def build(hgi=None, impact=None, pos=None, hacrp=(), hrrp=()):
+def build(hgi=None, impact=None, pos=None, hacrp=(), hrrp=(), hacrp_exempt=(), place=None):
+    """`hacrp_exempt`: CCNs the HACRP file lists but doesn't adjust (Payment Reduction N/A)."""
     return build_master(hgi or {}, impact or {}, pos or {},
-                        {"hacrp": {"fy": 2026, "names": {c: "INVENTED HACRP NAME" for c in hacrp}},
-                         "hrrp": {"fy": 2027, "names": {c: "Invented HRRP Name" for c in hrrp}}},
-                        fy=2027, manifest=MANIFEST, sources=[m["id"] for m in MANIFEST], built_at="2026-10-20T00:00:00Z")
+                        {"hacrp": {"fy": 2026, "names": {c: "INVENTED HACRP NAME" for c in hacrp},
+                                   "subject": set(hacrp) - set(hacrp_exempt)},
+                         "hrrp": {"fy": 2027, "names": {c: "Invented HRRP Name" for c in hrrp}, "subject": set(hrrp)}},
+                        fy=2027, manifest=MANIFEST, sources=[m["id"] for m in MANIFEST], built_at="2026-10-20T00:00:00Z",
+                        place=place)
 
 
 class Universe(unittest.TestCase):
@@ -107,6 +110,20 @@ class Reasons(unittest.TestCase):
                                          "hrrp": {"inProgram": False, "reason": "maryland"}})
         self.assertEqual(b["programs"]["hacrp"]["reason"], "inactive")
         self.assertEqual(b["inactive"], {"date": "2025-01-31", "reason": "merger or closure"})
+
+    def test_listed_but_not_adjusted_is_out_of_the_program(self):
+        out = build({"000001": hgi_row(state="MD"), "000002": hgi_row()}, hacrp=["000001", "000002"],
+                    hacrp_exempt=["000001"])
+        a, b = out["hospitals"]
+        self.assertEqual(a["programs"]["hacrp"], {"inProgram": False, "reason": "maryland"})
+        self.assertEqual(b["programs"]["hacrp"], {"inProgram": True, "reason": None})
+        self.assertEqual([h["ccn"] for h in out["hospitals"]], ["000001", "000002"])  # still in the universe
+
+    def test_state_falls_back_to_the_impact_files_fips_state(self):
+        r = build_record("000001", None, impact_row(fips="24003"), None, {"hacrp": False})
+        self.assertEqual((r["state"], r["fips"], r["programs"]["hacrp"]["reason"]), ("MD", "24003", "maryland"))
+        r = build_record("000001", None, impact_row(fips="24003"), pos_row(state="VA"), {})
+        self.assertEqual(r["state"], "VA")  # POS before the FIPS code
 
 
 class Attributes(unittest.TestCase):
@@ -187,9 +204,68 @@ class Attributes(unittest.TestCase):
         self.assertEqual(set(h["hospital"]["properties"]["types"]["items"]["enum"]),
                          {t for ts in master.PTYPES.values() for t in ts} | {"MDH"})
         self.assertEqual(h["hospital"]["required"], list(master.RECORD_KEYS))
+        self.assertEqual(h["hospital"]["properties"]["region"]["enum"][1:], list(dict.fromkeys(r for r, _ in geo.DIVISIONS.values())))
+        self.assertEqual(h["hospital"]["properties"]["division"]["enum"][1:], list(geo.DIVISIONS))
+        self.assertEqual(set(h["hospital"]["properties"]["geo"]["enum"]), {None, "address", "zip", "county"})
 
     def test_record_keys_in_order(self):
         self.assertEqual(list(build_record("000001", hgi_row(), None, None, {"hacrp": True})), list(master.RECORD_KEYS))
+
+
+
+SQUARE = [[(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]]  # ~111 km square county at the equator
+
+
+def place(points=None):
+    counties = geo.Counties(centroid={"99001": (0.5, 0.5)}, by_name={}, shape={"99001": [SQUARE]},
+                            name={"99001": "Squareville"}, named={})
+    zcta = {"01234": (0.25, 0.75), "05678": (0.75, 0.25)}
+    return Place(location.Ref(zcta, counties, points or {}, [], []), {"99901": "Invented, ZZ"})
+
+
+class Location(unittest.TestCase):
+    def test_location_fields(self):
+        r = build_record("000001", hgi_row(state="VA"), impact_row(fips="99001", cbsa_geo="99901"), None, {},
+                         place=place())
+        self.assertEqual({k: r[k] for k in ("county", "fips", "lat", "lon", "geo", "cbsa", "cbsaName", "region", "division")},
+                         {"county": "Squareville County", "fips": "99001", "lat": 0.25, "lon": 0.75, "geo": "zip",
+                          "cbsa": "99901", "cbsaName": "Invented, ZZ", "region": "South", "division": "South Atlantic"})
+
+    def test_cbsa_only_when_five_digits_and_name_only_when_known(self):
+        for code, want in (("05", (None, None)), ("", (None, None)), ("99902", ("99902", None))):
+            r = build_record("000001", hgi_row(), impact_row(cbsa_geo=code), None, {}, place=place())
+            self.assertEqual((r["cbsa"], r["cbsaName"]), want, code)
+
+    def test_an_address_point_wins_and_rounds_to_four_places(self):
+        r = build_record("000001", hgi_row(), impact_row(fips="99001"), None, {},
+                         place=place({"000001": (0.123456, 0.654321)}))
+        self.assertEqual((r["lat"], r["lon"], r["geo"]), (0.1235, 0.6543, "address"))
+
+    def test_no_care_compare_row_uses_pos_zip_and_the_impact_county(self):
+        r = build_record("000001", None, impact_row(fips="99001"), pos_row(), {}, place=place())
+        self.assertEqual((r["lat"], r["lon"], r["geo"], r["county"]), (0.75, 0.25, "zip", "Squareville County"))
+
+    def test_no_geography_gives_null_location(self):
+        r = build_record("000001", hgi_row(state="ZZ"), None, None, {})
+        self.assertEqual([r[k] for k in ("lat", "lon", "geo", "fips", "cbsa", "region", "division")], [None] * 7)
+
+    def test_records_with_location_validate(self):
+        out = build({"000001": hgi_row(state="VA"), "000002": hgi_row()},
+                    {"000001": impact_row(fips="99001", cbsa_geo="99901")}, place=place({"000002": (0.5, 0.5)}))
+        self.assertEqual(validate(SCHEMAS["hospital.schema.json"], out, SCHEMAS), [])
+
+    def test_a_ccn_in_two_point_files_raises(self):
+        self.assertEqual(location.merge_points({"000001": (1, 2)}, {"000002": (3, 4)}),
+                         {"000001": (1, 2), "000002": (3, 4)})
+        with self.assertRaisesRegex(SchemaError, "1 CCNs in two point files"):
+            location.merge_points({"000001": (1, 2)}, {"000001": (1, 2)})
+
+    def test_the_county_gate_lists_and_fails_above_the_limit(self):
+        rows = [("000001", "THE DISTRICT", "Invented City", "unknown county"), ("000002", None, "Narnia County", "x")]
+        self.assertEqual(location.county_gate(rows, 2),
+                         ["000001 'THE DISTRICT' -> Invented City (unknown county)", "000002 None -> Narnia County (x)"])
+        with self.assertRaisesRegex(SchemaError, r"^2 county names .* than 1: 000001 "):
+            location.county_gate(rows, 1)
 
 
 if __name__ == "__main__":

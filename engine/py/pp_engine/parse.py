@@ -184,7 +184,8 @@ def read_cbsa_names(text):
 
 def read_points(text):
     """A street-address points CSV (ccn,lat,lon,match,source) -> {ccn: (lat, lon)}. Unlike the CMS readers, which
-    skip footnote rows, any row that isn't a CCN, a repeated CCN, or a bad coordinate raises SchemaError."""
+    skip footnote rows, a non-blank first cell that isn't a CCN, a repeated CCN, or a bad coordinate raises
+    SchemaError (rows with a blank first cell are skipped, as `table` does everywhere)."""
     out = {}
     for r in table(rows(text, ","), "ccn", {"ccn": "ccn", "lat": "lat", "lon": "lon"}, "points"):
         if not _is_ccn(r["ccn"]) or r["ccn"] in out:

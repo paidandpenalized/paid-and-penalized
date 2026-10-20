@@ -2,15 +2,17 @@
 with each program's in/out flag and, when out, a reason code a page can render.
 
 Attribute rules are Thirty Day Readmissions' (pipeline/build_data.py at 80f3659): Care Compare first, the impact
-file and the Provider of Services file as fallbacks. Location fields (coordinates, county, CBSA) come in
-methods_version 2.
+file and the Provider of Services file as fallbacks. Location (map point, county, CBSA, region) follows TDR's rules
+too (pp_engine.location).
 """
-from pp_engine import names
+from collections import namedtuple
+
+from pp_engine import geo, location, names
 from pp_engine.contract import envelope
 from pp_engine.parse import POS_TERMINATION, SchemaError
 
-SCHEMA_VERSION = 1
-METHODS_VERSION = 1
+SCHEMA_VERSION = 2
+METHODS_VERSION = 2
 
 # Care Compare's "Hospital Type" -> kind. An unlisted type fails the build rather than guessing.
 KINDS = {
@@ -39,8 +41,22 @@ OWN_PREFIX = (("Government", "Government"), ("Voluntary", "Nonprofit"), ("Propri
               ("Physician", "For-profit"), ("Tribal", "Government"), ("Veterans", "Government"))
 MAJOR_TEACHING = 0.25  # resident-to-bed ratio at or above which a hospital counts as a major teaching hospital
 
-RECORD_KEYS = ("ccn", "name", "alias", "street", "city", "state", "zip", "kind", "ipps", "types", "teach", "urban",
+RECORD_KEYS = ("ccn", "name", "alias", "street", "city", "state", "zip", "county", "fips", "lat", "lon", "geo", "cbsa",
+               "cbsaName", "region", "division", "kind", "ipps", "types", "teach", "urban",
                "beds", "bedsSource", "own", "ownDetail", "inactive", "programs")
+
+
+# The geography a record is placed with: `ref`, a location.Ref; `cbsa_names`, {cbsa code: name}.
+Place = namedtuple("Place", "ref cbsa_names")
+
+
+def no_place():
+    """A Place with no geography: every record gets null location fields."""
+    return Place(location.Ref({}, geo.Counties({}, {}, {}, {}, {}), {}, [], []), {})
+
+
+def _round4(v):
+    return None if v is None else round(v, 4)  # TDR's rnd(v, 4)
 
 
 def kind_of(hgi, in_impact):
@@ -78,16 +94,24 @@ def _first(*values):
     return next((v for v in values if v), None)
 
 
-def build_record(ccn, hgi, impact, pos, listed, program_names=()):
+def build_record(ccn, hgi, impact, pos, listed, program_names=(), place=None):
     """One hospital's record from its HGI, impact and POS rows (each a dict or None), `listed` (program id -> whether
-    that program's file lists the CCN) and `program_names` (names those files give it, a last-resort name)."""
+    the hospital is subject to that program's adjustment), `program_names` (names the program files give it, a
+    last-resort name) and `place` (a Place; none: no location)."""
     g, imp, p = hgi or {}, impact or {}, pos or {}
     name = (names.display_name(g.get("name"), imp.get("name")) or names.smart_title(p.get("name"))
             or _first(*(names.display_name(n, None) for n in program_names))
             or f"Hospital {ccn} (name not in CMS files)")  # TDR's wording for a CCN no file names
     ipps = impact is not None
     kind = kind_of(hgi, ipps)
-    state = _first(g.get("state"), p.get("state"))
+    fips = imp.get("fips")
+    state = _first(g.get("state"), p.get("state"), geo.STATE_FIPS.get((fips or "")[:2]))
+    zip_ = _first(g.get("zip"), p.get("zip"))
+    place = place or no_place()
+    lat, lon, where, county = location.place_hospital(ccn, {"zip": zip_, "county": g.get("county")}, {"fips": fips},
+                                                      state, place.ref)
+    cbsa = imp.get("cbsa_geo") if len(imp.get("cbsa_geo") or "") == 5 else None
+    region, division = geo.region_of(state)
     term_reason = POS_TERMINATION.get(p.get("term"))
     inactive = {"date": p.get("termDate"), "reason": term_reason} if term_reason else None
     beds, beds_source = (p["beds"], "pos") if p.get("beds") else (imp["beds"], "cr") if imp.get("beds") else (None, None)
@@ -103,7 +127,16 @@ def build_record(ccn, hgi, impact, pos, listed, program_names=()):
         "street": _first(g.get("street"), p.get("street")),
         "city": names.smart_title(_first(g.get("city"), p.get("city"))),
         "state": state,
-        "zip": _first(g.get("zip"), p.get("zip")),
+        "zip": zip_,
+        "county": county,
+        "fips": fips,
+        "lat": _round4(lat),
+        "lon": _round4(lon),
+        "geo": where,
+        "cbsa": cbsa,
+        "cbsaName": place.cbsa_names.get(cbsa),
+        "region": region,
+        "division": division,
         "kind": kind,
         "ipps": ipps,
         "types": types,
@@ -128,14 +161,15 @@ def universe(hgi, impact, programs):
     return ccns
 
 
-def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at):
+def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at, place=None):
     """The master: envelope, each program's file year, and one record per CCN in HGI, the impact file or any
-    program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name}}."""
+    program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name},
+    "subject": the CCNs subject to its payment adjustment}; a listed CCN outside `subject` is not in the program."""
     ccns = universe(hgi, impact, programs)
     order = sorted(programs)
     hospitals = [build_record(c, hgi.get(c), impact.get(c), pos.get(c),
-                              {pid: c in programs[pid]["names"] for pid in order},
-                              [programs[pid]["names"][c] for pid in order if c in programs[pid]["names"]])
+                              {pid: c in programs[pid]["subject"] for pid in order},
+                              [programs[pid]["names"][c] for pid in order if c in programs[pid]["names"]], place)
                  for c in sorted(ccns)]
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, sources, manifest, built_at, fy),

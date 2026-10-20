@@ -3,7 +3,7 @@
   "def": null,
   "description": "Each case applies its patch to a copy of base (ops as in hacrp.cases.json). Synthetic CCN and invented name.",
   "base": {
-    "schema_version": 1,
+    "schema_version": 2,
     "methods_version": 1,
     "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
     "sources": [
@@ -24,6 +24,15 @@
         "city": "Springfield",
         "state": "ZZ",
         "zip": "01234",
+        "county": "Invented County",
+        "fips": "99001",
+        "lat": 12.3456,
+        "lon": -98.7654,
+        "geo": "address",
+        "cbsa": "99901",
+        "cbsaName": "Invented, ZZ",
+        "region": "South",
+        "division": "South Atlantic",
         "kind": "acute",
         "ipps": true,
         "types": [
@@ -184,6 +193,123 @@
         {
           "path": "/programYears/hrrp",
           "op": "delete"
+        }
+      ]
+    },
+    {
+      "name": "a hospital with no location",
+      "valid": true,
+      "patch": [
+        {
+          "path": "/hospitals/0/county",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/fips",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/lat",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/lon",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/geo",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/cbsa",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/cbsaName",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/region",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/division",
+          "op": "set",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "an unknown geo source",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/geo",
+          "op": "set",
+          "value": "gps"
+        }
+      ]
+    },
+    {
+      "name": "a latitude above 90",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/lat",
+          "op": "set",
+          "value": 91
+        }
+      ]
+    },
+    {
+      "name": "a 4-digit FIPS code",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/fips",
+          "op": "set",
+          "value": "1001"
+        }
+      ]
+    },
+    {
+      "name": "a CBSA as a number",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/cbsa",
+          "op": "set",
+          "value": 99901
+        }
+      ]
+    },
+    {
+      "name": "an unknown region",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/region",
+          "op": "set",
+          "value": "Pacific"
+        }
+      ]
+    },
+    {
+      "name": "schema_version 1",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/schema_version",
+          "op": "set",
+          "value": 1
         }
       ]
     }

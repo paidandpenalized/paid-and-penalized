@@ -30,8 +30,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `schemas/conformance/` pin it.
 - The hospital master, `data/emitted/hospital/fy<YYYY>/hospital_master.json`: one record per CCN in Care Compare,
   the IPPS impact file or any program file, with per-program `inProgram` and a reason code (rules and order in
-  `pp_engine/master.py` and `docs/METHODS-LOG.md`). Sites join on it by CCN. Until Thirty Day Readmissions folds in,
-  a test requires its hospital names to equal the master's.
+  `pp_engine/master.py` and `docs/METHODS-LOG.md`) and a location (point, county, CBSA, region; rules in
+  `pp_engine/location.py`). Sites join on it by CCN. Until Thirty Day Readmissions folds in, a test requires its
+  hospitals' names and locations to equal the master's. `run.py geocode` is the one command that uses the network
+  (the Census Geocoder); it is run by hand, and its output is a pinned input.
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
   validated by `engine/js/schema.js`, which throws on any keyword it doesn't support. `schemas/conformance/`
   holds language-neutral test cases; `engine/py/pp_engine/schema.py`, the Python twin, passes the same set.

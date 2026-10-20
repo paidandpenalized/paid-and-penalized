@@ -80,6 +80,8 @@ class CountyLabelTest(unittest.TestCase):
         self.assertEqual(location.place_name("James City", "VA", False), "James City County")
         self.assertEqual(location.place_name("Orleans", "LA", False), "Orleans Parish")
         self.assertEqual(location.place_name("Anchorage", "AK", False), "Anchorage")
+        for st, name in (("GU", "Guam"), ("VI", "Saint Thomas Island"), ("AS", "Eastern District"), ("MP", "Saipan")):
+            self.assertEqual(location.place_name(name, st, False), name)  # territories: no "County"
         self.assertEqual(location.place_name("", "TX", False), "")
         self.assertEqual(location.place_name("Narnia-County", "TX", False), "Narnia-County")
         self.assertEqual(location.place_name("Kansas City", "MO", None), "Kansas City")  # county or city unknown
