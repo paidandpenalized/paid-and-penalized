@@ -180,8 +180,10 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 - **Validator:** NaN and ±Infinity fail `number` and `integer`, because JSON would write them as `null`.
 - **Change gate (final form):** the `new-cms-release` label is gone (Dalton, 2026-10-20). Labels exist only on
   PR runs, so a label-only merge turned `main` red, and a real CMS release always re-pins. The gate reads
-  statuses from one `git diff --name-status --no-renames`, so a rename is a delete plus an add. A file under
-  `corrections/` (a new file, not an edit or an exact rename) covers the whole change. Otherwise each changed emitted file needs one
+  statuses from one `git diff --name-status --no-renames` (a rename is a delete plus an add) and runs from the
+  repo root. A file under
+  `corrections/` with new content (its blob isn't already there at the merge base; this catches renames and
+  copies) covers the whole change, unless the change deletes an entry (the log is append-only). Otherwise each changed emitted file needs one
   of:
   - *added*: a first emission (by git status, not by content);
   - *re-pinned*: an input's SHA-256 changes in the same change, the file keeps its sources and `methods_version`,

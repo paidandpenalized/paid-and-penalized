@@ -1,6 +1,7 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change. A new file under corrections/ (not an exact rename of an old one) covers the whole change. Otherwise
-// each changed emitted file needs one of:
+// change. A corrections entry with new content (its text isn't already under corrections/) covers the whole
+// change, as long as the change deletes no entry: the corrections log is append-only. Otherwise each changed
+// emitted file needs one of:
 //   - added: a first emission (nothing published to differ from);
 //   - re-pinned: one of its inputs has a new SHA-256 in this change's manifest diff, its sources and
 //     methods_version are unchanged, and its new source_manifest is the true hash of those inputs at HEAD. Pin and
@@ -20,18 +21,20 @@ const CORRECTIONS = 'corrections/';
 const MANIFEST = 'data/pinned/manifest.json';
 
 // changed: [{ status, path }] from git (A added, M modified, D deleted, T type change). explained: emitted paths
-// with a per-file reason (see above). renamed: added paths that are exact renames of deleted ones.
-export function changeGate({ changed, explained = new Set(), renamed = new Set() }) {
+// with a per-file reason (see above). newCorrection: an added file under corrections/ has content not already
+// there at the base.
+export function changeGate({ changed, explained = new Set(), newCorrection = false }) {
   const changedEmitted = changed.filter(({ path }) => path.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  if (changed.some(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS) && !renamed.has(path))) {
+  const deletesCorrection = changed.some(({ status, path }) => status === 'D' && path.startsWith(CORRECTIONS));
+  if (newCorrection && !deletesCorrection) {
     return { ok: true, reason: 'emitted data changed with a new corrections entry' };
   }
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
   if (unexplained.length === 0) return { ok: true, reason: 'every emitted change is new, re-pinned, or a new methods_version' };
   return {
     ok: false,
-    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new file under ${CORRECTIONS} (correction or removal)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), bump the site's methods_version with a new heading in ${METHODS_LOG} (methods change), or add a new entry under ${CORRECTIONS} (correction or removal; entries are append-only)`,
   };
 }
 
@@ -52,12 +55,11 @@ export function reasonFor({ added, before, now, pins, latest }) {
   return null;
 }
 
-// git's -z name-status → [{ status, path }]. "A\0path\0" records have 2 fields; renames ("R100\0old\0new\0")
-// have 3, and path is the new name.
-export function parseNameStatus(text, fields = 2) {
+// git's -z name-status with --no-renames → [{ status, path }]: "A\0path\0M\0path\0".
+export function parseNameStatus(text) {
   const parts = text.split('\0').filter(Boolean);
   const out = [];
-  for (let i = 0; i + fields - 1 < parts.length; i += fields) out.push({ status: parts[i][0], path: parts[i + fields - 1] });
+  for (let i = 0; i + 1 < parts.length; i += 2) out.push({ status: parts[i][0], path: parts[i + 1] });
   return out;
 }
 
@@ -66,6 +68,7 @@ const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB
 
 function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
+  process.chdir(git('rev-parse', '--show-toplevel').trim()); // every path below is repo-relative
   const given = process.env.GATE_BASE ?? '';
   // Only the first push of a branch has no base. A base that can't be found (a force-push) fails the gate
   // rather than shrinking the range it checks.
@@ -77,15 +80,16 @@ function main() {
   }
   const changed = parseNameStatus(git('diff', '--name-status', '--no-renames', '-z', `${base}...HEAD`));
   const emitted = changed.filter(({ status, path }) => path.startsWith(EMITTED) && status !== 'D');
-  // Exact renames under corrections/ (100% similar): an old entry under a new name, not a new correction.
-  const renamed = new Set(
-    parseNameStatus(git('diff', '--name-status', '-M100%', '--diff-filter=R', '-z', `${base}...HEAD`, '--', CORRECTIONS), 3).map(
-      ({ path }) => path,
-    ),
-  );
   const explained = new Set();
+  let newCorrection = false;
   if (emitted.length > 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
+    // Blob ids under corrections/ at the base, against those of the entries this change adds.
+    const blobsAt = (rev) =>
+      new Set(git('ls-tree', '-r', '-z', rev, '--', CORRECTIONS).split('\0').filter(Boolean).map((l) => l.split(/\s+/)[2]));
+    const oldBlobs = blobsAt(mergeBase);
+    const addedEntries = changed.filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS));
+    newCorrection = addedEntries.some(({ path }) => !oldBlobs.has(git('rev-parse', `HEAD:${path}`).trim()));
     const parse = (text) => {
       try {
         return JSON.parse(text);
@@ -111,7 +115,7 @@ function main() {
       if (reasonFor({ added, before, now, pins, latest: latestFor(path.slice(EMITTED.length).split('/')[0]) })) explained.add(path);
     }
   }
-  const result = changeGate({ changed, explained, renamed });
+  const result = changeGate({ changed, explained, newCorrection });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);
 }

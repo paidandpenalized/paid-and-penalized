@@ -1,5 +1,6 @@
 // Repo file access for pipeline CLIs and tests. The engine itself never reads files.
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -25,4 +26,13 @@ export function loadSchemas() {
       .filter((f) => f.endsWith('.schema.json'))
       .map((f) => [f, readJson(SCHEMAS_DIR + f)]),
   );
+}
+
+// Repo files under a prefix, repo-relative: tracked ones, plus untracked ones not gitignored when asked (a fresh
+// `make emit` before `git add`). Files deleted from the working tree are left out.
+export function repoFiles(prefix = '', { untracked = false } = {}) {
+  const args = ['ls-files', '-z', ...(untracked ? ['-co', '--exclude-standard'] : []), '--', prefix || '.'];
+  return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' })
+    .split('\0')
+    .filter((p) => p && existsSync(REPO_ROOT + p));
 }

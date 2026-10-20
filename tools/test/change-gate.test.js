@@ -22,20 +22,20 @@ test('an unexplained emitted change fails, naming only the unexplained files', (
   assert.equal(changeGate({ changed: [M(EMITTED)], explained: new Set([EMITTED]) }).ok, true);
 });
 
+const NEW_ENTRY = { status: 'A', path: 'corrections/2026-11-01-hacrp.md' };
+
 test('a deletion (or the delete half of a rename) needs a corrections entry', () => {
   const rename = [{ status: 'D', path: OLDER }, { status: 'A', path: 'data/emitted/hacrp/fy2025/hacrp-final.json' }];
   assert.equal(changeGate({ changed: rename, explained: new Set(['data/emitted/hacrp/fy2025/hacrp-final.json', OLDER]) }).ok, false);
-  assert.equal(changeGate({ changed: [...rename, { status: 'A', path: 'corrections/2026-11-01.md' }] }).ok, true);
+  assert.equal(changeGate({ changed: [...rename, NEW_ENTRY], newCorrection: true }).ok, true);
 });
 
-test('a new corrections entry covers the whole change; editing, deleting or renaming one, or near-misses, do not', () => {
-  assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), { status: 'A', path: 'corrections/2026-11-01-hacrp.md' }] }).ok, true);
-  const moved = [{ status: 'D', path: 'corrections/a.md' }, { status: 'A', path: 'corrections/b.md' }];
-  assert.equal(changeGate({ changed: [M(EMITTED), ...moved], renamed: new Set(['corrections/b.md']) }).ok, false, 'an exact rename');
-  assert.equal(changeGate({ changed: [M(EMITTED), ...moved] }).ok, true, 'deleting an old entry while adding a new one');
-  for (const status of ['M', 'D']) {
-    assert.equal(changeGate({ changed: [M(EMITTED), { status, path: 'corrections/2026-11-01-hacrp.md' }] }).ok, false, status);
-  }
+test('a corrections entry with new content covers the whole change, unless the change deletes an entry', () => {
+  assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), NEW_ENTRY], newCorrection: true }).ok, true);
+  assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY], newCorrection: false }).ok, false, 'old content under a new name');
+  const deletes = { status: 'D', path: 'corrections/2026-10-01-old.md' };
+  assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY, deletes], newCorrection: true }).ok, false, 'append-only');
+  assert.equal(changeGate({ changed: [M(EMITTED), { status: 'M', path: NEW_ENTRY.path }] }).ok, false, 'an edit');
   for (const p of ['corrections-old.md', 'docs/corrections/x.md', 'docs/METHODS-LOG.md']) {
     assert.equal(changeGate({ changed: [M(EMITTED), { status: 'A', path: p }] }).ok, false, p);
   }
@@ -92,5 +92,4 @@ test('parseNameStatus reads git -z output, paths with spaces and newlines includ
     { status: 'T', path: 'z' },
   ]);
   assert.deepEqual(parseNameStatus(''), []);
-  assert.deepEqual(parseNameStatus('R100\0corrections/a.md\0corrections/b.md\0', 3), [{ status: 'R', path: 'corrections/b.md' }]);
 });

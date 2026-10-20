@@ -43,8 +43,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
-  (`tools/ci/change-gate.js` has the exact rule). A new file under `corrections/` (not an edit or exact
-  rename of an old one) covers the whole change. Otherwise each changed emitted file must be:
+  (`tools/ci/change-gate.js` has the exact rule). A new entry under `corrections/` (new content, not an
+  edit, rename or copy of an old one) covers the whole change. The corrections log is append-only: a change that
+  deletes an entry gets no cover from it. Otherwise each changed emitted file must be:
   - **new** (a first emission); or
   - **re-pinned**: an input's SHA-256 changes in the same change, with the same `sources` and `methods_version`
     and a `source_manifest` that is the true hash at HEAD. Pin and `make emit` go together. Adding or dropping
