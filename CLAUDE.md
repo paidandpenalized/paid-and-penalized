@@ -17,7 +17,12 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `engine/js/`: shared plain ES modules. Top-level files (`csv.js`, `stats.js`) are program-neutral.
   Program formulas live in `engine/js/<program>/` as pure functions (data in, result out; no `fs`, network, DOM
   or clock) so the page build and the browser share one copy.
-- `sites/<program>/`, `hub/`: sites import the engine, never each other.
+- `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page.
+- `web/`: what every page shares: `site.js` (name, origin, each site's release state), `styles/` (`tokens.css` is
+  the only file under `web/` that may hold a color value), self-hosted fonts with their licenses, the favicon.
+- `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the shared assets (`assets.js`: one CSS file
+  and one ES module per JS entry, content-hashed), then runs each page generator in its list.
+  `serve.js` previews `dist/` locally. `dist/` is build output and gitignored.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
   A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
   hook blocks them and a test fails on any tracked file that size.
@@ -48,8 +53,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   (e.g., the 5th/95th percentiles) and documented tolerances.
 - **Test fixtures name no hospital.** Pick rows by property ("a row with an assigned measure"), or use synthetic
   rows.
-- **Zero dependencies by default.** Tests run on Node's built-in `node:test` (`npm test`). Flag any install or
-  download to Dalton before running it. Pin exact versions if one is ever added.
+- **Dependencies: build time only.** The engine, the pipeline's data code and their tests use none; tests run on
+  Node's built-in `node:test` (`npm test`). The page build uses four pinned dev dependencies: esbuild, d3-scale,
+  d3-array, d3-format (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or
+  download, to Dalton before running it. Pin exact versions.
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
@@ -81,6 +88,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   visibility, deploys, DNS, GitHub Releases. The repo stays private until the first public launch.
 
 ## Commands
+- `npm ci`: once per clone, installs the pinned build dependencies (`make build` and its tests need them).
 - `make test`: all tests (`npm test`, then `python3 -I pipeline/py/run.py test`), including the golden checks.
 - `make emit`: rebuild `data/emitted/` from the pins (both emitters).
 - `make hooks`: point git at `.githooks/`.
+- `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production`.
+- `make serve`: preview `dist/` at http://127.0.0.1:8080/.

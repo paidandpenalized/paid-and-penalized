@@ -26,8 +26,12 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.21.0
-      - name: Tests (engine, pins, contract, golden snapshot, hooks, workflow rules)
+      - name: Install the pinned build dependencies (from package-lock.json)
+        run: npm ci
+      - name: Tests (engine, pins, contract, golden snapshot, hooks, workflow rules, page build)
         run: npm test
+      - name: Build the site
+        run: make build
       - name: Change gate (emitted data needs a reason on record)
         if: ${{ !cancelled() }}
         env:

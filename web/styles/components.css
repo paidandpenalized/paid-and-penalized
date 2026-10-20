@@ -1,0 +1,34 @@
+/* Shared page parts: header, footer, green-bar tables, pills. Site-specific styles extend these. */
+
+/* ---------- header: one-line wordmark, byline, theme toggle ---------- */
+.masthead { background: var(--paper); border-bottom: var(--rule) solid var(--ink); }
+.masthead__row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; }
+.wordmark { font: 400 var(--fs-lg)/1 var(--font-display); letter-spacing: 0.005em; text-decoration: none; white-space: nowrap; }
+.wordmark__pen { color: var(--pen); }
+.wordmark:hover { color: inherit; }
+.byline { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
+.theme-toggle { margin-left: auto; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); font: 600 var(--fs-xs)/1 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+.theme-toggle:hover { border-color: var(--ink); }
+
+/* ---------- footer ---------- */
+.foot { position: relative; margin-top: 56px; padding-block: 20px 40px; border-top: 4px solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
+.foot::before { content: ''; position: absolute; left: 0; right: 0; top: 3px; border-top: 1px solid var(--ink); }
+.foot__row { display: grid; gap: 12px; }
+.foot p { max-width: 62ch; }
+@media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
+
+/* ---------- green-bar printout table ---------- */
+.printout { position: relative; border: var(--rule) solid var(--ink); background: var(--paper); }
+.printout__scroll { overflow-x: auto; }
+.gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
+.gb th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.gb td { padding: 7px 10px; vertical-align: top; }
+.gb tbody tr:nth-child(4n+1), .gb tbody tr:nth-child(4n+2) { background: var(--paper-2); }
+.gb .num { text-align: right; white-space: nowrap; }
+
+/* ---------- pills: a word on a mark; the word carries the meaning, the ink repeats it ---------- */
+.pill { display: inline-block; padding: 2px 7px 1px; border: 1.5px solid var(--neutral); border-radius: 2px; color: var(--ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.02em; white-space: nowrap; }
+.pill--pen { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
+.pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
+.pill--na { border-color: var(--line); background: var(--hatch-fill); }
+@media (forced-colors: active) { .pill { border-color: CanvasText; } }

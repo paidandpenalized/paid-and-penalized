@@ -9,4 +9,10 @@ emit:
 	node sites/hacrp/pipeline/emit.js
 	python3 -I pipeline/py/run.py emit
 
-.PHONY: test hooks emit
+build:
+	node pipeline/site/build.js
+
+serve:
+	node pipeline/site/serve.js
+
+.PHONY: test hooks emit build serve
