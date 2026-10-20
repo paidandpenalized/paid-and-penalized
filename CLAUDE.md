@@ -44,10 +44,11 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   (the last when a change touches external input or credentials).
 - **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
   (`tools/ci/change-gate.js` has the exact rule). The corrections log is append-only: a change that edits,
-  retypes or deletes a dated entry fails, so a typo in an entry is fixed by a new entry. Removing an entry is Dalton's call: do it as
-  a standalone change and expect the gate to fail on its PR and on the push to `main` after the merge. Deleting a
-  file does not remove its text from git history: private information needs a history rewrite and a force-push
-  (Dalton's OK; the gate then refuses the lost base, so check that range by hand). A new entry
+  retypes or deletes a dated entry fails, so a typo in an entry is fixed by a new entry. Removing an entry is Dalton's
+  call. A plain removal is a standalone change: the gate fails on its PR and on the push to `main` after the
+  merge, then passes again. Private information is different: deleting the file leaves the text in git history,
+  so it needs a history rewrite and force-push instead (Dalton's OK; the gate refuses the lost base, so check
+  that range by hand). A new entry
   `corrections/YYYY-MM-DD-<slug>.md` (a real calendar date; a regular `.md` file under 1 MiB with non-blank text
   that isn't a copy of any `.md` already under `corrections/`) covers the whole change. Otherwise each changed emitted file must be:
   - **new** (a first emission); or

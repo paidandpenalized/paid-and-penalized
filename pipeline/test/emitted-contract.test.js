@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { validate } from '../../engine/js/schema.js';
 import { hasMethodsVersion, latestMethodsVersion, METHODS_LOG } from '../methods-log.js';
 import { REPO_ROOT, loadSchemas, readJson, repoFiles } from '../files.js';
@@ -27,6 +28,16 @@ test('every file under data/emitted/ sits at <site>/fy<YYYY>/<name>.json', () =>
 });
 
 test('there is emitted data to check', () => assert.ok(files.length > 0));
+
+// A symlink (or submodule) under data/emitted/ would let readers see a file the change gate never checks.
+test('every tracked path under data/emitted/ is a regular file, not a symlink or submodule', () => {
+  const entries = execFileSync('git', ['ls-files', '-s', '-z', '--', 'data/emitted/'], { cwd: REPO_ROOT, encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => ({ mode: record.split(' ')[0], path: record.slice(record.indexOf('\t') + 1) }));
+  assert.ok(entries.length > 0);
+  assert.deepEqual(entries.filter(({ mode }) => mode !== '100644' && mode !== '100755'), []);
+});
 
 for (const { path, site, fy, data } of files) {
   test(`${path}: its fy field matches its folder`, () => assert.equal(data.fy, fy));

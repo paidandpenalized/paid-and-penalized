@@ -203,6 +203,12 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
   A deletion needs a corrections entry. Content that isn't an emitted file explains nothing and never crashes
   the gate. An unreachable base (force-push) fails closed. The rule (`changeGate`, `reasonFor`) is pure and
   unit-tested; the CLI is tested against a throwaway git repo.
+- **No links under `data/emitted/`** (final security review): a test requires every tracked path there to be a
+  regular file. A symlinked file or folder would point readers at content the gate never checks.
+- **Known Minor items left after the final review (clean of Critical/Important):** the misnamed-entry hint
+  also fires for non-entry notes such as `corrections/evidence/summary.md` and doesn't mention the lowercase
+  `.md` and slug rules; the `batchTexts` test doesn't check the stdin it sends or a near-limit buffer; it
+  doesn't check the newline after each blob (execFileSync throws on overflow, so truncation isn't expected).
 - **`source_manifest`** hashes only `{ id, sha256 }` per input, so metadata fixes don't change emitted data.
   This was HACRP `methods_version` 2; no numbers changed.
 - **Methods versions by year:** `pipeline/test/emitted-contract.test.js` checks every emitted file of every
