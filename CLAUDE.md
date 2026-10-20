@@ -23,9 +23,18 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   hook blocks them and a test fails on any tracked file that size.
 - `pipeline/`: build-time Node helpers (repo files, the data-contract envelope). File I/O and the clock live here
   and in `sites/*/pipeline/`, never in `engine/`.
+- `engine/py/pp_engine/` (pure: no file, network or clock access) and `pipeline/py/pp_pipeline/` (file I/O, CLIs):
+  stdlib-only Python, 3.9 or later; CI runs 3.12. Run everything through `python3 -I pipeline/py/run.py
+  <test|emit|extract-pos>`, which puts both packages on the path; nothing is installed. Python and JS write
+  identical JSON text (numbers as JavaScript prints them, keys in UTF-16 order); shared vectors in
+  `schemas/conformance/` pin it.
+- The hospital master, `data/emitted/hospital/fy<YYYY>/hospital_master.json`: one record per CCN in Care Compare,
+  the IPPS impact file or any program file, with per-program `inProgram` and a reason code (rules and order in
+  `pp_engine/master.py` and `docs/METHODS-LOG.md`). Sites join on it by CCN. Until Thirty Day Readmissions folds in,
+  a test requires its hospital names to equal the master's.
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
   validated by `engine/js/schema.js`, which throws on any keyword it doesn't support. `schemas/conformance/`
-  holds language-neutral test cases; the Python validator (with the hospital master) must pass the same set.
+  holds language-neutral test cases; `engine/py/pp_engine/schema.py`, the Python twin, passes the same set.
 - `data/emitted/<site>/fy<YYYY>/`: each site's emitted data, committed. It is the golden snapshot: a test
   rebuilds it from the pins and must match. Every file carries `schema_version`, `methods_version`,
   `source_manifest`, `sources`, `built_at`, `fy`.
@@ -70,6 +79,6 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   visibility, deploys, DNS, GitHub Releases. The repo stays private until the first public launch.
 
 ## Commands
-- `npm test` (or `make test`): all tests, including the golden check.
-- `make emit`: rebuild `data/emitted/` from the pins.
+- `make test`: all tests (`npm test`, then `python3 -I pipeline/py/run.py test`), including the golden checks.
+- `make emit`: rebuild `data/emitted/` from the pins (both emitters).
 - `make hooks`: point git at `.githooks/`.

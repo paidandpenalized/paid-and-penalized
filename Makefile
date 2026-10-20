@@ -7,5 +7,6 @@ hooks:
 
 emit:
 	node sites/hacrp/pipeline/emit.js
+	python3 -I pipeline/py/run.py emit
 
 .PHONY: test hooks emit
