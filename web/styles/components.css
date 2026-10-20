@@ -16,13 +16,16 @@
 .foot__row { display: grid; gap: 12px; }
 .foot p { max-width: 62ch; }
 @media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
+.foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
 
 /* ---------- green-bar printout table ---------- */
 .printout { position: relative; border: var(--rule) solid var(--ink); background: var(--paper); }
 .printout__scroll { overflow-x: auto; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
-.gb th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
-.gb td { padding: 7px 10px; vertical-align: top; }
+.gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.gb td, .gb tbody th { padding: 7px 10px; vertical-align: top; }
+/* Row headers read as text, in ink: left-aligned, in the body face, with the header row's rule under each. */
+.gb tbody th { text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); border-bottom: var(--rule) solid var(--ink); }
 .gb tbody tr:nth-child(4n+1), .gb tbody tr:nth-child(4n+2) { background: var(--paper-2); }
 .gb .num { text-align: right; white-space: nowrap; }
 
@@ -32,4 +35,3 @@
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
 .pill--na { border-color: var(--line); background: var(--hatch-fill); }
 @media (forced-colors: active) { .pill { border-color: CanvasText; } }
-.foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }

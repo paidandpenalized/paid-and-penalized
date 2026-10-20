@@ -1,0 +1,33 @@
+/* The HACRP site's own styles, bundled after the shared ones in web/styles/: the score hero, the measure table, the
+   estimate tag and the measure lists. Colors come only from web/styles/tokens.css. */
+
+/* The hospital's score and CMS's decision. The number is IBM Plex Mono, never under 48px. */
+.hero { display: flex; flex-wrap: wrap; align-items: end; gap: 16px 48px; padding-block: 16px; border-block: var(--rule) solid var(--ink); }
+.hero > * { min-width: 0; }
+.hero__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.hero__num { font: 700 clamp(3rem, 12vw, 4.5rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.hero__pill .pill { padding: 4px 10px 3px; font-size: var(--fs-md); }
+
+/* Measure table: right-aligned number columns, and the notes column taking the most room. */
+.gb--measures { table-layout: auto; }
+.gb--measures tbody th { width: 30%; }
+.gb--measures .num { width: 1%; }
+.gb .notes { font-family: var(--font-body); }
+.gb .notes p + p { margin-top: 4px; }
+
+/* Narrow screens: each measure row stacks into a block (name; CMS value · z-score; notes), so nothing scrolls
+   sideways. The header row is hidden visually; each number cell names itself. */
+@media (max-width: 640px) {
+  .gb--measures, .gb--measures tbody, .gb--measures tr { display: block; width: 100%; }
+  .gb--measures thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .gb--measures tr { display: flex; flex-wrap: wrap; gap: 2px 16px; padding: 10px 10px 12px; }
+  .gb--measures tbody th, .gb--measures td { display: block; padding: 0; }
+  .gb--measures tbody th, .gb--measures .notes { flex: 1 1 100%; width: auto; }
+  .gb--measures .num { width: auto; text-align: left; }
+  .gb--measures .num::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
+  .gb--measures .notes:empty { display: none; }
+}
+.tag { display: inline-block; padding: 0 6px; border: 1px dashed var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); text-decoration: none; }
+
+.measure-list { display: grid; gap: 8px; margin: 0; padding-left: 0; list-style: none; }
+.measure-list li { padding-left: 14px; border-left: 3px solid var(--line); }

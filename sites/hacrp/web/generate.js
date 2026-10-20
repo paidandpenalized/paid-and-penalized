@@ -62,6 +62,6 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 export const HACRP = {
   id: 'hacrp',
   entries: { 'hacrp-program': 'sites/hacrp/client/program.js' },
-  styles: [],
+  styles: ['sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };

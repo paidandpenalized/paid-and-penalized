@@ -4,8 +4,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { REPO_ROOT } from '../files.js';
-import { buildAssets, hash8 } from '../site/assets.js';
+import { REPO_ROOT, repoFiles } from '../files.js';
+import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { build } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
@@ -100,12 +100,18 @@ test('build refuses to empty a directory that is not dist/ or under the temp dir
   assert.ok(existsSync(REPO_ROOT + 'web/styles/tokens.css'));
 });
 
-test('no file under web/ but tokens.css holds a hex color, so a chart or component cannot add one', () => {
-  const files = readdirSync(REPO_ROOT + 'web', { recursive: true })
-    .map(String)
-    .filter((f) => /\.(css|js|mjs)$/.test(f) && f !== join('styles', 'tokens.css'));
-  assert.ok(files.length > 0);
-  for (const f of files) assert.doesNotMatch(readFileSync(REPO_ROOT + 'web/' + f, 'utf8'), /#[0-9a-fA-F]{3,8}\b/, f);
+test("no file under web/ but tokens.css, and no site's own styles or scripts, hold a hex color", () => {
+  const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true })]
+    .filter((f) => /\.(css|js|mjs)$/.test(f) && f !== 'web/styles/tokens.css')
+    .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f));
+  assert.ok(files.includes('sites/hacrp/web/styles.css'));
+  for (const f of files) assert.doesNotMatch(readFileSync(REPO_ROOT + f, 'utf8'), /#[0-9a-fA-F]{3,8}\b/, f);
+});
+
+test('the bundled stylesheet puts each site\'s styles after the shared ones', () => {
+  const css = stylesheet(['sites/hacrp/web/styles.css']);
+  assert.ok(css.indexOf('.home__mark') < css.indexOf('.hero {'));
+  assert.ok(!stylesheet().includes('.hero {'));
 });
 
 test('tokens.css keeps the dark block in the shape the build copies, and every token it sets in light it sets in dark', () => {

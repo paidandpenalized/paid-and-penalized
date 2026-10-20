@@ -17,7 +17,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `engine/js/`: shared plain ES modules. Top-level files (`csv.js`, `stats.js`) are program-neutral.
   Program formulas live in `engine/js/<program>/` as pure functions (data in, result out; no `fs`, network, DOM
   or clock) so the page build and the browser share one copy.
-- `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page.
+- `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page. A site's
+  own CSS is `sites/<program>/web/styles.css` (bundled after `web/styles/`); its browser scripts are in `client/`.
 - `web/`: what every page shares: `site.js` (name, origin, each site's path, names and release state), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
   `styles/` (`tokens.css` is the only file under `web/` that may hold a color value), self-hosted fonts with their
