@@ -1,0 +1,13 @@
+{
+  "schema": "common.schema.json",
+  "def": "ccn",
+  "cases": [
+    { "name": "six digits", "valid": true, "data": "010001" },
+    { "name": "letter in a valid position", "valid": true, "data": "21003F" },
+    { "name": "a number, not text", "valid": false, "data": 10001 },
+    { "name": "five characters", "valid": false, "data": "01000" },
+    { "name": "seven characters", "valid": false, "data": "0100011" },
+    { "name": "lower-case letter", "valid": false, "data": "01000a" },
+    { "name": "null", "valid": false, "data": null }
+  ]
+}

@@ -1,0 +1,108 @@
+// The JSON Schema subset validator, and every shared conformance case in schemas/conformance/.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { validate } from '../schema.js';
+import { SCHEMAS_DIR, loadSchemas } from './fixtures.js';
+
+const schemas = loadSchemas();
+const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+
+const ok = (schema, data, opts) => assert.deepEqual(validate(schema, data, opts), []);
+const bad = (schema, data, pattern, opts) => {
+  const errors = validate(schema, data, opts);
+  assert.ok(errors.length > 0, `expected errors for ${JSON.stringify(data)}`);
+  if (pattern) assert.ok(errors.some((e) => pattern.test(e)), errors.join('\n'));
+};
+
+test('type: each JSON type, arrays and null are not objects, integer means a whole number', () => {
+  ok({ type: 'object' }, {});
+  bad({ type: 'object' }, []);
+  bad({ type: 'object' }, null);
+  ok({ type: 'array' }, []);
+  ok({ type: 'string' }, '');
+  ok({ type: 'number' }, 1.5);
+  ok({ type: 'integer' }, 2);
+  bad({ type: 'integer' }, 2.5);
+  ok({ type: 'boolean' }, false);
+  ok({ type: 'null' }, null);
+  ok({ type: ['number', 'null'] }, null);
+  bad({ type: ['number', 'null'] }, '1');
+});
+
+test('properties, required and additionalProperties', () => {
+  const s = { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: false };
+  ok(s, { a: 'x' });
+  bad(s, {}, /^: missing required property "a"/);
+  bad(s, { a: 'x', b: 1 }, /^: unexpected property "b"/);
+  bad(s, { a: 1 }, /^\/a: /);
+  ok({ type: 'object', additionalProperties: { type: 'integer' } }, { x: 1, y: 2 });
+  bad({ type: 'object', additionalProperties: { type: 'integer' } }, { x: 1.5 }, /^\/x: /);
+});
+
+test('items, minItems, enum, const, pattern, minimum, maximum, minLength', () => {
+  ok({ type: 'array', items: { type: 'integer' }, minItems: 1 }, [1, 2]);
+  bad({ type: 'array', items: { type: 'integer' } }, [1, 'x'], /^\/1: /);
+  bad({ type: 'array', minItems: 1 }, []);
+  ok({ enum: ['Yes', 'No'] }, 'No');
+  bad({ enum: ['Yes', 'No'] }, 'Maybe');
+  ok({ const: 1 }, 1);
+  bad({ const: 1 }, 2);
+  ok({ type: 'string', pattern: '^a+$' }, 'aaa');
+  bad({ type: 'string', pattern: '^a+$' }, 'ab');
+  ok({ type: 'number', minimum: 0, maximum: 1 }, 1);
+  bad({ type: 'number', minimum: 0 }, -0.1);
+  bad({ type: 'number', maximum: 1 }, 1.1);
+  bad({ type: 'string', minLength: 1 }, '');
+});
+
+test('constraints for one type are skipped for another (a null passes a string pattern when null is allowed)', () => {
+  ok({ type: ['string', 'null'], pattern: '^a$', minLength: 1 }, null);
+  ok({ type: ['number', 'null'], minimum: 0 }, null);
+});
+
+test('$ref: local $defs and another file by $id', () => {
+  const local = { $defs: { n: { type: 'integer' } }, type: 'object', properties: { x: { $ref: '#/$defs/n' } } };
+  ok(local, { x: 1 });
+  bad(local, { x: 'a' }, /^\/x: /);
+  const s = { type: 'array', items: { $ref: 'common.schema.json#/$defs/ccn' } };
+  ok(s, ['010001'], { schemas });
+  bad(s, ['010001', 10001], /^\/1: /, { schemas });
+  assert.throws(() => validate({ $ref: 'missing.schema.json#/$defs/x' }, 1, { schemas }), RangeError);
+  assert.throws(() => validate({ $ref: '#/$defs/nope' }, 1), RangeError);
+});
+
+test('error pointers name the failing path', () => {
+  const s = { type: 'object', properties: { hospitals: { type: 'array', items: { type: 'object', properties: { ccn: { type: 'string' } } } } } };
+  const data = { hospitals: [{ ccn: 'a' }, { ccn: 'b' }, { ccn: 'c' }, { ccn: 4 }] };
+  bad(s, data, /^\/hospitals\/3\/ccn: /);
+});
+
+test('unsupported keyword throws, so a schema can never look stricter than it is', () => {
+  for (const kw of ['format', 'oneOf', 'anyOf', 'allOf', 'not', 'patternProperties', 'if', 'exclusiveMinimum', 'uniqueItems']) {
+    assert.throws(() => validate({ type: 'string', [kw]: {} }, 'x'), RangeError, kw);
+  }
+  // Nested schemas are checked even when the data never reaches them.
+  assert.throws(() => validate({ type: 'object', properties: { a: { format: 'date' } } }, {}), RangeError);
+  assert.throws(() => validate({ $defs: { a: { oneOf: [] } } }, 1), RangeError);
+});
+
+test('every schema file uses only supported keywords and has a matching $id', () => {
+  for (const [file, schema] of Object.entries(schemas)) {
+    assert.equal(schema.$id, file);
+    assert.doesNotThrow(() => validate(schema, null, { schemas }), file);
+  }
+});
+
+const conformanceDir = SCHEMAS_DIR + 'conformance/';
+for (const file of readdirSync(conformanceDir).filter((f) => f.endsWith('.cases.json'))) {
+  const suite = readJson(conformanceDir + file);
+  const root = schemas[suite.schema];
+  const target = suite.def ? { $ref: `${suite.schema}#/$defs/${suite.def}` } : root;
+  for (const c of suite.cases) {
+    test(`conformance ${file}: ${c.name} is ${c.valid ? 'valid' : 'invalid'}`, () => {
+      assert.ok(root, `no schema ${suite.schema}`);
+      assert.equal(validate(target, c.data, { schemas }).length === 0, c.valid);
+    });
+  }
+}
