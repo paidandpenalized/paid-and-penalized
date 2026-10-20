@@ -66,8 +66,9 @@ def rows(text, delimiter):
 
 def table(rows_, anchor, columns, label):
     """Records (dicts keyed by `columns` keys, stripped strings) from the table whose header row starts with `anchor`.
-    `columns` maps output key -> header text, matched case- and space-insensitively. `label` names the file in
-    errors."""
+    `columns` maps output key -> header text, matched case- and space-insensitively; a header text starting with '*'
+    matches the first header that ends with the rest (year-stamped names like 'FY 2025 CBSA'). `label` names the file
+    in errors."""
     target = _norm(anchor)
     it = iter(rows_)
     for row in it:
@@ -75,9 +76,11 @@ def table(rows_, anchor, columns, label):
             header = [_norm(h) for h in row]
             idx = {}
             for key, name in columns.items():
-                if _norm(name) not in header:
+                n = _norm(name)
+                hits = [j for j, h in enumerate(header) if (h.endswith(n[1:]) if n.startswith("*") else h == n)]
+                if not hits:
                     raise SchemaError(f"{label}: expected column {name!r} not found")
-                idx[key] = header.index(_norm(name))
+                idx[key] = hits[0]
             return [{k: (r[j] if j < len(r) else "").strip() for k, j in idx.items()} for r in it if r and r[0].strip()]
     raise SchemaError(f"{label}: header row starting with {anchor!r} not found")
 
@@ -102,13 +105,14 @@ def index_by_ccn(records, build, label):
 
 
 def read_hgi(text):
-    """Care Compare Hospital General Information CSV -> {ccn: {name, street, city, state, zip, type, ownership}}."""
+    """Care Compare Hospital General Information CSV -> {ccn: {name, street, city, state, zip, county, type,
+    ownership}}."""
     columns = {"ccn": "Facility ID", "name": "Facility Name", "street": "Address", "city": "City/Town", "state": "State",
-               "zip": "ZIP Code", "type": "Hospital Type", "ownership": "Hospital Ownership"}
+               "zip": "ZIP Code", "county": "County/Parish", "type": "Hospital Type", "ownership": "Hospital Ownership"}
 
     def build(r):
         return {"name": r["name"], "street": squash(r["street"]), "city": r["city"], "state": r["state"],
-                "zip": zip5(r["zip"]), "type": r["type"], "ownership": r["ownership"]}
+                "zip": zip5(r["zip"]), "county": r["county"], "type": r["type"], "ownership": r["ownership"]}
     return index_by_ccn(table(rows(text, ","), "Facility ID", columns, "HGI"), build, "HGI")
 
 
@@ -122,13 +126,16 @@ def impact_fy(text):
 
 
 def read_impact(text):
-    """IPPS impact file (tab-delimited) -> {ccn: {name, urgeo, irb, beds, own, ptype, mdh}}."""
+    """IPPS impact file (tab-delimited) -> {ccn: {name, urgeo, irb, beds, own, ptype, mdh, fips, cbsa_geo}}. `fips` is
+    the 5-digit county code (None when blank); `cbsa_geo` the geographic labor market area as written."""
     columns = {"ccn": "Provider Number", "name": "Name", "urgeo": "URGEO", "irb": "Resident to Bed Ratio", "beds": "Beds",
-               "own": "Ownership Control Type", "ptype": "Provider Type", "mdh": "MDH Flag"}
+               "own": "Ownership Control Type", "ptype": "Provider Type", "mdh": "MDH Flag",
+               "fips": "FIPS County Code", "cbsa_geo": "Geographic Labor Market Area"}
 
     def build(r):
         return {"name": r["name"], "urgeo": r["urgeo"], "irb": num(r["irb"]) or 0.0, "beds": to_int(r["beds"]),
-                "own": r["own"] or None, "ptype": to_int(r["ptype"]), "mdh": r["mdh"].upper() == "Y"}
+                "own": r["own"] or None, "ptype": to_int(r["ptype"]), "mdh": r["mdh"].upper() == "Y",
+                "fips": r["fips"].zfill(5) if r["fips"] else None, "cbsa_geo": r["cbsa_geo"]}
     label = "impact file"
     return index_by_ccn(table(rows(text, "\t"), "Provider Number", columns, label), build, label)
 
@@ -149,3 +156,34 @@ def read_pos(text):
                 "zip": zip5(r["zip"]), "beds": to_int(r["beds"]) or None, "term": r["term"],
                 "termDate": f"{d[:4]}-{d[4:6]}-{d[6:]}" if d else None}
     return index_by_ccn(table(rows(text, ","), "PRVDR_NUM", columns, "POS"), build, "POS")
+
+
+def read_zcta(text):
+    """Census ZCTA gazetteer (tab-delimited) -> {zip5: (lat, lon)}: each ZIP code tabulation area's internal point."""
+    recs = table(rows(text, "\t"), "GEOID", {"zip": "GEOID", "lat": "INTPTLAT", "lon": "INTPTLONG"}, "ZCTA gazetteer")
+    return {r["zip"]: (float(r["lat"]), float(r["lon"])) for r in recs}
+
+
+def read_cbsa_names(text):
+    """CMS county-to-CBSA crosswalk (tab-delimited) -> {cbsa code: CBSA name}; rural codes without a name are left out."""
+    recs = table(rows(text, "\t"), "FIPS County Code", {"code": "*cbsa", "name": "*cbsa name"}, "CBSA crosswalk")
+    return {r["code"]: r["name"].strip('"') for r in recs if r["code"] and r["name"]}
+
+
+_COORD = re.compile(r"-?\d{1,3}(\.\d+)?", re.ASCII)
+
+
+def read_points(text):
+    """A street-address points CSV (ccn,lat,lon,match,source) -> {ccn: (lat, lon)}. A malformed CCN or coordinate, a
+    coordinate out of range, or a repeated CCN raises SchemaError."""
+    out = {}
+    for r in table(rows(text, ","), "ccn", {"ccn": "ccn", "lat": "lat", "lon": "lon"}, "points"):
+        if not re.fullmatch(r"[0-9A-Z]{6}", r["ccn"], re.ASCII) or r["ccn"] in out:
+            raise SchemaError(f"points: malformed or repeated CCN {r['ccn']!r}")
+        if not (_COORD.fullmatch(r["lat"]) and _COORD.fullmatch(r["lon"])):
+            raise SchemaError(f"points: malformed coordinate for {r['ccn']}")
+        lat, lon = float(r["lat"]), float(r["lon"])
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise SchemaError(f"points: coordinate out of range for {r['ccn']}")
+        out[r["ccn"]] = (lat, lon)
+    return out
