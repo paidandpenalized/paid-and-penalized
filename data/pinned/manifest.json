@@ -21,5 +21,43 @@
     "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
     "sourceCommit": "80f3659d1f6c850443bbc7d939f5f1dc9cd8153b",
     "retrieved": "2026-10-20"
+  },
+  {
+    "id": "hgi-2026-07",
+    "title": "Hospital General Information (Care Compare), modified 2026-07-22",
+    "path": "hgi-2026-07/Hospital_General_Information.csv",
+    "bytes": 1450767,
+    "sha256": "f874f09fef895a1ccf5bb7392dcbb2be05c9860339261b093fe00f0c1b013480",
+    "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/893c372430d9d71a1c52737d01239d47_1785189955/Hospital_General_Information.csv",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+    "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/Hospital_General_Information.csv",
+    "pdcModified": "2026-07-22",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "id": "ipps-impact-fy2027",
+    "title": "FY2027 IPPS final rule and correction notice impact file",
+    "path": "ipps-impact-fy2027/fy2027-ipps-fr-impact-file.zip",
+    "bytes": 2961688,
+    "sha256": "6e51b1015b6c5c9320a3cb3a086450787f8fef3723d5cc382f6aa64b2c716f17",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy2027-ipps-fr-impact-file.zip",
+    "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/fy2027-ipps-fr-impact-file.zip",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "id": "pos-q2-2026",
+    "title": "Provider of Services file, Q2 2026: hospital rows and the columns the hospital master reads",
+    "path": "pos-q2-2026/pos_hospitals.csv",
+    "bytes": 1212911,
+    "sha256": "809a7faa5b24ec5fca8184837d0f65d3a10c73689475bbb9133286ce96039970",
+    "derivedFrom": {
+      "file": "Hospital_and_other.DATA.Q2_2026.csv",
+      "bytes": 30195693,
+      "sha256": "bcfb9c680f02fdc05a4c82b90e434ad96bb52ea0a1f04eb424bb3dad5a9ffe3d",
+      "downloadUrl": "https://data.cms.gov/sites/default/files/2026-07/7780b4e3-4c4b-4811-8884-65ca23b7a4e8/Hospital_and_other.DATA.Q2_2026.csv",
+      "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/Hospital_and_other.DATA.Q2_2026.csv"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/pos_extract.py",
+    "retrieved": "2026-10-20"
   }
 ]
