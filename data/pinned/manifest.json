@@ -12,6 +12,18 @@
     "retrieved": "2026-10-20"
   },
   {
+    "id": "y9us-9xdf",
+    "title": "Footnote Crosswalk (Provider Data Catalog)",
+    "path": "pdc-footnotes/Footnote_Crosswalk.csv",
+    "bytes": 3456,
+    "sha256": "5214e1468fb04c5cdeac8920f2c446cccaa65e2f6f929424cd228042a52d963e",
+    "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/f29bb7c812e242f6edfef0a4b7d0eaca_1760630713/Footnote_Crosswalk.csv",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/y9us-9xdf",
+    "pdcModified": "2025-09-18",
+    "pdcReleased": "2026-08-13",
+    "retrieved": "2026-10-20"
+  },
+  {
     "id": "tdr-hrrp-fy2027",
     "title": "Thirty Day Readmissions published data (HRRP FY2027)",
     "path": "tdr/hrrp.json",
