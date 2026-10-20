@@ -1,5 +1,8 @@
 // Synthetic HACRP rows for unit tests: every CSV column present, values made up.
+import { toHospital } from '../../hacrp/hospital.js';
 import { MEASURES } from '../../hacrp/measures.js';
+import { zFromValue } from '../../hacrp/params.js';
+import { classify, totalFromZ } from '../../hacrp/score.js';
 
 export function syntheticRow(overrides = {}) {
   const row = {
@@ -23,4 +26,29 @@ export function syntheticRow(overrides = {}) {
     row[m.zFootnote] = '';
   }
   return { ...row, ...overrides };
+}
+
+// A synthetic Hospital that agrees with a fitted model, for what-if tests: each z is the model's z of the value at
+// CMS's 4 decimals (CMS's worst z, zMax, for a measure marked 'assigned'), and the total is their mean. A measure
+// left out of values is unscored; with none scored, the total is N/A. The decision defaults to the model's line.
+export function modelHospital(model, ccn, { values, decision, state = 'AL' }) {
+  const r4 = (x) => Math.round(x * 1e4) / 1e4;
+  const overrides = { 'Facility ID': ccn, State: state };
+  const zs = [];
+  for (const m of MEASURES) {
+    const p = model.params[m.id];
+    const v = values[m.id];
+    let z = null;
+    if (v === 'assigned') z = p.zMax;
+    else if (v !== undefined) z = r4(zFromValue(v, p));
+    if (z !== null) zs.push(z);
+    overrides[m.value] = typeof v === 'number' ? v.toFixed(p.decimals) : 'N/A';
+    overrides[m.valueFootnote] = v === 'assigned' ? '18' : v === undefined ? '13' : '';
+    overrides[m.z] = z === null ? 'N/A' : z.toFixed(4);
+    overrides[m.zFootnote] = v === 'assigned' ? '18' : v === undefined ? '5' : '';
+  }
+  const total = zs.length ? r4(totalFromZ(zs)) : null;
+  overrides['Total HAC Score'] = total === null ? 'N/A' : total.toFixed(4);
+  overrides['Payment Reduction'] = decision ?? classify(total, model.boundary);
+  return toHospital(syntheticRow(overrides));
 }
