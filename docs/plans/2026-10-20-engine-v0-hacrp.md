@@ -210,5 +210,6 @@
 - **The solver searches the what-if itself** (bisection over display units). Every answer reads "No" and one display unit higher does not. "Unlimited" means a value past the cap still reads "No"; "not possible" means 0 doesn't. "No-cushion" means the current value is already the highest that reads "No".
 - **Flag direction:** a score that moves away from the line (a "No" hospital improving, a "Yes" hospital getting worse) keeps CMS's decision. Only a move toward the line is re-judged with the band.
 - **Parameter bounds:** zMin and zMax come from hospitals with a published value. A test checks the assigned z-scores against them.
+- **Fit error:** the fitted line's worst miss against CMS's published z over every row with a value, capped and floored rows included. Those rows read the line at CMS's bound, which is where a move off a bound starts. FY2026: ≤ 0.000052 for the SIRs and 0.0004 for PSI-90.
 - **A1(a):** asserted for every scored hospital, which is stricter than the ≥ 99% in the spec, because FY2026 reaches 100%.
 - **Guards added:** the CSV parser rejects stray quotes and duplicate headers; numbers must be plain decimals; the fit, the cutoff boundary and the estimate tag throw on degenerate input instead of returning NaN or Infinity.

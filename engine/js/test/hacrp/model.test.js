@@ -5,6 +5,7 @@ import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { toHospital } from '../../hacrp/hospital.js';
 import { fitMeasureParams, estimateTagged } from '../../hacrp/params.js';
 import { buildModel } from '../../hacrp/model.js';
+import { whatIf } from '../../hacrp/whatif.js';
 import { syntheticRow } from './synthetic.js';
 
 test('buildModel returns params for all six measures and the cutoff boundary', () => {
@@ -37,14 +38,25 @@ test('the cap comes from hospitals with a published value, not from assigned z-s
   assert.ok(Math.abs(p.cap - 0.9) < 1e-12);
 });
 
-test('fit error is measured on uncapped rows, so a cap that falls between two observations does not inflate it', () => {
+test('fit error includes the line\'s miss at CMS\'s cap, where a move off the cap starts', () => {
   // z = (v - 0.5) / 0.25 exactly between the bounds; CMS's cap (1.495) falls between the observed 1.5 and 1.6.
   const rows = ['0.000', '0.300', '0.500', '0.700', '0.900', '1.100', '1.300'].map((v, i) =>
     syntheticRow({ 'Facility ID': `00010${i}`, 'CDI SIR': v, 'CDI W Z Score': ((Number(v) - 0.5) / 0.25).toFixed(4) }));
   for (const [i, v] of ['1.500', '1.600'].entries()) {
     rows.push(syntheticRow({ 'Facility ID': `00020${i}`, 'CDI SIR': v, 'CDI W Z Score': '3.9800' }));
   }
-  const p = fitMeasureParams(rows.map(toHospital), 'CDI');
+  const hs = rows.map(toHospital);
+  const p = fitMeasureParams(hs, 'CDI');
   assert.equal(p.cap, 1.5);
-  assert.ok(p.fitError < 1e-9, `fitError ${p.fitError}`);
+  assert.ok(Math.abs(p.fitError - 0.02) < 1e-9, `fitError ${p.fitError}`); // the line gives 4.00 at 1.5; CMS gave 3.98
+
+  // A capped hospital moving to 1.3: the line says z 3.18, CMS's own map would say 3.20, past the line. The band
+  // must cover that, so the flag reads too-close, not No.
+  const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }]));
+  const capped = { ...hs.find((h) => h.measures.CDI.value === 1.6) };
+  capped.measures = Object.fromEntries(MEASURE_IDS.map((id) => [id, id === 'CDI' ? capped.measures.CDI : { value: null, z: null }]));
+  capped.total = 3.98;
+  capped.paymentReduction = 'Yes';
+  const r = whatIf(capped, { params, boundary: { highestNo: 3.19, lowestYes: 3.21 } }, { CDI: 1.3 });
+  assert.equal(r.after.flag, 'too-close');
 });

@@ -94,8 +94,10 @@ test('a hypothetical score between highestNo and lowestYes reads too-close', () 
   const zFor = ({ h, id }) => baselineZ(h.measures[id], model.params[id]) + (target - h.total) * scoredMeasures(h).length;
   const valueFor = (pair) => model.params[pair.id].mean + model.params[pair.id].sd * zFor(pair);
   const found = submittedPairs(hospitals, (h) => h.paymentReduction === 'Yes').find((pair) => {
+    const p = model.params[pair.id];
     const v = valueFor(pair);
-    return v > model.params[pair.id].floor && v < model.params[pair.id].cap;
+    const applied = pair.h.measures[pair.id].z + (target - pair.h.total) * scoredMeasures(pair.h).length;
+    return v > p.floor && v < p.cap && applied > p.zMin && applied < p.zMax;
   });
   const { h, id } = found;
   const value = valueFor(found);
@@ -168,10 +170,9 @@ test('no ties at the bounds: no row below CMS\'s max z sits at or past the cap, 
 });
 
 test('entering the value CMS capped at gives exactly CMS\'s maximum z', () => {
-  const cmsCap = Object.fromEntries(MEASURE_IDS.map((id) => [id, Math.min(...submittedPairs(hospitals).filter((x) => x.id === id && x.h.measures[id].z === model.params[id].zMax).map((x) => x.h.measures[id].value))]));
   for (const { h, id } of submittedPairs(hospitals)) {
     const p = model.params[id];
-    const r = whatIf(h, model, { [id]: cmsCap[id] }).measures[id];
+    const r = whatIf(h, model, { [id]: p.cap }).measures[id];
     assert.equal(r.afterZ, p.zMax, `${h.ccn} ${id}`);
     assert.equal(r.atCap, true, `${h.ccn} ${id}`);
   }

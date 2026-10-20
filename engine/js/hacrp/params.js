@@ -65,8 +65,9 @@ export function fitMeasureParams(hospitals, id) {
     median: median(pairs.map(({ m }) => m.value)),
     decimals: Math.max(...pairs.map(({ m }) => decimalsOf(m.valueText))),
   };
-  // Measured where the fitted line is used: capped and floored rows are mapped exactly by hypotheticalZ.
-  p.fitError = Math.max(...inside.map(({ m }) => Math.abs(zFromValue(m.value, p) - m.z)));
+  // The line's worst miss over every row, including at CMS's bounds (capped rows read the line at the cap), since
+  // a move off a bound starts from the line there.
+  p.fitError = Math.max(...pairs.map(({ m }) => Math.abs(zFromValue(m.value, p) - m.z)));
   return p;
 }
 
