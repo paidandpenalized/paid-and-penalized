@@ -28,16 +28,16 @@ export function solveMeasure(hospital, model, id) {
       if (reads(mid)) lo = mid;
       else hi = mid;
     }
-    return lo / scale;
+    return lo;
   };
 
   if (hospital.paymentReduction === 'Yes') {
     if (!reads(0)) return result('needed', id);
-    return result('needed', id, { possible: true, value: lastNo(0, current) });
+    return result('needed', id, { possible: true, value: lastNo(0, current) / scale });
   }
 
   const beyond = Math.ceil(Math.max(p.cap, m.value) * scale) + 1;
   if (reads(beyond)) return result('cushion', id, { possible: true, unlimited: true });
-  const value = lastNo(current, beyond);
-  return value * scale === current ? result('cushion', id, { value, note: 'no-cushion' }) : result('cushion', id, { possible: true, value });
+  const k = lastNo(current, beyond);
+  return k === current ? result('cushion', id, { value: m.value, note: 'no-cushion' }) : result('cushion', id, { possible: true, value: k / scale });
 }

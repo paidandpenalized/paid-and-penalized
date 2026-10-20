@@ -73,9 +73,17 @@ test('assigned measures, Maryland and unscored rows get notes, not answers; unkn
 });
 
 test('cushion: a No hospital whose measure is already at or above the cap has unlimited room on it', () => {
-  const pairs = submittedPairs('No').filter(({ h, id }) => h.measures[id].value >= model.params[id].cap);
+  const pairs = submittedPairs('No').filter(({ h, id }) => h.measures[id].value >= model.params[id].cap || h.measures[id].z === model.params[id].zMax);
   assert.ok(pairs.length > 0);
   for (const { h, id } of pairs) assert.equal(solveMeasure(h, model, id).unlimited, true, `${h.ccn} ${id}`);
+});
+
+test('"no-cushion" is detected exactly even when the current value does not survive a float round-trip (1.001)', () => {
+  const p = { mean: 0, sd: 1, floor: 0, cap: 3, zMin: 0, zMax: 3, decimals: 3, fitError: 0 };
+  const m = { params: Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }])), boundary: { highestNo: 1.001, lowestYes: 1.5 } };
+  const measures = Object.fromEntries(MEASURE_IDS.map((id, k) => [id, k === 0 ? { value: 1.001, z: 1.001 } : { value: null, z: null }]));
+  const h = { ccn: 'S1', total: 1.001, paymentReduction: 'No', measures };
+  assert.deepEqual(solveMeasure(h, m, MEASURE_IDS[0]), { kind: 'cushion', id: MEASURE_IDS[0], possible: false, value: 1.001, unlimited: false, note: 'no-cushion' });
 });
 
 test('"no-cushion" means the current value is already the highest that reads No', () => {

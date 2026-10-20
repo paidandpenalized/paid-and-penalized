@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
-import { baselineZ, valueFromZ, zFromValue } from '../../hacrp/params.js';
+import { baselineZ, zFromValue } from '../../hacrp/params.js';
 import { whatIf } from '../../hacrp/whatif.js';
 import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './helpers.js';
 
@@ -97,7 +97,7 @@ test('a hypothetical score between highestNo and lowestYes reads too-close', () 
     return z > model.params[pair.id].zMin && z < model.params[pair.id].zMax;
   });
   const { h, id } = found;
-  const value = valueFromZ(zFor(found), model.params[id]);
+  const value = model.params[id].mean + model.params[id].sd * zFor(found);
   const r = whatIf(h, model, { [id]: value });
   assert.ok(Math.abs(r.after.score - target) < 1e-9);
   assert.equal(r.after.flag, 'too-close');
@@ -157,9 +157,26 @@ test('mixed changes: a net move away from the line keeps CMS\'s flag; every move
   assert.ok(Math.abs(whatIf(h, model, { [b]: 0 }).band - pb.fitError / 6) < 1e-15);
 });
 
-test('PSI-90 just above its fitted floor takes the change-only step, not the floor', () => {
+test('rows CMS published at the cap read atCap with no change', () => {
+  const capped = submittedPairs(hospitals).filter(({ h, id }) => h.measures[id].z === model.params[id].zMax);
+  assert.ok(capped.length > 100);
+  for (const { h, id } of capped) assert.equal(whatIf(h, model).measures[id].atCap, true, `${h.ccn} ${id}`);
+});
+
+test('entering the value CMS capped at gives exactly CMS\'s maximum z', () => {
+  for (const { h, id } of submittedPairs(hospitals)) {
+    const p = model.params[id];
+    const capValues = hospitals.map((x) => x.measures[id]).filter((m) => m.value !== null && m.z === p.zMax).map((m) => m.value);
+    const cmsCap = Math.min(...capValues);
+    const r = whatIf(h, model, { [id]: cmsCap }).measures[id];
+    assert.equal(r.afterZ, p.zMax, `${h.ccn} ${id}`);
+    assert.equal(r.atCap, true, `${h.ccn} ${id}`);
+  }
+});
+
+test('PSI-90 one display unit above its floor takes the change-only step, not the floor', () => {
   const p = model.params.PSI90;
-  const v = Math.ceil(p.floor * 1e4) / 1e4; // the first 4-decimal value above the floor
-  const h = scored.find((x) => x.measures.PSI90.value !== null && x.measures.PSI90.value > v + 0.01);
+  const v = p.floor + 10 ** -p.decimals;
+  const h = scored.find((x) => x.measures.PSI90.value > v + 0.01 && x.measures.PSI90.z >= baselineZ(x.measures.PSI90, p));
   assert.ok(whatIf(h, model, { PSI90: v }).measures.PSI90.afterZ > p.zMin);
 });

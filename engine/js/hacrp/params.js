@@ -23,11 +23,6 @@ export function zFromValue(value, p) {
   return (clamp(value, p.floor, p.cap) - p.mean) / p.sd;
 }
 
-// The value whose z is z; the inverse of zFromValue between the caps.
-export function valueFromZ(z, p) {
-  return p.mean + p.sd * z;
-}
-
 // Where a change to a measure starts from: the fitted z of the published value, or, for a measure CMS assigned
 // because it wasn't submitted, CMS's assigned z.
 export function baselineZ(measure, p) {
@@ -35,14 +30,13 @@ export function baselineZ(measure, p) {
 }
 
 // The z a measure would have at a hypothetical value. At or past the cap, CMS's worst z; at or below the floor
-// (for an SIR, 0), its best. In between, the change-only step from the published z, kept in CMS's z range.
+// (for an SIR, 0), its best. The cap and floor are the values CMS published at its maximum and minimum z. In between, the change-only step from the published z, kept in CMS's z range.
 // A published value already past a bound stays anchored at its published z while the new value is past it too,
 // so the mapping never moves against the direction of a change.
 export function hypotheticalZ(measure, p, value) {
-  const floor = Math.max(p.floor, 0);
   const current = measure.value;
   if (value >= p.cap) return current !== null && current >= p.cap ? measure.z : p.zMax;
-  if (value <= floor) return current !== null && current <= floor ? measure.z : p.zMin;
+  if (value <= p.floor) return current !== null && current <= p.floor ? measure.z : p.zMin;
   return clamp(measure.z + zFromValue(value, p) - baselineZ(measure, p), p.zMin, p.zMax);
 }
 
@@ -62,8 +56,9 @@ export function fitMeasureParams(hospitals, id) {
     n: pairs.length,
     mean: intercept,
     sd,
-    floor: intercept + sd * zMin,
-    cap: intercept + sd * zMax,
+    // CMS's own bounds, as published: the highest value scored at the minimum z and the lowest at the maximum.
+    floor: Math.max(...pairs.filter(({ m }) => m.z === zMin).map(({ m }) => m.value)),
+    cap: Math.min(...pairs.filter(({ m }) => m.z === zMax).map(({ m }) => m.value)),
     zMin,
     zMax,
     median: median(pairs.map(({ m }) => m.value)),
