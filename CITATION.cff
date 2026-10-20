@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software or its derived data, please cite it as below."
+title: "Paid & Penalized"
+authors:
+  - family-names: Haslam
+    given-names: Dalton
+url: "https://paidandpenalized.org"
+repository-code: "https://github.com/paidandpenalized/paid-and-penalized"
+license: MIT

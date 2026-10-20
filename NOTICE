@@ -1,0 +1,16 @@
+Paid & Penalized
+Copyright (c) 2026 Dalton Haslam
+
+Code is licensed under MIT (LICENSE). Prose, charts and derived data are licensed under CC BY 4.0
+(LICENSE-CONTENT).
+
+Not covered by either license:
+- Source data from the Centers for Medicare & Medicaid Services (CMS) and other U.S. federal agencies.
+  These are U.S. government works in the public domain; files in data/pinned/ are unmodified copies.
+- The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
+- Third-party fonts, which carry their own licenses next to the font files.
+
+Never included in this repository: CPT codes' descriptors or other material licensed by the American Medical
+Association, copyrighted third-party guides, or proprietary measure specifications.
+
+This project is not affiliated with or endorsed by CMS.
