@@ -49,7 +49,24 @@ export function readableMarkdown(lsTree) {
       const [mode, , blob, size] = record.slice(0, record.indexOf('\t')).split(/\s+/);
       return { mode, blob, size: Number(size), path: record.slice(record.indexOf('\t') + 1) };
     })
-    .filter(({ mode, size, path }) => (mode === '100644' || mode === '100755') && path.endsWith('.md') && size < MAX_ENTRY);
+    .filter(({ mode, size, path }) => (mode === '100644' || mode === '100755') && /\.md$/i.test(path) && size < MAX_ENTRY);
+}
+
+// The text of each record's blob, from one `git cat-file --batch` ("<id> blob <size>\n<bytes>\n" per blob). Each
+// header must name the requested blob and its size, or this throws: a missing object never reads as text.
+export function batchTexts(exec, records) {
+  if (records.length === 0) return [];
+  const maxBuffer = records.reduce((sum, r) => sum + r.size + r.blob.length + 32, 1024);
+  const out = exec('git', ['cat-file', '--batch'], { input: records.map((r) => r.blob).join('\n') + '\n', maxBuffer });
+  let at = 0;
+  return records.map(({ blob, size }) => {
+    const end = out.indexOf(0x0a, at);
+    const header = out.subarray(at, end).toString('utf8');
+    if (header !== `${blob} blob ${size}`) throw new Error(`git cat-file: expected "${blob} blob ${size}", got "${header}"`);
+    const text = out.subarray(end + 1, end + 1 + size).toString('utf8');
+    at = end + 1 + size + 1;
+    return text;
+  });
 }
 
 const plural = (paths, one, many) => `${paths.join(', ')} ${paths.length === 1 ? one : many}`;
@@ -70,10 +87,10 @@ export function changeGate({ changed, explained = new Set(), freshEntries = new 
   const addedMarkdown = changed
     .filter(({ status, path }) => status === 'A' && path.startsWith(CORRECTIONS) && /\.md$/i.test(path))
     .map(({ path }) => path);
-  const misnamed = addedMarkdown.filter((p) => !isEntry(p) && /^corrections\/\d/.test(p));
+  const misnamed = addedMarkdown.filter((p) => !isEntry(p) && !/^corrections\/readme\.md$/i.test(p));
   const unusable = addedMarkdown.filter((p) => isEntry(p) && !freshEntries.has(p));
   const hints = [
-    misnamed.length > 0 && `${plural(misnamed, 'is not a dated entry', 'are not dated entries')} (corrections/YYYY-MM-DD-<slug>.md, a real date).`,
+    misnamed.length > 0 && `${plural(misnamed, 'is not a dated entry', 'are not dated entries')} (corrections/YYYY-MM-DD-<slug>.md directly under corrections/, a real date).`,
     unusable.length > 0 && `${plural(unusable, "doesn't count", "don't count")}: blank, a copy of an earlier file, a link, or 1 MiB or more.`,
   ].filter(Boolean);
   const unexplained = changedEmitted.filter(({ status, path }) => status === 'D' || !explained.has(path)).map(({ path }) => path);
@@ -116,8 +133,8 @@ function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
   process.chdir(git('rev-parse', '--show-toplevel').trim()); // every path below is repo-relative
   const given = process.env.GATE_BASE ?? '';
-  // Only the first push of a branch has no base. A base that can't be found (a force-push) fails the gate
-  // rather than shrinking the range it checks.
+  // Push runs happen only on main; only main's first push has no base, and then only its last commit is checked.
+  // A base that can't be found (a force-push) fails the gate rather than shrinking the range it checks.
   const base = given === '' || ZERO_SHA.test(given) ? 'HEAD~1' : given;
   try {
     execFileSync('git', ['cat-file', '-e', `${base}^{commit}`], { stdio: 'ignore' });
@@ -132,27 +149,14 @@ function main() {
   const freshEntries = new Set();
   if (emitted.length > 0 && entryRewrites(changed).length === 0) {
     const mergeBase = git('merge-base', base, 'HEAD').trim();
-    // Entry text, whitespace-normalized, so a copy with a stray newline is still a copy. All blobs are read in one
-    // `git cat-file --batch` ("<id> blob <size>\n<bytes>\n" per blob).
-    const normal = (text) => text.replace(/\s+/g, ' ').trim();
-    const texts = (records) => {
-      if (records.length === 0) return [];
-      const out = execFileSync('git', ['cat-file', '--batch'], { input: records.map((r) => r.blob).join('\n') + '\n', maxBuffer: MAX_FILE });
-      const result = [];
-      let at = 0;
-      for (const { size } of records) {
-        at = out.indexOf(0x0a, at) + 1; // past the header line
-        result.push(normal(out.subarray(at, at + size).toString('utf8')));
-        at += size + 1;
-      }
-      return result;
-    };
     const markdownAt = (rev, paths) => readableMarkdown(git('ls-tree', '-r', '-l', '-z', rev, '--', ...paths));
     const addedEntries = changed.filter(({ status, path }) => status === 'A' && isEntry(path)).map(({ path }) => path);
     if (addedEntries.length > 0) {
-      const oldTexts = new Set(texts(markdownAt(mergeBase, [CORRECTIONS])));
+      const old = markdownAt(mergeBase, [CORRECTIONS]);
       const added = markdownAt('HEAD', addedEntries);
-      texts(added).forEach((text, i) => {
+      const all = batchTexts(execFileSync, [...old, ...added]).map((text) => text.replace(/\s+/g, ' ').trim());
+      const oldTexts = new Set(all.slice(0, old.length));
+      all.slice(old.length).forEach((text, i) => {
         if (text !== '' && !oldTexts.has(text)) freshEntries.add(added[i].path);
       });
     }

@@ -1,7 +1,7 @@
 // The change gate's rule: emitted data may change only with a reason on record.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { changeGate, isEntry, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
+import { batchTexts, changeGate, isEntry, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
@@ -67,10 +67,20 @@ test('the failure says why an added entry did not count', () => {
   const r = changeGate({ changed: [M(EMITTED), add('corrections/2026-02-29-x.md'), add('corrections/README.md')], freshEntries: new Set() });
   assert.equal(r.ok, false);
   assert.match(r.reason, /^corrections\/2026-02-29-x\.md is not a dated entry/, 'a README is not called misnamed');
-  const two = changeGate({ changed: [M(EMITTED), add('corrections/2026-02-29-x.md'), add('corrections/2026-02-30-y.MD')] });
-  assert.match(two.reason, /2026-02-29-x\.md, corrections\/2026-02-30-y\.MD are not dated entries/);
+  const two = changeGate({ changed: [M(EMITTED), add('corrections/2026-02-29-x.md'), add('corrections/evidence/2026-11-01-y.MD')] });
+  assert.match(two.reason, /2026-02-29-x\.md, corrections\/evidence\/2026-11-01-y\.MD are not dated entries/);
   const copy = changeGate({ changed: [M(EMITTED), add('corrections/2026-11-01-copy.md')], freshEntries: new Set() });
   assert.match(copy.reason, /^corrections\/2026-11-01-copy\.md doesn't count: blank, a copy/);
+});
+
+test('batchTexts: reads each blob by its header, and throws on a missing or mismatched one', () => {
+  const a = { blob: 'a'.repeat(40), size: 3 };
+  const b = { blob: 'b'.repeat(40), size: 6 };
+  const fake = (text) => () => Buffer.from(text);
+  assert.deepEqual(batchTexts(fake(`${a.blob} blob 3\nhi\n\n${b.blob} blob 6\nthere!\n`), [a, b]), ['hi\n', 'there!']);
+  assert.throws(() => batchTexts(fake(`${a.blob} missing\n${b.blob} blob 6\nthere!\n`), [a, b]), /expected/);
+  assert.throws(() => batchTexts(fake(`${a.blob} blob 4\nhi!\n\n`), [a]), /expected/);
+  assert.deepEqual(batchTexts(fake(''), []), []);
 });
 
 test('readableMarkdown: regular .md files under 1 MiB only', () => {
@@ -82,10 +92,12 @@ test('readableMarkdown: regular .md files under 1 MiB only', () => {
     rec('100644', 2 * 1024 * 1024, 'corrections/evidence/letter.pdf'),
     rec('120000', 18, 'corrections/2026-11-04-link.md'),
     rec('100644', 50, 'corrections/notes.txt'),
+    rec('100644', 60, 'corrections/NOTES.MD'),
   ].join('\0') + '\0';
   assert.deepEqual(readableMarkdown(lsTree).map((r) => [r.path, r.size]), [
     ['corrections/2026-11-01-a.md', 120],
     ['corrections/2026-11-02-b.md', 80],
+    ['corrections/NOTES.MD', 60],
   ]);
   assert.deepEqual(readableMarkdown(''), []);
 });

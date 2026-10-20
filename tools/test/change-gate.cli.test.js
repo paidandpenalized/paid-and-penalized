@@ -143,11 +143,13 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   r.write('corrections/2026-11-05-big.md', 'x'.repeat(1024 * 1024));
   const readme = r.commit('a README, a large evidence file and an oversized entry');
   r.write('corrections/2026-11-08-copy-of-readme.md', 'how to write an entry\n');
+  r.write('corrections/2026-11-08-too-big.md', 'y'.repeat(1024 * 1024));
   r.write(FILE, emitted(3, ['{"v":9}'], 'cc'));
-  r.commit('a copy of a non-entry file is not new text');
+  r.commit('a copy of a non-entry file, and an added entry of 1 MiB');
   const copied = r.gate(readme);
   assert.equal(copied.status, 1);
   assert.match(copied.stdout, /hacrp\.json changed without a reason on record/, 'fails on the reason, not a crash on the PDF');
+  assert.match(copied.stdout, /2026-11-08-copy-of-readme\.md, corrections\/2026-11-08-too-big\.md don't count/);
   r.write('corrections/2026-11-09-real.md', 'a real correction\n');
   r.commit('a real entry');
   assert.equal(r.gate(readme).status, 0, 'and passes with a real entry, the PDF notwithstanding');
