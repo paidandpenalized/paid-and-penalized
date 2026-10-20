@@ -28,7 +28,7 @@ export function html(strings, ...values) {
   return new Safe(out);
 }
 
-// JSON for a <script> element. `<` becomes the six characters \\u003c so no value can close the tag or open a comment; the line
+// JSON for a <script> element. `<` becomes the six characters \u003c so no value can close the tag or open a comment; the line
 // separators U+2028/2029 are escaped too, for older parsers.
 export function jsonText(value) {
   return JSON.stringify(value).replace(/[<\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
