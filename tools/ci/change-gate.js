@@ -1,41 +1,30 @@
 // CI change gate: emitted data (the golden snapshots) may change only with a reason on record in the same
-// change: new source data (every changed emitted file's own source_manifest changed, or the "new-cms-release"
-// PR label), a new methods_version heading in the methods log, or a corrections entry. The label exists only on
-// PR runs; a re-pin also shows on the push to main after the merge.
+// change. Per changed emitted file: its own source_manifest changed (new pinned inputs), or its site gained a
+// new methods_version heading in the methods log. For the whole change: the "new-cms-release" PR label, or a
+// corrections entry. The label exists only on PR runs; a re-pin also shows on the push to main after the merge.
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { METHODS_LOG, sitesWithAddedHeading } from '../../pipeline/methods-log.js';
 
 const EMITTED = 'data/emitted/';
 const LABEL = 'new-cms-release';
-export const METHODS_LOG = 'docs/METHODS-LOG.md';
 const CORRECTIONS = 'corrections/';
-const ADDED_HEADING = /^\+## \S+ methods_version \d+ /m;
 
-const SOURCE_LINE = /^\+"source_manifest": /m;
+// data/emitted/<site>/fy<YYYY>/<file>.json → <site>
+const siteOf = (path) => path.slice(EMITTED.length).split('/')[0];
 
-// True when every changed emitted file's diff section rewrites its source_manifest line (formatEmitted puts it
-// on a line of its own).
-function allRepinned(changedEmitted, emittedDiff) {
-  const sections = new Map(
-    emittedDiff
-      .split(/^(?=diff --git )/m)
-      .map((s) => [/^diff --git a\/(\S+) /.exec(s)?.[1], s])
-      .filter(([path]) => path),
-  );
-  return changedEmitted.every((p) => SOURCE_LINE.test(sections.get(p) ?? ''));
-}
-
-// emittedDiff / logDiff: unified diffs of data/emitted/ and of the methods log over the same range.
-export function changeGate({ changed, labels, emittedDiff = '', logDiff = '' }) {
+// repinned: emitted paths whose source_manifest differs from the base. logDiff: unified diff of the methods log.
+export function changeGate({ changed, labels, repinned = new Set(), logDiff = '' }) {
   const changedEmitted = changed.filter((p) => p.startsWith(EMITTED));
   if (changedEmitted.length === 0) return { ok: true, reason: 'no emitted data changed' };
-  if (allRepinned(changedEmitted, emittedDiff)) return { ok: true, reason: 'emitted data changed with new pinned inputs' };
   if (labels.includes(LABEL)) return { ok: true, reason: `emitted data changed; PR labeled ${LABEL}` };
-  if (ADDED_HEADING.test(logDiff)) return { ok: true, reason: 'emitted data changed with a new methods_version' };
   if (changed.some((p) => p.startsWith(CORRECTIONS))) return { ok: true, reason: 'emitted data changed with a corrections entry' };
+  const bumped = sitesWithAddedHeading(logDiff);
+  const unexplained = changedEmitted.filter((p) => !repinned.has(p) && !bumped.has(siteOf(p)));
+  if (unexplained.length === 0) return { ok: true, reason: 'every emitted change has new pinned inputs or a new methods_version' };
   return {
     ok: false,
-    reason: `${EMITTED} changed without a reason on record: re-pin the inputs (new CMS data), add a new methods_version heading to ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction)`,
+    reason: `${unexplained.join(', ')} changed without a reason on record: re-pin the inputs (new CMS data), add a new methods_version heading for the site to ${METHODS_LOG} (methods change), or add a file under ${CORRECTIONS} (correction)`,
   };
 }
 
@@ -53,19 +42,35 @@ export function parseLabels(text) {
   return value;
 }
 
-const MAX_DIFF = 512 * 1024 * 1024; // a new site's emitted file arrives as one large added-file diff
 const ZERO_SHA = /^0{40}$/;
+const MAX_FILE = 32 * 1024 * 1024; // emitted files stay under the hook's 10 MiB limit
 
 function main() {
   const given = process.env.GATE_BASE ?? '';
   const base = given === '' || ZERO_SHA.test(given) ? 'HEAD~1' : given;
-  const diff = (flags, path = []) => execFileSync('git', ['diff', ...flags, `${base}...HEAD`, '--', ...path], { encoding: 'utf8', maxBuffer: MAX_DIFF });
-  const changed = diff(['--name-only', '-z']).split('\0').filter(Boolean);
+  const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
+  // source_manifest at a revision, or undefined when the file doesn't exist there (added or deleted).
+  const sourceAt = (rev, path) => {
+    try {
+      return JSON.parse(git('show', `${rev}:${path}`)).source_manifest;
+    } catch {
+      return undefined;
+    }
+  };
+  const changed = git('diff', '--name-only', '-z', `${base}...HEAD`).split('\0').filter(Boolean);
+  const mergeBase = git('merge-base', base, 'HEAD').trim();
+  const repinned = new Set(
+    changed.filter((p) => {
+      if (!p.startsWith(EMITTED)) return false;
+      const now = sourceAt('HEAD', p);
+      return now !== undefined && now !== sourceAt(mergeBase, p);
+    }),
+  );
   const result = changeGate({
     changed,
     labels: parseLabels(process.env.PR_LABELS),
-    emittedDiff: diff(['--unified=0'], [EMITTED]),
-    logDiff: diff(['--unified=0'], [METHODS_LOG]),
+    repinned,
+    logDiff: git('diff', '--unified=0', `${base}...HEAD`, '--', METHODS_LOG),
   });
   console.log(`change gate (${base}...HEAD): ${result.reason}`);
   if (!result.ok) process.exit(1);

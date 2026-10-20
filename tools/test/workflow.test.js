@@ -6,6 +6,7 @@ import { REPO_ROOT } from '../../pipeline/files.js';
 
 const text = readFileSync(REPO_ROOT + '.github/workflows/ci.yml', 'utf8');
 const lines = text.split('\n');
+const jobsAt = text.indexOf('\njobs:');
 
 test('every action is pinned to a full commit SHA with its version noted', () => {
   const uses = lines.filter((l) => /^\s*-?\s*uses:/.test(l));
@@ -14,26 +15,15 @@ test('every action is pinned to a full commit SHA with its version noted', () =>
 });
 
 test('the token is read-only and pull_request_target is never used', () => {
-  const top = text.slice(0, text.indexOf('\njobs:'));
+  const top = text.slice(0, jobsAt);
   assert.match(top, /^permissions:\n {2}contents: read\n/m);
   assert.doesNotMatch(text, /pull_request_target/);
-  assert.doesNotMatch(text.slice(text.indexOf('\njobs:')), /^\s+permissions:/m);
+  assert.doesNotMatch(text.slice(jobsAt), /^\s+permissions:/m);
 });
 
-test('workflow passes labels through env only: no ${{ }} inside any run block', () => {
-  let inRun = false;
-  let runIndent = 0;
-  for (const l of lines) {
-    const indent = l.length - l.trimStart().length;
-    if (inRun && l.trim() !== '' && indent <= runIndent) inRun = false;
-    const m = /^(\s*)(?:- )?run:(.*)$/.exec(l);
-    if (m) {
-      inRun = true;
-      runIndent = m[1].length;
-      assert.doesNotMatch(m[2], /\$\{\{/, l);
-      continue;
-    }
-    if (inRun) assert.doesNotMatch(l, /\$\{\{/, l);
+test('workflow passes labels through env only: ${{ }} appears only in if:, group: or an env value', () => {
+  for (const l of lines.filter((line) => line.includes('${{'))) {
+    assert.match(l, /^\s*(if: \$\{\{|group: |[A-Z_]+: \$\{\{)/, l);
   }
 });
 

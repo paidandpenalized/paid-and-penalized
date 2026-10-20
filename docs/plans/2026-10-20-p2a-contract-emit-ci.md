@@ -161,3 +161,33 @@ Test locations: `tools/test/`, `engine/js/test/`, `sites/hacrp/test/`. `npm test
 
 ### Task 6: Planning-repo close-out (private repo, Claude)
 - [ ] INDEX/ROADMAP per the planning rules; `.project-status`; hours from Dalton.
+
+---
+
+## Amendments made during execution (2026-10-20)
+
+- **File placement:** the pure hook checks are in `tools/hygiene/precommit-checks.js` (the CLIs in `precommit.js`
+  and `commit-msg.js`, the list loader in `load.js`). The envelope helpers (`canonicalJson`,
+  `sourceManifestHash`, `keepBuiltAt`, `formatEmitted`, and `envelope`, added in the simplify pass) are in
+  `pipeline/contract.js`, not `engine/js/`: they use `node:crypto` and are build-only. Repo file helpers
+  (`readJson`, `readManifest`, `readPinned`, `loadSchemas`) are in `pipeline/files.js`.
+- **Emitted HACRP shape:** `model` is exactly `buildModel()`'s `{ params, boundary }`, so a page passes it
+  straight to `whatIf`. The estimate tags are a separate top-level `estimate` object.
+- **Blocklist matching:** both sides are NFC-normalized. A space in an entry also matches runs of dots, dashes
+  and underscores, so file names and email addresses are caught. Staged file paths are scanned too. UTF-16 text
+  with a byte-order mark is decoded rather than skipped as binary. Type-changed files (`T`) are included. The
+  outside-repo check uses `realpathSync.native`, so a differently cased path can't slip through on macOS.
+- **Validator:** NaN and ±Infinity fail `number` and `integer`, because JSON would write them as `null`.
+- **Change gate:** a PR label exists only on PR runs, so the push to `main` after merging a labeled PR would
+  fail. "New source data" is therefore also proven in-tree: the changed emitted file's own `source_manifest`
+  changed (a re-pin). The CLI reads that field as JSON at the merge base and at HEAD. The label still counts
+  on PRs. A methods-log edit explains a change only if it adds a `## <site> methods_version N` heading for
+  that file's own site. Reasons are checked per emitted file. `pipeline/methods-log.js` holds the one heading
+  format. A shared test, `pipeline/test/emitted-contract.test.js`, checks every emitted file of every site
+  against its schema and requires its `methods_version` to equal the newest heading for that site. The gate step runs even when tests fail, so both checks report. A test runs the gate CLI
+  against a throwaway git repo.
+- **Synthetic CCNs** (`000001`, `00001F`, `990001`) replace real ones in the contract fixtures.
+- **Verified on GitHub:** both CI jobs are green on `main`. A throwaway PR that changed one emitted value with
+  no reason failed both the golden check and the change gate. With the `new-cms-release` label, the gate
+  passed and golden still failed. PR labels work with Issues turned off. The PR was closed unmerged and its
+  branch deleted.

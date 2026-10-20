@@ -22,7 +22,7 @@ export function assertOutsideRepo(listPath, repoRoot) {
 // Text to scan, or null for a binary file. UTF-16 with a byte-order mark is text (Windows "Unicode" exports).
 function textOf(bytes) {
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return bytes.subarray(2).toString('utf16le');
-  if (bytes[0] === 0xfe && bytes[1] === 0xff) return Buffer.from(bytes.subarray(2)).swap16().toString('utf16le');
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes.subarray(2));
   return bytes.subarray(0, BINARY_SNIFF).includes(0) ? null : bytes.toString('utf8');
 }
 

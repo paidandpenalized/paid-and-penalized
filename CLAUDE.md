@@ -41,10 +41,11 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
-- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails: new source
-  data (that file's `source_manifest` changed, i.e. a re-pin; or the `new-cms-release` PR label), a new
-  `## <site> methods_version N` heading in `docs/METHODS-LOG.md` with the matching bump (a test requires the
-  newest heading to equal the emitted `methods_version`), or a file under `corrections/`. Run `make emit` after any engine or pin change; it keeps `built_at` when
+- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails. Each changed
+  emitted file needs new source data (its own `source_manifest` changed, i.e. a re-pin) or a new
+  `## <site> methods_version N` heading for its site in `docs/METHODS-LOG.md`, with the matching bump (a test
+  requires the newest heading to equal the emitted `methods_version`). Alternatively, the whole change carries
+  the `new-cms-release` PR label or a file under `corrections/`. Run `make emit` after any engine or pin change; it keeps `built_at` when
   nothing else changed.
 - **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MB or more, strings from a
   private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist

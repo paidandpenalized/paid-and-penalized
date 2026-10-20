@@ -16,24 +16,28 @@ test('an emitted change alone fails', () => {
   assert.match(r.reason, /data\/emitted/);
 });
 
-const NEW_HEADING = '@@ -9,0 +10,3 @@\n+## hacrp methods_version 2 (2026-11-02)\n+- what changed\n';
+const NEW_HEADING = '--- a/docs/METHODS-LOG.md\n+++ b/docs/METHODS-LOG.md\n@@ -9,0 +10,3 @@\n+## hacrp methods_version 2 (2026-11-02)\n+- what changed\n';
 
 test('an emitted change passes with a re-pin, the label, a new methods-version heading, or a corrections entry', () => {
-  const repin = `diff --git a/${EMITTED} b/${EMITTED}\n@@ -4 +4 @@\n-"source_manifest": "aa",\n+"source_manifest": "bb",\n`;
-  assert.equal(changeGate({ changed: [EMITTED, 'data/pinned/manifest.json'], labels: [], emittedDiff: repin }).ok, true);
+  assert.equal(changeGate({ changed: [EMITTED, 'data/pinned/manifest.json'], labels: [], repinned: new Set([EMITTED]) }).ok, true);
   assert.equal(changeGate({ changed: [EMITTED], labels: ['new-cms-release'] }).ok, true);
   assert.equal(changeGate({ changed: [EMITTED, 'docs/METHODS-LOG.md'], labels: [], logDiff: NEW_HEADING }).ok, true);
   assert.equal(changeGate({ changed: [EMITTED, 'corrections/2026-11-01-hacrp.md'], labels: [] }).ok, true);
 });
 
+const OTHER = 'data/emitted/hvbp/fy2026/hvbp.json';
+
 test('a re-pin counts only for the emitted files whose own source_manifest changed', () => {
-  const other = 'data/emitted/hvbp/fy2026/hvbp.json';
-  const diff = [
-    `diff --git a/${EMITTED} b/${EMITTED}\n@@ -4 +4 @@\n-"source_manifest": "aa",\n+"source_manifest": "bb",\n`,
-    `diff --git a/${other} b/${other}\n@@ -20 +20 @@\n-{"ccn":"000001"}\n+{"ccn":"000002"}\n`,
-  ].join('');
-  assert.equal(changeGate({ changed: [EMITTED, other, 'data/pinned/manifest.json'], labels: [], emittedDiff: diff }).ok, false);
-  assert.equal(changeGate({ changed: [EMITTED, 'data/pinned/manifest.json'], labels: [], emittedDiff: '' }).ok, false);
+  const r = changeGate({ changed: [EMITTED, OTHER, 'data/pinned/manifest.json'], labels: [], repinned: new Set([EMITTED]) });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /hvbp\.json changed/);
+  assert.doesNotMatch(r.reason, /hacrp\.json/);
+  assert.equal(changeGate({ changed: [EMITTED, 'data/pinned/manifest.json'], labels: [] }).ok, false);
+});
+
+test('a new methods_version heading explains only its own site', () => {
+  assert.equal(changeGate({ changed: [EMITTED, OTHER, 'docs/METHODS-LOG.md'], labels: [], logDiff: NEW_HEADING }).ok, false);
+  assert.equal(changeGate({ changed: [EMITTED, OTHER], labels: [], logDiff: NEW_HEADING, repinned: new Set([OTHER]) }).ok, true);
 });
 
 test('a methods-log edit that adds no methods_version heading is not a reason', () => {

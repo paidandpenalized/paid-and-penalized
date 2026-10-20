@@ -6,7 +6,7 @@
 export function parseBlocklist(text) {
   const entries = text
     .split(/\r?\n/)
-    .map((line) => line.trim().normalize('NFC'))
+    .map((line) => line.trim())
     .filter((line) => line !== '' && !line.startsWith('#'));
   if (entries.length === 0) throw new RangeError('blocklist: no entries');
   return entries;

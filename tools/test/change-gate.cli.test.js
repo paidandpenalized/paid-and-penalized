@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
 
 const GATE = join(REPO_ROOT, 'tools/ci/change-gate.js');
@@ -18,7 +18,7 @@ function repo() {
   git('config', 'commit.gpgsign', 'false');
   git('config', 'core.hooksPath', '/dev/null');
   const write = (path, text) => {
-    mkdirSync(join(dir, path, '..'), { recursive: true });
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   };
   const commit = (msg) => {
