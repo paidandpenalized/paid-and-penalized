@@ -52,8 +52,8 @@ test('flag and cut text: too close to call reads both cuts; Maryland reads N/A, 
 });
 
 test('sentence: no change', () => {
-  assert.equal(sentence('no'), "These are CMS's values: a Total HAC Score of 0.2734 and a payment reduction decision of No.");
-  assert.equal(sentence('capped'), "These are CMS's values: a Total HAC Score of −0.3488 and a payment reduction decision of No.");
+  assert.equal(sentence('no'), "CMS reports a Total HAC Score of 0.2734 and a payment reduction decision of No.");
+  assert.equal(sentence('capped'), "CMS reports a Total HAC Score of −0.3488 and a payment reduction decision of No.");
 });
 
 test('sentence: one better change, below the line', () => {
@@ -63,7 +63,7 @@ test('sentence: one better change, below the line', () => {
 
 test('sentence: one worse change, crossing the line', () => {
   assert.equal(sentence('no', { MRSA: 1.4 }),
-    `With MRSA at 1.400 instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.4476. ${CUT} CMS's decision was No.`);
+    `With MRSA at 1.400 instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.4476. ${CUT} CMS reports a payment reduction decision of No.`);
 });
 
 test('sentence: a change in the dead zone names CMS\'s cap (or floor)', () => {
@@ -78,7 +78,7 @@ test('sentence: a change in the dead zone names CMS\'s cap (or floor)', () => {
 test('sentence: an assigned measure, "had it been submitted"', () => {
   assert.equal(sentence('assigned', { SSI: 0.8 }),
     'With SSI at 0.800 (had it been submitted), the Total HAC Score would fall from 0.6211 to 0.2448. '
-    + `${NO_CUT} CMS's decision was Yes.`);
+    + `${NO_CUT} CMS reports a payment reduction decision of Yes.`);
 });
 
 test('sentence: two changes', () => {
@@ -98,12 +98,12 @@ test('sentence: too close to call, never Yes or No', () => {
   assert.equal(vm.result.after.flag, 'too-close');
   assert.equal(scenarioSentence(vm, H.no, model),
     'With CLABSI at 1.074 instead of 0.800, the Total HAC Score would rise from 0.2734 to 0.3793. That would be too close to call: '
-    + "this site's recompute cannot place it on either side of CMS's line, so the cut would be 0% or 1%. CMS's decision was No.");
+    + "this site's recompute cannot place it on either side of CMS's line, so the cut would be 0% or 1%. CMS reports a payment reduction decision of No.");
 });
 
 test('sentence: Maryland moves the score only', () => {
   assert.equal(sentence('maryland'),
-    "These are CMS's values: a Total HAC Score of 0.2734 and a payment reduction decision of N/A (not subject to the reduction).");
+    "CMS reports a Total HAC Score of 0.2734 and a payment reduction decision of N/A (not subject to the reduction).");
   assert.equal(sentence('maryland', { CLABSI: 0.6 }),
     'With CLABSI at 0.600 instead of 0.800, the Total HAC Score would fall from 0.2734 to 0.1961. '
     + 'The payment reduction decision would stay N/A (not subject to the reduction).');
@@ -136,7 +136,7 @@ test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, an
     'any value: CMS caps SSI at 2.118', 'any value: CMS caps CDI at 0.944', 'any value: CMS caps MRSA at 1.762',
   ]);
   assert.deepEqual(rows('noCushion').find((r) => r.id === 'CLABSI'),
-    { id: 'CLABSI', label: 'CLABSI', answer: 'no cushion', note: "CMS's value is already the highest that keeps the decision at No." });
+    { id: 'CLABSI', label: 'CLABSI', answer: 'no cushion', note: 'The current value is already the highest that keeps the decision at No.' });
 });
 
 test('solver rows, an assigned measure: a note, no answer; Maryland: not applicable', () => {
@@ -169,7 +169,7 @@ test('the solver and the sentences never point at an assigned score, even when i
     { id: 'MRSA', label: 'MRSA', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
   ]);
   assert.equal(scenarioSentence(vmOf(allAssigned), allAssigned, model),
-    "These are CMS's values: a Total HAC Score of 2.2091 and a payment reduction decision of Yes.");
+    "CMS reports a Total HAC Score of 2.2091 and a payment reduction decision of Yes.");
 });
 
 test('a hospital with no score: no sentence, no solver rows, no slide', () => {
@@ -187,7 +187,7 @@ test('slide text: name, before -> after, Hypothetical, the sentence, the source 
     'Example General Hospital',
     'Total HAC Score: 0.2734 → 0.4476 (Hypothetical)',
     'Payment reduction decision: No → Yes (Hypothetical)',
-    `With MRSA at 1.400 instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.4476. ${CUT} CMS's decision was No.`,
+    `With MRSA at 1.400 instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.4476. ${CUT} CMS reports a payment reduction decision of No.`,
     'Source: CMS Provider Data Catalog, HACRP FY2026 (yq43-i98g), released August 13, 2026.',
     STANDING,
   ].join('\n'));
@@ -217,4 +217,46 @@ test('the what-if words never say should, failed, caught, dodged, worst-performi
       ...solverRows(vm, model).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, banned, w);
   }
+});
+
+test('a change that moves the score into the dead zone names the bound, without saying the score stood still', () => {
+  const capNote = 'CMS caps MRSA at 1.762, so any value above it scores the same.';
+  for (const v of [2, 3]) {
+    const text = sentence('no', { MRSA: v });
+    assert.equal(text, `With MRSA at ${v.toFixed(3)} instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.5737. `
+      + `${CUT} CMS reports a payment reduction decision of No. ${capNote}`);
+  }
+  // Exactly at the cap: named too.
+  assert.match(sentence('no', { MRSA: 1.762 }), /CMS caps MRSA at 1\.762, so any value above it scores the same\.$/);
+  assert.equal(sentence('no', { PSI90: 0.7 }),
+    `With PSI 90 at 0.7000 instead of 1.0000, the Total HAC Score would fall from 0.2734 to 0.0127. ${NO_CUT} `
+    + 'CMS gives every PSI 90 value at or below 0.7760 the same score.');
+  // A floor of zero is no dead zone worth naming: SIRs can't go below it.
+  assert.doesNotMatch(sentence('no', { CLABSI: 0 }), /the same score/);
+  assert.doesNotMatch(sentence('no', { CLABSI: 0.6 }), /caps|the same score/);
+});
+
+test('the median hospital: this site\'s hypothetical, never described as CMS\'s values or decision', () => {
+  const mh = medianHospital(model);
+  assert.equal(scenarioSentence(vmOf(mh), mh, model),
+    'This site recomputes a Total HAC Score of −0.1278 and a payment reduction decision of No for its hypothetical hospital '
+    + 'at the national median on every measure.');
+  assert.equal(scenarioSentence(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model),
+    'With CLABSI at 1.200 instead of 0.559 and MRSA at 1.400 instead of 0.641, the Total HAC Score would rise from −0.1278 to 0.3844. '
+    + `${CUT} Before these changes, this site recomputes its decision as No.`);
+  const claimsCms = /CMS's values|CMS reports|CMS's decision|CMS's value|CMS assigned/;
+  for (const changes of [{}, { CLABSI: 1.2, MRSA: 1.4 }, { MRSA: 2 }, { CLABSI: 0.4 }, { PSI90: 0.7 }]) {
+    const vm = vmOf(mh, changes);
+    const words = [scenarioSentence(vm, mh, model), slideText(vm, mh, model, { name: null, fy: 2026, source: SOURCE }),
+      ...solverRows(vm, model).flatMap((r) => [r.answer, r.note])].filter(Boolean);
+    for (const w of words) assert.doesNotMatch(w, claimsCms, w);
+  }
+  assert.equal(slideText(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, { name: null, fy: 2026, source: SOURCE }), [
+    'Total HAC Score: −0.1278 → 0.3844 (Hypothetical)',
+    'Payment reduction decision: No → Yes (Hypothetical)',
+    'With CLABSI at 1.200 instead of 0.559 and MRSA at 1.400 instead of 0.641, the Total HAC Score would rise from −0.1278 to 0.3844. '
+      + `${CUT} Before these changes, this site recomputes its decision as No.`,
+    'Source: CMS Provider Data Catalog, HACRP FY2026 (yq43-i98g), released August 13, 2026.',
+    STANDING,
+  ].join('\n'));
 });

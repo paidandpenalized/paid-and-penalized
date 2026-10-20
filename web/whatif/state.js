@@ -8,7 +8,7 @@ import { whatIf } from '../../engine/js/hacrp/whatif.js';
 import { fillCopy } from '../render/components.js';
 import { decimal } from '../render/format.js';
 import { COPY } from '../copy.js';
-import { toUnit } from './fragment.js';
+import { MAX_FACTOR, toUnit } from './fragment.js';
 
 // Measures reported as an SIR, for which NHSN publishes a predicted infection count. PSI 90 is not one.
 const NOT_SIR = new Set(['PSI90']);
@@ -19,7 +19,8 @@ const isValue = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 const ceilToUnit = (x, decimals) => Math.ceil(Number((x * 10 ** decimals).toPrecision(9))) / 10 ** decimals;
 
 // cms: CMS's value per scored measure (null where CMS assigned the score). medians: each measure's median at its
-// display unit (the slider mark and the "bring all to the median" target).
+// display unit (the slider mark and the "bring all to the median" target). limits: the highest value a reader
+// may set, the same range a link's fragment may carry.
 export function initialState(hospital, model) {
   const ids = hospital.total === null ? [] : scoredMeasures(hospital);
   const cms = Object.fromEntries(ids.map((id) => [id, hospital.measures[id].value]));
@@ -30,6 +31,7 @@ export function initialState(hospital, model) {
     values: { ...cms },
     decimals: pick((p) => p.decimals),
     medians: pick((p) => toUnit(p.median, p.decimals)),
+    limits: pick((p) => toUnit(MAX_FACTOR * p.cap, p.decimals)),
     predicted: {},
   };
 }
@@ -46,7 +48,7 @@ export function changesOf(state) {
 
 const withValues = (state, values) => ({ ...state, values });
 
-// Actions: set { id, value } (null restores CMS's value), reset, median, predicted { id, count } (null clears).
+// Actions: set { id, value } (null restores CMS's value; above the limit is ignored), reset, median, predicted { id, count } (null clears).
 // Anything the engine would refuse leaves the state unchanged (the same object).
 export function reduce(state, action) {
   switch (action?.type) {
@@ -55,7 +57,9 @@ export function reduce(state, action) {
       if (!state.ids.includes(id)) return state;
       if (value === null) return withValues(state, { ...state.values, [id]: state.cms[id] });
       if (!isValue(value)) return state;
-      return withValues(state, { ...state.values, [id]: toUnit(value, state.decimals[id]) });
+      const v = toUnit(value, state.decimals[id]);
+      if (v > state.limits[id]) return state;
+      return withValues(state, { ...state.values, [id]: v });
     }
     case 'reset':
       return withValues(state, { ...state.cms });
@@ -117,12 +121,12 @@ export function viewModel(state, hospital, model, estimate) {
   const inputs = state.ids.map((id) => {
     const p = model.params[id];
     const value = state.values[id];
-    const cms = state.cms[id];
     return {
       id,
       value,
       min: 0,
-      max: ceilToUnit(Math.max(cms ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals),
+      // Follows the current value, so a typed or linked value never sits past the slider's end.
+      max: ceilToUnit(Math.max(value ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals),
       step: 1 / 10 ** p.decimals,
       median: state.medians[id],
       cap: p.cap,

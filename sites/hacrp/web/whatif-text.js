@@ -1,6 +1,8 @@
 // The what-if's words, built from its view model (web/whatif/state.js). Everything is conditional ("would"):
 // this site's arithmetic on CMS's values, never a statement of what CMS did or what a hospital could do.
-// A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only.
+// A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The median
+// hospital is this site's synthetic record, so its words never call its values or decision CMS's.
+import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
 import { cmsText, decimal, isoDate, pct } from '../../../web/render/format.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fill } from './copy.js';
@@ -31,13 +33,13 @@ function scores(result, hospital) {
   return { before, after };
 }
 
-// The changed measures, each with whether its change moved the score and, if not, why: CMS's cap or floor.
+// The changed measures: whether each moved the score, and the bound its new value sits on, if any: at or past
+// CMS's cap, or at or below a floor above zero (an SIR can't go below a floor of zero, so that one isn't named).
 function changes(result, model) {
   return Object.entries(result.measures).filter(([, m]) => m.changed).map(([id, m]) => {
     const p = model.params[id];
-    const moved = m.afterZ !== m.beforeZ;
-    const bound = moved ? null : m.afterValue >= p.cap ? 'cap' : m.afterValue <= p.floor ? 'floor' : null;
-    return { id, m, short: SHORT_NAMES[id], moved, bound };
+    const bound = m.afterValue >= p.cap ? 'cap' : p.floor > 0 && m.afterValue <= p.floor ? 'floor' : null;
+    return { id, m, short: SHORT_NAMES[id], moved: m.afterZ !== m.beforeZ, bound };
   });
 }
 
@@ -58,20 +60,22 @@ function deadZone(c, model) {
   return fill(`whatifFloor${verb}`, { short: c.short, after, floor: value(p.floor, model, c.id) });
 }
 
+// For one change among several that didn't move the score, or any change that moved it into the dead zone.
 function boundNote(c, model) {
   const p = model.params[c.id];
-  return c.bound === 'cap'
-    ? fill('whatifCapNote', { short: c.short, cap: value(p.cap, model, c.id) })
-    : fill('whatifFloorNote', { short: c.short, floor: value(p.floor, model, c.id) });
+  const cap = { short: c.short, cap: value(p.cap, model, c.id) };
+  const floor = { short: c.short, floor: value(p.floor, model, c.id) };
+  if (c.bound === 'cap') return c.moved ? fill('whatifCapReached', cap) : fill('whatifCapNote', cap);
+  return c.moved ? fill('whatifFloorReached', floor) : fill('whatifFloorNote', floor);
 }
 
-function flagSentences(result) {
+function flagSentences(result, median) {
   const { before, after } = result;
   if (before.flag === 'N/A') return [fill('whatifNA', { decision: flagText('N/A') })];
   const out = [after.flag === 'Yes' ? fill('whatifYes', { pct: REDUCTION_TEXT })
     : after.flag === 'No' ? fill('whatifNo')
       : fill('whatifClose', { cuts: cutText('too-close') })];
-  if (after.flag !== before.flag) out.push(fill('whatifCmsWas', { decision: flagText(before.flag) }));
+  if (after.flag !== before.flag) out.push(fill(median ? 'whatifMedianWas' : 'whatifCmsWas', { decision: flagText(before.flag) }));
   return out;
 }
 
@@ -81,14 +85,15 @@ export function scenarioSentence(vm, hospital, model) {
   if (!r.available) return null;
   const list = changes(r, model);
   const { before, after } = scores(r, hospital);
-  if (!list.length) return fill('whatifNone', { score: before, decision: flagText(r.before.flag) });
-  if (list.length === 1 && list[0].bound) return deadZone(list[0], model);
+  const median = isMedianHospital(hospital);
+  if (!list.length) return fill(median ? 'whatifNoneMedian' : 'whatifNone', { score: before, decision: flagText(r.before.flag) });
+  if (list.length === 1 && list[0].bound && !list[0].moved) return deadZone(list[0], model);
 
   const items = LIST.format(list.map((c) => item(c, model)));
   const out = [];
   if (after === before) out.push(fill('whatifStay', { changes: items, score: before }));
   else out.push(fill(r.after.score > r.before.score ? 'whatifRise' : 'whatifFall', { changes: items, before, after }));
-  if (list.some((c) => c.moved)) out.push(...flagSentences(r));
+  if (list.some((c) => c.moved)) out.push(...flagSentences(r, median));
   for (const c of list) if (c.bound) out.push(boundNote(c, model));
   return out.join(' ');
 }

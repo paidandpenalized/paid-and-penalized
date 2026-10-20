@@ -7,7 +7,7 @@ import { solveMeasure } from '../../engine/js/hacrp/solver.js';
 import { whatIf } from '../../engine/js/hacrp/whatif.js';
 import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
 import { modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
-import { decode } from '../whatif/fragment.js';
+import { MAX_FACTOR, decode } from '../whatif/fragment.js';
 import { changesOf, initialState, reduce, viewModel } from '../whatif/state.js';
 
 const { hospitals, model } = loadHacrp();
@@ -45,6 +45,10 @@ test('set: rounds to the display unit; CMS\'s own value, junk and negatives are 
     assert.equal(reduce(s, set('CLABSI', bad)), s, String(bad));
   }
   assert.equal(reduce(s, set('NOPE', 1)), s);
+  // Past MAX_FACTOR x cap, the same range decode accepts: no change.
+  assert.equal(reduce(s, set('MRSA', 1e25)), s);
+  assert.equal(reduce(s, set('MRSA', MAX_FACTOR * params.MRSA.cap + 0.001)), s);
+  assert.deepEqual(changesOf(reduce(s, set('MRSA', MAX_FACTOR * params.MRSA.cap))), { MRSA: 17.62 });
   assert.equal(reduce(s, { type: 'nope' }), s);
 });
 
@@ -148,6 +152,14 @@ test('view model inputs: one per scored measure, with slider bounds, step, marks
   assert.equal(psi.tagged, true);
   assert.equal(psi.max, 1.6179); // cap 1.3482 x 1.2, rounded up to the unit
 
+  // The slider's top follows the current value, so a typed or decoded value never sits above it.
+  const typed = viewModel(apply(CAPPED, set('MRSA', 5)), CAPPED, model, ESTIMATE).inputs.find((i) => i.id === 'MRSA');
+  assert.equal(typed.max, 6);
+  const decoded = decode('#whatif&CLABSI=15.5', { ids: scoredMeasures(CAPPED), params }).changes;
+  const fromLink = viewModel(apply(CAPPED, set('CLABSI', decoded.CLABSI)), CAPPED, model, ESTIMATE).inputs.find((i) => i.id === 'CLABSI');
+  assert.equal(fromLink.max, 18.6);
+  assert.ok(fromLink.value <= fromLink.max);
+
   const atCap = viewModel(apply(NO, set('MRSA', params.MRSA.cap)), NO, model, ESTIMATE);
   assert.equal(atCap.inputs.find((i) => i.id === 'MRSA').valuetext, '1.762, at CMS\'s cap');
 });
@@ -163,6 +175,9 @@ test('view model input for an assigned measure: blank value, cap x 1.2, its own 
   assert.equal(filled.value, 0.8);
   assert.equal(filled.valuetext, '0.800');
   assert.equal(filled.assigned, true);
+  assert.equal(filled.max, 2.542);
+  const high = viewModel(apply(ASSIGNED, set('SSI', 3)), ASSIGNED, model, ESTIMATE).inputs.find((i) => i.id === 'SSI');
+  assert.equal(high.max, 3.6);
 });
 
 test('view model ramp: CMS\'s score, the hypothetical, the line, inside a fixed axis for the hospital', () => {

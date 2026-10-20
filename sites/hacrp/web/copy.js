@@ -59,7 +59,12 @@ export const COPY = {
   },
 
   // The what-if: this site's arithmetic on CMS's values, always in the conditional.
-  whatifNone: { text: "These are CMS's values: a Total HAC Score of {score} and a payment reduction decision of {decision}.", claim: null },
+  whatifNone: { text: 'CMS reports a Total HAC Score of {score} and a payment reduction decision of {decision}.', claim: null },
+  // The median hospital is this site's own synthetic record: nothing about it is CMS's.
+  whatifNoneMedian: {
+    text: 'This site recomputes a Total HAC Score of {score} and a payment reduction decision of {decision} for its hypothetical hospital at the national median on every measure.',
+    claim: null,
+  },
   whatifRise: { text: 'With {changes}, the Total HAC Score would rise from {before} to {after}.', claim: null },
   whatifFall: { text: 'With {changes}, the Total HAC Score would fall from {before} to {after}.', claim: null },
   whatifStay: { text: 'With {changes}, the Total HAC Score would stay at {score}.', claim: null },
@@ -82,6 +87,9 @@ export const COPY = {
   },
   // The same, for one change among several.
   whatifCapNote: { text: 'CMS caps {short} at {cap}, so the change to {short} does not move the score.', claim: 'HACRP-03' },
+  // A change that moves the score and ends in the dead zone: past it, the value no longer matters.
+  whatifCapReached: { text: 'CMS caps {short} at {cap}, so any value above it scores the same.', claim: 'HACRP-03' },
+  whatifFloorReached: { text: 'CMS gives every {short} value at or below {floor} the same score.', claim: 'HACRP-03' },
   whatifFloorNote: {
     text: 'CMS gives every {short} value at or below {floor} the same score, so the change to {short} does not move the score.',
     claim: 'HACRP-03',
@@ -95,7 +103,8 @@ export const COPY = {
     text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}.",
     claim: 'HACRP-01',
   },
-  whatifCmsWas: { text: "CMS's decision was {decision}.", claim: null },
+  whatifCmsWas: { text: 'CMS reports a payment reduction decision of {decision}.', claim: null },
+  whatifMedianWas: { text: 'Before these changes, this site recomputes its decision as {decision}.', claim: null },
   whatifNA: { text: 'The payment reduction decision would stay {decision}.', claim: null },
   flagYes: { text: 'Yes', claim: null },
   flagNo: { text: 'No', claim: null },
@@ -108,7 +117,7 @@ export const COPY = {
   solverCushion: { text: 'up to {value}', claim: null },
   solverUnlimited: { text: 'any value: CMS caps {short} at {cap}', claim: 'HACRP-03' },
   solverNoCushion: { text: 'no cushion', claim: null },
-  solverNoCushionNote: { text: "CMS's value is already the highest that keeps the decision at No.", claim: null },
+  solverNoCushionNote: { text: 'The current value is already the highest that keeps the decision at No.', claim: null },
   solverAssignedNote: { text: "CMS assigned this measure's score, so there is no submitted value to solve for.", claim: 'HACRP-05' },
   solverNANote: { text: 'Not subject to the reduction.', claim: 'HACRP-13' },
   // Copy for a slide: plain text lines.

@@ -4,7 +4,7 @@ import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { zFromValue } from '../../hacrp/params.js';
 import { totalFromZ } from '../../hacrp/score.js';
 import { whatIf } from '../../hacrp/whatif.js';
-import { medianHospital } from '../../hacrp/median.js';
+import { MEDIAN_CCN, isMedianHospital, medianHospital } from '../../hacrp/median.js';
 import { loadHacrp } from './helpers.js';
 
 const { model } = loadHacrp();
@@ -76,4 +76,12 @@ test('optional fiscal year and periods are carried through', () => {
   const bare = medianHospital(model);
   assert.equal(bare.fiscalYear, null);
   assert.deepEqual(bare.periods, { psi90: { start: null, end: null }, hai: { start: null, end: null } });
+});
+
+test('isMedianHospital tells the median hospital from every row in the file', () => {
+  const { hospitals } = loadHacrp();
+  assert.equal(MEDIAN_CCN, '000000');
+  assert.equal(isMedianHospital(medianHospital(model)), true);
+  assert.equal(hospitals.some(isMedianHospital), false);
+  assert.equal(isMedianHospital(null), false);
 });

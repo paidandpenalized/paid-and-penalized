@@ -9,6 +9,12 @@ function roundTo(x, decimals) {
   return Math.round(Number((x * 10 ** decimals).toPrecision(9))) / 10 ** decimals;
 }
 
+// The median hospital's CCN: state code 00 is unassigned, so no real hospital has it.
+export const MEDIAN_CCN = '000000';
+
+// Whether a record is the median hospital: words about it must never call its values CMS's.
+export const isMedianHospital = (h) => h?.ccn === MEDIAN_CCN;
+
 // fiscalYear and periods are optional; without them the record carries nulls in the same shape.
 export function medianHospital(model, { fiscalYear = null, periods } = {}) {
   const measures = {};
@@ -22,7 +28,7 @@ export function medianHospital(model, { fiscalYear = null, periods } = {}) {
   }
   const total = roundTo(totalFromZ(zs), 4);
   return {
-    ccn: '000000',
+    ccn: MEDIAN_CCN,
     name: null,
     state: null,
     fiscalYear,
