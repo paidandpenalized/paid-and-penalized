@@ -38,7 +38,7 @@ test('the cap comes from hospitals with a published value, not from assigned z-s
   assert.ok(Math.abs(p.cap - 0.9) < 1e-12);
 });
 
-test('a move off the cap carries the starting row\'s own miss; moves between uncapped rows do not', () => {
+test('a move off the cap carries the starting row\'s own miss; an uncapped move on an exact line carries none', () => {
   // z = (v - 0.5) / 0.25 exactly between the bounds; CMS's cap (1.495) falls between the observed 1.5 and 1.6.
   const rows = ['0.000', '0.300', '0.500', '0.700', '0.900', '1.100', '1.300'].map((v, i) =>
     syntheticRow({ 'Facility ID': `00010${i}`, 'CDI SIR': v, 'CDI W Z Score': ((Number(v) - 0.5) / 0.25).toFixed(4) }));
@@ -66,4 +66,15 @@ test('a move off the cap carries the starting row\'s own miss; moves between unc
   inside.total = -0.8;
   inside.paymentReduction = 'No';
   assert.equal(whatIf(inside, { params, boundary: { highestNo: 0.39, lowestYes: 0.41 } }, { CDI: 0.595 }).after.flag, 'No');
+});
+
+test('opposite moves that cancel are still re-judged with the band, not handed CMS\'s flag', () => {
+  const p = { mean: 0.5, sd: 0.25, floor: 0, cap: 1, zMin: -2, zMax: 2, decimals: 3, fitError: 0.001 };
+  const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, { ...p, id }]));
+  const [a, b] = MEASURE_IDS;
+  const measures = Object.fromEntries(MEASURE_IDS.map((id) => [id, id === a || id === b ? { value: 0.5, z: 0 } : { value: null, z: null }]));
+  const h = { ccn: 'S1', total: 0.41, paymentReduction: 'Yes', measures };
+  const r = whatIf(h, { params, boundary: { highestNo: 0.4, lowestYes: 0.41 } }, { [a]: 0.6, [b]: 0.4 });
+  assert.ok(Math.abs(r.band - 0.001) < 1e-15);
+  assert.equal(r.after.flag, 'too-close');
 });

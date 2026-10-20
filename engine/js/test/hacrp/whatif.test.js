@@ -2,14 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
-import { baselineZ, zFromValue } from '../../hacrp/params.js';
+import { bandTerm, baselineZ, zFromValue } from '../../hacrp/params.js';
 import { whatIf } from '../../hacrp/whatif.js';
 import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './helpers.js';
 
 const { hospitals, model } = loadHacrp();
 const scored = hospitals.filter((h) => h.total !== null);
-// A move's band term: the starting row's own miss from the fitted line plus the line's fit error.
-const moveBand = (h, id) => Math.abs(h.measures[id].z - baselineZ(h.measures[id], model.params[id])) + model.params[id].fitError;
+const moveBand = (h, id) => bandTerm(h.measures[id], model.params[id]);
 
 test('no change = CMS exactly, for every row in the file', () => {
   for (const h of hospitals) {
@@ -175,6 +174,15 @@ test('the cap is the lowest value CMS published at its maximum z', () => {
     const p = model.params[id];
     const capped = submittedPairs(hospitals).filter((x) => x.id === id && x.h.measures[id].z === p.zMax).map((x) => x.h.measures[id].value);
     assert.ok(capped.includes(p.cap) && capped.every((v) => v >= p.cap), id);
+  }
+});
+
+test('entering exactly the cap gives CMS\'s maximum z and reads atCap', () => {
+  for (const { h, id } of submittedPairs(hospitals)) {
+    const p = model.params[id];
+    const r = whatIf(h, model, { [id]: p.cap }).measures[id];
+    assert.equal(r.afterZ, p.zMax, `${h.ccn} ${id}`);
+    assert.equal(r.atCap, true, `${h.ccn} ${id}`);
   }
 });
 

@@ -30,6 +30,13 @@ export function baselineZ(measure, p) {
   return measure.value === null ? measure.z : zFromValue(measure.value, p);
 }
 
+// What one real move of this measure adds to the what-if's error band: the starting row's own miss from the
+// fitted line (known) plus the line's worst miss at any new value (fitError). A change-only step can miss
+// CMS's z by both.
+export function bandTerm(measure, p) {
+  return Math.abs(measure.z - baselineZ(measure, p)) + p.fitError;
+}
+
 // The z a measure would have at a hypothetical value. At or past the cap, CMS's worst z; at or below the floor,
 // its best. In between, the change-only step from the published z, kept in CMS's z range. A published value
 // already past a bound stays anchored at its published z while the new value is past it too, so the mapping

@@ -5,7 +5,7 @@
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { EDGE, baselineZ, hypotheticalZ } from './params.js';
+import { EDGE, bandTerm, hypotheticalZ } from './params.js';
 import { classify } from './score.js';
 
 function validate(changes, ids) {
@@ -40,13 +40,12 @@ export function whatIf(hospital, model, changes = {}) {
     let afterZ = m.z;
     if (changed) {
       const z = hypotheticalZ(m, p, afterValue);
-      // A move smaller than float noise is no move. A real move can miss CMS's z by its starting row's own miss
-      // (known) plus the line's miss at the new value (at most fitError); the band carries both. It is the same
-      // for every move of this measure, so the flag changes in one direction only as a value rises.
+      // A move smaller than float noise is no move. The band term is the same for every move of this measure,
+      // so the flag changes in one direction only as a value rises.
       if (Math.abs(z - m.z) >= EDGE) {
         afterZ = z;
         deltaZ += z - m.z;
-        fitErrors += Math.abs(m.z - baselineZ(m, p)) + p.fitError;
+        fitErrors += bandTerm(m, p);
         if (z > m.z) anyUp = true;
         else anyDown = true;
       }
@@ -66,7 +65,8 @@ export function whatIf(hospital, model, changes = {}) {
   }
 
   const cms = hospital.paymentReduction;
-  const moved = Math.abs(deltaZ) >= EDGE;
+  // Opposite moves that cancel are still moves: each can miss CMS's z, so they are re-judged with the band.
+  const moved = (anyUp && anyDown) || Math.abs(deltaZ) >= EDGE;
   const band = moved ? fitErrors / n : 0;
   const score = moved ? hospital.total + deltaZ / n : hospital.total;
   // CMS's own value -> z map only rises with the value, so when every change moves away from the line (all
