@@ -7,13 +7,18 @@ import functools
 import json
 from datetime import datetime, timezone
 
+from pp_engine import geo
 from pp_engine.contract import format_emitted, keep_built_at
 from pp_engine.master import build_master
-from pp_engine.parse import SchemaError, impact_fy, index_by_ccn, read_hgi, read_impact, read_pos, rows, table
+from pp_engine.parse import (SchemaError, impact_fy, index_by_ccn, read_cbsa_names, read_hgi, read_impact, read_points,
+                             read_pos, read_zcta, rows, table)
 from pp_engine.schema import validate
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, load_schemas, read_json, read_manifest, read_pinned_bytes, read_zip_member
 
 HGI, IMPACT, POS, HACRP, TDR = "hgi-2026-07", "ipps-impact-fy2027", "pos-q2-2026", "yq43-i98g", "tdr-hrrp-fy2027"
+ZCTA, COUNTIES, CBSA, TDR_POINTS = "zcta-2024", "us-atlas-counties-3.0.1", "county-cbsa-fy2027", "tdr-geocodes"
+ZCTA_MEMBER = "2024_Gaz_zcta_national.txt"
+CBSA_MEMBER = "FY 2027 FR County to CBSA Crosswalk.txt"  # CMS text: Windows-1252
 SOURCES = (HGI, IMPACT, POS, HACRP, TDR)
 # The final rule's correction-notice values, the file Thirty Day Readmissions builds from. CMS writes it in
 # Windows-1252.
@@ -45,6 +50,21 @@ def hrrp_program():
 @functools.lru_cache(maxsize=None)
 def impact_text():
     return read_zip_member(IMPACT, IMPACT_MEMBER).decode("cp1252")
+
+
+@functools.lru_cache(maxsize=None)
+def zcta():
+    return read_zcta(read_zip_member(ZCTA, ZCTA_MEMBER).decode("utf-8"))
+
+
+@functools.lru_cache(maxsize=None)
+def counties():
+    return geo.read_counties(json.loads(read_pinned_bytes(COUNTIES)))
+
+
+@functools.lru_cache(maxsize=None)
+def cbsa_names():
+    return read_cbsa_names(read_zip_member(CBSA, CBSA_MEMBER).decode("cp1252"))
 
 
 def build_from_pins(built_at):
