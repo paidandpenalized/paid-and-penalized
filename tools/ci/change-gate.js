@@ -33,7 +33,7 @@ function main() {
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: MAX_FILE });
   const exists = (object) => {
     try {
-      git('cat-file', '-e', object);
+      execFileSync('git', ['cat-file', '-e', object], { stdio: 'ignore' });
       return true;
     } catch {
       return false;
