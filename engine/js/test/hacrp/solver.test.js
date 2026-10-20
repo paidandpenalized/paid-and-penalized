@@ -1,17 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadHacrpFy2026 } from '../fixtures.js';
-import { toHospital, scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
-import { buildModel } from '../../hacrp/model.js';
+import { MEASURE_IDS } from '../../hacrp/measures.js';
+import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
 import { whatIf } from '../../hacrp/whatif.js';
 import { solveMeasure } from '../../hacrp/solver.js';
+import { loadHacrp, submittedPairs as pairsWhere } from './helpers.js';
 
-const hospitals = loadHacrpFy2026().rows.map(toHospital);
-const model = buildModel(hospitals);
-const submittedPairs = (flag) =>
-  hospitals
-    .filter((h) => h.total !== null && h.paymentReduction === flag)
-    .flatMap((h) => scoredMeasures(h).filter((id) => !isAssigned(h.measures[id])).map((id) => ({ h, id })));
+const { hospitals, model } = loadHacrp();
+const submittedPairs = (flag) => pairsWhere(hospitals, (h) => h.paymentReduction === flag);
 const unit = (id) => 10 ** -model.params[id].decimals;
 const flagAt = (h, id, value) => whatIf(h, model, { [id]: value }).after.flag;
 
@@ -72,6 +68,6 @@ test('assigned measures, Maryland and unscored rows get notes, not answers; unkn
   assert.equal(solveMeasure(unscored, model, 'PSI90').note, 'not-applicable');
 
   const partial = hospitals.find((h) => h.total !== null && h.paymentReduction !== 'N/A' && scoredMeasures(h).length < 6);
-  const missing = ['PSI90', 'CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'].find((id) => partial.measures[id].z === null);
+  const missing = MEASURE_IDS.find((id) => partial.measures[id].z === null);
   assert.throws(() => solveMeasure(partial, model, missing), RangeError);
 });

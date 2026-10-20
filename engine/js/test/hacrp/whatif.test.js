@@ -1,16 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadHacrpFy2026 } from '../fixtures.js';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
-import { toHospital, scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
-import { buildModel } from '../../hacrp/model.js';
-import { zFromValue } from '../../hacrp/params.js';
+import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
+import { baselineZ, valueFromZ, zFromValue } from '../../hacrp/params.js';
 import { whatIf } from '../../hacrp/whatif.js';
+import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './helpers.js';
 
-const hospitals = loadHacrpFy2026().rows.map(toHospital);
-const model = buildModel(hospitals);
+const { hospitals, model } = loadHacrp();
 const scored = hospitals.filter((h) => h.total !== null);
-const submitted = (h) => scoredMeasures(h).filter((id) => !isAssigned(h.measures[id]));
 
 test('no change = CMS exactly, for every row in the file', () => {
   for (const h of hospitals) {
@@ -46,7 +43,7 @@ test('setting a value to its published value is no change', () => {
 });
 
 test('no movement between two values above the cap', () => {
-  const pick = scored.flatMap((h) => submitted(h).map((id) => ({ h, id }))).find(({ h, id }) => h.measures[id].value > model.params[id].cap);
+  const pick = submittedPairs(hospitals).find(({ h, id }) => h.measures[id].value > model.params[id].cap);
   assert.ok(pick, 'FY2026 has a measure above its cap');
   const { h, id } = pick;
   const r = whatIf(h, model, { [id]: model.params[id].cap * 1.2 + 0.5 });
@@ -94,14 +91,13 @@ test('contribution is z / n and band sums the changed measures\' fit errors over
 test('a hypothetical score between highestNo and lowestYes reads too-close', () => {
   const { highestNo, lowestYes } = model.boundary;
   const target = (highestNo + lowestYes) / 2;
-  const found = scored.filter((h) => h.paymentReduction === 'Yes').flatMap((h) => submitted(h).map((id) => ({ h, id }))).find(({ h, id }) => {
-    const p = model.params[id];
-    const z = zFromValue(h.measures[id].value, p) + (target - h.total) * scoredMeasures(h).length;
-    return z > p.zMin && z < p.zMax;
+  const zFor = ({ h, id }) => baselineZ(h.measures[id], model.params[id]) + (target - h.total) * scoredMeasures(h).length;
+  const found = submittedPairs(hospitals, (h) => h.paymentReduction === 'Yes').find((pair) => {
+    const z = zFor(pair);
+    return z > model.params[pair.id].zMin && z < model.params[pair.id].zMax;
   });
   const { h, id } = found;
-  const p = model.params[id];
-  const value = p.mean + p.sd * (zFromValue(h.measures[id].value, p) + (target - h.total) * scoredMeasures(h).length);
+  const value = valueFromZ(zFor(found), model.params[id]);
   const r = whatIf(h, model, { [id]: value });
   assert.ok(Math.abs(r.after.score - target) < 1e-9);
   assert.equal(r.after.flag, 'too-close');

@@ -5,10 +5,8 @@
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { zFromValue } from './params.js';
+import { EDGE, baselineZ, zFromValue } from './params.js';
 import { classify } from './score.js';
-
-const EDGE = 1e-9;
 
 function validate(changes, ids) {
   for (const [id, value] of Object.entries(changes)) {
@@ -39,8 +37,7 @@ export function whatIf(hospital, model, changes = {}) {
 
     let afterZ = m.z;
     if (changed) {
-      // An assigned measure has no value to move from; it moves from CMS's assigned z.
-      const d = zFromValue(afterValue, p) - (assigned ? m.z : zFromValue(m.value, p));
+      const d = zFromValue(afterValue, p) - baselineZ(m, p);
       if (d !== 0) {
         afterZ = m.z + d;
         deltaZ += d;
@@ -62,7 +59,7 @@ export function whatIf(hospital, model, changes = {}) {
   }
 
   const band = fitErrors / n;
-  const score = deltaZ === 0 ? hospital.total : hospital.total + deltaZ / n;
+  const score = hospital.total + deltaZ / n;
   let flag = hospital.paymentReduction;
   if (flag !== 'N/A' && deltaZ !== 0) flag = classify(score, model.boundary, band);
 

@@ -3,7 +3,8 @@
 // it didn't). Uses the same change-only math as the what-if, and targets the bottom of the too-close band so
 // applying the answer reads "No", not "too close to call".
 import { scoredMeasures, isAssigned } from './hospital.js';
-import { zFromValue } from './params.js';
+import { baselineZ, valueFromZ } from './params.js';
+import { noCeiling } from './score.js';
 
 // Round down to the measure's display decimals. Lower is the safe direction for both questions: a lower value
 // never raises the score. The small nudge keeps an answer that is already exact from rounding back up.
@@ -25,21 +26,20 @@ export function solveMeasure(hospital, model, id) {
 
   const p = model.params[id];
   const n = ids.length;
-  const target = model.boundary.highestNo - p.fitError / n;
-  const zNeeded = zFromValue(m.value, p) + (target - hospital.total) * n;
-  const raw = p.mean + p.sd * zNeeded;
+  // The what-if's change-only math, run backward: the z this measure needs for the score to land on the
+  // highest value that still reads No, with the band a change to this measure carries.
+  const target = noCeiling(model.boundary, p.fitError / n);
+  const zNeeded = baselineZ(m, p) + (target - hospital.total) * n;
+  const value = floorTo(valueFromZ(zNeeded, p), p.decimals);
 
   if (hospital.paymentReduction === 'Yes') {
     // total > target here, so zNeeded is below the current z and the answer is always under the cap.
-    if (zNeeded < p.zMin) return result('needed', id);
-    const value = floorTo(raw, p.decimals);
-    if (value < 0) return result('needed', id);
+    if (zNeeded < p.zMin || value < 0) return result('needed', id);
     return result('needed', id, { possible: true, value });
   }
 
   // The measure can rise to its cap, and past it, without crossing the line.
   if (zNeeded >= p.zMax) return result('cushion', id, { possible: true, unlimited: true });
-  const value = floorTo(raw, p.decimals);
   if (value < m.value || value < 0) return result('cushion', id, { value: Math.max(value, 0), note: 'no-cushion' });
   return result('cushion', id, { possible: true, value });
 }

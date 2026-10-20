@@ -1,10 +1,8 @@
 // Property test: the what-if moves in one direction only. Seeded, so failures reproduce.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadHacrpFy2026 } from '../fixtures.js';
-import { toHospital, scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
-import { buildModel } from '../../hacrp/model.js';
 import { whatIf } from '../../hacrp/whatif.js';
+import { loadHacrp, submittedPairs } from './helpers.js';
 
 function mulberry32(seed) {
   return () => {
@@ -15,11 +13,8 @@ function mulberry32(seed) {
   };
 }
 
-const hospitals = loadHacrpFy2026().rows.map(toHospital);
-const model = buildModel(hospitals);
-const cases = hospitals
-  .filter((h) => h.total !== null)
-  .flatMap((h) => scoredMeasures(h).filter((id) => !isAssigned(h.measures[id])).map((id) => ({ h, id })));
+const { hospitals, model } = loadHacrp();
+const cases = submittedPairs(hospitals);
 
 test('monotonic: a higher value never gives a lower score, and moves stay on the right side of CMS (5,000 trials)', () => {
   const rand = mulberry32(20261020);

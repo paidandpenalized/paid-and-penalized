@@ -1,13 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadHacrpFy2026 } from '../fixtures.js';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
-import { toHospital, isAssigned } from '../../hacrp/hospital.js';
+import { isAssigned } from '../../hacrp/hospital.js';
 import { zFromValue, estimateTagged } from '../../hacrp/params.js';
-import { buildModel } from '../../hacrp/model.js';
+import { loadHacrp } from './helpers.js';
 
-const hospitals = loadHacrpFy2026().rows.map(toHospital);
-const { params } = buildModel(hospitals);
+const { hospitals, model: { params } } = loadHacrp();
 
 // Documented fit tolerances: CMS's own parameters reproduce every SIR z within 0.0001 and PSI-90 within 0.0004
 // (PSI-90 was scored on unrounded values; the public file has 4 decimals).

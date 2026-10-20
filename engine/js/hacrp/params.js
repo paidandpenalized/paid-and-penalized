@@ -6,7 +6,8 @@
 // whose hospital population differs slightly from the one CMS scored.
 import { clamp, linearFit, mean, median, percentileSas5, sampleSd } from '../stats.js';
 
-const EDGE = 1e-9;
+// Tolerance for comparing z-scores that CMS published to 4 decimals against the measure's min and max.
+export const EDGE = 1e-9;
 const ESTIMATE_THRESHOLD = 0.001;
 
 function withValueAndZ(hospitals, id) {
@@ -20,6 +21,17 @@ function decimalsOf(text) {
 
 export function zFromValue(value, p) {
   return (clamp(value, p.floor, p.cap) - p.mean) / p.sd;
+}
+
+// The value whose z is z; the inverse of zFromValue between the caps.
+export function valueFromZ(z, p) {
+  return p.mean + p.sd * z;
+}
+
+// Where a change to a measure starts from: the fitted z of the published value, or, for a measure CMS assigned
+// because it wasn't submitted, CMS's assigned z.
+export function baselineZ(measure, p) {
+  return measure.value === null ? measure.z : zFromValue(measure.value, p);
 }
 
 export function fitMeasureParams(hospitals, id) {

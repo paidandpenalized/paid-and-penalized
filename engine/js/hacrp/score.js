@@ -23,9 +23,14 @@ export function cutoffBoundary(hospitals) {
   return { highestNo, lowestYes };
 }
 
-// 'No' at or below highestNo - band, 'Yes' at or above lowestYes + band, otherwise 'too-close'.
-export function classify(score, { highestNo, lowestYes }, band = 0) {
-  if (score <= highestNo - band) return 'No';
-  if (score >= lowestYes + band) return 'Yes';
+// The highest score that still reads 'No' when the score carries an error band.
+export function noCeiling({ highestNo }, band = 0) {
+  return highestNo - band;
+}
+
+// 'No' at or below noCeiling, 'Yes' at or above lowestYes + band, otherwise 'too-close'.
+export function classify(score, boundary, band = 0) {
+  if (score <= noCeiling(boundary, band)) return 'No';
+  if (score >= boundary.lowestYes + band) return 'Yes';
   return 'too-close';
 }
