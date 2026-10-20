@@ -28,8 +28,10 @@ test('a deletion (or the delete half of a rename) needs a corrections entry', ()
   assert.equal(changeGate({ changed: [...rename, { status: 'A', path: 'corrections/2026-11-01.md' }] }).ok, true);
 });
 
-test('a new corrections entry covers the whole change; editing or deleting one, or near-misses, do not', () => {
+test('a new corrections entry covers the whole change; editing, deleting or renaming one, or near-misses, do not', () => {
   assert.equal(changeGate({ changed: [M(EMITTED), M(OLDER), { status: 'A', path: 'corrections/2026-11-01-hacrp.md' }] }).ok, true);
+  const renamed = [{ status: 'D', path: 'corrections/a.md' }, { status: 'A', path: 'corrections/b.md' }];
+  assert.equal(changeGate({ changed: [M(EMITTED), ...renamed] }).ok, false, 'a rename');
   for (const status of ['M', 'D']) {
     assert.equal(changeGate({ changed: [M(EMITTED), { status, path: 'corrections/2026-11-01-hacrp.md' }] }).ok, false, status);
   }
@@ -42,23 +44,24 @@ const hash = (pins, ids) => sourceManifestHash(ids.map((id) => ({ id, sha256: pi
 const OLD = new Map([['a', '1'], ['b', '2']]);
 const NEW = new Map([['a', '9'], ['b', '2']]);
 const file = (version, sources = ['a'], pins = OLD) => ({ source_manifest: hash(pins, sources), methods_version: version, sources });
-const ctx = (before, now, { pins = { before: OLD, now: OLD }, latest = { now: 1, before: 1 }, added = false } = {}) =>
+const ctx = (before, now, { pins = OLD, latest = { now: 1, before: 1 }, added = false } = {}) =>
   reasonFor({ added, before, now, pins, latest });
 
 test('reasonFor: added, re-pinned, bumped, or nothing', () => {
   assert.equal(ctx(undefined, file(1), { added: true }), 'added');
-  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: { before: OLD, now: NEW } }), 're-pinned');
+  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: NEW }), 're-pinned');
   assert.equal(ctx(file(1), file(2), { latest: { now: 2, before: 1 } }), 'bumped');
   assert.equal(ctx(file(1), file(1)), null, 'numbers moved, nothing else');
 });
 
-test('reasonFor: a re-pin needs a new SHA-256 for an existing input and a truthful source_manifest', () => {
-  const repinned = { pins: { before: OLD, now: NEW } };
-  assert.equal(ctx(file(1), { ...file(1, ['a'], NEW), source_manifest: 'f'.repeat(64) }, repinned), null, 'a forged hash');
-  assert.equal(ctx(file(1), file(1, ['a'], OLD), repinned), null, 'a stale hash');
-  assert.equal(ctx(file(1), file(1, ['a', 'b'])), null, 'adding an input is a methods change, not new data');
-  assert.equal(ctx(file(1, ['b']), file(1, ['b'], NEW), repinned), null, 'only another input changed');
-  assert.equal(ctx(file(1), file(1, ['a'], NEW), { pins: { before: new Map(), now: NEW } }), null, 'the input is new to the manifest');
+test('reasonFor: a re-pin needs the same sources and a new, truthful source_manifest', () => {
+  assert.equal(ctx(file(1), { ...file(1, ['a'], NEW), source_manifest: 'f'.repeat(64) }, { pins: NEW }), null, 'a forged hash');
+  assert.equal(ctx(file(1), file(1, ['a'], OLD), { pins: NEW }), null, 'a stale hash');
+  assert.equal(ctx(file(1), file(1, ['a', 'b'], NEW), { pins: NEW }), null, 'adding an input during a re-pin is a methods change');
+  assert.equal(ctx(file(1, ['a', 'b']), file(1, ['a'], NEW), { pins: NEW }), null, 'dropping one, likewise');
+  assert.equal(ctx(file(1, ['b', 'a']), file(1, ['a', 'b'], NEW), { pins: NEW }), null, 'reordering, likewise');
+  assert.equal(ctx(file(1), file(1, ['c'], NEW), { pins: NEW }), null, 'an input missing from the manifest');
+  assert.equal(ctx(file(1), file(1)), null, 'the same hash');
 });
 
 test('reasonFor: a bump counts only when the file moves to the new newest version', () => {

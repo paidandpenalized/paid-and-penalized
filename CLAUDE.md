@@ -42,13 +42,17 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
-- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails. A file under
-  `corrections/` covers the whole change. Otherwise each changed emitted file must be new (a first emission),
-  re-pinned (its `source_manifest`, a hash of its inputs' ids and SHA-256s, changed), or bumped (its own
-  `methods_version` moved to its site's new newest `## <site> methods_version N` heading in
-  `docs/METHODS-LOG.md`). Deleting or renaming an emitted file needs a corrections entry. Tests require the
-  newest year of each site to carry the newest version; older years keep theirs. Run `make emit` after any engine
-  or pin change (the golden test fails until you do); it keeps `built_at` when nothing else changed.
+- **Emitted data changes need a reason on record** in the same change, or CI's change gate fails
+  (`tools/ci/change-gate.js` has the exact rule). A new file under `corrections/` (not an edit or rename of an
+  old one) covers the whole change. Otherwise each changed emitted file must be:
+  - **new** (a first emission); or
+  - **re-pinned**: same `sources`, and a new `source_manifest` that is the true hash of those inputs' ids and
+    SHA-256s in the manifest. Adding or dropping an input doesn't count; that's a methods change; or
+  - **bumped**: its own `methods_version` moved to its site's new newest `## <site> methods_version N` heading
+    in `docs/METHODS-LOG.md`.
+  Deleting or renaming an emitted file needs a corrections entry. Tests require each site's newest year to carry
+  the newest version; older years keep theirs. Run `make emit` after any engine or pin change (the golden test
+  fails until you do); it keeps `built_at` when nothing else changed.
 - **Commit hooks** (`make hooks`, once per clone): pre-commit blocks files of 10 MiB or more, strings from a
   private blocklist, and secrets (gitleaks); commit-msg checks the message against the blocklist. The blocklist
   lives outside the repo (`~/.config/paid-and-penalized/blocklist.txt`, or `$PP_BLOCKLIST`) and is never copied

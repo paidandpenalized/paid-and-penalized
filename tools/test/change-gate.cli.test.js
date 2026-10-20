@@ -81,13 +81,20 @@ test('CLI: the gate reads git correctly for each reason, and fails without one',
   assert.equal(r.gate(bumped).status, 0, 'a bump and a re-pin explain the newest year');
   assert.equal(r.gate('0'.repeat(40)).status, 0, 'a branch\'s first push compares with HEAD~1');
 
+  r.write('data/pinned/manifest.json', manifest('cc', '2026-11-04'));
+  const pinOnly = r.commit('push 1: the re-pin alone');
+  assert.equal(r.gate(repinned).status, 0, 'no emitted change yet');
+  r.write(FILE, emitted(3, ['{"v":6}'], 'cc'));
+  r.commit('push 2: make emit');
+  assert.equal(r.gate(pinOnly).status, 0, 'a re-pin split across two pushes still counts');
+
   r.mv(OLDER, 'data/emitted/hacrp/fy2025/hacrp-final.json');
-  r.commit('a rename is a delete plus an add');
-  assert.equal(r.gate(repinned).status, 1, 'the delete half needs a corrections entry');
+  const renamed = r.commit('a rename is a delete plus an add');
+  assert.equal(r.gate(`${renamed}~1`).status, 1, 'the delete half needs a corrections entry');
   r.write('corrections/2026-11-04-hacrp.md', 'renamed\n');
   r.write('data/emitted/hacrp/notes.txt', 'not json\n');
   r.commit('a correction, plus a stray non-JSON file');
-  assert.equal(r.gate(repinned).status, 0, 'a corrections entry covers it all, and a stray file does not crash the gate');
+  assert.equal(r.gate(`${renamed}~1`).status, 0, 'a corrections entry covers it all, and a stray file does not crash the gate');
   const lost = r.gate('f'.repeat(40));
   assert.equal(lost.status, 1, 'an unreachable base (force-push) fails closed');
   assert.match(lost.stderr, /not in this history/);
