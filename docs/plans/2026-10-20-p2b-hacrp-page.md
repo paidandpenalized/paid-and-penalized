@@ -42,9 +42,10 @@ archives; past-cutoff ticks on the ramp wait for it), the hub's directory and se
   relative performance; it is not a verdict on the quality of care."
 - **What-if standing line** under every what-if, verbatim: "A what-if shows the formula's arithmetic, not what a
   hospital could realistically change or how. CMS's real result also depends on other hospitals."
-- **The line** is shown as the boundary in CMS's decisions, never as a recomputed percentile: "CMS cut hospitals with
-  a published Total HAC Score of {lowestYes} or higher; none at {highestNo} or lower." Values come from
-  `model.boundary`.
+- **The line** is shown as the boundary in CMS's decisions, never as a recomputed percentile: "Among hospitals with a
+  Yes or No payment decision, CMS cut those with a published Total HAC Score of {lowestYes} or higher and none at
+  {highestNo} or lower. Maryland's hospitals are scored but not subject to the reduction." Values are CMS's published
+  text of the scores at `model.boundary`. (Amended in M1: the unscoped wording was false for Maryland.)
 - **Counts** (DATA-X-02): sentences about penalties use hospitals with a Yes/No decision; sentences about scores use
   scored hospitals. Both counts come from data.
 - **Footnotes:** CMS's text from the pinned crosswalk, verbatim. A code with no crosswalk text fails the build.
@@ -424,3 +425,28 @@ Copy button.
 - [ ] Push to the private remote; CI green.
 
 ## Amendments made during execution
+
+### Milestone 1 (2026-10-20)
+- **Branch** `p2b-hacrp-page`; CI runs on draft PR #2 (private). Node 24 and `npm ci` verified there.
+- **Footnote 11 vs 18:** some CMS-assigned measures carry footnote 11 (data discrepancies), not 18 (not submitted), so the
+  assigned-measure note says CMS assigned the worst score "under the program's rules" and points to CMS's footnote,
+  never "did not submit".
+- **Counts:** penalty sentences use scored hospitals with a Yes/No decision (A1(b)'s population): FY2026 718 of 2,886.
+  The one unscored "Yes" row shows CMS's literal value ("Payment reduction: Yes"), not "1% cut".
+- **A1:** (b) covers scored Yes/No hospitals; (a) also requires every scored hospital within 0.001 (a hard cap). The
+  build checks that the hospital master was built for the HACRP file's year.
+- **View model:** adds `noScore`/`score` handling, `hasValue`/`hasZ`, CMS's own text for the boundary values
+  (`boundaryText`, required), and leaves indexing to one `robotsFor` rule in `pipeline/site/`.
+- **Simplify (M1):** sites register through a manifest (`path`, entries, styles, generator); `ctx.emit` writes every page
+  and feeds the sitemap; shared render pieces live in `web/render/components.js`; per-site CSS; the hospital search list
+  is a hashed JSON asset loaded on first focus (`/hacrp/` went from 191 KB to 7 KB).
+- **Layout:** stacked measure rows at ≤ 640px; no page scrolls sideways at 375px (checked in Chrome); measure names in ink.
+- **Copy:** program page says "above the 75th percentile of Total HAC Scores, as CMS calculates it"; as-of bar reads
+  "Provider Data Catalog release: {date}". New claim ids HACRP-12 (as-of label) and HACRP-13 (Maryland) for Task 14.
+- **Reviews:** per-task reviews (Tasks 5 and 6 took one fix round each); M1 `/simplify` (4 angles), `/code-review`
+  (F1 Maryland sentence, F2 A1 cap, F3 year check, plus three small fixes), `/security-review` (no findings).
+- **Minor items left (M1):** dev-server and outDir guards are lexical (symlinks); `npm ci` runs install scripts;
+  `.pill--rew` is 4.47:1 (fix before any bonus site); stacked-table semantics need an axe/VoiceOver pass at narrow width;
+  column headers use `--pen-ink` text; the copy gate doesn't catch number words; the as-of "expected early" label goes
+  stale without a refresh (the maintenance banner covers it).
+
