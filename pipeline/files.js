@@ -1,6 +1,7 @@
 // Repo file access for pipeline CLIs and tests. The engine itself never reads files.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -8,6 +9,22 @@ export const PINNED_DIR = REPO_ROOT + 'data/pinned/';
 export const SCHEMAS_DIR = REPO_ROOT + 'schemas/';
 
 export const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+
+// Writes a file, creating its folder first.
+export function writeFileMkdir(path, text) {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
+}
+
+// The newest fy<YYYY> folder under a repo directory (e.g. data/emitted/hacrp), as a number.
+export function newestYear(dir) {
+  const years = readdirSync(REPO_ROOT + dir).map((f) => /^fy(\d{4})$/.exec(f)?.[1]).filter(Boolean).map(Number);
+  if (!years.length) throw new RangeError(`no fy<YYYY> folder under ${dir}`);
+  return Math.max(...years);
+}
+
+// The hospital master for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/master.py).
+export const masterPath = (fy) => `data/emitted/hospital/fy${fy}/hospital_master.json`;
 
 export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');

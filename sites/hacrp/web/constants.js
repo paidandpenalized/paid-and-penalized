@@ -2,9 +2,12 @@
 // CMS's file. Copy files hold no digits, so these arrive through placeholders. Each constant cites a claim in
 // sites/hacrp/CLAIMS.md.
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
+import { pct } from '../../../web/render/format.js';
 
 // CMS reduces a flagged hospital's Medicare inpatient payments by this percentage.
 export const REDUCTION_PCT = 1;
+// REDUCTION_PCT as the pages say it ("1%").
+export const REDUCTION_TEXT = pct(REDUCTION_PCT / 100, 0);
 // Hospitals with a Total HAC Score above this percentile of scores get the reduction.
 export const CUTOFF_PERCENTILE = 75;
 // CMS winsorizes each measure's results at these percentiles before standardizing them.

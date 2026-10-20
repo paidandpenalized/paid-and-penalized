@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { CCN, loadHacrp } from './data.js';
+import { loadHacrp } from './data.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
 import { boundaryText, hospitalView } from './view.js';
@@ -30,17 +30,15 @@ export function a1Summary({ ok, a, b, info }) {
 // released defaults to web/site.js; tests pass it, and may pass data from loadHacrp() to read the files once.
 export async function generateHacrp({ outDir, assets, env, released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log }) {
   const { fy, hospitals, model, estimate, footnotes, master, periods, source } = data;
-  const a1 = checkA1(hospitals, model, estimate);
+  const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
 
   const production = env === 'production';
   const bt = boundaryText(hospitals, model.boundary);
   const indexable = [];
-  const views = hospitals.map((hospital) => {
-    if (!CCN.test(hospital.ccn)) throw new RangeError(`HACRP: bad CCN "${hospital.ccn}"`);
-    return hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, released, boundaryText: bt });
-  });
+  const views = hospitals.map((hospital) =>
+    hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, released, boundaryText: bt }));
 
   for (const view of views) {
     const robots = production && view.indexable ? null : 'noindex';
@@ -48,16 +46,11 @@ export async function generateHacrp({ outDir, assets, env, released = SITE.sites
     if (!robots) indexable.push(view.path);
   }
 
-  // Penalty counts use scored hospitals with a Yes/No decision: A1(b)'s population.
-  const decided = hospitals.filter((h) => h.total !== null && (h.paymentReduction === 'Yes' || h.paymentReduction === 'No'));
   const programRobots = production && released === true ? null : 'noindex';
   writePage(outDir, PROGRAM_PATH, programPage({
     fy,
-    counts: {
-      decided: decided.length,
-      yes: decided.filter((h) => h.paymentReduction === 'Yes').length,
-      scored: hospitals.filter((h) => h.total !== null).length,
-    },
+    // Penalty counts use A1(b)'s population (scored, decided Yes/No); the score count, every scored hospital.
+    counts: { decided: a1.b.n, yes: a1.b.yes, scored: a1.a.n },
     boundaryText: bt,
     measures: views[0].measures.map(({ id, label, short }) => ({ id, label, short })),
     periods,

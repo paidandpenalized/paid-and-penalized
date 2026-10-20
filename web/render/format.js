@@ -9,8 +9,18 @@ export const cmsText = (text) => String(text).replace(/^-(?=[\d.])/, MINUS);
 
 export const count = (n) => NUMBER.format(n);
 
+// An English ordinal: 1st, 2nd, 3rd, 11th, 22nd, 75th.
+export function ordinal(n) {
+  const v = n % 100;
+  return n + (['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th');
+}
+
+// One formatter per style and decimal count: building an Intl.NumberFormat is the slow part.
+const FIXED = new Map();
 function fixed(x, dp, style) {
-  return new Intl.NumberFormat('en-US', { style, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(x);
+  const key = `${style}:${dp}`;
+  if (!FIXED.has(key)) FIXED.set(key, new Intl.NumberFormat('en-US', { style, minimumFractionDigits: dp, maximumFractionDigits: dp }));
+  return FIXED.get(key).format(x);
 }
 
 // x is a fraction: 0.123 with dp 1 reads 12.3%.

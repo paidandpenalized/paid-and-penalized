@@ -1,23 +1,15 @@
 // What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, CMS's
 // footnote crosswalk and the dataset's manifest entry. File reads live here; views and pages stay pure.
-import { readdirSync } from 'node:fs';
+import { CCN } from '../../../engine/js/ccn.js';
 import { parseFootnotes } from '../../../engine/js/footnotes.js';
-import { REPO_ROOT, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 
-export const CCN = /^[0-9A-Z]{6}$/;
 const FOOTNOTES_ID = 'y9us-9xdf';
-
-// The newest fy<YYYY> folder under a data/emitted/ directory, as a number.
-function newestYear(dir) {
-  const years = readdirSync(REPO_ROOT + dir).map((f) => /^fy(\d{4})$/.exec(f)?.[1]).filter(Boolean).map(Number);
-  if (!years.length) throw new RangeError(`no fy<YYYY> folder under ${dir}`);
-  return Math.max(...years);
-}
 
 export function loadHacrp() {
   const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
-  const masterFile = readJson(`${REPO_ROOT}data/emitted/hospital/fy${newestYear('data/emitted/hospital')}/hospital_master.json`);
+  const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
 
   for (const h of data.hospitals) {

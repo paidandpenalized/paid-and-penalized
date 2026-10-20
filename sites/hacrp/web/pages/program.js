@@ -1,21 +1,16 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, this year's counts,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
 import { html, jsonScript } from '../../../../web/render/html.js';
-import { count, longDate, pct } from '../../../../web/render/format.js';
+import { count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { CUTOFF_PERCENTILE, REDUCTION_PCT, SHORT_NAMES } from '../constants.js';
+import { CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { fill } from '../copy.js';
 import { LINKS } from '../links.js';
 import { asofBar, sourceLine, t } from './parts.js';
 
 export const PATH = '/hacrp/';
 export const SEARCH_ID = 'hacrp-search-data';
-
-const ordinal = (n) => {
-  const v = n % 100;
-  return n + (['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th');
-};
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
@@ -24,7 +19,7 @@ const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note 
 export function programPage({ fy, counts, boundaryText, measures, periods, search, source, robots, assets }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
-  const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => SHORT_NAMES[m.id]).join(', ');
+  const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => m.short).join(', ');
   const psi = measures.find((m) => m.id === 'PSI90');
 
   const body = html`<article class="wrap page">
@@ -43,7 +38,7 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
 <section class="block" aria-labelledby="what-h">
 <h2 id="what-h">${t('whatHeading')}</h2>
 <p>${t('whatScore')}</p>
-<p>${fill('whatCut', { percentile: ordinal(CUTOFF_PERCENTILE), pct: pct(REDUCTION_PCT / 100, 0) })}</p>
+<p>${fill('whatCut', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}</p>
 <p>${t('whatRelative')}</p>
 </section>
 <section class="block" aria-labelledby="measures-h">

@@ -1,6 +1,7 @@
 // Acceptance check A1 as a build gate: the published z-scores reproduce each Total HAC Score, and the model's
-// boundary reproduces every Yes/No decision. Pure: the build throws on !ok and prints a, b and info.
-import { scoredMeasures } from './hospital.js';
+// boundary reproduces every Yes/No decision. Pure: the build throws on !ok and prints a, b and info; b's counts
+// (decided, Yes) are the page's penalty counts.
+import { decidedHospitals, scoredHospitals, scoredMeasures } from './hospital.js';
 import { totalFromZ } from './score.js';
 import { percentileInc } from '../stats.js';
 
@@ -9,8 +10,8 @@ const MIN_WITHIN = 0.99; // (a): share of scored hospitals that must be within t
 
 const ascending = (xs) => [...xs].sort((x, y) => x - y);
 
-export function checkA1(hospitals, model, estimate) {
-  const scored = hospitals.filter((h) => h.total !== null);
+export function checkA1(hospitals, model) {
+  const scored = scoredHospitals(hospitals);
 
   let maxError = 0;
   let within = 0;
@@ -20,8 +21,7 @@ export function checkA1(hospitals, model, estimate) {
     if (err < Z_TOLERANCE) within++;
   }
 
-  // Yes/No decisions on scored hospitals; a "Yes" with no published score has nothing to compare.
-  const decided = scored.filter((h) => h.paymentReduction === 'Yes' || h.paymentReduction === 'No');
+  const decided = decidedHospitals(hospitals);
   const mismatches = decided
     .filter((h) => h.paymentReduction !== (h.total > model.boundary.highestNo ? 'Yes' : 'No'))
     .map((h) => h.ccn);
@@ -31,8 +31,7 @@ export function checkA1(hospitals, model, estimate) {
   return {
     ok: scored.length > 0 && within / scored.length >= MIN_WITHIN && mismatches.length === 0,
     a: { n: scored.length, maxError, within },
-    b: { n: decided.length, mismatches },
-    c: { ...estimate },
+    b: { n: decided.length, yes: decided.filter((h) => h.paymentReduction === 'Yes').length, mismatches },
     info: { pctAllScored: pct(scored), pctDecided: pct(decided) },
   };
 }

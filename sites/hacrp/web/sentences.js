@@ -1,7 +1,6 @@
 // The plain-language layer of a hospital page, built from its view (view.js). CMS's values are said as "CMS
 // reports"; this site's arithmetic as "this site recomputes". Odd rows get CMS's values and notes and nothing more.
-import { pct } from '../../../web/render/format.js';
-import { REDUCTION_PCT } from './constants.js';
+import { REDUCTION_TEXT } from './constants.js';
 import { COPY, fill } from './copy.js';
 
 const notes = (list) => list.map((f) => f.text).join(' ');
@@ -15,7 +14,7 @@ export function summary(view) {
   const scoreNotes = (view.total ?? view.noScore).footnotes;
   if (scoreNotes.length) out.push(fill('noteScore', { notes: notes(scoreNotes) }));
   if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
-  if (view.status === 'yes') out.push(fill('whyYes', { pct: pct(REDUCTION_PCT / 100, 0) }));
+  if (view.status === 'yes') out.push(fill('whyYes', { pct: REDUCTION_TEXT }));
   if (view.status === 'no') out.push(fill('whyNo'));
   out.push(fill('scoreIs'), fill('notAGrade'));
   return out;

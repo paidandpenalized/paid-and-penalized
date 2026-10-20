@@ -7,8 +7,6 @@ import { checkA1 } from '../../hacrp/acceptance.js';
 import { loadHacrp } from './helpers.js';
 import { syntheticRow } from './synthetic.js';
 
-const estimate = { PSI90: { tagged: true, maxError: 0.002 }, CDI: { tagged: false, maxError: 0.0005 } };
-
 function synthetic(ccn, total, paymentReduction) {
   const row = syntheticRow({ 'Facility ID': ccn, 'Total HAC Score': total, 'Payment Reduction': paymentReduction });
   for (const m of MEASURES) row[m.z] = total;
@@ -24,34 +22,34 @@ const base = [
   synthetic('990004', '0.9000', 'Yes'),
 ];
 
-test('pinned FY2026 file: ok, every decision reproduced, estimate copied', () => {
+test('pinned FY2026 file: ok, every decision reproduced', () => {
   const { hospitals, model: pinned } = loadHacrp();
-  const r = checkA1(hospitals, pinned, estimate);
+  const r = checkA1(hospitals, pinned);
   assert.equal(r.ok, true);
   assert.equal(r.b.mismatches.length, 0);
   assert.equal(r.a.within, r.a.n);
   assert.ok(r.a.maxError < 0.0001);
   assert.ok(r.b.n > 0 && r.b.n <= r.a.n);
-  assert.deepEqual(r.c, estimate);
+  assert.ok(r.b.yes > 0 && r.b.yes < r.b.n);
   assert.ok(r.info.pctAllScored >= pinned.boundary.highestNo && r.info.pctAllScored < pinned.boundary.lowestYes);
   assert.ok(Number.isFinite(r.info.pctDecided));
 });
 
 test('a coherent synthetic set passes', () => {
-  const r = checkA1(base, model, {});
+  const r = checkA1(base, model);
   assert.equal(r.ok, true);
-  assert.deepEqual(r.b, { n: 4, mismatches: [] });
+  assert.deepEqual(r.b, { n: 4, yes: 2, mismatches: [] });
 });
 
 test('a "No" row moved above the line fails (b) and names its CCN', () => {
-  const r = checkA1([...base, synthetic('990005', '0.8000', 'No')], model, {});
+  const r = checkA1([...base, synthetic('990005', '0.8000', 'No')], model);
   assert.equal(r.ok, false);
   assert.deepEqual(r.b.mismatches, ['990005']);
   assert.equal(r.a.within, r.a.n);
 });
 
 test('a "Yes" row at or below the highest "No" fails (b)', () => {
-  const r = checkA1([...base, synthetic('990006', '0.4000', 'Yes')], model, {});
+  const r = checkA1([...base, synthetic('990006', '0.4000', 'Yes')], model);
   assert.equal(r.ok, false);
   assert.deepEqual(r.b.mismatches, ['990006']);
 });
@@ -59,7 +57,7 @@ test('a "Yes" row at or below the highest "No" fails (b)', () => {
 test('a total that disagrees with its published z-scores fails (a)', () => {
   const off = synthetic('990007', '0.2000', 'No');
   off.total = 0.3;
-  const r = checkA1([...base, off], model, {});
+  const r = checkA1([...base, off], model);
   assert.equal(r.a.within, r.a.n - 1);
   assert.ok(r.a.maxError > 0.09);
   assert.equal(r.ok, false); // 4 of 5 within is below 99%
@@ -67,7 +65,7 @@ test('a total that disagrees with its published z-scores fails (a)', () => {
 
 test('unscored rows are skipped: a "Yes" with no score is not a mismatch', () => {
   const none = toHospital(syntheticRow({ 'Facility ID': '990008', 'Total HAC Score': 'N/A', 'Payment Reduction': 'Yes' }));
-  const r = checkA1([...base, none], model, {});
+  const r = checkA1([...base, none], model);
   assert.equal(r.ok, true);
   assert.equal(r.a.n, 4);
   assert.equal(r.b.n, 4);

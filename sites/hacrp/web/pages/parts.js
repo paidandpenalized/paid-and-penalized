@@ -1,8 +1,8 @@
 // Pieces both HACRP pages use: the decision pill, the as-of bar and the source line.
 import { html } from '../../../../web/render/html.js';
-import { isoDate, longDate, pct } from '../../../../web/render/format.js';
-import { REDUCTION_PCT, SHORT_NAMES } from '../constants.js';
-import { COPY, fill } from '../copy.js';
+import { isoDate, longDate } from '../../../../web/render/format.js';
+import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
+import { fill } from '../copy.js';
 
 export const t = (key) => fill(key);
 
@@ -11,7 +11,7 @@ export const t = (key) => fill(key);
 export function decisionPill(status, decision) {
   if (status === 'maryland') return html`<span class="pill pill--na">${t('pillNA')}</span>`;
   if (status === 'yes-no-score') return html`<span class="pill pill--pen">${fill('pillCms', { decision })}</span>`;
-  if (status === 'yes') return html`<span class="pill pill--pen">${fill('pillYes', { pct: pct(REDUCTION_PCT / 100, 0) })}</span>`;
+  if (status === 'yes') return html`<span class="pill pill--pen">${fill('pillYes', { pct: REDUCTION_TEXT })}</span>`;
   return html`<span class="pill">${t('pillNo')}</span>`;
 }
 
@@ -23,7 +23,7 @@ export function asofBar({ fy, periods, source }) {
     fill('asofLatest', { fy: String(fy), next: String(fy + 1) }),
     fill('asofReleased', { date: isoDate(source.pdcReleased) }),
   ];
-  return html`<aside class="asof" aria-label="${COPY.asofHeading.text}">
+  return html`<aside class="asof" aria-label="${t('asofHeading')}">
 <ul class="asof__list" role="list">${items.map((item) => html`<li>${item}</li>`)}</ul>
 </aside>`;
 }

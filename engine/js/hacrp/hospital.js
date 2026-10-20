@@ -52,6 +52,14 @@ export function toHospital(row) {
   };
 }
 
+// Hospitals CMS published a Total HAC Score for.
+export const scoredHospitals = (hospitals) => hospitals.filter((h) => h.total !== null);
+
+// Scored hospitals with a Yes or No payment decision: the population for penalty counts and for acceptance A1(b).
+// A "Yes" with no published score is left out; it has no score to compare with the line.
+export const decidedHospitals = (hospitals) =>
+  scoredHospitals(hospitals).filter((h) => h.paymentReduction === 'Yes' || h.paymentReduction === 'No');
+
 // Measures that count toward the hospital's score: those with a published z-score.
 export function scoredMeasures(hospital) {
   return MEASURE_IDS.filter((id) => hospital.measures[id].z !== null);
