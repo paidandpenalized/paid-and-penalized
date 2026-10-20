@@ -73,7 +73,7 @@ test('assigned measures, Maryland and unscored rows get notes, not answers; unkn
 });
 
 test('cushion: a No hospital whose measure is already at or above the cap has unlimited room on it', () => {
-  const pairs = submittedPairs('No').filter(({ h, id }) => h.measures[id].value >= model.params[id].cap || h.measures[id].z === model.params[id].zMax);
+  const pairs = submittedPairs('No').filter(({ h, id }) => h.measures[id].value >= model.params[id].cap);
   assert.ok(pairs.length > 0);
   for (const { h, id } of pairs) assert.equal(solveMeasure(h, model, id).unlimited, true, `${h.ccn} ${id}`);
 });

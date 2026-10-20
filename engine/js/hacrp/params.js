@@ -1,9 +1,10 @@
 // Per-measure parameters behind CMS's z-scores, and the public-method recompute.
 //
 // CMS winsorizes each measure at its 5th/95th percentile and standardizes it: z = (w - mean) / sd. Between the
-// caps, z is linear in the value, so CMS's own mean, sd, floor and cap can be fit from the published value-z
-// pairs. That fit reproduces CMS's z far more closely than recomputing the parameters from the public file,
-// whose hospital population differs slightly from the one CMS scored.
+// bounds, z is linear in the value, so CMS's own mean and sd can be fit from the published value-z pairs; the
+// floor and cap are read directly from the values CMS published at the minimum and maximum z. That reproduces
+// CMS's z far more closely than recomputing the parameters from the public file, whose hospital population
+// differs slightly from the one CMS scored.
 import { clamp, linearFit, mean, median, percentileSas5, sampleSd } from '../stats.js';
 
 // Tolerance for comparing z-scores that CMS published to 4 decimals against the measure's min and max.
@@ -29,10 +30,10 @@ export function baselineZ(measure, p) {
   return measure.value === null ? measure.z : zFromValue(measure.value, p);
 }
 
-// The z a measure would have at a hypothetical value. At or past the cap, CMS's worst z; at or below the floor
-// (for an SIR, 0), its best. The cap and floor are the values CMS published at its maximum and minimum z. In between, the change-only step from the published z, kept in CMS's z range.
-// A published value already past a bound stays anchored at its published z while the new value is past it too,
-// so the mapping never moves against the direction of a change.
+// The z a measure would have at a hypothetical value. At or past the cap, CMS's worst z; at or below the floor,
+// its best. In between, the change-only step from the published z, kept in CMS's z range. A published value
+// already past a bound stays anchored at its published z while the new value is past it too, so the mapping
+// never moves against the direction of a change.
 export function hypotheticalZ(measure, p, value) {
   const current = measure.value;
   if (value >= p.cap) return current !== null && current >= p.cap ? measure.z : p.zMax;
@@ -64,7 +65,8 @@ export function fitMeasureParams(hospitals, id) {
     median: median(pairs.map(({ m }) => m.value)),
     decimals: Math.max(...pairs.map(({ m }) => decimalsOf(m.valueText))),
   };
-  p.fitError = Math.max(...pairs.map(({ m }) => Math.abs(zFromValue(m.value, p) - m.z)));
+  // Measured where the fitted line is used: capped and floored rows are mapped exactly by hypotheticalZ.
+  p.fitError = Math.max(...inside.map(({ m }) => Math.abs(zFromValue(m.value, p) - m.z)));
   return p;
 }
 

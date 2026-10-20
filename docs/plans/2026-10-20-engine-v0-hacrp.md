@@ -114,7 +114,7 @@
 **Files:** Create `engine/js/hacrp/params.js`, `engine/js/hacrp/model.js`; tests `hacrp/params.test.js`.
 
 **Interfaces:**
-- `fitMeasureParams(hospitals, id) → MeasureParams`:
+- `fitMeasureParams(hospitals, id) → MeasureParams` (*superseded in part: floor, cap and fitError are defined in § Amendments at the end*):
   `{ id, n, mean, sd, floor, cap, zMin, zMax, median, decimals, fitError }`.
   Fit: least-squares of value on published z over the rows with both, *excluding* rows at zMin or zMax (clipped), giving value = mean + sd·z. Then floor = mean + sd·zMin, cap = mean + sd·zMax. `median` = median of published values. `decimals` = the decimal count of CMS's value text (3 for SIRs, 4 for PSI-90). `fitError` = max |zFromValue(value) − published z| over all rows with both.
 - `zFromValue(value, p) → number`: clamp the value to [floor, cap], then `(v − mean) / sd`.

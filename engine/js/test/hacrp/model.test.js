@@ -36,3 +36,15 @@ test('the cap comes from hospitals with a published value, not from assigned z-s
   assert.equal(p.zMax, 1);
   assert.ok(Math.abs(p.cap - 0.9) < 1e-12);
 });
+
+test('fit error is measured on uncapped rows, so a cap that falls between two observations does not inflate it', () => {
+  // z = (v - 0.5) / 0.25 exactly between the bounds; CMS's cap (1.495) falls between the observed 1.5 and 1.6.
+  const rows = ['0.000', '0.300', '0.500', '0.700', '0.900', '1.100', '1.300'].map((v, i) =>
+    syntheticRow({ 'Facility ID': `00010${i}`, 'CDI SIR': v, 'CDI W Z Score': ((Number(v) - 0.5) / 0.25).toFixed(4) }));
+  for (const [i, v] of ['1.500', '1.600'].entries()) {
+    rows.push(syntheticRow({ 'Facility ID': `00020${i}`, 'CDI SIR': v, 'CDI W Z Score': '3.9800' }));
+  }
+  const p = fitMeasureParams(rows.map(toHospital), 'CDI');
+  assert.equal(p.cap, 1.5);
+  assert.ok(p.fitError < 1e-9, `fitError ${p.fitError}`);
+});
