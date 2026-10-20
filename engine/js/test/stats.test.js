@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mean, median, sampleSd, percentileInc, percentileSas5, linearFit } from '../stats.js';
+import { clamp, mean, median, sampleSd, percentileInc, percentileSas5, linearFit } from '../stats.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -32,4 +32,10 @@ test('linearFit recovers an exact line', () => {
   const { slope, intercept } = linearFit([0, 1, 2], [1, 3, 5]);
   close(slope, 2);
   close(intercept, 1);
+});
+
+test('clamp holds a value inside [lo, hi]', () => {
+  assert.equal(clamp(5, 0, 1), 1);
+  assert.equal(clamp(-5, 0, 1), 0);
+  assert.equal(clamp(0.5, 0, 1), 0.5);
 });

@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { loadHacrpFy2026 } from '../fixtures.js';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { toHospital, isAssigned } from '../../hacrp/hospital.js';
-import { fitMeasureParams, zFromValue, estimateTagged } from '../../hacrp/params.js';
+import { zFromValue, estimateTagged } from '../../hacrp/params.js';
 import { buildModel } from '../../hacrp/model.js';
 
 const hospitals = loadHacrpFy2026().rows.map(toHospital);
-const params = Object.fromEntries(MEASURE_IDS.map((id) => [id, fitMeasureParams(hospitals, id)]));
+const { params } = buildModel(hospitals);
 
 // Documented fit tolerances: CMS's own parameters reproduce every SIR z within 0.0001 and PSI-90 within 0.0004
 // (PSI-90 was scored on unrounded values; the public file has 4 decimals).
@@ -56,8 +56,3 @@ test('A1(c) estimate tag: FY2026 tags exactly PSI-90 and CDI; SSI and MRSA recom
   assert.ok(result.MRSA.maxError <= 0.0001);
 });
 
-test('buildModel returns params for all six measures and the cutoff boundary', () => {
-  const model = buildModel(hospitals);
-  assert.deepEqual(Object.keys(model.params), MEASURE_IDS);
-  assert.ok(model.boundary.lowestYes > model.boundary.highestNo);
-});

@@ -4,8 +4,7 @@
 // caps, z is linear in the value, so CMS's own mean, sd, floor and cap can be fit from the published value-z
 // pairs. That fit reproduces CMS's z far more closely than recomputing the parameters from the public file,
 // whose hospital population differs slightly from the one CMS scored.
-import { linearFit, mean, median, percentileSas5, sampleSd } from '../stats.js';
-import { isAssigned } from './hospital.js';
+import { clamp, linearFit, mean, median, percentileSas5, sampleSd } from '../stats.js';
 
 const EDGE = 1e-9;
 const ESTIMATE_THRESHOLD = 0.001;
@@ -20,8 +19,7 @@ function decimalsOf(text) {
 }
 
 export function zFromValue(value, p) {
-  const v = Math.min(Math.max(value, p.floor), p.cap);
-  return (v - p.mean) / p.sd;
+  return (clamp(value, p.floor, p.cap) - p.mean) / p.sd;
 }
 
 export function fitMeasureParams(hospitals, id) {
@@ -30,7 +28,9 @@ export function fitMeasureParams(hospitals, id) {
   const zMin = Math.min(...zs);
   const zMax = Math.max(...zs);
   const inside = pairs.filter(({ m }) => m.z > zMin + EDGE && m.z < zMax - EDGE);
+  if (inside.length < 2) throw new RangeError(`${id}: fit needs at least 2 uncapped hospitals, found ${inside.length}`);
   const { slope: sd, intercept } = linearFit(inside.map(({ m }) => m.z), inside.map(({ m }) => m.value));
+  if (!(sd > 0) || !Number.isFinite(intercept)) throw new RangeError(`${id}: fit gave sd ${sd}, mean ${intercept}`);
 
   const p = {
     id,
@@ -55,7 +55,7 @@ export function publicMethodZ(hospitals, id) {
   const sorted = pairs.map(({ m }) => m.value).sort((a, b) => a - b);
   const lo = percentileSas5(sorted, 0.05);
   const hi = percentileSas5(sorted, 0.95);
-  const w = pairs.map(({ m }) => Math.min(Math.max(m.value, lo), hi));
+  const w = pairs.map(({ m }) => clamp(m.value, lo, hi));
   const mu = mean(w);
   const sd = sampleSd(w);
   return new Map(pairs.map(({ ccn }, i) => [ccn, (w[i] - mu) / sd]));

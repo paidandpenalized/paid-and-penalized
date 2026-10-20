@@ -1,6 +1,6 @@
 // One row of CMS's HACRP hospital file -> a Hospital record. Numbers are parsed; CMS's own text is kept
 // alongside so pages can show CMS's decimals and footnotes verbatim.
-import { MEASURES } from './measures.js';
+import { MEASURES, MEASURE_IDS } from './measures.js';
 
 const FLAGS = new Set(['Yes', 'No', 'N/A']);
 
@@ -54,7 +54,7 @@ export function toHospital(row) {
 
 // Measures that count toward the hospital's score: those with a published z-score.
 export function scoredMeasures(hospital) {
-  return MEASURES.map((m) => m.id).filter((id) => hospital.measures[id].z !== null);
+  return MEASURE_IDS.filter((id) => hospital.measures[id].z !== null);
 }
 
 // CMS assigned the worst z-score because the hospital didn't submit the measure: a z with no published value.

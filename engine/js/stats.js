@@ -1,5 +1,9 @@
 // Small statistics helpers shared across programs. Percentile functions take an ascending-sorted array.
 
+export function clamp(x, lo, hi) {
+  return Math.min(Math.max(x, lo), hi);
+}
+
 export function mean(xs) {
   return xs.reduce((sum, x) => sum + x, 0) / xs.length;
 }

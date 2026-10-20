@@ -48,6 +48,7 @@ function parseRecords(text) {
 export function parseCsv(text) {
   const [header, ...body] = parseRecords(text);
   if (!header) return [];
+  if (new Set(header).size !== header.length) throw new RangeError('CSV: duplicate header name');
   return body.map((values, index) => {
     if (values.length !== header.length) {
       throw new RangeError(`CSV: field count ${values.length} != header ${header.length} at data row ${index + 1}`);

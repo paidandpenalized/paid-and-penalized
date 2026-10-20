@@ -43,3 +43,7 @@ test('an unterminated quote throws', () => {
 test('a leading byte-order mark is ignored', () => {
   assert.deepEqual(parseCsv('﻿a\n1\n'), [{ a: '1' }]);
 });
+
+test('a repeated header name throws instead of silently dropping a column', () => {
+  assert.throws(() => parseCsv('a,a\n1,2\n'), /duplicate header/);
+});

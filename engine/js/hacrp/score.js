@@ -1,9 +1,10 @@
 // Total HAC Score and the payment-reduction line.
+import { mean } from '../stats.js';
 
 // The Total HAC Score is the equally weighted mean of a hospital's measure z-scores.
 export function totalFromZ(zs) {
   if (zs.length === 0) throw new RangeError('HACRP: no z-scores to average');
-  return zs.reduce((sum, z) => sum + z, 0) / zs.length;
+  return mean(zs);
 }
 
 // The line as CMS's own decisions show it: the highest score CMS marked "No" and the lowest it marked "Yes".
