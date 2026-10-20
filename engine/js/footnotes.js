@@ -17,3 +17,9 @@ export function footnoteText(map, code) {
   if (!map.has(code)) throw new RangeError(`no CMS footnote text for code "${code}"`);
   return map.get(code);
 }
+
+// A CMS footnote field ("", "5" or "11, 18") -> [{ code, text }] in CMS's order, each code once.
+export function footnoteList(map, field) {
+  const codes = [...new Set(String(field).split(',').map((c) => c.trim()).filter(Boolean))];
+  return codes.map((code) => ({ code, text: footnoteText(map, code) }));
+}

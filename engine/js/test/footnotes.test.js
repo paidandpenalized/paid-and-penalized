@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT, readPinned } from '../../../pipeline/files.js';
-import { parseFootnotes, footnoteText } from '../footnotes.js';
+import { footnoteList, parseFootnotes, footnoteText } from '../footnotes.js';
 
 const emitted = JSON.parse(readFileSync(REPO_ROOT + 'data/emitted/hacrp/fy2026/hacrp.json', 'utf8'));
 
@@ -42,4 +42,15 @@ test('an unknown code throws a RangeError naming it', () => {
 test('a crosswalk with a duplicate code or a missing column is rejected', () => {
   assert.throws(() => parseFootnotes('Footnote,Footnote Text\n1,x\n1,y\n'), RangeError);
   assert.throws(() => parseFootnotes('Code,Text\n1,x\n'), RangeError);
+});
+
+test('footnoteList splits a comma-separated field, trims, drops empties and repeats, and keeps CMS text', () => {
+  const map = parseFootnotes('Footnote,Footnote Text\n5,Five text\n11,Eleven text\n');
+  assert.deepEqual(footnoteList(map, ''), []);
+  assert.deepEqual(footnoteList(map, '5'), [{ code: '5', text: 'Five text' }]);
+  assert.deepEqual(footnoteList(map, ' 11, 5,,11 '), [
+    { code: '11', text: 'Eleven text' },
+    { code: '5', text: 'Five text' },
+  ]);
+  assert.throws(() => footnoteList(map, '5, zz'), RangeError);
 });

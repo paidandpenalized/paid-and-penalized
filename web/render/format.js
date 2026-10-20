@@ -18,12 +18,17 @@ export function pct(x, dp = 1) {
   return fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
 }
 
-// A true minus for negatives, + for positives, no sign for a value that rounds to zero.
-export function signed(x, dp = 1) {
+function withSign(x, dp, plus) {
   const body = fixed(Math.abs(x), dp, 'decimal');
   if (Number(body.replaceAll(',', '')) === 0) return body;
-  return (x < 0 ? MINUS : '+') + body;
+  return (x < 0 ? MINUS : plus) + body;
 }
+
+// A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
+export const decimal = (x, dp) => withSign(x, dp, '');
+
+// As decimal, with + for positives.
+export const signed = (x, dp = 1) => withSign(x, dp, '+');
 
 function longForm(year, month, day, source) {
   const d = new Date(Date.UTC(year, month - 1, day));
