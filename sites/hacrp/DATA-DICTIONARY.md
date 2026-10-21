@@ -6,7 +6,7 @@ schema_version: 1
 
 ## Source
 
-- CMS Provider Data Catalog, "Hospital-Acquired Condition Reduction Program", dataset {source_id}, released {pdc_released}. The site's pages repeat this source line.
+- CMS Provider Data Catalog, "{source_title}", dataset {source_id}, released {pdc_released}. The site's pages give the same dataset id and release date.
 - CMS's footnote crosswalk, dataset y9us-9xdf, holds the text of each footnote code.
 - Name, city, state and county come from this site's hospital master, built from CMS and U.S. Census Bureau files.
 
@@ -22,6 +22,7 @@ schema_version: 1
 | Column | Type | Meaning | CMS source column | Notes |
 |---|---|---|---|---|
 | `ccn` | text | The hospital's CMS Certification Number: six digits or capital letters. | Facility ID | The key to join on. Keep it as text, so a leading zero survives. |
+| `fiscal_year` | text | The fiscal year of CMS's file. | Fiscal Year | CMS's text, unchanged. |
 | `name` | text | The hospital's name. | (hospital master) | Not CMS's `Facility Name`: the name this site shows, from its hospital master, built from CMS files. |
 | `city` | text | The hospital's city. | (hospital master) |  |
 | `state` | text | The hospital's state or territory, as a two-letter code. | (hospital master) |  |

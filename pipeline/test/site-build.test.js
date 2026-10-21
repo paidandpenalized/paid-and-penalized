@@ -85,7 +85,13 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
   withTemp(async (dir) => {
     const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
     for (const path of ['a/', '/../x/', '/a/../../x/', '/A/', '/a b/', '//x/']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
+    // Capitals only in a file that is not a page; a repeat is refused whatever its case.
+    for (const path of ['/Page.html', '/a/Index.html']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
     ctx.emit({ path: '/data/x/DATA-DICTIONARY.md', text: 'd' });
+    assert.throws(() => ctx.emit({ path: '/data/x/data-dictionary.md', text: 'e' }), /already written/);
+    assert.throws(() => ctx.emit({ path: '/data/x/DATA-DICTIONARY.md', text: 'e' }), /already written/);
+    ctx.emit({ path: '/p/', text: 'p' });
+    assert.throws(() => ctx.emit({ path: '/p/index.html', text: 'q' }), /already written/);
     assert.equal(readFileSync(join(dir, 'data/x/DATA-DICTIONARY.md'), 'utf8'), 'd');
     const url = ctx.asset('demo', 'json', '[1]');
     assert.equal(url, `/assets/demo.${hash8('[1]')}.json`);

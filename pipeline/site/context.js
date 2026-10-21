@@ -12,10 +12,11 @@ export function robotsFor({ env, released, eligible = true }) {
 }
 
 // A site path: "/", folders ending in "/", or one file name ("/404.html", "/robots.txt", ".../DATA-DICTIONARY.md").
-// Folders are lowercase; a file name may hold capitals.
+// Folders are lowercase; a file name may hold capitals, except a page's (.html).
 const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
 
 export function createContext({ outDir, env, assets }) {
+  const written = new Set();
   const ctx = {
     outDir,
     env,
@@ -27,6 +28,10 @@ export function createContext({ outDir, env, assets }) {
     emit({ path, text, robots }) {
       if (!PATH.test(path)) throw new RangeError(`emit: bad path "${path}"`);
       const file = path.endsWith('/') ? `${path}index.html` : path;
+      if (file.endsWith('.html') && /[A-Z]/.test(file)) throw new RangeError(`emit: bad path "${path}"`);
+      // Compared without case, so two paths that one case-insensitive disk would merge never both get written.
+      if (written.has(file.toLowerCase())) throw new RangeError(`emit: "${path}" is already written`);
+      written.add(file.toLowerCase());
       writeFileMkdir(join(outDir, file), String(text));
       if (file.endsWith('.html')) ctx.pages++;
       if (robots === null) ctx.indexable.push(path);

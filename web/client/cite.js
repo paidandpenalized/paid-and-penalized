@@ -9,6 +9,8 @@ for (const block of document.querySelectorAll('.cite')) {
   if (!button || !text || !status) continue;
 
   button.addEventListener('click', async () => {
+    // Cleared first, so a second click is announced again.
+    status.textContent = '';
     try {
       await navigator.clipboard.writeText(text.textContent);
       status.textContent = block.dataset.copied;
@@ -16,8 +18,8 @@ for (const block of document.querySelectorAll('.cite')) {
       const range = document.createRange();
       range.selectNodeContents(text);
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
       status.textContent = block.dataset.failed;
     }
   });

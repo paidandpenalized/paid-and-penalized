@@ -35,6 +35,7 @@ test('one row per hospital in CMS\'s file; every name and city round-trips throu
     const h = DATA.hospitals[i];
     const m = DATA.master.get(h.ccn);
     assert.equal(row.ccn, h.ccn);
+    assert.equal(row.fiscal_year, h.fiscalYear);
     // A name or city starting with =, +, - or @ is guarded; none of the pinned ones should, so they come back as is.
     assert.equal(row.name, m.name);
     assert.equal(row.city, m.city);
@@ -101,6 +102,16 @@ test('hostile text: a formula name is guarded; quotes, commas, newlines and < ro
   assert.equal(parseCsv(hospitalsCsv([odd], masters(master('990006'))))[0].total_footnote, '\'=HYPERLINK("x")');
 });
 
+test('a footnote cell with several codes is one quoted cell and round-trips', () => {
+  const h = hospital('990001', { total: '0.1000', decision: 'No', totalFootnote: '12, 29', measures: { PSI90: { value: '0.9', valueFootnote: '12,29', z: '0.1000', zFootnote: '' } } });
+  const csv = hospitalsCsv([h], masters(master('990001')));
+  assert.ok(csv.includes('"12, 29"'));
+  assert.ok(csv.includes('"12,29"'));
+  const [row] = parseCsv(csv);
+  assert.equal(row.total_footnote, '12, 29');
+  assert.equal(row.psi90_value_footnote, '12,29');
+});
+
 test('RFC 4180 shape: UTF-8 without a BOM, CRLF line ends, a header row of the documented columns, a closing CRLF', () => {
   const csv = hospitalsCsv(DATA.hospitals.slice(0, 3), DATA.master);
   assert.notEqual(csv.charCodeAt(0), 0xfeff);
@@ -109,7 +120,8 @@ test('RFC 4180 shape: UTF-8 without a BOM, CRLF line ends, a header row of the d
   assert.equal(csv.split('\r\n').length, 5);
   assert.equal(csv.split('\r\n')[0], COLUMNS.map((c) => c.name).join(','));
   assert.deepEqual(Object.keys(parseCsv(csv)[0]), COLUMNS.map((c) => c.name));
-  assert.equal(COLUMNS.length, 9 + 4 * MEASURE_IDS.length + 4);
+  assert.equal(COLUMNS.length, 10 + 4 * MEASURE_IDS.length + 4);
+  assert.deepEqual(COLUMNS.slice(0, 2).map((c) => c.name), ['ccn', 'fiscal_year']);
 });
 
 test('a hospital with no master record is an error, not a blank row', () => {
@@ -139,9 +151,11 @@ test('dictionaryText fills the fiscal year, dataset id and release date, and ref
   const text = dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source });
   assert.ok(text.includes(String(DATA.fy)));
   assert.ok(text.includes(DATA.source.id));
-  assert.ok(text.includes(DATA.source.pdcReleased));
+  assert.ok(text.includes(isoDate(DATA.source.pdcReleased)), 'the date as the pages word it');
+  assert.ok(text.includes(`"${DATA.source.title}"`), "CMS's dataset title, from the manifest");
   assert.doesNotMatch(text, /\{\w+\}/);
   assert.throws(() => dictionaryText('a {nope} b', { fy: 1, source: DATA.source }), /nope/);
+  assert.throws(() => dictionaryText('a {source_title} b', { fy: 1, source: { ...DATA.source, title: undefined } }), /source_title/);
 });
 
 test('the build writes the CSV and the dictionary beside it; neither is a page or in the sitemap', () =>
@@ -185,7 +199,7 @@ test('the program page cites its title, FY, canonical URL and source line, and l
   assert.doesNotMatch(text, /accessed/i, 'no clock in the page');
   assert.match(block, /<button type="button" class="fig__btn" data-cite-copy hidden>Copy citation<\/button>/);
   assert.match(block, /aria-live="polite"/);
-  assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">`));
+  assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals&#39; data (CSV)</a>`));
   assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}">`));
   assert.ok(page.includes('<script type="module" src="/assets/cite.test.js">'));
 });
@@ -200,7 +214,7 @@ test('every hospital page, whatever its status, cites its name, place, FY, canon
     assert.ok(text.includes(`FY${DATA.fy}`), `${name}: FY`);
     assert.ok(text.includes('Example General Hospital'), `${name}: title`);
     assert.ok(text.includes(esc(sourceText)), `${name}: source line`);
-    assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals (CSV)</a>`), `${name}: CSV link`);
+    assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals&#39; data (CSV)</a>`), `${name}: CSV link`);
     assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}">`), `${name}: dictionary link`);
     assert.ok(page.includes('/assets/cite.test.js'), `${name}: script`);
   }
@@ -222,7 +236,7 @@ test('a page with the citation block needs the cite script path', () => {
 
 const ORIGINAL = { document: globalThis.document, window: globalThis.window, navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator') };
 
-async function runCite(t, { clipboard }) {
+async function runCite(t, { clipboard, selection = true }) {
   const handlers = {};
   const status = { textContent: '' };
   const textNode = { textContent: 'Paid & Penalized. A cite.' };
@@ -236,7 +250,7 @@ async function runCite(t, { clipboard }) {
     querySelectorAll: (s) => (s === '.cite' ? [section] : []),
     createRange: () => ({ selectNodeContents: (n) => selected.push(['range', n]) }),
   };
-  globalThis.window = { getSelection: () => ({ removeAllRanges() {}, addRange: (r) => selected.push(['add', r]) }) };
+  globalThis.window = { getSelection: () => (selection ? { removeAllRanges() {}, addRange: (r) => selected.push(['add', r]) } : null) };
   Object.defineProperty(globalThis, 'navigator', { value: { clipboard }, configurable: true });
   t.after(() => {
     for (const k of ['document', 'window']) {
@@ -251,12 +265,17 @@ async function runCite(t, { clipboard }) {
 
 test('cite script: shows the button, copies the text, says Copied', async (t) => {
   const written = [];
-  const s = await runCite(t, { clipboard: { writeText: async (x) => { written.push(x); } } });
+  const seen = [];
+  const s = await runCite(t, { clipboard: { writeText: async (x) => { written.push(x); seen.push(s.status.textContent); } } });
   assert.equal(s.button.hidden, false);
   await s.click();
   assert.deepEqual(written, ['Paid & Penalized. A cite.']);
   assert.equal(s.status.textContent, 'Copied.');
   assert.deepEqual(s.selected, []);
+  // A second click clears the line before writing it again, so a screen reader announces it again.
+  await s.click();
+  assert.deepEqual(seen, ['', '']);
+  assert.equal(s.status.textContent, 'Copied.');
 });
 
 test('cite script: when the copy fails (or there is no clipboard), the text is selected and the status says so', async (t) => {
@@ -267,4 +286,8 @@ test('cite script: when the copy fails (or there is no clipboard), the text is s
   const none = await runCite(t, { clipboard: undefined });
   await none.click();
   assert.equal(none.status.textContent, 'Not copied; the citation is selected.');
+  // A browser with no selection object still gets the message, with no error.
+  const bare = await runCite(t, { clipboard: undefined, selection: false });
+  await bare.click();
+  assert.equal(bare.status.textContent, 'Not copied; the citation is selected.');
 });

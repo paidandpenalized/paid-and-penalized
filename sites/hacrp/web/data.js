@@ -49,6 +49,6 @@ export function loadHacrp() {
     master,
     footnotes: parseFootnotes(readPinned(FOOTNOTES_ID)),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
-    source: { id: source.id, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
+    source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };
 }

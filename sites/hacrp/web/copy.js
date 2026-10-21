@@ -275,8 +275,7 @@ export const COPY = {
   source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
   datasetLink: { text: "CMS's dataset page", claim: null },
   // The data download and the citation block (both pages).
-  dataHeading: { text: 'Use this data', claim: null },
-  dataCsv: { text: 'Download all hospitals (CSV)', claim: null },
+  dataCsv: { text: "Download all hospitals' data (CSV)", claim: null },
   dataDictionary: { text: 'Data dictionary', claim: null },
   citeHeading: { text: 'Cite this page', claim: null },
   citeText: { text: '{site}. {title}. {url}. {source}', claim: null },
@@ -478,7 +477,7 @@ export const COPY = {
     text: 'The sortable table of every hospital needs JavaScript; the CSV file holds the same values.',
     claim: null,
   },
-  tableCsv: { text: "Download every hospital's score and decision (CSV)", claim: null },
+  tableCsv: { text: "Download all hospitals' data (CSV)", claim: null },
   tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },

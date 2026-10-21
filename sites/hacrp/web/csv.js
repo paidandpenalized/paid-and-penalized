@@ -4,6 +4,7 @@
 // sites/hacrp/DATA-DICTIONARY.md documents every column; a test keeps the two in step.
 import { toCsv } from '../../../engine/js/csv.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
+import { isoDate } from '../../../web/render/format.js';
 
 // Bump when a column is added, removed, renamed or changes meaning (the dictionary states it).
 export const CSV_SCHEMA_VERSION = 1;
@@ -14,6 +15,7 @@ const number = (name, get) => ({ name, numeric: true, get });
 // The columns, in file order. get(hospital, masterRecord) returns the cell.
 export const COLUMNS = [
   text('ccn', (h) => h.ccn),
+  text('fiscal_year', (h) => h.fiscalYear),
   text('name', (h, m) => m.name),
   text('city', (h, m) => m.city),
   text('state', (h, m) => m.state),
@@ -49,12 +51,13 @@ export function hospitalsCsv(hospitals, master) {
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// The dictionary file with its fiscal year, dataset id and release date filled in, so none of them is typed twice.
-// An unknown placeholder throws.
+// The dictionary file with its fiscal year, CMS's dataset id and title (from the pinned manifest) and the release
+// date (worded as the pages' source line words it) filled in, so none of them is typed twice. An unknown
+// placeholder, or a value that is missing, throws.
 export function dictionaryText(raw, { fy, source }) {
-  const values = { fy: String(fy), source_id: source.id, pdc_released: source.pdcReleased };
+  const values = { fy: String(fy), source_id: source.id, source_title: source.title, pdc_released: source.pdcReleased && isoDate(source.pdcReleased) };
   return raw.replace(PLACEHOLDER, (_, name) => {
-    if (!Object.hasOwn(values, name)) throw new RangeError(`dictionary: no value for {${name}}`);
+    if (typeof values[name] !== 'string' || values[name] === '') throw new RangeError(`dictionary: no value for {${name}}`);
     return values[name];
   });
 }
