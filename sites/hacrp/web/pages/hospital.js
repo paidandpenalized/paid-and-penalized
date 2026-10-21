@@ -9,7 +9,7 @@ import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, kicker, pillShowsCmsValue, printLink } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -113,7 +113,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 
   const body = html`<article class="wrap page page--article">
 <header class="page__head">
-<p class="cap kicker"><a href="${home}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy })}</a></p>
+${kicker(fy)}
 <h1>${view.name}</h1>
 <p class="place">${placeLine(view, source)}</p>
 </header>

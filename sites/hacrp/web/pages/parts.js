@@ -1,5 +1,5 @@
-// HACRP's words for the shared page parts (web/render/components.js) both HACRP pages use: the decision pill, the
-// as-of bar, the citation (which carries the source line) and the data links.
+// HACRP's words for the shared page parts (web/render/components.js) the HACRP pages use: the decision pill, the
+// as-of bar, the kicker, the citation (which carries the source line) and the data links.
 import { asofBar as asofShell, citation as citationShell, fillCopyKeep, keepWhole, pill } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
@@ -48,6 +48,9 @@ export function asofBar({ fy, periods, source }) {
     ],
   });
 }
+
+// The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
+export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;
 
 // The citation block: the site, the page's title, its canonical URL and the source line. No access date: the page
 // has no clock. title: the page title without the site's name.
