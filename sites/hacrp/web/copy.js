@@ -473,6 +473,10 @@ export const COPY = {
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },
   figStatesNoDecision: { text: 'no hospitals with a payment decision', claim: null },
+  // The tile grid's legend rows for a zero share and for a share that rests on few decisions, and that share's text.
+  figStatesZero: { text: 'no hospitals cut', claim: null },
+  figStatesFew: { text: 'fewer than {n} hospitals with a payment decision', claim: null },
+  figStatesFewText: { text: '{yes} of {decided}', claim: null },
   figStatesOffGrid: { text: 'Not on the grid: {codes}.', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },

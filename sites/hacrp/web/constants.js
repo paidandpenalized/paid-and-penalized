@@ -25,6 +25,9 @@ export const LEVERAGE_STEP = 0.1;
 // The state tile grid's shading steps: the share of a state's hospitals with a payment decision that CMS cut, in
 // percent (a share at a step takes the darker shade). Round breaks around the national share.
 export const TILE_STEPS_PCT = Object.freeze([10, 20, 30, 40]);
+// The state tile grid marks a state with fewer hospitals with a payment decision than this, and prints its counts
+// ("4 of 6") instead of a share: a percentage of a handful reads as more precise than it is.
+export const FEW_DECIDED = 10;
 // The program page's hospital table shows this many rows until the reader asks for all (or picks a state).
 export const TABLE_FIRST_ROWS = 50;
 

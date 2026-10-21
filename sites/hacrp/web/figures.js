@@ -16,7 +16,7 @@ import { tileMap } from '../../../web/charts/tileMap.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
 import { rampDomain } from '../../../web/whatif/marks.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { TILE_STEPS_PCT } from './constants.js';
+import { FEW_DECIDED, TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
 import { flagText } from './whatif-text.js';
 
@@ -174,7 +174,8 @@ export function statesFigure({ states, n, source, fy }) {
     if (!s) return { code, label: t('figStatesNone'), empty: true };
     if (s.decided === 0) return s.na > 0 ? { code, s, label: t('figStatesNA'), hatched: true } : { code, s, label: t('figStatesNoDecision'), empty: true };
     const value = shareOf(s);
-    return { code, s, value, label: fill('figStatesTile', { yes: count(s.yes), decided: count(s.decided), share: shareText(value) }) };
+    const few = s.decided < FEW_DECIDED;
+    return { code, s, value, few, label: fill('figStatesTile', { yes: count(s.yes), decided: count(s.decided), share: shareText(value) }) };
   };
   const tiles = Object.keys(TILES).map(entry);
   const offGrid = Object.keys(states).filter((code) => !has(TILES, code)).sort().map(entry);
@@ -182,14 +183,22 @@ export function statesFigure({ states, n, source, fy }) {
   const shares = listed.filter((x) => x.value !== undefined).map((x) => x.value);
   const none = num('—', null);
   const total = (k) => Object.values(states).reduce((sum, s) => sum + s[k], 0);
+  // A share that rests on few decisions prints its counts, not a percentage that would read as precise.
+  const tileText = ({ s, value, few }) => (few ? fill('figStatesFewText', { yes: count(s.yes), decided: count(s.decided) }) : shareText(value));
+  const legend = {
+    title: t('figColShare'), high: shareText(Math.max(...shares)), zero: t('figStatesZero'),
+    few: fill('figStatesFew', { n: count(FEW_DECIDED) }),
+  };
   return figure({
     n, source, alt: t('figStatesAlt'), csvName: `hacrp-fy${fy}-states`,
     takeaway: fill('figStatesTakeaway', {
       share: pct(total('yes') / total('decided'), SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
     }),
     ...variants((width) => tileMap({
-      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width, showValues: width === WIDE,
-      states: Object.fromEntries(tiles.map(({ code, value, label, hatched, empty }) => [code, value === undefined ? { hatched, empty, label } : { value, label, text: shareText(value) }])),
+      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width, showValues: width === WIDE, legend,
+      states: Object.fromEntries(tiles.map((x) => [x.code, x.value === undefined
+        ? { hatched: x.hatched, empty: x.empty, label: x.label }
+        : { value: x.value, label: x.label, few: x.few, text: tileText(x) }])),
     })),
     note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
     table: {

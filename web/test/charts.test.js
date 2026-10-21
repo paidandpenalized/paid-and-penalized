@@ -30,7 +30,7 @@ const RAMP = { domain: [-1, 1], actual: 0.3, band: [-0.05, 0.05], labels: { actu
 const HIST = { values: [-0.9, -0.5, -0.45, -0.1, 0, 0.12, 0.2, 0.61, 0.9], bins: 4, boundary: 0.05, markLabel: "CMS's line" };
 const STATES = Object.fromEntries(Object.keys(TILES).map((st, i) => [st, { value: (i % 5) / 4, label: `${st} label` }]));
 STATES.MD = { value: null, label: 'not subject to the reduction', hatched: true };
-const MAP = { id: 'm1', states: STATES, ramp: [0.2, 0.4, 0.6, 0.8] };
+const MAP = { id: 'm1', states: STATES, ramp: [0.2, 0.4, 0.6, 0.8], legend: { title: 'Share', high: '1', zero: 'none cut' } };
 const TABLE = { columns: [{ name: 'Measure', numeric: false }, { name: 'Part', numeric: true }], rows: [['Measure A', '0.25'], ['Measure B', '-0.125'], ['Measure C', '0.5']] };
 const FIG = { n: 1, takeaway: 'Measure C adds the most.', svg: contribBars(BARS), source: 'Synthetic source.', table: TABLE, alt: 'Three bars.' };
 
@@ -224,7 +224,7 @@ test('tileMap draws a code with no data hatched with its label, never as zero, a
   assert.match(md, /fill="url\(#chart-m1-hatch\)"/);
   assert.ok(md.includes('<title>MD: not subject to the reduction</title>'));
   assert.ok(!md.includes('data-value'));
-  assert.ok(s.includes('>not subject to the reduction</text>'), 'the hatch has a legend label');
+  assert.ok(s.includes('>Not subject to the reduction</text>'), 'the hatch has a legend label, in sentence case');
   const { CA, ...missing } = STATES;
   assert.throws(() => tileMap({ ...MAP, states: missing }), /CA/);
   assert.throws(() => tileMap({ ...MAP, states: { ...STATES, ZZ: { value: 1, label: 'x' } } }), /ZZ/);
@@ -234,8 +234,8 @@ test('tileMap draws a code with no data hatched with its label, never as zero, a
 test('tileMap draws nothing-to-show as an empty dashed tile, apart from the hatch, each with its own legend swatch', () => {
   const s = String(tileMap({ ...MAP, states: { ...STATES, PR: { empty: true, label: 'none in the file' } } }));
   assert.match(s, /data-state="PR"><title>PR: none in the file<\/title><rect class="chart-tile-empty" x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+"\/>/);
-  assert.match(s, /<rect class="chart-tile-na" fill="url\(#chart-m1-hatch\)" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>not subject to the reduction<\/text>/);
-  assert.match(s, /<rect class="chart-tile-empty" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>none in the file<\/text>/);
+  assert.match(s, /<rect class="chart-tile-na" fill="url\(#chart-m1-hatch\)" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>Not subject to the reduction<\/text>/);
+  assert.match(s, /<rect class="chart-tile-empty" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>None in the file<\/text>/);
   assert.throws(() => tileMap({ ...MAP, states: { ...STATES, PR: { empty: true, hatched: true, label: 'x' } } }), /hatched or empty/);
 });
 
@@ -245,6 +245,10 @@ test('tileMap: the legend is one stepped bar with each threshold under its edge;
   assert.equal(legend.match(/<rect class="chart-tile chart-seq-\d" x="[\d.]+" y="[\d.]+" width="44" height="10"\/>/g).length, 5);
   assert.deepEqual([...legend.matchAll(/class="chart-legend__label" x="([\d.]+)" y="[\d.]+" text-anchor="middle">([^<]+)</g)].map((m) => [m[1], m[2]]),
     [['44', '0.2'], ['88', '0.4'], ['132', '0.6'], ['176', '0.8']]);
+  // Its title above it, and the two ends labelled: zero under the left end, legend.high beside the right end.
+  assert.match(legend, /<text class="chart-legend__title" x="0" y="[\d.]+" text-anchor="start">Share<\/text>/);
+  assert.match(legend, /x="0" y="[\d.]+" text-anchor="start">0<\/text>/);
+  assert.match(legend, /x="226" y="[\d.]+" text-anchor="start">1<\/text>/);
   assert.ok(!s.includes('chart-tile__value'), 'no values unless asked');
   const states = { ...STATES, CA: { value: 0.3, label: 'CA label', text: '30.0% <b>' } };
   const shown = String(tileMap({ ...MAP, states, showValues: true }));
@@ -257,9 +261,26 @@ test('tileMap steps follow the ramp thresholds, and text on a dark step uses the
   const step = (st) => new RegExp(`data-state="${st}"[^>]*>[\\s\\S]*?class="chart-tile chart-seq-(\\d)"`).exec(s)[1];
   const code = Object.keys(TILES);
   const at = (v) => code.find((st) => STATES[st].value === v && st !== 'MD');
-  assert.equal(step(at(0)), '1');
+  assert.equal(step(at(0.25)), '2');
   assert.equal(step(at(0.5)), '3');
   assert.equal(step(at(1)), '5');
+});
+
+test('tileMap: a zero share takes the neutral mark, never a ramp step, keyed in the legend; few cases get a dashed inner outline', () => {
+  const s = String(tileMap(MAP));
+  const zero = Object.keys(TILES).find((st) => STATES[st].value === 0);
+  const tile = new RegExp(`data-state="${zero}"[^>]*>[\\s\\S]*?</g>`).exec(s)[0];
+  assert.match(tile, /<rect class="chart-tile chart-tile-zero"/);
+  assert.doesNotMatch(tile, /chart-seq-/);
+  assert.match(s, /<rect class="chart-tile chart-tile-zero" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>None cut<\/text>/, 'sentence case');
+  assert.throws(() => tileMap({ ...MAP, legend: {} }), /legend\.zero/);
+  const states = { ...STATES, CA: { value: 0.9, label: 'CA', few: true, text: '4 of 6' } };
+  assert.throws(() => tileMap({ ...MAP, states }), /legend\.few/);
+  const few = String(tileMap({ ...MAP, states, showValues: true, legend: { ...MAP.legend, few: 'few decisions' } }));
+  const ca = /data-state="CA"[\s\S]*?<\/g>/.exec(few)[0];
+  assert.match(ca, /<rect class="chart-tile-few chart-tile-few--on"/, 'on a dark step the outline takes the on-mark ink');
+  assert.ok(ca.includes('>4 of 6</text>'));
+  assert.match(few, />Few decisions<\/text>/);
 });
 
 test('tile codes are centered by charts.css, not an attribute on each of the 52 tiles', () => {
@@ -462,10 +483,10 @@ const SNAPSHOTS = {
 <p class="fig__actions"><button type="button" class="fig__btn" data-figure-csv="figure-1.csv" hidden>Download CSV</button></p>
 </details>
 </figure>`,
-  tileMapEnds: `<svg class="chart chart--tile-map" viewBox="0 0 360 326" width="100%" focusable="false"><defs><pattern id="chart-m1-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs>
-<g class="chart-mark" data-mark data-state="AK" data-value="0"><title>AK: AK label</title><rect class="chart-tile chart-seq-1" x="0" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="15.36" y="19.36">AK</text></g>
+  tileMapEnds: `<svg class="chart chart--tile-map" viewBox="0 0 360 362" width="100%" focusable="false"><defs><pattern id="chart-m1-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs>
+<g class="chart-mark" data-mark data-state="AK" data-value="0"><title>AK: AK label</title><rect class="chart-tile chart-tile-zero" x="0" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="15.36" y="19.36">AK</text></g>
 <g class="chart-mark" data-mark data-state="ME" data-value="0.25"><title>ME: ME label</title><rect class="chart-tile chart-seq-2" x="327.27" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="342.64" y="19.36">ME</text></g>
-<g class="chart-legend"><rect class="chart-tile chart-seq-1" x="0" y="271.82" width="44" height="10"/><rect class="chart-tile chart-seq-2" x="44" y="271.82" width="44" height="10"/><rect class="chart-tile chart-seq-3" x="88" y="271.82" width="44" height="10"/><rect class="chart-tile chart-seq-4" x="132" y="271.82" width="44" height="10"/><rect class="chart-tile chart-seq-5" x="176" y="271.82" width="44" height="10"/><text class="chart-legend__label" x="44" y="293.82" text-anchor="middle">0.2</text><text class="chart-legend__label" x="88" y="293.82" text-anchor="middle">0.4</text><text class="chart-legend__label" x="132" y="293.82" text-anchor="middle">0.6</text><text class="chart-legend__label" x="176" y="293.82" text-anchor="middle">0.8</text><rect class="chart-tile-na" fill="url(#chart-m1-hatch)" x="0" y="305.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="315.82" text-anchor="start">not subject to the reduction</text></g></svg>`,
+<g class="chart-legend"><text class="chart-legend__title" x="0" y="279.82" text-anchor="start">Share</text><rect class="chart-tile chart-seq-1" x="0" y="287.82" width="44" height="10"/><rect class="chart-tile chart-seq-2" x="44" y="287.82" width="44" height="10"/><rect class="chart-tile chart-seq-3" x="88" y="287.82" width="44" height="10"/><rect class="chart-tile chart-seq-4" x="132" y="287.82" width="44" height="10"/><rect class="chart-tile chart-seq-5" x="176" y="287.82" width="44" height="10"/><text class="chart-legend__label" x="44" y="309.82" text-anchor="middle">0.2</text><text class="chart-legend__label" x="88" y="309.82" text-anchor="middle">0.4</text><text class="chart-legend__label" x="132" y="309.82" text-anchor="middle">0.6</text><text class="chart-legend__label" x="176" y="309.82" text-anchor="middle">0.8</text><text class="chart-legend__label" x="0" y="309.82" text-anchor="start">0</text><text class="chart-legend__label" x="226" y="296.82" text-anchor="start">1</text><rect class="chart-tile chart-tile-zero" x="0" y="321.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="331.82" text-anchor="start">None cut</text><rect class="chart-tile-na" fill="url(#chart-m1-hatch)" x="0" y="341.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="351.82" text-anchor="start">Not subject to the reduction</text></g></svg>`,
 };
 
 test('each chart part matches its inline snapshot', () => {

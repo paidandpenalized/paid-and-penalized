@@ -60,12 +60,18 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-axis__title { fill: var(--ink-2); font-size: 11px; }
 .chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .chart-legend__label { fill: var(--ink); font-size: 11px; }
+.chart-legend__title { fill: var(--ink); font-size: 11px; font-weight: 600; }
 
 /* Marks: neutral gray unless the mark is a cut (--pen); no data is the hatch, never a color. */
 .chart-bar, .chart-col { fill: var(--ink-3); }
 .chart-col--pen { fill: var(--pen); }
 .chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* Nothing to show (no hospital in the file): an empty tile, dashed, so it never reads as the hatch's "not in the program". */
+/* A share of exactly zero: the neutral mark, a solid outline (the dashed one means nothing to show). */
+.chart-tile-zero { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* A share that rests on few decisions: a dashed outline inside the tile. */
+.chart-tile-few { fill: none; stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.chart-tile-few--on { stroke: var(--on-mark); }
 .chart-tile-empty { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
 .chart-hatch { color: var(--ink-3); }
 .chart-band { fill: var(--ink-3); fill-opacity: 0.2; }
