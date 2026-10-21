@@ -96,6 +96,8 @@
    (still read by screen readers); the Sort by menu stands in for their buttons. */
 @media (max-width: 640px) {
   .ht__sort { display: grid; }
+  .ht__controls { display: grid; gap: 12px; }
+  .ht__field, .ht select, .ht input { width: 100%; }
   .ht-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .gb--hospitals, .gb--hospitals tbody { display: block; width: 100%; }
   .gb--hospitals thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

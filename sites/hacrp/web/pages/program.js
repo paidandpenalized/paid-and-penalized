@@ -54,14 +54,13 @@ ${lineFigure({ hospital, model, range, boundaryText, n, source: line, fy })}</li
 }
 
 // The table of every hospital: client/program.js fills it from the hospitals asset (data-src) and shows it;
-// without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu
+// without JavaScript, a sentence and the CSV link (the data links close the section either way). On a phone the column heads are hidden and a Sort by menu
 // (the same keys, each way) stands in for them.
 const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
 const hospitalTable = ({ fy, searchUrl, source }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
 <p class="ht-retry" role="status"></p>
-${dataLinks(fy, source)}
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
 <div class="ht__controls">
@@ -77,6 +76,7 @@ ${printout(html`<table class="gb gb--hospitals">
 </table>`)}
 <p class="fig__actions"><button type="button" class="fig__btn" id="ht-all" hidden></button></p>
 </div>
+${dataLinks(fy, source)}
 </section>`;
 
 // counts: { decided, yes, scored }, for the counts sentences. boundaryText: CMS's text for the line's two scores.
