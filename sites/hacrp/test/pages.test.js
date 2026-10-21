@@ -321,3 +321,23 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
     const client = readFileSync(join(import.meta.dirname, '..', 'client', 'program.js'), 'utf8');
     assert.match(client, /\.search\[data-src\]/, 'the search stays in the same entry');
   }));
+
+test('the measure table has a Notes column only when some measure has a note, wide only for prose notes', () => {
+  const table = (h) => {
+    const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+    return /<table class="gb gb--measures[^"]*">[\s\S]*?<\/table>/.exec(text)[0];
+  };
+  for (const h of Object.values(CASES)) {
+    const t = table(h);
+    const heads = (/<thead>[\s\S]*?<\/thead>/.exec(t)[0].match(/<th /g) ?? []).length;
+    for (const row of t.match(/<tbody>[\s\S]*<\/tbody>/)[0].split('</tr>').slice(0, -1)) {
+      assert.equal((row.match(/<t[hd] /g) ?? []).length, heads, `${h.ccn}: every row has a cell per column`);
+    }
+    const notes = /<td class="notes">/.test(t);
+    assert.equal(t.includes('>Notes</th>'), notes, `${h.ccn}: Notes column iff a note`);
+    if (/class="gb gb--measures gb--notes"/.test(t)) assert.match(t, /<td class="notes"><p>/, `${h.ccn}: wide only for prose`);
+  }
+  // The unscored measure's footnote makes a prose note; the yes case has only estimate tags, so its column stays narrow.
+  assert.match(table(CASES.no), /class="gb gb--measures gb--notes"/);
+  assert.match(table(CASES.yes), /class="gb gb--measures">/);
+});

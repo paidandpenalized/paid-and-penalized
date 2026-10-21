@@ -21,6 +21,9 @@
 .fig__table summary { width: fit-content; min-height: 24px; padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .fig__table[open] summary { margin-bottom: 8px; }
 .fig__table th[data-numeric] { text-align: right; }
+/* A figure's table is as wide as its columns need, up to 48rem, so a short table's values sit together. */
+.fig__table .printout { max-width: 48rem; width: fit-content; min-width: min(100%, 36rem); }
+.fig__table .gb { width: 100%; }
 .fig__actions { margin-top: 8px; }
 .fig__btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
 .fig__btn:hover { background: var(--paper-2); }

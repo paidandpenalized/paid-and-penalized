@@ -18,17 +18,34 @@ const value = (text, published) => (published
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
 
-function measureRow(m) {
+// A measure's notes: this site's note, CMS's footnotes and the estimate tag ('' when it has none). The tag marks a
+// recompute from a measured value, so a measure with no value (unscored or assigned) has none.
+function measureNotes(m) {
   const note = measureNote(m);
-  // The tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
   const tag = m.tagged && m.hasValue && html`<details class="est"><summary>${t('estimateTag')}</summary>
 <p class="est__body small">${fill('estimateNote', { maxError: m.maxErrorText })} <a href="/methods/#estimate">${t('estimateMore')}</a></p></details>`;
+  return html`${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}`;
+}
+
+// withNotes: the table has a Notes column (some measure has a note), so every row carries the cell.
+function measureRow(m, withNotes) {
   return html`<tr>
 <th scope="row">${m.label} <span class="short">(${m.short})</span></th>
 <td class="num cms" data-label="${t('colValue')}">${value(m.valueText, m.hasValue)}</td>
 <td class="num cms" data-label="${t('colZ')}">${value(m.zText, m.hasZ)}</td>
-<td class="notes">${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}</td>
-</tr>`;
+${withNotes && html`<td class="notes">${measureNotes(m)}</td>
+`}</tr>`;
+}
+
+// The measure table, with a Notes column only when some measure has a note; the column takes the page's width only
+// for prose (this site's note or CMS's footnotes), not for estimate tags alone.
+function measureTable(measures) {
+  const withNotes = measures.some((m) => String(measureNotes(m)) !== '');
+  const prose = measures.some((m) => measureNote(m) || m.footnotes.length);
+  return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}">
+<thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th>${withNotes && html`<th scope="col">${t('colNotes')}</th>`}</tr></thead>
+<tbody>${measures.map((m) => measureRow(m, withNotes))}</tbody>
+</table>`);
 }
 
 // Every CMS footnote the page quotes, once, in the order it first appears.
@@ -93,10 +110,7 @@ ${small && html`<p class="note">${small}</p>`}
 <h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('measuresIntro')}</p>
 ${largest && html`<p>${largest}</p>`}
-${printout(html`<table class="gb gb--measures">
-<thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
-<tbody>${view.measures.map(measureRow)}</tbody>
-</table>`)}
+${measureTable(view.measures)}
 ${figs}
 </section>
 ${what?.body}
