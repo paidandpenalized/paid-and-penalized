@@ -11,10 +11,10 @@ import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { TILES } from '../../../web/charts/states.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { csvPath } from '../web/links.js';
-import { partsFigure, rangeFigure, scoresFigure, statesFigure, lineFigure } from '../web/figures.js';
+import { partsFigure, rangeFigure, scoresFigure, statesFigure } from '../web/figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
-import { stepRows } from '../web/stepper.js';
+import { lineStep, stepRows } from '../web/stepper.js';
 import { hospitalView, stateCounts } from '../web/view.js';
 import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
 import { DATA, RANGE, RANGES } from './pinned.js';
@@ -145,20 +145,24 @@ test('the program page\'s stepper walks the median hospital with medianHospital\
   }
   const sum = toUnit(MEASURE_IDS.reduce((t, id) => t + MEDIAN.measures[id].z, 0), 4);
   assert.ok(steps.includes(`add up to ${decimal(sum, 4)}, and ${decimal(sum, 4)} ÷ 6 is ${cmsText(MEDIAN.totalText)}, the Total HAC Score.`));
-  // The last step is the ramp: the median hospital against CMS's line, as Figure 1 (hypothetical).
-  assert.match(steps, /<figure class="fig" id="figure-1" data-figure>/);
-  assert.match(steps, /class="chart chart--ramp"/);
-  assert.match(steps, /<span class="fig__claim">Hypothetical<\/span> · /);
-  assert.equal(captions(steps)[0][1], esc(`This site’s hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No.`));
+  // The last step says it in words and points to the sandbox: no figure, no ramp (the sandbox below draws it).
+  assert.doesNotMatch(steps, /<figure|chart--ramp/);
+  const last = steps.slice(steps.lastIndexOf('<li>'));
+  assert.ok(last.includes(esc(`This site’s hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No. The sandbox below starts at this score.`)));
+  assert.ok(text.indexOf('The sandbox below starts') < text.indexOf('id="whatif"'), 'the pointer comes before the sandbox');
+  for (const [decision, pattern] of [['Yes', /at or above .*, so its decision would be Yes\.$/], ['too-close', /between .* and .*, so its decision would be too close to call\.$/]]) {
+    assert.match(lineStep({ ...MEDIAN, paymentReduction: decision }, DATA.boundaryText), pattern);
+  }
+  assert.throws(() => lineStep({ ...MEDIAN, paymentReduction: 'N/A' }, DATA.boundaryText), /unexpected decision/);
   assert.equal(MEDIAN.paymentReduction, 'No', 'the pinned median hospital sits below the line');
 });
 
 test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No decision, the line marked, the brief\'s takeaway', () => {
   const text = program();
   const caps = captions(text);
-  assert.deepEqual(caps.map(([n]) => n), ['1', '2', '3']);
-  assert.equal(caps[1][1], esc(`CMS cut payments to ${count(COUNTS.yes)} of ${count(COUNTS.decided)} hospitals with a payment decision: those whose Total HAC Score was above its line.`));
-  const body = figures(text)[1][2];
+  assert.deepEqual(caps.map(([n]) => n), ['1', '2']);
+  assert.equal(caps[0][1], esc(`CMS cut payments to ${count(COUNTS.yes)} of ${count(COUNTS.decided)} hospitals with a payment decision: those whose Total HAC Score was above its line.`));
+  const body = figures(text)[0][2];
   assert.match(body, /class="chart chart--histogram"/);
   assert.match(body, /class="chart-boundary"/);
   const countsIn = (svg) => [...svg.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
@@ -167,22 +171,21 @@ test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No
   assert.deepEqual(countsIn(variant(body, 'wide')), counts, 'the wide variant draws the same bins');
   assert.match(variant(body, 'wide'), /viewBox="0 0 560 /);
   // Bins above the line hold the Yes decisions, the rest the No.
-  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 2, source: 's', fy: DATA.fy });
+  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy });
   assert.ok(String(yes).includes('<td>Yes</td>') && String(yes).includes('<td>No</td>'));
   // A No at or above CMS's lowest Yes score (or a Yes below it) would put both decisions in one bin: the build stops.
   for (const odd of [{ total: model.boundary.lowestYes, yes: false }, { total: model.boundary.highestNo, yes: true }]) {
-    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, boundaryText: DATA.boundaryText, n: 2, source: 's', fy: DATA.fy }), /wrong side/);
+    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy }), /wrong side/);
   }
 });
 
-test('CMS\'s line means one thing in both program figures: the gap between CMS\'s highest No and lowest Yes, named by both', () => {
+test('CMS\'s line in the histogram is the gap between CMS\'s highest No and lowest Yes, named by both', () => {
   const { highestNo, lowestYes } = model.boundary;
   const sentence = esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${DATA.boundaryText.lowestYes} or higher and none at ${DATA.boundaryText.highestNo} or lower.`);
-  const [ramp, hist] = figures(program()).map(([, , body]) => body);
-  // Both lines are marks whose tooltip is the line sentence and whose values are CMS's two scores.
+  const [hist] = figures(program()).map(([, , body]) => body);
+  // The line is a mark whose tooltip is the line sentence and whose values are CMS's two scores.
   const lineMark = new RegExp(`<g class="chart-mark" data-mark data-value="${highestNo} ${lowestYes}"><title>([^<]*)</title>`);
-  assert.equal(lineMark.exec(ramp)?.[1], sentence, 'Figure 1');
-  assert.equal(lineMark.exec(hist)?.[1], sentence, 'Figure 2');
+  assert.equal(lineMark.exec(hist)?.[1], sentence);
   // The histogram's table lists the line between the last No bin and the first Yes bin, by both of CMS's scores.
   const rows = [...hist.matchAll(/<tr><th scope="row"[^>]*>([^<]*)<\/th><td[^>]*>([^<]*)<\/td><td[^>]*>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => m.slice(1));
   const at = rows.findIndex((r) => r[3] === 'CMS’s line');
@@ -190,13 +193,13 @@ test('CMS\'s line means one thing in both program figures: the gap between CMS\'
   assert.equal(rows.filter((r) => r[3] === 'CMS’s line').length, 1);
   assert.ok(rows.slice(0, at).every((r) => r[3] !== 'Yes') && rows.slice(at + 1).every((r) => r[3] !== 'No'));
   assert.equal(rows[at + 1][0], decimal(lowestYes, 4), 'the first bin above starts at CMS’s lowest Yes score');
-  // No word on either figure gives the line as a single score.
-  for (const body of [ramp, hist]) assert.doesNotMatch(body, /CMS’s line \(/);
+  // No word on the figure gives the line as a single score.
+  assert.doesNotMatch(hist, /CMS’s line \(/);
 });
 
 test('the state tile grid: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no code drawn as zero', () => {
   const text = program();
-  const body = figures(text)[2][2];
+  const body = figures(text)[1][2];
   assert.match(body, /class="chart chart--tile-map"/);
   const tile = (code) => new RegExp(`<g class="chart-mark" data-mark data-state="${code}"[^>]*>([\\s\\S]*?)</g>`).exec(body);
   assert.match(tile('MD')[0], /<title>MD: not subject to the reduction<\/title>/);
@@ -215,7 +218,7 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.match(variant(body, 'wide'), /<pattern id="chart-states-wide-hatch"/, 'each variant names its own hatch');
   // The table lists every tile.
   assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length);
-  const [, takeaway] = captions(text)[2];
+  const [, takeaway] = captions(text)[1];
   assert.match(takeaway, /^Nationally, CMS cut payments to \d+\.\d% of hospitals with a payment decision; by state, the share ran from \d+\.\d% to \d+\.\d%\.$/);
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
 });
@@ -239,7 +242,7 @@ test('a state code with no tile (a territory) is not drawn: its row is in the ta
   const extra = stateCounts([gu, vi]);
   assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
   const states = { ...STATES, ...extra };
-  const body = String(statesFigure({ states, n: 3, source: 's', fy: DATA.fy }));
+  const body = String(statesFigure({ states, n: 2, source: 's', fy: DATA.fy }));
   const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
   assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
   assert.equal(svg.match(/data-state="/g).length, Object.keys(TILES).length);
@@ -250,11 +253,11 @@ test('a state code with no tile (a territory) is not drawn: its row is in the ta
   // The off-grid rows follow the tiles, and every tiled code keeps its row.
   assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length + 2);
   // The national share counts every state; the range spans every row with a share.
-  const [, takeaway] = /<span class="fig__n">Figure 3\.<\/span> ([^<]*)</.exec(body);
+  const [, takeaway] = /<span class="fig__n">Figure 2\.<\/span> ([^<]*)</.exec(body);
   assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
   assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
   // Without an off-grid code there is no note.
-  assert.doesNotMatch(String(statesFigure({ states: STATES, n: 3, source: 's', fy: DATA.fy })), /fig__note/);
+  assert.doesNotMatch(String(statesFigure({ states: STATES, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
 });
 
 test('the hospital table section: the controls for client/program.js, the asset, and without JavaScript a sentence and the CSV link', () => {
@@ -296,14 +299,14 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
   assert.notEqual(national, pct(COUNTS.yes / COUNTS.decided, 1));
   const text = program({ scores, states });
   const caps = captions(text).map(([, t]) => t);
-  assert.ok(caps[1].includes(`${count(yes)} of ${count(scores.length)}`));
-  assert.ok(caps[2].includes(national));
+  assert.ok(caps[0].includes(`${count(yes)} of ${count(scores.length)}`));
+  assert.ok(caps[1].includes(national));
   const shares = Object.values(states).filter((s) => s.decided > 0).map((s) => toUnit(100 * s.yes / s.decided, 1));
   const allowed = new Set([count(yes), count(scores.length), national, pct(Math.min(...shares) / 100, 1), pct(Math.max(...shares) / 100, 1),
     cmsText(MEDIAN.totalText), DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes]);
   for (const t of caps) for (const x of numbers(t)) assert.ok(allowed.has(x), `"${x}" in "${t}"`);
   // The figure builders take their words from copy.js and their numbers only from their arguments.
-  assert.ok(String(lineFigure({ hospital: MEDIAN, model, range: RANGE, boundaryText: DATA.boundaryText, n: 1, source: 's' })).includes('Figure 1.'));
+  assert.ok(String(scoresFigure({ scores, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy })).includes('Figure 1.'));
 });
 
 test('hostile names stay text in the hospital page\'s figures', () => {

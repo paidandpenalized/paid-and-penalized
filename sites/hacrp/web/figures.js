@@ -1,7 +1,6 @@
 // The HACRP figures (DES-31), drawn with the chart kit (web/charts/) in HACRP's words: on a hospital page, each
 // measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
-// the median hospital against CMS's line (the formula stepper's last step), the histogram of Total HAC Scores and
-// the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
+// the histogram of Total HAC Scores and the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
 import { has } from '../../../engine/js/has.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -10,11 +9,9 @@ import { contribBars } from '../../../web/charts/contribBars.js';
 import { dotRanges } from '../../../web/charts/dotRange.js';
 import { figure } from '../../../web/charts/figure.js';
 import { histogram, histogramBins } from '../../../web/charts/histogram.js';
-import { ramp } from '../../../web/charts/ramp.js';
 import { TILES } from '../../../web/charts/states.js';
 import { tileMap } from '../../../web/charts/tileMap.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
-import { rampDomain } from '../../../web/whatif/marks.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { FEW_DECIDED, TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
@@ -90,35 +87,6 @@ export function rangeFigure(view, ranges, n, source) {
         num(format(floor), floor), num(format(median), median), num(format(cap), cap),
         ...(notes ? [m.footnotes.map((f) => f.text).join(' ')] : []),
       ]),
-    },
-  });
-}
-
-// Program page: the median hospital's Total HAC Score against CMS's line, the stepper's last step.
-export function lineFigure({ hospital, model, range, boundaryText, n, source, fy = hospital.fiscalYear }) {
-  const { highestNo, lowestYes } = model.boundary;
-  const total = cmsText(hospital.totalText);
-  const words = {
-    No: ['figLineNo', { total, highestNo: boundaryText.highestNo }],
-    Yes: ['figLineYes', { total, lowestYes: boundaryText.lowestYes }],
-    'too-close': ['figLineClose', { total, ...boundaryText }],
-  }[hospital.paymentReduction];
-  if (!words) throw new RangeError(`lineFigure: unexpected decision "${hospital.paymentReduction}"`);
-  const label = t('figLineMedian');
-  return figure({
-    n, source, claimLevel: 'hypothetical', alt: t('figLineAlt'), csvName: `hacrp-fy${fy}-median-hospital`,
-    takeaway: fill(...words),
-    svg: ramp({
-      domain: rampDomain(range, { actual: hospital.total, highestNo, lowestYes }), actual: hospital.total, band: [highestNo, lowestYes],
-      labels: { actual: label, line: t('whatifRampLine'), lineTip: fill('line', boundaryText) }, format: (v) => decimal(v, DP),
-    }),
-    table: {
-      columns: [{ name: t('figColMark') }, { name: t('figColScore'), numeric: true }],
-      rows: [
-        [label, hospital.totalText],
-        [t('figLineHighestNo'), num(boundaryText.highestNo, highestNo)],
-        [t('figLineLowestYes'), num(boundaryText.lowestYes, lowestYes)],
-      ],
     },
   });
 }

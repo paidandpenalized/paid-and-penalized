@@ -423,26 +423,21 @@ export const COPY = {
   stepColSd: { text: 'SD', claim: null },
   stepTableValue: { text: "Each measure's value, CMS's floor and cap, and the value limited to them", claim: null },
   stepTableZ: { text: "Each limited value, the measure's mean and standard deviation, and the z-score", claim: null },
-  // Program page, Figure: the median hospital against CMS's line (the stepper's last step).
-  figLineMedian: { text: 'Median hospital', claim: null },
-  figLineNo: {
+  // Program page: the stepper's last step, the median hospital against CMS's line, in words (the sandbox below
+  // draws it).
+  stepLineNo: {
     text: "This site's hypothetical median hospital scores {total}, at or below {highestNo}, the highest score CMS marked No, so its decision would be No.",
     claim: null,
   },
-  figLineYes: {
+  stepLineYes: {
     text: "This site's hypothetical median hospital scores {total}, at or above {lowestYes}, the lowest score CMS marked Yes, so its decision would be Yes.",
     claim: null,
   },
-  figLineClose: {
+  stepLineClose: {
     text: "This site's hypothetical median hospital scores {total}, between {highestNo} and {lowestYes}, so its decision would be too close to call.",
     claim: null,
   },
-  figLineAlt: {
-    text: "A line of Total HAC Scores with CMS's line marked and the side above it shaded; a triangle marks the median hospital's score.",
-    claim: null,
-  },
-  figLineHighestNo: { text: 'Highest score CMS marked No', claim: null },
-  figLineLowestYes: { text: 'Lowest score CMS marked Yes', claim: null },
+  stepSandbox: { text: 'The sandbox below starts at this score.', claim: null },
   // Program page, Figure: the histogram of scores.
   figScoresTakeaway: {
     text: 'CMS cut payments to {yes} of {decided} hospitals with a payment decision: those whose Total HAC Score was above its line.',

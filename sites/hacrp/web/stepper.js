@@ -1,10 +1,11 @@
 // The program page's formula stepper, as display text: the median hospital's numbers at each step of CMS's
-// formula (pages/program.js lays them out; its last step is a figure, figures.js lineFigure).
+// formula (pages/program.js lays them out).
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, decimal } from '../../../web/render/format.js';
 import { SHORT_NAMES } from './constants.js';
+import { fill } from './copy.js';
 
 // z-scores at CMS's decimals (DP); the fitted mean and SD from DP decimals up.
 const MAX_FIT_DP = 10;
@@ -38,4 +39,17 @@ export function stepRows(hospital, model) {
 export function stepSum(hospital) {
   const zs = MEASURE_IDS.map((id) => hospital.measures[id].z).filter((z) => z !== null);
   return { n: zs.length, sumText: decimal(toUnit(zs.reduce((a, b) => a + b, 0), DP), DP) };
+}
+
+// The stepper's last step in words: the median hospital's score against CMS's line (boundaryText: CMS's text for
+// the two scores). The decision is the hospital's own (hospital.paymentReduction).
+export function lineStep(hospital, boundaryText) {
+  const total = cmsText(hospital.totalText);
+  const words = {
+    No: ['stepLineNo', { total, highestNo: boundaryText.highestNo }],
+    Yes: ['stepLineYes', { total, lowestYes: boundaryText.lowestYes }],
+    'too-close': ['stepLineClose', { total, ...boundaryText }],
+  }[hospital.paymentReduction];
+  if (!words) throw new RangeError(`lineStep: unexpected decision "${hospital.paymentReduction}"`);
+  return fill(...words);
 }

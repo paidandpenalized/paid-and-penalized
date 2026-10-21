@@ -9,9 +9,9 @@ import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fill, measureLabel, sourceText, t } from '../copy.js';
-import { lineFigure, scoresFigure, statesFigure } from '../figures.js';
+import { scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
-import { stepRows, stepSum } from '../stepper.js';
+import { lineStep, stepRows, stepSum } from '../stepper.js';
 import { asofBar, citation, dataLinks } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
@@ -33,8 +33,9 @@ const stepTable = (caption, step, columns, rows) => printout(html`<table class="
 </table>`);
 
 // The formula, step by step, on the median hospital (whatif.hospital, from medianHospital): value, limited to
-// CMS's floor and cap, z-score from the fitted mean and SD, the average, and the line (a numbered figure).
-function stepper({ hospital, model, range }, { boundaryText, n, line, fy }) {
+// CMS's floor and cap, z-score from the fitted mean and SD, the average, and the line (in words; the sandbox below
+// draws it).
+function stepper({ hospital, model }, { boundaryText }) {
   const rows = stepRows(hospital, model);
   const { n: zCount, sumText: sum } = stepSum(hospital);
   return html`<section class="block" aria-labelledby="steps-h">
@@ -47,7 +48,7 @@ ${stepTable(t('stepTableValue'), 'value', ['stepColValue', 'stepColFloor', 'step
 ${stepTable(t('stepTableZ'), 'z', ['stepColLimited', 'stepColMean', 'stepColSd', 'colZ'], rows.map((r) => [r, [r.limitedText, r.meanText, r.sdText, r.zText]]))}</li>
 <li><p>${fill('stepAverage', { n: String(zCount), sum, total: cmsText(hospital.totalText) })}</p></li>
 <li><p>${t('stepLine')}</p>
-${lineFigure({ hospital, model, range, boundaryText, n, source: line, fy })}</li>
+<p>${lineStep(hospital, boundaryText)} ${t('stepSandbox')}</p></li>
 </ol>
 <p class="small muted">${t('stepRounded')}</p>
 </section>`;
@@ -96,7 +97,7 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
   const what = whatif && sandbox(whatif, { fy, boundaryText, source });
   const line = sourceText({ fy, source });
   let n = 0;
-  const steps = whatif && stepper(whatif, { boundaryText, n: ++n, line, fy });
+  const steps = whatif && stepper(whatif, { boundaryText });
   const histogram = scores && scoresFigure({ scores, boundary, boundaryText, n: ++n, source: line, fy });
   const tiles = states && statesFigure({ states, n: ++n, source: line, fy });
 
@@ -166,7 +167,7 @@ ${citation({ fy, title: heading, path: PATH, source })}
     path: PATH,
     robots,
     body,
-    scripts: [...(steps || histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js['hacrp-program']],
+    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js['hacrp-program']],
     assets,
   });
 }
