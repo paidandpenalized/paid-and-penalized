@@ -39,7 +39,7 @@
 .gb .num { text-align: right; white-space: nowrap; }
 
 /* ---------- pills: a word on a mark; the word carries the meaning, the ink repeats it ---------- */
-.pill { display: inline-block; padding: 2px 7px 1px; border: 1.5px solid var(--neutral); border-radius: 2px; color: var(--ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.02em; white-space: nowrap; }
+.pill { display: inline-block; padding: 2px 7px 1px; border: 1.5px solid var(--neutral); border-radius: 0; color: var(--ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.02em; white-space: nowrap; }
 .pill--pen { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
 /* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. */
