@@ -136,10 +136,11 @@
 .wi-bars__value { text-align: right; }
 .wi-bars__track { position: relative; height: 16px; }
 .wi-bars__track::before { content: ''; position: absolute; top: -3px; bottom: -3px; left: 50%; border-left: 1px solid var(--ink); }
-.wi-bar { position: absolute; top: 2px; bottom: 2px; left: calc(var(--at) * 100%); width: calc(var(--w) * 100%); background: var(--ink-3); }
+.wi-bar, .wi-bar-cms { position: absolute; left: calc(var(--at) * 100%); width: calc(var(--w) * 100%); }
+.wi-bar { top: 2px; bottom: 2px; background: var(--ink-3); }
 .wi-bars__row--assigned .wi-bar { outline: 1px solid var(--ink-3); background: var(--hatch-fill); }
 /* CMS's bar, once the reader's moves: a 1px outline behind it, as the slider keeps CMS's value as a dotted tick. */
-.wi-bar-cms { position: absolute; top: 1px; bottom: 1px; left: calc(var(--at) * 100%); width: calc(var(--w) * 100%); border: 1px solid var(--ink-2); }
+.wi-bar-cms { top: 1px; bottom: 1px; border: 1px solid var(--ink-2); }
 /* The framed bars' line for a changed what-if, under the figure's caption (CMS's values). */
 .wi-bars__lead { color: var(--ink-2); }
 

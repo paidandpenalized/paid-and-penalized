@@ -194,9 +194,10 @@ ${framed ? html`<p class="small wi-bars__lead" data-wi="bars-lead" aria-hidden="
 <ul class="wi-bars__list" role="list">${vm.inputs.map((input) => {
     const m = vm.result.measures[input.id];
     const span = barSpan(m.contribution, vm.extent);
+    const at = `--at: ${fraction(span.at)}; --w: ${fraction(span.width)}`;
     return html`<li data-bar="${input.id}" class="${barClass(input)}">
 <span class="wi-bars__name">${words[input.id].short}${input.assigned && html` <span class="muted" data-wi="bar-assigned"${hiddenIf(!assignedNow(input))}>(${texts.bars.assigned})</span>`}</span>
-<span class="wi-bars__track">${framed && html`<span class="wi-bar-cms" data-wi="bar-cms" style="--at: ${fraction(span.at)}; --w: ${fraction(span.width)}" hidden></span>`}<span class="wi-bar" data-wi="bar" style="--at: ${fraction(span.at)}; --w: ${fraction(span.width)}"></span></span>
+<span class="wi-bars__track">${framed && html`<span class="wi-bar-cms" data-wi="bar-cms" style="${at}" hidden></span>`}<span class="wi-bar" data-wi="bar" style="${at}"></span></span>
 <span class="wi-bars__value" data-wi="bar-value">${texts.bars.value(m.contribution)}</span>
 </li>`;
   })}</ul>

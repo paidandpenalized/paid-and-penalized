@@ -9,6 +9,7 @@ import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
+import { assignedNow } from '../../../web/whatif/marks.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, heroLineText, measureLabel, sourcePlain } from './copy.js';
 
@@ -51,7 +52,7 @@ export function largestPart(parts) {
 // The framed bars' line for a changed what-if: the hypothetical part that adds the most, by largestPart; a measure
 // CMS assigned counts once the reader gives it a value ("had it been submitted").
 function barsLead(vm) {
-  const parts = vm.inputs.map((input) => ({ id: input.id, assigned: input.assigned && input.value === null, contribution: vm.result.measures[input.id].contribution }));
+  const parts = vm.inputs.map((input) => ({ id: input.id, assigned: assignedNow(input), contribution: vm.result.measures[input.id].contribution }));
   const top = largestPart(parts);
   return top ? fill('figPartsHyp', { short: SHORT_NAMES[top.id], contribution: signed(top.contribution, PART_DP) }) : fill('figPartsHypNone');
 }

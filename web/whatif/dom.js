@@ -216,9 +216,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       row.bar.style.setProperty('--w', fraction(span.width));
       const part = texts.bars.value(m.contribution);
       setText(row.barValue, part);
-      if (row.barCms) row.barCms.hidden = part === startPart[input.id];
+      const same = part === startPart[input.id];
+      if (row.barCms && row.barCms.hidden !== same) row.barCms.hidden = same;
       if (row.partCell) {
-        const same = part === startPart[input.id];
         setText(row.partCell, same ? texts.same : part);
         // The raw number for sorting and the CSV: the part as shown, with a hyphen-minus and no plus sign.
         row.partCell.setAttribute('data-value', part.replace('\u2212', '-').replace('+', ''));
