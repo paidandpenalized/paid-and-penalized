@@ -341,3 +341,11 @@ test('the measure table has a Notes column only when some measure has a note, wi
   assert.match(table(CASES.no), /class="gb gb--measures gb--notes"/);
   assert.match(table(CASES.yes), /class="gb gb--measures">/);
 });
+
+test('the hero is the lede: right after the page head, before the summary sentences', () => {
+  for (const h of Object.values(CASES)) {
+    const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+    assert.match(text, /<\/header>\n<section class="hero"/, h.ccn);
+    assert.ok(text.indexOf('class="hero"') < text.indexOf('For fiscal year'), `${h.ccn}: hero before the summary`);
+  }
+});

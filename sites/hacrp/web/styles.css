@@ -1,7 +1,8 @@
 /* The HACRP site's own styles, bundled after the shared ones in web/styles/: the score hero, the measure table, the
    estimate tag and the measure lists. Colors come only from web/styles/tokens.css. */
 
-/* The hospital's score and CMS's decision. The number is IBM Plex Mono, never under 48px. */
+/* The hospital's score and CMS's decision, the page's lede, right under its head. The number is IBM Plex Mono, never
+   under 48px. */
 .hero { display: flex; flex-wrap: wrap; align-items: start; gap: 16px 48px; padding-block: 16px; border-block: var(--rule) solid var(--ink); }
 .hero > * { min-width: 0; }
 .hero__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }

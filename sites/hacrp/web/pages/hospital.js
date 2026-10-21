@@ -1,4 +1,4 @@
-// One hospital's page: what CMS reports for it in plain words, the score and decision, the measure table with
+// One hospital's page: the score and decision (the lede), what CMS reports in plain words, the measure table with
 // CMS's values and footnotes, two figures and the what-if (scored hospitals only), then where the data come from.
 // Odd rows show CMS's values and add no inference.
 import { footnoteLegend, footnoteNote, printout } from '../../../../web/render/components.js';
@@ -93,7 +93,6 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 <h1>${view.name}</h1>
 <p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })}</p>
 </header>
-<div class="prose">${sentences.map((s) => html`<p>${s}</p>`)}</div>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
     ? html`<p class="hero__num cms">${view.score.text}</p>`
@@ -102,6 +101,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 ${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>
 </section>
 <div class="prose">
+${sentences.map((s) => html`<p>${s}</p>`)}
 ${distance && html`<p>${distance}</p>`}
 ${small && html`<p class="note">${small}</p>`}
 <p class="standing">${t('standing')}</p>
