@@ -320,7 +320,7 @@ export const COPY = {
     claim: 'HACRP-13',
   },
   lineRelative: {
-    text: "The line is set by every hospital's scores, so a hospital can land above it without its own results getting worse.",
+    text: "The line depends on other hospitals' scores, so a hospital can land above it without its own results getting worse.",
     claim: 'HACRP-02',
   },
   countsHeading: { text: 'Fiscal year {fy} in counts', claim: null },
