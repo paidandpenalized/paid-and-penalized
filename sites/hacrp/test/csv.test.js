@@ -191,6 +191,10 @@ const sourceText = `Source: CMS Provider Data Catalog, HACRP FY${DATA.fy} (${DAT
 const citeBlock = (page) => /<section class="block cite"[\s\S]*?<\/section>/.exec(page)?.[0];
 // The citation's text, without the span that keeps the dataset id on one line (the copied text is the same).
 const citeText = (block) => /<p class="cite__text"[^>]*>([\s\S]*?)<\/p>/.exec(block)[1].replace(/<\/?span[^>]*>/g, '');
+// A data link to a site path, as the page writes it: its address printed in full on paper (data-print-href).
+const dataLink = (path, text) => `<a href="${path}" data-print-href="https://paidandpenalized.org${path}">${text}</a>`;
+const CSV_LINK = dataLink(csvPath(DATA.fy), 'Download all hospitals’ data (CSV)');
+const DICTIONARY_LINK = dataLink(DICTIONARY_PAGE, 'Data dictionary');
 
 test('the program page cites its title, FY, canonical URL and source line, and links the CSV and the dictionary', () => {
   const page = programPage(PROGRAM_ARGS);
@@ -204,8 +208,8 @@ test('the program page cites its title, FY, canonical URL and source line, and l
   assert.ok(block.includes(`<span class="nw">(${DATA.source.id})</span>`), 'the dataset id never breaks at its hyphen');
   assert.match(block, /<button type="button" class="fig__btn" data-cite-copy hidden>Copy citation<\/button>/);
   assert.match(block, /aria-live="polite"/);
-  assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`));
-  assert.ok(page.includes(`<a href="${DICTIONARY_PAGE}" data-print-href="https://paidandpenalized.org${DICTIONARY_PAGE}">Data dictionary</a>`));
+  assert.ok(page.includes(CSV_LINK));
+  assert.ok(page.includes(DICTIONARY_LINK));
   assert.ok(page.includes('<script type="module" src="/assets/cite.test.js">'));
 });
 
@@ -219,8 +223,8 @@ test('every hospital page, whatever its status, cites its name, place, FY, canon
     assert.ok(text.includes(`FY${DATA.fy}`), `${name}: FY`);
     assert.ok(text.includes('Example General Hospital'), `${name}: title`);
     assert.ok(text.includes(esc(sourceText)), `${name}: source line`);
-    assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`), `${name}: CSV link`);
-    assert.ok(page.includes(`<a href="${DICTIONARY_PAGE}" data-print-href="https://paidandpenalized.org${DICTIONARY_PAGE}">Data dictionary</a>`), `${name}: dictionary link`);
+    assert.ok(page.includes(CSV_LINK), `${name}: CSV link`);
+    assert.ok(page.includes(DICTIONARY_LINK), `${name}: dictionary link`);
     assert.ok(page.includes('/assets/cite.test.js'), `${name}: script`);
   }
 });
