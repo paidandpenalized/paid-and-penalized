@@ -9,6 +9,9 @@ export const cmsText = (text) => String(text).replace(/^-(?=[\d.])/, MINUS);
 
 export const count = (n) => NUMBER.format(n);
 
+// The text with its first letter in upper case, for a label in sentence case; '' stays ''.
+export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
 // An English ordinal: 1st, 2nd, 3rd, 11th, 22nd, 75th.
 export function ordinal(n) {
   const v = n % 100;

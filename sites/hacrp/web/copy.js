@@ -2,7 +2,7 @@
 // is filled. `claim` names the row of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
 // sentences that only restate CMS's file or this site's arithmetic).
 import { fillCopy, fillCopyKeep } from '../../../web/render/components.js';
-import { isoDate } from '../../../web/render/format.js';
+import { capitalize, isoDate } from '../../../web/render/format.js';
 
 export const COPY = {
   // Summary: what CMS reports, CMS's notes verbatim, then what the decision and the score mean.
@@ -527,7 +527,4 @@ export const t = (key) => fill(key);
 export const sourceText = ({ fy, source }) => fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });
 
 // A measure's name as a label (capitalized): "Central line–associated bloodstream infections".
-export const measureLabel = (id) => {
-  const text = fill(`measure${id}`);
-  return text[0].toUpperCase() + text.slice(1);
-};
+export const measureLabel = (id) => capitalize(fill(`measure${id}`));

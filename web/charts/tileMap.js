@@ -14,6 +14,7 @@
 //   legend   { title, high, zero, few }: the stepped bar's title, the text at its right end (the highest value), and
 //            the legend rows for a zero value and for few cases (required when some tile is zero or few)
 import { scaleThreshold } from 'd3-scale';
+import { capitalize } from '../render/format.js';
 import { html } from '../render/html.js';
 import { GAP, WIDTH, checkId, frame, hatchDefs, hatchFill, mark, plain, r2, text } from './svg.js';
 import { GRID, TILES } from './states.js';
@@ -42,8 +43,6 @@ function checkStates(states) {
     if (!s.hatched && !s.empty && !Number.isFinite(s.value)) throw new RangeError(`tileMap: ${code} has no value and is not hatched or empty`);
   }
 }
-
-const sentence = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, format = plain, showValues = false }) {
   checkId(id, 'tileMap');
@@ -100,7 +99,7 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
     ...(words.high ? [text({ x: steps.length * STEP_W + 6, y: barY + BAR_H - 1, anchor: 'start', cls: 'chart-legend__label', body: words.high })] : [])];
   const bar = html`${words.title ? text({ x: 0, y: titleY, anchor: 'start', cls: 'chart-legend__title', body: words.title }) : ''}${steps.map((step, i) => html`<rect class="chart-tile chart-seq-${step}" x="${r2(i * STEP_W)}" y="${r2(barY)}" width="${STEP_W}" height="${BAR_H}"/>`)}${ramp.map((t, i) => text({ x: (i + 1) * STEP_W, y: labelY, cls: 'chart-legend__label', body: format(t) }))}${ends}`;
   const othersY = barY + BAR_H + BAR_LABELS + 8;
-  const rows = others.map((row, i) => ({ ...row, x: 0, y: othersY + i * LEGEND_ROW, body: sentence(row.label) }));
+  const rows = others.map((row, i) => ({ ...row, x: 0, y: othersY + i * LEGEND_ROW, body: capitalize(row.label) }));
   const height = othersY + others.length * LEGEND_ROW;
 
   return frame({
