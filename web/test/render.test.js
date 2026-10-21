@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
-import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, pill, typeset } from '../render/components.js';
+import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -216,6 +216,18 @@ test('fillCopyKeep keeps each value, or a run from one value to another, on one 
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 'b' }, ['nope']), /unknown placeholder/);
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 1 }, []), /formatted string/);
   assert.equal(String(fillCopyKeep({ twice: 'FY{next} expected early {next}' }, 'twice', { next: '2027' }, [])), 'FY2027 expected early 2027', 'a placeholder used twice is filled twice');
+});
+
+test('lastCall returns its last result for the same key (by identity) and calls again for a new one', () => {
+  let calls = 0;
+  const source = { id: 'x' };
+  const f = lastCall(({ fy, source: s }) => [fy, s], ({ fy }) => { calls += 1; return `fy${fy}`; });
+  assert.equal(f({ fy: 1, source }), 'fy1');
+  assert.equal(f({ fy: 1, source }), 'fy1');
+  assert.equal(calls, 1, 'the same key: no second call');
+  assert.equal(f({ fy: 2, source }), 'fy2');
+  assert.equal(f({ fy: 2, source: { id: 'x' } }), 'fy2');
+  assert.equal(calls, 3, 'a new value or a new object: called again');
 });
 
 test('keepWhole wraps a part of escaped text in one .nw span, and refuses a part that is not there', () => {

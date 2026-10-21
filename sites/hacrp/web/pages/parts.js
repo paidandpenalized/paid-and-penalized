@@ -1,6 +1,6 @@
 // HACRP's words for the shared page parts (web/render/components.js) the HACRP pages use: the decision pill, the
 // as-of bar, the kicker, the citation (which carries the source line) and the data links.
-import { asofBar as asofShell, citation as citationShell, keepWhole, pill } from '../../../../web/render/components.js';
+import { asofBar as asofShell, citation as citationShell, keepWhole, lastCall, pill } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
@@ -21,8 +21,8 @@ export function decisionPill(status, decision) {
 export const pillShowsCmsValue = (status) => status === 'maryland' || status === 'yes-no-score';
 
 // Each fact is one row of the strip's list: its term (copy key …Label) and its value. A date (or a short name) never
-// breaks across lines.
-export function asofBar({ fy, periods, source }) {
+// breaks across lines. Built once for the pages of a build that share the fiscal year, periods and source.
+export const asofBar = lastCall(({ fy, periods, source }) => [fy, periods, source], ({ fy, periods, source }) => {
   const period = (key, { start, end }) => fillKeep(key, { start: longDate(start), end: longDate(end) }, ['start', 'end']);
   return asofShell({
     label: t('asofHeading'),
@@ -34,7 +34,7 @@ export function asofBar({ fy, periods, source }) {
       { label: t('asofReleasedLabel'), value: fillKeep('asofReleased', { date: isoDate(source.pdcReleased) }, ['date']) },
     ],
   });
-}
+});
 
 // The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
 export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;
@@ -59,5 +59,5 @@ export const printLink = (href, text) => (href.startsWith('/')
   : html`<a href="${href}">${text}</a>`);
 
 // The plain links to the dataset file, its dictionary (the page; the Markdown file sits beside the CSV) and CMS's
-// dataset page (source: the manifest entry).
-export const dataLinks = (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(DICTIONARY_PAGE, t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`;
+// dataset page (source: the manifest entry). Built once for the pages that share them.
+export const dataLinks = lastCall((fy, source) => [fy, source], (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(DICTIONARY_PAGE, t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`);

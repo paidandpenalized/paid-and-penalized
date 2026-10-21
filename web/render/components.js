@@ -26,6 +26,22 @@ export function typeset(text) {
   return out;
 }
 
+// fn remembering its last call: called again with arguments whose key (keyOf(...args), a list compared item by item,
+// by identity) matches, it returns the last result. For a page part every page of a build fills alike (the same fiscal
+// year, periods and source objects), which is then built once, not once per page.
+export function lastCall(keyOf, fn) {
+  let key = null;
+  let value;
+  return (...args) => {
+    const next = keyOf(...args);
+    if (!key || next.length !== key.length || next.some((k, i) => k !== key[i])) {
+      value = fn(...args);
+      key = next;
+    }
+    return value;
+  };
+}
+
 // A copy object whose entries are plain strings, typeset once (for copy read directly, not through fillCopy).
 export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy).map(([k, v]) => [k, typeset(v)])));
 
