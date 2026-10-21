@@ -85,7 +85,7 @@
 /* ---------- each measure's part of the score ---------- */
 .wi-bars { display: grid; gap: 8px; }
 .wi-bars__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.wi-bars__row { display: grid; grid-template-columns: minmax(5.5rem, 12rem) minmax(0, 1fr) 5rem; gap: 10px; align-items: center; font-size: var(--fs-sm); }
+.wi-bars__row { max-width: none; display: grid; grid-template-columns: minmax(5.5rem, 12rem) minmax(0, 1fr) 5rem; gap: 10px; align-items: center; font-size: var(--fs-sm); }
 .wi-bars__name, .wi-bars__value { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-bars__value { text-align: right; }
 .wi-bars__track { position: relative; height: 16px; }

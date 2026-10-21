@@ -40,7 +40,7 @@
 
 /* The formula stepper: numbered steps, each with its compact table (four numbers to a row, so it fits a phone). */
 .steps { display: grid; gap: 20px; margin: 0; padding-left: 1.5em; }
-.steps > li { min-width: 0; padding-left: 4px; }
+.steps > li { min-width: 0; max-width: none; padding-left: 4px; }
 .steps > li > * + * { margin-top: 10px; }
 .steps > li::marker { font: 700 var(--fs-base)/1 var(--font-type); }
 .gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 6px; }

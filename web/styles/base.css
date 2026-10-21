@@ -18,7 +18,10 @@ h1, h2, h3, h4 { margin: 0; text-wrap: balance; line-height: 1.12; }
 h1 { font: 400 clamp(2rem, 6vw, var(--fs-2xl))/1.05 var(--font-display); letter-spacing: 0.005em; }
 h2 { font: 400 var(--fs-xl)/1.1 var(--font-display); letter-spacing: 0.005em; }
 h3 { font: 700 var(--fs-lg)/1.2 var(--font-body); }
-p { margin: 0; max-width: var(--measure); }
+p { margin: 0; }
+/* Running text keeps a readable line; containers stay uncapped. :where() keeps it at zero specificity, so a part that
+   is a grid row or a control (a bar row, a step holding a table) sets its own width. */
+:where(p, li, figcaption, dd) { max-width: var(--measure); }
 a { color: inherit; text-decoration-color: var(--pen); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 a:hover { color: var(--pen-ink); }
 :focus-visible { outline: 2.5px solid var(--pen); outline-offset: 2px; }

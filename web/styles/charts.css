@@ -5,7 +5,7 @@
 /* ---------- the figure ---------- */
 .fig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
 .fig > * { min-width: 0; }
-.fig__cap { max-width: var(--measure); font-weight: 600; }
+.fig__cap { font-weight: 600; }
 .fig__n { font-family: var(--font-type); font-weight: 700; }
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
 .fig__table summary { width: fit-content; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }

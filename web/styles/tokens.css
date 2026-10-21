@@ -44,7 +44,7 @@
   --fs-2xl: 2.75rem;
   --rule: 1.5px;
   --gutter: 16px;
-  --measure: 66ch;
+  --measure: 34em;          /* about 70 characters of Libre Franklin; in em, so small text keeps the count */
   --page: 1180px;
   color-scheme: light;
 }
