@@ -292,9 +292,10 @@ export const COPY = {
   },
   whatHeading: { text: 'What the program is', claim: null },
   whatScore: {
-    text: "Each year, CMS scores hospitals paid under Medicare's inpatient payment system on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.",
+    text: 'Each year, CMS scores hospitals on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.',
     claim: 'HACRP-17',
   },
+  whatWho: { text: "The hospitals scored are those paid under Medicare's inpatient payment system.", claim: 'HACRP-18' },
   whatCut: {
     text: 'Hospitals whose score is above the {percentile} percentile of Total HAC Scores, as CMS calculates it, have their Medicare inpatient payments cut by {pct} for the fiscal year.',
     claim: 'HACRP-02',
@@ -303,10 +304,8 @@ export const COPY = {
     text: "Each measure compares a hospital with all hospitals scored on that measure, so the score reflects relative performance, not a fixed standard.",
     claim: 'HACRP-15',
   },
-  programMeasures: {
-    text: "The Total HAC Score is the average of a hospital's z-scores on these measures; each z-score compares the hospital with all hospitals scored on that measure.",
-    claim: 'HACRP-15',
-  },
+  programMeasures: { text: "The Total HAC Score is the average of a hospital's z-scores on these measures.", claim: 'HACRP-04' },
+  programMeasuresZ: { text: 'Each z-score compares the hospital with all hospitals scored on that measure.', claim: 'HACRP-15' },
   periodsHeading: { text: 'When the data are from', claim: null },
   periodPsi: { text: '{label} ({short}): {start} to {end}', claim: null },
   periodHai: { text: 'Infection measures ({shorts}): {start} to {end}', claim: null },
@@ -385,7 +384,7 @@ export const COPY = {
   stepsHeading: { text: 'How a score is built, step by step', claim: null },
   stepsIntro: {
     text: "These steps follow this site's hypothetical hospital at the national median on every measure, so its numbers are this site's, not CMS's. CMS takes the same steps for every hospital it scores.",
-    claim: 'HACRP-17',
+    claim: 'HACRP-19',
   },
   stepValue: {
     text: "Start from each measure's value. For this hospital, that is the national median of the values CMS published.",

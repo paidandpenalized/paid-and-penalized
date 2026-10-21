@@ -23,14 +23,16 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-14 | An infection measure's SIR compares a hospital's observed infections with the number NHSN's model predicted; an SIR of 1 means they are equal. | https://www.cdc.gov/nhsn/pdfs/ps-analysis-resources/nhsn-sir-guide.pdf | "If the SIR= 1.0, then the same number of HAIs were observed as predicted, based on the 2015 national aggregate data." | 2026-10-20 |
 | HACRP-15 | CMS turns each limited measure result into a z-score: its difference from the mean across hospitals, divided by the standard deviation, so each measure compares a hospital with the other hospitals scored on it. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-fiscal-year-2027-fact-sheet.pdf | "difference between a hospital’s Winsorized measure result and the mean of Winsorized measure results calculated across all subsection (d) hospitals, divided by the standard deviation" | 2026-10-20 |
 | HACRP-16 | A z-score above zero means worse performance than the average and one below zero better, so a lower measure result is better. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-fiscal-year-2027-fact-sheet.pdf | "Negative Winsorized z-scores indicate better performance. Positive Winsorized z-scores indicate worse performance." | 2026-10-20 |
-| HACRP-17 | Every year CMS scores hospitals paid under Medicare's inpatient prospective payment system the same way, combining their measure scores into a Total HAC Score. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-acquired-condition-reduction-program-hacrp | "On an annual basis, CMS evaluates overall hospital performance by calculating Total HAC Scores" | 2026-10-20 |
+| HACRP-17 | Every year CMS scores hospitals on measures of hospital-acquired conditions (infections and complications patients develop in the hospital) and combines them into a Total HAC Score. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-acquired-condition-reduction-program-hacrp | "on measures of hospital-acquired conditions. On an annual basis, CMS evaluates overall hospital performance by calculating Total HAC Scores" | 2026-10-20 |
+| HACRP-18 | The hospitals CMS scores are subsection (d) hospitals: general acute care hospitals paid under Medicare's inpatient prospective payment system, with Maryland's included. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-payment-reduction-methodology.pdf | "CMS includes all subsection (d) hospitals (that is, general acute care hospitals paid under the Inpatient Prospective Payment System), including Maryland hospitals" | 2026-10-20 |
+| HACRP-19 | CMS calculates every hospital's Total HAC Score by one set of steps: measure results, winsorized z-scores, the equal-weight average, then the line. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CMS follows these steps to calculate Total HAC Scores and the worst-performing quartile" | 2026-10-20 |
 
 ## Notes on the sources
 
 - **CMS file names.** CMS posts the HACRP methodology and fact-sheet PDFs (cited for HACRP-03, HACRP-04, HACRP-12,
-  HACRP-15 and HACRP-16) from the HACRP program page under file names that begin `hospital-readmissions-reduction-program-`.
+  HACRP-15, HACRP-16 and HACRP-18) from the HACRP program page under file names that begin `hospital-readmissions-reduction-program-`.
   The documents themselves are CMS's HAC Reduction Program documents; the file names are CMS's.
-- **HACRP-05** cites CMS's FY2026 HACRP FAQ on QualityNet (question 33). QualityNet is a JavaScript application: an
+- **HACRP-05** cites CMS's FY2026 HACRP FAQ on QualityNet (question 33); so does HACRP-19. QualityNet is a JavaScript application: an
   HTTP client without a browser receives the application shell for every address, so this source was read in a
   browser. CMS's FAQ also gives the validation case (question 32): hospitals that "failed HAI validation for the
   measure" receive "the maximum (worst) Winsorized z-score for the set of HAI measures validated."
@@ -48,9 +50,10 @@ A claim marked `unverified` may not be used in copy.
   measure." CMS's FY2026 FAQ (question 30) describes the same step for FY2026.
 - **Editions.** The methodology PDF cited is CMS's current edition, dated August 2026; it names no fiscal year. It
   says CMS "finalized the adoption of the Equal Measure Weights approach starting in fiscal year 2020" (HACRP-04).
-- **HACRP-17:** the population is from the methodology PDF's footnote: "CMS includes all subsection (d) hospitals
-  (that is, general acute care hospitals paid under the Inpatient Prospective Payment System), including Maryland
-  hospitals".
+- **HACRP-19** cites question 25 of CMS's FY2026 FAQ, which lists the steps (measure results, Winsorized z-scores,
+  the Total HAC Score, the worst-performing quartile). Its step 2 calculates z-scores "for each hospital", and CMS's
+  FY2027 fact sheet says of step 3: "For each hospital, calculate the Total HAC Score as the equally weighted average
+  of the hospital’s measure scores."
 - **HACRP-01** cites the statute, 42 U.S.C. 1395ww(p)(1), at Cornell's Legal Information Institute. The CMS rule
   says the same at 42 CFR 412.172(b).
 

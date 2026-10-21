@@ -107,13 +107,13 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
 </section>
 <section class="block" aria-labelledby="what-h">
 <h2 id="what-h">${t('whatHeading')}</h2>
-<p>${t('whatScore')}</p>
+<p>${t('whatScore')} ${t('whatWho')}</p>
 <p>${fill('whatCut', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}</p>
 <p>${t('whatRelative')}</p>
 </section>
 <section class="block" aria-labelledby="measures-h">
 <h2 id="measures-h">${t('measuresHeading')}</h2>
-<p>${t('programMeasures')}</p>
+<p>${t('programMeasures')} ${t('programMeasuresZ')}</p>
 <ul class="measure-list">${measures.map((m) => html`<li>${m.label} <span class="short">(${m.short})</span></li>`)}</ul>
 </section>
 <section class="block" aria-labelledby="periods-h">
