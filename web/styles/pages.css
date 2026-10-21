@@ -12,6 +12,8 @@
 .printout { max-width: 100%; }
 .page__head { gap: 8px; }
 .kicker, .kicker a { color: var(--ink-2); }
+/* The kicker's link is the way up from a hospital page: a taller target than its 15px line. */
+.kicker a { display: inline-block; padding-block: 5px; }
 .place { max-width: none; font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
 .dek { font-size: var(--fs-md); color: var(--ink-2); }
 .h-sm { font: 700 var(--fs-md)/1.2 var(--font-body); }
