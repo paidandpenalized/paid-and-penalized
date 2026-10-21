@@ -1,6 +1,13 @@
 /* Page content shared by the sites and the hub: headings, prose blocks, the as-of bar, footnote legends, link
    lists and search. Colors come only from tokens.css. A site's own styles live in sites/<id>/web/styles.css. */
+/* Two steps of rhythm: 28px between the parts of a section, 56px where a new section (or the hero, or the reference
+   matter under the as-of rule) starts, so a section break reads as one. Inside a section: 12px between paragraphs
+   and 16px under its heading. */
 .page { gap: 28px; padding-block: 28px 0; }
+.page > :is(.block, .whatif, .hero, .asof) { margin-top: 28px; }
+/* Under the as-of rule the reference matter (footnotes, citation) keeps the plain step. */
+.page > .asof ~ .block { margin-top: 0; }
+.block > :is(h2, h3) + * { margin-top: 4px; }
 .printout { max-width: 100%; }
 .page__head { gap: 8px; }
 .kicker a { color: var(--ink-2); }
