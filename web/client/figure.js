@@ -47,14 +47,18 @@ function mountTable(fig) {
     });
   });
 
-  // A table wider than its box (on a phone) fades out at the right edge while more of it lies that way.
+  // A table wider than its box (on a phone) fades out at the right edge while more of it lies that way. One observer
+  // watches the box (a resize) and the table (its fonts arriving); a scroll moves the edge, and the details' toggle
+  // re-reads it (a closed one's content is skipped, so the observer may not report it).
   const scroll = table.closest('.printout__scroll');
   const box = scroll?.parentElement;
-  if (scroll && box) {
+  if (scroll && box && 'ResizeObserver' in window) {
     const edge = () => box.toggleAttribute('data-more', scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 1);
     scroll.addEventListener('scroll', edge, { passive: true });
     fig.querySelector('.fig__table')?.addEventListener('toggle', edge);
-    window.addEventListener('resize', edge, { passive: true });
+    const sizes = new ResizeObserver(edge);
+    sizes.observe(scroll);
+    sizes.observe(table);
   }
 
   const download = fig.querySelector('[data-figure-csv]');
