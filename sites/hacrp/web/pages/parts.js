@@ -1,6 +1,6 @@
 // HACRP's words for the shared page parts (web/render/components.js) both HACRP pages use: the decision pill, the
-// as-of bar and the source line.
-import { asofBar as asofShell, citation as citationShell, pill, sourceLine as sourceShell } from '../../../../web/render/components.js';
+// as-of bar, the citation (which carries the source line) and the data links.
+import { asofBar as asofShell, citation as citationShell, pill } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
@@ -33,14 +33,6 @@ export function asofBar({ fy, periods, source }) {
   });
 }
 
-export function sourceLine({ fy, source }) {
-  return sourceShell({
-    text: sourceText({ fy, source }),
-    href: source.landingPage,
-    linkText: t('datasetLink'),
-  });
-}
-
 // The citation block: the site, the page's title, its canonical URL and the source line. No access date: the page
 // has no clock. title: the page title without the site's name.
 export function citation({ fy, title, path, source }) {
@@ -53,5 +45,5 @@ export function citation({ fy, title, path, source }) {
   return citationShell({ heading: t('citeHeading'), text, button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }
 
-// The two plain links to the dataset file and its dictionary.
-export const dataLinks = (fy) => html`<p class="data-links"><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>`;
+// The plain links to the dataset file, its dictionary and CMS's dataset page (source: the manifest entry).
+export const dataLinks = (fy, source) => html`<p class="data-links"><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a> · <a href="${source.landingPage}">${t('datasetLink')}</a></p>`;

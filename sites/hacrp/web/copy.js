@@ -240,6 +240,8 @@ export const COPY = {
   },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
   place: { text: '{city}, {state} · CCN {ccn}', claim: null },
+  // On the place line, so the data's date sits near the headline as well as at the foot.
+  placeData: { text: 'Data: CMS, released {date}', claim: null },
   heroScore: { text: 'Total HAC Score, as CMS reports it', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
   // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.

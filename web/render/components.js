@@ -1,4 +1,4 @@
-// Page parts any site can use, in the site's own words: the decision pill, the as-of bar, the source line, the
+// Page parts any site can use, in the site's own words: the decision pill, the as-of bar, the
 // citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
 // fills the placeholders in a site's copy.
 import { has } from '../../engine/js/has.js';
@@ -33,8 +33,6 @@ export const pill = ({ kind = null, label }) => html`<span class="${pillClass(ki
 export const asofBar = ({ label, items }) => html`<aside class="asof" aria-label="${label}">
 <ul class="asof__list" role="list">${items.map((item) => html`<li>${item}</li>`)}</ul>
 </aside>`;
-
-export const sourceLine = ({ text, href, linkText }) => html`<p class="source">${text} <a href="${href}">${linkText}</a></p>`;
 
 // The citation block: the text to cite, selectable without JavaScript, and a Copy button the script (web/client/cite.js)
 // shows. The button's words and the two status messages are the site's; the script reads the messages from data-copied

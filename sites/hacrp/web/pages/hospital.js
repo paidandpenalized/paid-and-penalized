@@ -2,13 +2,14 @@
 // CMS's values and footnotes, two figures and the what-if (scored hospitals only), then where the data come from.
 // Odd rows show CMS's values and add no inference.
 import { footnoteLegend, footnoteNote, printout } from '../../../../web/render/components.js';
+import { isoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, sourceLine } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
@@ -91,7 +92,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 <header class="page__head">
 <p class="cap kicker"><a href="${home}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy })}</a></p>
 <h1>${view.name}</h1>
-<p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })}</p>
+<p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })} · ${fill('placeData', { date: isoDate(source.pdcReleased) })}</p>
 </header>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
@@ -115,12 +116,11 @@ ${measureTable(view.measures)}
 ${figs}
 </section>
 ${what?.body}
-${asofBar({ fy: view.fy, periods: view.periods, source })}
-${dataLinks(view.fy)}
-${legend(view)}
 <p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
+${asofBar({ fy: view.fy, periods: view.periods, source })}
+${legend(view)}
+${dataLinks(view.fy, source)}
 ${citation({ fy: view.fy, title: heading, path: view.path, source })}
-${sourceLine({ fy: view.fy, source })}
 </article>`;
 
   return page({

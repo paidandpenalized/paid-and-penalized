@@ -11,7 +11,7 @@ import { HUB } from '../../../hub/pages.js';
 import { build } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { cmsText, count } from '../../../web/render/format.js';
+import { cmsText, count, isoDate as isoDateOf } from '../../../web/render/format.js';
 import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -366,4 +366,14 @@ test("the phone's Sort by menu offers each column head's key both ways, the defa
   assert.match(menu, /<option value="state:1" selected>State, ascending<\/option>/);
   assert.match(menu, /<option value="score:-1">Total HAC Score, descending<\/option>/);
   assert.match(text, /<label for="ht-sort">Sort by<\/label>/);
+});
+
+test("a hospital page's head names the data's release; its foot runs back link, as-of, footnotes, data links, citation, with the source said once", () => {
+  const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  assert.match(text, new RegExp(`<p class="place">Exampleton, AL · CCN 990002 · Data: CMS, released ${cmsText(isoDateOf(DATA.source.pdcReleased))}</p>`));
+  const at = (s) => text.indexOf(s);
+  const order = ['class="page__links"', 'class="asof"', 'id="fn-h"', 'class="data-links"', 'id="cite-h"'].map(at);
+  assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);
+  assert.equal(text.split('Source: CMS Provider Data Catalog').length - 1, 1 + (text.match(/class="source fig__source"/g) ?? []).length, 'the citation and each figure say the source; no extra source line');
+  assert.match(text, new RegExp(`<a href="${DATA.source.landingPage.replace(/[.?]/g, '\\$&')}">CMS(&#39;|')s dataset page</a></p>`));
 });

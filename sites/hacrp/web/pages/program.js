@@ -12,7 +12,7 @@ import { fill, measureLabel, sourceText, t } from '../copy.js';
 import { lineFigure, scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { stepRows, stepSum } from '../stepper.js';
-import { asofBar, citation, dataLinks, sourceLine } from './parts.js';
+import { asofBar, citation, dataLinks } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
@@ -57,11 +57,11 @@ ${lineFigure({ hospital, model, range, boundaryText, n, source: line, fy })}</li
 // without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu
 // (the same keys, each way) stands in for them.
 const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
-const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
+const hospitalTable = ({ fy, searchUrl, source }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
 <p class="ht-retry" role="status"></p>
-${dataLinks(fy)}
+${dataLinks(fy, source)}
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
 <div class="ht__controls">
@@ -146,7 +146,7 @@ ${what}
 ${histogram}
 ${tiles}
 </section>
-${hospitalTable({ fy, searchUrl })}
+${hospitalTable({ fy, searchUrl, source })}
 <section class="block" aria-labelledby="links-h">
 <h2 id="links-h">${t('linksHeading')}</h2>
 <ul class="links" role="list">
@@ -158,7 +158,6 @@ ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </section>
 ${asofBar({ fy, periods, source })}
 ${citation({ fy, title: heading, path: PATH, source })}
-${sourceLine({ fy, source })}
 </article>`;
 
   return page({
