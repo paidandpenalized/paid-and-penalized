@@ -1,30 +1,25 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, this year's counts,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
-import { html, jsonScript } from '../../../../web/render/html.js';
+import { html } from '../../../../web/render/html.js';
 import { count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { renderWhatIf } from '../../../../web/whatif/render.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { fill } from '../copy.js';
 import { LINKS } from '../links.js';
-import { initialState, solverOf, viewModel } from '../whatif-state.js';
-import { whatIfTexts } from '../whatif-text.js';
 import { asofBar, sourceLine, t } from './parts.js';
+import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
-// The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share. Its page
-// data (for client/program.js) take the same shape as a hospital page's: the record, the model and the estimate
-// tags (never the whole file), the fields the texts need, and the ramp's national range of scores.
-function sandbox({ hospital, model, estimate, range }, { fy, boundaryText, source }) {
-  const page = { name: null, fy, path: PATH, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText, baseline: 'sandbox' };
-  const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
+// The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share (its page
+// data, pages/whatif.js, take the same shape as a hospital page's).
+function sandbox(whatif, { fy, boundaryText, source }) {
+  const page = { name: null, fy, path: PATH, source, boundaryText, baseline: 'sandbox', share: false };
   return html`<p class="cap sandbox-label">${t('sandboxLabel')}</p>
-${renderWhatIf({ vm, texts: whatIfTexts({ hospital, model, ...page }), share: false, range, solver: solverOf(hospital, model) })}
-${jsonScript('hacrp-program', { hospital, model, estimate, page, range })}`;
+${whatIfSection(whatif, page, 'hacrp-program')}`;
 }
 
 // counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. measures: [{ id, label,

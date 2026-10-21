@@ -291,6 +291,7 @@ test('the sandbox page data is the median record, the model, the estimate tags a
   assert.deepEqual(Object.keys(data).sort(), ['estimate', 'hospital', 'model', 'page', 'range']);
   assert.equal(data.hospital.ccn, '000000');
   assert.equal(data.page.name, null);
+  assert.deepEqual([data.page.share, data.page.baseline], [false, 'sandbox']);
   assert.equal(data.page.path, '/hacrp/');
   assert.deepEqual(data.page.source, { id: DATA.source.id, pdcReleased: DATA.source.pdcReleased });
   assert.deepEqual(data.page.boundaryText, BOUNDARY);
@@ -305,16 +306,15 @@ test('without whatif data the program page has no sandbox (the other tests rende
   assert.doesNotMatch(text, /id="whatif"|hacrp-program"/);
 });
 
-test('the build writes the sandbox into /hacrp/ and the program client mounts it with share false', () =>
+test('the build writes the sandbox into /hacrp/, its page data saying share false; the search shares the entry', () =>
   temp(async (dir) => {
     await generate(dir, undefined, { data: SLICE });
     const text = read(dir, '/hacrp/');
     assert.match(text, /id="whatif"/);
     assert.ok(text.includes(SANDBOX_LABEL));
     assert.doesNotMatch(text, /data-wi="banner"/);
-    assert.match(text, /<script type="application\/json" id="hacrp-program">/);
+    const [, json] = /<script type="application\/json" id="hacrp-program">(.*?)<\/script>/s.exec(text);
+    assert.equal(JSON.parse(json).page.share, false);
     const client = readFileSync(join(import.meta.dirname, '..', 'client', 'program.js'), 'utf8');
-    assert.match(client, /share: false/);
-    assert.doesNotMatch(client, /share: true/);
     assert.match(client, /\.search\[data-src\]/, 'the search stays in the same entry');
   }));

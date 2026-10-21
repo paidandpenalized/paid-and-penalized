@@ -2,15 +2,13 @@
 // CMS's values and footnotes, the what-if (scored hospitals only), then where the data come from. Odd rows show
 // CMS's values and add no inference.
 import { footnoteLegend, footnoteNote } from '../../../../web/render/components.js';
-import { html, jsonScript } from '../../../../web/render/html.js';
+import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { renderWhatIf } from '../../../../web/whatif/render.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill } from '../copy.js';
-import { initialState, solverOf, viewModel } from '../whatif-state.js';
-import { whatIfTexts } from '../whatif-text.js';
 import { asofBar, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
+import { whatIfSection } from './whatif.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
 const value = (text, published) => (published
@@ -38,17 +36,12 @@ const legend = (view) => footnoteLegend({
   lists: [view.score.footnotes, view.decision.footnotes, ...view.measures.map((m) => m.footnotes)],
 });
 
-// The what-if for a scored hospital, CMS's values to start, and the page data its client module reads: this
-// hospital's record, the model and the estimate tags (never the whole file), the words the slide text needs, and
-// the ramp's national range of scores.
-function whatIfBlock(view, { hospital, model, estimate, range }, source, assets) {
+// The what-if for a scored hospital, CMS's values to start, shared by link (pages/whatif.js has its page data).
+function whatIfBlock(view, whatif, source, assets) {
   const script = assets.js['hacrp-hospital'];
   if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
-  const page = { name: view.name, fy: view.fy, path: view.path, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText: view.boundaryText, baseline: 'cms' };
-  const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
-  const body = html`${renderWhatIf({ vm, texts: whatIfTexts({ hospital, model, ...page }), share: true, range, solver: solverOf(hospital, model) })}
-${jsonScript('hacrp-hospital', { hospital, model, estimate, page, range })}`;
-  return { body, script };
+  const page = { name: view.name, fy: view.fy, path: view.path, source, boundaryText: view.boundaryText, baseline: 'cms', share: true };
+  return { body: whatIfSection(whatif, page, 'hacrp-hospital'), script };
 }
 
 // robots: null for an indexable page, else the meta robots value. whatif: { hospital, model, estimate, range } for

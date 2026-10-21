@@ -51,8 +51,11 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
 
-  const views = hospitals.map((hospital) =>
-    hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText }));
+  const pages = hospitals.map((hospital) => ({
+    hospital,
+    view: hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText }),
+  }));
+  const views = pages.map((p) => p.view);
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
@@ -74,9 +77,9 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     }),
   });
 
-  for (const [i, view] of views.entries()) {
+  for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital: hospitals[i], model, estimate, range } }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital, model, estimate, range } }) });
   }
 }
 

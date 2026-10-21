@@ -1,11 +1,10 @@
 // The program page's scripts. The hospital search: a native datalist of hospital names; choosing one opens its page.
 // The list comes from the hospitals asset named in the search box's data-src (see hospitalRows in web/generate.js),
 // fetched the first time the box gets focus. Without JavaScript the search stays hidden. The sandbox: the what-if on
-// the median hospital, mounted from the page's own record with share false (the URL is never read or written).
+// the median hospital, mounted from the page's own data (client/whatif.js), whose share is false: the URL is never
+// read or written.
 import { CCN } from '../../../engine/js/ccn.js';
-import { mountWhatIf } from '../../../web/whatif/dom.js';
-import { whatIfRules } from '../web/whatif-state.js';
-import { whatIfTexts } from '../web/whatif-text.js';
+import { mountFromPage } from './whatif.js';
 
 const box = document.querySelector('.search[data-src]');
 const PATH = /^\/[a-z0-9/-]*\/$/;
@@ -54,9 +53,4 @@ if (box) {
 }
 
 // After the search, so a fault in the sandbox never takes the search with it.
-const root = document.querySelector('#whatif');
-const data = document.querySelector('#hacrp-program');
-if (root && data) {
-  const { hospital, model, estimate, page, range } = JSON.parse(data.textContent);
-  mountWhatIf(root, { rules: whatIfRules(hospital, model, estimate), texts: whatIfTexts({ hospital, model, ...page }), share: false, range });
-}
+mountFromPage('hacrp-program');

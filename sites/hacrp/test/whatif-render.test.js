@@ -7,6 +7,7 @@ import { build as esbuild } from 'esbuild';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { REPO_ROOT, repoFiles } from '../../../pipeline/files.js';
+import { scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { MAX_FACTOR, encode } from '../../../web/whatif/fragment.js';
@@ -220,10 +221,30 @@ test('a scored page carries the what-if, both standing lines, its own record as 
   const data = JSON.parse(json);
   assert.deepEqual(Object.keys(data).sort(), ['estimate', 'hospital', 'model', 'page', 'range']);
   assert.deepEqual(data.range, RANGE);
-  assert.deepEqual(data.hospital, h);
-  assert.deepEqual(data.model, model);
+  assert.equal(data.hospital.ccn, h.ccn);
   assert.equal(data.page.name, D.master.get(h.ccn).name);
+  assert.deepEqual([data.page.share, data.page.baseline], [true, 'cms']);
   assert.match(text, /<script type="module" src="\/assets\/hacrp-hospital\.test\.js"><\/script>/);
+});
+
+test('the page data hold the record and the model only as far as the browser reads them, and compute the same', () => {
+  const h = pick((x) => x.total !== null && scoredMeasures(x).length === 6 && x.paymentReduction === 'No', 'scored No, six measures');
+  const data = JSON.parse(/<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(pageFor(h))[1]);
+  assert.deepEqual(Object.keys(data.hospital).sort(), ['ccn', 'measures', 'paymentReduction', 'periods', 'total', 'totalText']);
+  assert.deepEqual(Object.keys(data.hospital.measures.CLABSI).sort(), ['value', 'z', 'zText']);
+  assert.deepEqual(data.hospital.periods, { hai: h.periods.hai });
+  assert.ok(!('id' in data.model.params.CLABSI) && !('n' in data.model.params.CLABSI));
+  assert.deepEqual(Object.values(data.estimate).map(Object.keys), MEASURE_IDS.map(() => ['tagged']));
+  // What the browser draws from the page data equals what the build drew from the full record and model.
+  const html = (record, m, e, t) => String(renderWhatIf({ vm: viewModel(initialState(record, m), record, m, e), texts: t, share: true, range: RANGE, solver: null }));
+  const full = html(h, model, estimate, whatIfTexts({ hospital: h, model, ...data.page }));
+  const slim = html(data.hospital, data.model, data.estimate, whatIfTexts({ hospital: data.hospital, model: data.model, ...data.page }));
+  assert.equal(slim, full);
+  for (const changes of [{ MRSA: 1.4 }, { CLABSI: 0, PSI90: 1.2 }, { CDI: 9 }]) {
+    let s = initialState(data.hospital, data.model);
+    for (const [id, value] of Object.entries(changes)) s = reduce(s, { type: 'set', id, value });
+    assert.deepEqual(viewModel(s, data.hospital, data.model, data.estimate), viewModel(s, h, model, estimate), JSON.stringify(changes));
+  }
 });
 
 test('no score, and the "Yes" row with no score: no what-if, no inputs, no page data, no client module', () => {
@@ -242,7 +263,7 @@ test('hostile text in a hospital name stays text in the page data', () => {
   const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE } });
   assert.ok(!text.includes('<script>alert'));
   const json = /<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(text)[1];
-  assert.equal(JSON.parse(json).hospital.name, h.name);
+  assert.ok(!json.includes('<'));
   assert.equal(JSON.parse(json).page.name, '<b>&"x"');
 });
 
@@ -252,7 +273,7 @@ test('the browser bundle builds; dom.js and the client never write markup or rea
   const js = out.outputFiles[0].text;
   assert.ok(js.length > 0);
   assert.ok(js.length < 80_000, `client module is ${js.length} bytes`);
-  for (const file of ['web/whatif/dom.js', 'web/whatif/marks.js', 'sites/hacrp/client/hospital.js']) {
+  for (const file of ['web/whatif/dom.js', 'web/whatif/marks.js', 'sites/hacrp/client/hospital.js', 'sites/hacrp/client/whatif.js']) {
     const src = readFileSync(REPO_ROOT + file, 'utf8');
     for (const banned of ['innerHTML', 'outerHTML', 'insertAdjacentHTML', 'localStorage', 'sessionStorage', 'fetch', 'XMLHttpRequest', 'cookie', 'eval(', 'alert(', 'confirm(']) {
       assert.ok(!src.includes(banned), `${file}: ${banned}`);
