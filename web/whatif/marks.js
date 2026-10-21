@@ -46,7 +46,7 @@ export const labelAt = (t) => ({ t, anchor: labelAnchor(t), dx: labelDx(labelAnc
 // the figure. Text widths are estimated (CHAR_PX per character overstates the 12px labels) and checked on the
 // narrowest ramp the page draws: NARROW_PX, a 320px phone less its gutters and the result box's padding. When the two
 // would touch there, they stack: the hypothetical's label takes a second row (stacked: true).
-const CHAR_PX = 7;
+export const CHAR_PX = 7;
 export const NARROW_PX = 260;
 const GAP_PX = 8;
 

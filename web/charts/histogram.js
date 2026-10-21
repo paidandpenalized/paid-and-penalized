@@ -15,7 +15,7 @@ import { bin, tickStep } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { count } from '../render/format.js';
 import { html } from '../render/html.js';
-import { labelAt } from '../whatif/marks.js';
+import { CHAR_PX, labelAt } from '../whatif/marks.js';
 import { axis } from './axis.js';
 import { GAP, MAX_THICKNESS, WIDTH, columnPath, frame, mark, plain, r2, text } from './svg.js';
 
@@ -23,8 +23,7 @@ const PLOT_H = 200;
 const M = { top: 30, right: 12, bottom: 26, left: 36 };
 // Room under the x axis for its title.
 const TITLE_H = 16;
-// Group labels: their estimated width per character (12px, semibold) and the clearance kept over a column.
-const CHAR_W = 7;
+// Group labels (12px, semibold) take marks.js's per-character width estimate; CLEAR is the clearance kept over a column.
 const CLEAR = 6;
 // Edges are boundary + k × step; rounding to 12 places drops float noise such as 0.30000000000000004.
 const edge = (x) => Number(x.toFixed(12));
@@ -52,7 +51,7 @@ export function histogramBins(values, bins, boundary) {
 // Where a group label goes: the first candidate span whose columns leave room under it, else the last candidate.
 // Each candidate is { x, anchor }; returns { x, y, anchor }.
 function placeGroup(text, candidates, columns, top) {
-  const w = text.length * CHAR_W;
+  const w = text.length * CHAR_PX;
   let pick = null;
   for (const c of candidates) {
     const [l, r] = c.anchor === 'end' ? [c.x - w, c.x] : [c.x, c.x + w];
