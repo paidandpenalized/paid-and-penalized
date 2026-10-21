@@ -4,24 +4,22 @@ import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
-import { SYNTH_PERIODS, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_PERIODS, SYNTH_VALUES as V, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { hospitalView } from '../web/view.js';
 import { initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { cutText, flagText, scenarioSentence, slideText, solverRows, whatIfTexts } from '../web/whatif-text.js';
-import { inputs } from './fixtures.js';
+import { WHATIF_STANDING as STANDING, inputs } from './fixtures.js';
 
 const { model } = loadHacrp();
 const ESTIMATE = Object.fromEntries(MEASURE_IDS.map((id) => [id, { tagged: false, maxError: 0.0001 }]));
 const SOURCE = { id: 'yq43-i98g', landingPage: 'https://data.cms.gov/provider-data/dataset/yq43-i98g', pdcReleased: '2026-08-13' };
-const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
-
 const H = {
-  no: modelHospital(model, '990011', { values: V }),
-  yes: modelHospital(model, '990012', { values: { PSI90: 1.05, CLABSI: 1.2, CAUTI: 0.8, SSI: 1.0, CDI: 0.6, MRSA: 1.2 } }),
-  capped: modelHospital(model, '990013', { values: { PSI90: 0.75, CLABSI: 0.3, CAUTI: 0.2, SSI: 0.5, CDI: 0.2, MRSA: 1.9 } }),
-  noCushion: modelHospital(model, '990014', { values: { ...V, CLABSI: 1.073 } }),
-  assigned: modelHospital(model, '990016', { values: { ...V, SSI: 'assigned' } }),
-  maryland: modelHospital(model, '990017', { values: V, decision: 'N/A', state: 'MD' }),
+  no: modelHospital(model, '990011', { values: V.no }),
+  yes: modelHospital(model, '990012', { values: V.yes }),
+  capped: modelHospital(model, '990013', { values: V.capped }),
+  noCushion: modelHospital(model, '990014', { values: V.noCushion }),
+  assigned: modelHospital(model, '990016', { values: V.assigned }),
+  maryland: modelHospital(model, '990017', { values: V.no, decision: 'N/A', state: 'MD' }),
 };
 
 const vmOf = (h, changes = {}) => {
@@ -36,8 +34,6 @@ const rows = (name) => rowsOf(H[name]);
 
 const NO_CUT = "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.";
 const CUT = "That would be above CMS's line, so the payment reduction decision would be Yes: a 1% cut.";
-const STANDING = "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. "
-  + "CMS's real result also depends on other hospitals.";
 
 test('the fixtures sit where the snapshots need them', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(H).map(([k, h]) => [k, [h.totalText, h.paymentReduction]])), {

@@ -5,24 +5,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
-import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { toUnit } from '../../../engine/js/stats.js';
+import { SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { loadHacrp } from '../web/data.js';
 import { scoreRange } from '../web/generate.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
-import { whatIfTexts } from '../web/whatif-text.js';
+import { textsFor as fixtureTexts } from './fixtures.js';
 
 const D = loadHacrp();
 const { model, estimate } = D;
 const RANGE = scoreRange(D.hospitals);
 const PATH = '/hacrp/hospital/990026/';
-const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
+const V = SYNTH_VALUES.no;
 const H = modelHospital(model, '990026', { values: V });
-const ASSIGNED = modelHospital(model, '990027', { values: { ...V, SSI: 'assigned' } });
+const ASSIGNED = modelHospital(model, '990027', { values: SYNTH_VALUES.assigned });
 const MARYLAND = modelHospital(model, '990028', { values: V, decision: 'N/A', state: 'MD' });
-const textsFor = (h) => whatIfTexts({ hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: PATH, source: D.source, boundaryText: D.boundaryText, baseline: 'cms' });
+// Every hospital's texts on the one page the stub window is at.
+const textsFor = (h) => fixtureTexts(D, h, { path: PATH });
 const texts = textsFor(H);
 
 const ATTR = /\s([\w:-]+)(?:="([^"]*)")?/g;
@@ -230,7 +232,8 @@ test('NHSN predicted counts reach the count line and never the fragment', () => 
 test('median and reset buttons', () => {
   const root = mount(false, windowStub());
   q(root, 'median').fire('click');
-  assert.equal(field(root, 'MRSA', 'number').value, (Math.round(model.params.MRSA.median * 1000) / 1000).toFixed(3));
+  const p = model.params.MRSA;
+  assert.equal(field(root, 'MRSA', 'number').value, toUnit(p.median, p.decimals).toFixed(p.decimals));
   q(root, 'reset').fire('click');
   assert.equal(field(root, 'MRSA', 'number').value, '0.900');
 });
@@ -351,7 +354,7 @@ test('mounting on markup that lacks parts never throws: Maryland, share false, a
     stub.flush();
   }
   const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
-  const t = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText, baseline: 'sandbox' });
+  const t = fixtureTexts(D, m, { name: null, path: '/hacrp/', baseline: 'sandbox' });
   const root = rootFor(m, false, t);
   mountWhatIf(root, { rules: whatIfRules(m, model, estimate), texts: t, share: false, range: RANGE, env: windowStub().env });
   type(field(root, 'MRSA', 'number'), '1.2');

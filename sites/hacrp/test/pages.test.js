@@ -18,21 +18,21 @@ import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
-import { BOUNDARY_TEXT as BOUNDARY, CASES, inputs, master } from './fixtures.js';
+import { BOUNDARY_TEXT as BOUNDARY, CASES, WHATIF_STANDING, esc, inputs, master, pick as pickFrom } from './fixtures.js';
 
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const DATA = loadHacrp();
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
 const FN = (code) => DATA.footnotes.get(code);
-const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 const read = (dir, path) => readFileSync(join(dir, path, 'index.html'), 'utf8');
 const hospitalPath = (h) => `/hacrp/hospital/${h.ccn.toLowerCase()}/`;
-const pick = (pred, what) => {
-  const h = DATA.hospitals.find(pred);
-  assert.ok(h, `no pinned row: ${what}`);
-  return h;
+const pick = (pred, what) => pickFrom(DATA.hospitals, pred, what);
+// The program page's arguments, for the tests that vary one of them.
+const PROGRAM_ARGS = {
+  fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
+  periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
 };
 const temp = (fn) => withTemp('pp-hacrp-', fn);
 const generate = (dir, env, options) => {
@@ -177,9 +177,8 @@ test('the program page links the hospitals asset and inlines no hospital data; h
     rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i]]),
   });
   const text = programPage({
-    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
-    measures: views[0].measures, periods: DATA.periods, searchUrl: '/assets/hacrp-hospitals.0000abcd.json',
-    source: DATA.source, robots: 'noindex', assets: ASSETS,
+    ...PROGRAM_ARGS, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' }, measures: views[0].measures,
+    searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
   assert.match(text, /<section class="block search" aria-labelledby="search-h" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
   assert.doesNotMatch(text, /application\/json/);
@@ -231,10 +230,7 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   const name = 'Example General Hospital';
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
   assert.equal(meta(text, 'description'), esc(`${name} (Exampleton, AL): CMS's FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`));
-  const program = programPage({
-    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
-    periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
-  });
+  const program = programPage(PROGRAM_ARGS);
   assert.equal(meta(program, 'description'), esc(`How Medicare's Hospital-Acquired Condition Reduction Program works, and CMS's FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
 
@@ -267,8 +263,7 @@ const SANDBOX_LABEL = 'a hypothetical hospital at the national median on every m
 const sandboxProgram = () => {
   const { model, estimate } = DATA;
   return programPage({
-    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
-    periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
+    ...PROGRAM_ARGS,
     whatif: { hospital: medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods }), model, estimate, range: scoreRange(DATA.hospitals) },
   });
 };
@@ -278,7 +273,7 @@ test('the program page holds the sandbox on the median hospital: labeled, no sha
   assert.match(text, /<section class="block whatif" id="whatif"/);
   assert.ok(text.includes(SANDBOX_LABEL));
   assert.doesNotMatch(text, /data-wi="banner"|data-wi="predicted"|Reader-made scenario/);
-  assert.ok(text.includes(esc("A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals.")));
+  assert.ok(text.includes(esc(WHATIF_STANDING)));
   assert.ok(text.includes('<script type="module" src="/assets/hacrp-program.test.js"></script>'));
   assert.equal([...text.matchAll(/id="whatif"/g)].length, 1);
 });
@@ -299,10 +294,7 @@ test('the sandbox page data is the median record, the model, the estimate tags a
 });
 
 test('without whatif data the program page has no sandbox (the other tests render it that way)', () => {
-  const text = programPage({
-    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
-    periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
-  });
+  const text = programPage(PROGRAM_ARGS);
   assert.doesNotMatch(text, /id="whatif"|hacrp-program"/);
 });
 

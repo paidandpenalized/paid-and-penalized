@@ -37,6 +37,18 @@ export function syntheticRow(overrides = {}) {
   return { ...row, ...overrides };
 }
 
+// Measure values for modelHospital that land where the what-if tests need them on the FY2026 model: below the line
+// (no), above it (yes), with MRSA past CMS's cap and the rest low (capped), at the last value that keeps No
+// (noCushion), and with SSI assigned (assigned).
+const BASE_VALUES = Object.freeze({ PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 });
+export const SYNTH_VALUES = Object.freeze({
+  no: BASE_VALUES,
+  yes: Object.freeze({ PSI90: 1.05, CLABSI: 1.2, CAUTI: 0.8, SSI: 1.0, CDI: 0.6, MRSA: 1.2 }),
+  capped: Object.freeze({ PSI90: 0.75, CLABSI: 0.3, CAUTI: 0.2, SSI: 0.5, CDI: 0.2, MRSA: 1.9 }),
+  noCushion: Object.freeze({ ...BASE_VALUES, CLABSI: 1.073 }),
+  assigned: Object.freeze({ ...BASE_VALUES, SSI: 'assigned' }),
+});
+
 // A synthetic Hospital that agrees with a fitted model, for what-if tests: each z is the model's z of the value at
 // CMS's 4 decimals (CMS's worst z, zMax, for a measure marked 'assigned'), and the total is their mean. A measure
 // left out of values is unscored; with none scored, the total is N/A. The decision defaults to the model's line.

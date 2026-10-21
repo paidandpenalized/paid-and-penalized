@@ -1,16 +1,15 @@
 // Synthetic hospitals for the HACRP page tests: invented names, CCNs 990001-990099 (no real hospital), CMS's real
 // footnote crosswalk (CMS text, no hospital in it), and a tiny model with a made-up line.
+import assert from 'node:assert/strict';
 import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
-import { syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
 import { readPinned } from '../../../pipeline/files.js';
+import { whatIfTexts } from '../web/whatif-text.js';
 
 export const FY = 2026;
-export const PERIODS = {
-  psi90: { start: '07/01/2022', end: '06/30/2024' },
-  hai: { start: '01/01/2023', end: '12/31/2024' },
-};
+export const PERIODS = SYNTH_PERIODS;
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
 // CMS's text for the two boundary scores, as boundaryText() reads it from the file.
 export const BOUNDARY_TEXT = { highestNo: '0.2500', lowestYes: '0.2507' };
@@ -118,3 +117,23 @@ export function inputs(h, overrides = {}) {
   return { hospital: h, model: MODEL, estimate: ESTIMATE, footnotes: FOOTNOTES, master: master(h.ccn, { state: h.state }), fy: FY,
     periods: PERIODS, boundaryText: BOUNDARY_TEXT, ...overrides };
 }
+
+// The two standing lines, verbatim (Global Constraints): under every flag, and under every what-if.
+export const STANDING = "A penalty reflects how CMS's formula scored relative performance; it is not a verdict on the quality of care.";
+export const WHATIF_STANDING = "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. "
+  + "CMS's real result also depends on other hospitals.";
+
+// HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.
+export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+// The first pinned row with a property; fails the test, naming the property, if there is none.
+export function pick(hospitals, pred, what) {
+  const h = hospitals.find(pred);
+  assert.ok(h, `no pinned row: ${what}`);
+  return h;
+}
+
+// The what-if's words for a synthetic hospital on a hospital page (data: loadHacrp()). A sandbox passes name null,
+// its path and baseline 'sandbox'.
+export const textsFor = (data, h, { name = 'Example General Hospital', path = `/hacrp/hospital/${h.ccn.toLowerCase()}/`, baseline = 'cms' } = {}) =>
+  whatIfTexts({ hospital: h, model: data.model, name, fy: data.fy, path, source: data.source, boundaryText: data.boundaryText, baseline });

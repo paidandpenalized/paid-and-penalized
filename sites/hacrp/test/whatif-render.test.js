@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { build as esbuild } from 'esbuild';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
-import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { REPO_ROOT, repoFiles } from '../../../pipeline/files.js';
 import { scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
@@ -19,31 +19,22 @@ import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
-import { master } from './fixtures.js';
+import { STANDING, WHATIF_STANDING, esc, master, pick as pickFrom, textsFor } from './fixtures.js';
 
 const D = loadHacrp();
 const { model, estimate } = D;
 const RANGE = scoreRange(D.hospitals);
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
-const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
+const { no: V } = SYNTH_VALUES;
 const H = {
   no: modelHospital(model, '990021', { values: V }),
-  yes: modelHospital(model, '990022', { values: { PSI90: 1.05, CLABSI: 1.2, CAUTI: 0.8, SSI: 1.0, CDI: 0.6, MRSA: 1.2 } }),
-  assigned: modelHospital(model, '990023', { values: { ...V, SSI: 'assigned' } }),
+  yes: modelHospital(model, '990022', { values: SYNTH_VALUES.yes }),
+  assigned: modelHospital(model, '990023', { values: SYNTH_VALUES.assigned }),
   maryland: modelHospital(model, '990024', { values: V, decision: 'N/A', state: 'MD' }),
-  three: modelHospital(model, '990025', { values: { PSI90: 1.0, CLABSI: 0.8, MRSA: 0.9 } }),
+  three: modelHospital(model, '990025', { values: { PSI90: V.PSI90, CLABSI: V.CLABSI, MRSA: V.MRSA } }),
 };
-const STANDING = "A penalty reflects how CMS's formula scored relative performance; it is not a verdict on the quality of care.";
-const WHATIF_STANDING = "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. "
-  + "CMS's real result also depends on other hospitals.";
-const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-
-const textsFor = (h) => whatIfTexts({
-  hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: `/hacrp/hospital/${h.ccn.toLowerCase()}/`,
-  source: D.source, boundaryText: D.boundaryText, baseline: 'cms',
-});
-const render = (h, state = initialState(h, model), share = true, texts = textsFor(h)) =>
+const render = (h, state = initialState(h, model), share = true, texts = textsFor(D, h)) =>
   String(renderWhatIf({ vm: viewModel(state, h, model, estimate), texts, share, range: RANGE, solver: solverOf(h, model) }));
 const set = (h, changes) => Object.entries(changes).reduce((s, [id, value]) => reduce(s, { type: 'set', id, value }), initialState(h, model));
 const all = (text, re) => [...text.matchAll(re)];
@@ -201,11 +192,7 @@ test('without JavaScript: inputs are disabled and say so; buttons hidden', () =>
 });
 
 // The pages, on pinned rows picked by property.
-const pick = (pred, what) => {
-  const h = D.hospitals.find(pred);
-  assert.ok(h, `no pinned row: ${what}`);
-  return h;
-};
+const pick = (pred, what) => pickFrom(D.hospitals, pred, what);
 const pageFor = (h) => hospitalPage({
   view: hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: D.master.get(h.ccn), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText }),
   source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE },
@@ -367,9 +354,9 @@ test('a reader value on an assigned measure: its bar loses the hatch and the "as
 test('share, range and solver are required; the slider label names the value, not the role; the solver sits under its button', () => {
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
   const solver = solverOf(H.no, model);
-  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), range: RANGE, solver }), /share/);
-  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), share: true, solver }), /range/);
-  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), share: true, range: RANGE }), /solver/);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(D, H.no), range: RANGE, solver }), /share/);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(D, H.no), share: true, solver }), /range/);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(D, H.no), share: true, range: RANGE }), /solver/);
   const text = render(H.no);
   assert.match(text, /<label class="vh" for="wi-MRSA-r">MRSA value<\/label>/);
   assert.doesNotMatch(text, /slider</);
@@ -379,8 +366,8 @@ test('share, range and solver are required; the slider label names the value, no
 
 test('the median hospital never gets NHSN fields, even with periods', () => {
   const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
-  const texts = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText, baseline: 'sandbox' });
-  assert.equal(texts.predicted, null);
-  const text = render(m, initialState(m, model), false, texts);
+  const sandbox = textsFor(D, m, { name: null, path: '/hacrp/', baseline: 'sandbox' });
+  assert.equal(sandbox.predicted, null);
+  const text = render(m, initialState(m, model), false, sandbox);
   assert.doesNotMatch(text, /data-wi="predicted"|than at CMS/);
 });

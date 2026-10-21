@@ -8,17 +8,16 @@ import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { solveMeasure } from '../../../engine/js/hacrp/solver.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
-import { SYNTH_PERIODS, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_PERIODS, SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { MAX_FACTOR, decode, encode } from '../../../web/whatif/fragment.js';
 import { changesOf, initialState, reduce, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 
 const { hospitals, model } = loadHacrp();
 const { params } = model;
 const ESTIMATE = Object.fromEntries(MEASURE_IDS.map((id) => [id, { tagged: id === 'PSI90' || id === 'CDI', maxError: 0.001 }]));
-const VALUES = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
-const NO = modelHospital(model, '990011', { values: VALUES });
-const ASSIGNED = modelHospital(model, '990016', { values: { ...VALUES, SSI: 'assigned' } });
-const CAPPED = modelHospital(model, '990013', { values: { PSI90: 0.75, CLABSI: 0.3, CAUTI: 0.2, SSI: 0.5, CDI: 0.2, MRSA: 1.9 } });
+const NO = modelHospital(model, '990011', { values: SYNTH_VALUES.no });
+const ASSIGNED = modelHospital(model, '990016', { values: SYNTH_VALUES.assigned });
+const CAPPED = modelHospital(model, '990013', { values: SYNTH_VALUES.capped });
 const set = (id, value) => ({ type: 'set', id, value });
 const apply = (h, ...actions) => actions.reduce(reduce, initialState(h, model));
 
@@ -201,7 +200,7 @@ test('view model bars and estimate: one fixed scale per hospital; estimated once
 test('solver answers: solveMeasure for each scored measure, from CMS\'s values; none for Maryland or no score', () => {
   assert.deepEqual(solverOf(ASSIGNED, model), scoredMeasures(ASSIGNED).map((id) => solveMeasure(ASSIGNED, model, id)));
   assert.equal(solverOf(ASSIGNED, model).find((r) => r.id === 'SSI').note, 'assigned');
-  const maryland = modelHospital(model, '990017', { values: VALUES, decision: 'N/A', state: 'MD' });
+  const maryland = modelHospital(model, '990017', { values: SYNTH_VALUES.no, decision: 'N/A', state: 'MD' });
   assert.equal(solverOf(maryland, model), null);
   assert.equal(solverOf(hospitals.find((x) => x.total === null), model), null);
 });
