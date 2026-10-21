@@ -3,9 +3,9 @@
 // A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The median
 // hospital is this site's synthetic record, so its words never call its values or decision CMS's.
 import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
-import { cmsText, decimal, isoDate, pct } from '../../../web/render/format.js';
-import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
-import { fill } from './copy.js';
+import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
+import { REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
+import { fill, measureLabel } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
@@ -132,4 +132,93 @@ export function slideText(vm, hospital, model, view) {
     fill('source', { fy: String(view.fy), id: view.source.id, date: isoDate(view.source.pdcReleased) }),
     fill('whatifStanding'),
   ].filter((line) => line !== null && line !== undefined).join('\n');
+}
+
+// The step the engine's leveragePerTenth is measured in, and the page's decimals for score parts.
+const TENTH = 0.1;
+const PART_DP = 4;
+const METHODS_ESTIMATE = '/methods/#estimate';
+
+function countText(delta) {
+  const count = decimal(Math.abs(delta), 1);
+  if (Number(count) === 0) return fill('whatifCountSame');
+  return fill(delta > 0 ? 'whatifCountMore' : 'whatifCountFewer', { count });
+}
+
+// The words the what-if component (web/whatif/render.js and dom.js) takes for one hospital: strings for the fixed
+// parts, functions of the view model for the parts that move. The page passes the hospital view's name, fy and path,
+// the dataset's manifest entry (source) and CMS's text for the line's two scores (boundaryText).
+export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryText }) {
+  const median = isMedianHospital(hospital);
+  const decision = hospital.paymentReduction;
+  const hai = hospital.periods.hai;
+  const view = { name, fy, source };
+  const value = (x, id) => decimal(x, model.params[id].decimals);
+  return {
+    heading: fill('whatifHeading'),
+    intro: fill(median ? 'whatifIntroMedian' : 'whatifIntro'),
+    noScript: fill('whatifNoScript'),
+    banner: { text: fill('whatifBanner'), linkText: fill('whatifBannerLink'), href: path },
+    resultLabel: fill('whatifResultLabel'),
+    start: fill(median ? 'whatifStartMedian' : 'whatifStartCms'),
+    hypothetical: fill('whatifHypothetical'),
+    rows: { score: fill('whatifRowScore'), decision: fill('whatifRowDecision'), cut: fill('whatifRowCut') },
+    rampLine: fill('whatifRampLine'),
+    rampLegend: `${fill('line', boundaryText)} ${fill('lineMaryland')}`,
+    scores: (vm) => scores(vm.result, hospital),
+    flag: flagText,
+    cut: cutText,
+    sentence: (vm) => scenarioSentence(vm, hospital, model),
+    slide: (vm) => slideText(vm, hospital, model, view),
+    estimate: { text: fill('whatifEstimate'), linkText: fill('estimateMore'), href: METHODS_ESTIMATE },
+    copy: fill('whatifCopy'),
+    copied: fill('whatifCopied'),
+    copyFallback: fill('whatifCopyFallback'),
+    slideLabel: fill('whatifSlideLabel'),
+    reset: fill('whatifReset'),
+    median: fill('whatifMedian'),
+    // Maryland is not subject to the reduction, so there is nothing to solve for.
+    solver: decision === 'N/A' ? null : {
+      question: fill(decision === 'Yes' ? 'whatifSolveYes' : 'whatifSolveNo'),
+      caption: fill(median ? 'solverCaptionMedian' : 'solverCaption'),
+      columns: [fill('solverColMeasure'), fill(decision === 'Yes' ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
+      rows: (vm) => solverRows(vm, model),
+    },
+    fieldsLegend: fill('whatifFieldsLegend'),
+    weight: (n) => fill('whatifWeight', { one: decimal(1, 0), n: String(n) }),
+    // input: one of vm.inputs; m: its vm.result.measures entry.
+    measure(input, m) {
+      const { id } = input;
+      const p = model.params[id];
+      const short = SHORT_NAMES[id];
+      const marks = p.floor > 0
+        ? fill('whatifMarksFloor', { median: value(input.median, id), floor: value(p.floor, id), cap: value(p.cap, id) })
+        : fill('whatifMarks', { median: value(input.median, id), cap: value(p.cap, id) });
+      return {
+        label: `${measureLabel(id)} (${short})`,
+        short,
+        help: id === 'PSI90' ? fill('whatifPsiHelp') : fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT }),
+        leverage: fill('whatifLeverage', { tenth: decimal(TENTH, 1), leverage: decimal(m.leveragePerTenth, PART_DP) }),
+        marks,
+        slider: fill('whatifSliderLabel', { short }),
+        placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
+        assignedHelp: input.assigned ? fill('whatifAssignedHelp') : null,
+      };
+    },
+    bars: {
+      heading: fill('whatifBarsHeading'),
+      caption: (n) => fill('whatifBarsCaption', { n: String(n) }),
+      value: (contribution) => signed(contribution, PART_DP),
+      assigned: fill('whatifBarAssigned'),
+    },
+    // NHSN predicted counts: SIRs only, for a record with an HAI period (the median hospital has none).
+    predicted: hai.start === null ? null : {
+      label: (id) => (id === 'PSI90' ? null
+        : fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })),
+      help: fill('whatifPredictedHelp'),
+      result: countText,
+    },
+    held: fill('whatifHeld'),
+    standing: fill('whatifStanding'),
+  };
 }

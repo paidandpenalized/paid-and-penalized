@@ -5,7 +5,7 @@ import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { cmsText, decimal, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { COPY } from './copy.js';
+import { measureLabel } from './copy.js';
 import { SHORT_NAMES } from './constants.js';
 
 // Hospital pages live at <HOSPITALS_PATH><ccn, lowercase>/.
@@ -15,7 +15,6 @@ const DP = 4;
 const round = (x) => Math.round(x * 10 ** DP) / 10 ** DP;
 // An error bound shown at 4 decimals is rounded up, so the text never understates it.
 const ceilText = (x) => decimal(Math.ceil(x * 10 ** DP - 1e-9) / 10 ** DP, DP);
-const upperFirst = (s) => s[0].toUpperCase() + s.slice(1);
 
 function status(h) {
   if (h.paymentReduction === 'N/A') return 'maryland';
@@ -57,7 +56,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     const contribution = m.z === null ? null : m.z / n;
     return {
       id,
-      label: upperFirst(COPY[`measure${id}`].text),
+      label: measureLabel(id),
       short: SHORT_NAMES[id],
       valueText: cmsText(m.valueText),
       zText: cmsText(m.zText),

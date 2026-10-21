@@ -130,6 +130,86 @@ export const COPY = {
     claim: null,
   },
 
+  // The what-if component on a page.
+  whatifHeading: { text: 'What if a measure were different?', claim: null },
+  whatifIntro: {
+    text: "Change a measure's value to see how this site recomputes the Total HAC Score and the payment reduction decision, starting from CMS's values.",
+    claim: null,
+  },
+  whatifIntroMedian: {
+    text: "Change a measure's value to see how this site recomputes the score of its hypothetical hospital at the national median on every measure.",
+    claim: null,
+  },
+  whatifNoScript: { text: 'The what-if needs JavaScript. Without it, the values below stay as they are.', claim: null },
+  whatifBanner: { text: 'Reader-made scenario, not CMS data.', claim: null },
+  whatifBannerLink: { text: "Open this page with CMS's values", claim: null },
+  whatifStartCms: { text: 'CMS reports', claim: null },
+  whatifStartMedian: { text: 'Starting point', claim: null },
+  whatifHypothetical: { text: 'Hypothetical', claim: null },
+  whatifRowScore: { text: 'Total HAC Score', claim: null },
+  whatifRowDecision: { text: 'Payment reduction decision', claim: null },
+  whatifRowCut: { text: 'Payment cut', claim: 'HACRP-01' },
+  whatifResultLabel: { text: 'Result of the what-if', claim: null },
+  whatifRampLine: { text: "CMS's line", claim: null },
+  whatifEstimate: {
+    text: "Estimate: a changed measure's z-score is this site's recompute, which can differ slightly from CMS's.",
+    claim: null,
+  },
+  whatifCopy: { text: 'Copy for a slide', claim: null },
+  whatifCopied: { text: 'Copied.', claim: null },
+  whatifCopyFallback: { text: 'This browser did not copy the text. It is selected below: copy it from there.', claim: null },
+  whatifSlideLabel: { text: 'Text for a slide', claim: null },
+  whatifReset: { text: 'Reset', claim: null },
+  whatifMedian: { text: 'Bring all to the national median', claim: null },
+  whatifSolveYes: { text: 'What would it take?', claim: null },
+  whatifSolveNo: { text: 'How much cushion?', claim: null },
+  whatifFieldsLegend: { text: 'Measure values', claim: null },
+  whatifWeight: { text: 'Each measure weighs {one} ÷ {n} of the score.', claim: 'HACRP-04' },
+  whatifLeverage: { text: "Each {tenth} moves the score by {leverage}, between CMS's floor and cap.", claim: null },
+  whatifSirHelp: { text: 'SIR {one} = as many infections as predicted', claim: 'HACRP-14' },
+  whatifPsiHelp: { text: 'Lower is better', claim: null },
+  whatifMarks: {
+    text: 'National median {median} (the tick). CMS cap {cap}: every value above it scores the same (shaded).',
+    claim: 'HACRP-03',
+  },
+  whatifMarksFloor: {
+    text: 'National median {median} (the tick). CMS floor {floor} and cap {cap}: every value below the floor, or above the cap, scores the same (shaded).',
+    claim: 'HACRP-03',
+  },
+  whatifSliderLabel: { text: '{short}, slider', claim: null },
+  whatifAssignedPlaceholder: { text: 'none (assigned z-score {z})', claim: null },
+  whatifAssignedHelp: {
+    text: "CMS assigned this measure's score; CMS's footnote in the table above gives the reason. Enter a value to see the score had it been submitted.",
+    claim: 'HACRP-05',
+  },
+  whatifPredictedLabel: { text: 'Optional: your NHSN predicted infections for {short}, {start} to {end}', claim: null },
+  whatifPredictedHelp: { text: 'Stays in your browser; never sent.', claim: null },
+  whatifCountMore: {
+    text: "About {count} more infections than at CMS's value. This rests on the predicted count you entered, not on CMS data.",
+    claim: null,
+  },
+  whatifCountFewer: {
+    text: "About {count} fewer infections than at CMS's value. This rests on the predicted count you entered, not on CMS data.",
+    claim: null,
+  },
+  whatifCountSame: { text: "The same number of infections as at CMS's value.", claim: null },
+  whatifBarsHeading: { text: "Each measure's part of the score", claim: 'HACRP-04' },
+  whatifBarsCaption: {
+    text: 'A measure adds its z-score divided by {n}, the number of measures scored. Bars right of the center line raise the score. Hatched: assigned by CMS.',
+    claim: 'HACRP-04',
+  },
+  whatifBarAssigned: { text: 'assigned by CMS', claim: 'HACRP-05' },
+  solverCaption: { text: "From CMS's values, one measure at a time, with every other measure held at CMS's value.", claim: null },
+  solverCaptionMedian: { text: 'From the starting values, one measure at a time, with every other measure held where it starts.', claim: null },
+  solverColMeasure: { text: 'Measure', claim: null },
+  solverColNeeded: { text: 'Value that would read No', claim: null },
+  solverColCushion: { text: 'Highest value that keeps No', claim: null },
+  solverColNote: { text: 'Note', claim: null },
+  whatifHeld: {
+    text: "Held fixed: every other hospital's results, CMS's line, and each measure's mean, spread, floor and cap as this site fits them to CMS's published values.",
+    claim: null,
+  },
+
   // Measure names, as they read mid-sentence.
   measurePSI90: { text: 'patient safety and adverse events composite', claim: 'HACRP-06' },
   measureCLABSI: { text: 'central line–associated bloodstream infections', claim: 'HACRP-07' },
@@ -246,3 +326,9 @@ export const COPY = {
 
 // COPY[key].text with each {placeholder} filled; see fillCopy for the rules.
 export const fill = (key, values) => fillCopy(COPY, key, values);
+
+// A measure's name as a label (capitalized): "Central line–associated bloodstream infections".
+export const measureLabel = (id) => {
+  const text = fill(`measure${id}`);
+  return text[0].toUpperCase() + text.slice(1);
+};
