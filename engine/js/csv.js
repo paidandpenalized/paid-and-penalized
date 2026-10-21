@@ -76,7 +76,7 @@ const QUOTE = /[",\r\n]/;
 function csvCell(value, numeric) {
   let text = value === null || value === undefined ? '' : String(value);
   if (FORMULA.test(text) && !(numeric && NUMBER.test(text))) text = `'${text}`;
-  return QUOTE.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  return QUOTE.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 export function toCsv(columns, rows) {

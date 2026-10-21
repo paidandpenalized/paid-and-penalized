@@ -2,6 +2,7 @@
 // The fragment never reaches a server. A link can be stale or tampered with, so decode keeps only what it can
 // trust and never throws; the page then opens on CMS's values for everything else. Program-neutral: the site passes
 // its measure ids and each measure's { decimals, cap }.
+import { has } from '../../engine/js/has.js';
 import { toUnit } from '../../engine/js/stats.js';
 
 const TAG = 'whatif';
@@ -20,7 +21,7 @@ export const isWhatIfHash = (hash) => hash === `#${TAG}` || isScenarioHash(hash)
 
 // changes: { [id]: number }. Only ids in `ids` are written, in that order.
 export function encode(changes, ids) {
-  const parts = ids.filter((id) => Object.hasOwn(changes, id)).map((id) => `${id}=${changes[id]}`);
+  const parts = ids.filter((id) => has(changes, id)).map((id) => `${id}=${changes[id]}`);
   return parts.length ? `#${[TAG, ...parts].join('&')}` : '';
 }
 

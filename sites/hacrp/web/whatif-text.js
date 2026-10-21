@@ -3,6 +3,7 @@
 // A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The page says where
 // the starting values come from (baseline): CMS's, or this site's own for the sandbox's synthetic median hospital,
 // whose words never call its values or decision CMS's.
+import { has } from '../../../engine/js/has.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
@@ -27,14 +28,14 @@ const BASELINES = {
 };
 
 function wordsFor(baseline) {
-  if (!Object.hasOwn(BASELINES, baseline)) throw new TypeError(`what-if: baseline must be "cms" or "sandbox", got "${baseline}"`);
+  if (!has(BASELINES, baseline)) throw new TypeError(`what-if: baseline must be "cms" or "sandbox", got "${baseline}"`);
   return BASELINES[baseline];
 }
 
 const value = (x, model, id) => decimal(x, model.params[id].decimals);
 
 export function flagText(flag) {
-  if (!Object.hasOwn(FLAG_KEYS, flag)) throw new RangeError(`no flag text for "${flag}"`);
+  if (!has(FLAG_KEYS, flag)) throw new RangeError(`no flag text for "${flag}"`);
   return fill(FLAG_KEYS[flag]);
 }
 

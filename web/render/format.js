@@ -30,7 +30,7 @@ export function pct(x, dp = 1) {
 
 function withSign(x, dp, plus) {
   const body = fixed(Math.abs(x), dp, 'decimal');
-  if (Number(body.replaceAll(',', '')) === 0) return body;
+  if (Number(body.replace(/,/g, '')) === 0) return body;
   return (x < 0 ? MINUS : plus) + body;
 }
 
@@ -42,7 +42,7 @@ export const signed = (x, dp = 1) => withSign(x, dp, '+');
 
 // The number decimal(x, dp) and signed(x, dp) show, so a chart can plot exactly what its text says (Intl's rounding,
 // not toFixed's: the two split some ties).
-export const shown = (x, dp) => Number(fixed(x, dp, 'decimal').replaceAll(',', '')) + 0; // + 0: never -0
+export const shown = (x, dp) => Number(fixed(x, dp, 'decimal').replace(/,/g, '')) + 0; // + 0: never -0
 
 function longForm(year, month, day, source) {
   const d = new Date(Date.UTC(year, month - 1, day));

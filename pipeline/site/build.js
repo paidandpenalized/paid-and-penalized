@@ -17,7 +17,7 @@ import { createContext } from './context.js';
 export const SITES = [HACRP, HUB];
 // Shared by every site: the theme toggle (every page), the figure layer (pages with a figure) and the citation Copy
 // button (pages with a citation block); layout.js loads the last two.
-const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js' };
+export const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js' };
 
 const DIST = resolve(REPO_ROOT, 'dist');
 const inside = (dir, parent) => {

@@ -1,6 +1,7 @@
 // Page parts any site can use, in the site's own words: the decision pill, the as-of bar, the source line, the
 // citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
 // fills the placeholders in a site's copy.
+import { has } from '../../engine/js/has.js';
 import { html } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
@@ -8,12 +9,12 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 // copy[key] (a string, or { text, claim }) with each {placeholder} replaced. Values must be strings (format numbers
 // first); a placeholder with no value, or a value with no placeholder, throws.
 export function fillCopy(copy, key, values = {}) {
-  if (!Object.hasOwn(copy, key)) throw new RangeError(`no copy key "${key}"`);
+  if (!has(copy, key)) throw new RangeError(`no copy key "${key}"`);
   const entry = copy[key];
   const text = typeof entry === 'string' ? entry : entry.text;
   const used = new Set();
   const out = text.replace(PLACEHOLDER, (_, name) => {
-    if (!Object.hasOwn(values, name)) throw new RangeError(`copy "${key}": no value for {${name}}`);
+    if (!has(values, name)) throw new RangeError(`copy "${key}": no value for {${name}}`);
     if (typeof values[name] !== 'string') throw new TypeError(`copy "${key}": {${name}} must be a formatted string`);
     used.add(name);
     return values[name];

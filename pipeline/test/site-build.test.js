@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { REPO_ROOT, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
-import { SITES, build, mergeEntries } from '../site/build.js';
+import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
 import { withTemp as inTemp } from './helpers.js';
@@ -56,6 +56,26 @@ test('buildAssets bundles each JS entry as minified ESM under a content hash and
     assert.match(js, /export\s*\{/);
     assert.deepEqual((await buildAssets({ outDir: out, entries: {} })).js, {});
     await assert.rejects(buildAssets({ outDir: out, entries: { '../x': entry } }), /entry name/);
+  }));
+
+// The bundles target ES2020 (assets.js), and esbuild lowers syntax but never adds a missing built-in, so a newer
+// built-in in browser code would throw in an older browser that runs the rest. Each name here is newer than ES2020.
+const NEWER_BUILT_INS = [
+  ['Object.hasOwn', /\bObject\.hasOwn\b/], ['String#replaceAll', /\.replaceAll\(/], ['Array/String#at', /\.at\(/],
+  ['structuredClone', /\bstructuredClone\b/], ['Array#findLast', /\.findLast(Index)?\(/],
+  ['Array#toSorted and kin', /\.(toSorted|toReversed|toSpliced)\(/], ['Object.groupBy', /\bObject\.groupBy\b/],
+];
+
+test('no browser bundle calls a built-in newer than the ES2020 target', () =>
+  withTemp(async (dir) => {
+    const out = join(dir, 'dist');
+    const entries = mergeEntries(SHARED_ENTRIES, ...SITES.map((s) => s.entries ?? {}));
+    const { js } = await buildAssets({ outDir: out, entries });
+    assert.ok(Object.keys(js).length >= 5);
+    for (const [name, path] of Object.entries(js)) {
+      const text = readFileSync(join(out, path), 'utf8');
+      for (const [builtIn, re] of NEWER_BUILT_INS) assert.doesNotMatch(text, re, `${name}: ${builtIn}`);
+    }
   }));
 
 test('build runs the sites in order with one context: assets, env, and what earlier sites emitted', () =>

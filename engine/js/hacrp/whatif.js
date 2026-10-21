@@ -4,6 +4,7 @@
 // the change in that measure's z, using CMS's fitted parameters, divided by the number of measures the hospital
 // has (n). Everything else is held fixed: other hospitals, CMS's parameters, and the line between CMS's
 // "No" and "Yes" decisions.
+import { has } from '../has.js';
 import { scoredMeasures, isAssigned } from './hospital.js';
 import { EDGE, bandTerm, hypotheticalZ } from './params.js';
 
@@ -36,7 +37,7 @@ export function whatIf(hospital, model, changes = {}) {
     const m = hospital.measures[id];
     const p = model.params[id];
     const assigned = isAssigned(m);
-    const changed = Object.hasOwn(changes, id) && changes[id] !== m.value;
+    const changed = has(changes, id) && changes[id] !== m.value;
     const afterValue = changed ? changes[id] : m.value;
 
     let afterZ = m.z;

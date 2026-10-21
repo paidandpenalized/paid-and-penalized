@@ -3,6 +3,7 @@
 // with) and any NHSN predicted counts they type, which stay in the browser and never enter the fragment.
 // reduce() only lets through values the engine accepts; viewModel() runs the engine and adds what the component
 // draws: slider bounds and text, the ramp's scores, the bars' scale, the count deltas.
+import { has } from '../../../engine/js/has.js';
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
@@ -138,7 +139,7 @@ export function viewModel(state, hospital, model, estimate) {
   // value of CMS's to count from.
   const counts = {};
   for (const id of state.ids) {
-    if (!Object.hasOwn(state.predicted, id) || state.cms[id] === null) continue;
+    if (!has(state.predicted, id) || state.cms[id] === null) continue;
     counts[id] = { delta: (state.values[id] - state.cms[id]) * state.predicted[id] };
   }
 
