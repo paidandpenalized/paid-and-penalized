@@ -22,7 +22,6 @@
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
 /* The claim level leads the source line as words, not a badge. */
 .fig__claim { color: var(--ink); font-weight: 600; }
-.fig__table summary { width: fit-content; min-height: 24px; padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .fig__table[open] summary { margin-bottom: 8px; }
 .fig__table th[data-numeric] { text-align: right; }
 /* A cell a script keeps in step with the reader (the what-if's hypothetical parts): bold once it differs, quiet while

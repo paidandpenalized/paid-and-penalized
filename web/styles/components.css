@@ -54,3 +54,6 @@
   .pill { border-color: CanvasText; }
   .pill--na { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; color: CanvasText; }
 }
+
+/* ---------- disclosure summaries: a figure's "Show table" and the what-if's result-table fold, one look ---------- */
+.fig__table summary, .wi-detail summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }

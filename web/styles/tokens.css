@@ -48,6 +48,7 @@
   --measure: 34em;          /* about 70 characters of Libre Franklin; in em, so small text keeps the count */
   --page: 1180px;
   --control-h: 40px;        /* every field, menu and button: one height (44px for touch, below) */
+  --target-min: 24px;       /* the smallest target for a text-sized control (WCAG 2.2's 24px) */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
