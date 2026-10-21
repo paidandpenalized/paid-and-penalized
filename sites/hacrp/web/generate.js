@@ -64,12 +64,13 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 
   // The dataset file and its dictionary: files, not pages (no robots: they are not in the sitemap).
   ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master) });
-  ctx.emit({ path: dictionaryPath(fy), text: dictionaryText(dictionary, { fy, source }) });
+  const dictionaryFilled = dictionaryText(dictionary, { fy, source });
+  ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
   // The dictionary as a page, which the data links open; indexed as the program page is.
-  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ dictionary, fy, source, path: DICTIONARY_PAGE, robots: programRobots, assets }) });
+  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets }) });
   ctx.emit({
     path: PROGRAM_PATH,
     robots: programRobots,
