@@ -37,19 +37,22 @@ export function compareRows(index, numeric, dir) {
 // fonts or rows arriving); a scroll moves the edge, and an enclosing details' toggle re-reads it (a closed one's content
 // is skipped, so the observer may not report it). The label is the table's aria-labelledby, else its caption's id.
 export function scrollState(scroll) {
-  const over = scroll.scrollWidth - scroll.clientWidth > 1;
-  return { region: over, more: over && scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 1 };
+  const overflow = scroll.scrollWidth - scroll.clientWidth;
+  return { region: overflow > 1, more: overflow - scroll.scrollLeft > 1 };
 }
 
 export function mountScroll(scroll) {
-  const box = scroll.parentElement;
   const table = scroll.querySelector('table');
-  const label = table?.getAttribute('aria-labelledby') ?? table?.caption?.id;
-  if (!box || !table || !label || !('ResizeObserver' in window)) return;
+  if (!table) return;
+  const label = table.getAttribute('aria-labelledby') ?? table.caption?.id;
+  if (!label || !('ResizeObserver' in window)) return;
+  const box = scroll.parentElement;
+  let isRegion = false;
   const edge = () => {
     const { region, more } = scrollState(scroll);
     box.toggleAttribute('data-more', more);
-    if (region === scroll.hasAttribute('tabindex')) return;
+    if (region === isRegion) return;
+    isRegion = region;
     if (region) {
       scroll.setAttribute('tabindex', '0');
       scroll.setAttribute('role', 'region');
