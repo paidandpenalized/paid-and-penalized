@@ -383,9 +383,11 @@ export const COPY = {
   figSideAbove: { text: 'above', claim: null },
   figSideBelow: { text: 'at or below', claim: null },
   figRangeAlt: {
-    text: "For each measure, this hospital's value marked with a triangle against the national range from CMS's floor to its cap, with the national median as a tick.",
-    claim: null,
+    text: "For each measure, this hospital's value (triangle) against the national median (tick); hatched values score the same as CMS's floor or cap.",
+    claim: 'HACRP-03',
   },
+  // Said as the chart's description once it takes focus.
+  figRangeKeys: { text: 'Arrow keys step through the measures.', claim: null },
   figRangeThis: { text: 'This hospital', claim: null },
   figRangeMedian: { text: 'National median', claim: null },
   // The figure's hatch: values past CMS's floor or cap, which score the same as that end.

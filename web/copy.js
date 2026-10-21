@@ -19,6 +19,9 @@ export const COPY = typesetCopy({
   figure: 'Figure',
   showTable: 'Show table',
   downloadCsv: 'Download CSV',
+  // Said (to screen readers) when a figure's table is sorted by a column head.
+  sortedUp: 'Sorted by {column}, ascending',
+  sortedDown: 'Sorted by {column}, descending',
   // A figure's claim level, said under the chart when its values are not CMS's own (DES-25 words).
   claimRecomputed: 'This site recomputes',
   claimEstimate: 'Estimate',

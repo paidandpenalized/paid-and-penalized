@@ -6,6 +6,8 @@
 // JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
+import { COPY } from '../copy.js';
+import { fillCopy } from '../render/components.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 // Some browsers start a download after click() returns; revoking its blob URL at once can cancel it. A minute is
@@ -63,7 +65,8 @@ export function mountScroll(scroll) {
   sizes.observe(table);
 }
 
-function mountTable(fig) {
+// live: the figure's polite live paragraph (a sort says its new order there).
+function mountTable(fig, live) {
   const table = fig.querySelector('table');
   if (!table) return;
   const heads = [...table.tHead.rows[0].cells];
@@ -77,6 +80,7 @@ function mountTable(fig) {
       const dir = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
       for (const h of heads) h.removeAttribute('aria-sort');
       th.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
+      live.textContent = fillCopy(COPY, dir > 0 ? 'sortedUp' : 'sortedDown', { column: button.textContent.trim() });
       const body = table.tBodies[0];
       body.append(...[...body.rows].sort(compareRows(i, th.hasAttribute('data-numeric'), dir)));
     });
@@ -98,8 +102,9 @@ function mountTable(fig) {
 }
 
 // One chart's tooltip layer; a figure with a narrow and a wide variant gets one per chart (only the shown one meets
-// the pointer or the keyboard: the other is display: none).
-function mountMarks(fig, svg) {
+// the pointer or the keyboard: the other is display: none). A focusable chart takes the figure's keyboard hint as its
+// description, where the page has one (keysHint in web/charts/figure.js).
+function mountMarks(fig, svg, live) {
   const marks = [...svg.querySelectorAll('[data-mark]')];
   if (!marks.length) return;
   // The custom tooltip replaces the native one, so the two never show together.
@@ -112,11 +117,10 @@ function mountMarks(fig, svg) {
   tip.className = 'fig__tip';
   tip.setAttribute('role', 'tooltip');
   tip.hidden = true;
-  const live = document.createElement('p');
-  live.className = 'vh';
-  live.setAttribute('aria-live', 'polite');
-  fig.append(tip, live);
+  fig.append(tip);
   svg.setAttribute('tabindex', '0');
+  const hint = document.getElementById(`${fig.id}-keys`);
+  if (hint) svg.setAttribute('aria-describedby', hint.id);
 
   let current = -1;
   const hide = () => {
@@ -169,8 +173,12 @@ function mountMarks(fig, svg) {
 }
 
 function mountFigure(fig) {
-  mountTable(fig);
-  for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg);
+  const live = document.createElement('p');
+  live.className = 'vh';
+  live.setAttribute('aria-live', 'polite');
+  fig.append(live);
+  mountTable(fig, live);
+  for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg, live);
 }
 
 if (typeof document !== 'undefined') {

@@ -7,11 +7,12 @@ import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { contribBars } from '../../../web/charts/contribBars.js';
 import { dotRanges } from '../../../web/charts/dotRange.js';
-import { figure } from '../../../web/charts/figure.js';
+import { figure, keysHint } from '../../../web/charts/figure.js';
 import { histogram, histogramBins } from '../../../web/charts/histogram.js';
 import { TILES } from '../../../web/charts/states.js';
 import { tileMap } from '../../../web/charts/tileMap.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
+import { html } from '../../../web/render/html.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { FEW_DECIDED, TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
@@ -60,8 +61,8 @@ export function partsFigure(view, n, source, chart = null) {
   });
 }
 
-// Hospital page: each measure's value against the national range, one row per measure on its own scale. null when
-// no measure has a published value.
+// Hospital page: each measure's value against the national range, one row per measure on its own scale, with its
+// keyboard hint after it. null when no measure has a published value.
 export function rangeFigure(view, ranges, n, source) {
   const rows = view.measures.map((m) => {
     const { floor, cap, median, decimals } = ranges[m.id];
@@ -74,7 +75,7 @@ export function rangeFigure(view, ranges, n, source) {
   const takeaway = valued.length === 1
     ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
     : fill('figRangeTakeaway', { k: String(valued.length), above: String(above), rest: String(valued.length - above) });
-  return figure({
+  const fig = figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figRangeAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-ranges`,
     key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'same', label: t('figRangeSame') }],
     svg: dotRanges({
@@ -93,6 +94,8 @@ export function rangeFigure(view, ranges, n, source) {
       ]),
     },
   });
+  return html`${fig}
+${keysHint(n, t('figRangeKeys'))}`;
 }
 
 // Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. CMS's line is

@@ -106,6 +106,13 @@ test('Figure 1: a measure with no value has no triangle and says so; its table q
   assert.ok(body.includes(`<title>National median: ${decimal(r.median, 3)}</title>`));
 });
 
+test('Figure 1 is named for what it draws, and its keyboard hint follows it, hidden until the script names it', () => {
+  const text = render(CASES.yes);
+  const svg = /<svg role="img" aria-label="([^"]*)"/.exec(figures(text)[0][2])[1];
+  assert.equal(svg, esc('For each measure, this hospital’s value (triangle) against the national median (tick); hatched values score the same as CMS’s floor or cap.'));
+  assert.ok(text.includes('</figure>\n<p id="figure-1-keys" hidden>Arrow keys step through the measures.</p>'));
+});
+
 test('no-score pages and the unscored "Yes" row get no figures; Maryland gets both', () => {
   for (const h of [CASES.noScore, CASES.yesNoScore]) {
     const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS });
