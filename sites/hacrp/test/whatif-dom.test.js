@@ -37,6 +37,11 @@ function node(tag, chunk) {
     setAttribute: (k, v) => attrs.set(k, String(v)),
     getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
     removeAttribute: (k) => attrs.delete(k),
+    toggleAttribute: (k, on) => {
+      if (!on) attrs.delete(k);
+      else if (!attrs.has(k)) attrs.set(k, '');
+      return on;
+    },
     addEventListener: (type, fn) => listeners.set(type, [...(listeners.get(type) ?? []), fn]),
     fire: (type) => (listeners.get(type) ?? []).forEach((fn) => fn({ type, target: el, currentTarget: el })),
     querySelector(sel) {

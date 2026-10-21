@@ -113,8 +113,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   function after(cell, before, value) {
     if (!cell) return;
     setText(cell, afterText(before, value, texts.same));
-    if (value === before) cell.setAttribute('data-same', '');
-    else cell.removeAttribute('data-same');
+    cell.toggleAttribute('data-same', value === before);
   }
 
   // An SVG text at a ramp place { t, anchor, dx }.
@@ -168,8 +167,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const p = texts.pill(r.after.flag);
     setText(el['head-label'], anyChanged(r) ? texts.hypothetical : texts.start);
     // A changed what-if prints as a scenario; an unchanged one drops its instructions on paper (print.css).
-    if (anyChanged(r)) root.setAttribute('data-changed', '');
-    else root.removeAttribute('data-changed');
+    root.toggleAttribute('data-changed', anyChanged(r));
     setText(el['head-score'], headScore(s));
     setText(el['head-pill'], p.label);
     el['head-pill'].setAttribute('class', pillClass(p.kind));
@@ -184,10 +182,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const stacked = labels.stacked && !unchanged;
     el['hyp-label'].setAttribute('y', String(stacked ? RAMP_Y.label2 : RAMP_Y.label));
     el.ramp.setAttribute('height', String(rampHeight(stacked)));
-    for (const node of [el.hyp, el['hyp-label']]) {
-      if (unchanged) node.setAttribute('hidden', '');
-      else node.removeAttribute('hidden');
-    }
+    for (const node of [el.hyp, el['hyp-label']]) node.toggleAttribute('hidden', unchanged);
     const edge = rampEdge(rampSide(r.after.score, domain));
     place(el['hyp-edge'], edge);
     setText(el['hyp-edge'], edge.text);
