@@ -46,8 +46,9 @@
 .pill { display: inline-block; padding: 2px 7px 1px; border: 1.5px solid var(--neutral); border-radius: 0; color: var(--ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.02em; white-space: nowrap; }
 .pill--pen { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
-/* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. */
-.pill--na { padding-left: 18px; border-color: var(--line); background: var(--hatch-fill) left / 10px 100% no-repeat, var(--paper); }
+/* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. The swatch and the room
+   it takes (a text-indent, added to whatever padding a context sets) are in em, so a larger pill needs no override. */
+.pill--na { text-indent: 0.88em; border-color: var(--line); background: var(--hatch-fill) left / 0.76em 100% no-repeat, var(--paper); }
 /* Forced colors: the word carries the decision; the N/A swatch's hatch (a gradient, dropped there) is redrawn in
    system colors. */
 @media (forced-colors: active) {

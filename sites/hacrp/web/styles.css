@@ -22,7 +22,6 @@
   .hero__none { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .hero__none span { background: Canvas; color: CanvasText; }
 }
-.hero__pill .pill--na { padding-left: 32px; background-size: 17px 100%; }
 
 /* Measure table: as wide as its content (never stretched across the page), right-aligned number columns, and the
    notes column, when there is one, taking the room left. */
