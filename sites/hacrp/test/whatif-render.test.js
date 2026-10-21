@@ -175,6 +175,14 @@ test('buttons and the solver: reset, median, the question by CMS\'s decision; ro
   const changed = render(H.no, reduce(initialState(H.no, model), { type: 'set', id: 'MRSA', value: 1.4 }));
   const table = (t) => /id="wi-solver"[\s\S]*?<\/table>/.exec(t)[0];
   assert.equal(table(changed), table(no));
+  // A Note column only when some row has a note; Reset reads as unavailable until there is something to reset.
+  for (const text of [no, yes]) {
+    const t = table(text);
+    const notes = all(t, /<tr><th scope="row">[^<]*<\/th><td>[^<]*<\/td><td>([^<]*)<\/td><\/tr>/g).map((m) => m[1]);
+    assert.equal(t.includes('>Note</th>'), notes.length > 0);
+    assert.ok(notes.length === 0 || notes.some(Boolean), 'never a column of empty notes');
+    assert.match(text, /data-wi="reset" aria-disabled="true"/);
+  }
 });
 
 test('contribution bars in fixed measure order; an assigned measure is marked', () => {

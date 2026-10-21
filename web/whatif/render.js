@@ -189,14 +189,18 @@ function bars(vm, words, texts) {
 </div>`;
 }
 
-// The solver: one measure at a time, from the starting values (its answers never follow the reader's edits).
+// The solver: one measure at a time, from the starting values (its answers never follow the reader's edits). The
+// note column only when some row has a note.
 function solverBlock(answers, s) {
+  const rows = s.rows(answers);
+  const withNote = rows.some((row) => row.note);
+  const columns = withNote ? s.columns : s.columns.slice(0, 2);
   return html`<div class="wi-solver" id="wi-solver" data-wi="solver">
 <h3 class="h-sm" id="wi-solver-h">${s.question}</h3>
 <p class="small muted">${s.caption}</p>
 ${printout(html`<table class="gb wi-solver__table" aria-labelledby="wi-solver-h">
-<thead><tr>${s.columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead>
-<tbody>${s.rows(answers).map((row) => html`<tr><th scope="row">${row.label}</th><td>${row.answer}</td><td>${row.note}</td></tr>`)}</tbody>
+<thead><tr>${columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead>
+<tbody>${rows.map((row) => html`<tr><th scope="row">${row.label}</th><td>${row.answer}</td>${withNote && html`<td>${row.note}</td>`}</tr>`)}</tbody>
 </table>`)}
 </div>`;
 }
@@ -222,7 +226,7 @@ ${result(vm, range, texts)}
 <div class="wi-inputs">
 <div data-wi="controls" hidden>
 <div class="wi-actions">
-<button type="button" class="wi-btn" data-wi="reset">${texts.reset}</button>
+<button type="button" class="wi-btn" data-wi="reset" aria-disabled="true">${texts.reset}</button>
 <button type="button" class="wi-btn" data-wi="median" aria-describedby="wi-median-help">${texts.median}</button>
 ${solver && html`<button type="button" class="wi-btn" data-wi="solve" aria-expanded="true" aria-controls="wi-solver">${texts.solver.question}</button>`}
 </div>

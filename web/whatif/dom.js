@@ -214,6 +214,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       }
     }
     if (el.banner) el.banner.hidden = !(linked && hasChanges(state));
+    // Reset reads as unavailable while there is nothing to reset (it stays focusable and harmless).
+    const dirty = hasChanges(state) || Object.values(vm.counts).some(Boolean);
+    el.reset.setAttribute('aria-disabled', String(!dirty));
     setText(el['copy-status'], '');
     env.clearTimeout(timer);
     timer = env.setTimeout(settle, SETTLE_MS);

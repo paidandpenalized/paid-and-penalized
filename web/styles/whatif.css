@@ -61,6 +61,8 @@
 .wi-actions + p { margin-top: 6px; }
 .wi-btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
 .wi-btn:hover { background: var(--paper-2); }
+.wi-btn[aria-disabled="true"] { border-color: var(--line); color: var(--ink-3); cursor: default; }
+.wi-btn[aria-disabled="true"]:hover { background: var(--paper); }
 .wi-btn[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
 
 /* ---------- the inputs ---------- */

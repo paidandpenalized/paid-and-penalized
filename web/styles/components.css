@@ -31,7 +31,8 @@
 .printout { position: relative; border-block: var(--rule) solid var(--ink); background: var(--paper); }
 .printout__scroll { overflow-x: auto; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
-.gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+/* The head's rule is an inset shadow, not a border: a collapsed border stays behind when the head sticks. */
+.gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
 .gb td, .gb tbody th { padding: 7px 10px; vertical-align: top; }
 /* Row headers read as text, in ink: left-aligned, in the body face. Rows are told apart by the green-bar banding. */
 .gb tbody th { text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); }
