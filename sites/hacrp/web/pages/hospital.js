@@ -92,7 +92,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 <header class="page__head">
 <p class="cap kicker"><a href="${home}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy })}</a></p>
 <h1>${view.name}</h1>
-<p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })} · ${fill('placeData', { date: isoDate(source.pdcReleased) })}</p>
+<p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })} · <span class="nw">${fill('placeData', { date: isoDate(source.pdcReleased) })}</span></p>
 </header>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
