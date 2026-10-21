@@ -29,6 +29,10 @@
 /* Rules above and below, no box: the green-bar banding is the almanac detail, and the one framed object on a page is
    the what-if result, so a frame means "this responds to you". */
 .printout { position: relative; border-block: var(--rule) solid var(--ink); background: var(--paper); }
+/* A table wider than its box fades out at the right edge while more of it lies that way (data-more and the box's
+   focus as a region are set by web/client/figure.js). */
+.printout[data-more]::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px; background: linear-gradient(to right, transparent, var(--paper)); pointer-events: none; }
+.printout__scroll:focus-visible { outline-offset: -2px; }
 .printout__scroll { overflow-x: auto; }
 .printout--fit { width: fit-content; max-width: 100%; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }

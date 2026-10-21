@@ -26,8 +26,9 @@ function sandbox(whatif, { fy, boundaryText, source }) {
   return whatIfSection(whatif, page, 'hacrp-program');
 }
 
+// The caption's id names the table's scroll box when it scrolls (web/client/figure.js).
 const stepTable = (caption, step, columns, rows) => printout(html`<table class="gb gb--steps">
-<caption class="vh">${caption}</caption>
+<caption class="vh" id="steps-${step}-cap">${caption}</caption>
 <thead><tr><th scope="col">${t('colMeasure')}</th>${columns.map((c) => html`<th scope="col" class="num">${t(c)}</th>`)}</tr></thead>
 <tbody>${rows.map(([r, cells]) => html`<tr data-measure="${r.id}" data-step="${step}"><th scope="row">${r.short}</th>${cells.map((c) => html`<td class="num">${c}</td>`)}</tr>`)}</tbody>
 </table>`);
@@ -71,7 +72,7 @@ const hospitalTable = ({ fy, searchUrl, source }) => html`<section class="block 
 </div>
 <p class="small" id="ht-count" aria-live="polite"></p>
 ${printout(html`<table class="gb gb--hospitals">
-<caption class="vh">${t('tableCaption')}</caption>
+<caption class="vh" id="hospitals-cap">${t('tableCaption')}</caption>
 <thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
 <tbody></tbody>
 </table>`)}

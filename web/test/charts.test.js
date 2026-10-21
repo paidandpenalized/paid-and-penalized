@@ -12,7 +12,7 @@ import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
 import { GRID, TILES } from '../charts/states.js';
 import { tileMap } from '../charts/tileMap.js';
-import { compareRows, tableCsv } from '../client/figure.js';
+import { compareRows, scrollState, tableCsv } from '../client/figure.js';
 import { citation } from '../render/components.js';
 import { Safe } from '../render/html.js';
 
@@ -459,6 +459,13 @@ test('column sort: numbers by value with non-numbers last either way; text by lo
   assert.deepEqual(names([...rows].sort(compareRows(1, true, 1))), ['a', 'b', 'd', 'a2', 'c']);
   assert.deepEqual(names([...rows].sort(compareRows(1, true, -1))), ['a2', 'b', 'd', 'a', 'c']);
   assert.deepEqual(names([...rows].sort(compareRows(0, false, 1))), ['a', 'a2', 'b', 'c', 'd']);
+});
+
+test('a scroll box is a region while its table overflows, and fades while more lies to the right', () => {
+  const box = (scrollWidth, clientWidth, scrollLeft) => scrollState({ scrollWidth, clientWidth, scrollLeft });
+  assert.deepEqual(box(300, 264, 0), { region: true, more: true });
+  assert.deepEqual(box(300, 264, 36), { region: true, more: false });
+  assert.deepEqual(box(264.5, 264, 0), { region: false, more: false });
 });
 
 // Inline snapshots: the exact markup for the fixed synthetic inputs above. A change here is a visible change to every

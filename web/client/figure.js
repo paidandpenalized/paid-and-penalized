@@ -1,8 +1,9 @@
 // Figures in the browser (web/charts/figure.js wrote them): column sort on the table, the CSV download built from
 // the table, and a tooltip for the chart's marks on hover and from the keyboard (the chart takes focus; arrow keys,
 // Home and End step through the marks; Escape hides the tooltip). A tap on a mark shows its tooltip until a tap
-// elsewhere, Escape or a scroll. Program-neutral: it runs on any page with
-// figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work. No animation.
+// elsewhere, Escape or a scroll. It also makes every table's scroll box on the page a keyboard-scrollable region while
+// its table overflows (mountScroll). Program-neutral: it runs on any page with figure[data-figure]. Without
+// JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 
@@ -28,6 +29,40 @@ export function compareRows(index, numeric, dir) {
   return (a, b) => compareNumbers(numberOrNaN(key(a)), numberOrNaN(key(b)), dir);
 }
 
+// A table's scroll box (components.js printout): while its table is wider than the box (on a phone), the box is a
+// focusable region named by the table's own label, so a keyboard can scroll it, and its frame fades out at the right
+// edge while more of the table lies that way (data-more). One observer watches the box (a resize) and the table (its
+// fonts or rows arriving); a scroll moves the edge, and an enclosing details' toggle re-reads it (a closed one's content
+// is skipped, so the observer may not report it). The label is the table's aria-labelledby, else its caption's id.
+export function scrollState(scroll) {
+  const over = scroll.scrollWidth - scroll.clientWidth > 1;
+  return { region: over, more: over && scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 1 };
+}
+
+export function mountScroll(scroll) {
+  const box = scroll.parentElement;
+  const table = scroll.querySelector('table');
+  const label = table?.getAttribute('aria-labelledby') ?? table?.caption?.id;
+  if (!box || !table || !label || !('ResizeObserver' in window)) return;
+  const edge = () => {
+    const { region, more } = scrollState(scroll);
+    box.toggleAttribute('data-more', more);
+    if (region === scroll.hasAttribute('tabindex')) return;
+    if (region) {
+      scroll.setAttribute('tabindex', '0');
+      scroll.setAttribute('role', 'region');
+      scroll.setAttribute('aria-labelledby', label);
+    } else {
+      for (const name of ['tabindex', 'role', 'aria-labelledby']) scroll.removeAttribute(name);
+    }
+  };
+  scroll.addEventListener('scroll', edge, { passive: true });
+  scroll.closest('details')?.addEventListener('toggle', edge);
+  const sizes = new ResizeObserver(edge);
+  sizes.observe(scroll);
+  sizes.observe(table);
+}
+
 function mountTable(fig) {
   const table = fig.querySelector('table');
   if (!table) return;
@@ -46,20 +81,6 @@ function mountTable(fig) {
       body.append(...[...body.rows].sort(compareRows(i, th.hasAttribute('data-numeric'), dir)));
     });
   });
-
-  // A table wider than its box (on a phone) fades out at the right edge while more of it lies that way. One observer
-  // watches the box (a resize) and the table (its fonts arriving); a scroll moves the edge, and the details' toggle
-  // re-reads it (a closed one's content is skipped, so the observer may not report it).
-  const scroll = table.closest('.printout__scroll');
-  const box = scroll?.parentElement;
-  if (scroll && box && 'ResizeObserver' in window) {
-    const edge = () => box.toggleAttribute('data-more', scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 1);
-    scroll.addEventListener('scroll', edge, { passive: true });
-    fig.querySelector('.fig__table')?.addEventListener('toggle', edge);
-    const sizes = new ResizeObserver(edge);
-    sizes.observe(scroll);
-    sizes.observe(table);
-  }
 
   const download = fig.querySelector('[data-figure-csv]');
   if (!download) return;
@@ -152,4 +173,7 @@ function mountFigure(fig) {
   for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg);
 }
 
-if (typeof document !== 'undefined') for (const fig of document.querySelectorAll('figure[data-figure]')) mountFigure(fig);
+if (typeof document !== 'undefined') {
+  for (const fig of document.querySelectorAll('figure[data-figure]')) mountFigure(fig);
+  for (const scroll of document.querySelectorAll('.printout__scroll')) mountScroll(scroll);
+}

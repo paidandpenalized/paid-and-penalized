@@ -116,6 +116,18 @@ test('no-score pages and the unscored "Yes" row get no figures; Maryland gets bo
   assert.throws(() => hospitalPage({ view: hospitalView(inputs(CASES.yes)), source: DATA.source, robots: null, assets: ASSETS }), /ranges/);
 });
 
+test('every table in a scroll box carries a label in the page, which names the box when it scrolls (web/client/figure.js)', () => {
+  for (const text of [program(), render(CASES.yes), render(CASES.maryland)]) {
+    const tables = [...text.matchAll(/<div class="printout__scroll"><table([^>]*)>\n(?:<caption[^>]*id="([^"]+)")?/g)];
+    assert.ok(tables.length >= 3);
+    for (const [, attrs, captionId] of tables) {
+      const id = /aria-labelledby="([^"]+)"/.exec(attrs)?.[1] ?? captionId;
+      assert.ok(id, `a table with no label: ${attrs}`);
+      assert.ok(text.includes(`id="${id}"`), `no element with id ${id}`);
+    }
+  }
+});
+
 test('the program page\'s stepper walks the median hospital with medianHospital\'s numbers and the model\'s', () => {
   const text = program();
   const steps = /<section class="block" aria-labelledby="steps-h">([\s\S]*?)<\/section>/.exec(text)[1];
