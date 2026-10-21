@@ -6,6 +6,8 @@
 /* Beats the single-class display rules below, so hidden parts stay hidden. */
 .whatif [hidden] { display: none; }
 
+/* The line naming a what-if's starting point (the sandbox's), in sentence case: two lines of caps read as shouting. */
+.wi-label { font: 600 var(--fs-sm)/1.4 var(--font-body); color: var(--ink-2); }
 .wi-banner { max-width: none; padding: 8px 12px; border: var(--rule) solid var(--ink); background: var(--paper-2); font-weight: 600; }
 
 .wi-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }

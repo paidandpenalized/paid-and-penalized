@@ -217,7 +217,7 @@ export function renderWhatIf({ vm, texts, share, range, solver }) {
   const words = Object.fromEntries(vm.inputs.map((input) => [input.id, texts.measure(input, vm.result.measures[input.id])]));
   return html`<section class="block whatif" id="whatif" aria-labelledby="whatif-h">
 <h2 id="whatif-h">${texts.heading}</h2>${texts.label && html`
-<p class="cap">${texts.label}</p>`}
+<p class="wi-label">${texts.label}</p>`}
 <p class="wi-intro">${texts.intro}</p>
 ${share && html`<p class="wi-banner" data-wi="banner" hidden>${texts.banner.text} <a href="${texts.banner.href}">${texts.banner.linkText}</a></p>`}
 <p class="small muted" data-wi="nojs">${texts.noScript}</p>

@@ -281,7 +281,7 @@ test('the program page holds the sandbox on the median hospital: labeled, no sha
   const text = sandboxProgram();
   assert.match(text, /<section class="block whatif" id="whatif"/);
   assert.ok(text.includes(SANDBOX_LABEL));
-  assert.match(text, /<section class="block whatif" id="whatif"[^>]*>\n<h2 id="whatif-h">[^<]*<\/h2>\n<p class="cap">Sandbox: a hypothetical/,
+  assert.match(text, /<section class="block whatif" id="whatif"[^>]*>\n<h2 id="whatif-h">[^<]*<\/h2>\n<p class="wi-label">Sandbox: a hypothetical/,
     'the label sits inside the section, under its heading');
   assert.doesNotMatch(text, /data-wi="banner"|data-wi="predicted"|Reader-made scenario/);
   assert.ok(text.includes(esc(WHATIF_STANDING)));
