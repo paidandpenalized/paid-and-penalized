@@ -357,13 +357,18 @@ test("the hero names CMS's line under a scored hospital's number, from CMS's tex
   for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
 });
 
-test('every hospital page says, in its hero\'s last row, that the score is not a grade; the prose does not repeat it', () => {
+test('a page with a score says, in its hero\'s last row, that the score is not a grade; a page with none says nothing there', () => {
   const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   for (const h of Object.values(CASES)) {
     const text = page(h);
     const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(text)[0];
-    assert.match(hero, /<p class="hero__note">It is not a grade of the quality of care\.<\/p>\n<\/section>$/, h.ccn);
-    assert.equal(text.split('It is not a grade of the quality of care.').length, 2, `${h.ccn}: said once`);
+    if (h.total === null) {
+      assert.doesNotMatch(hero, /hero__note/, `${h.ccn}: no score, so no note about one`);
+      assert.doesNotMatch(text, /not a grade/, h.ccn);
+      continue;
+    }
+    assert.match(hero, /<p class="hero__note">The score is not a grade of the quality of care\.<\/p>\n<\/section>$/, h.ccn);
+    assert.equal(text.split('not a grade of the quality of care.').length, 2, `${h.ccn}: said once`);
   }
 });
 
