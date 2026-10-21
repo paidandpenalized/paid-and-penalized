@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
 import { bandTerm, baselineZ, zFromValue } from '../../hacrp/params.js';
-import { LEVERAGE_STEP, whatIf } from '../../hacrp/whatif.js';
+import * as engine from '../../hacrp/whatif.js';
+
+const { whatIf } = engine;
 import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './helpers.js';
 
 const { hospitals, model } = loadHacrp();
@@ -78,7 +80,14 @@ test('a one-measure hospital uses n = 1 for band and leverage', () => {
   const r = whatIf(h, model, { [id]: p.median });
   assert.equal(r.n, 1);
   assert.ok(Math.abs(r.band - moveBand(h, id)) < 1e-15);
-  assert.ok(Math.abs(r.measures[id].leverage - LEVERAGE_STEP / p.sd) < 1e-12);
+  assert.ok(Math.abs(r.measures[id].leverage - 1 / p.sd) < 1e-12);
+});
+
+test('leverage is per unit of the value, 1 / (n x sd); the display step is the site\'s, not the engine\'s', () => {
+  const h = scored.find((x) => submitted(x).length === 6);
+  const r = whatIf(h, model);
+  for (const id of scoredMeasures(h)) assert.ok(Math.abs(r.measures[id].leverage - 1 / (r.n * model.params[id].sd)) < 1e-12, id);
+  assert.equal(Object.hasOwn(engine, 'LEVERAGE_STEP'), false);
 });
 
 test('contribution is z / n and band sums the changed measures\' band terms over n', () => {

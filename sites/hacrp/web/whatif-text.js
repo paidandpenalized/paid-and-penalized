@@ -5,9 +5,8 @@
 // whose words never call its values or decision CMS's.
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
-import { LEVERAGE_STEP } from '../../../engine/js/hacrp/whatif.js';
 import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
-import { REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
+import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, measureLabel } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
@@ -215,7 +214,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
         label: `${measureLabel(id)} (${short})`,
         short,
         help: isSir(id) ? fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT }) : fill('whatifPsiHelp'),
-        leverage: fill('whatifLeverage', { tenth: decimal(LEVERAGE_STEP, decimalsOf(String(LEVERAGE_STEP))), leverage: decimal(m.leverage, PART_DP) }),
+        leverage: fill('whatifLeverage', { tenth: decimal(LEVERAGE_STEP, decimalsOf(String(LEVERAGE_STEP))), leverage: decimal(LEVERAGE_STEP * m.leverage, PART_DP) }),
         marks,
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,

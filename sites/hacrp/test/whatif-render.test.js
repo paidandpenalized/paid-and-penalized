@@ -19,6 +19,7 @@ import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
+import { LEVERAGE_STEP } from '../web/constants.js';
 import { STANDING, WHATIF_STANDING, esc, master, pick as pickFrom, textsFor } from './fixtures.js';
 
 const D = loadHacrp();
@@ -78,7 +79,7 @@ test('helper text, leverage, weight, marks and the dead zone', () => {
   assert.match(text, /lower is better/i);
   assert.ok(text.includes('Each measure weighs 1 ÷ 6 of the score.'));
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
-  const lev = vm.result.measures.MRSA.leverage.toFixed(4);
+  const lev = (LEVERAGE_STEP * vm.result.measures.MRSA.leverage).toFixed(4);
   assert.ok(text.includes(`Each 0.1 moves the score by ${lev}`), 'leverage per 0.1');
   assert.equal(all(text, /data-wi="median-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="cap-mark"/g).length, 6);

@@ -17,9 +17,11 @@ export const WINSOR_HIGH = 95;
 export const SIR_EXPECTED = 1;
 export const SIR_EXPECTED_TEXT = decimal(SIR_EXPECTED, 1);
 
-// The what-if's ramp spans these percentiles of published Total HAC Scores (a display choice, not CMS's method).
+// Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.
 export const RAMP_LOW_PCT = 5;
 export const RAMP_HIGH_PCT = 95;
+// The display step from the what-if standard: each measure's leverage is stated per this change in its value.
+export const LEVERAGE_STEP = 0.1;
 
 export const CLAIMS = {
   REDUCTION_PCT: 'HACRP-01',
