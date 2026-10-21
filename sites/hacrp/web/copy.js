@@ -492,6 +492,8 @@ export const COPY = {
   tableCountNone: { text: 'No hospital matches.', claim: null },
   tableCountFirst: { text: 'Showing the first {shown} of {n} hospitals.', claim: null },
   tableShowAll: { text: 'Show all {n}', claim: null },
+  tableFailed: { text: "The table didn't load.", claim: null },
+  tableRetry: { text: 'Try again', claim: null },
 };
 
 // COPY[key].text with each {placeholder} filled; see fillCopy for the rules.

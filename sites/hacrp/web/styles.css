@@ -57,6 +57,8 @@
 /* The hospital table: its controls in one row above it, wrapping on a phone. */
 .ht { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .ht[hidden] { display: none; }
+/* The hospitals asset failed to load: a sentence and a Try again button (client/program.js); empty otherwise. */
+.ht-retry:empty { display: none; }
 .ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }
 .ht__field { display: grid; gap: 4px; }
 .ht__field label { font-weight: 600; }

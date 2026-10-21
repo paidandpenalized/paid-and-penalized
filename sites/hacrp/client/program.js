@@ -194,20 +194,32 @@ function mountTable({ hospitalPath, rows }, { linked }) {
 if (table) {
   // Fetch when the table nears the screen, or at once for a link that names a state (or a browser with no
   // observer). hospitals() keeps one fetch in flight, so a second call waits for the same one, and the table is
-  // mounted once. A failed fetch is logged and tried again the next time the section comes near; a fault while
-  // building the table is not caught here, so it reaches the console as itself.
+  // mounted once. A failed fetch is logged and offers a Try again button (and is tried again the next time the
+  // section comes near); a fault while building the table is not caught here, so it reaches the console as itself.
   let observer = null;
   let mounted = false;
   const linked = /(^#|&)state=/.test(window.location.hash);
+  const retry = table.closest('section').querySelector('.ht-retry');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'fig__btn';
+  button.textContent = fill('tableRetry');
   const load = () => hospitals(table.dataset.src).then(
     (data) => {
       if (mounted) return;
       mounted = true;
       observer?.disconnect();
+      const focused = document.activeElement === button;
+      retry.replaceChildren();
       mountTable(data, { linked });
+      if (focused) table.querySelector('#ht-state').focus();
     },
-    (error) => { console.error(error); },
+    (error) => {
+      console.error(error);
+      retry.replaceChildren(fill('tableFailed'), ' ', button);
+    },
   );
+  button.addEventListener('click', load);
   if (!linked && 'IntersectionObserver' in window) {
     observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));

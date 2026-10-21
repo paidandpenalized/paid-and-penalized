@@ -245,6 +245,7 @@ test('the hospital table section: the controls for client/program.js, the asset,
   assert.ok(section.includes(`<a href="${csvPath(DATA.fy)}"`));
   assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
   assert.match(section, /<p class="ht-nojs">[^<]+<\/p>/);
+  assert.ok(section.includes('<p class="ht-retry" role="status"></p>'), 'an empty live region for a failed load (client/program.js)');
   assert.match(section, /<div class="ht" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
   assert.match(section, /<select id="ht-state">/);
   assert.match(section, /<input id="ht-name" type="search"/);

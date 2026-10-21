@@ -7,6 +7,9 @@ import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+// Some browsers start a download after click() returns; revoking its blob URL at once can cancel it. A minute is
+// ample, and one CSV's blob is small.
+const REVOKE_MS = 60000;
 
 // A cell's raw value (CMS's text, with its hyphen-minus) where the build kept one, else its text.
 const valueOf = (cell) => cell.getAttribute('data-value') ?? cell.textContent.trim();
@@ -55,7 +58,7 @@ function mountTable(fig) {
     document.body.append(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setTimeout(() => URL.revokeObjectURL(url), REVOKE_MS);
   });
 }
 

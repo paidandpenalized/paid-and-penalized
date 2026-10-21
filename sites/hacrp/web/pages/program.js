@@ -59,6 +59,7 @@ const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', '
 const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
+<p class="ht-retry" role="status"></p>
 ${dataLinks(fy)}
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
