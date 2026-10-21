@@ -1,6 +1,6 @@
-// RFC 4180 CSV parser: quoted fields, doubled quotes, CRLF or LF, newlines inside quotes.
-// Returns one object per data row, keyed by the header row. Throws on malformed input
-// rather than guessing, so a changed upstream file fails loudly.
+// RFC 4180 CSV: a parser and the project's one writer (toCsv, below).
+// parseCsv: quoted fields, doubled quotes, CRLF or LF, newlines inside quotes. Returns one object per data row, keyed
+// by the header row. Throws on malformed input rather than guessing, so a changed upstream file fails loudly.
 
 function parseRecords(text) {
   const records = [];
@@ -62,4 +62,28 @@ export function parseCsv(text) {
     }
     return Object.fromEntries(header.map((name, j) => [name, values[j]]));
   });
+}
+
+// RFC 4180 CSV text from columns ({ name, numeric }) and rows (arrays of cells, in column order): a header row, CRLF
+// line ends, cells holding a quote, comma, CR or LF quoted with inner quotes doubled; null and undefined are empty.
+// A text cell starting with =, +, -, @, a tab or CR gets a leading ' so a spreadsheet reads it as text, not a
+// formula. A numeric cell is written as it is when it reads as a number, so -0.2580 stays -0.2580; any other text in
+// a numeric column is guarded like a text cell.
+const FORMULA = /^[=+\-@\t\r]/;
+const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const QUOTE = /[",\r\n]/;
+
+function csvCell(value, numeric) {
+  let text = value === null || value === undefined ? '' : String(value);
+  if (FORMULA.test(text) && !(numeric && NUMBER.test(text))) text = `'${text}`;
+  return QUOTE.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function toCsv(columns, rows) {
+  const lines = [columns.map((c) => csvCell(c.name, false))];
+  rows.forEach((row, i) => {
+    if (row.length !== columns.length) throw new RangeError(`toCsv: row ${i + 1} has ${row.length} cells, not ${columns.length}`);
+    lines.push(row.map((cell, j) => csvCell(cell, columns[j].numeric)));
+  });
+  return lines.map((cells) => cells.join(',') + '\r\n').join('');
 }
