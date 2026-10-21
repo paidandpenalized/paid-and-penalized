@@ -285,6 +285,21 @@ test('figure: every plotted value must be in the table, or the figure refuses to
   assert.throws(() => figure({ ...FIG, table: { ...TABLE, rows: [] } }), /table/);
 });
 
+test('figure: a blank or non-numeric cell never vouches for a plotted value, and a plotted value must be finite', () => {
+  const plot = (values) => new Safe(`<svg class="chart"><g data-mark data-value="${values}"></g></svg>`);
+  const cols = [{ name: 'Value', numeric: true }];
+  const build = (svg, rows) => () => figure({ ...FIG, svg, table: { columns: cols, rows } });
+  // Number('') and Number(' ') are 0: a blank cell must not stand in for a plotted 0.
+  assert.throws(build(plot('0'), [[{ text: '—', value: '' }]]), /not in the table/);
+  assert.throws(build(plot('0'), [[{ text: '—', value: ' ' }]]), /not in the table/);
+  assert.doesNotThrow(build(plot('0'), [['0.0000']]));
+  // NaN is not a value: neither a NaN cell nor a NaN plotted value passes.
+  assert.throws(build(plot('NaN'), [['NaN']]), /not in the table/);
+  assert.throws(build(plot('abc'), [['abc']]), /not in the table/);
+  assert.throws(build(plot('Infinity'), [['Infinity']]), /not in the table/);
+  assert.throws(build(plot(''), [['0']]), /not in the table/);
+});
+
 test('figure: hostile takeaway, alt, source and cells render as text', () => {
   const evil = '"><script>x</script>';
   const s = String(figure({ ...FIG, takeaway: evil, alt: evil, source: evil, table: { ...TABLE, rows: [[evil, '0.25'], ['B', '-0.125'], ['C', '0.5']] } }));

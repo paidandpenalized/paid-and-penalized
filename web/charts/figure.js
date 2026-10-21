@@ -39,11 +39,17 @@ function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName }
   });
 }
 
-// Every number the chart plots (its marks' data-value) must be some numeric cell's value.
+// Every number the chart plots (its marks' data-value) must be finite and some numeric cell's value. A cell counts only
+// when its raw value is a finite number written as non-empty text (Number('') is 0, and NaN would match NaN).
+const finite = (s) => (s.trim() === '' ? NaN : Number(s));
 function checkPlotted(n, svg, columns, cells) {
-  const inTable = new Set(cells.flatMap((row) => row.filter((c, j) => columns[j].numeric && c.value !== null).map((c) => Number(c.value))));
+  const inTable = new Set(cells.flatMap((row) => row.filter((c, j) => columns[j].numeric && c.value !== null)
+    .map((c) => finite(c.value)).filter(Number.isFinite)));
   for (const [, list] of svg.text.matchAll(/data-value="([^"]*)"/g)) {
-    for (const v of list.split(' ')) if (!inTable.has(Number(v))) throw new RangeError(`figure ${n}: plotted value ${v} is not in the table`);
+    for (const v of list.split(' ')) {
+      const x = finite(v);
+      if (!Number.isFinite(x) || !inTable.has(x)) throw new RangeError(`figure ${n}: plotted value "${v}" is not in the table`);
+    }
   }
 }
 
