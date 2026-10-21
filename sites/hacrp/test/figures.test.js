@@ -33,6 +33,8 @@ const program = (overrides = {}) => programPage({
   whatif: { hospital: MEDIAN, model, estimate, range: RANGE }, scores: SCORES, boundary: model.boundary, states: STATES, ...overrides,
 });
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
+// One variant of a figure that draws its chart twice (phone wide, and wide for 720px and up).
+const variant = (body, fit) => new RegExp(`<svg role="img"[^>]*data-fit="${fit}"[\\s\\S]*?</svg>`).exec(body)[0];
 const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1));
 // Every number written in a sentence: digits with their commas, decimal point and sign.
 // Measure short names (PSI 90) are CMS's names, not numbers.
@@ -151,8 +153,11 @@ test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No
   const body = figures(text)[1][2];
   assert.match(body, /class="chart chart--histogram"/);
   assert.match(body, /class="chart-boundary"/);
-  const counts = [...body.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
+  const countsIn = (svg) => [...svg.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
+  const counts = countsIn(variant(body, 'narrow'));
   assert.equal(counts.reduce((a, b) => a + b, 0), COUNTS.decided, 'every decided hospital in one bin');
+  assert.deepEqual(countsIn(variant(body, 'wide')), counts, 'the wide variant draws the same bins');
+  assert.match(variant(body, 'wide'), /viewBox="0 0 560 /);
   // Bins above the line hold the Yes decisions, the rest the No.
   const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 2, source: 's', fy: DATA.fy });
   assert.ok(String(yes).includes('<td>Yes</td>') && String(yes).includes('<td>No</td>'));
@@ -198,7 +203,8 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.ok(body.includes('<th scope="col" data-numeric>Share cut</th>'));
   // The table carries the full sentence.
   assert.ok(body.includes(`${al.yes}</td>`));
-  assert.equal(body.match(/data-state="/g).length, Object.keys(TILES).length);
+  for (const fit of ['narrow', 'wide']) assert.equal(variant(body, fit).match(/data-state="/g).length, Object.keys(TILES).length, fit);
+  assert.match(variant(body, 'wide'), /<pattern id="chart-states-wide-hatch"/, 'each variant names its own hatch');
   // The table lists every tile.
   assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length);
   const [, takeaway] = captions(text)[2];

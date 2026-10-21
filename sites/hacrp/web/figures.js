@@ -22,8 +22,12 @@ import { flagText } from './whatif-text.js';
 
 // Scores, z-scores and parts of the score are shown at CMS's decimals (DP).
 const BINS = 20;
+// The wide variant's viewBox width, for screens 720px and up (figure.js svgWide).
+const WIDE = 560;
 const SHARE_DP = 1;
 const num = (text, value) => ({ text, value });
+// A chart drawn twice, phone wide and WIDE, for figure()'s svg and svgWide.
+const variants = (draw) => ({ svg: draw(undefined), svgWide: draw(WIDE) });
 
 // Each measure's national range, from the model: CMS's floor and cap as published, and the national median of
 // published values at CMS's decimals (as the what-if shows it). { [id]: { floor, cap, median, decimals } }.
@@ -145,11 +149,11 @@ export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) 
   return figure({
     n, source, alt: t('figScoresAlt'), csvName: `hacrp-fy${fy}-scores`,
     takeaway: fill('figScoresTakeaway', { yes: count(yes), decided: count(scores.length) }),
-    svg: histogram({
+    ...variants((width) => histogram({
       binned: bins, boundary: lowestYes, markLabel: lineName, markTip: fill('line', boundaryText), markValue: [highestNo, lowestYes], tip,
       xTitle: t('figColScore'), yTitle: t('figColHospitals'),
-      groups: { below: fill('figScoresNotCut', { n: count(no) }), above: fill('figScoresCut', { n: count(yes) }) },
-    }),
+      groups: { below: fill('figScoresNotCut', { n: count(no) }), above: fill('figScoresCut', { n: count(yes) }) }, width,
+    })),
     table: {
       columns: [{ name: t('figColFrom'), numeric: true }, { name: t('figColTo'), numeric: true }, { name: t('figColHospitals'), numeric: true }, { name: t('figColDecision') }],
       rows,
@@ -183,10 +187,10 @@ export function statesFigure({ states, n, source, fy }) {
     takeaway: fill('figStatesTakeaway', {
       share: pct(total('yes') / total('decided'), SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
     }),
-    svg: tileMap({
-      id: 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0),
+    ...variants((width) => tileMap({
+      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width,
       states: Object.fromEntries(tiles.map(({ code, value, label, hatched, empty }) => [code, value === undefined ? { hatched, empty, label } : { value, label }])),
-    }),
+    })),
     note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
     table: {
       columns: [{ name: t('figColState') }, { name: t('figColCut'), numeric: true }, { name: t('figColDecided'), numeric: true }, { name: t('figColShare'), numeric: true }],

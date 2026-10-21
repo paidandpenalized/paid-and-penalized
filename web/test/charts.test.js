@@ -317,6 +317,17 @@ test('figure: an optional key names marks above the chart, as text; a bad key th
   }
 });
 
+test('figure: an optional wide variant rides beside the phone one, both named by alt, both checked against the table', () => {
+  const wide = contribBars({ ...BARS, width: 560 });
+  const s = String(figure({ ...FIG, svgWide: wide }));
+  assert.equal(s.match(/<svg role="img" aria-label="Three bars\." data-fit="(narrow|wide)"/g).length, 2);
+  assert.ok(s.indexOf('data-fit="narrow"') < s.indexOf('data-fit="wide"'));
+  assert.ok(!String(figure(FIG)).includes('data-fit'), 'one chart, no variants');
+  assert.throws(() => figure({ ...FIG, svgWide: 'x' }), /svgWide/);
+  const extra = new Safe('<svg class="chart"><g data-mark data-value="9"></g></svg>');
+  assert.throws(() => figure({ ...FIG, svgWide: extra }), /not in the table/);
+});
+
 test('figure: every plotted value must be in the table, or the figure refuses to build', () => {
   for (const svg of [contribBars(BARS), dotRange(DOT), ramp(RAMP), histogram(HIST), tileMap(MAP)]) {
     const values = [...String(svg).matchAll(/data-value="([^"]+)"/g)].flatMap((m) => m[1].split(' '));

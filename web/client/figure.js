@@ -62,9 +62,10 @@ function mountTable(fig) {
   });
 }
 
-function mountMarks(fig) {
-  const svg = fig.querySelector('svg.chart');
-  const marks = svg ? [...svg.querySelectorAll('[data-mark]')] : [];
+// One chart's tooltip layer; a figure with a narrow and a wide variant gets one per chart (only the shown one meets
+// the pointer or the keyboard: the other is display: none).
+function mountMarks(fig, svg) {
+  const marks = [...svg.querySelectorAll('[data-mark]')];
   if (!marks.length) return;
   // The custom tooltip replaces the native one, so the two never show together.
   for (const m of marks) {
@@ -134,7 +135,7 @@ function mountMarks(fig) {
 
 function mountFigure(fig) {
   mountTable(fig);
-  mountMarks(fig);
+  for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg);
 }
 
 if (typeof document !== 'undefined') for (const fig of document.querySelectorAll('figure[data-figure]')) mountFigure(fig);
