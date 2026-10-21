@@ -93,6 +93,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       scores: decidedHospitals(hospitals).map((h) => ({ total: h.total, yes: h.paymentReduction === 'Yes' })),
       boundary: model.boundary,
       states: stateCounts(views),
+      shapes,
     }),
   });
 

@@ -369,6 +369,21 @@ export const COPY = {
     text: "How Medicare's Hospital-Acquired Condition Reduction Program works, and CMS's FY{fy} scores and payment decisions for every hospital in its file.",
     claim: null,
   },
+  // The page's top: a summary form beside the program's name.
+  summaryTitle: { text: 'Program summary · FY{fy}', claim: null },
+  summaryReleased: { text: 'CMS data released {date}', claim: null },
+  summaryCut: { text: 'Hospitals cut', claim: null },
+  summaryCutNote: { text: 'Of {decided} with a Yes or No payment decision', claim: null },
+  summaryPct: { text: 'The cut', claim: 'HACRP-01' },
+  summaryPctNote: { text: 'Of each Medicare inpatient payment, for the fiscal year', claim: 'HACRP-01' },
+  summaryScored: { text: 'Scored', claim: null },
+  summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
+  // The US map's section.
+  mapHeading: { text: 'By state', claim: null },
+  mapIntro: {
+    text: "Each state is shaded by the share of its hospitals with a payment decision that CMS cut. Pick a state on the map to list its hospitals in the table below.",
+    claim: null,
+  },
   whatHeading: { text: 'What the program is', claim: null },
   whatScore: {
     text: 'Each year, CMS scores hospitals on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.',
@@ -539,24 +554,26 @@ export const COPY = {
   figColTo: { text: 'To', claim: null },
   figColHospitals: { text: 'Hospitals', claim: null },
   figColDecision: { text: "CMS's decision", claim: null },
-  // Program page, Figure: the state tile grid.
+  // Program page, Figure: the US map of states.
   figStatesTakeaway: {
     text: 'Nationally, CMS cut payments to {share} of hospitals with a payment decision; by state, the share ran from {low} to {high}.',
     claim: null,
   },
   figStatesAlt: {
-    text: "Map of the states as tiles, each shaded by the share of its hospitals with a payment decision that CMS cut; hatched tiles have no share to show.",
+    text: 'Map of the states, each shaded by the share of its hospitals with a payment decision that CMS cut; hatched and plain states have no share to show.',
     claim: null,
   },
+  // Said as the map's description once it takes focus; Enter (or a click) lists a state's hospitals in the table.
+  figStatesKeys: { text: "Arrow keys step through the states; Enter lists the state's hospitals in the table below.", claim: null },
   figStatesTile: { text: '{yes} of {decided} cut ({share})', claim: null },
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },
   figStatesNoDecision: { text: 'no hospitals with a payment decision', claim: null },
-  // The tile grid's legend rows for a zero share and for a share that rests on few decisions, and that share's text.
+  // The map's legend rows for a zero share and for a share that rests on few decisions, and that share's text.
   figStatesZero: { text: 'no hospitals cut', claim: null },
   figStatesFew: { text: 'fewer than {n} hospitals with a payment decision', claim: null },
   figStatesFewText: { text: '{yes} of {decided}', claim: null },
-  figStatesOffGrid: { text: 'Not on the grid: {codes}.', claim: null },
+  figStatesOffMap: { text: 'Not on the map: {codes}.', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },
   figColDecided: { text: 'With a decision', claim: null },

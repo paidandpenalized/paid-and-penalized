@@ -2,19 +2,18 @@
 // stepper on the median hospital, the sandbox, this year's counts with their figures, the table of every hospital,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
 import { isSir, MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
-import { printout } from '../../../../web/render/components.js';
+import { formField, formTitle, printout, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
-import { cmsText, count, longDate, ordinal } from '../../../../web/render/format.js';
+import { cmsText, count, isoDate, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
-import { fill, measureLabel, sourceText, t } from '../copy.js';
+import { fill, fillKeep, measureLabel, sourceText, t } from '../copy.js';
 import { scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { lineStep, stepRows, stepSum } from '../stepper.js';
 import { asofBar, citation, dataLinks, siteHeader, split } from './parts.js';
 import { whatIfSection } from './whatif.js';
-import { fillKeep } from '../copy.js';
 
 export const PATH = SITE.sites.hacrp.path;
 
@@ -82,14 +81,42 @@ ${printout(html`<table class="gb gb--hospitals">
 ${dataLinks(fy, source)}
 </section>`;
 
+// The page's top, after Thirty Day Readmissions' front page: the kicker, the program's name in the display face (its
+// last word in the penalty ink) and the dek beside a summary form (this year's counts, the cut and CMS's line, each
+// from the data) under the program's stamp.
+function programTop({ title, subtitle, fy, counts, boundaryText, source }) {
+  const at = title.lastIndexOf(' ');
+  const { highestNo, lowestYes } = boundaryText;
+  return html`<header class="page__head prog__top">
+<div class="prog__intro">
+<p class="cap kicker prog__kicker">${fill('kicker', { subtitle, fy })}</p>
+<h1 class="prog__title">${at < 0 ? title : html`${title.slice(0, at)} <span class="prog__title-pen">${title.slice(at + 1)}</span>`}</h1>
+<p class="dek prog__dek">${t('dek')}</p>
+</div>
+<div class="prog__card">
+<div class="form prog__summary">
+${formTitle(fill('summaryTitle', { fy }), fillKeep('summaryReleased', { date: isoDate(source.pdcReleased) }, ['date']))}
+${[
+    { label: t('summaryCut'), value: count(counts.yes), size: 'big', note: fill('summaryCutNote', { decided: count(counts.decided) }) },
+    { label: t('summaryPct'), value: REDUCTION_TEXT, size: 'big', note: t('summaryPctNote') },
+    { label: t('summaryScored'), value: count(counts.scored), note: t('summaryScoredNote') },
+    { label: t('lineHeading'), value: fillKeep('numLine', { highestNo, lowestYes }, [['highestNo', 'lowestYes']]), size: 'sm', note: t('numLineNote') },
+  ].map((field, i) => html`${formField({ no: i + 1, ...field })}
+`)}</div>
+${stamp({ label: fill('stampYes', { pct: REDUCTION_TEXT }) })}
+</div>
+</header>`;
+}
+
 // counts: { decided, yes, scored }, for the counts sentences. boundaryText: CMS's text for the line's two scores.
 // searchUrl: the hospitals asset the search reads (generate.js, hospitalRows).
 // robots: null for an indexable page. whatif: { hospital, model, estimate, range } for the stepper and the sandbox
 // (hospital: medianHospital(model); range from scoreRange() in generate.js); without it the page has neither.
 // scores: [{ total, yes }] of the hospitals with a Yes/No decision, with boundary (the model's numbers for the
-// line), for the histogram; states: stateCounts() (view.js), for the tile grid; each figure is left out without its
-// data, and takes its numbers from its own data. Figures are numbered in page order.
-export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null }) {
+// line), for the histogram; states: stateCounts() (view.js), with shapes (stateShapes of the atlas), for the US map;
+// each figure is left out without its data, and takes its numbers from its own data. Figures are numbered in page
+// order.
+export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null, shapes = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const heading = fill('programTitle', { fy: fyText });
@@ -101,14 +128,10 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
   let n = 0;
   const steps = whatif && stepper(whatif, { boundaryText });
   const histogram = scores && scoresFigure({ scores, boundary, boundaryText, n: ++n, source: line, fy });
-  const tiles = states && statesFigure({ states, n: ++n, source: line, fy });
+  const map = states && shapes && statesFigure({ states, shapes, n: ++n, source: line, fy });
 
   const body = html`<article class="wrap page page--article">
-<header class="page__head">
-<p class="cap kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
-<h1>${title}</h1>
-<p class="dek">${t('dek')}</p>
-</header>
+${programTop({ title, subtitle, fy: fyText, counts, boundaryText, source })}
 <section class="block" id="how" aria-labelledby="what-h">
 <h2 id="what-h">${t('whatHeading')}</h2>
 <p>${t('whatScore')} ${t('whatWho')}</p>
@@ -138,7 +161,8 @@ ${split({ id: 'fy', label: 'counts-h', text: html`<h2 id="counts-h">${fill('coun
 <p>${fill('countDecided', { yes: count(counts.yes), decided: count(counts.decided) })}</p>
 <p>${fill('countScored', { scored: count(counts.scored) })}</p>
 <p class="standing">${t('standing')}</p>`, figure: histogram })}
-${tiles && html`<div class="block" id="map">${tiles}</div>`}
+${map && split({ id: 'map', label: 'map-h', text: html`<h2 id="map-h">${t('mapHeading')}</h2>
+<p>${t('mapIntro')}</p>`, figure: map })}
 ${hospitalTable({ fy, searchUrl, source })}
 <section class="block" aria-labelledby="links-h">
 <h2 id="links-h">${t('linksHeading')}</h2>
@@ -159,7 +183,7 @@ ${citation({ fy, title: heading, path: PATH, source })}
     path: PATH,
     robots,
     body,
-    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],
+    scripts: [...(histogram || map ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],
     assets,
     topbar: siteHeader({ fy, current: 'how', searchUrl }),
   });

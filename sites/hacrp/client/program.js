@@ -213,6 +213,20 @@ if (table) {
     },
   );
   button.addEventListener('click', load);
+  // A state picked on the US map (a click, or Enter on the mark the keyboard is on: web/client/figure.js marks it
+  // is-active) lists its hospitals: the state goes in the URL as the menu writes it (hashchange updates a mounted
+  // table; a table still to mount reads it), and the table comes into view.
+  for (const svg of document.querySelectorAll?.('svg.chart--us-map') ?? []) {
+    svg.addEventListener('click', (e) => pickState(e.target.closest?.('[data-state]')));
+    svg.addEventListener('keydown', (e) => { if (e.key === 'Enter') pickState(svg.querySelector('.chart-mark.is-active[data-state]')); });
+  }
+  function pickState(mark) {
+    const code = mark?.dataset.state;
+    if (!code) return;
+    window.location.hash = withState(window.location.hash, code);
+    load();
+    table.closest('section').scrollIntoView({ block: 'start' });
+  }
   if (!linked && 'IntersectionObserver' in window) {
     observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));

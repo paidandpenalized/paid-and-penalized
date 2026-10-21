@@ -20,7 +20,7 @@ function el(name) {
   return node;
 }
 
-async function run(t, { hash = '', results, heads = [], media }) {
+async function run(t, { hash = '', results, heads = [], media, maps = [] }) {
   const parts = { '#ht-state': el('select'), '#ht-name': el('input'), '#ht-count': el('count'), tbody: el('tbody'), '#ht-all': el('all') };
   const retry = el('retry');
   const nojs = el('nojs');
@@ -34,7 +34,7 @@ async function run(t, { hash = '', results, heads = [], media }) {
   table.querySelectorAll = () => heads;
   const fetched = [];
   const errors = [];
-  globalThis.document = { activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), createElement: el };
+  globalThis.document = { activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : []), createElement: el };
   globalThis.window = { location: { hash, pathname: '/hacrp/', search: '' }, history: { replaceState() {} }, addEventListener() {}, ...(media && { matchMedia: media }) };
   globalThis.fetch = async (url) => {
     fetched.push(url);
@@ -52,7 +52,7 @@ async function run(t, { hash = '', results, heads = [], media }) {
   await import(`../client/program.js?run=${Math.random()}`);
   const settle = () => new Promise((r) => setTimeout(r, 0));
   await settle();
-  return { table, retry, nojs, parts, fetched, errors, settle };
+  return { table, retry, nojs, parts, fetched, errors, settle, section };
 }
 
 const ASSET = {
@@ -123,4 +123,22 @@ test('on a phone the sort buttons leave the tab order (the Sort by menu stands i
   phone.matches = true;
   change();
   assert.deepEqual(tabs(), ['-1', '-1', '-1', '-1', '-1']);
+});
+
+test('a state picked on the US map, by a click or by Enter on the active mark, goes in the URL and brings the table into view', async (t) => {
+  const mark = (code) => ({ dataset: { state: code } });
+  const active = mark('MD');
+  const svg = el('svg');
+  svg.querySelector = (s) => (s === '.chart-mark.is-active[data-state]' ? active : null);
+  const s = await run(t, { results: [true, true], maps: [svg] });
+  let scrolled = 0;
+  s.section.scrollIntoView = () => { scrolled++; };
+  svg.handlers.click({ target: { closest: () => mark('AL') } });
+  assert.equal(globalThis.window.location.hash, '#state=AL');
+  svg.handlers.keydown({ key: 'Enter' });
+  assert.equal(globalThis.window.location.hash, '#state=MD');
+  svg.handlers.keydown({ key: 'ArrowRight' });
+  svg.handlers.click({ target: { closest: () => null } });
+  assert.equal(globalThis.window.location.hash, '#state=MD', 'a key other than Enter, or a click off the states, picks nothing');
+  assert.equal(scrolled, 2);
 });

@@ -8,7 +8,7 @@ import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, count, decimal, isoDate, pct } from '../../../web/render/format.js';
-import { TILES } from '../../../web/charts/states.js';
+import { US_MAP_CODES } from '../../../web/charts/geo.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { csvPath } from '../web/links.js';
 import { partsFigure, rangeFigure, scoresFigure, statesFigure } from '../web/figures.js';
@@ -34,7 +34,7 @@ const render = (h) => hospitalPage({
 const program = (overrides = {}) => programPage({
   fy: DATA.fy, counts: COUNTS, boundaryText: DATA.boundaryText, periods: DATA.periods,
   searchUrl: '/assets/hacrp-hospitals.0000abcd.json', source: DATA.source, robots: null, assets: ASSETS,
-  whatif: { hospital: MEDIAN, model, estimate, range: RANGE }, scores: SCORES, boundary: model.boundary, states: STATES, ...overrides,
+  whatif: { hospital: MEDIAN, model, estimate, range: RANGE }, scores: SCORES, boundary: model.boundary, states: STATES, shapes: DATA.shapes, ...overrides,
 });
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
 // One variant of a figure that draws its chart twice (phone wide, and wide for 720px and up).
@@ -238,27 +238,27 @@ test('CMS\'s line in the histogram is the gap between CMS\'s highest No and lowe
   assert.doesNotMatch(hist, /CMS’s line \(/);
 });
 
-test('the state tile grid: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no code drawn as zero', () => {
+test('the US map: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no state drawn as zero', () => {
   const text = program();
   const body = figures(text)[1][2];
-  assert.match(body, /class="chart chart--tile-map"/);
+  assert.match(body, /class="chart chart--us-map"/);
   const tile = (code) => new RegExp(`<g class="chart-mark" data-mark data-state="${code}"[^>]*>([\\s\\S]*?)</g>`).exec(body);
-  assert.match(tile('MD')[0], /<title>MD: not subject to the reduction<\/title>/);
+  assert.match(tile('MD')[0], /<title>Maryland: not subject to the reduction<\/title>/);
   assert.doesNotMatch(tile('MD')[0], /data-value/);
   assert.match(tile('MD')[1], /chart-tile-na/);
   assert.equal(Object.hasOwn(STATES, 'PR'), false, 'PR has no hospitals in the pinned file');
-  assert.match(tile('PR')[0], /<title>PR: no hospitals in CMS’s file<\/title>/);
-  assert.match(tile('PR')[1], /chart-tile-empty/, 'nothing to show is an empty tile, not the hatch that means not subject');
+  assert.equal(tile('PR'), null, 'Puerto Rico has no place on the US map');
   const al = STATES.AL;
-  assert.ok(tile('AL')[0].includes(`<title>AL: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
-  assert.doesNotMatch(body.slice(0, body.indexOf('chart-legend')), /data-state="[A-Z]{2}"[^>]*>(<title>[^<]*<\/title>)?<rect class="chart-hit"/, 'a tile is its own hit area');
+  assert.ok(tile('AL')[0].includes(`<title>Alabama: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
+  assert.doesNotMatch(body.slice(0, body.indexOf('chart-legend')), /<rect class="chart-hit"/, 'a state is its own hit area');
+  assert.ok(text.includes('<p id="figure-2-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
   assert.ok(body.includes('<th scope="col" data-numeric>Share cut</th>'));
   // The table carries the full sentence.
   assert.ok(body.includes(`${al.yes}</td>`));
-  for (const fit of ['narrow', 'wide']) assert.equal(variant(body, fit).match(/data-state="/g).length, Object.keys(TILES).length, fit);
+  for (const fit of ['narrow', 'wide']) assert.equal(variant(body, fit).match(/data-state="/g).length, US_MAP_CODES.length, fit);
   assert.match(variant(body, 'wide'), /<pattern id="chart-states-wide-hatch"/, 'each variant names its own hatch');
   // The table lists every tile.
-  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length);
+  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length);
   const [, takeaway] = captions(text)[1];
   assert.match(takeaway, /^Nationally, CMS cut payments to \d+\.\d% of hospitals with a payment decision; by state, the share ran from \d+\.\d% to \d+\.\d%\.$/);
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
@@ -276,29 +276,29 @@ test('stateCounts counts by the master\'s state', () => {
   assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
 });
 
-test('a state code with no tile (a territory) is not drawn: its row is in the table and a note names it', () => {
+test('a state code with no place on the map (a territory) is not drawn: its row is in the table and a note names it', () => {
   // Synthetic hospitals the master places in GU and VI, codes the grid has no tile for.
   const gu = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { state: 'GU' }) }));
   const vi = hospitalView(inputs(CASES.noScore, { master: master(CASES.noScore.ccn, { state: 'VI' }) }));
   const extra = stateCounts([gu, vi]);
   assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
   const states = { ...STATES, ...extra };
-  const body = String(statesFigure({ states, n: 2, source: 's', fy: DATA.fy }));
+  const body = String(statesFigure({ states, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy }));
   const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
   assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
-  assert.equal(svg.match(/data-state="/g).length, Object.keys(TILES).length);
-  assert.ok(body.includes('<p class="small muted fig__note">Not on the grid: GU, VI.</p>'));
+  assert.equal(svg.match(/data-state="/g).length, US_MAP_CODES.length);
+  assert.ok(body.includes('<p class="small muted fig__note">Not on the map: GU, VI.</p>'));
   const row = (code) => new RegExp(`<tr><th scope="row">${code}</th>([\\s\\S]*?)</tr>`).exec(body)?.[1];
   assert.equal(row('GU'), '<td class="num" data-value="1">1</td><td class="num" data-value="1">1</td><td class="num" data-value="100">100.0%</td>');
   assert.match(row('VI'), /no hospitals with a payment decision/);
-  // The off-grid rows follow the tiles, and every tiled code keeps its row.
-  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length + 2);
+  // The off-map rows follow the drawn states', and every drawn state keeps its row.
+  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length + 2);
   // The national share counts every state; the range spans every row with a share.
   const [, takeaway] = /<span class="fig__n">Figure 2\.<\/span> ([^<]*)</.exec(body);
   assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
   assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
   // Without an off-grid code there is no note.
-  assert.doesNotMatch(String(statesFigure({ states: STATES, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
+  assert.doesNotMatch(String(statesFigure({ states: STATES, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
 });
 
 test('the hospital table section: the controls for client/program.js, the asset, and without JavaScript a sentence and the CSV link', () => {
@@ -314,7 +314,10 @@ test('the hospital table section: the controls for client/program.js, the asset,
   assert.match(section, /aria-live="polite"/);
   for (const key of ['name', 'city', 'state', 'score', 'decision']) assert.match(section, new RegExp(`<th scope="col" data-key="${key}"${key === 'state' ? ' aria-sort="ascending"' : ''}${key === 'score' ? ' class="num"' : ''}><button type="button" class="fig__sort">`));
   assert.doesNotMatch(text, /Exampleton|EXAMPLE GENERAL/, 'no hospital list inlined');
-  assert.ok(text.length < 120_000, `the program page stays small (${text.length} bytes)`);
+  // Small but for its two inline maps (the US map's phone and wide variants, about 115 kB together): no hospital data.
+  const maps = [...text.matchAll(/<svg[^>]*chart--us-map[\s\S]*?<\/svg>/g)].reduce((n, [m]) => n + m.length, 0);
+  assert.ok(maps < 130_000, `the maps stay thinned (${maps} bytes)`);
+  assert.ok(text.length - maps < 120_000, `the program page stays small (${text.length - maps} bytes besides its maps)`);
 });
 
 test('no figure takeaway holds a hand-typed number: every number in it comes from the data it was built from', () => {

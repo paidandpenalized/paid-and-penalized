@@ -22,11 +22,11 @@ export const RAMP_LOW_PCT = 5;
 export const RAMP_HIGH_PCT = 95;
 // The display step from the what-if standard: each measure's leverage is stated per this change in its value.
 export const LEVERAGE_STEP = 0.1;
-// The state tile grid's shading steps: the share of a state's hospitals with a payment decision that CMS cut, in
+// The state map's shading steps: the share of a state's hospitals with a payment decision that CMS cut, in
 // percent (a share at a step takes the darker shade). Round breaks around the national share.
-export const TILE_STEPS_PCT = Object.freeze([10, 20, 30, 40]);
-// The state tile grid marks a state with fewer hospitals with a payment decision than this, and prints its counts
-// ("4 of 6") instead of a share: a percentage of a handful reads as more precise than it is.
+export const MAP_STEPS_PCT = Object.freeze([10, 20, 30, 40]);
+// The state map marks a state with fewer hospitals with a payment decision than this, and prints its counts
+// (its tooltip and table say "4 of 6"): a percentage of a handful reads as more precise than it is.
 export const FEW_DECIDED = 10;
 // Care Compare's overall rating runs from one star to this many (a display constant: the record card draws the
 // empty stars after the filled ones).

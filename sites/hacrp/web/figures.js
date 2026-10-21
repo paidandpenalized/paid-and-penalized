@@ -1,6 +1,6 @@
 // The HACRP figures (DES-31), drawn with the chart kit (web/charts/) in HACRP's words: on a hospital page, each
 // measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
-// the histogram of Total HAC Scores and the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
+// the histogram of Total HAC Scores and the US map of states. Every takeaway is filled from the data the figure draws; copy.js holds the words.
 import { has } from '../../../engine/js/has.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -9,11 +9,10 @@ import { contribBars } from '../../../web/charts/contribBars.js';
 import { dotRanges } from '../../../web/charts/dotRange.js';
 import { figure, keysHint } from '../../../web/charts/figure.js';
 import { histogram, histogramBins } from '../../../web/charts/histogram.js';
-import { TILES } from '../../../web/charts/states.js';
-import { tileMap } from '../../../web/charts/tileMap.js';
+import { US_MAP_CODES, usMap } from '../../../web/charts/geo.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { FEW_DECIDED, TILE_STEPS_PCT } from './constants.js';
+import { FEW_DECIDED, MAP_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
 import { flagText } from './whatif-text.js';
 import { html } from '../../../web/render/html.js';
@@ -142,11 +141,14 @@ export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) 
 const shareOf = (s) => toUnit((100 * s.yes) / s.decided, SHARE_DP);
 const shareText = (x) => pct(x / 100, SHARE_DP);
 
-// Program page: per state, the hospitals CMS cut of those with a payment decision; states: stateCounts() (view.js).
-// A state whose hospitals are not subject to the reduction is hatched; one with no hospital in CMS's file, or none
-// with a decision, is an empty tile; never 0. A code with no tile (a territory such as GU) is not drawn: its row is in the table
-// and a note under the grid names it. The national share is the states' own total; the range spans the table's rows.
-export function statesFigure({ states, n, source, fy }) {
+// Program page: per state, the hospitals CMS cut of those with a payment decision, as a US map (geo.js usMap) in
+// two variants; states: stateCounts() (view.js); shapes: stateShapes(topology). A state whose hospitals are not
+// subject to the reduction is hatched; one with no hospital in CMS's file, or none with a decision, is plain; never
+// 0. A code the map has no place for (Puerto Rico, a territory) is not drawn: its row is in the table and a note
+// under the map names it. The national share is the states' own total; the range spans the table's rows. Each
+// state is a mark the keyboard steps through (the keys hint follows the figure), and the program page's script
+// lists a picked state's hospitals in the table.
+export function statesFigure({ states, shapes, n, source, fy }) {
   const entry = (code) => {
     const s = states[code];
     if (!s) return { code, label: t('figStatesNone'), empty: true };
@@ -155,31 +157,29 @@ export function statesFigure({ states, n, source, fy }) {
     const few = s.decided < FEW_DECIDED;
     return { code, s, value, few, label: fill('figStatesTile', { yes: count(s.yes), decided: count(s.decided), share: shareText(value) }) };
   };
-  const tiles = Object.keys(TILES).map(entry);
-  const offGrid = Object.keys(states).filter((code) => !has(TILES, code)).sort().map(entry);
-  const listed = [...tiles, ...offGrid];
+  const drawn = US_MAP_CODES.map(entry);
+  const offMap = Object.keys(states).filter((code) => !US_MAP_CODES.includes(code)).sort().map(entry);
+  const listed = [...drawn, ...offMap];
   const shares = listed.filter((x) => x.value !== undefined).map((x) => x.value);
   const [low, high] = [shareText(Math.min(...shares)), shareText(Math.max(...shares))];
-  const none = num('—', null);
+  const none = num('\u2014', null);
   const total = (k) => Object.values(states).reduce((sum, s) => sum + s[k], 0);
-  // A share that rests on few decisions prints its counts, not a percentage that would read as precise.
-  const tileText = ({ s, value, few }) => (few ? fill('figStatesFewText', { yes: count(s.yes), decided: count(s.decided) }) : shareText(value));
   const legend = {
     title: t('figColShare'), high, zero: t('figStatesZero'),
     few: fill('figStatesFew', { n: count(FEW_DECIDED) }),
   };
-  return figure({
+  const entries = Object.fromEntries(drawn.map((x) => [x.code, x.value === undefined
+    ? { hatched: x.hatched, empty: x.empty, label: x.label }
+    : { value: x.value, label: x.label, few: x.few }]));
+  const fig = figure({
     n, source, alt: t('figStatesAlt'), csvName: `hacrp-fy${fy}-states`,
     takeaway: fill('figStatesTakeaway', {
       share: pct(total('yes') / total('decided'), SHARE_DP), low, high,
     }),
-    ...variants((width) => tileMap({
-      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width, showValues: width === WIDE, legend,
-      states: Object.fromEntries(tiles.map((x) => [x.code, x.value === undefined
-        ? { hatched: x.hatched, empty: x.empty, label: x.label }
-        : { value: x.value, label: x.label, few: x.few, text: tileText(x) }])),
+    ...variants((width) => usMap({
+      id: width === WIDE ? 'states-wide' : 'states', shapes, ramp: MAP_STEPS_PCT, format: (x) => pct(x / 100, 0), width, legend, states: entries,
     })),
-    note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
+    note: offMap.length ? fill('figStatesOffMap', { codes: offMap.map((x) => x.code).join(', ') }) : null,
     table: {
       columns: [{ name: t('figColState') }, { name: t('figColCut'), numeric: true }, { name: t('figColDecided'), numeric: true }, { name: t('figColShare'), numeric: true }],
       rows: listed.map(({ code, s, value, label }) => (value === undefined
@@ -187,4 +187,6 @@ export function statesFigure({ states, n, source, fy }) {
         : [code, num(count(s.yes), s.yes), num(count(s.decided), s.decided), num(shareText(value), value)])),
     },
   });
+  return html`${fig}
+${keysHint(n, t('figStatesKeys'))}`;
 }

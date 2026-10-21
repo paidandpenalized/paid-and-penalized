@@ -37,6 +37,8 @@ const LOCATOR_CODES = new Set(US_MAP_CODES);
 // markup, and detail finer than about half a pixel never shows.
 const DIGITS = 1;
 const THIN = 1;
+// The US map's fifty states are each drawn smaller than a locator map's one, so its outlines take a coarser thinning.
+const THIN_US = 1.5;
 // A locator map's margin inside its frame, and the tallest it may be as a share of its width (a tall state, such as
 // California, fits the height and is centered across).
 const PAD = 8;
@@ -67,16 +69,16 @@ export function stateShapes(topo) {
   return shapes;
 }
 
-// A projection's stream with each ring thinned: a point closer than THIN to the last one kept is dropped (a ring's
+// A projection's stream with each ring thinned: a point closer than thin to the last one kept is dropped (a ring's
 // last point is always kept, so it closes where it should), and a ring left with fewer than three points (an islet
 // under a pixel across) is dropped whole. Points outside a ring pass through.
-function thinned(projection) {
-  const min2 = THIN * THIN;
+function thinned(projection, thin = THIN) {
+  const min2 = thin * thin;
   return {
     stream(sink) {
       let ring = null;
       let skipped = null;
-      const thin = {
+      const filter = {
         point(x, y) {
           if (!ring) return sink.point(x, y);
           const last = ring.at(-1);
@@ -99,11 +101,11 @@ function thinned(projection) {
         polygonEnd() { sink.polygonEnd(); },
         sphere() { sink.sphere(); },
       };
-      return projection.stream(thin);
+      return projection.stream(filter);
     },
   };
 }
-const outlinePath = (projection) => geoPath(thinned(projection)).digits(DIGITS);
+const outlinePath = (projection, thin = THIN) => geoPath(thinned(projection, thin)).digits(DIGITS);
 
 // One state's projection and outline at a width, fitted to its own shape; remembered, since every hospital in a state
 // shares them.
@@ -151,8 +153,10 @@ function usPaths(shapes, width) {
   const height = Math.round(width * US_ASPECT);
   const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
   const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
-  const path = outlinePath(projection);
-  const paths = new Map(US_MAP_CODES.map((code) => [code, shapes.has(code) ? path(shapes.get(code)) : null]));
+  const path = outlinePath(projection, THIN_US);
+  // A state the thinning would leave with no ring (DC, on the phone variant) keeps its full outline.
+  const full = geoPath(projection).digits(DIGITS);
+  const paths = new Map(US_MAP_CODES.map((code) => [code, shapes.has(code) ? path(shapes.get(code)) || full(shapes.get(code)) : null]));
   const entry = { shapes, height, paths };
   US.set(key, entry);
   return entry;

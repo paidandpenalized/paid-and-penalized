@@ -438,7 +438,7 @@ test("a hospital page's verdict names the data's release; its foot runs back lin
 });
 
 test("the HACRP top bar: the program's name and FY tag, its nav to the program page's sections (each id on the page) and Methods", () => {
-  const program = programPage({ ...PROGRAM_ARGS, states: { AL: { hospitals: 12, decided: 12, yes: 3, na: 0 } } });
+  const program = programPage({ ...PROGRAM_ARGS, states: { AL: { hospitals: 12, decided: 12, yes: 3, na: 0 } }, shapes: DATA.shapes });
   const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
   assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
@@ -539,4 +539,20 @@ test('a section whose words explain a figure splits: the measures and Figure 1 o
   const { model } = DATA;
   const program = programPage({ ...PROGRAM_ARGS, scores: [{ total: 0.5, yes: true }, { total: 0.1, yes: false }], boundary: model.boundary });
   assert.match(program, /<section class="block split" id="fy" aria-labelledby="counts-h">\n<div class="split__text">\n<h2 id="counts-h">[\s\S]*?<\/div>\n<div class="split__fig">\n<figure class="fig" id="figure-1"/);
+});
+
+test("the program page's top: the name with its last word in the penalty ink, the dek, and a summary form of this year's counts, the cut and CMS's line, under the stamp", () => {
+  const text = programPage({ ...PROGRAM_ARGS, counts: { decided: 1240, yes: 310, scored: 1305 } });
+  const top = /<header class="page__head prog__top">[\s\S]*?<\/header>/.exec(text)[0];
+  assert.ok(top.includes('<h1 class="prog__title">Hospital-Acquired <span class="prog__title-pen">Conditions</span></h1>'));
+  assert.match(top, /<p class="form__title"><span>Program summary · FY2026<\/span><span>CMS data released <span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span><\/span><\/p>/);
+  const fields = [...top.matchAll(/<span class="field__no">(\d)<\/span>([^<]+)<\/p>\n<p class="field__value[^"]*">([\s\S]*?)<\/p>/g)].map((m) => [m[1], m[2], m[3]]);
+  assert.deepEqual(fields.map(([n, label]) => [n, label]), [['1', 'Hospitals cut'], ['2', 'The cut'], ['3', 'Scored'], ['4', 'CMS’s line']]);
+  assert.deepEqual(fields.slice(0, 3).map(([, , v]) => v), ['310', '1%', '1,305']);
+  assert.ok(top.includes('Of 1,240 with a Yes or No payment decision'));
+  assert.match(top, /<p class="stamp">Cut 1%<\/p>/);
+  // The map's section: its words beside the figure, under the id the nav's Map item names.
+  const withMap = programPage({ ...PROGRAM_ARGS, states: { AL: { hospitals: 12, decided: 12, yes: 3, na: 0 } }, shapes: DATA.shapes });
+  assert.match(withMap, /<section class="block split" id="map" aria-labelledby="map-h">\n<div class="split__text">\n<h2 id="map-h">By state<\/h2>/);
+  assert.doesNotMatch(programPage(PROGRAM_ARGS), /id="map"/, 'no map without its data');
 });
