@@ -383,7 +383,7 @@ test("the phone's Sort by menu offers each column head's key both ways, the defa
   assert.match(text, /<label for="ht-sort">Sort by<\/label>/);
 });
 
-test('the as-of strip is a list of facts, each copy entry split at its colon into a term and its value; no new words', () => {
+test('the as-of strip is a list of facts, each a term and its value from their own copy entries', () => {
   const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   const list = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(text)[1];
   const rows = [...list.matchAll(/<div><dt>(.*?)<\/dt><dd>(.*?)<\/dd><\/div>/g)].map(([, dt, dd]) => [dt.replace(/<[^>]+>/g, ''), dd.replace(/<[^>]+>/g, '')]);

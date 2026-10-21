@@ -277,13 +277,19 @@ export const COPY = {
   footnotesHeading: { text: "CMS's footnotes on this page", claim: null },
   backToProgram: { text: 'How the program works, and how to find another hospital', claim: null },
 
-  // As-of bar and source line (hospital and program pages).
+  // As-of bar and source line (hospital and program pages). Each fact of the as-of bar is a term (…Label) and its
+  // value, one row of its list.
   asofHeading: { text: 'About this data', claim: null },
-  asofFy: { text: 'Fiscal year {fy}', claim: null },
-  asofPsi: { text: '{short} period: {start} to {end}', claim: null },
-  asofHai: { text: 'Infection measures period: {start} to {end}', claim: null },
-  asofLatest: { text: 'Latest public hospital results: FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
-  asofReleased: { text: 'Provider Data Catalog release: {date}', claim: null },
+  asofFyLabel: { text: 'Fiscal year', claim: null },
+  asofFy: { text: '{fy}', claim: null },
+  asofPsiLabel: { text: '{short} period', claim: null },
+  asofPsi: { text: '{start} to {end}', claim: null },
+  asofHaiLabel: { text: 'Infection measures period', claim: null },
+  asofHai: { text: '{start} to {end}', claim: null },
+  asofLatestLabel: { text: 'Latest public hospital results', claim: null },
+  asofLatest: { text: 'FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
+  asofReleasedLabel: { text: 'Provider Data Catalog release', claim: null },
+  asofReleased: { text: '{date}', claim: null },
   source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
   datasetLink: { text: "CMS's dataset page", claim: null },
   // The data download and the citation block (both pages).
