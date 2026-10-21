@@ -269,3 +269,32 @@ test('markdownSections: a line outside the subset ("### x", a "|" line with no r
   const { sections } = markdownSections('### Not a heading\n\n| a | b\nnext line\n', { idPrefix: 'd' });
   assert.equal(String(sections[0].body), '<p>### Not a heading</p><p>| a | b next line</p>');
 });
+
+test('programHeader: the small mark to /, the name and edition tag, the search slot, the toggle, then the numbered nav and the byline', async () => {
+  const { programHeader } = await import('../render/layout.js');
+  const nav = [{ id: 'how', label: 'How it works', href: '/x/#how' }, { id: 'list', label: 'Every <one>', href: '/x/#list' }];
+  const header = String(programHeader({ name: 'A program', href: '/x/', tag: 'AP · FY2026', nav, current: 'list', search: html`<form id="s"></form>` }));
+  const at = (s) => header.indexOf(s);
+  assert.ok(at('class="pp-mark" href="/"') < at('class="program-mark" href="/x/"'));
+  assert.ok(at('program-mark') < at('<form id="s">') && at('<form id="s">') < at('class="theme-toggle"'));
+  assert.ok(at('class="theme-toggle"') < at('<nav class="nav" aria-label="Sections">') && at('<nav') < at('class="byline"'));
+  assert.ok(header.includes('P&amp;P<span class="vh"> Paid &amp; Penalized home</span>'));
+  assert.ok(header.includes('<span class="wordmark__name">A program</span> <span class="wordmark__tag">AP · FY2026</span>'));
+  assert.ok(header.includes('<li><a href="/x/#how" data-nav="how"><span class="nav__num">1</span>How it works</a></li>'));
+  assert.ok(header.includes('<li><a href="/x/#list" data-nav="list" aria-current="true"><span class="nav__num">2</span>Every &lt;one&gt;</a></li>'));
+  assert.ok(!/<h1/.test(header));
+  assert.throws(() => programHeader({ name: 'A', href: '/x/', tag: 't', nav, current: 'nope' }), /nope/);
+  assert.throws(() => programHeader({ name: 'A', href: '/x/', tag: 't', nav: [] }), TypeError);
+  // In a page, it stands in for the family's masthead: still one header, the byline once.
+  const out = page({ ...PAGE, topbar: programHeader({ name: 'A', href: '/x/', tag: 't', nav }) });
+  assert.equal(out.match(/<header[ >]/g).length, 1);
+  assert.ok(!out.includes('class="masthead"'));
+  assert.equal(out.match(/class="byline"/g).length, 1);
+});
+
+test('topbar.js: the section in view is the last whose top has passed the line, else the first', async () => {
+  const { sectionInView } = await import('../client/topbar.js');
+  assert.equal(sectionInView([300, 900, 1500], 100), 0);
+  assert.equal(sectionInView([-50, 90, 1500], 100), 1);
+  assert.equal(sectionInView([-900, -400, -10], 100), 2);
+});

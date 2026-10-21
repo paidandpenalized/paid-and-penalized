@@ -12,7 +12,7 @@ import { fill, measureLabel, sourceText, t } from '../copy.js';
 import { scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { lineStep, stepRows, stepSum } from '../stepper.js';
-import { asofBar, citation, dataLinks } from './parts.js';
+import { asofBar, citation, dataLinks, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
 import { fillKeep } from '../copy.js';
 
@@ -116,7 +116,7 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 <p id="search-hint" class="small muted">${t('searchHint')}</p>
 <p class="small search__status" role="status"></p>
 </form>
-<section class="block" aria-labelledby="what-h">
+<section class="block" id="how" aria-labelledby="what-h">
 <h2 id="what-h">${t('whatHeading')}</h2>
 <p>${t('whatScore')} ${t('whatWho')}</p>
 <p>${fill('whatCut', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}</p>
@@ -141,13 +141,13 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 </section>
 ${steps}
 ${what}
-<section class="block" aria-labelledby="counts-h">
+<section class="block" id="fy" aria-labelledby="counts-h">
 <h2 id="counts-h">${fill('countsHeading', { fy: fyText })}</h2>
 <p>${fill('countDecided', { yes: count(counts.yes), decided: count(counts.decided) })}</p>
 <p>${fill('countScored', { scored: count(counts.scored) })}</p>
 <p class="standing">${t('standing')}</p>
 ${histogram}
-${tiles}
+${tiles && html`<div id="map">${tiles}</div>`}
 </section>
 ${hospitalTable({ fy, searchUrl, source })}
 <section class="block" aria-labelledby="links-h">
@@ -169,7 +169,8 @@ ${citation({ fy, title: heading, path: PATH, source })}
     path: PATH,
     robots,
     body,
-    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js['hacrp-program']],
+    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, assets.js['hacrp-program']],
     assets,
+    topbar: siteHeader({ fy, current: 'how' }),
   });
 }

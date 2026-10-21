@@ -9,7 +9,7 @@ import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, citation, dataLinks, decisionPill, kicker, pillShowsCmsValue, printLink } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, kicker, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -153,8 +153,9 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, ...(what ? [what.script] : [])],
+    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(what ? [what.script] : [])],
     assets,
+    topbar: siteHeader({ fy: view.fy, current: 'hospitals' }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
     // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.
     preloadFonts: HERO_FONTS,

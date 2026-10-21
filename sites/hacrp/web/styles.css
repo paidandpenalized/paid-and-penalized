@@ -89,6 +89,8 @@
 /* Wide screens: the five columns fit, so the table needs no sideways scroll box, and its header sticks to the top of
    the window (a scroll box would be its sticky container, and that box never scrolls down). */
 @media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
+/* There the head sticks under the site's top bar (--sticky-top: web/client/topbar.js). */
+@media (min-width: 641px) { .ht .gb thead th { top: var(--sticky-top, 0px); } }
 /* A row's link brought into view by the keyboard clears the stuck head: its height (--thead-h, components.css) and
    8px more. */
 @media (min-width: 641px) { .gb--hospitals tbody a { scroll-margin-top: calc(var(--thead-h) + 8px); } }

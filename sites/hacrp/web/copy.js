@@ -235,6 +235,13 @@ export const COPY = {
   measureCDI: { text: 'Clostridioides difficile (C. diff) infections', claim: 'HACRP-10' },
   measureMRSA: { text: 'MRSA bloodstream infections', claim: 'HACRP-11' },
 
+  // The site's top bar (pages/parts.js siteHeader): the edition tag beside the program's name and the numbered nav.
+  edition: { text: '{subtitle} · FY{fy}', claim: null },
+  navHow: { text: 'How it works', claim: null },
+  navFy: { text: 'FY{fy}', claim: null },
+  navMap: { text: 'Map', claim: null },
+  navHospitals: { text: 'Every hospital', claim: null },
+
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
   hospitalDescription: {

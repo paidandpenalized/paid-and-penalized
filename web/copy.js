@@ -11,6 +11,11 @@ export const COPY = typesetCopy({
   bylineName: 'Dalton Haslam, MD, MBA',
   newTab: ' (opens in a new tab)',
   themeToggle: 'Dark mode',
+  // A program site's top bar (layout.js programHeader): the family's small mark, its link's full name for screen
+  // readers, and the section nav's name.
+  markShort: 'P&P',
+  markHome: 'Paid & Penalized home',
+  navLabel: 'Sections',
   affiliation: 'Uses public data from the Centers for Medicare & Medicaid Services (CMS) and shows no patient information. Not affiliated with or endorsed by CMS.',
   builtWith: 'Built with Claude Code',
   feedback: 'Send feedback',

@@ -1,8 +1,10 @@
 // HACRP's words for the shared page parts (web/render/components.js) the HACRP pages use: the decision pill, the
 // as-of bar, the kicker, the citation (which carries the source line) and the data links.
 import { asofBar as asofShell, citation as citationShell, keepWhole, lastCall, pill } from '../../../../web/render/components.js';
+import { COPY as SHARED } from '../../../../web/copy.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
+import { programHeader } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
 import { fill, fillKeep, sourcePlain, t } from '../copy.js';
@@ -33,6 +35,26 @@ export const asofBar = lastCall(({ fy, periods, source }) => [fy, periods, sourc
       { label: t('asofLatestLabel'), value: fill('asofLatest', { fy: String(fy), next: String(fy + 1) }) },
       { label: t('asofReleasedLabel'), value: fillKeep('asofReleased', { date: isoDate(source.pdcReleased) }, ['date']) },
     ],
+  });
+});
+
+// The program page's sections the top bar's nav links to, by id (program.js gives each section its id), then Methods.
+export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'hospitals']);
+
+// The HACRP top bar (layout.js programHeader): the program's name and edition tag, the search (markup, or '') and
+// the numbered nav to the program page's sections and Methods. current: the nav item to mark (an id), or null.
+// Built once per build for each current item.
+export const siteHeader = lastCall(({ fy, current, search }) => [fy, current, search], ({ fy, current = null, search = '' }) => {
+  const { path, title, subtitle } = SITE.sites.hacrp;
+  const fyText = String(fy);
+  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), map: t('navMap'), hospitals: t('navHospitals') };
+  return programHeader({
+    name: title,
+    href: path,
+    tag: fill('edition', { subtitle, fy: fyText }),
+    nav: [...SECTIONS.map((id) => ({ id, label: labels[id], href: `${path}#${id}` })), { id: 'methods', label: SHARED.methods, href: '/methods/' }],
+    current,
+    search,
   });
 });
 

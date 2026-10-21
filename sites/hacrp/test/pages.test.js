@@ -409,3 +409,21 @@ test("a hospital page's head names the data's release; its foot runs back link, 
   // On paper the way back prints its full address (print.css).
   assert.ok(text.includes('<p class="page__links"><a href="/hacrp/" data-print-href="https://paidandpenalized.org/hacrp/">'));
 });
+
+test("the HACRP top bar: the program's name and FY tag, its nav to the program page's sections (each id on the page) and Methods", () => {
+  const program = programPage({ ...PROGRAM_ARGS, states: { AL: { hospitals: 12, decided: 12, yes: 3, na: 0 } } });
+  const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
+  assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
+  const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
+  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'map', 'hospitals', 'methods']);
+  for (const [id, href] of targets.slice(0, 4)) {
+    assert.equal(href, `/hacrp/#${id}`);
+    assert.match(program, new RegExp(`<[a-z]+ [^>]*id="${id}"`), `the program page holds #${id}`);
+  }
+  assert.ok(header.includes('href="/methods/" data-nav="methods"'));
+  assert.match(header, /data-nav="how" aria-current="true"/);
+  assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
+  const view = hospitalView(inputs(CASES.yes));
+  const hosp = hospitalPage({ view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  assert.match(/<header class="topbar">[\s\S]*?<\/header>/.exec(hosp)[0], /data-nav="hospitals" aria-current="true"/);
+});

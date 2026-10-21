@@ -5,7 +5,7 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { markdownSections } from '../../../../web/render/markdown.js';
 import { SITE } from '../../../../web/site.js';
-import { kicker } from './parts.js';
+import { kicker, siteHeader } from './parts.js';
 
 // text: the filled Markdown (csv.js dictionaryText), as the downloadable file holds it; fy for the kicker; robots: null
 // for an indexable page.
@@ -25,5 +25,5 @@ ${s.body}
     : html`<div class="prose">${s.body}</div>`))}
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable on a phone (web/client/figure.js).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure], assets });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar], assets, topbar: siteHeader({ fy }) });
 }

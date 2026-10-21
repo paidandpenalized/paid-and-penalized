@@ -1,5 +1,5 @@
-// The page shell every page renders through: head metadata, skip link, header (wordmark, byline, theme toggle),
-// <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
+// The page shell every page renders through: head metadata, skip link, header (the family's masthead, or a program
+// site's top bar: programHeader), <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
 import { COPY } from '../copy.js';
 import { SITE } from '../site.js';
 import { html, jsonText, raw } from './html.js';
@@ -14,13 +14,40 @@ const FONT_NAME = /^[a-z0-9-]+$/;
 
 const newTab = html`<span class="vh">${COPY.newTab}</span>`;
 
+const byline = html`<p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener"><span class="nw">${COPY.bylineName}</span>${newTab}</a></p>`;
+const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${COPY.themeToggle}</button>`;
+
+// The family's header (the hub's pages): the wordmark, the byline, the theme toggle.
 const header = html`<header class="masthead">
   <div class="wrap masthead__row">
     <a class="wordmark" href="/">${COPY.wordmarkLead} <span class="wordmark__pen">${COPY.wordmarkPen}</span></a>
-    <p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener"><span class="nw">${COPY.bylineName}</span>${newTab}</a></p>
-    <button type="button" class="theme-toggle" aria-pressed="false" hidden>${COPY.themeToggle}</button>
+    ${byline}
+    ${themeToggle}
   </div>
 </header>`;
+
+// A program site's header, after Thirty Day Readmissions' top bar. Row one: the family's small mark (to /), the
+// program's name with its edition tag in red (to the program page), the search (markup the site supplies; '' for
+// none) and the theme toggle. Row two: the numbered section nav, the current item (current: its id, or null)
+// marked aria-current, then the byline. Markup order is the visual and tab order at every width.
+//   name, href, tag  the program's name, its page and its edition tag ("HACRP · FY2026")
+//   nav     [{ id, label, href }], numbered in order
+export function programHeader({ name, href, tag, nav, current = null, search = '' }) {
+  if (!name || !href || !tag || !Array.isArray(nav) || !nav.length) throw new TypeError('programHeader: name, href, tag and nav are required');
+  if (current !== null && !nav.some((item) => item.id === current)) throw new RangeError(`programHeader: no nav item "${current}"`);
+  return html`<header class="topbar">
+  <div class="wrap topbar__row">
+    <a class="pp-mark" href="/">${COPY.markShort}<span class="vh"> ${COPY.markHome}</span></a>
+    <a class="program-mark" href="${href}"><span class="wordmark__name">${name}</span> <span class="wordmark__tag">${tag}</span></a>
+    <div class="topbar__search">${search}</div>
+    ${themeToggle}
+  </div>
+  <div class="wrap topbar__sub">
+    <nav class="nav" aria-label="${COPY.navLabel}"><ol>${nav.map((item, i) => html`<li><a href="${item.href}" data-nav="${item.id}"${item.id === current ? html` aria-current="true"` : ''}><span class="nav__num">${String(i + 1)}</span>${item.label}</a></li>`)}</ol></nav>
+    ${byline}
+  </div>
+</header>`;
+}
 
 const footer = html`<footer class="foot">
   <div class="wrap foot__row">
@@ -48,7 +75,8 @@ const socialTags = ({ title, description, url, type }) => html`<meta property="o
 // body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
-export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS }) {
+// topbar: a program site's header (programHeader), in place of the family's masthead.
+export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
@@ -74,7 +102,7 @@ ${jsonLd ? raw(`<script type="application/ld+json">${jsonText(jsonLd)}</script>`
 </head>
 <body>
 <a class="skip" href="#main">${COPY.skip}</a>
-${header}
+${topbar ?? header}
 <main id="main">
 ${body}
 </main>
