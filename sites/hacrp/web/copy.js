@@ -370,7 +370,6 @@ export const COPY = {
     claim: 'HACRP-05',
   },
   figPartsAssigned: { text: '{short}, assigned', claim: 'HACRP-05' },
-  figPartsTableNote: { text: "The bars follow the changes you make above; the table holds CMS's values.", claim: null },
   figColPart: { text: 'Part of the score', claim: null },
   // Hospital page, Figure: each measure's value against the national range.
   figRangeTakeaway: {

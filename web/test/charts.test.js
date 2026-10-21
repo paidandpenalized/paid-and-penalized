@@ -523,3 +523,11 @@ test('each chart part matches its inline snapshot', () => {
   assert.equal(lines.length, Object.keys(TILES).length + 2);
   assert.equal([...lines.slice(0, 3), lines.at(-1)].join('\n'), SNAPSHOTS.tileMapEnds, 'tileMap');
 });
+
+test('figure: a table cell may carry data-* hooks for a script that updates it; a bad name throws', () => {
+  const table = { columns: [{ name: 'M' }, { name: 'Part', numeric: true }], rows: [['A', { text: 'same', value: '0.25', data: { part: 'a', same: '' } }], ['B', '0.5'], ['C', '-0.125']] };
+  const s = String(figure({ ...FIG, table }));
+  assert.ok(s.includes('<td class="num" data-value="0.25" data-part="a" data-same="">same</td>'));
+  assert.throws(() => figure({ ...FIG, table: { ...table, rows: [['A', { text: 'x', value: '0.25', data: { 'Bad name': 1 } }], ...table.rows.slice(1)] } }), /data attribute/);
+  assert.throws(() => figure({ ...FIG, table: { ...table, rows: [['A', { text: 'x', value: '0.25', data: { value: '1' } }], ...table.rows.slice(1)] } }), /data attribute/);
+});

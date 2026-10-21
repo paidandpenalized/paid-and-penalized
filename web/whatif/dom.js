@@ -63,6 +63,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       barRow: bar,
       bar: q('bar', bar),
       barValue: q('bar-value', bar),
+      // The bars' figure table, when a page frames the bars as a figure: this measure's hypothetical part.
+      partCell: q(`part-${id}`),
       barAssigned: q('bar-assigned', bar),
     }];
   }));
@@ -71,6 +73,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
+  // Each measure's part of the score at the start, as the bars write it: the figure table's Hypothetical cell reads
+  // "same" while the part equals it.
+  const startPart = Object.fromEntries(first.inputs.map((input) => [input.id, texts.bars.value(first.result.measures[input.id].contribution)]));
   // Each measure's starting value, where a changed measure's track keeps a dotted tick (none for an assigned one).
   const startValue = Object.fromEntries(first.inputs.map((input) => [input.id, input.value]));
   const domain = rampDomain(range, first.ramp);
@@ -204,7 +209,16 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       const span = barSpan(m.contribution, vm.extent);
       row.bar.style.setProperty('--at', fraction(span.at));
       row.bar.style.setProperty('--w', fraction(span.width));
-      setText(row.barValue, texts.bars.value(m.contribution));
+      const part = texts.bars.value(m.contribution);
+      setText(row.barValue, part);
+      if (row.partCell) {
+        const same = part === startPart[input.id];
+        setText(row.partCell, same ? texts.same : part);
+        // The raw number for sorting and the CSV: the part as shown, with a hyphen-minus and no plus sign.
+        row.partCell.setAttribute('data-value', part.replace('\u2212', '-').replace('+', ''));
+        if (same) row.partCell.setAttribute('data-same', '');
+        else row.partCell.removeAttribute('data-same');
+      }
       if (row.echo) {
         row.echo.hidden = !(input.id === id && echo);
         setText(row.echo, input.id === id ? echo : '');

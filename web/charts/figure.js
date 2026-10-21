@@ -14,8 +14,9 @@
 //                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
 //   table        { columns: [{ name, numeric }], rows: [[cell]] }; the first cell of a row is its header. A cell is
-//                text, or { text, value }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus), shown
-//                with a true minus, kept in data-value for sorting and the CSV (value null or absent: none)
+//                text, or { text, value, data }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus),
+//                shown with a true minus, kept in data-value for sorting and the CSV (value null or absent: none);
+//                data: optional { name: text } data-* attributes, hooks for a script that updates the cell
 //   csvName      the download's file name without .csv (default figure-N)
 import { numberOrNaN } from '../../engine/js/stats.js';
 import { COPY } from '../copy.js';
@@ -28,9 +29,9 @@ const NAME = /^[a-z0-9][a-z0-9-]*$/;
 export const KEY_SWATCHES = ['this', 'median', 'same'];
 
 function cellOf(cell, numeric) {
-  if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value) };
+  if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value), data: cell.data ?? {} };
   const s = String(cell);
-  return numeric ? { text: cmsText(s), value: s } : { text: s, value: null };
+  return numeric ? { text: cmsText(s), value: s, data: {} } : { text: s, value: null, data: {} };
 }
 
 const isChart = (svg) => svg instanceof Safe && svg.text.startsWith('<svg ');
@@ -70,9 +71,14 @@ function checkPlotted(n, svg, columns, cells) {
   }
 }
 
+const NAME_DATA = /^[a-z][a-z0-9-]*$/;
 const tableCell = (cell, column, j) => {
   // No data-value without a raw value: the browser then sorts and writes the cell's text (and sorts it last).
-  const value = column.numeric ? html` class="num"${cell.value === null ? '' : html` data-value="${cell.value}"`}` : '';
+  const data = Object.entries(cell.data).map(([k, v]) => {
+    if (!NAME_DATA.test(k) || k === 'value') throw new RangeError(`figure: bad data attribute name "${k}"`);
+    return html` data-${k}="${v}"`;
+  });
+  const value = html`${column.numeric ? html` class="num"${cell.value === null ? '' : html` data-value="${cell.value}"`}` : ''}${data}`;
   return j === 0 ? html`<th scope="row"${value}>${cell.text}</th>` : html`<td${value}>${cell.text}</td>`;
 };
 

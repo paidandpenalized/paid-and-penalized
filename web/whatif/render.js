@@ -184,10 +184,11 @@ ${fields.map(({ id }) => html`<div class="wi-predicted__row" data-predicted="${i
 </details>`;
 }
 
-// Each measure's part of the score (z ÷ n), in the fixed measure order, on one scale for the hospital.
-function bars(vm, words, texts) {
+// Each measure's part of the score (z ÷ n), in the fixed measure order, on one scale for the hospital. framed: a page
+// frames them as a figure, whose caption is their title.
+function bars(vm, words, texts, framed = false) {
   return html`<div class="wi-bars" data-wi="bars">
-<p class="h-sm">${texts.bars.heading}</p>
+${framed ? '' : html`<p class="h-sm">${texts.bars.heading}</p>`}
 <ul class="wi-bars__list" role="list">${vm.inputs.map((input) => {
     const m = vm.result.measures[input.id];
     const span = barSpan(m.contribution, vm.extent);
@@ -218,7 +219,8 @@ ${printout(html`<table class="gb wi-solver__table" aria-labelledby="wi-solver-h"
 }
 
 // vm: the view model of the starting state. wrapBars: optional (barsHtml) -> Safe, a page's frame for the bars (a
-// numbered figure). share (required): the page keeps the reader's changes in its URL (the banner is rendered only then). range: { low, high }, the ramp's national span of scores. solver (required): the
+// numbered figure, placed right after the inputs, beside the result on a wide screen; its table may carry data-part
+// cells, which dom.js fills with each measure's hypothetical part). share (required): the page keeps the reader's changes in its URL (the banner is rendered only then). range: { low, high }, the ramp's national span of scores. solver (required): the
 // site's solver answers, which texts.solver.rows() words, or null for none (no button, no table). A view model
 // with no result (a hospital with no score) gets nothing.
 export function renderWhatIf({ vm, texts, share, range, solver, wrapBars = null }) {
@@ -252,9 +254,10 @@ ${solver && solverBlock(solver, texts.solver)}
 ${vm.inputs.map((input) => measure(input, words[input.id]))}
 ${predictedBlock(vm, texts)}
 </fieldset>
+${wrapBars && wrapBars(bars(vm, words, texts, true))}
 </div>
 </div>
-${wrapBars ? wrapBars(bars(vm, words, texts)) : bars(vm, words, texts)}
+${!wrapBars && bars(vm, words, texts)}
 <p class="small print-only">${texts.print}</p>
 <p class="small muted">${texts.rampLegend}</p>
 <p class="small muted">${texts.held}</p>

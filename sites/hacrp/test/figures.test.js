@@ -58,8 +58,17 @@ test('a scored hospital page has Figure 1 (each value against the national range
   assert.doesNotMatch(text, /chart--bars/, 'no static bar chart');
   assert.equal(text.match(/data-wi="bars"/g).length, 1);
   assert.match(figures(text)[1][2], /<span class="fig__claim">This site recomputes<\/span> · Source/);
-  // The bars move with the reader's edits; the table holds CMS's values, and a note under the bars says so.
-  assert.match(figures(text)[1][2], /<\/div>\n<p class="small muted fig__note">The bars follow the changes you make above; the table holds CMS’s values\.<\/p>\n<p class="source fig__source">/);
+  // The bars move with the reader's edits, and so does the table: CMS's part, then a Hypothetical column that reads
+  // "same" until the reader's part differs (dom.js fills each data-wi="part-…" cell). The caption is the figure's only title.
+  const fig2 = figures(text)[1][2];
+  assert.match(fig2, /<th scope="col" data-numeric>Part of the score<\/th><th scope="col" data-numeric>Hypothetical<\/th><\/tr>/);
+  const view2 = hospitalView(inputs(CASES.yes));
+  const clabsi = view2.measures.find((m) => m.id === 'CLABSI');
+  assert.ok(fig2.includes(`<td class="num" data-value="${clabsi.contributionRaw}" data-wi="part-CLABSI" data-same="">same</td>`));
+  assert.doesNotMatch(fig2, /fig__note|class="h-sm"/);
+  // Placed right after the inputs, inside the inputs' column (beside the result on a wide screen).
+  assert.ok(whatif.indexOf('id="figure-2"') > whatif.indexOf('</fieldset>'));
+  assert.ok(whatif.indexOf('id="figure-2"') < whatif.indexOf('class="small print-only"'));
   assert.ok(text.includes('<script type="module" src="/assets/figure.test.js"></script>'));
 });
 

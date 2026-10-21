@@ -136,6 +136,8 @@
 .wi-bars__row--assigned .wi-bar { outline: 1px solid var(--ink-3); background: var(--hatch-fill); }
 
 .wi-solver { display: grid; gap: 8px; }
+/* The bars as the page's figure, right after the inputs. */
+.wi-inputs > .fig { margin-top: 16px; }
 
 @media (max-width: 640px) {
   .wi-measure__controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }

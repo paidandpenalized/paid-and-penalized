@@ -10,6 +10,7 @@ import { SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synth
 import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
+import { html } from '../../../web/render/html.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { textsFor as fixtureTexts } from './fixtures.js';
 import { DATA as D, RANGE } from './pinned.js';
@@ -142,6 +143,23 @@ test('a changed measure keeps a dotted tick at its starting value on the track; 
   assert.equal(tick.hidden, true);
   assert.equal(root.getAttribute('data-changed'), null);
   assert.equal(q(root, 'reset').getAttribute('aria-disabled'), 'true');
+});
+
+test('a page that frames the bars as a figure gets its Hypothetical cells kept in step: "same" until the part moves', () => {
+  const wrapBars = (b) => html`<figure><table><tbody><tr><td class="num" data-value="0" data-wi="part-MRSA" data-same="">same</td></tr></tbody></table>${b}</figure>`;
+  const markup = String(renderWhatIf({ vm: viewModel(initialState(H, model), H, model, estimate), texts, share: false, range: RANGE, solver: solverOf(H, model), wrapBars }));
+  const root = node(/^<section[^>]*>/.exec(markup)[0], markup);
+  mountWhatIf(root, { rules: whatIfRules(H, model, estimate), texts, share: false, range: RANGE, env: windowStub().env });
+  const cell = q(root, 'part-MRSA');
+  assert.equal(cell.textContent, 'same');
+  type(field(root, 'MRSA', 'number'), '1.4');
+  const bar = root.querySelector('[data-bar="MRSA"]').querySelector('[data-wi="bar-value"]').textContent;
+  assert.equal(cell.textContent, bar, 'the part the bar shows');
+  assert.equal(cell.getAttribute('data-value'), bar.replace('\u2212', '-').replace('+', ''));
+  assert.equal(cell.getAttribute('data-same'), null);
+  q(root, 'reset').fire('click');
+  assert.equal(cell.textContent, 'same');
+  assert.equal(cell.getAttribute('data-same'), '');
 });
 
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {

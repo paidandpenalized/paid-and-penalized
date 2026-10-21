@@ -25,6 +25,10 @@
 .fig__table summary { width: fit-content; min-height: 24px; padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .fig__table[open] summary { margin-bottom: 8px; }
 .fig__table th[data-numeric] { text-align: right; }
+/* A cell a script keeps in step with the reader (the what-if's hypothetical parts): bold once it differs, quiet while
+   it reads "same", as in the what-if's result. */
+.fig__table td[data-wi^="part-"] { font-weight: 700; }
+.fig__table td[data-wi^="part-"][data-same] { color: var(--ink-2); font-weight: 400; }
 /* A figure's table is as wide as its columns need, up to 48rem, so a short table's values sit together. */
 .fig__table .printout { width: fit-content; min-width: min(100%, 36rem); max-width: min(100%, 48rem); }
 .fig__table .gb { width: 100%; }
