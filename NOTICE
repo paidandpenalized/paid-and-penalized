@@ -21,9 +21,10 @@ Not covered by either license:
   results from the same public service (U.S. Census Bureau Geocoder) for the remaining hospitals.
 - The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
 - Third-party fonts, which carry their own licenses next to the font files.
-- The page build uses d3-scale, d3-array and d3-format by Mike Bostock, each under the ISC license, at build time
-  only, to draw the charts as SVG. They are development dependencies (package.json); none of their code is
-  redistributed in the site's JavaScript.
+
+Build tools: the page build uses d3-scale, d3-array and d3-format by Mike Bostock, each under the ISC license, at
+build time only, to draw the charts as SVG. They are development dependencies (package.json); none of their code is
+redistributed in the site's JavaScript.
 
 Never included in this repository: CPT codes' descriptors or other material licensed by the American Medical
 Association, copyrighted third-party guides, or proprietary measure specifications.

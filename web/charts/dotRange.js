@@ -1,4 +1,4 @@
-// One value against a national range: the floor-to-cap range as a gray band on the axis, the median as a tick, and
+// One value against a national range: the floor-to-cap range as a gray band with hairline ends, the median as a tick, and
 // this hospital's value as a ▲ under the axis with its label (no ▲ when value is null). Words are the caller's.
 //   label, medianLabel, rangeLabel   the ▲'s label and the median's and range's tooltip names
 //   format                           value -> text (default: the number as given, with a true minus)
@@ -39,7 +39,7 @@ ${text({ x: x(value), y: 68, anchor, dx, cls: 'chart-label', body: label })}`;
     kind: 'dot-range', width, height: HEIGHT, body: html`${mark({
       tip: `${rangeLabel}: ${format(floor)} – ${format(cap)}`, value: [floor, cap],
       hit: { x: x(floor), y: AXIS_Y - BAND, width: x(cap) - x(floor), height: 2 * BAND },
-      body: html`<rect class="chart-band" x="${x(floor)}" y="${AXIS_Y - BAND / 2}" width="${r2(x(cap) - x(floor))}" height="${BAND}"/>`,
+      body: html`<rect class="chart-band" x="${x(floor)}" y="${AXIS_Y - BAND / 2}" width="${r2(x(cap) - x(floor))}" height="${BAND}"/>${[floor, cap].map((v) => html`<line class="chart-band__end" x1="${x(v)}" x2="${x(v)}" y1="${AXIS_Y - BAND / 2 - 2}" y2="${AXIS_Y + BAND / 2 + 2}"/>`)}`,
     })}
 <g transform="translate(0 ${AXIS_Y})">${axis({ scale, orient: 'top', ticks: 5 })}</g>
 ${mark({

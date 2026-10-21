@@ -1,6 +1,8 @@
 // Each part of a total as a horizontal bar from a zero line, one row per part in the order given (never re-sorted):
 // negative parts grow left, positive parts right, all on one scale. A row CMS assigned is hatched; its label (the
-// caller's words) says so. Bars are THICKNESS units thick, rounded at the data end; the value sits at the row's end.
+// caller's words) says so, and keeps a hatched stub at the zero line when its bar would be too short to show the
+// hatch. Bars are THICKNESS units thick, rounded at the data end; the value sits at the row's end. Labels get
+// LABEL_W units (about 15 characters) and are never truncated: pass short names.
 //   id       names this SVG's hatch pattern (lowercase letters, digits, hyphens)
 //   rows     [{ id, label, value, assigned }]
 //   extent   the largest |value| the scale holds (default: the rows' largest)
@@ -15,6 +17,8 @@ const VALUE_W = 64;
 const PAD = 4;
 // From a row's middle to the baseline of its 12-unit text.
 const BASELINE = 4;
+// An assigned bar shorter than half this is drawn as a stub this wide, centered on the zero line.
+const STUB = 8;
 
 export function contribBars({ id, rows, extent, width = WIDTH, format = plain }) {
   checkId(id, 'contribBars');
@@ -30,7 +34,9 @@ export function contribBars({ id, rows, extent, width = WIDTH, format = plain })
 ${rows.map((row, i) => {
     const y = PAD + i * ROW;
     const barY = y + (ROW - THICKNESS) / 2;
-    const d = barPath(zero, xOf(row.value), barY, THICKNESS);
+    const tip = xOf(row.value);
+    const stub = row.assigned && Math.abs(tip - zero) < STUB / 2;
+    const d = stub ? barPath(zero - STUB / 2, zero + STUB / 2, barY, THICKNESS) : barPath(zero, tip, barY, THICKNESS);
     const fill = row.assigned ? html` fill="${hatchFill(id)}"` : '';
     return html`${mark({
       tip: `${row.label}: ${format(row.value)}`, value: row.value, data: { row: row.id },

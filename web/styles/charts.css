@@ -37,6 +37,8 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-hatch { color: var(--ink-3); }
 .chart-band { fill: var(--ink-3); fill-opacity: 0.3; }
+/* The wash alone is faint; the range's ends carry its extent at full --ink-3. */
+.chart-band__end { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-median { stroke: var(--ink); stroke-width: 2px; }
 .chart-this { fill: var(--ink); }
 .chart-hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; }

@@ -1,6 +1,7 @@
 // How many values fall in each bin, as columns: bins at or above the boundary (CMS's line) in --pen, the rest
 // neutral, the boundary drawn and annotated with markLabel. The bins are equal widths with the boundary as an edge,
-// so no bin straddles the line; each value lands in exactly one bin (histogramBins).
+// so no bin straddles the line, and span the boundary even when the data don't; each value lands in exactly one
+// bin (histogramBins).
 //   bins     about how many bins (d3-array's tickStep picks a round width)
 //   format   a bin edge -> text; tip(bin) -> a column's tooltip (default: "lo – hi: count")
 import { bin, tickStep } from 'd3-array';
@@ -21,9 +22,12 @@ export function histogramBins(values, bins, boundary) {
   if (!values.length || !values.every(Number.isFinite)) throw new RangeError('histogramBins: values must be finite numbers');
   const lo = Math.min(...values);
   const hi = Math.max(...values);
-  const step = tickStep(lo, hi, bins) || Math.abs(boundary - lo) || 1;
-  const kLo = Math.floor((lo - boundary) / step);
-  const kHi = Math.max(kLo + 1, Math.ceil((hi - boundary) / step));
+  // The edges span the boundary too, so the line always sits on the chart (as its first or last edge when the
+  // data are all on one side); a value at or past the boundary always lands in a bin above it.
+  const [from, to] = [Math.min(lo, boundary), Math.max(hi, boundary)];
+  const step = tickStep(from, to, bins) || 1;
+  const kLo = Math.floor((from - boundary) / step);
+  const kHi = Math.max(kLo + 1, Math.ceil((to - boundary) / step), hi >= boundary ? 1 : 0);
   const edges = [];
   for (let k = kLo; k <= kHi; k++) edges.push(edge(boundary + k * step));
   // Float error can leave lo or hi a hair outside the outer edges; widen them so no value drops out.

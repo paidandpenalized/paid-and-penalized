@@ -98,6 +98,18 @@ test('contribBars keeps the given order, hatches assigned rows, and keeps every 
   assert.ok(Math.min(...xs('b')) < zero && Math.max(...xs('a')) > zero && Math.max(...xs('c')) > Math.max(...xs('a')));
 });
 
+test('an assigned part of zero still shows a hatched stub at the zero line', () => {
+  const s = String(contribBars({ id: 'z1', rows: [{ id: 'a', label: 'A', value: 0.5 }, { id: 'z', label: 'Z', value: 0, assigned: true }] }));
+  const z = /data-row="z"[\s\S]*?<\/g>/.exec(s)[0];
+  assert.match(z, /class="chart-bar-na" fill="url\(#chart-z1-hatch\)"/);
+  assert.doesNotMatch(String(contribBars({ id: 'z2', rows: [{ id: 'z', label: 'Z', value: 0 }] })), /chart-bar/);
+});
+
+test('dotRange marks the range\'s ends with hairline ticks, not only the gray wash', () => {
+  const s = String(dotRange(DOT));
+  assert.equal(s.match(/class="chart-band__end"/g).length, 2);
+});
+
 test('dotRange draws the range as a band, the median as a tick and this hospital as a triangle under the axis', () => {
   const s = String(dotRange(DOT));
   assert.match(s, /class="chart-band"/);
@@ -125,8 +137,28 @@ test('histogramBins puts each value in exactly one bin, with CMS\'s line as a bi
     if (boundary > lo && boundary < hi) assert.ok(bins.some((b) => Math.abs(b.x0 - boundary) < 1e-9), 'the line is an edge');
     for (const b of bins) assert.equal(b.above, b.x0 >= boundary - 1e-9);
   }
-  assert.deepEqual(histogramBins([0.5], 10, 0).map((b) => b.count), [1]);
+  // One value: the bins run from the line to it, and it sits in the last one, above the line.
+  const one = histogramBins([0.5], 10, 0);
+  assert.equal(one[0].x0, 0);
+  assert.deepEqual([one.at(-1).count, one.at(-1).above, one.reduce((t, b) => t + b.count, 0)], [1, true, 1]);
+  assert.deepEqual(histogramBins([2], 4, 2).map((b) => [b.count, b.above]), [[1, true]]);
   assert.throws(() => histogramBins([1, Number.NaN], 4, 0), /finite/);
+});
+
+test('a boundary outside the data is still a bin edge, and the histogram draws its line inside the chart', () => {
+  for (const boundary of [10, -10, 3, 1]) {
+    const values = [1, 1.5, 2, 2.5, 3];
+    const bins = histogramBins(values, 10, boundary);
+    assert.ok(bins.some((b) => b.x0 === boundary) || bins.at(-1).x1 === boundary, `edge at ${boundary}`);
+    assert.equal(bins.reduce((t, b) => t + b.count, 0), values.length);
+    for (const b of bins) assert.equal(b.above, b.x0 >= boundary);
+    assert.ok(bins.length <= 30, `${bins.length} bins`);
+    // Every value at or past the boundary is in a bin drawn above the line.
+    for (const v of values.filter((x) => x >= boundary)) assert.ok(bins.find((b) => v >= b.x0 && v <= b.x1 && b.count).above, `${v}`);
+    const s = String(histogram({ values, bins: 10, boundary, markLabel: 'Line' }));
+    const x = Number(/class="chart-boundary" x1="([-\d.]+)"/.exec(s)[1]);
+    assert.ok(x >= 0 && x <= 360, `line at ${x}`);
+  }
 });
 
 test('histogram fills bins above the line in pen and the rest neutral, and annotates the line', () => {
@@ -196,6 +228,14 @@ test('figure: the table marks numeric columns and keeps the raw value beside the
   assert.ok(s.includes('<th scope="col">Measure</th><th scope="col" data-numeric>Part</th>'));
   assert.ok(s.includes('<td class="num" data-value="-0.125">−0.125</td>'));
   assert.ok(s.includes('<th scope="row">Measure B</th>'));
+});
+
+test('figure: a numeric cell with no raw value keeps no data-value, so the browser falls back to its text', () => {
+  const rows = [...TABLE.rows, ['Measure D', { text: 'Not Available', value: null }], ['Measure E', { text: 'N/A' }]];
+  const s = String(figure({ ...FIG, table: { ...TABLE, rows } }));
+  assert.ok(s.includes('<td class="num">Not Available</td>'));
+  assert.ok(s.includes('<td class="num">N/A</td>'));
+  assert.ok(!s.includes('data-value="null"') && !s.includes('data-value=""'));
 });
 
 test('figure: a claim level other than official is said under the chart; an unknown one throws', () => {
@@ -281,7 +321,7 @@ const SNAPSHOTS = {
 <g class="chart-mark" data-mark data-row="b" data-value="-0.125"><title>Measure B: −0.125</title><rect class="chart-hit" x="0" y="32" width="360" height="28"/><text class="chart-label" x="0" y="50" text-anchor="start">Measure B</text><path class="chart-bar" d="M204 38H185A4 4 0 0 0 181 42V50A4 4 0 0 0 185 54H204Z"/><text class="chart-value" x="360" y="50" text-anchor="end">−0.125</text></g>
 <g class="chart-mark" data-mark data-row="c" data-value="0.5"><title>Measure C &lt;&amp;&gt;: 0.5</title><rect class="chart-hit" x="0" y="60" width="360" height="28"/><text class="chart-label" x="0" y="78" text-anchor="start">Measure C &lt;&amp;&gt;</text><path class="chart-bar-na" fill="url(#chart-c1-hatch)" d="M204 66H292A4 4 0 0 1 296 70V78A4 4 0 0 1 292 82H204Z"/><text class="chart-value" x="360" y="78" text-anchor="end">0.5</text></g>
 <line class="chart-zero" x1="204" x2="204" y1="0" y2="92"/></svg>`,
-  dotRange: `<svg class="chart chart--dot-range" viewBox="0 0 360 76" width="100%" focusable="false"><g class="chart-mark" data-mark data-value="0.4 2"><title>Floor to cap: 0.4 – 2</title><rect class="chart-hit" x="30" y="20" width="300" height="20"/><rect class="chart-band" x="30" y="25" width="300" height="10"/></g>
+  dotRange: `<svg class="chart chart--dot-range" viewBox="0 0 360 76" width="100%" focusable="false"><g class="chart-mark" data-mark data-value="0.4 2"><title>Floor to cap: 0.4 – 2</title><rect class="chart-hit" x="30" y="20" width="300" height="20"/><rect class="chart-band" x="30" y="25" width="300" height="10"/><line class="chart-band__end" x1="30" x2="30" y1="23" y2="37"/><line class="chart-band__end" x1="330" x2="330" y1="23" y2="37"/></g>
 <g transform="translate(0 30)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="342" y1="0" y2="0"/><line class="chart-axis__tick" x1="48.75" x2="48.75" y1="0" y2="-4"/><text class="chart-axis__label" x="48.75" y="-8" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="142.5" x2="142.5" y1="0" y2="-4"/><text class="chart-axis__label" x="142.5" y="-8" text-anchor="middle">1.0</text><line class="chart-axis__tick" x1="236.25" x2="236.25" y1="0" y2="-4"/><text class="chart-axis__label" x="236.25" y="-8" text-anchor="middle">1.5</text><line class="chart-axis__tick" x1="330" x2="330" y1="0" y2="-4"/><text class="chart-axis__label" x="330" y="-8" text-anchor="middle">2.0</text></g></g>
 <g class="chart-mark" data-mark data-value="0.9"><title>Median: 0.9</title><rect class="chart-hit" x="117.75" y="20" width="12" height="20"/><line class="chart-median" x1="123.75" x2="123.75" y1="24" y2="38"/></g>
 <g class="chart-mark" data-mark data-value="1.2"><title>This hospital: 1.2</title><rect class="chart-hit" x="171" y="38" width="18" height="16"/><path class="chart-this" d="M180 40l6 11h-12z"/></g>

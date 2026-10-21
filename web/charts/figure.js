@@ -8,7 +8,7 @@
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
 //   table        { columns: [{ name, numeric }], rows: [[cell]] }; the first cell of a row is its header. A cell is
 //                text, or { text, value }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus), shown
-//                with a true minus, kept in data-value for sorting and the CSV
+//                with a true minus, kept in data-value for sorting and the CSV (value null or absent: none)
 //   csvName      the download's file name without .csv (default figure-N)
 import { COPY } from '../copy.js';
 import { cmsText } from '../render/format.js';
@@ -18,7 +18,7 @@ const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COP
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
 
 function cellOf(cell, numeric) {
-  if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value === undefined ? null : String(cell.value) };
+  if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value) };
   const s = String(cell);
   return numeric ? { text: cmsText(s), value: s } : { text: s, value: null };
 }
@@ -47,7 +47,8 @@ function checkPlotted(n, svg, columns, cells) {
 }
 
 const tableCell = (cell, column, j) => {
-  const value = column.numeric ? html` class="num" data-value="${cell.value ?? ''}"` : '';
+  // No data-value without a raw value: the browser then sorts and writes the cell's text (and sorts it last).
+  const value = column.numeric ? html` class="num"${cell.value === null ? '' : html` data-value="${cell.value}"`}` : '';
   return j === 0 ? html`<th scope="row"${value}>${cell.text}</th>` : html`<td${value}>${cell.text}</td>`;
 };
 
