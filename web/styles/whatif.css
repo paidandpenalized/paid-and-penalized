@@ -25,6 +25,7 @@
 .wi-head__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; }
 .wi-head__score { font: 700 var(--fs-lg)/1.1 var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-head .pill { padding: 3px 9px 2px; font-size: var(--fs-md); }
+.wi-head .pill--na { padding-left: 24px; background-size: 13px 100%; }
 .wi-table { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-body); }
 .wi-table th, .wi-table td { padding: 5px 10px 5px 0; text-align: left; vertical-align: baseline; }
 .wi-table thead th { border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }

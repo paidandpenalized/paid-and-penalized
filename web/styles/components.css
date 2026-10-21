@@ -43,5 +43,6 @@
 .pill { display: inline-block; padding: 2px 7px 1px; border: 1.5px solid var(--neutral); border-radius: 2px; color: var(--ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.02em; white-space: nowrap; }
 .pill--pen { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
-.pill--na { border-color: var(--line); background: var(--hatch-fill); }
+/* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. */
+.pill--na { padding-left: 18px; border-color: var(--line); background: var(--hatch-fill) left / 10px 100% no-repeat, var(--paper); }
 @media (forced-colors: active) { .pill { border-color: CanvasText; } }
