@@ -214,7 +214,7 @@ export function renderWhatIf({ vm, texts, share, range, solver }) {
   return html`<section class="block whatif" id="whatif" aria-labelledby="whatif-h">
 <h2 id="whatif-h">${texts.heading}</h2>${texts.label && html`
 <p class="cap">${texts.label}</p>`}
-<p>${texts.intro}</p>
+<p class="wi-intro">${texts.intro}</p>
 ${share && html`<p class="wi-banner" data-wi="banner" hidden>${texts.banner.text} <a href="${texts.banner.href}">${texts.banner.linkText}</a></p>`}
 <p class="small muted" data-wi="nojs">${texts.noScript}</p>
 <div class="wi-grid">
@@ -229,7 +229,7 @@ ${solver && html`<button type="button" class="wi-btn" data-wi="solve" aria-expan
 <p class="small muted" id="wi-median-help">${texts.medianHelp}</p>
 </div>
 ${solver && solverBlock(solver, texts.solver)}
-<p class="small">${texts.weight(vm.result.n)}</p>
+<p class="small wi-weights">${texts.weight(vm.result.n)}</p>
 <fieldset class="wi-fields" data-wi="fields" disabled>
 <legend class="vh">${texts.fieldsLegend}</legend>
 ${vm.inputs.map((input) => measure(input, words[input.id], texts))}

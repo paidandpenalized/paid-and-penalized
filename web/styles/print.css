@@ -2,13 +2,15 @@
    nothing on paper are hidden (!important: whatif.css and the site styles load after this file); the marks that
    carry meaning keep their ink (browsers drop backgrounds by default); figures, the hero and the what-if result
    don't split across pages; external links in the source lines and link lists print their address. The what-if
-   prints as it stands on screen, with a line naming its address (.print-only). */
+   prints as it stands on screen, with a line naming its address (.print-only); one the reader hasn't changed drops
+   its instructions and its column of "same" (dom.js marks a changed one data-changed). */
 .print-only { display: none; }
 @media print {
   @page { margin: 1.5cm; }
-  body { background: var(--paper); }
+  body { background: var(--paper); font-size: 10.5pt; line-height: 1.45; }
+  .whatif:not([data-changed]) :is(.wi-intro, .wi-table :is(th, td):last-child) { display: none !important; }
   .theme-toggle, .skip, .search, .wi-actions, [data-wi="controls"], [data-wi="nojs"], .wi-fields, .wi-copy, .wi-slide,
-  .wi-echo, .wi-banner, .wi-solver, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row {
+  .wi-echo, .wi-banner, .wi-solver, .wi-weights, .wi-detail summary, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row {
     display: none !important;
   }
   .print-only { display: block; }

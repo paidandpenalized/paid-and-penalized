@@ -160,6 +160,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     after(el.cut, texts.cut(r.before.flag), texts.cut(r.after.flag));
     const p = texts.pill(r.after.flag);
     setText(el['head-label'], anyChanged(r) ? texts.hypothetical : texts.start);
+    // A changed what-if prints as a scenario; an unchanged one drops its instructions on paper (print.css).
+    if (anyChanged(r)) root.setAttribute('data-changed', '');
+    else root.removeAttribute('data-changed');
     setText(el['head-score'], headScore(s));
     setText(el['head-pill'], p.label);
     el['head-pill'].setAttribute('class', pillClass(p.kind));

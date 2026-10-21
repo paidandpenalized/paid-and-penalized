@@ -132,9 +132,11 @@ test('a changed measure keeps a dotted tick at its starting value on the track; 
   type(field(root, 'MRSA', 'number'), '1.4');
   assert.equal(tick.hidden, false);
   assert.ok(Number(at) > 0, 'placed at the starting value');
+  assert.equal(root.getAttribute('data-changed'), '', 'the section is marked changed (print.css prints it as a scenario)');
   assert.equal(field(root, 'CLABSI', 'start-mark').hidden, true, 'an unchanged measure shows none');
   q(root, 'reset').fire('click');
   assert.equal(tick.hidden, true);
+  assert.equal(root.getAttribute('data-changed'), null);
 });
 
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {
