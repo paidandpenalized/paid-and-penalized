@@ -30,7 +30,7 @@ const BAR_H = 10;
 const BAR_LABELS = 16;
 const STEPS = 5;
 // Steps from --pen-seq-3 up are dark enough for on-mark text (tokens.css).
-const DARK_FROM = 3;
+export const DARK_FROM = 3;
 
 // The ramp classes used for k steps: spread across the five, always both ends.
 const stepsFor = (k) => Array.from({ length: k }, (_, i) => Math.round((i * (STEPS - 1)) / (k - 1)) + 1);
@@ -48,17 +48,8 @@ function checkStates(states) {
 export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, format = plain, showValues = false }) {
   checkId(id, 'tileMap');
   checkStates(states);
-  const valued = Object.values(states).filter((s) => !s.hatched && !s.empty);
-  const anyZero = valued.some((s) => s.value === 0);
-  const anyFew = valued.some((s) => s.few);
-  if (anyZero && !words.zero) throw new RangeError('tileMap: a zero tile needs legend.zero, its legend row');
-  if (anyFew && !words.few) throw new RangeError('tileMap: a few-cases tile needs legend.few, its legend row');
-  if (!words.title || !words.high) throw new RangeError('tileMap: legend.title and legend.high are required');
-  if (!(ramp.length >= 1 && ramp.length < STEPS && ramp.every((t, i) => i === 0 || t > ramp[i - 1]))) {
-    throw new RangeError('tileMap: ramp must be 1 to 4 ascending thresholds');
-  }
-  const steps = stepsFor(ramp.length + 1);
-  const stepOf = scaleThreshold().domain(ramp).range(steps);
+  checkLegend({ ramp, words, states });
+  const { stepOf } = stepScale(ramp);
   const pitch = width / GRID.cols;
   const size = pitch - GAP;
   const gridH = GRID.rows * pitch;
@@ -86,15 +77,44 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
 `;
   });
 
+  const legend = stepLegend({ id, top: gridH, ramp, format, words, states });
+  return frame({
+    kind: 'tile-map', width, height: legend.height, body: html`${hatchDefs(id)}
+${tiles}${legend.body}`,
+  });
+}
+
+// The words and ramp a stepped legend needs, checked against the marks it keys (states: the chart's entries).
+export function checkLegend({ ramp, words = {}, states, who = 'tileMap' }) {
+  const valued = Object.values(states).filter((s) => !s.hatched && !s.empty);
+  if (valued.some((s) => s.value === 0) && !words.zero) throw new RangeError(`${who}: a zero value needs legend.zero, its legend row`);
+  if (valued.some((s) => s.few) && !words.few) throw new RangeError(`${who}: a few-cases value needs legend.few, its legend row`);
+  if (!words.title || !words.high) throw new RangeError(`${who}: legend.title and legend.high are required`);
+  if (!(ramp.length >= 1 && ramp.length < STEPS && ramp.every((t, i) => i === 0 || t > ramp[i - 1]))) {
+    throw new RangeError(`${who}: ramp must be 1 to 4 ascending thresholds`);
+  }
+}
+
+// A value's ramp step (1 to 5; a value at a threshold takes the step above), for a ramp checkLegend passed.
+export function stepScale(ramp) {
+  const steps = stepsFor(ramp.length + 1);
+  return { steps, stepOf: scaleThreshold().domain(ramp).range(steps) };
+}
+
+// The legend under a ramp-shaded chart (the tile map, the US map), starting at y = top: the ramp as one bar of steps
+// under its title, each threshold printed under the edge where its step begins and the ends labelled (zero under the
+// low end, legend.high beside the high end); then one row each for zero, few cases, and every hatched or empty label
+// among states, in sentence case. { body, height }: height is the chart's, legend included.
+export function stepLegend({ id, top, ramp, format = plain, words, states }) {
+  const { steps } = stepScale(ramp);
+  const valued = Object.values(states).filter((s) => !s.hatched && !s.empty);
   const labelsOf = (key) => [...new Set(Object.values(states).filter((s) => s[key]).map((s) => s.label))];
   const others = [
-    ...(anyZero ? [{ label: words.zero, cls: 'chart-tile chart-tile-zero', fill: null }] : []),
-    ...(anyFew ? [{ label: words.few, cls: 'chart-tile chart-tile-zero', fill: null, few: true }] : []),
+    ...(valued.some((s) => s.value === 0) ? [{ label: words.zero, cls: 'chart-tile chart-tile-zero', fill: null }] : []),
+    ...(valued.some((s) => s.few) ? [{ label: words.few, cls: 'chart-tile chart-tile-zero', fill: null, few: true }] : []),
     ...labelsOf('hatched').map((label) => ({ label, cls: 'chart-tile-na', fill: hatchFill(id) })),
     ...labelsOf('empty').map((label) => ({ label, cls: 'chart-tile-empty', fill: null }))];
-  // The ramp as one bar of steps under its title, each threshold printed under the edge where its step begins and
-  // the ends labelled (zero under the low end, legend.high beside the high end); then one row for each other mark.
-  const titleY = gridH + 18;
+  const titleY = top + 18;
   const barY = titleY + 8;
   const labelY = barY + BAR_H + 12;
   const ends = [text({ x: 0, y: labelY, anchor: 'start', cls: 'chart-legend__label', body: format(0) }),
@@ -102,14 +122,10 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
   const bar = html`${text({ x: 0, y: titleY, anchor: 'start', cls: 'chart-legend__title', body: words.title })}${steps.map((step, i) => html`<rect class="chart-tile chart-seq-${step}" x="${r2(i * STEP_W)}" y="${r2(barY)}" width="${STEP_W}" height="${BAR_H}"/>`)}${ramp.map((t, i) => text({ x: (i + 1) * STEP_W, y: labelY, cls: 'chart-legend__label', body: format(t) }))}${ends}`;
   const othersY = barY + BAR_H + BAR_LABELS + 8;
   const rows = others.map((row, i) => ({ ...row, x: 0, y: othersY + i * LEGEND_ROW, body: capitalize(row.label) }));
-  const height = othersY + others.length * LEGEND_ROW;
-
-  return frame({
-    kind: 'tile-map', width, height, body: html`${hatchDefs(id)}
-${tiles}<g class="chart-legend">${bar}${rows.map(({ x, y, cls, fill, few, body }) =>
-      html`<rect class="${cls}"${fill ? html` fill="${fill}"` : ''} x="${r2(x)}" y="${r2(y)}" width="${SWATCH}" height="${SWATCH}"/>${few ? fewOutline(x - 0.5, y - 0.5, SWATCH + 1, '') : ''}${text({ x: x + SWATCH + 6, y: y + SWATCH - 2, anchor: 'start', cls: 'chart-legend__label', body })}`)}</g>`,
-  });
+  const body = html`<g class="chart-legend">${bar}${rows.map(({ x, y, cls, fill, few, body: label }) =>
+    html`<rect class="${cls}"${fill ? html` fill="${fill}"` : ''} x="${r2(x)}" y="${r2(y)}" width="${SWATCH}" height="${SWATCH}"/>${few ? fewOutline(x - 0.5, y - 0.5, SWATCH + 1, '') : ''}${text({ x: x + SWATCH + 6, y: y + SWATCH - 2, anchor: 'start', cls: 'chart-legend__label', body: label })}`)}</g>`;
+  return { body, height: othersY + others.length * LEGEND_ROW };
 }
 
 // The few-cases mark: a dashed outline just inside a tile, in ink (on-mark ink over a dark step).
-const fewOutline = (x, y, size, on) => html`<rect class="chart-tile-few${on ? ' chart-tile-few--on' : ''}" x="${r2(x + FEW_INSET)}" y="${r2(y + FEW_INSET)}" width="${r2(size - 2 * FEW_INSET)}" height="${r2(size - 2 * FEW_INSET)}"/>`;
+export const fewOutline = (x, y, size, on) => html`<rect class="chart-tile-few${on ? ' chart-tile-few--on' : ''}" x="${r2(x + FEW_INSET)}" y="${r2(y + FEW_INSET)}" width="${r2(size - 2 * FEW_INSET)}" height="${r2(size - 2 * FEW_INSET)}"/>`;

@@ -22,9 +22,10 @@ Not covered by either license:
 - The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
 - Third-party fonts, which carry their own licenses next to the font files.
 
-Build tools: the page build uses d3-scale, d3-array and d3-format by Mike Bostock, each under the ISC license, at
-build time only, to draw the charts as SVG. They are development dependencies (package.json); none of their code is
-redistributed in the site's JavaScript.
+Build tools: the page build uses d3-scale, d3-array, d3-format and d3-geo by Mike Bostock, and topojson-client by
+Mike Bostock (with its own dependency commander, by TJ Holowaychuk, under the MIT license), each of the others under
+the ISC license, at build time only, to draw the charts and maps as SVG. None of their code is redistributed in the
+site's JavaScript. d3-geo includes code from GeographicLib by Charles Karney, under the MIT license.
 
 Never included in this repository: CPT codes' descriptors or other material licensed by the American Medical
 Association, copyrighted third-party guides, or proprietary measure specifications.

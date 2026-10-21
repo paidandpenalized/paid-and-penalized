@@ -10,7 +10,7 @@ const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
   '.chart-boundary', '.chart-zone', '.chart-hatch', '.chart-dead__end', '.chart-tile', '.chart-tile-na', '.chart-tile-empty',
-  '.chart-tile-zero', '.chart-tile-few', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
+  '.chart-tile-zero', '.chart-tile-few', '.chart-geo-state', '.chart-geo-few', '.chart-geo-dot', '.chart-geo-halo', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
   // the what-if's bars and ramp
   '.wi-bar', '.wi-bars__row--assigned .wi-bar', '.wi-tri--cms', '.wi-tri--hyp', '.wi-ramp__line', '.wi-ramp__zone',
   // hatched page parts

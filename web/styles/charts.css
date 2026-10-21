@@ -116,6 +116,19 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 /* A hatched tile's code sits on a paper halo, so the hatch never crosses its letters. */
 .chart-tile-na + .chart-tile__code { stroke: var(--paper); stroke-width: 3px; }
 
+/* ---------- maps (web/charts/geo.js) ---------- */
+/* A locator map: the state in the panel tone with an ink outline, the place an ink dot on a paper ring inside a soft
+   ink halo, so it reads on any part of the state. */
+.chart--state-map .chart-geo-state { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-geo-halo { fill: var(--ink); fill-opacity: 0.14; }
+.chart-geo-dot { fill: var(--ink); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* The US map: every state outlined in a thin ink line (over the tile classes' own strokes); nothing to show is plain
+   paper, so the whole state still takes the pointer. Few cases: a dashed ink line just over the outline. */
+.chart--us-map .chart-geo-state { stroke: var(--ink); stroke-width: 0.5px; stroke-dasharray: none; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart--us-map .chart-tile-empty { fill: var(--paper); }
+.chart-geo-few { stroke-width: 1.25px; stroke-dasharray: 3 2; stroke-linejoin: round; }
+.chart-mark.is-active .chart-geo-state { stroke-width: 2.5px; }
+
 /* The hit area is larger than its mark and invisible until the mark is the active one (web/client/figure.js). */
 .chart-hit { fill: transparent; }
 .chart-mark.is-active .chart-hit { fill: var(--ink); fill-opacity: 0.07; }
@@ -138,4 +151,8 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-median, .chart-boundary, .chart-axis__line, .chart-axis__tick, .chart-zero { stroke: CanvasText; }
   .chart-line { stroke: Highlight; }
   .chart-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
+  .chart-geo-state, .chart-geo-few { stroke: CanvasText; }
+  .chart--state-map .chart-geo-state { fill: Canvas; }
+  .chart-geo-dot { fill: CanvasText; stroke: Canvas; }
+  .chart-geo-halo { fill: none; stroke: CanvasText; }
 }

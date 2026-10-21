@@ -13,5 +13,9 @@
     "d3-format": "3.1.2",
     "d3-scale": "4.0.2",
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "d3-geo": "3.1.1",
+    "topojson-client": "3.1.0"
   }
 }
