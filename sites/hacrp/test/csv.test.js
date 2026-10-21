@@ -145,7 +145,7 @@ test('the dictionary states the schema version, the licence, the footnote crossw
   assert.match(DICTIONARY, /\{source_id\}/);
 });
 
-test('dictionaryText fills the fiscal year, dataset id and release date, and refuses an unknown placeholder', () => {
+test('dictionaryText fills the fiscal year, dataset id and release date, and refuses an unknown placeholder or an unused value', () => {
   const text = dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source });
   assert.ok(text.includes(String(DATA.fy)));
   assert.ok(text.includes(DATA.source.id));
@@ -154,6 +154,7 @@ test('dictionaryText fills the fiscal year, dataset id and release date, and ref
   assert.doesNotMatch(text, /\{\w+\}/);
   assert.throws(() => dictionaryText('a {nope} b', { fy: 1, source: DATA.source }), /nope/);
   assert.throws(() => dictionaryText('a {source_title} b', { fy: 1, source: { ...DATA.source, title: undefined } }), /source_title/);
+  assert.throws(() => dictionaryText('{fy} {source_id} {source_title}', { fy: 1, source: DATA.source }), /unused value\(s\) pdc_released/);
 });
 
 test('the build writes the CSV and the dictionary beside it; neither is a page or in the sitemap', () =>

@@ -4,6 +4,7 @@
 // sites/hacrp/DATA-DICTIONARY.md documents every column; a test keeps the two in step.
 import { toCsv } from '../../../engine/js/csv.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
+import { fillCopy } from '../../../web/render/components.js';
 import { isoDate } from '../../../web/render/format.js';
 
 // Bump when a column is added, removed, renamed or changes meaning (the dictionary states it).
@@ -49,15 +50,12 @@ export function hospitalsCsv(hospitals, master) {
   return toCsv(COLUMNS, rows);
 }
 
-const PLACEHOLDER = /\{(\w+)\}/g;
-
 // The dictionary file with its fiscal year, CMS's dataset id and title (from the pinned manifest) and the release
-// date (worded as the pages' source line words it) filled in, so none of them is typed twice. An unknown
-// placeholder, or a value that is missing, throws.
+// date (worded as the pages' source line words it) filled in, so none of them is typed twice. fillCopy's rules hold:
+// an unknown placeholder, a missing value, or a value the file doesn't use throws.
 export function dictionaryText(raw, { fy, source }) {
-  const values = { fy: String(fy), source_id: source.id, source_title: source.title, pdc_released: source.pdcReleased && isoDate(source.pdcReleased) };
-  return raw.replace(PLACEHOLDER, (_, name) => {
-    if (typeof values[name] !== 'string' || values[name] === '') throw new RangeError(`dictionary: no value for {${name}}`);
-    return values[name];
+  const { id, title, pdcReleased } = source;
+  return fillCopy({ dictionary: raw }, 'dictionary', {
+    fy: String(fy), source_id: id, source_title: title, pdc_released: pdcReleased && isoDate(pdcReleased),
   });
 }
