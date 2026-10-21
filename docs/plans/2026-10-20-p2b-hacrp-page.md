@@ -264,7 +264,7 @@ write `robots.txt` and `sitemap.xml`).
 `params[id].median` (rounded to `decimals`, `valueText` with them), `z = zFromValue(value, p)` rounded to 4 dp, `total =
 totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.boundary)`, empty footnotes.
 
-- [ ] Failing tests: `whatIf(medianHospital(model), model)` returns `available: true` and no change; every z equals the
+- [x] Failing tests: `whatIf(medianHospital(model), model)` returns `available: true` and no change; every z equals the
   fitted z of the median value to 4 dp; the result is "No" on the FY2026 model. Implement; commit.
 
 ### Task 8: what-if state, sentences, fragment
@@ -291,13 +291,13 @@ totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.bound
   1.762."). Maryland: score only, "N/A (not subject to the reduction)". The cut reads as a percentage (`REDUCTION_PCT`)
   until dollars ship; a too-close flag reads "0% or 1%".
 
-- [ ] Failing tests: fragment round-trip; `decode` drops `abc`, a missing measure, `-1`, `1e9`, a duplicate key and a
+- [x] Failing tests: fragment round-trip; `decode` drops `abc`, a missing measure, `-1`, `1e9`, a duplicate key and a
   key outside `MEASURE_IDS`, and never throws; the NHSN count never appears in `encode`; `median` never worsens a
   measure and leaves assigned ones; sentence snapshots for: no change, one better change below the line, one worse
   change crossing it, a dead-zone change, an assigned "had it been submitted" change, two changes, too close to call,
   Maryland; solver rows for a flagged hospital (needed value; "not possible with this measure alone"), an unflagged
   one (cushion; "any value: CMS caps … at …"; "no cushion"), and an assigned measure (note, no answer).
-- [ ] Implement; commit.
+- [x] Implement; commit.
 
 ### Task 9: the what-if component on hospital pages
 
@@ -326,11 +326,11 @@ totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.bound
   scrolls a focused field into view on narrow screens, and respects `prefers-reduced-motion`.
 - Phone: the result summary sits above the inputs, not sticky.
 
-- [ ] Failing tests: the rendered HTML for a synthetic hospital contains one `aria-live` region, a slider per scored
+- [x] Failing tests: the rendered HTML for a synthetic hospital contains one `aria-live` region, a slider per scored
   measure with `aria-valuetext`, "Hypothetical", both standing lines, no NHSN value in any URL or attribute; the
   no-score and "Yes with no score" views render no inputs; the browser bundle builds; `dom.js` source contains no
   `innerHTML`, `localStorage`, `fetch` or `XMLHttpRequest`.
-- [ ] Implement; build; in Chrome: drag, type, reset, median, solver, a shared link (banner), keyboard only, 375px.
+- [x] Implement; build; in Chrome: drag, type, reset, median, solver, a shared link (banner), keyboard only, 375px.
   Commit.
 
 ### Task 10: the sandbox on the program page
@@ -338,12 +338,12 @@ totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.bound
 **Files:** Modify `sites/hacrp/web/pages/program.js`, `sites/hacrp/client/program.js` (new entry), tests in
 `sites/hacrp/test/pages.test.js`.
 
-- [ ] The same component on `medianHospital(model)`, labeled "a hypothetical hospital at the national median on
+- [x] The same component on `medianHospital(model)`, labeled "a hypothetical hospital at the national median on
   every measure", `share: false`, no NHSN field. Failing test: the program page contains the sandbox and no fragment
   writer. Implement; commit.
 
 ### Checkpoint M2
-- [ ] `/simplify` → `make test && make build`; `/code-review`; `/security-review` (the fragment is reader input).
+- [x] `/simplify` → `make test && make build`; `/code-review`; `/security-review` (the fragment is reader input).
 
 ## Milestone 3: figures, state view, downloads, claims
 
@@ -455,4 +455,38 @@ Copy button.
   two-row phone header, toggle pressed state, kicker link). Owner-review items are kept in the private planning repo.
   Open Minor, fix in M2: at ≤ 520px the header's visual order (wordmark, toggle, byline) differs from tab order; move
   the toggle before the byline in the markup.
+
+### Milestone 2 (2026-10-20)
+- **Median hospital:** medians round half away from zero at CMS's decimals after a float-noise snap (one `toUnit`
+  helper in `engine/js/stats.js`, also used by the fragment, the what-if state and the hospital view).
+- **Layers:** `web/whatif/` holds the program-neutral component (`render.js`, `dom.js`, `marks.js`, `fragment.js`);
+  HACRP's what-if rules and words live in `sites/hacrp/web/` (`whatif-state.js`, `whatif-text.js`, `pages/whatif.js`).
+  `viewModel` takes the emitted `estimate` as a fourth argument. The page states its baseline (`cms` or `sandbox`)
+  rather than the words detecting the median hospital.
+- **Inputs:** an assigned measure's field starts blank (placeholder names CMS's assigned z) with the slider at its max;
+  a reader value asks "had it been submitted". Field max = 10 × cap (the link accepts the same range); slider max =
+  min(that limit, max(value, cap) × 1.2), updated on commit only. Invalid entries (fields and NHSN counts) show a text
+  error (WCAG 3.3.1).
+- **Result:** the `aria-live` region is the scenario sentence (it states the whole result; a live box would announce
+  every keystroke), plus the estimate note when shown. The dead-zone sentence names the cap or floor when a change
+  moves into it. A starting decision inside the line's band is solved for "No".
+- **Ramp:** spans the 5th–95th percentile of published Total HAC Scores (display constants), widened to hold the
+  hospital's score and the line; a hypothetical past it clamps to the edge with an arrow; labels never overlap.
+  DES-31's figure apparatus does not apply inside the what-if (the ramp is `aria-hidden`; its values are in the
+  result table).
+- **Links:** only `#whatif&…` is a scenario; `#whatif` and `#whatif-h` are in-page anchors. A link that changed
+  something scrolls the what-if into view without animation.
+- **Program page:** the sandbox runs on the median hospital with `share: false` in the existing program entry; no
+  banner, no NHSN fields; its slide text keeps the CMS source line (its parameters come from CMS's file).
+- **Header:** one order at every width (wordmark, byline, toggle), in the markup; at ≤ 520px the byline and toggle
+  share the second row.
+- **Leverage:** the engine returns leverage per unit; the 0.1 display step is a site constant.
+- **Reviews:** per-task reviews (Tasks 8 and 9 took one fix round each); controller Chrome checks (desktop, 375px,
+  light/dark, shared and tampered links); M2 `/simplify` (4 angles; skipped: share as a separate module, esbuild
+  code splitting, lazy-loading the sandbox, a client-only copy file, a shared model asset, a per-page stylesheet —
+  revisit with the size budget); `/code-review` (10 findings, 9 fixed, one kept by design: the median button's label,
+  now with a helper line); `/security-review` (no findings).
+- **Minor items left (M2):** the median button's helper sentence and other new what-if copy go to the owner's copy
+  review; ramp label widths are estimated (7 px per character); the dom tests use a string-slice markup parser;
+  claim id HACRP-14 (the SIR definition) and the what-if copy's claim ids resolve in Task 14.
 
