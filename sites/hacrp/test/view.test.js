@@ -24,6 +24,7 @@ test('a scored "Yes" hospital: the whole view', () => {
     periods: PERIODS,
     status: 'yes',
     scored: true,
+    decided: true,
     score: { text: '0.3000', raw: '0.3000', footnotes: [] },
     decision: { text: 'Yes', footnotes: [] },
     distance: { to: 'highestNo', value: 0.05, text: '0.0500' },
@@ -107,6 +108,11 @@ test('the row reading Yes with no score: status yes-no-score, CMS\'s values only
   assert.deepEqual(v.score, { text: 'N/A', raw: 'N/A', footnotes: [fn('5')] });
   assert.deepEqual(v.decision, { text: 'Yes', footnotes: [] });
   assert.deepEqual([v.distance, v.largest], [null, null]);
+});
+
+test('decided (counted in penalty sentences): scored with a Yes or No only, never Maryland or a row with no score', () => {
+  const decided = Object.fromEntries(['yes', 'no', 'maryland', 'noScore', 'yesNoScore'].map((k) => [k, view(k).decided]));
+  assert.deepEqual(decided, { yes: true, no: true, maryland: false, noScore: false, yesNoScore: false });
 });
 
 test('a one-measure hospital is flagged oneMeasure; its measure carries the whole score', () => {

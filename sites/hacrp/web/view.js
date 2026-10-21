@@ -1,7 +1,7 @@
 // One hospital's page data: CMS's values as CMS published them (with a true minus), CMS's footnote text, and this
 // site's arithmetic (distance to the line, each measure's part of the score). Plain strings only; pages escape.
 import { footnoteList } from '../../../engine/js/footnotes.js';
-import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { isAssigned, isDecided, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
@@ -99,6 +99,8 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     status: st,
     // A hospital with a score gets the distance sentence, the what-if and (on a released site) indexing.
     scored,
+    // Scored, with a Yes or No decision: counted in penalty sentences (the engine's isDecided).
+    decided: isDecided(h),
     // CMS's Total HAC Score text ("N/A" when CMS published none) with a true minus, as published (raw), and its
     // footnotes.
     score: { text: cmsText(h.totalText), raw: h.totalText, footnotes: footnoteList(footnotes, h.totalFootnote) },
@@ -112,19 +114,18 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
   };
 }
 
-// Per state (the master's code), over hospital views: { hospitals, decided (scored, Yes or No), yes, na (scored,
-// decision N/A) }. The program page's tile grid draws it (figures.js statesFigure).
+// Per state (the master's code), over hospital views: { hospitals, decided (scored, Yes or No: the view's decided),
+// yes, na (scored, decision N/A) }. The program page's tile grid draws it (figures.js statesFigure).
 export function stateCounts(views) {
   const out = {};
   for (const v of views) {
     const s = (out[v.state] ??= { hospitals: 0, decided: 0, yes: 0, na: 0 });
     s.hospitals += 1;
-    const d = v.decision.text;
-    if (v.scored && (d === 'Yes' || d === 'No')) {
+    if (v.decided) {
       s.decided += 1;
-      if (d === 'Yes') s.yes += 1;
+      if (v.decision.text === 'Yes') s.yes += 1;
     }
-    if (v.scored && d === 'N/A') s.na += 1;
+    if (v.scored && v.decision.text === 'N/A') s.na += 1;
   }
   return out;
 }

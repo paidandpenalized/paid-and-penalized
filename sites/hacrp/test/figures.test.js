@@ -210,7 +210,7 @@ test('stateCounts counts by the master\'s state', () => {
   assert.equal(STATES.MD.decided, 0);
   assert.ok(STATES.MD.na > 0);
   // Only a scored "N/A" counts as not subject to the reduction.
-  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decision: { text: 'N/A' } }]);
+  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decided: false, decision: { text: 'N/A' } }]);
   assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
 });
 

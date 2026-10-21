@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURES, MEASURE_IDS } from '../../hacrp/measures.js';
-import { decidedHospitals, isAssigned, scoredHospitals, scoredMeasures, toHospital } from '../../hacrp/hospital.js';
+import { decidedHospitals, isAssigned, isDecided, scoredHospitals, scoredMeasures, toHospital } from '../../hacrp/hospital.js';
 import { syntheticRow } from './synthetic.js';
 
 test('six measures in CMS column order', () => {
@@ -50,10 +50,11 @@ test('padded, blank-with-space, hex or exponent text is not a number (schema dri
   assert.equal(toHospital(syntheticRow({ 'CDI W Z Score': '-1.2345' })).measures.CDI.z, -1.2345);
 });
 
-test('scoredHospitals keeps rows with a score; decidedHospitals keeps scored Yes/No rows only', () => {
+test('scoredHospitals keeps rows with a score; decidedHospitals (isDecided) keeps scored Yes/No rows only', () => {
   const row = (ccn, total, decision) => toHospital(syntheticRow({ 'Facility ID': ccn, 'Total HAC Score': total, 'Payment Reduction': decision }));
   const hs = [row('990001', '0.1000', 'No'), row('990002', '0.9000', 'Yes'), row('990003', '0.5000', 'N/A'),
     row('990004', 'N/A', 'Yes'), row('990005', 'N/A', 'No')];
   assert.deepEqual(scoredHospitals(hs).map((h) => h.ccn), ['990001', '990002', '990003']);
   assert.deepEqual(decidedHospitals(hs).map((h) => h.ccn), ['990001', '990002']);
+  assert.deepEqual(hs.map(isDecided), [true, true, false, false, false]);
 });
