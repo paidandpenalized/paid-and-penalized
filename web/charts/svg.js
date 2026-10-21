@@ -6,7 +6,7 @@ import { html } from '../render/html.js';
 
 // Charts are drawn about phone wide, so on a 375px screen their text is near its CSS size.
 export const WIDTH = 360;
-export const RADIUS = 4;
+const RADIUS = 4;
 export const GAP = 2;
 export const MAX_THICKNESS = 24;
 

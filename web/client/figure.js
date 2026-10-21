@@ -4,7 +4,7 @@
 // elsewhere, Escape or a scroll. Program-neutral: it runs on any page with
 // figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
-import { compareNumbers } from '../../engine/js/stats.js';
+import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
@@ -22,8 +22,7 @@ const collate = new Intl.Collator('en').compare;
 export function compareRows(index, numeric, dir) {
   const key = (row) => valueOf(row.cells[index]);
   if (!numeric) return (a, b) => dir * collate(key(a), key(b));
-  const num = (row) => (key(row) === '' ? NaN : Number(key(row)));
-  return (a, b) => compareNumbers(num(a), num(b), dir);
+  return (a, b) => compareNumbers(numberOrNaN(key(a)), numberOrNaN(key(b)), dir);
 }
 
 function mountTable(fig) {
@@ -130,7 +129,7 @@ function mountMarks(fig) {
   });
 }
 
-export function mountFigure(fig) {
+function mountFigure(fig) {
   mountTable(fig);
   mountMarks(fig);
 }

@@ -4,6 +4,9 @@ export function clamp(x, lo, hi) {
   return Math.min(Math.max(x, lo), hi);
 }
 
+// A number from its decimal text; NaN for blank text (Number('') would read 0) or anything that isn't a number.
+export const numberOrNaN = (s) => (String(s).trim() === '' ? NaN : Number(s));
+
 // Two numbers in sort order, dir 1 (ascending) or -1, with NaN (no value) last in either direction.
 export const compareNumbers = (x, y, dir) => (Number.isNaN(x) || Number.isNaN(y) ? Number.isNaN(x) - Number.isNaN(y) : dir * (x - y));
 

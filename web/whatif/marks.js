@@ -47,7 +47,7 @@ export const labelAt = (t) => ({ t, anchor: labelAnchor(t), dx: labelDx(labelAnc
 // NARROW_PX, a 320px phone less its gutters and the result box's padding.
 // Far apart, each label sits under its mark; close together, they sit side by side around the marks' midpoint,
 // the left mark's label on the left, kept inside the figure near either end. Each result is { t, anchor, dx }.
-export const CHAR_PX = 7;
+const CHAR_PX = 7;
 export const NARROW_PX = 260;
 const GAP_PX = 8;
 const INSET_PX = 12;
@@ -94,7 +94,7 @@ export const rampWidthFrom = (t) => `${((1 - t) * (100 - 2 * RAMP_MARGIN)).toFix
 export const lineScore = ({ highestNo, lowestYes }) => (highestNo + lowestYes) / 2;
 
 // A value's place on a slider whose track runs from 0 to max.
-export const trackAt = (value, max) => (max > 0 ? clamp01(value / max) : 0);
+const trackAt = (value, max) => (max > 0 ? clamp01(value / max) : 0);
 export const fraction = (t) => t.toFixed(4);
 
 // A measure's marks on its slider's track (vm input): the floor, the cap and the median, as fractions.

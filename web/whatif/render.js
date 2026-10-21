@@ -31,7 +31,6 @@
 //   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
 import { scaleLinear } from 'd3-scale';
 import { printout } from '../render/components.js';
-import { decimal } from '../render/format.js';
 import { html } from '../render/html.js';
 import {
   assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, labelAt, lineScore, rampAt, rampDomain, rampEdge, rampLabels, rampSide,
@@ -40,8 +39,6 @@ import {
 
 const TICKS = 5;
 const hiddenIf = (condition) => (condition ? html` hidden` : '');
-// The decimals that tell ticks a step apart.
-const tickDecimals = (ticks) => (ticks.length > 1 ? Math.max(0, Math.ceil(-Math.log10(ticks[1] - ticks[0]) - 1e-9)) : 0);
 
 // A text at a ramp place { t, anchor, dx }; name: its data-wi hook for dom.js, if it moves.
 const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
@@ -53,8 +50,10 @@ const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
 function ramp(vm, range, texts) {
   const domain = rampDomain(range, vm.ramp);
   const at = (score) => rampAt(score, domain);
-  const ticks = scaleLinear().domain(domain).ticks(TICKS);
-  const dp = tickDecimals(ticks);
+  // The scale's own tick format (d3-format): the decimals that tell ticks a step apart, with a true minus.
+  const scale = scaleLinear().domain(domain);
+  const ticks = scale.ticks(TICKS);
+  const fmt = scale.tickFormat(TICKS);
   const line = at(lineScore(vm.ramp));
   const start = at(vm.ramp.actual);
   const hyp = at(vm.ramp.hypothetical);
@@ -63,7 +62,7 @@ function ramp(vm, range, texts) {
   return html`<svg class="wi-ramp" data-wi="ramp" width="100%" height="76" aria-hidden="true" focusable="false">
 <defs><path id="wi-tri" d="M0 0L6 11H-6Z"/></defs>
 <rect class="wi-ramp__zone" x="${rampX(line)}" y="18" width="${rampWidthFrom(line)}" height="22"/>
-${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="36" y2="40"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="32" text-anchor="middle">${decimal(x, dp)}</text>`)}
+${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="36" y2="40"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="32" text-anchor="middle">${fmt(x)}</text>`)}
 <line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="40" y2="40"/>
 <line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="16" y2="44"/>
 ${rampText(labelAt(line), 12, texts.rampLine, 'wi-ramp__label')}

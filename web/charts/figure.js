@@ -10,6 +10,7 @@
 //                text, or { text, value }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus), shown
 //                with a true minus, kept in data-value for sorting and the CSV (value null or absent: none)
 //   csvName      the download's file name without .csv (default figure-N)
+import { numberOrNaN } from '../../engine/js/stats.js';
 import { COPY } from '../copy.js';
 import { printout } from '../render/components.js';
 import { cmsText } from '../render/format.js';
@@ -41,13 +42,12 @@ function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName }
 
 // Every number the chart plots (its marks' data-value) must be finite and some numeric cell's value. A cell counts only
 // when its raw value is a finite number written as non-empty text (Number('') is 0, and NaN would match NaN).
-const finite = (s) => (s.trim() === '' ? NaN : Number(s));
 function checkPlotted(n, svg, columns, cells) {
   const inTable = new Set(cells.flatMap((row) => row.filter((c, j) => columns[j].numeric && c.value !== null)
-    .map((c) => finite(c.value)).filter(Number.isFinite)));
+    .map((c) => numberOrNaN(c.value)).filter(Number.isFinite)));
   for (const [, list] of svg.text.matchAll(/data-value="([^"]*)"/g)) {
     for (const v of list.split(' ')) {
-      const x = finite(v);
+      const x = numberOrNaN(v);
       if (!Number.isFinite(x) || !inTable.has(x)) throw new RangeError(`figure ${n}: plotted value "${v}" is not in the table`);
     }
   }
