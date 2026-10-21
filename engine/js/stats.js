@@ -4,9 +4,12 @@ export function clamp(x, lo, hi) {
   return Math.min(Math.max(x, lo), hi);
 }
 
-// x at `decimals` places. Float noise is snapped first, so 0.6405000000000001 reads 0.641. round: Math.round (half
-// away from zero for the values the sites use), or Math.ceil through ceilToUnit.
-export function toUnit(x, decimals, round = Math.round) {
+// Half away from zero on both sides of zero (Math.round alone rounds -2.5 to -2).
+const halfAway = (y) => Math.sign(y) * Math.round(Math.abs(y));
+
+// x at `decimals` places. Float noise is snapped first, so 0.6405000000000001 reads 0.641. round: half away from
+// zero, or Math.ceil through ceilToUnit.
+export function toUnit(x, decimals, round = halfAway) {
   const scale = 10 ** decimals;
   return round(Number((x * scale).toPrecision(9))) / scale;
 }

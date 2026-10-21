@@ -3,6 +3,7 @@
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, decimal, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { measureLabel } from './copy.js';
@@ -12,9 +13,9 @@ import { SHORT_NAMES } from './constants.js';
 export const HOSPITALS_PATH = `${SITE.sites.hacrp.path}hospital/`;
 
 const DP = 4;
-const round = (x) => Math.round(x * 10 ** DP) / 10 ** DP;
+const round = (x) => toUnit(x, DP);
 // An error bound shown at 4 decimals is rounded up, so the text never understates it.
-const ceilText = (x) => decimal(Math.ceil(x * 10 ** DP - 1e-9) / 10 ** DP, DP);
+const ceilText = (x) => decimal(ceilToUnit(x, DP), DP);
 
 function status(h) {
   if (h.paymentReduction === 'N/A') return 'maryland';

@@ -52,3 +52,12 @@ test('toUnit snaps float noise, then rounds to the unit; ceilToUnit rounds up', 
   // 1.1 x 3 is 3.3000000000000003 in floating point: snapped, it stays 3.3.
   assert.equal(ceilToUnit(1.1 * 3, 1), 3.3);
 });
+
+test('toUnit rounds half away from zero on both sides of zero; ceilToUnit stays a ceiling for negatives', () => {
+  assert.equal(toUnit(2.5, 0), 3);
+  assert.equal(toUnit(-2.5, 0), -3);
+  assert.equal(toUnit(-0.00125, 4), -0.0013);
+  assert.equal(toUnit(-0.12344, 4), -0.1234);
+  assert.equal(ceilToUnit(-2.5, 0), -2);
+  assert.equal(ceilToUnit(-0.12341, 4), -0.1234);
+});
