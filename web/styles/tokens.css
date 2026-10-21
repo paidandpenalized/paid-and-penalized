@@ -30,7 +30,7 @@
   /* not in program, no data, not eligible: a 45° hatch, never a color */
   --hatch-fill: repeating-linear-gradient(45deg, var(--hatch) 0 1.5px, transparent 1.5px 6px);
 
-  --font-display: 'Alfa Slab One', Rockwell, 'Roboto Slab', Georgia, serif;
+  --font-display: 'Alfa Slab One', 'Alfa Slab One Fallback', Rockwell, 'Roboto Slab', Georgia, serif;
   --font-body: 'Libre Franklin', 'Franklin Gothic Book', 'Helvetica Neue', Arial, sans-serif;
   --font-type: 'IBM Plex Mono', 'Courier New', Courier, monospace;
 

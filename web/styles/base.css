@@ -1,5 +1,8 @@
 /* Element defaults and small utilities. Fonts are self-hosted from /assets/fonts/ (SIL OFL texts sit beside them). */
 @font-face { font-family: 'Alfa Slab One'; src: url('/assets/fonts/alfa-slab-one-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+/* Shown while Alfa Slab One loads: the system's Georgia Bold scaled to Alfa Slab's width and vertical metrics
+   (measured in the browser: widths within 1%), so a heading barely reflows when the font swaps in. */
+@font-face { font-family: 'Alfa Slab One Fallback'; src: local('Georgia Bold'), local('Georgia-Bold'); font-weight: 400; size-adjust: 103.6%; ascent-override: 100%; descent-override: 32%; line-gap-override: 0%; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
