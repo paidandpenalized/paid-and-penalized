@@ -13,6 +13,7 @@
 //
 // texts:
 //   heading, intro, noScript, resultLabel, fieldsLegend, held, standing   strings
+//   label                                  a line under the heading, or null for none
 //   banner { text, linkText, href }        the shared-link banner (rendered only with share)
 //   start, hypothetical                    column heads and the ramp's two mark labels
 //   rows { score, decision, cut }          the result table's row heads
@@ -21,7 +22,7 @@
 //   flag(flag), cut(flag)                  decision and cut texts (cut: null where there is no cut)
 //   sentence(vm), slide(vm)                the result in words; plain text for "Copy for a slide"
 //   estimate { text, linkText, href }      shown when a changed measure is a recompute
-//   copy, copied, copyFallback, slideLabel, reset, median
+//   copy, copied, copyFallback, slideLabel, reset, median, medianHelp (the line under the buttons)
 //   solver { question, caption, columns: [3 strings], rows(solver) -> [{ id, label, answer, note }] }
 //   weight(n)                              "each measure weighs 1 ÷ n"
 //   measure(input, m) -> { label, short, help, leverage, marks, slider, placeholder, assignedHelp, invalid }
@@ -177,17 +178,21 @@ export function renderWhatIf({ vm, texts, share, range, solver }) {
   if (!vm.result.available) return html``;
   const words = Object.fromEntries(vm.inputs.map((input) => [input.id, texts.measure(input, vm.result.measures[input.id])]));
   return html`<section class="block whatif" id="whatif" aria-labelledby="whatif-h">
-<h2 id="whatif-h">${texts.heading}</h2>
+<h2 id="whatif-h">${texts.heading}</h2>${texts.label && html`
+<p class="cap">${texts.label}</p>`}
 <p>${texts.intro}</p>
 ${share && html`<p class="wi-banner" data-wi="banner" hidden>${texts.banner.text} <a href="${texts.banner.href}">${texts.banner.linkText}</a></p>`}
 <p class="small muted" data-wi="nojs">${texts.noScript}</p>
 <div class="wi-grid">
 ${result(vm, range, texts)}
 <div class="wi-inputs">
-<div class="wi-actions" data-wi="controls" hidden>
+<div data-wi="controls" hidden>
+<div class="wi-actions">
 <button type="button" class="wi-btn" data-wi="reset">${texts.reset}</button>
-<button type="button" class="wi-btn" data-wi="median">${texts.median}</button>
+<button type="button" class="wi-btn" data-wi="median" aria-describedby="wi-median-help">${texts.median}</button>
 ${solver && html`<button type="button" class="wi-btn" data-wi="solve" aria-expanded="true" aria-controls="wi-solver">${texts.solver.question}</button>`}
+</div>
+<p class="small muted" id="wi-median-help">${texts.medianHelp}</p>
 </div>
 ${solver && solverBlock(solver, texts.solver)}
 <p class="small">${texts.weight(vm.result.n)}</p>

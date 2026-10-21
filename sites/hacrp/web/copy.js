@@ -160,6 +160,10 @@ export const COPY = {
   whatifSlideLabel: { text: 'Text for a slide', claim: null },
   whatifReset: { text: 'Reset', claim: null },
   whatifMedian: { text: 'Bring all to the national median', claim: null },
+  whatifMedianHelp: {
+    text: '{button} lowers each measure above its national median to that median and leaves the measures CMS assigned as they are.',
+    claim: null,
+  },
   whatifSolveYes: { text: 'What would it take?', claim: null },
   whatifSolveNo: { text: 'How much cushion?', claim: null },
   whatifFieldsLegend: { text: 'Measure values', claim: null },

@@ -13,11 +13,15 @@ const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
 
 // The words that depend on the starting values. counts: the NHSN fields, whose words compare with CMS's value.
+// label: a line under the heading naming the starting point (the sandbox's), or none.
 const BASELINES = {
-  cms: { intro: 'whatifIntro', start: 'whatifStartCms', none: 'whatifNone', was: 'whatifCmsWas', solverCaption: 'solverCaption', counts: true },
+  cms: {
+    intro: 'whatifIntro', start: 'whatifStartCms', none: 'whatifNone', was: 'whatifCmsWas', solverCaption: 'solverCaption', counts: true,
+    label: null,
+  },
   sandbox: {
     intro: 'whatifIntroMedian', start: 'whatifStartMedian', none: 'whatifNoneMedian', was: 'whatifMedianWas',
-    solverCaption: 'solverCaptionMedian', counts: false,
+    solverCaption: 'solverCaptionMedian', counts: false, label: 'sandboxLabel',
   },
 };
 
@@ -183,6 +187,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   const slide = { name, fy, source, baseline };
   return {
     heading: fill('whatifHeading'),
+    label: words.label && fill(words.label),
     intro: fill(words.intro),
     noScript: fill('whatifNoScript'),
     banner: { text: fill('whatifBanner'), linkText: fill('whatifBannerLink'), href: path },
@@ -204,6 +209,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     slideLabel: fill('whatifSlideLabel'),
     reset: fill('whatifReset'),
     median: fill('whatifMedian'),
+    medianHelp: fill('whatifMedianHelp', { button: fill('whatifMedian') }),
     // Shown only where there are answers (Maryland, not subject to the reduction, has none).
     solver: {
       question: fill(needed ? 'whatifSolveYes' : 'whatifSolveNo'),

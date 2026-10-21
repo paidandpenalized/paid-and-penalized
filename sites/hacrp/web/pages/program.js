@@ -15,11 +15,10 @@ export const PATH = SITE.sites.hacrp.path;
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
 // The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share (its page
-// data, pages/whatif.js, take the same shape as a hospital page's).
+// data, pages/whatif.js, take the same shape as a hospital page's). Its label is the section's, under the heading.
 function sandbox(whatif, { fy, boundaryText, source }) {
   const page = { name: null, fy, path: PATH, source, boundaryText, baseline: 'sandbox', share: false };
-  return html`<p class="cap sandbox-label">${t('sandboxLabel')}</p>
-${whatIfSection(whatif, page, 'hacrp-program')}`;
+  return whatIfSection(whatif, page, 'hacrp-program');
 }
 
 // counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. measures: [{ id, label,

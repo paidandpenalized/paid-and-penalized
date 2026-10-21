@@ -192,6 +192,17 @@ test('without JavaScript: inputs are disabled and say so; buttons hidden', () =>
   assert.match(text, /data-wi="nojs"/);
 });
 
+test('one helper line under the buttons says what the median button does; the button names it', () => {
+  const text = render(H.no);
+  const controls = /<div[^>]*data-wi="controls"[\s\S]*?<\/p>\n<\/div>/.exec(text)[0];
+  const help = 'Bring all to the national median lowers each measure above its national median to that median and '
+    + 'leaves the measures CMS assigned as they are.';
+  assert.ok(controls.includes(esc(help)), controls);
+  assert.match(controls, /data-wi="median" aria-describedby="wi-median-help"/);
+  assert.match(controls, /<p class="small muted" id="wi-median-help">/);
+  assert.ok(controls.indexOf('data-wi="median"') < controls.indexOf('id="wi-median-help"'), 'under the buttons');
+});
+
 // The pages, on pinned rows picked by property.
 const pick = (pred, what) => pickFrom(D.hospitals, pred, what);
 const pageFor = (h) => hospitalPage({
