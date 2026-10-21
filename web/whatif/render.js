@@ -36,7 +36,8 @@
 //                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: the parts
 //                                          of one line (its starting value, median, floor, cap and leverage), each kept
 //                                          whole, with a separator before every part but the first
-//   bars { heading, caption(n), value(contribution), assigned }
+//   bars { heading, caption(n), value(contribution), assigned, lead(vm) }   lead: the framed bars' line for a changed
+//                                          what-if (which part adds the most)
 //   predicted null | { summary, label(id) -> string | null, help, invalid, result(delta) }   NHSN counts, in one
 //                                          folded section after the measures (label null: no field for that measure)
 import { scaleLinear } from 'd3-scale';
@@ -185,16 +186,18 @@ ${fields.map(({ id }) => html`<div class="wi-predicted__row" data-predicted="${i
 }
 
 // Each measure's part of the score (z ÷ n), in the fixed measure order, on one scale for the hospital. framed: a page
-// frames them as a figure, whose caption is their title.
+// frames them as a figure, whose caption is their title (CMS's values): under it, a line dom.js fills once the reader
+// changes something (aria-hidden: the live sentence speaks), and behind each bar CMS's own bar as an outline, shown
+// once the bar moves.
 function bars(vm, words, texts, framed = false) {
   return html`<div class="wi-bars" data-wi="bars">
-${framed ? '' : html`<p class="h-sm">${texts.bars.heading}</p>`}
+${framed ? html`<p class="small wi-bars__lead" data-wi="bars-lead" aria-hidden="true" hidden></p>` : html`<p class="h-sm">${texts.bars.heading}</p>`}
 <ul class="wi-bars__list" role="list">${vm.inputs.map((input) => {
     const m = vm.result.measures[input.id];
     const span = barSpan(m.contribution, vm.extent);
     return html`<li data-bar="${input.id}" class="${barClass(input)}">
 <span class="wi-bars__name">${words[input.id].short}${input.assigned && html` <span class="muted" data-wi="bar-assigned"${hiddenIf(!assignedNow(input))}>(${texts.bars.assigned})</span>`}</span>
-<span class="wi-bars__track"><span class="wi-bar" data-wi="bar" style="--at: ${fraction(span.at)}; --w: ${fraction(span.width)}"></span></span>
+<span class="wi-bars__track">${framed && html`<span class="wi-bar-cms" data-wi="bar-cms" style="--at: ${fraction(span.at)}; --w: ${fraction(span.width)}" hidden></span>`}<span class="wi-bar" data-wi="bar" style="--at: ${fraction(span.at)}; --w: ${fraction(span.width)}"></span></span>
 <span class="wi-bars__value" data-wi="bar-value">${texts.bars.value(m.contribution)}</span>
 </li>`;
   })}</ul>

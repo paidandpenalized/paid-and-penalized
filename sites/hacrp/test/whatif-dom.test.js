@@ -13,6 +13,7 @@ import { renderWhatIf } from '../../../web/whatif/render.js';
 import { html } from '../../../web/render/html.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { textsFor as fixtureTexts } from './fixtures.js';
+import { largestPart } from '../web/whatif-text.js';
 import { DATA as D, RANGE } from './pinned.js';
 
 const { model, estimate } = D;
@@ -165,6 +166,37 @@ test('a page that frames the bars as a figure gets its Hypothetical cells kept i
   q(root, 'reset').fire('click');
   assert.equal(cell.textContent, 'same');
   assert.equal(cell.getAttribute('data-same'), '');
+});
+
+test('framed bars: a changed what-if names its largest hypothetical part under the caption, and keeps CMS\'s bar outlined behind each moved bar', () => {
+  const wrapBars = (b) => html`<figure>${b}</figure>`;
+  const markup = String(renderWhatIf({ vm: viewModel(initialState(H, model), H, model, estimate), texts, share: false, range: RANGE, solver: solverOf(H, model), wrapBars }));
+  assert.match(markup, /<p class="small wi-bars__lead" data-wi="bars-lead" aria-hidden="true" hidden><\/p>/);
+  const root = node(/^<section[^>]*>/.exec(markup)[0], markup);
+  mountWhatIf(root, { rules: whatIfRules(H, model, estimate), texts, share: false, range: RANGE, env: windowStub().env });
+  const lead = q(root, 'bars-lead');
+  const cms = (id) => root.querySelector(`[data-bar="${id}"]`).querySelector('[data-wi="bar-cms"]');
+  assert.equal(lead.hidden, true, 'unchanged: the caption (CMS\'s values) speaks alone');
+  assert.equal(cms('MRSA').hidden, true);
+  type(field(root, 'MRSA', 'number'), '2.5');
+  const part = root.querySelector('[data-bar="MRSA"]').querySelector('[data-wi="bar-value"]').textContent;
+  assert.equal(lead.hidden, false);
+  assert.equal(lead.textContent, `Hypothetical: MRSA adds the most, ${part}.`, 'MRSA raised far enough adds the most');
+  assert.equal(cms('MRSA').hidden, false, 'the moved bar keeps CMS\'s outline');
+  assert.equal(cms('CLABSI').hidden, true, 'an unmoved bar needs none');
+  for (const id of ['PSI90', 'CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA']) type(field(root, id, 'number'), '0');
+  assert.equal(lead.textContent, 'Hypothetical: no measured result adds to the score.', 'no part above zero');
+  q(root, 'reset').fire('click');
+  assert.equal(lead.hidden, true);
+  assert.equal(lead.textContent, '');
+  assert.equal(cms('MRSA').hidden, true);
+});
+
+test('the build\'s largest part and the what-if\'s use one rule: the largest positive part, never an assigned one', () => {
+  const p = (assigned, contribution) => ({ assigned, contribution });
+  const parts = [p(false, 0.1), p(true, 0.9), p(false, 0.3), p(false, 0.3)];
+  assert.equal(largestPart(parts), parts[2], 'the first of a tie; the assigned one skipped');
+  assert.equal(largestPart([p(false, -0.2), p(false, 0), p(false, null)]), null);
 });
 
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {

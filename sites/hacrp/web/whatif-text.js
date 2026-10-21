@@ -35,6 +35,27 @@ function wordsFor(baseline) {
 
 const value = (x, model, id) => decimal(x, model.params[id].decimals);
 
+// The measure that adds the most to the score, among those with a measured result: [{ assigned, contribution }, …]
+// in measure order -> the entry with the largest positive contribution (the first, on a tie), or null when none is
+// positive. Never one whose score CMS assigned. The page's takeaway (view.js) and the what-if's line for the
+// reader's hypothetical (bars.lead) use this one rule.
+export function largestPart(parts) {
+  let largest = null;
+  for (const m of parts) {
+    if (m.assigned || m.contribution === null || m.contribution <= 0) continue;
+    if (!largest || m.contribution > largest.contribution) largest = m;
+  }
+  return largest;
+}
+
+// The framed bars' line for a changed what-if: the hypothetical part that adds the most, by largestPart; a measure
+// CMS assigned counts once the reader gives it a value ("had it been submitted").
+function barsLead(vm) {
+  const parts = vm.inputs.map((input) => ({ id: input.id, assigned: input.assigned && input.value === null, contribution: vm.result.measures[input.id].contribution }));
+  const top = largestPart(parts);
+  return top ? fill('figPartsHyp', { short: SHORT_NAMES[top.id], contribution: signed(top.contribution, PART_DP) }) : fill('figPartsHypNone');
+}
+
 export function flagText(flag) {
   if (!has(FLAG_KEYS, flag)) throw new RangeError(`no flag text for "${flag}"`);
   return fill(FLAG_KEYS[flag]);
@@ -275,6 +296,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       caption: (n) => fill('whatifBarsCaption', { n: String(n) }),
       value: (contribution) => signed(contribution, PART_DP),
       assigned: fill('whatifBarAssigned'),
+      lead: barsLead,
     },
     // NHSN predicted counts: SIRs only, from CMS's values (the words compare with CMS's value), with an HAI period.
     predicted: hai === null ? null : {

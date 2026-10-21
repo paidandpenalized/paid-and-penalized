@@ -370,6 +370,9 @@ export const COPY = {
     claim: 'HACRP-05',
   },
   figPartsAssigned: { text: '{short}, assigned', claim: 'HACRP-05' },
+  // Under the takeaway (CMS's values) once the reader changes the what-if: the same finding for the hypothetical.
+  figPartsHyp: { text: 'Hypothetical: {short} adds the most, {contribution}.', claim: 'HACRP-04' },
+  figPartsHypNone: { text: 'Hypothetical: no measured result adds to the score.', claim: 'HACRP-04' },
   figColPart: { text: 'Part of the score', claim: null },
   // Hospital page, Figure: each measure's value against the national range.
   figRangeTakeaway: {

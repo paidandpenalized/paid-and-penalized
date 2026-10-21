@@ -69,11 +69,13 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       barValue: q('bar-value', bar),
       // The bars' figure table, when a page frames the bars as a figure: this measure's hypothetical part.
       partCell: q(`part-${id}`),
+      // CMS's bar, outlined behind the bar once it moves (framed bars only).
+      barCms: q('bar-cms', bar),
       barAssigned: q('bar-assigned', bar),
     }];
   }));
   const el = Object.fromEntries(['detail', 'head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
-    'start-label', 'hyp-edge', 'ramp', 'banner', 'copy',
+    'start-label', 'hyp-edge', 'ramp', 'banner', 'copy', 'bars-lead',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
@@ -214,6 +216,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       row.bar.style.setProperty('--w', fraction(span.width));
       const part = texts.bars.value(m.contribution);
       setText(row.barValue, part);
+      if (row.barCms) row.barCms.hidden = part === startPart[input.id];
       if (row.partCell) {
         const same = part === startPart[input.id];
         setText(row.partCell, same ? texts.same : part);
@@ -231,6 +234,11 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
         row.count.hidden = !count;
         setText(row.count, count ? texts.predicted.result(count.delta) : '');
       }
+    }
+    if (el['bars-lead']) {
+      const lead = changed ? texts.bars.lead(vm) : '';
+      setText(el['bars-lead'], lead);
+      el['bars-lead'].hidden = !lead;
     }
     if (el.banner) el.banner.hidden = !(linked && hasChanges(state));
     // Reset reads as unavailable while there is nothing to reset (it stays focusable and harmless).

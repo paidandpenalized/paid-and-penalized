@@ -10,6 +10,7 @@ import { SITE } from '../../../web/site.js';
 import { measureLabel } from './copy.js';
 import { SHORT_NAMES } from './constants.js';
 import { hospitalHref } from './hospital-table.js';
+import { largestPart } from './whatif-text.js';
 
 // Hospital pages live at <HOSPITALS_PATH><ccn, lowercase>/.
 export const HOSPITALS_PATH = `${SITE.sites.hacrp.path}hospital/`;
@@ -80,11 +81,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
   });
 
   // The measure that added most, among those with a measured result: never one CMS assigned (its view entry).
-  let largest = null;
-  for (const m of measures) {
-    if (m.assigned || m.contribution === null || m.contribution <= 0) continue;
-    if (!largest || m.contribution > largest.contribution) largest = m;
-  }
+  const largest = largestPart(measures);
 
   const scored = h.total !== null;
   return {
