@@ -7,6 +7,8 @@
 //   svg          a chart from this kit (Safe, starting <svg), drawn about phone wide
 //   svgWide      optional: the same chart drawn on a wider viewBox for screens 560px and up (charts.css shows one
 //                of the two), so its text keeps its size instead of growing with the chart
+//   chart        in place of svg: a chart that is not a kit SVG (Safe HTML, e.g. the what-if's live bars, which
+//                name their own parts); alt is then not used, and its marks carry no data-value to check
 //   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
 //   key          optional: [{ swatch, label }], a one-line key above the chart naming marks it doesn't label itself;
 //                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words
@@ -33,12 +35,14 @@ function cellOf(cell, numeric) {
 
 const isChart = (svg) => svg instanceof Safe && svg.text.startsWith('<svg ');
 
-function checkArgs({ n, takeaway, svg, svgWide, source, claimLevel, table, alt, csvName, note, key }) {
+function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key }) {
   if (!Number.isInteger(n) || n < 1) throw new RangeError(`figure: n must be a positive integer, got ${n}`);
   if (typeof takeaway !== 'string' || !takeaway) throw new TypeError(`figure ${n}: a takeaway is required`);
-  if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);
+  if (chart !== null) {
+    if (!(chart instanceof Safe) || svg !== undefined) throw new TypeError(`figure ${n}: chart must be Safe markup, given in place of svg`);
+  } else if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);
   if (!(source instanceof Safe) && (typeof source !== 'string' || !source)) throw new TypeError(`figure ${n}: a source line is required`);
-  if (!isChart(svg)) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
+  if (chart === null && !isChart(svg)) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
   if (svgWide !== null && !isChart(svgWide)) throw new TypeError(`figure ${n}: svgWide must be a chart from web/charts`);
   if (!Object.hasOwn(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
   if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
@@ -75,15 +79,15 @@ const tableCell = (cell, column, j) => {
 // The chart as an image named by alt; fit: 'narrow' or 'wide' when the figure carries both variants.
 const imageOf = (svg, alt, fit) => new Safe(html`<svg role="img" aria-label="${alt}"${fit ? html` data-fit="${fit}"` : ''} `.text + svg.text.slice('<svg '.length));
 
-export function figure({ n, takeaway, svg, svgWide = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
-  checkArgs({ n, takeaway, svg, svgWide, source, claimLevel, table, alt, csvName, note, key });
+export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
+  checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key });
   const { columns, rows } = table;
   const cells = rows.map((row) => row.map((c, j) => cellOf(c, columns[j].numeric)));
-  checkPlotted(n, svg, columns, cells);
+  if (chart === null) checkPlotted(n, svg, columns, cells);
   if (svgWide) checkPlotted(n, svgWide, columns, cells);
   const claim = CLAIMS[claimLevel];
-  const image = svgWide ? html`${imageOf(svg, alt, 'narrow')}
-${imageOf(svgWide, alt, 'wide')}` : imageOf(svg, alt, null);
+  const image = chart ?? (svgWide ? html`${imageOf(svg, alt, 'narrow')}
+${imageOf(svgWide, alt, 'wide')}` : imageOf(svg, alt, null));
   return html`<figure class="fig" id="figure-${n}" data-figure>
 <figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>

@@ -216,11 +216,11 @@ ${printout(html`<table class="gb wi-solver__table" aria-labelledby="wi-solver-h"
 </div>`;
 }
 
-// vm: the view model of the starting state. share (required): the page keeps the reader's changes in its URL (the
-// banner is rendered only then). range: { low, high }, the ramp's national span of scores. solver (required): the
+// vm: the view model of the starting state. wrapBars: optional (barsHtml) -> Safe, a page's frame for the bars (a
+// numbered figure). share (required): the page keeps the reader's changes in its URL (the banner is rendered only then). range: { low, high }, the ramp's national span of scores. solver (required): the
 // site's solver answers, which texts.solver.rows() words, or null for none (no button, no table). A view model
 // with no result (a hospital with no score) gets nothing.
-export function renderWhatIf({ vm, texts, share, range, solver }) {
+export function renderWhatIf({ vm, texts, share, range, solver, wrapBars = null }) {
   if (typeof share !== 'boolean') throw new TypeError('renderWhatIf: share must be true or false');
   if (!Number.isFinite(range?.low) || !Number.isFinite(range?.high)) throw new TypeError('renderWhatIf: range { low, high } is required');
   if (solver !== null && !Array.isArray(solver)) throw new TypeError('renderWhatIf: solver must be the solver answers or null');
@@ -253,7 +253,7 @@ ${predictedBlock(vm, texts)}
 </fieldset>
 </div>
 </div>
-${bars(vm, words, texts)}
+${wrapBars ? wrapBars(bars(vm, words, texts)) : bars(vm, words, texts)}
 <p class="small print-only">${texts.print}</p>
 <p class="small muted">${texts.rampLegend}</p>
 <p class="small muted">${texts.held}</p>

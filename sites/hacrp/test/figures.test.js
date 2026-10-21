@@ -26,7 +26,11 @@ const COUNTS = { decided: SCORES.length, yes: SCORES.filter((s) => s.yes).length
 const VIEWS = DATA.hospitals.map((h) => hospitalView({ hospital: h, model, estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }));
 const STATES = stateCounts(VIEWS);
 
-const render = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+// A hospital page with its what-if (scored hospitals), whose bars are the page's last figure.
+const render = (h) => hospitalPage({
+  view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES,
+  whatif: h.total === null ? null : { hospital: h, model, estimate, range: RANGE },
+});
 const program = (overrides = {}) => programPage({
   fy: DATA.fy, counts: COUNTS, boundaryText: DATA.boundaryText, periods: DATA.periods,
   searchUrl: '/assets/hacrp-hospitals.0000abcd.json', source: DATA.source, robots: null, assets: ASSETS,
@@ -40,40 +44,44 @@ const captions = (text) => figures(text).map(([, , body]) => /<figcaption class=
 // Measure short names (PSI 90) are CMS's names, not numbers.
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s.replaceAll('&#39;', "'")).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
 
-test('a scored hospital page has Figure 1 (each measure\'s part) and Figure 2 (each value against the national range), before the what-if', () => {
+test('a scored hospital page has Figure 1 (each value against the national range) and Figure 2 (each measure\'s part: the what-if\'s live bars)', () => {
   const text = render(CASES.yes);
   assert.deepEqual(captions(text).map(([n]) => n), ['1', '2']);
-  const [[, part], [, range]] = captions(text);
+  const [[, range], [, part]] = captions(text);
   const view = hospitalView(inputs(CASES.yes));
   assert.equal(part, esc(`CLABSI added the most to this hospital’s Total HAC Score of ${view.score.text} among its measured results: ${view.largest.contributionText}.`));
   assert.match(range, /^Of the 6 measures with a published value, this hospital’s value is above the national median on \d and at or below it on \d\.$/);
   assert.ok(text.indexOf('id="figure-1"') > text.indexOf('gb--measures'));
-  // The what-if is not rendered here (no whatif data), so check order against the as-of bar instead.
-  assert.ok(text.indexOf('id="figure-2"') < text.indexOf('class="asof'));
+  // Figure 2 frames the what-if's bars, inside the what-if: no static copy of them anywhere else.
+  const whatif = text.slice(text.indexOf('id="whatif"'));
+  assert.match(whatif, /<figure class="fig" id="figure-2" data-figure>[\s\S]*?<div class="wi-bars" data-wi="bars">/);
+  assert.doesNotMatch(text, /chart--bars/, 'no static bar chart');
+  assert.equal(text.match(/data-wi="bars"/g).length, 1);
+  assert.match(figures(text)[1][2], /<span class="fig__claim">This site recomputes<\/span> · Source/);
   assert.ok(text.includes('<script type="module" src="/assets/figure.test.js"></script>'));
 });
 
-test('Figure 1 hatches an assigned measure, says so in its label, and never names it as the largest', () => {
+test('Figure 2 hatches an assigned measure, says so in its label, and never names it as the largest', () => {
   const text = render(CASES.assignedLargest);
-  const [fig] = figures(text);
-  assert.match(fig[2], /class="chart-bar-na" fill="url\(#chart-parts-hatch\)"/);
-  assert.ok(fig[2].includes('>SSI, assigned</text>'));
-  assert.doesNotMatch(captions(text)[0][1], /SSI/);
+  const [, fig] = figures(text);
+  assert.match(fig[2], /<li data-bar="SSI" class="wi-bars__row wi-bars__row--assigned">/);
+  assert.match(fig[2], /data-bar="SSI"[\s\S]*?\(assigned by CMS\)/);
+  assert.doesNotMatch(captions(text)[1][1], /SSI/);
 });
 
-test('Figure 1 with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
+test('the bars figure with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
   const text = render(CASES.allAssigned);
   const view = hospitalView(inputs(CASES.allAssigned));
   assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
-  assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no Figure 2: no measure has a published value');
+  assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no range figure: no measure has a published value, so the bars are Figure 1');
   const one = render(CASES.oneMeasure);
-  assert.equal(figures(one)[0][2].match(/data-row="/g).length, 1);
-  assert.match(captions(one)[1][1], /^This hospital has a published value for one measure, PSI 90, and it is (above|at or below) the national median\.$/);
+  assert.equal(figures(one)[1][2].match(/data-bar="/g).length, 1);
+  assert.match(captions(one)[0][1], /^This hospital has a published value for one measure, PSI 90, and it is (above|at or below) the national median\.$/);
 });
 
-test('Figure 2: a measure with no value has no triangle and says so; its table quotes CMS\'s footnotes', () => {
+test('Figure 1: a measure with no value has no triangle and says so; its table quotes CMS\'s footnotes', () => {
   const text = render(CASES.no);
-  const [, [, , body]] = figures(text);
+  const [[, , body]] = figures(text);
   assert.equal(body.match(/class="chart-this"/g).length, 5, 'one triangle per published value');
   assert.ok(body.includes('>SSI</text>') && body.includes('class="chart-note" x="76" y="42" text-anchor="start">no value published</text>'), 'the row keeps its title and says it has no value');
   // A key names the marks once; the ▲'s own label prints only under the first ▲.
@@ -276,7 +284,7 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
   }
   // Counts in a hospital takeaway follow the data: drop a measure's value and the count drops with it.
   const fewer = { ...CASES.yes, measures: { ...CASES.yes.measures, MRSA: { ...CASES.yes.measures.MRSA, value: null, valueText: 'N/A' } } };
-  assert.match(captions(render(fewer))[1][1], /^Of the 5 measures/);
+  assert.match(captions(render(fewer))[0][1], /^Of the 5 measures/);
 
   // The program page: change the data and every number in its takeaways changes with it. Each figure counts its own
   // data, so the histogram's takeaway follows its scores and the tile grid's national share follows its states.

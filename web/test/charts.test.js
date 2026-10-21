@@ -373,6 +373,16 @@ test('figure: an optional wide variant rides beside the phone one, both named by
   assert.throws(() => figure({ ...FIG, svgWide: extra }), /not in the table/);
 });
 
+test('figure: a chart that is not a kit SVG frames as given, in place of svg, with no alt or plotted-value check', () => {
+  const chart = new Safe('<div class="live">bars</div>');
+  const s = String(figure({ ...FIG, svg: undefined, alt: undefined, chart }));
+  assert.ok(s.includes('</figcaption>\n<div class="live">bars</div>'));
+  assert.ok(!s.includes('role="img"'));
+  assert.ok(s.includes('<details class="fig__table">'), 'still a table');
+  assert.throws(() => figure({ ...FIG, chart }), /in place of svg/);
+  assert.throws(() => figure({ ...FIG, svg: undefined, chart: '<div>' }), /Safe/);
+});
+
 test('figure: every plotted value must be in the table, or the figure refuses to build', () => {
   for (const svg of [contribBars(BARS), dotRange(DOT), ramp(RAMP), histogram(HIST), tileMap(MAP)]) {
     const values = [...String(svg).matchAll(/data-value="([^"]+)"/g)].flatMap((m) => m[1].split(' '));

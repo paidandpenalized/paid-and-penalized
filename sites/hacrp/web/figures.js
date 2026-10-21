@@ -38,8 +38,9 @@ export function measureRanges(model) {
   }));
 }
 
-// Hospital page: each scored measure's part of the Total HAC Score (its z-score divided by the number scored).
-export function partsFigure(view, n, source) {
+// Hospital page: each scored measure's part of the Total HAC Score (its z-score divided by the number scored). chart:
+// the what-if's live bars to frame in place of the static bar chart (the takeaway and table are CMS's values).
+export function partsFigure(view, n, source, chart = null) {
   // The plotted part is the number the view's text shows (so the bar, its table and the takeaway agree to the digit).
   const parts = view.measures.filter((m) => m.contribution !== null).map((m) => ({
     m, value: m.contributionRaw, label: m.assigned ? fill('figPartsAssigned', { short: m.short }) : m.short,
@@ -50,7 +51,7 @@ export function partsFigure(view, n, source) {
     : fill('figPartsNone', { total: view.score.text, n: String(view.n) });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figPartsAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-parts`,
-    svg: contribBars({ id: 'parts', rows: parts.map(({ m, value, label }) => ({ id: m.id, label, value, assigned: m.assigned })), format: (v) => signed(v, DP) }),
+    ...(chart ? { chart } : { svg: contribBars({ id: 'parts', rows: parts.map(({ m, value, label }) => ({ id: m.id, label, value, assigned: m.assigned })), format: (v) => signed(v, DP) }) }),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }],
       rows: parts.map(({ m, value, label }) => [label, m.zRaw, num(m.contributionText, value)]),

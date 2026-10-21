@@ -38,13 +38,14 @@ function whatIfData({ hospital, model, estimate, range }, page) {
   };
 }
 
-// The section's HTML and its page data, under the script id dataId.
-export function whatIfSection(whatif, page, dataId) {
+// The section's HTML and its page data, under the script id dataId. wrapBars: optional frame for the bars
+// (renderWhatIf).
+export function whatIfSection(whatif, page, dataId, wrapBars = null) {
   const { hospital, model, estimate, range } = whatif;
   const data = whatIfData(whatif, page);
   const rules = whatIfRules(hospital, model, estimate);
   const vm = rules.viewModel(rules.start);
   const texts = whatIfTexts({ hospital, model, ...data.page });
-  return html`${renderWhatIf({ vm, texts, share: page.share, range, solver: solverOf(hospital, model) })}
+  return html`${renderWhatIf({ vm, texts, share: page.share, range, solver: solverOf(hospital, model), wrapBars })}
 ${jsonScript(dataId, data)}`;
 }

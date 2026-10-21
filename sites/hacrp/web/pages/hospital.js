@@ -72,21 +72,23 @@ const legend = (view) => footnoteLegend({
   lists: [view.score.footnotes, view.decision.footnotes, ...view.measures.map((m) => m.footnotes)],
 });
 
-// The what-if for a scored hospital, CMS's values to start, shared by link (pages/whatif.js has its page data).
-function whatIfBlock(view, whatif, source, assets) {
+// The what-if for a scored hospital, CMS's values to start, shared by link (pages/whatif.js has its page data). Its
+// bars are the page's figure n: each measure's part of the score, live as the reader changes a value.
+function whatIfBlock(view, whatif, source, assets, n) {
   const script = assets.js['hacrp-hospital'];
   if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
   const page = { name: view.name, fy: view.fy, path: view.path, source, boundaryText: view.boundaryText, baseline: 'cms', share: true };
-  return { body: whatIfSection(whatif, page, 'hacrp-hospital'), script };
+  const wrapBars = (chart) => partsFigure(view, n, sourceText({ fy: view.fy, source }), chart);
+  return { body: whatIfSection(whatif, page, 'hacrp-hospital', wrapBars), script };
 }
 
-// A scored hospital's figures, numbered in page order: each measure's part of the score, then each measure's value
-// against the national range (when any measure has a published value).
+// A scored hospital's figures before the what-if: each measure's value against the national range (when any
+// measure has a published value). The what-if's bars follow as the next number.
 function figures(view, ranges, source) {
   if (!view.scored) return [];
   if (!ranges) throw new TypeError('hospitalPage: a scored hospital needs ranges (measureRanges in figures.js)');
   const line = sourceText({ fy: view.fy, source });
-  return [partsFigure(view, 1, line), rangeFigure(view, ranges, 2, line)].filter(Boolean);
+  return [rangeFigure(view, ranges, 1, line)].filter(Boolean);
 }
 
 // robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
@@ -102,8 +104,8 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
   const distance = distanceSentence(view);
   const small = smallNumber(view);
   const home = SITE.sites.hacrp.path;
-  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets) : null;
   const figs = figures(view, ranges, source);
+  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, figs.length + 1) : null;
 
   const body = html`<article class="wrap page">
 <header class="page__head">
@@ -146,7 +148,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [...(figs.length ? [assets.js.figure] : []), assets.js.cite, ...(what ? [what.script] : [])],
+    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, ...(what ? [what.script] : [])],
     assets,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
   });
