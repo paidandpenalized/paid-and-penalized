@@ -43,9 +43,11 @@ if (box) {
   const input = box.querySelector('input');
   const list = box.querySelector('datalist');
   const status = box.querySelector('[role="status"]');
-  // Each hospital: its label (the datalist's option), the text a query is matched against (key), and its page.
+  // Each hospital: the text a query is matched against (key) and its page; and, built with them, each label (the
+  // datalist's option) to its page, so a keystroke looks a pick up without a scan.
   const entries = [];
-  const pathOf = (label) => entries.find((e) => e.label === label)?.path;
+  const paths = new Map();
+  const pathOf = (label) => paths.get(label);
 
   async function load() {
     const { hospitalPath, rows } = await hospitals(box.dataset.src);
@@ -57,7 +59,9 @@ if (box) {
     list.replaceChildren(...valid.map((cells, i) => {
       const [ccn] = cells;
       const label = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
-      entries.push({ label, key: searchKey(cells), path: hospitalHref(hospitalPath, ccn) });
+      const path = hospitalHref(hospitalPath, ccn);
+      entries.push({ key: searchKey(cells), path });
+      paths.set(label, path);
       const option = document.createElement('option');
       option.value = label;
       return option;
