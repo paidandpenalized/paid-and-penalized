@@ -1,6 +1,7 @@
 // The program page's search script (client/program.js) against a stand-in DOM: it fetches the hospitals asset on
 // first focus, builds the datalist in one step, skips bad rows, and opens a hospital's page on a pick or on submit;
-// a submit with several matches hands the query to the table's filter, and one with none says so.
+// a submit with several matches hands the query to the table's filter, one with none says so, and one while the list
+// won't load says that instead.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -8,6 +9,7 @@ const ORIGINAL = { document: globalThis.document, window: globalThis.window, fet
 
 // The stand-ins stay in place until the test ends (t.after), since the script fetches on a later focus.
 async function run(t, asset, { ok = true } = {}) {
+  const net = { ok };
   const handlers = {};
   const input = { value: '', addEventListener: (type, fn) => { handlers[type] = fn; } };
   const list = { options: null, replaceChildren: (...options) => { list.options = options.map((o) => o.value); } };
@@ -24,7 +26,7 @@ async function run(t, asset, { ok = true } = {}) {
   const others = { '#ht-name': filter, '#hospitals': section };
   globalThis.document = { querySelector: (s) => (s === '.search[data-src]' ? box : others[s] ?? null), createElement: () => ({}) };
   globalThis.window = { location: { assign: (p) => opened.push(p) } };
-  globalThis.fetch = async (url) => { fetched.push(url); return { ok, status: ok ? 200 : 500, json: async () => asset }; };
+  globalThis.fetch = async (url) => { fetched.push(url); return { ok: net.ok, status: net.ok ? 200 : 500, json: async () => asset }; };
   t.after(() => {
     for (const [k, v] of Object.entries(ORIGINAL)) {
       if (v === undefined) delete globalThis[k];
@@ -39,7 +41,7 @@ async function run(t, asset, { ok = true } = {}) {
     assert.ok(prevented, 'the form never submits to the server');
   };
   return {
-    handlers, input, list, box, status, filter, section, fetched, opened, submit,
+    handlers, input, list, box, status, filter, section, fetched, opened, submit, net,
     focus: async () => { handlers.focus(); await new Promise((r) => setTimeout(r, 0)); },
   };
 }
@@ -102,6 +104,18 @@ test('a failed fetch or a bad hospitalPath leaves the list empty, and a later fo
   const bad = await run(t, { ...ASSET, hospitalPath: 'javascript:alert(1)//' });
   await bad.focus();
   assert.equal(bad.list.options, null);
+});
+
+test('a submit while the list won\'t load says the list didn\'t load, not "no match"; a later submit tries again', async (t) => {
+  const s = await run(t, ASSET, { ok: false });
+  await s.submit('sample');
+  assert.equal(s.fetched.length, 1);
+  assert.equal(s.status.textContent, 'The table didn\u2019t load.');
+  assert.deepEqual(s.opened, []);
+  s.net.ok = true;
+  await s.submit('sample');
+  assert.equal(s.fetched.length, 2);
+  assert.deepEqual(s.opened, ['/hacrp/hospital/990003/']);
 });
 
 test('the asset is in the table\'s order (state, then name); the search lists its labels by name', async (t) => {

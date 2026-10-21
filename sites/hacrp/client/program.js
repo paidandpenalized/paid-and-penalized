@@ -3,9 +3,10 @@
 // and the table's section shows a sentence and the CSV link.
 // The search: a native datalist of hospital names, fetched the first time the box gets focus; choosing one opens
 // its page. Submitting (Enter or the button) matches the name, city or CCN: one match opens its page, several are
-// handed to the table below (its text filter, scrolled into view), none says so. The table: every hospital, sortable
-// by any column, filtered by a state (kept in the URL as #state=XX) and by name, city or CCN; its rows are fetched
-// when the section nears the screen, or at once when the URL names a state.
+// handed to the table below (its text filter, scrolled into view), none says so; a list that didn't load says that, and
+// the next submit fetches it again. The table: every hospital, sortable by any column, filtered by a state (kept in
+// the URL as #state=XX) and by name, city or CCN; its rows are fetched when the section nears the screen, or at once
+// when the URL names a state.
 // The sandbox: the what-if on the median hospital, mounted from the page's own data (client/whatif.js), whose
 // share is false: the URL is never read or written by it.
 import { CCN } from '../../../engine/js/ccn.js';
@@ -63,8 +64,12 @@ if (box) {
     }));
   }
 
+  // true once the list is in; false when the fetch failed, and the next call tries again.
   let loading = null;
-  const ready = () => (loading ??= load().catch(() => { loading = null; }));
+  const ready = () => (loading ??= load().then(() => true, () => {
+    loading = null;
+    return false;
+  }));
   input.addEventListener('focus', ready);
 
   const go = (path) => { if (path) window.location.assign(path); };
@@ -85,7 +90,11 @@ if (box) {
     event.preventDefault();
     const query = input.value.trim();
     if (!query) return;
-    await ready();
+    // A list that didn't load says so (the table's words), rather than "No hospital matches."
+    if (!(await ready())) {
+      status.textContent = fill('tableFailed');
+      return;
+    }
     const picked = pathOf(input.value);
     if (picked) return go(picked);
     const q = query.toLowerCase();
