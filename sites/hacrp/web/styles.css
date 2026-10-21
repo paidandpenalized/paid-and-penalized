@@ -17,9 +17,8 @@
    phone it comes first (the order is visual only: the hero has nothing to tab to). */
 .hero__pill .pill { padding: 5px 12px 4px; font-size: var(--fs-lg); }
 @media (max-width: 520px) { .hero__item--decision { order: -1; } }
-/* Forced colors: the no-score hatch (a gradient, dropped there) is redrawn in system colors. */
+/* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
-  .hero__none { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .hero__none span { background: Canvas; color: CanvasText; }
 }
 

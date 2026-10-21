@@ -49,11 +49,14 @@
 /* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. The swatch and the room
    it takes (a text-indent, added to whatever padding a context sets) are in em, so a larger pill needs no override. */
 .pill--na { text-indent: 0.88em; border-color: var(--line); background: var(--hatch-fill) left / 0.76em 100% no-repeat, var(--paper); }
-/* Forced colors: the word carries the decision; the N/A swatch's hatch (a gradient, dropped there) is redrawn in
-   system colors. */
+/* Forced colors: the word carries the decision. Every part drawn with the hatch (a gradient, dropped there) opts out
+   of the adjustment and redraws it in system colors: the N/A pill, the figure key's "scores the same" swatch and the
+   hero's no-score box. A new hatched part joins this one rule. The html raises it over each part's own rule, which
+   loads later (charts.css, the site's styles). */
 @media (forced-colors: active) {
   .pill { border-color: CanvasText; }
-  .pill--na { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; color: CanvasText; }
+  html :is(.pill--na, .fig__swatch--same, .hero__none) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
+  .pill--na { color: CanvasText; }
 }
 
 /* ---------- disclosure summaries: a figure's "Show table" and the what-if's result-table fold, one look ---------- */

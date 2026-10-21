@@ -128,7 +128,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
    mark class is covered here or in whatif.css, components.css and the site styles. */
 @media (forced-colors: active) {
   .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { forced-color-adjust: none; background: CanvasText; }
-  .fig__swatch--same { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .chart-hatch { color: CanvasText; }
   .chart-bar-na, .chart-tile-na, .chart-tile-empty, .chart-tile-zero, .chart-tile-few, .chart-dead__end { stroke: CanvasText; }
   .chart-tile-zero { fill: Canvas; }
