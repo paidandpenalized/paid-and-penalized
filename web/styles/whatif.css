@@ -113,7 +113,13 @@
   .wi-ramp__zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
 }
 
-.wi-predicted { display: grid; gap: 4px; margin-top: 6px; padding: 6px 0 6px 12px; border-left: 3px solid var(--line); }
+/* What a value means and what the track marks, said once over the measures; each measure's facts in one mono line. */
+.wi-fields__help { display: grid; gap: 2px; }
+.wi-facts { max-width: none; font: 400 var(--fs-sm)/1.5 var(--font-type); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+/* The NHSN counts: one folded section after the measures, no side rule. */
+.wi-predicted { display: grid; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.wi-predicted summary { min-height: 24px; font-weight: 600; cursor: pointer; }
+.wi-predicted__row { display: grid; gap: 4px; }
 .wi-predicted .wi-number { max-width: 10rem; }
 
 /* ---------- each measure's part of the score ---------- */

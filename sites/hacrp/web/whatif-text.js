@@ -238,21 +238,21 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       rows: (answers) => solverRows(answers, model),
     },
     fieldsLegend: fill('whatifFieldsLegend'),
+    fieldsHelp: [`${fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT })} · ${fill('whatifPsiHelp')}`, fill('whatifTrackKey')],
     weight: (n) => fill('whatifWeight', { one: decimal(1, 0), n: String(n) }),
     // input: one of vm.inputs; m: its vm.result.measures entry.
     measure(input, m) {
       const { id } = input;
       const short = SHORT_NAMES[id];
       const at = (x) => decimal(x, input.decimals);
-      const marks = input.floor > 0
-        ? fill('whatifMarksFloor', { median: at(input.median), floor: at(input.floor), cap: at(input.cap) })
-        : fill('whatifMarks', { median: at(input.median), cap: at(input.cap) });
+      const values = {
+        median: at(input.median), cap: at(input.cap),
+        tenth: decimal(LEVERAGE_STEP, decimalsOf(String(LEVERAGE_STEP))), leverage: decimal(LEVERAGE_STEP * m.leverage, PART_DP),
+      };
       return {
         label: `${measureLabel(id)} (${short})`,
         short,
-        help: isSir(id) ? fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT }) : fill('whatifPsiHelp'),
-        leverage: fill('whatifLeverage', { tenth: decimal(LEVERAGE_STEP, decimalsOf(String(LEVERAGE_STEP))), leverage: decimal(LEVERAGE_STEP * m.leverage, PART_DP) }),
-        marks,
+        facts: input.floor > 0 ? fill('whatifFactsFloor', { ...values, floor: at(input.floor) }) : fill('whatifFacts', values),
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
         assignedHelp: input.assigned ? fill('whatifAssignedHelp') : null,
@@ -267,6 +267,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     },
     // NHSN predicted counts: SIRs only, from CMS's values (the words compare with CMS's value), with an HAI period.
     predicted: hai === null ? null : {
+      summary: fill('whatifPredictedSummary'),
       label: (id) => (isSir(id) ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], ...hai }) : null),
       help: fill('whatifPredictedHelp'),
       invalid: fill('whatifPredictedInvalid', { min: decimal(0, 0) }),

@@ -31,10 +31,13 @@
 //   copy, copied, copyFallback, slideLabel, reset, median, medianHelp (the line under the buttons)
 //   solver { question, caption, columns: [3 strings], rows(solver) -> [{ id, label, answer, note }] }
 //   weight(n)                              "each measure weighs 1 ÷ n"
-//   measure(input, m) -> { label, short, help, leverage, marks, slider, placeholder, assignedHelp, invalid }
-//                                          input: a vm.inputs entry; m: its vm.result.measures entry
+//   fieldsHelp [strings]                   lines said once over the measures (what a value means, what the track marks)
+//   measure(input, m) -> { label, short, facts, slider, placeholder, assignedHelp, invalid }
+//                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: one line of
+//                                          its median, floor, cap and leverage
 //   bars { heading, caption(n), value(contribution), assigned }
-//   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
+//   predicted null | { summary, label(id) -> string | null, help, invalid, result(delta) }   NHSN counts, in one
+//                                          folded section after the measures (label null: no field for that measure)
 import { scaleLinear } from 'd3-scale';
 import { COPY } from '../copy.js';
 import { pillClass, printout } from '../render/components.js';
@@ -127,22 +130,20 @@ ${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
 </div>`;
 }
 
+// The lines said once over the measures, which every field and slider names in aria-describedby.
+const FIELDS_HELP = 'wi-fields-help';
+const PREDICTED_HELP = 'wi-predicted-help';
+
 // One measure: its number field (blank where CMS assigned the score) and slider over a track marking the national
 // median, CMS's cap (and a floor above zero), the shaded values that score the same and, once the value changes, a
-// dotted tick at the starting value; its leverage; and, for an
-// SIR CMS has a value for, the optional NHSN predicted count. w: texts.measure() for it.
-function measure(input, w, texts) {
+// dotted tick at the starting value; and one line of its facts. w: texts.measure() for it.
+function measure(input, w) {
   const { id } = input;
   const at = trackMarks(input);
-  const ids = {
-    number: `wi-${id}-n`, slider: `wi-${id}-r`, help: `wi-${id}-h`, marks: `wi-${id}-m`, leverage: `wi-${id}-l`,
-    assigned: `wi-${id}-a`, error: `wi-${id}-e`, predicted: `wi-${id}-p`, predictedHelp: `wi-${id}-ph`, predictedError: `wi-${id}-pe`,
-  };
-  const describedBy = [ids.help, ids.marks, ids.leverage, input.assigned && ids.assigned].filter(Boolean).join(' ');
-  const predicted = !input.assigned && texts.predicted?.label(id);
+  const ids = { number: `wi-${id}-n`, slider: `wi-${id}-r`, facts: `wi-${id}-m`, assigned: `wi-${id}-a`, error: `wi-${id}-e` };
+  const describedBy = [FIELDS_HELP, ids.facts, input.assigned && ids.assigned].filter(Boolean).join(' ');
   return html`<div class="wi-measure" data-measure="${id}">
 <label class="wi-measure__label" for="${ids.number}">${w.label}</label>
-<p class="small muted" id="${ids.help}">${w.help}</p>
 <div class="wi-measure__controls">
 <input class="wi-number" type="number" id="${ids.number}" data-wi="number" min="0" max="${input.limit}" step="${input.step}" value="${fieldText(input)}"${w.placeholder ? html` placeholder="${w.placeholder}"` : ''} inputmode="decimal" autocomplete="off" aria-describedby="${describedBy}">
 <div class="wi-track">
@@ -154,22 +155,32 @@ ${input.floor > 0 && html`<span class="wi-dead" data-wi="dead-low" style="--from
 ${input.value !== null && html`<span class="wi-tick wi-tick--start" data-wi="start-mark" style="--at: ${trackStart(input.value, input.max)}" hidden></span>`}
 </div>
 <label class="vh" for="${ids.slider}">${w.slider}</label>
-<input class="wi-range" type="range" id="${ids.slider}" data-wi="slider" min="0" max="${input.max}" step="${input.step}" value="${sliderValue(input)}" aria-valuetext="${input.valuetext}" aria-describedby="${ids.help}">
+<input class="wi-range" type="range" id="${ids.slider}" data-wi="slider" min="0" max="${input.max}" step="${input.step}" value="${sliderValue(input)}" aria-valuetext="${input.valuetext}" aria-describedby="${FIELDS_HELP}">
 </div>
 </div>
 <p class="small wi-error" id="${ids.error}" data-wi="error" hidden>${w.invalid}</p>
 <p class="wi-echo" data-wi="echo" aria-hidden="true" hidden></p>
-<p class="small muted" id="${ids.marks}">${w.marks}</p>
-<p class="small" id="${ids.leverage}">${w.leverage}</p>
+<p class="wi-facts" id="${ids.facts}">${w.facts}</p>
 ${input.assigned && html`<p class="small" id="${ids.assigned}">${w.assignedHelp}</p>`}
-${predicted && html`<div class="wi-predicted">
-<label class="small" for="${ids.predicted}">${predicted}</label>
-<input class="wi-number" type="number" id="${ids.predicted}" data-wi="predicted" min="0" step="any" inputmode="decimal" autocomplete="off" aria-describedby="${ids.predictedHelp}">
-<p class="small wi-error" id="${ids.predictedError}" data-wi="predicted-error" hidden>${texts.predicted.invalid}</p>
-<p class="small muted" id="${ids.predictedHelp}">${texts.predicted.help}</p>
-<p class="small" data-wi="count" hidden></p>
-</div>`}
 </div>`;
+}
+
+// The optional NHSN predicted counts, one field per SIR CMS has a value for, folded into one section after the
+// measures; '' when the page takes none.
+function predictedBlock(vm, texts) {
+  const p = texts.predicted;
+  const fields = p ? vm.inputs.filter((input) => !input.assigned && p.label(input.id)) : [];
+  if (!fields.length) return '';
+  return html`<details class="wi-predicted">
+<summary>${p.summary}</summary>
+<p class="small muted" id="${PREDICTED_HELP}">${p.help}</p>
+${fields.map(({ id }) => html`<div class="wi-predicted__row" data-predicted="${id}">
+<label class="small" for="wi-${id}-p">${p.label(id)}</label>
+<input class="wi-number" type="number" id="wi-${id}-p" data-wi="predicted" min="0" step="any" inputmode="decimal" autocomplete="off" aria-describedby="${PREDICTED_HELP}">
+<p class="small wi-error" id="wi-${id}-pe" data-wi="predicted-error" hidden>${p.invalid}</p>
+<p class="small" data-wi="count" hidden></p>
+</div>`)}
+</details>`;
 }
 
 // Each measure's part of the score (z ÷ n), in the fixed measure order, on one scale for the hospital.
@@ -236,7 +247,9 @@ ${solver && solverBlock(solver, texts.solver)}
 <p class="small wi-weights">${texts.weight(vm.result.n)}</p>
 <fieldset class="wi-fields" data-wi="fields" disabled>
 <legend class="vh">${texts.fieldsLegend}</legend>
-${vm.inputs.map((input) => measure(input, words[input.id], texts))}
+<div class="small muted wi-fields__help" id="${FIELDS_HELP}">${texts.fieldsHelp.map((line) => html`<p>${line}</p>`)}</div>
+${vm.inputs.map((input) => measure(input, words[input.id]))}
+${predictedBlock(vm, texts)}
 </fieldset>
 </div>
 </div>

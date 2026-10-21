@@ -47,14 +47,15 @@ function node(tag, chunk) {
   return el;
 }
 
-// The selectors dom.js uses: [data-wi="…"], [data-measure="…"], [data-bar="…"]. null when the markup lacks it.
+// The selectors dom.js uses: [data-wi="…"], [data-measure="…"], [data-bar="…"], [data-predicted="…"]. null when the
+// markup lacks it.
 function find(chunk, sel) {
-  const [, kind, name] = /^\[data-(wi|measure|bar)="([^"]+)"\]$/.exec(sel);
+  const [, kind, name] = /^\[data-(wi|measure|bar|predicted)="([^"]+)"\]$/.exec(sel);
   const at = chunk.indexOf(` data-${kind}="${name}"`);
   if (at === -1) return null;
   const open = chunk.lastIndexOf('<', at);
   const tag = chunk.slice(open, chunk.indexOf('>', at) + 1);
-  const ends = { wi: [], measure: ['data-measure="', '</fieldset>'], bar: ['</li>'] }[kind];
+  const ends = { wi: [], measure: ['data-measure="', '<details', '</fieldset>'], bar: ['</li>'], predicted: ['data-predicted="', '</details>'] }[kind];
   const end = Math.min(...ends.map((e) => chunk.indexOf(e, at + 2)).filter((i) => i !== -1), chunk.length);
   return node(tag, chunk.slice(open, end));
 }
@@ -97,7 +98,9 @@ const mount = (share, stub, h = H) => {
   return root;
 };
 const q = (root, name) => root.querySelector(`[data-wi="${name}"]`);
-const field = (root, id, name) => root.querySelector(`[data-measure="${id}"]`).querySelector(`[data-wi="${name}"]`);
+// A measure's part: its row's, or for the NHSN count (its field, error and result line) its folded section's.
+const field = (root, id, name) => root.querySelector(/^(predicted|count)/.test(name) ? `[data-predicted="${id}"]` : `[data-measure="${id}"]`)
+  .querySelector(`[data-wi="${name}"]`);
 const type = (el, text) => { el.value = text; el.fire('input'); };
 
 test('mounting enables the fields, shows the buttons, hides the no-script note and folds the solver', () => {

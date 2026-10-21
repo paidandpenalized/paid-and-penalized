@@ -171,17 +171,17 @@ export const COPY = {
   whatifSolveNo: { text: 'How much cushion?', claim: null },
   whatifFieldsLegend: { text: 'Measure values', claim: null },
   whatifWeight: { text: 'Each measure weighs {one} ÷ {n} of the score.', claim: 'HACRP-04' },
-  whatifLeverage: { text: "Each {tenth} moves the score by {leverage}, between CMS's floor and cap.", claim: 'HACRP-03' },
   whatifSirHelp: { text: 'SIR {one} = as many infections as predicted', claim: 'HACRP-14' },
   whatifPsiHelp: { text: 'Lower is better', claim: 'HACRP-16' },
-  whatifMarks: {
-    text: 'National median {median} (the tick). CMS cap {cap}: every value above it scores the same (shaded).',
+  // Said once over the measures: what each track marks.
+  whatifTrackKey: {
+    text: "On each track the tick is the national median; shaded values score the same as CMS's floor or cap.",
     claim: 'HACRP-03',
   },
-  whatifMarksFloor: {
-    text: 'National median {median} (the tick). CMS floor {floor} and cap {cap}: every value below the floor, or above the cap, scores the same (shaded).',
-    claim: 'HACRP-03',
-  },
+  // Each measure's facts in one line: its national median, CMS's floor (above zero) and cap, and what each step of
+  // the value moves the score, between the floor and the cap.
+  whatifFacts: { text: 'median {median} · cap {cap} · each {tenth} = {leverage}', claim: 'HACRP-03' },
+  whatifFactsFloor: { text: 'median {median} · floor {floor} · cap {cap} · each {tenth} = {leverage}', claim: 'HACRP-03' },
   whatifSliderLabel: { text: '{short} value', claim: null },
   // A slider's aria-valuetext beside its value.
   valueAtCap: { text: "{value}, at CMS's cap", claim: 'HACRP-03' },
@@ -193,6 +193,7 @@ export const COPY = {
     text: "CMS assigned this measure's score; CMS's footnote in the table above gives the reason. Enter a value to see the score had it been submitted.",
     claim: 'HACRP-05',
   },
+  whatifPredictedSummary: { text: 'Have your NHSN predicted counts? (optional, stays in your browser)', claim: null },
   whatifPredictedLabel: { text: 'Optional: your NHSN predicted infections for {short}, {start} to {end}', claim: null },
   whatifPredictedHelp: { text: 'Stays in your browser; never sent.', claim: null },
   whatifPredictedInvalid: { text: 'Enter a number of {min} or more.', claim: null },

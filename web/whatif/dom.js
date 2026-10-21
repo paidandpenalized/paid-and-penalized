@@ -45,6 +45,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const rows = Object.fromEntries(start.ids.map((id) => {
     const row = root.querySelector(`[data-measure="${id}"]`);
     const bar = root.querySelector(`[data-bar="${id}"]`);
+    // The NHSN count's field sits in its own folded section, not in the measure's row.
+    const extra = root.querySelector(`[data-predicted="${id}"]`);
     return [id, {
       number: q('number', row),
       slider: q('slider', row),
@@ -53,11 +55,11 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       medianMark: q('median-mark', row),
       capMark: q('cap-mark', row),
       startMark: q('start-mark', row),
-      predicted: q('predicted', row),
-      count: q('count', row),
+      predicted: extra && q('predicted', extra),
+      count: extra && q('count', extra),
       echo: q('echo', row),
       numberCheck: checked(q('number', row), q('error', row)),
-      predictedCheck: checked(q('predicted', row), q('predicted-error', row)),
+      predictedCheck: extra && checked(q('predicted', extra), q('predicted-error', extra)),
       barRow: bar,
       bar: q('bar', bar),
       barValue: q('bar-value', bar),

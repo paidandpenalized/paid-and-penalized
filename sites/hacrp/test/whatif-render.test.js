@@ -70,20 +70,23 @@ test('a slider and a number field per scored measure, with labels, valuetext, CM
   }
 });
 
-test('helper text, leverage, weight, marks and the dead zone', () => {
+test('helper text said once, each measure\'s facts in one line, weight, marks and the dead zone', () => {
   const text = render(H.no);
-  assert.equal(all(text, /SIR 1\.0 = as many infections as predicted/g).length, SIRS.length);
-  assert.match(text, /lower is better/i);
+  assert.equal(all(text, /SIR 1\.0 = as many infections as predicted/g).length, 1, 'said once, over the measures');
+  assert.equal(all(text, /lower is better/gi).length, 1);
+  assert.match(text, /<div class="small muted wi-fields__help" id="wi-fields-help"><p>SIR 1\.0 = as many infections as predicted · Lower is better<\/p><p>On each track/);
   assert.ok(text.includes('Each measure weighs 1 ÷ 6 of the score.'));
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
   const lev = (LEVERAGE_STEP * vm.result.measures.MRSA.leverage).toFixed(4);
-  assert.ok(text.includes(`Each 0.1 moves the score by ${lev}`), 'leverage per 0.1');
+  const p = model.params.MRSA;
+  assert.ok(text.includes(`<p class="wi-facts" id="wi-MRSA-m">median ${toUnit(p.median, p.decimals).toFixed(3)} · cap ${p.cap.toFixed(3)} · each 0.1 = ${lev}</p>`), 'one facts line');
+  assert.match(/<input class="wi-number"[^>]*id="wi-MRSA-n"[^>]*>/.exec(text)[0], /aria-describedby="wi-fields-help wi-MRSA-m"/);
   assert.equal(all(text, /data-wi="median-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="cap-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="dead-high"/g).length, 6);
   // PSI 90 has a floor above zero, so it is the one measure shaded below as well.
   assert.equal(all(text, /data-wi="dead-low"/g).length, model.params.PSI90.floor > 0 ? 1 : 0);
-  assert.ok(text.includes(`CMS cap ${model.params.MRSA.cap.toFixed(3)}`));
+  assert.match(text, /<p class="wi-facts" id="wi-PSI90-m">median [\d.]+ · floor [\d.]+ · cap [\d.]+ · each 0\.1 = [\d.]+<\/p>/, 'a floor above zero is named');
 });
 
 test('the result box: before and after, the ramp with a solid and a hollow mark, the line, the cut', () => {
@@ -139,6 +142,10 @@ test('NHSN predicted counts: one optional field per submitted SIR, naming the HA
     assert.equal(attr(tag, 'autocomplete'), 'off');
   }
   assert.match(text, /January 1, 2023 to December 31, 2024/);
+  const folded = /<details class="wi-predicted">\n<summary>Have your NHSN predicted counts\? \(optional, stays in your browser\)<\/summary>[\s\S]*?<\/details>/.exec(text);
+  assert.ok(folded, 'one folded section after the measures');
+  assert.equal(all(folded[0], /data-wi="predicted"/g).length, SIRS.length, 'every field in it');
+  assert.ok(text.indexOf('<details class="wi-predicted">') > text.lastIndexOf('data-measure="'), 'after the last measure');
   assert.match(text, /stays in your browser; never sent/i);
   assert.doesNotMatch(text, /id="wi-PSI90-p"/);
 
