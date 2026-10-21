@@ -12,11 +12,11 @@ import { histogram, histogramBins } from '../../../web/charts/histogram.js';
 import { TILES } from '../../../web/charts/states.js';
 import { tileMap } from '../../../web/charts/tileMap.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
-import { html } from '../../../web/render/html.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { FEW_DECIDED, TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
 import { flagText } from './whatif-text.js';
+import { html } from '../../../web/render/html.js';
 
 // Scores, z-scores and parts of the score are shown at CMS's decimals (DP).
 const BINS = 20;
