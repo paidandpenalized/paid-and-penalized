@@ -12,7 +12,7 @@ body {
   margin: 0;
   background: var(--grain) repeat, var(--paper);
   color: var(--ink);
-  font: 400 var(--fs-base)/1.55 var(--font-body);
+  font: 400 var(--fs-base)/1.65 var(--font-body);
 }
 h1, h2, h3, h4 { margin: 0; text-wrap: balance; line-height: 1.12; }
 h1 { font: 400 clamp(2rem, 6vw, var(--fs-2xl))/1.05 var(--font-display); letter-spacing: 0.005em; }
@@ -40,7 +40,7 @@ button, input, select { font: inherit; color: inherit; }
 .type { font-family: var(--font-type); }
 .cap { font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
 .muted { color: var(--ink-2); }
-.small { font-size: var(--fs-sm); }
+.small { font-size: var(--fs-sm); line-height: 1.57; }
 .nw { white-space: nowrap; }
 .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--paper); border: var(--rule) solid var(--pen); padding: 8px 12px; font-weight: 600; }
