@@ -96,6 +96,12 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.match(out, /<button type="button" class="theme-toggle" aria-pressed="false" hidden>Dark mode<\/button>/);
 });
 
+test('page: the header\'s tab order is wordmark, theme toggle, byline (the narrow screen\'s visual order)', () => {
+  const header = /<header[\s\S]*?<\/header>/.exec(page(PAGE))[0];
+  const at = (s) => header.indexOf(s);
+  assert.ok(at('class="wordmark"') < at('class="theme-toggle"') && at('class="theme-toggle"') < at('class="byline"'));
+});
+
 test('page: the theme script always loads, extra scripts follow, and robots and JSON-LD appear only when given', () => {
   const plain = page(PAGE);
   assert.ok(!plain.includes('name="robots"'));

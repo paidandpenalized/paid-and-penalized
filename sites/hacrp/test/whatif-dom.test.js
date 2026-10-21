@@ -43,7 +43,7 @@ function node(tag, chunk) {
       if (!kids.has(sel)) kids.set(sel, find(chunk, sel));
       return kids.get(sel);
     },
-    focus() {}, select() { el.selected = true; }, scrollIntoView() { el.scrolled = true; },
+    focus() {}, select() { el.selected = true; }, scrollIntoView(options) { el.scrolled = true; el.scrollOptions = options; },
   };
   return el;
 }
@@ -299,6 +299,15 @@ test('a link that changed something scrolls the what-if into view; a clean page 
   assert.equal(mount(true, windowStub({ hash: '#whatif&MRSA=1.4' })).scrolled, true);
   assert.equal(mount(true, windowStub()).scrolled, undefined);
   assert.equal(mount(true, windowStub({ hash: '#whatif&MRSA=abc' })).scrolled, undefined);
+});
+
+test('the scroll on load never animates: a smooth scroll does not run in a background tab', () => {
+  const smooth = windowStub({ hash: '#whatif&MRSA=1.4' });
+  smooth.matchMedia = () => ({ matches: false });
+  assert.equal(mount(true, smooth).scrollOptions.behavior, 'auto');
+  const reduced = windowStub({ hash: '#whatif&MRSA=1.4' });
+  reduced.matchMedia = (q) => ({ matches: q.includes('reduce') });
+  assert.equal(mount(true, reduced).scrollOptions.behavior, 'auto');
 });
 
 test('an assigned measure\'s bar follows the state: hatched and noted until the reader enters a value', () => {

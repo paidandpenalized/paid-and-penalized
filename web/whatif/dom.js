@@ -175,9 +175,10 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
     if (!env.matchMedia?.(NARROW).matches) return;
     event.target.scrollIntoView({ block: 'center', behavior: behavior() });
   };
-  // A link that changed something opens on the what-if, not the top of the page.
+  // A link that changed something opens on the what-if, not the top of the page. Never animated: a smooth scroll
+  // started on load does not run in a background tab.
   const showLinked = () => {
-    if (linked) root.scrollIntoView({ block: 'start', behavior: behavior() });
+    if (linked) root.scrollIntoView({ block: 'start', behavior: 'auto' });
   };
 
   for (const id of start.ids) {
