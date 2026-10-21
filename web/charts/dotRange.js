@@ -1,10 +1,11 @@
 // One value against a national range: the axis from zero (or from just under CMS's floor, when the floor is above
 // zero) to just past the larger of the cap and the value; the values that score the same as CMS's floor or cap
 // hatched from that end to the axis's end (one encoding for one idea, as on the what-if's tracks); the median as a
-// tick in ink crossing the axis; and this hospital's value as a ▲ under the axis (no ▲ when value is null). Words
-// are the caller's. dotRanges stacks several as small multiples in one SVG, each row on its own scale (units
-// differ) with its title in a column at the left; the ▲'s label prints once, under the first row that has a ▲, and
-// a key (figure.js) names the marks for every row.
+// tick in ink crossing the axis; and this hospital's value as a ▲ under the axis (no ▲ when value is null), its
+// number beside it in mono on a paper halo, on the side with more room. Words are the caller's. dotRanges stacks
+// several as small multiples in one SVG, each row on its own scale (units differ) with its title in a column at the
+// left; the ▲'s label prints once, under the first row that has a ▲, and a key (figure.js) names the marks for every
+// row. Its optional cue (e.g. which way is better) is said once, at the chart's top right.
 //   id                               names this SVG's hatch pattern (lowercase letters, digits, hyphens)
 //   label, medianLabel, sameLabel    the ▲'s name (its label and tooltip), the median's and the hatch's tooltip names
 //   showLabel                        print the ▲'s label under it (dotRange: yes; dotRanges: the first ▲ only)
@@ -34,6 +35,11 @@ const ROOM = 0.1;
 // dotRanges: the title column (short names, about 7 characters) and the gap between rows.
 const TITLE_W = 58;
 const ROW_GAP = 4;
+// The ▲'s number: its gap from the ▲'s center, and its baseline (about the ▲'s middle for 11-unit text).
+const VALUE_DX = 9;
+const VALUE_Y = MARK_Y + 9.5;
+// The cue's row over the first row's tick labels.
+const CUE_H = 16;
 
 function body({ id, value, floor, cap, median, label, showLabel = true, note = null, medianLabel, sameLabel, width, format, x0 = 0 }) {
   if (!(floor <= median && median <= cap)) throw new RangeError('dotRange: need floor <= median <= cap');
@@ -48,10 +54,12 @@ function body({ id, value, floor, cap, median, label, showLabel = true, note = n
   let hospital = '';
   if (value !== null) {
     const { anchor, dx } = labelAt(tAt(value));
+    const side = tAt(value) > 0.5 ? -1 : 1;
     hospital = html`${mark({
       tip: `${label}: ${format(value)}`, value, hit: { x: x(value) - 9, y: MARK_Y - 2, width: 18, height: 16 },
       body: triangle(x(value), MARK_Y, 'chart-this'),
-    })}${showLabel ? html`
+    })}
+${text({ x: x(value) + side * VALUE_DX, y: VALUE_Y, anchor: side > 0 ? 'start' : 'end', cls: 'chart-value chart-value--mark chart-label--halo', body: format(value) })}${showLabel ? html`
 ${text({ x: x(value), y: MARK_Y + 25, anchor, dx, cls: 'chart-label', body: label })}` : ''}`;
   } else if (note) {
     hospital = text({ x: left, y: MARK_Y + 9, anchor: 'start', cls: 'chart-note', body: note });
@@ -81,12 +89,13 @@ export function dotRange({ id = 'range', width = WIDTH, format = plain, showLabe
   });
 }
 
-// rows: [{ title, value, floor, cap, median, label, note, format }], drawn top to bottom in the order given.
-export function dotRanges({ id = 'ranges', rows, medianLabel, sameLabel, width = WIDTH }) {
+// rows: [{ title, value, floor, cap, median, label, note, format }], drawn top to bottom in the order given. cue:
+// optional text over the rows' top right.
+export function dotRanges({ id = 'ranges', rows, medianLabel, sameLabel, width = WIDTH, cue = null }) {
   checkId(id, 'dotRanges');
   if (!rows?.length) throw new RangeError('dotRanges: no rows');
   const first = rows.findIndex((r) => r.value !== null);
-  let y = 0;
+  let y = cue ? CUE_H : 0;
   const drawn = rows.map(({ title, format = plain, ...row }, i) => {
     const showLabel = i === first;
     const out = html`<g transform="translate(0 ${y})">${text({ x: 0, y: AXIS_Y + 4, anchor: 'start', cls: 'chart-label', body: title })}
@@ -95,5 +104,6 @@ ${body({ ...row, id, showLabel, medianLabel, sameLabel, width, format, x0: TITLE
     y += (showLabel ? LABELLED : HEIGHT) + ROW_GAP;
     return out;
   });
-  return frame({ kind: 'dot-ranges', width, height: y - ROW_GAP, body: html`${hatchDefs(id)}${drawn}` });
+  const top = cue ? text({ x: width, y: CUE_H - 6, anchor: 'end', cls: 'chart-axis__title', body: cue }) : '';
+  return frame({ kind: 'dot-ranges', width, height: y - ROW_GAP, body: html`${hatchDefs(id)}${top}${drawn}` });
 }

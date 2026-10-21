@@ -79,7 +79,7 @@ export function rangeFigure(view, ranges, n, source) {
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figRangeAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-ranges`,
     key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'same', label: t('figRangeSame') }],
     svg: dotRanges({
-      medianLabel: t('figRangeMedian'), sameLabel: t('figRangeSame'),
+      medianLabel: t('figRangeMedian'), sameLabel: t('figRangeSame'), cue: t('whatifPsiHelp'),
       rows: rows.map(({ m, ...row }) => ({ ...row, title: m.short, label: t('figRangeThis'), note: m.hasValue ? null : t('noValue') })),
     }),
     // A Notes column (CMS's footnotes) only when some measure has one.

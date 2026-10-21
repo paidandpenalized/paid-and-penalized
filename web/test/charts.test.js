@@ -150,6 +150,24 @@ test('dotRanges stacks one titled dotRange per row, each on its own scale and fo
   assert.throws(() => dotRanges({ rows: [], medianLabel: 'M', sameLabel: 'S' }), /rows/);
 });
 
+test('a ruler prints its value beside the triangle, in mono on a halo, on the side with more room; dotRanges says its cue once', () => {
+  const at = (s) => /<text class="chart-value chart-value--mark chart-label--halo" x="([\d.]+)" y="[\d.]+" text-anchor="(start|end)">([^<]+)<\/text>/.exec(s).slice(1);
+  const tri = (s) => Number(/<path class="chart-this" d="M([\d.]+) /.exec(s)[1]);
+  const low = String(dotRange({ ...DOT, value: 0.5 }));
+  const [lx, lAnchor, lText] = at(low);
+  assert.deepEqual([lAnchor, lText], ['start', '0.5'], 'left of center: the number on the right');
+  assert.ok(Number(lx) > tri(low));
+  const high = String(dotRange({ ...DOT, value: 1.9 }));
+  const [hx, hAnchor] = at(high);
+  assert.equal(hAnchor, 'end', 'right of center: the number on the left');
+  assert.ok(Number(hx) < tri(high));
+  const rows = [{ title: 'A', ...DOT }, { title: 'B', ...DOT }];
+  const withCue = String(dotRanges({ rows, medianLabel: 'M', sameLabel: 'S', cue: 'Lower <is> better' }));
+  assert.equal(withCue.match(/>Lower &lt;is&gt; better<\/text>/g).length, 1);
+  assert.ok(withCue.includes('<text class="chart-axis__title" x="300" y="10" text-anchor="end">'), 'at the top right');
+  assert.ok(!String(dotRanges({ rows, medianLabel: 'M', sameLabel: 'S' })).includes('chart-axis__title'), 'no cue unless given');
+});
+
 test('histogramBins puts each value in exactly one bin, with CMS\'s line as a bin edge', () => {
   const rand = mulberry32(11);
   for (let trial = 0; trial < 200; trial++) {
@@ -482,6 +500,7 @@ const SNAPSHOTS = {
 <g transform="translate(0 24)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="282" y1="0" y2="0"/><line class="chart-axis__tick" x1="53.75" x2="53.75" y1="0" y2="-4"/><text class="chart-axis__label" x="53.75" y="-12" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="122.5" x2="122.5" y1="0" y2="-4"/><text class="chart-axis__label" x="122.5" y="-12" text-anchor="middle">1.0</text><line class="chart-axis__tick" x1="191.25" x2="191.25" y1="0" y2="-4"/><text class="chart-axis__label" x="191.25" y="-12" text-anchor="middle">1.5</text><line class="chart-axis__tick" x1="260" x2="260" y1="0" y2="-4"/><text class="chart-axis__label" x="260" y="-12" text-anchor="middle">2.0</text></g></g>
 <g class="chart-mark" data-mark data-value="0.9"><title>Median: 0.9</title><rect class="chart-hit" x="102.75" y="16" width="12" height="16"/><line class="chart-median" x1="108.75" x2="108.75" y1="17" y2="31"/></g>
 <g class="chart-mark" data-mark data-value="1.2"><title>This hospital: 1.2</title><rect class="chart-hit" x="141" y="31" width="18" height="16"/><path class="chart-this" d="M150 33l6 11h-12z"/></g>
+<text class="chart-value chart-value--mark chart-label--halo" x="159" y="42.5" text-anchor="start">1.2</text>
 <text class="chart-label" x="150" y="58" text-anchor="middle">This hospital</text></svg>`,
   ramp: `<svg class="chart chart--ramp" viewBox="0 0 300 91" width="100%" focusable="false" style="--vb: 300"><rect class="chart-zone" x="150" y="14" width="135" height="26"/>
 <g transform="translate(0 40)"><g class="chart-axis"><line class="chart-axis__line" x1="15" x2="285" y1="0" y2="0"/><line class="chart-axis__tick" x1="15" x2="15" y1="0" y2="4"/><text class="chart-axis__label" x="15" y="14" text-anchor="middle">−1.0</text><line class="chart-axis__tick" x1="82.5" x2="82.5" y1="0" y2="4"/><text class="chart-axis__label" x="82.5" y="14" text-anchor="middle">−0.5</text><line class="chart-axis__tick" x1="150" x2="150" y1="0" y2="4"/><text class="chart-axis__label" x="150" y="14" text-anchor="middle">0.0</text><line class="chart-axis__tick" x1="217.5" x2="217.5" y1="0" y2="4"/><text class="chart-axis__label" x="217.5" y="14" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="285" x2="285" y1="0" y2="4"/><text class="chart-axis__label" x="285" y="14" text-anchor="middle">1.0</text></g></g>
