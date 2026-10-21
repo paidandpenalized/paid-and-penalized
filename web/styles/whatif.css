@@ -83,9 +83,11 @@
 .wi-predicted .wi-number { max-width: 10rem; }
 
 /* ---------- each measure's part of the score ---------- */
-.wi-bars { display: grid; gap: 8px; }
-.wi-bars__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.wi-bars__row { max-width: none; display: grid; grid-template-columns: minmax(5.5rem, 12rem) minmax(0, 1fr) 5rem; gap: 10px; align-items: center; font-size: var(--fs-sm); }
+/* Held to a readable width, so a row reads across: name, bar, value. The rows share one set of columns (subgrid), so
+   the name column is as wide as the longest name and every bar starts at the same place. */
+.wi-bars { display: grid; gap: 8px; max-width: 40rem; }
+.wi-bars__list { display: grid; grid-template-columns: minmax(4.5rem, max-content) minmax(0, 1fr) 5rem; gap: 6px 10px; margin: 0; padding: 0; list-style: none; }
+.wi-bars__row { grid-column: 1 / -1; max-width: none; display: grid; grid-template-columns: subgrid; align-items: center; font-size: var(--fs-sm); }
 .wi-bars__name, .wi-bars__value { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-bars__value { text-align: right; }
 .wi-bars__track { position: relative; height: 16px; }
@@ -98,5 +100,5 @@
 @media (max-width: 640px) {
   .wi-measure__controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .wi-number { max-width: 10rem; }
-  .wi-bars__row { grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem; gap: 8px; }
+  .wi-bars__list { grid-template-columns: minmax(4.5rem, max-content) minmax(0, 1fr) 4.5rem; column-gap: 8px; }
 }
