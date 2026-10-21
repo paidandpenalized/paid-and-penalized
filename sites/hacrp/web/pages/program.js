@@ -12,7 +12,7 @@ import { fill, measureLabel, sourceText, t } from '../copy.js';
 import { scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { lineStep, stepRows, stepSum } from '../stepper.js';
-import { asofBar, citation, dataLinks, siteHeader } from './parts.js';
+import { asofBar, citation, dataLinks, siteHeader, split } from './parts.js';
 import { whatIfSection } from './whatif.js';
 import { fillKeep } from '../copy.js';
 
@@ -134,14 +134,11 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 </section>
 ${steps}
 ${what}
-<section class="block" id="fy" aria-labelledby="counts-h">
-<h2 id="counts-h">${fill('countsHeading', { fy: fyText })}</h2>
+${split({ id: 'fy', label: 'counts-h', text: html`<h2 id="counts-h">${fill('countsHeading', { fy: fyText })}</h2>
 <p>${fill('countDecided', { yes: count(counts.yes), decided: count(counts.decided) })}</p>
 <p>${fill('countScored', { scored: count(counts.scored) })}</p>
-<p class="standing">${t('standing')}</p>
-${histogram}
-${tiles && html`<div id="map">${tiles}</div>`}
-</section>
+<p class="standing">${t('standing')}</p>`, figure: histogram })}
+${tiles && html`<div class="block" id="map">${tiles}</div>`}
 ${hospitalTable({ fy, searchUrl, source })}
 <section class="block" aria-labelledby="links-h">
 <h2 id="links-h">${t('linksHeading')}</h2>

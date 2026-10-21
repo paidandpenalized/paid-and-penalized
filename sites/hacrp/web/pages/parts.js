@@ -69,6 +69,21 @@ function searchBox(searchUrl) {
 </form>`;
 }
 
+// A section whose words explain a figure: the words (its heading first) on the left and the figure on the right from
+// 980px, stacked under that (pages.css .split). Without a figure, a plain section. label: the heading's id.
+export const split = ({ label, text, figure = null, id = null }) => (figure
+  ? html`<section class="block split"${id ? html` id="${id}"` : ''} aria-labelledby="${label}">
+<div class="split__text">
+${text}
+</div>
+<div class="split__fig">
+${figure}
+</div>
+</section>`
+  : html`<section class="block"${id ? html` id="${id}"` : ''} aria-labelledby="${label}">
+${text}
+</section>`);
+
 // The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
 export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;
 

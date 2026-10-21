@@ -530,3 +530,13 @@ test('previews: a preview build writes each sample hospital in each placement un
     await generate(prod, 'production', { data: SLICE, released: true });
     assert.throws(() => readdirSync(join(prod, 'preview')), /ENOENT/);
   }));
+
+test('a section whose words explain a figure splits: the measures and Figure 1 on a hospital page, the counts and the histogram on the program page', () => {
+  const scored = render(CASES.yes);
+  assert.match(scored, /<section class="block split" aria-labelledby="measures-h">\n<div class="split__text">\n<h2 id="measures-h">The measures<\/h2>[\s\S]*?<\/table><\/div><\/div>\n<\/div>\n<div class="split__fig">\n<figure class="fig" id="figure-1"/);
+  // No figure (no score): the measures stay one plain section.
+  assert.match(render(CASES.noScore), /<section class="block" aria-labelledby="measures-h">\n<h2 id="measures-h">/);
+  const { model } = DATA;
+  const program = programPage({ ...PROGRAM_ARGS, scores: [{ total: 0.5, yes: true }, { total: 0.1, yes: false }], boundary: model.boundary });
+  assert.match(program, /<section class="block split" id="fy" aria-labelledby="counts-h">\n<div class="split__text">\n<h2 id="counts-h">[\s\S]*?<\/div>\n<div class="split__fig">\n<figure class="fig" id="figure-1"/);
+});

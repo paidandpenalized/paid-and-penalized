@@ -15,7 +15,7 @@ import { largestSentence, leadSentences, measureNote, noteSentences, smallNumber
 import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
 import { careCompareHref } from '../links.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader, split } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -228,13 +228,10 @@ ${noteSentences(view).map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
 <p class="standing">${t('standing')}</p>
 </div>
-<section class="block" aria-labelledby="measures-h">
-<h2 id="measures-h">${t('measuresHeading')}</h2>
+${split({ label: 'measures-h', text: html`<h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('measuresIntro')}</p>
 ${largest && html`<p>${largest}</p>`}
-${measureTable(view.measures)}
-${figs}
-</section>
+${measureTable(view.measures)}`, figure: figs.length ? figs : null })}
 ${what?.body}
 <p class="page__links">${printLink(home, t('backToProgram'))}</p>
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
