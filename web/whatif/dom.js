@@ -99,7 +99,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   let vm = first;
   let timer = null;
   // The print-only line naming the what-if's address; with share, draw() keeps the scenario's fragment on it.
-  const printLine = q('print');
+  const printLine = root.querySelector('.print-only');
 
   function writeHash() {
     const next = encode(changesOf(state), start.ids);

@@ -11,7 +11,6 @@ import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { html } from '../../../web/render/html.js';
-import { SITE } from '../../../web/site.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { textsFor as fixtureTexts } from './fixtures.js';
 import { largestPart } from '../web/whatif-text.js';
@@ -47,7 +46,7 @@ function node(tag, chunk) {
     addEventListener: (type, fn) => listeners.set(type, [...(listeners.get(type) ?? []), fn]),
     fire: (type) => (listeners.get(type) ?? []).forEach((fn) => fn({ type, target: el, currentTarget: el })),
     querySelector(sel) {
-      if (!kids.has(sel)) kids.set(sel, find(chunk, sel));
+      if (!kids.has(sel)) kids.set(sel, sel === '.print-only' ? findPrint(chunk) : find(chunk, sel));
       return kids.get(sel);
     },
     focus() {}, select() { el.selected = true; }, scrollIntoView(options) { el.scrolled = true; el.scrollOptions = options; },
@@ -66,6 +65,14 @@ function find(chunk, sel) {
   const ends = { wi: [], measure: ['data-measure="', '<details', '</fieldset>'], bar: ['</li>'], predicted: ['data-predicted="', '</details>'] }[kind];
   const end = Math.min(...ends.map((e) => chunk.indexOf(e, at + 2)).filter((i) => i !== -1), chunk.length);
   return node(tag, chunk.slice(open, end));
+}
+
+// The print-only line, which dom.js finds by its class: an element with no children (its text starts blank here).
+function findPrint(chunk) {
+  const at = chunk.search(/class="[^"]*\bprint-only\b/);
+  if (at === -1) return null;
+  const open = chunk.lastIndexOf('<', at);
+  return node(chunk.slice(open, chunk.indexOf('>', at) + 1), '');
 }
 
 const rootFor = (h, share, t = textsFor(h)) => {
@@ -569,24 +576,26 @@ test('a field rewritten by another action shows the what-if\'s value and drops i
 });
 
 test('the printed line names the shareable link: with a changed what-if\'s fragment, as share writes it; unchanged, the page\'s', () => {
-  const page = `${SITE.origin}${PATH}`;
+  // The built line names the page's address (texts.print), which the stub window is at.
+  const bare = texts.print;
+  assert.match(bare, /^Interactive what-if at https:\/\/[^#]+\/hacrp\/hospital\/990026\/$/);
   const stub = windowStub();
   const root = mount(true, stub);
-  const print = () => q(root, 'print').textContent;
-  assert.equal(print(), `Interactive what-if at ${page}`);
+  const line = (r) => r.querySelector('.print-only').textContent;
+  assert.equal(line(root), bare);
   type(field(root, 'MRSA', 'number'), '1.4');
-  assert.equal(print(), `Interactive what-if at ${page}#whatif&MRSA=1.4`, 'current on the draw, before the URL settles');
+  assert.equal(line(root), `${bare}#whatif&MRSA=1.4`, 'current on the draw, before the URL settles');
   stub.flush();
-  assert.equal(print(), `Interactive what-if at ${SITE.origin}${stub.urls.at(-1)}`, 'the same link share writes');
+  assert.equal(line(root), bare + stub.urls.at(-1).slice(PATH.length), 'the same link share writes');
   type(field(root, 'CLABSI', 'number'), '0.9');
-  assert.equal(print(), `Interactive what-if at ${page}#whatif&CLABSI=0.9&MRSA=1.4`);
+  assert.equal(line(root), `${bare}#whatif&CLABSI=0.9&MRSA=1.4`);
   q(root, 'reset').fire('click');
-  assert.equal(print(), `Interactive what-if at ${page}`);
+  assert.equal(line(root), bare);
 
   const opened = mount(true, windowStub({ hash: '#whatif&MRSA=1.4&CLABSI=abc' }));
-  assert.equal(q(opened, 'print').textContent, `Interactive what-if at ${page}#whatif&MRSA=1.4`, 'a link opens with its good parts printed');
+  assert.equal(line(opened), `${bare}#whatif&MRSA=1.4`, 'a link opens with its good parts printed');
 
   const sandbox = mount(false, windowStub());
   type(field(sandbox, 'MRSA', 'number'), '1.4');
-  assert.equal(q(sandbox, 'print').textContent, '', 'share: false reads no fragment, so it leaves the built line (the page\'s link) alone');
+  assert.equal(line(sandbox), '', 'share: false reads no fragment, so it leaves the built line (the page\'s address) alone');
 });
