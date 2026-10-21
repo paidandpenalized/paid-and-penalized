@@ -283,3 +283,30 @@ test('the baseline is stated by the page, never read from the record: the words 
     assert.throws(() => scenarioSentence(vmOf(H.no), H.no, model, bad), TypeError, String(bad));
   }
 });
+
+test('a starting decision of too close to call asks "What would it take?" and names the value that would read No', () => {
+  const options = { fiscalYear: '2026', periods: SYNTH_PERIODS };
+  const { total } = medianHospital(model, options);
+  const m = { ...model, boundary: { highestNo: total - 0.0002, lowestYes: total + 0.0002 } };
+  const mh = medianHospital(m, options);
+  assert.equal(mh.paymentReduction, 'too-close');
+  const t = whatIfTexts({ hospital: mh, model: m, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: 'x', lowestYes: 'y' }, baseline: 'sandbox' });
+  assert.equal(t.solver.question, 'What would it take?');
+  assert.equal(t.solver.columns[1], 'Value that would read No');
+  const rows = t.solver.rows(solverOf(mh, m));
+  assert.ok(rows.some((r) => / or lower$/.test(r.answer ?? '')), JSON.stringify(rows));
+  assert.ok(rows.every((r) => !/^up to |no cushion/.test(r.answer ?? '')));
+});
+
+test('NHSN fields need an HAI period whose start and end both read as dates; anything else gets none, never a throw', () => {
+  const make = (hai, baseline = 'cms') => whatIfTexts({
+    hospital: { ...H.no, periods: { ...H.no.periods, hai } }, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE,
+    boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' }, baseline,
+  });
+  assert.notEqual(make({ start: '01/01/2023', end: '12/31/2024' }).predicted, null);
+  for (const hai of [{ start: '', end: '' }, { start: 'N/A', end: 'N/A' }, { start: '01/01/2023', end: 'N/A' },
+    { start: '', end: '12/31/2024' }, { start: '13/45/2023', end: '12/31/2024' }, { start: null, end: null }]) {
+    assert.equal(make(hai).predicted, null, JSON.stringify(hai));
+  }
+  assert.equal(make({ start: '01/01/2023', end: '12/31/2024' }, 'sandbox').predicted, null, 'the baseline must be CMS\'s');
+});

@@ -1,6 +1,6 @@
 // HACRP solver: for one measure on its own, the value that would clear CMS's line ("What would it take?",
-// for a hospital CMS flagged) or the highest value that would stay clear of it ("How much cushion?", for one
-// it didn't). It searches the what-if itself, one display unit at a time by bisection, so every answer is
+// for a hospital CMS flagged, or a recomputed start too close to call) or the highest value that would stay clear
+// of it ("How much cushion?", for one it didn't). It searches the what-if itself, one display unit at a time by bisection, so every answer is
 // exactly what the what-if shows: it reads "No", and one display unit higher does not.
 import { scoredMeasures, isAssigned } from './hospital.js';
 import { whatIf } from './whatif.js';
@@ -31,7 +31,8 @@ export function solveMeasure(hospital, model, id) {
     return lo;
   };
 
-  if (hospital.paymentReduction === 'Yes') {
+  // A start too close to call (the sandbox's recomputed median hospital, in some year) does not read No either.
+  if (hospital.paymentReduction === 'Yes' || hospital.paymentReduction === 'too-close') {
     if (!reads(0)) return result('needed', id);
     return result('needed', id, { possible: true, value: lastNo(0, current) / scale });
   }

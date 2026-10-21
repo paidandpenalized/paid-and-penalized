@@ -117,8 +117,8 @@ export function viewModel(state, hospital, model, estimate) {
       id,
       value,
       // Follows the current value, so a typed or linked value never sits past the slider's end; rounded up to the
-      // display unit, so the slider's top is a step it can reach.
-      max: ceilToUnit(Math.max(value ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals),
+      // display unit, so the slider's top is a step it can reach; never past the highest value a reader may set.
+      max: Math.min(state.limits[id], ceilToUnit(Math.max(value ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals)),
       step: 1 / 10 ** p.decimals,
       decimals: p.decimals,
       median: state.medians[id],

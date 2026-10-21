@@ -155,6 +155,16 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
 const PART_DP = 4;
 const METHODS_ESTIMATE = '/methods/#estimate';
 
+// CMS's HAI period as long dates; null where CMS gives none ('' or 'N/A') or either end does not read as a date.
+function haiPeriod({ start, end }) {
+  try {
+    return { start: longDate(start), end: longDate(end) };
+  } catch (e) {
+    if (e instanceof RangeError) return null;
+    throw e;
+  }
+}
+
 function countText(delta) {
   const count = decimal(Math.abs(delta), 1);
   if (Number(count) === 0) return fill('whatifCountSame');
@@ -167,8 +177,9 @@ function countText(delta) {
 // values come from (baseline: 'cms', or 'sandbox' for the median hospital). Other page fields are ignored.
 export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryText, baseline }) {
   const words = wordsFor(baseline);
-  const decision = hospital.paymentReduction;
-  const hai = hospital.periods.hai;
+  // A start that does not read No (Yes, or a recompute too close to call) asks what it would take to read No.
+  const needed = hospital.paymentReduction === 'Yes' || hospital.paymentReduction === 'too-close';
+  const hai = words.counts ? haiPeriod(hospital.periods.hai) : null;
   const slide = { name, fy, source, baseline };
   return {
     heading: fill('whatifHeading'),
@@ -195,9 +206,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     median: fill('whatifMedian'),
     // Shown only where there are answers (Maryland, not subject to the reduction, has none).
     solver: {
-      question: fill(decision === 'Yes' ? 'whatifSolveYes' : 'whatifSolveNo'),
+      question: fill(needed ? 'whatifSolveYes' : 'whatifSolveNo'),
       caption: fill(words.solverCaption),
-      columns: [fill('solverColMeasure'), fill(decision === 'Yes' ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
+      columns: [fill('solverColMeasure'), fill(needed ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
       rows: (answers) => solverRows(answers, model),
     },
     fieldsLegend: fill('whatifFieldsLegend'),
@@ -229,10 +240,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       assigned: fill('whatifBarAssigned'),
     },
     // NHSN predicted counts: SIRs only, from CMS's values (the words compare with CMS's value), with an HAI period.
-    predicted: !words.counts || hai.start === null ? null : {
-      label: (id) => (isSir(id)
-        ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })
-        : null),
+    predicted: hai === null ? null : {
+      label: (id) => (isSir(id) ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], ...hai }) : null),
       help: fill('whatifPredictedHelp'),
       invalid: fill('whatifPredictedInvalid', { min: decimal(0, 0) }),
       result: countText,

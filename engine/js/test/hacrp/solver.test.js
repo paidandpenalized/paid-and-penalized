@@ -4,6 +4,8 @@ import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
 import { whatIf } from '../../hacrp/whatif.js';
 import { solveMeasure } from '../../hacrp/solver.js';
+import { medianHospital } from '../../hacrp/median.js';
+import { SYNTH_PERIODS } from './synthetic.js';
 import { loadHacrp, submittedPairs as pairsWhere } from './helpers.js';
 
 const { hospitals, model } = loadHacrp();
@@ -93,4 +95,29 @@ test('"no-cushion" means the current value is already the highest that reads No'
     assert.equal(r.value, h.measures[id].value, `${h.ccn} ${id}`);
     assert.notEqual(flagAt(h, id, r.value + unit(id)), 'No', `${h.ccn} ${id}`);
   }
+});
+
+// The median hospital whose recomputed score falls inside the band around the line (possible in some year): the
+// FY2026 model with the line moved to straddle its score.
+function tooCloseStart() {
+  const options = { fiscalYear: '2026', periods: SYNTH_PERIODS };
+  const { total } = medianHospital(model, options);
+  const m = { ...model, boundary: { highestNo: total - 0.0002, lowestYes: total + 0.0002 } };
+  return { h: medianHospital(m, options), m };
+}
+
+test('a starting decision of too close to call is solved as "What would it take": the value that reads No', () => {
+  const { h, m } = tooCloseStart();
+  assert.equal(h.paymentReduction, 'too-close');
+  let possible = 0;
+  for (const id of scoredMeasures(h)) {
+    const r = solveMeasure(h, m, id);
+    assert.equal(r.kind, 'needed', id);
+    if (!r.possible) continue;
+    possible++;
+    const step = 10 ** -m.params[id].decimals;
+    assert.equal(whatIf(h, m, { [id]: r.value }).after.flag, 'No', `${id} ${r.value}`);
+    assert.notEqual(whatIf(h, m, { [id]: r.value + step }).after.flag, 'No', `${id} ${r.value}`);
+  }
+  assert.ok(possible > 0);
 });

@@ -158,7 +158,7 @@ test('view model inputs: one per scored measure, with slider bounds, step, marks
   assert.equal(typed.max, 6);
   const decoded = decode('#whatif&CLABSI=15.5', { ids: scoredMeasures(CAPPED), params }).changes;
   const fromLink = viewModel(apply(CAPPED, set('CLABSI', decoded.CLABSI)), CAPPED, model, ESTIMATE).inputs.find((i) => i.id === 'CLABSI');
-  assert.equal(fromLink.max, 18.6);
+  assert.equal(fromLink.max, 15.72, 'never past the limit: 15.5 x 1.2 is 18.6');
   assert.ok(fromLink.value <= fromLink.max);
 
   const atCap = viewModel(apply(NO, set('MRSA', params.MRSA.cap)), NO, model, ESTIMATE);
@@ -264,5 +264,19 @@ test('reduce and decode accept the same range: whatever set keeps, a link carrie
   for (const v of [0, 0.4, 1.762, 17.62, 17.621, 18, 1e25]) {
     const s = reduce(initialState(NO, model), { type: 'set', id: 'MRSA', value: v });
     assert.deepEqual(decode(encode(changesOf(s), s.ids), { ids: s.ids, params }).changes, changesOf(s), String(v));
+  }
+});
+
+test('the slider never runs past the highest value a reader may set, which it can reach', () => {
+  for (const id of scoredMeasures(NO)) {
+    const p = params[id];
+    const limit = initialState(NO, model).limits[id];
+    for (const value of [0, p.cap, limit / 1.2 + 10 ** -p.decimals, limit]) {
+      const input = viewModel(apply(NO, set(id, value)), NO, model, ESTIMATE).inputs.find((i) => i.id === id);
+      assert.ok(input.max <= limit, `${id} ${value}: max ${input.max} > limit ${limit}`);
+      assert.ok(input.value <= input.max, `${id} ${value}`);
+    }
+    const top = viewModel(apply(NO, set(id, limit)), NO, model, ESTIMATE).inputs.find((i) => i.id === id);
+    assert.equal(top.max, limit, id);
   }
 });
