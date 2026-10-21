@@ -8,12 +8,21 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 
 // Copy as a page sets it: a straight apostrophe becomes ’ (CMS’s, hospitals’) and straight double quotes become
 // “ and ”. The copy files keep plain ASCII; only their words are typeset, never a value filled into them (CMS's text
-// stays as CMS published it).
-export const typeset = (text) => text
-  .replace(/([\w})])'(?=[\w{])/g, '$1\u2019')
-  .replace(/s'(?=[\s.,;:!?)]|$)/g, 's\u2019')
-  .replace(/(^|[\s(\[{])"/g, '$1\u201c')
-  .replace(/"/g, '\u201d');
+// stays as CMS published it). Each copy string is typeset once and remembered: copy is a fixed set of strings, and
+// fillCopy runs on every fill, in the build and in the browser.
+const TYPESET = new Map();
+export function typeset(text) {
+  let out = TYPESET.get(text);
+  if (out === undefined) {
+    out = text
+      .replace(/([\w})])'(?=[\w{])/g, '$1\u2019')
+      .replace(/s'(?=[\s.,;:!?)]|$)/g, 's\u2019')
+      .replace(/(^|[\s(\[{])"/g, '$1\u201c')
+      .replace(/"/g, '\u201d');
+    TYPESET.set(text, out);
+  }
+  return out;
+}
 
 // A copy object whose entries are plain strings, typeset once (for copy read directly, not through fillCopy).
 export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy).map(([k, v]) => [k, typeset(v)])));
