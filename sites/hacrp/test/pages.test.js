@@ -464,7 +464,8 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   const text = page({}, { rating: '4', footnotes: [] });
   assert.ok(text.includes('<p class="field__value field__value--sm">Major teaching · 1,234 beds · Government · Urban · Rural referral center · Sole community hospital</p>'));
   assert.ok(text.includes('Teaching, urban and special status: CMS’s FY2027 IPPS impact file.'));
-  assert.ok(text.includes('<p class="field__value">Exampleton, AL 35000</p>\n<div class="field__note">Example County</div>'));
+  assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div>/);
+  assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
   assert.match(text, /href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990002" target="_blank" rel="noopener">Open on Care Compare/);
   assert.match(text, /<span class="geo geo--e"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);

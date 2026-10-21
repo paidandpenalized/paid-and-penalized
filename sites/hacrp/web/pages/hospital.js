@@ -130,6 +130,16 @@ function starsField(view, no, careSource) {
   return formField({ no, label: t('fieldStars'), value, note, size: n === null ? 'sm' : null });
 }
 
+// The Location field's words, the state a link to the program page's map and table for that state (#state=XX, which
+// the table filters on and the map marks), as Thirty Day Readmissions links a hospital's metro area.
+const STATE_AT = '\u0001';
+function locationText(view) {
+  const values = { city: view.city, state: STATE_AT };
+  const [before, after] = (view.zip ? fill('location', { ...values, zip: view.zip }) : fill('locationNoZip', values)).split(STATE_AT);
+  const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
+  return html`${before}<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>${after}`;
+}
+
 // The postmark's cancellation lines (placement g): wavy rules left of its ring, in its ink. Shape constants only.
 const WAVES = { lines: 4, gap: 8, amp: 3, len: 10, half: 3 };
 const wavesSvg = (() => {
@@ -148,7 +158,7 @@ const geoFrame = (placement, svg) => html`<span class="geo geo--${placement}">${
 function recordCard(view, { careSource, masterFy, map, placement }) {
   const here = (p) => (map && placement === p ? map : null);
   const fy = String(view.fy);
-  const location = view.zip ? fill('location', { city: view.city, state: view.state, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: view.state });
+  const location = locationText(view);
   const type = typeText(view.profile);
   // Each field as (its number) => markup, numbered in order; a field with nothing to show is left out.
   const fields = [

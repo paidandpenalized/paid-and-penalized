@@ -248,6 +248,8 @@ export const COPY = {
   fieldHospital: { text: 'Hospital', claim: null },
   fieldLocation: { text: 'Location', claim: null },
   location: { text: '{city}, {state} {zip}', claim: null },
+  // The Location field's state link, for screen readers after the state's code: where it goes.
+  locationState: { text: "({state}'s hospitals on the map and in the table)", claim: null },
   locationNoZip: { text: '{city}, {state}', claim: null },
   fieldType: { text: 'Type', claim: null },
   typeTeachMajor: { text: 'Major teaching', claim: null },

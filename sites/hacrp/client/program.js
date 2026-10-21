@@ -115,17 +115,27 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     announce(text, typing);
   }
 
+  // The state on the US map: its outline drawn heavier while the table lists its hospitals (both map variants).
+  const maps = [...(document.querySelectorAll?.('svg.chart--us-map') ?? [])];
+  function markMap() {
+    for (const svg of maps) {
+      for (const mark of svg.querySelectorAll('.chart-mark[data-state]')) mark.classList.toggle('is-picked', mark.dataset.state === view.state);
+    }
+  }
+
   // The state from the URL: a code in the data, or none; anything else in the fragment is left alone.
   function fromHash() {
     const state = decodeState(window.location.hash, codes);
     if (state === view.state) return false;
     view.state = state;
     select.value = state ?? '';
+    markMap();
     return true;
   }
 
   select.addEventListener('change', () => {
     view.state = codes.includes(select.value) ? select.value : null;
+    markMap();
     const { pathname, search: query, hash } = window.location;
     window.history.replaceState(null, '', pathname + query + withState(hash, view.state));
     render();

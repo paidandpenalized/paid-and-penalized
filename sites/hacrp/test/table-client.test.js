@@ -142,3 +142,24 @@ test('a state picked on the US map, by a click or by Enter on the active mark, g
   assert.equal(globalThis.window.location.hash, '#state=MD', 'a key other than Enter, or a click off the states, picks nothing');
   assert.equal(scrolled, 2);
 });
+
+test("arriving with #state=XX (a hospital page's Location link) filters the table, marks the state on each US map and brings the table into view", async (t) => {
+  const marks = ['AL', 'MD'].map((code) => {
+    const classes = new Set();
+    return { dataset: { state: code }, classes, classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) } };
+  });
+  const svg = el('svg');
+  svg.querySelector = () => null;
+  svg.querySelectorAll = (s) => (s === '.chart-mark[data-state]' ? marks : []);
+  const s = await run(t, { hash: '#state=al', results: [true], maps: [svg] });
+  assert.equal(s.parts.tbody.children.length, 1);
+  assert.equal(s.parts['#ht-state'].value, 'AL');
+  assert.deepEqual(marks.map((m) => m.classes.has('is-picked')), [true, false]);
+  // The menu moves the mark too.
+  s.parts['#ht-state'].value = 'MD';
+  s.parts['#ht-state'].handlers.change();
+  assert.deepEqual(marks.map((m) => m.classes.has('is-picked')), [false, true]);
+  s.parts['#ht-state'].value = '';
+  s.parts['#ht-state'].handlers.change();
+  assert.deepEqual(marks.map((m) => m.classes.has('is-picked')), [false, false]);
+});
