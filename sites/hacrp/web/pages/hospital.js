@@ -1,11 +1,15 @@
 // One hospital's page: what CMS reports for it in plain words, the score and decision, the measure table with
-// CMS's values and footnotes, then where the data come from. Odd rows show CMS's values and add no inference.
+// CMS's values and footnotes, the what-if (scored hospitals only), then where the data come from. Odd rows show
+// CMS's values and add no inference.
 import { footnoteLegend, footnoteNote } from '../../../../web/render/components.js';
-import { html } from '../../../../web/render/html.js';
+import { html, jsonScript } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
+import { renderWhatIf } from '../../../../web/whatif/render.js';
+import { initialState, viewModel } from '../../../../web/whatif/state.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill } from '../copy.js';
+import { whatIfTexts } from '../whatif-text.js';
 import { asofBar, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
@@ -34,8 +38,21 @@ const legend = (view) => footnoteLegend({
   lists: [view.score.footnotes, view.decision.footnotes, ...view.measures.map((m) => m.footnotes)],
 });
 
-// robots: null for an indexable page, else the meta robots value.
-export function hospitalPage({ view, source, robots, assets }) {
+// The what-if for a scored hospital, CMS's values to start, and the page data its client module reads: this
+// hospital's record, the model and the estimate tags (never the whole file), plus the words the slide text needs.
+function whatIfBlock(view, { hospital, model, estimate }, source, assets) {
+  const script = assets.js['hacrp-hospital'];
+  if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
+  const page = { name: view.name, fy: view.fy, path: view.path, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText: view.boundaryText };
+  const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
+  const body = html`${renderWhatIf({ vm, hospital, model, texts: whatIfTexts({ hospital, model, ...page }) })}
+${jsonScript('hacrp-hospital', { hospital, model, estimate, page })}`;
+  return { body, script };
+}
+
+// robots: null for an indexable page, else the meta robots value. whatif: { hospital, model, estimate } for the
+// what-if; a hospital with no score never gets one.
+export function hospitalPage({ view, source, robots, assets, whatif = null }) {
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
   const title = `${fill('hospitalTitle', where)} · ${SITE.name}`;
@@ -44,6 +61,7 @@ export function hospitalPage({ view, source, robots, assets }) {
   const distance = distanceSentence(view);
   const small = smallNumber(view);
   const home = SITE.sites.hacrp.path;
+  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets) : null;
 
   const body = html`<article class="wrap page">
 <header class="page__head">
@@ -73,6 +91,7 @@ ${largest && html`<p>${largest}</p>`}
 <tbody>${view.measures.map(measureRow)}</tbody>
 </table></div></div>
 </section>
+${what?.body}
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
 ${legend(view)}
 <p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
@@ -85,6 +104,7 @@ ${sourceLine({ fy: view.fy, source })}
     path: view.path,
     robots,
     body,
+    scripts: what ? [what.script] : [],
     assets,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
   });

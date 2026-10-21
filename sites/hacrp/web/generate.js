@@ -61,16 +61,16 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     }),
   });
 
-  for (const view of views) {
+  for (const [i, view] of views.entries()) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital: hospitals[i], model, estimate } }) });
   }
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
-  entries: { 'hacrp-program': 'sites/hacrp/client/program.js' },
+  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js' },
   styles: ['sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };

@@ -19,7 +19,7 @@ import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
 import { BOUNDARY_TEXT as BOUNDARY, CASES, inputs, master } from './fixtures.js';
 
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-program': '/assets/hacrp-program.test.js' } };
+const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const DATA = loadHacrp();
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -70,8 +70,12 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
       for (const [, cell] of cells) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
     }
 
-    // Scored pages may be indexed; a page with no score never is, even in production on a released site.
-    for (const h of DATA.hospitals) assert.equal(page(h).includes(NOINDEX), h.total === null, hospitalPath(h));
+    // Scored pages may be indexed; a page with no score never is, even in production on a released site. Only a
+    // scored page has the what-if.
+    for (const h of DATA.hospitals) {
+      assert.equal(page(h).includes(NOINDEX), h.total === null, hospitalPath(h));
+      assert.equal(page(h).includes('<section class="block whatif" id="whatif"'), h.total !== null, `${hospitalPath(h)}: what-if`);
+    }
     const scored = DATA.hospitals.filter((h) => h.total !== null).map(hospitalPath);
     assert.deepEqual(ctx.indexable, ['/hacrp/', ...scored]);
     assert.ok(!pages.get('/hacrp/').includes(NOINDEX));
@@ -103,7 +107,7 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     assert.match(yes, /pill--pen">1% cut</);
     assert.ok(yes.includes(esc("CMS's value: Yes")));
     assert.doesNotMatch(yes, /No score published|hero__none/);
-    assert.doesNotMatch(yes, /id="whatif"/, 'no empty what-if section until it has content');
+    assert.match(yes, /<section class="block whatif" id="whatif"/);
     assert.match(yes, /class="hero__num cms">\S+</);
     assert.match(yes, /"isBasedOn":"https:\/\/data\.cms\.gov\/provider-data\/dataset\/yq43-i98g"/);
     const no = page(pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No'));
