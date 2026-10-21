@@ -79,7 +79,7 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
     // With its value printed, the code moves up and the value sits under it.
     const codeY = printed ? y + size / 2 - 2 : y + size / 2 + 4;
     return html`${mark({
-      // A tile (a phone-wide grid's cell, about 30 units) is its own hit area.
+      // A tile (a narrow grid's cell, about 27 units) is its own hit area.
       tip: `${code}: ${s.label}`, value: none ? null : s.value, data: { state: code }, hit: null,
       body: html`${tile}${text({ x: x + size / 2, y: codeY, anchor: null, cls: `chart-tile__code${on}`, body: code })}${printed ? text({ x: x + size / 2, y: codeY + 13, anchor: null, cls: `chart-tile__value${on}`, body: s.text }) : ''}`,
     })}

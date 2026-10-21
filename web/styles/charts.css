@@ -1,6 +1,7 @@
 /* The chart kit (web/charts/): build-time SVG charts and the figure around them. Colors come only from tokens.css;
-   marks may carry a meaning ink, text stays in text inks. Each chart's viewBox is about phone wide, so its text is
-   near its CSS size at 375px and grows only a little on wide screens (max-width). */
+   marks may carry a meaning ink, text stays in text inks. Each chart's narrow viewBox (300 units) is narrower than a
+   phone's column, so its 12-unit labels and 11-unit ticks read at about 11.5px and 10.6px at 320 and grow only a
+   little on wide screens (max-width). */
 
 /* ---------- the figure ---------- */
 .fig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
@@ -53,7 +54,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 
 /* ---------- the SVG ---------- */
 /* A viewBox shown wider scales its text, so a chart is never drawn much wider than its viewBox (--vb, from the kit's
-   frame): about 1.15x, so its labels never outgrow the body (26rem for the phone-wide 360, 40rem for the wide 560). */
+   frame): about 1.15x, so its labels never outgrow the body (about 22rem for the narrow 300, 40rem for the wide 560). */
 .chart { display: block; width: 100%; max-width: calc(var(--vb) * 1.12px + 0.8rem); height: auto; overflow: visible; font: 400 12px var(--font-body); }
 /* A focused chart's ring clears its edge labels. */
 .chart:focus-visible { outline-offset: 4px; }

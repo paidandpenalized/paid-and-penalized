@@ -4,8 +4,9 @@
 import { cmsText } from '../render/format.js';
 import { html } from '../render/html.js';
 
-// Charts are drawn about phone wide, so on a 375px screen their text is near its CSS size.
-export const WIDTH = 360;
+// Charts are drawn narrower than a phone (300 units across a 288px column at 320 and 343px at 375), so their 12-unit
+// labels and 11-unit ticks read at about 11.5px and up on any phone (charts.css caps the drawn width at about 22rem).
+export const WIDTH = 300;
 const RADIUS = 4;
 export const GAP = 2;
 export const MAX_THICKNESS = 24;

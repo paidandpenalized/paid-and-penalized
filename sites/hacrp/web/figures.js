@@ -23,7 +23,7 @@ const BINS = 20;
 const WIDE = 560;
 const SHARE_DP = 1;
 const num = (text, value) => ({ text, value });
-// A chart drawn twice, phone wide and WIDE, for figure()'s svg and svgWide.
+// A chart drawn twice, on the kit's narrow viewBox and WIDE, for figure()'s svg and svgWide.
 const variants = (draw) => ({ svg: draw(undefined), svgWide: draw(WIDE) });
 
 // Each measure's national range, from the model: CMS's floor and cap as published, and the national median of
