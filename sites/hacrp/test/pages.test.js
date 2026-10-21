@@ -222,7 +222,7 @@ test('a hospital with no score shows a hatched "No score published" block, not a
     assert.doesNotMatch(text, /cms">N\/A</);
   }
   const scored = render(CASES.yes);
-  assert.match(scored, /class="hero__num cms">0\.3000</);
+  assert.match(scored, /class="hero__num cms">0<span class="dp">\.<\/span>3000</, "CMS's text, its point in a span");
   assert.doesNotMatch(scored, /hero__none|No score published/);
 });
 

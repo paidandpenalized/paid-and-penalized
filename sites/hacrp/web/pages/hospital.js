@@ -17,6 +17,13 @@ const value = (text, published) => (published
   ? text
   : html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`);
 
+// The hero's number, its decimal point in a span the CSS pulls in: a monospace point takes a full cell, which opens
+// a gap at hero size. The digits stay tabular, and the text is CMS's, unchanged.
+function heroNumber(text) {
+  const at = text.indexOf('.');
+  return at < 0 ? text : html`${text.slice(0, at)}<span class="dp">.</span>${text.slice(at + 1)}`;
+}
+
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
 
 // A measure's notes: this site's note, CMS's footnotes and the estimate tag ('' when it has none). The tag marks a
@@ -96,7 +103,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 </header>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
-    ? html`<p class="hero__num cms">${view.score.text}</p>${view.status !== 'maryland' && html`
+    ? html`<p class="hero__num cms">${heroNumber(view.score.text)}</p>${view.status !== 'maryland' && html`
 <p class="hero__ref">${fill('heroLine', view.boundaryText)}</p>`}`
     : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
