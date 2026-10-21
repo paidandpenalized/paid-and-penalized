@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { scaleLinear } from 'd3-scale';
 import { parseCsv } from '../../engine/js/csv.js';
 import { mulberry32 } from '../../engine/js/test/prng.js';
@@ -221,6 +222,12 @@ test('tileMap steps follow the ramp thresholds, and text on a dark step uses the
   assert.equal(step(at(1)), '5');
 });
 
+test('tile codes are centered by charts.css, not an attribute on each of the 52 tiles', () => {
+  assert.doesNotMatch(String(tileMap(MAP)), /class="chart-tile__code[^"]*"[^>]*text-anchor/);
+  const css = readFileSync(new URL('../styles/charts.css', import.meta.url), 'utf8');
+  assert.match(css, /\.chart-tile__code \{[^}]*text-anchor: middle;/);
+});
+
 test('ramp marks CMS\'s line and this hospital where the what-if ramp would, and clamps a far hypothetical with an arrow', () => {
   const s = String(ramp(RAMP));
   assert.match(s, /class="chart-line"/);
@@ -372,8 +379,8 @@ const SNAPSHOTS = {
 </details>
 </figure>`,
   tileMapEnds: `<svg class="chart chart--tile-map" viewBox="0 0 360 330" width="100%" focusable="false"><defs><pattern id="chart-m1-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs>
-<g class="chart-mark" data-mark data-state="AK" data-value="0"><title>AK: AK label</title><rect class="chart-tile chart-seq-1" x="0" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="15.36" y="19.36" text-anchor="middle">AK</text></g>
-<g class="chart-mark" data-mark data-state="ME" data-value="0.25"><title>ME: ME label</title><rect class="chart-tile chart-seq-2" x="327.27" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="342.64" y="19.36" text-anchor="middle">ME</text></g>
+<g class="chart-mark" data-mark data-state="AK" data-value="0"><title>AK: AK label</title><rect class="chart-tile chart-seq-1" x="0" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="15.36" y="19.36">AK</text></g>
+<g class="chart-mark" data-mark data-state="ME" data-value="0.25"><title>ME: ME label</title><rect class="chart-tile chart-seq-2" x="327.27" y="0" width="30.73" height="30.73" rx="2"/><text class="chart-tile__code" x="342.64" y="19.36">ME</text></g>
 <g class="chart-legend"><rect class="chart-tile chart-seq-1" x="0" y="269.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="279.82" text-anchor="start">&lt; 0.2</text><rect class="chart-tile chart-seq-2" x="120" y="269.82" width="12" height="12"/><text class="chart-legend__label" x="138" y="279.82" text-anchor="start">0.2 – 0.4</text><rect class="chart-tile chart-seq-3" x="240" y="269.82" width="12" height="12"/><text class="chart-legend__label" x="258" y="279.82" text-anchor="start">0.4 – 0.6</text><rect class="chart-tile chart-seq-4" x="0" y="289.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="299.82" text-anchor="start">0.6 – 0.8</text><rect class="chart-tile chart-seq-5" x="120" y="289.82" width="12" height="12"/><text class="chart-legend__label" x="138" y="299.82" text-anchor="start">≥ 0.8</text><rect class="chart-tile-na" fill="url(#chart-m1-hatch)" x="0" y="309.82" width="12" height="12"/><text class="chart-legend__label" x="18" y="319.82" text-anchor="start">not subject to the reduction</text></g></svg>`,
 };
 

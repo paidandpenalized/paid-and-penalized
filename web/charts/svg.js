@@ -63,5 +63,6 @@ export function columnPath(x, w, yb, yt) {
 // The ▲ with its apex at (x, y): solid for this hospital, hollow for a hypothetical.
 export const triangle = (x, y, cls) => html`<path class="${cls}" d="M${r2(x)} ${r2(y)}l6 11h-12z"/>`;
 
+// anchor null: the class's CSS sets text-anchor (for text repeated many times, such as a tile map's codes).
 export const text = ({ x, y, anchor = 'middle', dx = 0, cls, body }) =>
-  html`<text class="${cls}" x="${r2(x)}" y="${r2(y)}"${dx ? html` dx="${dx}"` : ''} text-anchor="${anchor}">${body}</text>`;
+  html`<text class="${cls}" x="${r2(x)}" y="${r2(y)}"${dx ? html` dx="${dx}"` : ''}${anchor ? html` text-anchor="${anchor}"` : ''}>${body}</text>`;

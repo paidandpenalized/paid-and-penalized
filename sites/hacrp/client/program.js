@@ -113,6 +113,12 @@ function mountTable({ hospitalPath, rows }) {
     tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(total, 'score'), cell(decision, 'decision'));
     return tr;
   }
+  // Each row's <tr> is built once; a filter or sort only puts the built rows in a new order.
+  const built = new WeakMap();
+  const rowOf = (r) => {
+    if (!built.has(r)) built.set(r, row(r));
+    return built.get(r);
+  };
 
   // The row count, in a polite live region; while the reader types a name, it follows SETTLE_MS after they stop.
   let settle = null;
@@ -126,7 +132,7 @@ function mountTable({ hospitalPath, rows }) {
     const matches = sortRows(filterRows(rows, view), view.key, view.dir);
     const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
     const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
-    body.replaceChildren(...shown.map(row));
+    body.replaceChildren(...shown.map(rowOf));
     all.hidden = !limited;
     if (limited) all.textContent = fill('tableShowAll', { n: count(matches.length) });
     const text = matches.length === 0 ? fill('tableCountNone')
@@ -179,23 +185,20 @@ function mountTable({ hospitalPath, rows }) {
 
 if (table) {
   // Fetch when the table nears the screen, or at once for a link that names a state (or a browser with no
-  // observer). A failed fetch is logged and tried again the next time the section comes near; a fault while
+  // observer). hospitals() keeps one fetch in flight, so a second call waits for the same one, and the table is
+  // mounted once. A failed fetch is logged and tried again the next time the section comes near; a fault while
   // building the table is not caught here, so it reaches the console as itself.
   let observer = null;
-  let loading = false;
   let mounted = false;
-  const load = () => {
-    if (loading || mounted) return;
-    loading = true;
-    hospitals(table.dataset.src).then(
-      (data) => {
-        mounted = true;
-        observer?.disconnect();
-        mountTable(data);
-      },
-      (error) => { console.error(error); },
-    ).finally(() => { loading = false; });
-  };
+  const load = () => hospitals(table.dataset.src).then(
+    (data) => {
+      if (mounted) return;
+      mounted = true;
+      observer?.disconnect();
+      mountTable(data);
+    },
+    (error) => { console.error(error); },
+  );
   if (!/(^#|&)state=/.test(window.location.hash) && 'IntersectionObserver' in window) {
     observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));

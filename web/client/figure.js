@@ -85,6 +85,8 @@ function mountMarks(fig) {
     tip.hidden = true;
   };
   const show = (i, announce) => {
+    // The pointer moving between one mark's parts changes nothing; a key press still announces the mark again.
+    if (i === current && !announce) return;
     marks[current]?.classList.remove('is-active');
     current = i;
     const m = marks[i];

@@ -53,7 +53,7 @@ export function tileMap({ id, states, ramp, width = WIDTH, format = plain }) {
     return html`${mark({
       // A tile (a phone-wide grid's cell, about 30 units) is its own hit area.
       tip: `${code}: ${s.label}`, value: s.hatched ? null : s.value, data: { state: code }, hit: null,
-      body: html`${tile}${text({ x: x + size / 2, y: y + size / 2 + 4, cls: codeCls, body: code })}`,
+      body: html`${tile}${text({ x: x + size / 2, y: y + size / 2 + 4, anchor: null, cls: codeCls, body: code })}`,
     })}
 `;
   });

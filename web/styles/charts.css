@@ -52,7 +52,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-seq-3 { fill: var(--pen-seq-3); }
 .chart-seq-4 { fill: var(--pen-seq-4); }
 .chart-seq-5 { fill: var(--pen-seq-5); }
-.chart-tile__code { fill: var(--ink); font-family: var(--font-type); font-size: 11px; font-weight: 700; paint-order: stroke; }
+.chart-tile__code { fill: var(--ink); font-family: var(--font-type); font-size: 11px; font-weight: 700; paint-order: stroke; text-anchor: middle; }
 .chart-tile__code--on { fill: var(--on-mark); }
 /* A hatched tile's code sits on a paper halo, so the hatch never crosses its letters. */
 .chart-tile-na + .chart-tile__code { stroke: var(--paper); stroke-width: 3px; }
