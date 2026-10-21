@@ -88,8 +88,8 @@
    the window (a scroll box would be its sticky container, and that box never scrolls down). */
 @media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
 
-/* The phone's Sort by menu and each cell's screen-reader label show only on a narrow screen. */
-.ht__sort, .ht-label { display: none; }
+/* The phone's Sort by menu shows only on a narrow screen. */
+.ht__sort { display: none; }
 /* Narrow screens: each hospital stacks into a block (the name across the top; "City, ST" at the left and the score
    at the right; the decision under the score), so the table never scrolls sideways. The column heads are hidden
    (still read by screen readers); the Sort by menu stands in for their buttons. */
@@ -97,7 +97,8 @@
   .ht__sort { display: grid; }
   .ht__controls { display: grid; gap: 12px; }
   .ht__field, .ht select, .ht input { width: 100%; }
-  .ht-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Each cell's column name, for screen readers only (the heads are hidden): generated from data-label, clipped. */
+  .gb--hospitals td::before { content: attr(data-label) ": "; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .gb--hospitals, .gb--hospitals tbody { display: block; width: 100%; }
   .gb--hospitals thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .gb--hospitals tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name name" "city state score" ". . decision"; gap: 2px 0; padding: 8px 10px 10px; }

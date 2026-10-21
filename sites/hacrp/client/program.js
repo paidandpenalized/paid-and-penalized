@@ -121,16 +121,14 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     return option;
   }));
 
-  // Each cell names its column in a span shown only to screen readers on a narrow screen, where the rows stack and
-  // the column heads are hidden.
+  // Each cell names its column (data-label), which a narrow screen, where the rows stack and the column heads are
+  // hidden, gives to screen readers only, as generated text (styles.css): no extra node per cell.
   const label = Object.fromEntries(heads.map((th) => [th.dataset.key, th.textContent.trim()]));
   const cell = (text, key) => {
     const td = document.createElement('td');
     td.className = key === 'score' ? `ht-${key} num` : `ht-${key}`;
-    const name = document.createElement('span');
-    name.className = 'ht-label';
-    name.textContent = `${label[key]}: `;
-    td.append(name, text);
+    td.dataset.label = label[key];
+    td.append(text);
     return td;
   };
   function row([ccn, name, city, state, total, decision]) {
