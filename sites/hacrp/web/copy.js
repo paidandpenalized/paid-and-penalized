@@ -284,17 +284,18 @@ export const COPY = {
   mapAddress: { text: "Placed from its street address (U.S. Census Bureau Geocoder).", claim: null },
   mapZip: { text: 'Placed approximately, at the center of its ZIP code.', claim: null },
   mapCounty: { text: 'Placed approximately, at the center of its county.', claim: null },
-  // The map as a record field (placement a), and the strip's one line (placement d).
+  // The map as a cell of the numbers card (placement i).
   fieldMap: { text: 'On the map', claim: null },
-  mapStrip: { text: '{city}, {state}.', claim: null },
-  // The preview index (a preview build only, never the site): the map's four placements on sample hospital pages.
+  // The preview index (a preview build only, never the site): the map's placements on sample hospital pages.
   previewTitle: { text: 'State map placements: previews', claim: null },
-  previewIntro: { text: 'Sample hospital pages, each built with the state map in one of four places. A preview build only: these pages are never indexed or published.', claim: null },
+  previewIntro: { text: 'Sample hospital pages, each built with the state map in a different place. A preview build only: these pages are never indexed or published.', claim: null },
   previewLink: { text: '{name}, {state}', claim: null },
-  previewA: { text: 'a. In the record card, beside Location', claim: null },
-  previewB: { text: 'b. Beside the record card, a third column on wide screens', claim: null },
-  previewC: { text: 'c. Under the stamp (the default)', claim: null },
-  previewD: { text: 'd. A full-width strip under the top', claim: null },
+  previewE: { text: 'e. In the Hospital field, right of the name, as tall as the name (the default)', claim: null },
+  previewF: { text: 'f. A thumbnail in the Location field, right of the address', claim: null },
+  previewG: { text: "g. A postmark over the record card's top-right corner", claim: null },
+  previewH: { text: 'h. Beside the stamp, at the top of the right column', claim: null },
+  previewI: { text: "i. A third cell in the numbers card, after CMS's line and the distance", claim: null },
+  previewJ: { text: "j. A faint watermark behind the record card's fields", claim: null },
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },

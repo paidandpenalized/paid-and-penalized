@@ -132,7 +132,8 @@ function locator(shapes, code, width) {
 // topology lacks), a point that isn't a pair of finite numbers, or a point that would fall outside the frame (a
 // location the outline doesn't hold).
 //   shapes  stateShapes(topo); code: the postal code; label: the image's accessible name (text)
-export function stateMap({ shapes, code, point, label, width = WIDTH }) {
+//   dot     the dot and halo's scale, for a map drawn small (a thumbnail needs a larger dot to stay visible)
+export function stateMap({ shapes, code, point, label, width = WIDTH, dot = 1 }) {
   if (typeof label !== 'string' || !label) throw new TypeError('stateMap: label is required');
   if (!LOCATOR_CODES.has(code) || !shapes.has(code)) return null;
   if (!Array.isArray(point) || point.length !== 2 || !point.every(Number.isFinite)) return null;
@@ -142,7 +143,7 @@ export function stateMap({ shapes, code, point, label, width = WIDTH }) {
   const [x, y] = at.map(r2);
   return new Safe(`<svg class="chart chart--state-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${escapeHtml(label)}" focusable="false" style="--vb: ${width}">`
     + `<path class="chart-geo-state" d="${outline}"/>`
-    + `<circle class="chart-geo-halo" cx="${x}" cy="${y}" r="${HALO_R}"/><circle class="chart-geo-dot" cx="${x}" cy="${y}" r="${DOT_R}"/></svg>`);
+    + `<circle class="chart-geo-halo" cx="${x}" cy="${y}" r="${r2(HALO_R * dot)}"/><circle class="chart-geo-dot" cx="${x}" cy="${y}" r="${r2(DOT_R * dot)}"/></svg>`);
 }
 
 // The US map's projection and each state's path at a width; remembered for the build.

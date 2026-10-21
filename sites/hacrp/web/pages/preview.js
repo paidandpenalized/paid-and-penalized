@@ -5,7 +5,7 @@ import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { fill, t } from '../copy.js';
 
-const LABELS = { a: 'previewA', b: 'previewB', c: 'previewC', d: 'previewD' };
+const LABELS = { e: 'previewE', f: 'previewF', g: 'previewG', h: 'previewH', i: 'previewI', j: 'previewJ' };
 
 // links: [{ placement, path, view }], in placement order.
 export function previewIndex(links, assets) {

@@ -14,7 +14,7 @@ import { withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count, isoDate as isoDateOf } from '../../../web/render/format.js';
 import { HACRP, MAP_PLACEMENT, generateHacrp, hospitalRows, previewSamples, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
-import { hospitalPage } from '../web/pages/hospital.js';
+import { MAP_PLACEMENTS, hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
@@ -150,7 +150,7 @@ test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
     assert.deepEqual(ctx.indexable, []);
     // The hospitals, /hacrp/, the dictionary page, and the map previews: each sample in each placement, and their index.
     const samples = previewSamples(SLICE.hospitals.map((h) => ({ view: { ccn: h.ccn, status: h.paymentReduction === 'N/A' ? 'maryland' : h.total === null ? 'none' : h.paymentReduction.toLowerCase(), scored: h.total !== null, state: DATA.master.get(h.ccn).state } })));
-    assert.equal(ctx.pages, SLICE.hospitals.length + 2 + samples.length * 4 + 1);
+    assert.equal(ctx.pages, SLICE.hospitals.length + 2 + samples.length * MAP_PLACEMENTS.length + 1);
     for (const path of ['/hacrp/', '/hacrp/data/', ...SLICE.hospitals.map(hospitalPath)]) assert.ok(read(dir, path).includes(NOINDEX), path);
   }));
 
@@ -357,7 +357,7 @@ test('the measure table has a Notes column only when some measure has a note, wi
 test('the top: the record card (title bar, numbered fields from the name) beside the verdict (stamp, summary), before the notes', () => {
   for (const h of Object.values(CASES)) {
     const text = render(h);
-    assert.match(text, /<article class="wrap page page--article hosp">\n<div class="hosp__top hosp__top--c">\n<div class="form hosp__id">\n<p class="form__title"><span>Hospital record · FY2026<\/span><span>CCN 99\d{4}<\/span><\/p>/, h.ccn);
+    assert.match(text, /<article class="wrap page page--article hosp">\n<div class="hosp__top hosp__top--e">\n<div class="form hosp__id">\n<p class="form__title"><span>Hospital record · FY2026<\/span><span>CCN 99\d{4}<\/span><\/p>/, h.ccn);
     const card = /<div class="form hosp__id">[\s\S]*?\n<\/div>\n<section/.exec(text)[0];
     const numbers = [...card.matchAll(/<span class="field__no">(\d+)<\/span>([^<]+)</g)].map((m) => [Number(m[1]), m[2]]);
     assert.deepEqual(numbers.map(([n]) => n), numbers.map((_, i) => i + 1), `${h.ccn}: numbered in order`);
@@ -467,8 +467,7 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.ok(text.includes('<p class="field__value">Exampleton, AL 35000</p>\n<div class="field__note">Example County</div>'));
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
   assert.match(text, /href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990002" target="_blank" rel="noopener">Open on Care Compare/);
-  assert.match(text, /<figure class="hosp__map"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
-  assert.ok(text.includes('Placed approximately, at the center of its ZIP code.'));
+  assert.match(text, /<span class="geo geo--e"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
   // CMS's words where it gives no rating, with its footnote; no stars field when Care Compare doesn't list the hospital.
   const fn = FN('16');
   const none = page({}, { rating: 'Not Available', footnotes: [{ code: '16', text: fn }] });
@@ -493,23 +492,32 @@ test("careCompareRatings: CMS's rating text and footnotes by CCN; a missing colu
   assert.ok(rated > DATA.hospitals.length / 2, `${rated} rated`);
 });
 
-test('map placements: a puts the map in the record card, b beside it, c under the stamp (the default), d in a strip under the top', () => {
-  const page = (mapPlacement) => hospitalPage({ view: hospitalView(inputs(CASES.yes, { master: master('990001', { lat: 32.4, lon: -86.3, geo: 'address' }) })), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, shapes: DATA.shapes, mapPlacement });
-  assert.equal(MAP_PLACEMENT, 'c');
-  const where = (text) => {
-    const at = text.indexOf('chart--state-map');
-    return { inCard: at > text.indexOf('class="form hosp__id"') && at < text.indexOf('<section class="hosp__verdict"'), inVerdict: at > text.indexOf('<section class="hosp__verdict"') && at < text.indexOf('</section>\n</div>'), inStrip: at > text.indexOf('<figure class="hosp__strip">') && text.includes('<figure class="hosp__strip">') };
-  };
-  const a = page('a');
-  assert.match(a, /<span class="field__no">3<\/span>On the map<\/p>\n<div class="field__value hosp__map-field"><svg class="chart chart--state-map"/, 'a field right after Location');
-  assert.equal(a.split('chart--state-map').length, 2, 'one map');
-  assert.deepEqual(where(page('b')), { inCard: true, inVerdict: false, inStrip: false });
-  assert.match(page('b'), /<\/div>\n<figure class="hosp__map hosp__map--side"><svg/);
-  assert.deepEqual(where(page('c')), { inCard: false, inVerdict: true, inStrip: false });
-  assert.deepEqual(where(page('d')), { inCard: false, inVerdict: false, inStrip: true });
-  assert.match(page('d'), /<figcaption><span class="hosp__strip-place">Exampleton, Alabama\.<\/span> Placed from its street address/);
-  for (const p of ['a', 'b', 'c', 'd']) assert.match(page(p), new RegExp(`<div class="hosp__top hosp__top--${p}">`));
-  assert.throws(() => page('e'), /placement "e"/);
+test('map placements: e in the Hospital field, f in Location, g a postmark on the card, h beside the stamp, i a numbers cell, j a watermark; e the default', () => {
+  const page = (mapPlacement, h = CASES.yes) => hospitalPage({ view: hospitalView(inputs(h, { master: master(h.ccn, { lat: 32.4, lon: -86.3, geo: 'address' }) })), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, shapes: DATA.shapes, mapPlacement });
+  assert.equal(MAP_PLACEMENT, 'e');
+  assert.deepEqual([...MAP_PLACEMENTS], ['e', 'f', 'g', 'h', 'i', 'j']);
+  const card = (text) => /<div class="form hosp__id">[\s\S]*?\n<\/div>\n<section/.exec(text)[0];
+  const verdict = (text) => /<section class="hosp__verdict"[\s\S]*?<\/section>/.exec(text)[0];
+  for (const p of MAP_PLACEMENTS) {
+    const text = page(p);
+    assert.match(text, new RegExp(`<div class="hosp__top hosp__top--${p}">`));
+    assert.equal(text.split('chart--state-map').length, 2, `${p}: one map`);
+    assert.match(text, new RegExp(`<span class="geo geo--${p}"><svg class="chart chart--state-map"`), p);
+    assert.equal(card(text).includes('chart--state-map'), 'efgj'.includes(p), `${p}: in the card or not`);
+  }
+  // e: beside the h1, never inside it (the heading's name stays the hospital's).
+  assert.match(page('e'), /<div class="field__row"><h1 class="field__value hosp__name">[^<]*<\/h1><span class="geo geo--e">/);
+  assert.match(page('f'), /Location<\/p>\n<div class="field__row"><p class="field__value">[^]*?<\/p><span class="geo geo--f">/);
+  assert.match(page('g'), /<div class="postmark"><svg class="postmark__waves"[^>]*aria-hidden="true"[^]*?<span class="postmark__ring"><span class="geo geo--g">[^]*?<span class="postmark__code">AL<\/span>/);
+  assert.match(verdict(page('h')), /<div class="hosp__stamprow"><p class="stamp">[^<]*<\/p><span class="geo geo--h">/);
+  assert.match(verdict(page('i')), /<div class="form hosp__nums hosp__nums--map">[^]*?<span class="field__no">C<\/span>On the map<\/p>\n<div class="field__value hosp__map-cell"><span class="geo geo--i">/);
+  // i with no score: the map is the card's only cell.
+  assert.match(page('i', CASES.noScore), /<div class="form hosp__nums hosp__nums--map">\n<div class="field">\n<p class="field__label"><span class="field__no">A<\/span>On the map/);
+  assert.match(card(page('j')), /^<div class="form hosp__id">\n<div class="hosp__wm"><span class="geo geo--j">/);
+  // The dot grows as the map shrinks.
+  const dotR = (text) => Number(/class="chart-geo-dot"[^>]*r="([\d.]+)"/.exec(text)[1]);
+  assert.ok(dotR(page('f')) > dotR(page('j')));
+  assert.throws(() => page('a'), /placement "a"/);
 });
 
 test('previews: a preview build writes each sample hospital in each placement under /preview/, noindex, canonical to the real page, with an index; production writes none', () =>
@@ -517,8 +525,9 @@ test('previews: a preview build writes each sample hospital in each placement un
     const ctx = await generate(dir, undefined, { data: SLICE });
     const index = read(dir, '/preview/');
     assert.ok(index.includes(NOINDEX));
-    const links = [...index.matchAll(/href="(\/preview\/map-([a-d])\/hacrp\/hospital\/(\w+)\/)"/g)];
-    assert.ok(links.length >= 12 && links.length % 4 === 0, `${links.length} links`);
+    const links = [...index.matchAll(/href="(\/preview\/map-([e-j])\/hacrp\/hospital\/(\w+)\/)"/g)];
+    assert.ok(links.length >= MAP_PLACEMENTS.length * 3 && links.length % MAP_PLACEMENTS.length === 0, `${links.length} links`);
+    assert.doesNotMatch(index, /map-[a-d]\//);
     for (const [, path, placement, ccn] of links) {
       const text = read(dir, path);
       assert.ok(text.includes(NOINDEX), path);

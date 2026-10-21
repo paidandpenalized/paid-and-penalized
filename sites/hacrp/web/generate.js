@@ -109,7 +109,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 }
 
 // The map placement every hospital page is built with (pages/hospital.js MAP_PLACEMENTS).
-export const MAP_PLACEMENT = 'c';
+export const MAP_PLACEMENT = 'e';
 const PREVIEW_ROOT = '/preview/';
 
 // One hospital page per kind the owner compares placements on, picked by property in CCN order: a scored cut, a

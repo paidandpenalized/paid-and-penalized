@@ -29,32 +29,59 @@
 .hosp__note { font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
 .hosp__nums { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
 .hosp__nums .field__value--sm .nw { font-variant-numeric: tabular-nums; }
-.hosp__map { display: grid; align-content: start; gap: 6px; margin: 0; }
-.hosp__map .chart { max-width: 22rem; }
-/* The state map's placements (pages/hospital.js MAP_PLACEMENTS); c, under the stamp, needs nothing more.
-   a: a field of the record card, beside Location. */
-.hosp__map-field .chart { max-width: 16rem; margin-top: 4px; }
-/* b: beside the record card. From 1180px a third column between it and the verdict; from 980px under the card, the
-   verdict beside both; under 980px stacked, the record, the map, the verdict. */
-@media (min-width: 980px) {
-  .hosp__top--b > .hosp__map--side { grid-column: 1; }
-  .hosp__top--b > .hosp__verdict { grid-column: 2; grid-row: 1 / span 2; }
+/* The state map's placements (pages/hospital.js MAP_PLACEMENTS). Every one draws the dot in the penalty ink's red. */
+.geo { display: block; }
+.geo .chart { display: block; }
+.geo .chart-geo-dot, .geo .chart-geo-halo { fill: var(--pen); }
+.geo .chart-geo-halo { fill-opacity: 0.2; }
+/* A value with a map at its right (components.js formField aside). */
+.field__row { display: flex; align-items: stretch; gap: 12px; }
+.field__row > :first-child { flex: 1 1 auto; min-width: 0; }
+/* e: right of the name, as tall as two lines of it (most names take two; the frame takes the name's size). */
+.geo--e { flex: none; align-self: center; max-width: 34%; height: 2.04em; margin-top: 6px; font-size: clamp(1.8rem, 4.4vw, 3rem); }
+.geo--e .chart { width: auto; height: 100%; max-width: 100%; }
+/* f: a thumbnail right of the address. */
+.geo--f { flex: none; align-self: center; }
+.geo--f .chart { width: auto; height: 3.25rem; }
+/* g: a postmark over the card's top-right corner: cancellation lines and a double ring around the outline, in ink,
+   rotated and grain-masked like the stamp. The title bar and the name keep clear of it. */
+.hosp__top--g { padding-top: 36px; }
+.hosp__top--g .hosp__id { position: relative; }
+.hosp__top--g .hosp__id > .form__title { padding-right: 150px; }
+.hosp__top--g .hosp__id > .field--wide { padding-right: 96px; }
+.postmark { position: absolute; top: -32px; right: -4px; display: flex; align-items: center; color: var(--ink); transform: rotate(-9deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); pointer-events: none; }
+.postmark__waves { width: 60px; margin-right: -6px; stroke-width: 1.5; }
+.postmark__ring { display: grid; justify-items: center; align-content: center; gap: 2px; width: 96px; height: 96px; border: 5px double currentColor; border-radius: 50%; background: var(--paper); }
+.postmark .geo .chart { width: auto; height: 50px; max-width: 66px; }
+.postmark .chart-geo-state { fill: none; stroke: currentColor; stroke-width: 2px; }
+.postmark__waves, .postmark__code { flex: none; }
+@media (max-width: 480px) {
+  .postmark__waves { display: none; }
+  .hosp__top--g .hosp__id > .form__title { padding-right: 100px; }
 }
-@media (min-width: 1180px) {
-  .hosp__top--b { grid-template-columns: minmax(0, 3fr) minmax(0, 1.6fr) minmax(0, 2fr); }
-  .hosp__top--b > .hosp__map--side { grid-column: 2; grid-row: 1; }
-  .hosp__top--b > .hosp__verdict { grid-column: 3; grid-row: 1; }
-}
-/* d: a full-width strip under the top, the outline small at its left and one line beside it. */
-.page--article > .hosp__strip { grid-column: full; }
-.hosp__strip { display: flex; align-items: center; gap: 12px 24px; margin: 0; padding-block: 12px; border-block: var(--rule) solid var(--ink); }
-.hosp__strip .chart { flex: none; width: 10rem; }
-.hosp__strip figcaption { max-width: none; font-size: var(--fs-sm); color: var(--ink-2); }
-.hosp__strip-place { color: var(--ink); font: 400 var(--fs-md)/1.3 var(--font-display); }
-@media (max-width: 480px) { .hosp__strip .chart { width: 7rem; } }
+.postmark__code { font: 700 var(--fs-cap)/1 var(--font-type); letter-spacing: 0.1em; }
+/* h: beside the stamp. */
+.hosp__stamprow { display: flex; align-items: center; gap: 18px; }
+.geo--h .chart { width: auto; height: 4.5rem; max-width: 7rem; }
+/* i: the numbers card's third cell, at its right, beside CMS's line and the distance stacked. */
+.hosp__nums--map { grid-template-columns: minmax(0, 1fr) auto; }
+.hosp__nums--map > .field:last-child { grid-column: 2; grid-row: 1 / span 2; }
+.hosp__nums--map > .field:only-child { grid-column: 1 / -1; grid-row: auto; }
+.geo--i .chart { width: auto; height: 5rem; max-width: 7rem; margin-top: 4px; }
+/* j: a faint outline behind the record's fields, the dot still red; the fields sit over it. */
+.hosp__top--j .hosp__id { position: relative; }
+.hosp__top--j .hosp__id > :not(.hosp__wm) { position: relative; }
+.hosp__wm { position: absolute; inset: 2.5rem 8px 8px; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
+.geo--j { height: 100%; }
+.geo--j .chart { width: auto; height: 100%; max-width: 100%; }
+.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.4; }
+.geo--j .chart-geo-halo { fill-opacity: 0.12; }
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
   .hosp__none span { background: Canvas; color: CanvasText; }
+  .geo .chart-geo-dot { fill: CanvasText; }
+  .geo .chart-geo-halo { fill: none; }
+  .postmark { -webkit-mask-image: none; mask-image: none; }
   .stars__off { color: GrayText; }
 }
 

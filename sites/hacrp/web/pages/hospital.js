@@ -91,8 +91,16 @@ function figures(view, ranges, source) {
   return [rangeFigure(view, ranges, 1, line)].filter(Boolean);
 }
 
-// The state map's four placements on a hospital page, for the owner to choose among (preview pages show each).
-export const MAP_PLACEMENTS = Object.freeze(['a', 'b', 'c', 'd']);
+// The state map's placements on a hospital page, for the owner to choose among (preview pages show each):
+//   e  in the Hospital field, right of the name, as tall as the name
+//   f  a thumbnail in the Location field, right of the address
+//   g  a postmark (ring, outline, dot and cancellation lines) over the record card's top-right corner
+//   h  beside the stamp, at the top of the verdict column
+//   i  a third cell of the numbers card
+//   j  a faint watermark behind the record card's fields
+export const MAP_PLACEMENTS = Object.freeze(['e', 'f', 'g', 'h', 'i', 'j']);
+// Each placement's dot scale: the smaller the map is drawn, the larger its dot is in the map's own units.
+const DOT = { e: 3, f: 4, g: 4.5, h: 2.5, i: 3, j: 1.25 };
 
 // The record card's Type field: what the master knows, in the site's words (the ownership as the master writes it);
 // null when it knows nothing.
@@ -122,17 +130,30 @@ function starsField(view, no, careSource) {
   return formField({ no, label: t('fieldStars'), value, note, size: n === null ? 'sm' : null });
 }
 
-// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields. mapField: the state map
-// as a field beside Location (placement a), or null.
-function recordCard(view, { careSource, masterFy, mapField }) {
+// The postmark's cancellation lines (placement g): wavy rules left of its ring, in its ink. Shape constants only.
+const WAVES = { lines: 4, gap: 8, amp: 3, len: 10, half: 3 };
+const wavesSvg = (() => {
+  const { lines, gap, amp, len, half } = WAVES;
+  const width = len * half * 2;
+  const height = gap * (lines - 1) + 2 * amp + 2;
+  const d = Array.from({ length: lines }, (_, i) => `M0 ${amp + 1 + i * gap}q${len / 2} ${-2 * amp} ${len} 0${` t${len} 0`.repeat(half * 2 - 1)}`).join('');
+  return html`<svg class="postmark__waves" viewBox="0 0 ${String(width)} ${String(height)}" aria-hidden="true" focusable="false"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+})();
+
+// The state map in its placement's frame (the dot in the penalty ink's red; see styles.css .geo).
+const geoFrame = (placement, svg) => html`<span class="geo geo--${placement}">${svg}</span>`;
+
+// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields. map: the state map's
+// markup when its placement is in the card (e, f, g or j), with that placement; else null.
+function recordCard(view, { careSource, masterFy, map, placement }) {
+  const here = (p) => (map && placement === p ? map : null);
   const fy = String(view.fy);
   const location = view.zip ? fill('location', { city: view.city, state: view.state, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: view.state });
   const type = typeText(view.profile);
   // Each field as (its number) => markup, numbered in order; a field with nothing to show is left out.
   const fields = [
-    (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true }),
-    (no) => formField({ no, label: t('fieldLocation'), value: location, note: view.county }),
-    mapField,
+    (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true, aside: here('e') }),
+    (no) => formField({ no, label: t('fieldLocation'), value: location, note: view.county, aside: here('f') }),
     type && ((no) => formField({ no, label: t('fieldType'), value: type, size: 'sm', note: masterFy ? fill('typeNote', { fy: String(masterFy) }) : null })),
     view.scored
       ? (no) => formField({ no, label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: view.status === 'maryland' ? t('scoreNote') : html`${t('scoreNote')}<br>${heroLineText(view.boundaryText)}` })
@@ -141,9 +162,12 @@ function recordCard(view, { careSource, masterFy, mapField }) {
     (no) => starsField(view, no, careSource),
   ].filter(Boolean);
   let no = 0;
+  const mark = here('g');
   return html`<div class="form hosp__id">
-${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
-${fields.map((field) => {
+${here('j') && html`<div class="hosp__wm">${here('j')}</div>
+`}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
+${mark && html`<div class="postmark">${wavesSvg}<span class="postmark__ring">${mark}<span class="postmark__code">${view.state}</span></span></div>
+`}${fields.map((field) => {
     const markup = field(no + 1);
     if (markup) no++;
     return markup && html`${markup}
@@ -163,27 +187,36 @@ function stampOf(view) {
   }
 }
 
-// The numbers card beside the record: CMS's line (every scored hospital) and this site's distance to it (a Yes or No
-// decision); null for a hospital with no score.
-function numbersCard(view) {
-  if (!view.scored) return null;
-  const { highestNo, lowestYes } = view.boundaryText;
-  const d = view.distance;
-  return html`<div class="form hosp__nums">
-${formField({ no: 'A', label: t('lineHeading'), value: fillKeep('numLine', { highestNo, lowestYes }, [['highestNo', 'lowestYes']]), size: 'sm', note: view.status === 'maryland' ? t('lineMaryland') : t('numLineNote') })}
-${d && formField({ no: 'B', label: t('fieldDistance'), value: d.text, note: d.to === 'highestNo' ? fill('numDistanceYes', { highestNo }) : fill('numDistanceNo', { lowestYes }) })}
-</div>`;
+// The numbers card beside the record: CMS's line (every scored hospital), this site's distance to it (a Yes or No
+// decision) and, in placement i, the state map as the last cell; null when it has none of them.
+const CELL_LETTERS = 'ABC';
+function numbersCard(view, map) {
+  const cells = [];
+  if (view.scored) {
+    const { highestNo, lowestYes } = view.boundaryText;
+    const d = view.distance;
+    cells.push((no) => formField({ no, label: t('lineHeading'), value: fillKeep('numLine', { highestNo, lowestYes }, [['highestNo', 'lowestYes']]), size: 'sm', note: view.status === 'maryland' ? t('lineMaryland') : t('numLineNote') }));
+    if (d) cells.push((no) => formField({ no, label: t('fieldDistance'), value: d.text, note: d.to === 'highestNo' ? fill('numDistanceYes', { highestNo }) : fill('numDistanceNo', { lowestYes }) }));
+  }
+  if (map) cells.push((no) => formField({ no, label: t('fieldMap'), value: map, as: 'div', cls: 'hosp__map-cell' }));
+  if (!cells.length) return null;
+  return html`<div class="form hosp__nums${map ? ' hosp__nums--map' : ''}">
+${cells.map((cell, i) => html`${cell(CELL_LETTERS[i])}
+`)}</div>`;
 }
 
 // The state outline with the hospital's dot, and how the dot was placed; null where geo.js draws no map (a territory,
-// no point, or a point the outline doesn't hold).
+// no point, or a point the outline doesn't hold). dot: the dot's scale (DOT, by placement).
 const PLACED = { address: 'mapAddress', zip: 'mapZip', county: 'mapCounty' };
-export function locatorMap(view, shapes) {
+export function locatorMap(view, shapes, dot = 1) {
   if (!shapes || !view.point) return null;
-  const svg = stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }) });
+  const svg = stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
   if (!svg) return null;
   return { svg, caption: PLACED[view.geo] ? t(PLACED[view.geo]) : null };
 }
+
+// The map in its placement's frame; null with no map.
+const placedMap = (map, placement) => map && geoFrame(placement, map.svg);
 
 // robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
 // (measureRanges(model) in figures.js), required for a scored hospital. whatif: { hospital, model, estimate, range }
@@ -191,9 +224,8 @@ export function locatorMap(view, shapes) {
 // searchUrl: the hospitals asset the top bar's search reads (null: no search box). shapes: stateShapes(topology) for
 // the state map (null: none). careSource: Care Compare's manifest facts ({ modified }) for the stars' note.
 // masterFy: the hospital master's fiscal year, for the Type field's note.
-// mapPlacement: where the state map goes (MAP_PLACEMENTS): a, a record field beside Location; b, beside the record
-// card (a third column on wide screens); c, under the stamp (the default); d, a full-width strip under the top.
-export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null, mapPlacement = 'c' }) {
+// mapPlacement: where the state map goes (MAP_PLACEMENTS, e the default).
+export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null, mapPlacement = 'e' }) {
   if (!MAP_PLACEMENTS.includes(mapPlacement)) throw new RangeError(`hospitalPage: map placement "${mapPlacement}" is not one of ${MAP_PLACEMENTS.join(', ')}`);
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -204,25 +236,20 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
   const home = SITE.sites.hacrp.path;
   const figs = figures(view, ranges, source);
   const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, figs.length + 1) : null;
-  const map = locatorMap(view, shapes);
-  const caption = (cls) => map.caption && html`<figcaption class="${cls}">${map.caption}</figcaption>`;
-  const at = (placement) => (map && mapPlacement === placement);
-  const mapField = at('a') && ((no) => formField({ no, label: t('fieldMap'), value: map.svg, as: 'div', cls: 'hosp__map-field', note: map.caption }));
+  const map = placedMap(locatorMap(view, shapes, DOT[mapPlacement]), mapPlacement);
+  const at = (placement) => (mapPlacement === placement ? map : null);
 
   const body = html`<article class="wrap page page--article hosp">
 <div class="hosp__top hosp__top--${mapPlacement}">
-${recordCard(view, { careSource, masterFy, mapField })}
-${at('b') && html`<figure class="hosp__map hosp__map--side">${map.svg}${caption('small muted')}</figure>`}
+${recordCard(view, { careSource, masterFy, map, placement: mapPlacement })}
 <section class="hosp__verdict" aria-label="${t('heroLabel')}">
-${stampOf(view)}
+${at('h') ? html`<div class="hosp__stamprow">${stampOf(view)}${map}</div>` : stampOf(view)}
 ${leadSentences(view).map((s, i) => html`<p class="${i ? 'hosp__why' : 'hosp__summary'}">${s}</p>`)}
 ${view.scored && html`<p class="hosp__note">${t('notAGrade')}</p>`}
-${numbersCard(view)}
-${at('c') && html`<figure class="hosp__map">${map.svg}${caption('small muted')}</figure>`}
+${numbersCard(view, at('i'))}
 <p class="small muted">${fillKeep('placeData', { date: isoDate(source.pdcReleased) }, ['date'])}</p>
 </section>
 </div>
-${at('d') && html`<figure class="hosp__strip">${map.svg}<figcaption><span class="hosp__strip-place">${fill('mapStrip', { city: view.city, state: STATE_NAMES[view.state] ?? view.state })}</span> ${map.caption}</figcaption></figure>`}
 <div class="prose">
 ${noteSentences(view).map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
