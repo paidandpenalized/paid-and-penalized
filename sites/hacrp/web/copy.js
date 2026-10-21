@@ -518,6 +518,8 @@ export const COPY = {
 export const fill = (key, values) => fillCopy(COPY, key, values);
 // As markup, keeping each group in `keep` on one line (see fillCopyKeep): dates, number pairs.
 export const fillKeep = (key, values, keep) => fillCopyKeep(COPY, key, values, keep);
+// The hero's short form of the line, its two scores kept on one line; the what-if's ramp repeats it.
+export const heroLineText = (boundaryText) => fillKeep('heroLine', boundaryText, [['highestNo', 'lowestYes']]);
 // A word or sentence with no placeholders.
 export const t = (key) => fill(key);
 

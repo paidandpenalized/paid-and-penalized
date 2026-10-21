@@ -7,7 +7,7 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
-import { fill, fillKeep, sourceText, t } from '../copy.js';
+import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue } from './parts.js';
 import { whatIfSection } from './whatif.js';
@@ -116,7 +116,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
     ? html`<p class="hero__num cms">${heroNumber(view.score.text)}</p>${view.status !== 'maryland' && html`
-<p class="hero__ref">${fillKeep('heroLine', view.boundaryText, [['highestNo', 'lowestYes']])}</p>`}`
+<p class="hero__ref">${heroLineText(view.boundaryText)}</p>`}`
     : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item hero__item--decision"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
 ${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>
