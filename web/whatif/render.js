@@ -20,6 +20,7 @@
 //   pill(flag) -> { kind, label }          the result head's decision pill (kind: components.js pill())
 //   rows { score, decision, cut }          the result table's row heads
 //   rampLine, rampLegend                   the ramp's line label and the sentence under it
+//   rampZone                               the shaded side's label (e.g. its cut), or null for none
 //   scores(vm) -> { before, after }        score texts
 //   flag(flag), cut(flag)                  decision and cut texts (cut: null where there is no cut)
 //   sentence(vm), slide(vm)                the result in words; plain text for "Copy for a slide"
@@ -36,7 +37,7 @@ import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
-  rampEdge, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks,
+  RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks, zoneLabelAt,
 } from './marks.js';
 
 const TICKS = 5;
@@ -46,9 +47,10 @@ const hiddenIf = (condition) => (condition ? html` hidden` : '');
 const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
   html`<text class="${cls}"${name && html` data-wi="${name}"`} x="${rampX(t)}" y="${y}" dx="${dx}" text-anchor="${anchor}">${text}</text>`;
 
-// The score's ramp over the national middle of scores (range): CMS's line with the side above it shaded, a solid
-// mark for the starting score and a hollow one for the hypothetical (at an edge, with an arrow, when it runs past
-// the range), their labels side by side. Decorative: the table and the sentence say the same.
+// The score's ramp over the national middle of scores (range): CMS's line with the side above it shaded and named, a
+// solid mark for the starting score and a hollow one for the hypothetical (at an edge, with an arrow, when it runs
+// past the range; hidden, with its label, while it equals the start), each label under its mark (stacked when they
+// would touch). Decorative: the table and the sentence say the same.
 function ramp(vm, range, texts) {
   const domain = rampDomain(range, vm.ramp);
   const at = (score) => rampAt(score, domain);
@@ -61,18 +63,23 @@ function ramp(vm, range, texts) {
   const hyp = at(vm.ramp.hypothetical);
   const labels = rampLabels(start, hyp, texts.start, texts.hypothetical);
   const edge = rampEdge(rampSide(vm.ramp.hypothetical, domain));
-  return html`<svg class="wi-ramp" data-wi="ramp" width="100%" height="76" aria-hidden="true" focusable="false">
+  const unchanged = vm.ramp.hypothetical === vm.ramp.actual;
+  const same = hiddenIf(unchanged);
+  const stacked = labels.stacked && !unchanged;
+  const Y = RAMP_Y;
+  return html`<svg class="wi-ramp" data-wi="ramp" width="100%" height="${rampHeight(stacked)}" aria-hidden="true" focusable="false">
 <defs><path id="wi-tri" d="M0 0L6 11H-6Z"/></defs>
-<rect class="wi-ramp__zone" x="${rampX(line)}" y="18" width="${rampWidthFrom(line)}" height="22"/>
-${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="36" y2="40"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="32" text-anchor="middle">${fmt(x)}</text>`)}
-<line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="40" y2="40"/>
-<line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="16" y2="44"/>
-${rampText(labelAt(line), 12, texts.rampLine, 'wi-ramp__label')}
-<use class="wi-tri wi-tri--hyp" data-wi="hyp" href="#wi-tri" x="${rampX(hyp)}" y="44"/>
-<use class="wi-tri wi-tri--cms" href="#wi-tri" x="${rampX(start)}" y="44"/>
-${rampText(edge, 54, edge.text, 'wi-ramp__edge', 'hyp-edge')}
-${rampText(labels.start, 70, texts.start, 'wi-ramp__label', 'start-label')}
-${rampText(labels.hyp, 70, texts.hypothetical, 'wi-ramp__label', 'hyp-label')}
+<rect class="wi-ramp__zone" x="${rampX(line)}" y="${Y.zoneTop}" width="${rampWidthFrom(line)}" height="${Y.axis - Y.zoneTop}"/>
+${texts.rampZone && rampText(zoneLabelAt(line), Y.zoneLabel, texts.rampZone, 'wi-ramp__zone-label')}
+${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="${Y.axis - 4}" y2="${Y.axis}"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="${Y.tickLabel}" text-anchor="middle">${fmt(x)}</text>`)}
+<line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="${Y.axis}" y2="${Y.axis}"/>
+<line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="${Y.zoneTop - 2}" y2="${Y.mark}"/>
+${rampText(labelAt(line), Y.lineLabel, texts.rampLine, 'wi-ramp__label')}
+<use class="wi-tri wi-tri--hyp" data-wi="hyp" href="#wi-tri" x="${rampX(hyp)}" y="${Y.mark}"${same}/>
+<use class="wi-tri wi-tri--cms" href="#wi-tri" x="${rampX(start)}" y="${Y.mark}"/>
+${rampText(edge, Y.edge, edge.text, 'wi-ramp__edge', 'hyp-edge')}
+${rampText(labels.start, Y.label, texts.start, 'wi-ramp__label', 'start-label')}
+${html`<text class="wi-ramp__label" data-wi="hyp-label" x="${rampX(labels.hyp.t)}" y="${stacked ? Y.label2 : Y.label}" dx="${labels.hyp.dx}" text-anchor="${labels.hyp.anchor}"${same}>${texts.hypothetical}</text>`}
 </svg>`;
 }
 

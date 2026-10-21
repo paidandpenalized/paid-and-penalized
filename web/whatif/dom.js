@@ -13,7 +13,7 @@ import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, rampAt, rampDomain, rampEdge, rampLabels,
-  rampSide, rampX, sliderValue, trackMarks,
+  RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks,
 } from './marks.js';
 
 // A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
@@ -63,7 +63,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     }];
   }));
   const el = Object.fromEntries(['head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
-    'start-label', 'hyp-edge', 'banner', 'copy',
+    'start-label', 'hyp-edge', 'ramp', 'banner', 'copy',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
@@ -161,6 +161,15 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const labels = rampLabels(startAt, t, texts.start, texts.hypothetical);
     place(el['start-label'], labels.start);
     place(el['hyp-label'], labels.hyp);
+    // The hollow mark and its label only once the hypothetical differs from the start (SVG has no hidden property).
+    const unchanged = r.after.score === r.before.score;
+    const stacked = labels.stacked && !unchanged;
+    el['hyp-label'].setAttribute('y', String(stacked ? RAMP_Y.label2 : RAMP_Y.label));
+    el.ramp.setAttribute('height', String(rampHeight(stacked)));
+    for (const node of [el.hyp, el['hyp-label']]) {
+      if (unchanged) node.setAttribute('hidden', '');
+      else node.removeAttribute('hidden');
+    }
     const edge = rampEdge(rampSide(r.after.score, domain));
     place(el['hyp-edge'], edge);
     setText(el['hyp-edge'], edge.text);

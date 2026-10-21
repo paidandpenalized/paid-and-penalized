@@ -59,6 +59,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-this { fill: var(--ink); }
 .chart-hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; }
 .chart-zone { fill: var(--pen-tint); }
+.chart-zone-label { fill: var(--ink); font-size: 11px; font-weight: 600; }
 .chart-line { stroke: var(--pen); stroke-width: 2px; }
 .chart-boundary { stroke: var(--ink); stroke-width: 1.5px; }
 

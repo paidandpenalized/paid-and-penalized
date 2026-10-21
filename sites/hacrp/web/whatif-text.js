@@ -210,6 +210,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     pill: pillOf,
     rows: { score: fill('whatifRowScore'), decision: fill('whatifRowDecision'), cut: fill('whatifRowCut') },
     rampLine: fill('whatifRampLine'),
+    // The shaded side is the cut; Maryland's hospitals are not subject to it, so their ramp names no cut.
+    rampZone: hospital.paymentReduction === 'N/A' ? null : pillOf('Yes').label,
     rampLegend: `${fill('line', boundaryText)} ${fill('lineMaryland')}`,
     scores: (vm) => scores(vm.result, hospital),
     flag: flagText,

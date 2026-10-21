@@ -308,7 +308,8 @@ test('the ramp: a hypothetical past the range clamps to the edge with an arrow; 
       return labelSpan({ t: (parseFloat(el.getAttribute('x')) - 5) / 90, anchor: el.getAttribute('text-anchor'), dx: Number(el.getAttribute('dx')) }, chars, NARROW_PX);
     };
     const [s, h] = [span('start-label', texts.start.length), span('hyp-label', texts.hypothetical.length)];
-    return s[1] <= h[0] || h[1] <= s[0];
+    const stacked = q(root, 'hyp-label').getAttribute('y') !== q(root, 'start-label').getAttribute('y');
+    return stacked || s[1] <= h[0] || h[1] <= s[0];
   };
   type(field(root, 'MRSA', 'number'), '1.4');
   assert.equal(q(root, 'hyp-edge').textContent, '');
@@ -317,9 +318,11 @@ test('the ramp: a hypothetical past the range clamps to the edge with an arrow; 
   assert.equal(q(root, 'hyp').getAttribute('x'), rampX(1));
   assert.equal(q(root, 'hyp-edge').textContent, '▶');
   assert.ok(labelsApart());
+  assert.equal(q(root, 'hyp').getAttribute('hidden'), null);
   q(root, 'reset').fire('click');
   assert.equal(q(root, 'hyp-edge').textContent, '');
-  assert.ok(labelsApart(), 'no change: both marks at one place, labels side by side');
+  assert.equal(q(root, 'hyp').getAttribute('hidden'), '', 'no change: the hollow mark hides');
+  assert.equal(q(root, 'hyp-label').getAttribute('hidden'), '', 'and its label');
 });
 
 test('the live region carries the estimate note when a tagged measure changed', () => {

@@ -42,15 +42,13 @@ const labelAnchor = (t) => (t < EDGE ? 'start' : t > 1 - EDGE ? 'end' : 'middle'
 const labelDx = (anchor) => ({ start: -6, middle: 0, end: 6 })[anchor];
 // A label under the mark at t, anchored to stay inside the figure: { t, anchor, dx }.
 export const labelAt = (t) => ({ t, anchor: labelAnchor(t), dx: labelDx(labelAnchor(t)) });
-// The two mark labels (the starting score's, the hypothetical's) share one row and never overlap. Text widths are
-// estimated (CHAR_PX per character overstates the 12px labels) and checked on the narrowest ramp the page draws:
-// NARROW_PX, a 320px phone less its gutters and the result box's padding.
-// Far apart, each label sits under its mark; close together, they sit side by side around the marks' midpoint,
-// the left mark's label on the left, kept inside the figure near either end. Each result is { t, anchor, dx }.
+// The two mark labels (the starting score's, the hypothetical's) each sit under their own mark, anchored to stay inside
+// the figure. Text widths are estimated (CHAR_PX per character overstates the 12px labels) and checked on the
+// narrowest ramp the page draws: NARROW_PX, a 320px phone less its gutters and the result box's padding. When the two
+// would touch there, they stack: the hypothetical's label takes a second row (stacked: true).
 const CHAR_PX = 7;
 export const NARROW_PX = 260;
 const GAP_PX = 8;
-const INSET_PX = 12;
 
 // A label's left and right edge (px) on a ramp `width` px wide.
 export function labelSpan({ t, anchor, dx }, chars, width) {
@@ -64,28 +62,15 @@ export function rampLabels(tStart, tHyp, startText, hypText) {
   const start = labelAt(tStart);
   const hyp = labelAt(tHyp);
   const [a, b] = [labelSpan(start, startText.length, NARROW_PX), labelSpan(hyp, hypText.length, NARROW_PX)];
-  if (a[1] + GAP_PX <= b[0] || b[1] + GAP_PX <= a[0]) return { start, hyp };
-
-  const startLeft = tStart <= tHyp;
-  const [nl, nr] = (startLeft ? [startText, hypText] : [hypText, startText]).map((s) => s.length);
-  const [wl, wr] = [nl * CHAR_PX, nr * CHAR_PX];
-  const mid = (tStart + tHyp) / 2;
-  const [l0] = labelSpan({ t: mid, anchor: 'end', dx: -GAP_PX / 2 }, nl, NARROW_PX);
-  const [, r1] = labelSpan({ t: mid, anchor: 'start', dx: GAP_PX / 2 }, nr, NARROW_PX);
-  let left;
-  let right;
-  if (l0 < 0) {
-    left = { t: 0, anchor: 'start', dx: -INSET_PX };
-    right = { t: 0, anchor: 'start', dx: -INSET_PX + wl + GAP_PX };
-  } else if (r1 > NARROW_PX) {
-    right = { t: 1, anchor: 'end', dx: INSET_PX };
-    left = { t: 1, anchor: 'end', dx: INSET_PX - wr - GAP_PX };
-  } else {
-    left = { t: mid, anchor: 'end', dx: -GAP_PX / 2 };
-    right = { t: mid, anchor: 'start', dx: GAP_PX / 2 };
-  }
-  return startLeft ? { start: left, hyp: right } : { start: right, hyp: left };
+  return { start, hyp, stacked: !(a[1] + GAP_PX <= b[0] || b[1] + GAP_PX <= a[0]) };
 }
+
+// The ramp's rows (px from its top): the line's label over the zone, the zone's label inside it, tick labels just above
+// the axis, the marks under it, then one or two rows of mark labels. RAMP_H: its height with one row, and stacked.
+export const RAMP_Y = { lineLabel: 10, zoneTop: 14, zoneLabel: 25, tickLabel: 38, axis: 44, mark: 48, edge: 58, label: 74, label2: 88 };
+export const rampHeight = (stacked) => (stacked ? 94 : 80);
+// The zone's label: just inside CMS's line, or against the ramp's right end when the line is near it.
+export const zoneLabelAt = (t) => (t > 1 - EDGE ? { t: 1, anchor: 'end', dx: -4 } : { t, anchor: 'start', dx: 4 });
 
 // The width (an SVG percentage) of the ramp from t to its right end.
 export const rampWidthFrom = (t) => `${((1 - t) * (100 - 2 * RAMP_MARGIN)).toFixed(2)}%`;

@@ -42,6 +42,7 @@
 .wi-ramp__zone { fill: var(--pen-tint); }
 .wi-ramp__axis, .wi-ramp__tick { stroke: var(--ink-3); stroke-width: 1; }
 .wi-ramp__line { stroke: var(--pen); stroke-width: 2; }
+.wi-ramp__zone-label { fill: var(--ink); font-family: var(--font-body); font-size: 11px; font-weight: 600; }
 .wi-ramp__tick-label { fill: var(--ink-2); }
 .wi-ramp__label { fill: var(--ink); font-family: var(--font-body); font-weight: 600; }
 .wi-ramp__edge { fill: var(--ink); font-family: var(--font-body); }

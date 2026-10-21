@@ -320,27 +320,39 @@ test('a hypothetical past the ramp sits at its edge with an arrow; inside, no ar
   assert.match(lowText, new RegExp(`data-wi="hyp" href="#wi-tri" x="${rampX(0).replace('.', '\\.')}"`));
 });
 
-test('the two mark labels never overlap and stay inside the ramp, at any pair of places and widths', () => {
+test('the two mark labels sit under their marks, never overlap (they stack when they would) and stay inside the ramp', () => {
   for (const [a, b] of [['CMS reports', 'Hypothetical'], ['Starting point', 'Hypothetical']]) {
     for (let i = 0; i <= 100; i += 2) {
       for (let j = 0; j <= 100; j += 2) {
         const labels = rampLabels(i / 100, j / 100, a, b);
+        assert.equal(labels.start.t, i / 100);
+        assert.equal(labels.hyp.t, j / 100);
         for (const width of [NARROW_PX, 400, 700, 1000]) {
           const s = labelSpan(labels.start, a.length, width);
           const h = labelSpan(labels.hyp, b.length, width);
           const where = `${a} ${i} ${j} @${width}`;
-          assert.ok(s[1] <= h[0] || h[1] <= s[0], `${where}: overlap`);
+          assert.ok(labels.stacked || s[1] <= h[0] || h[1] <= s[0], `${where}: overlap`);
           for (const [l, r] of [s, h]) assert.ok(l >= 0 && r <= width, `${where}: outside`);
         }
       }
     }
   }
-  // Close marks put the left mark's label on the left.
-  const near = rampLabels(0.5, 0.52, 'CMS reports', 'Hypothetical');
-  assert.ok(labelSpan(near.start, 11, NARROW_PX)[1] <= labelSpan(near.hyp, 12, NARROW_PX)[0]);
-  const flipped = rampLabels(0.52, 0.5, 'CMS reports', 'Hypothetical');
-  assert.ok(labelSpan(flipped.hyp, 12, NARROW_PX)[1] <= labelSpan(flipped.start, 11, NARROW_PX)[0]);
+  assert.equal(rampLabels(0.5, 0.52, 'CMS reports', 'Hypothetical').stacked, true, 'close marks stack');
+  assert.equal(rampLabels(0.1, 0.9, 'CMS reports', 'Hypothetical').stacked, false, 'far marks share a row');
   assert.ok(rampAt(0, [0, 1]) === 0);
+});
+
+test('the ramp: the shaded side carries its cut; the hollow mark and its label hide while the score is unchanged; close labels stack', () => {
+  const start = render(H.no);
+  assert.match(start, /class="wi-ramp__zone-label"[^>]*>1% cut</);
+  assert.match(start, /data-wi="hyp" href="#wi-tri" x="[\d.]+%" y="48" hidden/);
+  assert.match(start, /data-wi="hyp-label"[^>]*hidden>Hypothetical</);
+  assert.match(start, /class="wi-ramp" data-wi="ramp" width="100%" height="80"/);
+  const near = render(H.no, set(H.no, { MRSA: 0.95 }));
+  assert.doesNotMatch(near, /data-wi="hyp-label"[^>]*hidden/);
+  assert.match(near, /data-wi="hyp-label"[^>]*y="88"/, 'a close hypothetical takes the second row');
+  assert.match(near, /class="wi-ramp" data-wi="ramp" width="100%" height="94"/);
+  assert.doesNotMatch(render(H.maryland), /wi-ramp__zone-label/, "Maryland's ramp names no cut");
 });
 
 test('each number field has an error line naming its range, hidden until an entry is refused', () => {
