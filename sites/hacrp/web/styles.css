@@ -112,3 +112,13 @@
   .gb--hospitals .ht-score { grid-area: score; width: auto; text-align: right; }
   .gb--hospitals .ht-decision { grid-area: decision; text-align: right; }
 }
+
+/* The article column: the head, hero, prose, tables and figures share one 46rem column, centered, so every rule ends
+   where the text ends; only the what-if's working area breaks out, from the column's left edge to the page's right,
+   with its result box in the room beside the text. The what-if's own words stay in the column (subgrid). */
+.page--article { grid-template-columns: [full-start] minmax(0, 1fr) [main-start] minmax(0, 46rem) [main-end] minmax(0, 1fr) [full-end]; column-gap: 0; }
+.page--article > * { grid-column: main; }
+.page--article > .whatif { grid-column: full; grid-template-columns: subgrid; column-gap: 0; }
+.page--article > .whatif > * { grid-column: main; }
+.page--article > .whatif > .wi-grid { grid-column: main-start / full-end; }
+@media (min-width: 900px) { .page--article .wi-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }

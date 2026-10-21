@@ -101,7 +101,7 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
   const histogram = scores && scoresFigure({ scores, boundary, boundaryText, n: ++n, source: line, fy });
   const tiles = states && statesFigure({ states, n: ++n, source: line, fy });
 
-  const body = html`<article class="wrap page">
+  const body = html`<article class="wrap page page--article">
 <header class="page__head">
 <p class="cap kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
 <h1>${title}</h1>

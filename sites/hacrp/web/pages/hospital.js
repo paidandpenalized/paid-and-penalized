@@ -107,7 +107,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
   const figs = figures(view, ranges, source);
   const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, figs.length + 1) : null;
 
-  const body = html`<article class="wrap page">
+  const body = html`<article class="wrap page page--article">
 <header class="page__head">
 <p class="cap kicker"><a href="${home}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy })}</a></p>
 <h1>${view.name}</h1>
