@@ -18,12 +18,11 @@ import { generateHacrp } from '../web/generate.js';
 import { csvPath, dictionaryPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
-import { BOUNDARY_TEXT, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
 import { hospitalView } from '../web/view.js';
 
 const DATA = loadHacrp();
 const DICTIONARY = readFileSync(join(REPO_ROOT, 'sites/hacrp/DATA-DICTIONARY.md'), 'utf8');
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 
 const masters = (...records) => new Map(records.map((r) => [r.ccn, r]));
 const quiet = () => {};

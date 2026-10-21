@@ -3,15 +3,22 @@
 // fragment that keeps the chosen state in the URL. Rows are the hospitals asset's: [ccn, name, city, state, total,
 // decision], the total as CMS's text with a true minus ("N/A" when CMS published none). No DOM.
 
-// Each sortable column's place in a row.
-const INDEX = Object.freeze({ name: 1, city: 2, state: 3, score: 4, decision: 5 });
+import { compareNumbers } from '../../../engine/js/stats.js';
+
+// Each column's place in a row; all but the CCN are sortable.
+const INDEX = Object.freeze({ ccn: 0, name: 1, city: 2, state: 3, score: 4, decision: 5 });
+const SORTABLE = ['name', 'city', 'state', 'score', 'decision'];
 const text = (a, b) => a.localeCompare(b, 'en');
+// Rows by these columns' text, in turn.
+const by = (...keys) => (x, y) => keys.reduce((d, k) => d || text(x[INDEX[k]], y[INDEX[k]]), 0);
 
 // The default order: state, then name, then city, then CCN (so it never depends on the input's order).
-export const compareDefault = (x, y) => text(x[3], y[3]) || text(x[1], y[1]) || text(x[2], y[2]) || text(x[0], y[0]);
+export const compareDefault = by('state', 'name', 'city', 'ccn');
+// The search's order: name, then state, then city.
+export const compareByName = by('name', 'state', 'city');
 
 // The state codes in the rows, in order.
-export const stateCodes = (rows) => [...new Set(rows.map((r) => r[3]))].sort(text);
+export const stateCodes = (rows) => [...new Set(rows.map((r) => r[INDEX.state]))].sort(text);
 
 // The state a fragment names: "#state=xx" (any case) for a code in codes, as an uppercase code; else null. Other
 // parts of the fragment are ignored, and the first part that names a known code wins.
@@ -41,18 +48,14 @@ export function scoreOf(s) {
 // order given; with no key, the default order. Scores sort by value with "N/A" last in either direction.
 export function sortRows(rows, key, dir) {
   if (key === null || key === undefined) return [...rows].sort(compareDefault);
-  if (!Object.hasOwn(INDEX, key)) throw new RangeError(`sortRows: unknown key "${key}"`);
+  if (!SORTABLE.includes(key)) throw new RangeError(`sortRows: unknown key "${key}"`);
   const i = INDEX[key];
   if (key !== 'score') return [...rows].sort((a, b) => dir * text(a[i], b[i]));
-  return [...rows].sort((a, b) => {
-    const [x, y] = [scoreOf(a[i]), scoreOf(b[i])];
-    if (Number.isNaN(x) || Number.isNaN(y)) return Number.isNaN(x) - Number.isNaN(y);
-    return dir * (x - y);
-  });
+  return [...rows].sort((a, b) => compareNumbers(scoreOf(a[i]), scoreOf(b[i]), dir));
 }
 
 // Rows in state (when given) whose name holds query (trimmed, any case), in the order given.
 export function filterRows(rows, { state = null, query = '' } = {}) {
   const q = query.trim().toLowerCase();
-  return rows.filter((r) => (!state || r[3] === state) && (!q || r[1].toLowerCase().includes(q)));
+  return rows.filter((r) => (!state || r[INDEX.state] === state) && (!q || r[INDEX.name].toLowerCase().includes(q)));
 }

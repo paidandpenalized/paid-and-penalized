@@ -5,10 +5,8 @@ import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
-import { fill } from '../copy.js';
+import { fill, sourceText, t } from '../copy.js';
 import { csvPath, dictionaryPath } from '../links.js';
-
-export const t = (key) => fill(key);
 
 // The word carries the decision; the ink repeats it. N/A is hatched. The row CMS marked Yes with no score shows
 // CMS's literal value: nothing about the cut is inferred for it.
@@ -37,7 +35,7 @@ export function asofBar({ fy, periods, source }) {
 
 export function sourceLine({ fy, source }) {
   return sourceShell({
-    text: fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }),
+    text: sourceText({ fy, source }),
     href: source.landingPage,
     linkText: t('datasetLink'),
   });
@@ -50,7 +48,7 @@ export function citation({ fy, title, path, source }) {
     site: SITE.name,
     title,
     url: SITE.origin + path,
-    source: fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }),
+    source: sourceText({ fy, source }),
   });
   return citationShell({ heading: t('citeHeading'), text, button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }

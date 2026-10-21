@@ -1,14 +1,14 @@
 // One hospital's page: what CMS reports for it in plain words, the score and decision, the measure table with
 // CMS's values and footnotes, two figures and the what-if (scored hospitals only), then where the data come from.
 // Odd rows show CMS's values and add no inference.
-import { footnoteLegend, footnoteNote } from '../../../../web/render/components.js';
+import { footnoteLegend, footnoteNote, printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
-import { fill } from '../copy.js';
-import { figureSource, partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
+import { fill, sourceText, t } from '../copy.js';
+import { partsFigure, rangeFigure } from '../figures.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, sourceLine } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
@@ -50,7 +50,7 @@ function whatIfBlock(view, whatif, source, assets) {
 function figures(view, ranges, source) {
   if (!view.scored) return [];
   if (!ranges) throw new TypeError('hospitalPage: a scored hospital needs ranges (measureRanges in figures.js)');
-  const line = figureSource({ fy: view.fy, source });
+  const line = sourceText({ fy: view.fy, source });
   return [partsFigure(view, 1, line), rangeFigure(view, ranges, 2, line)].filter(Boolean);
 }
 
@@ -60,7 +60,8 @@ function figures(view, ranges, source) {
 export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null }) {
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
-  const title = `${fill('hospitalTitle', where)} · ${SITE.name}`;
+  const heading = fill('hospitalTitle', where);
+  const title = `${heading} · ${SITE.name}`;
   const largest = largestSentence(view);
   const sentences = summary(view);
   const distance = distanceSentence(view);
@@ -91,10 +92,10 @@ ${small && html`<p class="note">${small}</p>`}
 <h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('measuresIntro')}</p>
 ${largest && html`<p>${largest}</p>`}
-<div class="printout"><div class="printout__scroll"><table class="gb gb--measures">
+${printout(html`<table class="gb gb--measures">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
 <tbody>${view.measures.map(measureRow)}</tbody>
-</table></div></div>
+</table>`)}
 ${figures(view, ranges, source)}
 </section>
 ${what?.body}
@@ -102,7 +103,7 @@ ${asofBar({ fy: view.fy, periods: view.periods, source })}
 ${dataLinks(view.fy)}
 ${legend(view)}
 <p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
-${citation({ fy: view.fy, title: fill('hospitalTitle', where), path: view.path, source })}
+${citation({ fy: view.fy, title: heading, path: view.path, source })}
 ${sourceLine({ fy: view.fy, source })}
 </article>`;
 

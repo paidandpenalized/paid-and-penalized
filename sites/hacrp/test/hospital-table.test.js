@@ -2,7 +2,7 @@
 // the state and name filters, and the #state= fragment. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareDefault, decodeState, filterRows, scoreOf, sortRows, stateCodes, withState } from '../web/hospital-table.js';
+import { compareByName, compareDefault, decodeState, filterRows, scoreOf, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 
 // [ccn, name, city, state, total (CMS text, true minus), decision]
 const ROWS = [
@@ -17,6 +17,10 @@ const ccns = (rows) => rows.map((r) => r[0]);
 
 test('the default order is state, then name, then city, then CCN', () => {
   assert.deepEqual(ccns([...ROWS].sort(compareDefault)), ['990013', '990012', '990014', '990015', '990016', '990011']);
+});
+
+test('the search\'s order is name, then state, then city; full ties keep their order', () => {
+  assert.deepEqual(ccns([...ROWS].sort(compareByName)), ['990015', '990016', '990013', '990012', '990011', '990014']);
 });
 
 test('decodeState accepts only #state=XX for a code in the data, any case, and ignores everything else', () => {

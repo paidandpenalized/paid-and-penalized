@@ -3,6 +3,7 @@
 // Home and End step through the marks; Escape hides the tooltip). Program-neutral: it runs on any page with
 // figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
+import { compareNumbers } from '../../engine/js/stats.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
@@ -20,11 +21,7 @@ export function compareRows(index, numeric, dir) {
   const key = (row) => valueOf(row.cells[index]);
   if (!numeric) return (a, b) => dir * key(a).localeCompare(key(b), 'en');
   const num = (row) => (key(row) === '' ? NaN : Number(key(row)));
-  return (a, b) => {
-    const [x, y] = [num(a), num(b)];
-    if (Number.isNaN(x) || Number.isNaN(y)) return Number.isNaN(x) - Number.isNaN(y);
-    return dir * (x - y);
-  };
+  return (a, b) => compareNumbers(num(a), num(b), dir);
 }
 
 function mountTable(fig) {

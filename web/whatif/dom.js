@@ -15,7 +15,8 @@ import {
   sliderValue, trackMarks,
 } from './marks.js';
 
-const SETTLE_MS = 400;
+// A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
+export const SETTLE_MS = 400;
 const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 

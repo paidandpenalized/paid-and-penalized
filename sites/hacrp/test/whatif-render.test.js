@@ -21,12 +21,11 @@ import { hospitalView } from '../web/view.js';
 import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 import { LEVERAGE_STEP } from '../web/constants.js';
-import { STANDING, WHATIF_STANDING, esc, master, pick as pickFrom, textsFor } from './fixtures.js';
+import { ASSETS, esc, master, pick as pickFrom, STANDING, textsFor, WHATIF_STANDING } from './fixtures.js';
 
 const D = loadHacrp();
 const { model, estimate } = D;
 const RANGE = scoreRange(D.hospitals);
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
 const { no: V } = SYNTH_VALUES;
 const H = {

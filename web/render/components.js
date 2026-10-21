@@ -1,5 +1,6 @@
-// Page parts any site can use, in the site's own words: the decision pill, the as-of bar, the source line, CMS
-// footnotes (one note, and the page's legend), and fillCopy, which fills the placeholders in a site's copy.
+// Page parts any site can use, in the site's own words: the decision pill, the as-of bar, the source line, the
+// citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
+// fills the placeholders in a site's copy.
 import { html } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
@@ -41,6 +42,9 @@ export const citation = ({ heading, text, button, copied, failed }) => html`<sec
 <p class="cite__text" data-cite-text>${text}</p>
 <p class="cite__row"><button type="button" class="fig__btn" data-cite-copy hidden>${button}</button> <span class="small" data-cite-status aria-live="polite"></span></p>
 </section>`;
+
+// A table in the printout frame, which scrolls sideways inside its box on a narrow screen (components.css).
+export const printout = (table) => html`<div class="printout"><div class="printout__scroll">${table}</div></div>`;
 
 // One CMS footnote beside a value: lead ("CMS footnote 5:") and CMS's text.
 export const footnoteNote = ({ lead, text }) => html`<p><span class="fn">${lead}</span> ${text}</p>`;

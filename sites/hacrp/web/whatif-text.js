@@ -5,9 +5,9 @@
 // whose words never call its values or decision CMS's.
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
-import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
+import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
-import { fill, measureLabel } from './copy.js';
+import { fill, measureLabel, sourceText } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
@@ -150,7 +150,7 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
     fill('slideScore', { before, after }),
     decision,
     scenarioSentence(vm, hospital, model, baseline),
-    fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }),
+    sourceText({ fy, source }),
     fill('whatifStanding'),
   ].filter((line) => line !== null && line !== undefined).join('\n');
 }

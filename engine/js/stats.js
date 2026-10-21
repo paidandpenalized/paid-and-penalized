@@ -4,6 +4,9 @@ export function clamp(x, lo, hi) {
   return Math.min(Math.max(x, lo), hi);
 }
 
+// Two numbers in sort order, dir 1 (ascending) or -1, with NaN (no value) last in either direction.
+export const compareNumbers = (x, y, dir) => (Number.isNaN(x) || Number.isNaN(y) ? Number.isNaN(x) - Number.isNaN(y) : dir * (x - y));
+
 // Half away from zero on both sides of zero (Math.round alone rounds -2.5 to -2).
 const halfAway = (y) => Math.sign(y) * Math.round(Math.abs(y));
 

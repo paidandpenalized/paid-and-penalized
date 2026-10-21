@@ -9,14 +9,12 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import { decodeState, filterRows, sortRows, stateCodes, withState } from '../web/hospital-table.js';
+import { compareByName, decodeState, filterRows, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 import { count } from '../../../web/render/format.js';
+import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
 
 const PATH = /^\/[a-z0-9/-]*\/$/;
-// The what-if's settle time: a live announcement waits this long after the reader stops typing.
-const SETTLE_MS = 400;
-const byName = (x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en');
 
 // One fetch for the search and the table; a failed one is tried again on the next call.
 let pending = null;
@@ -43,7 +41,7 @@ if (box) {
 
   async function load() {
     const { hospitalPath, rows } = await hospitals(box.dataset.src);
-    const valid = [...rows].sort(byName);
+    const valid = [...rows].sort(compareByName);
     // "Name, City, ST"; a label two hospitals share also carries the CCN.
     const labels = valid.map(([, name, city, state]) => `${name}, ${city}, ${state}`);
     const seen = new Map();

@@ -2,6 +2,7 @@
 // is filled. `claim` names the row of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
 // sentences that only restate CMS's file or this site's arithmetic).
 import { fillCopy } from '../../../web/render/components.js';
+import { isoDate } from '../../../web/render/format.js';
 
 export const COPY = {
   // Summary: what CMS reports, CMS's notes verbatim, then what the decision and the score mean.
@@ -476,7 +477,6 @@ export const COPY = {
     text: 'The sortable table of every hospital needs JavaScript; the CSV file holds the same values.',
     claim: null,
   },
-  tableCsv: { text: "Download all hospitals' data (CSV)", claim: null },
   tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },
@@ -495,6 +495,11 @@ export const COPY = {
 
 // COPY[key].text with each {placeholder} filled; see fillCopy for the rules.
 export const fill = (key, values) => fillCopy(COPY, key, values);
+// A word or sentence with no placeholders.
+export const t = (key) => fill(key);
+
+// The source line's text, as every HACRP source line, figure, citation and what-if slide writes it.
+export const sourceText = ({ fy, source }) => fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });
 
 // A measure's name as a label (capitalized): "Central line–associated bloodstream infections".
 export const measureLabel = (id) => {

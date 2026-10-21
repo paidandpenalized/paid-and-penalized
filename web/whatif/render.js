@@ -30,6 +30,7 @@
 //   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
 import { scaleLinear } from 'd3-scale';
+import { printout } from '../render/components.js';
 import { decimal } from '../render/format.js';
 import { html } from '../render/html.js';
 import {
@@ -160,10 +161,10 @@ function solverBlock(answers, s) {
   return html`<div class="wi-solver" id="wi-solver" data-wi="solver">
 <h3 class="h-sm">${s.question}</h3>
 <p class="small muted">${s.caption}</p>
-<div class="printout"><div class="printout__scroll"><table class="gb wi-solver__table">
+${printout(html`<table class="gb wi-solver__table">
 <thead><tr>${s.columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead>
 <tbody>${s.rows(answers).map((row) => html`<tr><th scope="row">${row.label}</th><td>${row.answer}</td><td>${row.note}</td></tr>`)}</tbody>
-</table></div></div>
+</table>`)}
 </div>`;
 }
 

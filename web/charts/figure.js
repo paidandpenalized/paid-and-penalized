@@ -11,6 +11,7 @@
 //                with a true minus, kept in data-value for sorting and the CSV (value null or absent: none)
 //   csvName      the download's file name without .csv (default figure-N)
 import { COPY } from '../copy.js';
+import { printout } from '../render/components.js';
 import { cmsText } from '../render/format.js';
 import { Safe, html } from '../render/html.js';
 
@@ -65,10 +66,10 @@ ${image}
 ${claim && html`<p class="fig__claim"><span class="pill">${claim}</span></p>
 `}<p class="source fig__source">${source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
-<div class="printout"><div class="printout__scroll"><table class="gb">
+${printout(html`<table class="gb">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
 <tbody>${cells.map((row) => html`<tr>${row.map((c, j) => tableCell(c, columns[j], j))}</tr>`)}</tbody>
-</table></div></div>
+</table>`)}
 <p class="fig__actions"><button type="button" class="fig__btn" data-figure-csv="${csvName}.csv" hidden>${COPY.downloadCsv}</button></p>
 </details>
 </figure>`;

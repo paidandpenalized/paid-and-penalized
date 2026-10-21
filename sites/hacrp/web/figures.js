@@ -10,21 +10,17 @@ import { histogram, histogramBins } from '../../../web/charts/histogram.js';
 import { ramp } from '../../../web/charts/ramp.js';
 import { TILES } from '../../../web/charts/states.js';
 import { tileMap } from '../../../web/charts/tileMap.js';
-import { cmsText, count, decimal, isoDate, pct, signed } from '../../../web/render/format.js';
+import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
 import { rampDomain } from '../../../web/whatif/marks.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SHORT_NAMES, TILE_STEPS_PCT } from './constants.js';
-import { fill } from './copy.js';
+import { fill, t } from './copy.js';
 
 // Scores, z-scores and parts of the score at CMS's four decimals; the stepper's fitted mean and SD likewise.
 const DP = 4;
 const BINS = 20;
 const SHARE_DP = 1;
-const t = (key) => fill(key);
 const num = (text, value) => ({ text, value: value === null ? null : String(value) });
-
-// The source line every HACRP figure carries.
-export const figureSource = ({ fy, source }) => fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });
 
 // Each measure's national range, from the model: CMS's floor and cap as published, and the national median of
 // published values at CMS's decimals (as the what-if shows it). { [id]: { floor, cap, median, decimals } }.

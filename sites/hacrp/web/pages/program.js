@@ -1,15 +1,16 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, the formula
 // stepper on the median hospital, the sandbox, this year's counts with their figures, the table of every hospital,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
+import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { cmsText, count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
-import { fill } from '../copy.js';
-import { figureSource, lineFigure, scoresFigure, statesFigure, stepRows, stepSum } from '../figures.js';
+import { fill, sourceText, t } from '../copy.js';
+import { lineFigure, scoresFigure, statesFigure, stepRows, stepSum } from '../figures.js';
 import { LINKS, csvPath, dictionaryPath } from '../links.js';
-import { asofBar, citation, sourceLine, t } from './parts.js';
+import { asofBar, citation, sourceLine } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
@@ -23,11 +24,11 @@ function sandbox(whatif, { fy, boundaryText, source }) {
   return whatIfSection(whatif, page, 'hacrp-program');
 }
 
-const stepTable = (caption, step, columns, rows) => html`<div class="printout"><div class="printout__scroll"><table class="gb gb--steps">
+const stepTable = (caption, step, columns, rows) => printout(html`<table class="gb gb--steps">
 <caption class="vh">${caption}</caption>
 <thead><tr><th scope="col">${t('colMeasure')}</th>${columns.map((c) => html`<th scope="col" class="num">${t(c)}</th>`)}</tr></thead>
 <tbody>${rows.map(([r, cells]) => html`<tr data-measure="${r.id}" data-step="${step}"><th scope="row">${r.short}</th>${cells.map((c) => html`<td class="num">${c}</td>`)}</tr>`)}</tbody>
-</table></div></div>`;
+</table>`);
 
 // The formula, step by step, on the median hospital (whatif.hospital, from medianHospital): value, limited to
 // CMS's floor and cap, z-score from the fitted mean and SD, the average, and the line (a numbered figure).
@@ -56,7 +57,7 @@ const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', '
 const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
-<p><a href="${csvPath(fy)}">${t('tableCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>
+<p><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
 <div class="ht__controls">
@@ -64,11 +65,11 @@ const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospital
 <p class="ht__field"><label for="ht-name">${t('tableName')}</label> <input id="ht-name" type="search" autocomplete="off"></p>
 </div>
 <p class="small" id="ht-count" aria-live="polite"></p>
-<div class="printout"><div class="printout__scroll"><table class="gb gb--hospitals">
+${printout(html`<table class="gb gb--hospitals">
 <caption class="vh">${t('tableCaption')}</caption>
 <thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
 <tbody></tbody>
-</table></div></div>
+</table>`)}
 <p class="fig__actions"><button type="button" class="fig__btn" id="ht-all" hidden></button></p>
 </div>
 </section>`;
@@ -83,10 +84,11 @@ const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospital
 export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
+  const heading = fill('programTitle', { fy: fyText });
   const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => m.short).join(', ');
   const psi = measures.find((m) => m.id === 'PSI90');
   const what = whatif && sandbox(whatif, { fy, boundaryText, source });
-  const line = figureSource({ fy, source });
+  const line = sourceText({ fy, source });
   let n = 0;
   const steps = whatif && stepper(whatif, { boundaryText, n: ++n, line, fy });
   const histogram = scores && scoresFigure({ scores, boundary, counts, n: ++n, source: line, fy });
@@ -149,12 +151,12 @@ ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </ul>
 </section>
 ${asofBar({ fy, periods, source })}
-${citation({ fy, title: fill('programTitle', { fy: fyText }), path: PATH, source })}
+${citation({ fy, title: heading, path: PATH, source })}
 ${sourceLine({ fy, source })}
 </article>`;
 
   return page({
-    title: `${fill('programTitle', { fy: fyText })} · ${SITE.name}`,
+    title: `${heading} · ${SITE.name}`,
     description: fill('programDescription', { fy: fyText }),
     path: PATH,
     robots,
