@@ -34,6 +34,15 @@ const footer = html`<footer class="foot">
   </div>
 </footer>`;
 
+// A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
+// title, description and canonical URL, as text only (no image). Harmless on a noindex page.
+const socialTags = ({ title, description, url }) => html`<meta property="og:type" content="article">
+<meta property="og:site_name" content="${SITE.name}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:url" content="${url}">
+<meta name="twitter:card" content="summary">`;
+
 // body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
@@ -53,6 +62,7 @@ export function page({ title, description, path, robots, body, scripts = [], jso
 <meta name="description" content="${description}">
 <link rel="canonical" href="${SITE.origin + path}">
 ${robots ? html`<meta name="robots" content="${robots}">` : ''}
+${socialTags({ title, description, url: SITE.origin + path })}
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>

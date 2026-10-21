@@ -90,6 +90,11 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="canonical" href="${SITE.origin}/hacrp/">`));
   assert.ok(out.includes('<title>A title</title>'));
   assert.ok(out.includes('<meta name="description" content="A description">'));
+  // The share card: the same title, description and canonical URL, text only.
+  for (const tag of ['<meta property="og:type" content="article">', `<meta property="og:site_name" content="${SITE.name.replace('&', '&amp;')}">`,
+    '<meta property="og:title" content="A title">', '<meta property="og:description" content="A description">',
+    `<meta property="og:url" content="${SITE.origin}/hacrp/">`, '<meta name="twitter:card" content="summary">']) assert.ok(out.includes(tag), tag);
+  assert.doesNotMatch(out, /og:image|twitter:image/);
   assert.ok(out.includes('<link rel="icon" href="/favicon.svg"'));
   assert.ok(out.includes(`<link rel="stylesheet" href="${ASSETS.css}">`));
   assert.ok(out.indexOf('class="skip" href="#main"') < out.indexOf('<header'));
