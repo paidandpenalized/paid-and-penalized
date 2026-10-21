@@ -146,7 +146,7 @@ test('view model inputs: one per scored measure, with slider bounds, step, marks
   });
   const mrsa = vm.inputs.find((i) => i.id === 'MRSA');
   assert.equal(mrsa.max, 2.28); // max(1.9, cap) x 1.2
-  assert.equal(mrsa.valuetext, '1.900, above CMS\'s cap');
+  assert.equal(mrsa.valuetext, '1.900, above CMS’s cap');
   const psi = vm.inputs.find((i) => i.id === 'PSI90');
   assert.equal(psi.step, 0.0001);
   assert.equal(psi.median, 0.9623);
@@ -162,7 +162,7 @@ test('view model inputs: one per scored measure, with slider bounds, step, marks
   assert.ok(fromLink.value <= fromLink.max);
 
   const atCap = viewModel(apply(NO, set('MRSA', params.MRSA.cap)), NO, model, ESTIMATE);
-  assert.equal(atCap.inputs.find((i) => i.id === 'MRSA').valuetext, '1.762, at CMS\'s cap');
+  assert.equal(atCap.inputs.find((i) => i.id === 'MRSA').valuetext, '1.762, at CMS’s cap');
 });
 
 test('view model input for an assigned measure: blank value, cap x 1.2, its own valuetext; a reader value fills it', () => {

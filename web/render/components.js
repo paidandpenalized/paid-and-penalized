@@ -6,12 +6,26 @@ import { Safe, escapeHtml, html } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// copy[key] (a string, or { text, claim }) with each {placeholder} replaced. Values must be strings (format numbers
-// first); a placeholder with no value, or a value with no placeholder, throws.
-export function fillCopy(copy, key, values = {}) {
+// Copy as a page sets it: a straight apostrophe becomes ’ (CMS’s, hospitals’) and straight double quotes become
+// “ and ”. The copy files keep plain ASCII; only their words are typeset, never a value filled into them (CMS's text
+// stays as CMS published it).
+export const typeset = (text) => text
+  .replace(/(?<=[\w}\)])'(?=[\w{])/g, '\u2019')
+  .replace(/(?<=s)'(?=[\s.,;:!?)]|$)/g, '\u2019')
+  .replace(/(^|[\s(\[{])"/g, '$1\u201c')
+  .replace(/"/g, '\u201d');
+
+// A copy object whose entries are plain strings, typeset once (for copy read directly, not through fillCopy).
+export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy).map(([k, v]) => [k, typeset(v)])));
+
+// copy[key] (a string, or { text, claim }), typeset, with each {placeholder} replaced. Values must be strings (format numbers
+// first); a placeholder with no value, or a value with no placeholder, throws. plain: leave the text untypeset (a
+// file that isn't page copy, such as the data dictionary's Markdown).
+export function fillCopy(copy, key, values = {}, { plain = false } = {}) {
   if (!has(copy, key)) throw new RangeError(`no copy key "${key}"`);
   const entry = copy[key];
-  const text = typeof entry === 'string' ? entry : entry.text;
+  const source = typeof entry === 'string' ? entry : entry.text;
+  const text = plain ? source : typeset(source);
   const used = new Set();
   const out = text.replace(PLACEHOLDER, (_, name) => {
     if (!has(values, name)) throw new RangeError(`copy "${key}": no value for {${name}}`);

@@ -62,7 +62,7 @@ test('a slider and a number field per scored measure, with labels, valuetext, CM
     state.ids.forEach((id, i) => {
       const p = model.params[id];
       assert.ok(attr(sliders[i], 'aria-valuetext'), `${id} valuetext`);
-      assert.equal(attr(numbers[i], 'value'), h.measures[id].value.toFixed(p.decimals), `${id} starts at CMS's value`);
+      assert.equal(attr(numbers[i], 'value'), h.measures[id].value.toFixed(p.decimals), `${id} starts at CMS’s value`);
       assert.equal(Number(attr(numbers[i], 'max')), toUnit(MAX_FACTOR * p.cap, p.decimals), `${id} number max`);
       assert.equal(Number(attr(sliders[i], 'step')), 1 / 10 ** p.decimals);
       for (const tag of [sliders[i], numbers[i]]) assert.match(text, new RegExp(`<label[^>]*for="${attr(tag, 'id')}"`), `${id} label`);
@@ -96,7 +96,7 @@ test('the result box: before and after, the ramp with a solid and a hollow mark,
   assert.match(result, /<svg[^>]*class="wi-ramp"/);
   assert.match(result, /class="wi-tri wi-tri--cms"/);
   assert.match(result, /class="wi-tri wi-tri--hyp"[^>]*data-wi="hyp"/);
-  assert.match(result, /CMS(&#39;|')s line/);
+  assert.match(result, /CMS’s line/);
   assert.ok(result.includes(esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${D.boundaryText.lowestYes} or higher`)));
   assert.doesNotMatch(result, /#[0-9a-f]{3,6}\b/i, 'colors come from tokens');
 });
@@ -161,7 +161,7 @@ test('buttons and the solver: reset, median, the question by CMS\'s decision; ro
     assert.match(text, /data-wi="median"[^>]*>Bring all to the national median</);
     assert.match(text, /data-wi="solve"[^>]*aria-controls="wi-solver"/);
     assert.match(text, /id="wi-solver"/);
-    assert.match(text, /From CMS(&#39;|')s values, one measure at a time/);
+    assert.match(text, /From CMS’s values, one measure at a time/);
   }
   assert.match(no, /How much cushion\?/);
   assert.match(yes, /What would it take\?/);
@@ -352,7 +352,7 @@ test('the ramp: the shaded side carries its cut; the hollow mark and its label h
   assert.doesNotMatch(near, /data-wi="hyp-label"[^>]*hidden/);
   assert.match(near, /data-wi="hyp-label"[^>]*y="99"/, 'a close hypothetical takes the second row');
   assert.match(near, /class="wi-ramp" data-wi="ramp" width="100%" height="105"/);
-  assert.doesNotMatch(render(H.maryland), /wi-ramp__zone-label/, "Maryland's ramp names no cut");
+  assert.doesNotMatch(render(H.maryland), /wi-ramp__zone-label/, "Maryland’s ramp names no cut");
 });
 
 test('each number field has an error line naming its range, hidden until an entry is refused', () => {

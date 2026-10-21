@@ -82,12 +82,12 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     assert.ok(maryland.includes(esc(FN('a'))), 'footnote a text');
     assert.ok(maryland.includes('pill--na'));
     assert.doesNotMatch(maryland, /distance to CMS/);
-    assert.doesNotMatch(maryland, /CMS(&#39;|')s value:/, 'the pill already reads CMS\'s value');
+    assert.doesNotMatch(maryland, /CMS’s value:/, 'the pill already reads CMS’s value');
     assert.match(maryland, /pill--na">N\/A</);
 
     const yesNoScoreRow = pick((h) => h.total === null && h.paymentReduction === 'Yes', 'Yes with no score');
     const yesNoScore = page(yesNoScoreRow);
-    assert.doesNotMatch(yesNoScore, /CMS(&#39;|')s value:/, 'the pill already reads CMS\'s value');
+    assert.doesNotMatch(yesNoScore, /CMS’s value:/, 'the pill already reads CMS’s value');
     assert.match(yesNoScore, /pill--pen">Yes</);
     assert.doesNotMatch(yesNoScore, /hero__num/);
     assert.match(yesNoScore, /<p class="hero__none"><span>No score published<\/span><\/p>/);
@@ -103,14 +103,14 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
 
     const yes = page(pick((h) => h.total !== null && h.paymentReduction === 'Yes', 'scored Yes'));
     assert.match(yes, /pill--pen">1% cut</);
-    assert.ok(yes.includes(esc("CMS's value: Yes")));
+    assert.ok(yes.includes(esc("CMS’s value: Yes")));
     assert.doesNotMatch(yes, /No score published|hero__none/);
     assert.match(yes, /<section class="block whatif" id="whatif"/);
     assert.match(yes, /class="hero__num cms">\S+</);
     assert.match(yes, /"isBasedOn":"https:\/\/data\.cms\.gov\/provider-data\/dataset\/yq43-i98g"/);
     const no = page(pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No'));
     assert.match(no, /class="pill">No cut</);
-    assert.ok(no.includes(esc("CMS's value: No")));
+    assert.ok(no.includes(esc("CMS’s value: No")));
 
     // The distance sentence quotes CMS's own text for the boundary scores.
     const bt = DATA.boundaryText;
@@ -124,7 +124,7 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     const program = pages.get('/hacrp/');
     assert.ok(DATA.hospitals.some((h) => h.paymentReduction === 'N/A' && h.total >= DATA.model.boundary.lowestYes), 'the scope matters in the pinned data');
     assert.ok(program.includes(esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${bt.lowestYes} or higher and none at ${bt.highestNo} or lower.`)));
-    assert.ok(program.includes(esc("Maryland's hospitals are scored but not subject to the reduction.")));
+    assert.ok(program.includes(esc("Maryland’s hospitals are scored but not subject to the reduction.")));
 
     assert.ok(pages.get('/hacrp/').includes(`CMS cut Medicare inpatient payments to ${count(cut)} of the ${count(decided.length)} hospitals with a Total HAC Score`));
   }));
@@ -222,12 +222,12 @@ test('a hospital with no score shows a hatched "No score published" block, not a
     assert.doesNotMatch(text, /cms">N\/A</);
   }
   const scored = render(CASES.yes);
-  assert.match(scored, /class="hero__num cms">0<span class="dp">\.<\/span>3000</, "CMS's text, its point in a span");
+  assert.match(scored, /class="hero__num cms">0<span class="dp">\.<\/span>3000</, "CMS’s text, its point in a span");
   assert.doesNotMatch(scored, /hero__none|No score published/);
 });
 
 test('the decision pill and the "CMS\'s value" line: shown under a cut or no-cut pill, skipped when the pill is CMS\'s own text', () => {
-  const says = (h) => render(h).includes(esc("CMS's value:"));
+  const says = (h) => render(h).includes(esc("CMS’s value:"));
   assert.deepEqual([CASES.yes, CASES.no].map(says), [true, true]);
   assert.deepEqual([CASES.maryland, CASES.yesNoScore].map(says), [false, false]);
   assert.match(render(CASES.yesNoScore), /pill--pen">Yes</);
@@ -238,9 +238,9 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   const text = render(CASES.yes);
   const name = 'Example General Hospital';
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
-  assert.equal(meta(text, 'description'), esc(`${name} (Exampleton, AL): CMS's FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`));
+  assert.equal(meta(text, 'description'), esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`));
   const program = programPage(PROGRAM_ARGS);
-  assert.equal(meta(program, 'description'), esc(`How Medicare's Hospital-Acquired Condition Reduction Program works, and CMS's FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
+  assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
 
 test('a scored page says which measure added the most, right after the measure table intro; a page with none says nothing', () => {
@@ -249,7 +249,7 @@ test('a scored page says which measure added the most, right after the measure t
     const sentence = largestSentence(view);
     assert.ok(sentence, `${h.ccn}: a synthetic case with a largest measure`);
     const text = render(h);
-    const intro = text.indexOf(esc("CMS's published value and z-score for each measure."));
+    const intro = text.indexOf(esc("CMS’s published value and z-score for each measure."));
     assert.ok(intro > 0);
     assert.equal(text.indexOf(`<p>${esc(sentence)}</p>`), text.indexOf('</p>', intro) + 5, `${h.ccn}: directly after the intro`);
   }
@@ -261,7 +261,7 @@ test('an estimate tag opens a visible note with the maximum error and a methods 
   const psi = view.measures.find((m) => m.id === 'PSI90');
   assert.equal(psi.tagged, true);
   const text = render(CASES.yes);
-  assert.ok(text.includes(esc(`The recompute can differ from CMS's z-score by up to ${psi.maxErrorText}.`)));
+  assert.ok(text.includes(esc(`The recompute can differ from CMS’s z-score by up to ${psi.maxErrorText}.`)));
   assert.match(text, /<details class="est"><summary>estimate<\/summary>/);
   assert.match(text, /<a href="\/methods\/#estimate">/);
   assert.doesNotMatch(text, /title="This site/);
@@ -352,7 +352,7 @@ test('the hero is the lede: right after the page head, before the summary senten
 
 test("the hero names CMS's line under a scored hospital's number, from CMS's text; not for Maryland or no score", () => {
   const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
-  const line = `<p class="hero__ref">CMS&#39;s line: between <span class="nw">${BOUNDARY.highestNo} and ${BOUNDARY.lowestYes}</span></p>`;
+  const line = `<p class="hero__ref">CMS’s line: between <span class="nw">${BOUNDARY.highestNo} and ${BOUNDARY.lowestYes}</span></p>`;
   for (const h of [CASES.yes, CASES.no]) assert.ok(page(h).includes(line), h.ccn);
   for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
 });
@@ -376,5 +376,5 @@ test("a hospital page's head names the data's release; its foot runs back link, 
   const order = ['class="page__links"', 'class="asof"', 'id="fn-h"', 'class="data-links"', 'id="cite-h"'].map(at);
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);
   assert.equal(text.split('Source: CMS Provider Data Catalog').length - 1, 1 + (text.match(/class="source fig__source"/g) ?? []).length, 'the citation and each figure say the source; no extra source line');
-  assert.match(text, new RegExp(`<a href="${DATA.source.landingPage.replace(/[.?]/g, '\\$&')}">CMS(&#39;|')s dataset page</a></p>`));
+  assert.match(text, new RegExp(`<a href="${DATA.source.landingPage.replace(/[.?]/g, '\\$&')}">CMS’s dataset page</a></p>`));
 });

@@ -1,6 +1,9 @@
 // Fixed words shared by every page's header and footer, and the chart kit's figure frame (web/charts/figure.js).
 // No digit characters: numbers never live in copy files.
-export const COPY = {
+import { typesetCopy } from './render/components.js';
+
+// Typeset once (straight apostrophes and quotes to curly), as every page shows them.
+export const COPY = typesetCopy({
   skip: 'Skip to content',
   wordmarkLead: 'Paid &',
   wordmarkPen: 'Penalized',
@@ -20,4 +23,4 @@ export const COPY = {
   claimRecomputed: 'This site recomputes',
   claimEstimate: 'Estimate',
   claimHypothetical: 'Hypothetical',
-};
+});

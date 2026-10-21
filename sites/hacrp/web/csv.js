@@ -57,5 +57,5 @@ export function dictionaryText(raw, { fy, source }) {
   const { id, title, pdcReleased } = source;
   return fillCopy({ dictionary: raw }, 'dictionary', {
     fy: String(fy), source_id: id, source_title: title, pdc_released: pdcReleased && isoDate(pdcReleased),
-  });
+  }, { plain: true });
 }

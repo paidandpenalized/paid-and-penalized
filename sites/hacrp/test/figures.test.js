@@ -45,8 +45,8 @@ test('a scored hospital page has Figure 1 (each measure\'s part) and Figure 2 (e
   assert.deepEqual(captions(text).map(([n]) => n), ['1', '2']);
   const [[, part], [, range]] = captions(text);
   const view = hospitalView(inputs(CASES.yes));
-  assert.equal(part, esc(`CLABSI added the most to this hospital's Total HAC Score of ${view.score.text} among its measured results: ${view.largest.contributionText}.`));
-  assert.match(range, /^Of the 6 measures with a published value, this hospital&#39;s value is above the national median on \d and at or below it on \d\.$/);
+  assert.equal(part, esc(`CLABSI added the most to this hospital’s Total HAC Score of ${view.score.text} among its measured results: ${view.largest.contributionText}.`));
+  assert.match(range, /^Of the 6 measures with a published value, this hospital’s value is above the national median on \d and at or below it on \d\.$/);
   assert.ok(text.indexOf('id="figure-1"') > text.indexOf('gb--measures'));
   // The what-if is not rendered here (no whatif data), so check order against the as-of bar instead.
   assert.ok(text.indexOf('id="figure-2"') < text.indexOf('class="asof'));
@@ -64,7 +64,7 @@ test('Figure 1 hatches an assigned measure, says so in its label, and never name
 test('Figure 1 with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
   const text = render(CASES.allAssigned);
   const view = hospitalView(inputs(CASES.allAssigned));
-  assert.equal(captions(text)[0][1], esc(`Each bar is one measure's part of this hospital's Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
+  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
   assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no Figure 2: no measure has a published value');
   const one = render(CASES.oneMeasure);
   assert.equal(figures(one)[0][2].match(/data-row="/g).length, 1);
@@ -78,7 +78,7 @@ test('Figure 2: a measure with no value has no triangle and says so; its table q
   assert.ok(body.includes('>SSI</text>') && body.includes('class="chart-note" x="76" y="42" text-anchor="start">no value published</text>'), 'the row keeps its title and says it has no value');
   // A key names the marks once; the ▲'s own label prints only under the first ▲.
   assert.equal(body.match(/>This hospital<\/text>/g).length, 1);
-  assert.match(body, /<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"><\/span>This hospital<\/li><li><span class="fig__swatch fig__swatch--median" aria-hidden="true"><\/span>National median<\/li><li><span class="fig__swatch fig__swatch--same" aria-hidden="true"><\/span>Scores the same as CMS&#39;s floor or cap<\/li><\/ul>/);
+  assert.match(body, /<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"><\/span>This hospital<\/li><li><span class="fig__swatch fig__swatch--median" aria-hidden="true"><\/span>National median<\/li><li><span class="fig__swatch fig__swatch--same" aria-hidden="true"><\/span>Scores the same as CMS’s floor or cap<\/li><\/ul>/);
   const footnote = hospitalView(inputs(CASES.no)).measures.find((m) => m.id === 'SSI').footnotes[0];
   assert.ok(body.includes(esc(footnote.text)), 'CMS footnote text in the table');
   // The range's ends and median are the model's: CMS's floor and cap and the median at CMS's decimals.
@@ -100,7 +100,7 @@ test('no-score pages and the unscored "Yes" row get no figures; Maryland gets bo
 test('the program page\'s stepper walks the median hospital with medianHospital\'s numbers and the model\'s', () => {
   const text = program();
   const steps = /<section class="block" aria-labelledby="steps-h">([\s\S]*?)<\/section>/.exec(text)[1];
-  assert.ok(steps.includes(esc("so its numbers are this site's, not CMS's")), 'the stepper says its hospital is synthetic');
+  assert.ok(steps.includes(esc("so its numbers are this site’s, not CMS’s")), 'the stepper says its hospital is synthetic');
   const rows = stepRows(MEDIAN, model);
   assert.deepEqual(rows.map((r) => r.id), MEASURE_IDS);
   for (const r of rows) {
@@ -141,7 +141,7 @@ test('the program page\'s stepper walks the median hospital with medianHospital\
   assert.match(steps, /<figure class="fig" id="figure-1" data-figure>/);
   assert.match(steps, /class="chart chart--ramp"/);
   assert.match(steps, /<span class="fig__claim">Hypothetical<\/span> · /);
-  assert.equal(captions(steps)[0][1], esc(`This site's hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No.`));
+  assert.equal(captions(steps)[0][1], esc(`This site’s hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No.`));
   assert.equal(MEDIAN.paymentReduction, 'No', 'the pinned median hospital sits below the line');
 });
 
@@ -177,13 +177,13 @@ test('CMS\'s line means one thing in both program figures: the gap between CMS\'
   assert.equal(lineMark.exec(hist)?.[1], sentence, 'Figure 2');
   // The histogram's table lists the line between the last No bin and the first Yes bin, by both of CMS's scores.
   const rows = [...hist.matchAll(/<tr><th scope="row"[^>]*>([^<]*)<\/th><td[^>]*>([^<]*)<\/td><td[^>]*>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => m.slice(1));
-  const at = rows.findIndex((r) => r[3] === 'CMS&#39;s line');
-  assert.deepEqual(rows[at], [DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes, '—', 'CMS&#39;s line']);
-  assert.equal(rows.filter((r) => r[3] === 'CMS&#39;s line').length, 1);
+  const at = rows.findIndex((r) => r[3] === 'CMS’s line');
+  assert.deepEqual(rows[at], [DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes, '—', 'CMS’s line']);
+  assert.equal(rows.filter((r) => r[3] === 'CMS’s line').length, 1);
   assert.ok(rows.slice(0, at).every((r) => r[3] !== 'Yes') && rows.slice(at + 1).every((r) => r[3] !== 'No'));
-  assert.equal(rows[at + 1][0], decimal(lowestYes, 4), 'the first bin above starts at CMS\'s lowest Yes score');
+  assert.equal(rows[at + 1][0], decimal(lowestYes, 4), 'the first bin above starts at CMS’s lowest Yes score');
   // No word on either figure gives the line as a single score.
-  for (const body of [ramp, hist]) assert.doesNotMatch(body, /CMS&#39;s line \(/);
+  for (const body of [ramp, hist]) assert.doesNotMatch(body, /CMS’s line \(/);
 });
 
 test('the state tile grid: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no code drawn as zero', () => {
@@ -195,7 +195,7 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.doesNotMatch(tile('MD')[0], /data-value/);
   assert.match(tile('MD')[1], /chart-tile-na/);
   assert.equal(Object.hasOwn(STATES, 'PR'), false, 'PR has no hospitals in the pinned file');
-  assert.match(tile('PR')[0], /<title>PR: no hospitals in CMS(&#39;|')s file<\/title>/);
+  assert.match(tile('PR')[0], /<title>PR: no hospitals in CMS’s file<\/title>/);
   assert.match(tile('PR')[1], /chart-tile-empty/, 'nothing to show is an empty tile, not the hatch that means not subject');
   const al = STATES.AL;
   assert.ok(tile('AL')[0].includes(`<title>AL: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
@@ -320,7 +320,7 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
     for (const m of view.measures.filter((x) => x.contribution !== null)) {
       assert.ok(fig.includes(`>${m.contributionText}</text>`), `scored row ${i} ${m.id}: bar label`);
       assert.ok(fig.includes(`data-value="${Number(m.contributionText.replace('−', '-'))}">${m.contributionText}</td>`), `scored row ${i} ${m.id}: table`);
-      assert.equal(m.contributionRaw, Number(m.contributionText.replace('−', '-')), `scored row ${i} ${m.id}: the view's number is its text's`);
+      assert.equal(m.contributionRaw, Number(m.contributionText.replace('−', '-')), `scored row ${i} ${m.id}: the view’s number is its text’s`);
     }
   }
 });

@@ -32,8 +32,8 @@ const sentence = (name, changes) => scenarioSentence(vmOf(H[name], changes), H[n
 const rowsOf = (h) => solverRows(solverOf(h, model) ?? [], model);
 const rows = (name) => rowsOf(H[name]);
 
-const NO_CUT = "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.";
-const CUT = "That would be above CMS's line, so the payment reduction decision would be Yes: a 1% cut.";
+const NO_CUT = "That would be at or below CMS’s line, so the payment reduction decision would be No: no cut.";
+const CUT = "That would be above CMS’s line, so the payment reduction decision would be Yes: a 1% cut.";
 
 test('the fixtures sit where the snapshots need them', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(H).map(([k, h]) => [k, [h.totalText, h.paymentReduction]])), {
@@ -96,7 +96,7 @@ test('sentence: too close to call, never Yes or No', () => {
   assert.equal(vm.result.after.flag, 'too-close');
   assert.equal(scenarioSentence(vm, H.no, model, 'cms'),
     'With CLABSI at 1.074 instead of 0.800, the Total HAC Score would rise from 0.2734 to 0.3793. That would be too close to call: '
-    + "this site's recompute cannot place it on either side of CMS's line, so the cut would be 0% or 1%. CMS reports a payment reduction decision of No.");
+    + "this site’s recompute cannot place it on either side of CMS’s line, so the cut would be 0% or 1%. CMS reports a payment reduction decision of No.");
 });
 
 test('sentence: Maryland moves the score only', () => {
@@ -137,7 +137,7 @@ test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, an
 
 test('solver rows, an assigned measure: a note, no answer; Maryland: no solver at all', () => {
   assert.deepEqual(rows('assigned').find((r) => r.id === 'SSI'),
-    { id: 'SSI', label: 'SSI', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." });
+    { id: 'SSI', label: 'SSI', answer: null, note: "CMS assigned this measure’s score, so there is no submitted value to solve for." });
   assert.equal(solverOf(H.maryland, model), null);
 });
 
@@ -161,8 +161,8 @@ test('the solver and the sentences never point at an assigned score, even when i
   const allAssigned = modelHospital(model, '990018', { values: { CDI: 'assigned', MRSA: 'assigned' } });
   assert.equal(allAssigned.paymentReduction, 'Yes');
   assert.deepEqual(rowsOf(allAssigned), [
-    { id: 'CDI', label: 'CDI', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
-    { id: 'MRSA', label: 'MRSA', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
+    { id: 'CDI', label: 'CDI', answer: null, note: "CMS assigned this measure’s score, so there is no submitted value to solve for." },
+    { id: 'MRSA', label: 'MRSA', answer: null, note: "CMS assigned this measure’s score, so there is no submitted value to solve for." },
   ]);
   assert.equal(scenarioSentence(vmOf(allAssigned), allAssigned, model, 'cms'),
     "CMS reports a Total HAC Score of 2.2091 and a payment reduction decision of Yes.");
@@ -240,7 +240,7 @@ test('the median hospital: this site\'s hypothetical, never described as CMS\'s 
   assert.equal(scenarioSentence(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, 'sandbox'),
     'With CLABSI at 1.200 instead of 0.559 and MRSA at 1.400 instead of 0.641, the Total HAC Score would rise from −0.1278 to 0.3844. '
     + `${CUT} Before these changes, this site recomputes its decision as No.`);
-  const claimsCms = /CMS's values|CMS reports|CMS's decision|CMS's value|CMS assigned/;
+  const claimsCms = /CMS’s values|CMS reports|CMS’s decision|CMS’s value|CMS assigned/;
   for (const changes of [{}, { CLABSI: 1.2, MRSA: 1.4 }, { MRSA: 2 }, { CLABSI: 0.4 }, { PSI90: 0.7 }]) {
     const vm = vmOf(mh, changes);
     const words = [scenarioSentence(vm, mh, model, 'sandbox'), slideText(vm, mh, model, { name: null, fy: 2026, source: SOURCE, baseline: 'sandbox' }),
@@ -308,5 +308,5 @@ test('NHSN fields need an HAI period whose start and end both read as dates; any
     { start: '', end: '12/31/2024' }, { start: '13/45/2023', end: '12/31/2024' }, { start: null, end: null }]) {
     assert.equal(make(hai).predicted, null, JSON.stringify(hai));
   }
-  assert.equal(make({ start: '01/01/2023', end: '12/31/2024' }, 'sandbox').predicted, null, 'the baseline must be CMS\'s');
+  assert.equal(make({ start: '01/01/2023', end: '12/31/2024' }, 'sandbox').predicted, null, 'the baseline must be CMS’s');
 });

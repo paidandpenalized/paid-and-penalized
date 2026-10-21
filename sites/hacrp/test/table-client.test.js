@@ -69,7 +69,7 @@ for (const hash of ['', '#state=AL']) {
     assert.equal(s.errors.length, 1);
     assert.equal(s.table.hidden, true);
     const [message, , button] = s.retry.children;
-    assert.equal(message, "The table didn't load.");
+    assert.equal(message, 'The table didn\u2019t load.');
     assert.equal(button.textContent, 'Try again');
     assert.equal(button.type, 'button');
 

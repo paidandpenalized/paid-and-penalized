@@ -121,9 +121,9 @@ export function inputs(h, overrides = {}) {
 }
 
 // The two standing lines, verbatim (Global Constraints): under every flag, and under every what-if.
-export const STANDING = "A penalty reflects how CMS's formula scored relative performance; it is not a verdict on the quality of care.";
-export const WHATIF_STANDING = "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. "
-  + "CMS's real result also depends on other hospitals.";
+export const STANDING = "A penalty reflects how CMS’s formula scored relative performance; it is not a verdict on the quality of care.";
+export const WHATIF_STANDING = "A what-if shows the formula’s arithmetic, not what a hospital could realistically change or how. "
+  + "CMS’s real result also depends on other hospitals.";
 
 // HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.
 export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

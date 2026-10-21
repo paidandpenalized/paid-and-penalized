@@ -441,7 +441,7 @@ test('a refused NHSN count shows its error line, named by the field, and hides t
     assert.equal(count.hidden, true, bad);
   }
   type(field(root, 'MRSA', 'number'), '1.2');
-  assert.equal(count.hidden, true, 'another field\'s redraw never brings back the old count');
+  assert.equal(count.hidden, true, 'another field’s redraw never brings back the old count');
   type(p, '5');
   assert.equal(error.hidden, true);
   assert.equal(p.getAttribute('aria-invalid'), null);

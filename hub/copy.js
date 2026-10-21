@@ -1,6 +1,9 @@
 // The hub's words: the family's front page, the methods stub and the not-found page. No digit characters:
 // numbers never live in copy files.
-export const COPY = {
+import { typesetCopy } from '../web/render/components.js';
+
+// Typeset once (straight apostrophes and quotes to curly), as every page shows them.
+export const COPY = typesetCopy({
   homeTitle: 'Paid & Penalized',
   tagline: 'Public Medicare data, made visible.',
   homeDescription: 'Plain-language explainers for Medicare hospital payment programs, built from public CMS data.',
@@ -19,4 +22,4 @@ export const COPY = {
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',
   notFoundHome: 'Go to the home page',
-};
+});
