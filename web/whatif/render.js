@@ -27,7 +27,7 @@
 //   measure(input, m) -> { label, short, help, leverage, marks, slider, placeholder, assignedHelp, invalid }
 //                                          input: a vm.inputs entry; m: its vm.result.measures entry
 //   bars { heading, caption(n), value(contribution), assigned }
-//   predicted null | { label(id) -> string | null, help, result(delta) }   NHSN counts (label null: no field)
+//   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
 import { scaleLinear } from 'd3-scale';
 import { decimal } from '../render/format.js';
 import { html } from '../render/html.js';
@@ -103,7 +103,7 @@ function measure(input, w, texts) {
   const at = trackMarks(input);
   const ids = {
     number: `wi-${id}-n`, slider: `wi-${id}-r`, help: `wi-${id}-h`, marks: `wi-${id}-m`, leverage: `wi-${id}-l`,
-    assigned: `wi-${id}-a`, error: `wi-${id}-e`, predicted: `wi-${id}-p`, predictedHelp: `wi-${id}-ph`,
+    assigned: `wi-${id}-a`, error: `wi-${id}-e`, predicted: `wi-${id}-p`, predictedHelp: `wi-${id}-ph`, predictedError: `wi-${id}-pe`,
   };
   const describedBy = [ids.help, ids.marks, ids.leverage, input.assigned && ids.assigned].filter(Boolean).join(' ');
   const predicted = !input.assigned && texts.predicted?.label(id);
@@ -130,6 +130,7 @@ ${input.assigned && html`<p class="small" id="${ids.assigned}">${w.assignedHelp}
 ${predicted && html`<div class="wi-predicted">
 <label class="small" for="${ids.predicted}">${predicted}</label>
 <input class="wi-number" type="number" id="${ids.predicted}" data-wi="predicted" min="0" step="any" inputmode="decimal" autocomplete="off" aria-describedby="${ids.predictedHelp}">
+<p class="small wi-error" id="${ids.predictedError}" data-wi="predicted-error" hidden>${texts.predicted.invalid}</p>
 <p class="small muted" id="${ids.predictedHelp}">${texts.predicted.help}</p>
 <p class="small" data-wi="count" hidden></p>
 </div>`}

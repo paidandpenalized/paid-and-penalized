@@ -9,7 +9,7 @@
 // changesOf(state), viewModel(state) }. start.ids: the measures; params[id]: { decimals, cap }, for decoding a link.
 // reduce() takes { type: 'set', id, value }, 'reset', 'median', { type: 'predicted', id, count } and
 // { type: 'load', changes }, and returns the same state when it refuses an action.
-import { decode, encode, isWhatIfHash } from './fragment.js';
+import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
   assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX,
   sliderValue, trackMarks,
@@ -30,6 +30,9 @@ const setText = (el, text) => {
   if (el && el.textContent !== text) el.textContent = text;
 };
 
+// An input with an error line: the line shows while the input's entry is refused. null without the input.
+const checked = (el, error) => el && { el, error, described: el.getAttribute('aria-describedby') ?? '' };
+
 export function mountWhatIf(root, { rules, texts, share, range, env = globalThis }) {
   if (typeof share !== 'boolean') throw new TypeError('mountWhatIf: share must be true or false');
   const q = (name, scope = root) => scope.querySelector(`[data-wi="${name}"]`);
@@ -49,8 +52,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       capMark: q('cap-mark', row),
       predicted: q('predicted', row),
       count: q('count', row),
-      error: q('error', row),
-      described: q('number', row).getAttribute('aria-describedby') ?? '',
+      numberCheck: checked(q('number', row), q('error', row)),
+      predictedCheck: checked(q('predicted', row), q('predicted-error', row)),
       barRow: bar,
       bar: q('bar', bar),
       barValue: q('bar-value', bar),
@@ -101,11 +104,22 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   }
 
   // A field's error line shows while its entry is refused, and the field names it in aria-describedby.
-  function markInvalid(row, invalid) {
-    row.error.hidden = !invalid;
-    row.number.setAttribute('aria-describedby', invalid ? `${row.described} ${row.error.id}`.trim() : row.described);
-    if (invalid) row.number.setAttribute('aria-invalid', 'true');
-    else row.number.removeAttribute('aria-invalid');
+  function markInvalid({ el: input, error, described }, invalid) {
+    error.hidden = !invalid;
+    input.setAttribute('aria-describedby', invalid ? `${described} ${error.id}`.trim() : described);
+    if (invalid) input.setAttribute('aria-invalid', 'true');
+    else input.removeAttribute('aria-invalid');
+  }
+
+  // Reset and a new link start every field over. A refused NHSN count is cleared with its error (the state holds no
+  // count for it); number fields drop theirs when draw() rewrites them.
+  function clearRefusedCounts() {
+    for (const id of start.ids) {
+      const c = rows[id].predictedCheck;
+      if (!c || c.error.hidden) continue;
+      c.el.value = '';
+      markInvalid(c, false);
+    }
   }
 
   function track(r, input) {
@@ -141,7 +155,11 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       if (!(holdMax && source === row.slider)) track(row, input);
       if (source !== row.slider) row.slider.value = String(sliderValue(input));
       row.slider.setAttribute('aria-valuetext', input.valuetext);
-      if (source !== row.number) row.number.value = fieldText(input);
+      if (source !== row.number) {
+        row.number.value = fieldText(input);
+        // The field now shows the value the what-if uses, so no refused entry is left to flag.
+        if (!row.numberCheck.error.hidden) markInvalid(row.numberCheck, false);
+      }
       row.barRow.setAttribute('class', barClass(input));
       if (row.barAssigned) row.barAssigned.hidden = !assignedNow(input);
       const span = barSpan(m.contribution, vm.extent);
@@ -195,19 +213,22 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     row.number.addEventListener('input', () => {
       const value = entry(row.number);
       const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number });
-      markInvalid(row, !ok);
+      markInvalid(row.numberCheck, !ok);
     });
     row.number.addEventListener('change', () => {
-      markInvalid(row, false);
+      markInvalid(row.numberCheck, false);
       commit(id);
     });
     row.number.addEventListener('focus', reveal);
     row.slider.addEventListener('input', () => apply({ type: 'set', id, value: Number(row.slider.value) }, { source: row.slider, holdMax: true }));
     row.slider.addEventListener('change', () => commit(id));
     if (row.predicted) {
+      // A refused count also clears the count held for the field, so the count line never shows a stale one.
       row.predicted.addEventListener('input', () => {
         const count = entry(row.predicted);
-        if (!Number.isNaN(count)) apply({ type: 'predicted', id, count }, { source: row.predicted });
+        const ok = !Number.isNaN(count) && apply({ type: 'predicted', id, count }, { source: row.predicted });
+        if (!ok) apply({ type: 'predicted', id, count: null }, { source: row.predicted });
+        markInvalid(row.predictedCheck, !ok);
       });
       row.predicted.addEventListener('focus', reveal);
     }
@@ -215,6 +236,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
 
   el.reset.addEventListener('click', () => {
     linked = false;
+    clearRefusedCounts();
     apply({ type: 'reset' });
   });
   el.median.addEventListener('click', () => apply({ type: 'median' }));
@@ -245,10 +267,12 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     }
   });
 
-  // A what-if link opened in this tab. Any other fragment (the skip link's #main) leaves the scenario alone.
+  // A scenario link opened in this tab. Any other fragment (the skip link's #main, the section's own #whatif and
+  // #whatif-h) leaves the scenario alone.
   if (share) {
     env.addEventListener('hashchange', () => {
-      if (!isWhatIfHash(env.location.hash)) return;
+      if (!isScenarioHash(env.location.hash)) return;
+      clearRefusedCounts();
       state = load(state);
       linked = hasChanges(state);
       draw();

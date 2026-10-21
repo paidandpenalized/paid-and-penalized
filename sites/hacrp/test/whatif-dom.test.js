@@ -363,3 +363,77 @@ test('mounting on markup that lacks parts never throws: Maryland, share false, a
 test('share is required', () => {
   assert.throws(() => mountWhatIf(rootFor(H, false), { rules: whatIfRules(H, model, estimate), texts, range: RANGE, env: windowStub().env }), /share/);
 });
+
+test('the section\'s own anchors (#whatif, #whatif-h) never reset the reader\'s scenario, and are not stripped on load', () => {
+  const stub = windowStub();
+  const root = mount(true, stub);
+  type(field(root, 'MRSA', 'number'), '1.4');
+  for (const anchor of ['#whatif', '#whatif-h']) {
+    stub.navigate(anchor);
+    assert.equal(q(root, 'score').textContent, '0.4476', anchor);
+    assert.equal(field(root, 'MRSA', 'slider').value, '1.4', anchor);
+  }
+  const heading = windowStub({ hash: '#whatif-h' });
+  mount(true, heading);
+  heading.flush();
+  assert.deepEqual(heading.urls, [], 'a heading anchor is left in the URL');
+});
+
+test('a refused NHSN count shows its error line, named by the field, and hides the count line until a good count', () => {
+  const stub = windowStub();
+  const root = mount(true, stub);
+  const p = field(root, 'CLABSI', 'predicted');
+  const error = field(root, 'CLABSI', 'predicted-error');
+  const count = field(root, 'CLABSI', 'count');
+  const base = p.getAttribute('aria-describedby');
+  assert.equal(error.hidden, true);
+  assert.equal(error.id, 'wi-CLABSI-pe');
+  type(p, '12');
+  type(field(root, 'CLABSI', 'number'), '1.8');
+  assert.equal(count.hidden, false);
+  for (const bad of ['-3', 'abc']) {
+    type(p, bad);
+    assert.equal(error.hidden, false, bad);
+    assert.equal(p.getAttribute('aria-invalid'), 'true', bad);
+    assert.equal(p.getAttribute('aria-describedby'), `${base} wi-CLABSI-pe`, bad);
+    assert.equal(count.hidden, true, bad);
+  }
+  type(field(root, 'MRSA', 'number'), '1.2');
+  assert.equal(count.hidden, true, 'another field\'s redraw never brings back the old count');
+  type(p, '5');
+  assert.equal(error.hidden, true);
+  assert.equal(p.getAttribute('aria-invalid'), null);
+  assert.equal(p.getAttribute('aria-describedby'), base);
+  assert.equal(count.hidden, false);
+  type(p, '');
+  assert.equal(error.hidden, true, 'blank clears the count, with no error');
+  assert.equal(count.hidden, true);
+});
+
+test('reset and a new scenario link clear every field\'s error state', () => {
+  for (const clear of [(root) => q(root, 'reset').fire('click'), (root, stub) => stub.navigate('#whatif&MRSA=1.4')]) {
+    const stub = windowStub();
+    const root = mount(true, stub);
+    const n = field(root, 'MRSA', 'number');
+    const p = field(root, 'CLABSI', 'predicted');
+    type(p, '-3');
+    type(n, '99999');
+    assert.equal(field(root, 'MRSA', 'error').hidden, false);
+    assert.equal(field(root, 'CLABSI', 'predicted-error').hidden, false);
+    clear(root, stub);
+    assert.equal(field(root, 'MRSA', 'error').hidden, true);
+    assert.equal(n.getAttribute('aria-invalid'), null);
+    assert.equal(field(root, 'CLABSI', 'predicted-error').hidden, true);
+    assert.equal(p.getAttribute('aria-invalid'), null);
+    assert.equal(p.value, '', 'the refused count is cleared with its error');
+  }
+});
+
+test('a field rewritten by another action shows the what-if\'s value and drops its error', () => {
+  const root = mount(false, windowStub());
+  const n = field(root, 'MRSA', 'number');
+  type(n, '99999');
+  q(root, 'median').fire('click');
+  assert.equal(field(root, 'MRSA', 'error').hidden, true);
+  assert.equal(n.getAttribute('aria-invalid'), null);
+});

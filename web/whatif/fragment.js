@@ -12,8 +12,11 @@ export const MAX_FACTOR = 10;
 // The highest value a reader may set for a measure (params p): what the number field allows and a link may carry.
 export const limitOf = (p) => toUnit(MAX_FACTOR * p.cap, p.decimals);
 
-// Whether a URL fragment is the what-if's (a skip link's #main is not).
-export const isWhatIfHash = (hash) => typeof hash === 'string' && hash.startsWith(`#${TAG}`);
+// A scenario link: #whatif&... A bare #whatif is the section's own anchor and carries no scenario.
+export const isScenarioHash = (hash) => typeof hash === 'string' && hash.startsWith(`#${TAG}&`);
+// Whether a URL fragment is the what-if's: #whatif or a scenario (a skip link's #main and the heading's #whatif-h
+// are not).
+export const isWhatIfHash = (hash) => hash === `#${TAG}` || isScenarioHash(hash);
 
 // changes: { [id]: number }. Only ids in `ids` are written, in that order.
 export function encode(changes, ids) {

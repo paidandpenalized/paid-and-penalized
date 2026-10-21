@@ -234,6 +234,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
         ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })
         : null),
       help: fill('whatifPredictedHelp'),
+      invalid: fill('whatifPredictedInvalid', { min: decimal(0, 0) }),
       result: countText,
     },
     held: fill('whatifHeld'),

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../engine/js/hacrp/measures.js';
 import { toUnit } from '../../engine/js/stats.js';
-import { decode, encode as encodeIds } from '../whatif/fragment.js';
+import { decode, encode as encodeIds, isScenarioHash, isWhatIfHash } from '../whatif/fragment.js';
 import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
 
 const { model } = loadHacrp();
@@ -70,4 +70,15 @@ test('decode never throws, whatever it is given', () => {
   assert.deepEqual(decode('whatif&CLABSI=0.5', ALL).changes, { CLABSI: 0.5 });
   assert.deepEqual(decode('#whatif&__proto__=1', ALL), { changes: {}, rejected: ['__proto__'] });
   assert.equal(({}).polluted, undefined);
+});
+
+test('the what-if\'s fragment is #whatif or #whatif&...; only #whatif&... is a scenario; the section\'s anchors are neither', () => {
+  const cases = [
+    ['#whatif&MRSA=1.4', true, true], ['#whatif&', true, true], ['#whatif', true, false], ['#whatif-h', false, false],
+    ['#whatifx&MRSA=1', false, false], ['#main', false, false], ['', false, false], [undefined, false, false], [null, false, false],
+  ];
+  for (const [hash, whatIf, scenario] of cases) {
+    assert.equal(isWhatIfHash(hash), whatIf, `isWhatIfHash ${hash}`);
+    assert.equal(isScenarioHash(hash), scenario, `isScenarioHash ${hash}`);
+  }
 });

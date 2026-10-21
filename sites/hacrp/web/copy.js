@@ -188,6 +188,7 @@ export const COPY = {
   },
   whatifPredictedLabel: { text: 'Optional: your NHSN predicted infections for {short}, {start} to {end}', claim: null },
   whatifPredictedHelp: { text: 'Stays in your browser; never sent.', claim: null },
+  whatifPredictedInvalid: { text: 'Enter a number of {min} or more.', claim: null },
   whatifCountMore: {
     text: "About {count} more infections than at CMS's value. This rests on the predicted count you entered, not on CMS data.",
     claim: null,
