@@ -102,8 +102,8 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 
   const body = html`<article class="wrap page">
 <header class="page__head">
+<p class="cap kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
 <h1>${title}</h1>
-<p class="subtitle">${subtitle}</p>
 <p class="dek">${t('dek')}</p>
 </header>
 <form class="block search" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
