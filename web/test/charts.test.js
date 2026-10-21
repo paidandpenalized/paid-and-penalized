@@ -5,7 +5,7 @@ import { parseCsv } from '../../engine/js/csv.js';
 import { mulberry32 } from '../../engine/js/test/prng.js';
 import { axis } from '../charts/axis.js';
 import { contribBars } from '../charts/contribBars.js';
-import { dotRange } from '../charts/dotRange.js';
+import { dotRange, dotRanges } from '../charts/dotRange.js';
 import { figure } from '../charts/figure.js';
 import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
@@ -117,6 +117,25 @@ test('dotRange draws the range as a band, the median as a tick and this hospital
   assert.match(s, /class="chart-this"/);
   assert.ok(s.includes('>This hospital</text>'));
   assert.ok(!String(dotRange({ ...DOT, value: null })).includes('chart-this'), 'no value, no triangle');
+});
+
+test('dotRanges stacks one titled dotRange per row, each on its own scale and format, in one SVG', () => {
+  const rows = [
+    { id: 'a', title: 'Row A', ...DOT, format: (v) => v.toFixed(2) },
+    { id: 'b', title: 'Row B <&>', value: null, floor: 0, cap: 10, median: 5, label: 'This hospital' },
+  ];
+  const s = String(dotRanges({ rows, medianLabel: 'Median', rangeLabel: 'Floor to cap' }));
+  assert.match(s, /^<svg class="chart chart--dot-ranges" viewBox="0 0 360 \d+"/);
+  assert.equal(s.match(/<svg /g).length, 1, 'one SVG');
+  assert.equal(s.match(/class="chart-band"/g).length, 2);
+  assert.equal(s.match(/class="chart-this"/g).length, 1, 'no triangle where the value is null');
+  assert.ok(s.includes('>Row A</text>') && s.includes('>Row B &lt;&amp;&gt;</text>'));
+  assert.ok(s.includes('<title>This hospital: 1.20</title>'), 'each row keeps its own format');
+  assert.ok(s.includes('<title>Median: 5</title>'));
+  // Each row's body is the single dotRange's, moved down under its title.
+  const one = String(dotRange(DOT)).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  assert.ok(String(dotRanges({ rows: [{ title: 'T', ...DOT }], medianLabel: 'Median', rangeLabel: 'Floor to cap' })).includes(one));
+  assert.throws(() => dotRanges({ rows: [], medianLabel: 'M', rangeLabel: 'R' }), /rows/);
 });
 
 test('histogramBins puts each value in exactly one bin, with CMS\'s line as a bin edge', () => {
