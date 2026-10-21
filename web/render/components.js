@@ -101,8 +101,9 @@ export const citation = ({ heading, text, button, copied, failed }) => html`<sec
 <p class="cite__row"><button type="button" class="fig__btn" data-cite-copy hidden>${button}</button> <span class="small" data-cite-status aria-live="polite"></span></p>
 </section>`;
 
-// A table in the printout frame, which scrolls sideways inside its box on a narrow screen (components.css).
-export const printout = (table) => html`<div class="printout"><div class="printout__scroll">${table}</div></div>`;
+// A table in the printout frame, which scrolls sideways inside its box on a narrow screen (components.css). fit: the
+// frame (its rules) ends with a table narrower than the page, not at the page's edge.
+export const printout = (table, { fit = false } = {}) => html`<div class="${fit ? 'printout printout--fit' : 'printout'}"><div class="printout__scroll">${table}</div></div>`;
 
 // One CMS footnote beside a value: lead ("CMS footnote 5:") and CMS's text.
 export const footnoteNote = ({ lead, text }) => html`<p><span class="fn">${lead}</span> ${text}</p>`;

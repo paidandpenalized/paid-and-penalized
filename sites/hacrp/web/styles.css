@@ -26,8 +26,6 @@
    notes column, when there is one, taking the room left. */
 .gb--measures { table-layout: auto; width: auto; min-width: min(100%, var(--table-min)); max-width: var(--table-max); }
 .gb--measures.gb--notes { width: 100%; max-width: none; }
-/* Its rules end with the table. */
-.printout:has(.gb--measures:not(.gb--notes)) { width: fit-content; max-width: 100%; }
 .gb--measures.gb--notes tbody th { width: 30%; }
 .gb--measures .num { width: 1%; }
 .gb .notes { font-family: var(--font-body); }

@@ -30,6 +30,7 @@
    the what-if result, so a frame means "this responds to you". */
 .printout { position: relative; border-block: var(--rule) solid var(--ink); background: var(--paper); }
 .printout__scroll { overflow-x: auto; }
+.printout--fit { width: fit-content; max-width: 100%; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
 /* The head's rule is an inset shadow, not a border: a collapsed border stays behind when the head sticks. */
 .gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); color: var(--ink-2); font: 600 var(--fs-sm)/1.25 var(--font-body); }

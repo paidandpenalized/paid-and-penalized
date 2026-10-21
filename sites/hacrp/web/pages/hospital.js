@@ -55,7 +55,7 @@ ${notes !== null && html`<td class="notes">${notes}</td>
 }
 
 // The measure table, with a Notes column only when some measure has a note; the column takes the page's width only
-// for prose (this site's note or CMS's footnotes), not for estimate tags alone.
+// for prose (this site's note or CMS's footnotes), not for estimate tags alone. Without prose, its rules end with it.
 function measureTable(measures) {
   const notes = measures.map(measureNote);
   const cells = measures.map((m, i) => measureNotes(m, notes[i]));
@@ -64,7 +64,7 @@ function measureTable(measures) {
   return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}" aria-labelledby="measures-h">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th>${withNotes && html`<th scope="col">${t('colNotes')}</th>`}</tr></thead>
 <tbody>${measures.map((m, i) => measureRow(m, withNotes ? cells[i] : null))}</tbody>
-</table>`);
+</table>`, { fit: !prose });
 }
 
 // Every CMS footnote the page quotes, once, in the order it first appears.
