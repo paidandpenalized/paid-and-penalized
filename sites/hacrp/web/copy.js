@@ -25,7 +25,7 @@ export const COPY = {
   },
   scoreIs: {
     text: 'The Total HAC Score compares hospitals with each other on the infection and patient-safety measures each hospital was scored on.',
-    claim: 'HACRP-04',
+    claim: 'HACRP-15',
   },
   // Site framing, not a claim about CMS's program.
   notAGrade: { text: 'It is not a grade of the quality of care.', claim: null },
@@ -98,14 +98,14 @@ export const COPY = {
     text: "That would be above CMS's line, so the payment reduction decision would be Yes: a {pct} cut.",
     claim: 'HACRP-01',
   },
-  whatifNo: { text: "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.", claim: null },
+  whatifNo: { text: "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.", claim: 'HACRP-01' },
   whatifClose: {
     text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}.",
     claim: 'HACRP-01',
   },
   whatifCmsWas: { text: 'CMS reports a payment reduction decision of {decision}.', claim: null },
   whatifMedianWas: { text: 'Before these changes, this site recomputes its decision as {decision}.', claim: null },
-  whatifNA: { text: 'The payment reduction decision would stay {decision}.', claim: null },
+  whatifNA: { text: 'The payment reduction decision would stay {decision}.', claim: 'HACRP-13' },
   flagYes: { text: 'Yes', claim: null },
   flagNo: { text: 'No', claim: null },
   flagClose: { text: 'too close to call', claim: null },
@@ -126,7 +126,7 @@ export const COPY = {
   // Under every what-if, verbatim.
   whatifStanding: {
     text: "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals.",
-    claim: null,
+    claim: 'HACRP-02',
   },
 
   // The what-if component on a page.
@@ -168,9 +168,9 @@ export const COPY = {
   whatifSolveNo: { text: 'How much cushion?', claim: null },
   whatifFieldsLegend: { text: 'Measure values', claim: null },
   whatifWeight: { text: 'Each measure weighs {one} ÷ {n} of the score.', claim: 'HACRP-04' },
-  whatifLeverage: { text: "Each {tenth} moves the score by {leverage}, between CMS's floor and cap.", claim: null },
+  whatifLeverage: { text: "Each {tenth} moves the score by {leverage}, between CMS's floor and cap.", claim: 'HACRP-03' },
   whatifSirHelp: { text: 'SIR {one} = as many infections as predicted', claim: 'HACRP-14' },
-  whatifPsiHelp: { text: 'Lower is better', claim: null },
+  whatifPsiHelp: { text: 'Lower is better', claim: 'HACRP-16' },
   whatifMarks: {
     text: 'National median {median} (the tick). CMS cap {cap}: every value above it scores the same (shaded).',
     claim: 'HACRP-03',
@@ -293,7 +293,7 @@ export const COPY = {
   whatHeading: { text: 'What the program is', claim: null },
   whatScore: {
     text: "Each year, CMS scores hospitals paid under Medicare's inpatient payment system on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.",
-    claim: 'HACRP-04',
+    claim: 'HACRP-17',
   },
   whatCut: {
     text: 'Hospitals whose score is above the {percentile} percentile of Total HAC Scores, as CMS calculates it, have their Medicare inpatient payments cut by {pct} for the fiscal year.',
@@ -301,11 +301,11 @@ export const COPY = {
   },
   whatRelative: {
     text: "Each measure compares a hospital with all hospitals scored on that measure, so the score reflects relative performance, not a fixed standard.",
-    claim: 'HACRP-04',
+    claim: 'HACRP-15',
   },
   programMeasures: {
     text: "The Total HAC Score is the average of a hospital's z-scores on these measures; each z-score compares the hospital with all hospitals scored on that measure.",
-    claim: 'HACRP-04',
+    claim: 'HACRP-15',
   },
   periodsHeading: { text: 'When the data are from', claim: null },
   periodPsi: { text: '{label} ({short}): {start} to {end}', claim: null },
@@ -355,7 +355,7 @@ export const COPY = {
   },
   figPartsAlt: {
     text: "Bar chart of each measure's part of this hospital's Total HAC Score. Bars right of the center line raise the score; hatched bars are scores CMS assigned.",
-    claim: null,
+    claim: 'HACRP-05',
   },
   figPartsAssigned: { text: '{short}, assigned', claim: 'HACRP-05' },
   figColPart: { text: 'Part of the score', claim: null },
@@ -385,7 +385,7 @@ export const COPY = {
   stepsHeading: { text: 'How a score is built, step by step', claim: null },
   stepsIntro: {
     text: "These steps follow this site's hypothetical hospital at the national median on every measure, so its numbers are this site's, not CMS's. CMS takes the same steps for every hospital it scores.",
-    claim: 'HACRP-04',
+    claim: 'HACRP-17',
   },
   stepValue: {
     text: "Start from each measure's value. For this hospital, that is the national median of the values CMS published.",
