@@ -189,6 +189,24 @@ test('the result head: the start name and score until a change; then Hypothetica
   assert.equal(q(root, 'flag').textContent, 'same');
 });
 
+test('the edited measure echoes the result under itself (aria-hidden); other measures, reset and the median button clear it', () => {
+  const root = mount(false, windowStub());
+  const echo = (id) => field(root, id, 'echo');
+  assert.equal(echo('MRSA').hidden, true, 'nothing to echo before an edit');
+  assert.equal(echo('MRSA').getAttribute('aria-hidden'), 'true');
+  type(field(root, 'MRSA', 'number'), '1.4');
+  assert.equal(echo('MRSA').hidden, false);
+  assert.equal(echo('MRSA').textContent, '0.2734 → 0.4476 · 1% cut');
+  assert.equal(echo('CLABSI').hidden, true);
+  const slider = field(root, 'CLABSI', 'slider');
+  slider.value = '0.7';
+  slider.fire('input');
+  assert.equal(echo('MRSA').hidden, true, 'the echo follows the measure being edited');
+  assert.equal(echo('CLABSI').hidden, false);
+  q(root, 'reset').fire('click');
+  assert.ok(['MRSA', 'CLABSI'].every((id) => echo(id).hidden));
+});
+
 test('a bad or blank entry: blank restores the starting value; out of range is ignored and flagged', () => {
   const root = mount(false, windowStub());
   const n = field(root, 'MRSA', 'number');

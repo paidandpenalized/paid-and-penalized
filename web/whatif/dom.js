@@ -54,6 +54,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       capMark: q('cap-mark', row),
       predicted: q('predicted', row),
       count: q('count', row),
+      echo: q('echo', row),
       numberCheck: checked(q('number', row), q('error', row)),
       predictedCheck: checked(q('predicted', row), q('predicted-error', row)),
       barRow: bar,
@@ -142,11 +143,14 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   }
 
   // source: the element the reader is using, left as they have it. holdMax: a slider mid-drag keeps its max, so
-  // its thumb never runs from under the pointer; the drag's change event redraws it.
-  function draw({ source = null, holdMax = false } = {}) {
+  // its thumb never runs from under the pointer; the drag's change event redraws it. id: the measure the reader is
+  // editing, which echoes the result under itself (on a phone the result box sits far above it; CSS shows the echo
+  // only there, and it is aria-hidden: the live region announces the result).
+  function draw({ source = null, holdMax = false, id = null } = {}) {
     vm = rules.viewModel(state);
     const r = vm.result;
     const s = texts.scores(vm);
+    const echo = anyChanged(r) ? `${headScore(s)} · ${texts.pill(r.after.flag).label}` : '';
     after(el.score, s.before, s.after);
     after(el.flag, texts.flag(r.before.flag), texts.flag(r.after.flag));
     after(el.cut, texts.cut(r.before.flag), texts.cut(r.after.flag));
@@ -191,6 +195,10 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       row.bar.style.setProperty('--at', fraction(span.at));
       row.bar.style.setProperty('--w', fraction(span.width));
       setText(row.barValue, texts.bars.value(m.contribution));
+      if (row.echo) {
+        row.echo.hidden = !(input.id === id && echo);
+        setText(row.echo, input.id === id ? echo : '');
+      }
       if (row.count) {
         const count = vm.counts[input.id];
         row.count.hidden = !count;
@@ -237,7 +245,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const row = rows[id];
     row.number.addEventListener('input', () => {
       const value = entry(row.number);
-      const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number });
+      const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number, id });
       markInvalid(row.numberCheck, !ok);
     });
     row.number.addEventListener('change', () => {
@@ -245,7 +253,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       commit(id);
     });
     row.number.addEventListener('focus', reveal);
-    row.slider.addEventListener('input', () => apply({ type: 'set', id, value: Number(row.slider.value) }, { source: row.slider, holdMax: true }));
+    row.slider.addEventListener('input', () => apply({ type: 'set', id, value: Number(row.slider.value) }, { source: row.slider, holdMax: true, id }));
     row.slider.addEventListener('change', () => commit(id));
     if (row.predicted) {
       // A refused count also clears the count held for the field, so the count line never shows a stale one.

@@ -150,6 +150,7 @@ ${input.floor > 0 && html`<span class="wi-dead" data-wi="dead-low" style="--from
 </div>
 </div>
 <p class="small wi-error" id="${ids.error}" data-wi="error" hidden>${w.invalid}</p>
+<p class="wi-echo" data-wi="echo" aria-hidden="true" hidden></p>
 <p class="small muted" id="${ids.marks}">${w.marks}</p>
 <p class="small" id="${ids.leverage}">${w.leverage}</p>
 ${input.assigned && html`<p class="small" id="${ids.assigned}">${w.assignedHelp}</p>`}
