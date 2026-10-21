@@ -52,8 +52,11 @@ export function citation({ fy, title, path, source }) {
   return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`, isoDate(source.pdcReleased)]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }
 
-// A link that prints its full address after its words (print.css reads data-print-href).
-export const printLink = (href, text) => html`<a href="${href}" data-print-href="${href.startsWith('/') ? SITE.origin + href : href}">${text}</a>`;
+// A link that prints its full address after its words. A site path carries the address in data-print-href, which
+// print.css prints; print.css prints an absolute link's own href.
+export const printLink = (href, text) => (href.startsWith('/')
+  ? html`<a href="${href}" data-print-href="${SITE.origin + href}">${text}</a>`
+  : html`<a href="${href}">${text}</a>`);
 
 // The plain links to the dataset file, its dictionary (the page; the Markdown file sits beside the CSV) and CMS's
 // dataset page (source: the manifest entry).
