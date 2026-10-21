@@ -178,7 +178,9 @@ test('the program page links the hospitals asset and inlines no hospital data; h
     ...PROGRAM_ARGS, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
     searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
-  assert.match(text, /<section class="block search" aria-labelledby="search-h" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  assert.match(text, /<form class="block search" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  assert.match(text, /<label class="h-sm" for="hospital-search">Hospital name, city or CCN<\/label>\n<div class="search__row"><input id="hospital-search"[^>]*><button type="submit" class="fig__btn">Search<\/button><\/div>/);
+  assert.match(text, /<p class="small search__status" role="status"><\/p>/);
   assert.doesNotMatch(text, /application\/json/);
   assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of 0\.2507 or higher and none at 0\.2500 or lower\./);
 });

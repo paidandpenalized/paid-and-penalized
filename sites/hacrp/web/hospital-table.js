@@ -43,11 +43,17 @@ export function withState(hash, code) {
   return parts.length ? `#${parts.join('&')}` : '';
 }
 
-// The rows the browser sorts and filters, each read once when the asset loads: { cells, name, score }, with cells the
-// asset's row, name in lowercase (the name filter) and score as a number (the score sort; NaN for "N/A" or blank).
+// A hospital as the search lists it: "Name, City, ST".
+export const hospitalLabel = (cells) => `${cells[INDEX.name]}, ${cells[INDEX.city]}, ${cells[INDEX.state]}`;
+// What a query is matched against, in lowercase: the label and the CCN, so a name, a city or a CCN finds the
+// hospital. The search box and the table's filter share it, so both find the same hospitals.
+export const searchKey = (cells) => `${hospitalLabel(cells)} ${cells[INDEX.ccn]}`.toLowerCase();
+
+// The rows the browser sorts and filters, each read once when the asset loads: { cells, key, score }, with cells the
+// asset's row, key its searchKey (the text filter) and score as a number (the score sort; NaN for "N/A" or blank).
 // The score text is CMS's decimal text, which the build checked when it read CMS's file, so numberOrNaN reads it.
 export const tableRows = (rows) =>
-  rows.map((cells) => ({ cells, name: cells[INDEX.name].toLowerCase(), score: numberOrNaN(cells[INDEX.score]) }));
+  rows.map((cells) => ({ cells, key: searchKey(cells), score: numberOrNaN(cells[INDEX.score]) }));
 
 // A sorted copy of tableRows: by key ('name', 'city', 'state', 'score' or 'decision') in dir 1 (ascending) or -1, ties
 // kept in the order given; with no key, the default order. Scores sort by value with "N/A" last in either direction.
@@ -61,8 +67,9 @@ export function sortRows(rows, key, dir) {
   return [...rows].sort((a, b) => compareNumbers(a.score, b.score, dir));
 }
 
-// tableRows in state (when given) whose name holds query (trimmed, any case), in the order given.
+// tableRows in state (when given) whose name, city or CCN holds query (trimmed, any case; searchKey), in the order
+// given.
 export function filterRows(rows, { state = null, query = '' } = {}) {
   const q = query.trim().toLowerCase();
-  return rows.filter((r) => (!state || r.cells[INDEX.state] === state) && (!q || r.name.includes(q)));
+  return rows.filter((r) => (!state || r.cells[INDEX.state] === state) && (!q || r.key.includes(q)));
 }

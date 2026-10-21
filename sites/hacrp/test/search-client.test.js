@@ -1,5 +1,6 @@
 // The program page's search script (client/program.js) against a stand-in DOM: it fetches the hospitals asset on
-// first focus, builds the datalist in one step, skips bad rows, and opens a hospital's page on a pick or on Enter.
+// first focus, builds the datalist in one step, skips bad rows, and opens a hospital's page on a pick or on submit;
+// a submit with several matches hands the query to the table's filter, and one with none says so.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -10,10 +11,18 @@ async function run(t, asset, { ok = true } = {}) {
   const handlers = {};
   const input = { value: '', addEventListener: (type, fn) => { handlers[type] = fn; } };
   const list = { options: null, replaceChildren: (...options) => { list.options = options.map((o) => o.value); } };
-  const box = { hidden: true, dataset: { src: '/assets/hacrp-hospitals.test.json' }, querySelector: (s) => (s === 'input' ? input : list) };
+  const status = { textContent: '' };
+  const parts = { input, datalist: list, '[role="status"]': status };
+  const box = {
+    hidden: true, dataset: { src: '/assets/hacrp-hospitals.test.json' }, querySelector: (s) => parts[s],
+    addEventListener: (type, fn) => { handlers[type] = fn; },
+  };
+  const filter = { value: '', events: [], dispatchEvent: (e) => filter.events.push(e.type) };
+  const section = { scrolled: false, scrollIntoView() { section.scrolled = true; } };
   const fetched = [];
   const opened = [];
-  globalThis.document = { querySelector: (s) => (s === '.search[data-src]' ? box : null), createElement: () => ({}) };
+  const others = { '#ht-name': filter, '#hospitals': section };
+  globalThis.document = { querySelector: (s) => (s === '.search[data-src]' ? box : others[s] ?? null), createElement: () => ({}) };
   globalThis.window = { location: { assign: (p) => opened.push(p) } };
   globalThis.fetch = async (url) => { fetched.push(url); return { ok, status: ok ? 200 : 500, json: async () => asset }; };
   t.after(() => {
@@ -23,7 +32,16 @@ async function run(t, asset, { ok = true } = {}) {
     }
   });
   await import(`../client/program.js?run=${Math.random()}`);
-  return { handlers, input, list, box, fetched, opened, focus: async () => { handlers.focus(); await new Promise((r) => setTimeout(r, 0)); } };
+  const submit = async (value) => {
+    input.value = value;
+    let prevented = false;
+    await handlers.submit({ preventDefault: () => { prevented = true; } });
+    assert.ok(prevented, 'the form never submits to the server');
+  };
+  return {
+    handlers, input, list, box, status, filter, section, fetched, opened, submit,
+    focus: async () => { handlers.focus(); await new Promise((r) => setTimeout(r, 0)); },
+  };
 }
 
 const ASSET = {
@@ -50,11 +68,28 @@ test('fetches on first focus only, labels shared names with the CCN, skips a bad
   ]);
   s.input.value = 'Example General Hospital, Exampleton, AL (CCN 99000A)';
   s.handlers.input();
-  s.input.value = 'sample';
-  s.handlers.keydown({ key: 'Enter' });
-  s.input.value = 'example';
-  s.handlers.keydown({ key: 'Enter' });
+  await s.submit('sample');
   assert.deepEqual(s.opened, ['/hacrp/hospital/99000a/', '/hacrp/hospital/990003/']);
+});
+
+test('a submit matches the name, city or CCN: one opens its page, several go to the table, none says so', async (t) => {
+  const s = await run(t, ASSET);
+  await s.submit('990002');
+  await s.submit('sampleville');
+  assert.deepEqual(s.opened, ['/hacrp/hospital/990002/', '/hacrp/hospital/990003/'], 'a CCN or a city with one hospital opens it');
+  await s.submit('  Exampleton ');
+  assert.equal(s.opened.length, 2, 'several matches open nothing');
+  assert.equal(s.filter.value, 'Exampleton');
+  assert.deepEqual(s.filter.events, ['input']);
+  assert.ok(s.section.scrolled, 'the table comes into view');
+  assert.equal(s.status.textContent, '');
+  await s.submit('no such place');
+  assert.equal(s.status.textContent, 'No hospital matches.');
+  s.input.value = 'n';
+  s.handlers.input();
+  assert.equal(s.status.textContent, '', 'typing clears the message');
+  await s.submit('   ');
+  assert.equal(s.opened.length, 2);
 });
 
 test('a failed fetch or a bad hospitalPath leaves the list empty, and a later focus tries again', async (t) => {

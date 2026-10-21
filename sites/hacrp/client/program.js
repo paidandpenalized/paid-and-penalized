@@ -2,14 +2,18 @@
 // their data-src (see hospitalRows in web/generate.js), fetched once for both; without JavaScript both stay hidden
 // and the table's section shows a sentence and the CSV link.
 // The search: a native datalist of hospital names, fetched the first time the box gets focus; choosing one opens
-// its page. The table: every hospital, sortable by any column, filtered by a state (kept in the URL as #state=XX)
-// and by name; its rows are fetched when the section nears the screen, or at once when the URL names a state.
+// its page. Submitting (Enter or the button) matches the name, city or CCN: one match opens its page, several are
+// handed to the table below (its text filter, scrolled into view), none says so. The table: every hospital, sortable
+// by any column, filtered by a state (kept in the URL as #state=XX) and by name, city or CCN; its rows are fetched
+// when the section nears the screen, or at once when the URL names a state.
 // The sandbox: the what-if on the median hospital, mounted from the page's own data (client/whatif.js), whose
 // share is false: the URL is never read or written by it.
 import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import { compareByName, decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
+import {
+  compareByName, decodeState, filterRows, hospitalHref, hospitalLabel, searchKey, sortRows, stateCodes, tableRows, withState,
+} from '../web/hospital-table.js';
 import { cmsText, count } from '../../../web/render/format.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
@@ -37,18 +41,24 @@ const box = document.querySelector('.search[data-src]');
 if (box) {
   const input = box.querySelector('input');
   const list = box.querySelector('datalist');
+  const status = box.querySelector('[role="status"]');
+  // Each hospital's label (the datalist's option), the text a query is matched against, and its page.
+  const entries = [];
   const paths = new Map();
 
   async function load() {
     const { hospitalPath, rows } = await hospitals(box.dataset.src);
     const valid = [...rows].sort(compareByName);
     // "Name, City, ST"; a label two hospitals share also carries the CCN.
-    const labels = valid.map(([, name, city, state]) => `${name}, ${city}, ${state}`);
+    const labels = valid.map(hospitalLabel);
     const seen = new Map();
     for (const text of labels) seen.set(text, (seen.get(text) ?? 0) + 1);
-    list.replaceChildren(...valid.map(([ccn], i) => {
+    list.replaceChildren(...valid.map((cells, i) => {
+      const [ccn] = cells;
       const text = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
-      paths.set(text, hospitalHref(hospitalPath, ccn));
+      const path = hospitalHref(hospitalPath, ccn);
+      paths.set(text, path);
+      entries.push({ key: searchKey(cells), path });
       const option = document.createElement('option');
       option.value = text;
       return option;
@@ -56,19 +66,34 @@ if (box) {
   }
 
   let loading = null;
-  input.addEventListener('focus', () => {
-    loading ??= load().catch(() => { loading = null; });
-  });
+  const ready = () => (loading ??= load().catch(() => { loading = null; }));
+  input.addEventListener('focus', ready);
 
   const go = (path) => { if (path) window.location.assign(path); };
-  input.addEventListener('input', () => go(paths.get(input.value)));
-  // Enter opens the one hospital whose label contains what was typed, if only one does.
-  input.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    const query = input.value.trim().toLowerCase();
+  input.addEventListener('input', () => {
+    if (status) status.textContent = '';
+    go(paths.get(input.value));
+  });
+  // Several matches: the table below shows them, through its own text filter (mountTable reads it if the table
+  // mounts later).
+  function showInTable(query) {
+    const filter = document.querySelector('#ht-name');
+    if (!filter) return;
+    filter.value = query;
+    filter.dispatchEvent?.(new Event('input'));
+    document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });
+  }
+  box.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const query = input.value.trim();
     if (!query) return;
-    const matches = [...paths.keys()].filter((text) => text.toLowerCase().includes(query));
-    if (matches.length === 1) go(paths.get(matches[0]));
+    await ready();
+    if (paths.has(input.value)) return go(paths.get(input.value));
+    const q = query.toLowerCase();
+    const matches = entries.filter((e) => e.key.includes(q));
+    if (matches.length === 1) return go(matches[0].path);
+    if (status) status.textContent = matches.length ? '' : fill('tableCountNone');
+    if (matches.length) showInTable(query);
   });
   box.hidden = false;
 }
@@ -85,7 +110,8 @@ function mountTable({ hospitalPath, rows }, { linked }) {
   const all = table.querySelector('#ht-all');
   const heads = [...table.querySelectorAll('th[data-key]')];
   const codes = stateCodes(rows);
-  const view = { state: null, query: '', key: null, dir: 1, expanded: false };
+  // The search above may have filled the text filter before the table mounted.
+  const view = { state: null, query: search.value ?? '', key: null, dir: 1, expanded: false };
 
   select.append(...codes.map((code) => {
     const option = document.createElement('option');

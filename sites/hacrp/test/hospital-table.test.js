@@ -55,13 +55,16 @@ test('scores sort by value, with "N/A" and blanks last in either direction; text
   assert.throws(() => sortRows(base, 'ccn', 1), /key/);
 });
 
-test('filterRows keeps one state and names containing the query, case-insensitive', () => {
+test('filterRows keeps one state and names, cities or CCNs containing the query, case-insensitive', () => {
+  assert.deepEqual(ccns(filterRows(TABLE, { query: '990013' })), ['990013']);
+  assert.deepEqual(ccns(filterRows(TABLE, { query: 'aardvark' })), ['990013'], 'a city matches');
+  assert.deepEqual(ccns(filterRows(TABLE, { query: 'testburg, ca' })), ['990015', '990016'], 'as the search labels it');
   assert.deepEqual(ccns(filterRows(TABLE, { state: 'AL' })), ['990012', '990013', '990014']);
   assert.deepEqual(ccns(filterRows(TABLE, { query: '  GENERAL ' })), ['990012', '990013']);
   assert.deepEqual(ccns(filterRows(TABLE, { state: 'CA', query: 'alpha' })), ['990015', '990016']);
   assert.deepEqual(ccns(filterRows(TABLE, { state: 'CA', query: 'general' })), []);
   assert.deepEqual(ccns(filterRows(TABLE, {})), ccns(ROWS));
-  assert.equal(TABLE[1].name, 'example general hospital', 'the name is lowercased once, when the rows are read');
+  assert.equal(TABLE[1].key, 'example general hospital, exampleton, al 990012', 'the key is lowercased once, when the rows are read');
 });
 
 test('a sorted order, filtered, equals the filtered rows sorted: the browser sorts once and filters as the reader types', () => {

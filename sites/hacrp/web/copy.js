@@ -332,7 +332,8 @@ export const COPY = {
   },
   countScored: { text: 'CMS published a Total HAC Score for {scored} hospitals.', claim: null },
   searchHeading: { text: 'Find a hospital', claim: null },
-  searchLabel: { text: 'Hospital name', claim: null },
+  searchLabel: { text: 'Hospital name, city or CCN', claim: null },
+  searchButton: { text: 'Search', claim: null },
   searchHint: { text: "Pick a hospital from the list to open its page.", claim: null },
   sandboxLabel: { text: 'Sandbox: a hypothetical hospital at the national median on every measure', claim: null },
   linksHeading: { text: 'Sources and related sites', claim: null },
@@ -475,7 +476,7 @@ export const COPY = {
   // Program page: the table of every hospital (client/program.js fills it from the hospitals asset).
   tableHeading: { text: "Every hospital in CMS's file", claim: null },
   tableIntro: {
-    text: 'Sorted by state, then name. Sort by any column, pick a state, or search by name.',
+    text: 'Sorted by state, then name. Sort by any column, pick a state, or search by name, city or CCN.',
     claim: null,
   },
   tableNoScript: {
@@ -485,7 +486,7 @@ export const COPY = {
   tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },
-  tableName: { text: 'Hospital name contains', claim: null },
+  tableName: { text: 'Name, city or CCN contains', claim: null },
   tableColName: { text: 'Hospital', claim: null },
   tableColCity: { text: 'City', claim: null },
   tableColState: { text: 'State', claim: null },
