@@ -12,6 +12,9 @@ import { partsFigure, rangeFigure } from '../figures.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
+// The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
+const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
+
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
 const value = (text, published) => (published
   ? text
@@ -153,5 +156,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, ...(what ? [what.script] : [])],
     assets,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
+    // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.
+    preloadFonts: HERO_FONTS,
   });
 }

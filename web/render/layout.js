@@ -6,9 +6,11 @@ import { html, jsonText, raw } from './html.js';
 
 const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
 const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
-// The headline face, the body face, and IBM Plex Mono 700, the hero's number (the most important glyphs on a
-// hospital page, which otherwise swap in late from Courier).
-const PRELOAD_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
+// The fonts a page preloads (files in web/fonts), by default: the headline face, the body face and IBM Plex Mono 400
+// (tables, facts and place lines). A page whose first screen shows another face passes its own list (preloadFonts):
+// a hospital page swaps in the mono 700 of its hero number.
+export const PRELOAD_FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
+const FONT_NAME = /^[a-z0-9-]+$/;
 
 const newTab = html`<span class="vh">${COPY.newTab}</span>`;
 
@@ -34,12 +36,13 @@ const footer = html`<footer class="foot">
 
 // body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
-// block (components.js) assets.js.cite, then its own.
-export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets }) {
+// block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
+export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
+  if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
   const modules = [assets.js.theme, ...scripts];
   return html`<!doctype html>
 <html lang="en">
@@ -52,7 +55,7 @@ export function page({ title, description, path, robots, body, scripts = [], jso
 ${robots ? html`<meta name="robots" content="${robots}">` : ''}
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-${PRELOAD_FONTS.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
+${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
 `)}<link rel="stylesheet" href="${assets.css}">
 ${jsonLd ? raw(`<script type="application/ld+json">${jsonText(jsonLd)}</script>`) : ''}
 </head>

@@ -142,6 +142,13 @@ test('page rejects missing parts and a path without a leading slash', () => {
   assert.throws(() => page({ ...PAGE, scripts: [undefined] }), /script/, 'a script path the assets lack');
 });
 
+test('page preloads the default fonts unless the page names its own; a font name that is not a file name throws', () => {
+  const preloads = (out) => [...out.matchAll(/<link rel="preload" href="\/assets\/fonts\/([\w-]+)\.woff2"/g)].map((m) => m[1]);
+  assert.deepEqual(preloads(page(PAGE)), ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
+  assert.deepEqual(preloads(page({ ...PAGE, preloadFonts: ['ibm-plex-mono-700'] })), ['ibm-plex-mono-700']);
+  assert.throws(() => page({ ...PAGE, preloadFonts: ['../x'] }), TypeError);
+});
+
 test('theme.js stores nothing and sets only data-theme', () => {
   const src = readFileSync(REPO_ROOT + 'web/client/theme.js', 'utf8');
   for (const word of ['localStorage', 'sessionStorage', 'cookie', 'indexedDB']) assert.ok(!src.includes(word), word);
