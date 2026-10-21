@@ -22,7 +22,7 @@ import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
 import { BOUNDARY_TEXT as BOUNDARY, CASES, WHATIF_STANDING, esc, inputs, master, pick as pickFrom } from './fixtures.js';
 
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
+const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const DATA = loadHacrp();
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';

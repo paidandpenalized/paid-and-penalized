@@ -9,3 +9,5 @@ export const LINKS = Object.freeze({
 // The dataset CSV of every hospital's CMS values (written by the page build), at one path per fiscal year. The
 // program page links to it, so the hospital table's data are there without JavaScript.
 export const csvPath = (fy) => `/data/hacrp/fy${fy}/hacrp-hospitals.csv`;
+// Its data dictionary (sites/hacrp/DATA-DICTIONARY.md), beside it.
+export const dictionaryPath = (fy) => `/data/hacrp/fy${fy}/DATA-DICTIONARY.md`;

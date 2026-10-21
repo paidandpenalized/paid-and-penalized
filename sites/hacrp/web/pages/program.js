@@ -8,8 +8,8 @@ import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fill } from '../copy.js';
 import { figureSource, lineFigure, scoresFigure, statesFigure, stepRows, stepSum } from '../figures.js';
-import { LINKS, csvPath } from '../links.js';
-import { asofBar, sourceLine, t } from './parts.js';
+import { LINKS, csvPath, dictionaryPath } from '../links.js';
+import { asofBar, citation, sourceLine, t } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
@@ -56,7 +56,7 @@ const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', '
 const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
-<p><a href="${csvPath(fy)}">${t('tableCsv')}</a></p>
+<p><a href="${csvPath(fy)}">${t('tableCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
 <div class="ht__controls">
@@ -149,6 +149,7 @@ ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </ul>
 </section>
 ${asofBar({ fy, periods, source })}
+${citation({ fy, title: fill('programTitle', { fy: fyText }), path: PATH, source })}
 ${sourceLine({ fy, source })}
 </article>`;
 

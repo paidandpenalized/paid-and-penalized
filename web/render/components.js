@@ -33,6 +33,15 @@ export const asofBar = ({ label, items }) => html`<aside class="asof" aria-label
 
 export const sourceLine = ({ text, href, linkText }) => html`<p class="source">${text} <a href="${href}">${linkText}</a></p>`;
 
+// The citation block: the text to cite, selectable without JavaScript, and a Copy button the script (web/client/cite.js)
+// shows. The button's words and the two status messages are the site's; the script reads the messages from data-copied
+// and data-failed. layout.js loads the script on any page holding this block.
+export const citation = ({ heading, text, button, copied, failed }) => html`<section class="block cite" aria-labelledby="cite-h" data-copied="${copied}" data-failed="${failed}">
+<h2 id="cite-h" class="h-sm">${heading}</h2>
+<p class="cite__text" data-cite-text>${text}</p>
+<p class="cite__row"><button type="button" class="fig__btn" data-cite-copy hidden>${button}</button> <span class="small" data-cite-status aria-live="polite"></span></p>
+</section>`;
+
 // One CMS footnote beside a value: lead ("CMS footnote 5:") and CMS's text.
 export const footnoteNote = ({ lead, text }) => html`<p><span class="fn">${lead}</span> ${text}</p>`;
 

@@ -8,7 +8,7 @@ import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill } from '../copy.js';
 import { figureSource, partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
@@ -99,8 +99,10 @@ ${figures(view, ranges, source)}
 </section>
 ${what?.body}
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
+${dataLinks(view.fy)}
 ${legend(view)}
 <p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
+${citation({ fy: view.fy, title: fill('hospitalTitle', where), path: view.path, source })}
 ${sourceLine({ fy: view.fy, source })}
 </article>`;
 

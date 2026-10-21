@@ -1,5 +1,6 @@
 // The HACRP page generator: checks acceptance A1 on the emitted data (the build fails if it doesn't hold), then
-// emits the program page and one page per hospital through the build context.
+// emits the program page, one page per hospital, and the dataset CSV with its data dictionary through the build
+// context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { decidedHospitals, scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
@@ -8,9 +9,11 @@ import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
+import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
 import { measureRanges, stateCounts } from './figures.js';
 import { compareDefault } from './hospital-table.js';
+import { csvPath, dictionaryPath } from './links.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
@@ -47,7 +50,7 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary } = data;
   const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
@@ -57,6 +60,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     view: hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText }),
   }));
   const views = pages.map((p) => p.view);
+
+  // The dataset file and its dictionary: files, not pages (no robots: they are not in the sitemap).
+  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master) });
+  ctx.emit({ path: dictionaryPath(fy), text: dictionaryText(dictionary, { fy, source }) });
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });

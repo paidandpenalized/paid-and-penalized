@@ -1,9 +1,12 @@
 // HACRP's words for the shared page parts (web/render/components.js) both HACRP pages use: the decision pill, the
 // as-of bar and the source line.
-import { asofBar as asofShell, pill, sourceLine as sourceShell } from '../../../../web/render/components.js';
+import { asofBar as asofShell, citation as citationShell, pill, sourceLine as sourceShell } from '../../../../web/render/components.js';
+import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
+import { SITE } from '../../../../web/site.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
 import { fill } from '../copy.js';
+import { csvPath, dictionaryPath } from '../links.js';
 
 export const t = (key) => fill(key);
 
@@ -39,3 +42,18 @@ export function sourceLine({ fy, source }) {
     linkText: t('datasetLink'),
   });
 }
+
+// The citation block: the site, the page's title, its canonical URL and the source line. No access date: the page
+// has no clock. title: the page title without the site's name.
+export function citation({ fy, title, path, source }) {
+  const text = fill('citeText', {
+    site: SITE.name,
+    title,
+    url: SITE.origin + path,
+    source: fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }),
+  });
+  return citationShell({ heading: t('citeHeading'), text, button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
+}
+
+// The two plain links to the dataset file and its dictionary.
+export const dataLinks = (fy) => html`<p class="data-links"><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>`;

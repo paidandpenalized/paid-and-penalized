@@ -15,8 +15,9 @@ import { createContext } from './context.js';
 // JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after web/styles/).
 // Last: the hub writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
-// Shared by every site: the theme toggle (every page) and the figure layer (pages with a figure; layout.js).
-const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js' };
+// Shared by every site: the theme toggle (every page), the figure layer (pages with a figure) and the citation Copy
+// button (pages with a citation block); layout.js loads the last two.
+const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js' };
 
 const DIST = resolve(REPO_ROOT, 'dist');
 const inside = (dir, parent) => {

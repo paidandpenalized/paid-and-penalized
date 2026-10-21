@@ -26,7 +26,7 @@ import { STANDING, WHATIF_STANDING, esc, master, pick as pickFrom, textsFor } fr
 const D = loadHacrp();
 const { model, estimate } = D;
 const RANGE = scoreRange(D.hospitals);
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
+const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
 const { no: V } = SYNTH_VALUES;
 const H = {
@@ -253,7 +253,7 @@ test('no score, and the "Yes" row with no score: no what-if, no inputs, no page 
     [(x) => x.total === null && x.paymentReduction === 'Yes', 'Yes with no score'],
   ]) {
     const text = pageFor(pick(pred, what));
-    assert.doesNotMatch(text, /id="whatif"|<input|hacrp-hospital/, what);
+    assert.doesNotMatch(text, /id="whatif"|<input|id="hacrp-hospital"|hacrp-hospital\.test\.js/, what);
   }
 });
 

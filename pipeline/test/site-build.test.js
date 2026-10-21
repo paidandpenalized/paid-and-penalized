@@ -85,6 +85,8 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
   withTemp(async (dir) => {
     const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
     for (const path of ['a/', '/../x/', '/a/../../x/', '/A/', '/a b/', '//x/']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
+    ctx.emit({ path: '/data/x/DATA-DICTIONARY.md', text: 'd' });
+    assert.equal(readFileSync(join(dir, 'data/x/DATA-DICTIONARY.md'), 'utf8'), 'd');
     const url = ctx.asset('demo', 'json', '[1]');
     assert.equal(url, `/assets/demo.${hash8('[1]')}.json`);
     assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
@@ -157,12 +159,16 @@ test('the local server serves index.html for directories, 404.html for unknown p
     writeFileSync(join(root, '404.html'), 'not here');
     writeFileSync(join(root, 'hacrp', 'index.html'), 'hacrp');
     writeFileSync(join(dir, 'secret.txt'), 'outside');
+    writeFileSync(join(root, 'd.csv'), 'a');
+    writeFileSync(join(root, 'D.md'), 'b');
     const server = createSiteServer(root);
     await new Promise((r) => server.listen(0, '127.0.0.1', r));
     const { port } = server.address();
     try {
       assert.deepEqual(await get(port, '/'), { status: 200, type: 'text/html; charset=utf-8', location: undefined, body: 'home' });
       assert.equal((await get(port, '/hacrp/?x=1')).body, 'hacrp');
+      assert.equal((await get(port, '/d.csv')).type, 'text/csv; charset=utf-8');
+      assert.equal((await get(port, '/D.md')).type, 'text/markdown; charset=utf-8');
       const bare = await get(port, '/hacrp');
       assert.equal(bare.status, 301);
       assert.equal(bare.location, '/hacrp/');

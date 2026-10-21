@@ -274,6 +274,15 @@ export const COPY = {
   asofReleased: { text: 'Provider Data Catalog release: {date}', claim: null },
   source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
   datasetLink: { text: "CMS's dataset page", claim: null },
+  // The data download and the citation block (both pages).
+  dataHeading: { text: 'Use this data', claim: null },
+  dataCsv: { text: 'Download all hospitals (CSV)', claim: null },
+  dataDictionary: { text: 'Data dictionary', claim: null },
+  citeHeading: { text: 'Cite this page', claim: null },
+  citeText: { text: '{site}. {title}. {url}. {source}', claim: null },
+  citeCopy: { text: 'Copy citation', claim: null },
+  citeCopied: { text: 'Copied.', claim: null },
+  citeFailed: { text: 'Could not copy. The citation is selected; copy it with your keyboard.', claim: null },
 
   // Program page.
   programTitle: { text: 'Hospital-Acquired Conditions (HACRP), FY{fy}', claim: null },

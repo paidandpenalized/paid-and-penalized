@@ -11,8 +11,9 @@ export function robotsFor({ env, released, eligible = true }) {
   return env === 'production' && released === true && eligible ? null : 'noindex';
 }
 
-// A site path: "/", folders ending in "/", or one file name ("/404.html", "/robots.txt").
-const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[a-z0-9-]+\.[a-z]+)?$/;
+// A site path: "/", folders ending in "/", or one file name ("/404.html", "/robots.txt", ".../DATA-DICTIONARY.md").
+// Folders are lowercase; a file name may hold capitals.
+const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
 
 export function createContext({ outDir, env, assets }) {
   const ctx = {

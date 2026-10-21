@@ -1,12 +1,15 @@
 // What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, CMS's
-// footnote crosswalk and the dataset's manifest entry, plus CMS's text for the line's two scores. File reads live here; views and pages stay pure.
+// footnote crosswalk, the dataset's manifest entry and the CSV's data dictionary, plus CMS's text for the line's two scores.
+// File reads live here; views and pages stay pure.
+import { readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { boundaryText } from './view.js';
 
-const FOOTNOTES_ID = 'y9us-9xdf';
+export const FOOTNOTES_ID = 'y9us-9xdf';
+const DICTIONARY_FILE = 'sites/hacrp/DATA-DICTIONARY.md';
 
 // The master's HACRP program year must be the year of the HACRP file the pages show (the newest master is not
 // necessarily the one built for this program year).
@@ -45,6 +48,7 @@ export function loadHacrp() {
     periods,
     master,
     footnotes: parseFootnotes(readPinned(FOOTNOTES_ID)),
+    dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     source: { id: source.id, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };
 }
