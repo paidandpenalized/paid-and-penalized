@@ -13,10 +13,11 @@ import { SHORT_NAMES } from '../web/constants.js';
 import { loadHacrp } from '../web/data.js';
 import { scoreRange } from '../web/generate.js';
 import { csvPath } from '../web/links.js';
-import { measureRanges, partsFigure, rangeFigure, scoresFigure, stateCounts, statesFigure, stepRows, lineFigure } from '../web/figures.js';
+import { measureRanges, partsFigure, rangeFigure, scoresFigure, statesFigure, lineFigure } from '../web/figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
-import { hospitalView } from '../web/view.js';
+import { stepRows } from '../web/stepper.js';
+import { hospitalView, stateCounts } from '../web/view.js';
 import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
 
 const DATA = loadHacrp();
@@ -154,9 +155,12 @@ test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No
   const counts = [...body.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
   assert.equal(counts.reduce((a, b) => a + b, 0), COUNTS.decided, 'every decided hospital in one bin');
   // Bins above the line hold the Yes decisions, the rest the No.
-  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, counts: COUNTS, n: 2, source: 's', fy: DATA.fy });
+  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, n: 2, source: 's', fy: DATA.fy });
   assert.ok(String(yes).includes('<td>Yes</td>') && String(yes).includes('<td>No</td>'));
-  assert.throws(() => scoresFigure({ scores: [{ total: 1, yes: false }, ...SCORES], boundary: model.boundary, counts: COUNTS, n: 2, source: 's', fy: DATA.fy }), /both/);
+  // A No at or above CMS's lowest Yes score (or a Yes below it) would put both decisions in one bin: the build stops.
+  for (const odd of [{ total: model.boundary.lowestYes, yes: false }, { total: model.boundary.highestNo, yes: true }]) {
+    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, n: 2, source: 's', fy: DATA.fy }), /wrong side/);
+  }
 });
 
 test('the state tile grid: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no code drawn as zero', () => {
@@ -193,7 +197,7 @@ test('stateCounts counts by the master\'s state; an unknown state code stops the
   // Only a scored "N/A" counts as not subject to the reduction.
   const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decision: { text: 'N/A' } }]);
   assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
-  assert.throws(() => statesFigure({ states: { ...STATES, ZZ: STATES.AL }, counts: COUNTS, n: 3, source: 's', fy: DATA.fy }), /ZZ/);
+  assert.throws(() => statesFigure({ states: { ...STATES, ZZ: STATES.AL }, n: 3, source: 's', fy: DATA.fy }), /ZZ/);
 });
 
 test('the hospital table section: the controls for client/program.js, the asset, and without JavaScript a sentence and the CSV link', () => {
@@ -224,15 +228,20 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
   const fewer = { ...CASES.yes, measures: { ...CASES.yes.measures, MRSA: { ...CASES.yes.measures.MRSA, value: null, valueText: 'N/A' } } };
   assert.match(captions(render(fewer))[1][1], /^Of the 5 measures/);
 
-  // The program page: change the data and every number in its takeaways changes with it.
-  const fake = { decided: 4321, yes: 1234, scored: 5000 };
+  // The program page: change the data and every number in its takeaways changes with it. Each figure counts its own
+  // data, so the histogram's takeaway follows its scores and the tile grid's national share follows its states.
+  const scores = SCORES.filter((_, i) => i % 3 === 0);
+  const yes = scores.filter((s) => s.yes).length;
   const states = { ...STATES, AL: { ...STATES.AL, yes: 1, decided: 8 } };
-  const text = program({ counts: fake, states });
+  const total = (k) => Object.values(states).reduce((t, s) => t + s[k], 0);
+  const national = pct(total('yes') / total('decided'), 1);
+  assert.notEqual(national, pct(COUNTS.yes / COUNTS.decided, 1));
+  const text = program({ scores, states });
   const caps = captions(text).map(([, t]) => t);
-  assert.ok(caps[1].includes('1,234 of 4,321'));
-  assert.ok(caps[2].includes(pct(1234 / 4321, 1)));
+  assert.ok(caps[1].includes(`${count(yes)} of ${count(scores.length)}`));
+  assert.ok(caps[2].includes(national));
   const shares = Object.entries(states).filter(([c, s]) => Object.hasOwn(TILES, c) && s.decided > 0).map(([, s]) => toUnit(100 * s.yes / s.decided, 1));
-  const allowed = new Set([count(1234), count(4321), pct(1234 / 4321, 1), pct(Math.min(...shares) / 100, 1), pct(Math.max(...shares) / 100, 1),
+  const allowed = new Set([count(yes), count(scores.length), national, pct(Math.min(...shares) / 100, 1), pct(Math.max(...shares) / 100, 1),
     cmsText(MEDIAN.totalText), DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes]);
   for (const t of caps) for (const x of numbers(t)) assert.ok(allowed.has(x), `"${x}" in "${t}"`);
   // The figure builders take their words from copy.js and their numbers only from their arguments.

@@ -107,3 +107,20 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     largest: largest && { id: largest.id, contributionText: largest.contributionText },
   };
 }
+
+// Per state (the master's code), over hospital views: { hospitals, decided (scored, Yes or No), yes, na (scored,
+// decision N/A) }. The program page's tile grid draws it (figures.js statesFigure).
+export function stateCounts(views) {
+  const out = {};
+  for (const v of views) {
+    const s = (out[v.state] ??= { hospitals: 0, decided: 0, yes: 0, na: 0 });
+    s.hospitals += 1;
+    const d = v.decision.text;
+    if (v.scored && (d === 'Yes' || d === 'No')) {
+      s.decided += 1;
+      if (d === 'Yes') s.yes += 1;
+    }
+    if (v.scored && d === 'N/A') s.na += 1;
+  }
+  return out;
+}

@@ -1,5 +1,5 @@
-// How many values fall in each bin, as columns: bins at or above the boundary (CMS's line) in --pen, the rest
-// neutral, the boundary drawn and annotated with markLabel. The bins are equal widths with the boundary as an edge,
+// How many values fall in each bin, as columns: bins at or above the boundary in --pen, the rest neutral, the
+// boundary drawn and annotated with markLabel. The bins are equal widths with the boundary as an edge,
 // so no bin straddles the line, and span the boundary even when the data don't; each value lands in exactly one
 // bin (histogramBins).
 //   bins     about how many bins (d3-array's tickStep picks a round width)
@@ -37,20 +37,20 @@ export function histogramBins(values, bins, boundary) {
   return out.map((b) => ({ x0: b.x0, x1: b.x1, count: b.length, above: b.x0 >= boundary }));
 }
 
-export function histogram({ values, bins = 20, boundary, markLabel, width = WIDTH, height = HEIGHT, format = plain, tip }) {
+export function histogram({ values, bins = 20, boundary, markLabel, width = WIDTH, format = plain, tip }) {
   const data = histogramBins(values, bins, boundary);
   const tipOf = tip ?? ((b) => `${format(b.x0)} – ${format(b.x1)}: ${count(b.count)}`);
   const x = scaleLinear().domain([data[0].x0, data[data.length - 1].x1]).range([M.left, width - M.right]);
   const most = Math.max(...data.map((b) => b.count));
-  const y = scaleLinear().domain([0, most]).nice().range([height - M.bottom, M.top]);
+  const y = scaleLinear().domain([0, most]).nice().range([HEIGHT - M.bottom, M.top]);
   const yTicks = y.ticks(Math.min(4, most)).filter(Number.isInteger);
-  const base = height - M.bottom;
+  const base = HEIGHT - M.bottom;
   const bx = r2(x(boundary));
   const t = (x(boundary) - M.left) / (width - M.left - M.right);
   const { anchor, dx } = labelAt(t);
 
   return frame({
-    kind: 'histogram', width, height, body: html`<g transform="translate(${M.left} 0)">${axis({ scale: y, orient: 'left', ticks: yTicks, format: count, grid: width - M.left - M.right })}</g>
+    kind: 'histogram', width, height: HEIGHT, body: html`<g transform="translate(${M.left} 0)">${axis({ scale: y, orient: 'left', ticks: yTicks, format: count, grid: width - M.left - M.right })}</g>
 ${data.map((b) => {
     const slot = x(b.x1) - x(b.x0);
     const w = Math.max(1, Math.min(MAX_THICKNESS, slot - GAP));

@@ -5,7 +5,6 @@
 // LABEL_W units (about 15 characters) and are never truncated: pass short names.
 //   id       names this SVG's hatch pattern (lowercase letters, digits, hyphens)
 //   rows     [{ id, label, value, assigned }]
-//   extent   the largest |value| the scale holds (default: the rows' largest)
 //   format   value -> text (default: the number as given, with a true minus)
 import { html } from '../render/html.js';
 import { WIDTH, barPath, checkId, frame, hatchDefs, hatchFill, mark, plain, r2, text } from './svg.js';
@@ -20,10 +19,11 @@ const BASELINE = 4;
 // An assigned bar shorter than half this is drawn as a stub this wide, centered on the zero line.
 const STUB = 8;
 
-export function contribBars({ id, rows, extent, width = WIDTH, format = plain }) {
+export function contribBars({ id, rows, width = WIDTH, format = plain }) {
   checkId(id, 'contribBars');
   if (!rows.length) throw new RangeError('contribBars: no rows');
-  const max = extent ?? Math.max(...rows.map((r) => Math.abs(r.value)));
+  // One scale for all rows: the largest |value| reaches the edge.
+  const max = Math.max(...rows.map((r) => Math.abs(r.value)));
   const half = (width - LABEL_W - VALUE_W) / 2;
   const zero = LABEL_W + half;
   const xOf = (v) => zero + (max > 0 ? (v / max) * half : 0);

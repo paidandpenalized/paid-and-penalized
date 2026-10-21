@@ -8,8 +8,9 @@ import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fill, sourceText, t } from '../copy.js';
-import { lineFigure, scoresFigure, statesFigure, stepRows, stepSum } from '../figures.js';
+import { lineFigure, scoresFigure, statesFigure } from '../figures.js';
 import { LINKS, csvPath, dictionaryPath } from '../links.js';
+import { stepRows, stepSum } from '../stepper.js';
 import { asofBar, citation, sourceLine } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
@@ -74,13 +75,13 @@ ${printout(html`<table class="gb gb--hospitals">
 </div>
 </section>`;
 
-// counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. measures: [{ id, label,
-// short }]. searchUrl: the hospitals asset the search reads (generate.js, hospitalRows). robots: null for an
-// indexable page. whatif: { hospital, model, estimate, range } for the stepper and the sandbox (hospital:
-// medianHospital(model); range from scoreRange() in generate.js); without it the page has neither. scores: [{ total,
-// yes }] of the hospitals with a Yes/No decision, with boundary (the model's numbers for the line), for the
-// histogram; states: stateCounts() (figures.js), for the tile grid; each figure is left out without its data.
-// Figures are numbered in page order.
+// counts: { decided, yes, scored }, for the counts sentences. boundaryText: CMS's text for the line's two scores.
+// measures: [{ id, label, short }]. searchUrl: the hospitals asset the search reads (generate.js, hospitalRows).
+// robots: null for an indexable page. whatif: { hospital, model, estimate, range } for the stepper and the sandbox
+// (hospital: medianHospital(model); range from scoreRange() in generate.js); without it the page has neither.
+// scores: [{ total, yes }] of the hospitals with a Yes/No decision, with boundary (the model's numbers for the
+// line), for the histogram; states: stateCounts() (view.js), for the tile grid; each figure is left out without its
+// data, and takes its numbers from its own data. Figures are numbered in page order.
 export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
@@ -91,8 +92,8 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
   const line = sourceText({ fy, source });
   let n = 0;
   const steps = whatif && stepper(whatif, { boundaryText, n: ++n, line, fy });
-  const histogram = scores && scoresFigure({ scores, boundary, counts, n: ++n, source: line, fy });
-  const tiles = states && statesFigure({ states, counts, n: ++n, source: line, fy });
+  const histogram = scores && scoresFigure({ scores, boundary, n: ++n, source: line, fy });
+  const tiles = states && statesFigure({ states, n: ++n, source: line, fy });
 
   const body = html`<article class="wrap page">
 <header class="page__head">

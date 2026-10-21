@@ -2,7 +2,7 @@
 // measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
 // the median hospital against CMS's line (the formula stepper's last step), the histogram of Total HAC Scores and
 // the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
-import { clamp, toUnit } from '../../../engine/js/stats.js';
+import { toUnit } from '../../../engine/js/stats.js';
 import { contribBars } from '../../../web/charts/contribBars.js';
 import { dotRanges } from '../../../web/charts/dotRange.js';
 import { figure } from '../../../web/charts/figure.js';
@@ -13,14 +13,14 @@ import { tileMap } from '../../../web/charts/tileMap.js';
 import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
 import { rampDomain } from '../../../web/whatif/marks.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { SHORT_NAMES, TILE_STEPS_PCT } from './constants.js';
+import { TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
 
-// Scores, z-scores and parts of the score at CMS's four decimals; the stepper's fitted mean and SD likewise.
+// Scores, z-scores and parts of the score at CMS's four decimals.
 const DP = 4;
 const BINS = 20;
 const SHARE_DP = 1;
-const num = (text, value) => ({ text, value: value === null ? null : String(value) });
+const num = (text, value) => ({ text, value });
 
 // Each measure's national range, from the model: CMS's floor and cap as published, and the national median of
 // published values at CMS's decimals (as the what-if shows it). { [id]: { floor, cap, median, decimals } }.
@@ -54,67 +54,33 @@ export function partsFigure(view, n, source) {
 // Hospital page: each measure's value against the national range, one row per measure on its own scale. null when
 // no measure has a published value.
 export function rangeFigure(view, ranges, n, source) {
-  const valued = view.measures.filter((m) => m.hasValue);
-  if (!valued.length) return null;
-  const valueOf = (m) => (m.hasValue ? Number(m.valueRaw) : null);
-  const above = valued.filter((m) => valueOf(m) > ranges[m.id].median);
-  const takeaway = valued.length === 1
-    ? fill('figRangeOne', { short: valued[0].short, side: t(above.length ? 'figSideAbove' : 'figSideBelow') })
-    : fill('figRangeTakeaway', { k: String(valued.length), above: String(above.length), rest: String(valued.length - above.length) });
   const rows = view.measures.map((m) => {
-    const r = ranges[m.id];
-    const at = (v) => decimal(v, r.decimals);
-    return { m, r, at, title: m.hasValue ? m.short : fill('figRangeNoValue', { short: m.short }) };
+    const { floor, cap, median, decimals } = ranges[m.id];
+    return { m, floor, cap, median, value: m.hasValue ? Number(m.valueRaw) : null, format: (v) => decimal(v, decimals) };
   });
+  const valued = rows.filter((r) => r.value !== null);
+  if (!valued.length) return null;
+  const above = valued.filter((r) => r.value > r.median).length;
+  const takeaway = valued.length === 1
+    ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
+    : fill('figRangeTakeaway', { k: String(valued.length), above: String(above), rest: String(valued.length - above) });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figRangeAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-ranges`,
     svg: dotRanges({
       medianLabel: t('figRangeMedian'), rangeLabel: t('figRangeRange'),
-      rows: rows.map(({ m, r, at, title }) => ({ title, value: valueOf(m), floor: r.floor, cap: r.cap, median: r.median, label: t('figRangeThis'), format: at })),
+      rows: rows.map(({ m, ...row }) => ({ ...row, title: m.hasValue ? m.short : fill('figRangeNoValue', { short: m.short }), label: t('figRangeThis') })),
     }),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colValue'), numeric: true }, { name: t('figColFloor'), numeric: true },
         { name: t('figRangeMedian'), numeric: true }, { name: t('figColCap'), numeric: true }, { name: t('colNotes') }],
-      rows: rows.map(({ m, r, at }) => [
+      rows: rows.map(({ m, floor, cap, median, format }) => [
         m.short,
         m.hasValue ? num(m.valueText, m.valueRaw) : num(t('noValue'), null),
-        num(at(r.floor), r.floor), num(at(r.median), r.median), num(at(r.cap), r.cap),
+        num(format(floor), floor), num(format(median), median), num(format(cap), cap),
         m.footnotes.map((f) => f.text).join(' '),
       ]),
     },
   });
-}
-
-// The stepper's numbers for the median hospital (medianHospital), measure by measure: its value, CMS's floor and
-// cap, the value limited to them, the fitted mean and SD, and its z-score. All as display text. The mean and SD
-// show the fewest decimals, from DP up, at which every row's z-score follows from its own shown cells (fitDp).
-const MAX_FIT_DP = 10;
-export function stepRows(hospital, model) {
-  const rows = MEASURE_IDS.map((id) => {
-    const m = hospital.measures[id];
-    const p = model.params[id];
-    return { id, m, p, limited: toUnit(clamp(m.value, p.floor, p.cap), p.decimals) };
-  });
-  const reproduces = (dp) => rows.every(({ m, p, limited }) =>
-    decimal(toUnit((limited - toUnit(p.mean, dp)) / toUnit(p.sd, dp), DP), DP) === cmsText(m.zText));
-  let fitDp = DP;
-  while (!reproduces(fitDp)) {
-    if (++fitDp > MAX_FIT_DP) throw new RangeError('stepRows: no display precision reproduces the z-scores');
-  }
-  return rows.map(({ id, m, p, limited }) => {
-    const at = (v) => decimal(v, p.decimals);
-    return {
-      id, short: SHORT_NAMES[id], valueText: cmsText(m.valueText), floorText: at(p.floor), capText: at(p.cap),
-      limitedText: at(limited), meanText: decimal(p.mean, fitDp), sdText: decimal(p.sd, fitDp), zText: cmsText(m.zText), fitDp,
-    };
-  });
-}
-
-// The stepper's average step: how many z-scores, and their sum as text (each z is CMS-style text at four
-// decimals, so the sum is exact at that unit and the sum divided by n rounds to the total).
-export function stepSum(hospital) {
-  const zs = MEASURE_IDS.map((id) => hospital.measures[id].z).filter((z) => z !== null);
-  return { n: zs.length, sumText: decimal(toUnit(zs.reduce((a, b) => a + b, 0), DP), DP) };
 }
 
 // Program page: the median hospital's Total HAC Score against CMS's line, the stepper's last step.
@@ -146,63 +112,41 @@ export function lineFigure({ hospital, model, range, boundaryText, n, source, fy
   });
 }
 
-// Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. Bins have
-// CMS's lowest Yes score as an edge, so each holds one decision; a bin holding both stops the build.
-export function scoresFigure({ scores, boundary, counts, n, source, fy }) {
-  const values = scores.map((s) => s.total);
+// Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. CMS's lowest
+// Yes score is a bin edge, so a bin at or above it holds only Yes decisions and a bin below it only No; a decision
+// on the wrong side of that score stops the build.
+export function scoresFigure({ scores, boundary, n, source, fy }) {
   const edge = boundary.lowestYes;
-  const bins = histogramBins(values, BINS, edge).map((b) => ({ ...b, yes: 0, no: 0 }));
-  for (const s of scores) {
-    const b = bins.find((x, i) => s.total >= x.x0 && (s.total < x.x1 || i === bins.length - 1));
-    b[s.yes ? 'yes' : 'no'] += 1;
-  }
-  const decisionOf = (b) => {
-    if (b.yes && b.no) throw new RangeError(`scoresFigure: the bin from ${b.x0} to ${b.x1} holds both Yes and No decisions`);
-    return b.yes ? t('flagYes') : b.no ? t('flagNo') : '';
-  };
-  const decisions = bins.map(decisionOf);
-  const decisionAt = new Map(bins.map((b, i) => [b.x0, decisions[i]]));
+  const wrong = scores.find((s) => s.yes !== (s.total >= edge));
+  if (wrong) throw new RangeError(`scoresFigure: a ${wrong.yes ? 'Yes' : 'No'} decision at ${wrong.total} is on the wrong side of CMS's lowest Yes score, ${edge}`);
+  const values = scores.map((s) => s.total);
+  const bins = histogramBins(values, BINS, edge);
+  const decisionOf = (b) => (b.count === 0 ? '' : t(b.above ? 'flagYes' : 'flagNo'));
   const at = (v) => decimal(v, DP);
-  // The histogram bins the same values the same way, so a column's bin is found by its lower edge.
   const tip = (b) => {
     const span = { from: at(b.x0), to: at(b.x1) };
     if (b.count === 0) return fill('figScoresTipNone', span);
-    const decision = decisionAt.get(b.x0);
+    const decision = decisionOf(b);
     return b.count === 1 ? fill('figScoresTipOne', { ...span, decision }) : fill('figScoresTip', { ...span, decision, count: count(b.count) });
   };
   return figure({
     n, source, alt: t('figScoresAlt'), csvName: `hacrp-fy${fy}-scores`,
-    takeaway: fill('figScoresTakeaway', { yes: count(counts.yes), decided: count(counts.decided) }),
+    takeaway: fill('figScoresTakeaway', { yes: count(scores.filter((s) => s.yes).length), decided: count(scores.length) }),
     svg: histogram({ values, bins: BINS, boundary: edge, markLabel: t('whatifRampLine'), tip }),
     table: {
       columns: [{ name: t('figColFrom'), numeric: true }, { name: t('figColTo'), numeric: true }, { name: t('figColHospitals'), numeric: true }, { name: t('figColDecision') }],
-      rows: bins.map((b, i) => [num(at(b.x0), b.x0), num(at(b.x1), b.x1), num(count(b.count), b.count), decisions[i]]),
+      rows: bins.map((b) => [num(at(b.x0), b.x0), num(at(b.x1), b.x1), num(count(b.count), b.count), decisionOf(b)]),
     },
   });
-}
-
-// Per state (the master's code): { hospitals, decided (scored, Yes or No), yes, na (scored, decision N/A) }.
-export function stateCounts(views) {
-  const out = {};
-  for (const v of views) {
-    const s = (out[v.state] ??= { hospitals: 0, decided: 0, yes: 0, na: 0 });
-    s.hospitals += 1;
-    const d = v.decision.text;
-    if (v.scored && (d === 'Yes' || d === 'No')) {
-      s.decided += 1;
-      if (d === 'Yes') s.yes += 1;
-    }
-    if (v.scored && d === 'N/A') s.na += 1;
-  }
-  return out;
 }
 
 const shareOf = (s) => toUnit((100 * s.yes) / s.decided, SHARE_DP);
 const shareText = (x) => pct(x / 100, SHARE_DP);
 
-// Program page: per state, the hospitals CMS cut of those with a payment decision. A state whose hospitals are
-// not subject to the reduction, one with no hospital in CMS's file and one with no decision are hatched, never 0.
-export function statesFigure({ states, counts, n, source, fy }) {
+// Program page: per state, the hospitals CMS cut of those with a payment decision; states: stateCounts() (view.js).
+// A state whose hospitals are not subject to the reduction, one with no hospital in CMS's file and one with no
+// decision are hatched, never 0. The national share is the states' own total.
+export function statesFigure({ states, n, source, fy }) {
   for (const code of Object.keys(states)) if (!Object.hasOwn(TILES, code)) throw new RangeError(`statesFigure: state code ${code} has no tile`);
   const tiles = Object.keys(TILES).map((code) => {
     const s = states[code];
@@ -213,10 +157,11 @@ export function statesFigure({ states, counts, n, source, fy }) {
   });
   const shares = tiles.filter((x) => x.value !== undefined).map((x) => x.value);
   const none = num('—', null);
+  const total = (k) => Object.values(states).reduce((sum, s) => sum + s[k], 0);
   return figure({
     n, source, alt: t('figStatesAlt'), csvName: `hacrp-fy${fy}-states`,
     takeaway: fill('figStatesTakeaway', {
-      share: pct(counts.yes / counts.decided, SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
+      share: pct(total('yes') / total('decided'), SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
     }),
     svg: tileMap({
       id: 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0),

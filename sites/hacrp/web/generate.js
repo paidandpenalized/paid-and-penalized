@@ -11,12 +11,12 @@ import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
 import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
-import { measureRanges, stateCounts } from './figures.js';
+import { measureRanges } from './figures.js';
 import { compareDefault } from './hospital-table.js';
 import { csvPath, dictionaryPath } from './links.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
-import { HOSPITALS_PATH, hospitalView } from './view.js';
+import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
 
