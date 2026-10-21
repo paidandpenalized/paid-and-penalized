@@ -1,7 +1,7 @@
 // The HACRP page generator: checks acceptance A1 on the emitted data (the build fails if it doesn't hold), then
 // emits the program page and one page per hospital through the build context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
-import { scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { decidedHospitals, scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
@@ -9,6 +9,8 @@ import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
 import { loadHacrp } from './data.js';
+import { measureRanges, stateCounts } from './figures.js';
+import { compareDefault } from './hospital-table.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
@@ -27,11 +29,10 @@ export function a1Summary({ ok, a, b, info }) {
 // The hospitals asset (/assets/hacrp-hospitals.<hash>.json) the program page's client reads: { hospitalPath, rows },
 // one row per hospital, [ccn, name, city, state, total, decision]: the CCN as CMS writes it (a page is at
 // hospitalPath + the CCN in lowercase + "/"), names from the hospital master, CMS's Total HAC Score text (true minus;
-// "N/A" when none) and CMS's payment reduction text. Rows sort by name, then state, then city: the search's order.
+// "N/A" when none) and CMS's payment reduction text. Rows are in the hospital table's default order (state, then
+// name; hospital-table.js); the search sorts its own list by name.
 export function hospitalRows(views) {
-  const rows = views
-    .map((v) => [v.ccn, v.name, v.city, v.state, v.score.text, v.decision.text])
-    .sort((x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en'));
+  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.text, v.decision.text]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows };
 }
 
@@ -74,12 +75,17 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       robots: programRobots,
       assets,
       whatif: { hospital: medianHospital(model, { fiscalYear: String(fy), periods }), model, estimate, range },
+      // The histogram's population is A1(b)'s too.
+      scores: decidedHospitals(hospitals).map((h) => ({ total: h.total, yes: h.paymentReduction === 'Yes' })),
+      boundary: model.boundary,
+      states: stateCounts(views),
     }),
   });
 
+  const ranges = measureRanges(model);
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital, model, estimate, range } }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, whatif: { hospital, model, estimate, range } }) });
   }
 }
 

@@ -61,6 +61,9 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
       short: SHORT_NAMES[id],
       valueText: cmsText(m.valueText),
       zText: cmsText(m.zText),
+      // CMS's text as published (hyphen-minus): a figure's table keeps it for sorting and its CSV.
+      valueRaw: m.valueText,
+      zRaw: m.zText,
       // Whether CMS published a number (the parsed value is null for blank and "N/A"); the page shows a dash if not.
       hasValue: m.value !== null,
       hasZ: m.z !== null,

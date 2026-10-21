@@ -68,3 +68,16 @@ test('a failed fetch or a bad hospitalPath leaves the list empty, and a later fo
   await bad.focus();
   assert.equal(bad.list.options, null);
 });
+
+test('the asset is in the table\'s order (state, then name); the search lists its labels by name', async (t) => {
+  const s = await run(t, {
+    hospitalPath: '/hacrp/hospital/',
+    rows: [
+      ['990041', 'Zeta Hospital', 'Exampleton', 'AL', '0.1000', 'No'],
+      ['990042', 'Beta Hospital', 'Exampleton', 'CA', '0.2000', 'No'],
+      ['990043', 'Alpha Hospital', 'Sampleville', 'MD', '0.3000', 'N/A'],
+    ],
+  });
+  await s.focus();
+  assert.deepEqual(s.list.options, ['Alpha Hospital, Sampleville, MD', 'Beta Hospital, Exampleton, CA', 'Zeta Hospital, Exampleton, AL']);
+});

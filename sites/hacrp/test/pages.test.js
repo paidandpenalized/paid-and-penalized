@@ -13,18 +13,21 @@ import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count } from '../../../web/render/format.js';
 import { loadHacrp } from '../web/data.js';
+import { measureRanges } from '../web/figures.js';
 import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.js';
+import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
 import { BOUNDARY_TEXT as BOUNDARY, CASES, WHATIF_STANDING, esc, inputs, master, pick as pickFrom } from './fixtures.js';
 
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
+const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const DATA = loadHacrp();
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
 const FN = (code) => DATA.footnotes.get(code);
+const RANGES = measureRanges(DATA.model);
 
 const read = (dir, path) => readFileSync(join(dir, path, 'index.html'), 'utf8');
 const hospitalPath = (h) => `/hacrp/hospital/${h.ccn.toLowerCase()}/`;
@@ -160,7 +163,7 @@ test('A1 failing stops the build and names the mismatched CCN', async () => {
 test('hostile text in a hospital name renders as text in the page, the title and the JSON-LD', () => {
   const name = '<script>alert("x")</script> & Sons\' Hospital';
   const view = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name, city: 'A<b' }) }));
-  const text = hospitalPage({ view, source: DATA.source, robots: 'noindex', assets: ASSETS });
+  const text = hospitalPage({ view, source: DATA.source, robots: 'noindex', assets: ASSETS, ranges: RANGES });
   assert.ok(!text.includes('<script>alert'));
   assert.ok(text.includes(`<h1>${esc(name)}</h1>`));
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(text)[1];
@@ -172,6 +175,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   const name = '</script><script>alert(1)</script> & "Sons"';
   const views = [CASES.yes, CASES.noScore].map((h) => hospitalView(inputs(h, { master: master(h.ccn, { name: h.ccn === '990001' ? name : 'A' }) })));
   const asset = JSON.parse(JSON.stringify(hospitalRows(views)));
+  // State, then name: both are AL, and "A" sorts after "<".
   assert.deepEqual(asset, {
     hospitalPath: '/hacrp/hospital/',
     rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i]]),
@@ -185,7 +189,16 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of 0\.2507 or higher and none at 0\.2500 or lower\./);
 });
 
-test('the build writes the hospitals asset with one row per hospital, sorted by name', () =>
+test('hospitalRows: the table\'s default order, state then name (then city, then CCN), whatever order the views come in', () => {
+  const rows = [
+    ['990031', 'Beta Hospital', 'Exampleton', 'CA'], ['990032', 'Alpha Hospital', 'Exampleton', 'MD'],
+    ['990033', 'Beta Hospital', 'Aville', 'AL'], ['990034', 'Alpha Hospital', 'Zville', 'AL'], ['990035', 'Alpha Hospital', 'Zville', 'AL'],
+  ];
+  const views = rows.reverse().map(([ccn, name, city, state]) => hospitalView(inputs(CASES.yes, { hospital: { ...CASES.yes, ccn }, master: master(ccn, { name, city, state }) })));
+  assert.deepEqual(hospitalRows(views).rows.map((r) => r[0]), ['990034', '990035', '990033', '990031', '990032']);
+});
+
+test('the build writes the hospitals asset with one row per hospital, in the table\'s default order (state, then name)', () =>
   temp(async (dir) => {
     await generate(dir, undefined, { data: SLICE });
     const url = /data-src="([^"]+)"/.exec(read(dir, '/hacrp/'))[1];
@@ -193,8 +206,8 @@ test('the build writes the hospitals asset with one row per hospital, sorted by 
     const { hospitalPath, rows } = JSON.parse(readFileSync(join(dir, url), 'utf8'));
     assert.equal(hospitalPath, '/hacrp/hospital/');
     assert.deepEqual(rows.map((r) => r[0]).sort(), SLICE.hospitals.map((h) => h.ccn).sort());
-    const names = rows.map((r) => r[1]);
-    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en')));
+    assert.deepEqual(rows, [...rows].sort(compareDefault));
+    assert.ok(new Set(rows.map((r) => r[3])).size > 1, 'the slice spans states');
     for (const [ccn, , , , total] of rows) {
       const text = read(dir, `${hospitalPath}${ccn.toLowerCase()}/`);
       assert.ok(total === 'N/A' ? text.includes('No score published') : text.includes(`cms">${total}<`), ccn);
@@ -202,7 +215,7 @@ test('the build writes the hospitals asset with one row per hospital, sorted by 
   }));
 
 // The hospital page as the build renders it, for a synthetic case.
-const render = (h, overrides) => hospitalPage({ view: hospitalView(inputs(h, overrides)), source: DATA.source, robots: null, assets: ASSETS });
+const render = (h, overrides) => hospitalPage({ view: hospitalView(inputs(h, overrides)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
 const meta = (text, name) => new RegExp(`<meta name="${name}" content="([^"]*)">`).exec(text)[1];
 
 test('a hospital with no score shows a hatched "No score published" block, not an N/A headline', () => {

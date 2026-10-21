@@ -14,6 +14,7 @@ import { MAX_FACTOR, encode } from '../../../web/whatif/fragment.js';
 import { NARROW_PX, labelSpan, rampAt, rampDomain, rampLabels, rampSide, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { loadHacrp } from '../web/data.js';
+import { measureRanges } from '../web/figures.js';
 import { HACRP, scoreRange } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
@@ -25,7 +26,7 @@ import { STANDING, WHATIF_STANDING, esc, master, pick as pickFrom, textsFor } fr
 const D = loadHacrp();
 const { model, estimate } = D;
 const RANGE = scoreRange(D.hospitals);
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
+const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
 const { no: V } = SYNTH_VALUES;
 const H = {
@@ -207,7 +208,7 @@ test('one helper line under the buttons says what the median button does; the bu
 const pick = (pred, what) => pickFrom(D.hospitals, pred, what);
 const pageFor = (h) => hospitalPage({
   view: hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: D.master.get(h.ccn), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText }),
-  source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE },
+  source: D.source, robots: 'noindex', assets: ASSETS, ranges: measureRanges(model), whatif: { hospital: h, model, estimate, range: RANGE },
 });
 
 test('a scored page carries the what-if, both standing lines, its own record as page data, and the client module', () => {
@@ -259,7 +260,7 @@ test('no score, and the "Yes" row with no score: no what-if, no inputs, no page 
 test('hostile text in a hospital name stays text in the page data', () => {
   const h = { ...H.no, name: '</script><script>alert(1)</script>' };
   const view = hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: master(h.ccn, { name: '<b>&"x"' }), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText });
-  const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE } });
+  const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, ranges: measureRanges(model), whatif: { hospital: h, model, estimate, range: RANGE } });
   assert.ok(!text.includes('<script>alert'));
   const json = /<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(text)[1];
   assert.ok(!json.includes('<'));

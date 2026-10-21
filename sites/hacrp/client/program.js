@@ -1,13 +1,38 @@
-// The program page's scripts. The hospital search: a native datalist of hospital names; choosing one opens its page.
-// The list comes from the hospitals asset named in the search box's data-src (see hospitalRows in web/generate.js),
-// fetched the first time the box gets focus. Without JavaScript the search stays hidden. The sandbox: the what-if on
-// the median hospital, mounted from the page's own data (client/whatif.js), whose share is false: the URL is never
-// read or written.
+// The program page's scripts. Both the hospital search and the hospital table read the hospitals asset named in
+// their data-src (see hospitalRows in web/generate.js), fetched once for both; without JavaScript both stay hidden
+// and the table's section shows a sentence and the CSV link.
+// The search: a native datalist of hospital names, fetched the first time the box gets focus; choosing one opens
+// its page. The table: every hospital, sortable by any column, filtered by a state (kept in the URL as #state=XX)
+// and by name; its rows are fetched when the section nears the screen, or at once when the URL names a state.
+// The sandbox: the what-if on the median hospital, mounted from the page's own data (client/whatif.js), whose
+// share is false: the URL is never read or written by it.
 import { CCN } from '../../../engine/js/ccn.js';
+import { TABLE_FIRST_ROWS } from '../web/constants.js';
+import { fill } from '../web/copy.js';
+import { decodeState, filterRows, sortRows, stateCodes, stateHash } from '../web/hospital-table.js';
+import { count } from '../../../web/render/format.js';
 import { mountFromPage } from './whatif.js';
 
-const box = document.querySelector('.search[data-src]');
 const PATH = /^\/[a-z0-9/-]*\/$/;
+const byName = (x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en');
+
+// One fetch for the search and the table; a failed one is tried again on the next call.
+let pending = null;
+function hospitals(src) {
+  pending ??= (async () => {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`hospital list: HTTP ${res.status}`);
+    const { hospitalPath, rows } = await res.json();
+    if (!PATH.test(hospitalPath)) throw new Error('hospital list: bad hospitalPath');
+    return { hospitalPath, rows: rows.filter(([ccn]) => CCN.test(ccn)) };
+  })().catch((error) => {
+    pending = null;
+    throw error;
+  });
+  return pending;
+}
+
+const box = document.querySelector('.search[data-src]');
 
 if (box) {
   const input = box.querySelector('input');
@@ -15,11 +40,8 @@ if (box) {
   const paths = new Map();
 
   async function load() {
-    const res = await fetch(box.dataset.src);
-    if (!res.ok) throw new Error(`hospital list: HTTP ${res.status}`);
-    const { hospitalPath, rows } = await res.json();
-    if (!PATH.test(hospitalPath)) throw new Error('hospital list: bad hospitalPath');
-    const valid = rows.filter(([ccn]) => CCN.test(ccn));
+    const { hospitalPath, rows } = await hospitals(box.dataset.src);
+    const valid = [...rows].sort(byName);
     // "Name, City, ST"; a label two hospitals share also carries the CCN.
     const labels = valid.map(([, name, city, state]) => `${name}, ${city}, ${state}`);
     const seen = new Map();
@@ -33,7 +55,6 @@ if (box) {
     }));
   }
 
-  // One fetch; a failed one is tried again on the next focus.
   let loading = null;
   input.addEventListener('focus', () => {
     loading ??= load().catch(() => { loading = null; });
@@ -52,5 +73,116 @@ if (box) {
   box.hidden = false;
 }
 
-// After the search, so a fault in the sandbox never takes the search with it.
+const table = document.querySelector('.ht[data-src]');
+
+function mountTable({ hospitalPath, rows }) {
+  const section = table.closest('section');
+  const select = table.querySelector('#ht-state');
+  const search = table.querySelector('#ht-name');
+  const status = table.querySelector('#ht-count');
+  const body = table.querySelector('tbody');
+  const all = table.querySelector('#ht-all');
+  const heads = [...table.querySelectorAll('th[data-key]')];
+  const codes = stateCodes(rows);
+  const view = { state: null, query: '', key: null, dir: 1, expanded: false };
+
+  select.append(...codes.map((code) => {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = code;
+    return option;
+  }));
+
+  // Each cell names its column (data-label), for the stacked rows of a narrow screen.
+  const label = Object.fromEntries(heads.map((th) => [th.dataset.key, th.textContent.trim()]));
+  const cell = (text, key) => {
+    const td = document.createElement('td');
+    if (key === 'score') td.className = 'num';
+    td.dataset.label = label[key];
+    td.textContent = text;
+    return td;
+  };
+  function row([ccn, name, city, state, total, decision]) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.scope = 'row';
+    const a = document.createElement('a');
+    a.href = `${hospitalPath}${ccn.toLowerCase()}/`;
+    a.textContent = name;
+    th.append(a);
+    tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(total, 'score'), cell(decision, 'decision'));
+    return tr;
+  }
+
+  function render({ announce = true } = {}) {
+    const matches = sortRows(filterRows(rows, view), view.key, view.dir);
+    const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
+    const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
+    body.replaceChildren(...shown.map(row));
+    all.hidden = !limited;
+    if (limited) all.textContent = fill('tableShowAll', { n: count(matches.length) });
+    const text = matches.length === 0 ? fill('tableCountNone')
+      : matches.length === 1 ? fill('tableCountOne')
+        : limited ? fill('tableCountFirst', { shown: count(shown.length), n: count(matches.length) })
+          : fill('tableCount', { n: count(matches.length) });
+    if (announce || !status.textContent) status.textContent = text;
+  }
+
+  // The state from the URL: a code in the data, or none; anything else in the fragment is left alone.
+  function fromHash() {
+    const state = decodeState(window.location.hash, codes);
+    if (state === view.state) return false;
+    view.state = state;
+    select.value = state ?? '';
+    return true;
+  }
+
+  select.addEventListener('change', () => {
+    view.state = codes.includes(select.value) ? select.value : null;
+    const { pathname, search: query } = window.location;
+    window.history.replaceState(null, '', view.state ? stateHash(view.state) : pathname + query);
+    render();
+  });
+  search.addEventListener('input', () => {
+    view.query = search.value;
+    render();
+  });
+  all.addEventListener('click', () => {
+    view.expanded = true;
+    render();
+  });
+  for (const th of heads) {
+    th.querySelector('button').addEventListener('click', () => {
+      const key = th.dataset.key;
+      view.dir = view.key === key || (view.key === null && key === 'state') ? -view.dir : 1;
+      view.key = key;
+      for (const h of heads) h.removeAttribute('aria-sort');
+      th.setAttribute('aria-sort', view.dir > 0 ? 'ascending' : 'descending');
+      render();
+    });
+  }
+  window.addEventListener('hashchange', () => { if (fromHash()) render(); });
+
+  fromHash();
+  render({ announce: false });
+  section.querySelector('.ht-nojs').hidden = true;
+  table.hidden = false;
+}
+
+if (table) {
+  const load = () => hospitals(table.dataset.src).then(mountTable).catch(() => {});
+  // Fetch when the table nears the screen, or at once for a link that names a state (or a browser with no observer).
+  if (!/(^#|&)state=/.test(window.location.hash) && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      observer.disconnect();
+      load();
+    }, { rootMargin: '600px 0px' });
+    observer.observe(table.closest('section'));
+  } else {
+    load();
+  }
+}
+
+// After the search and the table, so a fault in the sandbox never takes them with it.
 mountFromPage('hacrp-program');

@@ -37,3 +37,36 @@
 
 .measure-list { display: grid; gap: 8px; margin: 0; padding-left: 0; list-style: none; }
 .measure-list li { padding-left: 14px; border-left: 3px solid var(--line); }
+
+/* The formula stepper: numbered steps, each with its compact table (four numbers to a row, so it fits a phone). */
+.steps { display: grid; gap: 20px; margin: 0; padding-left: 1.5em; }
+.steps > li { min-width: 0; padding-left: 4px; }
+.steps > li > * + * { margin-top: 10px; }
+.steps > li::marker { font: 700 var(--fs-base)/1 var(--font-type); }
+.gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 6px; }
+.gb--steps tbody th { white-space: nowrap; }
+.steps .printout { max-width: 36rem; }
+
+/* The hospital table: its controls in one row above it, wrapping on a phone. */
+.ht { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.ht[hidden] { display: none; }
+.ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }
+.ht__field { display: grid; gap: 4px; }
+.ht__field label { font-weight: 600; }
+.ht select, .ht input { padding: 8px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
+.ht input { width: min(100%, 22rem); }
+.gb--hospitals .num { width: 1%; }
+
+/* Narrow screens: each hospital stacks into a block (name; city, state, score, decision on one line), so the
+   table never scrolls sideways. The header row stays: its buttons are the sort controls. */
+@media (max-width: 640px) {
+  .gb--hospitals, .gb--hospitals tbody, .gb--hospitals thead { display: block; width: 100%; }
+  .gb--hospitals thead tr { display: flex; flex-wrap: wrap; gap: 0 4px; border-bottom: var(--rule) solid var(--ink); }
+  .gb--hospitals thead th { position: static; padding: 8px 6px; border: 0; }
+  .gb--hospitals tbody tr { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 8px 10px 10px; }
+  .gb--hospitals tbody tr + tr { border-top: 1px solid var(--line); }
+  .gb--hospitals tbody th, .gb--hospitals td { display: block; padding: 0; }
+  .gb--hospitals tbody th { flex: 1 1 100%; }
+  .gb--hospitals .num { width: auto; text-align: left; }
+  .gb--hospitals td:nth-of-type(n+3)::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
+}

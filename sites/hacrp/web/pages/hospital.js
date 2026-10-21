@@ -1,12 +1,13 @@
 // One hospital's page: what CMS reports for it in plain words, the score and decision, the measure table with
-// CMS's values and footnotes, the what-if (scored hospitals only), then where the data come from. Odd rows show
-// CMS's values and add no inference.
+// CMS's values and footnotes, two figures and the what-if (scored hospitals only), then where the data come from.
+// Odd rows show CMS's values and add no inference.
 import { footnoteLegend, footnoteNote } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill } from '../copy.js';
+import { figureSource, partsFigure, rangeFigure } from '../figures.js';
 import { asofBar, decisionPill, pillShowsCmsValue, sourceLine, t } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
@@ -44,9 +45,19 @@ function whatIfBlock(view, whatif, source, assets) {
   return { body: whatIfSection(whatif, page, 'hacrp-hospital'), script };
 }
 
-// robots: null for an indexable page, else the meta robots value. whatif: { hospital, model, estimate, range } for
-// the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
-export function hospitalPage({ view, source, robots, assets, whatif = null }) {
+// A scored hospital's figures, numbered in page order: each measure's part of the score, then each measure's value
+// against the national range (when any measure has a published value).
+function figures(view, ranges, source) {
+  if (!view.scored) return [];
+  if (!ranges) throw new TypeError('hospitalPage: a scored hospital needs ranges (measureRanges in figures.js)');
+  const line = figureSource({ fy: view.fy, source });
+  return [partsFigure(view, 1, line), rangeFigure(view, ranges, 2, line)].filter(Boolean);
+}
+
+// robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
+// (measureRanges(model) in figures.js), required for a scored hospital. whatif: { hospital, model, estimate, range }
+// for the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
+export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null }) {
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
   const title = `${fill('hospitalTitle', where)} · ${SITE.name}`;
@@ -84,6 +95,7 @@ ${largest && html`<p>${largest}</p>`}
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
 <tbody>${view.measures.map(measureRow)}</tbody>
 </table></div></div>
+${figures(view, ranges, source)}
 </section>
 ${what?.body}
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
