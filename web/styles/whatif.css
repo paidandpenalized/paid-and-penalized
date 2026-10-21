@@ -144,3 +144,7 @@
   .wi-number { max-width: 10rem; }
   .wi-bars__list { grid-template-columns: minmax(4.5rem, max-content) minmax(0, 1fr) 4.5rem; column-gap: 8px; }
 }
+
+/* The line naming a what-if's starting point (the sandbox's) sits in the kicker slot, above the heading, as a page's
+   kicker does; it follows the heading in the markup, so a screen reader meets the heading first. */
+.whatif > h2 + p:is(.wi-label, .cap) { order: -1; margin: 0 0 -8px; }
