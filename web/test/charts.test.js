@@ -284,6 +284,8 @@ test('tileMap: a zero share takes the neutral mark, never a ramp step, keyed in 
   assert.doesNotMatch(tile, /chart-seq-/);
   assert.match(s, /<rect class="chart-tile chart-tile-zero" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>None cut<\/text>/, 'sentence case');
   assert.throws(() => tileMap({ ...MAP, legend: {} }), /legend\.zero/);
+  assert.throws(() => tileMap({ ...MAP, legend: { ...MAP.legend, title: '' } }), /legend\.title/);
+  assert.throws(() => tileMap({ ...MAP, legend: { ...MAP.legend, high: undefined } }), /legend\.high/);
   const states = { ...STATES, CA: { value: 0.9, label: 'CA', few: true, text: '4 of 6' } };
   assert.throws(() => tileMap({ ...MAP, states }), /legend\.few/);
   const few = String(tileMap({ ...MAP, states, showValues: true, legend: { ...MAP.legend, few: 'few decisions' } }));

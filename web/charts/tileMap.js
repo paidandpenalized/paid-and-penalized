@@ -11,8 +11,9 @@
 //   showValues  print each valued tile's text under its code (for a viewBox wide enough to hold it)
 //   ramp     the step thresholds, ascending (1 to 4 of them: 2 to 5 steps); a value at a threshold takes the step above
 //   format   a threshold -> text (default: the number as given, with a true minus)
-//   legend   { title, high, zero, few }: the stepped bar's title, the text at its right end (the highest value), and
-//            the legend rows for a zero value and for few cases (required when some tile is zero or few)
+//   legend   { title, high, zero, few }: the stepped bar's title and the text at its right end (the highest value),
+//            both required, and the legend rows for a zero value and for few cases (required when some tile is zero
+//            or few)
 import { scaleThreshold } from 'd3-scale';
 import { capitalize } from '../render/format.js';
 import { html } from '../render/html.js';
@@ -52,6 +53,7 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
   const anyFew = valued.some((s) => s.few);
   if (anyZero && !words.zero) throw new RangeError('tileMap: a zero tile needs legend.zero, its legend row');
   if (anyFew && !words.few) throw new RangeError('tileMap: a few-cases tile needs legend.few, its legend row');
+  if (!words.title || !words.high) throw new RangeError('tileMap: legend.title and legend.high are required');
   if (!(ramp.length >= 1 && ramp.length < STEPS && ramp.every((t, i) => i === 0 || t > ramp[i - 1]))) {
     throw new RangeError('tileMap: ramp must be 1 to 4 ascending thresholds');
   }
@@ -93,11 +95,11 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
   // The ramp as one bar of steps under its title, each threshold printed under the edge where its step begins and
   // the ends labelled (zero under the low end, legend.high beside the high end); then one row for each other mark.
   const titleY = gridH + 18;
-  const barY = words.title ? titleY + 8 : gridH + 10;
+  const barY = titleY + 8;
   const labelY = barY + BAR_H + 12;
   const ends = [text({ x: 0, y: labelY, anchor: 'start', cls: 'chart-legend__label', body: format(0) }),
-    ...(words.high ? [text({ x: steps.length * STEP_W + 6, y: barY + BAR_H - 1, anchor: 'start', cls: 'chart-legend__label', body: words.high })] : [])];
-  const bar = html`${words.title ? text({ x: 0, y: titleY, anchor: 'start', cls: 'chart-legend__title', body: words.title }) : ''}${steps.map((step, i) => html`<rect class="chart-tile chart-seq-${step}" x="${r2(i * STEP_W)}" y="${r2(barY)}" width="${STEP_W}" height="${BAR_H}"/>`)}${ramp.map((t, i) => text({ x: (i + 1) * STEP_W, y: labelY, cls: 'chart-legend__label', body: format(t) }))}${ends}`;
+    text({ x: steps.length * STEP_W + 6, y: barY + BAR_H - 1, anchor: 'start', cls: 'chart-legend__label', body: words.high })];
+  const bar = html`${text({ x: 0, y: titleY, anchor: 'start', cls: 'chart-legend__title', body: words.title })}${steps.map((step, i) => html`<rect class="chart-tile chart-seq-${step}" x="${r2(i * STEP_W)}" y="${r2(barY)}" width="${STEP_W}" height="${BAR_H}"/>`)}${ramp.map((t, i) => text({ x: (i + 1) * STEP_W, y: labelY, cls: 'chart-legend__label', body: format(t) }))}${ends}`;
   const othersY = barY + BAR_H + BAR_LABELS + 8;
   const rows = others.map((row, i) => ({ ...row, x: 0, y: othersY + i * LEGEND_ROW, body: capitalize(row.label) }));
   const height = othersY + others.length * LEGEND_ROW;
