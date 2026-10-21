@@ -91,6 +91,9 @@ function figures(view, ranges, source) {
   return [rangeFigure(view, ranges, 1, line)].filter(Boolean);
 }
 
+// The state map's four placements on a hospital page, for the owner to choose among (preview pages show each).
+export const MAP_PLACEMENTS = Object.freeze(['a', 'b', 'c', 'd']);
+
 // The record card's Type field: what the master knows, in the site's words (the ownership as the master writes it);
 // null when it knows nothing.
 const TEACH = { major: 'typeTeachMajor', minor: 'typeTeachMinor', none: 'typeTeachNone' };
@@ -188,7 +191,10 @@ export function locatorMap(view, shapes) {
 // searchUrl: the hospitals asset the top bar's search reads (null: no search box). shapes: stateShapes(topology) for
 // the state map (null: none). careSource: Care Compare's manifest facts ({ modified }) for the stars' note.
 // masterFy: the hospital master's fiscal year, for the Type field's note.
-export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null }) {
+// mapPlacement: where the state map goes (MAP_PLACEMENTS): a, a record field beside Location; b, beside the record
+// card (a third column on wide screens); c, under the stamp (the default); d, a full-width strip under the top.
+export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null, mapPlacement = 'c' }) {
+  if (!MAP_PLACEMENTS.includes(mapPlacement)) throw new RangeError(`hospitalPage: map placement "${mapPlacement}" is not one of ${MAP_PLACEMENTS.join(', ')}`);
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
   const heading = fill('hospitalTitle', where);
@@ -199,19 +205,24 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
   const figs = figures(view, ranges, source);
   const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, figs.length + 1) : null;
   const map = locatorMap(view, shapes);
+  const caption = (cls) => map.caption && html`<figcaption class="${cls}">${map.caption}</figcaption>`;
+  const at = (placement) => (map && mapPlacement === placement);
+  const mapField = at('a') && ((no) => formField({ no, label: t('fieldMap'), value: map.svg, as: 'div', cls: 'hosp__map-field', note: map.caption }));
 
   const body = html`<article class="wrap page page--article hosp">
-<div class="hosp__top">
-${recordCard(view, { careSource, masterFy, mapField: null })}
+<div class="hosp__top hosp__top--${mapPlacement}">
+${recordCard(view, { careSource, masterFy, mapField })}
+${at('b') && html`<figure class="hosp__map hosp__map--side">${map.svg}${caption('small muted')}</figure>`}
 <section class="hosp__verdict" aria-label="${t('heroLabel')}">
 ${stampOf(view)}
 ${leadSentences(view).map((s, i) => html`<p class="${i ? 'hosp__why' : 'hosp__summary'}">${s}</p>`)}
 ${view.scored && html`<p class="hosp__note">${t('notAGrade')}</p>`}
 ${numbersCard(view)}
-${map && html`<figure class="hosp__map">${map.svg}${map.caption && html`<figcaption class="small muted">${map.caption}</figcaption>`}</figure>`}
+${at('c') && html`<figure class="hosp__map">${map.svg}${caption('small muted')}</figure>`}
 <p class="small muted">${fillKeep('placeData', { date: isoDate(source.pdcReleased) }, ['date'])}</p>
 </section>
 </div>
+${at('d') && html`<figure class="hosp__strip">${map.svg}<figcaption><span class="hosp__strip-place">${fill('mapStrip', { city: view.city, state: STATE_NAMES[view.state] ?? view.state })}</span> ${map.caption}</figcaption></figure>`}
 <div class="prose">
 ${noteSentences(view).map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}

@@ -16,7 +16,8 @@ import { compareDefault } from './hospital-table.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
 import { dictionaryPage } from './pages/dictionary.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
-import { hospitalPage } from './pages/hospital.js';
+import { MAP_PLACEMENTS, hospitalPage } from './pages/hospital.js';
+import { previewIndex } from './pages/preview.js';
 import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
@@ -96,10 +97,44 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   });
 
   const ranges = measureRanges(model);
-  for (const { hospital, view } of pages) {
-    const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, searchUrl, shapes, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range } }) });
+  const render = ({ hospital, view }, robots, mapPlacement) => hospitalPage({ view, source, robots, assets, ranges, searchUrl, shapes, careSource: careCompareSource, masterFy, mapPlacement, whatif: { hospital, model, estimate, range } });
+  for (const p of pages) {
+    const robots = robotsFor({ env, released, eligible: p.view.scored });
+    ctx.emit({ path: p.view.path, robots, text: render(p, robots, MAP_PLACEMENT) });
   }
+  // A preview build (no PP_ENV) only: sample hospital pages in each map placement, and an index of them; never in
+  // a production build, always noindex, never in the sitemap.
+  if (!env) emitPreviews(ctx, previewSamples(pages), render);
+}
+
+// The map placement every hospital page is built with (pages/hospital.js MAP_PLACEMENTS).
+export const MAP_PLACEMENT = 'c';
+const PREVIEW_ROOT = '/preview/';
+
+// One hospital page per kind the owner compares placements on, picked by property in CCN order: a scored cut, a
+// scored no-cut, Maryland, and a scored hospital in Alaska or Hawaii (whose maps fit far from the mainland). A kind
+// the data lack is left out.
+export function previewSamples(pages) {
+  const byCcn = [...pages].sort((x, y) => (x.view.ccn < y.view.ccn ? -1 : 1));
+  const kinds = [
+    (v) => v.status === 'yes',
+    (v) => v.status === 'no',
+    (v) => v.status === 'maryland',
+    (v) => v.scored && (v.state === 'AK' || v.state === 'HI'),
+  ];
+  return kinds.map((kind) => byCcn.find((p) => kind(p.view))).filter(Boolean);
+}
+
+function emitPreviews(ctx, samples, render) {
+  const links = [];
+  for (const placement of MAP_PLACEMENTS) {
+    for (const p of samples) {
+      const path = `${PREVIEW_ROOT}map-${placement}${p.view.path}`;
+      ctx.emit({ path, robots: 'noindex', text: render(p, 'noindex', placement) });
+      links.push({ placement, path, view: p.view });
+    }
+  }
+  ctx.emit({ path: PREVIEW_ROOT, robots: 'noindex', text: previewIndex(links, ctx.assets) });
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).

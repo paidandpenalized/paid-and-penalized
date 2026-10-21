@@ -29,8 +29,29 @@
 .hosp__note { font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
 .hosp__nums { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
 .hosp__nums .field__value--sm .nw { font-variant-numeric: tabular-nums; }
-.hosp__map { display: grid; gap: 6px; margin: 0; }
+.hosp__map { display: grid; align-content: start; gap: 6px; margin: 0; }
 .hosp__map .chart { max-width: 22rem; }
+/* The state map's placements (pages/hospital.js MAP_PLACEMENTS); c, under the stamp, needs nothing more.
+   a: a field of the record card, beside Location. */
+.hosp__map-field .chart { max-width: 16rem; margin-top: 4px; }
+/* b: beside the record card. From 1180px a third column between it and the verdict; from 980px under the card, the
+   verdict beside both; under 980px stacked, the record, the map, the verdict. */
+@media (min-width: 980px) {
+  .hosp__top--b > .hosp__map--side { grid-column: 1; }
+  .hosp__top--b > .hosp__verdict { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (min-width: 1180px) {
+  .hosp__top--b { grid-template-columns: minmax(0, 3fr) minmax(0, 1.6fr) minmax(0, 2fr); }
+  .hosp__top--b > .hosp__map--side { grid-column: 2; grid-row: 1; }
+  .hosp__top--b > .hosp__verdict { grid-column: 3; grid-row: 1; }
+}
+/* d: a full-width strip under the top, the outline small at its left and one line beside it. */
+.page--article > .hosp__strip { grid-column: full; }
+.hosp__strip { display: flex; align-items: center; gap: 12px 24px; margin: 0; padding-block: 12px; border-block: var(--rule) solid var(--ink); }
+.hosp__strip .chart { flex: none; width: 10rem; }
+.hosp__strip figcaption { max-width: none; font-size: var(--fs-sm); color: var(--ink-2); }
+.hosp__strip-place { color: var(--ink); font: 400 var(--fs-md)/1.3 var(--font-display); }
+@media (max-width: 480px) { .hosp__strip .chart { width: 7rem; } }
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
   .hosp__none span { background: Canvas; color: CanvasText; }

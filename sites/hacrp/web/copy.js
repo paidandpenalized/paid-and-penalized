@@ -284,6 +284,17 @@ export const COPY = {
   mapAddress: { text: "Placed from its street address (U.S. Census Bureau Geocoder).", claim: null },
   mapZip: { text: 'Placed approximately, at the center of its ZIP code.', claim: null },
   mapCounty: { text: 'Placed approximately, at the center of its county.', claim: null },
+  // The map as a record field (placement a), and the strip's one line (placement d).
+  fieldMap: { text: 'On the map', claim: null },
+  mapStrip: { text: '{city}, {state}.', claim: null },
+  // The preview index (a preview build only, never the site): the map's four placements on sample hospital pages.
+  previewTitle: { text: 'State map placements: previews', claim: null },
+  previewIntro: { text: 'Sample hospital pages, each built with the state map in one of four places. A preview build only: these pages are never indexed or published.', claim: null },
+  previewLink: { text: '{name}, {state}', claim: null },
+  previewA: { text: 'a. In the record card, beside Location', claim: null },
+  previewB: { text: 'b. Beside the record card, a third column on wide screens', claim: null },
+  previewC: { text: 'c. Under the stamp (the default)', claim: null },
+  previewD: { text: 'd. A full-width strip under the top', claim: null },
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
