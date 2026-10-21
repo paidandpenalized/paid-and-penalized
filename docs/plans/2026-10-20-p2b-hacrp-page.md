@@ -99,15 +99,15 @@ archives; past-cutoff ticks on the ramp wait for it), the hub's directory and se
 **Interfaces:** Produces `parseFootnotes(csvText: string) → Map<string, string>` (code → CMS text) and
 `footnoteText(map, code) → string` (throws `RangeError` naming the code when absent).
 
-- [ ] Copy the file the session already downloaded (3,456 bytes, SHA-256
+- [x] Copy the file the session already downloaded (3,456 bytes, SHA-256
   `5214e1468fb04c5cdeac8920f2c446cccaa65e2f6f929424cd228042a52d963e`) from the copy the session downloaded (path given in the task prompt). Manifest entry:
   `id: "y9us-9xdf"`, title "Footnote Crosswalk (Provider Data Catalog)", `downloadUrl`
   `https://data.cms.gov/provider-data/sites/default/files/resources/f29bb7c812e242f6edfef0a4b7d0eaca_1760630713/Footnote_Crosswalk.csv`,
   `landingPage` `https://data.cms.gov/provider-data/dataset/y9us-9xdf`, `pdcModified` `2025-09-18`, `pdcReleased`
   `2026-08-13`, `retrieved` `2026-10-20`.
-- [ ] Failing tests: the pinned file parses; every footnote code in the emitted HACRP file (value, z, total and
+- [x] Failing tests: the pinned file parses; every footnote code in the emitted HACRP file (value, z, total and
   payment-reduction footnotes, including `a`) has text; `footnoteText(map, 'zz')` throws.
-- [ ] Implement with `parseCsv`; trim nothing inside the text. Run `npm test` and the Python suite (its pin test reads
+- [x] Implement with `parseCsv`; trim nothing inside the text. Run `npm test` and the Python suite (its pin test reads
   the manifest). Commit.
 
 ### Task 2: dependencies, build orchestrator, assets, local server, CI
@@ -132,11 +132,11 @@ archives; past-cutoff ticks on the ramp wait for it), the hub's directory and se
 - `make build` → `node pipeline/site/build.js`; `make serve` → `node pipeline/site/serve.js` (node:http, static from
   `dist/`, `127.0.0.1:8080`, directory → `index.html`, unknown path → `404.html` with status 404).
 
-- [ ] **Install (flagged and approved 2026-10-20):** `npm install --save-dev --save-exact esbuild@0.28.2 d3-scale@4.0.2
+- [x] **Install (flagged and approved 2026-10-20):** `npm install --save-dev --save-exact esbuild@0.28.2 d3-scale@4.0.2
   d3-array@3.2.4 d3-format@3.1.2`. Run `npm audit` and record the result in the commit message.
-- [ ] Failing test: `build({ outDir: tmp })` writes `assets/*.css` containing `--pen` and the six font files; no file
+- [x] Failing test: `build({ outDir: tmp })` writes `assets/*.css` containing `--pen` and the six font files; no file
   under `web/` other than `tokens.css` matches `/#[0-9a-fA-F]{3,8}\b/` in CSS or JS (charts can't add a color).
-- [ ] Implement. CI: add `npm ci` before `npm test` and a `make build` step after it; keep SHA pins, read-only token,
+- [x] Implement. CI: add `npm ci` before `npm test` and a `make build` step after it; keep SHA pins, read-only token,
   no `${{ }}` in `run:`. `tools/test/workflow.test.js` must still pass. Commit.
 
 ### Task 3: page kit: escaping, formatting, layout
@@ -156,11 +156,11 @@ archives; past-cutoff ticks on the ramp wait for it), the hub's directory and se
   the byline; a theme toggle button), `<main id="main">` with a skip link, and the footer (Global Constraints).
 - `theme.js`: toggles `data-theme` on `<html>` for this visit only; no storage of any kind.
 
-- [ ] Failing tests: `html\`<p>${'<a & "b">'}</p>\`` renders escaped; `jsonScript` output contains no `</script`
+- [x] Failing tests: `html\`<p>${'<a & "b">'}</p>\`` renders escaped; `jsonScript` output contains no `</script`
   even for a value holding it; `cmsText('-0.2580') === '−0.2580'`; `longDate` and `isoDate` as above; `page()`
   output has exactly one `<h1>`-free header, one `<main>`, the canonical URL, and the not-affiliated sentence;
   `theme.js` source contains no `localStorage`, `sessionStorage` or `cookie`.
-- [ ] Implement; commit.
+- [x] Implement; commit.
 
 ### Task 4: acceptance A1 as a build gate
 
@@ -174,9 +174,9 @@ c: { [id]: { maxError, tagged } }, info: { pctAllScored, pctDecided } }`:
 - (c) copies `estimate` (informational; the emitted file already holds it);
 - `info`: `percentileInc` at 0.75 over all scored totals and over Yes/No totals (printed, never used).
 
-- [ ] Failing tests: on the pinned file `ok === true`, `b.mismatches === 0`; on a synthetic set where one "No" row is
+- [x] Failing tests: on the pinned file `ok === true`, `b.mismatches === 0`; on a synthetic set where one "No" row is
   moved above the line, `ok === false` and the mismatch names that synthetic CCN.
-- [ ] Implement; the build (Task 6) throws when `!ok` and prints `a`, `b` and `info`. Commit.
+- [x] Implement; the build (Task 6) throws when `!ok` and prints `a`, `b` and `info`. Commit.
 
 ### Task 5: the hospital view model and its sentences
 
@@ -204,14 +204,14 @@ c: { [id]: { maxError, tagged } }, info: { pctAllScored, pctDecided } }`:
 - `sentences.js`: `summary(view, model) → string[]` (the plain-language top layer: what CMS reports, then why, in
   copy keys), `smallNumber(view) → string | null`, `distanceSentence(view, model) → string | null`.
 
-- [ ] Failing copy-gate test: no `COPY` text and no `hub/copy.js` text contains a digit; every non-null `claim` matches
+- [x] Failing copy-gate test: no `COPY` text and no `hub/copy.js` text contains a digit; every non-null `claim` matches
   `/^HACRP-\d{2}$/` (Task 14 adds the check that each resolves to a verified row of `sites/hacrp/CLAIMS.md`).
-- [ ] Failing view tests on synthetic hospitals, one per status, plus: a one-measure hospital (`oneMeasure`); a
+- [x] Failing view tests on synthetic hospitals, one per status, plus: a one-measure hospital (`oneMeasure`); a
   hospital whose largest z is CMS-assigned (`largest` names a different measure, or null when all are assigned);
   total footnote on a scored hospital (shown); a tagged measure (`tagged`, `maxErrorText` from `estimate`).
-- [ ] Failing sentence snapshot tests: the exact `summary()` output for each status and the edge cases above, written
+- [x] Failing sentence snapshot tests: the exact `summary()` output for each status and the edge cases above, written
   inline in the test. Sentences say "CMS reports …" for CMS values and "this site recomputes …" for the distance.
-- [ ] Implement; commit.
+- [x] Implement; commit.
 
 ### Task 6: hospital pages, program page, hub stubs, sitemap
 
@@ -241,18 +241,18 @@ write `robots.txt` and `sitemap.xml`).
   in Task 14).
 - Robots per Global Constraints; JSON-LD `WebPage` with `isBasedOn` the CMS dataset URL on hospital pages.
 
-- [ ] Failing tests: the generator on the pinned data writes 3,055 hospital pages plus `/hacrp/`; every page has one
+- [x] Failing tests: the generator on the pinned data writes 3,055 hospital pages plus `/hacrp/`; every page has one
   `<h1>`; a no-score page carries `noindex` even with `env: 'production'` and `released: true`; with
   `released: false` every page carries `noindex` and `sitemap.xml` lists none; the Maryland page shows footnote `a`'s
   text and no distance; the "Yes with no score" row (picked by property) shows CMS's decision and footnote and no
   what-if section; no page contains the hyphen-minus before a digit inside a CMS value cell.
-- [ ] Implement; `make build && make serve`; look at a Yes, a No, a Maryland and a no-score page in Chrome (light and
+- [x] Implement; `make build && make serve`; look at a Yes, a No, a Maryland and a no-score page in Chrome (light and
   dark, 375px wide). Commit.
 
 ### Checkpoint M1
-- [ ] `/simplify` on the M1 diff → `make test && make build`.
-- [ ] `/code-review` on the M1 diff; fix Critical/Important.
-- [ ] `/security-review` (CMS text and names rendered into HTML; JSON in script). Minors go in Amendments.
+- [x] `/simplify` on the M1 diff → `make test && make build`.
+- [x] `/code-review` on the M1 diff; fix Critical/Important.
+- [x] `/security-review` (CMS text and names rendered into HTML; JSON in script). Minors go in Amendments.
 
 ## Milestone 2: the what-if (DES-29)
 
@@ -365,9 +365,9 @@ totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.bound
   hatched } }, ramp })` with `states.js` holding the tile grid layout (50 states, DC, PR).
 - Colors only via `var(--…)` and CSS classes; hatch via an SVG `<pattern>` using `currentColor`.
 
-- [ ] Failing tests: each component's output for fixed synthetic input matches an inline snapshot; no output contains
+- [x] Failing tests: each component's output for fixed synthetic input matches an inline snapshot; no output contains
   a hex color; `figure` always has a table with every plotted value; `histogram` puts each value in exactly one bin.
-- [ ] Implement; commit.
+- [x] Implement; commit.
 
 ### Task 12: figures on the pages, the hospital table and state view
 
@@ -383,7 +383,7 @@ totalFromZ(zs)` rounded to 4 dp, `paymentReduction = classify(total, model.bound
   (name, city, state, Total HAC Score as CMS text, decision; default state then name; reader sort; state filter
   bound to `#state=XX`; name search) rendered by `client/program.js` from an embedded compact JSON array; without
   JavaScript, a link to the CSV.
-- [ ] Failing tests: program page has the stepper with numbers equal to `medianHospital`'s; `#state=` decoding accepts
+- [x] Failing tests: program page has the stepper with numbers equal to `medianHospital`'s; `#state=` decoding accepts
   only a state code present in the data; the table JSON's default order is state then name; no figure takeaway
   contains a hand-typed digit (all from data). Implement; build; look in Chrome. Commit.
 
@@ -399,7 +399,7 @@ text verbatim; `schema_version` stated in the dictionary). Written to `dist/data
 `DATA-DICTIONARY.md` beside it (ARCH-49). Citation block: site, page title, FY, canonical URL, the source line, and a
 Copy button.
 
-- [ ] Failing tests: row count equals the file's; parsing the CSV back with `parseCsv` round-trips every name; a
+- [x] Failing tests: row count equals the file's; parsing the CSV back with `parseCsv` round-trips every name; a
   synthetic name `=SUM(A1)` is written `'=SUM(A1)`; `-0.2580` stays `-0.2580`; every column is documented in the
   dictionary (test reads both). Implement; commit.
 
@@ -414,15 +414,15 @@ Copy button.
   be checked at a primary source is marked `unverified`, and copy may not reference it.
 - Live checks are network reads by the session (not the build): each link-out and citation URL returns 200 (or its
   archive copy does); record the date.
-- [ ] Failing test: every `claim` in `COPY` and in `constants.js` resolves to a row whose status isn't `unverified`
+- [x] Failing test: every `claim` in `COPY` and in `constants.js` resolves to a row whose status isn't `unverified`
   and whose source is `https://`. Implement; commit.
 
 ### Checkpoint M3 and final gate
-- [ ] `/simplify` on the M3 diff → tests; `/code-review`; `/security-review` (CSV, table JSON, `#state=`).
-- [ ] Final gate on the whole branch: `/simplify` → `make test && make build`; `/code-review`; `/security-review`;
+- [x] `/simplify` on the M3 diff → tests; `/code-review`; `/security-review` (CSV, table JSON, `#state=`).
+- [x] Final gate on the whole branch: `/simplify` → `make test && make build`; `/code-review`; `/security-review`;
   `/verify` (fresh clone: `npm ci && make test && make build && make serve`, then Chrome: hospital pages for each
   status, the what-if end to end, a shared link, the program page figures and table, keyboard, dark mode, 375px).
-- [ ] Push to the private remote; CI green.
+- [x] Push to the private remote; CI green.
 
 ## Amendments made during execution
 
@@ -490,3 +490,45 @@ Copy button.
   review; ramp label widths are estimated (7 px per character); the dom tests use a string-slice markup parser;
   claim id HACRP-14 (the SIR definition) and the what-if copy's claim ids resolve in Task 14.
 
+
+### Milestone 3 (2026-10-20/21)
+- **Chart kit** (`web/charts/`): `svg.js` holds the shared frame, marks (a `<title>` tooltip, `data-value`, a hit area
+  larger than the mark), the hatch pattern and bar paths. `figure()` refuses to build when a plotted value is missing
+  from its table, so "every plotted value is in the table" is a build failure, not a convention. `dotRanges` draws
+  the per-measure small multiples in one SVG. Tick labels use `--ink-2` (`--ink-3` is 4.47:1 on paper, under 4.5:1).
+  New tokens `--pen-seq-1..5` (light and dark) passed the palette validator; step 1 is about 2:1 against the
+  surface, under the chart standard's 3:1 for marks, and the tile text, legend and table carry the values.
+- **One CSV writer:** `toCsv(columns, rows)` in `engine/js/csv.js` (RFC 4180, CRLF; text cells starting with `=`, `+`,
+  `-`, `@`, a tab or CR get a leading `'`; numeric cells are written raw only when they read as a number). The
+  browser figure download and the dataset CSV both use it.
+- **Interaction** (chart standard §6, kept small): `web/client/figure.js` adds table sort (`aria-sort`), the CSV
+  download, and a tooltip by hover, tap (kept until dismissed) or arrow keys, with a polite readout. Pages list the
+  figure and citation scripts themselves; `page()` no longer reads the body to decide.
+- **Program page:** the formula stepper on the median hospital shows mean and SD at the fewest decimals (4 or more)
+  at which every row's z-score reproduces from its own cells; the static ramp is its last step. The histogram's line
+  and Figure 1's line share one meaning and one tooltip (CMS's highest No and lowest Yes). The state tile grid draws
+  50 states, DC and PR; a code with no hospitals in CMS's file is hatched and labelled; a code with no tile (a
+  territory) goes in the table with a note under the grid. Shading steps are display constants (`TILE_STEPS_PCT`),
+  like the what-if ramp's percentiles.
+- **Hospital table:** reads the existing hashed hospitals asset (no second embedded copy; the asset's order is the
+  table's default, state then name); sort, a state filter bound to `#state=XX` (only codes in the data), a name
+  search, a debounced polite row count, "Show all", and a retry button if the asset fails to load.
+- **Dataset CSV** at `/data/hacrp/fy{fy}/hacrp-hospitals.csv` with `fiscal_year` after `ccn`, and
+  `DATA-DICTIONARY.md` beside it, filled from the pinned manifest. `emit` refuses a case-folded duplicate path and
+  capitals in a page path. Citation block with a Copy button on every page.
+- **Claims register:** 19 rows, each quote verbatim and at most 25 words, checked 2026-10-20 at primary sources (CMS
+  program page and PDFs, QualityNet FAQ, CMS's footnote crosswalk, CDC NHSN, 42 U.S.C. 1395ww(p) at Cornell LII).
+  The copy gate fails on a missing, unverified, non-https or over-long row and on an orphan row. Two sentences were
+  reworded so their claims match the sources (`lineRelative`; the program-measures sentence split in two).
+- **Browser support:** bundles target ES2020; a test bundles every entry and fails on newer built-ins
+  (`Object.hasOwn`, `replaceAll`, `.at(`, …).
+- **Reviews:** per-task reviews (Tasks 11–13 one fix round each, Task 14 two); M3 `/simplify` (4 angles), `/code-review`
+  (10 findings, 9 fixed), `/security-review` (no findings); final gate on the whole branch: `/simplify` (2 agents,
+  cross-milestone), `/code-review` (10 findings, 9 fixed), `/security-review` (no findings), `/verify` in a fresh
+  clone (`npm ci && make test && make build`, then Chrome: each hospital status, the what-if, shared and tampered
+  links, figures, the table, keyboard, both themes, 375px).
+- **Minor items left (M3):** build-only copy ships in each client bundle (~3.5 KB gzipped; with the size budget); two
+  ramp drawers (the what-if's and the static figure's) share only geometry; the histogram line's hit strip overlaps
+  its neighbours; QualityNet pages answer scripts with an empty shell, so two claim rows were checked in a browser;
+  the hospital-table "Show all" renders every row at once; the site-wide items for the next site (one hospital
+  lookup, one fragment grammar) wait for site two.
