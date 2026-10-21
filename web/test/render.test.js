@@ -77,6 +77,13 @@ test('longDate and isoDate spell the month out and reject non-dates', () => {
   assert.throws(() => isoDate('August 13, 2026'), RangeError);
 });
 
+test("page: og:type is website on the site's root and each program's hub page, article on every other page", () => {
+  const type = (path) => /<meta property="og:type" content="(\w+)">/.exec(page({ ...PAGE, path }))[1];
+  assert.equal(type('/'), 'website');
+  for (const { path } of Object.values(SITE.sites)) assert.equal(type(path), 'website', path);
+  for (const path of ['/hacrp/hospital/990001/', '/hacrp/data/', '/methods/', '/404.html']) assert.equal(type(path), 'article', path);
+});
+
 test('page: one header without an h1, one main, the body, canonical, skip link, byline and footer sentences', () => {
   const out = page(PAGE);
   assert.match(out, /^<!doctype html>\n<html lang="en">/);
@@ -90,8 +97,8 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="canonical" href="${SITE.origin}/hacrp/">`));
   assert.ok(out.includes('<title>A title</title>'));
   assert.ok(out.includes('<meta name="description" content="A description">'));
-  // The share card: the same title, description and canonical URL, text only.
-  for (const tag of ['<meta property="og:type" content="article">', `<meta property="og:site_name" content="${SITE.name.replace('&', '&amp;')}">`,
+  // The share card: the same title, description and canonical URL, text only; a program's hub page is a website.
+  for (const tag of ['<meta property="og:type" content="website">', `<meta property="og:site_name" content="${SITE.name.replace('&', '&amp;')}">`,
     '<meta property="og:title" content="A title">', '<meta property="og:description" content="A description">',
     `<meta property="og:url" content="${SITE.origin}/hacrp/">`, '<meta name="twitter:card" content="summary">']) assert.ok(out.includes(tag), tag);
   assert.doesNotMatch(out, /og:image|twitter:image/);

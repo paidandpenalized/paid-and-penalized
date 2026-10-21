@@ -35,8 +35,10 @@ const footer = html`<footer class="foot">
 </footer>`;
 
 // A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
-// title, description and canonical URL, as text only (no image). Harmless on a noindex page.
-const socialTags = ({ title, description, url }) => html`<meta property="og:type" content="article">
+// title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page
+// and each program's hub page are a website; every other page is an article.
+const WEBSITES = new Set(['/', ...Object.values(SITE.sites).map((s) => s.path)]);
+const socialTags = ({ title, description, url, type }) => html`<meta property="og:type" content="${type}">
 <meta property="og:site_name" content="${SITE.name}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
@@ -63,7 +65,7 @@ export function page({ title, description, path, robots, body, scripts = [], jso
 <meta name="description" content="${description}">
 <link rel="canonical" href="${url}">
 ${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${socialTags({ title, description, url })}
+${socialTags({ title, description, url, type: WEBSITES.has(path) ? 'website' : 'article' })}
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
