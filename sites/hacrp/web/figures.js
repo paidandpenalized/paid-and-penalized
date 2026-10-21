@@ -126,6 +126,8 @@ export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) 
   const wrong = scores.find((s) => s.yes !== (s.total >= lowestYes));
   if (wrong) throw new RangeError(`scoresFigure: a ${wrong.yes ? 'Yes' : 'No'} decision at ${wrong.total} is on the wrong side of CMS's lowest Yes score, ${lowestYes}`);
   const bins = histogramBins(scores.map((s) => s.total), BINS, lowestYes);
+  const yes = scores.filter((s) => s.yes).length;
+  const no = scores.length - yes;
   const decisionOf = (b) => (b.count === 0 ? '' : flagText(b.above ? 'Yes' : 'No'));
   const at = (v) => decimal(v, DP);
   const tip = (b) => {
@@ -142,9 +144,11 @@ export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) 
   rows.splice(firstAbove < 0 ? rows.length : firstAbove, 0, lineRow);
   return figure({
     n, source, alt: t('figScoresAlt'), csvName: `hacrp-fy${fy}-scores`,
-    takeaway: fill('figScoresTakeaway', { yes: count(scores.filter((s) => s.yes).length), decided: count(scores.length) }),
+    takeaway: fill('figScoresTakeaway', { yes: count(yes), decided: count(scores.length) }),
     svg: histogram({
       binned: bins, boundary: lowestYes, markLabel: lineName, markTip: fill('line', boundaryText), markValue: [highestNo, lowestYes], tip,
+      xTitle: t('figColScore'), yTitle: t('figColHospitals'),
+      groups: { below: fill('figScoresNotCut', { n: count(no) }), above: fill('figScoresCut', { n: count(yes) }) },
     }),
     table: {
       columns: [{ name: t('figColFrom'), numeric: true }, { name: t('figColTo'), numeric: true }, { name: t('figColHospitals'), numeric: true }, { name: t('figColDecision') }],

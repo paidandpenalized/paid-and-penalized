@@ -191,6 +191,24 @@ test('histogram fills bins above the line in pen and the rest neutral, and annot
   assert.ok(s.includes(">CMS&#39;s line</text>"));
 });
 
+test('histogram: optional axis titles, and a direct label on each side of the line that never sits on a column', () => {
+  const s = String(histogram({ ...HIST, xTitle: 'Score <x>', yTitle: 'Count', groups: { below: 'Below: 5', above: 'Above: 4' } }));
+  assert.match(s, /viewBox="0 0 360 216"/, 'room under the axis for its title');
+  assert.ok(s.includes('class="chart-axis__title" x="192" y="208" text-anchor="middle">Score &lt;x&gt;</text>'));
+  assert.ok(s.includes('class="chart-axis__title" x="0" y="14" text-anchor="start">Count</text>'));
+  const labels = [...s.matchAll(/<text class="chart-label chart-label--halo" x="([\d.]+)" y="([\d.]+)" text-anchor="(start|end)">([^<]+)<\/text>/g)];
+  assert.deepEqual(labels.map((m) => m[4]), ['Below: 5', 'Above: 4']);
+  // Each label's baseline is above every column under its estimated span.
+  const cols = [...s.matchAll(/<rect class="chart-hit" x="([\d.]+)" y="[\d.]+" width="([\d.]+)"[^>]*\/><path class="chart-col[^"]*" d="M[\d.]+ [\d.]+V([\d.]+)/g)]
+    .map((m) => ({ l: Number(m[1]), r: Number(m[1]) + Number(m[2]), top: Number(m[3]) - 4 }));
+  for (const [, x, y, anchor, body] of labels) {
+    const w = body.length * 7;
+    const [l, r] = anchor === 'end' ? [Number(x) - w, Number(x)] : [Number(x), Number(x) + w];
+    for (const c of cols.filter((c) => c.r > l && c.l < r)) assert.ok(Number(y) < c.top, `${body} clears the column at ${c.l}`);
+  }
+  assert.ok(!String(histogram(HIST)).includes('chart-axis__title'), 'no titles unless given');
+});
+
 test('the tile grid holds the 50 states, DC and PR, one cell each', () => {
   const codes = ('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK '
     + 'OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC PR').split(' ');

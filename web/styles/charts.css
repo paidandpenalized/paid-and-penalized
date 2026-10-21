@@ -38,6 +38,9 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-grid { stroke: var(--line); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-label { fill: var(--ink); font-weight: 600; }
+/* A label set over marks keeps a paper halo, so a column never crosses its letters. */
+.chart-label--halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+.chart-axis__title { fill: var(--ink-2); font-size: 11px; }
 .chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .chart-legend__label { fill: var(--ink); font-size: 11px; }
 

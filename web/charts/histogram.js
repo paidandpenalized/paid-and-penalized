@@ -8,6 +8,9 @@
 //   format   a bin edge -> text; tip(bin) -> a column's tooltip (default: "lo – hi: count")
 //   markTip  the boundary's tooltip, and markValue the value or values it stands for (the caller's table holds them):
 //            the boundary is then a mark; without markTip it is drawn but is not one
+//   xTitle, yTitle   optional axis titles: under the x axis, and over the top of the y axis
+//   groups   optional { below, above }: a direct label for each side of the boundary (e.g. its count), set inside the
+//            plot beside the boundary where the columns leave room, else at the plot's outer edge, on a paper halo
 import { bin, tickStep } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { count } from '../render/format.js';
@@ -16,8 +19,13 @@ import { labelAt } from '../whatif/marks.js';
 import { axis } from './axis.js';
 import { GAP, MAX_THICKNESS, WIDTH, columnPath, frame, mark, plain, r2, text } from './svg.js';
 
-const HEIGHT = 200;
+const PLOT_H = 200;
 const M = { top: 30, right: 12, bottom: 26, left: 36 };
+// Room under the x axis for its title.
+const TITLE_H = 16;
+// Group labels: their estimated width per character (12px, semibold) and the clearance kept over a column.
+const CHAR_W = 7;
+const CLEAR = 6;
 // Edges are boundary + k × step; rounding to 12 places drops float noise such as 0.30000000000000004.
 const edge = (x) => Number(x.toFixed(12));
 
@@ -41,21 +49,44 @@ export function histogramBins(values, bins, boundary) {
   return out.map((b) => ({ x0: b.x0, x1: b.x1, count: b.length, above: b.x0 >= boundary }));
 }
 
-export function histogram({ values, bins = 20, binned = null, boundary, markLabel, markTip = null, markValue = null, width = WIDTH, format = plain, tip }) {
+// Where a group label goes: the first candidate span whose columns leave room under it, else the last candidate.
+// Each candidate is { x, anchor }; returns { x, y, anchor }.
+function placeGroup(text, candidates, columns, top) {
+  const w = text.length * CHAR_W;
+  let pick = null;
+  for (const c of candidates) {
+    const [l, r] = c.anchor === 'end' ? [c.x - w, c.x] : [c.x, c.x + w];
+    const under = columns.filter((col) => col.x1 > l && col.x0 < r);
+    const highest = Math.min(...under.map((col) => col.top), Infinity);
+    const y = Math.min(highest - CLEAR, top + 40);
+    pick = { ...c, y: Math.max(y, top + 12) };
+    if (y >= top + 12) return pick;
+  }
+  return pick;
+}
+
+export function histogram({ values, bins = 20, binned = null, boundary, markLabel, markTip = null, markValue = null, width = WIDTH, format = plain, tip, xTitle = null, yTitle = null, groups = null }) {
   const data = binned ?? histogramBins(values, bins, boundary);
   const tipOf = tip ?? ((b) => `${format(b.x0)} – ${format(b.x1)}: ${count(b.count)}`);
   const x = scaleLinear().domain([data[0].x0, data[data.length - 1].x1]).range([M.left, width - M.right]);
   const most = Math.max(...data.map((b) => b.count));
-  const y = scaleLinear().domain([0, most]).nice().range([HEIGHT - M.bottom, M.top]);
+  const y = scaleLinear().domain([0, most]).nice().range([PLOT_H - M.bottom, M.top]);
   const yTicks = y.ticks(Math.min(4, most)).filter(Number.isInteger);
-  const base = HEIGHT - M.bottom;
+  const base = PLOT_H - M.bottom;
+  const height = PLOT_H + (xTitle ? TITLE_H : 0);
   const bx = r2(x(boundary));
   const t = (x(boundary) - M.left) / (width - M.left - M.right);
   const { anchor, dx } = labelAt(t);
   const line = html`<line class="chart-boundary" x1="${bx}" x2="${bx}" y1="${M.top - 12}" y2="${base}"/>`;
+  const columns = data.map((b) => ({ x0: x(b.x0), x1: x(b.x1), top: y(b.count), above: b.above }));
+  const [left, right] = [M.left + 4, width - M.right - 4];
+  const groupLabel = (body, candidates) => {
+    const p = placeGroup(body, candidates, columns, M.top);
+    return text({ x: p.x, y: p.y, anchor: p.anchor, cls: 'chart-label chart-label--halo', body });
+  };
 
   return frame({
-    kind: 'histogram', width, height: HEIGHT, body: html`<g transform="translate(${M.left} 0)">${axis({ scale: y, orient: 'left', ticks: yTicks, format: count, grid: width - M.left - M.right })}</g>
+    kind: 'histogram', width, height, body: html`<g transform="translate(${M.left} 0)">${axis({ scale: y, orient: 'left', ticks: yTicks, format: count, grid: width - M.left - M.right })}</g>
 ${data.map((b) => {
     const slot = x(b.x1) - x(b.x0);
     const w = Math.max(1, Math.min(MAX_THICKNESS, slot - GAP));
@@ -68,6 +99,10 @@ ${data.map((b) => {
 `;
   })}<g transform="translate(0 ${base})">${axis({ scale: x, orient: 'bottom', ticks: 5 })}</g>
 ${markTip === null ? line : mark({ tip: markTip, value: markValue, hit: { x: bx - 6, y: M.top - 12, width: 12, height: base - M.top + 12 }, body: line })}
-${text({ x: bx, y: M.top - 16, anchor, dx, cls: 'chart-label', body: markLabel })}`,
+${text({ x: bx, y: M.top - 16, anchor, dx, cls: 'chart-label', body: markLabel })}${yTitle ? html`
+${text({ x: 0, y: M.top - 16, anchor: 'start', cls: 'chart-axis__title', body: yTitle })}` : ''}${xTitle ? html`
+${text({ x: (M.left + width - M.right) / 2, y: base + 34, cls: 'chart-axis__title', body: xTitle })}` : ''}${groups ? html`
+${groupLabel(groups.below, [{ x: bx - CLEAR, anchor: 'end' }, { x: left, anchor: 'start' }])}
+${groupLabel(groups.above, [{ x: bx + CLEAR, anchor: 'start' }, { x: right, anchor: 'end' }])}` : ''}`,
   });
 }

@@ -444,6 +444,9 @@ export const COPY = {
   figScoresTip: { text: "{count} hospitals scored from {from} to {to}; CMS's decision for each: {decision}", claim: null },
   figScoresTipOne: { text: "One hospital scored from {from} to {to}; CMS's decision: {decision}", claim: null },
   figScoresTipNone: { text: 'No hospital scored from {from} to {to}', claim: null },
+  // The histogram's direct labels: hospitals on each side of CMS's line.
+  figScoresCut: { text: 'Cut: {n}', claim: null },
+  figScoresNotCut: { text: 'Not cut: {n}', claim: null },
   figColFrom: { text: 'Scores from', claim: null },
   figColTo: { text: 'To', claim: null },
   figColHospitals: { text: 'Hospitals', claim: null },
