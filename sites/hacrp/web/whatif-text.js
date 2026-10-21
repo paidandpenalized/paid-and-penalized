@@ -231,6 +231,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   const needed = hospital.paymentReduction === 'Yes' || hospital.paymentReduction === 'too-close';
   const hai = words.counts ? haiPeriod(hospital.periods.hai) : null;
   const slide = { name, fy, source, baseline };
+  const printAt = (fragment) => fill('whatifPrint', { url: SITE.origin + path + fragment });
   return {
     heading: fill('whatifHeading'),
     label: words.label && fill(words.label),
@@ -308,7 +309,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       result: countText,
     },
     held: fill('whatifHeld'),
-    print: fill('whatifPrint', { url: SITE.origin + path }),
+    // The printed link: the page's, or with a changed what-if's fragment (#whatif&…, as share writes it) after it.
+    print: printAt(''),
+    printAt,
     standing: fill('whatifStanding'),
   };
 }

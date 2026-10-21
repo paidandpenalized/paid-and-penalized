@@ -261,7 +261,7 @@ ${wrapBars && wrapBars(bars(vm, words, texts, true))}
 </div>
 </div>
 ${!wrapBars && bars(vm, words, texts)}
-<p class="small print-only">${texts.print}</p>
+<p class="small print-only" data-wi="print">${texts.print}</p>
 <p class="small muted">${texts.rampLegend}</p>
 <p class="small muted">${texts.held}</p>
 <p class="standing">${texts.standing}</p>

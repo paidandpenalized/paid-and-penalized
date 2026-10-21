@@ -11,6 +11,7 @@ import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { html } from '../../../web/render/html.js';
+import { SITE } from '../../../web/site.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { textsFor as fixtureTexts } from './fixtures.js';
 import { largestPart } from '../web/whatif-text.js';
@@ -197,6 +198,29 @@ test('the build\'s largest part and the what-if\'s use one rule: the largest pos
   const parts = [p(false, 0.1), p(true, 0.9), p(false, 0.3), p(false, 0.3)];
   assert.equal(largestPart(parts), parts[2], 'the first of a tie; the assigned one skipped');
   assert.equal(largestPart([p(false, -0.2), p(false, 0), p(false, null)]), null);
+});
+
+test('the printed line names the shareable link: with a changed what-if\'s fragment, as share writes it; unchanged, the page\'s', () => {
+  const page = `${SITE.origin}${PATH}`;
+  const stub = windowStub();
+  const root = mount(true, stub);
+  const print = () => q(root, 'print').textContent;
+  assert.equal(print(), `Interactive what-if at ${page}`);
+  type(field(root, 'MRSA', 'number'), '1.4');
+  assert.equal(print(), `Interactive what-if at ${page}#whatif&MRSA=1.4`, 'current on the draw, before the URL settles');
+  stub.flush();
+  assert.equal(print(), `Interactive what-if at ${SITE.origin}${stub.urls.at(-1)}`, 'the same link share writes');
+  type(field(root, 'CLABSI', 'number'), '0.9');
+  assert.equal(print(), `Interactive what-if at ${page}#whatif&CLABSI=0.9&MRSA=1.4`);
+  q(root, 'reset').fire('click');
+  assert.equal(print(), `Interactive what-if at ${page}`);
+
+  const opened = mount(true, windowStub({ hash: '#whatif&MRSA=1.4&CLABSI=abc' }));
+  assert.equal(q(opened, 'print').textContent, `Interactive what-if at ${page}#whatif&MRSA=1.4`, 'a link opens with its good parts printed');
+
+  const sandbox = mount(false, windowStub());
+  type(field(sandbox, 'MRSA', 'number'), '1.4');
+  assert.equal(q(sandbox, 'print').textContent, '', 'share: false reads no fragment, so it leaves the built line (the page\'s link) alone');
 });
 
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {

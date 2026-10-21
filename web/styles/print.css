@@ -15,7 +15,7 @@
   .wi-echo, .wi-banner, .wi-solver, .wi-weights, .wi-detail summary, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row {
     display: none !important;
   }
-  .print-only { display: block; }
+  .print-only { display: block; overflow-wrap: anywhere; }
   .pill, .hero__none, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .wi-result { position: static; }
   figure, .hero, .wi-result, .wi-bars, tr { break-inside: avoid; }

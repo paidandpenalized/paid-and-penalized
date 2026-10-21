@@ -77,7 +77,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   }));
   const el = Object.fromEntries(['detail', 'head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
     'start-label', 'hyp-edge', 'ramp', 'banner', 'copy', 'bars-lead',
-    'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
+    'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median', 'print'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
   // Each measure's part of the score at the start, as the bars write it: the figure table's Hypothetical cell reads
@@ -242,6 +242,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       el['bars-lead'].hidden = !lead;
     }
     if (el.banner) el.banner.hidden = !(linked && hasChanges(state));
+    // On paper, a shared what-if's link carries its changes (the fragment share writes); unchanged, the page's.
+    if (share && el.print) setText(el.print, texts.printAt(encode(changesOf(state), start.ids)));
     // Reset reads as unavailable while there is nothing to reset (it stays focusable and harmless).
     const dirty = hasChanges(state) || Object.values(vm.counts).some(Boolean);
     setAttr(el.reset, 'aria-disabled', String(!dirty));
