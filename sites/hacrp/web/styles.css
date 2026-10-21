@@ -79,7 +79,7 @@
 .ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }
 .ht__field { display: grid; gap: 4px; }
 .ht__field label { font-weight: 600; }
-.ht select, .ht input { padding: 8px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
+.ht select, .ht input { padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
 .ht input { width: min(100%, 22rem); }
 .gb--hospitals .num { width: 1%; }
 /* Wide screens: the five columns fit, so the table needs no sideways scroll box, and its header sticks to the top of

@@ -42,7 +42,7 @@
 
 .search { gap: 8px; }
 .search__row { display: flex; gap: 8px; max-width: 40rem; }
-.search input { flex: 1; min-width: 0; padding: 9px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); }
+.search input { flex: 1; min-width: 0; padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); }
 .search__status:empty { display: none; }
 
 .home__mark { font-size: clamp(2.5rem, 9vw, 4rem); }

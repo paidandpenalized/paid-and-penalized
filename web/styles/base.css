@@ -36,7 +36,9 @@ p { margin: 0; }
 a { color: inherit; text-decoration-color: var(--pen); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 a:hover { color: var(--pen-ink); }
 :focus-visible { outline: 2.5px solid var(--pen); outline-offset: 2px; }
-button, input, select { font: inherit; color: inherit; }
+button, input, select { font: inherit; line-height: 1.25; color: inherit; }
+/* One height for every control, so a row of them shares a baseline (the sliders and the theme toggle excepted). */
+:where(input:not([type="range"]), select, .fig__btn, .wi-btn) { min-height: var(--control-h); }
 
 [hidden] { display: none; }
 

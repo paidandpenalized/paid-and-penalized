@@ -46,6 +46,7 @@
   --gutter: 16px;
   --measure: 34em;          /* about 70 characters of Libre Franklin; in em, so small text keeps the count */
   --page: 1180px;
+  --control-h: 40px;        /* every field, menu and button: one height (44px for touch, below) */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -59,6 +60,7 @@
     color-scheme: dark;
   }
 }
+@media (pointer: coarse) { :root { --control-h: 44px; } }
 /* Print: always the light tokens on plain white paper, whatever the device or the toggle says (a dark page printed
    with its backgrounds stripped would put near-white text on white). !important beats the dark media block and the
    toggle's copy of it, which the build appends after this file. The rest of the print rules are in print.css. */
