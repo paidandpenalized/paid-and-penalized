@@ -36,8 +36,7 @@
 //                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: the parts
 //                                          of one line (its starting value, median, floor, cap and leverage), each kept
 //                                          whole, with a separator before every part but the first
-//   bars { heading, caption(n), value(contribution), assigned, lead(vm) }   lead: the framed bars' line for a changed
-//                                          what-if (which part adds the most)
+//   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { summary, label(id) -> string | null, help, invalid, result(delta) }   NHSN counts, in one
 //                                          folded section after the measures (label null: no field for that measure)
 import { scaleLinear } from 'd3-scale';
@@ -187,8 +186,8 @@ ${fields.map(({ id }) => html`<div class="wi-predicted__row" data-predicted="${i
 
 // Each measure's part of the score (z ÷ n), in the fixed measure order, on one scale for the hospital. framed: a page
 // frames them as a figure, whose caption is their title (CMS's values): under it, a line dom.js fills once the reader
-// changes something (aria-hidden: the live sentence speaks), and behind each bar CMS's own bar as an outline, shown
-// once the bar moves.
+// changes something (texts.bars.lead(vm); aria-hidden: the live sentence speaks), and behind each bar CMS's own bar
+// as an outline, shown once the bar moves.
 function bars(vm, words, texts, framed = false) {
   return html`<div class="wi-bars" data-wi="bars">
 ${framed ? html`<p class="small wi-bars__lead" data-wi="bars-lead" aria-hidden="true" hidden></p>` : html`<p class="h-sm">${texts.bars.heading}</p>`}
