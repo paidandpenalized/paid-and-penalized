@@ -151,6 +151,22 @@ test('a slider drag leaves its max alone until the change is committed', () => {
   assert.equal(field(root, 'MRSA', 'number').value, '2.100');
 });
 
+test('a commit redraws its own row from the current view model, computing no new one', () => {
+  const rules = whatIfRules(H, model, estimate);
+  let computed = 0;
+  const counted = { ...rules, viewModel: (state) => { computed++; return rules.viewModel(state); } };
+  const root = rootFor(H, false);
+  mountWhatIf(root, { rules: counted, texts, share: false, range: RANGE, env: windowStub().env });
+  const slider = field(root, 'MRSA', 'slider');
+  type(slider, '2.1');
+  const before = computed;
+  slider.fire('change');
+  field(root, 'MRSA', 'number').fire('change');
+  assert.equal(computed, before);
+  assert.equal(slider.getAttribute('max'), '2.52');
+  assert.equal(field(root, 'MRSA', 'number').value, '2.100');
+});
+
 test('a bad or blank entry: blank restores the starting value; out of range is ignored and flagged', () => {
   const root = mount(false, windowStub());
   const n = field(root, 'MRSA', 'number');

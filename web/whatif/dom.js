@@ -85,7 +85,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     }
   }
 
+  // Now, and in place of a pending settle (draw() arms one).
   function settle() {
+    env.clearTimeout(timer);
     setText(el.sentence, texts.sentence(vm));
     setText(el['sentence-est'], estimateNote(vm, texts));
     if (share) writeHash();
@@ -158,6 +160,16 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     timer = env.setTimeout(settle, SETTLE_MS);
   }
 
+  // On commit, for one measure: its slider's track catches up with its value (a drag held it) and its field shows the
+  // value the what-if uses (a blank or refused entry shows it again). vm already holds the state, so nothing else
+  // moves.
+  function commit(id) {
+    const input = vm.inputs.find((i) => i.id === id);
+    track(rows[id], input);
+    rows[id].number.value = fieldText(input);
+    setText(el['copy-status'], '');
+  }
+
   // Applies an action; false when reduce() refused it (the state is unchanged).
   function apply(action, options) {
     const next = reduce(state, action);
@@ -182,16 +194,16 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const row = rows[id];
     row.number.addEventListener('input', () => {
       const value = entry(row.number);
-      markInvalid(row, !(!Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number })));
+      const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number });
+      markInvalid(row, !ok);
     });
-    // On commit the field shows the value the what-if uses (a blank or refused entry shows it again).
     row.number.addEventListener('change', () => {
       markInvalid(row, false);
-      draw();
+      commit(id);
     });
     row.number.addEventListener('focus', reveal);
     row.slider.addEventListener('input', () => apply({ type: 'set', id, value: Number(row.slider.value) }, { source: row.slider, holdMax: true }));
-    row.slider.addEventListener('change', () => draw({ source: row.slider }));
+    row.slider.addEventListener('change', () => commit(id));
     if (row.predicted) {
       row.predicted.addEventListener('input', () => {
         const count = entry(row.predicted);
