@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
-import { fillCopy, footnoteLegend, pill } from '../render/components.js';
+import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, pill } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -192,4 +192,19 @@ test('pill and footnoteLegend: escaped text, each footnote once in first-seen or
   assert.equal(out.match(/<dt>/g).length, 2);
   assert.ok(out.indexOf('<dt>5</dt>') < out.indexOf('<dt>1</dt>'));
   assert.ok(out.includes('<dd>Five &amp; &lt;x&gt;</dd>'));
+});
+
+test('fillCopyKeep keeps each value, or a run from one value to another, on one line, escaping values and words', () => {
+  const copy = { pair: { text: "CMS's line: between {a} and {b}", claim: null }, dates: 'From {start} to {end}' };
+  assert.equal(String(fillCopyKeep(copy, 'pair', { a: '0.1', b: '<0.2>' }, [['a', 'b']])),
+    'CMS&#39;s line: between <span class="nw">0.1 and &lt;0.2&gt;</span>');
+  assert.equal(String(fillCopyKeep(copy, 'dates', { start: 'May 1, 2024', end: 'June 2, 2024' }, ['start', 'end'])),
+    'From <span class="nw">May 1, 2024</span> to <span class="nw">June 2, 2024</span>');
+  assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 'b' }, ['nope']), /unknown placeholder/);
+  assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 1 }, []), /formatted string/);
+});
+
+test('keepWhole wraps a part of escaped text in one .nw span, and refuses a part that is not there', () => {
+  assert.equal(String(keepWhole('A & B (ab-12)', ['(ab-12)'])), 'A &amp; B <span class="nw">(ab-12)</span>');
+  assert.throws(() => keepWhole('text', ['missing']), /not in the text/);
 });

@@ -30,7 +30,7 @@
 .fnlist dd { margin: 0; }
 
 .asof { padding-top: 12px; border-top: var(--rule) solid var(--ink); }
-.asof__list { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
+.asof__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 4px 24px; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
 .source { font-size: var(--fs-sm); color: var(--ink-2); max-width: none; }
 
 /* The citation block: the text selectable, the Copy button beside a short status. */

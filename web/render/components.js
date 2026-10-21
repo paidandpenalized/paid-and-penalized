@@ -2,7 +2,7 @@
 // citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
 // fills the placeholders in a site's copy.
 import { has } from '../../engine/js/has.js';
-import { html } from './html.js';
+import { Safe, escapeHtml, html } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
@@ -22,6 +22,40 @@ export function fillCopy(copy, key, values = {}) {
   const unused = Object.keys(values).filter((name) => !used.has(name));
   if (unused.length) throw new RangeError(`copy "${key}": unused value(s) ${unused.join(', ')}`);
   return out;
+}
+
+// fillCopy as markup, with stretches kept on one line: each group in `keep` is a placeholder name, or a list of
+// names whose values are kept together with the copy's words between them (a number pair: "0.3792 and 0.3799"),
+// wrapped in a .nw span from the first value's start to the last value's end. Values and words are escaped.
+export function fillCopyKeep(copy, key, values, keep) {
+  const names = Object.keys(values);
+  const mark = (name) => `\u0001${names.indexOf(name)}\u0002`;
+  let text = escapeHtml(fillCopy(copy, key, Object.fromEntries(names.map((n) => {
+    if (typeof values[n] !== 'string') throw new TypeError(`copy "${key}": {${n}} must be a formatted string`);
+    return [n, mark(n)];
+  }))));
+  for (const group of keep) {
+    const list = [group].flat();
+    if (!list.every((n) => names.includes(n))) throw new RangeError(`copy "${key}": keep names an unknown placeholder`);
+    const start = text.indexOf(mark(list[0]));
+    const end = text.indexOf(mark(list.at(-1))) + mark(list.at(-1)).length;
+    text = `${text.slice(0, start)}<span class="nw">${text.slice(start, end)}</span>${text.slice(end)}`;
+  }
+  for (const n of names) text = text.replace(mark(n), escapeHtml(values[n]));
+  return new Safe(text);
+}
+
+// text (escaped) with the first occurrence of each part kept on one line (a .nw span), e.g. a dataset id that would
+// otherwise break at its hyphen. A part not in text throws.
+export function keepWhole(text, parts) {
+  let out = escapeHtml(text);
+  for (const part of parts) {
+    const at = out.indexOf(escapeHtml(part));
+    if (at < 0) throw new RangeError(`keepWhole: "${part}" is not in the text`);
+    const end = at + escapeHtml(part).length;
+    out = `${out.slice(0, at)}<span class="nw">${out.slice(at, end)}</span>${out.slice(end)}`;
+  }
+  return new Safe(out);
 }
 
 // A word on a mark; the word carries the meaning, the ink repeats it. kind: 'pen' (a penalty), 'rew' (a reward),

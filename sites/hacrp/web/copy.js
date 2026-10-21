@@ -1,7 +1,7 @@
 // The HACRP site's words. No digit characters: every number arrives through a {placeholder}, formatted before it
 // is filled. `claim` names the row of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
 // sentences that only restate CMS's file or this site's arithmetic).
-import { fillCopy } from '../../../web/render/components.js';
+import { fillCopy, fillCopyKeep } from '../../../web/render/components.js';
 import { isoDate } from '../../../web/render/format.js';
 
 export const COPY = {
@@ -518,6 +518,8 @@ export const COPY = {
 
 // COPY[key].text with each {placeholder} filled; see fillCopy for the rules.
 export const fill = (key, values) => fillCopy(COPY, key, values);
+// As markup, keeping each group in `keep` on one line (see fillCopyKeep): dates, number pairs.
+export const fillKeep = (key, values, keep) => fillCopyKeep(COPY, key, values, keep);
 // A word or sentence with no placeholders.
 export const t = (key) => fill(key);
 

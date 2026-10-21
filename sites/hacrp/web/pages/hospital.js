@@ -7,7 +7,7 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
-import { fill, sourceText, t } from '../copy.js';
+import { fill, fillKeep, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue } from './parts.js';
 import { whatIfSection } from './whatif.js';
@@ -22,6 +22,13 @@ const value = (text, published) => (published
 function heroNumber(text) {
   const at = text.indexOf('.');
   return at < 0 ? text : html`${text.slice(0, at)}<span class="dp">.</span>${text.slice(at + 1)}`;
+}
+
+// The place line's parts ("Boaz, AL", "CCN 010005", the data's date), each kept on one line with the separator
+// before it, so a line can break only before a separator, never leave one at a line's end.
+function placeLine(view, source) {
+  const parts = [...fill('place', { city: view.city, state: view.state, ccn: view.ccn }).split(' · '), fill('placeData', { date: isoDate(source.pdcReleased) })];
+  return html`${parts.map((part, i) => html`${i ? ' ' : ''}<span class="nw">${i ? '· ' : ''}${part}</span>`)}`;
 }
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
@@ -99,12 +106,12 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 <header class="page__head">
 <p class="cap kicker"><a href="${home}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy })}</a></p>
 <h1>${view.name}</h1>
-<p class="place">${fill('place', { city: view.city, state: view.state, ccn: view.ccn })} · <span class="nw">${fill('placeData', { date: isoDate(source.pdcReleased) })}</span></p>
+<p class="place">${placeLine(view, source)}</p>
 </header>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
     ? html`<p class="hero__num cms">${heroNumber(view.score.text)}</p>${view.status !== 'maryland' && html`
-<p class="hero__ref">${fill('heroLine', view.boundaryText)}</p>`}`
+<p class="hero__ref">${fillKeep('heroLine', view.boundaryText, [['highestNo', 'lowestYes']])}</p>`}`
     : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
 ${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>

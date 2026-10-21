@@ -180,7 +180,8 @@ const hospitalHtml = (h, overrides = {}) => {
 };
 const sourceText = `Source: CMS Provider Data Catalog, HACRP FY${DATA.fy} (${DATA.source.id}), released ${isoDate(DATA.source.pdcReleased)}.`;
 const citeBlock = (page) => /<section class="block cite"[\s\S]*?<\/section>/.exec(page)?.[0];
-const citeText = (block) => /<p class="cite__text"[^>]*>([\s\S]*?)<\/p>/.exec(block)[1];
+// The citation's text, without the span that keeps the dataset id on one line (the copied text is the same).
+const citeText = (block) => /<p class="cite__text"[^>]*>([\s\S]*?)<\/p>/.exec(block)[1].replace(/<\/?span[^>]*>/g, '');
 
 test('the program page cites its title, FY, canonical URL and source line, and links the CSV and the dictionary', () => {
   const page = programPage(PROGRAM_ARGS);
@@ -191,6 +192,7 @@ test('the program page cites its title, FY, canonical URL and source line, and l
     assert.ok(text.includes(part), part);
   }
   assert.doesNotMatch(text, /accessed/i, 'no clock in the page');
+  assert.ok(block.includes(`<span class="nw">(${DATA.source.id})</span>`), 'the dataset id never breaks at its hyphen');
   assert.match(block, /<button type="button" class="fig__btn" data-cite-copy hidden>Copy citation<\/button>/);
   assert.match(block, /aria-live="polite"/);
   assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals&#39; data (CSV)</a>`));

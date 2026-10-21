@@ -1,11 +1,11 @@
 // HACRP's words for the shared page parts (web/render/components.js) both HACRP pages use: the decision pill, the
 // as-of bar, the citation (which carries the source line) and the data links.
-import { asofBar as asofShell, citation as citationShell, pill } from '../../../../web/render/components.js';
+import { asofBar as asofShell, citation as citationShell, keepWhole, pill } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
-import { fill, sourceText, t } from '../copy.js';
+import { fill, fillKeep, sourceText, t } from '../copy.js';
 import { csvPath, dictionaryPath } from '../links.js';
 import { pillOf } from '../whatif-text.js';
 
@@ -20,15 +20,16 @@ export function decisionPill(status, decision) {
 // Whether the pill already shows CMS's literal decision text, so the page needn't repeat it beside the pill.
 export const pillShowsCmsValue = (status) => status === 'maryland' || status === 'yes-no-score';
 
+// Each item is one cell of the strip's grid; a date (or a short name) never breaks across lines.
 export function asofBar({ fy, periods, source }) {
   return asofShell({
     label: t('asofHeading'),
     items: [
       fill('asofFy', { fy: String(fy) }),
-      fill('asofPsi', { short: SHORT_NAMES.PSI90, start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) }),
-      fill('asofHai', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) }),
+      fillKeep('asofPsi', { short: SHORT_NAMES.PSI90, start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) }, ['short', 'start', 'end']),
+      fillKeep('asofHai', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) }, ['start', 'end']),
       fill('asofLatest', { fy: String(fy), next: String(fy + 1) }),
-      fill('asofReleased', { date: isoDate(source.pdcReleased) }),
+      fillKeep('asofReleased', { date: isoDate(source.pdcReleased) }, ['date']),
     ],
   });
 }
@@ -42,7 +43,8 @@ export function citation({ fy, title, path, source }) {
     url: SITE.origin + path,
     source: sourceText({ fy, source }),
   });
-  return citationShell({ heading: t('citeHeading'), text, button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
+  // The dataset id would break at its hyphen; the URL may still break anywhere.
+  return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }
 
 // The plain links to the dataset file, its dictionary and CMS's dataset page (source: the manifest entry).
