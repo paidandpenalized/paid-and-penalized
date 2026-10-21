@@ -37,7 +37,7 @@ export function programHeader({ name, href, tag, nav, current = null, search = '
   if (current !== null && !nav.some((item) => item.id === current)) throw new RangeError(`programHeader: no nav item "${current}"`);
   return html`<header class="topbar">
   <div class="wrap topbar__row">
-    <a class="pp-mark" href="/">${COPY.markShort}<span class="vh"> ${COPY.markHome}</span></a>
+    <a class="pp-mark" href="/">${COPY.markLead}<span class="pp-mark__pen">${COPY.markPen}</span><span class="vh"> ${COPY.markHome}</span></a>
     <a class="program-mark" href="${href}"><span class="wordmark__name">${name}</span> <span class="wordmark__tag">${tag}</span></a>
     <div class="topbar__search">${search}</div>
     ${themeToggle}

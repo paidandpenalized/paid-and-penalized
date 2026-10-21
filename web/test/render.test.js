@@ -278,7 +278,7 @@ test('programHeader: the small mark to /, the name and edition tag, the search s
   assert.ok(at('class="pp-mark" href="/"') < at('class="program-mark" href="/x/"'));
   assert.ok(at('program-mark') < at('<form id="s">') && at('<form id="s">') < at('class="theme-toggle"'));
   assert.ok(at('class="theme-toggle"') < at('<nav class="nav" aria-label="Sections">') && at('<nav') < at('class="byline"'));
-  assert.ok(header.includes('P&amp;P<span class="vh"> Paid &amp; Penalized home</span>'));
+  assert.ok(header.includes('P&amp;<span class="pp-mark__pen">P</span><span class="vh"> Paid &amp; Penalized home</span>'), 'the last P in the penalty red, P& in ink');
   assert.ok(header.includes('<span class="wordmark__name">A program</span> <span class="wordmark__tag">AP · FY2026</span>'));
   assert.ok(header.includes('<li><a href="/x/#how" data-nav="how"><span class="nav__num">1</span>How it works</a></li>'));
   assert.ok(header.includes('<li><a href="/x/#list" data-nav="list" aria-current="true"><span class="nav__num">2</span>Every &lt;one&gt;</a></li>'));

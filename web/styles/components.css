@@ -28,6 +28,9 @@
 .topbar__row { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
 .pp-mark { flex: none; padding: 3px 6px 2px; border: var(--rule) solid var(--ink); font: 400 var(--fs-sm)/1 var(--font-display); letter-spacing: 0.02em; text-decoration: none; white-space: nowrap; }
 .pp-mark:hover { background: var(--ink); color: var(--paper); }
+/* The mark's last "P" in the program name's red (the wordmark's --pen), in both themes; plain on hover's ink. */
+.pp-mark__pen { color: var(--pen); }
+.pp-mark:hover .pp-mark__pen { color: inherit; }
 .program-mark { display: flex; align-items: baseline; gap: 10px; min-width: 0; text-decoration: none; }
 .wordmark__name { font: 400 1.4rem/1.05 var(--font-display); color: var(--ink); }
 /* The edition tag: the one red word in the bar, as on Thirty Day Readmissions (the program's edition, not a mark). */
