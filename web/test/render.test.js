@@ -96,10 +96,13 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.match(out, /<button type="button" class="theme-toggle" aria-pressed="false" hidden>Dark mode<\/button>/);
 });
 
-test('page: the header\'s tab order is wordmark, theme toggle, byline (the narrow screen\'s visual order)', () => {
+test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {
   const header = /<header[\s\S]*?<\/header>/.exec(page(PAGE))[0];
   const at = (s) => header.indexOf(s);
-  assert.ok(at('class="wordmark"') < at('class="theme-toggle"') && at('class="theme-toggle"') < at('class="byline"'));
+  assert.ok(at('class="wordmark"') < at('class="byline"') && at('class="byline"') < at('class="theme-toggle"'));
+  // DOM order = visual order = tab order at every width: no flex `order` anywhere in the shared styles.
+  const css = readFileSync(`${REPO_ROOT}/web/styles/components.css`, 'utf8');
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /(^|[\s;{])order\s*:/);
 });
 
 test('page: the theme script always loads, extra scripts follow, and robots and JSON-LD appear only when given', () => {

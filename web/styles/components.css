@@ -10,15 +10,12 @@
 .theme-toggle { margin-left: auto; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); font: 600 var(--fs-xs)/1 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--ink); }
 .theme-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-/* The markup runs wordmark, toggle, byline (the narrow order, so tabbing matches what is seen); wide screens put the
-   byline before the toggle with `order`. */
-.wordmark { order: 1; }
-.byline { order: 2; }
-.theme-toggle { order: 3; }
-/* Narrow screens: the toggle sits on the wordmark's row and the byline wraps below, so the header is two rows. */
+/* One order at every width, the markup's: wordmark, byline, toggle, so what is seen is what tabbing follows.
+   Narrow screens: the wordmark has the first row; the byline starts the second with the toggle at its right. */
 @media (max-width: 520px) {
-  .theme-toggle { order: 2; }
-  .byline { order: 3; flex: 1 1 100%; }
+  .masthead__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .wordmark { grid-column: 1 / -1; justify-self: start; }
+  .theme-toggle { margin-left: 0; justify-self: end; }
 }
 
 /* ---------- footer ---------- */
