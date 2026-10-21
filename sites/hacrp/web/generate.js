@@ -13,7 +13,8 @@ import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
 import { measureRanges } from './figures.js';
 import { compareDefault } from './hospital-table.js';
-import { csvPath, dictionaryPath } from './links.js';
+import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
+import { dictionaryPage } from './pages/dictionary.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
 import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
@@ -67,6 +68,8 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
+  // The dictionary as a page, which the data links open; indexed as the program page is.
+  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ dictionary, fy, source, path: DICTIONARY_PAGE, robots: programRobots, assets }) });
   ctx.emit({
     path: PROGRAM_PATH,
     robots: programRobots,

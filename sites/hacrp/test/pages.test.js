@@ -51,7 +51,7 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
   temp(async (dir) => {
     const ctx = await generate(dir, 'production', { released: true, data: DATA });
     assert.equal(DATA.hospitals.length, 3055);
-    assert.equal(ctx.pages, DATA.hospitals.length + 1);
+    assert.equal(ctx.pages, DATA.hospitals.length + 2, 'the hospitals, /hacrp/ and the data dictionary page');
     assert.equal(readdirSync(join(dir, 'hacrp', 'hospital')).length, DATA.hospitals.length);
 
     const pages = new Map([['/hacrp/', read(dir, '/hacrp/')], ...DATA.hospitals.map((h) => [hospitalPath(h), read(dir, hospitalPath(h))])]);
@@ -75,7 +75,7 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
       assert.equal(page(h).includes('<section class="block whatif" id="whatif"'), h.total !== null, `${hospitalPath(h)}: what-if`);
     }
     const scored = DATA.hospitals.filter((h) => h.total !== null).map(hospitalPath);
-    assert.deepEqual(ctx.indexable, ['/hacrp/', ...scored]);
+    assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...scored]);
     assert.ok(!pages.get('/hacrp/').includes(NOINDEX));
 
     const maryland = page(pick((h) => h.paymentReduction === 'N/A' && h.paymentReductionFootnote === 'a', 'Maryland'));
@@ -135,7 +135,7 @@ test('released: false: every page is noindex in production and the sitemap lists
     const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: false, data: SLICE, log: quiet }) };
     await build({ outDir: out, env: 'production', sites: [hacrp, HUB] });
     for (const h of SLICE.hospitals) assert.ok(read(out, hospitalPath(h)).includes(NOINDEX), hospitalPath(h));
-    for (const path of ['/hacrp/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
+    for (const path of ['/hacrp/', '/hacrp/data/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
     assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
@@ -143,8 +143,8 @@ test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
   temp(async (dir) => {
     const ctx = await generate(dir, undefined, { released: true, data: SLICE });
     assert.deepEqual(ctx.indexable, []);
-    assert.equal(ctx.pages, SLICE.hospitals.length + 1);
-    for (const path of ['/hacrp/', ...SLICE.hospitals.map(hospitalPath)]) assert.ok(read(dir, path).includes(NOINDEX), path);
+    assert.equal(ctx.pages, SLICE.hospitals.length + 2);
+    for (const path of ['/hacrp/', '/hacrp/data/', ...SLICE.hospitals.map(hospitalPath)]) assert.ok(read(dir, path).includes(NOINDEX), path);
   }));
 
 test('A1 failing stops the build and names the mismatched CCN', async () => {

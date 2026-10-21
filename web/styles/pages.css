@@ -58,3 +58,11 @@
 .search__status:empty { display: none; }
 
 .home__mark { font-size: clamp(2.5rem, 9vw, 4rem); }
+
+/* A reference file shown as a page (the data dictionary): its wide table keeps readable columns and scrolls in its
+   frame on a phone; prose cells in the body face, column names in mono. */
+.gb--dict { min-width: 44rem; }
+.gb--dict td { font-family: var(--font-body); }
+.dict code { font-family: var(--font-type); font-size: 0.92em; }
+/* A bare URL in its prose breaks rather than widen a phone's page. */
+.dict :is(p, li) { overflow-wrap: break-word; }

@@ -235,3 +235,18 @@ test('keepDates keeps every long date in escaped text on one line', () => {
     'A &amp; B, released <span class="nw">August 13, 2026</span>; <span class="nw">July 1, 2022</span>.');
   assert.equal(String(keepDates('No date <here>')), 'No date &lt;here&gt;');
 });
+
+test('markdownSections: a title, an intro, sections with ids, lists, a labelled pipe table and code; everything escaped', async () => {
+  const { markdownSections } = await import('../render/markdown.js');
+  const md = '# Title <x>\n\nFirst `a&b` para\ncontinues.\n\n## Some Part\n\n- one `<i>`\n- two\n\n| Col | Meaning |\n|---|---|\n| `c1` | says <b> |\n';
+  const { title, intro, sections } = markdownSections(md, { idPrefix: 'd', tableClass: 'gb x' });
+  assert.equal(title, 'Title <x>');
+  assert.equal(intro, 'First a&b para continues.');
+  assert.deepEqual(sections.map((s) => [s.heading, s.id]), [[null, null], ['Some Part', 'd-some-part']]);
+  assert.equal(String(sections[0].body), '<p>First <code>a&amp;b</code> para continues.</p>');
+  const body = String(sections[1].body);
+  assert.ok(body.includes('<ul><li>one <code>&lt;i&gt;</code></li><li>two</li></ul>'));
+  assert.ok(body.includes('<table class="gb x" aria-labelledby="d-some-part">'));
+  assert.ok(body.includes('<tr><th scope="row"><code>c1</code></th><td>says &lt;b&gt;</td></tr>'));
+  assert.ok(body.includes('<div class="printout"><div class="printout__scroll">'));
+});

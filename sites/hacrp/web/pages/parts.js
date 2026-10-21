@@ -6,7 +6,7 @@ import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
 import { COPY, fill, sourceText, t } from '../copy.js';
-import { csvPath, dictionaryPath } from '../links.js';
+import { DICTIONARY_PAGE, csvPath } from '../links.js';
 import { pillOf } from '../whatif-text.js';
 
 // The word carries the decision; the ink repeats it. N/A is hatched. The row CMS marked Yes with no score shows
@@ -65,5 +65,6 @@ export function citation({ fy, title, path, source }) {
 // A link that prints its full address after its words (print.css reads data-print-href).
 export const printLink = (href, text) => html`<a href="${href}" data-print-href="${href.startsWith('/') ? SITE.origin + href : href}">${text}</a>`;
 
-// The plain links to the dataset file, its dictionary and CMS's dataset page (source: the manifest entry).
-export const dataLinks = (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(dictionaryPath(fy), t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`;
+// The plain links to the dataset file, its dictionary (the page; the Markdown file sits beside the CSV) and CMS's
+// dataset page (source: the manifest entry).
+export const dataLinks = (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(DICTIONARY_PAGE, t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`;

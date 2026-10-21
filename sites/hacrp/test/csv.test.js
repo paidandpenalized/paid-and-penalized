@@ -14,7 +14,7 @@ import { isoDate } from '../../../web/render/format.js';
 import { COLUMNS, CSV_SCHEMA_VERSION, dictionaryText, hospitalsCsv } from '../web/csv.js';
 import { FOOTNOTES_ID } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
-import { csvPath, dictionaryPath } from '../web/links.js';
+import { DICTIONARY_PAGE, csvPath, dictionaryPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
@@ -157,7 +157,7 @@ test('dictionaryText fills the fiscal year, dataset id and release date, and ref
   assert.throws(() => dictionaryText('{fy} {source_id} {source_title}', { fy: 1, source: DATA.source }), /unused value\(s\) pdc_released/);
 });
 
-test('the build writes the CSV and the dictionary beside it; neither is a page or in the sitemap', () =>
+test('the build writes the CSV and the dictionary beside it (neither a page nor in the sitemap), and the dictionary as a page', () =>
   withTemp('pp-csv-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     const slice = { ...DATA, hospitals: DATA.hospitals.slice(0, 4) };
@@ -167,8 +167,17 @@ test('the build writes the CSV and the dictionary beside it; neither is a page o
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
     assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
-    assert.equal(ctx.pages, 1 + 4);
+    assert.equal(ctx.pages, 1 + 1 + 4);
     assert.ok(!ctx.indexable.some((p) => p.startsWith('/data/')));
+    // The page: the file's own words in the site shell, its columns table labelled by its heading, column names in mono.
+    assert.ok(ctx.indexable.includes(DICTIONARY_PAGE));
+    const page = readFileSync(join(dir, DICTIONARY_PAGE, 'index.html'), 'utf8');
+    assert.match(page, /<h1>Data dictionary: hacrp-hospitals\.csv<\/h1>/);
+    assert.match(page, /<h2 id="dict-columns" class="h-sm">Columns<\/h2>/);
+    assert.match(page, /<table class="gb gb--dict" aria-labelledby="dict-columns">/);
+    assert.equal(page.match(/<th scope="row"><code>[a-z0-9_]+<\/code><\/th>/g).length, COLUMNS.length);
+    assert.ok(page.includes(`dataset ${DATA.source.id}`), 'filled as the file is');
+    assert.match(page, /<meta name="description" content="hacrp-hospitals\.csv holds what CMS reports/);
   }));
 
 // ---------- the citation block ----------
@@ -196,7 +205,7 @@ test('the program page cites its title, FY, canonical URL and source line, and l
   assert.match(block, /<button type="button" class="fig__btn" data-cite-copy hidden>Copy citation<\/button>/);
   assert.match(block, /aria-live="polite"/);
   assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`));
-  assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${dictionaryPath(DATA.fy)}">`));
+  assert.ok(page.includes(`<a href="${DICTIONARY_PAGE}" data-print-href="https://paidandpenalized.org${DICTIONARY_PAGE}">Data dictionary</a>`));
   assert.ok(page.includes('<script type="module" src="/assets/cite.test.js">'));
 });
 
@@ -211,7 +220,7 @@ test('every hospital page, whatever its status, cites its name, place, FY, canon
     assert.ok(text.includes('Example General Hospital'), `${name}: title`);
     assert.ok(text.includes(esc(sourceText)), `${name}: source line`);
     assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`), `${name}: CSV link`);
-    assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${dictionaryPath(DATA.fy)}">`), `${name}: dictionary link`);
+    assert.ok(page.includes(`<a href="${DICTIONARY_PAGE}" data-print-href="https://paidandpenalized.org${DICTIONARY_PAGE}">Data dictionary</a>`), `${name}: dictionary link`);
     assert.ok(page.includes('/assets/cite.test.js'), `${name}: script`);
   }
 });
