@@ -1,4 +1,4 @@
-// Fixed words shared by every page's header and footer, and by the what-if component. No digit characters: numbers never live in copy files.
+// Fixed words shared by every page's header and footer. No digit characters: numbers never live in copy files.
 export const COPY = {
   skip: 'Skip to content',
   wordmarkLead: 'Paid &',
@@ -12,8 +12,4 @@ export const COPY = {
   feedback: 'Send feedback',
   methods: 'Methods',
   licenseLead: 'Text licensed',
-  // What-if sliders' aria-valuetext.
-  valueAtCap: "{value}, at CMS's cap",
-  valueAboveCap: "{value}, above CMS's cap",
-  valueAssigned: 'no value: CMS assigned the worst score',
 };

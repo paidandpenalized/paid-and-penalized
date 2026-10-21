@@ -1,4 +1,4 @@
-// The what-if's words, built from its view model (web/whatif/state.js). Everything is conditional ("would"):
+// The what-if's words, built from its view model (whatif-state.js). Everything is conditional ("would"):
 // this site's arithmetic on CMS's values, never a statement of what CMS did or what a hospital could do.
 // A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The median
 // hospital is this site's synthetic record, so its words never call its values or decision CMS's.
@@ -7,7 +7,6 @@ import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { LEVERAGE_STEP } from '../../../engine/js/hacrp/whatif.js';
 import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
-import { limitOf } from '../../../web/whatif/fragment.js';
 import { REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, measureLabel } from './copy.js';
 
@@ -102,11 +101,10 @@ export function scenarioSentence(vm, hospital, model) {
 }
 
 // One row per scored measure: "What would it take?" (CMS flagged it) or "How much cushion?" (it didn't). Answers
-// are for that measure alone, from CMS's values.
-export function solverRows(vm, model) {
-  return vm.solver.map((s) => {
+// are for that measure alone, from CMS's values. answers: solverOf() (whatif-state.js), never null here.
+export function solverRows(answers, model) {
+  return answers.map((s) => {
     const row = { id: s.id, label: SHORT_NAMES[s.id], answer: null, note: null };
-    if (s.note === 'not-applicable') return { ...row, note: fill('solverNANote') };
     if (s.note === 'assigned') return { ...row, note: fill('solverAssignedNote') };
     if (s.note === 'no-cushion') return { ...row, answer: fill('solverNoCushion'), note: fill('solverNoCushionNote') };
     if (s.kind === 'needed') {
@@ -155,7 +153,6 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   const decision = hospital.paymentReduction;
   const hai = hospital.periods.hai;
   const view = { name, fy, source };
-  const value = (x, id) => decimal(x, model.params[id].decimals);
   return {
     heading: fill('whatifHeading'),
     intro: fill(median ? 'whatifIntroMedian' : 'whatifIntro'),
@@ -179,23 +176,23 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     slideLabel: fill('whatifSlideLabel'),
     reset: fill('whatifReset'),
     median: fill('whatifMedian'),
-    // Maryland is not subject to the reduction, so there is nothing to solve for.
-    solver: decision === 'N/A' ? null : {
+    // Shown only where there are answers (Maryland, not subject to the reduction, has none).
+    solver: {
       question: fill(decision === 'Yes' ? 'whatifSolveYes' : 'whatifSolveNo'),
       caption: fill(median ? 'solverCaptionMedian' : 'solverCaption'),
       columns: [fill('solverColMeasure'), fill(decision === 'Yes' ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
-      rows: (vm) => solverRows(vm, model),
+      rows: (answers) => solverRows(answers, model),
     },
     fieldsLegend: fill('whatifFieldsLegend'),
     weight: (n) => fill('whatifWeight', { one: decimal(1, 0), n: String(n) }),
     // input: one of vm.inputs; m: its vm.result.measures entry.
     measure(input, m) {
       const { id } = input;
-      const p = model.params[id];
       const short = SHORT_NAMES[id];
-      const marks = p.floor > 0
-        ? fill('whatifMarksFloor', { median: value(input.median, id), floor: value(p.floor, id), cap: value(p.cap, id) })
-        : fill('whatifMarks', { median: value(input.median, id), cap: value(p.cap, id) });
+      const at = (x) => decimal(x, input.decimals);
+      const marks = input.floor > 0
+        ? fill('whatifMarksFloor', { median: at(input.median), floor: at(input.floor), cap: at(input.cap) })
+        : fill('whatifMarks', { median: at(input.median), cap: at(input.cap) });
       return {
         label: `${measureLabel(id)} (${short})`,
         short,
@@ -205,7 +202,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
         assignedHelp: input.assigned ? fill('whatifAssignedHelp') : null,
-        invalid: fill('whatifInvalid', { min: value(0, id), max: value(limitOf(p), id) }),
+        invalid: fill('whatifInvalid', { min: at(0), max: at(input.limit) }),
       };
     },
     bars: {

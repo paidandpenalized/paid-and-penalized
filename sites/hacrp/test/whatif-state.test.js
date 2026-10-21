@@ -1,14 +1,16 @@
+// HACRP's what-if rules (sites/hacrp/web/whatif-state.js): the state, its actions and the view model. Synthetic
+// hospitals (CCNs 990011-990016) on the FY2026 model.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isAssigned, scoredMeasures } from '../../engine/js/hacrp/hospital.js';
-import { MEASURE_IDS } from '../../engine/js/hacrp/measures.js';
-import { medianHospital } from '../../engine/js/hacrp/median.js';
-import { solveMeasure } from '../../engine/js/hacrp/solver.js';
-import { whatIf } from '../../engine/js/hacrp/whatif.js';
-import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
-import { SYNTH_PERIODS, modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
-import { MAX_FACTOR, decode } from '../whatif/fragment.js';
-import { changesOf, initialState, reduce, viewModel } from '../whatif/state.js';
+import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { medianHospital } from '../../../engine/js/hacrp/median.js';
+import { solveMeasure } from '../../../engine/js/hacrp/solver.js';
+import { whatIf } from '../../../engine/js/hacrp/whatif.js';
+import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
+import { SYNTH_PERIODS, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { MAX_FACTOR, decode, encode } from '../../../web/whatif/fragment.js';
+import { changesOf, initialState, reduce, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 
 const { hospitals, model } = loadHacrp();
 const { params } = model;
@@ -140,7 +142,7 @@ test('view model inputs: one per scored measure, with slider bounds, step, marks
   assert.deepEqual(vm.inputs.map((i) => i.id), scoredMeasures(CAPPED));
   const clabsi = vm.inputs.find((i) => i.id === 'CLABSI');
   assert.deepEqual(clabsi, {
-    id: 'CLABSI', value: 0.2, min: 0, max: 1.887, step: 0.001, median: 0.559, cap: 1.572, deadZoneFrom: 1.572,
+    id: 'CLABSI', value: 0.2, max: 1.887, step: 0.001, decimals: 3, median: 0.559, floor: 0, cap: 1.572, limit: 15.72,
     valuetext: '0.200', assigned: false, tagged: false,
   });
   const mrsa = vm.inputs.find((i) => i.id === 'MRSA');
@@ -180,29 +182,45 @@ test('view model input for an assigned measure: blank value, cap x 1.2, its own 
   assert.equal(high.max, 3.6);
 });
 
-test('view model ramp: CMS\'s score, the hypothetical, the line, inside a fixed axis for the hospital', () => {
-  const base = viewModel(initialState(NO, model), NO, model, ESTIMATE).ramp;
+test('view model ramp: CMS\'s score, the hypothetical and the line', () => {
   const vm = viewModel(apply(NO, set('MRSA', 1.4)), NO, model, ESTIMATE);
-  assert.equal(vm.ramp.actual, NO.total);
-  assert.equal(vm.ramp.hypothetical, vm.result.after.score);
-  assert.equal(vm.ramp.highestNo, model.boundary.highestNo);
-  assert.equal(vm.ramp.lowestYes, model.boundary.lowestYes);
-  assert.equal(vm.ramp.min, base.min);
-  assert.equal(vm.ramp.max, base.max);
-  // The axis spans every score the inputs can reach.
-  const best = whatIf(NO, model, Object.fromEntries(scoredMeasures(NO).map((id) => [id, 0])));
-  const worst = whatIf(NO, model, Object.fromEntries(scoredMeasures(NO).map((id) => [id, params[id].cap * 2])));
-  assert.ok(Math.abs(vm.ramp.min - best.after.score) < 1e-12);
-  assert.ok(Math.abs(vm.ramp.max - worst.after.score) < 1e-12);
-  for (const x of [vm.ramp.actual, vm.ramp.hypothetical, vm.ramp.highestNo, vm.ramp.lowestYes]) {
-    assert.ok(x >= vm.ramp.min && x <= vm.ramp.max);
-  }
+  assert.deepEqual(vm.ramp, {
+    actual: NO.total, hypothetical: vm.result.after.score, highestNo: model.boundary.highestNo, lowestYes: model.boundary.lowestYes,
+  });
 });
 
-test('view model solver: solveMeasure for each scored measure, from CMS\'s values whatever the reader changed', () => {
-  const vm = viewModel(apply(ASSIGNED, set('CLABSI', 0.1)), ASSIGNED, model, ESTIMATE);
-  assert.deepEqual(vm.solver, scoredMeasures(ASSIGNED).map((id) => solveMeasure(ASSIGNED, model, id)));
-  assert.equal(vm.solver.find((r) => r.id === 'SSI').note, 'assigned');
+test('view model bars and estimate: one fixed scale per hospital; estimated once a tagged measure changed', () => {
+  const base = viewModel(initialState(NO, model), NO, model, ESTIMATE);
+  assert.ok(base.extent > 0);
+  assert.equal(viewModel(apply(NO, set('MRSA', 3)), NO, model, ESTIMATE).extent, base.extent);
+  assert.equal(base.estimated, false);
+  assert.equal(viewModel(apply(NO, set('CLABSI', 0.6)), NO, model, ESTIMATE).estimated, false);
+  assert.equal(viewModel(apply(NO, set('CDI', 0.3)), NO, model, ESTIMATE).estimated, true);
+});
+
+test('solver answers: solveMeasure for each scored measure, from CMS\'s values; none for Maryland or no score', () => {
+  assert.deepEqual(solverOf(ASSIGNED, model), scoredMeasures(ASSIGNED).map((id) => solveMeasure(ASSIGNED, model, id)));
+  assert.equal(solverOf(ASSIGNED, model).find((r) => r.id === 'SSI').note, 'assigned');
+  const maryland = modelHospital(model, '990017', { values: VALUES, decision: 'N/A', state: 'MD' });
+  assert.equal(solverOf(maryland, model), null);
+  assert.equal(solverOf(hospitals.find((x) => x.total === null), model), null);
+});
+
+test('load: a link\'s changes on CMS\'s values, each through set; refused values dropped; predicted counts kept', () => {
+  const s = apply(NO, set('CLABSI', 0.6), { type: 'predicted', id: 'CLABSI', count: 4 });
+  const loaded = reduce(s, { type: 'load', changes: { MRSA: 1.4, PSI90: 1e9, NOPE: 1 } });
+  assert.deepEqual(changesOf(loaded), { MRSA: 1.4 });
+  assert.deepEqual(loaded.predicted, { CLABSI: 4 });
+  assert.deepEqual(changesOf(reduce(s, { type: 'load', changes: {} })), {});
+});
+
+test('the rules dom.js runs: the starting state, the params a link decodes with, and the view model', () => {
+  const rules = whatIfRules(NO, model, ESTIMATE);
+  assert.deepEqual(rules.start, initialState(NO, model));
+  assert.equal(rules.params, params);
+  assert.deepEqual(rules.viewModel(rules.start), viewModel(rules.start, NO, model, ESTIMATE));
+  assert.equal(rules.reduce, reduce);
+  assert.equal(rules.changesOf, changesOf);
 });
 
 test('a hospital with no score: an empty view model, no inputs, no throw', () => {
@@ -211,7 +229,7 @@ test('a hospital with no score: an empty view model, no inputs, no throw', () =>
   assert.equal(reduce(s, set('PSI90', 1)), s);
   const vm = viewModel(s, h, model, ESTIMATE);
   assert.equal(vm.result.available, false);
-  assert.deepEqual([vm.inputs, vm.solver, vm.ramp, vm.counts], [[], [], null, {}]);
+  assert.deepEqual([vm.inputs, vm.ramp, vm.counts], [[], null, {}]);
 });
 
 test('a tampered link opens on CMS\'s values, ignoring the bad parts, with no error', () => {
@@ -230,4 +248,22 @@ test('a tampered link opens on CMS\'s values, ignoring the bad parts, with no er
   const none = decode('#whatif&CLABSI=abc&SSI=-3', { ids, params });
   assert.deepEqual(none.changes, {});
   assert.deepEqual(viewModel(initialState(ASSIGNED, model), ASSIGNED, model, ESTIMATE).result, whatIf(ASSIGNED, model));
+});
+
+test('the NHSN predicted count never appears in the fragment', () => {
+  let s = initialState(NO, model);
+  s = reduce(s, { type: 'set', id: 'CLABSI', value: 0.6 });
+  s = reduce(s, { type: 'predicted', id: 'CLABSI', count: 7.25 });
+  s = reduce(s, { type: 'predicted', id: 'MRSA', count: 3.5 });
+  const hash = encode(changesOf(s), s.ids);
+  assert.equal(hash, '#whatif&CLABSI=0.6');
+  assert.deepEqual(decode(hash, { ids: s.ids, params }).changes, changesOf(s));
+  assert.doesNotMatch(hash, /7\.25|3\.5/);
+});
+
+test('reduce and decode accept the same range: whatever set keeps, a link carries', () => {
+  for (const v of [0, 0.4, 1.762, 17.62, 17.621, 18, 1e25]) {
+    const s = reduce(initialState(NO, model), { type: 'set', id: 'MRSA', value: v });
+    assert.deepEqual(decode(encode(changesOf(s), s.ids), { ids: s.ids, params }).changes, changesOf(s), String(v));
+  }
 });

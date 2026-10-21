@@ -1,20 +1,23 @@
-// The what-if in the browser: makes the component web/whatif/render.js wrote live. Each input goes through the state's
-// reduce() and viewModel(); the page changes by textContent and attributes only. The numbers move at once; the live
-// sentence (and, with share, the URL fragment) follow 400 ms after the reader stops. With share, a link's fragment
-// is read on load and the reader's changes are written back with history.replaceState; NHSN counts stay in memory.
-// env is the window (a seam for tests): with share false, location and history are never touched. range: the ramp's
-// national span of scores ({ low, high }, from the page data), as render.js drew it.
+// The what-if in the browser: makes the component web/whatif/render.js wrote live. Each input goes through the site's
+// rules: reduce() and viewModel(); the page changes by textContent and attributes only. The numbers move at once; the
+// live sentence (and, with share, the URL fragment) follow 400 ms after the reader stops. With share, a link's
+// fragment is read on load and the reader's changes are written back with history.replaceState; NHSN counts stay in
+// memory. env is the window (a seam for tests): with share false, location and history are never touched. range: the
+// ramp's national span of scores ({ low, high }, from the page data), as render.js drew it.
+//
+// rules, the site's (sites/<program>/web/whatif-state.js): { start, params, reduce(state, action),
+// changesOf(state), viewModel(state) }. start.ids: the measures; params[id]: { decimals, cap }, for decoding a link.
+// reduce() takes { type: 'set', id, value }, 'reset', 'median', { type: 'predicted', id, count } and
+// { type: 'load', changes }, and returns the same state when it refuses an action.
 import { decode, encode, isWhatIfHash } from './fragment.js';
-import { changesOf, initialState, reduce, viewModel } from './state.js';
 import {
-  assignedNow, barClass, barExtent, barSpan, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX, trackAt,
+  assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX,
+  sliderValue, trackMarks,
 } from './marks.js';
 
 const SETTLE_MS = 400;
 const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
-
-const hasChanges = (state) => Object.keys(changesOf(state)).length > 0;
 
 // A number field's entry: null when blank, NaN when it isn't a number.
 function entry(el) {
@@ -27,11 +30,12 @@ const setText = (el, text) => {
   if (el && el.textContent !== text) el.textContent = text;
 };
 
-export function mountWhatIf(root, { hospital, model, estimate, texts, share, range, env = globalThis }) {
+export function mountWhatIf(root, { rules, texts, share, range, env = globalThis }) {
   if (typeof share !== 'boolean') throw new TypeError('mountWhatIf: share must be true or false');
   const q = (name, scope = root) => scope.querySelector(`[data-wi="${name}"]`);
-  const start = initialState(hospital, model);
+  const { start, reduce, changesOf } = rules;
   if (!start.ids.length) return;
+  const hasChanges = (state) => Object.keys(changesOf(state)).length > 0;
 
   const rows = Object.fromEntries(start.ids.map((id) => {
     const row = root.querySelector(`[data-measure="${id}"]`);
@@ -57,18 +61,14 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
     'start-label', 'hyp-edge', 'banner', 'copy',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
-  const first = viewModel(start, hospital, model, estimate);
+  const first = rules.viewModel(start);
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
-  const extent = barExtent(first.result, model);
 
-  // The state a link's fragment describes: what decode() trusts goes through reduce(); the rest stays CMS's.
-  const fromHash = () => {
-    const { changes } = decode(env.location.hash, { ids: start.ids, params: model.params });
-    return Object.entries(changes).reduce((s, [id, value]) => reduce(s, { type: 'set', id, value }), start);
-  };
+  // A link's fragment: what decode() trusts goes through reduce(); the rest stays CMS's.
+  const load = (state) => reduce(state, { type: 'load', changes: decode(env.location.hash, { ids: start.ids, params: rules.params }).changes });
 
-  let state = share ? fromHash() : start;
+  let state = share ? load(start) : start;
   let linked = share && hasChanges(state);
   let vm = first;
   let timer = null;
@@ -85,11 +85,9 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
     }
   }
 
-  const estimateShown = () => vm.inputs.some((i) => i.tagged && vm.result.measures[i.id].changed);
-
   function settle() {
     setText(el.sentence, texts.sentence(vm));
-    setText(el['sentence-est'], estimateShown() ? ` ${texts.estimate.text}` : '');
+    setText(el['sentence-est'], estimateNote(vm, texts));
     if (share) writeHash();
   }
 
@@ -109,24 +107,23 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
   }
 
   function track(r, input) {
-    const at = (value) => fraction(trackAt(value, input.max));
-    const p = model.params[input.id];
+    const at = trackMarks(input);
     r.slider.setAttribute('max', String(input.max));
-    r.deadLow?.style.setProperty('--to', at(p.floor));
-    r.deadHigh.style.setProperty('--from', at(p.cap));
-    r.medianMark.style.setProperty('--at', at(input.median));
-    r.capMark.style.setProperty('--at', at(p.cap));
+    r.deadLow?.style.setProperty('--to', at.floor);
+    r.deadHigh.style.setProperty('--from', at.cap);
+    r.medianMark.style.setProperty('--at', at.median);
+    r.capMark.style.setProperty('--at', at.cap);
   }
 
   // source: the element the reader is using, left as they have it. holdMax: a slider mid-drag keeps its max, so
   // its thumb never runs from under the pointer; the drag's change event redraws it.
   function draw({ source = null, holdMax = false } = {}) {
-    vm = viewModel(state, hospital, model, estimate);
+    vm = rules.viewModel(state);
     const r = vm.result;
     setText(el.score, texts.scores(vm).after);
     setText(el.flag, texts.flag(r.after.flag));
     setText(el.cut, texts.cut(r.after.flag) ?? '');
-    el.estimate.hidden = !estimateShown();
+    el.estimate.hidden = !vm.estimated;
     const t = rampAt(r.after.score, domain);
     el.hyp.setAttribute('x', rampX(t));
     const labels = rampLabels(startAt, t, texts.start, texts.hypothetical);
@@ -140,12 +137,12 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
       const row = rows[input.id];
       const m = r.measures[input.id];
       if (!(holdMax && source === row.slider)) track(row, input);
-      if (source !== row.slider) row.slider.value = String(input.value ?? input.max);
+      if (source !== row.slider) row.slider.value = String(sliderValue(input));
       row.slider.setAttribute('aria-valuetext', input.valuetext);
-      if (source !== row.number) row.number.value = input.value === null ? '' : input.value.toFixed(model.params[input.id].decimals);
+      if (source !== row.number) row.number.value = fieldText(input);
       row.barRow.setAttribute('class', barClass(input));
       if (row.barAssigned) row.barAssigned.hidden = !assignedNow(input);
-      const span = barSpan(m.contribution, extent);
+      const span = barSpan(m.contribution, vm.extent);
       row.bar.style.setProperty('--at', fraction(span.at));
       row.bar.style.setProperty('--w', fraction(span.width));
       setText(row.barValue, texts.bars.value(m.contribution));
@@ -240,7 +237,7 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
   if (share) {
     env.addEventListener('hashchange', () => {
       if (!isWhatIfHash(env.location.hash)) return;
-      state = { ...fromHash(), predicted: state.predicted };
+      state = load(state);
       linked = hasChanges(state);
       draw();
       settle();

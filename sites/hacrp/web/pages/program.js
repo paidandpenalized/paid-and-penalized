@@ -5,10 +5,10 @@ import { count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { renderWhatIf } from '../../../../web/whatif/render.js';
-import { initialState, viewModel } from '../../../../web/whatif/state.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { fill } from '../copy.js';
 import { LINKS } from '../links.js';
+import { initialState, solverOf, viewModel } from '../whatif-state.js';
 import { whatIfTexts } from '../whatif-text.js';
 import { asofBar, sourceLine, t } from './parts.js';
 
@@ -23,7 +23,7 @@ function sandbox({ hospital, model, estimate, range }, { fy, boundaryText, sourc
   const page = { name: null, fy, path: PATH, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText };
   const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
   return html`<p class="cap sandbox-label">${t('sandboxLabel')}</p>
-${renderWhatIf({ vm, hospital, model, texts: whatIfTexts({ hospital, model, ...page }), share: false, range })}
+${renderWhatIf({ vm, texts: whatIfTexts({ hospital, model, ...page }), share: false, range, solver: solverOf(hospital, model) })}
 ${jsonScript('hacrp-program', { hospital, model, estimate, page, range })}`;
 }
 

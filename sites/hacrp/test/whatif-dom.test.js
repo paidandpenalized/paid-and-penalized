@@ -9,9 +9,9 @@ import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
-import { initialState, viewModel } from '../../../web/whatif/state.js';
 import { loadHacrp } from '../web/data.js';
 import { scoreRange } from '../web/generate.js';
+import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
 const D = loadHacrp();
@@ -61,7 +61,7 @@ function find(chunk, sel) {
 }
 
 const rootFor = (h, share, t = textsFor(h)) => {
-  const html = String(renderWhatIf({ vm: viewModel(initialState(h, model), h, model, estimate), hospital: h, model, texts: t, share, range: RANGE }));
+  const html = String(renderWhatIf({ vm: viewModel(initialState(h, model), h, model, estimate), texts: t, share, range: RANGE, solver: solverOf(h, model) }));
   return node(/^<section[^>]*>/.exec(html)[0], html);
 };
 
@@ -94,7 +94,7 @@ function windowStub({ hash = '', clipboard } = {}) {
 
 const mount = (share, stub, h = H) => {
   const root = rootFor(h, share);
-  mountWhatIf(root, { hospital: h, model, estimate, texts: textsFor(h), share, range: RANGE, env: stub.env });
+  mountWhatIf(root, { rules: whatIfRules(h, model, estimate), texts: textsFor(h), share, range: RANGE, env: stub.env });
   return root;
 };
 const q = (root, name) => root.querySelector(`[data-wi="${name}"]`);
@@ -337,10 +337,10 @@ test('mounting on markup that lacks parts never throws: Maryland, share false, a
   const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
   const t = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText });
   const root = rootFor(m, false, t);
-  mountWhatIf(root, { hospital: m, model, estimate, texts: t, share: false, range: RANGE, env: windowStub().env });
+  mountWhatIf(root, { rules: whatIfRules(m, model, estimate), texts: t, share: false, range: RANGE, env: windowStub().env });
   type(field(root, 'MRSA', 'number'), '1.2');
 });
 
 test('share is required', () => {
-  assert.throws(() => mountWhatIf(rootFor(H, false), { hospital: H, model, estimate, texts, range: RANGE, env: windowStub().env }), /share/);
+  assert.throws(() => mountWhatIf(rootFor(H, false), { rules: whatIfRules(H, model, estimate), texts, range: RANGE, env: windowStub().env }), /share/);
 });

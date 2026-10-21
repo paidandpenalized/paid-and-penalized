@@ -5,8 +5,8 @@ import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
 import { SYNTH_PERIODS, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
-import { initialState, reduce, viewModel } from '../../../web/whatif/state.js';
 import { hospitalView } from '../web/view.js';
+import { initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { cutText, flagText, scenarioSentence, slideText, solverRows, whatIfTexts } from '../web/whatif-text.js';
 import { inputs } from './fixtures.js';
 
@@ -30,7 +30,9 @@ const vmOf = (h, changes = {}) => {
   return viewModel(s, h, model, ESTIMATE);
 };
 const sentence = (name, changes) => scenarioSentence(vmOf(H[name], changes), H[name], model);
-const rows = (name, changes) => solverRows(vmOf(H[name], changes), model);
+// The solver's rows for a hospital (none where solverOf has no answers).
+const rowsOf = (h) => solverRows(solverOf(h, model) ?? [], model);
+const rows = (name) => rowsOf(H[name]);
 
 const NO_CUT = "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.";
 const CUT = "That would be above CMS's line, so the payment reduction decision would be Yes: a 1% cut.";
@@ -118,8 +120,6 @@ test('solver rows, flagged hospital: the value needed, or not possible with this
     { id: 'CDI', label: 'CDI', answer: '0.003 or lower', note: null },
     { id: 'MRSA', label: 'MRSA', answer: '0.094 or lower', note: null },
   ]);
-  // The reader's own changes don't move the solver: it answers from CMS's values.
-  assert.deepEqual(rows('yes', { CLABSI: 0.1 }), rows('yes'));
 });
 
 test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, and no cushion', () => {
@@ -139,16 +139,16 @@ test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, an
     { id: 'CLABSI', label: 'CLABSI', answer: 'no cushion', note: 'The current value is already the highest that keeps the decision at No.' });
 });
 
-test('solver rows, an assigned measure: a note, no answer; Maryland: not applicable', () => {
+test('solver rows, an assigned measure: a note, no answer; Maryland: no solver at all', () => {
   assert.deepEqual(rows('assigned').find((r) => r.id === 'SSI'),
     { id: 'SSI', label: 'SSI', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." });
-  for (const r of rows('maryland')) assert.deepEqual([r.answer, r.note], [null, 'Not subject to the reduction.']);
+  assert.equal(solverOf(H.maryland, model), null);
 });
 
 test('the solver\'s answer, entered as the reader\'s value, reads No; one unit higher does not', () => {
   for (const name of ['yes', 'assigned', 'no']) {
     const h = H[name];
-    for (const r of vmOf(h).solver) {
+    for (const r of solverOf(h, model)) {
       if (!r.possible || r.unlimited) continue;
       const unit = 10 ** -model.params[r.id].decimals;
       const at = vmOf(h, { [r.id]: r.value });
@@ -164,7 +164,7 @@ test('the solver\'s answer, entered as the reader\'s value, reads No; one unit h
 test('the solver and the sentences never point at an assigned score, even when it is all CMS scored', () => {
   const allAssigned = modelHospital(model, '990018', { values: { CDI: 'assigned', MRSA: 'assigned' } });
   assert.equal(allAssigned.paymentReduction, 'Yes');
-  assert.deepEqual(solverRows(vmOf(allAssigned), model), [
+  assert.deepEqual(rowsOf(allAssigned), [
     { id: 'CDI', label: 'CDI', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
     { id: 'MRSA', label: 'MRSA', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
   ]);
@@ -176,7 +176,7 @@ test('a hospital with no score: no sentence, no solver rows, no slide', () => {
   const none = modelHospital(model, '990019', { values: {}, decision: 'No' });
   const vm = vmOf(none);
   assert.equal(scenarioSentence(vm, none, model), null);
-  assert.deepEqual(solverRows(vm, model), []);
+  assert.equal(solverOf(none, model), null);
   assert.equal(slideText(vm, none, model, { name: 'X', fy: 2026, source: SOURCE }), null);
 });
 
@@ -214,7 +214,7 @@ test('the what-if words never say should, failed, caught, dodged, worst-performi
   for (const [name, changes] of scenarios) {
     const vm = vmOf(H[name], changes);
     const words = [scenarioSentence(vm, H[name], model), slideText(vm, H[name], model, { name: null, fy: 2026, source: SOURCE }),
-      ...solverRows(vm, model).flatMap((r) => [r.answer, r.note])].filter(Boolean);
+      ...rowsOf(H[name]).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, banned, w);
   }
 });
@@ -248,7 +248,7 @@ test('the median hospital: this site\'s hypothetical, never described as CMS\'s 
   for (const changes of [{}, { CLABSI: 1.2, MRSA: 1.4 }, { MRSA: 2 }, { CLABSI: 0.4 }, { PSI90: 0.7 }]) {
     const vm = vmOf(mh, changes);
     const words = [scenarioSentence(vm, mh, model), slideText(vm, mh, model, { name: null, fy: 2026, source: SOURCE }),
-      ...solverRows(vm, model).flatMap((r) => [r.answer, r.note])].filter(Boolean);
+      ...rowsOf(mh).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, claimsCms, w);
   }
   assert.equal(slideText(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, { name: null, fy: 2026, source: SOURCE }), [

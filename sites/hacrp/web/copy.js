@@ -119,7 +119,6 @@ export const COPY = {
   solverNoCushion: { text: 'no cushion', claim: null },
   solverNoCushionNote: { text: 'The current value is already the highest that keeps the decision at No.', claim: null },
   solverAssignedNote: { text: "CMS assigned this measure's score, so there is no submitted value to solve for.", claim: 'HACRP-05' },
-  solverNANote: { text: 'Not subject to the reduction.', claim: 'HACRP-13' },
   // Copy for a slide: plain text lines.
   slideScore: { text: 'Total HAC Score: {before} → {after} (Hypothetical)', claim: null },
   slideDecision: { text: 'Payment reduction decision: {before} → {after} (Hypothetical)', claim: null },
@@ -177,6 +176,10 @@ export const COPY = {
     claim: 'HACRP-03',
   },
   whatifSliderLabel: { text: '{short} value', claim: null },
+  // A slider's aria-valuetext beside its value.
+  valueAtCap: { text: "{value}, at CMS's cap", claim: 'HACRP-03' },
+  valueAboveCap: { text: "{value}, above CMS's cap", claim: 'HACRP-03' },
+  valueAssigned: { text: 'no value: CMS assigned the worst score', claim: 'HACRP-05' },
   whatifInvalid: { text: 'Enter a number from {min} to {max}.', claim: null },
   whatifAssignedPlaceholder: { text: 'none (assigned z-score {z})', claim: null },
   whatifAssignedHelp: {

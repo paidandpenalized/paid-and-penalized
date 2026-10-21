@@ -6,17 +6,17 @@ import { readFileSync } from 'node:fs';
 import { build as esbuild } from 'esbuild';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
-import { REPO_ROOT } from '../../../pipeline/files.js';
+import { REPO_ROOT, repoFiles } from '../../../pipeline/files.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { MAX_FACTOR, encode } from '../../../web/whatif/fragment.js';
 import { NARROW_PX, labelSpan, rampAt, rampDomain, rampLabels, rampSide, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
-import { changesOf, initialState, reduce, viewModel } from '../../../web/whatif/state.js';
 import { loadHacrp } from '../web/data.js';
 import { HACRP, scoreRange } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
+import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 import { master } from './fixtures.js';
 
@@ -43,7 +43,7 @@ const textsFor = (h) => whatIfTexts({
   source: D.source, boundaryText: D.boundaryText,
 });
 const render = (h, state = initialState(h, model), share = true, texts = textsFor(h)) =>
-  String(renderWhatIf({ vm: viewModel(state, h, model, estimate), hospital: h, model, texts, share, range: RANGE }));
+  String(renderWhatIf({ vm: viewModel(state, h, model, estimate), texts, share, range: RANGE, solver: solverOf(h, model) }));
 const set = (h, changes) => Object.entries(changes).reduce((s, [id, value]) => reduce(s, { type: 'set', id, value }), initialState(h, model));
 const all = (text, re) => [...text.matchAll(re)];
 const inputsOf = (text, type) => all(text, new RegExp(`<input[^>]*type="${type}"[^>]*>`, 'g')).map(([tag]) => tag);
@@ -259,6 +259,17 @@ test('the browser bundle builds; dom.js and the client never write markup or rea
     }
   }
   for (const banned of ['innerHTML', 'localStorage', 'sessionStorage', 'XMLHttpRequest', 'fetch(']) assert.ok(!js.includes(banned), `bundle: ${banned}`);
+  // Only the site's rules run the solver, at build time: the browser never needs it.
+  assert.ok(!js.includes('HACRP solver'), 'bundle: the solver');
+});
+
+test('the shared component imports no site and no program\'s engine: a site passes its rules and words in', () => {
+  const files = repoFiles('web/whatif/', { untracked: true }).filter((f) => f.endsWith('.js'));
+  assert.deepEqual(files.sort(), ['web/whatif/dom.js', 'web/whatif/fragment.js', 'web/whatif/marks.js', 'web/whatif/render.js']);
+  for (const file of files) {
+    const imports = [...readFileSync(REPO_ROOT + file, 'utf8').matchAll(/^import[^;]*?from '([^']+)'/gms)].map((m) => m[1]);
+    for (const path of imports) assert.doesNotMatch(path, /\/sites\/|\/engine\/js\/hacrp\//, `${file} imports ${path}`);
+  }
 });
 
 test('the ramp spans the national middle of published scores, widened for the starting score and the line', () => {
@@ -272,10 +283,6 @@ test('the ramp spans the national middle of published scores, widened for the st
     const [lo, hi] = rampDomain(RANGE, { actual, ...boundary });
     for (const x of [RANGE.low, RANGE.high, actual, boundary.highestNo, boundary.lowestYes]) assert.ok(x > lo && x < hi, `${actual}: ${x} inside`);
   }
-  // Narrower than the reach of the score, which Task 8's ramp spanned.
-  const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
-  const [lo, hi] = rampDomain(RANGE, vm.ramp);
-  assert.ok(hi - lo < (vm.ramp.max - vm.ramp.min) * 0.75);
 });
 
 test('a hypothetical past the ramp sits at its edge with an arrow; inside, no arrow', () => {
@@ -336,10 +343,12 @@ test('a reader value on an assigned measure: its bar loses the hatch and the "as
   assert.match(/data-wi="bar-assigned"[^>]*>/.exec(after)[0], /hidden/);
 });
 
-test('share and range are required; the slider label names the value, not the role; the solver sits under its button', () => {
+test('share, range and solver are required; the slider label names the value, not the role; the solver sits under its button', () => {
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
-  assert.throws(() => renderWhatIf({ vm, hospital: H.no, model, texts: textsFor(H.no), range: RANGE }), /share/);
-  assert.throws(() => renderWhatIf({ vm, hospital: H.no, model, texts: textsFor(H.no), share: true }), /range/);
+  const solver = solverOf(H.no, model);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), range: RANGE, solver }), /share/);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), share: true, solver }), /range/);
+  assert.throws(() => renderWhatIf({ vm, texts: textsFor(H.no), share: true, range: RANGE }), /solver/);
   const text = render(H.no);
   assert.match(text, /<label class="vh" for="wi-MRSA-r">MRSA value<\/label>/);
   assert.doesNotMatch(text, /slider</);

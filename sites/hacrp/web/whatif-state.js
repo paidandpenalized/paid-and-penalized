@@ -1,16 +1,16 @@
-// The what-if's state and view model. The state holds the reader's values per scored measure (CMS's to begin
+// HACRP's rules for the shared what-if component (web/whatif/): its state, the actions reduce() takes, and the
+// view model render.js and dom.js draw. The state holds the reader's values per scored measure (CMS's to begin
 // with) and any NHSN predicted counts they type, which stay in the browser and never enter the fragment.
-// reduce() only lets through values the engine accepts; viewModel() runs the engine and adds what the
-// component draws: slider bounds and text, the ramp, the solver, the count deltas.
-import { isAssigned, scoredMeasures } from '../../engine/js/hacrp/hospital.js';
-import { isSir } from '../../engine/js/hacrp/measures.js';
-import { solveMeasure } from '../../engine/js/hacrp/solver.js';
-import { whatIf } from '../../engine/js/hacrp/whatif.js';
-import { fillCopy } from '../render/components.js';
-import { decimal } from '../render/format.js';
-import { COPY } from '../copy.js';
-import { ceilToUnit, toUnit } from '../../engine/js/stats.js';
-import { limitOf } from './fragment.js';
+// reduce() only lets through values the engine accepts; viewModel() runs the engine and adds what the component
+// draws: slider bounds and text, the ramp's scores, the bars' scale, the count deltas.
+import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { isSir } from '../../../engine/js/hacrp/measures.js';
+import { solveMeasure } from '../../../engine/js/hacrp/solver.js';
+import { whatIf } from '../../../engine/js/hacrp/whatif.js';
+import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
+import { decimal } from '../../../web/render/format.js';
+import { limitOf } from '../../../web/whatif/fragment.js';
+import { fill } from './copy.js';
 
 const SLIDER_HEADROOM = 1.2;
 
@@ -46,8 +46,9 @@ export function changesOf(state) {
 
 const withValues = (state, values) => ({ ...state, values });
 
-// Actions: set { id, value } (null restores CMS's value; above the limit is ignored), reset, median, predicted { id, count } (null clears).
-// Anything the engine would refuse leaves the state unchanged (the same object).
+// Actions: set { id, value } (null restores CMS's value; above the limit is ignored), reset, median, predicted
+// { id, count } (null clears), load { changes } (a link's values, each as a set, on CMS's values; predicted counts
+// are kept). Anything the engine would refuse leaves the state unchanged (the same object).
 export function reduce(state, action) {
   switch (action?.type) {
     case 'set': {
@@ -61,6 +62,9 @@ export function reduce(state, action) {
     }
     case 'reset':
       return withValues(state, { ...state.cms });
+    case 'load':
+      return Object.entries(action.changes)
+        .reduce((s, [id, value]) => reduce(s, { type: 'set', id, value }), withValues(state, { ...state.cms }));
     case 'median': {
       const values = { ...state.values };
       for (const id of state.ids) if (state.cms[id] !== null) values[id] = Math.min(values[id], state.medians[id]);
@@ -82,40 +86,29 @@ export function reduce(state, action) {
   }
 }
 
-// The score's reach for this hospital: each measure's z can move between CMS's best and worst z (or stay past
-// them, where CMS published a value beyond a bound). Fixed per hospital, so the axis doesn't rescale as the
-// reader drags.
-function ramp(result, hospital, model) {
-  let lo = 0;
-  let hi = 0;
-  for (const [id, m] of Object.entries(result.measures)) {
-    const p = model.params[id];
-    lo += Math.min(p.zMin, m.beforeZ) - m.beforeZ;
-    hi += Math.max(p.zMax, m.beforeZ) - m.beforeZ;
-  }
-  const total = hospital.total;
-  return {
-    min: total + lo / result.n,
-    max: total + hi / result.n,
-    actual: result.before.score,
-    hypothetical: result.after.score,
-    highestNo: model.boundary.highestNo,
-    lowestYes: model.boundary.lowestYes,
-  };
-}
-
 function valuetext(value, p) {
-  if (value === null) return fillCopy(COPY, 'valueAssigned');
+  if (value === null) return fill('valueAssigned');
   const text = decimal(value, p.decimals);
-  if (value === p.cap) return fillCopy(COPY, 'valueAtCap', { value: text });
-  if (value > p.cap) return fillCopy(COPY, 'valueAboveCap', { value: text });
+  if (value === p.cap) return fill('valueAtCap', { value: text });
+  if (value > p.cap) return fill('valueAboveCap', { value: text });
   return text;
 }
 
-// estimate: the emitted per-measure { tagged } map.
+// The widest part any measure could add or take away for this hospital (its z-score over n, at CMS's bounds or
+// at the value CMS published), so the bars keep one scale while the reader changes values.
+function barExtent(result, model) {
+  let extent = 0;
+  for (const [id, m] of Object.entries(result.measures)) {
+    const p = model.params[id];
+    extent = Math.max(extent, Math.abs(p.zMin), Math.abs(p.zMax), Math.abs(m.beforeZ));
+  }
+  return extent / result.n || 1;
+}
+
+// The view model (its shape is listed in web/whatif/render.js). estimate: the emitted per-measure { tagged } map.
 export function viewModel(state, hospital, model, estimate) {
   const result = whatIf(hospital, model, changesOf(state));
-  if (!result.available) return { result, solver: [], ramp: null, inputs: [], counts: {} };
+  if (!result.available) return { result, ramp: null, inputs: [], counts: {} };
 
   const inputs = state.ids.map((id) => {
     const p = model.params[id];
@@ -123,14 +116,15 @@ export function viewModel(state, hospital, model, estimate) {
     return {
       id,
       value,
-      min: 0,
       // Follows the current value, so a typed or linked value never sits past the slider's end; rounded up to the
       // display unit, so the slider's top is a step it can reach.
       max: ceilToUnit(Math.max(value ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals),
       step: 1 / 10 ** p.decimals,
+      decimals: p.decimals,
       median: state.medians[id],
+      floor: p.floor,
       cap: p.cap,
-      deadZoneFrom: p.cap,
+      limit: state.limits[id],
       valuetext: valuetext(value, p),
       assigned: isAssigned(hospital.measures[id]),
       tagged: estimate[id].tagged,
@@ -147,9 +141,37 @@ export function viewModel(state, hospital, model, estimate) {
 
   return {
     result,
-    solver: state.ids.map((id) => solveMeasure(hospital, model, id)),
-    ramp: ramp(result, hospital, model),
+    ramp: {
+      actual: result.before.score,
+      hypothetical: result.after.score,
+      highestNo: model.boundary.highestNo,
+      lowestYes: model.boundary.lowestYes,
+    },
     inputs,
     counts,
+    extent: barExtent(result, model),
+    // A recomputed (estimate-tagged) measure changed: the result carries the estimate note.
+    estimated: inputs.some((i) => i.tagged && result.measures[i.id].changed),
   };
+}
+
+// What web/whatif/dom.js runs for one hospital: the starting state, each measure's { decimals, cap } for decoding a
+// link, and the state's functions.
+export function whatIfRules(hospital, model, estimate) {
+  return {
+    start: initialState(hospital, model),
+    params: model.params,
+    reduce,
+    changesOf,
+    viewModel: (state) => viewModel(state, hospital, model, estimate),
+  };
+}
+
+// The solver's answers (engine/js/hacrp/solver.js), one per scored measure, from the starting values: they never
+// follow the reader's edits. null where there is nothing to solve for: no score, or Maryland, which is not subject
+// to the reduction. Build time only; the browser never needs them.
+export function solverOf(hospital, model) {
+  const ids = hospital.total === null ? [] : scoredMeasures(hospital);
+  const rows = ids.map((id) => solveMeasure(hospital, model, id));
+  return rows.some((r) => r.note !== 'not-applicable') ? rows : null;
 }

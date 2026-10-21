@@ -4,6 +4,7 @@
 // the median hospital, mounted from the page's own record with share false (the URL is never read or written).
 import { CCN } from '../../../engine/js/ccn.js';
 import { mountWhatIf } from '../../../web/whatif/dom.js';
+import { whatIfRules } from '../web/whatif-state.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
 const box = document.querySelector('.search[data-src]');
@@ -57,5 +58,5 @@ const root = document.querySelector('#whatif');
 const data = document.querySelector('#hacrp-program');
 if (root && data) {
   const { hospital, model, estimate, page, range } = JSON.parse(data.textContent);
-  mountWhatIf(root, { hospital, model, estimate, texts: whatIfTexts({ hospital, model, ...page }), share: false, range });
+  mountWhatIf(root, { rules: whatIfRules(hospital, model, estimate), texts: whatIfTexts({ hospital, model, ...page }), share: false, range });
 }

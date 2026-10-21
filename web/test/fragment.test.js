@@ -1,11 +1,11 @@
+// The what-if's URL fragment (web/whatif/fragment.js), with HACRP's measures and fitted parameters. The state's
+// side of the round trip is in sites/hacrp/test/whatif-state.test.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../engine/js/hacrp/measures.js';
 import { toUnit } from '../../engine/js/stats.js';
 import { decode, encode as encodeIds } from '../whatif/fragment.js';
-import { initialState, reduce, changesOf } from '../whatif/state.js';
 import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
-import { modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
 
 const { model } = loadHacrp();
 const { params } = model;
@@ -70,24 +70,4 @@ test('decode never throws, whatever it is given', () => {
   assert.deepEqual(decode('whatif&CLABSI=0.5', ALL).changes, { CLABSI: 0.5 });
   assert.deepEqual(decode('#whatif&__proto__=1', ALL), { changes: {}, rejected: ['__proto__'] });
   assert.equal(({}).polluted, undefined);
-});
-
-test('the NHSN predicted count never appears in the fragment', () => {
-  const h = modelHospital(model, '990011', { values: { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 } });
-  let s = initialState(h, model);
-  s = reduce(s, { type: 'set', id: 'CLABSI', value: 0.6 });
-  s = reduce(s, { type: 'predicted', id: 'CLABSI', count: 7.25 });
-  s = reduce(s, { type: 'predicted', id: 'MRSA', count: 3.5 });
-  const hash = encode(changesOf(s));
-  assert.equal(hash, '#whatif&CLABSI=0.6');
-  assert.deepEqual(decode(hash, ALL).changes, changesOf(s));
-  assert.doesNotMatch(hash, /7\.25|3\.5/);
-});
-
-test('reduce and decode accept the same range: whatever set keeps, a link carries', () => {
-  const h = modelHospital(model, '990011', { values: { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 } });
-  for (const v of [0, 0.4, 1.762, 17.62, 17.621, 18, 1e25]) {
-    const s = reduce(initialState(h, model), { type: 'set', id: 'MRSA', value: v });
-    assert.deepEqual(decode(encode(changesOf(s)), ALL).changes, changesOf(s), String(v));
-  }
 });
