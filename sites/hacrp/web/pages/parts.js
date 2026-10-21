@@ -62,5 +62,8 @@ export function citation({ fy, title, path, source }) {
   return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`, isoDate(source.pdcReleased)]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }
 
+// A link that prints its full address after its words (print.css reads data-print-href).
+export const printLink = (href, text) => html`<a href="${href}" data-print-href="${href.startsWith('/') ? SITE.origin + href : href}">${text}</a>`;
+
 // The plain links to the dataset file, its dictionary and CMS's dataset page (source: the manifest entry).
-export const dataLinks = (fy, source) => html`<p class="data-links"><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a> · <a href="${source.landingPage}">${t('datasetLink')}</a></p>`;
+export const dataLinks = (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(dictionaryPath(fy), t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`;

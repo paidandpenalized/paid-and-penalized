@@ -399,5 +399,8 @@ test("a hospital page's head names the data's release; its foot runs back link, 
   const order = ['class="page__links"', 'class="asof"', 'id="fn-h"', 'class="data-links"', 'id="cite-h"'].map(at);
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);
   assert.equal(text.split('Source: CMS Provider Data Catalog').length - 1, 1 + (text.match(/class="source fig__source"/g) ?? []).length, 'the citation and each figure say the source; no extra source line');
-  assert.match(text, new RegExp(`<a href="${DATA.source.landingPage.replace(/[.?]/g, '\\$&')}">CMS’s dataset page</a></p>`));
+  const landing = DATA.source.landingPage.replace(/[.?]/g, '\\$&');
+  assert.match(text, new RegExp(`<a href="${landing}" data-print-href="${landing}">CMS’s dataset page</a></p>`));
+  // On paper the way back prints its full address (print.css).
+  assert.ok(text.includes('<p class="page__links"><a href="/hacrp/" data-print-href="https://paidandpenalized.org/hacrp/">'));
 });

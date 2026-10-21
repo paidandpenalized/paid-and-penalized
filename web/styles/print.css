@@ -1,7 +1,9 @@
 /* Print and save-as-PDF: the page as a document. The light tokens are forced in tokens.css. Controls that do
    nothing on paper are hidden (!important: whatif.css and the site styles load after this file); the marks that
    carry meaning keep their ink (browsers drop backgrounds by default); figures, the hero and the what-if result
-   don't split across pages; external links in the source lines and link lists print their address. The what-if
+   don't split across pages; external links in the source lines and link lists, and every link the build marks
+   data-print-href (the data links, the way back to the program), print their address; an estimate tag prints its
+   note. The what-if
    prints as it stands on screen, with a line naming its address (.print-only); one the reader hasn't changed drops
    its instructions and its column of "same" (dom.js marks a changed one data-changed). */
 .print-only { display: none; }
@@ -20,4 +22,9 @@
   h2, h3 { break-after: avoid; }
   thead { display: table-header-group; }
   :is(.source, .links) a[href^="http"]::after { content: " (" attr(href) ")"; overflow-wrap: anywhere; }
+  a[data-print-href]::after { content: " (" attr(data-print-href) ")"; overflow-wrap: anywhere; }
+  /* The estimate tag prints its note in the Notes cell: the word, a colon, then the note. */
+  .est::details-content { display: contents; content-visibility: visible; }
+  .est > :not(summary) { display: block !important; }
+  .est summary::after { content: ":"; }
 }

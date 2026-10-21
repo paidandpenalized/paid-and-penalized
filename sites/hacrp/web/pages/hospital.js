@@ -9,7 +9,7 @@ import { SITE } from '../../../../web/site.js';
 import { distanceSentence, largestSentence, measureNote, smallNumber, summary } from '../sentences.js';
 import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
 import { partsFigure, rangeFigure } from '../figures.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -140,7 +140,7 @@ ${measureTable(view.measures)}
 ${figs}
 </section>
 ${what?.body}
-<p class="page__links"><a href="${home}">${t('backToProgram')}</a></p>
+<p class="page__links">${printLink(home, t('backToProgram'))}</p>
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
 ${legend(view)}
 ${dataLinks(view.fy, source)}

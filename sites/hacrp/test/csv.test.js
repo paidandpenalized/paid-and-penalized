@@ -195,8 +195,8 @@ test('the program page cites its title, FY, canonical URL and source line, and l
   assert.ok(block.includes(`<span class="nw">(${DATA.source.id})</span>`), 'the dataset id never breaks at its hyphen');
   assert.match(block, /<button type="button" class="fig__btn" data-cite-copy hidden>Copy citation<\/button>/);
   assert.match(block, /aria-live="polite"/);
-  assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`));
-  assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}">`));
+  assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`));
+  assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${dictionaryPath(DATA.fy)}">`));
   assert.ok(page.includes('<script type="module" src="/assets/cite.test.js">'));
 });
 
@@ -210,8 +210,8 @@ test('every hospital page, whatever its status, cites its name, place, FY, canon
     assert.ok(text.includes(`FY${DATA.fy}`), `${name}: FY`);
     assert.ok(text.includes('Example General Hospital'), `${name}: title`);
     assert.ok(text.includes(esc(sourceText)), `${name}: source line`);
-    assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`), `${name}: CSV link`);
-    assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}">`), `${name}: dictionary link`);
+    assert.ok(page.includes(`<a href="${csvPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${csvPath(DATA.fy)}">Download all hospitals’ data (CSV)</a>`), `${name}: CSV link`);
+    assert.ok(page.includes(`<a href="${dictionaryPath(DATA.fy)}" data-print-href="https://paidandpenalized.org${dictionaryPath(DATA.fy)}">`), `${name}: dictionary link`);
     assert.ok(page.includes('/assets/cite.test.js'), `${name}: script`);
   }
 });
