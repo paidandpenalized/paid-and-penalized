@@ -1,0 +1,98 @@
+/* The what-if component (web/whatif/render.js): the result box with its ramp, the measure inputs over marked
+   tracks, the contribution bars and the solver. Colors come only from tokens.css; text stays in ink (marks may
+   carry a meaning ink, words never do). Wide screens: inputs left, the result beside them, sticky. Phones: the
+   result sits above the inputs and scrolls with the page. */
+.whatif { gap: 16px; }
+/* Beats the single-class display rules below, so hidden parts stay hidden. */
+.whatif [hidden] { display: none; }
+
+.wi-banner { max-width: none; padding: 8px 12px; border: var(--rule) solid var(--ink); background: var(--paper-2); font-weight: 600; }
+
+.wi-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.wi-grid > * { min-width: 0; }
+@media (min-width: 900px) {
+  .wi-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; }
+  .wi-inputs { grid-column: 1; grid-row: 1; }
+  .wi-result { grid-column: 2; grid-row: 1; position: sticky; top: 16px; }
+}
+.wi-inputs { display: grid; gap: 12px; }
+
+/* ---------- the result ---------- */
+.wi-result { display: grid; gap: 10px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
+.wi-result > * { min-width: 0; }
+.wi-table { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-body); }
+.wi-table th, .wi-table td { padding: 5px 10px 5px 0; text-align: left; vertical-align: baseline; }
+.wi-table thead th { border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.wi-table tbody th { font-weight: 600; }
+.wi-table td { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.wi-after { font-weight: 700; }
+.wi-sentence { font-weight: 600; }
+.wi-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wi-slide { display: block; width: 100%; padding: 8px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); font: 400 var(--fs-sm)/1.4 var(--font-type); resize: vertical; }
+
+/* The ramp: positions are percentages of its width, so its text keeps its size on any screen. */
+.wi-ramp { display: block; overflow: visible; font: 400 var(--fs-xs) var(--font-type); }
+.wi-ramp__zone { fill: var(--pen-tint); }
+.wi-ramp__axis, .wi-ramp__tick { stroke: var(--ink-3); stroke-width: 1; }
+.wi-ramp__line { stroke: var(--pen); stroke-width: 2; }
+.wi-ramp__tick-label { fill: var(--ink-2); }
+.wi-ramp__label { fill: var(--ink); font-family: var(--font-body); font-weight: 600; }
+.wi-tri--cms { fill: var(--ink); }
+.wi-tri--hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+
+/* ---------- buttons ---------- */
+.wi-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.wi-btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
+.wi-btn:hover { background: var(--paper-2); }
+.wi-btn[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
+
+/* ---------- the inputs ---------- */
+.wi-fields { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.wi-measure { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.wi-measure > * { min-width: 0; }
+.wi-measure__label { font-weight: 600; }
+.wi-measure__controls { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 14px; align-items: center; }
+.wi-number { width: 100%; padding: 6px 8px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
+.wi-number[aria-invalid="true"] { border-color: var(--pen); box-shadow: 0 0 0 1px var(--pen); }
+.wi-fields:disabled .wi-number, .wi-fields:disabled .wi-range { cursor: not-allowed; }
+
+/* A track drawn behind a transparent native range input: median tick, cap tick, and hatched values that score the
+   same. --at, --from and --to are fractions of the slider's range; the thumb's center runs inside half a thumb
+   from either end, so the marks do too. */
+.wi-track { --thumb: 18px; position: relative; }
+.wi-scale { position: absolute; top: 50%; right: 0; left: 0; height: 8px; margin-top: -4px; border: 1px solid var(--ink-3); background: var(--paper-2); pointer-events: none; }
+.wi-dead { position: absolute; top: 0; bottom: 0; left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--from)); width: calc((100% - var(--thumb)) * (var(--to) - var(--from))); background: var(--hatch-fill); }
+.wi-tick { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--at)); }
+.wi-tick--median { background: var(--ink-2); }
+.wi-tick--cap { width: 3px; background: var(--ink); }
+.wi-range { position: relative; display: block; width: 100%; height: 32px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.wi-range::-webkit-slider-runnable-track { height: 8px; border: 0; background: transparent; }
+.wi-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -5px; border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); -webkit-appearance: none; appearance: none; }
+.wi-range::-moz-range-track { height: 8px; border: 0; background: transparent; }
+.wi-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
+@media (forced-colors: active) {
+  .wi-range { -webkit-appearance: auto; appearance: auto; }
+  .wi-scale { display: none; }
+}
+
+.wi-predicted { display: grid; gap: 4px; margin-top: 6px; padding: 6px 0 6px 12px; border-left: 3px solid var(--line); }
+.wi-predicted .wi-number { max-width: 10rem; }
+
+/* ---------- each measure's part of the score ---------- */
+.wi-bars { display: grid; gap: 8px; }
+.wi-bars__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wi-bars__row { display: grid; grid-template-columns: minmax(5.5rem, 12rem) minmax(0, 1fr) 5rem; gap: 10px; align-items: center; font-size: var(--fs-sm); }
+.wi-bars__name, .wi-bars__value { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.wi-bars__value { text-align: right; }
+.wi-bars__track { position: relative; height: 16px; }
+.wi-bars__track::before { content: ''; position: absolute; top: -3px; bottom: -3px; left: 50%; border-left: 1px solid var(--ink); }
+.wi-bar { position: absolute; top: 2px; bottom: 2px; left: calc(var(--at) * 100%); width: calc(var(--w) * 100%); background: var(--ink-3); }
+.wi-bars__row--assigned .wi-bar { outline: 1px solid var(--ink-3); background: var(--hatch-fill); }
+
+.wi-solver { display: grid; gap: 8px; }
+
+@media (max-width: 640px) {
+  .wi-measure__controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .wi-number { max-width: 10rem; }
+  .wi-bars__row { grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem; gap: 8px; }
+}
