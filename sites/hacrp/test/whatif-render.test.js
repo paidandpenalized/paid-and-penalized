@@ -345,13 +345,13 @@ test('the two mark labels sit under their marks, never overlap (they stack when 
 test('the ramp: the shaded side carries its cut; the hollow mark and its label hide while the score is unchanged; close labels stack', () => {
   const start = render(H.no);
   assert.match(start, /class="wi-ramp__zone-label"[^>]*>1% cut</);
-  assert.match(start, /data-wi="hyp" href="#wi-tri" x="[\d.]+%" y="48" hidden/);
+  assert.match(start, /data-wi="hyp" href="#wi-tri" x="[\d.]+%" y="59" hidden/);
   assert.match(start, /data-wi="hyp-label"[^>]*hidden>Hypothetical</);
-  assert.match(start, /class="wi-ramp" data-wi="ramp" width="100%" height="80"/);
+  assert.match(start, /class="wi-ramp" data-wi="ramp" width="100%" height="91"/);
   const near = render(H.no, set(H.no, { MRSA: 0.95 }));
   assert.doesNotMatch(near, /data-wi="hyp-label"[^>]*hidden/);
-  assert.match(near, /data-wi="hyp-label"[^>]*y="88"/, 'a close hypothetical takes the second row');
-  assert.match(near, /class="wi-ramp" data-wi="ramp" width="100%" height="94"/);
+  assert.match(near, /data-wi="hyp-label"[^>]*y="99"/, 'a close hypothetical takes the second row');
+  assert.match(near, /class="wi-ramp" data-wi="ramp" width="100%" height="105"/);
   assert.doesNotMatch(render(H.maryland), /wi-ramp__zone-label/, "Maryland's ramp names no cut");
 });
 

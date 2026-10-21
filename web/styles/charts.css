@@ -12,9 +12,13 @@
 /* Each swatch is drawn like its mark in the chart (the rules below). */
 .fig__swatch { position: relative; display: inline-block; flex: none; }
 .fig__swatch--this { width: 12px; height: 11px; background: var(--ink); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.fig__swatch--median { width: 1.5px; height: 10px; background: var(--ink-2); }
-.fig__swatch--band { width: 20px; height: 10px; border-inline: 1px solid var(--ink-3); }
-.fig__swatch--band::before { content: ''; position: absolute; inset: 0; background: var(--ink-3); opacity: 0.2; }
+/* The median: a stub of axis with the ink tick crossing it. */
+.fig__swatch--median { width: 14px; height: 12px; }
+.fig__swatch--median::before, .fig__swatch--median::after { content: ''; position: absolute; }
+.fig__swatch--median::before { top: 50%; right: 0; left: 0; height: 1px; background: var(--ink-3); }
+.fig__swatch--median::after { top: 0; bottom: 0; left: 6px; width: 2px; background: var(--ink); }
+/* Scores the same: the hatch, with the hairline where it starts. */
+.fig__swatch--same { width: 20px; height: 8px; border-left: 1px solid var(--ink-2); background: var(--hatch-fill); }
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
 /* The claim level leads the source line as words, not a badge. */
 .fig__claim { color: var(--ink); font-weight: 600; }
@@ -74,10 +78,10 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-tile-few--on { stroke: var(--on-mark); }
 .chart-tile-empty { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
 .chart-hatch { color: var(--ink-3); }
-.chart-band { fill: var(--ink-3); fill-opacity: 0.2; }
-/* The wash alone is faint; the range's ends carry its extent at full --ink-3. */
-.chart-band__end { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-median { stroke: var(--ink-2); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* Values that score the same as CMS's floor or cap: the hatch, with a hairline where it starts. */
+.chart-dead__end { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* The median crosses the axis in ink, so it never reads as one of the axis's ticks. */
+.chart-median { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .chart-note { fill: var(--ink-2); font-size: 11px; }
 .chart-this { fill: var(--ink); }
 .chart-hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; }
@@ -105,7 +109,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-mark.is-active :is(.chart-tile, .chart-tile-na) { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 
 @media (forced-colors: active) {
-  .fig__swatch--this, .fig__swatch--median, .fig__swatch--band::before { background: CanvasText; }
+  .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { background: CanvasText; }
   .chart-hatch { color: CanvasText; }
   .chart-bar-na, .chart-tile-na, .chart-tile-empty { stroke: CanvasText; }
 }

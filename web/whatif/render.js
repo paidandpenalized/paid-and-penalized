@@ -38,7 +38,7 @@ import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
-  RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks, zoneLabelAt,
+  RAMP_TICK, RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks, zoneLabelAt,
 } from './marks.js';
 
 const TICKS = 5;
@@ -72,9 +72,9 @@ function ramp(vm, range, texts) {
 <defs><path id="wi-tri" d="M0 0L6 11H-6Z"/></defs>
 <rect class="wi-ramp__zone" x="${rampX(line)}" y="${Y.zoneTop}" width="${rampWidthFrom(line)}" height="${Y.axis - Y.zoneTop}"/>
 ${texts.rampZone && rampText(zoneLabelAt(line), Y.zoneLabel, texts.rampZone, 'wi-ramp__zone-label')}
-${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="${Y.axis - 4}" y2="${Y.axis}"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="${Y.tickLabel}" text-anchor="middle">${fmt(x)}</text>`)}
+${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="${Y.axis}" y2="${Y.axis + RAMP_TICK}"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="${Y.tickLabel}" text-anchor="middle">${fmt(x)}</text>`)}
 <line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="${Y.axis}" y2="${Y.axis}"/>
-<line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="${Y.zoneTop - 2}" y2="${Y.mark}"/>
+<line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="${Y.zoneTop - 2}" y2="${Y.axis + RAMP_TICK}"/>
 ${rampText(labelAt(line), Y.lineLabel, texts.rampLine, 'wi-ramp__label')}
 <use class="wi-tri wi-tri--hyp" data-wi="hyp" href="#wi-tri" x="${rampX(hyp)}" y="${Y.mark}"${same}/>
 <use class="wi-tri wi-tri--cms" href="#wi-tri" x="${rampX(start)}" y="${Y.mark}"/>

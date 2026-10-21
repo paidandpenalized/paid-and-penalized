@@ -25,7 +25,7 @@ const BARS = {
     { id: 'c', label: 'Measure C <&>', value: 0.5, assigned: true },
   ],
 };
-const DOT = { value: 1.2, floor: 0.4, cap: 2, median: 0.9, label: 'This hospital', medianLabel: 'Median', rangeLabel: 'Floor to cap' };
+const DOT = { value: 1.2, floor: 0.4, cap: 2, median: 0.9, label: 'This hospital', medianLabel: 'Median', sameLabel: 'Scores the same' };
 const RAMP = { domain: [-1, 1], actual: 0.3, band: [-0.05, 0.05], labels: { actual: 'This hospital', line: "CMS's line" } };
 const HIST = { values: [-0.9, -0.5, -0.45, -0.1, 0, 0.12, 0.2, 0.61, 0.9], bins: 4, boundary: 0.05, markLabel: "CMS's line" };
 const STATES = Object.fromEntries(Object.keys(TILES).map((st, i) => [st, { value: (i % 5) / 4, label: `${st} label` }]));
@@ -106,15 +106,24 @@ test('an assigned part of zero still shows a hatched stub at the zero line', () 
   assert.doesNotMatch(String(contribBars({ id: 'z2', rows: [{ id: 'z', label: 'Z', value: 0 }] })), /chart-bar/);
 });
 
-test('dotRange marks the range\'s ends with hairline ticks, not only the gray wash', () => {
+test('dotRange hatches the values that score the same past the floor and the cap, each with a hairline where it starts', () => {
   const s = String(dotRange(DOT));
-  assert.equal(s.match(/class="chart-band__end"/g).length, 2);
+  assert.equal(s.match(/<rect class="chart-dead" fill="url\(#chart-range-hatch\)"/g).length, 2, 'below the floor and past the cap');
+  assert.equal(s.match(/class="chart-dead__end"/g).length, 2);
+  assert.ok(s.includes('<title>Scores the same (0.4, 2)</title>'));
+  // A floor at zero starts the axis: nothing to hatch below it, and no room left under zero.
+  const sir = String(dotRange({ ...DOT, floor: 0 }));
+  assert.equal(sir.match(/class="chart-dead"/g).length, 1, 'past the cap only');
+  assert.ok(sir.includes('<title>Scores the same (2)</title>'));
+  assert.match(sir, /<text class="chart-axis__label" x="18" y="-12" text-anchor="middle">0\.0<\/text>/, 'the axis starts at zero, its labels clear of the marks');
 });
 
-test('dotRange draws the range as a band, the median as a tick and this hospital as a triangle under the axis', () => {
-  const s = String(dotRange(DOT));
-  assert.match(s, /class="chart-band"/);
-  assert.match(s, /class="chart-median"/);
+test('dotRange draws the median as an ink tick crossing the axis, drops any axis tick beside it, and this hospital as a triangle under the axis', () => {
+  const s = String(dotRange({ ...DOT, floor: 0, median: 1 }));
+  assert.match(s, /<line class="chart-median" x1="([\d.]+)" x2="\1" y1="17" y2="31"\/>/);
+  const at = /<line class="chart-median" x1="([\d.]+)"/.exec(s)[1];
+  assert.doesNotMatch(s, new RegExp(`class="chart-axis__tick" x1="${at}"`), 'no axis tick under the median');
+  assert.ok(s.includes(`<text class="chart-axis__label" x="${at}" y="-12" text-anchor="middle">1.0</text>`), 'its label stays');
   assert.match(s, /class="chart-this"/);
   assert.ok(s.includes('>This hospital</text>'));
   assert.ok(!String(dotRange({ ...DOT, value: null })).includes('chart-this'), 'no value, no triangle');
@@ -126,10 +135,11 @@ test('dotRanges stacks one titled dotRange per row, each on its own scale and fo
     { id: 'a', title: 'Row A', ...DOT, format: (v) => v.toFixed(2) },
     { id: 'c', title: 'Row C', ...DOT },
   ];
-  const s = String(dotRanges({ rows, medianLabel: 'Median', rangeLabel: 'Floor to cap' }));
+  const s = String(dotRanges({ rows, medianLabel: 'Median', sameLabel: 'Scores the same' }));
   assert.match(s, /^<svg class="chart chart--dot-ranges" viewBox="0 0 360 \d+"/);
   assert.equal(s.match(/<svg /g).length, 1, 'one SVG');
-  assert.equal(s.match(/class="chart-band"/g).length, 3);
+  assert.equal(s.match(/<defs>/g).length, 1, 'one hatch pattern for every row');
+  assert.equal(s.match(/class="chart-median"/g).length, 3);
   assert.equal(s.match(/class="chart-this"/g).length, 2, 'no triangle where the value is null');
   assert.ok(s.includes('>no value &lt;here&gt;</text>'), "a null value's note stands in its place, as text");
   assert.equal(s.match(/>This hospital<\/text>/g).length, 1, "the triangle's label prints once, under the first triangle");
@@ -137,7 +147,7 @@ test('dotRanges stacks one titled dotRange per row, each on its own scale and fo
   assert.ok(s.includes('<title>This hospital: 1.20</title>'), 'each row keeps its own format');
   assert.ok(s.includes('<title>This hospital: 1.2</title>'), 'every triangle keeps its tooltip');
   assert.ok(s.includes('<title>Median: 5</title>'));
-  assert.throws(() => dotRanges({ rows: [], medianLabel: 'M', rangeLabel: 'R' }), /rows/);
+  assert.throws(() => dotRanges({ rows: [], medianLabel: 'M', sameLabel: 'S' }), /rows/);
 });
 
 test('histogramBins puts each value in exactly one bin, with CMS\'s line as a bin edge', () => {
@@ -342,7 +352,7 @@ test('figure: an optional note sits under the chart, as text; a blank or non-tex
 });
 
 test('figure: an optional key names marks above the chart, as text; a bad key throws', () => {
-  const s = String(figure({ ...FIG, key: [{ swatch: 'this', label: 'This <one>' }, { swatch: 'band', label: 'Range' }] }));
+  const s = String(figure({ ...FIG, key: [{ swatch: 'this', label: 'This <one>' }, { swatch: 'same', label: 'Range' }] }));
   assert.ok(s.includes('</figcaption>\n<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"></span>This &lt;one&gt;</li>'));
   assert.ok(s.indexOf('fig__key') < s.indexOf('<svg'), 'the key comes before the chart');
   assert.ok(!String(figure(FIG)).includes('fig__key'));
@@ -448,17 +458,17 @@ const SNAPSHOTS = {
 <g class="chart-mark" data-mark data-row="b" data-value="-0.125"><title>Measure B: −0.125</title><rect class="chart-hit" x="0" y="32" width="360" height="28"/><text class="chart-label" x="0" y="50" text-anchor="start">Measure B</text><path class="chart-bar" d="M204 38H185A4 4 0 0 0 181 42V50A4 4 0 0 0 185 54H204Z"/><text class="chart-value" x="360" y="50" text-anchor="end">−0.125</text></g>
 <g class="chart-mark" data-mark data-row="c" data-value="0.5"><title>Measure C &lt;&amp;&gt;: 0.5</title><rect class="chart-hit" x="0" y="60" width="360" height="28"/><text class="chart-label" x="0" y="78" text-anchor="start">Measure C &lt;&amp;&gt;</text><path class="chart-bar-na" fill="url(#chart-c1-hatch)" d="M204 66H292A4 4 0 0 1 296 70V78A4 4 0 0 1 292 82H204Z"/><text class="chart-value" x="360" y="78" text-anchor="end">0.5</text></g>
 <line class="chart-zero" x1="204" x2="204" y1="0" y2="92"/></svg>`,
-  dotRange: `<svg class="chart chart--dot-range" viewBox="0 0 360 58" width="100%" focusable="false"><g class="chart-mark" data-mark data-value="0.4 2"><title>Floor to cap: 0.4 – 2</title><rect class="chart-hit" x="30" y="12" width="300" height="20"/><rect class="chart-band" x="30" y="17" width="300" height="10"/><line class="chart-band__end" x1="30" x2="30" y1="15" y2="29"/><line class="chart-band__end" x1="330" x2="330" y1="15" y2="29"/></g>
-<g transform="translate(0 22)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="342" y1="0" y2="0"/><line class="chart-axis__tick" x1="48.75" x2="48.75" y1="0" y2="-4"/><text class="chart-axis__label" x="48.75" y="-8" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="142.5" x2="142.5" y1="0" y2="-4"/><text class="chart-axis__label" x="142.5" y="-8" text-anchor="middle">1.0</text><line class="chart-axis__tick" x1="236.25" x2="236.25" y1="0" y2="-4"/><text class="chart-axis__label" x="236.25" y="-8" text-anchor="middle">1.5</text><line class="chart-axis__tick" x1="330" x2="330" y1="0" y2="-4"/><text class="chart-axis__label" x="330" y="-8" text-anchor="middle">2.0</text></g></g>
-<g class="chart-mark" data-mark data-value="0.9"><title>Median: 0.9</title><rect class="chart-hit" x="117.75" y="12" width="12" height="20"/><line class="chart-median" x1="123.75" x2="123.75" y1="17" y2="27"/></g>
-<g class="chart-mark" data-mark data-value="1.2"><title>This hospital: 1.2</title><rect class="chart-hit" x="171" y="28" width="18" height="16"/><path class="chart-this" d="M180 30l6 11h-12z"/></g>
-<text class="chart-label" x="180" y="55" text-anchor="middle">This hospital</text></svg>`,
-  ramp: `<svg class="chart chart--ramp" viewBox="0 0 360 80" width="100%" focusable="false"><rect class="chart-zone" x="180" y="14" width="162" height="30"/>
-<g transform="translate(0 44)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="342" y1="0" y2="0"/><line class="chart-axis__tick" x1="18" x2="18" y1="0" y2="-4"/><text class="chart-axis__label" x="18" y="-6" text-anchor="middle">−1.0</text><line class="chart-axis__tick" x1="99" x2="99" y1="0" y2="-4"/><text class="chart-axis__label" x="99" y="-6" text-anchor="middle">−0.5</text><line class="chart-axis__tick" x1="180" x2="180" y1="0" y2="-4"/><text class="chart-axis__label" x="180" y="-6" text-anchor="middle">0.0</text><line class="chart-axis__tick" x1="261" x2="261" y1="0" y2="-4"/><text class="chart-axis__label" x="261" y="-6" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="342" x2="342" y1="0" y2="-4"/><text class="chart-axis__label" x="342" y="-6" text-anchor="middle">1.0</text></g></g>
-<g class="chart-mark" data-mark data-value="-0.05 0.05"><title>CMS&#39;s line (−0.05, 0.05)</title><rect class="chart-hit" x="174" y="4" width="12" height="44"/><line class="chart-line" x1="180" x2="180" y1="12" y2="48"/></g>
+  dotRange: `<svg class="chart chart--dot-range" viewBox="0 0 360 61" width="100%" focusable="false"><defs><pattern id="chart-range-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs><g class="chart-mark" data-mark data-value="0.4 2"><title>Scores the same (0.4, 2)</title><rect class="chart-dead" fill="url(#chart-range-hatch)" x="18" y="20" width="27" height="8"/><rect class="chart-dead" fill="url(#chart-range-hatch)" x="315" y="20" width="27" height="8"/><line class="chart-dead__end" x1="45" x2="45" y1="20" y2="28"/><line class="chart-dead__end" x1="315" x2="315" y1="20" y2="28"/></g>
+<g transform="translate(0 24)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="342" y1="0" y2="0"/><line class="chart-axis__tick" x1="61.88" x2="61.88" y1="0" y2="-4"/><text class="chart-axis__label" x="61.88" y="-12" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="146.25" x2="146.25" y1="0" y2="-4"/><text class="chart-axis__label" x="146.25" y="-12" text-anchor="middle">1.0</text><line class="chart-axis__tick" x1="230.63" x2="230.63" y1="0" y2="-4"/><text class="chart-axis__label" x="230.63" y="-12" text-anchor="middle">1.5</text><line class="chart-axis__tick" x1="315" x2="315" y1="0" y2="-4"/><text class="chart-axis__label" x="315" y="-12" text-anchor="middle">2.0</text></g></g>
+<g class="chart-mark" data-mark data-value="0.9"><title>Median: 0.9</title><rect class="chart-hit" x="123.38" y="16" width="12" height="16"/><line class="chart-median" x1="129.38" x2="129.38" y1="17" y2="31"/></g>
+<g class="chart-mark" data-mark data-value="1.2"><title>This hospital: 1.2</title><rect class="chart-hit" x="171" y="31" width="18" height="16"/><path class="chart-this" d="M180 33l6 11h-12z"/></g>
+<text class="chart-label" x="180" y="58" text-anchor="middle">This hospital</text></svg>`,
+  ramp: `<svg class="chart chart--ramp" viewBox="0 0 360 91" width="100%" focusable="false"><rect class="chart-zone" x="180" y="14" width="162" height="26"/>
+<g transform="translate(0 40)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="342" y1="0" y2="0"/><line class="chart-axis__tick" x1="18" x2="18" y1="0" y2="4"/><text class="chart-axis__label" x="18" y="14" text-anchor="middle">−1.0</text><line class="chart-axis__tick" x1="99" x2="99" y1="0" y2="4"/><text class="chart-axis__label" x="99" y="14" text-anchor="middle">−0.5</text><line class="chart-axis__tick" x1="180" x2="180" y1="0" y2="4"/><text class="chart-axis__label" x="180" y="14" text-anchor="middle">0.0</text><line class="chart-axis__tick" x1="261" x2="261" y1="0" y2="4"/><text class="chart-axis__label" x="261" y="14" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="342" x2="342" y1="0" y2="4"/><text class="chart-axis__label" x="342" y="14" text-anchor="middle">1.0</text></g></g>
+<g class="chart-mark" data-mark data-value="-0.05 0.05"><title>CMS&#39;s line (−0.05, 0.05)</title><rect class="chart-hit" x="174" y="4" width="12" height="44"/><line class="chart-line" x1="180" x2="180" y1="12" y2="44"/></g>
 <text class="chart-label" x="180" y="10" text-anchor="middle">CMS&#39;s line</text>
-<g class="chart-mark" data-mark data-value="0.3"><title>This hospital: 0.3</title><rect class="chart-hit" x="219.6" y="44" width="18" height="18"/><path class="chart-this" d="M228.6 48l6 11h-12z"/></g>
-<text class="chart-label" x="228.6" y="74" text-anchor="middle">This hospital</text></svg>`,
+<g class="chart-mark" data-mark data-value="0.3"><title>This hospital: 0.3</title><rect class="chart-hit" x="219.6" y="55" width="18" height="18"/><path class="chart-this" d="M228.6 59l6 11h-12z"/></g>
+<text class="chart-label" x="228.6" y="85" text-anchor="middle">This hospital</text></svg>`,
   histogram: `<svg class="chart chart--histogram" viewBox="0 0 360 200" width="100%" focusable="false"><g transform="translate(36 0)"><g class="chart-axis"><line class="chart-axis__line" x1="0" x2="0" y1="174" y2="30"/><line class="chart-grid" x1="0" x2="312" y1="174" y2="174"/><line class="chart-axis__tick" x1="-4" x2="0" y1="174" y2="174"/><text class="chart-axis__label" x="-7" y="174" dy="0.32em" text-anchor="end">0</text><line class="chart-grid" x1="0" x2="312" y1="126" y2="126"/><line class="chart-axis__tick" x1="-4" x2="0" y1="126" y2="126"/><text class="chart-axis__label" x="-7" y="126" dy="0.32em" text-anchor="end">1</text><line class="chart-grid" x1="0" x2="312" y1="78" y2="78"/><line class="chart-axis__tick" x1="-4" x2="0" y1="78" y2="78"/><text class="chart-axis__label" x="-7" y="78" dy="0.32em" text-anchor="end">2</text><line class="chart-grid" x1="0" x2="312" y1="30" y2="30"/><line class="chart-axis__tick" x1="-4" x2="0" y1="30" y2="30"/><text class="chart-axis__label" x="-7" y="30" dy="0.32em" text-anchor="end">3</text></g></g>
 <g class="chart-mark" data-mark data-value="2"><title>−0.95 – −0.45: 2</title><rect class="chart-hit" x="36" y="30" width="78" height="144"/><path class="chart-col" d="M63 174V82A4 4 0 0 1 67 78H83A4 4 0 0 1 87 82V174Z"/></g>
 <g class="chart-mark" data-mark data-value="3"><title>−0.45 – 0.05: 3</title><rect class="chart-hit" x="114" y="30" width="78" height="144"/><path class="chart-col" d="M141 174V34A4 4 0 0 1 145 30H161A4 4 0 0 1 165 34V174Z"/></g>

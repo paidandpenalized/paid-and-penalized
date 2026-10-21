@@ -65,10 +65,13 @@ export function rampLabels(tStart, tHyp, startText, hypText) {
   return { start, hyp, stacked: !(a[1] + GAP_PX <= b[0] || b[1] + GAP_PX <= a[0]) };
 }
 
-// The ramp's rows (px from its top): the line's label over the zone, the zone's label inside it, tick labels just above
-// the axis, the marks under it, then one or two rows of mark labels. RAMP_H: its height with one row, and stacked.
-export const RAMP_Y = { lineLabel: 10, zoneTop: 14, zoneLabel: 25, tickLabel: 38, axis: 44, mark: 48, edge: 58, label: 74, label2: 88 };
-export const rampHeight = (stacked) => (stacked ? 94 : 80);
+// The ramp's rows (px from its top): the line's label over the zone, the zone's label at the zone's top (nothing
+// else sits in the zone), the axis, tick labels under it (clear of the zone and of CMS's line, which stops at the
+// axis's ticks), the marks under them, then one or two rows of mark labels. rampHeight: its height with one row of
+// mark labels, and stacked.
+export const RAMP_Y = { lineLabel: 10, zoneTop: 14, zoneLabel: 27, axis: 40, tickLabel: 54, mark: 59, edge: 69, label: 85, label2: 99 };
+export const RAMP_TICK = 4;
+export const rampHeight = (stacked) => (stacked ? 105 : 91);
 // The zone's label: just inside CMS's line, or against the ramp's right end when the line is near it.
 export const zoneLabelAt = (t) => (t > 1 - EDGE ? { t: 1, anchor: 'end', dx: -4 } : { t, anchor: 'start', dx: 4 });
 

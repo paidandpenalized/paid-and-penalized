@@ -23,7 +23,7 @@ import { Safe, html } from '../render/html.js';
 
 const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COPY.claimEstimate, hypothetical: COPY.claimHypothetical };
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
-export const KEY_SWATCHES = ['this', 'median', 'band'];
+export const KEY_SWATCHES = ['this', 'median', 'same'];
 
 function cellOf(cell, numeric) {
   if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value) };

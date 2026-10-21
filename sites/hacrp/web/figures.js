@@ -73,9 +73,9 @@ export function rangeFigure(view, ranges, n, source) {
     : fill('figRangeTakeaway', { k: String(valued.length), above: String(above), rest: String(valued.length - above) });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figRangeAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-ranges`,
-    key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'band', label: t('figRangeRange') }],
+    key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'same', label: t('figRangeSame') }],
     svg: dotRanges({
-      medianLabel: t('figRangeMedian'), rangeLabel: t('figRangeRange'),
+      medianLabel: t('figRangeMedian'), sameLabel: t('figRangeSame'),
       rows: rows.map(({ m, ...row }) => ({ ...row, title: m.short, label: t('figRangeThis'), note: m.hasValue ? null : t('noValue') })),
     }),
     table: {

@@ -385,7 +385,8 @@ export const COPY = {
   },
   figRangeThis: { text: 'This hospital', claim: null },
   figRangeMedian: { text: 'National median', claim: null },
-  figRangeRange: { text: "CMS's floor to cap", claim: 'HACRP-03' },
+  // The figure's hatch: values past CMS's floor or cap, which score the same as that end.
+  figRangeSame: { text: "Scores the same as CMS's floor or cap", claim: 'HACRP-03' },
   figColFloor: { text: 'CMS floor', claim: 'HACRP-03' },
   figColCap: { text: 'CMS cap', claim: 'HACRP-03' },
 

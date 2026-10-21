@@ -75,10 +75,10 @@ test('Figure 2: a measure with no value has no triangle and says so; its table q
   const text = render(CASES.no);
   const [, [, , body]] = figures(text);
   assert.equal(body.match(/class="chart-this"/g).length, 5, 'one triangle per published value');
-  assert.ok(body.includes('>SSI</text>') && body.includes('class="chart-note" x="76" y="39" text-anchor="start">no value published</text>'), 'the row keeps its title and says it has no value');
+  assert.ok(body.includes('>SSI</text>') && body.includes('class="chart-note" x="76" y="42" text-anchor="start">no value published</text>'), 'the row keeps its title and says it has no value');
   // A key names the marks once; the ▲'s own label prints only under the first ▲.
   assert.equal(body.match(/>This hospital<\/text>/g).length, 1);
-  assert.match(body, /<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"><\/span>This hospital<\/li><li><span class="fig__swatch fig__swatch--median" aria-hidden="true"><\/span>National median<\/li><li><span class="fig__swatch fig__swatch--band" aria-hidden="true"><\/span>CMS&#39;s floor to cap<\/li><\/ul>/);
+  assert.match(body, /<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"><\/span>This hospital<\/li><li><span class="fig__swatch fig__swatch--median" aria-hidden="true"><\/span>National median<\/li><li><span class="fig__swatch fig__swatch--same" aria-hidden="true"><\/span>Scores the same as CMS&#39;s floor or cap<\/li><\/ul>/);
   const footnote = hospitalView(inputs(CASES.no)).measures.find((m) => m.id === 'SSI').footnotes[0];
   assert.ok(body.includes(esc(footnote.text)), 'CMS footnote text in the table');
   // The range's ends and median are the model's: CMS's floor and cap and the median at CMS's decimals.

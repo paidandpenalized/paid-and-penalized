@@ -5,12 +5,13 @@
 //   format  value -> text; by default the scale's own tick format (d3-format, which writes a true minus)
 //   grid    for 'left', the length of a hairline gridline at each tick (0: none)
 //   labelY  for 'top' or 'bottom', the labels' baseline off the line (default: just past the ticks)
+//   noTick  value -> true to leave that value's tick out but keep its label (e.g. a tick on top of another mark)
 import { html } from '../render/html.js';
 import { r2 } from './svg.js';
 
 const TICK = 4;
 
-export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, labelY = null }) {
+export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, labelY = null, noTick = () => false }) {
   if (!['bottom', 'top', 'left'].includes(orient)) throw new RangeError(`axis: orient must be bottom, top or left, got "${orient}"`);
   const values = Array.isArray(ticks) ? ticks : scale.ticks(ticks);
   const fmt = format ?? scale.tickFormat(Array.isArray(ticks) ? values.length : ticks);
@@ -26,6 +27,6 @@ export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, la
   const baseline = labelY ?? (orient === 'top' ? -TICK - 4 : TICK + 12);
   return html`<g class="chart-axis"><line class="chart-axis__line" x1="${a}" x2="${b}" y1="0" y2="0"/>${values.map((v) => {
     const x = r2(scale(v));
-    return html`<line class="chart-axis__tick" x1="${x}" x2="${x}" y1="0" y2="${dir * TICK}"/><text class="chart-axis__label" x="${x}" y="${baseline}" text-anchor="middle">${fmt(v)}</text>`;
+    return html`${noTick(v) ? '' : html`<line class="chart-axis__tick" x1="${x}" x2="${x}" y1="0" y2="${dir * TICK}"/>`}<text class="chart-axis__label" x="${x}" y="${baseline}" text-anchor="middle">${fmt(v)}</text>`;
   })}</g>`;
 }
