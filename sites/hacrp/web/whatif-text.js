@@ -8,6 +8,7 @@ import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
+import { SITE } from '../../../web/site.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, measureLabel, sourceText } from './copy.js';
 
@@ -269,6 +270,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       result: countText,
     },
     held: fill('whatifHeld'),
+    print: fill('whatifPrint', { url: SITE.origin + path }),
     standing: fill('whatifStanding'),
   };
 }

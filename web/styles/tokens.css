@@ -59,4 +59,19 @@
     color-scheme: dark;
   }
 }
+/* Print: always the light tokens on plain white paper, whatever the device or the toggle says (a dark page printed
+   with its backgrounds stripped would put near-white text on white). !important beats the dark media block and the
+   toggle's copy of it, which the build appends after this file. The rest of the print rules are in print.css. */
+@media print {
+  :root {
+    --paper: #ffffff !important; --paper-2: #f0f1ec !important; --ink: #1c1b1d !important;
+    --ink-2: #49484d !important; --ink-3: #75747a !important; --line: #8a898f !important;
+    --pen: #c4303a !important; --pen-ink: #a5222c !important; --pen-tint: #f7e1e2 !important;
+    --rew: #00876f !important; --neutral: #9a999f !important; --on-mark: #ffffff !important;
+    --hatch: rgba(28, 27, 29, 0.3) !important; --pen-seq-1: #e8a2a2 !important; --pen-seq-2: #d9706f !important;
+    --pen-seq-3: #c4303a !important; --pen-seq-4: #9a1f28 !important; --pen-seq-5: #6a1119 !important;
+    --grain: none !important; --stamp-blend: multiply !important;
+    color-scheme: light !important;
+  }
+}
 /* The build copies the dark block's declarations to :root[data-theme="dark"], for the toggle (pipeline/site/assets.js). */

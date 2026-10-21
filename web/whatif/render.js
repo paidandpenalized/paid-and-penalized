@@ -12,7 +12,8 @@
 //   estimated                                             a changed measure is a recompute: show the estimate note
 //
 // texts:
-//   heading, intro, noScript, resultLabel, fieldsLegend, held, standing   strings
+//   heading, intro, noScript, resultLabel, fieldsLegend, held, standing, print   strings (print: the line a printed
+//                                          page carries in place of the controls)
 //   label                                  a line under the heading, or null for none
 //   banner { text, linkText, href }        the shared-link banner (rendered only with share)
 //   start, hypothetical                    column heads, the ramp's two mark labels and the result head's label
@@ -229,6 +230,7 @@ ${vm.inputs.map((input) => measure(input, words[input.id], texts))}
 </div>
 </div>
 ${bars(vm, words, texts)}
+<p class="small print-only">${texts.print}</p>
 <p class="small muted">${texts.held}</p>
 <p class="standing">${texts.standing}</p>
 </section>`;

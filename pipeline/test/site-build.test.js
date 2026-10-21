@@ -202,6 +202,21 @@ test('tokens.css keeps the dark block in the shape the build copies, and every t
   }
 });
 
+test('print forces the light tokens on white: every color token the light block sets, the print block sets with !important', () => {
+  const tokens = readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8');
+  const decls = (block) => new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+?)\s*(?:!important)?;/g)].map((m) => [m[1], m[2]]));
+  const light = decls(/^:root \{([^}]*)\}/m.exec(tokens)[1]);
+  const block = /@media print \{\s*:root \{([^}]*)\}\s*\}/.exec(tokens);
+  assert.ok(block, 'print block');
+  const print = decls(block[1]);
+  for (const [name, value] of light) {
+    if (!/#|rgba?\(/.test(value) || name === '--grain' || name === '--stamp-mask') continue;
+    assert.equal(print.get(name), name === '--paper' ? '#ffffff' : value, name);
+  }
+  assert.equal(block[1].match(/;/g).length, block[1].match(/!important;/g).length, 'every print declaration is !important');
+  assert.ok(stylesheet().includes('@media print'), 'the bundle carries the print rules');
+});
+
 // A raw request, so the path reaches the server exactly as written (no client-side normalising of ..).
 function get(port, path) {
   return new Promise((resolve, reject) => {

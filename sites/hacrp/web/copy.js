@@ -217,6 +217,8 @@ export const COPY = {
   solverColNeeded: { text: 'Value that would read No', claim: null },
   solverColCushion: { text: 'Highest value that keeps No', claim: null },
   solverColNote: { text: 'Note', claim: null },
+  // On paper, in place of the what-if's controls.
+  whatifPrint: { text: 'Interactive what-if at {url}', claim: null },
   whatifHeld: {
     text: "Held fixed: every other hospital's results, CMS's line, and each measure's mean, spread, floor and cap as this site fits them to CMS's published values.",
     claim: null,
