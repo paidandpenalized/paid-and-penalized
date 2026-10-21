@@ -39,6 +39,9 @@
 .printout__scroll { overflow-x: auto; }
 .printout--fit { width: fit-content; max-width: 100%; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
+/* The head's height when it sticks, for what must clear it: the head row's 1.25 line of --fs-sm and its 9px of padding
+   above and below (.gb thead th, next). */
+.gb { --thead-h: calc(var(--fs-sm) * 1.25 + 18px); }
 /* The head's rule is an inset shadow, not a border: a collapsed border stays behind when the head sticks. */
 .gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); color: var(--ink-2); font: 600 var(--fs-sm)/1.25 var(--font-body); }
 .gb td, .gb tbody th { padding: 7px 10px; vertical-align: top; }

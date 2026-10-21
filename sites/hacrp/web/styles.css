@@ -89,9 +89,9 @@
 /* Wide screens: the five columns fit, so the table needs no sideways scroll box, and its header sticks to the top of
    the window (a scroll box would be its sticky container, and that box never scrolls down). */
 @media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
-/* A row's link brought into view by the keyboard clears the stuck head: its height (a 1.25 line of --fs-sm and 9px
-   of padding above and below, components.css) and 8px more. */
-@media (min-width: 641px) { .gb--hospitals tbody a { scroll-margin-top: calc(var(--fs-sm) * 1.25 + 26px); } }
+/* A row's link brought into view by the keyboard clears the stuck head: its height (--thead-h, components.css) and
+   8px more. */
+@media (min-width: 641px) { .gb--hospitals tbody a { scroll-margin-top: calc(var(--thead-h) + 8px); } }
 
 /* The phone's Sort by menu shows only on a narrow screen. */
 .ht__sort { display: none; }
