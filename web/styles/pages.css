@@ -32,7 +32,15 @@
 .fnlist dd { margin: 0; }
 
 .asof { padding-top: 12px; border-top: var(--rule) solid var(--ink); }
-.asof__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 4px 24px; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
+/* One fact per row: the term in the body face, the value in mono, in two columns that every row shares (subgrid);
+   on a phone the term sits over its value. */
+.asof__list { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 0; font-size: var(--fs-sm); line-height: 1.5; }
+.asof__list > div { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+.asof__list dt { color: var(--ink-2); }
+.asof__list dd { margin: 0; font-family: var(--font-type); }
+@media (max-width: 480px) {
+  .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
 .source { font-size: var(--fs-sm); color: var(--ink-2); max-width: none; }
 
 /* The citation block: the text selectable, the Copy button beside a short status. */

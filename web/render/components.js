@@ -71,7 +71,7 @@ export function fillCopyKeep(copy, key, values, keep) {
     const end = text.indexOf(last) + last.length;
     text = nw(text, start, end);
   }
-  for (const n of names) text = text.replace(mark(n), escapeHtml(values[n]));
+  for (const n of names) text = text.split(mark(n)).join(escapeHtml(values[n]));
   return new Safe(text);
 }
 
@@ -95,9 +95,10 @@ export const keepDates = (text) => new Safe(escapeHtml(text).replace(LONG_DATE, 
 export const pillClass = (kind) => (kind ? `pill pill--${kind}` : 'pill');
 export const pill = ({ kind = null, label }) => html`<span class="${pillClass(kind)}">${label}</span>`;
 
-// The as-of bar: what the data are and when they are from, one item each.
+// The as-of bar: what the data are and when they are from, one fact each, as a term and its value
+// (items: [{ label, value }], text or Safe).
 export const asofBar = ({ label, items }) => html`<aside class="asof" aria-label="${label}">
-<ul class="asof__list" role="list">${items.map((item) => html`<li>${item}</li>`)}</ul>
+<dl class="asof__list">${items.map((item) => html`<div><dt>${item.label}</dt><dd>${item.value}</dd></div>`)}</dl>
 </aside>`;
 
 // The citation block: the text to cite, selectable without JavaScript, and a Copy button the script (web/client/cite.js)

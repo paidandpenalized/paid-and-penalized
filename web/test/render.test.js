@@ -209,6 +209,7 @@ test('fillCopyKeep keeps each value, or a run from one value to another, on one 
     'From <span class="nw">May 1, 2024</span> to <span class="nw">June 2, 2024</span>');
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 'b' }, ['nope']), /unknown placeholder/);
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 1 }, []), /formatted string/);
+  assert.equal(String(fillCopyKeep({ twice: 'FY{next} expected early {next}' }, 'twice', { next: '2027' }, [])), 'FY2027 expected early 2027', 'a placeholder used twice is filled twice');
 });
 
 test('keepWhole wraps a part of escaped text in one .nw span, and refuses a part that is not there', () => {

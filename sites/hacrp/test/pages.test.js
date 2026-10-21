@@ -378,6 +378,18 @@ test("the phone's Sort by menu offers each column head's key both ways, the defa
   assert.match(text, /<label for="ht-sort">Sort by<\/label>/);
 });
 
+test('the as-of strip is a list of facts, each copy entry split at its colon into a term and its value; no new words', () => {
+  const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const list = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(text)[1];
+  const rows = [...list.matchAll(/<div><dt>(.*?)<\/dt><dd>(.*?)<\/dd><\/div>/g)].map(([, dt, dd]) => [dt.replace(/<[^>]+>/g, ''), dd.replace(/<[^>]+>/g, '')]);
+  const fy = String(DATA.fy);
+  assert.deepEqual(rows.map(([dt]) => dt), ['Fiscal year', 'PSI 90 period', 'Infection measures period', 'Latest public hospital results', 'Provider Data Catalog release']);
+  assert.equal(rows[0][1], fy);
+  assert.equal(rows[3][1], `FY${fy}; FY${DATA.fy + 1} expected early ${DATA.fy + 1}`);
+  assert.equal(rows[4][1], cmsText(isoDateOf(DATA.source.pdcReleased)));
+  assert.match(list, /<dd><span class="nw">[^<]+<\/span> to <span class="nw">[^<]+<\/span><\/dd>/, 'each period date whole');
+});
+
 test("a hospital page's head names the data's release; its foot runs back link, as-of, footnotes, data links, citation, with the source said once", () => {
   const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   // Each part with the separator before it (glued to the part), so no line ends on a separator; the release part may
