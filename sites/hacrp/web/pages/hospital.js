@@ -120,6 +120,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
     : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item hero__item--decision"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
 ${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>
+<p class="hero__note">${t('notAGrade')}</p>
 </section>
 <div class="prose">
 ${sentences.map((s) => html`<p>${s}</p>`)}

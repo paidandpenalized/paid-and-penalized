@@ -5,7 +5,8 @@ import { fill, t } from './copy.js';
 
 const notes = (list) => list.map((f) => f.text).join(' ');
 
-// What CMS reports, CMS's notes, what the decision means (scored Yes/No only), then what the score is.
+// What CMS reports, CMS's notes, what the decision means (scored Yes/No only), then what the score is. (That it is
+// not a grade of the quality of care is said in the hero, on the first screen: pages/hospital.js.)
 export function summary(view) {
   const facts = { fy: String(view.fy), name: view.name, decision: view.decision.text };
   const out = [view.scored
@@ -15,7 +16,7 @@ export function summary(view) {
   if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
   if (view.status === 'yes') out.push(fill('whyYes', { pct: REDUCTION_TEXT }));
   if (view.status === 'no') out.push(fill('whyNo'));
-  out.push(fill('scoreIs'), fill('notAGrade'));
+  out.push(fill('scoreIs'));
   return out;
 }
 

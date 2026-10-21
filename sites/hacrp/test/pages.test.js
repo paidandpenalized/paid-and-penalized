@@ -357,6 +357,16 @@ test("the hero names CMS's line under a scored hospital's number, from CMS's tex
   for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
 });
 
+test('every hospital page says, in its hero\'s last row, that the score is not a grade; the prose does not repeat it', () => {
+  const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  for (const h of Object.values(CASES)) {
+    const text = page(h);
+    const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(text)[0];
+    assert.match(hero, /<p class="hero__note">It is not a grade of the quality of care\.<\/p>\n<\/section>$/, h.ccn);
+    assert.equal(text.split('It is not a grade of the quality of care.').length, 2, `${h.ccn}: said once`);
+  }
+});
+
 test("the phone's Sort by menu offers each column head's key both ways, the default (state, ascending) selected", () => {
   const text = programPage({ ...PROGRAM_ARGS, searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: null });
   const menu = /<select id="ht-sort">([\s\S]*?)<\/select>/.exec(text)[1];

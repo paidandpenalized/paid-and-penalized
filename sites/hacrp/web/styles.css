@@ -9,6 +9,8 @@
 .hero__ref { font: 400 var(--fs-sm)/1.4 var(--font-type); font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .hero__num { font: 700 clamp(3rem, 12vw, 4.5rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .hero__num .dp { margin-inline: -0.18em; }
+/* The hero's last row, full width: what the score is not, on the first screen of every hospital page. */
+.hero__note { flex-basis: 100%; font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
 .hero__none { display: grid; align-content: center; justify-items: start; min-height: 4.5rem; padding: 10px; border: 1px solid var(--line); background: var(--hatch-fill); }
 .hero__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-md)/1.3 var(--font-body); }
 /* The decision answers the reader's first question ("was it cut?"), so its pill reads near the number's weight; on a

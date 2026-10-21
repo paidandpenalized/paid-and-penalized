@@ -13,6 +13,7 @@ const all = (name) => {
 
 const SCORE_IS = 'The Total HAC Score compares hospitals with each other on the infection and patient-safety measures '
   + 'each hospital was scored on.';
+// Said in the hero (pages/hospital.js), never in the summary.
 const NOT_A_GRADE = 'It is not a grade of the quality of care.';
 
 test('a scored "Yes" hospital', () => {
@@ -21,7 +22,6 @@ test('a scored "Yes" hospital', () => {
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3000 for Example General Hospital and a payment reduction decision of Yes.',
       "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0500 above 0.2500, the highest score CMS marked No.",
     small: null,
@@ -36,7 +36,6 @@ test('a scored "No" hospital', () => {
       'For fiscal year 2026, CMS reports a Total HAC Score of −0.1000 for Example General Hospital and a payment reduction decision of No.',
       "Its score was at or below CMS’s line, so this program did not cut its Medicare inpatient payments for that fiscal year.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.3507 below 0.2507, the lowest score CMS marked Yes.",
     small: null,
@@ -51,7 +50,6 @@ test('Maryland: CMS\'s footnote verbatim, no inference, no distance', () => {
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.4000 for Example General Hospital and a payment reduction decision of N/A.',
       "CMS’s note on the payment reduction: Maryland hospitals are waived from receiving payment adjustments under the Program.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: null,
     small: null,
@@ -66,7 +64,6 @@ test('no score, decision No: CMS\'s values and footnote only', () => {
       'For fiscal year 2026, CMS reports no Total HAC Score for Example General Hospital and a payment reduction decision of No.',
       "CMS’s note on the score: Results are not available for this reporting period.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: null,
     small: null,
@@ -80,7 +77,6 @@ test('the row reading Yes with no score: CMS\'s values and footnote only, no rea
       'For fiscal year 2026, CMS reports no Total HAC Score for Example General Hospital and a payment reduction decision of Yes.',
       "CMS’s note on the score: Results are not available for this reporting period.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: null,
     small: null,
@@ -94,7 +90,6 @@ test('a one-measure hospital gets the small-number warning', () => {
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3500 for Example General Hospital and a payment reduction decision of Yes.',
       "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.1000 above 0.2500, the highest score CMS marked No.",
     small: 'CMS scored this hospital on a single measure, so that measure alone set its Total HAC Score.',
@@ -109,7 +104,6 @@ test('the largest-contribution sentence never names a CMS-assigned measure', () 
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3250 for Example General Hospital and a payment reduction decision of Yes.',
       "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0750 above 0.2500, the highest score CMS marked No.",
     small: null,
@@ -124,7 +118,6 @@ test('every scored measure CMS-assigned: no largest-contribution sentence', () =
       'For fiscal year 2026, CMS reports a Total HAC Score of 2.2091 for Example General Hospital and a payment reduction decision of Yes.',
       "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
       SCORE_IS,
-      NOT_A_GRADE,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 1.9591 above 0.2500, the highest score CMS marked No.",
     small: null,
@@ -141,7 +134,6 @@ test('a tagged measure changes no sentence: the whole output equals the untagged
     'For fiscal year 2026, CMS reports a Total HAC Score of 0.3000 for Example General Hospital and a payment reduction decision of Yes.',
     "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
     SCORE_IS,
-    NOT_A_GRADE,
   ]);
   assert.deepEqual(summary(v), summary(view('yes', { estimate: untagged })));
 });
@@ -161,7 +153,6 @@ test('a scored hospital\'s total footnote is quoted after the lead', () => {
     "CMS’s note on the score: The data are based on claims that the hospital or facility submitted to CMS. The hospital or facility has reported discrepancies in their claims data.",
     "Its score was at or below CMS’s line, so this program did not cut its Medicare inpatient payments for that fiscal year.",
     SCORE_IS,
-    NOT_A_GRADE,
   ]);
   assert.equal(out.largest, null);
 });
@@ -185,4 +176,8 @@ test('fill takes formatted strings only and refuses a missing or unused placehol
   assert.throws(() => fill('noteScore', { notes: 'x', extra: 'y' }), /extra/);
   assert.throws(() => fill('noteScore', { notes: 3 }), TypeError);
   assert.throws(() => fill('noSuchKey', {}), RangeError);
+});
+
+test('the summary never says the score is not a grade: the hero does, on the first screen', () => {
+  for (const name of Object.keys(CASES)) assert.ok(!summary(view(name)).includes(NOT_A_GRADE), name);
 });
