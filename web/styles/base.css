@@ -39,9 +39,11 @@ p { margin: 0; }
 :where(p, li, figcaption, dd) { max-width: var(--measure); }
 /* No paragraph ends on a lone short word where the browser can help (ignored where unsupported). */
 :where(p, li, figcaption, dd) { text-wrap: pretty; }
-a { color: inherit; text-decoration-color: var(--pen); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
-a:hover { color: var(--pen-ink); }
-:focus-visible { outline: 2.5px solid var(--pen); outline-offset: 2px; }
+/* Red means money taken, so navigation never wears it: links underline in the rule ink and darken on hover, and
+   focus is an ink ring (distinct from a refused field's red border). The wordmark keeps its red (DES-11). */
+a { color: inherit; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 button, input, select { font: inherit; line-height: 1.25; color: inherit; }
 /* One height for every control, so a row of them shares a baseline (the sliders and the theme toggle excepted). */
 :where(input:not([type="range"]), select, .fig__btn, .wi-btn) { min-height: var(--control-h); }
@@ -62,6 +64,6 @@ button, input, select { font: inherit; line-height: 1.25; color: inherit; }
 .small { font-size: var(--fs-sm); line-height: 1.57; }
 .nw { white-space: nowrap; }
 .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--paper); border: var(--rule) solid var(--pen); padding: 8px 12px; font-weight: 600; }
+.skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--paper); border: var(--rule) solid var(--ink); padding: 8px 12px; font-weight: 600; }
 .skip:focus { left: 8px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

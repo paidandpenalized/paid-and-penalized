@@ -15,6 +15,7 @@
   --rew: #00876f;           /* money paid to hospitals: marks, bars, pills */
   --neutral: #9a999f;
   --on-mark: #ffffff;       /* text on a filled meaning-ink pill */
+  --focus: var(--ink);      /* the focus ring: ink, never a meaning ink */
   --hatch: rgba(28, 27, 29, 0.3);
   /* the pen ramp: five steps of the penalty hue, light to dark, for magnitude (a share cut); a step's text is ink
      on 1-2 and on-mark from 3 up. Validated as an ordinal ramp (monotone lightness, the light end >= 2:1). */
