@@ -36,33 +36,34 @@ function placeLine(view, source) {
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
 
-// A measure's notes: this site's note, CMS's footnotes and the estimate tag ('' when it has none). The tag marks a
-// recompute from a measured value, so a measure with no value (unscored or assigned) has none.
-function measureNotes(m) {
-  const note = measureNote(m);
+// A measure's notes: this site's note (measureNote(m)), CMS's footnotes and the estimate tag ('' when it has none). The
+// tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
+function measureNotes(m, note) {
   const tag = m.tagged && m.hasValue && html`<details class="est"><summary>${t('estimateTag')}</summary>
 <p class="est__body small">${fill('estimateNote', { maxError: m.maxErrorText })} <a href="/methods/#estimate">${t('estimateMore')}</a></p></details>`;
   return html`${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}`;
 }
 
-// withNotes: the table has a Notes column (some measure has a note), so every row carries the cell.
-function measureRow(m, withNotes) {
+// notes: the row's Notes cell, or null when the table has no Notes column (no measure has a note).
+function measureRow(m, notes) {
   return html`<tr>
 <th scope="row">${m.label} <span class="short">(${m.short})</span></th>
 <td class="num cms" data-label="${t('colValue')}">${value(m.valueText, m.hasValue)}</td>
 <td class="num cms" data-label="${t('colZ')}">${value(m.zText, m.hasZ)}</td>
-${withNotes && html`<td class="notes">${measureNotes(m)}</td>
+${notes !== null && html`<td class="notes">${notes}</td>
 `}</tr>`;
 }
 
 // The measure table, with a Notes column only when some measure has a note; the column takes the page's width only
 // for prose (this site's note or CMS's footnotes), not for estimate tags alone.
 function measureTable(measures) {
-  const withNotes = measures.some((m) => String(measureNotes(m)) !== '');
-  const prose = measures.some((m) => measureNote(m) || m.footnotes.length);
+  const notes = measures.map(measureNote);
+  const cells = measures.map((m, i) => measureNotes(m, notes[i]));
+  const withNotes = cells.some((cell) => String(cell) !== '');
+  const prose = measures.some((m, i) => notes[i] || m.footnotes.length);
   return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}" aria-labelledby="measures-h">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th>${withNotes && html`<th scope="col">${t('colNotes')}</th>`}</tr></thead>
-<tbody>${measures.map((m) => measureRow(m, withNotes))}</tbody>
+<tbody>${measures.map((m, i) => measureRow(m, withNotes ? cells[i] : null))}</tbody>
 </table>`);
 }
 
