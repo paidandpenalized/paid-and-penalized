@@ -143,12 +143,44 @@ test('build refuses to empty a directory that is not dist/ or under the temp dir
   assert.ok(existsSync(REPO_ROOT + 'web/styles/tokens.css'));
 });
 
-test("no file under web/ but tokens.css, and no site's own styles or scripts, hold a hex color", () => {
+// CSS Color 4's named colors. transparent, currentColor and the forced-colors system colors (CanvasText and kin) have
+// no color of their own, so they are allowed anywhere.
+const NAMED_COLORS = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown
+  burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray
+  darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue
+  darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite
+  forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory
+  khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen
+  lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime
+  limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue
+  mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive
+  olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+  powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue
+  slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke
+  yellow yellowgreen`.split(/\s+/));
+const COLOR_FUNCTION = /\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\(/i;
+// The words of a CSS file's declaration values, comments and quoted strings left out.
+const cssValueWords = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"[^"]*"|'[^']*'/g, '')
+  .match(/:[^;{}]*(?=[;}])/g)?.flatMap((v) => v.toLowerCase().match(/[a-z-]+/g) ?? []) ?? [];
+// A color an SVG or style attribute in a script names: fill="red", stroke: 'navy', color=white.
+const JS_COLOR_ATTR = /\b(?:fill|stroke|stop-color|flood-color|lighting-color|color)\s*[=:]\s*["'`]?\s*([a-z]+)/gi;
+
+test("no file under web/ but tokens.css, and no site's own styles or scripts, hold a color value (hex, a color function, a named color)", () => {
   const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true })]
     .filter((f) => /\.(css|js|mjs)$/.test(f) && f !== 'web/styles/tokens.css')
     .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f));
   assert.ok(files.includes('sites/hacrp/web/styles.css'));
-  for (const f of files) assert.doesNotMatch(readFileSync(REPO_ROOT + f, 'utf8'), /#[0-9a-fA-F]{3,8}\b/, f);
+  for (const f of files) {
+    const text = readFileSync(REPO_ROOT + f, 'utf8');
+    assert.doesNotMatch(text, /#[0-9a-fA-F]{3,8}\b/, f);
+    assert.doesNotMatch(text, COLOR_FUNCTION, f);
+    const named = f.endsWith('.css') ? cssValueWords(text) : [...text.matchAll(JS_COLOR_ATTR)].map((m) => m[1].toLowerCase());
+    assert.deepEqual(named.filter((w) => NAMED_COLORS.has(w)), [], f);
+  }
+  // The checks see what they are meant to.
+  assert.deepEqual(cssValueWords('a { color: Navy; } /* red */ b { content: "white"; fill: transparent; }').filter((w) => NAMED_COLORS.has(w)), ['navy']);
+  assert.deepEqual([...'<rect fill="red"/> fill="currentColor"'.matchAll(JS_COLOR_ATTR)].map((m) => m[1]), ['red', 'currentColor']);
+  assert.match('a { color: rgb(0 0 0); }', COLOR_FUNCTION);
 });
 
 test('the bundled stylesheet puts each site\'s styles after the shared ones', () => {

@@ -21,7 +21,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   own CSS is `sites/<program>/web/styles.css` (bundled after `web/styles/`); its browser scripts are in `client/`.
 - `web/`: what every page shares: `site.js` (name, origin, each site's path, names and release state), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
-  `styles/` (`tokens.css` is the only CSS or JS file under `web/` that may hold a color value; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
+  `styles/` (`tokens.css` is the only CSS or JS file under `web/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
   licenses, the favicon.
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: one CSS file and
   one ES module per JS entry, content-hashed), then runs each site in its `SITES` list (hub last). Each site exports
