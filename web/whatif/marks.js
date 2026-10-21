@@ -108,6 +108,13 @@ export function trackMarks(input) {
 export const fieldText = (input) => (input.value === null ? '' : input.value.toFixed(input.decimals));
 export const sliderValue = (input) => input.value ?? input.max;
 
+// The result's hypothetical column: a value only where it differs from the start, else the site's "same", so bold only
+// ever means changed. The head shows the score as "before → after" once it moves.
+export const afterText = (before, after, same) => (after === before ? same : after);
+export const headScore = ({ before, after }) => (after === before ? before : `${before} → ${after}`);
+// Whether the reader has changed any measure (the head then reads "Hypothetical", not the start's name).
+export const anyChanged = (result) => Object.values(result.measures).some((m) => m.changed);
+
 // The estimate note the live sentence carries when a changed measure is a recompute ('' otherwise).
 export const estimateNote = (vm, texts) => (vm.estimated ? ` ${texts.estimate.text}` : '');
 

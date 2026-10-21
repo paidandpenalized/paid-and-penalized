@@ -9,10 +9,11 @@
 // changesOf(state), viewModel(state) }. start.ids: the measures; params[id]: { decimals, cap }, for decoding a link.
 // reduce() takes { type: 'set', id, value }, 'reset', 'median', { type: 'predicted', id, count } and
 // { type: 'load', changes }, and returns the same state when it refuses an action.
+import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
-  assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX,
-  sliderValue, trackMarks,
+  afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, rampAt, rampDomain, rampEdge, rampLabels,
+  rampSide, rampX, sliderValue, trackMarks,
 } from './marks.js';
 
 // A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
@@ -61,7 +62,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       barAssigned: q('bar-assigned', bar),
     }];
   }));
-  const el = Object.fromEntries(['score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
+  const el = Object.fromEntries(['head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
     'start-label', 'hyp-edge', 'banner', 'copy',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
@@ -95,6 +96,14 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     setText(el.sentence, texts.sentence(vm));
     setText(el['sentence-est'], estimateNote(vm, texts));
     if (share) writeHash();
+  }
+
+  // A hypothetical cell: its value, or "same" (marked data-same) where it equals the start.
+  function after(cell, before, value) {
+    if (!cell) return;
+    setText(cell, afterText(before, value, texts.same));
+    if (value === before) cell.setAttribute('data-same', '');
+    else cell.removeAttribute('data-same');
   }
 
   // An SVG text at a ramp place { t, anchor, dx }.
@@ -137,9 +146,15 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   function draw({ source = null, holdMax = false } = {}) {
     vm = rules.viewModel(state);
     const r = vm.result;
-    setText(el.score, texts.scores(vm).after);
-    setText(el.flag, texts.flag(r.after.flag));
-    setText(el.cut, texts.cut(r.after.flag) ?? '');
+    const s = texts.scores(vm);
+    after(el.score, s.before, s.after);
+    after(el.flag, texts.flag(r.before.flag), texts.flag(r.after.flag));
+    after(el.cut, texts.cut(r.before.flag), texts.cut(r.after.flag));
+    const p = texts.pill(r.after.flag);
+    setText(el['head-label'], anyChanged(r) ? texts.hypothetical : texts.start);
+    setText(el['head-score'], headScore(s));
+    setText(el['head-pill'], p.label);
+    el['head-pill'].setAttribute('class', pillClass(p.kind));
     el.estimate.hidden = !vm.estimated;
     const t = rampAt(r.after.score, domain);
     el.hyp.setAttribute('x', rampX(t));

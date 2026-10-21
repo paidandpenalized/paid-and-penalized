@@ -4,17 +4,17 @@ import { asofBar as asofShell, citation as citationShell, pill, sourceLine as so
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
-import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
+import { SHORT_NAMES } from '../constants.js';
 import { fill, sourceText, t } from '../copy.js';
 import { csvPath, dictionaryPath } from '../links.js';
+import { pillOf } from '../whatif-text.js';
 
 // The word carries the decision; the ink repeats it. N/A is hatched. The row CMS marked Yes with no score shows
-// CMS's literal value: nothing about the cut is inferred for it.
+// CMS's literal value: nothing about the cut is inferred for it. The what-if's head uses the same pills (pillOf).
+const FLAGS = { maryland: 'N/A', yes: 'Yes' };
 export function decisionPill(status, decision) {
-  if (status === 'maryland') return pill({ kind: 'na', label: t('pillNA') });
   if (status === 'yes-no-score') return pill({ kind: 'pen', label: fill('pillCms', { decision }) });
-  if (status === 'yes') return pill({ kind: 'pen', label: fill('pillYes', { pct: REDUCTION_TEXT }) });
-  return pill({ label: t('pillNo') });
+  return pill(pillOf(FLAGS[status] ?? 'No'));
 }
 
 // Whether the pill already shows CMS's literal decision text, so the page needn't repeat it beside the pill.

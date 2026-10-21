@@ -20,12 +20,19 @@
 /* ---------- the result ---------- */
 .wi-result { display: grid; gap: 10px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
 .wi-result > * { min-width: 0; }
+/* The head: the score and decision as the hero shows them, the loudest thing in the box. */
+.wi-head { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.wi-head__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; }
+.wi-head__score { font: 700 var(--fs-lg)/1.1 var(--font-type); font-variant-numeric: tabular-nums; }
+.wi-head .pill { padding: 3px 9px 2px; font-size: var(--fs-md); }
 .wi-table { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-body); }
 .wi-table th, .wi-table td { padding: 5px 10px 5px 0; text-align: left; vertical-align: baseline; }
 .wi-table thead th { border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
 .wi-table tbody th { font-weight: 600; }
 .wi-table td { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-after { font-weight: 700; }
+/* Unchanged: quiet, so bold only ever means changed. */
+.wi-after[data-same] { color: var(--ink-2); font-weight: 400; }
 .wi-sentence { font-weight: 600; }
 .wi-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .wi-slide { display: block; width: 100%; padding: 8px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); font: 400 var(--fs-sm)/1.4 var(--font-type); resize: vertical; }

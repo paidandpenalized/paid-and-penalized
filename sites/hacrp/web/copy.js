@@ -146,6 +146,8 @@ export const COPY = {
   whatifStartCms: { text: 'CMS reports', claim: null },
   whatifStartMedian: { text: 'Starting point', claim: null },
   whatifHypothetical: { text: 'Hypothetical', claim: null },
+  // A hypothetical cell in the result table that equals the start.
+  whatifSame: { text: 'same', claim: null },
   whatifRowScore: { text: 'Total HAC Score', claim: null },
   whatifRowDecision: { text: 'Payment reduction decision', claim: null },
   whatifRowCut: { text: 'Payment cut', claim: 'HACRP-01' },

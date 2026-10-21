@@ -146,7 +146,8 @@ test('NHSN predicted counts: one optional field per submitted SIR, naming the HA
 
 test('Maryland: the score moves, the decision reads N/A (not subject to the reduction), no cut and no solver', () => {
   const text = render(H.maryland, reduce(initialState(H.maryland, model), { type: 'set', id: 'MRSA', value: 1.4 }));
-  assert.match(text, /data-wi="flag"[^>]*>N\/A \(not subject to the reduction\)</);
+  assert.match(text, /<td>N\/A \(not subject to the reduction\)<\/td><td class="wi-after" data-wi="flag" data-same>same</, 'the decision stays N/A');
+  assert.match(text, /data-wi="head-pill">N\/A</);
   assert.doesNotMatch(text, /data-wi="cut"/);
   assert.doesNotMatch(text, /data-wi="solve"|data-wi="solver"/);
   assert.equal(inputsOf(text, 'range').length, 6);

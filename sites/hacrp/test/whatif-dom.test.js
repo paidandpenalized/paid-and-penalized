@@ -115,7 +115,8 @@ test('mounting enables the fields, shows the buttons, hides the no-script note a
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {
   const stub = windowStub({ hash: '#whatif&MRSA=1.4' });
   const root = mount(false, stub);
-  assert.equal(q(root, 'score').textContent, '0.2734', 'a fragment is ignored without share');
+  assert.equal(q(root, 'head-score').textContent, '0.2734', 'a fragment is ignored without share');
+  assert.equal(q(root, 'score').textContent, 'same');
   type(field(root, 'MRSA', 'number'), '1.4');
   type(field(root, 'CLABSI', 'predicted'), '3');
   q(root, 'median').fire('click');
@@ -166,16 +167,38 @@ test('a commit redraws its own row from the current view model, computing no new
   assert.equal(field(root, 'MRSA', 'number').value, '2.100');
 });
 
+test('the result head: the start name and score until a change; then Hypothetical, before → after and the new pill; unchanged cells read same', () => {
+  const root = mount(false, windowStub());
+  assert.equal(q(root, 'head-label').textContent, texts.start);
+  assert.equal(q(root, 'head-score').textContent, '0.2734');
+  assert.equal(q(root, 'head-pill').textContent, 'No cut');
+  assert.equal(q(root, 'head-pill').getAttribute('class'), 'pill');
+  for (const name of ['score', 'flag', 'cut']) {
+    assert.equal(q(root, name).textContent, 'same', name);
+    assert.equal(q(root, name).getAttribute('data-same'), '', name);
+  }
+  type(field(root, 'MRSA', 'number'), '1.4');
+  assert.equal(q(root, 'head-label').textContent, texts.hypothetical);
+  assert.equal(q(root, 'head-score').textContent, '0.2734 → 0.4476');
+  assert.equal(q(root, 'head-pill').textContent, '1% cut');
+  assert.equal(q(root, 'head-pill').getAttribute('class'), 'pill pill--pen');
+  assert.equal(q(root, 'score').getAttribute('data-same'), null, 'a changed cell is not marked same');
+  q(root, 'reset').fire('click');
+  assert.equal(q(root, 'head-label').textContent, texts.start);
+  assert.equal(q(root, 'head-score').textContent, '0.2734');
+  assert.equal(q(root, 'flag').textContent, 'same');
+});
+
 test('a bad or blank entry: blank restores the starting value; out of range is ignored and flagged', () => {
   const root = mount(false, windowStub());
   const n = field(root, 'MRSA', 'number');
   type(n, '99999');
   assert.equal(n.getAttribute('aria-invalid'), 'true');
-  assert.equal(q(root, 'score').textContent, '0.2734');
+  assert.equal(q(root, 'head-score').textContent, '0.2734');
   type(n, '1.4');
   assert.equal(n.getAttribute('aria-invalid'), null);
   type(n, '');
-  assert.equal(q(root, 'score').textContent, '0.2734');
+  assert.equal(q(root, 'head-score').textContent, '0.2734');
   n.fire('change');
   assert.equal(n.value, '0.900');
 });
@@ -210,7 +233,8 @@ test('a link that changes nothing (all parts bad, or not a what-if fragment) sho
   for (const hash of ['#whatif&MRSA=abc&PSI90=-1', '#main', '#whatif&MRSA=0.9']) {
     const root = mount(true, windowStub({ hash }));
     assert.equal(q(root, 'banner').hidden, true, hash);
-    assert.equal(q(root, 'score').textContent, '0.2734', hash);
+    assert.equal(q(root, 'head-score').textContent, '0.2734', hash);
+    assert.equal(q(root, 'head-label').textContent, texts.start, hash);
   }
 });
 

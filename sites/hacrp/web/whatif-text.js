@@ -39,6 +39,18 @@ export function flagText(flag) {
   return fill(FLAG_KEYS[flag]);
 }
 
+// The decision as a pill, in the hero's words: { kind, label } for components.js pill(). Too close to call is neutral.
+const PILLS = {
+  Yes: () => ({ kind: 'pen', label: fill('pillYes', { pct: REDUCTION_TEXT }) }),
+  No: () => ({ kind: null, label: fill('pillNo') }),
+  'too-close': () => ({ kind: null, label: fill('flagClose') }),
+  'N/A': () => ({ kind: 'na', label: fill('pillNA') }),
+};
+export function pillOf(flag) {
+  if (!has(PILLS, flag)) throw new RangeError(`no pill for "${flag}"`);
+  return PILLS[flag]();
+}
+
 // The cut as a percentage (dollars come later); null for Maryland, which is not subject to it.
 export function cutText(flag) {
   if (flag === 'Yes') return REDUCTION_TEXT;
@@ -194,6 +206,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     resultLabel: fill('whatifResultLabel'),
     start: fill(words.start),
     hypothetical: fill('whatifHypothetical'),
+    same: fill('whatifSame'),
+    pill: pillOf,
     rows: { score: fill('whatifRowScore'), decision: fill('whatifRowDecision'), cut: fill('whatifRowCut') },
     rampLine: fill('whatifRampLine'),
     rampLegend: `${fill('line', boundaryText)} ${fill('lineMaryland')}`,

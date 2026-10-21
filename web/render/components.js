@@ -26,7 +26,8 @@ export function fillCopy(copy, key, values = {}) {
 
 // A word on a mark; the word carries the meaning, the ink repeats it. kind: 'pen' (a penalty), 'rew' (a reward),
 // 'na' (hatched) or null (neutral).
-export const pill = ({ kind = null, label }) => html`<span class="${kind ? `pill pill--${kind}` : 'pill'}">${label}</span>`;
+export const pillClass = (kind) => (kind ? `pill pill--${kind}` : 'pill');
+export const pill = ({ kind = null, label }) => html`<span class="${pillClass(kind)}">${label}</span>`;
 
 // The as-of bar: what the data are and when they are from, one item each.
 export const asofBar = ({ label, items }) => html`<aside class="asof" aria-label="${label}">

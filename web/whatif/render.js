@@ -15,7 +15,9 @@
 //   heading, intro, noScript, resultLabel, fieldsLegend, held, standing   strings
 //   label                                  a line under the heading, or null for none
 //   banner { text, linkText, href }        the shared-link banner (rendered only with share)
-//   start, hypothetical                    column heads and the ramp's two mark labels
+//   start, hypothetical                    column heads, the ramp's two mark labels and the result head's label
+//   same                                   a hypothetical cell that equals the start
+//   pill(flag) -> { kind, label }          the result head's decision pill (kind: components.js pill())
 //   rows { score, decision, cut }          the result table's row heads
 //   rampLine, rampLegend                   the ramp's line label and the sentence under it
 //   scores(vm) -> { before, after }        score texts
@@ -30,11 +32,11 @@
 //   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
 import { scaleLinear } from 'd3-scale';
-import { printout } from '../render/components.js';
+import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
-  assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, labelAt, lineScore, rampAt, rampDomain, rampEdge, rampLabels, rampSide,
-  rampWidthFrom, rampX, sliderValue, trackMarks,
+  afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
+  rampEdge, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks,
 } from './marks.js';
 
 const TICKS = 5;
@@ -74,17 +76,33 @@ ${rampText(labels.hyp, 70, texts.hypothetical, 'wi-ramp__label', 'hyp-label')}
 </svg>`;
 }
 
+// A hypothetical cell: its value where it differs from the start, else "same" (marked data-same, so it reads quiet).
+const afterCell = (name, before, after, same) => html`<td class="wi-after" data-wi="${name}"${after === before ? html` data-same` : ''}>${afterText(before, after, same)}</td>`;
+
+// The head: the decision as a pill and the score as "before → after", in the hero's vocabulary, so a flip is the
+// loudest thing in the box. A visual summary of the table under it, so screen readers skip it (the live sentence
+// announces the change).
+function head(vm, texts) {
+  const r = vm.result;
+  const p = texts.pill(r.after.flag);
+  return html`<div class="wi-head" aria-hidden="true">
+<p class="cap wi-head__label" data-wi="head-label">${anyChanged(r) ? texts.hypothetical : texts.start}</p>
+<p class="wi-head__row"><span class="wi-head__score" data-wi="head-score">${headScore(texts.scores(vm))}</span> <span class="${pillClass(p.kind)}" data-wi="head-pill">${p.label}</span></p>
+</div>`;
+}
+
 function result(vm, range, texts) {
   const r = vm.result;
   const s = texts.scores(vm);
   const cutBefore = texts.cut(r.before.flag);
   return html`<div class="wi-result" data-wi="result" role="group" aria-label="${texts.resultLabel}">
+${head(vm, texts)}
 <table class="wi-table">
 <thead><tr><td></td><th scope="col">${texts.start}</th><th scope="col">${texts.hypothetical}</th></tr></thead>
 <tbody>
-<tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td><td class="wi-after" data-wi="score">${s.after}</td></tr>
-<tr><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td><td class="wi-after" data-wi="flag">${texts.flag(r.after.flag)}</td></tr>
-${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td><td class="wi-after" data-wi="cut">${texts.cut(r.after.flag)}</td></tr>`}
+<tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td>${afterCell('score', s.before, s.after, texts.same)}</tr>
+<tr><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td>${afterCell('flag', texts.flag(r.before.flag), texts.flag(r.after.flag), texts.same)}</tr>
+${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td>${afterCell('cut', cutBefore, texts.cut(r.after.flag), texts.same)}</tr>`}
 </tbody>
 </table>
 ${ramp(vm, range, texts)}
