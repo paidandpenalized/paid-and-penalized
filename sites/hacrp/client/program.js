@@ -42,9 +42,9 @@ if (box) {
   const input = box.querySelector('input');
   const list = box.querySelector('datalist');
   const status = box.querySelector('[role="status"]');
-  // Each hospital's label (the datalist's option), the text a query is matched against, and its page.
+  // Each hospital: its label (the datalist's option), the text a query is matched against (key), and its page.
   const entries = [];
-  const paths = new Map();
+  const pathOf = (label) => entries.find((e) => e.label === label)?.path;
 
   async function load() {
     const { hospitalPath, rows } = await hospitals(box.dataset.src);
@@ -55,12 +55,10 @@ if (box) {
     for (const text of labels) seen.set(text, (seen.get(text) ?? 0) + 1);
     list.replaceChildren(...valid.map((cells, i) => {
       const [ccn] = cells;
-      const text = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
-      const path = hospitalHref(hospitalPath, ccn);
-      paths.set(text, path);
-      entries.push({ key: searchKey(cells), path });
+      const label = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
+      entries.push({ label, key: searchKey(cells), path: hospitalHref(hospitalPath, ccn) });
       const option = document.createElement('option');
-      option.value = text;
+      option.value = label;
       return option;
     }));
   }
@@ -71,8 +69,8 @@ if (box) {
 
   const go = (path) => { if (path) window.location.assign(path); };
   input.addEventListener('input', () => {
-    if (status) status.textContent = '';
-    go(paths.get(input.value));
+    status.textContent = '';
+    go(pathOf(input.value));
   });
   // Several matches: the table below shows them, through its own text filter (mountTable reads it if the table
   // mounts later).
@@ -80,7 +78,7 @@ if (box) {
     const filter = document.querySelector('#ht-name');
     if (!filter) return;
     filter.value = query;
-    filter.dispatchEvent?.(new Event('input'));
+    filter.dispatchEvent(new Event('input'));
     document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });
   }
   box.addEventListener('submit', async (event) => {
@@ -88,11 +86,12 @@ if (box) {
     const query = input.value.trim();
     if (!query) return;
     await ready();
-    if (paths.has(input.value)) return go(paths.get(input.value));
+    const picked = pathOf(input.value);
+    if (picked) return go(picked);
     const q = query.toLowerCase();
     const matches = entries.filter((e) => e.key.includes(q));
     if (matches.length === 1) return go(matches[0].path);
-    if (status) status.textContent = matches.length ? '' : fill('tableCountNone');
+    status.textContent = matches.length ? '' : fill('tableCountNone');
     if (matches.length) showInTable(query);
   });
   box.hidden = false;
@@ -112,7 +111,7 @@ function mountTable({ hospitalPath, rows }, { linked }) {
   const heads = [...table.querySelectorAll('th[data-key]')];
   const codes = stateCodes(rows);
   // The search above may have filled the text filter before the table mounted.
-  const view = { state: null, query: search.value ?? '', key: null, dir: 1, expanded: false };
+  const view = { state: null, query: search.value, key: null, dir: 1, expanded: false };
 
   select.append(...codes.map((code) => {
     const option = document.createElement('option');
