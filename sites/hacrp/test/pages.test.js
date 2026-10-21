@@ -12,8 +12,6 @@ import { build } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count } from '../../../web/render/format.js';
-import { loadHacrp } from '../web/data.js';
-import { measureRanges } from '../web/figures.js';
 import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -21,21 +19,15 @@ import { programPage } from '../web/pages/program.js';
 import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
+import { DATA, PROGRAM_ARGS, RANGES } from './pinned.js';
 
-const DATA = loadHacrp();
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
 const FN = (code) => DATA.footnotes.get(code);
-const RANGES = measureRanges(DATA.model);
 
 const read = (dir, path) => readFileSync(join(dir, path, 'index.html'), 'utf8');
 const hospitalPath = (h) => `/hacrp/hospital/${h.ccn.toLowerCase()}/`;
 const pick = (pred, what) => pickFrom(DATA.hospitals, pred, what);
-// The program page's arguments, for the tests that vary one of them.
-const PROGRAM_ARGS = {
-  fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
-  periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
-};
 const temp = (fn) => withTemp('pp-hacrp-', fn);
 const generate = (dir, env, options) => {
   const ctx = createContext({ outDir: dir, env, assets: ASSETS });
@@ -183,7 +175,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
     rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i]]),
   });
   const text = programPage({
-    ...PROGRAM_ARGS, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' }, measures: views[0].measures,
+    ...PROGRAM_ARGS, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
     searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
   assert.match(text, /<section class="block search" aria-labelledby="search-h" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);

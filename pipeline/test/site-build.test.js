@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
-import { build, mergeEntries } from '../site/build.js';
+import { HUB } from '../../hub/pages.js';
+import { SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
 import { withTemp as inTemp } from './helpers.js';
@@ -80,6 +81,11 @@ test('build runs the sites in order with one context: assets, env, and what earl
     assert.equal(readFileSync(join(out, 'a', 'index.html'), 'utf8'), 'a');
     assert.equal(readFileSync(join(out, 'robots.txt'), 'utf8'), 'r');
   }));
+
+test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {
+  assert.equal(SITES.at(-1), HUB);
+  assert.equal(SITES.filter((s) => s === HUB).length, 1);
+});
 
 test('emit refuses a path outside the site; asset writes a content-hashed file', () =>
   withTemp(async (dir) => {

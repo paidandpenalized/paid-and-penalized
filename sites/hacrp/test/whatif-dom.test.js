@@ -10,14 +10,11 @@ import { SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synth
 import { mountWhatIf } from '../../../web/whatif/dom.js';
 import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
-import { loadHacrp } from '../web/data.js';
-import { scoreRange } from '../web/generate.js';
 import { initialState, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 import { textsFor as fixtureTexts } from './fixtures.js';
+import { DATA as D, RANGE } from './pinned.js';
 
-const D = loadHacrp();
 const { model, estimate } = D;
-const RANGE = scoreRange(D.hospitals);
 const PATH = '/hacrp/hospital/990026/';
 const V = SYNTH_VALUES.no;
 const H = modelHospital(model, '990026', { values: V });

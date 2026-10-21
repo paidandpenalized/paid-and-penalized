@@ -10,20 +10,16 @@ import { clamp, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { TILES } from '../../../web/charts/states.js';
 import { SHORT_NAMES } from '../web/constants.js';
-import { loadHacrp } from '../web/data.js';
-import { scoreRange } from '../web/generate.js';
 import { csvPath } from '../web/links.js';
-import { measureRanges, partsFigure, rangeFigure, scoresFigure, statesFigure, lineFigure } from '../web/figures.js';
+import { partsFigure, rangeFigure, scoresFigure, statesFigure, lineFigure } from '../web/figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { stepRows } from '../web/stepper.js';
 import { hospitalView, stateCounts } from '../web/view.js';
 import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
+import { DATA, RANGE, RANGES } from './pinned.js';
 
-const DATA = loadHacrp();
 const { model, estimate } = DATA;
-const RANGES = measureRanges(model);
-const RANGE = scoreRange(DATA.hospitals);
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
 const SCORES = decidedHospitals(DATA.hospitals).map((h) => ({ total: h.total, yes: h.paymentReduction === 'Yes' }));
 const COUNTS = { decided: SCORES.length, yes: SCORES.filter((s) => s.yes).length, scored: DATA.hospitals.filter((h) => h.total !== null).length };
@@ -32,7 +28,7 @@ const STATES = stateCounts(VIEWS);
 
 const render = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
 const program = (overrides = {}) => programPage({
-  fy: DATA.fy, counts: COUNTS, boundaryText: DATA.boundaryText, measures: VIEWS[0].measures, periods: DATA.periods,
+  fy: DATA.fy, counts: COUNTS, boundaryText: DATA.boundaryText, periods: DATA.periods,
   searchUrl: '/assets/hacrp-hospitals.0000abcd.json', source: DATA.source, robots: null, assets: ASSETS,
   whatif: { hospital: MEDIAN, model, estimate, range: RANGE }, scores: SCORES, boundary: model.boundary, states: STATES, ...overrides,
 });
