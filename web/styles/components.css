@@ -19,8 +19,7 @@
 }
 
 /* ---------- footer ---------- */
-.foot { position: relative; margin-top: 56px; padding-block: 20px 40px; border-top: 4px solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
-.foot::before { content: ''; position: absolute; left: 0; right: 0; top: 3px; border-top: 1px solid var(--ink); }
+.foot { margin-top: 56px; padding-block: 20px 40px; border-top: var(--rule) solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
 .foot__row { display: grid; gap: 12px; }
 .foot p { max-width: 62ch; }
 @media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
