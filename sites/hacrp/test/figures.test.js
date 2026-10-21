@@ -138,7 +138,7 @@ test('the program page\'s stepper walks the median hospital with medianHospital\
   // The last step is the ramp: the median hospital against CMS's line, as Figure 1 (hypothetical).
   assert.match(steps, /<figure class="fig" id="figure-1" data-figure>/);
   assert.match(steps, /class="chart chart--ramp"/);
-  assert.match(steps, /<span class="pill">Hypothetical<\/span>/);
+  assert.match(steps, /<span class="fig__claim">Hypothetical<\/span> · /);
   assert.equal(captions(steps)[0][1], esc(`This site's hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No.`));
   assert.equal(MEDIAN.paymentReduction, 'No', 'the pinned median hospital sits below the line');
 });

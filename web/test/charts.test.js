@@ -291,9 +291,11 @@ test('figure: a numeric cell with no raw value keeps no data-value, so the brows
   assert.ok(!s.includes('data-value="null"') && !s.includes('data-value=""'));
 });
 
-test('figure: a claim level other than official is said under the chart; an unknown one throws', () => {
+test('figure: a claim level other than official leads the source line, as words; an unknown one throws', () => {
   for (const [level, text] of [['recomputed', 'This site recomputes'], ['estimate', 'Estimate'], ['hypothetical', 'Hypothetical']]) {
-    assert.ok(String(figure({ ...FIG, claimLevel: level })).includes(`<p class="fig__claim"><span class="pill">${text}</span></p>`), level);
+    const s = String(figure({ ...FIG, claimLevel: level }));
+    assert.ok(s.includes(`<p class="source fig__source"><span class="fig__claim">${text}</span> · Synthetic source.</p>`), level);
+    assert.ok(!s.includes('class="pill"'), `${level}: not a badge`);
   }
   assert.throws(() => figure({ ...FIG, claimLevel: 'guess' }), /claimLevel/);
 });
@@ -427,8 +429,7 @@ const SNAPSHOTS = {
 <g class="chart-mark" data-mark data-row="b" data-value="-0.125"><title>Measure B: −0.125</title><rect class="chart-hit" x="0" y="32" width="360" height="28"/><text class="chart-label" x="0" y="50" text-anchor="start">Measure B</text><path class="chart-bar" d="M204 38H185A4 4 0 0 0 181 42V50A4 4 0 0 0 185 54H204Z"/><text class="chart-value" x="360" y="50" text-anchor="end">−0.125</text></g>
 <g class="chart-mark" data-mark data-row="c" data-value="0.5"><title>Measure C &lt;&amp;&gt;: 0.5</title><rect class="chart-hit" x="0" y="60" width="360" height="28"/><text class="chart-label" x="0" y="78" text-anchor="start">Measure C &lt;&amp;&gt;</text><path class="chart-bar-na" fill="url(#chart-c1-hatch)" d="M204 66H292A4 4 0 0 1 296 70V78A4 4 0 0 1 292 82H204Z"/><text class="chart-value" x="360" y="78" text-anchor="end">0.5</text></g>
 <line class="chart-zero" x1="204" x2="204" y1="0" y2="92"/></svg>
-<p class="fig__claim"><span class="pill">Estimate</span></p>
-<p class="source fig__source">Synthetic source.</p>
+<p class="source fig__source"><span class="fig__claim">Estimate</span> · Synthetic source.</p>
 <details class="fig__table"><summary>Show table</summary>
 <div class="printout"><div class="printout__scroll"><table class="gb">
 <thead><tr><th scope="col">Measure</th><th scope="col" data-numeric>Part</th></tr></thead>

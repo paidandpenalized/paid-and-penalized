@@ -1,5 +1,5 @@
 // The frame every chart sits in (DES-31): "Figure N." and a one-sentence takeaway, the chart as an image named by
-// alt, its claim level when its values are not CMS's own, the source line, and a "Show table" toggle holding every
+// alt, the source line (led by the claim level, as words, when the values are not CMS's own), and a "Show table" toggle holding every
 // plotted value in a table (web/client/figure.js adds column sort, a CSV download and a tooltip layer). The build
 // fails if a value the chart plots is missing from the table.
 //   n            the figure's number on its page (a positive integer)
@@ -79,8 +79,7 @@ export function figure({ n, takeaway, svg, source, claimLevel = 'official', tabl
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
-`}${claim && html`<p class="fig__claim"><span class="pill">${claim}</span></p>
-`}<p class="source fig__source">${source}</p>
+`}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
 ${printout(html`<table class="gb">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
