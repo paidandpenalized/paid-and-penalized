@@ -102,7 +102,8 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes('Not affiliated with or endorsed by CMS.'));
   assert.ok(out.includes('Uses public data from the Centers for Medicare &amp; Medicaid Services (CMS) and shows no patient information.'));
   assert.ok(out.includes('Built with Claude Code'));
-  assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener">Dalton Haslam, MD, MBA<span class="vh"> (opens in a new tab)</span></a>'));
+  // The name and credentials never split; the byline may break after "Built by".
+  assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener"><span class="nw">Dalton Haslam, MD, MBA</span><span class="vh"> (opens in a new tab)</span></a>'));
   assert.ok(out.includes(`href="${SITE.feedbackUrl}"`));
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));

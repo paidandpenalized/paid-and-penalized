@@ -17,7 +17,7 @@ const newTab = html`<span class="vh">${COPY.newTab}</span>`;
 const header = html`<header class="masthead">
   <div class="wrap masthead__row">
     <a class="wordmark" href="/">${COPY.wordmarkLead} <span class="wordmark__pen">${COPY.wordmarkPen}</span></a>
-    <p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener">${COPY.bylineName}${newTab}</a></p>
+    <p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener"><span class="nw">${COPY.bylineName}</span>${newTab}</a></p>
     <button type="button" class="theme-toggle" aria-pressed="false" hidden>${COPY.themeToggle}</button>
   </div>
 </header>`;

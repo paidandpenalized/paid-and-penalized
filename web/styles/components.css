@@ -17,6 +17,9 @@
   .wordmark { grid-column: 1 / -1; justify-self: start; }
   .theme-toggle { margin-left: 0; justify-self: end; }
 }
+/* The byline keeps the name and credentials whole (layout.js); on the narrowest phones a step smaller, so they fit
+   beside the toggle. */
+@media (max-width: 360px) { .byline { font-size: var(--fs-xs); } }
 
 /* ---------- footer ---------- */
 .foot { margin-top: 56px; padding-block: 20px 40px; border-top: var(--rule) solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
