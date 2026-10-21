@@ -31,12 +31,35 @@ export function compareRows(index, numeric, dir) {
 
 // A table's scroll box (components.js printout): while its table is wider than the box (on a phone), the box is a
 // focusable region named by the table's own label, so a keyboard can scroll it, and its frame fades out at the right
-// edge while more of the table lies that way (data-more). One observer watches the box (a resize) and the table (its
-// fonts or rows arriving); a scroll moves the edge, and an enclosing details' toggle re-reads it (a closed one's content
-// is skipped, so the observer may not report it). The label is the table's aria-labelledby, else its caption's id.
+// edge while more of the table lies that way (data-more). One observer for the page watches every box (a resize) and
+// its table (its fonts or rows arriving); a scroll moves the edge, and an enclosing details' toggle re-reads it (a
+// closed one's content is skipped, so the observer may not report it). The label is the table's aria-labelledby, else
+// its caption's id.
 export function scrollState(scroll) {
   const overflow = scroll.scrollWidth - scroll.clientWidth;
   return { region: overflow > 1, more: overflow - scroll.scrollLeft > 1 };
+}
+
+// Each mounted box, { scroll, frame, label, region }, by its scroll box and by its table: what the observer reports.
+const BOXES = new Map();
+let sizes = null;
+
+// Every box's state is read before any box is written, so the page is laid out once, not once per box.
+function edges(boxes) {
+  const states = boxes.map((box) => scrollState(box.scroll));
+  boxes.forEach((box, i) => {
+    const { region, more } = states[i];
+    box.frame.toggleAttribute('data-more', more);
+    if (region === box.region) return;
+    box.region = region;
+    if (region) {
+      box.scroll.setAttribute('tabindex', '0');
+      box.scroll.setAttribute('role', 'region');
+      box.scroll.setAttribute('aria-labelledby', box.label);
+    } else {
+      for (const name of ['tabindex', 'role', 'aria-labelledby']) box.scroll.removeAttribute(name);
+    }
+  });
 }
 
 export function mountScroll(scroll) {
@@ -44,24 +67,13 @@ export function mountScroll(scroll) {
   if (!table) return;
   const label = table.getAttribute('aria-labelledby') ?? table.caption?.id;
   if (!label || !('ResizeObserver' in window)) return;
-  const box = scroll.parentElement;
-  let isRegion = false;
-  const edge = () => {
-    const { region, more } = scrollState(scroll);
-    box.toggleAttribute('data-more', more);
-    if (region === isRegion) return;
-    isRegion = region;
-    if (region) {
-      scroll.setAttribute('tabindex', '0');
-      scroll.setAttribute('role', 'region');
-      scroll.setAttribute('aria-labelledby', label);
-    } else {
-      for (const name of ['tabindex', 'role', 'aria-labelledby']) scroll.removeAttribute(name);
-    }
-  };
+  const box = { scroll, frame: scroll.parentElement, label, region: false };
+  const edge = () => edges([box]);
   scroll.addEventListener('scroll', edge, { passive: true });
   scroll.closest('details')?.addEventListener('toggle', edge);
-  const sizes = new ResizeObserver(edge);
+  // One report can name a box and its table: each box is read once.
+  if (!sizes) sizes = new ResizeObserver((entries) => edges([...new Set(entries.map((e) => BOXES.get(e.target)))]));
+  BOXES.set(scroll, box).set(table, box);
   sizes.observe(scroll);
   sizes.observe(table);
 }
