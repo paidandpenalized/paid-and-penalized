@@ -31,6 +31,10 @@ function entry(el) {
 const setText = (el, text) => {
   if (el && el.textContent !== text) el.textContent = text;
 };
+// An attribute written only when it changes: a drag redraws many times a second.
+const setAttr = (el, name, value) => {
+  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+};
 
 // An input with an error line: the line shows while the input's entry is refused. null without the input.
 const checked = (el, error) => el && { el, error, described: el.getAttribute('aria-describedby') ?? '' };
@@ -78,6 +82,9 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const startPart = Object.fromEntries(first.inputs.map((input) => [input.id, texts.bars.value(first.result.measures[input.id].contribution)]));
   // Each measure's starting value, where a changed measure's track keeps a dotted tick (none for an assigned one).
   const startValue = Object.fromEntries(first.inputs.map((input) => [input.id, input.value]));
+  // The start's decision and cut, as the result table writes them (CMS's, or the sandbox's: fixed for the page).
+  const startFlag = texts.flag(first.result.before.flag);
+  const startCut = texts.cut(first.result.before.flag);
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
 
@@ -160,17 +167,18 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     vm = rules.viewModel(state);
     const r = vm.result;
     const s = texts.scores(vm);
-    const echo = anyChanged(r) ? `${headScore(s)} · ${texts.pill(r.after.flag).label}` : '';
-    after(el.score, s.before, s.after);
-    after(el.flag, texts.flag(r.before.flag), texts.flag(r.after.flag));
-    after(el.cut, texts.cut(r.before.flag), texts.cut(r.after.flag));
+    const changed = anyChanged(r);
     const p = texts.pill(r.after.flag);
-    setText(el['head-label'], anyChanged(r) ? texts.hypothetical : texts.start);
+    const echo = changed ? `${headScore(s)} · ${p.label}` : '';
+    after(el.score, s.before, s.after);
+    after(el.flag, startFlag, texts.flag(r.after.flag));
+    after(el.cut, startCut, texts.cut(r.after.flag));
+    setText(el['head-label'], changed ? texts.hypothetical : texts.start);
     // A changed what-if prints as a scenario; an unchanged one drops its instructions on paper (print.css).
-    root.toggleAttribute('data-changed', anyChanged(r));
+    root.toggleAttribute('data-changed', changed);
     setText(el['head-score'], headScore(s));
     setText(el['head-pill'], p.label);
-    el['head-pill'].setAttribute('class', pillClass(p.kind));
+    setAttr(el['head-pill'], 'class', pillClass(p.kind));
     el.estimate.hidden = !vm.estimated;
     const t = rampAt(r.after.score, domain);
     el.hyp.setAttribute('x', rampX(t));
@@ -180,8 +188,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     // The hollow mark and its label only once the hypothetical differs from the start (SVG has no hidden property).
     const unchanged = r.after.score === r.before.score;
     const stacked = labels.stacked && !unchanged;
-    el['hyp-label'].setAttribute('y', String(stacked ? RAMP_Y.label2 : RAMP_Y.label));
-    el.ramp.setAttribute('height', String(rampHeight(stacked)));
+    setAttr(el['hyp-label'], 'y', String(stacked ? RAMP_Y.label2 : RAMP_Y.label));
+    setAttr(el.ramp, 'height', String(rampHeight(stacked)));
     for (const node of [el.hyp, el['hyp-label']]) node.toggleAttribute('hidden', unchanged);
     const edge = rampEdge(rampSide(r.after.score, domain));
     place(el['hyp-edge'], edge);
@@ -199,7 +207,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
         // The field now shows the value the what-if uses, so no refused entry is left to flag.
         if (!row.numberCheck.error.hidden) markInvalid(row.numberCheck, false);
       }
-      row.barRow.setAttribute('class', barClass(input));
+      setAttr(row.barRow, 'class', barClass(input));
       if (row.barAssigned) row.barAssigned.hidden = !assignedNow(input);
       const span = barSpan(m.contribution, vm.extent);
       row.bar.style.setProperty('--at', fraction(span.at));
@@ -227,7 +235,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     if (el.banner) el.banner.hidden = !(linked && hasChanges(state));
     // Reset reads as unavailable while there is nothing to reset (it stays focusable and harmless).
     const dirty = hasChanges(state) || Object.values(vm.counts).some(Boolean);
-    el.reset.setAttribute('aria-disabled', String(!dirty));
+    setAttr(el.reset, 'aria-disabled', String(!dirty));
     setText(el['copy-status'], '');
     env.clearTimeout(timer);
     timer = env.setTimeout(settle, SETTLE_MS);
