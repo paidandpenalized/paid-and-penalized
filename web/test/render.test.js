@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
-import { fillCopy, fillCopyKeep, footnoteLegend, keepDates, keepWhole, pill, typeset } from '../render/components.js';
+import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -228,12 +228,6 @@ test('copy is typeset: straight apostrophes and quotes become curly in the words
   assert.equal(fillCopy(copy, 'a', { name: "O'Brien's" }), 'CMS\u2019s line and the hospitals\u2019 data, a \u201cquote\u201d (O\'Brien\'s)');
   assert.equal(typeset("{short}'s"), '{short}\u2019s');
   assert.equal(typeset('the z-scores; a Z-score head'), 'the z\u2011scores; a Z-score head', 'z-score in running text takes a non-breaking hyphen');
-});
-
-test('keepDates keeps every long date in escaped text on one line', () => {
-  assert.equal(String(keepDates('A & B, released August 13, 2026; July 1, 2022.')),
-    'A &amp; B, released <span class="nw">August 13, 2026</span>; <span class="nw">July 1, 2022</span>.');
-  assert.equal(String(keepDates('No date <here>')), 'No date &lt;here&gt;');
 });
 
 test('markdownSections: a title, an intro, sections with ids, lists, a labelled pipe table and code; everything escaped', async () => {

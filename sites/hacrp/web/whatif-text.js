@@ -10,7 +10,7 @@ import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
-import { fill, heroLineText, measureLabel, sourceText } from './copy.js';
+import { fill, heroLineText, measureLabel, sourcePlain } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
@@ -186,7 +186,7 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
     fill('slideScore', { before, after }),
     decision,
     scenarioSentence(vm, hospital, model, baseline),
-    sourceText({ fy, source }),
+    sourcePlain({ fy, source }),
     fill('whatifStanding'),
   ].filter((line) => line !== null && line !== undefined).join('\n');
 }

@@ -528,8 +528,12 @@ export const heroLineText = (boundaryText) => fillKeep('heroLine', boundaryText,
 // A word or sentence with no placeholders.
 export const t = (key) => fill(key);
 
-// The source line's text, as every HACRP source line, figure, citation and what-if slide writes it.
-export const sourceText = ({ fy, source }) => fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });
+// The source line's values: the fiscal year, the dataset id and its release date.
+const sourceValues = ({ fy, source }) => ({ fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });
+// The source line as every HACRP figure writes it: markup, its release date kept on one line.
+export const sourceText = (args) => fillKeep('source', sourceValues(args), ['date']);
+// The same line as plain text, for the citation and the what-if's "Copy for a slide".
+export const sourcePlain = (args) => fill('source', sourceValues(args));
 
 // A measure's name as a label (capitalized): "Central line–associated bloodstream infections".
 export const measureLabel = (id) => capitalize(fill(`measure${id}`));

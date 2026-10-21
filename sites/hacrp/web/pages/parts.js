@@ -5,7 +5,7 @@ import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
-import { COPY, fill, sourceText, t } from '../copy.js';
+import { COPY, fill, sourcePlain, t } from '../copy.js';
 import { DICTIONARY_PAGE, csvPath } from '../links.js';
 import { pillOf } from '../whatif-text.js';
 
@@ -56,7 +56,7 @@ export function citation({ fy, title, path, source }) {
     site: SITE.name,
     title,
     url: SITE.origin + path,
-    source: sourceText({ fy, source }),
+    source: sourcePlain({ fy, source }),
   });
   // The dataset id would break at its hyphen, and the release date at its spaces; the URL may still break anywhere.
   return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`, isoDate(source.pdcReleased)]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });

@@ -2,7 +2,7 @@
 // stepper on the median hospital, the sandbox, this year's counts with their figures, the table of every hospital,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
 import { isSir, MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
-import { keepDates, keepWhole, printout } from '../../../../web/render/components.js';
+import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { cmsText, count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
@@ -14,6 +14,7 @@ import { LINKS } from '../links.js';
 import { lineStep, stepRows, stepSum } from '../stepper.js';
 import { asofBar, citation, dataLinks } from './parts.js';
 import { whatIfSection } from './whatif.js';
+import { fillKeep } from '../copy.js';
 
 export const PATH = SITE.sites.hacrp.path;
 
@@ -129,13 +130,13 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 <section class="block" aria-labelledby="periods-h">
 <h2 id="periods-h">${t('periodsHeading')}</h2>
 <dl class="measure-list">
-<div><dt>${psi.short}</dt><dd>${keepDates(fill('periodRange', { start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) }))}</dd></div>
-<div><dt>${hai}</dt><dd>${keepDates(fill('periodRange', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) }))}</dd></div>
+<div><dt>${psi.short}</dt><dd>${fillKeep('periodRange', { start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) }, ['start', 'end'])}</dd></div>
+<div><dt>${hai}</dt><dd>${fillKeep('periodRange', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) }, ['start', 'end'])}</dd></div>
 </dl>
 </section>
 <section class="block" aria-labelledby="line-h">
 <h2 id="line-h">${t('lineHeading')}</h2>
-<p class="line">${keepWhole(fill('line', boundaryText), [boundaryText.lowestYes, boundaryText.highestNo])} ${t('lineMaryland')}</p>
+<p class="line">${fillKeep('line', boundaryText, ['lowestYes', 'highestNo'])} ${t('lineMaryland')}</p>
 <p>${t('lineRelative')}</p>
 </section>
 ${steps}
