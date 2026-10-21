@@ -74,7 +74,7 @@
 .hosp__wm { position: absolute; inset: 2.5rem 8px 8px; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
 .geo--j { height: 100%; }
 .geo--j .chart { width: auto; height: 100%; max-width: 100%; }
-.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.4; }
+.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.2; }
 .geo--j .chart-geo-halo { fill-opacity: 0.12; }
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
