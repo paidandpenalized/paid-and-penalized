@@ -53,8 +53,9 @@ function body({ id, value, floor, cap, median, label, showLabel = true, note = n
 
   let hospital = '';
   if (value !== null) {
-    const { anchor, dx } = labelAt(tAt(value));
-    const side = tAt(value) > 0.5 ? -1 : 1;
+    const at = tAt(value);
+    const { anchor, dx } = labelAt(at);
+    const side = at > 0.5 ? -1 : 1;
     hospital = html`${mark({
       tip: `${label}: ${format(value)}`, value, hit: { x: x(value) - 9, y: MARK_Y - 2, width: 18, height: 16 },
       body: triangle(x(value), MARK_Y, 'chart-this'),
