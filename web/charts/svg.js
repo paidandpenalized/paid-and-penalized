@@ -22,8 +22,9 @@ export function checkId(id, who) {
   return id;
 }
 
+// --vb: the viewBox's width, from which charts.css caps the drawn width.
 export const frame = ({ kind, width, height, body }) =>
-  html`<svg class="chart chart--${kind}" viewBox="0 0 ${Math.round(width)} ${Math.round(height)}" width="100%" focusable="false">${body}</svg>`;
+  html`<svg class="chart chart--${kind}" viewBox="0 0 ${Math.round(width)} ${Math.round(height)}" width="100%" focusable="false" style="--vb: ${Math.round(width)}">${body}</svg>`;
 
 // The hatch for no data, not in the program, or a CMS-assigned value: a pattern in currentColor, so its ink comes
 // from .chart-hatch and forced-colors can repaint it. One per SVG, named by the caller's id.

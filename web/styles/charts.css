@@ -54,15 +54,14 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
 
 /* ---------- the SVG ---------- */
-.chart { display: block; width: 100%; max-width: 34rem; height: auto; overflow: visible; font: 400 12px var(--font-body); }
+/* A viewBox shown wider scales its text, so a chart is never drawn much wider than its viewBox (--vb, from the kit's
+   frame): about 1.15x, so its labels never outgrow the body (26rem for the phone-wide 360, 40rem for the wide 560). */
+.chart { display: block; width: 100%; max-width: calc(var(--vb) * 1.12px + 0.8rem); height: auto; overflow: visible; font: 400 12px var(--font-body); }
 /* A focused chart's ring clears its edge labels. */
 .chart:focus-visible { outline-offset: 4px; }
-/* A phone-wide viewBox shown wider scales its text: these stay near 1.15x, so chart labels never outgrow the body. */
-.chart--dot-ranges, .chart--ramp, .chart--bars { max-width: 26rem; }
 /* A figure with two variants shows the phone one under 560px and the wide one (its own viewBox) from 560px, where
    the wide one already draws near its own size; the phone one shown wider would blow its text up. */
-.chart[data-fit="narrow"] { max-width: 26rem; }
-.chart[data-fit="wide"] { display: none; max-width: 40rem; }
+.chart[data-fit="wide"] { display: none; }
 @media (min-width: 560px) {
   .chart[data-fit="narrow"] { display: none; }
   .chart[data-fit="wide"] { display: block; }
