@@ -19,7 +19,8 @@ export const COPY = typesetCopy({
   figure: 'Figure',
   showTable: 'Show table',
   downloadCsv: 'Download CSV',
-  // Said (to screen readers) when a figure's table is sorted by a column head.
+  // Said (to screen readers) when a figure's table is sorted by a column head; the build writes them on the table for
+  // web/client/figure.js, which fills in {column}.
   sortedUp: 'Sorted by {column}, ascending',
   sortedDown: 'Sorted by {column}, descending',
   // A figure's claim level, said under the chart when its values are not CMS's own (DES-25 words).

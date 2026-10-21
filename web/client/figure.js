@@ -6,8 +6,6 @@
 // JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
-import { COPY } from '../copy.js';
-import { fillCopy } from '../render/components.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 // Some browsers start a download after click() returns; revoking its blob URL at once can cancel it. A minute is
@@ -68,7 +66,8 @@ export function mountScroll(scroll) {
   sizes.observe(table);
 }
 
-// live: the figure's polite live paragraph (a sort says its new order there).
+// live: the figure's polite live paragraph (a sort says its new order there, in the words the build wrote on the
+// table: data-sorted-up and data-sorted-down, each with a {column} for the column head's text).
 function mountTable(fig, live) {
   const table = fig.querySelector('table');
   if (!table) return;
@@ -83,7 +82,7 @@ function mountTable(fig, live) {
       const dir = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
       for (const h of heads) h.removeAttribute('aria-sort');
       th.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
-      live.textContent = fillCopy(COPY, dir > 0 ? 'sortedUp' : 'sortedDown', { column: button.textContent.trim() });
+      live.textContent = table.dataset[dir > 0 ? 'sortedUp' : 'sortedDown'].replace('{column}', () => button.textContent.trim());
       const body = table.tBodies[0];
       body.append(...[...body.rows].sort(compareRows(i, th.hasAttribute('data-numeric'), dir)));
     });

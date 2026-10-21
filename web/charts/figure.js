@@ -1,6 +1,7 @@
 // The frame every chart sits in (DES-31): "Figure N." and a one-sentence takeaway, the chart as an image named by
 // alt, the source line (led by the claim level, as words, when the values are not CMS's own), and a "Show table" toggle holding every
-// plotted value in a table (web/client/figure.js adds column sort, a CSV download and a tooltip layer). The build
+// plotted value in a table (web/client/figure.js adds column sort, said in the words the table carries in
+// data-sorted-up and data-sorted-down, a CSV download and a tooltip layer). The build
 // fails if a value the chart plots is missing from the table.
 //   n            the figure's number on its page (a positive integer)
 //   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
@@ -101,7 +102,7 @@ ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span c
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
-${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap">
+${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap" data-sorted-up="${COPY.sortedUp}" data-sorted-down="${COPY.sortedDown}">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
 <tbody>${cells.map((row) => html`<tr>${row.map((c, j) => tableCell(c, columns[j], j))}</tr>`)}</tbody>
 </table>`)}

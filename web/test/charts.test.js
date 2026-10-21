@@ -333,7 +333,7 @@ test('figure: Figure N. and the takeaway, the SVG as an image named by alt, the 
   const s = String(figure(FIG));
   assert.match(s, /^<figure class="fig" id="figure-1" data-figure>/);
   assert.match(s, /<figcaption class="fig__cap" id="figure-1-cap"><span class="fig__n">Figure 1\.<\/span> Measure C adds the most\.<\/figcaption>/);
-  assert.match(s, /<table class="gb" aria-labelledby="figure-1-cap">/, 'the table is named by the caption');
+  assert.match(s, /<table class="gb" aria-labelledby="figure-1-cap" data-sorted-up="Sorted by \{column\}, ascending" data-sorted-down="Sorted by \{column\}, descending">/, 'the table is named by the caption and carries its sort words');
   assert.match(s, /<svg role="img" aria-label="Three bars\." class="chart chart--bars"/);
   assert.ok(s.includes('<p class="source fig__source">Synthetic source.</p>'));
   assert.match(s, /<details class="fig__table"><summary>Show table<\/summary>/);
@@ -486,6 +486,11 @@ test('a scroll box is a region while its table overflows, and fades while more l
   assert.deepEqual(box(264.5, 264, 0), { region: false, more: false });
 });
 
+test('the figure script, which every figure page loads, imports neither render/ nor the copy: its words are on the page', () => {
+  const src = readFileSync(new URL('../client/figure.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /from '\.\.\/(render\/|copy\.js)/);
+});
+
 // Inline snapshots: the exact markup for the fixed synthetic inputs above. A change here is a visible change to every
 // figure; look at it in the browser before updating a snapshot.
 const SNAPSHOTS = {
@@ -525,7 +530,7 @@ const SNAPSHOTS = {
 <line class="chart-zero" x1="174" x2="174" y1="0" y2="92"/></svg>
 <p class="source fig__source"><span class="fig__claim">Estimate</span> · Synthetic source.</p>
 <details class="fig__table"><summary>Show table</summary>
-<div class="printout"><div class="printout__scroll"><table class="gb" aria-labelledby="figure-1-cap">
+<div class="printout"><div class="printout__scroll"><table class="gb" aria-labelledby="figure-1-cap" data-sorted-up="Sorted by {column}, ascending" data-sorted-down="Sorted by {column}, descending">
 <thead><tr><th scope="col">Measure</th><th scope="col" data-numeric>Part</th></tr></thead>
 <tbody><tr><th scope="row">Measure A</th><td class="num" data-value="0.25">0.25</td></tr><tr><th scope="row">Measure B</th><td class="num" data-value="-0.125">−0.125</td></tr><tr><th scope="row">Measure C</th><td class="num" data-value="0.5">0.5</td></tr></tbody>
 </table></div></div>
