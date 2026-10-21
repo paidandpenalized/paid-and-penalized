@@ -9,7 +9,7 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import { compareByName, decodeState, filterRows, hospitalHref, sortRows, stateCodes, withState } from '../web/hospital-table.js';
+import { compareByName, decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
 import { cmsText, count } from '../../../web/render/format.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
@@ -117,7 +117,7 @@ function mountTable({ hospitalPath, rows }, { linked }) {
   // Each row's <tr> is built once; a filter or sort only puts the built rows in a new order.
   const built = new WeakMap();
   const rowOf = (r) => {
-    if (!built.has(r)) built.set(r, row(r));
+    if (!built.has(r)) built.set(r, row(r.cells));
     return built.get(r);
   };
 
@@ -130,8 +130,10 @@ function mountTable({ hospitalPath, rows }, { linked }) {
   }
 
   // The rows in the reader's sort, built once per sort change: the asset's own order is the default (hospitalRows),
-  // and a filter keeps the order it is given, so a keystroke only filters.
-  let ordered = rows;
+  // and a filter keeps the order it is given, so a keystroke only filters. Each row's lowercase name and numeric
+  // score are read once, here.
+  const records = tableRows(rows);
+  let ordered = records;
 
   function render({ typing = false } = {}) {
     const matches = filterRows(ordered, view);
@@ -177,7 +179,7 @@ function mountTable({ hospitalPath, rows }, { linked }) {
       view.key = key;
       for (const h of heads) h.removeAttribute('aria-sort');
       th.setAttribute('aria-sort', view.dir > 0 ? 'ascending' : 'descending');
-      ordered = sortRows(rows, view.key, view.dir);
+      ordered = sortRows(records, view.key, view.dir);
       render();
     });
   }

@@ -2,9 +2,9 @@
 // (client/program.js) share: the default order, the reader's sort, the state and name filters, and the #state=XX
 // fragment that keeps the chosen state in the URL. Rows are the hospitals asset's: [ccn, name, city, state, total,
 // decision], the total as CMS published it, with its hyphen-minus ("N/A" when CMS published none); the browser shows
-// it with a true minus. No DOM.
+// it with a true minus. The sort and the filters take them through tableRows. No DOM.
 
-import { compareNumbers } from '../../../engine/js/stats.js';
+import { compareNumbers, numberOrNaN } from '../../../engine/js/stats.js';
 
 // Each column's place in a row; all but the CCN are sortable.
 const INDEX = Object.freeze({ ccn: 0, name: 1, city: 2, state: 3, score: 4, decision: 5 });
@@ -43,24 +43,26 @@ export function withState(hash, code) {
   return parts.length ? `#${parts.join('&')}` : '';
 }
 
-// A Total HAC Score as a number, from CMS's own decimal text (hyphen-minus); NaN for "N/A", blank or anything else.
-export function scoreOf(s) {
-  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
-}
+// The rows the browser sorts and filters, each read once when the asset loads: { cells, name, score }, with cells the
+// asset's row, name in lowercase (the name filter) and score as a number (the score sort; NaN for "N/A" or blank).
+// The score text is CMS's decimal text, which the build checked when it read CMS's file, so numberOrNaN reads it.
+export const tableRows = (rows) =>
+  rows.map((cells) => ({ cells, name: cells[INDEX.name].toLowerCase(), score: numberOrNaN(cells[INDEX.score]) }));
 
-// A sorted copy: by key ('name', 'city', 'state', 'score' or 'decision') in dir 1 (ascending) or -1, ties kept in the
-// order given; with no key, the default order. Scores sort by value with "N/A" last in either direction. Filtering a
-// sorted list keeps its order, so the browser sorts once per sort change and filters that order as the reader types.
+// A sorted copy of tableRows: by key ('name', 'city', 'state', 'score' or 'decision') in dir 1 (ascending) or -1, ties
+// kept in the order given; with no key, the default order. Scores sort by value with "N/A" last in either direction.
+// Filtering a sorted list keeps its order, so the browser sorts once per sort change and filters that order as the
+// reader types.
 export function sortRows(rows, key, dir) {
-  if (key === null || key === undefined) return [...rows].sort(compareDefault);
+  if (key === null || key === undefined) return [...rows].sort((a, b) => compareDefault(a.cells, b.cells));
   if (!SORTABLE.includes(key)) throw new RangeError(`sortRows: unknown key "${key}"`);
   const i = INDEX[key];
-  if (key !== 'score') return [...rows].sort((a, b) => dir * text(a[i], b[i]));
-  return [...rows].sort((a, b) => compareNumbers(scoreOf(a[i]), scoreOf(b[i]), dir));
+  if (key !== 'score') return [...rows].sort((a, b) => dir * text(a.cells[i], b.cells[i]));
+  return [...rows].sort((a, b) => compareNumbers(a.score, b.score, dir));
 }
 
-// Rows in state (when given) whose name holds query (trimmed, any case), in the order given.
+// tableRows in state (when given) whose name holds query (trimmed, any case), in the order given.
 export function filterRows(rows, { state = null, query = '' } = {}) {
   const q = query.trim().toLowerCase();
-  return rows.filter((r) => (!state || r[INDEX.state] === state) && (!q || r[INDEX.name].toLowerCase().includes(q)));
+  return rows.filter((r) => (!state || r.cells[INDEX.state] === state) && (!q || r.name.includes(q)));
 }
