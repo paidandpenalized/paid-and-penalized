@@ -39,7 +39,8 @@ const program = (overrides = {}) => programPage({
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
 // One variant of a figure that draws its chart twice (phone wide, and wide for 720px and up).
 const variant = (body, fit) => new RegExp(`<svg role="img"[^>]*data-fit="${fit}"[\\s\\S]*?</svg>`).exec(body)[0];
-const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1));
+// Each figure's [number, takeaway]; the takeaway's non-breaking hyphens (z-score's, a glyph only) read as hyphens.
+const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1).map((s) => s.replaceAll('\u2011', '-')));
 // Every number written in a sentence: digits with their commas, decimal point and sign.
 // Measure short names (PSI 90) are CMS's names, not numbers.
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s.replaceAll('&#39;', "'")).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
@@ -83,7 +84,7 @@ test('Figure 2 hatches an assigned measure, says so in its label, and never name
 test('the bars figure with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
   const text = render(CASES.allAssigned);
   const view = hospitalView(inputs(CASES.allAssigned));
-  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z‑score divided by 2, the number of measures scored.`));
+  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
   assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no range figure: no measure has a published value, so the bars are Figure 1');
   const one = render(CASES.oneMeasure);
   assert.equal(figures(one)[1][2].match(/data-bar="/g).length, 1);
