@@ -65,6 +65,9 @@
 .ht select, .ht input { padding: 8px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
 .ht input { width: min(100%, 22rem); }
 .gb--hospitals .num { width: 1%; }
+/* Wide screens: the five columns fit, so the table needs no sideways scroll box, and its header sticks to the top of
+   the window (a scroll box would be its sticky container, and that box never scrolls down). */
+@media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
 
 /* Narrow screens: each hospital stacks into a block (name; city, state, score, decision on one line), so the
    table never scrolls sideways. The header row stays: its buttons are the sort controls. */
