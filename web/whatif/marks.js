@@ -34,7 +34,9 @@ export function rampEdge(side) {
 
 // A score's place along the ramp (0 to 1, clamped) and that place as an SVG x percentage.
 export const rampAt = (score, [lo, hi]) => clamp01((score - lo) / (hi - lo));
-export const rampX = (t) => `${(RAMP_MARGIN + t * (100 - 2 * RAMP_MARGIN)).toFixed(2)}%`;
+// rampPct: as a number (the chart kit's static ramp draws on a viewBox); rampX: as an SVG percentage.
+export const rampPct = (t) => RAMP_MARGIN + t * (100 - 2 * RAMP_MARGIN);
+export const rampX = (t) => `${rampPct(t).toFixed(2)}%`;
 const labelAnchor = (t) => (t < EDGE ? 'start' : t > 1 - EDGE ? 'end' : 'middle');
 // A label's nudge (px) off its mark for that anchor, so an end-anchored label still sits beside the mark.
 const labelDx = (anchor) => ({ start: -6, middle: 0, end: 6 })[anchor];
@@ -52,7 +54,7 @@ const INSET_PX = 12;
 
 // A label's left and right edge (px) on a ramp `width` px wide.
 export function labelSpan({ t, anchor, dx }, chars, width) {
-  const x = (width * (RAMP_MARGIN + t * (100 - 2 * RAMP_MARGIN))) / 100 + dx;
+  const x = (width * rampPct(t)) / 100 + dx;
   const w = chars * CHAR_PX;
   const left = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
   return [left, left + w];

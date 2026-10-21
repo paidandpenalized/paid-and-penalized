@@ -1,4 +1,5 @@
-// Fixed words shared by every page's header and footer. No digit characters: numbers never live in copy files.
+// Fixed words shared by every page's header and footer, and the chart kit's figure frame (web/charts/figure.js).
+// No digit characters: numbers never live in copy files.
 export const COPY = {
   skip: 'Skip to content',
   wordmarkLead: 'Paid &',
@@ -12,4 +13,11 @@ export const COPY = {
   feedback: 'Send feedback',
   methods: 'Methods',
   licenseLead: 'Text licensed',
+  figure: 'Figure',
+  showTable: 'Show table',
+  downloadCsv: 'Download CSV',
+  // A figure's claim level, said under the chart when its values are not CMS's own (DES-25 words).
+  claimRecomputed: 'This site recomputes',
+  claimEstimate: 'Estimate',
+  claimHypothetical: 'Hypothetical',
 };

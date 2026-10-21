@@ -1,0 +1,65 @@
+/* The chart kit (web/charts/): build-time SVG charts and the figure around them. Colors come only from tokens.css;
+   marks may carry a meaning ink, text stays in text inks. Each chart's viewBox is about phone wide, so its text is
+   near its CSS size at 375px and grows only a little on wide screens (max-width). */
+
+/* ---------- the figure ---------- */
+.fig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
+.fig > * { min-width: 0; }
+.fig__cap { max-width: var(--measure); font-weight: 600; }
+.fig__n { font-family: var(--font-type); font-weight: 700; }
+.fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
+.fig__table summary { width: fit-content; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
+.fig__table[open] summary { margin-bottom: 8px; }
+.fig__table th[data-numeric] { text-align: right; }
+.fig__actions { margin-top: 8px; }
+.fig__btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
+.fig__btn:hover { background: var(--paper-2); }
+/* A sortable column head: the head's own look, as a button; aria-sort names the order, the arrow repeats it. */
+.fig__sort { padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
+th[aria-sort="ascending"] .fig__sort::after { content: " \25B2" / ""; }
+th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
+.fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
+
+/* ---------- the SVG ---------- */
+.chart { display: block; width: 100%; max-width: 34rem; height: auto; overflow: visible; font: 400 12px var(--font-body); }
+.chart-axis__line, .chart-axis__tick { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* Tick labels in --ink-2: --ink-3 sits just under 4.5:1 on the paper, short of AA for text. */
+.chart-axis__label { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-grid { stroke: var(--line); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-label { fill: var(--ink); font-weight: 600; }
+.chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.chart-legend__label { fill: var(--ink); font-size: 11px; }
+
+/* Marks: neutral gray unless the mark is a cut (--pen); no data is the hatch, never a color. */
+.chart-bar, .chart-col { fill: var(--ink-3); }
+.chart-col--pen { fill: var(--pen); }
+.chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-hatch { color: var(--ink-3); }
+.chart-band { fill: var(--ink-3); fill-opacity: 0.3; }
+.chart-median { stroke: var(--ink); stroke-width: 2px; }
+.chart-this { fill: var(--ink); }
+.chart-hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; }
+.chart-zone { fill: var(--pen-tint); }
+.chart-line { stroke: var(--pen); stroke-width: 2px; }
+.chart-boundary { stroke: var(--ink); stroke-width: 1.5px; }
+
+/* The pen ramp, and the text on each step (ink on the light steps, on-mark from step 3). */
+.chart-seq-1 { fill: var(--pen-seq-1); }
+.chart-seq-2 { fill: var(--pen-seq-2); }
+.chart-seq-3 { fill: var(--pen-seq-3); }
+.chart-seq-4 { fill: var(--pen-seq-4); }
+.chart-seq-5 { fill: var(--pen-seq-5); }
+.chart-tile__code { fill: var(--ink); font-family: var(--font-type); font-size: 11px; font-weight: 700; paint-order: stroke; }
+.chart-tile__code--on { fill: var(--on-mark); }
+/* A hatched tile's code sits on a paper halo, so the hatch never crosses its letters. */
+.chart-tile-na + .chart-tile__code { stroke: var(--paper); stroke-width: 3px; }
+
+/* The hit area is larger than its mark and invisible until the mark is the active one (web/client/figure.js). */
+.chart-hit { fill: transparent; }
+.chart-mark.is-active .chart-hit { fill: var(--ink); fill-opacity: 0.07; }
+
+@media (forced-colors: active) {
+  .chart-hatch { color: CanvasText; }
+  .chart-bar-na, .chart-tile-na { stroke: CanvasText; }
+}

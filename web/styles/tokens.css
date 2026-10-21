@@ -16,6 +16,13 @@
   --neutral: #9a999f;
   --on-mark: #ffffff;       /* text on a filled meaning-ink pill */
   --hatch: rgba(28, 27, 29, 0.3);
+  /* the pen ramp: five steps of the penalty hue, light to dark, for magnitude (a share cut); a step's text is ink
+     on 1-2 and on-mark from 3 up. Validated as an ordinal ramp (monotone lightness, the light end >= 2:1). */
+  --pen-seq-1: #e8a2a2;
+  --pen-seq-2: #d9706f;
+  --pen-seq-3: #c4303a;
+  --pen-seq-4: #9a1f28;
+  --pen-seq-5: #6a1119;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --stamp-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -2.2 1.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --stamp-blend: multiply;
@@ -46,6 +53,7 @@
     --paper: #15161a; --paper-2: #1f2126; --ink: #ecebe5; --ink-2: #bdbcb5; --ink-3: #8d8c87; --line: #5f5e64;
     --pen: #ef5b55; --pen-ink: #ff7d74; --pen-tint: #3a1d21; --rew: #1ea68a; --neutral: #6f6e74; --on-mark: #15161a;
     --hatch: rgba(236, 235, 229, 0.28);
+    --pen-seq-1: #7e3238; --pen-seq-2: #a43f45; --pen-seq-3: #d85f5e; --pen-seq-4: #f47e75; --pen-seq-5: #ffb0a6;
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     --stamp-blend: normal;
     color-scheme: dark;
