@@ -2,7 +2,7 @@
 // citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
 // fills the placeholders in a site's copy.
 import { has } from '../../engine/js/has.js';
-import { Safe, escapeHtml, html } from './html.js';
+import { Safe, escapeHtml, html, raw } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
@@ -139,3 +139,22 @@ export function footnoteLegend({ heading, lists }) {
 <dl class="fnlist">${[...seen].map(([code, text]) => html`<div><dt>${code}</dt><dd>${text}</dd></div>`)}</dl>
 </section>`;
 }
+
+// A boxed form field, Thirty Day Readmissions' signature device: a numbered label (no: its number or letter, or
+// null), the value (text or Safe; `as` sets its element, e.g. 'h1' for a record's name) and an optional note under
+// it. Fields sit in a .form grid, whose red rules box them. size: 'big' or 'sm' for the value; wide: the full row.
+export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null }) {
+  const valueClass = `field__value${size ? ` field__value--${size}` : ''}${cls ? ` ${cls}` : ''}`;
+  const tag = /^(p|h1|div)$/.test(as) ? as : 'p';
+  return html`<div class="field${wide ? ' field--wide' : ''}">
+<p class="field__label">${no === null ? '' : html`<span class="field__no">${String(no)}</span>`}${label}</p>
+${raw(`<${tag} class="${escapeHtml(valueClass)}"${id ? ` id="${escapeHtml(id)}"` : ''}>`)}${value}${raw(`</${tag}>`)}
+${note && html`<div class="field__note">${note}</div>`}</div>`;
+}
+
+// The record's title bar across the top of a .form: two runs of words, left and right.
+export const formTitle = (left, right) => html`<p class="form__title"><span>${left}</span><span>${right}</span></p>`;
+
+// A rubber stamp (Thirty Day Readmissions): the decision in the display face, rotated and grain-masked. ink: the
+// neutral variant (no cut, no score, not subject); otherwise it is in the penalty ink.
+export const stamp = ({ label, ink = false }) => html`<p class="stamp${ink ? ' stamp--ink' : ''}">${label}</p>`;

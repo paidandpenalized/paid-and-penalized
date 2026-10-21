@@ -28,6 +28,9 @@ export const TILE_STEPS_PCT = Object.freeze([10, 20, 30, 40]);
 // The state tile grid marks a state with fewer hospitals with a payment decision than this, and prints its counts
 // ("4 of 6") instead of a share: a percentage of a handful reads as more precise than it is.
 export const FEW_DECIDED = 10;
+// Care Compare's overall rating runs from one star to this many (a display constant: the record card draws the
+// empty stars after the filled ones).
+export const CARE_COMPARE_STARS = 5;
 // The program page's hospital table shows this many rows until the reader asks for all (or picks a state).
 export const TABLE_FIRST_ROWS = 50;
 

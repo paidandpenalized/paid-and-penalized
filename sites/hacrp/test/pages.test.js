@@ -60,8 +60,8 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     for (const [path, text] of pages) {
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, `${path}: one h1`);
       const cells = [...text.matchAll(cmsCell)];
-      // Twelve measure cells, and the score in the hero when CMS published one.
-      if (path !== '/hacrp/') assert.ok(cells.length >= (text.includes('class="hero__num') ? 13 : 12), `${path}: CMS cells found`);
+      // Twelve measure cells, and the score in the record card when CMS published one.
+      if (path !== '/hacrp/') assert.ok(cells.length >= (text.includes(' hosp__score"') ? 13 : 12), `${path}: CMS cells found`);
       for (const [, cell] of cells) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
       // A page loads the figure script exactly when it has a figure, and the cite script when it has the citation.
       assert.equal(text.includes(`src="${ASSETS.js.figure}"`), text.includes(' data-figure>'), `${path}: figure script`);
@@ -89,9 +89,10 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     const yesNoScore = page(yesNoScoreRow);
     assert.doesNotMatch(yesNoScore, /CMS’s value:/, 'the pill already reads CMS’s value');
     assert.match(yesNoScore, /pill--pen">Yes</);
-    assert.doesNotMatch(yesNoScore, /hero__num/);
-    assert.match(yesNoScore, /<p class="hero__none"><span>No score published<\/span><\/p>/);
-    assert.doesNotMatch(yesNoScore, /% cut/);
+    assert.doesNotMatch(yesNoScore, /hosp__score/);
+    assert.match(yesNoScore, /<span class="hosp__none"><span>No score published<\/span><\/span>/);
+    assert.doesNotMatch(yesNoScore, /% cut|Cut 1%/);
+    assert.match(yesNoScore, /<p class="stamp">Yes<\/p>/, "the stamp carries CMS's literal value");
     assert.ok(yesNoScoreRow.totalFootnote, 'the row carries a CMS score footnote');
     for (const { code, text } of footnoteList(DATA.footnotes, yesNoScoreRow.totalFootnote)) {
       assert.ok(yesNoScore.includes(esc(text)), `CMS score footnote ${code}`);
@@ -104,18 +105,22 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
     const yes = page(pick((h) => h.total !== null && h.paymentReduction === 'Yes', 'scored Yes'));
     assert.match(yes, /pill--pen">1% cut</);
     assert.ok(yes.includes(esc("CMS’s value: Yes")));
-    assert.doesNotMatch(yes, /No score published|hero__none/);
+    assert.doesNotMatch(yes, /No score published|hosp__none/);
     assert.match(yes, /<section class="block whatif" id="whatif"/);
-    assert.match(yes, /class="hero__num cms">\S+</);
+    assert.match(yes, /class="field__value field__value--big cms hosp__score">\S+</);
+    assert.match(yes, /<p class="stamp">Cut 1%<\/p>/);
     assert.match(yes, /"isBasedOn":"https:\/\/data\.cms\.gov\/provider-data\/dataset\/yq43-i98g"/);
     const no = page(pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No'));
     assert.match(no, /class="pill">No cut</);
     assert.ok(no.includes(esc("CMS’s value: No")));
+    assert.match(no, /<p class="stamp stamp--ink">No cut<\/p>/);
+    assert.match(maryland, /<p class="stamp stamp--ink">Not subject<\/p>/);
 
-    // The distance sentence quotes CMS's own text for the boundary scores.
+    // The numbers card's distance quotes CMS's own text for the boundary scores, as this site's recompute.
     const bt = DATA.boundaryText;
-    assert.ok(yes.includes(`above ${bt.highestNo}, the highest score CMS marked No.`));
-    assert.ok(no.includes(`below ${bt.lowestYes}, the lowest score CMS marked Yes.`));
+    assert.ok(yes.includes(`Above ${bt.highestNo}; this site recomputes`));
+    assert.ok(no.includes(`Below ${bt.lowestYes}; this site recomputes`));
+    assert.doesNotMatch(maryland, /Distance to the line/);
 
     // Penalty counts use A1(b)'s population: scored hospitals with a Yes/No decision.
     const decided = decidedHospitals(DATA.hospitals);
@@ -159,7 +164,8 @@ test('hostile text in a hospital name renders as text in the page, the title and
   const view = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name, city: 'A<b' }) }));
   const text = hospitalPage({ view, source: DATA.source, robots: 'noindex', assets: ASSETS, ranges: RANGES });
   assert.ok(!text.includes('<script>alert'));
-  assert.ok(text.includes(`<h1>${esc(name)}</h1>`));
+  assert.ok(text.includes(`<h1 class="field__value hosp__name">${esc(name)}</h1>`));
+  assert.ok(text.includes(`aria-label="Map of`) || !text.includes('chart--state-map'));
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(text)[1];
   assert.ok(!ld.includes('<'));
   assert.equal(JSON.parse(ld).name.startsWith(name), true);
@@ -221,13 +227,13 @@ const meta = (text, name) => new RegExp(`<meta name="${name}" content="([^"]*)">
 test('a hospital with no score shows a hatched "No score published" block, not an N/A headline', () => {
   for (const h of [CASES.noScore, CASES.yesNoScore]) {
     const text = render(h);
-    assert.match(text, /<p class="hero__none"><span>No score published<\/span><\/p>/);
-    assert.doesNotMatch(text, /hero__num/);
+    assert.match(text, /<span class="hosp__none"><span>No score published<\/span><\/span>/);
+    assert.doesNotMatch(text, /hosp__score/);
     assert.doesNotMatch(text, /cms">N\/A</);
   }
   const scored = render(CASES.yes);
-  assert.match(scored, /class="hero__num cms">0<span class="dp">\.<\/span>3000</, "CMS’s text, its point in a span");
-  assert.doesNotMatch(scored, /hero__none|No score published/);
+  assert.match(scored, /class="field__value field__value--big cms hosp__score">0<span class="dp">\.<\/span>3000</, "CMS’s text, its point in a span");
+  assert.doesNotMatch(scored, /hosp__none|No score published/);
 });
 
 test('the decision pill and the "CMS\'s value" line: shown under a cut or no-cut pill, skipped when the pill is CMS\'s own text', () => {
@@ -346,32 +352,47 @@ test('the measure table has a Notes column only when some measure has a note, wi
   assert.match(table(CASES.yes), /class="gb gb--measures" aria-labelledby="measures-h">/, 'named by its section heading');
 });
 
-test('the hero is the lede: right after the page head, before the summary sentences', () => {
+test('the top: the record card (title bar, numbered fields from the name) beside the verdict (stamp, summary), before the notes', () => {
   for (const h of Object.values(CASES)) {
-    const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
-    assert.match(text, /<\/header>\n<section class="hero"/, h.ccn);
-    assert.ok(text.indexOf('class="hero"') < text.indexOf('For fiscal year'), `${h.ccn}: hero before the summary`);
+    const text = render(h);
+    assert.match(text, /<article class="wrap page page--article hosp">\n<div class="hosp__top">\n<div class="form hosp__id">\n<p class="form__title"><span>Hospital record · FY2026<\/span><span>CCN 99\d{4}<\/span><\/p>/, h.ccn);
+    const card = /<div class="form hosp__id">[\s\S]*?\n<\/div>\n<section/.exec(text)[0];
+    const numbers = [...card.matchAll(/<span class="field__no">(\d+)<\/span>([^<]+)</g)].map((m) => [Number(m[1]), m[2]]);
+    assert.deepEqual(numbers.map(([n]) => n), numbers.map((_, i) => i + 1), `${h.ccn}: numbered in order`);
+    assert.deepEqual(numbers.slice(0, 2).map(([, label]) => label), ['Hospital', 'Location']);
+    assert.ok(numbers.some(([, l]) => l === 'Total HAC Score') && numbers.some(([, l]) => l === 'Payment reduction'), h.ccn);
+    assert.ok(text.indexOf('class="hosp__verdict"') < text.indexOf('<div class="prose">'), h.ccn);
+    assert.match(text, /<section class="hosp__verdict" aria-label="Score and payment decision">\n<p class="stamp[^"]*">/, `${h.ccn}: the verdict keeps the hero's name`);
+    assert.ok(text.indexOf('For fiscal year') > text.indexOf('class="hosp__verdict"') && text.indexOf('For fiscal year') < text.indexOf('<div class="prose">'), `${h.ccn}: the summary in the verdict`);
   }
 });
 
-test("the hero names CMS's line under a scored hospital's number, from CMS's text; not for Maryland or no score", () => {
-  const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
-  const line = `<p class="hero__ref">CMS’s line: between <span class="nw">${BOUNDARY.highestNo} and ${BOUNDARY.lowestYes}</span></p>`;
-  for (const h of [CASES.yes, CASES.no]) assert.ok(page(h).includes(line), h.ccn);
-  for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
+test("the score field names CMS's line, from CMS's text, under a scored hospital's number; not for Maryland or no score", () => {
+  const line = `CMS’s line: between <span class="nw">${BOUNDARY.highestNo} and ${BOUNDARY.lowestYes}</span>`;
+  for (const h of [CASES.yes, CASES.no]) assert.ok(render(h).includes(`As CMS reports it<br>${line}`), h.ccn);
+  for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.ok(!render(h).includes(line), h.ccn);
 });
 
-test('a page with a score says, in its hero\'s last row, that the score is not a grade; a page with none says nothing there', () => {
-  const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+test('the numbers card: CMS\'s line for a scored hospital, the distance for a Yes or No; none without a score', () => {
+  const card = (h) => /<div class="form hosp__nums">[\s\S]*?\n<\/div>/.exec(render(h))?.[0] ?? null;
+  assert.match(card(CASES.yes), /CMS’s line<\/p>\n<p class="field__value field__value--sm">between <span class="nw">0\.2500 and 0\.2507<\/span><\/p>/);
+  assert.match(card(CASES.yes), /Distance to the line<\/p>\n<p class="field__value">0\.0500<\/p>\n<div class="field__note">Above 0\.2500; this site recomputes<\/div>/);
+  assert.match(card(CASES.no), /Below 0\.2507; this site recomputes/);
+  assert.doesNotMatch(card(CASES.maryland), /Distance/);
+  assert.match(card(CASES.maryland), /Maryland’s hospitals are scored but not subject to the reduction\./);
+  assert.equal(card(CASES.noScore), null);
+  assert.equal(card(CASES.yesNoScore), null);
+});
+
+test('a page with a score says, beside the record, that the score is not a grade; a page with none says nothing of it', () => {
   for (const h of Object.values(CASES)) {
-    const text = page(h);
-    const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(text)[0];
+    const text = render(h);
     if (h.total === null) {
-      assert.doesNotMatch(hero, /hero__note/, `${h.ccn}: no score, so no note about one`);
       assert.doesNotMatch(text, /not a grade/, h.ccn);
       continue;
     }
-    assert.match(hero, /<p class="hero__note">The score is not a grade of the quality of care\.<\/p>\n<\/section>$/, h.ccn);
+    const verdict = /<section class="hosp__verdict"[\s\S]*?<\/section>/.exec(text)[0];
+    assert.match(verdict, /<p class="hosp__note">The score is not a grade of the quality of care\.<\/p>/, h.ccn);
     assert.equal(text.split('not a grade of the quality of care.').length, 2, `${h.ccn}: said once`);
   }
 });
@@ -399,11 +420,11 @@ test('the as-of strip is a list of facts, each a term and its value from their o
   assert.match(list, /<dd><span class="nw">[^<]+<\/span> to <span class="nw">[^<]+<\/span><\/dd>/, 'each period date whole');
 });
 
-test("a hospital page's head names the data's release; its foot runs back link, as-of, footnotes, data links, citation, with the source said once", () => {
+test("a hospital page's verdict names the data's release; its foot runs back link, as-of, footnotes, data links, citation, with the source said once", () => {
   const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   // Each part with the separator before it (glued to the part), so no line ends on a separator; the release part may
   // wrap, its date kept whole.
-  assert.match(text, new RegExp(`<p class="place"><span class="nw">Exampleton, AL</span> <span class="nw">· CCN 990002</span> <span>·\u00a0Data: CMS, released <span class="nw">${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></span></p>`));
+  assert.ok(text.includes(`<p class="small muted">Data: CMS, released <span class="nw">${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></p>\n</section>`), 'the release under the verdict');
   const at = (s) => text.indexOf(s);
   const order = ['class="page__links"', 'class="asof"', 'id="fn-h"', 'class="data-links"', 'id="cite-h"'].map(at);
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);
@@ -430,4 +451,42 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   const view = hospitalView(inputs(CASES.yes));
   const hosp = hospitalPage({ view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   assert.match(/<header class="topbar">[\s\S]*?<\/header>/.exec(hosp)[0], /data-nav="hospitals" aria-current="true"/);
+});
+
+test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map with how its dot was placed', () => {
+  const profile = { zip: '35000', lat: 32.4, lon: -86.3, geo: 'zip', teach: 'major', beds: 1234, own: 'Government', urban: true, types: ['RRC', 'SCH'] };
+  const page = (overrides, careCompare = null, state = 'AL') => hospitalPage({
+    view: hospitalView(inputs(CASES.no, { master: master('990002', { state, ...profile, ...overrides }), careCompare })),
+    source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, shapes: DATA.shapes, careSource: DATA.careCompareSource, masterFy: 2027,
+  });
+  const text = page({}, { rating: '4', footnotes: [] });
+  assert.ok(text.includes('<p class="field__value field__value--sm">Major teaching · 1,234 beds · Government · Urban · Rural referral center · Sole community hospital</p>'));
+  assert.ok(text.includes('Teaching, urban and special status: CMS’s FY2027 IPPS impact file.'));
+  assert.ok(text.includes('<p class="field__value">Exampleton, AL 35000</p>\n<div class="field__note">Example County</div>'));
+  assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
+  assert.match(text, /href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990002" target="_blank" rel="noopener">Open on Care Compare/);
+  assert.match(text, /<figure class="hosp__map"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
+  assert.ok(text.includes('Placed approximately, at the center of its ZIP code.'));
+  // CMS's words where it gives no rating, with its footnote; no stars field when Care Compare doesn't list the hospital.
+  const fn = FN('16');
+  const none = page({}, { rating: 'Not Available', footnotes: [{ code: '16', text: fn }] });
+  assert.match(none, /<p class="field__value field__value--sm">Not Available<\/p>/);
+  assert.ok(none.includes(`CMS footnote 16: ${esc(fn)}`));
+  assert.doesNotMatch(page({}), /Care Compare stars/);
+  // No Type field when the master knows nothing; no map for a territory or a missing point.
+  assert.doesNotMatch(page({ teach: null, beds: null, own: null, urban: null, types: [] }), />Type</);
+  assert.doesNotMatch(page({}, null, 'GU'), /chart--state-map/);
+  assert.doesNotMatch(page({ lat: null }), /chart--state-map/);
+});
+
+test("careCompareRatings: CMS's rating text and footnotes by CCN; a missing column fails", async () => {
+  const { careCompareRatings } = await import('../web/data.js');
+  const csv = '"Facility ID","Hospital overall rating","Hospital overall rating footnote"\n"990001","3",""\n"990002","Not Available","16"\n';
+  const ratings = careCompareRatings(csv, DATA.footnotes);
+  assert.deepEqual(ratings.get('990001'), { rating: '3', footnotes: [] });
+  assert.deepEqual(ratings.get('990002'), { rating: 'Not Available', footnotes: [{ code: '16', text: FN('16') }] });
+  assert.throws(() => careCompareRatings('"Facility ID","Hospital overall rating"\n"990001","3"\n', DATA.footnotes), /missing column/);
+  // The pinned file rates most of HACRP's hospitals.
+  const rated = DATA.hospitals.filter((h) => /^[1-5]$/.test(DATA.careCompare.get(h.ccn)?.rating ?? '')).length;
+  assert.ok(rated > DATA.hospitals.length / 2, `${rated} rated`);
 });

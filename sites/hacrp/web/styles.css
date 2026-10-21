@@ -1,25 +1,40 @@
-/* The HACRP site's own styles, bundled after the shared ones in web/styles/: the score hero, the measure table, the
+/* The HACRP site's own styles, bundled after the shared ones in web/styles/: the hospital page's top (record card, stamp, map), the measure table, the
    estimate tag and the measure lists. Colors come only from web/styles/tokens.css. */
 
-/* The hospital's score and CMS's decision, the page's lede, right under its head. The number is IBM Plex Mono, never
-   under 48px. */
-.hero { display: flex; flex-wrap: wrap; align-items: start; gap: 16px 48px; padding-block: 16px; border-block: var(--rule) solid var(--ink); }
-.hero > * { min-width: 0; }
-.hero__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-.hero__ref { font: 400 var(--fs-sm)/1.4 var(--font-type); font-variant-numeric: tabular-nums; color: var(--ink-2); }
-.hero__num { font: 700 clamp(3rem, 12vw, 4.5rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.hero__num .dp { margin-inline: -0.18em; }
-/* The hero's last row, full width: what the score is not, on the first screen of every page with a score. */
-.hero__note { flex-basis: 100%; font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
-.hero__none { display: grid; align-content: center; justify-items: start; min-height: 4.5rem; padding: 10px; border: 1px solid var(--line); background: var(--hatch-fill); }
-.hero__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-md)/1.3 var(--font-body); }
-/* The decision answers the reader's first question ("was it cut?"), so its pill reads near the number's weight; on a
-   phone it comes first (the order is visual only: the hero has nothing to tab to). */
+/* ---------- the hospital page's top (pages/hospital.js), after Thirty Day Readmissions' .hosp__top ----------
+   Two columns from 980px, 3fr and 2fr: the record card, and the verdict (stamp, summary, numbers card, map). Under
+   980px they stack, the record first. */
+.hosp { gap: 28px; }
+.hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 36px; padding-top: 4px; }
+@media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.hosp__top > * { min-width: 0; }
+/* The record's fields wrap as boxes about 190px and up, each row's boxes growing to fill it, so the form never ends
+   on an empty box; the title and the name take whole rows. */
+.hosp__id { display: flex; flex-wrap: wrap; align-self: start; }
+.hosp__id > .field { flex: 1 1 190px; }
+.hosp__id > :is(.form__title, .field--wide) { flex-basis: 100%; }
+.hosp__name { margin-top: 6px; font: 400 clamp(1.8rem, 4.4vw, 3rem)/1.02 var(--font-display); letter-spacing: 0.005em; }
+/* The score: CMS's text in IBM Plex Mono 700, the most important glyphs on the page. */
+.hosp__score { font-weight: 700; font-size: clamp(2.25rem, 7vw, 3rem); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.hosp__score .dp { margin-inline: -0.18em; }
+.hosp__none { display: grid; align-content: center; justify-items: start; min-height: 3.5rem; padding: 8px; border: 1px solid var(--line); background: var(--hatch-fill); }
+.hosp__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-base)/1.3 var(--font-body); }
+.hero__pill { margin-top: 8px; }
 .hero__pill .pill { padding: 5px 12px 4px; font-size: var(--fs-lg); }
-@media (max-width: 520px) { .hero__item--decision { order: -1; } }
+.stars { color: var(--ink); letter-spacing: 0.05em; }
+.stars__off { color: var(--ink-3); }
+.hosp__verdict { display: grid; gap: 14px; align-content: start; }
+.hosp__verdict .stamp { margin: 6px 0 4px; font-size: clamp(1.6rem, 3.4vw, 2.3rem); }
+.hosp__summary { font-size: var(--fs-md); line-height: 1.5; }
+.hosp__note { font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
+.hosp__nums { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+.hosp__nums .field__value--sm .nw { font-variant-numeric: tabular-nums; }
+.hosp__map { display: grid; gap: 6px; margin: 0; }
+.hosp__map .chart { max-width: 22rem; }
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
-  .hero__none span { background: Canvas; color: CanvasText; }
+  .hosp__none span { background: Canvas; color: CanvasText; }
+  .stars__off { color: GrayText; }
 }
 
 /* Measure table: as wide as its content (never stretched across the page), right-aligned number columns, and the
@@ -125,6 +140,7 @@
    with its result box in the room beside the text. The what-if's own words stay in the column (subgrid). */
 .page--article { grid-template-columns: [full-start] minmax(0, 1fr) [main-start] minmax(0, 46rem) [main-end] minmax(0, 1fr) [full-end]; column-gap: 0; }
 .page--article > * { grid-column: main; }
+.page--article > .hosp__top { grid-column: full; }
 .page--article > .whatif { grid-column: full; grid-template-columns: subgrid; column-gap: 0; }
 .page--article > .whatif > * { grid-column: main; }
 .page--article > .whatif > .wi-grid { grid-column: main-start / full-end; }

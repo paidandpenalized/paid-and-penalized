@@ -48,7 +48,9 @@ export function boundaryText(hospitals, { highestNo, lowestYes }) {
   return { highestNo: find('No', highestNo), lowestYes: find('Yes', lowestYes) };
 }
 
-export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, boundaryText: bt }) {
+// careCompare: the hospital's Care Compare overall rating ({ rating, footnotes }, data.js careCompareRatings), or null
+// when Care Compare lists it under no rating at all.
+export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, boundaryText: bt, careCompare = null }) {
   if (master.ccn !== h.ccn) throw new RangeError(`master record ${master.ccn} is not hospital ${h.ccn}`);
   if (!bt) throw new TypeError('hospitalView: boundaryText is required (from boundaryText())');
   const st = status(h);
@@ -90,7 +92,14 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     city: master.city,
     state: master.state,
     zip: master.zip ?? '',
-    county: master.county,
+    county: master.county ?? null,
+    // Where the master puts it: [lon, lat] (null without one) and how it was found ('address', 'zip' or 'county').
+    point: Number.isFinite(master.lat) && Number.isFinite(master.lon) ? [master.lon, master.lat] : null,
+    geo: master.geo ?? null,
+    // What the master knows of the hospital (from CMS's IPPS impact file and Provider of Services file); a field
+    // the master lacks is null.
+    profile: { teach: master.teach ?? null, beds: master.beds ?? null, own: master.own ?? null, urban: master.urban ?? null, types: master.types ?? [] },
+    careCompare,
     path: hospitalHref(HOSPITALS_PATH, h.ccn),
     fy,
     periods,

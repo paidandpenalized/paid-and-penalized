@@ -1,6 +1,6 @@
 /* Print and save-as-PDF: the page as a document. The light tokens are forced in tokens.css. Controls that do
    nothing on paper are hidden (!important: whatif.css and the site styles load after this file); the marks that
-   carry meaning keep their ink (browsers drop backgrounds by default); figures, the hero and the what-if result
+   carry meaning keep their ink (browsers drop backgrounds by default); figures, the record card and the what-if result
    don't split across pages; external links in the source lines, link lists and data links, and every site link the
    build marks data-print-href (the data links, the way back to the program), print their address; an estimate tag prints its
    note. A changed what-if prints as it stands on screen, with a line naming its address (.print-only); one the
@@ -16,9 +16,9 @@
     display: none !important;
   }
   .print-only { display: block; overflow-wrap: anywhere; }
-  .pill, .hero__none, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pill, .hosp__none, .stamp, .form, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .wi-result { position: static; }
-  figure, .hero, .wi-result, .wi-bars, tr { break-inside: avoid; }
+  figure, .hosp__top > *, .wi-result, .wi-bars, tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   thead { display: table-header-group; }
   :is(.source, .links, .data-links) a[href^="http"]::after { content: " (" attr(href) ")"; overflow-wrap: anywhere; }

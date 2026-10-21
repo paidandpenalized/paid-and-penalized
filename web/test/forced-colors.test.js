@@ -14,7 +14,7 @@ const MARKS = [
   // the what-if's bars and ramp
   '.wi-bar', '.wi-bars__row--assigned .wi-bar', '.wi-tri--cms', '.wi-tri--hyp', '.wi-ramp__line', '.wi-ramp__zone',
   // hatched page parts
-  '.pill--na', '.hero__none',
+  '.pill--na', '.hosp__none',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.
@@ -49,7 +49,7 @@ test('a state shown only by fill or shadow keeps a system-color cue under forced
 });
 
 test('a hatch drawn with a CSS gradient is redrawn under forced colors with its own system colors', () => {
-  for (const mark of ['.fig__swatch--same', '.pill--na', '.hero__none', '.wi-bar']) {
+  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar']) {
     const rule = new RegExp(`${escape(mark)}[^{]*\\{[^}]*forced-color-adjust: none`);
     assert.match(forced, rule, `${mark} opts out of the adjustment`);
   }

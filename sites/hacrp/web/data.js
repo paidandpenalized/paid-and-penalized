@@ -3,12 +3,32 @@
 // File reads live here; views and pages stay pure.
 import { readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
-import { parseFootnotes } from '../../../engine/js/footnotes.js';
+import { parseCsv } from '../../../engine/js/csv.js';
+import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
+import { stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
+// Care Compare's Hospital General Information (each hospital's overall star rating) and the us-atlas topology (state
+// outlines for the locator maps and the US map).
+export const HGI_ID = 'hgi-2026-07';
+export const ATLAS_ID = 'us-atlas-counties-3.0.1';
+
+// CCN -> { rating, footnotes }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words when it
+// rates none) and its footnotes' text. A row without the columns fails the build.
+export function careCompareRatings(csvText, footnotes) {
+  const out = new Map();
+  for (const row of parseCsv(csvText)) {
+    const ccn = row['Facility ID'];
+    const rating = row['Hospital overall rating'];
+    const note = row['Hospital overall rating footnote'];
+    if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError(`${HGI_ID}: missing column`);
+    out.set(ccn, { rating, footnotes: footnoteList(footnotes, note) });
+  }
+  return out;
+}
 const DICTIONARY_FILE = 'sites/hacrp/DATA-DICTIONARY.md';
 
 // The master's HACRP program year must be the year of the HACRP file the pages show (the newest master is not
@@ -39,6 +59,9 @@ export function loadHacrp() {
   if (!source) throw new RangeError(`no manifest entry for ${sourceId}`);
   if (!/^https:\/\/[^\s"'<>]+$/.test(source.landingPage)) throw new RangeError(`${sourceId}: landingPage is not an https URL`);
 
+  const footnotes = parseFootnotes(readPinned(FOOTNOTES_ID));
+  const manifest = readManifest();
+  const hgi = manifest.find((e) => e.id === HGI_ID);
   return {
     fy: data.fy,
     hospitals: data.hospitals,
@@ -47,7 +70,12 @@ export function loadHacrp() {
     estimate: data.estimate,
     periods,
     master,
-    footnotes: parseFootnotes(readPinned(FOOTNOTES_ID)),
+    // The hospital master's own fiscal year (its IPPS attributes: teaching, urban, special statuses).
+    masterFy: masterFile.fy,
+    footnotes,
+    careCompare: careCompareRatings(readPinned(HGI_ID), footnotes),
+    careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
+    shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };

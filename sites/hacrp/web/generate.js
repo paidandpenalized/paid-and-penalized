@@ -52,14 +52,14 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, masterFy } = data;
   const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
 
   const pages = hospitals.map((hospital) => ({
     hospital,
-    view: hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText }),
+    view: hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText, careCompare: careCompare?.get(hospital.ccn) ?? null }),
   }));
   const views = pages.map((p) => p.view);
 
@@ -98,7 +98,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const ranges = measureRanges(model);
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, searchUrl, whatif: { hospital, model, estimate, range } }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, searchUrl, shapes, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range } }) });
   }
 }
 

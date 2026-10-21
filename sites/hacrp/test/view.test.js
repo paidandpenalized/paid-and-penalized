@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { boundaryText, hospitalView } from '../web/view.js';
-import { CASES, FOOTNOTES, MODEL, PERIODS, inputs } from './fixtures.js';
+import { CASES, FOOTNOTES, MODEL, PERIODS, inputs, master } from './fixtures.js';
 
 const view = (name, overrides) => hospitalView(inputs(CASES[name], overrides));
 const fn = (code) => ({ code, text: FOOTNOTES.get(code) });
@@ -20,6 +20,10 @@ test('a scored "Yes" hospital: the whole view', () => {
     state: 'AL',
     zip: '',
     county: 'Example County',
+    point: null,
+    geo: null,
+    profile: { teach: null, beds: null, own: null, urban: null, types: [] },
+    careCompare: null,
     path: '/hacrp/hospital/990001/',
     fy: 2026,
     periods: PERIODS,
@@ -181,4 +185,15 @@ test('display fields come from the master record; a missing county stays null', 
 
 test('a master record for another CCN is refused', () => {
   assert.throws(() => view('yes', { master: { ...inputs(CASES.no).master } }), RangeError);
+});
+
+test("the view carries the master's place, point and profile, and Care Compare's rating, as given", () => {
+  const v = view('no', { master: master('990002', { zip: '35000', lat: 32.1, lon: -86.2, geo: 'zip', teach: 'minor', beds: 120, own: 'Nonprofit', urban: false, types: ['SCH'] }),
+    careCompare: { rating: '4', footnotes: [] } });
+  assert.equal(v.zip, '35000');
+  assert.deepEqual(v.point, [-86.2, 32.1]);
+  assert.equal(v.geo, 'zip');
+  assert.deepEqual(v.profile, { teach: 'minor', beds: 120, own: 'Nonprofit', urban: false, types: ['SCH'] });
+  assert.deepEqual(v.careCompare, { rating: '4', footnotes: [] });
+  assert.equal(view('no', { master: master('990002', { lat: null, lon: -86.2 }) }).point, null, 'half a point is none');
 });

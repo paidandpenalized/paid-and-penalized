@@ -81,6 +81,27 @@
   .omni__list li[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
 
+/* ---------- form fields: Thirty Day Readmissions' signature device (components.js formField) ---------- */
+/* A record typed into a red-ruled form: each field boxed by the rules at its right and bottom, the form's own rules
+   at its top and left; a numbered label in red caps, the value in mono. */
+.form { display: grid; border-top: var(--rule) solid var(--pen); border-left: var(--rule) solid var(--pen); background: var(--paper); }
+.field { min-width: 0; padding: 6px 10px 9px; border-right: var(--rule) solid var(--pen); border-bottom: var(--rule) solid var(--pen); }
+.field__label { display: flex; gap: 6px; align-items: baseline; max-width: none; color: var(--pen-ink); font: 600 var(--fs-cap)/1.25 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.field__no { padding: 1px 3px; border: 1px solid var(--pen); font: 400 var(--fs-cap)/1 var(--font-type); letter-spacing: 0; }
+.field__value { max-width: none; margin-top: 4px; font: 400 var(--fs-lg)/1.25 var(--font-type); overflow-wrap: anywhere; }
+.field__value--big { font-size: var(--fs-xl); }
+.field__value--sm { font-size: var(--fs-base); line-height: 1.4; }
+.field__note { margin-top: 2px; color: var(--ink-2); font: 400 var(--fs-sm)/1.35 var(--font-type); }
+.field--wide { grid-column: 1 / -1; }
+.form__title { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; max-width: none; padding: 6px 10px; border-right: var(--rule) solid var(--pen); border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ---------- the stamp (components.js stamp): the decision, rotated and grain-masked, in the penalty ink or in ink ---------- */
+.stamp { display: inline-block; justify-self: start; max-width: none; padding: 6px 14px 4px; border: 3px solid var(--pen); border-radius: 4px; color: var(--pen); font: 400 var(--fs-lg)/1.05 var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; transform: rotate(-3deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+.stamp--ink { border-color: var(--ink); color: var(--ink); }
+/* Forced colors and print: the stamp keeps its words and border, unmasked. */
+@media (forced-colors: active) { .stamp { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
+@media print { .stamp { -webkit-mask-image: none; mask-image: none; mix-blend-mode: normal; } }
+
 /* ---------- footer ---------- */
 .foot { margin-top: 56px; padding-block: 20px 40px; border-top: var(--rule) solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
 .foot__row { display: grid; gap: 12px; }
@@ -122,13 +143,13 @@
 .pill--na { text-indent: 0.88em; border-color: var(--line); background: var(--hatch-fill) left / 0.76em 100% no-repeat, var(--paper); }
 /* Forced colors: the word carries the decision. Every part drawn with the hatch (a gradient, dropped there) opts out
    of the adjustment and redraws it in system colors: the N/A pill, the figure key's "scores the same" swatch and the
-   hero's no-score box. A new hatched part joins this one rule. The html raises it over each part's own rule, which
+   hospital page's no-score box. A new hatched part joins this one rule. The html raises it over each part's own rule, which
    loads later (charts.css, the site's styles). The pressed theme toggle keeps its state in system colors (its ink
    fill is dropped), and a table head keeps its rule as a border (the inset shadow is dropped); whatif.css does the
    same for the what-if's buttons and fields. */
 @media (forced-colors: active) {
   .pill { border-color: CanvasText; }
-  html :is(.pill--na, .fig__swatch--same, .hero__none) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
+  html :is(.pill--na, .fig__swatch--same, .hosp__none) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .pill--na { color: CanvasText; }
   .theme-toggle[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .gb thead th { border-bottom: var(--rule) solid CanvasText; }

@@ -6,16 +6,27 @@ import { fill, t } from './copy.js';
 const notes = (list) => list.map((f) => f.text).join(' ');
 
 // What CMS reports, CMS's notes, what the decision means (scored Yes/No only), then what the score is. (That it is
-// not a grade of the quality of care is said in the hero, on the first screen: pages/hospital.js.)
+// not a grade of the quality of care is said beside the record, on the first screen: pages/hospital.js.)
 export function summary(view) {
+  const [lead, ...why] = leadSentences(view);
+  const [scoreIs, ...notes] = [...noteSentences(view)].reverse();
+  return [lead, ...notes.reverse(), ...why, scoreIs];
+}
+
+// The verdict's plain words beside the record card: what CMS reports, and what the decision means (scored Yes/No).
+export function leadSentences(view) {
   const facts = { fy: String(view.fy), name: view.name, decision: view.decision.text };
-  const out = [view.scored
-    ? fill('leadScored', { ...facts, total: view.score.text })
-    : fill('leadNoScore', facts)];
-  if (view.score.footnotes.length) out.push(fill('noteScore', { notes: notes(view.score.footnotes) }));
-  if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
+  const out = [view.scored ? fill('leadScored', { ...facts, total: view.score.text }) : fill('leadNoScore', facts)];
   if (view.status === 'yes') out.push(fill('whyYes', { pct: REDUCTION_TEXT }));
   if (view.status === 'no') out.push(fill('whyNo'));
+  return out;
+}
+
+// The rest, under the record: CMS's notes on the score and the decision, verbatim, then what the score is.
+export function noteSentences(view) {
+  const out = [];
+  if (view.score.footnotes.length) out.push(fill('noteScore', { notes: notes(view.score.footnotes) }));
+  if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
   out.push(fill('scoreIs'));
   return out;
 }
