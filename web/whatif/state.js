@@ -3,20 +3,18 @@
 // reduce() only lets through values the engine accepts; viewModel() runs the engine and adds what the
 // component draws: slider bounds and text, the ramp, the solver, the count deltas.
 import { isAssigned, scoredMeasures } from '../../engine/js/hacrp/hospital.js';
+import { isSir } from '../../engine/js/hacrp/measures.js';
 import { solveMeasure } from '../../engine/js/hacrp/solver.js';
 import { whatIf } from '../../engine/js/hacrp/whatif.js';
 import { fillCopy } from '../render/components.js';
 import { decimal } from '../render/format.js';
 import { COPY } from '../copy.js';
-import { limitOf, toUnit } from './fragment.js';
+import { ceilToUnit, toUnit } from '../../engine/js/stats.js';
+import { limitOf } from './fragment.js';
 
-// Measures reported as an SIR, for which NHSN publishes a predicted infection count. PSI 90 is not one.
-const NOT_SIR = new Set(['PSI90']);
 const SLIDER_HEADROOM = 1.2;
 
 const isValue = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
-// x rounded up to the display unit, float noise snapped first, so the slider's top is a step it can reach.
-const ceilToUnit = (x, decimals) => Math.ceil(Number((x * 10 ** decimals).toPrecision(9))) / 10 ** decimals;
 
 // cms: CMS's value per scored measure (null where CMS assigned the score). medians: each measure's median at its
 // display unit (the slider mark and the "bring all to the median" target). limits: the highest value a reader
@@ -70,7 +68,8 @@ export function reduce(state, action) {
     }
     case 'predicted': {
       const { id, count } = action;
-      if (!state.ids.includes(id) || NOT_SIR.has(id)) return state;
+      // NHSN publishes a predicted count for an SIR only.
+      if (!state.ids.includes(id) || !isSir(id)) return state;
       if (count === null) {
         const { [id]: _, ...rest } = state.predicted;
         return { ...state, predicted: rest };
@@ -125,7 +124,8 @@ export function viewModel(state, hospital, model, estimate) {
       id,
       value,
       min: 0,
-      // Follows the current value, so a typed or linked value never sits past the slider's end.
+      // Follows the current value, so a typed or linked value never sits past the slider's end; rounded up to the
+      // display unit, so the slider's top is a step it can reach.
       max: ceilToUnit(Math.max(value ?? 0, p.cap) * SLIDER_HEADROOM, p.decimals),
       step: 1 / 10 ** p.decimals,
       median: state.medians[id],

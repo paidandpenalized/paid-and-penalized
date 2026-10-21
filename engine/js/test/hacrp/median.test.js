@@ -1,24 +1,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { toHospital } from '../../hacrp/hospital.js';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { zFromValue } from '../../hacrp/params.js';
 import { totalFromZ } from '../../hacrp/score.js';
 import { whatIf } from '../../hacrp/whatif.js';
 import { MEDIAN_CCN, isMedianHospital, medianHospital } from '../../hacrp/median.js';
 import { loadHacrp } from './helpers.js';
+import { SYNTH_PERIODS, round4, syntheticRow } from './synthetic.js';
 
 const { model } = loadHacrp();
-const round4 = (x) => Math.round(x * 1e4) / 1e4;
+const OPTIONS = { fiscalYear: '2026', periods: SYNTH_PERIODS };
+const median = () => medianHospital(model, OPTIONS);
 
 test('the median hospital has the shape of a Hospital record', () => {
-  const h = medianHospital(model);
+  const h = median();
+  const real = toHospital(syntheticRow());
+  assert.deepEqual(Object.keys(h), Object.keys(real));
   assert.equal(h.ccn, '000000');
   assert.equal(h.name, null);
   assert.equal(h.state, null);
   assert.deepEqual(Object.keys(h.measures), [...MEASURE_IDS]);
   for (const id of MEASURE_IDS) {
     const m = h.measures[id];
-    assert.deepEqual(Object.keys(m), ['value', 'valueText', 'valueFootnote', 'z', 'zText', 'zFootnote']);
+    assert.deepEqual(Object.keys(m), Object.keys(real.measures[id]));
     assert.equal(m.valueFootnote, '');
     assert.equal(m.zFootnote, '');
     assert.equal(m.zText, m.z.toFixed(4));
@@ -29,7 +34,7 @@ test('the median hospital has the shape of a Hospital record', () => {
 });
 
 test('each value is the measure median, rounded to the measure decimals (float noise snapped)', () => {
-  const h = medianHospital(model);
+  const h = median();
   for (const id of MEASURE_IDS) {
     const p = model.params[id];
     const m = h.measures[id];
@@ -43,7 +48,7 @@ test('each value is the measure median, rounded to the measure decimals (float n
 });
 
 test('every z is the fitted z of the median value to 4 dp; total and decision follow', () => {
-  const h = medianHospital(model);
+  const h = median();
   const zs = [];
   for (const id of MEASURE_IDS) {
     const m = h.measures[id];
@@ -56,7 +61,7 @@ test('every z is the fitted z of the median value to 4 dp; total and decision fo
 });
 
 test('the what-if runs on it with no change', () => {
-  const h = medianHospital(model);
+  const h = median();
   const r = whatIf(h, model);
   assert.equal(r.available, true);
   assert.equal(r.n, MEASURE_IDS.length);
@@ -68,20 +73,19 @@ test('the what-if runs on it with no change', () => {
   for (const id of MEASURE_IDS) assert.equal(r.measures[id].changed, false);
 });
 
-test('optional fiscal year and periods are carried through', () => {
+test('the fiscal year and periods are carried through, and required', () => {
   const periods = { psi90: { start: 'a', end: 'b' }, hai: { start: 'c', end: 'd' } };
   const h = medianHospital(model, { fiscalYear: '2026', periods });
   assert.equal(h.fiscalYear, '2026');
   assert.deepEqual(h.periods, periods);
-  const bare = medianHospital(model);
-  assert.equal(bare.fiscalYear, null);
-  assert.deepEqual(bare.periods, { psi90: { start: null, end: null }, hai: { start: null, end: null } });
+  assert.throws(() => medianHospital(model), TypeError);
+  assert.throws(() => medianHospital(model, { periods }), TypeError);
 });
 
 test('isMedianHospital tells the median hospital from every row in the file', () => {
   const { hospitals } = loadHacrp();
   assert.equal(MEDIAN_CCN, '000000');
-  assert.equal(isMedianHospital(medianHospital(model)), true);
+  assert.equal(isMedianHospital(median()), true);
   assert.equal(hospitals.some(isMedianHospital), false);
   assert.equal(isMedianHospital(null), false);
 });

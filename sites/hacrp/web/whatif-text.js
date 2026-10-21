@@ -2,7 +2,10 @@
 // this site's arithmetic on CMS's values, never a statement of what CMS did or what a hospital could do.
 // A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The median
 // hospital is this site's synthetic record, so its words never call its values or decision CMS's.
+import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
+import { decimalsOf } from '../../../engine/js/hacrp/params.js';
+import { LEVERAGE_STEP } from '../../../engine/js/hacrp/whatif.js';
 import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
 import { limitOf } from '../../../web/whatif/fragment.js';
 import { REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
@@ -11,7 +14,6 @@ import { fill, measureLabel } from './copy.js';
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
 
-const decimalsOf = (text) => (text.includes('.') ? text.length - text.indexOf('.') - 1 : 0);
 const value = (x, model, id) => decimal(x, model.params[id].decimals);
 
 export function flagText(flag) {
@@ -135,8 +137,7 @@ export function slideText(vm, hospital, model, view) {
   ].filter((line) => line !== null && line !== undefined).join('\n');
 }
 
-// The step the engine's leveragePerTenth is measured in, and the page's decimals for score parts.
-const TENTH = 0.1;
+// The page's decimals for score parts.
 const PART_DP = 4;
 const METHODS_ESTIMATE = '/methods/#estimate';
 
@@ -198,8 +199,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       return {
         label: `${measureLabel(id)} (${short})`,
         short,
-        help: id === 'PSI90' ? fill('whatifPsiHelp') : fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT }),
-        leverage: fill('whatifLeverage', { tenth: decimal(TENTH, 1), leverage: decimal(m.leveragePerTenth, PART_DP) }),
+        help: isSir(id) ? fill('whatifSirHelp', { one: SIR_EXPECTED_TEXT }) : fill('whatifPsiHelp'),
+        leverage: fill('whatifLeverage', { tenth: decimal(LEVERAGE_STEP, decimalsOf(String(LEVERAGE_STEP))), leverage: decimal(m.leverage, PART_DP) }),
         marks,
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
@@ -215,8 +216,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     },
     // NHSN predicted counts: SIRs only, for a real hospital (its words compare with CMS's value) with an HAI period.
     predicted: median || hai.start === null ? null : {
-      label: (id) => (id === 'PSI90' ? null
-        : fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })),
+      label: (id) => (isSir(id)
+        ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })
+        : null),
       help: fill('whatifPredictedHelp'),
       result: countText,
     },

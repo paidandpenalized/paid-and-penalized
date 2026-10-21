@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { scoredMeasures, isAssigned } from '../../hacrp/hospital.js';
 import { bandTerm, baselineZ, zFromValue } from '../../hacrp/params.js';
-import { whatIf } from '../../hacrp/whatif.js';
+import { LEVERAGE_STEP, whatIf } from '../../hacrp/whatif.js';
 import { loadHacrp, submittedMeasures as submitted, submittedPairs } from './helpers.js';
 
 const { hospitals, model } = loadHacrp();
@@ -78,7 +78,7 @@ test('a one-measure hospital uses n = 1 for band and leverage', () => {
   const r = whatIf(h, model, { [id]: p.median });
   assert.equal(r.n, 1);
   assert.ok(Math.abs(r.band - moveBand(h, id)) < 1e-15);
-  assert.ok(Math.abs(r.measures[id].leveragePerTenth - 0.1 / p.sd) < 1e-12);
+  assert.ok(Math.abs(r.measures[id].leverage - LEVERAGE_STEP / p.sd) < 1e-12);
 });
 
 test('contribution is z / n and band sums the changed measures\' band terms over n', () => {

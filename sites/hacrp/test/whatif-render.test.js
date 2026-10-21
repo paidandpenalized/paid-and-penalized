@@ -7,7 +7,9 @@ import { build as esbuild } from 'esbuild';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
-import { MAX_FACTOR, encode, toUnit } from '../../../web/whatif/fragment.js';
+import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { toUnit } from '../../../engine/js/stats.js';
+import { MAX_FACTOR, encode } from '../../../web/whatif/fragment.js';
 import { NARROW_PX, labelSpan, rampAt, rampDomain, rampLabels, rampSide, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { changesOf, initialState, reduce, viewModel } from '../../../web/whatif/state.js';
@@ -84,7 +86,7 @@ test('helper text, leverage, weight, marks and the dead zone', () => {
   assert.match(text, /lower is better/i);
   assert.ok(text.includes('Each measure weighs 1 ÷ 6 of the score.'));
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
-  const lev = vm.result.measures.MRSA.leveragePerTenth.toFixed(4);
+  const lev = vm.result.measures.MRSA.leverage.toFixed(4);
   assert.ok(text.includes(`Each 0.1 moves the score by ${lev}`), 'leverage per 0.1');
   assert.equal(all(text, /data-wi="median-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="cap-mark"/g).length, 6);
@@ -149,7 +151,7 @@ test('NHSN predicted counts: one optional field per submitted SIR, naming the HA
   s = reduce(s, { type: 'predicted', id: 'CLABSI', count: 12.3456 });
   const withCount = render(H.no, s);
   assert.doesNotMatch(withCount, /12\.34/);
-  assert.doesNotMatch(encode(changesOf(s)), /12\.34/);
+  assert.doesNotMatch(encode(changesOf(s), MEASURE_IDS), /12\.34/);
 });
 
 test('Maryland: the score moves, the decision reads N/A (not subject to the reduction), no cut and no solver', () => {

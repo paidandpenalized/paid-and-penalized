@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../engine/js/hacrp/measures.js';
-import { decode, encode, toUnit } from '../whatif/fragment.js';
+import { toUnit } from '../../engine/js/stats.js';
+import { decode, encode as encodeIds } from '../whatif/fragment.js';
 import { initialState, reduce, changesOf } from '../whatif/state.js';
 import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
 import { modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
@@ -9,6 +10,7 @@ import { modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
 const { model } = loadHacrp();
 const { params } = model;
 const ALL = { ids: [...MEASURE_IDS], params };
+const encode = (changes) => encodeIds(changes, MEASURE_IDS);
 
 test('encode: ids in MEASURE_IDS order, whatever order the changes came in', () => {
   assert.equal(encode({ MRSA: 0.9, CLABSI: 1.2 }), '#whatif&CLABSI=1.2&MRSA=0.9');

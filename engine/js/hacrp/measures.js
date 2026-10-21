@@ -1,8 +1,11 @@
 // The six HACRP measures and their column names in CMS's hospital file (PDC yq43-i98g).
 
+// sir: CMS reports the measure as a standardized infection ratio (its value column says so), for which NHSN
+// publishes a predicted infection count. PSI 90 is a composite, not an SIR.
 function measure(id, valueColumn, zPrefix) {
   return Object.freeze({
     id,
+    sir: valueColumn.endsWith(' SIR'),
     value: valueColumn,
     valueFootnote: `${valueColumn} Footnote`,
     z: `${zPrefix} W Z Score`,
@@ -20,3 +23,5 @@ export const MEASURES = Object.freeze([
 ]);
 
 export const MEASURE_IDS = Object.freeze(MEASURES.map((m) => m.id));
+
+export const isSir = (id) => MEASURES.some((m) => m.id === id && m.sir);

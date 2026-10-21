@@ -1,7 +1,8 @@
 // The what-if's shareable state: the reader's changed values in the URL fragment (#whatif&CLABSI=1.2&MRSA=0.9).
 // The fragment never reaches a server. A link can be stale or tampered with, so decode keeps only what it can
-// trust and never throws; the page then opens on CMS's values for everything else.
-import { MEASURE_IDS } from '../../engine/js/hacrp/measures.js';
+// trust and never throws; the page then opens on CMS's values for everything else. Program-neutral: the site passes
+// its measure ids and each measure's { decimals, cap }.
+import { toUnit } from '../../engine/js/stats.js';
 
 const TAG = 'whatif';
 // A plain decimal: no sign, exponent, hex or blank (Number() would read all of those).
@@ -11,13 +12,11 @@ export const MAX_FACTOR = 10;
 // The highest value a reader may set for a measure (params p): what the number field allows and a link may carry.
 export const limitOf = (p) => toUnit(MAX_FACTOR * p.cap, p.decimals);
 
-// x at the measure's display unit (10^-decimals). Float noise is snapped first, so 0.6405000000000001 reads 0.641.
-export function toUnit(x, decimals) {
-  return Math.round(Number((x * 10 ** decimals).toPrecision(9))) / 10 ** decimals;
-}
+// Whether a URL fragment is the what-if's (a skip link's #main is not).
+export const isWhatIfHash = (hash) => typeof hash === 'string' && hash.startsWith(`#${TAG}`);
 
 // changes: { [id]: number }. Only ids in `ids` are written, in that order.
-export function encode(changes, ids = MEASURE_IDS) {
+export function encode(changes, ids) {
   const parts = ids.filter((id) => Object.hasOwn(changes, id)).map((id) => `${id}=${changes[id]}`);
   return parts.length ? `#${[TAG, ...parts].join('&')}` : '';
 }
@@ -41,9 +40,9 @@ export function decode(hash, { ids, params }) {
   }
 
   for (const [key, value] of seen) {
-    const p = ids.includes(key) && Object.hasOwn(params, key) ? params[key] : null;
+    const p = ids.includes(key) ? params[key] : null;
     const x = p && typeof value === 'string' && DECIMAL.test(value) ? toUnit(Number(value), p.decimals) : NaN;
-    if (Number.isFinite(x) && x <= toUnit(MAX_FACTOR * p.cap, p.decimals)) changes[key] = x;
+    if (Number.isFinite(x) && x <= limitOf(p)) changes[key] = x;
     else rejected.add(key);
   }
   return { changes, rejected: [...rejected] };

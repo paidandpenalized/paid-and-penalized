@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
-import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_PERIODS, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { initialState, reduce, viewModel } from '../../../web/whatif/state.js';
 import { hospitalView } from '../web/view.js';
 import { cutText, flagText, scenarioSentence, slideText, solverRows, whatIfTexts } from '../web/whatif-text.js';
@@ -197,7 +197,7 @@ test('slide text: Maryland shows its decision once; the median hospital has no n
   const md = H.maryland;
   const text = slideText(vmOf(md, { CLABSI: 0.6 }), md, model, { name: 'Example Hospital', fy: 2026, source: SOURCE });
   assert.equal(text.split('\n')[2], 'Payment reduction decision: N/A (not subject to the reduction)');
-  const mh = medianHospital(model);
+  const mh = medianHospital(model, { fiscalYear: '2026', periods: SYNTH_PERIODS });
   const lines = slideText(vmOf(mh), mh, model, { name: null, fy: 2026, source: SOURCE }).split('\n');
   assert.equal(lines[0], `Total HAC Score: ${mh.totalText.replace('-', '−')} → ${mh.totalText.replace('-', '−')} (Hypothetical)`);
   assert.equal(lines.at(-1), STANDING);
@@ -237,7 +237,7 @@ test('a change that moves the score into the dead zone names the bound, without 
 });
 
 test('the median hospital: this site\'s hypothetical, never described as CMS\'s values or decision', () => {
-  const mh = medianHospital(model);
+  const mh = medianHospital(model, { fiscalYear: '2026', periods: SYNTH_PERIODS });
   assert.equal(scenarioSentence(vmOf(mh), mh, model),
     'This site recomputes a Total HAC Score of −0.1278 and a payment reduction decision of No for its hypothetical hospital '
     + 'at the national median on every measure.');

@@ -15,7 +15,8 @@ function withValueAndZ(hospitals, id) {
   return hospitals.map((h) => ({ ccn: h.ccn, m: h.measures[id] })).filter(({ m }) => m.value !== null && m.z !== null);
 }
 
-function decimalsOf(text) {
+// How many decimals CMS's text of a number shows ("0.940" -> 3).
+export function decimalsOf(text) {
   const dot = text.indexOf('.');
   return dot === -1 ? 0 : text.length - dot - 1;
 }

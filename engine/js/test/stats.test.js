@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clamp, mean, median, sampleSd, percentileInc, percentileSas5, linearFit } from '../stats.js';
+import { ceilToUnit, clamp, mean, median, sampleSd, percentileInc, percentileSas5, linearFit, toUnit } from '../stats.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -43,4 +43,12 @@ test('clamp holds a value inside [lo, hi]', () => {
 test('percentileSas5 edges: p = 1 is the maximum; an empty array throws', () => {
   assert.equal(percentileSas5([1, 2, 3, 4], 1), 4);
   assert.throws(() => percentileSas5([], 0.5), RangeError);
+});
+
+test('toUnit snaps float noise, then rounds to the unit; ceilToUnit rounds up', () => {
+  assert.equal(toUnit(0.6405000000000001, 3), 0.641);
+  assert.equal(toUnit(0.912349, 4), 0.9123);
+  assert.equal(ceilToUnit(1.8864, 3), 1.887);
+  // 1.1 x 3 is 3.3000000000000003 in floating point: snapped, it stays 3.3.
+  assert.equal(ceilToUnit(1.1 * 3, 1), 3.3);
 });

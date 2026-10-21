@@ -6,7 +6,7 @@ import { medianHospital } from '../../engine/js/hacrp/median.js';
 import { solveMeasure } from '../../engine/js/hacrp/solver.js';
 import { whatIf } from '../../engine/js/hacrp/whatif.js';
 import { loadHacrp } from '../../engine/js/test/hacrp/helpers.js';
-import { modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
+import { SYNTH_PERIODS, modelHospital } from '../../engine/js/test/hacrp/synthetic.js';
 import { MAX_FACTOR, decode } from '../whatif/fragment.js';
 import { changesOf, initialState, reduce, viewModel } from '../whatif/state.js';
 
@@ -89,7 +89,7 @@ test('median: each submitted measure to min(value, median) at the display unit; 
     assert.ok(whatIf(h, model, changes).after.score <= h.total);
   }
   // The median hospital is already there: no change.
-  const mh = medianHospital(model);
+  const mh = medianHospital(model, { fiscalYear: '2026', periods: SYNTH_PERIODS });
   assert.deepEqual(changesOf(apply(mh, { type: 'median' })), {});
 });
 

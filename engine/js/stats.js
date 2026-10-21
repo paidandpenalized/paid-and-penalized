@@ -4,6 +4,16 @@ export function clamp(x, lo, hi) {
   return Math.min(Math.max(x, lo), hi);
 }
 
+// x at `decimals` places. Float noise is snapped first, so 0.6405000000000001 reads 0.641. round: Math.round (half
+// away from zero for the values the sites use), or Math.ceil through ceilToUnit.
+export function toUnit(x, decimals, round = Math.round) {
+  const scale = 10 ** decimals;
+  return round(Number((x * scale).toPrecision(9))) / scale;
+}
+
+// x rounded up to `decimals` places, float noise snapped first.
+export const ceilToUnit = (x, decimals) => toUnit(x, decimals, Math.ceil);
+
 export function mean(xs) {
   return xs.reduce((sum, x) => sum + x, 0) / xs.length;
 }

@@ -4,7 +4,7 @@
 // is read on load and the reader's changes are written back with history.replaceState; NHSN counts stay in memory.
 // env is the window (a seam for tests): with share false, location and history are never touched. range: the ramp's
 // national span of scores ({ low, high }, from the page data), as render.js drew it.
-import { decode, encode } from './fragment.js';
+import { decode, encode, isWhatIfHash } from './fragment.js';
 import { changesOf, initialState, reduce, viewModel } from './state.js';
 import {
   assignedNow, barClass, barExtent, barSpan, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX, trackAt,
@@ -74,10 +74,10 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
   let timer = null;
 
   function writeHash() {
-    const next = encode(changesOf(state));
+    const next = encode(changesOf(state), start.ids);
     const { location, history } = env;
     // Leave a fragment that isn't the what-if's (a skip link's #main) alone while there is nothing to write.
-    if (next === location.hash || (next === '' && !location.hash.startsWith('#whatif'))) return;
+    if (next === location.hash || (next === '' && !isWhatIfHash(location.hash))) return;
     try {
       history.replaceState(null, '', location.pathname + location.search + next);
     } catch {
@@ -239,7 +239,7 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share, ran
   // A what-if link opened in this tab. Any other fragment (the skip link's #main) leaves the scenario alone.
   if (share) {
     env.addEventListener('hashchange', () => {
-      if (!env.location.hash.startsWith('#whatif')) return;
+      if (!isWhatIfHash(env.location.hash)) return;
       state = { ...fromHash(), predicted: state.predicted };
       linked = hasChanges(state);
       draw();

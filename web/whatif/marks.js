@@ -1,6 +1,7 @@
 // Where the what-if's marks sit, shared by its build-time HTML (render.js) and the browser (dom.js) so both place
 // them the same way: a score on the ramp, a value on a slider's track, a measure's part of the score on its bar.
-// Plain arithmetic: no DOM, no dependencies. Positions are fractions (0 to 1) or SVG percentages.
+// Plain arithmetic: no DOM. Positions are fractions (0 to 1) or SVG percentages.
+import { clamp } from '../../engine/js/stats.js';
 
 // The ramp's side margin, as a percentage of its width, and how much room it leaves past the reachable scores.
 const RAMP_MARGIN = 5;
@@ -8,7 +9,7 @@ const RAMP_ROOM = 0.04;
 // Near an end, a mark's label is anchored to stay inside the figure.
 const EDGE = 0.18;
 
-const clamp01 = (t) => Math.min(1, Math.max(0, t));
+const clamp01 = (t) => clamp(t, 0, 1);
 
 // The ramp's score range. range: { low, high }, the middle of the published scores nationally (the build reads it
 // from data); widened to hold the starting score and CMS's line, with a little room. It is fixed per hospital, so

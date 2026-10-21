@@ -7,6 +7,9 @@
 import { scoredMeasures, isAssigned } from './hospital.js';
 import { EDGE, bandTerm, hypotheticalZ } from './params.js';
 
+// The change in a measure's value that `leverage` is measured per.
+export const LEVERAGE_STEP = 0.1;
+
 function validate(changes, ids) {
   for (const [id, value] of Object.entries(changes)) {
     if (!ids.includes(id)) throw new RangeError(`HACRP what-if: ${id} has no published z-score for this hospital`);
@@ -65,7 +68,8 @@ export function whatIf(hospital, model, changes = {}) {
       changed,
       atCap: afterValue === null ? afterZ >= p.zMax : afterValue >= p.cap,
       contribution: afterZ / n,
-      leveragePerTenth: 0.1 / (n * p.sd),
+      // What one LEVERAGE_STEP of the value moves the score, between CMS's floor and cap.
+      leverage: LEVERAGE_STEP / (n * p.sd),
     };
   }
 
