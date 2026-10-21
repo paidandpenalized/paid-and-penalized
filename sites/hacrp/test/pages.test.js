@@ -370,8 +370,9 @@ test("the phone's Sort by menu offers each column head's key both ways, the defa
 
 test("a hospital page's head names the data's release; its foot runs back link, as-of, footnotes, data links, citation, with the source said once", () => {
   const text = hospitalPage({ view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
-  // Each part kept whole with the separator before it, so no line ends on a separator.
-  assert.match(text, new RegExp(`<p class="place"><span class="nw">Exampleton, AL</span> <span class="nw">· CCN 990002</span> <span class="nw">· Data: CMS, released ${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></p>`));
+  // Each part with the separator before it (glued to the part), so no line ends on a separator; the release part may
+  // wrap, its date kept whole.
+  assert.match(text, new RegExp(`<p class="place"><span class="nw">Exampleton, AL</span> <span class="nw">· CCN 990002</span> <span>·\u00a0Data: CMS, released <span class="nw">${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></span></p>`));
   const at = (s) => text.indexOf(s);
   const order = ['class="page__links"', 'class="asof"', 'id="fn-h"', 'class="data-links"', 'id="cite-h"'].map(at);
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);

@@ -24,11 +24,14 @@ function heroNumber(text) {
   return at < 0 ? text : html`${text.slice(0, at)}<span class="dp">.</span>${text.slice(at + 1)}`;
 }
 
-// The place line's parts ("Boaz, AL", "CCN 010005", the data's date), each kept on one line with the separator
-// before it, so a line can break only before a separator, never leave one at a line's end.
+// The place line's parts ("Boaz, AL", "CCN 010005", then the data's release), each with the separator before it, so a
+// line can break before a separator but never leave one at a line's end. The short parts stay whole; the release
+// part may wrap between its words (it is wider than a 320px phone), its separator glued to its first word and its
+// date kept whole.
 function placeLine(view, source) {
-  const parts = [...fill('place', { city: view.city, state: view.state, ccn: view.ccn }).split(' · '), fill('placeData', { date: isoDate(source.pdcReleased) })];
-  return html`${parts.map((part, i) => html`${i ? ' ' : ''}<span class="nw">${i ? '· ' : ''}${part}</span>`)}`;
+  const place = fill('place', { city: view.city, state: view.state, ccn: view.ccn }).split(' · ');
+  const data = fillKeep('placeData', { date: isoDate(source.pdcReleased) }, ['date']);
+  return html`${place.map((part, i) => html`${i ? ' ' : ''}<span class="nw">${i ? '· ' : ''}${part}</span>`)} <span>·\u00a0${data}</span>`;
 }
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
