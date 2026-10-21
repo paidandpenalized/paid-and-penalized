@@ -5,6 +5,7 @@
 // whose words never call its values or decision CMS's.
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
+import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, measureLabel, sourceText } from './copy.js';
@@ -155,8 +156,6 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
   ].filter((line) => line !== null && line !== undefined).join('\n');
 }
 
-// The page's decimals for score parts.
-const PART_DP = 4;
 const METHODS_ESTIMATE = '/methods/#estimate';
 
 // CMS's HAI period as long dates; null where CMS gives none ('' or 'N/A') or either end does not read as a date.

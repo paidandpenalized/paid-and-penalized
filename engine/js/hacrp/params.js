@@ -5,7 +5,7 @@
 // floor and cap are read directly from the values CMS published at the minimum and maximum z. That reproduces
 // CMS's z far more closely than recomputing the parameters from the public file, whose hospital population
 // differs slightly from the one CMS scored.
-import { clamp, linearFit, mean, median, percentileSas5, sampleSd } from '../stats.js';
+import { clamp, linearFit, mean, median, percentileSas5, sampleSd, toUnit } from '../stats.js';
 
 // Tolerance for comparing z-scores that CMS published to 4 decimals against the measure's min and max.
 export const EDGE = 1e-9;
@@ -20,6 +20,9 @@ export function decimalsOf(text) {
   const dot = text.indexOf('.');
   return dot === -1 ? 0 : text.length - dot - 1;
 }
+
+// A measure's national median of published values at CMS's decimals, as the pages show it.
+export const medianAt = (p) => toUnit(p.median, p.decimals);
 
 export function zFromValue(value, p) {
   return (clamp(value, p.floor, p.cap) - p.mean) / p.sd;

@@ -5,7 +5,7 @@
 import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { html, jsonScript } from '../../../../web/render/html.js';
 import { renderWhatIf } from '../../../../web/whatif/render.js';
-import { initialState, solverOf, viewModel } from '../whatif-state.js';
+import { solverOf, whatIfRules } from '../whatif-state.js';
 import { whatIfTexts } from '../whatif-text.js';
 
 function browserHospital(h) {
@@ -27,7 +27,7 @@ const browserEstimate = (estimate) => Object.fromEntries(Object.entries(estimate
 // The page data: { hospital, model, estimate, page, range }. whatif: { hospital, model, estimate, range } (range:
 // the ramp's national span of scores). page: { name, fy, path, source, boundaryText, baseline, share }, the fields
 // whatIfTexts takes plus share; source is cut to what the slide text cites.
-export function whatIfData({ hospital, model, estimate, range }, page) {
+function whatIfData({ hospital, model, estimate, range }, page) {
   const source = { id: page.source.id, pdcReleased: page.source.pdcReleased };
   return {
     hospital: browserHospital(hospital),
@@ -42,7 +42,8 @@ export function whatIfData({ hospital, model, estimate, range }, page) {
 export function whatIfSection(whatif, page, dataId) {
   const { hospital, model, estimate, range } = whatif;
   const data = whatIfData(whatif, page);
-  const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
+  const rules = whatIfRules(hospital, model, estimate);
+  const vm = rules.viewModel(rules.start);
   const texts = whatIfTexts({ hospital, model, ...data.page });
   return html`${renderWhatIf({ vm, texts, share: page.share, range, solver: solverOf(hospital, model) })}
 ${jsonScript(dataId, data)}`;

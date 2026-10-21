@@ -2,6 +2,8 @@
 // measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
 // the median hospital against CMS's line (the formula stepper's last step), the histogram of Total HAC Scores and
 // the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
+import { medianAt } from '../../../engine/js/hacrp/params.js';
+import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { contribBars } from '../../../web/charts/contribBars.js';
 import { dotRanges } from '../../../web/charts/dotRange.js';
@@ -15,9 +17,9 @@ import { rampDomain } from '../../../web/whatif/marks.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { TILE_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
+import { flagText } from './whatif-text.js';
 
-// Scores, z-scores and parts of the score at CMS's four decimals.
-const DP = 4;
+// Scores, z-scores and parts of the score are shown at CMS's decimals (DP).
 const BINS = 20;
 const SHARE_DP = 1;
 const num = (text, value) => ({ text, value });
@@ -26,8 +28,8 @@ const num = (text, value) => ({ text, value });
 // published values at CMS's decimals (as the what-if shows it). { [id]: { floor, cap, median, decimals } }.
 export function measureRanges(model) {
   return Object.fromEntries(MEASURE_IDS.map((id) => {
-    const { floor, cap, median, decimals } = model.params[id];
-    return [id, { floor, cap, median: toUnit(median, decimals), decimals }];
+    const p = model.params[id];
+    return [id, { floor: p.floor, cap: p.cap, median: medianAt(p), decimals: p.decimals }];
   }));
 }
 
@@ -37,16 +39,16 @@ export function partsFigure(view, n, source) {
   const parts = view.measures.filter((m) => m.contribution !== null).map((m) => ({
     m, value: m.contributionRaw, label: m.assigned ? fill('figPartsAssigned', { short: m.short }) : m.short,
   }));
-  const largest = view.largest && view.measures.find((m) => m.id === view.largest.id);
+  const { largest } = view;
   const takeaway = largest
-    ? fill('figPartsTakeaway', { short: largest.short, total: view.score.text, contribution: view.largest.contributionText })
+    ? fill('figPartsTakeaway', { short: largest.short, total: view.score.text, contribution: largest.contributionText })
     : fill('figPartsNone', { total: view.score.text, n: String(view.n) });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figPartsAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-parts`,
     svg: contribBars({ id: 'parts', rows: parts.map(({ m, value, label }) => ({ id: m.id, label, value, assigned: m.assigned })), format: (v) => signed(v, DP) }),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }],
-      rows: parts.map(({ m, value, label }) => [label, num(m.zText, m.zRaw), num(m.contributionText, value)]),
+      rows: parts.map(({ m, value, label }) => [label, m.zRaw, num(m.contributionText, value)]),
     },
   });
 }
@@ -75,7 +77,7 @@ export function rangeFigure(view, ranges, n, source) {
         { name: t('figRangeMedian'), numeric: true }, { name: t('figColCap'), numeric: true }, { name: t('colNotes') }],
       rows: rows.map(({ m, floor, cap, median, format }) => [
         m.short,
-        m.hasValue ? num(m.valueText, m.valueRaw) : num(t('noValue'), null),
+        m.hasValue ? m.valueRaw : num(t('noValue'), null),
         num(format(floor), floor), num(format(median), median), num(format(cap), cap),
         m.footnotes.map((f) => f.text).join(' '),
       ]),
@@ -104,7 +106,7 @@ export function lineFigure({ hospital, model, range, boundaryText, n, source, fy
     table: {
       columns: [{ name: t('figColMark') }, { name: t('figColScore'), numeric: true }],
       rows: [
-        [label, num(total, hospital.totalText)],
+        [label, hospital.totalText],
         [t('figLineHighestNo'), num(boundaryText.highestNo, highestNo)],
         [t('figLineLowestYes'), num(boundaryText.lowestYes, lowestYes)],
       ],
@@ -122,7 +124,7 @@ export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) 
   const wrong = scores.find((s) => s.yes !== (s.total >= lowestYes));
   if (wrong) throw new RangeError(`scoresFigure: a ${wrong.yes ? 'Yes' : 'No'} decision at ${wrong.total} is on the wrong side of CMS's lowest Yes score, ${lowestYes}`);
   const bins = histogramBins(scores.map((s) => s.total), BINS, lowestYes);
-  const decisionOf = (b) => (b.count === 0 ? '' : t(b.above ? 'flagYes' : 'flagNo'));
+  const decisionOf = (b) => (b.count === 0 ? '' : flagText(b.above ? 'Yes' : 'No'));
   const at = (v) => decimal(v, DP);
   const tip = (b) => {
     const span = { from: at(b.x0), to: at(b.x1) };

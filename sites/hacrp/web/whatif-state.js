@@ -5,6 +5,7 @@
 // draws: slider bounds and text, the ramp's scores, the bars' scale, the count deltas.
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
+import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { solveMeasure } from '../../../engine/js/hacrp/solver.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
@@ -15,12 +16,14 @@ import { fill } from './copy.js';
 const SLIDER_HEADROOM = 1.2;
 
 const isValue = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
+// The measures a what-if moves: the scored ones, or none for a hospital with no score.
+const whatIfIds = (hospital) => (hospital.total === null ? [] : scoredMeasures(hospital));
 
 // cms: CMS's value per scored measure (null where CMS assigned the score). medians: each measure's median at its
 // display unit (the slider mark and the "bring all to the median" target). limits: the highest value a reader
 // may set, the same range a link's fragment may carry.
 export function initialState(hospital, model) {
-  const ids = hospital.total === null ? [] : scoredMeasures(hospital);
+  const ids = whatIfIds(hospital);
   const cms = Object.fromEntries(ids.map((id) => [id, hospital.measures[id].value]));
   const pick = (f) => Object.fromEntries(ids.map((id) => [id, f(model.params[id])]));
   return {
@@ -28,7 +31,7 @@ export function initialState(hospital, model) {
     cms,
     values: { ...cms },
     decimals: pick((p) => p.decimals),
-    medians: pick((p) => toUnit(p.median, p.decimals)),
+    medians: pick(medianAt),
     limits: pick(limitOf),
     predicted: {},
   };
@@ -171,7 +174,6 @@ export function whatIfRules(hospital, model, estimate) {
 // follow the reader's edits. null where there is nothing to solve for: no score, or Maryland, which is not subject
 // to the reduction. Build time only; the browser never needs them.
 export function solverOf(hospital, model) {
-  const ids = hospital.total === null ? [] : scoredMeasures(hospital);
-  const rows = ids.map((id) => solveMeasure(hospital, model, id));
+  const rows = whatIfIds(hospital).map((id) => solveMeasure(hospital, model, id));
   return rows.some((r) => r.note !== 'not-applicable') ? rows : null;
 }

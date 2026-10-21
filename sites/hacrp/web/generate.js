@@ -20,7 +20,7 @@ import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
 
-export function a1Summary({ ok, a, b, info }) {
+function a1Summary({ ok, a, b, info }) {
   return [
     `A1 ${ok ? 'ok' : 'FAILED'}`,
     `(a) ${a.within} of ${a.n} scored hospitals: mean published z equals the Total HAC Score; max error ${dp5(a.maxError)}`,
@@ -75,7 +75,6 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       // Penalty counts use A1(b)'s population (scored, decided Yes/No); the score count, every scored hospital.
       counts: { decided: a1.b.n, yes: a1.b.yes, scored: a1.a.n },
       boundaryText,
-      measures: views[0].measures.map(({ id, label, short }) => ({ id, label, short })),
       periods,
       searchUrl: ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views))),
       source,

@@ -19,6 +19,9 @@ export const compareDefault = by('state', 'name', 'city', 'ccn');
 // The search's order: name, then state, then city.
 export const compareByName = by('name', 'state', 'city');
 
+// A hospital's page: under prefix (the asset's hospitalPath), at its CCN in lowercase.
+export const hospitalHref = (prefix, ccn) => `${prefix}${ccn.toLowerCase()}/`;
+
 // The state codes in the rows, in order.
 export const stateCodes = (rows) => [...new Set(rows.map((r) => r[INDEX.state]))].sort(text);
 

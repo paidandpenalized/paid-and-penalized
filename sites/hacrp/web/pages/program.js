@@ -1,13 +1,14 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, the formula
 // stepper on the median hospital, the sandbox, this year's counts with their figures, the table of every hospital,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
+import { isSir, MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { cmsText, count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { CUTOFF_PERCENTILE, REDUCTION_TEXT, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
-import { fill, sourceText, t } from '../copy.js';
+import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
+import { fill, measureLabel, sourceText, t } from '../copy.js';
 import { lineFigure, scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { stepRows, stepSum } from '../stepper.js';
@@ -76,18 +77,19 @@ ${printout(html`<table class="gb gb--hospitals">
 </section>`;
 
 // counts: { decided, yes, scored }, for the counts sentences. boundaryText: CMS's text for the line's two scores.
-// measures: [{ id, label, short }]. searchUrl: the hospitals asset the search reads (generate.js, hospitalRows).
+// searchUrl: the hospitals asset the search reads (generate.js, hospitalRows).
 // robots: null for an indexable page. whatif: { hospital, model, estimate, range } for the stepper and the sandbox
 // (hospital: medianHospital(model); range from scoreRange() in generate.js); without it the page has neither.
 // scores: [{ total, yes }] of the hospitals with a Yes/No decision, with boundary (the model's numbers for the
 // line), for the histogram; states: stateCounts() (view.js), for the tile grid; each figure is left out without its
 // data, and takes its numbers from its own data. Figures are numbered in page order.
-export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null }) {
+export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, scores = null, boundary = null, states = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const heading = fill('programTitle', { fy: fyText });
-  const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => m.short).join(', ');
-  const psi = measures.find((m) => m.id === 'PSI90');
+  const measures = MEASURE_IDS.map((id) => ({ id, label: measureLabel(id), short: SHORT_NAMES[id] }));
+  const hai = measures.filter((m) => isSir(m.id)).map((m) => m.short).join(', ');
+  const psi = measures.find((m) => !isSir(m.id));
   const what = whatif && sandbox(whatif, { fy, boundaryText, source });
   const line = sourceText({ fy, source });
   let n = 0;

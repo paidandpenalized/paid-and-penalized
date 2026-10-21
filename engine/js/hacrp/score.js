@@ -1,6 +1,9 @@
 // Total HAC Score and the payment-reduction line.
 import { mean } from '../stats.js';
 
+// CMS publishes z-scores and Total HAC Scores to this many decimals.
+export const SCORE_DECIMALS = 4;
+
 // The Total HAC Score is the equally weighted mean of a hospital's measure z-scores.
 export function totalFromZ(zs) {
   if (zs.length === 0) throw new RangeError('HACRP: no z-scores to average');

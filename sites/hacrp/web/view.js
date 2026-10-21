@@ -3,18 +3,19 @@
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, decimal, shown, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { measureLabel } from './copy.js';
 import { SHORT_NAMES } from './constants.js';
+import { hospitalHref } from './hospital-table.js';
 
 // Hospital pages live at <HOSPITALS_PATH><ccn, lowercase>/.
 export const HOSPITALS_PATH = `${SITE.sites.hacrp.path}hospital/`;
 
-const DP = 4;
 const round = (x) => toUnit(x, DP);
-// An error bound shown at 4 decimals is rounded up, so the text never understates it.
+// An error bound shown at CMS's decimals is rounded up, so the text never understates it.
 const ceilText = (x) => decimal(ceilToUnit(x, DP), DP);
 
 function status(h) {
@@ -78,7 +79,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     };
   });
 
-  // The measure that added most, among those with a measured result: never one CMS assigned.
+  // The measure that added most, among those with a measured result: never one CMS assigned (its view entry).
   let largest = null;
   for (const m of measures) {
     if (m.assigned || m.contribution === null || m.contribution <= 0) continue;
@@ -92,7 +93,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     city: master.city,
     state: master.state,
     county: master.county,
-    path: `${HOSPITALS_PATH}${h.ccn.toLowerCase()}/`,
+    path: hospitalHref(HOSPITALS_PATH, h.ccn),
     fy,
     periods,
     status: st,
@@ -107,7 +108,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     n,
     oneMeasure: n === 1,
     measures,
-    largest: largest && { id: largest.id, contributionText: largest.contributionText },
+    largest,
   };
 }
 

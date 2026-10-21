@@ -9,7 +9,7 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import { compareByName, decodeState, filterRows, sortRows, stateCodes, withState } from '../web/hospital-table.js';
+import { compareByName, decodeState, filterRows, hospitalHref, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 import { cmsText, count } from '../../../web/render/format.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
@@ -48,7 +48,7 @@ if (box) {
     for (const text of labels) seen.set(text, (seen.get(text) ?? 0) + 1);
     list.replaceChildren(...valid.map(([ccn], i) => {
       const text = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
-      paths.set(text, `${hospitalPath}${ccn.toLowerCase()}/`);
+      paths.set(text, hospitalHref(hospitalPath, ccn));
       const option = document.createElement('option');
       option.value = text;
       return option;
@@ -108,7 +108,7 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     const th = document.createElement('th');
     th.scope = 'row';
     const a = document.createElement('a');
-    a.href = `${hospitalPath}${ccn.toLowerCase()}/`;
+    a.href = hospitalHref(hospitalPath, ccn);
     a.textContent = name;
     th.append(a);
     tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(cmsText(total), 'score'), cell(decision, 'decision'));

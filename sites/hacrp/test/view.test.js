@@ -10,7 +10,10 @@ const fn = (code) => ({ code, text: FOOTNOTES.get(code) });
 const byId = (v, id) => v.measures.find((m) => m.id === id);
 
 test('a scored "Yes" hospital: the whole view', () => {
-  assert.deepEqual(view('yes'), {
+  const v = view('yes');
+  // largest is the measure's own entry.
+  assert.equal(v.largest, byId(v, 'CLABSI'));
+  assert.deepEqual({ ...v, largest: v.largest.id }, {
     ccn: '990001',
     name: 'Example General Hospital',
     city: 'Exampleton',
@@ -47,7 +50,7 @@ test('a scored "Yes" hospital: the whole view', () => {
         hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001', contribution: 0.1 / 6, contributionText: '+0.0167', contributionRaw: 0.0167,
         footnotes: [] },
     ],
-    largest: { id: 'CLABSI', contributionText: '+0.1500' },
+    largest: 'CLABSI',
   });
 });
 
@@ -63,7 +66,8 @@ test('a scored "No" hospital: distance to the lowest Yes; an unscored measure ke
     ['N/A', 'N/A', false, null, null]);
   assert.deepEqual(ssi.footnotes, [fn('12'), fn('5')]);
   assert.equal(byId(v, 'CDI').contribution, 0.2 / 5);
-  assert.deepEqual(v.largest, { id: 'CDI', contributionText: '+0.0400' });
+  assert.equal(v.largest, byId(v, 'CDI'));
+  assert.equal(v.largest.contributionText, '+0.0400');
   assert.equal(v.scored, true);
 });
 
@@ -109,7 +113,8 @@ test('a one-measure hospital is flagged oneMeasure; its measure carries the whol
   const v = view('oneMeasure');
   assert.equal(v.n, 1);
   assert.equal(v.oneMeasure, true);
-  assert.deepEqual(v.largest, { id: 'PSI90', contributionText: '+0.3500' });
+  assert.equal(v.largest, byId(v, 'PSI90'));
+  assert.equal(v.largest.contributionText, '+0.3500');
 });
 
 test('largest skips a CMS-assigned measure even when its z is the biggest', () => {
@@ -118,7 +123,8 @@ test('largest skips a CMS-assigned measure even when its z is the biggest', () =
   assert.equal(ssi.assigned, true);
   assert.deepEqual(ssi.footnotes, [fn('18')]);
   assert.equal(ssi.contributionText, '+0.3620');
-  assert.deepEqual(v.largest, { id: 'CAUTI', contributionText: '+0.0500' });
+  assert.equal(v.largest, byId(v, 'CAUTI'));
+  assert.equal(v.largest.contributionText, '+0.0500');
 });
 
 test('largest is null when every scored measure is CMS-assigned', () => {

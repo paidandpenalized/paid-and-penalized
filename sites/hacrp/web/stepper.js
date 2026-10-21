@@ -1,12 +1,12 @@
 // The program page's formula stepper, as display text: the median hospital's numbers at each step of CMS's
 // formula (pages/program.js lays them out; its last step is a figure, figures.js lineFigure).
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
 import { cmsText, decimal } from '../../../web/render/format.js';
 import { SHORT_NAMES } from './constants.js';
 
-// z-scores at CMS's four decimals; the fitted mean and SD from four decimals up.
-const DP = 4;
+// z-scores at CMS's decimals (DP); the fitted mean and SD from DP decimals up.
 const MAX_FIT_DP = 10;
 
 // The stepper's numbers for the median hospital (medianHospital), measure by measure: its value, CMS's floor and

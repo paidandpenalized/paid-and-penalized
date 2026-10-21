@@ -2,8 +2,8 @@
 // published value; z-scores, total and decision come from the fitted model, so it behaves like any real record.
 import { toUnit } from '../stats.js';
 import { MEASURE_IDS } from './measures.js';
-import { zFromValue } from './params.js';
-import { classify, totalFromZ } from './score.js';
+import { medianAt, zFromValue } from './params.js';
+import { SCORE_DECIMALS, classify, totalFromZ } from './score.js';
 
 // fiscalYear: CMS's text for the year; periods: { psi90, hai }, each { start, end }, as on every Hospital record.
 export function medianHospital(model, { fiscalYear, periods } = {}) {
@@ -12,12 +12,12 @@ export function medianHospital(model, { fiscalYear, periods } = {}) {
   const zs = [];
   for (const id of MEASURE_IDS) {
     const p = model.params[id];
-    const value = toUnit(p.median, p.decimals);
-    const z = toUnit(zFromValue(value, p), 4);
+    const value = medianAt(p);
+    const z = toUnit(zFromValue(value, p), SCORE_DECIMALS);
     zs.push(z);
-    measures[id] = { value, valueText: value.toFixed(p.decimals), valueFootnote: '', z, zText: z.toFixed(4), zFootnote: '' };
+    measures[id] = { value, valueText: value.toFixed(p.decimals), valueFootnote: '', z, zText: z.toFixed(SCORE_DECIMALS), zFootnote: '' };
   }
-  const total = toUnit(totalFromZ(zs), 4);
+  const total = toUnit(totalFromZ(zs), SCORE_DECIMALS);
   return {
     // State code 00 is unassigned, so no real hospital has this CCN.
     ccn: '000000',
@@ -26,7 +26,7 @@ export function medianHospital(model, { fiscalYear, periods } = {}) {
     fiscalYear,
     measures,
     total,
-    totalText: total.toFixed(4),
+    totalText: total.toFixed(SCORE_DECIMALS),
     totalFootnote: '',
     paymentReduction: classify(total, model.boundary),
     paymentReductionFootnote: '',
