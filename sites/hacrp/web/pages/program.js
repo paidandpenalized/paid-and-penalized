@@ -2,7 +2,7 @@
 // stepper on the median hospital, the sandbox, this year's counts with their figures, the table of every hospital,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
 import { isSir, MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
-import { keepDates, printout } from '../../../../web/render/components.js';
+import { keepDates, keepWhole, printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { cmsText, count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
@@ -135,7 +135,7 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 </section>
 <section class="block" aria-labelledby="line-h">
 <h2 id="line-h">${t('lineHeading')}</h2>
-<p class="line">${fill('line', boundaryText)} ${t('lineMaryland')}</p>
+<p class="line">${keepWhole(fill('line', boundaryText), [boundaryText.lowestYes, boundaryText.highestNo])} ${t('lineMaryland')}</p>
 <p>${t('lineRelative')}</p>
 </section>
 ${steps}

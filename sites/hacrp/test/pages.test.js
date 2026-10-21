@@ -182,7 +182,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   assert.match(text, /<label class="h-sm" for="hospital-search">Hospital name, city or CCN<\/label>\n<div class="search__row"><input id="hospital-search"[^>]*><button type="submit" class="fig__btn">Search<\/button><\/div>/);
   assert.match(text, /<p class="small search__status" role="status"><\/p>/);
   assert.doesNotMatch(text, /application\/json/);
-  assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of 0\.2507 or higher and none at 0\.2500 or lower\./);
+  assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of <span class="nw">0\.2507<\/span> or higher and none at <span class="nw">0\.2500<\/span> or lower\./);
 });
 
 test('hospitalRows: the table\'s default order, state then name (then city, then CCN), whatever order the views come in', () => {

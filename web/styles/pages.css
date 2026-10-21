@@ -22,7 +22,9 @@
 /* The standing line is plain secondary text; the left rule is kept for the one true aside, the small-number note. */
 .standing { color: var(--ink-2); }
 .note { padding-left: 12px; border-left: 3px solid var(--line); }
-.line { font: 600 var(--fs-md)/1.45 var(--font-body); }
+/* CMS's line in plain weight, its two scores whole and in mono, as the hero and the tables set CMS's numbers. */
+.line { font: 400 var(--fs-md)/1.45 var(--font-body); }
+.line .nw { font-family: var(--font-type); font-size: 0.94em; font-variant-numeric: tabular-nums; }
 
 /* CMS footnotes: one beside a value, and the page's legend. */
 .fn { font-family: var(--font-type); color: var(--ink-2); }
