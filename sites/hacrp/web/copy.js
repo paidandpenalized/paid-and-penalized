@@ -450,14 +450,14 @@ export const COPY = {
     text: "Map of the states as tiles, each shaded by the share of its hospitals with a payment decision that CMS cut; hatched tiles have no share to show.",
     claim: null,
   },
-  figStatesTile: { text: '{yes} of {decided} hospitals with a payment decision cut ({share})', claim: null },
+  figStatesTile: { text: '{yes} of {decided} cut ({share})', claim: null },
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },
   figStatesNoDecision: { text: 'no hospitals with a payment decision', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },
   figColDecided: { text: 'With a decision', claim: null },
-  figColShare: { text: 'Share cut (%)', claim: null },
+  figColShare: { text: 'Share cut', claim: null },
 
   // Program page: the table of every hospital (client/program.js fills it from the hospitals asset).
   tableHeading: { text: "Every hospital in CMS's file", claim: null },

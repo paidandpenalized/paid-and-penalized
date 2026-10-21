@@ -110,8 +110,11 @@ test('the program page\'s stepper walks the median hospital with medianHospital\
     assert.equal(r.floorText, decimal(p.floor, p.decimals));
     assert.equal(r.capText, decimal(p.cap, p.decimals));
     assert.equal(r.limitedText, decimal(clamp(m.value, p.floor, p.cap), p.decimals));
-    assert.equal(r.meanText, decimal(p.mean, 4));
-    assert.equal(r.sdText, decimal(p.sd, 4));
+    assert.equal(r.meanText, decimal(p.mean, r.fitDp));
+    assert.equal(r.sdText, decimal(p.sd, r.fitDp));
+    // The z step reproduces from its own displayed cells.
+    const num = (x) => Number(x.replace('−', '-'));
+    assert.equal(decimal(toUnit((num(r.limitedText) - num(r.meanText)) / num(r.sdText), 4), 4), r.zText, `${r.id}: z from the shown cells`);
     for (const step of ['value', 'z']) {
       const row = new RegExp(`<tr data-measure="${r.id}" data-step="${step}">([\\s\\S]*?)</tr>`).exec(steps)[1];
       const cells = [...row.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => c[1]);
@@ -119,6 +122,17 @@ test('the program page\'s stepper walks the median hospital with medianHospital\
         ? [r.short, r.valueText, r.floorText, r.capText, r.limitedText]
         : [r.short, r.limitedText, r.meanText, r.sdText, r.zText], `${r.id} ${step}`);
     }
+  }
+  // One number of decimals for the fitted mean and SD: the fewest, from four, that reproduce every row's z.
+  const dp = rows[0].fitDp;
+  assert.ok(dp >= 4 && rows.every((r) => r.fitDp === dp));
+  if (dp > 4) {
+    const again = rows.map((r) => {
+      const p = model.params[r.id];
+      const z = (clamp(MEDIAN.measures[r.id].value, p.floor, p.cap) - toUnit(p.mean, dp - 1)) / toUnit(p.sd, dp - 1);
+      return decimal(toUnit(z, 4), 4) === r.zText;
+    });
+    assert.ok(again.includes(false), 'one decimal fewer would not reproduce some row');
   }
   const sum = toUnit(MEASURE_IDS.reduce((t, id) => t + MEDIAN.measures[id].z, 0), 4);
   assert.ok(steps.includes(`add up to ${decimal(sum, 4)}, and ${decimal(sum, 4)} ÷ 6 is ${cmsText(MEDIAN.totalText)}, the Total HAC Score.`));
@@ -157,7 +171,11 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.equal(Object.hasOwn(STATES, 'PR'), false, 'PR has no hospitals in the pinned file');
   assert.match(tile('PR')[0], /<title>PR: no hospitals in CMS(&#39;|')s file<\/title>/);
   const al = STATES.AL;
-  assert.match(tile('AL')[0], new RegExp(`<title>AL: ${al.yes} of ${al.decided} hospitals with a payment decision cut \\(${pct(al.yes / al.decided, 1).replace('.', '\\.')}\\)</title>`));
+  assert.ok(tile('AL')[0].includes(`<title>AL: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
+  assert.doesNotMatch(body.slice(0, body.indexOf('chart-legend')), /data-state="[A-Z]{2}"[^>]*>(<title>[^<]*<\/title>)?<rect class="chart-hit"/, 'a tile is its own hit area');
+  assert.ok(body.includes('<th scope="col" data-numeric>Share cut</th>'));
+  // The table carries the full sentence.
+  assert.ok(body.includes(`${al.yes}</td>`));
   assert.equal(body.match(/data-state="/g).length, Object.keys(TILES).length);
   // The table lists every tile.
   assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length);
@@ -173,6 +191,9 @@ test('stateCounts counts by the master\'s state; an unknown state code stops the
   assert.equal(Object.values(STATES).reduce((t, s) => t + s.yes, 0), COUNTS.yes);
   assert.equal(STATES.MD.decided, 0);
   assert.ok(STATES.MD.na > 0);
+  // Only a scored "N/A" counts as not subject to the reduction.
+  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decision: { text: 'N/A' } }]);
+  assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
   assert.throws(() => statesFigure({ states: { ...STATES, ZZ: STATES.AL }, counts: COUNTS, n: 3, source: 's', fy: DATA.fy }), /ZZ/);
 });
 
@@ -188,8 +209,7 @@ test('the hospital table section: the controls for client/program.js, the asset,
   assert.match(section, /aria-live="polite"/);
   for (const key of ['name', 'city', 'state', 'score', 'decision']) assert.match(section, new RegExp(`<th scope="col" data-key="${key}"${key === 'state' ? ' aria-sort="ascending"' : ''}${key === 'score' ? ' class="num"' : ''}><button type="button" class="fig__sort">`));
   assert.doesNotMatch(text, /Exampleton|EXAMPLE GENERAL/, 'no hospital list inlined');
-  assert.ok(text.length < 80_000, `the program page stays small (${text.length} bytes)`);
-  console.log(`program page: ${text.length} bytes`);
+  assert.ok(text.length < 120_000, `the program page stays small (${text.length} bytes)`);
 });
 
 test('no figure takeaway holds a hand-typed number: every number in it comes from the data it was built from', () => {

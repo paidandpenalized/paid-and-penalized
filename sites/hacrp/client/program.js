@@ -9,11 +9,13 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import { decodeState, filterRows, sortRows, stateCodes, stateHash } from '../web/hospital-table.js';
+import { decodeState, filterRows, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 import { count } from '../../../web/render/format.js';
 import { mountFromPage } from './whatif.js';
 
 const PATH = /^\/[a-z0-9/-]*\/$/;
+// The what-if's settle time: a live announcement waits this long after the reader stops typing.
+const SETTLE_MS = 400;
 const byName = (x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en');
 
 // One fetch for the search and the table; a failed one is tried again on the next call.
@@ -114,7 +116,15 @@ function mountTable({ hospitalPath, rows }) {
     return tr;
   }
 
-  function render({ announce = true } = {}) {
+  // The row count, in a polite live region; while the reader types a name, it follows SETTLE_MS after they stop.
+  let settle = null;
+  function announce(text, wait) {
+    clearTimeout(settle);
+    if (wait) settle = setTimeout(() => { status.textContent = text; }, SETTLE_MS);
+    else status.textContent = text;
+  }
+
+  function render({ typing = false } = {}) {
     const matches = sortRows(filterRows(rows, view), view.key, view.dir);
     const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
     const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
@@ -125,7 +135,7 @@ function mountTable({ hospitalPath, rows }) {
       : matches.length === 1 ? fill('tableCountOne')
         : limited ? fill('tableCountFirst', { shown: count(shown.length), n: count(matches.length) })
           : fill('tableCount', { n: count(matches.length) });
-    if (announce || !status.textContent) status.textContent = text;
+    announce(text, typing);
   }
 
   // The state from the URL: a code in the data, or none; anything else in the fragment is left alone.
@@ -139,13 +149,13 @@ function mountTable({ hospitalPath, rows }) {
 
   select.addEventListener('change', () => {
     view.state = codes.includes(select.value) ? select.value : null;
-    const { pathname, search: query } = window.location;
-    window.history.replaceState(null, '', view.state ? stateHash(view.state) : pathname + query);
+    const { pathname, search: query, hash } = window.location;
+    window.history.replaceState(null, '', pathname + query + withState(hash, view.state));
     render();
   });
   search.addEventListener('input', () => {
     view.query = search.value;
-    render();
+    render({ typing: true });
   });
   all.addEventListener('click', () => {
     view.expanded = true;
@@ -164,20 +174,32 @@ function mountTable({ hospitalPath, rows }) {
   window.addEventListener('hashchange', () => { if (fromHash()) render(); });
 
   fromHash();
-  render({ announce: false });
+  render();
   section.querySelector('.ht-nojs').hidden = true;
   table.hidden = false;
 }
 
 if (table) {
-  const load = () => hospitals(table.dataset.src).then(mountTable).catch(() => {});
-  // Fetch when the table nears the screen, or at once for a link that names a state (or a browser with no observer).
+  // Fetch when the table nears the screen, or at once for a link that names a state (or a browser with no
+  // observer). A failed fetch is logged and tried again the next time the section comes near; a fault while
+  // building the table is not caught here, so it reaches the console as itself.
+  let observer = null;
+  let loading = false;
+  let mounted = false;
+  const load = () => {
+    if (loading || mounted) return;
+    loading = true;
+    hospitals(table.dataset.src).then(
+      (data) => {
+        mounted = true;
+        observer?.disconnect();
+        mountTable(data);
+      },
+      (error) => { console.error(error); },
+    ).finally(() => { loading = false; });
+  };
   if (!/(^#|&)state=/.test(window.location.hash) && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      observer.disconnect();
-      load();
-    }, { rootMargin: '600px 0px' });
+    observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));
   } else {
     load();

@@ -33,11 +33,13 @@ export const hatchDefs = (id) => html`<defs><pattern id="${hatchId(id)}" class="
 
 // One data mark: its tooltip (an SVG <title>: the browser's own tooltip without JavaScript; web/client/figure.js
 // shows it on hover and from the keyboard), its plotted value or values (figure() checks the table holds each), a
-// transparent hit area larger than the mark, then the mark. data: extra data-* attributes.
+// transparent hit area larger than the mark (hit null: the mark is big enough to be its own), then the mark.
+// data: extra data-* attributes.
 export function mark({ tip, value = null, data = {}, hit, body }) {
   const values = value === null ? [] : [value].flat();
   const attrs = Object.entries(data).map(([k, v]) => html` data-${k}="${v}"`);
-  return html`<g class="chart-mark" data-mark${attrs}${values.length ? html` data-value="${values.join(' ')}"` : ''}><title>${tip}</title><rect class="chart-hit" x="${r2(hit.x)}" y="${r2(hit.y)}" width="${r2(hit.width)}" height="${r2(hit.height)}"/>${body}</g>`;
+  const area = hit === null ? '' : html`<rect class="chart-hit" x="${r2(hit.x)}" y="${r2(hit.y)}" width="${r2(hit.width)}" height="${r2(hit.height)}"/>`;
+  return html`<g class="chart-mark" data-mark${attrs}${values.length ? html` data-value="${values.join(' ')}"` : ''}><title>${tip}</title>${area}${body}</g>`;
 }
 
 // A horizontal bar from x0 (the baseline) to x1 (the data end), rounded only at the data end. '' when it has no length.

@@ -90,15 +90,26 @@ export function rangeFigure(view, ranges, n, source) {
 }
 
 // The stepper's numbers for the median hospital (medianHospital), measure by measure: its value, CMS's floor and
-// cap, the value limited to them, the fitted mean and SD, and its z-score. All as display text.
+// cap, the value limited to them, the fitted mean and SD, and its z-score. All as display text. The mean and SD
+// show the fewest decimals, from DP up, at which every row's z-score follows from its own shown cells (fitDp).
+const MAX_FIT_DP = 10;
 export function stepRows(hospital, model) {
-  return MEASURE_IDS.map((id) => {
+  const rows = MEASURE_IDS.map((id) => {
     const m = hospital.measures[id];
     const p = model.params[id];
+    return { id, m, p, limited: toUnit(clamp(m.value, p.floor, p.cap), p.decimals) };
+  });
+  const reproduces = (dp) => rows.every(({ m, p, limited }) =>
+    decimal(toUnit((limited - toUnit(p.mean, dp)) / toUnit(p.sd, dp), DP), DP) === cmsText(m.zText));
+  let fitDp = DP;
+  while (!reproduces(fitDp)) {
+    if (++fitDp > MAX_FIT_DP) throw new RangeError('stepRows: no display precision reproduces the z-scores');
+  }
+  return rows.map(({ id, m, p, limited }) => {
     const at = (v) => decimal(v, p.decimals);
     return {
       id, short: SHORT_NAMES[id], valueText: cmsText(m.valueText), floorText: at(p.floor), capText: at(p.cap),
-      limitedText: at(clamp(m.value, p.floor, p.cap)), meanText: decimal(p.mean, DP), sdText: decimal(p.sd, DP), zText: cmsText(m.zText),
+      limitedText: at(limited), meanText: decimal(p.mean, fitDp), sdText: decimal(p.sd, fitDp), zText: cmsText(m.zText), fitDp,
     };
   });
 }
@@ -174,7 +185,7 @@ export function scoresFigure({ scores, boundary, counts, n, source, fy }) {
   });
 }
 
-// Per state (the master's code): { hospitals, decided (scored, Yes or No), yes, na (decision N/A) }.
+// Per state (the master's code): { hospitals, decided (scored, Yes or No), yes, na (scored, decision N/A) }.
 export function stateCounts(views) {
   const out = {};
   for (const v of views) {
@@ -185,7 +196,7 @@ export function stateCounts(views) {
       s.decided += 1;
       if (d === 'Yes') s.yes += 1;
     }
-    if (d === 'N/A') s.na += 1;
+    if (v.scored && d === 'N/A') s.na += 1;
   }
   return out;
 }

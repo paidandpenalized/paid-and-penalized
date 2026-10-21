@@ -2,7 +2,7 @@
 // the state and name filters, and the #state= fragment. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareDefault, decodeState, filterRows, scoreOf, sortRows, stateCodes, stateHash } from '../web/hospital-table.js';
+import { compareDefault, decodeState, filterRows, scoreOf, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 
 // [ccn, name, city, state, total (CMS text, true minus), decision]
 const ROWS = [
@@ -32,8 +32,6 @@ test('decodeState accepts only #state=XX for a code in the data, any case, and i
   }
   assert.equal(decodeState('#state=ZZ&state=ca', codes), 'CA', 'the first valid value wins');
   assert.equal(decodeState(undefined, codes), null);
-  assert.equal(stateHash('MD'), '#state=MD');
-  assert.equal(stateHash(null), '');
 });
 
 test('scores sort by value, with "N/A" and blanks last in either direction; text sorts by locale; ties keep order', () => {
@@ -55,4 +53,13 @@ test('filterRows keeps one state and names containing the query, case-insensitiv
   assert.deepEqual(ccns(filterRows(ROWS, { state: 'CA', query: 'alpha' })), ['990015', '990016']);
   assert.deepEqual(ccns(filterRows(ROWS, { state: 'CA', query: 'general' })), []);
   assert.deepEqual(ccns(filterRows(ROWS, {})), ccns(ROWS));
+});
+
+test('withState sets or clears only the state= part of the fragment and keeps the rest', () => {
+  assert.equal(withState('', 'MD'), '#state=MD');
+  assert.equal(withState('#state=AL', 'MD'), '#state=MD');
+  assert.equal(withState('#state=AL', null), '');
+  assert.equal(withState('#hospitals', 'MD'), '#hospitals&state=MD');
+  assert.equal(withState('#hospitals&state=al', null), '#hospitals');
+  assert.equal(withState('#state=al&state=ca&figure-2', 'CA'), '#figure-2&state=CA');
 });

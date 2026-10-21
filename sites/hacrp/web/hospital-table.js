@@ -24,7 +24,12 @@ export function decodeState(hash, codes) {
   return null;
 }
 
-export const stateHash = (code) => (code ? `#state=${code}` : '');
+// The fragment with its state= part set to code (or removed when code is null); every other part is kept.
+export function withState(hash, code) {
+  const parts = String(hash ?? '').replace(/^#/, '').split('&').filter((p) => p && !/^state=/.test(p));
+  if (code) parts.push(`state=${code}`);
+  return parts.length ? `#${parts.join('&')}` : '';
+}
 
 // A Total HAC Score's text as a number (CMS's decimal text with a true or hyphen minus); NaN for "N/A" or blank.
 export function scoreOf(s) {

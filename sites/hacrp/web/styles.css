@@ -46,6 +46,13 @@
 .gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 6px; }
 .gb--steps tbody th { white-space: nowrap; }
 .steps .printout { max-width: 36rem; }
+/* A phone: a tighter indent, cells and caps, so five columns fit 375px with no scroll inside the table. */
+@media (max-width: 480px) {
+  .steps { padding-left: 1.2em; }
+  .gb--steps { font-size: var(--fs-xs); }
+  .gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 4px; }
+  .gb--steps thead th { letter-spacing: 0.02em; }
+}
 
 /* The hospital table: its controls in one row above it, wrapping on a phone. */
 .ht { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }

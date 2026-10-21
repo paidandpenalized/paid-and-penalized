@@ -51,8 +51,8 @@ export function tileMap({ id, states, ramp, width = WIDTH, format = plain }) {
       : html`<rect class="chart-tile chart-seq-${step}" x="${r2(x)}" y="${r2(y)}" width="${r2(size)}" height="${r2(size)}" rx="2"/>`;
     const codeCls = step !== null && step >= DARK_FROM ? 'chart-tile__code chart-tile__code--on' : 'chart-tile__code';
     return html`${mark({
-      tip: `${code}: ${s.label}`, value: s.hatched ? null : s.value, data: { state: code },
-      hit: { x, y, width: pitch, height: pitch },
+      // A tile (a phone-wide grid's cell, about 30 units) is its own hit area.
+      tip: `${code}: ${s.label}`, value: s.hatched ? null : s.value, data: { state: code }, hit: null,
       body: html`${tile}${text({ x: x + size / 2, y: y + size / 2 + 4, cls: codeCls, body: code })}`,
     })}
 `;
