@@ -5,7 +5,7 @@
 //   n            the figure's number on its page (a positive integer)
 //   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
 //   svg          a chart from this kit (Safe, starting <svg), drawn about phone wide
-//   svgWide      optional: the same chart drawn on a wider viewBox for screens 720px and up (charts.css shows one
+//   svgWide      optional: the same chart drawn on a wider viewBox for screens 560px and up (charts.css shows one
 //                of the two), so its text keeps its size instead of growing with the chart
 //   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
 //   key          optional: [{ swatch, label }], a one-line key above the chart naming marks it doesn't label itself;

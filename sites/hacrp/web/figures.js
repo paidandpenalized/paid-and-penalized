@@ -22,7 +22,7 @@ import { flagText } from './whatif-text.js';
 
 // Scores, z-scores and parts of the score are shown at CMS's decimals (DP).
 const BINS = 20;
-// The wide variant's viewBox width, for screens 720px and up (figure.js svgWide).
+// The wide variant's viewBox width, for screens 560px and up (figure.js svgWide).
 const WIDE = 560;
 const SHARE_DP = 1;
 const num = (text, value) => ({ text, value });

@@ -55,9 +55,11 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart:focus-visible { outline-offset: 4px; }
 /* A phone-wide viewBox shown wider scales its text: these stay near 1.15x, so chart labels never outgrow the body. */
 .chart--dot-ranges, .chart--ramp, .chart--bars { max-width: 26rem; }
-/* A figure with two variants shows the phone one under 720px and the wide one (its own viewBox) from 720px. */
+/* A figure with two variants shows the phone one under 560px and the wide one (its own viewBox) from 560px, where
+   the wide one already draws near its own size; the phone one shown wider would blow its text up. */
+.chart[data-fit="narrow"] { max-width: 26rem; }
 .chart[data-fit="wide"] { display: none; max-width: 40rem; }
-@media (min-width: 720px) {
+@media (min-width: 560px) {
   .chart[data-fit="narrow"] { display: none; }
   .chart[data-fit="wide"] { display: block; }
 }
