@@ -13,7 +13,7 @@ import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, rampAt, rampDomain, rampEdge, rampLabels,
-  RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks,
+  RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks, trackStart,
 } from './marks.js';
 
 // A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
@@ -52,6 +52,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       deadHigh: q('dead-high', row),
       medianMark: q('median-mark', row),
       capMark: q('cap-mark', row),
+      startMark: q('start-mark', row),
       predicted: q('predicted', row),
       count: q('count', row),
       echo: q('echo', row),
@@ -68,6 +69,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
+  // Each measure's starting value, where a changed measure's track keeps a dotted tick (none for an assigned one).
+  const startValue = Object.fromEntries(first.inputs.map((input) => [input.id, input.value]));
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
 
@@ -140,6 +143,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     r.deadHigh.style.setProperty('--from', at.cap);
     r.medianMark.style.setProperty('--at', at.median);
     r.capMark.style.setProperty('--at', at.cap);
+    r.startMark?.style.setProperty('--at', trackStart(startValue[input.id], input.max));
   }
 
   // source: the element the reader is using, left as they have it. holdMax: a slider mid-drag keeps its max, so
@@ -182,6 +186,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       const row = rows[input.id];
       const m = r.measures[input.id];
       if (!(holdMax && source === row.slider)) track(row, input);
+      if (row.startMark) row.startMark.hidden = input.value === startValue[input.id];
       if (source !== row.slider) row.slider.value = String(sliderValue(input));
       row.slider.setAttribute('aria-valuetext', input.valuetext);
       if (source !== row.number) {

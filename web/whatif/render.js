@@ -41,7 +41,7 @@ import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
-  RAMP_TICK, RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackMarks, zoneLabelAt,
+  RAMP_TICK, RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackStart, trackMarks, zoneLabelAt,
 } from './marks.js';
 
 const TICKS = 5;
@@ -128,7 +128,8 @@ ${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
 }
 
 // One measure: its number field (blank where CMS assigned the score) and slider over a track marking the national
-// median, CMS's cap (and a floor above zero) and the shaded values that score the same; its leverage; and, for an
+// median, CMS's cap (and a floor above zero), the shaded values that score the same and, once the value changes, a
+// dotted tick at the starting value; its leverage; and, for an
 // SIR CMS has a value for, the optional NHSN predicted count. w: texts.measure() for it.
 function measure(input, w, texts) {
   const { id } = input;
@@ -150,6 +151,7 @@ ${input.floor > 0 && html`<span class="wi-dead" data-wi="dead-low" style="--from
 <span class="wi-dead" data-wi="dead-high" style="--from: ${at.cap}; --to: 1"></span>
 <span class="wi-tick wi-tick--median" data-wi="median-mark" style="--at: ${at.median}"></span>
 <span class="wi-tick wi-tick--cap" data-wi="cap-mark" style="--at: ${at.cap}"></span>
+${input.value !== null && html`<span class="wi-tick wi-tick--start" data-wi="start-mark" style="--at: ${trackStart(input.value, input.max)}" hidden></span>`}
 </div>
 <label class="vh" for="${ids.slider}">${w.slider}</label>
 <input class="wi-range" type="range" id="${ids.slider}" data-wi="slider" min="0" max="${input.max}" step="${input.step}" value="${sliderValue(input)}" aria-valuetext="${input.valuetext}" aria-describedby="${ids.help}">

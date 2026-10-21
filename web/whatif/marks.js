@@ -84,6 +84,9 @@ export const lineScore = ({ highestNo, lowestYes }) => (highestNo + lowestYes) /
 // A value's place on a slider whose track runs from 0 to max.
 const trackAt = (value, max) => (max > 0 ? clamp01(value / max) : 0);
 export const fraction = (t) => t.toFixed(4);
+// A starting value's place on a track whose slider now runs to max, as a fraction (the ghost tick a changed measure
+// keeps at its starting value).
+export const trackStart = (value, max) => fraction(trackAt(value, max));
 
 // A measure's marks on its slider's track (vm input): the floor, the cap and the median, as fractions.
 export function trackMarks(input) {

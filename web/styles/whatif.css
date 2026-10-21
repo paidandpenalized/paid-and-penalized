@@ -88,6 +88,8 @@
 .wi-tick { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--at)); }
 .wi-tick--median { background: var(--ink-2); }
 .wi-tick--cap { width: 3px; background: var(--ink); }
+/* The starting value (CMS's, on a hospital page), kept on the track once the reader moves away from it. */
+.wi-tick--start { width: 0; margin-left: -1px; border-left: 2px dotted var(--ink-2); }
 .wi-range { position: relative; display: block; width: 100%; height: 32px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
 .wi-range::-webkit-slider-runnable-track { height: 8px; border: 0; background: transparent; }
 .wi-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -5px; border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); -webkit-appearance: none; appearance: none; }

@@ -124,6 +124,19 @@ test('the result table folds on a phone and stays open on a wider screen, and op
   assert.equal(q(narrow, 'detail').open, true, 'widening the window opens it');
 });
 
+test('a changed measure keeps a dotted tick at its starting value on the track; reset hides it again', () => {
+  const root = mount(false, windowStub());
+  const tick = field(root, 'MRSA', 'start-mark');
+  assert.equal(tick.hidden, true);
+  const at = tick.style.props.get('--at');
+  type(field(root, 'MRSA', 'number'), '1.4');
+  assert.equal(tick.hidden, false);
+  assert.ok(Number(at) > 0, 'placed at the starting value');
+  assert.equal(field(root, 'CLABSI', 'start-mark').hidden, true, 'an unchanged measure shows none');
+  q(root, 'reset').fire('click');
+  assert.equal(tick.hidden, true);
+});
+
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {
   const stub = windowStub({ hash: '#whatif&MRSA=1.4' });
   const root = mount(false, stub);
