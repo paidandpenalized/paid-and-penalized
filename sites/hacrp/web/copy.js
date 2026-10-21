@@ -377,7 +377,6 @@ export const COPY = {
   figRangeThis: { text: 'This hospital', claim: null },
   figRangeMedian: { text: 'National median', claim: null },
   figRangeRange: { text: "CMS's floor to cap", claim: 'HACRP-03' },
-  figRangeNoValue: { text: '{short}: no value published', claim: null },
   figColFloor: { text: 'CMS floor', claim: 'HACRP-03' },
   figColCap: { text: 'CMS cap', claim: 'HACRP-03' },
 

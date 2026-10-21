@@ -6,6 +6,8 @@
 //   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
 //   svg          a chart from this kit (Safe, starting <svg)
 //   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
+//   key          optional: [{ swatch, label }], a one-line key above the chart naming marks it doesn't label itself;
+//                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
 //   table        { columns: [{ name, numeric }], rows: [[cell]] }; the first cell of a row is its header. A cell is
 //                text, or { text, value }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus), shown
@@ -19,6 +21,7 @@ import { Safe, html } from '../render/html.js';
 
 const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COPY.claimEstimate, hypothetical: COPY.claimHypothetical };
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
+export const KEY_SWATCHES = ['this', 'median', 'band'];
 
 function cellOf(cell, numeric) {
   if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value) };
@@ -26,7 +29,7 @@ function cellOf(cell, numeric) {
   return numeric ? { text: cmsText(s), value: s } : { text: s, value: null };
 }
 
-function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note }) {
+function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note, key }) {
   if (!Number.isInteger(n) || n < 1) throw new RangeError(`figure: n must be a positive integer, got ${n}`);
   if (typeof takeaway !== 'string' || !takeaway) throw new TypeError(`figure ${n}: a takeaway is required`);
   if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);
@@ -34,6 +37,9 @@ function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, 
   if (!(svg instanceof Safe) || !svg.text.startsWith('<svg ')) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
   if (!Object.hasOwn(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
   if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
+  if (key !== null && !(Array.isArray(key) && key.length && key.every((k) => KEY_SWATCHES.includes(k?.swatch) && typeof k.label === 'string' && k.label))) {
+    throw new TypeError(`figure ${n}: a key is a list of { swatch, label } with swatch one of ${KEY_SWATCHES.join(', ')}`);
+  }
   if (!NAME.test(csvName)) throw new RangeError(`figure ${n}: bad csvName "${csvName}"`);
   const { columns, rows } = table ?? {};
   if (!columns?.length || !rows?.length) throw new RangeError(`figure ${n}: a table with columns and rows is required`);
@@ -61,8 +67,8 @@ const tableCell = (cell, column, j) => {
   return j === 0 ? html`<th scope="row"${value}>${cell.text}</th>` : html`<td${value}>${cell.text}</td>`;
 };
 
-export function figure({ n, takeaway, svg, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null }) {
-  checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note });
+export function figure({ n, takeaway, svg, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
+  checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note, key });
   const { columns, rows } = table;
   const cells = rows.map((row) => row.map((c, j) => cellOf(c, columns[j].numeric)));
   checkPlotted(n, svg, columns, cells);
@@ -70,7 +76,8 @@ export function figure({ n, takeaway, svg, source, claimLevel = 'official', tabl
   const image = new Safe(html`<svg role="img" aria-label="${alt}" `.text + svg.text.slice('<svg '.length));
   return html`<figure class="fig" id="figure-${n}" data-figure>
 <figcaption class="fig__cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
-${image}
+${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
+`}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}${claim && html`<p class="fig__claim"><span class="pill">${claim}</span></p>
 `}<p class="source fig__source">${source}</p>
