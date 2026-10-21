@@ -79,14 +79,16 @@ test('helper text said once, each measure\'s facts in one line, weight, marks an
   const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
   const lev = (LEVERAGE_STEP * vm.result.measures.MRSA.leverage).toFixed(4);
   const p = model.params.MRSA;
-  assert.ok(text.includes(`<p class="wi-facts" id="wi-MRSA-m">median ${toUnit(p.median, p.decimals).toFixed(3)} · cap ${p.cap.toFixed(3)} · each 0.1 = ${lev}</p>`), 'one facts line');
+  // One facts line, led by CMS's value; each part kept whole with the separator before it.
+  const parts = [`CMS ${H.no.measures.MRSA.valueText}`, `median ${toUnit(p.median, p.decimals).toFixed(3)}`, `cap ${p.cap.toFixed(3)}`, `each 0.1 = ${lev}`];
+  assert.ok(text.includes(`<p class="wi-facts" id="wi-MRSA-m">${parts.map((x, i) => `${i ? ' ' : ''}<span class="nw">${i ? '· ' : ''}${x}</span>`).join('')}</p>`), 'one facts line');
   assert.match(/<input class="wi-number"[^>]*id="wi-MRSA-n"[^>]*>/.exec(text)[0], /aria-describedby="wi-fields-help wi-MRSA-m"/);
   assert.equal(all(text, /data-wi="median-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="cap-mark"/g).length, 6);
   assert.equal(all(text, /data-wi="dead-high"/g).length, 6);
   // PSI 90 has a floor above zero, so it is the one measure shaded below as well.
   assert.equal(all(text, /data-wi="dead-low"/g).length, model.params.PSI90.floor > 0 ? 1 : 0);
-  assert.match(text, /<p class="wi-facts" id="wi-PSI90-m">median [\d.]+ · floor [\d.]+ · cap [\d.]+ · each 0\.1 = [\d.]+<\/p>/, 'a floor above zero is named');
+  assert.match(text, /<p class="wi-facts" id="wi-PSI90-m"><span class="nw">CMS [\d.]+<\/span> <span class="nw">· median [\d.]+<\/span> <span class="nw">· floor [\d.]+<\/span> <span class="nw">· cap [\d.]+<\/span> <span class="nw">· each 0\.1 = [\d.]+<\/span><\/p>/, 'a floor above zero is named');
 });
 
 test('the result box: before and after, the ramp with a solid and a hollow mark, the line, the cut', () => {

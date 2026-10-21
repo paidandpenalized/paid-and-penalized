@@ -180,6 +180,8 @@ export const COPY = {
   },
   // Each measure's facts in one line: its national median, CMS's floor (above zero) and cap, and what each step of
   // the value moves the score, between the floor and the cap.
+  // On a hospital page the facts line starts with CMS's value, which the field and slider stop showing once changed.
+  whatifFactsCms: { text: 'CMS {value}', claim: null },
   whatifFacts: { text: 'median {median} · cap {cap} · each {tenth} = {leverage}', claim: 'HACRP-03' },
   whatifFactsFloor: { text: 'median {median} · floor {floor} · cap {cap} · each {tenth} = {leverage}', claim: 'HACRP-03' },
   whatifSliderLabel: { text: '{short} value', claim: null },

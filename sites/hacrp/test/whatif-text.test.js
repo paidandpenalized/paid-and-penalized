@@ -247,6 +247,10 @@ test('the median hospital: this site\'s hypothetical, never described as CMS\'s 
       ...rowsOf(mh).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, claimsCms, w);
   }
+  // The facts lines name no "CMS" value: the sandbox starts from this site's own record.
+  const texts = whatIfTexts({ hospital: mh, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' }, baseline: 'sandbox' });
+  const vm0 = vmOf(mh);
+  for (const input of vm0.inputs) assert.doesNotMatch(texts.measure(input, vm0.result.measures[input.id]).facts[0], /^CMS /);
   assert.equal(slideText(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, { name: null, fy: 2026, source: SOURCE, baseline: 'sandbox' }), [
     'Total HAC Score: −0.1278 → 0.3844 (Hypothetical)',
     'Payment reduction decision: No → Yes (Hypothetical)',

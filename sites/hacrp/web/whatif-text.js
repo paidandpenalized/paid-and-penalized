@@ -172,6 +172,17 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
 
 const METHODS_ESTIMATE = '/methods/#estimate';
 
+// A measure's facts line as its parts ("median 0.559", "cap 1.572", …), each kept whole on the page; led, on a
+// hospital page, by CMS's own value in CMS's text (so it stays beside the control once the reader changes it).
+// cms: the hospital's record for the measure, or null (the sandbox, whose start is not CMS's).
+function factsOf(input, values, cms) {
+  const line = input.floor > 0 ? fill('whatifFactsFloor', { ...values, floor: decimal(input.floor, input.decimals) }) : fill('whatifFacts', values);
+  // CMS's text where the record carries it (the build); the value at its decimals otherwise (the browser's slim record).
+  const value = cms?.valueText ? cmsText(cms.valueText) : cms && cms.value !== null && decimal(cms.value, input.decimals);
+  const lead = cms && cms.value !== null ? [fill('whatifFactsCms', { value })] : [];
+  return [...lead, ...line.split(' · ')];
+}
+
 // CMS's HAI period as long dates; null where CMS gives none ('' or 'N/A') or either end does not read as a date.
 function haiPeriod({ start, end }) {
   try {
@@ -252,7 +263,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       return {
         label: `${measureLabel(id)} (${short})`,
         short,
-        facts: input.floor > 0 ? fill('whatifFactsFloor', { ...values, floor: at(input.floor) }) : fill('whatifFacts', values),
+        facts: factsOf(input, values, baseline === 'cms' ? hospital.measures[id] : null),
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
         assignedHelp: input.assigned ? fill('whatifAssignedHelp') : null,

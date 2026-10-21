@@ -33,8 +33,9 @@
 //   weight(n)                              "each measure weighs 1 ÷ n"
 //   fieldsHelp [strings]                   lines said once over the measures (what a value means, what the track marks)
 //   measure(input, m) -> { label, short, facts, slider, placeholder, assignedHelp, invalid }
-//                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: one line of
-//                                          its median, floor, cap and leverage
+//                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: the parts
+//                                          of one line (its starting value, median, floor, cap and leverage), each kept
+//                                          whole, with a separator before every part but the first
 //   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { summary, label(id) -> string | null, help, invalid, result(delta) }   NHSN counts, in one
 //                                          folded section after the measures (label null: no field for that measure)
@@ -160,7 +161,7 @@ ${input.value !== null && html`<span class="wi-tick wi-tick--start" data-wi="sta
 </div>
 <p class="small wi-error" id="${ids.error}" data-wi="error" hidden>${w.invalid}</p>
 <p class="wi-echo" data-wi="echo" aria-hidden="true" hidden></p>
-<p class="wi-facts" id="${ids.facts}">${w.facts}</p>
+<p class="wi-facts" id="${ids.facts}">${w.facts.map((part, i) => html`${i ? ' ' : ''}<span class="nw">${i ? '· ' : ''}${part}</span>`)}</p>
 ${input.assigned && html`<p class="small" id="${ids.assigned}">${w.assignedHelp}</p>`}
 </div>`;
 }
