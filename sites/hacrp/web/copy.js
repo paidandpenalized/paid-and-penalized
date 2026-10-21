@@ -316,6 +316,7 @@ export const COPY = {
   searchHeading: { text: 'Find a hospital', claim: null },
   searchLabel: { text: 'Hospital name', claim: null },
   searchHint: { text: "Pick a hospital from the list to open its page.", claim: null },
+  sandboxLabel: { text: 'Sandbox: a hypothetical hospital at the national median on every measure', claim: null },
   linksHeading: { text: 'Sources and related sites', claim: null },
   linkCmsProgram: { text: "CMS: Hospital-Acquired Condition Reduction Program", claim: null },
   linkPdc: { text: 'CMS Provider Data Catalog: the hospital file this site uses', claim: null },

@@ -6,13 +6,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { HUB } from '../../../hub/pages.js';
 import { build } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count } from '../../../web/render/format.js';
 import { loadHacrp } from '../web/data.js';
-import { HACRP, generateHacrp, hospitalRows } from '../web/generate.js';
+import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { largestSentence } from '../web/sentences.js';
@@ -260,3 +261,60 @@ test('an estimate tag opens a visible note with the maximum error and a methods 
   assert.match(text, /<a href="\/methods\/#estimate">/);
   assert.doesNotMatch(text, /title="This site/);
 });
+
+// The program page's sandbox: the what-if on the synthetic median hospital, with no way to share a scenario.
+const SANDBOX_LABEL = 'a hypothetical hospital at the national median on every measure';
+const sandboxProgram = () => {
+  const { model, estimate } = DATA;
+  return programPage({
+    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
+    periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
+    whatif: { hospital: medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods }), model, estimate, range: scoreRange(DATA.hospitals) },
+  });
+};
+
+test('the program page holds the sandbox on the median hospital: labeled, no share banner, no NHSN field, standing line', () => {
+  const text = sandboxProgram();
+  assert.match(text, /<section class="block whatif" id="whatif"/);
+  assert.ok(text.includes(SANDBOX_LABEL));
+  assert.doesNotMatch(text, /data-wi="banner"|data-wi="predicted"|Reader-made scenario/);
+  assert.ok(text.includes(esc("A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals.")));
+  assert.ok(text.includes('<script type="module" src="/assets/hacrp-program.test.js"></script>'));
+  assert.equal([...text.matchAll(/id="whatif"/g)].length, 1);
+});
+
+test('the sandbox page data is the median record, the model, the estimate tags and the texts\' page fields; "<" is escaped', () => {
+  const text = sandboxProgram();
+  const [, json] = /<script type="application\/json" id="hacrp-program">(.*?)<\/script>/s.exec(text);
+  assert.ok(!json.includes('<'));
+  const data = JSON.parse(json);
+  assert.deepEqual(Object.keys(data).sort(), ['estimate', 'hospital', 'model', 'page', 'range']);
+  assert.equal(data.hospital.ccn, '000000');
+  assert.equal(data.page.name, null);
+  assert.equal(data.page.path, '/hacrp/');
+  assert.deepEqual(data.page.source, { id: DATA.source.id, pdcReleased: DATA.source.pdcReleased });
+  assert.deepEqual(data.page.boundaryText, BOUNDARY);
+  assert.equal(data.range.low < data.range.high, true);
+});
+
+test('without whatif data the program page has no sandbox (the other tests render it that way)', () => {
+  const text = programPage({
+    fy: DATA.fy, counts: { decided: 2, yes: 1, scored: 2 }, boundaryText: BOUNDARY, measures: hospitalView(inputs(CASES.yes)).measures,
+    periods: DATA.periods, searchUrl: '/assets/x.json', source: DATA.source, robots: null, assets: ASSETS,
+  });
+  assert.doesNotMatch(text, /id="whatif"|hacrp-program"/);
+});
+
+test('the build writes the sandbox into /hacrp/ and the program client mounts it with share false', () =>
+  temp(async (dir) => {
+    await generate(dir, undefined, { data: SLICE });
+    const text = read(dir, '/hacrp/');
+    assert.match(text, /id="whatif"/);
+    assert.ok(text.includes(SANDBOX_LABEL));
+    assert.doesNotMatch(text, /data-wi="banner"/);
+    assert.match(text, /<script type="application\/json" id="hacrp-program">/);
+    const client = readFileSync(join(import.meta.dirname, '..', 'client', 'program.js'), 'utf8');
+    assert.match(client, /share: false/);
+    assert.doesNotMatch(client, /share: true/);
+    assert.match(client, /\.search\[data-src\]/, 'the search stays in the same entry');
+  }));

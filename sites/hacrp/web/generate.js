@@ -2,6 +2,7 @@
 // emits the program page and one page per hospital through the build context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal } from '../../../web/render/format.js';
@@ -53,6 +54,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const views = hospitals.map((hospital) =>
     hospitalView({ hospital, model, estimate, footnotes, master: master.get(hospital.ccn), fy, periods, boundaryText }));
 
+  const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
   ctx.emit({
     path: PROGRAM_PATH,
@@ -68,10 +70,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       source,
       robots: programRobots,
       assets,
+      whatif: { hospital: medianHospital(model, { fiscalYear: String(fy), periods }), model, estimate, range },
     }),
   });
 
-  const range = scoreRange(hospitals);
   for (const [i, view] of views.entries()) {
     const robots = robotsFor({ env, released, eligible: view.scored });
     ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital: hospitals[i], model, estimate, range } }) });

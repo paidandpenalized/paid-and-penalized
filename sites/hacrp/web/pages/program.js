@@ -1,26 +1,42 @@
 // The HACRP program page (/hacrp/): what the program is, its measures and periods, CMS's line, this year's counts,
 // a hospital search and links out. Every number comes from the emitted data or a method constant.
-import { html } from '../../../../web/render/html.js';
+import { html, jsonScript } from '../../../../web/render/html.js';
 import { count, longDate, ordinal } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
+import { renderWhatIf } from '../../../../web/whatif/render.js';
+import { initialState, viewModel } from '../../../../web/whatif/state.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { fill } from '../copy.js';
 import { LINKS } from '../links.js';
+import { whatIfTexts } from '../whatif-text.js';
 import { asofBar, sourceLine, t } from './parts.js';
 
 export const PATH = SITE.sites.hacrp.path;
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
+// The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share. Its page
+// data (for client/program.js) take the same shape as a hospital page's: the record, the model and the estimate
+// tags (never the whole file), the fields the texts need, and the ramp's national range of scores.
+function sandbox({ hospital, model, estimate, range }, { fy, boundaryText, source }) {
+  const page = { name: null, fy, path: PATH, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText };
+  const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
+  return html`<p class="cap sandbox-label">${t('sandboxLabel')}</p>
+${renderWhatIf({ vm, hospital, model, texts: whatIfTexts({ hospital, model, ...page }), share: false, range })}
+${jsonScript('hacrp-program', { hospital, model, estimate, page, range })}`;
+}
+
 // counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. measures: [{ id, label,
 // short }]. searchUrl: the hospitals asset the search reads (generate.js, hospitalRows). robots: null for an
-// indexable page.
-export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets }) {
+// indexable page. whatif: { hospital, model, estimate, range } for the sandbox (hospital: medianHospital(model);
+// range from scoreRange() in generate.js); without it the page has none.
+export function programPage({ fy, counts, boundaryText, measures, periods, searchUrl, source, robots, assets, whatif = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const hai = measures.filter((m) => m.id !== 'PSI90').map((m) => m.short).join(', ');
   const psi = measures.find((m) => m.id === 'PSI90');
+  const what = whatif && sandbox(whatif, { fy, boundaryText, source });
 
   const body = html`<article class="wrap page">
 <header class="page__head">
@@ -58,6 +74,7 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
 <p class="line">${fill('line', boundaryText)} ${t('lineMaryland')}</p>
 <p>${t('lineRelative')}</p>
 </section>
+${what}
 <section class="block" aria-labelledby="counts-h">
 <h2 id="counts-h">${fill('countsHeading', { fy: fyText })}</h2>
 <p>${fill('countDecided', { yes: count(counts.yes), decided: count(counts.decided) })}</p>
