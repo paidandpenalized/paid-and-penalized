@@ -53,6 +53,7 @@ export function page({ title, description, path, robots, body, scripts = [], jso
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
   const modules = [assets.js.theme, ...scripts];
+  const url = SITE.origin + path;
   return html`<!doctype html>
 <html lang="en">
 <head>
@@ -60,9 +61,9 @@ export function page({ title, description, path, robots, body, scripts = [], jso
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${description}">
-<link rel="canonical" href="${SITE.origin + path}">
+<link rel="canonical" href="${url}">
 ${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${socialTags({ title, description, url: SITE.origin + path })}
+${socialTags({ title, description, url })}
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
