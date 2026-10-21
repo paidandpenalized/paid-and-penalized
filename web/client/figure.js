@@ -47,6 +47,16 @@ function mountTable(fig) {
     });
   });
 
+  // A table wider than its box (on a phone) fades out at the right edge while more of it lies that way.
+  const scroll = table.closest('.printout__scroll');
+  const box = scroll?.parentElement;
+  if (scroll && box) {
+    const edge = () => box.toggleAttribute('data-more', scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 1);
+    scroll.addEventListener('scroll', edge, { passive: true });
+    fig.querySelector('.fig__table')?.addEventListener('toggle', edge);
+    window.addEventListener('resize', edge, { passive: true });
+  }
+
   const download = fig.querySelector('[data-figure-csv]');
   if (!download) return;
   download.hidden = false;

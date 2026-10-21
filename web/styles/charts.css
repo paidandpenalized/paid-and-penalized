@@ -28,6 +28,14 @@
 /* A figure's table is as wide as its columns need, up to 48rem, so a short table's values sit together. */
 .fig__table .printout { width: fit-content; min-width: min(100%, 36rem); max-width: min(100%, 48rem); }
 .fig__table .gb { width: 100%; }
+/* A phone: a table wider than its box keeps its row heads in view as it scrolls, and fades out at the right edge
+   while more of it lies that way (data-more, set by web/client/figure.js). */
+@media (max-width: 640px) {
+  :where(.fig__table .gb tbody tr) { background: var(--paper); }
+  .fig__table .gb tbody th { position: sticky; left: 0; z-index: 1; background: inherit; }
+  .fig__table .gb thead th:first-child { left: 0; z-index: 2; }
+  .fig__table .printout[data-more]::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px; background: linear-gradient(to right, transparent, var(--paper)); pointer-events: none; }
+}
 .fig__actions { margin-top: 8px; }
 .fig__btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
 .fig__btn:hover { background: var(--paper-2); }
