@@ -57,11 +57,15 @@
 /* Forced colors: the word carries the decision. Every part drawn with the hatch (a gradient, dropped there) opts out
    of the adjustment and redraws it in system colors: the N/A pill, the figure key's "scores the same" swatch and the
    hero's no-score box. A new hatched part joins this one rule. The html raises it over each part's own rule, which
-   loads later (charts.css, the site's styles). */
+   loads later (charts.css, the site's styles). The pressed theme toggle keeps its state in system colors (its ink
+   fill is dropped), and a table head keeps its rule as a border (the inset shadow is dropped); whatif.css does the
+   same for the what-if's buttons and fields. */
 @media (forced-colors: active) {
   .pill { border-color: CanvasText; }
   html :is(.pill--na, .fig__swatch--same, .hero__none) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .pill--na { color: CanvasText; }
+  .theme-toggle[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .gb thead th { border-bottom: var(--rule) solid CanvasText; }
 }
 
 /* ---------- disclosure summaries: a figure's "Show table" and the what-if's result-table fold, one look ---------- */

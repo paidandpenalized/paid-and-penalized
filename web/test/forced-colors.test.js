@@ -42,6 +42,12 @@ test('every mark class has a forced-colors rule, so no bar, mark or hatch vanish
   }
 });
 
+test('a state shown only by fill or shadow keeps a system-color cue under forced colors', () => {
+  for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th']) {
+    assert.match(forced, new RegExp(`${escape(state)}\\s*\\{[^}]*(Highlight|GrayText|CanvasText)`), `${state} has no forced-colors cue`);
+  }
+});
+
 test('a hatch drawn with a CSS gradient is redrawn under forced colors with its own system colors', () => {
   for (const mark of ['.fig__swatch--same', '.pill--na', '.hero__none', '.wi-bar']) {
     const rule = new RegExp(`${escape(mark)}[^{]*\\{[^}]*forced-color-adjust: none`);

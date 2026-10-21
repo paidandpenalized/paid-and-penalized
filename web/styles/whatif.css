@@ -98,10 +98,14 @@
 .wi-range::-moz-range-track { height: 8px; border: 0; background: transparent; }
 .wi-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
 /* Forced colors: the native slider, no drawn track (its marks are said in words beside it); the bars and the ramp's
-   marks in system colors, an assigned bar as a dashed outline (its hatch, a gradient, is dropped there). */
+   marks in system colors, an assigned bar as a dashed outline (its hatch, a gradient, is dropped there). A button's
+   state, an unavailable Reset and a refused field keep a system-color cue (their fills and shadows are dropped). */
 @media (forced-colors: active) {
   .wi-range { -webkit-appearance: auto; appearance: auto; }
   .wi-scale { display: none; }
+  .wi-btn[aria-expanded="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .wi-btn[aria-disabled="true"] { color: GrayText; border-color: GrayText; }
+  .wi-number[aria-invalid="true"] { outline: 2px solid CanvasText; outline-offset: 1px; }
   .wi-bar { forced-color-adjust: none; background: CanvasText; }
   .wi-bars__row--assigned .wi-bar { background: Canvas; outline: 1px dashed CanvasText; }
   .wi-tri--cms { fill: CanvasText; }
