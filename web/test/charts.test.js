@@ -231,6 +231,14 @@ test('tileMap draws a code with no data hatched with its label, never as zero, a
   assert.throws(() => tileMap({ ...MAP, states: { ...STATES, CA: { value: null, label: 'x' } } }), /CA/);
 });
 
+test('tileMap draws nothing-to-show as an empty dashed tile, apart from the hatch, each with its own legend swatch', () => {
+  const s = String(tileMap({ ...MAP, states: { ...STATES, PR: { empty: true, label: 'none in the file' } } }));
+  assert.match(s, /data-state="PR"><title>PR: none in the file<\/title><rect class="chart-tile-empty" x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+"\/>/);
+  assert.match(s, /<rect class="chart-tile-na" fill="url\(#chart-m1-hatch\)" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>not subject to the reduction<\/text>/);
+  assert.match(s, /<rect class="chart-tile-empty" x="0" y="[\d.]+" width="12" height="12"\/><text[^>]*>none in the file<\/text>/);
+  assert.throws(() => tileMap({ ...MAP, states: { ...STATES, PR: { empty: true, hatched: true, label: 'x' } } }), /hatched or empty/);
+});
+
 test('tileMap steps follow the ramp thresholds, and text on a dark step uses the on-mark ink', () => {
   const s = String(tileMap(MAP));
   const step = (st) => new RegExp(`data-state="${st}"[^>]*>[\\s\\S]*?class="chart-tile chart-seq-(\\d)"`).exec(s)[1];

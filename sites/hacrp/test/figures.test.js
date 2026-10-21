@@ -191,6 +191,7 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.match(tile('MD')[1], /chart-tile-na/);
   assert.equal(Object.hasOwn(STATES, 'PR'), false, 'PR has no hospitals in the pinned file');
   assert.match(tile('PR')[0], /<title>PR: no hospitals in CMS(&#39;|')s file<\/title>/);
+  assert.match(tile('PR')[1], /chart-tile-empty/, 'nothing to show is an empty tile, not the hatch that means not subject');
   const al = STATES.AL;
   assert.ok(tile('AL')[0].includes(`<title>AL: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
   assert.doesNotMatch(body.slice(0, body.indexOf('chart-legend')), /data-state="[A-Z]{2}"[^>]*>(<title>[^<]*<\/title>)?<rect class="chart-hit"/, 'a tile is its own hit area');

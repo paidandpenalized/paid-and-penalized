@@ -161,14 +161,14 @@ const shareOf = (s) => toUnit((100 * s.yes) / s.decided, SHARE_DP);
 const shareText = (x) => pct(x / 100, SHARE_DP);
 
 // Program page: per state, the hospitals CMS cut of those with a payment decision; states: stateCounts() (view.js).
-// A state whose hospitals are not subject to the reduction, one with no hospital in CMS's file and one with no
-// decision are hatched, never 0. A code with no tile (a territory such as GU) is not drawn: its row is in the table
+// A state whose hospitals are not subject to the reduction is hatched; one with no hospital in CMS's file, or none
+// with a decision, is an empty tile; never 0. A code with no tile (a territory such as GU) is not drawn: its row is in the table
 // and a note under the grid names it. The national share is the states' own total; the range spans the table's rows.
 export function statesFigure({ states, n, source, fy }) {
   const entry = (code) => {
     const s = states[code];
-    if (!s) return { code, label: t('figStatesNone') };
-    if (s.decided === 0) return { code, s, label: t(s.na > 0 ? 'figStatesNA' : 'figStatesNoDecision') };
+    if (!s) return { code, label: t('figStatesNone'), empty: true };
+    if (s.decided === 0) return s.na > 0 ? { code, s, label: t('figStatesNA'), hatched: true } : { code, s, label: t('figStatesNoDecision'), empty: true };
     const value = shareOf(s);
     return { code, s, value, label: fill('figStatesTile', { yes: count(s.yes), decided: count(s.decided), share: shareText(value) }) };
   };
@@ -185,7 +185,7 @@ export function statesFigure({ states, n, source, fy }) {
     }),
     svg: tileMap({
       id: 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0),
-      states: Object.fromEntries(tiles.map(({ code, value, label }) => [code, value === undefined ? { hatched: true, label } : { value, label }])),
+      states: Object.fromEntries(tiles.map(({ code, value, label, hatched, empty }) => [code, value === undefined ? { hatched, empty, label } : { value, label }])),
     }),
     note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
     table: {

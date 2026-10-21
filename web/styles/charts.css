@@ -48,6 +48,8 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .chart-bar, .chart-col { fill: var(--ink-3); }
 .chart-col--pen { fill: var(--pen); }
 .chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* Nothing to show (no hospital in the file): an empty tile, dashed, so it never reads as the hatch's "not in the program". */
+.chart-tile-empty { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
 .chart-hatch { color: var(--ink-3); }
 .chart-band { fill: var(--ink-3); fill-opacity: 0.2; }
 /* The wash alone is faint; the range's ends carry its extent at full --ink-3. */
@@ -80,5 +82,5 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 @media (forced-colors: active) {
   .fig__swatch--this, .fig__swatch--median, .fig__swatch--band::before { background: CanvasText; }
   .chart-hatch { color: CanvasText; }
-  .chart-bar-na, .chart-tile-na { stroke: CanvasText; }
+  .chart-bar-na, .chart-tile-na, .chart-tile-empty { stroke: CanvasText; }
 }
