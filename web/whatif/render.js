@@ -117,7 +117,7 @@ ${head(vm, texts)}
 <thead><tr><td></td><th scope="col">${texts.start}</th><th scope="col">${texts.hypothetical}</th></tr></thead>
 <tbody>
 <tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td>${afterCell('score', s.before, s.after, texts.same)}</tr>
-<tr><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td>${afterCell('flag', texts.flag(r.before.flag), texts.flag(r.after.flag), texts.same)}</tr>
+<tr class="wi-table__words"><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td>${afterCell('flag', texts.flag(r.before.flag), texts.flag(r.after.flag), texts.same)}</tr>
 ${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td>${afterCell('cut', cutBefore, texts.cut(r.after.flag), texts.same)}</tr>`}
 </tbody>
 </table>

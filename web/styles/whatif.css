@@ -32,6 +32,8 @@
 .wi-table thead th { border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-sm)/1.25 var(--font-body); }
 .wi-table tbody th { font-weight: 600; }
 .wi-table td { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+/* The decision is words, in the body face, so a long one (Maryland's) wraps narrow enough for a 320px phone. */
+.wi-table__words td { font-family: var(--font-body); }
 .wi-after { font-weight: 700; }
 /* Unchanged: quiet, so bold only ever means changed. */
 .wi-after[data-same] { color: var(--ink-2); font-weight: 400; }
