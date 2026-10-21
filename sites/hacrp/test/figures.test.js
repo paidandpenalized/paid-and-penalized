@@ -107,11 +107,12 @@ test('Figure 1: a measure with no value has no triangle and says so; its table q
   assert.ok(body.includes(`<title>National median: ${decimal(r.median, 3)}</title>`));
 });
 
-test('Figure 1 is named for what it draws, and its keyboard hint follows it, hidden until the script names it', () => {
+test('the range figure is named for what it draws, and its keyboard hint follows it, hidden until the script names it', () => {
   const text = render(CASES.yes);
-  const svg = /<svg role="img" aria-label="([^"]*)"/.exec(figures(text)[0][2])[1];
+  const [, n, body] = figures(text).find(([, , b]) => b.includes('chart--dot-ranges'));
+  const svg = /<svg role="img" aria-label="([^"]*)"/.exec(body)[1];
   assert.equal(svg, esc('For each measure, this hospital’s value (triangle) against the national median (tick); hatched values score the same as CMS’s floor or cap.'));
-  assert.ok(text.includes('</figure>\n<p id="figure-1-keys" hidden>Arrow keys step through the measures.</p>'));
+  assert.ok(text.includes(`</figure>\n<p id="figure-${n}-keys" hidden>Arrow keys step through the measures.</p>`));
 });
 
 test('a figure\'s source line, the citation and the periods keep each date whole', () => {
