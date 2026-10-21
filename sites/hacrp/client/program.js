@@ -78,10 +78,19 @@ if (box) {
     go(pathOf(input.value));
   });
   // Several matches: the table below shows them, through its own text filter (mountTable reads it if the table
-  // mounts later).
+  // mounts later). A state filter could hide them, so the table goes back to all states, in the URL and the state
+  // menu, as the menu itself writes it.
   function showInTable(query) {
     const filter = document.querySelector('#ht-name');
     if (!filter) return;
+    const { pathname, search, hash } = window.location;
+    const next = withState(hash, null);
+    if (next !== hash) window.history.replaceState(null, '', pathname + search + next);
+    const states = document.querySelector('#ht-state');
+    if (states?.value) {
+      states.value = '';
+      states.dispatchEvent(new Event('change'));
+    }
     filter.value = query;
     filter.dispatchEvent(new Event('input'));
     document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });

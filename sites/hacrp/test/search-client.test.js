@@ -1,14 +1,14 @@
 // The program page's search script (client/program.js) against a stand-in DOM: it fetches the hospitals asset on
 // first focus, builds the datalist in one step, skips bad rows, and opens a hospital's page on a pick or on submit;
-// a submit with several matches hands the query to the table's filter, one with none says so, and one while the list
-// won't load says that instead.
+// a submit with several matches hands the query to the table's filter (on all states), one with none says so, and
+// one while the list won't load says that instead.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const ORIGINAL = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
 
 // The stand-ins stay in place until the test ends (t.after), since the script fetches on a later focus.
-async function run(t, asset, { ok = true } = {}) {
+async function run(t, asset, { ok = true, hash = '', state = '' } = {}) {
   const net = { ok };
   const handlers = {};
   const input = { value: '', addEventListener: (type, fn) => { handlers[type] = fn; } };
@@ -23,9 +23,13 @@ async function run(t, asset, { ok = true } = {}) {
   const section = { scrolled: false, scrollIntoView() { section.scrolled = true; } };
   const fetched = [];
   const opened = [];
-  const others = { '#ht-name': filter, '#hospitals': section };
+  const states = { value: state, events: [], dispatchEvent: (e) => states.events.push(e.type) };
+  const others = { '#ht-name': filter, '#hospitals': section, '#ht-state': states };
+  const urls = [];
   globalThis.document = { querySelector: (s) => (s === '.search[data-src]' ? box : others[s] ?? null), createElement: () => ({}) };
-  globalThis.window = { location: { assign: (p) => opened.push(p) } };
+  const location = { hash, pathname: '/hacrp/', search: '', assign: (p) => opened.push(p) };
+  const history = { replaceState(_s, _t, url) { urls.push(url); location.hash = url.includes('#') ? url.slice(url.indexOf('#')) : ''; } };
+  globalThis.window = { location, history };
   globalThis.fetch = async (url) => { fetched.push(url); return { ok: net.ok, status: net.ok ? 200 : 500, json: async () => asset }; };
   t.after(() => {
     for (const [k, v] of Object.entries(ORIGINAL)) {
@@ -41,7 +45,7 @@ async function run(t, asset, { ok = true } = {}) {
     assert.ok(prevented, 'the form never submits to the server');
   };
   return {
-    handlers, input, list, box, status, filter, section, fetched, opened, submit, net,
+    handlers, input, list, box, status, filter, section, fetched, opened, submit, net, states, urls, location,
     focus: async () => { handlers.focus(); await new Promise((r) => setTimeout(r, 0)); },
   };
 }
@@ -104,6 +108,21 @@ test('a failed fetch or a bad hospitalPath leaves the list empty, and a later fo
   const bad = await run(t, { ...ASSET, hospitalPath: 'javascript:alert(1)//' });
   await bad.focus();
   assert.equal(bad.list.options, null);
+});
+
+test('several matches with a state filter on: the table goes back to all states, in the URL and the menu', async (t) => {
+  const s = await run(t, ASSET, { hash: '#state=MD', state: 'MD' });
+  await s.submit('Exampleton');
+  assert.deepEqual(s.urls, ['/hacrp/'], 'the state leaves the URL, the way the menu writes it');
+  assert.equal(s.states.value, '');
+  assert.deepEqual(s.states.events, ['change'], 'the menu\'s own handler updates the table');
+  assert.equal(s.filter.value, 'Exampleton');
+
+  const clean = await run(t, ASSET, { hash: '#main' });
+  await clean.submit('Exampleton');
+  assert.deepEqual(clean.urls, [], 'no state filter: the URL is left alone');
+  assert.deepEqual(clean.states.events, []);
+  assert.equal(clean.location.hash, '#main');
 });
 
 test('a submit while the list won\'t load says the list didn\'t load, not "no match"; a later submit tries again', async (t) => {
