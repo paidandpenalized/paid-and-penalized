@@ -8,14 +8,16 @@
 .fig__cap { font-weight: 600; }
 .fig__n { font-family: var(--font-type); font-weight: 700; }
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
-.fig__table summary { width: fit-content; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
+.fig__table summary { width: fit-content; min-height: 24px; padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .fig__table[open] summary { margin-bottom: 8px; }
 .fig__table th[data-numeric] { text-align: right; }
 .fig__actions { margin-top: 8px; }
 .fig__btn { padding: 7px 12px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
 .fig__btn:hover { background: var(--paper-2); }
-/* A sortable column head: the head's own look, as a button; aria-sort names the order, the arrow repeats it. */
-.fig__sort { padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
+/* A sortable column head: the head's own look, as a button; aria-sort names the order, the arrow repeats it. The button
+   fills its cell (the head's 9px 10px padding, components.css), so the whole cell is the target, well over 24px. */
+.fig__sort { display: block; width: calc(100% + 20px); margin: -9px -10px; padding: 9px 10px; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
+.fig__sort:hover { background: var(--paper-2); }
 th[aria-sort="ascending"] .fig__sort::after { content: " \25B2" / ""; }
 th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }

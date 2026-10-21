@@ -30,7 +30,7 @@
   .gb--measures .num::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
   .gb--measures .notes:empty { display: none; }
 }
-.est summary { display: inline-block; padding: 0 6px; border: 1px solid var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); cursor: pointer; list-style: none; }
+.est summary { display: inline-block; min-height: 24px; padding: 2px 6px; border: 1px solid var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); cursor: pointer; list-style: none; }
 .est summary::-webkit-details-marker { display: none; }
 .est[open] summary { background: var(--ink-2); color: var(--paper); }
 .est__body { margin-top: 4px; }
