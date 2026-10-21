@@ -242,6 +242,8 @@ export const COPY = {
   place: { text: '{city}, {state} · CCN {ccn}', claim: null },
   heroScore: { text: 'Total HAC Score, as CMS reports it', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
+  // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.
+  heroLine: { text: "CMS's line: between {highestNo} and {lowestYes}", claim: null },
   noScore: { text: 'No score published', claim: null },
   heroDecision: { text: 'Payment reduction', claim: null },
   decisionCms: { text: "CMS's value: {decision}", claim: null },

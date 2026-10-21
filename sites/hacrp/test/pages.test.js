@@ -349,3 +349,10 @@ test('the hero is the lede: right after the page head, before the summary senten
     assert.ok(text.indexOf('class="hero"') < text.indexOf('For fiscal year'), `${h.ccn}: hero before the summary`);
   }
 });
+
+test("the hero names CMS's line under a scored hospital's number, from CMS's text; not for Maryland or no score", () => {
+  const page = (h) => hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const line = `<p class="hero__ref">CMS&#39;s line: between ${BOUNDARY.highestNo} and ${BOUNDARY.lowestYes}</p>`;
+  for (const h of [CASES.yes, CASES.no]) assert.ok(page(h).includes(line), h.ccn);
+  for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
+});

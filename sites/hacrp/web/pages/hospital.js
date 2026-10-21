@@ -95,7 +95,8 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 </header>
 <section class="hero" aria-label="${t('heroLabel')}">
 <div class="hero__item"><p class="cap">${t('heroScore')}</p>${view.scored
-    ? html`<p class="hero__num cms">${view.score.text}</p>`
+    ? html`<p class="hero__num cms">${view.score.text}</p>${view.status !== 'maryland' && html`
+<p class="hero__ref">${fill('heroLine', view.boundaryText)}</p>`}`
     : html`<p class="hero__none"><span>${t('noScore')}</span></p>`}</div>
 <div class="hero__item"><p class="cap">${t('heroDecision')}</p><p class="hero__pill">${decisionPill(view.status, view.decision.text)}</p>
 ${!pillShowsCmsValue(view.status) && html`<p class="small muted">${fill('decisionCms', { decision: view.decision.text })}</p>`}</div>
