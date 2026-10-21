@@ -31,12 +31,16 @@
    fills its cell (the head's 9px 10px padding, components.css), so the whole cell is the target, well over 24px. */
 .fig__sort { display: block; width: calc(100% + 20px); margin: -9px -10px; padding: 9px 10px; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
 .fig__sort:hover { background: var(--paper-2); }
+/* The ring sits inside the button: the table's scroll box clips anything drawn past the cell. */
+.fig__sort:focus-visible { outline-offset: -3px; }
 th[aria-sort="ascending"] .fig__sort::after { content: " \25B2" / ""; }
 th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 .fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
 
 /* ---------- the SVG ---------- */
 .chart { display: block; width: 100%; max-width: 34rem; height: auto; overflow: visible; font: 400 12px var(--font-body); }
+/* A focused chart's ring clears its edge labels. */
+.chart:focus-visible { outline-offset: 4px; }
 /* A phone-wide viewBox shown wider scales its text: these stay near 1.15x, so chart labels never outgrow the body. */
 .chart--dot-ranges, .chart--ramp, .chart--bars { max-width: 26rem; }
 /* A figure with two variants shows the phone one under 720px and the wide one (its own viewBox) from 720px. */
