@@ -36,7 +36,10 @@
 .gb td, .gb tbody th { padding: 7px 10px; vertical-align: top; }
 /* Row headers read as text, in ink: left-aligned, in the body face. Rows are told apart by the green-bar banding. */
 .gb tbody th { text-align: left; font: 600 var(--fs-sm)/1.35 var(--font-body); }
-.gb tbody tr:nth-child(4n+1), .gb tbody tr:nth-child(4n+2) { background: var(--paper-2); }
+/* Green-bar banding (pairs of rows) where it earns its keep, on a long scan of more than ten rows; a short table's
+   rows are told apart by hairline rules instead, so its banding never suggests a grouping the data doesn't have. */
+.gb tbody:has(> tr:nth-child(11)) > tr:is(:nth-child(4n+1), :nth-child(4n+2)) { background: var(--paper-2); }
+.gb tbody:not(:has(> tr:nth-child(11))) > tr + tr { border-top: 1px solid var(--line); }
 .gb .num { text-align: right; white-space: nowrap; }
 
 /* ---------- pills: a word on a mark; the word carries the meaning, the ink repeats it ---------- */
