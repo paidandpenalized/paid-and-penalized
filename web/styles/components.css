@@ -27,7 +27,9 @@
 .foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
 
 /* ---------- green-bar printout table ---------- */
-.printout { position: relative; border: var(--rule) solid var(--ink); background: var(--paper); }
+/* Rules above and below, no box: the green-bar banding is the almanac detail, and the one framed object on a page is
+   the what-if result, so a frame means "this responds to you". */
+.printout { position: relative; border-block: var(--rule) solid var(--ink); background: var(--paper); }
 .printout__scroll { overflow-x: auto; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
 .gb thead th { position: sticky; top: 0; background: var(--paper); text-align: left; vertical-align: bottom; white-space: nowrap; padding: 9px 10px; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
