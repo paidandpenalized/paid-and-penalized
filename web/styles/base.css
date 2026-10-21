@@ -8,12 +8,18 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* The footer sits at the bottom of the window on a short page, not a third of the way down. */
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: var(--grain) repeat, var(--paper);
   color: var(--ink);
   font: 400 var(--fs-base)/1.65 var(--font-body);
 }
+main { flex: 1 0 auto; }
 h1, h2, h3, h4 { margin: 0; text-wrap: balance; line-height: 1.12; }
 h1 { font: 400 clamp(2rem, 6vw, var(--fs-2xl))/1.05 var(--font-display); letter-spacing: 0.005em; }
 h2 { font: 400 var(--fs-xl)/1.1 var(--font-display); letter-spacing: 0.005em; }
