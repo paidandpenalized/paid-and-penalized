@@ -1,10 +1,12 @@
 // A state tile map: one square per code in states.js, filled by a step of the pen ramp (--pen-seq-1 to 5, light to
 // dark) or, where there is no value to show, never drawn as zero: hatched (not in the program) or an empty dashed
-// outline (nothing to show), with the caller's label. A legend under the grid names each step and each hatched or
-// empty label. Every code in the grid must be given, and only those codes.
+// outline (nothing to show), with the caller's label. Under the grid, the ramp as one stepped bar with each
+// threshold at its edge, then one row per hatched or empty label. Every code in the grid must be given, and only
+// those codes.
 //   id       names this SVG's hatch pattern (lowercase letters, digits, hyphens)
-//   states   { [code]: { value, label, hatched, empty } }   label: the tile's tooltip (and, hatched or empty, its
-//            legend entry)
+//   states   { [code]: { value, label, text, hatched, empty } }   label: the tile's tooltip (and, hatched or empty,
+//            its legend entry); text: the value as the tile prints it, with showValues
+//   showValues  print each valued tile's text under its code (for a viewBox wide enough to hold it)
 //   ramp     the step thresholds, ascending (1 to 4 of them: 2 to 5 steps); a value at a threshold takes the step above
 //   format   a threshold -> text (default: the number as given, with a true minus)
 import { scaleThreshold } from 'd3-scale';
@@ -12,9 +14,12 @@ import { html } from '../render/html.js';
 import { GAP, WIDTH, checkId, frame, hatchDefs, hatchFill, mark, plain, r2, text } from './svg.js';
 import { GRID, TILES } from './states.js';
 
-const LEGEND_COLS = 3;
 const LEGEND_ROW = 20;
 const SWATCH = 12;
+// The stepped bar: each step's width and the bar's height, then room under it for the threshold labels.
+const STEP_W = 44;
+const BAR_H = 10;
+const BAR_LABELS = 16;
 const STEPS = 5;
 // Steps from --pen-seq-3 up are dark enough for on-mark text (tokens.css).
 const DARK_FROM = 3;
@@ -32,7 +37,7 @@ function checkStates(states) {
   }
 }
 
-export function tileMap({ id, states, ramp, width = WIDTH, format = plain }) {
+export function tileMap({ id, states, ramp, width = WIDTH, format = plain, showValues = false }) {
   checkId(id, 'tileMap');
   checkStates(states);
   if (!(ramp.length >= 1 && ramp.length < STEPS && ramp.every((t, i) => i === 0 || t > ramp[i - 1]))) {
@@ -54,35 +59,32 @@ export function tileMap({ id, states, ramp, width = WIDTH, format = plain }) {
     const tile = s.hatched ? html`<rect class="chart-tile-na" fill="${hatchFill(id)}" ${box}/>`
       : s.empty ? html`<rect class="chart-tile-empty" ${box}/>`
         : html`<rect class="chart-tile chart-seq-${step}" ${box} rx="2"/>`;
-    const codeCls = step !== null && step >= DARK_FROM ? 'chart-tile__code chart-tile__code--on' : 'chart-tile__code';
+    const on = step !== null && step >= DARK_FROM ? ' chart-tile__code--on' : '';
+    const valued = showValues && !none && s.text;
+    // With its value printed, the code moves up and the value sits under it.
+    const codeY = valued ? y + size / 2 - 2 : y + size / 2 + 4;
     return html`${mark({
       // A tile (a phone-wide grid's cell, about 30 units) is its own hit area.
       tip: `${code}: ${s.label}`, value: none ? null : s.value, data: { state: code }, hit: null,
-      body: html`${tile}${text({ x: x + size / 2, y: y + size / 2 + 4, anchor: null, cls: codeCls, body: code })}`,
+      body: html`${tile}${text({ x: x + size / 2, y: codeY, anchor: null, cls: `chart-tile__code${on}`, body: code })}${valued ? text({ x: x + size / 2, y: codeY + 13, anchor: null, cls: `chart-tile__value${on}`, body: s.text }) : ''}`,
     })}
 `;
   });
 
-  const stepText = (i) => (i === 0 ? `< ${format(ramp[0])}` : i === ramp.length ? `≥ ${format(ramp[i - 1])}` : `${format(ramp[i - 1])} – ${format(ramp[i])}`);
   const labelsOf = (key) => [...new Set(Object.values(states).filter((s) => s[key]).map((s) => s.label))];
   const others = [...labelsOf('hatched').map((label) => ({ label, cls: 'chart-tile-na', fill: hatchFill(id) })),
     ...labelsOf('empty').map((label) => ({ label, cls: 'chart-tile-empty', fill: null }))];
-  // The steps share rows, LEGEND_COLS to a row; each hatched or empty label, likely longer, has a row of its own.
-  const stepRows = Math.ceil(steps.length / LEGEND_COLS);
-  const colW = width / LEGEND_COLS;
-  const legendY = gridH + 8;
-  const legend = [
-    ...steps.map((step, i) => ({
-      x: (i % LEGEND_COLS) * colW, y: legendY + Math.floor(i / LEGEND_COLS) * LEGEND_ROW,
-      cls: `chart-tile chart-seq-${step}`, body: stepText(i),
-    })),
-    ...others.map(({ label, cls, fill }, i) => ({ x: 0, y: legendY + (stepRows + i) * LEGEND_ROW, cls, fill, body: label })),
-  ];
-  const height = legendY + (stepRows + others.length) * LEGEND_ROW;
+  // The ramp as one bar of steps, each threshold printed under the edge where its step begins; then each hatched
+  // or empty label on a row of its own.
+  const barY = gridH + 10;
+  const bar = html`${steps.map((step, i) => html`<rect class="chart-tile chart-seq-${step}" x="${r2(i * STEP_W)}" y="${r2(barY)}" width="${STEP_W}" height="${BAR_H}"/>`)}${ramp.map((t, i) => text({ x: (i + 1) * STEP_W, y: barY + BAR_H + 12, cls: 'chart-legend__label', body: format(t) }))}`;
+  const othersY = barY + BAR_H + BAR_LABELS + 8;
+  const legend = others.map(({ label, cls, fill }, i) => ({ x: 0, y: othersY + i * LEGEND_ROW, cls, fill, body: label }));
+  const height = othersY + others.length * LEGEND_ROW;
 
   return frame({
     kind: 'tile-map', width, height, body: html`${hatchDefs(id)}
-${tiles}<g class="chart-legend">${legend.map(({ x, y, cls, fill, body }) =>
+${tiles}<g class="chart-legend">${bar}${legend.map(({ x, y, cls, fill, body }) =>
       html`<rect class="${cls}"${fill ? html` fill="${fill}"` : ''} x="${r2(x)}" y="${r2(y)}" width="${SWATCH}" height="${SWATCH}"/>${text({ x: x + SWATCH + 6, y: y + SWATCH - 2, anchor: 'start', cls: 'chart-legend__label', body })}`)}</g>`,
   });
 }

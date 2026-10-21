@@ -188,8 +188,8 @@ export function statesFigure({ states, n, source, fy }) {
       share: pct(total('yes') / total('decided'), SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
     }),
     ...variants((width) => tileMap({
-      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width,
-      states: Object.fromEntries(tiles.map(({ code, value, label, hatched, empty }) => [code, value === undefined ? { hatched, empty, label } : { value, label }])),
+      id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width, showValues: width === WIDE,
+      states: Object.fromEntries(tiles.map(({ code, value, label, hatched, empty }) => [code, value === undefined ? { hatched, empty, label } : { value, label, text: shareText(value) }])),
     })),
     note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
     table: {
