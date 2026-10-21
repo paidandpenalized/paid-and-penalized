@@ -31,7 +31,7 @@
   --hatch-fill: repeating-linear-gradient(45deg, var(--hatch) 0 1.5px, transparent 1.5px 6px);
 
   --font-display: 'Alfa Slab One', 'Alfa Slab One Fallback', Rockwell, 'Roboto Slab', Georgia, serif;
-  --font-body: 'Libre Franklin', 'Franklin Gothic Book', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Libre Franklin', 'Libre Franklin Fallback', 'Franklin Gothic Book', 'Helvetica Neue', Arial, sans-serif;
   --font-type: 'IBM Plex Mono', 'Courier New', Courier, monospace;
 
   --fs-cap: 0.75rem;

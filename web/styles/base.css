@@ -3,6 +3,12 @@
 /* Shown while Alfa Slab One loads: the system's Georgia Bold scaled to Alfa Slab's width and vertical metrics
    (measured in the browser: widths within 1%), so a heading barely reflows when the font swaps in. */
 @font-face { font-family: 'Alfa Slab One Fallback'; src: local('Georgia Bold'), local('Georgia-Bold'); font-weight: 400; size-adjust: 103.6%; ascent-override: 100%; descent-override: 32%; line-gap-override: 0%; }
+/* Shown while Libre Franklin loads: Arial (Arial Bold for 600 and 700) scaled to Libre Franklin's widths and vertical
+   metrics (measured in the browser over the page's own text: paragraph heights unchanged), so body text barely
+   reflows when the font swaps in. */
+@font-face { font-family: 'Libre Franklin Fallback'; src: local('Arial'), local('ArialMT'); font-weight: 400; size-adjust: 103.1%; ascent-override: 94.1%; descent-override: 24.3%; line-gap-override: 0%; }
+@font-face { font-family: 'Libre Franklin Fallback'; src: local('Arial Bold'), local('Arial-BoldMT'); font-weight: 600; size-adjust: 98.5%; ascent-override: 98.5%; descent-override: 25.4%; line-gap-override: 0%; }
+@font-face { font-family: 'Libre Franklin Fallback'; src: local('Arial Bold'), local('Arial-BoldMT'); font-weight: 700; size-adjust: 99.5%; ascent-override: 97.5%; descent-override: 25.1%; line-gap-override: 0%; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
 @font-face { font-family: 'Libre Franklin'; src: url('/assets/fonts/libre-franklin-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }

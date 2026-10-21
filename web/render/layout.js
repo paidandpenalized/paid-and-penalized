@@ -6,7 +6,9 @@ import { html, jsonText, raw } from './html.js';
 
 const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
 const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
-const PRELOAD_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400'];
+// The headline face, the body face, and IBM Plex Mono 700, the hero's number (the most important glyphs on a
+// hospital page, which otherwise swap in late from Courier).
+const PRELOAD_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
 
 const newTab = html`<span class="vh">${COPY.newTab}</span>`;
 
