@@ -303,10 +303,8 @@ export const COPY = {
     claim: null,
   },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
-  place: { text: '{city}, {state} · CCN {ccn}', claim: null },
-  // On the place line, so the data's date sits near the headline as well as at the foot.
+  // Under the verdict beside the record card, so the data's date sits near the headline as well as at the foot.
   placeData: { text: 'Data: CMS, released {date}', claim: null },
-  heroScore: { text: 'Total HAC Score, as CMS reports it', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
   // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.
   heroLine: { text: "CMS's line: between {highestNo} and {lowestYes}", claim: null },
@@ -569,10 +567,9 @@ export const COPY = {
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },
   figStatesNoDecision: { text: 'no hospitals with a payment decision', claim: null },
-  // The map's legend rows for a zero share and for a share that rests on few decisions, and that share's text.
+  // The map's legend rows for a zero share and for a share that rests on few decisions.
   figStatesZero: { text: 'no hospitals cut', claim: null },
   figStatesFew: { text: 'fewer than {n} hospitals with a payment decision', claim: null },
-  figStatesFewText: { text: '{yes} of {decided}', claim: null },
   figStatesOffMap: { text: 'Not on the map: {codes}.', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },
