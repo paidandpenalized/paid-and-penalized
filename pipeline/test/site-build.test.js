@@ -210,7 +210,7 @@ test('print forces the light tokens on white: every color token the light block 
   assert.ok(block, 'print block');
   const print = decls(block[1]);
   for (const [name, value] of light) {
-    if (!/#|rgba?\(/.test(value) || name === '--grain' || name === '--stamp-mask') continue;
+    if (!/#|rgba?\(/.test(value) || name === '--grain') continue;
     assert.equal(print.get(name), name === '--paper' ? '#ffffff' : value, name);
   }
   assert.equal(block[1].match(/;/g).length, block[1].match(/!important;/g).length, 'every print declaration is !important');
