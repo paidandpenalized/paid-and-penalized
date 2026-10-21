@@ -3,6 +3,8 @@ const MINUS = '−';
 const NUMBER = new Intl.NumberFormat('en-US');
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
   'November', 'December'];
+// A long date as longDate and isoDate write it ("August 13, 2026"), anywhere in a text.
+export const LONG_DATE = new RegExp(`(?:${MONTHS.join('|')}) \\d{1,2}, \\d{4}`, 'g');
 
 // A leading hyphen-minus on a number becomes a true minus; every other character is left as CMS wrote it.
 export const cmsText = (text) => String(text).replace(/^-(?=[\d.])/, MINUS);

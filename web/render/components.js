@@ -2,12 +2,13 @@
 // citation block, the printout table frame, CMS footnotes (one note, and the page's legend), and fillCopy, which
 // fills the placeholders in a site's copy.
 import { has } from '../../engine/js/has.js';
+import { LONG_DATE } from './format.js';
 import { Safe, escapeHtml, html } from './html.js';
 
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-// Copy as a page sets it: a straight apostrophe becomes ’ (CMS’s, hospitals’) and straight double quotes become
-// “ and ”. The copy files keep plain ASCII; only their words are typeset, never a value filled into them (CMS's text
+// Copy as a page sets it: a straight apostrophe becomes ’ (CMS’s, hospitals’), straight double quotes become
+// “ and ”, and z-score takes a non-breaking hyphen. The copy files keep plain ASCII; only their words are typeset, never a value filled into them (CMS's text
 // stays as CMS published it). Each copy string is typeset once and remembered: copy is a fixed set of strings, and
 // fillCopy runs on every fill, in the build and in the browser.
 const TYPESET = new Map();
@@ -18,7 +19,9 @@ export function typeset(text) {
       .replace(/([\w})])'(?=[\w{])/g, '$1\u2019')
       .replace(/s'(?=[\s.,;:!?)]|$)/g, 's\u2019')
       .replace(/(^|[\s(\[{])"/g, '$1\u201c')
-      .replace(/"/g, '\u201d');
+      .replace(/"/g, '\u201d')
+      // "z-score" never splits at its hyphen: a non-breaking hyphen, the same glyph.
+      .replace(/\bz-score/g, 'z\u2011score');
     TYPESET.set(text, out);
   }
   return out;
@@ -83,6 +86,9 @@ export function keepWhole(text, parts) {
   }
   return new Safe(out);
 }
+
+// text (escaped) with every long date in it kept on one line (a .nw span), e.g. a source line's release date.
+export const keepDates = (text) => new Safe(escapeHtml(text).replace(LONG_DATE, (date) => nw(date, 0, date.length)));
 
 // A word on a mark; the word carries the meaning, the ink repeats it. kind: 'pen' (a penalty), 'rew' (a reward),
 // 'na' (hatched) or null (neutral).

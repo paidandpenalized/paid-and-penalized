@@ -7,7 +7,7 @@ import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
-import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, isoDate, pct } from '../../../web/render/format.js';
 import { TILES } from '../../../web/charts/states.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { csvPath } from '../web/links.js';
@@ -83,7 +83,7 @@ test('Figure 2 hatches an assigned measure, says so in its label, and never name
 test('the bars figure with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
   const text = render(CASES.allAssigned);
   const view = hospitalView(inputs(CASES.allAssigned));
-  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
+  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z‑score divided by 2, the number of measures scored.`));
   assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no range figure: no measure has a published value, so the bars are Figure 1');
   const one = render(CASES.oneMeasure);
   assert.equal(figures(one)[1][2].match(/data-bar="/g).length, 1);
@@ -111,6 +111,15 @@ test('Figure 1 is named for what it draws, and its keyboard hint follows it, hid
   const svg = /<svg role="img" aria-label="([^"]*)"/.exec(figures(text)[0][2])[1];
   assert.equal(svg, esc('For each measure, this hospital’s value (triangle) against the national median (tick); hatched values score the same as CMS’s floor or cap.'));
   assert.ok(text.includes('</figure>\n<p id="figure-1-keys" hidden>Arrow keys step through the measures.</p>'));
+});
+
+test('a figure\'s source line, the citation and the periods keep each date whole', () => {
+  const text = render(CASES.yes);
+  const date = isoDate(DATA.source.pdcReleased);
+  for (const [, , body] of figures(text)) assert.ok(body.includes(`released <span class="nw">${date}</span>.`), 'figure source line');
+  assert.match(text, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
+  const periods = /<section class="block" aria-labelledby="periods-h">([\s\S]*?)<\/section>/.exec(program())[1];
+  assert.equal(periods.match(/<span class="nw">\w+ \d+, \d{4}<\/span> to <span class="nw">\w+ \d+, \d{4}<\/span>/g).length, 2);
 });
 
 test('no-score pages and the unscored "Yes" row get no figures; Maryland gets both', () => {

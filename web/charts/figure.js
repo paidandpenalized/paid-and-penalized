@@ -20,7 +20,7 @@
 //   csvName      the download's file name without .csv (default figure-N)
 import { numberOrNaN } from '../../engine/js/stats.js';
 import { COPY } from '../copy.js';
-import { printout } from '../render/components.js';
+import { keepDates, printout } from '../render/components.js';
 import { cmsText } from '../render/format.js';
 import { Safe, html } from '../render/html.js';
 
@@ -99,7 +99,7 @@ ${imageOf(svgWide, alt, 'wide')}` : imageOf(svg, alt, null));
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
-`}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
+`}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${typeof source === 'string' ? keepDates(source) : source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
 ${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>

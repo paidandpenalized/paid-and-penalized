@@ -249,7 +249,7 @@ test('a scored page says which measure added the most, right after the measure t
     const sentence = largestSentence(view);
     assert.ok(sentence, `${h.ccn}: a synthetic case with a largest measure`);
     const text = render(h);
-    const intro = text.indexOf(esc("CMS’s published value and z-score for each measure."));
+    const intro = text.indexOf(esc("CMS’s published value and z‑score for each measure."));
     assert.ok(intro > 0);
     assert.equal(text.indexOf(`<p>${esc(sentence)}</p>`), text.indexOf('</p>', intro) + 5, `${h.ccn}: directly after the intro`);
   }
@@ -261,7 +261,7 @@ test('an estimate tag opens a visible note with the maximum error and a methods 
   const psi = view.measures.find((m) => m.id === 'PSI90');
   assert.equal(psi.tagged, true);
   const text = render(CASES.yes);
-  assert.ok(text.includes(esc(`The recompute can differ from CMS’s z-score by up to ${psi.maxErrorText}.`)));
+  assert.ok(text.includes(esc(`The recompute can differ from CMS’s z‑score by up to ${psi.maxErrorText}.`)));
   assert.match(text, /<details class="est"><summary>estimate<\/summary>/);
   assert.match(text, /<a href="\/methods\/#estimate">/);
   assert.doesNotMatch(text, /title="This site/);

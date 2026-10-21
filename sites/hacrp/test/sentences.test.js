@@ -26,7 +26,7 @@ test('a scored "Yes" hospital', () => {
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0500 above 0.2500, the highest score CMS marked No.",
     small: null,
     largest: 'Of the measures with a measured result, central line–associated bloodstream infections (CLABSI) added the most '
-      + "to the score. This site recomputes its part as +0.1500 (the measure’s z-score divided by the number of measures scored).",
+      + "to the score. This site recomputes its part as +0.1500 (the measure’s z‑score divided by the number of measures scored).",
   });
 });
 
@@ -40,7 +40,7 @@ test('a scored "No" hospital', () => {
     distance: "This site recomputes the distance to CMS’s line: the score is 0.3507 below 0.2507, the lowest score CMS marked Yes.",
     small: null,
     largest: 'Of the measures with a measured result, Clostridioides difficile (C. diff) infections (CDI) added the most '
-      + "to the score. This site recomputes its part as +0.0400 (the measure’s z-score divided by the number of measures scored).",
+      + "to the score. This site recomputes its part as +0.0400 (the measure’s z‑score divided by the number of measures scored).",
   });
 });
 
@@ -54,7 +54,7 @@ test('Maryland: CMS\'s footnote verbatim, no inference, no distance', () => {
     distance: null,
     small: null,
     largest: 'Of the measures with a measured result, patient safety and adverse events composite (PSI 90) added the most '
-      + "to the score. This site recomputes its part as +0.1000 (the measure’s z-score divided by the number of measures scored).",
+      + "to the score. This site recomputes its part as +0.1000 (the measure’s z‑score divided by the number of measures scored).",
   });
 });
 
@@ -94,7 +94,7 @@ test('a one-measure hospital gets the small-number warning', () => {
     distance: "This site recomputes the distance to CMS’s line: the score is 0.1000 above 0.2500, the highest score CMS marked No.",
     small: 'CMS scored this hospital on a single measure, so that measure alone set its Total HAC Score.',
     largest: 'Of the measures with a measured result, patient safety and adverse events composite (PSI 90) added the most '
-      + "to the score. This site recomputes its part as +0.3500 (the measure’s z-score divided by the number of measures scored).",
+      + "to the score. This site recomputes its part as +0.3500 (the measure’s z‑score divided by the number of measures scored).",
   });
 });
 
@@ -108,7 +108,7 @@ test('the largest-contribution sentence never names a CMS-assigned measure', () 
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0750 above 0.2500, the highest score CMS marked No.",
     small: null,
     largest: 'Of the measures with a measured result, catheter-associated urinary tract infections (CAUTI) added the most '
-      + "to the score. This site recomputes its part as +0.0500 (the measure’s z-score divided by the number of measures scored).",
+      + "to the score. This site recomputes its part as +0.0500 (the measure’s z‑score divided by the number of measures scored).",
   });
 });
 

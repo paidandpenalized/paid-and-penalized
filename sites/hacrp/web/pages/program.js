@@ -8,7 +8,7 @@ import { cmsText, count, longDate, ordinal } from '../../../../web/render/format
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
-import { fill, measureLabel, sourceText, t } from '../copy.js';
+import { fill, fillKeep, measureLabel, sourceText, t } from '../copy.js';
 import { scoresFigure, statesFigure } from '../figures.js';
 import { LINKS } from '../links.js';
 import { lineStep, stepRows, stepSum } from '../stepper.js';
@@ -129,8 +129,8 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 <section class="block" aria-labelledby="periods-h">
 <h2 id="periods-h">${t('periodsHeading')}</h2>
 <dl class="measure-list">
-<div><dt>${psi.short}</dt><dd>${fill('periodRange', { start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) })}</dd></div>
-<div><dt>${hai}</dt><dd>${fill('periodRange', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) })}</dd></div>
+<div><dt>${psi.short}</dt><dd>${fillKeep('periodRange', { start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) }, ['start', 'end'])}</dd></div>
+<div><dt>${hai}</dt><dd>${fillKeep('periodRange', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) }, ['start', 'end'])}</dd></div>
 </dl>
 </section>
 <section class="block" aria-labelledby="line-h">

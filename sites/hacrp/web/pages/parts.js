@@ -43,8 +43,8 @@ export function citation({ fy, title, path, source }) {
     url: SITE.origin + path,
     source: sourceText({ fy, source }),
   });
-  // The dataset id would break at its hyphen; the URL may still break anywhere.
-  return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
+  // The dataset id would break at its hyphen, and the release date at its spaces; the URL may still break anywhere.
+  return citationShell({ heading: t('citeHeading'), text: keepWhole(text, [`(${source.id})`, isoDate(source.pdcReleased)]), button: t('citeCopy'), copied: t('citeCopied'), failed: t('citeFailed') });
 }
 
 // The plain links to the dataset file, its dictionary and CMS's dataset page (source: the manifest entry).
