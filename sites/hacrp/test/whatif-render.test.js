@@ -40,7 +40,7 @@ const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAl
 
 const textsFor = (h) => whatIfTexts({
   hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: `/hacrp/hospital/${h.ccn.toLowerCase()}/`,
-  source: D.source, boundaryText: D.boundaryText,
+  source: D.source, boundaryText: D.boundaryText, baseline: 'cms',
 });
 const render = (h, state = initialState(h, model), share = true, texts = textsFor(h)) =>
   String(renderWhatIf({ vm: viewModel(state, h, model, estimate), texts, share, range: RANGE, solver: solverOf(h, model) }));
@@ -358,7 +358,7 @@ test('share, range and solver are required; the slider label names the value, no
 
 test('the median hospital never gets NHSN fields, even with periods', () => {
   const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
-  const texts = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText });
+  const texts = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText, baseline: 'sandbox' });
   assert.equal(texts.predicted, null);
   const text = render(m, initialState(m, model), false, texts);
   assert.doesNotMatch(text, /data-wi="predicted"|than at CMS/);

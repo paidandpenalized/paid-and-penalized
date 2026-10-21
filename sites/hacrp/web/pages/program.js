@@ -20,7 +20,7 @@ const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note 
 // data (for client/program.js) take the same shape as a hospital page's: the record, the model and the estimate
 // tags (never the whole file), the fields the texts need, and the ramp's national range of scores.
 function sandbox({ hospital, model, estimate, range }, { fy, boundaryText, source }) {
-  const page = { name: null, fy, path: PATH, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText };
+  const page = { name: null, fy, path: PATH, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText, baseline: 'sandbox' };
   const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
   return html`<p class="cap sandbox-label">${t('sandboxLabel')}</p>
 ${renderWhatIf({ vm, texts: whatIfTexts({ hospital, model, ...page }), share: false, range, solver: solverOf(hospital, model) })}

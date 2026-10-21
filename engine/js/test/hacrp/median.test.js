@@ -5,7 +5,7 @@ import { MEASURE_IDS } from '../../hacrp/measures.js';
 import { zFromValue } from '../../hacrp/params.js';
 import { totalFromZ } from '../../hacrp/score.js';
 import { whatIf } from '../../hacrp/whatif.js';
-import { MEDIAN_CCN, isMedianHospital, medianHospital } from '../../hacrp/median.js';
+import { medianHospital } from '../../hacrp/median.js';
 import { loadHacrp } from './helpers.js';
 import { SYNTH_PERIODS, round4, syntheticRow } from './synthetic.js';
 
@@ -82,10 +82,8 @@ test('the fiscal year and periods are carried through, and required', () => {
   assert.throws(() => medianHospital(model, { periods }), TypeError);
 });
 
-test('isMedianHospital tells the median hospital from every row in the file', () => {
+test('its CCN is no row\'s in the file', () => {
   const { hospitals } = loadHacrp();
-  assert.equal(MEDIAN_CCN, '000000');
-  assert.equal(isMedianHospital(median()), true);
-  assert.equal(hospitals.some(isMedianHospital), false);
-  assert.equal(isMedianHospital(null), false);
+  assert.equal(median().ccn, '000000');
+  assert.equal(hospitals.some((h) => h.ccn === median().ccn), false);
 });

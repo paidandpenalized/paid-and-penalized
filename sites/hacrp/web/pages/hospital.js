@@ -44,7 +44,7 @@ const legend = (view) => footnoteLegend({
 function whatIfBlock(view, { hospital, model, estimate, range }, source, assets) {
   const script = assets.js['hacrp-hospital'];
   if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
-  const page = { name: view.name, fy: view.fy, path: view.path, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText: view.boundaryText };
+  const page = { name: view.name, fy: view.fy, path: view.path, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText: view.boundaryText, baseline: 'cms' };
   const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
   const body = html`${renderWhatIf({ vm, texts: whatIfTexts({ hospital, model, ...page }), share: true, range, solver: solverOf(hospital, model) })}
 ${jsonScript('hacrp-hospital', { hospital, model, estimate, page, range })}`;

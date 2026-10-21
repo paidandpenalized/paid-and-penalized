@@ -1,9 +1,9 @@
 // The what-if's words, built from its view model (whatif-state.js). Everything is conditional ("would"):
 // this site's arithmetic on CMS's values, never a statement of what CMS did or what a hospital could do.
-// A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The median
-// hospital is this site's synthetic record, so its words never call its values or decision CMS's.
+// A measure CMS assigned reads "had it been submitted"; Maryland's what-if moves the score only. The page says where
+// the starting values come from (baseline): CMS's, or this site's own for the sandbox's synthetic median hospital,
+// whose words never call its values or decision CMS's.
 import { isSir } from '../../../engine/js/hacrp/measures.js';
-import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { LEVERAGE_STEP } from '../../../engine/js/hacrp/whatif.js';
 import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
@@ -12,6 +12,20 @@ import { fill, measureLabel } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
+
+// The words that depend on the starting values. counts: the NHSN fields, whose words compare with CMS's value.
+const BASELINES = {
+  cms: { intro: 'whatifIntro', start: 'whatifStartCms', none: 'whatifNone', was: 'whatifCmsWas', solverCaption: 'solverCaption', counts: true },
+  sandbox: {
+    intro: 'whatifIntroMedian', start: 'whatifStartMedian', none: 'whatifNoneMedian', was: 'whatifMedianWas',
+    solverCaption: 'solverCaptionMedian', counts: false,
+  },
+};
+
+function wordsFor(baseline) {
+  if (!Object.hasOwn(BASELINES, baseline)) throw new TypeError(`what-if: baseline must be "cms" or "sandbox", got "${baseline}"`);
+  return BASELINES[baseline];
+}
 
 const value = (x, model, id) => decimal(x, model.params[id].decimals);
 
@@ -37,11 +51,12 @@ function scores(result, hospital) {
 
 // The changed measures: whether each moved the score, and the bound its new value sits on, if any: at or past
 // CMS's cap, or at or below a floor above zero (an SIR can't go below a floor of zero, so that one isn't named).
+// bound: 'cap', 'floor' or null; limit: that bound's value, formatted.
 function changes(result, model) {
   return Object.entries(result.measures).filter(([, m]) => m.changed).map(([id, m]) => {
     const p = model.params[id];
     const bound = m.afterValue >= p.cap ? 'cap' : p.floor > 0 && m.afterValue <= p.floor ? 'floor' : null;
-    return { id, m, short: SHORT_NAMES[id], moved: m.afterZ !== m.beforeZ, bound };
+    return { id, m, short: SHORT_NAMES[id], moved: m.afterZ !== m.beforeZ, bound, limit: bound && value(p[bound], model, id) };
   });
 }
 
@@ -52,51 +67,53 @@ function item(c, model) {
     : fill('whatifItem', { short: c.short, after, before: value(c.m.beforeValue, model, c.id) });
 }
 
-// One change that doesn't move the score, named by its bound.
+// One change that doesn't move the score, named by its bound (copy keys whatifCap… and whatifFloor…).
 function deadZone(c, model) {
-  const after = value(c.m.afterValue, model, c.id);
-  const p = model.params[c.id];
-  if (c.bound === 'cap' && c.m.assigned) return fill('whatifCapAssigned', { short: c.short, after, cap: value(p.cap, model, c.id) });
+  const values = { short: c.short, after: value(c.m.afterValue, model, c.id), [c.bound]: c.limit };
+  if (c.bound === 'cap' && c.m.assigned) return fill('whatifCapAssigned', values);
   const verb = c.m.afterValue < c.m.beforeValue ? 'Lower' : 'Raise';
-  if (c.bound === 'cap') return fill(`whatifCap${verb}`, { short: c.short, after, cap: value(p.cap, model, c.id) });
-  return fill(`whatifFloor${verb}`, { short: c.short, after, floor: value(p.floor, model, c.id) });
+  return fill(`${c.bound === 'cap' ? 'whatifCap' : 'whatifFloor'}${verb}`, values);
 }
 
 // For one change among several that didn't move the score, or any change that moved it into the dead zone.
-function boundNote(c, model) {
-  const p = model.params[c.id];
-  const cap = { short: c.short, cap: value(p.cap, model, c.id) };
-  const floor = { short: c.short, floor: value(p.floor, model, c.id) };
-  if (c.bound === 'cap') return c.moved ? fill('whatifCapReached', cap) : fill('whatifCapNote', cap);
-  return c.moved ? fill('whatifFloorReached', floor) : fill('whatifFloorNote', floor);
-}
+const BOUND_NOTES = {
+  cap: { moved: 'whatifCapReached', still: 'whatifCapNote' },
+  floor: { moved: 'whatifFloorReached', still: 'whatifFloorNote' },
+};
+const boundNote = (c) => fill(BOUND_NOTES[c.bound][c.moved ? 'moved' : 'still'], { short: c.short, [c.bound]: c.limit });
 
-function flagSentences(result, median) {
+// What the hypothetical decision would mean, by its flag.
+const AFTER_SENTENCES = {
+  Yes: () => fill('whatifYes', { pct: REDUCTION_TEXT }),
+  No: () => fill('whatifNo'),
+  'too-close': () => fill('whatifClose', { cuts: cutText('too-close') }),
+};
+
+function flagSentences(result, words) {
   const { before, after } = result;
   if (before.flag === 'N/A') return [fill('whatifNA', { decision: flagText('N/A') })];
-  const out = [after.flag === 'Yes' ? fill('whatifYes', { pct: REDUCTION_TEXT })
-    : after.flag === 'No' ? fill('whatifNo')
-      : fill('whatifClose', { cuts: cutText('too-close') })];
-  if (after.flag !== before.flag) out.push(fill(median ? 'whatifMedianWas' : 'whatifCmsWas', { decision: flagText(before.flag) }));
+  const out = [AFTER_SENTENCES[after.flag]()];
+  if (after.flag !== before.flag) out.push(fill(words.was, { decision: flagText(before.flag) }));
   return out;
 }
 
-// One paragraph: what changed, where the score would go, and what that would mean for the decision.
-export function scenarioSentence(vm, hospital, model) {
+// One paragraph: what changed, where the score would go, and what that would mean for the decision. baseline:
+// 'cms' or 'sandbox', where the starting values come from.
+export function scenarioSentence(vm, hospital, model, baseline) {
+  const words = wordsFor(baseline);
   const r = vm.result;
   if (!r.available) return null;
   const list = changes(r, model);
   const { before, after } = scores(r, hospital);
-  const median = isMedianHospital(hospital);
-  if (!list.length) return fill(median ? 'whatifNoneMedian' : 'whatifNone', { score: before, decision: flagText(r.before.flag) });
+  if (!list.length) return fill(words.none, { score: before, decision: flagText(r.before.flag) });
   if (list.length === 1 && list[0].bound && !list[0].moved) return deadZone(list[0], model);
 
   const items = LIST.format(list.map((c) => item(c, model)));
   const out = [];
   if (after === before) out.push(fill('whatifStay', { changes: items, score: before }));
   else out.push(fill(r.after.score > r.before.score ? 'whatifRise' : 'whatifFall', { changes: items, before, after }));
-  if (list.some((c) => c.moved)) out.push(...flagSentences(r, median));
-  for (const c of list) if (c.bound) out.push(boundNote(c, model));
+  if (list.some((c) => c.moved)) out.push(...flagSentences(r, words));
+  for (const c of list) if (c.bound) out.push(boundNote(c));
   return out.join(' ');
 }
 
@@ -115,22 +132,22 @@ export function solverRows(answers, model) {
   });
 }
 
-// Plain text for "Copy for a slide". view: { name (null for the median hospital), fy, source } — the hospital
-// view plus the dataset's manifest entry (id, pdcReleased).
-export function slideText(vm, hospital, model, view) {
+// Plain text for "Copy for a slide". name: the hospital's (null for the median hospital, which gets no name line);
+// fy; source: the dataset's manifest entry (id, pdcReleased); baseline: as for scenarioSentence.
+export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
   const r = vm.result;
   if (!r.available) return null;
-  if (!view?.source) throw new TypeError('slideText: view.source (id, pdcReleased) is required for the source line');
+  if (!source) throw new TypeError('slideText: source (id, pdcReleased) is required for the source line');
   const { before, after } = scores(r, hospital);
   const decision = r.before.flag === 'N/A'
     ? fill('slideDecisionOnly', { decision: flagText('N/A') })
     : fill('slideDecision', { before: flagText(r.before.flag), after: flagText(r.after.flag) });
   return [
-    view.name,
+    name,
     fill('slideScore', { before, after }),
     decision,
-    scenarioSentence(vm, hospital, model),
-    fill('source', { fy: String(view.fy), id: view.source.id, date: isoDate(view.source.pdcReleased) }),
+    scenarioSentence(vm, hospital, model, baseline),
+    fill('source', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }),
     fill('whatifStanding'),
   ].filter((line) => line !== null && line !== undefined).join('\n');
 }
@@ -147,19 +164,20 @@ function countText(delta) {
 
 // The words the what-if component (web/whatif/render.js and dom.js) takes for one hospital: strings for the fixed
 // parts, functions of the view model for the parts that move. The page passes the hospital view's name, fy and path,
-// the dataset's manifest entry (source) and CMS's text for the line's two scores (boundaryText).
-export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryText }) {
-  const median = isMedianHospital(hospital);
+// the dataset's manifest entry (source), CMS's text for the line's two scores (boundaryText) and where the starting
+// values come from (baseline: 'cms', or 'sandbox' for the median hospital). Other page fields are ignored.
+export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryText, baseline }) {
+  const words = wordsFor(baseline);
   const decision = hospital.paymentReduction;
   const hai = hospital.periods.hai;
-  const view = { name, fy, source };
+  const slide = { name, fy, source, baseline };
   return {
     heading: fill('whatifHeading'),
-    intro: fill(median ? 'whatifIntroMedian' : 'whatifIntro'),
+    intro: fill(words.intro),
     noScript: fill('whatifNoScript'),
     banner: { text: fill('whatifBanner'), linkText: fill('whatifBannerLink'), href: path },
     resultLabel: fill('whatifResultLabel'),
-    start: fill(median ? 'whatifStartMedian' : 'whatifStartCms'),
+    start: fill(words.start),
     hypothetical: fill('whatifHypothetical'),
     rows: { score: fill('whatifRowScore'), decision: fill('whatifRowDecision'), cut: fill('whatifRowCut') },
     rampLine: fill('whatifRampLine'),
@@ -167,8 +185,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     scores: (vm) => scores(vm.result, hospital),
     flag: flagText,
     cut: cutText,
-    sentence: (vm) => scenarioSentence(vm, hospital, model),
-    slide: (vm) => slideText(vm, hospital, model, view),
+    sentence: (vm) => scenarioSentence(vm, hospital, model, baseline),
+    slide: (vm) => slideText(vm, hospital, model, slide),
     estimate: { text: fill('whatifEstimate'), linkText: fill('estimateMore'), href: METHODS_ESTIMATE },
     copy: fill('whatifCopy'),
     copied: fill('whatifCopied'),
@@ -179,7 +197,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     // Shown only where there are answers (Maryland, not subject to the reduction, has none).
     solver: {
       question: fill(decision === 'Yes' ? 'whatifSolveYes' : 'whatifSolveNo'),
-      caption: fill(median ? 'solverCaptionMedian' : 'solverCaption'),
+      caption: fill(words.solverCaption),
       columns: [fill('solverColMeasure'), fill(decision === 'Yes' ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
       rows: (answers) => solverRows(answers, model),
     },
@@ -211,8 +229,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       value: (contribution) => signed(contribution, PART_DP),
       assigned: fill('whatifBarAssigned'),
     },
-    // NHSN predicted counts: SIRs only, for a real hospital (its words compare with CMS's value) with an HAI period.
-    predicted: median || hai.start === null ? null : {
+    // NHSN predicted counts: SIRs only, from CMS's values (the words compare with CMS's value), with an HAI period.
+    predicted: !words.counts || hai.start === null ? null : {
       label: (id) => (isSir(id)
         ? fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })
         : null),

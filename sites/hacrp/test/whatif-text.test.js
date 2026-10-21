@@ -29,7 +29,7 @@ const vmOf = (h, changes = {}) => {
   for (const [id, value] of Object.entries(changes)) s = reduce(s, { type: 'set', id, value });
   return viewModel(s, h, model, ESTIMATE);
 };
-const sentence = (name, changes) => scenarioSentence(vmOf(H[name], changes), H[name], model);
+const sentence = (name, changes) => scenarioSentence(vmOf(H[name], changes), H[name], model, 'cms');
 // The solver's rows for a hospital (none where solverOf has no answers).
 const rowsOf = (h) => solverRows(solverOf(h, model) ?? [], model);
 const rows = (name) => rowsOf(H[name]);
@@ -98,7 +98,7 @@ test('sentence: two changes', () => {
 test('sentence: too close to call, never Yes or No', () => {
   const vm = vmOf(H.no, { CLABSI: 1.074 });
   assert.equal(vm.result.after.flag, 'too-close');
-  assert.equal(scenarioSentence(vm, H.no, model),
+  assert.equal(scenarioSentence(vm, H.no, model, 'cms'),
     'With CLABSI at 1.074 instead of 0.800, the Total HAC Score would rise from 0.2734 to 0.3793. That would be too close to call: '
     + "this site's recompute cannot place it on either side of CMS's line, so the cut would be 0% or 1%. CMS reports a payment reduction decision of No.");
 });
@@ -153,10 +153,10 @@ test('the solver\'s answer, entered as the reader\'s value, reads No; one unit h
       const unit = 10 ** -model.params[r.id].decimals;
       const at = vmOf(h, { [r.id]: r.value });
       assert.equal(at.result.after.flag, 'No', `${name} ${r.id}`);
-      assert.match(scenarioSentence(at, h, model), /payment reduction decision would be No: no cut\./);
+      assert.match(scenarioSentence(at, h, model, 'cms'), /payment reduction decision would be No: no cut\./);
       const above = vmOf(h, { [r.id]: r.value + unit });
       assert.notEqual(above.result.after.flag, 'No', `${name} ${r.id}`);
-      assert.doesNotMatch(scenarioSentence(above, h, model), /decision would be No/);
+      assert.doesNotMatch(scenarioSentence(above, h, model, 'cms'), /decision would be No/);
     }
   }
 });
@@ -168,21 +168,21 @@ test('the solver and the sentences never point at an assigned score, even when i
     { id: 'CDI', label: 'CDI', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
     { id: 'MRSA', label: 'MRSA', answer: null, note: "CMS assigned this measure's score, so there is no submitted value to solve for." },
   ]);
-  assert.equal(scenarioSentence(vmOf(allAssigned), allAssigned, model),
+  assert.equal(scenarioSentence(vmOf(allAssigned), allAssigned, model, 'cms'),
     "CMS reports a Total HAC Score of 2.2091 and a payment reduction decision of Yes.");
 });
 
 test('a hospital with no score: no sentence, no solver rows, no slide', () => {
   const none = modelHospital(model, '990019', { values: {}, decision: 'No' });
   const vm = vmOf(none);
-  assert.equal(scenarioSentence(vm, none, model), null);
+  assert.equal(scenarioSentence(vm, none, model, 'cms'), null);
   assert.equal(solverOf(none, model), null);
-  assert.equal(slideText(vm, none, model, { name: 'X', fy: 2026, source: SOURCE }), null);
+  assert.equal(slideText(vm, none, model, { name: 'X', fy: 2026, source: SOURCE, baseline: 'cms' }), null);
 });
 
 test('slide text: name, before -> after, Hypothetical, the sentence, the source line and the what-if standing line', () => {
   const h = H.no;
-  const view = { ...hospitalView(inputs(h, { model })), source: SOURCE };
+  const view = { ...hospitalView(inputs(h, { model })), source: SOURCE, baseline: 'cms' };
   assert.equal(slideText(vmOf(h, { MRSA: 1.4 }), h, model, view), [
     'Example General Hospital',
     'Total HAC Score: 0.2734 → 0.4476 (Hypothetical)',
@@ -195,13 +195,13 @@ test('slide text: name, before -> after, Hypothetical, the sentence, the source 
 
 test('slide text: Maryland shows its decision once; the median hospital has no name line', () => {
   const md = H.maryland;
-  const text = slideText(vmOf(md, { CLABSI: 0.6 }), md, model, { name: 'Example Hospital', fy: 2026, source: SOURCE });
+  const text = slideText(vmOf(md, { CLABSI: 0.6 }), md, model, { name: 'Example Hospital', fy: 2026, source: SOURCE, baseline: 'cms' });
   assert.equal(text.split('\n')[2], 'Payment reduction decision: N/A (not subject to the reduction)');
   const mh = medianHospital(model, { fiscalYear: '2026', periods: SYNTH_PERIODS });
-  const lines = slideText(vmOf(mh), mh, model, { name: null, fy: 2026, source: SOURCE }).split('\n');
+  const lines = slideText(vmOf(mh), mh, model, { name: null, fy: 2026, source: SOURCE, baseline: 'sandbox' }).split('\n');
   assert.equal(lines[0], `Total HAC Score: ${mh.totalText.replace('-', '−')} → ${mh.totalText.replace('-', '−')} (Hypothetical)`);
   assert.equal(lines.at(-1), STANDING);
-  assert.throws(() => slideText(vmOf(md), md, model, { name: 'X', fy: 2026 }), TypeError);
+  assert.throws(() => slideText(vmOf(md), md, model, { name: 'X', fy: 2026, baseline: 'cms' }), TypeError);
 });
 
 test('the what-if words never say should, failed, caught, dodged, worst-performing or could have avoided', () => {
@@ -213,7 +213,7 @@ test('the what-if words never say should, failed, caught, dodged, worst-performi
   ];
   for (const [name, changes] of scenarios) {
     const vm = vmOf(H[name], changes);
-    const words = [scenarioSentence(vm, H[name], model), slideText(vm, H[name], model, { name: null, fy: 2026, source: SOURCE }),
+    const words = [scenarioSentence(vm, H[name], model, 'cms'), slideText(vm, H[name], model, { name: null, fy: 2026, source: SOURCE, baseline: 'cms' }),
       ...rowsOf(H[name]).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, banned, w);
   }
@@ -238,20 +238,20 @@ test('a change that moves the score into the dead zone names the bound, without 
 
 test('the median hospital: this site\'s hypothetical, never described as CMS\'s values or decision', () => {
   const mh = medianHospital(model, { fiscalYear: '2026', periods: SYNTH_PERIODS });
-  assert.equal(scenarioSentence(vmOf(mh), mh, model),
+  assert.equal(scenarioSentence(vmOf(mh), mh, model, 'sandbox'),
     'This site recomputes a Total HAC Score of −0.1278 and a payment reduction decision of No for its hypothetical hospital '
     + 'at the national median on every measure.');
-  assert.equal(scenarioSentence(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model),
+  assert.equal(scenarioSentence(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, 'sandbox'),
     'With CLABSI at 1.200 instead of 0.559 and MRSA at 1.400 instead of 0.641, the Total HAC Score would rise from −0.1278 to 0.3844. '
     + `${CUT} Before these changes, this site recomputes its decision as No.`);
   const claimsCms = /CMS's values|CMS reports|CMS's decision|CMS's value|CMS assigned/;
   for (const changes of [{}, { CLABSI: 1.2, MRSA: 1.4 }, { MRSA: 2 }, { CLABSI: 0.4 }, { PSI90: 0.7 }]) {
     const vm = vmOf(mh, changes);
-    const words = [scenarioSentence(vm, mh, model), slideText(vm, mh, model, { name: null, fy: 2026, source: SOURCE }),
+    const words = [scenarioSentence(vm, mh, model, 'sandbox'), slideText(vm, mh, model, { name: null, fy: 2026, source: SOURCE, baseline: 'sandbox' }),
       ...rowsOf(mh).flatMap((r) => [r.answer, r.note])].filter(Boolean);
     for (const w of words) assert.doesNotMatch(w, claimsCms, w);
   }
-  assert.equal(slideText(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, { name: null, fy: 2026, source: SOURCE }), [
+  assert.equal(slideText(vmOf(mh, { CLABSI: 1.2, MRSA: 1.4 }), mh, model, { name: null, fy: 2026, source: SOURCE, baseline: 'sandbox' }), [
     'Total HAC Score: −0.1278 → 0.3844 (Hypothetical)',
     'Payment reduction decision: No → Yes (Hypothetical)',
     'With CLABSI at 1.200 instead of 0.559 and MRSA at 1.400 instead of 0.641, the Total HAC Score would rise from −0.1278 to 0.3844. '
@@ -262,9 +262,11 @@ test('the median hospital: this site\'s hypothetical, never described as CMS\'s 
 });
 
 test('component texts: NHSN fields only for a real hospital with an HAI period; each field names its range', () => {
-  const make = (hospital) => whatIfTexts({ hospital, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' } });
+  const make = (hospital, baseline = 'cms') => whatIfTexts({
+    hospital, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' }, baseline,
+  });
   const periods = { psi90: { start: '07/01/2022', end: '06/30/2024' }, hai: { start: '01/01/2023', end: '12/31/2024' } };
-  assert.equal(make(medianHospital(model, { fiscalYear: '2026', periods })).predicted, null, 'median hospital, even with periods');
+  assert.equal(make(medianHospital(model, { fiscalYear: '2026', periods }), 'sandbox').predicted, null, 'median hospital, even with periods');
   const t = make(H.no);
   assert.match(t.predicted.label('CLABSI'), /January 1, 2023 to December 31, 2024/);
   assert.equal(t.predicted.label('PSI90'), null);
@@ -272,4 +274,16 @@ test('component texts: NHSN fields only for a real hospital with an HAI period; 
   const mrsa = vm.inputs.find((i) => i.id === 'MRSA');
   assert.equal(t.measure(mrsa, vm.result.measures.MRSA).invalid, 'Enter a number from 0.000 to 17.620.');
   assert.equal(t.measure(mrsa, vm.result.measures.MRSA).slider, 'MRSA value');
+});
+
+test('the baseline is stated by the page, never read from the record: the words follow it, and it is required', () => {
+  const make = (baseline) => whatIfTexts({
+    hospital: H.no, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' }, baseline,
+  });
+  assert.deepEqual([make('cms').start, make('sandbox').start], ['CMS reports', 'Starting point']);
+  assert.match(scenarioSentence(vmOf(H.no), H.no, model, 'sandbox'), /^This site recomputes/);
+  for (const bad of [undefined, 'median', '']) {
+    assert.throws(() => make(bad), TypeError, String(bad));
+    assert.throws(() => scenarioSentence(vmOf(H.no), H.no, model, bad), TypeError, String(bad));
+  }
 });

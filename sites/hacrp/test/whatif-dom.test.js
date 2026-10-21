@@ -22,7 +22,7 @@ const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 }
 const H = modelHospital(model, '990026', { values: V });
 const ASSIGNED = modelHospital(model, '990027', { values: { ...V, SSI: 'assigned' } });
 const MARYLAND = modelHospital(model, '990028', { values: V, decision: 'N/A', state: 'MD' });
-const textsFor = (h) => whatIfTexts({ hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: PATH, source: D.source, boundaryText: D.boundaryText });
+const textsFor = (h) => whatIfTexts({ hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: PATH, source: D.source, boundaryText: D.boundaryText, baseline: 'cms' });
 const texts = textsFor(H);
 
 const ATTR = /\s([\w:-]+)(?:="([^"]*)")?/g;
@@ -335,7 +335,7 @@ test('mounting on markup that lacks parts never throws: Maryland, share false, a
     stub.flush();
   }
   const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
-  const t = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText });
+  const t = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText, baseline: 'sandbox' });
   const root = rootFor(m, false, t);
   mountWhatIf(root, { rules: whatIfRules(m, model, estimate), texts: t, share: false, range: RANGE, env: windowStub().env });
   type(field(root, 'MRSA', 'number'), '1.2');

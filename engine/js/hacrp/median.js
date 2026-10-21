@@ -5,12 +5,6 @@ import { MEASURE_IDS } from './measures.js';
 import { zFromValue } from './params.js';
 import { classify, totalFromZ } from './score.js';
 
-// The median hospital's CCN: state code 00 is unassigned, so no real hospital has it.
-export const MEDIAN_CCN = '000000';
-
-// Whether a record is the median hospital: words about it must never call its values CMS's.
-export const isMedianHospital = (h) => h?.ccn === MEDIAN_CCN;
-
 // fiscalYear: CMS's text for the year; periods: { psi90, hai }, each { start, end }, as on every Hospital record.
 export function medianHospital(model, { fiscalYear, periods } = {}) {
   if (typeof fiscalYear !== 'string' || !periods) throw new TypeError('medianHospital: fiscalYear and periods are required');
@@ -25,7 +19,8 @@ export function medianHospital(model, { fiscalYear, periods } = {}) {
   }
   const total = toUnit(totalFromZ(zs), 4);
   return {
-    ccn: MEDIAN_CCN,
+    // State code 00 is unassigned, so no real hospital has this CCN.
+    ccn: '000000',
     name: null,
     state: null,
     fiscalYear,
