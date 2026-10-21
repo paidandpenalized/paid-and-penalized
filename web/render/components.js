@@ -47,6 +47,9 @@ export function fillCopy(copy, key, values = {}, { plain = false } = {}) {
   return out;
 }
 
+// Markup text with text.slice(start, end) kept on one line, in a .nw span.
+const nw = (text, start, end) => `${text.slice(0, start)}<span class="nw">${text.slice(start, end)}</span>${text.slice(end)}`;
+
 // fillCopy as markup, with stretches kept on one line: each group in `keep` is a placeholder name, or a list of
 // names whose values are kept together with the copy's words between them (a number pair: "0.3792 and 0.3799"),
 // wrapped in a .nw span from the first value's start to the last value's end. Values and words are escaped.
@@ -63,7 +66,7 @@ export function fillCopyKeep(copy, key, values, keep) {
     const last = mark(list[list.length - 1]);
     const start = text.indexOf(mark(list[0]));
     const end = text.indexOf(last) + last.length;
-    text = `${text.slice(0, start)}<span class="nw">${text.slice(start, end)}</span>${text.slice(end)}`;
+    text = nw(text, start, end);
   }
   for (const n of names) text = text.replace(mark(n), escapeHtml(values[n]));
   return new Safe(text);
@@ -76,8 +79,7 @@ export function keepWhole(text, parts) {
   for (const part of parts) {
     const at = out.indexOf(escapeHtml(part));
     if (at < 0) throw new RangeError(`keepWhole: "${part}" is not in the text`);
-    const end = at + escapeHtml(part).length;
-    out = `${out.slice(0, at)}<span class="nw">${out.slice(at, end)}</span>${out.slice(end)}`;
+    out = nw(out, at, at + escapeHtml(part).length);
   }
   return new Safe(out);
 }
