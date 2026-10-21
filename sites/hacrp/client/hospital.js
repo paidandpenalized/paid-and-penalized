@@ -7,6 +7,6 @@ const root = document.getElementById('whatif');
 const data = document.getElementById('hacrp-hospital');
 
 if (root && data) {
-  const { hospital, model, estimate, page } = JSON.parse(data.textContent);
-  mountWhatIf(root, { hospital, model, estimate, texts: whatIfTexts({ hospital, model, ...page }), share: true });
+  const { hospital, model, estimate, page, range } = JSON.parse(data.textContent);
+  mountWhatIf(root, { hospital, model, estimate, texts: whatIfTexts({ hospital, model, ...page }), share: true, range });
 }

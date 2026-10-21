@@ -2,10 +2,13 @@
 // reduce() and viewModel(); the page changes by textContent and attributes only. The numbers move at once; the live
 // sentence (and, with share, the URL fragment) follow 400 ms after the reader stops. With share, a link's fragment
 // is read on load and the reader's changes are written back with history.replaceState; NHSN counts stay in memory.
-// env is the window (a seam for tests): with share false, location and history are never touched.
+// env is the window (a seam for tests): with share false, location and history are never touched. range: the ramp's
+// national span of scores ({ low, high }, from the page data), as render.js drew it.
 import { decode, encode } from './fragment.js';
 import { changesOf, initialState, reduce, viewModel } from './state.js';
-import { barExtent, barSpan, fraction, labelAnchor, labelDx, rampAt, rampDomain, rampX, trackAt } from './marks.js';
+import {
+  assignedNow, barClass, barExtent, barSpan, fraction, rampAt, rampDomain, rampEdge, rampLabels, rampSide, rampX, trackAt,
+} from './marks.js';
 
 const SETTLE_MS = 400;
 const NARROW = '(max-width: 640px)';
@@ -24,7 +27,8 @@ const setText = (el, text) => {
   if (el && el.textContent !== text) el.textContent = text;
 };
 
-export function mountWhatIf(root, { hospital, model, estimate, texts, share = false, env = globalThis }) {
+export function mountWhatIf(root, { hospital, model, estimate, texts, share, range, env = globalThis }) {
+  if (typeof share !== 'boolean') throw new TypeError('mountWhatIf: share must be true or false');
   const q = (name, scope = root) => scope.querySelector(`[data-wi="${name}"]`);
   const start = initialState(hospital, model);
   if (!start.ids.length) return;
@@ -41,15 +45,21 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
       capMark: q('cap-mark', row),
       predicted: q('predicted', row),
       count: q('count', row),
+      error: q('error', row),
+      described: q('number', row).getAttribute('aria-describedby') ?? '',
+      barRow: bar,
       bar: q('bar', bar),
       barValue: q('bar-value', bar),
+      barAssigned: q('bar-assigned', bar),
     }];
   }));
-  const el = Object.fromEntries(['score', 'flag', 'cut', 'sentence', 'estimate', 'hyp', 'hyp-label', 'banner', 'copy',
+  const el = Object.fromEntries(['score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
+    'start-label', 'hyp-edge', 'banner', 'copy',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = viewModel(start, hospital, model, estimate);
-  const domain = rampDomain(first.ramp);
+  const domain = rampDomain(range, first.ramp);
+  const startAt = rampAt(first.ramp.actual, domain);
   const extent = barExtent(first.result, model);
 
   // The state a link's fragment describes: what decode() trusts goes through reduce(); the rest stays CMS's.
@@ -75,9 +85,27 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
     }
   }
 
+  const estimateShown = () => vm.inputs.some((i) => i.tagged && vm.result.measures[i.id].changed);
+
   function settle() {
     setText(el.sentence, texts.sentence(vm));
+    setText(el['sentence-est'], estimateShown() ? ` ${texts.estimate.text}` : '');
     if (share) writeHash();
+  }
+
+  // An SVG text at a ramp place { t, anchor, dx }.
+  function place(text, { t, anchor, dx }) {
+    text.setAttribute('x', rampX(t));
+    text.setAttribute('text-anchor', anchor);
+    text.setAttribute('dx', String(dx));
+  }
+
+  // A field's error line shows while its entry is refused, and the field names it in aria-describedby.
+  function markInvalid(row, invalid) {
+    row.error.hidden = !invalid;
+    row.number.setAttribute('aria-describedby', invalid ? `${row.described} ${row.error.id}`.trim() : row.described);
+    if (invalid) row.number.setAttribute('aria-invalid', 'true');
+    else row.number.removeAttribute('aria-invalid');
   }
 
   function track(r, input) {
@@ -98,12 +126,15 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
     setText(el.score, texts.scores(vm).after);
     setText(el.flag, texts.flag(r.after.flag));
     setText(el.cut, texts.cut(r.after.flag) ?? '');
-    el.estimate.hidden = !vm.inputs.some((i) => i.tagged && r.measures[i.id].changed);
+    el.estimate.hidden = !estimateShown();
     const t = rampAt(r.after.score, domain);
     el.hyp.setAttribute('x', rampX(t));
-    el['hyp-label'].setAttribute('x', rampX(t));
-    el['hyp-label'].setAttribute('text-anchor', labelAnchor(t));
-    el['hyp-label'].setAttribute('dx', String(labelDx(labelAnchor(t))));
+    const labels = rampLabels(startAt, t, texts.start, texts.hypothetical);
+    place(el['start-label'], labels.start);
+    place(el['hyp-label'], labels.hyp);
+    const edge = rampEdge(rampSide(r.after.score, domain));
+    place(el['hyp-edge'], edge);
+    setText(el['hyp-edge'], edge.text);
 
     for (const input of vm.inputs) {
       const row = rows[input.id];
@@ -112,6 +143,8 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
       if (source !== row.slider) row.slider.value = String(input.value ?? input.max);
       row.slider.setAttribute('aria-valuetext', input.valuetext);
       if (source !== row.number) row.number.value = input.value === null ? '' : input.value.toFixed(model.params[input.id].decimals);
+      row.barRow.setAttribute('class', barClass(input));
+      if (row.barAssigned) row.barAssigned.hidden = !assignedNow(input);
       const span = barSpan(m.contribution, extent);
       row.bar.style.setProperty('--at', fraction(span.at));
       row.bar.style.setProperty('--w', fraction(span.width));
@@ -137,22 +170,25 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
     return true;
   }
 
+  const behavior = () => (env.matchMedia?.(REDUCED_MOTION).matches ? 'auto' : 'smooth');
   const reveal = (event) => {
     if (!env.matchMedia?.(NARROW).matches) return;
-    event.target.scrollIntoView({ block: 'center', behavior: env.matchMedia(REDUCED_MOTION).matches ? 'auto' : 'smooth' });
+    event.target.scrollIntoView({ block: 'center', behavior: behavior() });
+  };
+  // A link that changed something opens on the what-if, not the top of the page.
+  const showLinked = () => {
+    if (linked) root.scrollIntoView({ block: 'start', behavior: behavior() });
   };
 
   for (const id of start.ids) {
     const row = rows[id];
     row.number.addEventListener('input', () => {
       const value = entry(row.number);
-      const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number });
-      if (ok) row.number.removeAttribute('aria-invalid');
-      else row.number.setAttribute('aria-invalid', 'true');
+      markInvalid(row, !(!Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number })));
     });
-    // On commit the field shows the value the what-if uses (a blank field shows the starting value again).
+    // On commit the field shows the value the what-if uses (a blank or refused entry shows it again).
     row.number.addEventListener('change', () => {
-      row.number.removeAttribute('aria-invalid');
+      markInvalid(row, false);
       draw();
     });
     row.number.addEventListener('focus', reveal);
@@ -207,6 +243,7 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
       linked = hasChanges(state);
       draw();
       settle();
+      showLinked();
     });
   }
 
@@ -216,4 +253,5 @@ export function mountWhatIf(root, { hospital, model, estimate, texts, share = fa
   el.controls.hidden = false;
   el.copy.hidden = false;
   el.nojs.hidden = true;
+  showLinked();
 }

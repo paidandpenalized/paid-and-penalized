@@ -17,6 +17,10 @@ export const WINSOR_HIGH = 95;
 export const SIR_EXPECTED = 1;
 export const SIR_EXPECTED_TEXT = decimal(SIR_EXPECTED, 1);
 
+// The what-if's ramp spans these percentiles of published Total HAC Scores (a display choice, not CMS's method).
+export const RAMP_LOW_PCT = 5;
+export const RAMP_HIGH_PCT = 95;
+
 export const CLAIMS = {
   REDUCTION_PCT: 'HACRP-01',
   CUTOFF_PERCENTILE: 'HACRP-02',

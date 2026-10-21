@@ -39,19 +39,20 @@ const legend = (view) => footnoteLegend({
 });
 
 // The what-if for a scored hospital, CMS's values to start, and the page data its client module reads: this
-// hospital's record, the model and the estimate tags (never the whole file), plus the words the slide text needs.
-function whatIfBlock(view, { hospital, model, estimate }, source, assets) {
+// hospital's record, the model and the estimate tags (never the whole file), the words the slide text needs, and
+// the ramp's national range of scores.
+function whatIfBlock(view, { hospital, model, estimate, range }, source, assets) {
   const script = assets.js['hacrp-hospital'];
   if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
   const page = { name: view.name, fy: view.fy, path: view.path, source: { id: source.id, pdcReleased: source.pdcReleased }, boundaryText: view.boundaryText };
   const vm = viewModel(initialState(hospital, model), hospital, model, estimate);
-  const body = html`${renderWhatIf({ vm, hospital, model, texts: whatIfTexts({ hospital, model, ...page }) })}
-${jsonScript('hacrp-hospital', { hospital, model, estimate, page })}`;
+  const body = html`${renderWhatIf({ vm, hospital, model, texts: whatIfTexts({ hospital, model, ...page }), share: true, range })}
+${jsonScript('hacrp-hospital', { hospital, model, estimate, page, range })}`;
   return { body, script };
 }
 
-// robots: null for an indexable page, else the meta robots value. whatif: { hospital, model, estimate } for the
-// what-if; a hospital with no score never gets one.
+// robots: null for an indexable page, else the meta robots value. whatif: { hospital, model, estimate, range } for
+// the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
 export function hospitalPage({ view, source, robots, assets, whatif = null }) {
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };

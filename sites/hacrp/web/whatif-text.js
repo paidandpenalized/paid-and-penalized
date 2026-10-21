@@ -4,6 +4,7 @@
 // hospital is this site's synthetic record, so its words never call its values or decision CMS's.
 import { isMedianHospital } from '../../../engine/js/hacrp/median.js';
 import { cmsText, decimal, isoDate, longDate, pct, signed } from '../../../web/render/format.js';
+import { limitOf } from '../../../web/whatif/fragment.js';
 import { REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, measureLabel } from './copy.js';
 
@@ -203,6 +204,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
         slider: fill('whatifSliderLabel', { short }),
         placeholder: input.assigned ? fill('whatifAssignedPlaceholder', { z: cmsText(hospital.measures[id].zText) }) : null,
         assignedHelp: input.assigned ? fill('whatifAssignedHelp') : null,
+        invalid: fill('whatifInvalid', { min: value(0, id), max: value(limitOf(p), id) }),
       };
     },
     bars: {
@@ -211,8 +213,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       value: (contribution) => signed(contribution, PART_DP),
       assigned: fill('whatifBarAssigned'),
     },
-    // NHSN predicted counts: SIRs only, for a record with an HAI period (the median hospital has none).
-    predicted: hai.start === null ? null : {
+    // NHSN predicted counts: SIRs only, for a real hospital (its words compare with CMS's value) with an HAI period.
+    predicted: median || hai.start === null ? null : {
       label: (id) => (id === 'PSI90' ? null
         : fill('whatifPredictedLabel', { short: SHORT_NAMES[id], start: longDate(hai.start), end: longDate(hai.end) })),
       help: fill('whatifPredictedHelp'),

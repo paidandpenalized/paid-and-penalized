@@ -1,9 +1,12 @@
 // The HACRP page generator: checks acceptance A1 on the emitted data (the build fails if it doesn't hold), then
 // emits the program page and one page per hospital through the build context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
+import { scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
+import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
 import { loadHacrp } from './data.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { hospitalPage } from './pages/hospital.js';
@@ -29,6 +32,13 @@ export function hospitalRows(views) {
     .map((v) => [v.ccn, v.name, v.city, v.state, v.score.text, v.decision.text])
     .sort((x, y) => x[1].localeCompare(y[1], 'en') || x[3].localeCompare(y[3], 'en') || x[2].localeCompare(y[2], 'en'));
   return { hospitalPath: HOSPITALS_PATH, rows };
+}
+
+// The what-if ramp's national span: the RAMP_LOW_PCT and RAMP_HIGH_PCT percentiles of CMS's published Total HAC
+// Scores (SAS's default definition, as elsewhere), so a hospital's ramp shows its score among most others'.
+export function scoreRange(hospitals) {
+  const totals = scoredHospitals(hospitals).map((h) => h.total).sort((a, b) => a - b);
+  return { low: percentileSas5(totals, RAMP_LOW_PCT / 100), high: percentileSas5(totals, RAMP_HIGH_PCT / 100) };
 }
 
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass
@@ -61,9 +71,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     }),
   });
 
+  const range = scoreRange(hospitals);
   for (const [i, view] of views.entries()) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital: hospitals[i], model, estimate } }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, whatif: { hospital: hospitals[i], model, estimate, range } }) });
   }
 }
 

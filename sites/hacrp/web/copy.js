@@ -176,7 +176,8 @@ export const COPY = {
     text: 'National median {median} (the tick). CMS floor {floor} and cap {cap}: every value below the floor, or above the cap, scores the same (shaded).',
     claim: 'HACRP-03',
   },
-  whatifSliderLabel: { text: '{short}, slider', claim: null },
+  whatifSliderLabel: { text: '{short} value', claim: null },
+  whatifInvalid: { text: 'Enter a number from {min} to {max}.', claim: null },
   whatifAssignedPlaceholder: { text: 'none (assigned z-score {z})', claim: null },
   whatifAssignedHelp: {
     text: "CMS assigned this measure's score; CMS's footnote in the table above gives the reason. Enter a value to see the score had it been submitted.",

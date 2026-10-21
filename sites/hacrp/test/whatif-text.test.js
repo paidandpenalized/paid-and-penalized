@@ -7,7 +7,7 @@ import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { initialState, reduce, viewModel } from '../../../web/whatif/state.js';
 import { hospitalView } from '../web/view.js';
-import { cutText, flagText, scenarioSentence, slideText, solverRows } from '../web/whatif-text.js';
+import { cutText, flagText, scenarioSentence, slideText, solverRows, whatIfTexts } from '../web/whatif-text.js';
 import { inputs } from './fixtures.js';
 
 const { model } = loadHacrp();
@@ -259,4 +259,17 @@ test('the median hospital: this site\'s hypothetical, never described as CMS\'s 
     'Source: CMS Provider Data Catalog, HACRP FY2026 (yq43-i98g), released August 13, 2026.',
     STANDING,
   ].join('\n'));
+});
+
+test('component texts: NHSN fields only for a real hospital with an HAI period; each field names its range', () => {
+  const make = (hospital) => whatIfTexts({ hospital, model, name: null, fy: 2026, path: '/hacrp/', source: SOURCE, boundaryText: { highestNo: '0.3792', lowestYes: '0.3799' } });
+  const periods = { psi90: { start: '07/01/2022', end: '06/30/2024' }, hai: { start: '01/01/2023', end: '12/31/2024' } };
+  assert.equal(make(medianHospital(model, { fiscalYear: '2026', periods })).predicted, null, 'median hospital, even with periods');
+  const t = make(H.no);
+  assert.match(t.predicted.label('CLABSI'), /January 1, 2023 to December 31, 2024/);
+  assert.equal(t.predicted.label('PSI90'), null);
+  const vm = vmOf(H.no);
+  const mrsa = vm.inputs.find((i) => i.id === 'MRSA');
+  assert.equal(t.measure(mrsa, vm.result.measures.MRSA).invalid, 'Enter a number from 0.000 to 17.620.');
+  assert.equal(t.measure(mrsa, vm.result.measures.MRSA).slider, 'MRSA value');
 });

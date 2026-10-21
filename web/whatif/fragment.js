@@ -8,6 +8,8 @@ const TAG = 'whatif';
 const DECIMAL = /^\d{1,6}(\.\d{1,8})?$/;
 // A value may be up to this many times the measure's cap: past the cap the score no longer moves.
 export const MAX_FACTOR = 10;
+// The highest value a reader may set for a measure (params p): what the number field allows and a link may carry.
+export const limitOf = (p) => toUnit(MAX_FACTOR * p.cap, p.decimals);
 
 // x at the measure's display unit (10^-decimals). Float noise is snapped first, so 0.6405000000000001 reads 0.641.
 export function toUnit(x, decimals) {

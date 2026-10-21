@@ -8,7 +8,7 @@ import { whatIf } from '../../engine/js/hacrp/whatif.js';
 import { fillCopy } from '../render/components.js';
 import { decimal } from '../render/format.js';
 import { COPY } from '../copy.js';
-import { MAX_FACTOR, toUnit } from './fragment.js';
+import { limitOf, toUnit } from './fragment.js';
 
 // Measures reported as an SIR, for which NHSN publishes a predicted infection count. PSI 90 is not one.
 const NOT_SIR = new Set(['PSI90']);
@@ -31,7 +31,7 @@ export function initialState(hospital, model) {
     values: { ...cms },
     decimals: pick((p) => p.decimals),
     medians: pick((p) => toUnit(p.median, p.decimals)),
-    limits: pick((p) => toUnit(MAX_FACTOR * p.cap, p.decimals)),
+    limits: pick(limitOf),
     predicted: {},
   };
 }

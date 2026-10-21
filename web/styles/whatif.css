@@ -37,6 +37,7 @@
 .wi-ramp__line { stroke: var(--pen); stroke-width: 2; }
 .wi-ramp__tick-label { fill: var(--ink-2); }
 .wi-ramp__label { fill: var(--ink); font-family: var(--font-body); font-weight: 600; }
+.wi-ramp__edge { fill: var(--ink); font-family: var(--font-body); }
 .wi-tri--cms { fill: var(--ink); }
 .wi-tri--hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
 
@@ -54,6 +55,8 @@
 .wi-measure__controls { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 14px; align-items: center; }
 .wi-number { width: 100%; padding: 6px 8px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-number[aria-invalid="true"] { border-color: var(--pen); box-shadow: 0 0 0 1px var(--pen); }
+/* The words carry the error; the rule beside them repeats it. */
+.wi-error { padding-left: 8px; border-left: 3px solid var(--pen); font-weight: 600; }
 .wi-fields:disabled .wi-number, .wi-fields:disabled .wi-range { cursor: not-allowed; }
 
 /* A track drawn behind a transparent native range input: median tick, cap tick, and hatched values that score the

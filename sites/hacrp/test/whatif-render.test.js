@@ -4,13 +4,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { build as esbuild } from 'esbuild';
+import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { MAX_FACTOR, encode, toUnit } from '../../../web/whatif/fragment.js';
+import { NARROW_PX, labelSpan, rampAt, rampDomain, rampLabels, rampSide, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
 import { changesOf, initialState, reduce, viewModel } from '../../../web/whatif/state.js';
 import { loadHacrp } from '../web/data.js';
-import { HACRP } from '../web/generate.js';
+import { HACRP, scoreRange } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -18,6 +20,7 @@ import { master } from './fixtures.js';
 
 const D = loadHacrp();
 const { model, estimate } = D;
+const RANGE = scoreRange(D.hospitals);
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', 'hacrp-hospital': '/assets/hacrp-hospital.test.js' } };
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
 const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
@@ -37,8 +40,9 @@ const textsFor = (h) => whatIfTexts({
   hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: `/hacrp/hospital/${h.ccn.toLowerCase()}/`,
   source: D.source, boundaryText: D.boundaryText,
 });
-const render = (h, state = initialState(h, model), share = true) =>
-  String(renderWhatIf({ vm: viewModel(state, h, model, estimate), hospital: h, model, texts: textsFor(h), share }));
+const render = (h, state = initialState(h, model), share = true, texts = textsFor(h)) =>
+  String(renderWhatIf({ vm: viewModel(state, h, model, estimate), hospital: h, model, texts, share, range: RANGE }));
+const set = (h, changes) => Object.entries(changes).reduce((s, [id, value]) => reduce(s, { type: 'set', id, value }), initialState(h, model));
 const all = (text, re) => [...text.matchAll(re)];
 const inputsOf = (text, type) => all(text, new RegExp(`<input[^>]*type="${type}"[^>]*>`, 'g')).map(([tag]) => tag);
 const attr = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
@@ -201,7 +205,7 @@ const pick = (pred, what) => {
 };
 const pageFor = (h) => hospitalPage({
   view: hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: D.master.get(h.ccn), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText }),
-  source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate },
+  source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE },
 });
 
 test('a scored page carries the what-if, both standing lines, its own record as page data, and the client module', () => {
@@ -212,7 +216,8 @@ test('a scored page carries the what-if, both standing lines, its own record as 
   assert.ok(text.includes(esc(WHATIF_STANDING)));
   const json = /<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(text)[1];
   const data = JSON.parse(json);
-  assert.deepEqual(Object.keys(data).sort(), ['estimate', 'hospital', 'model', 'page']);
+  assert.deepEqual(Object.keys(data).sort(), ['estimate', 'hospital', 'model', 'page', 'range']);
+  assert.deepEqual(data.range, RANGE);
   assert.deepEqual(data.hospital, h);
   assert.deepEqual(data.model, model);
   assert.equal(data.page.name, D.master.get(h.ccn).name);
@@ -232,7 +237,7 @@ test('no score, and the "Yes" row with no score: no what-if, no inputs, no page 
 test('hostile text in a hospital name stays text in the page data', () => {
   const h = { ...H.no, name: '</script><script>alert(1)</script>' };
   const view = hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: master(h.ccn, { name: '<b>&"x"' }), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText });
-  const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate } });
+  const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE } });
   assert.ok(!text.includes('<script>alert'));
   const json = /<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(text)[1];
   assert.equal(JSON.parse(json).hospital.name, h.name);
@@ -252,4 +257,98 @@ test('the browser bundle builds; dom.js and the client never write markup or rea
     }
   }
   for (const banned of ['innerHTML', 'localStorage', 'sessionStorage', 'XMLHttpRequest', 'fetch(']) assert.ok(!js.includes(banned), `bundle: ${banned}`);
+});
+
+test('the ramp spans the national middle of published scores, widened for the starting score and the line', () => {
+  const totals = D.hospitals.filter((h) => h.total !== null).map((h) => h.total).sort((a, b) => a - b);
+  const share = (x) => totals.filter((t) => t >= x).length / totals.length;
+  assert.ok(RANGE.low < RANGE.high);
+  assert.ok(Math.abs(share(RANGE.low) - 0.95) < 0.01 && Math.abs(share(RANGE.high) - 0.05) < 0.01, 'p5 and p95');
+  assert.ok(totals.includes(RANGE.low) && totals.includes(RANGE.high), 'published scores, not hand-typed');
+  const { boundary } = model;
+  for (const actual of [0.2734, RANGE.low - 0.5, RANGE.high + 0.5]) {
+    const [lo, hi] = rampDomain(RANGE, { actual, ...boundary });
+    for (const x of [RANGE.low, RANGE.high, actual, boundary.highestNo, boundary.lowestYes]) assert.ok(x > lo && x < hi, `${actual}: ${x} inside`);
+  }
+  // Narrower than the reach of the score, which Task 8's ramp spanned.
+  const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
+  const [lo, hi] = rampDomain(RANGE, vm.ramp);
+  assert.ok(hi - lo < (vm.ramp.max - vm.ramp.min) * 0.75);
+});
+
+test('a hypothetical past the ramp sits at its edge with an arrow; inside, no arrow', () => {
+  const edge = (text) => /data-wi="hyp-edge"[^>]*>([^<]*)</.exec(text)[1];
+  assert.equal(edge(render(H.no)), '');
+  const high = set(H.no, { PSI90: 1.6, CLABSI: 3, CAUTI: 3, SSI: 3, CDI: 3, MRSA: 3 });
+  const vm = viewModel(high, H.no, model, estimate);
+  assert.equal(rampSide(vm.result.after.score, rampDomain(RANGE, vm.ramp)), 1);
+  const text = render(H.no, high);
+  assert.equal(edge(text), '▶');
+  assert.match(text, new RegExp(`data-wi="hyp" href="#wi-tri" x="${rampX(1).replace('.', '\\.')}"`));
+  const zeros = set(H.yes, { PSI90: 0, CLABSI: 0, CAUTI: 0, SSI: 0, CDI: 0, MRSA: 0 });
+  const low = viewModel(zeros, H.yes, model, estimate);
+  assert.equal(rampSide(low.result.after.score, rampDomain(RANGE, low.ramp)), -1);
+  const lowText = render(H.yes, zeros);
+  assert.equal(edge(lowText), '◀');
+  assert.match(lowText, new RegExp(`data-wi="hyp" href="#wi-tri" x="${rampX(0).replace('.', '\\.')}"`));
+});
+
+test('the two mark labels never overlap and stay inside the ramp, at any pair of places and widths', () => {
+  for (const [a, b] of [['CMS reports', 'Hypothetical'], ['Starting point', 'Hypothetical']]) {
+    for (let i = 0; i <= 100; i += 2) {
+      for (let j = 0; j <= 100; j += 2) {
+        const labels = rampLabels(i / 100, j / 100, a, b);
+        for (const width of [NARROW_PX, 400, 700, 1000]) {
+          const s = labelSpan(labels.start, a.length, width);
+          const h = labelSpan(labels.hyp, b.length, width);
+          const where = `${a} ${i} ${j} @${width}`;
+          assert.ok(s[1] <= h[0] || h[1] <= s[0], `${where}: overlap`);
+          for (const [l, r] of [s, h]) assert.ok(l >= 0 && r <= width, `${where}: outside`);
+        }
+      }
+    }
+  }
+  // Close marks put the left mark's label on the left.
+  const near = rampLabels(0.5, 0.52, 'CMS reports', 'Hypothetical');
+  assert.ok(labelSpan(near.start, 11, NARROW_PX)[1] <= labelSpan(near.hyp, 12, NARROW_PX)[0]);
+  const flipped = rampLabels(0.52, 0.5, 'CMS reports', 'Hypothetical');
+  assert.ok(labelSpan(flipped.hyp, 12, NARROW_PX)[1] <= labelSpan(flipped.start, 11, NARROW_PX)[0]);
+  assert.ok(rampAt(0, [0, 1]) === 0);
+});
+
+test('each number field has an error line naming its range, hidden until an entry is refused', () => {
+  const text = render(H.no);
+  const p = model.params.MRSA;
+  const line = /<p class="small wi-error" id="wi-MRSA-e" data-wi="error" hidden>([^<]*)<\/p>/.exec(text);
+  assert.ok(line, 'the MRSA error line');
+  assert.equal(line[1], `Enter a number from 0.000 to ${toUnit(MAX_FACTOR * p.cap, p.decimals).toFixed(3)}.`);
+  assert.equal(all(text, /data-wi="error"/g).length, 6);
+});
+
+test('a reader value on an assigned measure: its bar loses the hatch and the "assigned by CMS" note', () => {
+  const before = render(H.assigned);
+  assert.match(/<li data-bar="SSI"[^>]*>/.exec(before)[0], /--assigned/);
+  assert.doesNotMatch(/data-wi="bar-assigned"[^>]*>/.exec(before)[0], /hidden/);
+  const after = render(H.assigned, set(H.assigned, { SSI: 0.8 }));
+  assert.doesNotMatch(/<li data-bar="SSI"[^>]*>/.exec(after)[0], /--assigned/);
+  assert.match(/data-wi="bar-assigned"[^>]*>/.exec(after)[0], /hidden/);
+});
+
+test('share and range are required; the slider label names the value, not the role; the solver sits under its button', () => {
+  const vm = viewModel(initialState(H.no, model), H.no, model, estimate);
+  assert.throws(() => renderWhatIf({ vm, hospital: H.no, model, texts: textsFor(H.no), range: RANGE }), /share/);
+  assert.throws(() => renderWhatIf({ vm, hospital: H.no, model, texts: textsFor(H.no), share: true }), /range/);
+  const text = render(H.no);
+  assert.match(text, /<label class="vh" for="wi-MRSA-r">MRSA value<\/label>/);
+  assert.doesNotMatch(text, /slider</);
+  const at = (s) => text.indexOf(s);
+  assert.ok(at('data-wi="solve"') < at('id="wi-solver"') && at('id="wi-solver"') < at('data-measure="PSI90"'));
+});
+
+test('the median hospital never gets NHSN fields, even with periods', () => {
+  const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
+  const texts = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText });
+  assert.equal(texts.predicted, null);
+  const text = render(m, initialState(m, model), false, texts);
+  assert.doesNotMatch(text, /data-wi="predicted"|than at CMS/);
 });

@@ -1,34 +1,69 @@
-// The what-if's browser module without a browser: a fake root that hands out one stub element per selector, and a
-// stub window that records every read of location and history. Synthetic hospital (CCN 990026) on the FY2026 model.
+// The what-if's browser module without a browser. The fake DOM is read from the component render.js writes for the
+// same hospital: an element exists only if the markup has it (querySelector returns null otherwise), with the
+// markup's attributes. The stub window records every read of location and history. Synthetic hospitals (CCNs
+// 990026-990028) on the FY2026 model.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { mountWhatIf } from '../../../web/whatif/dom.js';
+import { NARROW_PX, labelSpan, rampX } from '../../../web/whatif/marks.js';
+import { renderWhatIf } from '../../../web/whatif/render.js';
+import { initialState, viewModel } from '../../../web/whatif/state.js';
 import { loadHacrp } from '../web/data.js';
+import { scoreRange } from '../web/generate.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
 const D = loadHacrp();
 const { model, estimate } = D;
+const RANGE = scoreRange(D.hospitals);
 const PATH = '/hacrp/hospital/990026/';
-const H = modelHospital(model, '990026', { values: { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 } });
-const texts = whatIfTexts({ hospital: H, model, name: 'Example General Hospital', fy: D.fy, path: PATH, source: D.source, boundaryText: D.boundaryText });
+const V = { PSI90: 1.0, CLABSI: 0.8, CAUTI: 0.6, SSI: 0.9, CDI: 0.5, MRSA: 0.9 };
+const H = modelHospital(model, '990026', { values: V });
+const ASSIGNED = modelHospital(model, '990027', { values: { ...V, SSI: 'assigned' } });
+const MARYLAND = modelHospital(model, '990028', { values: V, decision: 'N/A', state: 'MD' });
+const textsFor = (h) => whatIfTexts({ hospital: h, model, name: 'Example General Hospital', fy: D.fy, path: PATH, source: D.source, boundaryText: D.boundaryText });
+const texts = textsFor(H);
 
-function element(selector) {
+const ATTR = /\s([\w:-]+)(?:="([^"]*)")?/g;
+// One element: its opening tag's attributes, and the markup inside it (chunk) to look its children up in.
+function node(tag, chunk) {
+  const attrs = new Map([...tag.replace(/^<\w+/, '').matchAll(ATTR)].map(([, k, v]) => [k, v ?? '']));
   const listeners = new Map();
-  const children = new Map();
-  const attrs = new Map();
+  const kids = new Map();
   const el = {
-    selector, hidden: false, disabled: false, textContent: '', value: '', attrs, style: { props: new Map(), setProperty(k, v) { this.props.set(k, v); } },
+    id: attrs.get('id') ?? '', hidden: attrs.has('hidden'), disabled: attrs.has('disabled'), value: attrs.get('value') ?? '',
+    textContent: '', attrs, style: { props: new Map(), setProperty(k, v) { this.props.set(k, v); } },
     setAttribute: (k, v) => attrs.set(k, String(v)),
     getAttribute: (k) => (attrs.has(k) ? attrs.get(k) : null),
     removeAttribute: (k) => attrs.delete(k),
     addEventListener: (type, fn) => listeners.set(type, [...(listeners.get(type) ?? []), fn]),
     fire: (type) => (listeners.get(type) ?? []).forEach((fn) => fn({ type, target: el, currentTarget: el })),
-    querySelector: (sel) => children.get(sel) ?? children.set(sel, element(sel)).get(sel),
+    querySelector(sel) {
+      if (!kids.has(sel)) kids.set(sel, find(chunk, sel));
+      return kids.get(sel);
+    },
     focus() {}, select() { el.selected = true; }, scrollIntoView() { el.scrolled = true; },
   };
   return el;
 }
+
+// The selectors dom.js uses: [data-wi="…"], [data-measure="…"], [data-bar="…"]. null when the markup lacks it.
+function find(chunk, sel) {
+  const [, kind, name] = /^\[data-(wi|measure|bar)="([^"]+)"\]$/.exec(sel);
+  const at = chunk.indexOf(` data-${kind}="${name}"`);
+  if (at === -1) return null;
+  const open = chunk.lastIndexOf('<', at);
+  const tag = chunk.slice(open, chunk.indexOf('>', at) + 1);
+  const ends = { wi: [], measure: ['data-measure="', '</fieldset>'], bar: ['</li>'] }[kind];
+  const end = Math.min(...ends.map((e) => chunk.indexOf(e, at + 2)).filter((i) => i !== -1), chunk.length);
+  return node(tag, chunk.slice(open, end));
+}
+
+const rootFor = (h, share, t = textsFor(h)) => {
+  const html = String(renderWhatIf({ vm: viewModel(initialState(h, model), h, model, estimate), hospital: h, model, texts: t, share, range: RANGE }));
+  return node(/^<section[^>]*>/.exec(html)[0], html);
+};
 
 function windowStub({ hash = '', clipboard } = {}) {
   const touched = [];
@@ -57,9 +92,9 @@ function windowStub({ hash = '', clipboard } = {}) {
   return { env, touched, urls, flush, navigate };
 }
 
-const mount = (share, stub) => {
-  const root = element('#whatif');
-  mountWhatIf(root, { hospital: H, model, estimate, texts, share, env: stub.env });
+const mount = (share, stub, h = H) => {
+  const root = rootFor(h, share);
+  mountWhatIf(root, { hospital: h, model, estimate, texts: textsFor(h), share, range: RANGE, env: stub.env });
   return root;
 };
 const q = (root, name) => root.querySelector(`[data-wi="${name}"]`);
@@ -204,4 +239,99 @@ test('copy for a slide: the clipboard when it works, else the text selected in a
   assert.ok(box.selected);
   assert.match(box.value, /Total HAC Score/);
   assert.equal(q(root2, 'copy-status').textContent, texts.copyFallback);
+});
+
+test('a refused entry shows its error line, named by the field; a valid entry or a commit hides it', () => {
+  const root = mount(false, windowStub());
+  const n = field(root, 'MRSA', 'number');
+  const error = field(root, 'MRSA', 'error');
+  const base = n.getAttribute('aria-describedby');
+  assert.equal(error.hidden, true);
+  type(n, '99999');
+  assert.equal(error.hidden, false);
+  assert.equal(n.getAttribute('aria-describedby'), `${base} wi-MRSA-e`);
+  type(n, '1.4');
+  assert.equal(error.hidden, true);
+  assert.equal(n.getAttribute('aria-describedby'), base);
+  type(n, '99999');
+  n.fire('change');
+  assert.equal(error.hidden, true);
+  assert.equal(n.getAttribute('aria-invalid'), null);
+  assert.equal(n.value, '1.400');
+});
+
+test('the ramp: a hypothetical past the range clamps to the edge with an arrow; labels never overlap', () => {
+  const root = mount(false, windowStub());
+  const labelsApart = () => {
+    const span = (name, chars) => {
+      const el = q(root, name);
+      return labelSpan({ t: (parseFloat(el.getAttribute('x')) - 5) / 90, anchor: el.getAttribute('text-anchor'), dx: Number(el.getAttribute('dx')) }, chars, NARROW_PX);
+    };
+    const [s, h] = [span('start-label', texts.start.length), span('hyp-label', texts.hypothetical.length)];
+    return s[1] <= h[0] || h[1] <= s[0];
+  };
+  type(field(root, 'MRSA', 'number'), '1.4');
+  assert.equal(q(root, 'hyp-edge').textContent, '');
+  assert.ok(labelsApart());
+  for (const id of Object.keys(V)) type(field(root, id, 'number'), '5');
+  assert.equal(q(root, 'hyp').getAttribute('x'), rampX(1));
+  assert.equal(q(root, 'hyp-edge').textContent, '▶');
+  assert.ok(labelsApart());
+  q(root, 'reset').fire('click');
+  assert.equal(q(root, 'hyp-edge').textContent, '');
+  assert.ok(labelsApart(), 'no change: both marks at one place, labels side by side');
+});
+
+test('the live region carries the estimate note when a tagged measure changed', () => {
+  const tagged = Object.keys(estimate).find((id) => estimate[id].tagged);
+  const untagged = Object.keys(estimate).find((id) => !estimate[id].tagged);
+  const stub = windowStub();
+  const root = mount(false, stub);
+  type(field(root, untagged, 'number'), '0.3');
+  stub.flush();
+  assert.equal(q(root, 'sentence-est').textContent, '');
+  type(field(root, tagged, 'number'), '0.3');
+  stub.flush();
+  assert.equal(q(root, 'sentence-est').textContent, ` ${texts.estimate.text}`);
+});
+
+test('a link that changed something scrolls the what-if into view; a clean page does not', () => {
+  assert.equal(mount(true, windowStub({ hash: '#whatif&MRSA=1.4' })).scrolled, true);
+  assert.equal(mount(true, windowStub()).scrolled, undefined);
+  assert.equal(mount(true, windowStub({ hash: '#whatif&MRSA=abc' })).scrolled, undefined);
+});
+
+test('an assigned measure\'s bar follows the state: hatched and noted until the reader enters a value', () => {
+  const root = mount(false, windowStub(), ASSIGNED);
+  const bar = root.querySelector('[data-bar="SSI"]');
+  const note = bar.querySelector('[data-wi="bar-assigned"]');
+  assert.match(bar.getAttribute('class'), /--assigned/);
+  type(field(root, 'SSI', 'number'), '0.8');
+  assert.doesNotMatch(bar.getAttribute('class'), /--assigned/);
+  assert.equal(note.hidden, true);
+  type(field(root, 'SSI', 'number'), '');
+  assert.match(bar.getAttribute('class'), /--assigned/);
+  assert.equal(note.hidden, false);
+});
+
+test('mounting on markup that lacks parts never throws: Maryland, share false, an assigned measure, the median hospital', () => {
+  assert.equal(rootFor(MARYLAND, true).querySelector('[data-wi="solve"]'), null, 'the fake returns null for absent parts');
+  assert.equal(rootFor(H, false).querySelector('[data-wi="banner"]'), null);
+  for (const [h, share] of [[MARYLAND, true], [MARYLAND, false], [H, false], [ASSIGNED, true]]) {
+    const stub = windowStub({ hash: '#whatif&MRSA=1.4' });
+    const root = mount(share, stub, h);
+    type(field(root, 'MRSA', 'number'), '1.2');
+    q(root, 'median').fire('click');
+    q(root, 'reset').fire('click');
+    stub.flush();
+  }
+  const m = medianHospital(model, { fiscalYear: String(D.fy), periods: D.periods });
+  const t = whatIfTexts({ hospital: m, model, name: null, fy: D.fy, path: '/hacrp/', source: D.source, boundaryText: D.boundaryText });
+  const root = rootFor(m, false, t);
+  mountWhatIf(root, { hospital: m, model, estimate, texts: t, share: false, range: RANGE, env: windowStub().env });
+  type(field(root, 'MRSA', 'number'), '1.2');
+});
+
+test('share is required', () => {
+  assert.throws(() => mountWhatIf(rootFor(H, false), { hospital: H, model, estimate, texts, range: RANGE, env: windowStub().env }), /share/);
 });
