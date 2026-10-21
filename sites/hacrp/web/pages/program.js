@@ -120,14 +120,14 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 <section class="block" aria-labelledby="measures-h">
 <h2 id="measures-h">${t('measuresHeading')}</h2>
 <p>${t('programMeasures')} ${t('programMeasuresZ')}</p>
-<ul class="measure-list">${measures.map((m) => html`<li>${m.label} <span class="short">(${m.short})</span></li>`)}</ul>
+<dl class="measure-list">${measures.map((m) => html`<div><dt>${m.short}</dt><dd>${m.label}</dd></div>`)}</dl>
 </section>
 <section class="block" aria-labelledby="periods-h">
 <h2 id="periods-h">${t('periodsHeading')}</h2>
-<ul class="measure-list">
-<li>${fill('periodPsi', { label: psi.label, short: psi.short, start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) })}</li>
-<li>${fill('periodHai', { shorts: hai, start: longDate(periods.hai.start), end: longDate(periods.hai.end) })}</li>
-</ul>
+<dl class="measure-list">
+<div><dt>${psi.short}</dt><dd>${fill('periodRange', { start: longDate(periods.psi90.start), end: longDate(periods.psi90.end) })}</dd></div>
+<div><dt>${hai}</dt><dd>${fill('periodRange', { start: longDate(periods.hai.start), end: longDate(periods.hai.end) })}</dd></div>
+</dl>
 </section>
 <section class="block" aria-labelledby="line-h">
 <h2 id="line-h">${t('lineHeading')}</h2>

@@ -17,7 +17,8 @@
 .h-sm { font: 700 var(--fs-md)/1.2 var(--font-body); }
 .short { font-family: var(--font-type); font-size: 0.92em; color: var(--ink-2); white-space: nowrap; }
 
-.standing { padding-left: 12px; border-left: 3px solid var(--ink); font-weight: 600; }
+/* The standing line is plain secondary text; the left rule is kept for the one true aside, the small-number note. */
+.standing { color: var(--ink-2); }
 .note { padding-left: 12px; border-left: 3px solid var(--line); }
 .line { font: 600 var(--fs-md)/1.45 var(--font-body); }
 

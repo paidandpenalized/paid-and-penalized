@@ -312,8 +312,8 @@ export const COPY = {
   programMeasures: { text: "The Total HAC Score is the average of a hospital's z-scores on these measures.", claim: 'HACRP-04' },
   programMeasuresZ: { text: 'Each z-score compares the hospital with all hospitals scored on that measure.', claim: 'HACRP-15' },
   periodsHeading: { text: 'When the data are from', claim: null },
-  periodPsi: { text: '{label} ({short}): {start} to {end}', claim: null },
-  periodHai: { text: 'Infection measures ({shorts}): {start} to {end}', claim: null },
+  // Beside the measures' short names.
+  periodRange: { text: '{start} to {end}', claim: null },
   lineHeading: { text: "CMS's line", claim: null },
   line: {
     text: 'Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of {lowestYes} or higher and none at {highestNo} or lower.',
