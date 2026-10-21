@@ -97,7 +97,8 @@
 .ht__sort { display: none; }
 /* Narrow screens: each hospital stacks into a block (the name across the top; "City, ST" at the left and the score
    at the right; the decision under the score), so the table never scrolls sideways. The column heads are hidden
-   (still read by screen readers); the Sort by menu stands in for their buttons. */
+   (still read by screen readers); the Sort by menu stands in for their buttons, which client/program.js takes out of
+   the tab order here. */
 @media (max-width: 640px) {
   .ht__sort { display: grid; }
   .ht__controls { display: grid; gap: 12px; }

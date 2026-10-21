@@ -18,7 +18,8 @@ import {
 
 // A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
 export const SETTLE_MS = 400;
-const NARROW = '(max-width: 640px)';
+// The phone layout (the program page's table uses it too).
+export const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 // A number field's entry: null when blank, NaN when it isn't a number.

@@ -1,6 +1,7 @@
 // The program page's table script (client/program.js) against a stand-in DOM: a failed fetch of the hospitals asset
 // says so and offers Try again, which fetches again; a fetch that then works mounts the table and clears the message.
-// Both the observer's path and a linked #state= path go through the same load.
+// Both the observer's path and a linked #state= path go through the same load. On a phone the sort buttons leave the
+// tab order.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -19,7 +20,7 @@ function el(name) {
   return node;
 }
 
-async function run(t, { hash = '', results }) {
+async function run(t, { hash = '', results, heads = [], media }) {
   const parts = { '#ht-state': el('select'), '#ht-name': el('input'), '#ht-count': el('count'), tbody: el('tbody'), '#ht-all': el('all') };
   const retry = el('retry');
   const nojs = el('nojs');
@@ -30,10 +31,11 @@ async function run(t, { hash = '', results }) {
   table.dataset.src = '/assets/hacrp-hospitals.test.json';
   table.closest = () => section;
   table.querySelector = (s) => parts[s] ?? null;
+  table.querySelectorAll = () => heads;
   const fetched = [];
   const errors = [];
   globalThis.document = { activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), createElement: el };
-  globalThis.window = { location: { hash, pathname: '/hacrp/', search: '' }, history: { replaceState() {} }, addEventListener() {} };
+  globalThis.window = { location: { hash, pathname: '/hacrp/', search: '' }, history: { replaceState() {} }, addEventListener() {}, ...(media && { matchMedia: media }) };
   globalThis.fetch = async (url) => {
     fetched.push(url);
     const ok = results.shift();
@@ -97,4 +99,28 @@ test('a table that loads first time shows no retry message', async (t) => {
   assert.deepEqual(s.retry.children, []);
   assert.equal(s.table.hidden, false);
   assert.notEqual(globalThis.document.activeElement, s.parts['#ht-state']);
+});
+
+test('on a phone the sort buttons leave the tab order (the Sort by menu stands in); on a wide screen they are back', async (t) => {
+  const heads = ['name', 'city', 'state', 'score', 'decision'].map((key) => {
+    const button = { attrs: new Map(), addEventListener() {} };
+    button.setAttribute = (k, v) => button.attrs.set(k, v);
+    button.removeAttribute = (k) => button.attrs.delete(k);
+    return { dataset: { key }, textContent: key, setAttribute() {}, removeAttribute() {}, querySelector: () => button };
+  });
+  const tabs = () => heads.map((th) => th.querySelector('button').attrs.get('tabindex') ?? null);
+  const queries = [];
+  const phone = { matches: true, listeners: [], addEventListener: (type, fn) => phone.listeners.push([type, fn]) };
+  const s = await run(t, { results: [true], heads, media: (query) => { queries.push(query); return phone; } });
+  assert.equal(s.table.hidden, false);
+  assert.deepEqual(queries, ['(max-width: 640px)']);
+  assert.deepEqual(tabs(), ['-1', '-1', '-1', '-1', '-1']);
+  const [[type, change]] = phone.listeners;
+  assert.equal(type, 'change');
+  phone.matches = false;
+  change();
+  assert.deepEqual(tabs(), [null, null, null, null, null]);
+  phone.matches = true;
+  change();
+  assert.deepEqual(tabs(), ['-1', '-1', '-1', '-1', '-1']);
 });

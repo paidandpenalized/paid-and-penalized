@@ -15,7 +15,7 @@ import {
   compareByName, decodeState, filterRows, hospitalHref, hospitalLabel, searchKey, sortRows, stateCodes, tableRows, withState,
 } from '../web/hospital-table.js';
 import { cmsText, count } from '../../../web/render/format.js';
-import { SETTLE_MS } from '../../../web/whatif/dom.js';
+import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
 
 const PATH = /^\/[a-z0-9/-]*\/$/;
@@ -210,6 +210,20 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     if (menu) menu.value = `${key}:${dir}`;
     ordered = sortRows(records, key, dir);
     render();
+  }
+  // On a phone the column heads are clipped out of view (styles.css), so their sort buttons leave the tab order
+  // while that layout holds; they stay in the accessibility tree, and the Sort by menu stands in for them.
+  const phone = window.matchMedia?.(NARROW);
+  function sortTabs() {
+    for (const th of heads) {
+      const button = th.querySelector('button');
+      if (phone.matches) button.setAttribute('tabindex', '-1');
+      else button.removeAttribute('tabindex');
+    }
+  }
+  if (phone) {
+    sortTabs();
+    phone.addEventListener?.('change', sortTabs);
   }
   for (const th of heads) {
     th.querySelector('button').addEventListener('click', () => {
