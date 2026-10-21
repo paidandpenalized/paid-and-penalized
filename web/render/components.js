@@ -10,8 +10,8 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 // “ and ”. The copy files keep plain ASCII; only their words are typeset, never a value filled into them (CMS's text
 // stays as CMS published it).
 export const typeset = (text) => text
-  .replace(/(?<=[\w}\)])'(?=[\w{])/g, '\u2019')
-  .replace(/(?<=s)'(?=[\s.,;:!?)]|$)/g, '\u2019')
+  .replace(/([\w})])'(?=[\w{])/g, '$1\u2019')
+  .replace(/s'(?=[\s.,;:!?)]|$)/g, 's\u2019')
   .replace(/(^|[\s(\[{])"/g, '$1\u201c')
   .replace(/"/g, '\u201d');
 
@@ -51,8 +51,9 @@ export function fillCopyKeep(copy, key, values, keep) {
   for (const group of keep) {
     const list = [group].flat();
     if (!list.every((n) => names.includes(n))) throw new RangeError(`copy "${key}": keep names an unknown placeholder`);
+    const last = mark(list[list.length - 1]);
     const start = text.indexOf(mark(list[0]));
-    const end = text.indexOf(mark(list.at(-1))) + mark(list.at(-1)).length;
+    const end = text.indexOf(last) + last.length;
     text = `${text.slice(0, start)}<span class="nw">${text.slice(start, end)}</span>${text.slice(end)}`;
   }
   for (const n of names) text = text.replace(mark(n), escapeHtml(values[n]));

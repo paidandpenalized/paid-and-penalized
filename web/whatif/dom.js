@@ -63,7 +63,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       barAssigned: q('bar-assigned', bar),
     }];
   }));
-  const el = Object.fromEntries(['head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
+  const el = Object.fromEntries(['detail', 'head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
     'start-label', 'hyp-edge', 'ramp', 'banner', 'copy',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
@@ -312,6 +312,15 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       settle();
       showLinked();
     });
+  }
+
+  // The result's table folds on a phone (its head already says before and after); wide screens and paper keep it
+  // open.
+  const narrow = env.matchMedia?.(NARROW);
+  if (el.detail && narrow) {
+    el.detail.open = !narrow.matches;
+    narrow.addEventListener?.('change', (e) => { if (!e.matches) el.detail.open = true; });
+    env.addEventListener('beforeprint', () => { el.detail.open = true; });
   }
 
   draw();

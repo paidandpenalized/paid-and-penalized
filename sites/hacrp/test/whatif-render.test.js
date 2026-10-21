@@ -97,7 +97,13 @@ test('the result box: before and after, the ramp with a solid and a hollow mark,
   assert.match(result, /class="wi-tri wi-tri--cms"/);
   assert.match(result, /class="wi-tri wi-tri--hyp"[^>]*data-wi="hyp"/);
   assert.match(result, /CMS’s line/);
-  assert.ok(result.includes(esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${D.boundaryText.lowestYes} or higher`)));
+  // Under the ramp, the line's two scores as the hero says them; the sentence itself is said once, under the what-if.
+  assert.ok(result.includes(`<p class="wi-ramp-ref">CMS’s line: between <span class="nw">${D.boundaryText.highestNo} and ${D.boundaryText.lowestYes}</span></p>`));
+  const line = esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${D.boundaryText.lowestYes} or higher`);
+  assert.ok(!result.includes(line));
+  assert.ok(text.includes(line));
+  // The table folds on a phone (dom.js); it is open in the markup.
+  assert.match(result, /<details class="wi-detail" data-wi="detail" open><summary>Show table<\/summary>\n<table class="wi-table">/);
   assert.doesNotMatch(result, /#[0-9a-f]{3,6}\b/i, 'colors come from tokens');
 });
 

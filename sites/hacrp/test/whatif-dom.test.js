@@ -112,6 +112,18 @@ test('mounting enables the fields, shows the buttons, hides the no-script note a
   assert.equal(q(root, 'solve').getAttribute('aria-expanded'), 'true');
 });
 
+test('the result table folds on a phone and stays open on a wider screen, and opens for printing', () => {
+  const wide = mount(false, windowStub());
+  assert.equal(q(wide, 'detail').open, true);
+  const stub = windowStub();
+  const listeners = {};
+  stub.env.matchMedia = (query) => ({ matches: query.includes('max-width'), addEventListener: (type, fn) => { listeners[type] = fn; } });
+  const narrow = mount(false, stub);
+  assert.equal(q(narrow, 'detail').open, false);
+  listeners.change({ matches: false });
+  assert.equal(q(narrow, 'detail').open, true, 'widening the window opens it');
+});
+
 test('share: false never reads or writes location or history, and does not listen for hash changes', () => {
   const stub = windowStub({ hash: '#whatif&MRSA=1.4' });
   const root = mount(false, stub);

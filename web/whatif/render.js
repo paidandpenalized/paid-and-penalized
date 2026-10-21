@@ -20,7 +20,9 @@
 //   same                                   a hypothetical cell that equals the start
 //   pill(flag) -> { kind, label }          the result head's decision pill (kind: components.js pill())
 //   rows { score, decision, cut }          the result table's row heads
-//   rampLine, rampLegend                   the ramp's line label and the sentence under it
+//   rampLine                               the ramp's line label
+//   rampRef                                a short line under the ramp naming the line's two scores, or null for none
+//   rampLegend                             the line in a sentence, said once under the what-if (outside the result)
 //   rampZone                               the shaded side's label (e.g. its cut), or null for none
 //   scores(vm) -> { before, after }        score texts
 //   flag(flag), cut(flag)                  decision and cut texts (cut: null where there is no cut)
@@ -34,6 +36,7 @@
 //   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { label(id) -> string | null, help, invalid, result(delta) }   NHSN counts (label null: no field)
 import { scaleLinear } from 'd3-scale';
+import { COPY } from '../copy.js';
 import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
@@ -105,6 +108,7 @@ function result(vm, range, texts) {
   const cutBefore = texts.cut(r.before.flag);
   return html`<div class="wi-result" data-wi="result" role="group" aria-label="${texts.resultLabel}">
 ${head(vm, texts)}
+<details class="wi-detail" data-wi="detail" open><summary>${COPY.showTable}</summary>
 <table class="wi-table">
 <thead><tr><td></td><th scope="col">${texts.start}</th><th scope="col">${texts.hypothetical}</th></tr></thead>
 <tbody>
@@ -113,8 +117,9 @@ ${head(vm, texts)}
 ${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td>${afterCell('cut', cutBefore, texts.cut(r.after.flag), texts.same)}</tr>`}
 </tbody>
 </table>
+</details>
 ${ramp(vm, range, texts)}
-<p class="small muted">${texts.rampLegend}</p>
+${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
 <p class="wi-sentence" data-wi="live" aria-live="polite"><span data-wi="sentence">${texts.sentence(vm)}</span><span class="vh" data-wi="sentence-est">${estimateNote(vm, texts)}</span></p>
 <p class="small wi-est" data-wi="estimate"${hiddenIf(!vm.estimated)}>${texts.estimate.text} <a href="${texts.estimate.href}">${texts.estimate.linkText}</a></p>
 <p class="wi-copy"><button type="button" class="wi-btn" data-wi="copy" hidden>${texts.copy}</button> <span class="small" data-wi="copy-status" role="status"></span></p>
@@ -231,6 +236,7 @@ ${vm.inputs.map((input) => measure(input, words[input.id], texts))}
 </div>
 ${bars(vm, words, texts)}
 <p class="small print-only">${texts.print}</p>
+<p class="small muted">${texts.rampLegend}</p>
 <p class="small muted">${texts.held}</p>
 <p class="standing">${texts.standing}</p>
 </section>`;

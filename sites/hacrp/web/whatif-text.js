@@ -10,7 +10,7 @@ import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
-import { fill, measureLabel, sourceText } from './copy.js';
+import { fill, fillKeep, measureLabel, sourceText } from './copy.js';
 
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
@@ -213,6 +213,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     rampLine: fill('whatifRampLine'),
     // The shaded side is the cut; Maryland's hospitals are not subject to it, so their ramp names no cut.
     rampZone: hospital.paymentReduction === 'N/A' ? null : pillOf('Yes').label,
+    // Under the ramp, the hero's short form of the line (not for Maryland, whose ramp names no cut); the sentence
+    // itself is said once, under the what-if.
+    rampRef: hospital.paymentReduction === 'N/A' ? null : fillKeep('heroLine', boundaryText, [['highestNo', 'lowestYes']]),
     rampLegend: `${fill('line', boundaryText)} ${fill('lineMaryland')}`,
     scores: (vm) => scores(vm.result, hospital),
     flag: flagText,
