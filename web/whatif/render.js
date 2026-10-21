@@ -109,7 +109,7 @@ function result(vm, range, texts) {
   return html`<div class="wi-result" data-wi="result" role="group" aria-label="${texts.resultLabel}">
 ${head(vm, texts)}
 <details class="wi-detail" data-wi="detail" open><summary>${COPY.showTable}</summary>
-<table class="wi-table">
+<table class="wi-table" aria-label="${texts.resultLabel}">
 <thead><tr><td></td><th scope="col">${texts.start}</th><th scope="col">${texts.hypothetical}</th></tr></thead>
 <tbody>
 <tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td>${afterCell('score', s.before, s.after, texts.same)}</tr>
@@ -192,9 +192,9 @@ function bars(vm, words, texts) {
 // The solver: one measure at a time, from the starting values (its answers never follow the reader's edits).
 function solverBlock(answers, s) {
   return html`<div class="wi-solver" id="wi-solver" data-wi="solver">
-<h3 class="h-sm">${s.question}</h3>
+<h3 class="h-sm" id="wi-solver-h">${s.question}</h3>
 <p class="small muted">${s.caption}</p>
-${printout(html`<table class="gb wi-solver__table">
+${printout(html`<table class="gb wi-solver__table" aria-labelledby="wi-solver-h">
 <thead><tr>${s.columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead>
 <tbody>${s.rows(answers).map((row) => html`<tr><th scope="row">${row.label}</th><td>${row.answer}</td><td>${row.note}</td></tr>`)}</tbody>
 </table>`)}

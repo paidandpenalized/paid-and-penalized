@@ -35,7 +35,7 @@ const program = (overrides = {}) => programPage({
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
 // One variant of a figure that draws its chart twice (phone wide, and wide for 720px and up).
 const variant = (body, fit) => new RegExp(`<svg role="img"[^>]*data-fit="${fit}"[\\s\\S]*?</svg>`).exec(body)[0];
-const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1));
+const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1));
 // Every number written in a sentence: digits with their commas, decimal point and sign.
 // Measure short names (PSI 90) are CMS's names, not numbers.
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s.replaceAll('&#39;', "'")).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];

@@ -103,7 +103,7 @@ test('the result box: before and after, the ramp with a solid and a hollow mark,
   assert.ok(!result.includes(line));
   assert.ok(text.includes(line));
   // The table folds on a phone (dom.js); it is open in the markup.
-  assert.match(result, /<details class="wi-detail" data-wi="detail" open><summary>Show table<\/summary>\n<table class="wi-table">/);
+  assert.match(result, /<details class="wi-detail" data-wi="detail" open><summary>Show table<\/summary>\n<table class="wi-table" aria-label="Result of the what-if">/);
   assert.doesNotMatch(result, /#[0-9a-f]{3,6}\b/i, 'colors come from tokens');
 });
 

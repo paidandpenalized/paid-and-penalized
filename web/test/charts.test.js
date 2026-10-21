@@ -312,7 +312,8 @@ test('ramp marks CMS\'s line and this hospital where the what-if ramp would, and
 test('figure: Figure N. and the takeaway, the SVG as an image named by alt, the source, and a Show table toggle', () => {
   const s = String(figure(FIG));
   assert.match(s, /^<figure class="fig" id="figure-1" data-figure>/);
-  assert.match(s, /<figcaption class="fig__cap"><span class="fig__n">Figure 1\.<\/span> Measure C adds the most\.<\/figcaption>/);
+  assert.match(s, /<figcaption class="fig__cap" id="figure-1-cap"><span class="fig__n">Figure 1\.<\/span> Measure C adds the most\.<\/figcaption>/);
+  assert.match(s, /<table class="gb" aria-labelledby="figure-1-cap">/, 'the table is named by the caption');
   assert.match(s, /<svg role="img" aria-label="Three bars\." class="chart chart--bars"/);
   assert.ok(s.includes('<p class="source fig__source">Synthetic source.</p>'));
   assert.match(s, /<details class="fig__table"><summary>Show table<\/summary>/);
@@ -478,7 +479,7 @@ const SNAPSHOTS = {
 <line class="chart-boundary" x1="192" x2="192" y1="18" y2="174"/>
 <text class="chart-label" x="192" y="14" text-anchor="middle">CMS&#39;s line</text></svg>`,
   figure: `<figure class="fig" id="figure-1" data-figure>
-<figcaption class="fig__cap"><span class="fig__n">Figure 1.</span> Measure C adds the most.</figcaption>
+<figcaption class="fig__cap" id="figure-1-cap"><span class="fig__n">Figure 1.</span> Measure C adds the most.</figcaption>
 <svg role="img" aria-label="Three bars." class="chart chart--bars" viewBox="0 0 360 92" width="100%" focusable="false"><defs><pattern id="chart-c1-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs>
 <g class="chart-mark" data-mark data-row="a" data-value="0.25"><title>Measure A: 0.25</title><rect class="chart-hit" x="0" y="4" width="360" height="28"/><text class="chart-label" x="0" y="22" text-anchor="start">Measure A</text><path class="chart-bar" d="M204 10H246A4 4 0 0 1 250 14V22A4 4 0 0 1 246 26H204Z"/><text class="chart-value" x="360" y="22" text-anchor="end">0.25</text></g>
 <g class="chart-mark" data-mark data-row="b" data-value="-0.125"><title>Measure B: −0.125</title><rect class="chart-hit" x="0" y="32" width="360" height="28"/><text class="chart-label" x="0" y="50" text-anchor="start">Measure B</text><path class="chart-bar" d="M204 38H185A4 4 0 0 0 181 42V50A4 4 0 0 0 185 54H204Z"/><text class="chart-value" x="360" y="50" text-anchor="end">−0.125</text></g>
@@ -486,7 +487,7 @@ const SNAPSHOTS = {
 <line class="chart-zero" x1="204" x2="204" y1="0" y2="92"/></svg>
 <p class="source fig__source"><span class="fig__claim">Estimate</span> · Synthetic source.</p>
 <details class="fig__table"><summary>Show table</summary>
-<div class="printout"><div class="printout__scroll"><table class="gb">
+<div class="printout"><div class="printout__scroll"><table class="gb" aria-labelledby="figure-1-cap">
 <thead><tr><th scope="col">Measure</th><th scope="col" data-numeric>Part</th></tr></thead>
 <tbody><tr><th scope="row">Measure A</th><td class="num" data-value="0.25">0.25</td></tr><tr><th scope="row">Measure B</th><td class="num" data-value="-0.125">−0.125</td></tr><tr><th scope="row">Measure C</th><td class="num" data-value="0.5">0.5</td></tr></tbody>
 </table></div></div>

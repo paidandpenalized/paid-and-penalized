@@ -57,7 +57,7 @@ ${withNotes && html`<td class="notes">${measureNotes(m)}</td>
 function measureTable(measures) {
   const withNotes = measures.some((m) => String(measureNotes(m)) !== '');
   const prose = measures.some((m) => measureNote(m) || m.footnotes.length);
-  return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}">
+  return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}" aria-labelledby="measures-h">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th>${withNotes && html`<th scope="col">${t('colNotes')}</th>`}</tr></thead>
 <tbody>${measures.map((m) => measureRow(m, withNotes))}</tbody>
 </table>`);

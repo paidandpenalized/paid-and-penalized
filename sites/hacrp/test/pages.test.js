@@ -325,7 +325,7 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
 test('the measure table has a Notes column only when some measure has a note, wide only for prose notes', () => {
   const table = (h) => {
     const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
-    return /<table class="gb gb--measures[^"]*">[\s\S]*?<\/table>/.exec(text)[0];
+    return /<table class="gb gb--measures[^"]*"[^>]*>[\s\S]*?<\/table>/.exec(text)[0];
   };
   for (const h of Object.values(CASES)) {
     const t = table(h);
@@ -339,7 +339,7 @@ test('the measure table has a Notes column only when some measure has a note, wi
   }
   // The unscored measure's footnote makes a prose note; the yes case has only estimate tags, so its column stays narrow.
   assert.match(table(CASES.no), /class="gb gb--measures gb--notes"/);
-  assert.match(table(CASES.yes), /class="gb gb--measures">/);
+  assert.match(table(CASES.yes), /class="gb gb--measures" aria-labelledby="measures-h">/, 'named by its section heading');
 });
 
 test('the hero is the lede: right after the page head, before the summary sentences', () => {

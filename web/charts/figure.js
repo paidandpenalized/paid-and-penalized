@@ -85,13 +85,13 @@ export function figure({ n, takeaway, svg, svgWide = null, source, claimLevel = 
   const image = svgWide ? html`${imageOf(svg, alt, 'narrow')}
 ${imageOf(svgWide, alt, 'wide')}` : imageOf(svg, alt, null);
   return html`<figure class="fig" id="figure-${n}" data-figure>
-<figcaption class="fig__cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
+<figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
-${printout(html`<table class="gb">
+${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
 <tbody>${cells.map((row) => html`<tr>${row.map((c, j) => tableCell(c, columns[j], j))}</tr>`)}</tbody>
 </table>`)}
