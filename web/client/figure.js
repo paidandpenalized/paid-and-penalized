@@ -1,6 +1,7 @@
 // Figures in the browser (web/charts/figure.js wrote them): column sort on the table, the CSV download built from
 // the table, and a tooltip for the chart's marks on hover and from the keyboard (the chart takes focus; arrow keys,
-// Home and End step through the marks; Escape hides the tooltip). Program-neutral: it runs on any page with
+// Home and End step through the marks; Escape hides the tooltip). A tap on a mark shows its tooltip until a tap
+// elsewhere, Escape or a scroll. Program-neutral: it runs on any page with
 // figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work. No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers } from '../../engine/js/stats.js';
@@ -17,9 +18,10 @@ export function tableCsv(table) {
 
 // Rows by column index, dir 1 (ascending) or -1. Numbers by value, with blanks and text such as "N/A" last in either
 // direction; text by locale. Ties keep their order (Array sort is stable).
+const collate = new Intl.Collator('en').compare;
 export function compareRows(index, numeric, dir) {
   const key = (row) => valueOf(row.cells[index]);
-  if (!numeric) return (a, b) => dir * key(a).localeCompare(key(b), 'en');
+  if (!numeric) return (a, b) => dir * collate(key(a), key(b));
   const num = (row) => (key(row) === '' ? NaN : Number(key(row)));
   return (a, b) => compareNumbers(num(a), num(b), dir);
 }
@@ -103,17 +105,20 @@ function mountMarks(fig) {
     if (announce) live.textContent = m.dataset.tip;
   };
 
+  // Onto a mark shows it; onto the chart's empty space (or a tap there) hides it.
   svg.addEventListener('pointerover', (e) => {
     const m = e.target.closest('[data-mark]');
     if (m) show(marks.indexOf(m), false);
+    else hide();
   });
-  svg.addEventListener('pointerleave', hide);
+  // A mouse or pen leaving the chart hides the tooltip. A tap's pointerleave comes right after its pointerup, so a
+  // touch keeps the tooltip; a tap outside the chart, Escape or a scroll hides it.
+  svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide(); });
   svg.addEventListener('blur', hide);
+  document.addEventListener('pointerdown', (e) => { if (current >= 0 && !svg.contains(e.target)) hide(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current >= 0) hide(); });
+  window.addEventListener('scroll', () => { if (current >= 0) hide(); }, { passive: true });
   svg.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      hide();
-      return;
-    }
     const step = STEPS[e.key];
     let i;
     if (step) i = current < 0 ? (step > 0 ? 0 : marks.length - 1) : (current + step + marks.length) % marks.length;
