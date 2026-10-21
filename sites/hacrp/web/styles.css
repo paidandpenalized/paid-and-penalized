@@ -24,7 +24,7 @@
 
 /* Measure table: as wide as its content (never stretched across the page), right-aligned number columns, and the
    notes column, when there is one, taking the room left. */
-.gb--measures { table-layout: auto; width: auto; min-width: min(100%, 36rem); max-width: 48rem; }
+.gb--measures { table-layout: auto; width: auto; min-width: min(100%, var(--table-min)); max-width: var(--table-max); }
 .gb--measures.gb--notes { width: 100%; max-width: none; }
 /* Its rules end with the table. */
 .printout:has(.gb--measures:not(.gb--notes)) { width: fit-content; max-width: 100%; }
@@ -66,7 +66,7 @@
 .steps > li::marker { font: 700 var(--fs-base)/1 var(--font-type); }
 .gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 6px; }
 .gb--steps tbody th { white-space: nowrap; }
-.steps .printout { max-width: 36rem; }
+.steps .printout { max-width: var(--table-min); }
 /* A phone: a tighter indent, cells and caps, so five columns fit 375px with no scroll inside the table. */
 @media (max-width: 480px) {
   .steps { padding-left: 1.2em; }
