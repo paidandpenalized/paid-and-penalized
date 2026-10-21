@@ -48,7 +48,7 @@ export function partsFigure(view, n, source, chart = null) {
     : fill('figPartsNone', { total: view.score.text, n: String(view.n) });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', alt: t('figPartsAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-parts`,
-    ...(chart ? { chart } : { svg: contribBars({ id: 'parts', rows: parts.map(({ m, value, label }) => ({ id: m.id, label, value, assigned: m.assigned })), format: (v) => signed(v, DP) }) }),
+    ...(chart ? { chart, note: t('figPartsTableNote') } : { svg: contribBars({ id: 'parts', rows: parts.map(({ m, value, label }) => ({ id: m.id, label, value, assigned: m.assigned })), format: (v) => signed(v, DP) }) }),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }],
       rows: parts.map(({ m, value, label }) => [label, m.zRaw, num(m.contributionText, value)]),

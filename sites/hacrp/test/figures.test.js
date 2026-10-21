@@ -58,6 +58,8 @@ test('a scored hospital page has Figure 1 (each value against the national range
   assert.doesNotMatch(text, /chart--bars/, 'no static bar chart');
   assert.equal(text.match(/data-wi="bars"/g).length, 1);
   assert.match(figures(text)[1][2], /<span class="fig__claim">This site recomputes<\/span> · Source/);
+  // The bars move with the reader's edits; the table holds CMS's values, and a note under the bars says so.
+  assert.match(figures(text)[1][2], /<\/div>\n<p class="small muted fig__note">The bars follow the changes you make above; the table holds CMS’s values\.<\/p>\n<p class="source fig__source">/);
   assert.ok(text.includes('<script type="module" src="/assets/figure.test.js"></script>'));
 });
 
