@@ -67,6 +67,7 @@ export function rangeFigure(view, ranges, n, source) {
   });
   const valued = rows.filter((r) => r.value !== null);
   if (!valued.length) return null;
+  const notes = rows.some(({ m }) => m.footnotes.length);
   const above = valued.filter((r) => r.value > r.median).length;
   const takeaway = valued.length === 1
     ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
@@ -78,14 +79,15 @@ export function rangeFigure(view, ranges, n, source) {
       medianLabel: t('figRangeMedian'), sameLabel: t('figRangeSame'),
       rows: rows.map(({ m, ...row }) => ({ ...row, title: m.short, label: t('figRangeThis'), note: m.hasValue ? null : t('noValue') })),
     }),
+    // A Notes column (CMS's footnotes) only when some measure has one.
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colValue'), numeric: true }, { name: t('figColFloor'), numeric: true },
-        { name: t('figRangeMedian'), numeric: true }, { name: t('figColCap'), numeric: true }, { name: t('colNotes') }],
+        { name: t('figRangeMedian'), numeric: true }, { name: t('figColCap'), numeric: true }, ...(notes ? [{ name: t('colNotes') }] : [])],
       rows: rows.map(({ m, floor, cap, median, format }) => [
         m.short,
         m.hasValue ? m.valueRaw : num(t('noValue'), null),
         num(format(floor), floor), num(format(median), median), num(format(cap), cap),
-        m.footnotes.map((f) => f.text).join(' '),
+        ...(notes ? [m.footnotes.map((f) => f.text).join(' ')] : []),
       ]),
     },
   });

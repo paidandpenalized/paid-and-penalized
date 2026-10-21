@@ -324,3 +324,14 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
     }
   }
 });
+
+test('the range figure\'s table has a Notes column only when some measure has a CMS footnote', () => {
+  for (const name of ['yes', 'no']) {
+    const view = hospitalView(inputs(CASES[name]));
+    const body = String(rangeFigure(view, RANGES, 1, 's'));
+    const any = view.measures.some((m) => m.footnotes.length);
+    assert.equal(body.includes('>Notes</th>'), any, name);
+  }
+  assert.ok(hospitalView(inputs(CASES.no)).measures.some((m) => m.footnotes.length), 'the "no" case exercises the column');
+  assert.ok(!hospitalView(inputs(CASES.yes)).measures.some((m) => m.footnotes.length), 'the "yes" case exercises its absence');
+});
