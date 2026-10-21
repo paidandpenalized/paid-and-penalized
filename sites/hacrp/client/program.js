@@ -108,6 +108,7 @@ function mountTable({ hospitalPath, rows }, { linked }) {
   const status = table.querySelector('#ht-count');
   const body = table.querySelector('tbody');
   const all = table.querySelector('#ht-all');
+  const menu = table.querySelector('#ht-sort');
   const heads = [...table.querySelectorAll('th[data-key]')];
   const codes = stateCodes(rows);
   // The search above may have filled the text filter before the table mounted.
@@ -120,13 +121,16 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     return option;
   }));
 
-  // Each cell names its column (data-label), for the stacked rows of a narrow screen.
+  // Each cell names its column in a span shown only to screen readers on a narrow screen, where the rows stack and
+  // the column heads are hidden.
   const label = Object.fromEntries(heads.map((th) => [th.dataset.key, th.textContent.trim()]));
   const cell = (text, key) => {
     const td = document.createElement('td');
-    if (key === 'score') td.className = 'num';
-    td.dataset.label = label[key];
-    td.textContent = text;
+    td.className = key === 'score' ? `ht-${key} num` : `ht-${key}`;
+    const name = document.createElement('span');
+    name.className = 'ht-label';
+    name.textContent = `${label[key]}: `;
+    td.append(name, text);
     return td;
   };
   function row([ccn, name, city, state, total, decision]) {
@@ -198,17 +202,28 @@ function mountTable({ hospitalPath, rows }, { linked }) {
     view.expanded = true;
     render();
   });
+  // One sort, from a column head or the phone's menu; each shows the other's choice.
+  function sortBy(key, dir) {
+    view.key = key;
+    view.dir = dir;
+    for (const h of heads) {
+      if (h.dataset.key === key) h.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
+      else h.removeAttribute('aria-sort');
+    }
+    if (menu) menu.value = `${key}:${dir}`;
+    ordered = sortRows(records, key, dir);
+    render();
+  }
   for (const th of heads) {
     th.querySelector('button').addEventListener('click', () => {
       const key = th.dataset.key;
-      view.dir = view.key === key || (view.key === null && key === 'state') ? -view.dir : 1;
-      view.key = key;
-      for (const h of heads) h.removeAttribute('aria-sort');
-      th.setAttribute('aria-sort', view.dir > 0 ? 'ascending' : 'descending');
-      ordered = sortRows(records, view.key, view.dir);
-      render();
+      sortBy(key, view.key === key || (view.key === null && key === 'state') ? -view.dir : 1);
     });
   }
+  menu?.addEventListener('change', () => {
+    const [key, dir] = menu.value.split(':');
+    if (heads.some((h) => h.dataset.key === key)) sortBy(key, dir === '-1' ? -1 : 1);
+  });
   window.addEventListener('hashchange', () => { if (fromHash()) render(); });
 
   fromHash();

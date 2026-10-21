@@ -491,6 +491,10 @@ export const COPY = {
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },
   tableName: { text: 'Name, city or CCN contains', claim: null },
+  // The phone's sort menu, in place of the column heads.
+  tableSortBy: { text: 'Sort by', claim: null },
+  tableSortUp: { text: '{column}, ascending', claim: null },
+  tableSortDown: { text: '{column}, descending', claim: null },
   tableColName: { text: 'Hospital', claim: null },
   tableColCity: { text: 'City', claim: null },
   tableColState: { text: 'State', claim: null },

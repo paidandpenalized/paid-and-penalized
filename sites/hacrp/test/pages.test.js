@@ -356,3 +356,14 @@ test("the hero names CMS's line under a scored hospital's number, from CMS's tex
   for (const h of [CASES.yes, CASES.no]) assert.ok(page(h).includes(line), h.ccn);
   for (const h of [CASES.maryland, CASES.noScore, CASES.yesNoScore]) assert.doesNotMatch(page(h), /hero__ref/, h.ccn);
 });
+
+test("the phone's Sort by menu offers each column head's key both ways, the default (state, ascending) selected", () => {
+  const text = programPage({ ...PROGRAM_ARGS, searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: null });
+  const menu = /<select id="ht-sort">([\s\S]*?)<\/select>/.exec(text)[1];
+  const heads = [...text.matchAll(/<th scope="col" data-key="(\w+)"/g)].map((m) => m[1]);
+  const values = [...menu.matchAll(/<option value="([\w:-]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(values, heads.flatMap((k) => [`${k}:1`, `${k}:-1`]));
+  assert.match(menu, /<option value="state:1" selected>State, ascending<\/option>/);
+  assert.match(menu, /<option value="score:-1">Total HAC Score, descending<\/option>/);
+  assert.match(text, /<label for="ht-sort">Sort by<\/label>/);
+});

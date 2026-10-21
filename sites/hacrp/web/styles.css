@@ -79,16 +79,23 @@
    the window (a scroll box would be its sticky container, and that box never scrolls down). */
 @media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
 
-/* Narrow screens: each hospital stacks into a block (name; city, state, score, decision on one line), so the
-   table never scrolls sideways. The header row stays: its buttons are the sort controls. */
+/* The phone's Sort by menu and each cell's screen-reader label show only on a narrow screen. */
+.ht__sort, .ht-label { display: none; }
+/* Narrow screens: each hospital stacks into a block (the name across the top; "City, ST" at the left and the score
+   at the right; the decision under the score), so the table never scrolls sideways. The column heads are hidden
+   (still read by screen readers); the Sort by menu stands in for their buttons. */
 @media (max-width: 640px) {
-  .gb--hospitals, .gb--hospitals tbody, .gb--hospitals thead { display: block; width: 100%; }
-  .gb--hospitals thead tr { display: flex; flex-wrap: wrap; gap: 0 4px; border-bottom: var(--rule) solid var(--ink); }
-  .gb--hospitals thead th { position: static; padding: 8px 6px; border: 0; }
-  .gb--hospitals tbody tr { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 8px 10px 10px; }
+  .ht__sort { display: grid; }
+  .ht-label { display: inline; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .gb--hospitals, .gb--hospitals tbody { display: block; width: 100%; }
+  .gb--hospitals thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .gb--hospitals tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name name" "city state score" ". . decision"; gap: 2px 0; padding: 8px 10px 10px; }
   .gb--hospitals tbody tr + tr { border-top: 1px solid var(--line); }
   .gb--hospitals tbody th, .gb--hospitals td { display: block; padding: 0; }
-  .gb--hospitals tbody th { flex: 1 1 100%; }
-  .gb--hospitals .num { width: auto; text-align: left; }
-  .gb--hospitals td:nth-of-type(n+3)::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
+  .gb--hospitals tbody th { grid-area: name; margin-bottom: 2px; }
+  .gb--hospitals .ht-city { grid-area: city; font-family: var(--font-body); color: var(--ink-2); }
+  .gb--hospitals .ht-city::after { content: ",\00a0"; }
+  .gb--hospitals .ht-state { grid-area: state; font-family: var(--font-body); color: var(--ink-2); }
+  .gb--hospitals .ht-score { grid-area: score; width: auto; text-align: right; }
+  .gb--hospitals .ht-decision { grid-area: decision; text-align: right; }
 }

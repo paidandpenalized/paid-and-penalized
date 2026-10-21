@@ -54,7 +54,8 @@ ${lineFigure({ hospital, model, range, boundaryText, n, source: line, fy })}</li
 }
 
 // The table of every hospital: client/program.js fills it from the hospitals asset (data-src) and shows it;
-// without JavaScript, a sentence and the CSV link.
+// without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu
+// (the same keys, each way) stands in for them.
 const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
 const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
@@ -66,6 +67,7 @@ ${dataLinks(fy)}
 <div class="ht__controls">
 <p class="ht__field"><label for="ht-state">${t('tableState')}</label> <select id="ht-state"><option value="">${t('tableAllStates')}</option></select></p>
 <p class="ht__field"><label for="ht-name">${t('tableName')}</label> <input id="ht-name" type="search" autocomplete="off"></p>
+<p class="ht__field ht__sort"><label for="ht-sort">${t('tableSortBy')}</label> <select id="ht-sort">${COLUMNS.flatMap(([key, label]) => [1, -1].map((dir) => html`<option value="${key}:${dir}"${key === 'state' && dir === 1 ? html` selected` : ''}>${fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: t(label) })}</option>`))}</select></p>
 </div>
 <p class="small" id="ht-count" aria-live="polite"></p>
 ${printout(html`<table class="gb gb--hospitals">
