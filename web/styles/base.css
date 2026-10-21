@@ -31,6 +31,8 @@ p { margin: 0; }
 /* Running text keeps a readable line; containers stay uncapped. :where() keeps it at zero specificity, so a part that
    is a grid row or a control (a bar row, a step holding a table) sets its own width. */
 :where(p, li, figcaption, dd) { max-width: var(--measure); }
+/* No paragraph ends on a lone short word where the browser can help (ignored where unsupported). */
+:where(p, li, figcaption, dd) { text-wrap: pretty; }
 a { color: inherit; text-decoration-color: var(--pen); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 a:hover { color: var(--pen-ink); }
 :focus-visible { outline: 2.5px solid var(--pen); outline-offset: 2px; }
