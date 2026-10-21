@@ -109,13 +109,6 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 <h1>${title}</h1>
 <p class="dek">${t('dek')}</p>
 </header>
-<form class="block search" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
-<label class="h-sm" for="hospital-search">${t('searchLabel')}</label>
-<div class="search__row"><input id="hospital-search" type="search" list="hospital-names" autocomplete="off" aria-describedby="search-hint"><button type="submit" class="fig__btn">${t('searchButton')}</button></div>
-<datalist id="hospital-names"></datalist>
-<p id="search-hint" class="small muted">${t('searchHint')}</p>
-<p class="small search__status" role="status"></p>
-</form>
 <section class="block" id="how" aria-labelledby="what-h">
 <h2 id="what-h">${t('whatHeading')}</h2>
 <p>${t('whatScore')} ${t('whatWho')}</p>
@@ -169,8 +162,8 @@ ${citation({ fy, title: heading, path: PATH, source })}
     path: PATH,
     robots,
     body,
-    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, assets.js['hacrp-program']],
+    scripts: [...(histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],
     assets,
-    topbar: siteHeader({ fy, current: 'how' }),
+    topbar: siteHeader({ fy, current: 'how', searchUrl }),
   });
 }

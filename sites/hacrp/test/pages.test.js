@@ -172,15 +172,19 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   // State, then name: both are AL, and "A" sorts after "<".
   assert.deepEqual(asset, {
     hospitalPath: '/hacrp/hospital/',
-    rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i]]),
+    rows: [[name, 0], ['A', 1]].map(([n, i]) => [views[i].ccn, n, 'Exampleton', 'AL', ['0.3000', 'N/A'][i], ['Yes', 'No'][i], '']),
   });
   const text = programPage({
     ...PROGRAM_ARGS, boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
     searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
-  assert.match(text, /<form class="block search" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
-  assert.match(text, /<label class="h-sm" for="hospital-search">Hospital name, city or CCN<\/label>\n<div class="search__row"><input id="hospital-search"[^>]*><button type="submit" class="fig__btn">Search<\/button><\/div>/);
-  assert.match(text, /<p class="small search__status" role="status"><\/p>/);
+  // The search sits in the top bar: a combobox over the asset, hidden until its script shows it.
+  const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(text)[0];
+  assert.match(header, /<form class="omni" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  assert.match(header, /<label class="omni__field" for="omni-q"><span class="omni__label cap">Find<span class="vh"> a hospital by name, city, ZIP code or CCN<\/span><\/span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list"/);
+  assert.match(header, /<ul class="omni__list" id="omni-list" role="listbox" aria-label="Find a hospital" hidden><\/ul>/);
+  assert.match(header, /<p class="vh" role="status" aria-live="polite"><\/p>/);
+  assert.doesNotMatch(text, /<datalist/);
   assert.doesNotMatch(text, /application\/json/);
   assert.match(text, /Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of <span class="nw">0\.2507<\/span> or higher and none at <span class="nw">0\.2500<\/span> or lower\./);
 });
@@ -309,7 +313,7 @@ test('without whatif data the program page has no sandbox (the other tests rende
   assert.doesNotMatch(text, /id="whatif"|hacrp-program"/);
 });
 
-test('the build writes the sandbox into /hacrp/, its page data saying share false; the search shares the entry', () =>
+test('the build writes the sandbox into /hacrp/, its page data saying share false; every page has the search', () =>
   temp(async (dir) => {
     await generate(dir, undefined, { data: SLICE });
     const text = read(dir, '/hacrp/');
@@ -318,8 +322,8 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
     assert.doesNotMatch(text, /data-wi="banner"/);
     const [, json] = /<script type="application\/json" id="hacrp-program">(.*?)<\/script>/s.exec(text);
     assert.equal(JSON.parse(json).page.share, false);
-    const client = readFileSync(join(import.meta.dirname, '..', 'client', 'program.js'), 'utf8');
-    assert.match(client, /\.search\[data-src\]/, 'the search stays in the same entry');
+    assert.match(text, /<form class="omni" role="search"[^>]*data-src="\/assets\/hacrp-hospitals\.[0-9a-f]{8}\.json"/, 'the top bar searches the same asset');
+    for (const path of SLICE.hospitals.map(hospitalPath)) assert.ok(read(dir, path).includes('<form class="omni" role="search"'), `${path}: a search on every page`);
   }));
 
 test('the measure table has a Notes column only when some measure has a note, wide only for prose notes', () => {

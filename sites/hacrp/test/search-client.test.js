@@ -1,151 +1,58 @@
-// The program page's search script (client/program.js) against a stand-in DOM: it fetches the hospitals asset on
-// first focus, builds the datalist in one step, skips bad rows, and opens a hospital's page on a pick or on submit;
-// a submit with several matches hands the query to the table's filter (on all states), one with none says so, and
-// one while the list won't load says that instead.
+// The HACRP search's entries (client/search.js) from the hospitals asset: each hospital found by its name, city,
+// state, ZIP code or CCN, opening its page; and the program page's handoff to the table (client/program.js
+// showInTable), which puts the table back on all states. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { buildIndex, search } from '../../../web/client/search.js';
+import { hospitalEntries, STATE_ENTRIES } from '../client/search.js';
 
-const ORIGINAL = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
+const ASSET = {
+  hospitalPath: '/hacrp/hospital/',
+  rows: [
+    ['99000A', 'Example General Hospital', 'Exampleton', 'AL', '0.3000', 'Yes', '35000'],
+    ['990002', 'Example General Hospital', 'Exampleton', 'AL', 'N/A', 'No', '35001'],
+    ['990003', 'Sample Medical Center', 'Sampleville', 'MD', '0.4000', 'N/A', ''],
+  ],
+};
 
-// The stand-ins stay in place until the test ends (t.after), since the script fetches on a later focus.
-async function run(t, asset, { ok = true, hash = '', state = '' } = {}) {
-  const net = { ok };
-  const handlers = {};
-  const input = { value: '', addEventListener: (type, fn) => { handlers[type] = fn; } };
-  const list = { options: null, replaceChildren: (...options) => { list.options = options.map((o) => o.value); } };
-  const status = { textContent: '' };
-  const parts = { input, datalist: list, '[role="status"]': status };
-  const box = {
-    hidden: true, dataset: { src: '/assets/hacrp-hospitals.test.json' }, querySelector: (s) => parts[s],
-    addEventListener: (type, fn) => { handlers[type] = fn; },
-  };
+test('each hospital is an entry: its name, "City, ST ZIP" under it, its page; no state entries until state pages exist', () => {
+  const entries = hospitalEntries(ASSET);
+  assert.deepEqual(entries[0], { type: 'hospital', key: '99000A', label: 'Example General Hospital', sub: 'Exampleton, AL 35000', extra: 'Exampleton AL 35000', href: '/hacrp/hospital/99000a/' });
+  assert.equal(entries[2].sub, 'Sampleville, MD', 'no ZIP, no trailing space');
+  assert.deepEqual(STATE_ENTRIES, []);
+});
+
+test('a name, a city, a state, a ZIP or a CCN finds the hospital; two of one name are told apart by ZIP', () => {
+  const index = buildIndex(hospitalEntries(ASSET));
+  const find = (q) => search(q, index).results.map((r) => r.href);
+  assert.deepEqual(find('sample med'), ['/hacrp/hospital/990003/']);
+  assert.deepEqual(find('sampleville'), ['/hacrp/hospital/990003/']);
+  assert.deepEqual(find('35001'), ['/hacrp/hospital/990002/']);
+  assert.deepEqual(find('99000a'), ['/hacrp/hospital/99000a/']);
+  assert.equal(find('example al').length, 2);
+  assert.deepEqual(search('example', index).results.map((r) => r.sub), ['Exampleton, AL 35000', 'Exampleton, AL 35001']);
+});
+
+test('showInTable: the query goes to the table filter, the state filter and the URL go back to all states, the table into view', async (t) => {
+  const ORIGINAL = { document: globalThis.document, window: globalThis.window };
   const filter = { value: '', events: [], dispatchEvent: (e) => filter.events.push(e.type) };
+  const states = { value: 'MD', events: [], dispatchEvent: (e) => states.events.push(e.type) };
   const section = { scrolled: false, scrollIntoView() { section.scrolled = true; } };
-  const fetched = [];
-  const opened = [];
-  const states = { value: state, events: [], dispatchEvent: (e) => states.events.push(e.type) };
-  const others = { '#ht-name': filter, '#hospitals': section, '#ht-state': states };
   const urls = [];
-  globalThis.document = { querySelector: (s) => (s === '.search[data-src]' ? box : others[s] ?? null), createElement: () => ({}) };
-  const location = { hash, pathname: '/hacrp/', search: '', assign: (p) => opened.push(p) };
-  const history = { replaceState(_s, _t, url) { urls.push(url); location.hash = url.includes('#') ? url.slice(url.indexOf('#')) : ''; } };
-  globalThis.window = { location, history };
-  globalThis.fetch = async (url) => { fetched.push(url); return { ok: net.ok, status: net.ok ? 200 : 500, json: async () => asset }; };
+  globalThis.document = { querySelector: (s) => ({ '#ht-name': filter, '#ht-state': states, '#hospitals': section })[s] ?? null, addEventListener() {} };
+  globalThis.window = { location: { pathname: '/hacrp/', search: '', hash: '#state=MD' }, history: { replaceState: (_s, _t, url) => urls.push(url) }, addEventListener() {} };
   t.after(() => {
     for (const [k, v] of Object.entries(ORIGINAL)) {
       if (v === undefined) delete globalThis[k];
       else globalThis[k] = v;
     }
   });
-  await import(`../client/program.js?run=${Math.random()}`);
-  const submit = async (value) => {
-    input.value = value;
-    let prevented = false;
-    await handlers.submit({ preventDefault: () => { prevented = true; } });
-    assert.ok(prevented, 'the form never submits to the server');
-  };
-  return {
-    handlers, input, list, box, status, filter, section, fetched, opened, submit, net, states, urls, location,
-    focus: async () => { handlers.focus(); await new Promise((r) => setTimeout(r, 0)); },
-  };
-}
-
-const ASSET = {
-  hospitalPath: '/hacrp/hospital/',
-  rows: [
-    ['99000A', 'Example General Hospital', 'Exampleton', 'AL', '0.3000', 'Yes'],
-    ['990002', 'Example General Hospital', 'Exampleton', 'AL', 'N/A', 'No'],
-    ['990003', 'Sample Medical Center', 'Sampleville', 'MD', '0.4000', 'N/A'],
-    ['bad', 'Not a hospital', 'Nowhere', 'ZZ', '', ''],
-  ],
-};
-
-test('fetches on first focus only, labels shared names with the CCN, skips a bad CCN', async (t) => {
-  const s = await run(t, ASSET);
-  assert.equal(s.box.hidden, false);
-  assert.deepEqual(s.fetched, []);
-  await s.focus();
-  await s.focus();
-  assert.deepEqual(s.fetched, ['/assets/hacrp-hospitals.test.json']);
-  assert.deepEqual(s.list.options, [
-    'Example General Hospital, Exampleton, AL (CCN 99000A)',
-    'Example General Hospital, Exampleton, AL (CCN 990002)',
-    'Sample Medical Center, Sampleville, MD',
-  ]);
-  s.input.value = 'Example General Hospital, Exampleton, AL (CCN 99000A)';
-  s.handlers.input();
-  await s.submit('sample');
-  assert.deepEqual(s.opened, ['/hacrp/hospital/99000a/', '/hacrp/hospital/990003/']);
-});
-
-test('a submit matches the name, city or CCN: one opens its page, several go to the table, none says so', async (t) => {
-  const s = await run(t, ASSET);
-  await s.submit('990002');
-  await s.submit('sampleville');
-  assert.deepEqual(s.opened, ['/hacrp/hospital/990002/', '/hacrp/hospital/990003/'], 'a CCN or a city with one hospital opens it');
-  await s.submit('  Exampleton ');
-  assert.equal(s.opened.length, 2, 'several matches open nothing');
-  assert.equal(s.filter.value, 'Exampleton');
-  assert.deepEqual(s.filter.events, ['input']);
-  assert.ok(s.section.scrolled, 'the table comes into view');
-  assert.equal(s.status.textContent, '');
-  await s.submit('no such place');
-  assert.equal(s.status.textContent, 'No hospital matches.');
-  s.input.value = 'n';
-  s.handlers.input();
-  assert.equal(s.status.textContent, '', 'typing clears the message');
-  await s.submit('   ');
-  assert.equal(s.opened.length, 2);
-});
-
-test('a failed fetch or a bad hospitalPath leaves the list empty, and a later focus tries again', async (t) => {
-  const failed = await run(t, ASSET, { ok: false });
-  await failed.focus();
-  await failed.focus();
-  assert.equal(failed.fetched.length, 2);
-  assert.equal(failed.list.options, null);
-
-  const bad = await run(t, { ...ASSET, hospitalPath: 'javascript:alert(1)//' });
-  await bad.focus();
-  assert.equal(bad.list.options, null);
-});
-
-test('several matches with a state filter on: the table goes back to all states, in the URL and the menu', async (t) => {
-  const s = await run(t, ASSET, { hash: '#state=MD', state: 'MD' });
-  await s.submit('Exampleton');
-  assert.deepEqual(s.urls, ['/hacrp/'], 'the state leaves the URL, the way the menu writes it');
-  assert.equal(s.states.value, '');
-  assert.deepEqual(s.states.events, ['change'], 'the menu\'s own handler updates the table');
-  assert.equal(s.filter.value, 'Exampleton');
-
-  const clean = await run(t, ASSET, { hash: '#main' });
-  await clean.submit('Exampleton');
-  assert.deepEqual(clean.urls, [], 'no state filter: the URL is left alone');
-  assert.deepEqual(clean.states.events, []);
-  assert.equal(clean.location.hash, '#main');
-});
-
-test('a submit while the list won\'t load says the list didn\'t load, not "no match"; a later submit tries again', async (t) => {
-  const s = await run(t, ASSET, { ok: false });
-  await s.submit('sample');
-  assert.equal(s.fetched.length, 1);
-  assert.equal(s.status.textContent, 'The table didn\u2019t load.');
-  assert.deepEqual(s.opened, []);
-  s.net.ok = true;
-  await s.submit('sample');
-  assert.equal(s.fetched.length, 2);
-  assert.deepEqual(s.opened, ['/hacrp/hospital/990003/']);
-});
-
-test('the asset is in the table\'s order (state, then name); the search lists its labels by name', async (t) => {
-  const s = await run(t, {
-    hospitalPath: '/hacrp/hospital/',
-    rows: [
-      ['990041', 'Zeta Hospital', 'Exampleton', 'AL', '0.1000', 'No'],
-      ['990042', 'Beta Hospital', 'Exampleton', 'CA', '0.2000', 'No'],
-      ['990043', 'Alpha Hospital', 'Sampleville', 'MD', '0.3000', 'N/A'],
-    ],
-  });
-  await s.focus();
-  assert.deepEqual(s.list.options, ['Alpha Hospital, Sampleville, MD', 'Beta Hospital, Exampleton, CA', 'Zeta Hospital, Exampleton, AL']);
+  const { showInTable } = await import(`../client/program.js?run=${Math.random()}`);
+  showInTable('Exampleton');
+  assert.deepEqual(urls, ['/hacrp/']);
+  assert.equal(states.value, '');
+  assert.deepEqual(states.events, ['change']);
+  assert.equal(filter.value, 'Exampleton');
+  assert.deepEqual(filter.events, ['input']);
+  assert.ok(section.scrolled);
 });

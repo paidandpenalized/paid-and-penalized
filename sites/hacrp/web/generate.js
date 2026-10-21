@@ -31,12 +31,13 @@ function a1Summary({ ok, a, b, info }) {
 }
 
 // The hospitals asset (/assets/hacrp-hospitals.<hash>.json) the program page's client reads: { hospitalPath, rows },
-// one row per hospital, [ccn, name, city, state, total, decision]: the CCN as CMS writes it (a page is at
-// hospitalPath + the CCN in lowercase + "/"), names from the hospital master, CMS's Total HAC Score text as published
-// (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none) and CMS's payment reduction text. Rows are in the hospital table's default order (state, then
-// name; hospital-table.js); the search sorts its own list by name.
+// one row per hospital, [ccn, name, city, state, total, decision, zip]: the CCN as CMS writes it (a page is at
+// hospitalPath + the CCN in lowercase + "/"), names, places and ZIP codes from the hospital master, CMS's Total HAC
+// Score text as published (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none) and CMS's payment
+// reduction text. Rows are in the hospital table's default order (state, then name; hospital-table.js); the search
+// ranks its own matches.
 export function hospitalRows(views) {
-  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text]).sort(compareDefault);
+  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows };
 }
 
@@ -69,8 +70,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
+  // The hospitals asset: the top bar's search on every page, and the program page's table.
+  const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
-  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets }) });
+  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
   ctx.emit({
     path: PROGRAM_PATH,
     robots: programRobots,
@@ -80,7 +83,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       counts: { decided: a1.b.n, yes: a1.b.yes, scored: a1.a.n },
       boundaryText,
       periods,
-      searchUrl: ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views))),
+      searchUrl,
       source,
       robots: programRobots,
       assets,
@@ -95,14 +98,14 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const ranges = measureRanges(model);
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, whatif: { hospital, model, estimate, range } }) });
+    ctx.emit({ path: view.path, robots, text: hospitalPage({ view, source, robots, assets, ranges, searchUrl, whatif: { hospital, model, estimate, range } }) });
   }
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
-  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js' },
+  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
   styles: ['sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };

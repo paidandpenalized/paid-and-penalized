@@ -1,123 +1,40 @@
-// The program page's scripts. Both the hospital search and the hospital table read the hospitals asset named in
-// their data-src (see hospitalRows in web/generate.js), fetched once for both; without JavaScript both stay hidden
-// and the table's section shows a sentence and the CSV link.
-// The search: a native datalist of hospital names, fetched the first time the box gets focus; choosing one opens
-// its page. Submitting (Enter or the button) matches the name, city or CCN: one match opens its page, several are
-// handed to the table below (its text filter, scrolled into view), none says so; a list that didn't load says that, and
-// the next submit fetches it again. The table: every hospital, sortable by any column, filtered by a state (kept in
-// the URL as #state=XX) and by name, city or CCN; its rows are fetched when the section nears the screen, or at once
-// when the URL names a state.
+// The program page's scripts. The hospital table reads the hospitals asset named in its data-src (see hospitalRows in
+// web/generate.js; client/hospitals.js fetches it once for the table and the top bar's search); without JavaScript the
+// table stays hidden and its section shows a sentence and the CSV link. The table: every hospital, sortable by any
+// column, filtered by a state (kept in the URL as #state=XX) and by name, city or CCN; its rows are fetched when the
+// section nears the screen, or at once when the URL names a state. The top bar's search hands it every match for a
+// query (the 'hacrp:show-in-table' event); a state picked on the map (figure: the US map's marks) filters it too.
 // The sandbox: the what-if on the median hospital, mounted from the page's own data (client/whatif.js), whose
 // share is false: the URL is never read or written by it.
-import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
-import {
-  compareByName, decodeState, filterRows, hospitalHref, hospitalLabel, searchKey, sortRows, stateCodes, tableRows, withState,
-} from '../web/hospital-table.js';
+import { decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
 import { cmsText, count } from '../../../web/render/format.js';
 import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
+import { hospitalLoader } from './hospitals.js';
+
+const hospitals = hospitalLoader();
 import { mountFromPage } from './whatif.js';
 
-const PATH = /^\/[a-z0-9/-]*\/$/;
-
-// One fetch for the search and the table; a failed one is tried again on the next call.
-let pending = null;
-function hospitals(src) {
-  pending ??= (async () => {
-    const res = await fetch(src);
-    if (!res.ok) throw new Error(`hospital list: HTTP ${res.status}`);
-    const { hospitalPath, rows } = await res.json();
-    if (!PATH.test(hospitalPath)) throw new Error('hospital list: bad hospitalPath');
-    return { hospitalPath, rows: rows.filter(([ccn]) => CCN.test(ccn)) };
-  })().catch((error) => {
-    pending = null;
-    throw error;
-  });
-  return pending;
-}
-
-const box = document.querySelector('.search[data-src]');
-
-if (box) {
-  const input = box.querySelector('input');
-  const list = box.querySelector('datalist');
-  const status = box.querySelector('[role="status"]');
-  // Each hospital: the text a query is matched against (key) and its page; and, built with them, each label (the
-  // datalist's option) to its page, so a keystroke looks a pick up without a scan.
-  const entries = [];
-  const paths = new Map();
-  const pathOf = (label) => paths.get(label);
-
-  async function load() {
-    const { hospitalPath, rows } = await hospitals(box.dataset.src);
-    const valid = [...rows].sort(compareByName);
-    // "Name, City, ST"; a label two hospitals share also carries the CCN.
-    const labels = valid.map(hospitalLabel);
-    const seen = new Map();
-    for (const text of labels) seen.set(text, (seen.get(text) ?? 0) + 1);
-    list.replaceChildren(...valid.map((cells, i) => {
-      const [ccn] = cells;
-      const label = seen.get(labels[i]) > 1 ? `${labels[i]} (CCN ${ccn})` : labels[i];
-      const path = hospitalHref(hospitalPath, ccn);
-      entries.push({ key: searchKey(cells), path });
-      paths.set(label, path);
-      const option = document.createElement('option');
-      option.value = label;
-      return option;
-    }));
+// Every match for a query, handed on by the top bar's search: the table shows them through its own text filter
+// (mountTable reads it if the table mounts later). A state filter could hide them, so the table goes back to all
+// states, in the URL and the state menu, as the menu itself writes it.
+export function showInTable(query) {
+  const filter = document.querySelector('#ht-name');
+  if (!filter) return;
+  const { pathname, search, hash } = window.location;
+  const next = withState(hash, null);
+  if (next !== hash) window.history.replaceState(null, '', pathname + search + next);
+  const states = document.querySelector('#ht-state');
+  if (states?.value) {
+    states.value = '';
+    states.dispatchEvent(new Event('change'));
   }
-
-  // true once the list is in; false when the fetch failed, and the next call tries again.
-  let loading = null;
-  const ready = () => (loading ??= load().then(() => true, () => {
-    loading = null;
-    return false;
-  }));
-  input.addEventListener('focus', ready);
-
-  const go = (path) => { if (path) window.location.assign(path); };
-  input.addEventListener('input', () => {
-    status.textContent = '';
-    go(pathOf(input.value));
-  });
-  // Several matches: the table below shows them, through its own text filter (mountTable reads it if the table
-  // mounts later). A state filter could hide them, so the table goes back to all states, in the URL and the state
-  // menu, as the menu itself writes it.
-  function showInTable(query) {
-    const filter = document.querySelector('#ht-name');
-    if (!filter) return;
-    const { pathname, search, hash } = window.location;
-    const next = withState(hash, null);
-    if (next !== hash) window.history.replaceState(null, '', pathname + search + next);
-    const states = document.querySelector('#ht-state');
-    if (states?.value) {
-      states.value = '';
-      states.dispatchEvent(new Event('change'));
-    }
-    filter.value = query;
-    filter.dispatchEvent(new Event('input'));
-    document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });
-  }
-  box.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const query = input.value.trim();
-    if (!query) return;
-    // A list that didn't load says so (the table's words), rather than "No hospital matches."
-    if (!(await ready())) {
-      status.textContent = fill('tableFailed');
-      return;
-    }
-    const picked = pathOf(input.value);
-    if (picked) return go(picked);
-    const q = query.toLowerCase();
-    const matches = entries.filter((e) => e.key.includes(q));
-    if (matches.length === 1) return go(matches[0].path);
-    status.textContent = matches.length ? '' : fill('tableCountNone');
-    if (matches.length) showInTable(query);
-  });
-  box.hidden = false;
+  filter.value = query;
+  filter.dispatchEvent(new Event('input'));
+  document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });
 }
+document.addEventListener?.('hacrp:show-in-table', (e) => showInTable(String(e.detail ?? '')));
 
 const table = document.querySelector('.ht[data-src]');
 

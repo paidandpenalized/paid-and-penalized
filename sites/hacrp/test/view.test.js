@@ -18,6 +18,7 @@ test('a scored "Yes" hospital: the whole view', () => {
     name: 'Example General Hospital',
     city: 'Exampleton',
     state: 'AL',
+    zip: '',
     county: 'Example County',
     path: '/hacrp/hospital/990001/',
     fy: 2026,

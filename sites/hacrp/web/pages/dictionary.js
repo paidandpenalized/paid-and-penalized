@@ -9,7 +9,7 @@ import { kicker, siteHeader } from './parts.js';
 
 // text: the filled Markdown (csv.js dictionaryText), as the downloadable file holds it; fy for the kicker; robots: null
 // for an indexable page.
-export function dictionaryPage({ text, fy, path, robots, assets }) {
+export function dictionaryPage({ text, fy, path, robots, assets, searchUrl = null }) {
   const { title, intro, sections } = markdownSections(text, { idPrefix: 'dict', tableClass: 'gb gb--dict' });
   if (!title || !intro) throw new RangeError('dictionaryPage: the dictionary needs a "# " title and an opening paragraph');
   const body = html`<article class="wrap page page--article dict">
@@ -25,5 +25,5 @@ ${s.body}
     : html`<div class="prose">${s.body}</div>`))}
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable on a phone (web/client/figure.js).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar], assets, topbar: siteHeader({ fy }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, topbar: siteHeader({ fy, searchUrl }) });
 }

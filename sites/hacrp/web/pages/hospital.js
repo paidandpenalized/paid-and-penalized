@@ -98,7 +98,8 @@ function figures(view, ranges, source) {
 // robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
 // (measureRanges(model) in figures.js), required for a scored hospital. whatif: { hospital, model, estimate, range }
 // for the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
-export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null }) {
+// searchUrl: the hospitals asset the top bar's search reads (null: no search box).
+export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null }) {
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
   const heading = fill('hospitalTitle', where);
@@ -153,9 +154,9 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(what ? [what.script] : [])],
+    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
-    topbar: siteHeader({ fy: view.fy, current: 'hospitals' }),
+    topbar: siteHeader({ fy: view.fy, current: 'hospitals', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
     // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.
     preloadFonts: HERO_FONTS,

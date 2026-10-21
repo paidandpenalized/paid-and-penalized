@@ -44,7 +44,7 @@ export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'hospitals']);
 // The HACRP top bar (layout.js programHeader): the program's name and edition tag, the search (markup, or '') and
 // the numbered nav to the program page's sections and Methods. current: the nav item to mark (an id), or null.
 // Built once per build for each current item.
-export const siteHeader = lastCall(({ fy, current, search }) => [fy, current, search], ({ fy, current = null, search = '' }) => {
+export const siteHeader = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current = null, searchUrl = null }) => {
   const { path, title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), map: t('navMap'), hospitals: t('navHospitals') };
@@ -54,9 +54,20 @@ export const siteHeader = lastCall(({ fy, current, search }) => [fy, current, se
     tag: fill('edition', { subtitle, fy: fyText }),
     nav: [...SECTIONS.map((id) => ({ id, label: labels[id], href: `${path}#${id}` })), { id: 'methods', label: SHARED.methods, href: '/methods/' }],
     current,
-    search,
+    search: searchUrl ? searchBox(searchUrl) : '',
   });
 });
+
+// The top bar's search: a combobox over the hospitals asset (data-src) that client/search.js mounts and shows; hidden
+// without JavaScript, where the nav's "Every hospital" and the data links stand in. The visible "Find" begins the
+// box's name, which goes on for screen readers.
+function searchBox(searchUrl) {
+  return html`<form class="omni" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
+<label class="omni__field" for="omni-q"><span class="omni__label cap">${t('searchFind')}<span class="vh"> ${t('searchFindRest')}</span></span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${t('searchPlaceholder')}"></label>
+<ul class="omni__list" id="omni-list" role="listbox" aria-label="${t('searchHeading')}" hidden></ul>
+<p class="vh" role="status" aria-live="polite"></p>
+</form>`;
+}
 
 // The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
 export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;

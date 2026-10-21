@@ -60,6 +60,27 @@
   .nav a[aria-current="true"] { border-bottom-color: Highlight; }
 }
 
+/* ---------- the top bar's search: a combobox (web/client/omnibox.js), after Thirty Day Readmissions' ---------- */
+.omni { position: relative; }
+.omni__field { display: flex; align-items: stretch; min-height: var(--control-h); border: var(--rule) solid var(--ink); background: var(--paper); }
+.omni__label { display: flex; align-items: center; padding: 0 8px; border-right: var(--rule) solid var(--ink); color: var(--pen-ink); }
+.omni input { flex: 1; min-width: 0; padding: 6px 10px; border: 0; background: transparent; font: 400 var(--fs-base)/1.3 var(--font-type); outline: none; }
+.omni input::placeholder { color: var(--ink-3); opacity: 1; }
+.omni input::-webkit-search-cancel-button { cursor: pointer; }
+.omni:focus-within .omni__field { outline: 2px solid var(--focus); outline-offset: 2px; }
+.omni__list { position: absolute; z-index: 30; top: calc(100% + 2px); right: 0; left: 0; max-height: 60vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; border: var(--rule) solid var(--ink); background: var(--paper); box-shadow: 4px 4px 0 var(--paper-2); }
+.omni__list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; max-width: none; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.omni__list li:last-child { border-bottom: 0; }
+.omni__list li:nth-child(odd) { background: var(--paper-2); }
+.omni__list li[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.omni__t { font-weight: 600; line-height: 1.3; }
+.omni__s { grid-column: 1; font: 400 var(--fs-sm)/1.25 var(--font-type); opacity: 0.85; }
+.omni__k { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 600 var(--fs-xs)/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.omni__list .omni__empty { display: block; cursor: default; font: 400 var(--fs-sm)/1.4 var(--font-type); }
+@media (forced-colors: active) {
+  .omni__list li[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
+
 /* ---------- footer ---------- */
 .foot { margin-top: 56px; padding-block: 20px 40px; border-top: var(--rule) solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
 .foot__row { display: grid; gap: 12px; }
