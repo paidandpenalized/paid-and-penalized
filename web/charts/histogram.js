@@ -78,7 +78,8 @@ export function histogram({ values, bins = 20, binned = null, boundary, markLabe
   const { anchor, dx } = labelAt(t);
   const line = html`<line class="chart-boundary" x1="${bx}" x2="${bx}" y1="${M.top - 12}" y2="${base}"/>`;
   const columns = data.map((b) => ({ x0: x(b.x0), x1: x(b.x1), top: y(b.count), above: b.above }));
-  const [left, right] = [M.left + 4, width - M.right - 4];
+  // The plot's inner edges, where a group label falls back to.
+  const [inLeft, inRight] = [M.left + 4, width - M.right - 4];
   const groupLabel = (body, candidates) => {
     const p = placeGroup(body, candidates, columns, M.top);
     return text({ x: p.x, y: p.y, anchor: p.anchor, cls: 'chart-label chart-label--halo', body });
@@ -101,7 +102,7 @@ ${markTip === null ? line : mark({ tip: markTip, value: markValue, hit: { x: bx 
 ${text({ x: bx, y: M.top - 16, anchor, dx, cls: 'chart-label', body: markLabel })}${yTitle ? html`
 ${text({ x: 0, y: M.top - 16, anchor: 'start', cls: 'chart-axis__title', body: yTitle })}` : ''}${xTitle ? html`
 ${text({ x: (M.left + width - M.right) / 2, y: base + 34, cls: 'chart-axis__title', body: xTitle })}` : ''}${groups ? html`
-${groupLabel(groups.below, [{ x: bx - CLEAR, anchor: 'end' }, { x: left, anchor: 'start' }])}
-${groupLabel(groups.above, [{ x: bx + CLEAR, anchor: 'start' }, { x: right, anchor: 'end' }])}` : ''}`,
+${groupLabel(groups.below, [{ x: bx - CLEAR, anchor: 'end' }, { x: inLeft, anchor: 'start' }])}
+${groupLabel(groups.above, [{ x: bx + CLEAR, anchor: 'start' }, { x: inRight, anchor: 'end' }])}` : ''}`,
   });
 }

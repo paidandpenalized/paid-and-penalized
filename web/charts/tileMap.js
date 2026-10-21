@@ -73,13 +73,13 @@ export function tileMap({ id, states, ramp, legend: words = {}, width = WIDTH, f
     const tile = s.hatched ? html`<rect class="chart-tile-na" fill="${hatchFill(id)}" ${box}/>`
       : s.empty ? html`<rect class="chart-tile-empty" ${box}/>`
         : html`<rect class="chart-tile ${zero ? 'chart-tile-zero' : `chart-seq-${step}`}" ${box} rx="2"/>${s.few ? fewOutline(x, y, size, on) : ''}`;
-    const valued = showValues && !none && s.text;
+    const printed = showValues && !none && s.text;
     // With its value printed, the code moves up and the value sits under it.
-    const codeY = valued ? y + size / 2 - 2 : y + size / 2 + 4;
+    const codeY = printed ? y + size / 2 - 2 : y + size / 2 + 4;
     return html`${mark({
       // A tile (a phone-wide grid's cell, about 30 units) is its own hit area.
       tip: `${code}: ${s.label}`, value: none ? null : s.value, data: { state: code }, hit: null,
-      body: html`${tile}${text({ x: x + size / 2, y: codeY, anchor: null, cls: `chart-tile__code${on}`, body: code })}${valued ? text({ x: x + size / 2, y: codeY + 13, anchor: null, cls: `chart-tile__value${on}`, body: s.text }) : ''}`,
+      body: html`${tile}${text({ x: x + size / 2, y: codeY, anchor: null, cls: `chart-tile__code${on}`, body: code })}${printed ? text({ x: x + size / 2, y: codeY + 13, anchor: null, cls: `chart-tile__value${on}`, body: s.text }) : ''}`,
     })}
 `;
   });
