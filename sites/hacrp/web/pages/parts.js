@@ -24,7 +24,8 @@ export const pillShowsCmsValue = (status) => status === 'maryland' || status ===
 
 // Each fact is one row of the strip's list: its term (copy key …Label) and its value. A date (or a short name) never
 // breaks across lines. Built once for the pages of a build that share the fiscal year, periods and source.
-export const asofBar = lastCall(({ fy, periods, source }) => [fy, periods, source], ({ fy, periods, source }) => {
+// geocoded: a hospital page whose map dot comes from the Census Bureau's geocoder, which the list then credits.
+export const asofBar = lastCall(({ fy, periods, source, geocoded = false }) => [fy, periods, source, geocoded], ({ fy, periods, source, geocoded = false }) => {
   const period = (key, { start, end }) => fillKeep(key, { start: longDate(start), end: longDate(end) }, ['start', 'end']);
   return asofShell({
     label: t('asofHeading'),
@@ -34,6 +35,7 @@ export const asofBar = lastCall(({ fy, periods, source }) => [fy, periods, sourc
       { label: t('asofHaiLabel'), value: period('asofHai', periods.hai) },
       { label: t('asofLatestLabel'), value: fill('asofLatest', { fy: String(fy), next: String(fy + 1) }) },
       { label: t('asofReleasedLabel'), value: fillKeep('asofReleased', { date: isoDate(source.pdcReleased) }, ['date']) },
+      ...(geocoded ? [{ label: t('asofMapLabel'), value: t('asofMap') }] : []),
     ],
   });
 });

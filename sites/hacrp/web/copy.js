@@ -279,11 +279,8 @@ export const COPY = {
   fieldDistance: { text: 'Distance to the line', claim: null },
   numDistanceYes: { text: 'Above {highestNo}; this site recomputes', claim: null },
   numDistanceNo: { text: 'Below {lowestYes}; this site recomputes', claim: null },
-  // The locator map: its name for screen readers and how the dot was placed.
+  // The locator map: its name for screen readers.
   mapLabel: { text: "Map of {state} with this hospital's location marked", claim: null },
-  mapAddress: { text: "Placed from its street address (U.S. Census Bureau Geocoder).", claim: null },
-  mapZip: { text: 'Placed approximately, at the center of its ZIP code.', claim: null },
-  mapCounty: { text: 'Placed approximately, at the center of its county.', claim: null },
   // The map as a cell of the numbers card (placement i).
   fieldMap: { text: 'On the map', claim: null },
   // The preview index (a preview build only, never the site): the map's placements on sample hospital pages.
@@ -350,6 +347,9 @@ export const COPY = {
   asofLatest: { text: 'FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
   asofReleasedLabel: { text: 'Provider Data Catalog release', claim: null },
   asofReleased: { text: '{date}', claim: null },
+  // A hospital page whose map dot is a geocoded street address: the geocoder, named once.
+  asofMapLabel: { text: 'Map location', claim: null },
+  asofMap: { text: 'U.S. Census Bureau Geocoder', claim: null },
   source: { text: 'Source: CMS Provider Data Catalog, HACRP FY{fy} ({id}), released {date}.', claim: null },
   datasetLink: { text: "CMS's dataset page", claim: null },
   // The data download and the citation block (both pages).

@@ -205,18 +205,16 @@ ${cells.map((cell, i) => html`${cell(CELL_LETTERS[i])}
 `)}</div>`;
 }
 
-// The state outline with the hospital's dot, and how the dot was placed; null where geo.js draws no map (a territory,
-// no point, or a point the outline doesn't hold). dot: the dot's scale (DOT, by placement).
-const PLACED = { address: 'mapAddress', zip: 'mapZip', county: 'mapCounty' };
+// The state outline with the hospital's dot; null where geo.js draws no map (a territory, no point, or a point the
+// outline doesn't hold). dot: the dot's scale (DOT, by placement). How the dot was placed is in Methods; the page's
+// data list credits the geocoder for a geocoded address.
 export function locatorMap(view, shapes, dot = 1) {
   if (!shapes || !view.point) return null;
-  const svg = stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
-  if (!svg) return null;
-  return { svg, caption: PLACED[view.geo] ? t(PLACED[view.geo]) : null };
+  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
 }
 
 // The map in its placement's frame; null with no map.
-const placedMap = (map, placement) => map && geoFrame(placement, map.svg);
+const placedMap = (svg, placement) => svg && geoFrame(placement, svg);
 
 // robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
 // (measureRanges(model) in figures.js), required for a scored hospital. whatif: { hospital, model, estimate, range }
@@ -261,7 +259,7 @@ ${largest && html`<p>${largest}</p>`}
 ${measureTable(view.measures)}`, figure: figs.length ? figs : null })}
 ${what?.body}
 <p class="page__links">${printLink(home, t('backToProgram'))}</p>
-${asofBar({ fy: view.fy, periods: view.periods, source })}
+${asofBar({ fy: view.fy, periods: view.periods, source, geocoded: Boolean(map) && view.geo === 'address' })}
 ${legend(view)}
 ${dataLinks(view.fy, source)}
 ${citation({ fy: view.fy, title: heading, path: view.path, source })}

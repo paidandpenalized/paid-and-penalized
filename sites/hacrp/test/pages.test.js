@@ -455,7 +455,7 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   assert.match(/<header class="topbar">[\s\S]*?<\/header>/.exec(hosp)[0], /data-nav="hospitals" aria-current="true"/);
 });
 
-test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map with how its dot was placed', () => {
+test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {
   const profile = { zip: '35000', lat: 32.4, lon: -86.3, geo: 'zip', teach: 'major', beds: 1234, own: 'Government', urban: true, types: ['RRC', 'SCH'] };
   const page = (overrides, careCompare = null, state = 'AL') => hospitalPage({
     view: hospitalView(inputs(CASES.no, { master: master('990002', { state, ...profile, ...overrides }), careCompare })),
@@ -468,6 +468,13 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
   assert.match(text, /href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990002" target="_blank" rel="noopener">Open on Care Compare/);
   assert.match(text, /<span class="geo geo--e"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
+  // No caption on how the dot was placed; the data list credits the geocoder once, for a geocoded address only.
+  assert.doesNotMatch(text, /Placed /);
+  assert.doesNotMatch(text, /Geocoder/, 'a ZIP-centered dot');
+  const geocoded = page({ geo: 'address' });
+  assert.equal(geocoded.split('Geocoder').length, 2);
+  assert.match(geocoded, /<div><dt>Map location<\/dt><dd>U\.S\. Census Bureau Geocoder<\/dd><\/div>/);
+  assert.doesNotMatch(page({ geo: 'address', lat: null }), /Geocoder/, 'no map, no credit');
   // CMS's words where it gives no rating, with its footnote; no stars field when Care Compare doesn't list the hospital.
   const fn = FN('16');
   const none = page({}, { rating: 'Not Available', footnotes: [{ code: '16', text: fn }] });
