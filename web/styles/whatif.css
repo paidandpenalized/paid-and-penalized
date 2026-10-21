@@ -87,9 +87,18 @@
 .wi-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -5px; border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); -webkit-appearance: none; appearance: none; }
 .wi-range::-moz-range-track { height: 8px; border: 0; background: transparent; }
 .wi-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 2px solid var(--paper); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
+/* Forced colors: the native slider, no drawn track (its marks are said in words beside it); the bars and the ramp's
+   marks in system colors, an assigned bar as a dashed outline (its hatch, a gradient, is dropped there). */
 @media (forced-colors: active) {
   .wi-range { -webkit-appearance: auto; appearance: auto; }
   .wi-scale { display: none; }
+  .wi-bar { forced-color-adjust: none; background: CanvasText; }
+  .wi-bars__row--assigned .wi-bar { background: Canvas; outline: 1px dashed CanvasText; }
+  .wi-tri--cms { fill: CanvasText; }
+  .wi-tri--hyp { fill: Canvas; stroke: CanvasText; }
+  .wi-ramp__axis, .wi-ramp__tick { stroke: CanvasText; }
+  .wi-ramp__line { stroke: Highlight; }
+  .wi-ramp__zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
 }
 
 .wi-predicted { display: grid; gap: 4px; margin-top: 6px; padding: 6px 0 6px 12px; border-left: 3px solid var(--line); }

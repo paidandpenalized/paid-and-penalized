@@ -44,4 +44,9 @@
 .pill--rew { border-color: var(--rew); background: var(--rew); color: var(--on-mark); }
 /* Not subject: the hatch as a swatch at the pill's left, so it never runs under the letters. */
 .pill--na { padding-left: 18px; border-color: var(--line); background: var(--hatch-fill) left / 10px 100% no-repeat, var(--paper); }
-@media (forced-colors: active) { .pill { border-color: CanvasText; } }
+/* Forced colors: the word carries the decision; the N/A swatch's hatch (a gradient, dropped there) is redrawn in
+   system colors. */
+@media (forced-colors: active) {
+  .pill { border-color: CanvasText; }
+  .pill--na { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; color: CanvasText; }
+}

@@ -108,8 +108,21 @@ th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
 /* A tile is its own hit area: the active one gets an ink outline. */
 .chart-mark.is-active :is(.chart-tile, .chart-tile-na) { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 
+/* Forced colors (Windows contrast themes): every mark keeps a system color, and every texture survives (CSS
+   gradients are dropped there, so a hatched swatch opts out of the adjustment with its own system colors). The
+   tile ramp keeps its author colors: its steps are data, and its codes are ink on them. A test checks that each
+   mark class is covered here or in whatif.css, components.css and the site styles. */
 @media (forced-colors: active) {
-  .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { background: CanvasText; }
+  .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { forced-color-adjust: none; background: CanvasText; }
+  .fig__swatch--same { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .chart-hatch { color: CanvasText; }
-  .chart-bar-na, .chart-tile-na, .chart-tile-empty { stroke: CanvasText; }
+  .chart-bar-na, .chart-tile-na, .chart-tile-empty, .chart-tile-zero, .chart-tile-few, .chart-dead__end { stroke: CanvasText; }
+  .chart-tile-zero { fill: Canvas; }
+  .chart-tile, .chart-tile__code, .chart-tile__value, .chart-tile-few--on { forced-color-adjust: none; }
+  .chart-bar, .chart-col--pen, .chart-this { fill: CanvasText; }
+  .chart-col { fill: GrayText; }
+  .chart-hyp { fill: Canvas; stroke: CanvasText; }
+  .chart-median, .chart-boundary, .chart-axis__line, .chart-axis__tick, .chart-zero { stroke: CanvasText; }
+  .chart-line { stroke: Highlight; }
+  .chart-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
 }

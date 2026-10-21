@@ -12,6 +12,11 @@
 .hero__none { display: grid; align-content: center; justify-items: start; min-height: 4.5rem; padding: 10px; border: 1px solid var(--line); background: var(--hatch-fill); }
 .hero__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-md)/1.3 var(--font-body); }
 .hero__pill .pill { padding: 4px 10px 3px; font-size: var(--fs-md); }
+/* Forced colors: the no-score hatch (a gradient, dropped there) is redrawn in system colors. */
+@media (forced-colors: active) {
+  .hero__none { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
+  .hero__none span { background: Canvas; color: CanvasText; }
+}
 .hero__pill .pill--na { padding-left: 26px; background-size: 14px 100%; }
 
 /* Measure table: as wide as its content (never stretched across the page), right-aligned number columns, and the
