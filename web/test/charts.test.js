@@ -271,6 +271,13 @@ test('figure: a claim level other than official is said under the chart; an unkn
   assert.throws(() => figure({ ...FIG, claimLevel: 'guess' }), /claimLevel/);
 });
 
+test('figure: an optional note sits under the chart, as text; a blank or non-text note throws', () => {
+  const s = String(figure({ ...FIG, note: 'Not drawn: <b> & co.' }));
+  assert.ok(s.includes('</svg>\n<p class="small muted fig__note">Not drawn: &lt;b&gt; &amp; co.</p>\n'));
+  assert.ok(!String(figure(FIG)).includes('fig__note'));
+  for (const note of ['', 3, {}]) assert.throws(() => figure({ ...FIG, note }), /note/, String(note));
+});
+
 test('figure: every plotted value must be in the table, or the figure refuses to build', () => {
   for (const svg of [contribBars(BARS), dotRange(DOT), ramp(RAMP), histogram(HIST), tileMap(MAP)]) {
     const values = [...String(svg).matchAll(/data-value="([^"]+)"/g)].flatMap((m) => m[1].split(' '));

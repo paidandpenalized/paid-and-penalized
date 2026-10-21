@@ -462,6 +462,7 @@ export const COPY = {
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },
   figStatesNoDecision: { text: 'no hospitals with a payment decision', claim: null },
+  figStatesOffGrid: { text: 'Not on the grid: {codes}.', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },
   figColDecided: { text: 'With a decision', claim: null },

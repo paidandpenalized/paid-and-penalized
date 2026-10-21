@@ -5,6 +5,7 @@
 //   n            the figure's number on its page (a positive integer)
 //   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
 //   svg          a chart from this kit (Safe, starting <svg)
+//   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
 //   table        { columns: [{ name, numeric }], rows: [[cell]] }; the first cell of a row is its header. A cell is
 //                text, or { text, value }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus), shown
@@ -25,13 +26,14 @@ function cellOf(cell, numeric) {
   return numeric ? { text: cmsText(s), value: s } : { text: s, value: null };
 }
 
-function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName }) {
+function checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note }) {
   if (!Number.isInteger(n) || n < 1) throw new RangeError(`figure: n must be a positive integer, got ${n}`);
   if (typeof takeaway !== 'string' || !takeaway) throw new TypeError(`figure ${n}: a takeaway is required`);
   if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);
   if (!(source instanceof Safe) && (typeof source !== 'string' || !source)) throw new TypeError(`figure ${n}: a source line is required`);
   if (!(svg instanceof Safe) || !svg.text.startsWith('<svg ')) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
   if (!Object.hasOwn(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
+  if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
   if (!NAME.test(csvName)) throw new RangeError(`figure ${n}: bad csvName "${csvName}"`);
   const { columns, rows } = table ?? {};
   if (!columns?.length || !rows?.length) throw new RangeError(`figure ${n}: a table with columns and rows is required`);
@@ -59,8 +61,8 @@ const tableCell = (cell, column, j) => {
   return j === 0 ? html`<th scope="row"${value}>${cell.text}</th>` : html`<td${value}>${cell.text}</td>`;
 };
 
-export function figure({ n, takeaway, svg, source, claimLevel = 'official', table, alt, csvName = `figure-${n}` }) {
-  checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName });
+export function figure({ n, takeaway, svg, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null }) {
+  checkArgs({ n, takeaway, svg, source, claimLevel, table, alt, csvName, note });
   const { columns, rows } = table;
   const cells = rows.map((row) => row.map((c, j) => cellOf(c, columns[j].numeric)));
   checkPlotted(n, svg, columns, cells);
@@ -69,7 +71,8 @@ export function figure({ n, takeaway, svg, source, claimLevel = 'official', tabl
   return html`<figure class="fig" id="figure-${n}" data-figure>
 <figcaption class="fig__cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
 ${image}
-${claim && html`<p class="fig__claim"><span class="pill">${claim}</span></p>
+${note && html`<p class="small muted fig__note">${note}</p>
+`}${claim && html`<p class="fig__claim"><span class="pill">${claim}</span></p>
 `}<p class="source fig__source">${source}</p>
 <details class="fig__table"><summary>${COPY.showTable}</summary>
 ${printout(html`<table class="gb">

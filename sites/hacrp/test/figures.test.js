@@ -202,7 +202,7 @@ test('the state tile grid: hospitals cut of hospitals with a decision; Maryland 
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
 });
 
-test('stateCounts counts by the master\'s state; an unknown state code stops the figure', () => {
+test('stateCounts counts by the master\'s state', () => {
   const total = Object.values(STATES).reduce((t, s) => t + s.hospitals, 0);
   assert.equal(total, DATA.hospitals.length);
   assert.equal(Object.values(STATES).reduce((t, s) => t + s.decided, 0), COUNTS.decided);
@@ -212,7 +212,31 @@ test('stateCounts counts by the master\'s state; an unknown state code stops the
   // Only a scored "N/A" counts as not subject to the reduction.
   const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decision: { text: 'N/A' } }]);
   assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
-  assert.throws(() => statesFigure({ states: { ...STATES, ZZ: STATES.AL }, n: 3, source: 's', fy: DATA.fy }), /ZZ/);
+});
+
+test('a state code with no tile (a territory) is not drawn: its row is in the table and a note names it', () => {
+  // Synthetic hospitals the master places in GU and VI, codes the grid has no tile for.
+  const gu = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { state: 'GU' }) }));
+  const vi = hospitalView(inputs(CASES.noScore, { master: master(CASES.noScore.ccn, { state: 'VI' }) }));
+  const extra = stateCounts([gu, vi]);
+  assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
+  const states = { ...STATES, ...extra };
+  const body = String(statesFigure({ states, n: 3, source: 's', fy: DATA.fy }));
+  const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
+  assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
+  assert.equal(svg.match(/data-state="/g).length, Object.keys(TILES).length);
+  assert.ok(body.includes('<p class="small muted fig__note">Not on the grid: GU, VI.</p>'));
+  const row = (code) => new RegExp(`<tr><th scope="row">${code}</th>([\\s\\S]*?)</tr>`).exec(body)?.[1];
+  assert.equal(row('GU'), '<td class="num" data-value="1">1</td><td class="num" data-value="1">1</td><td class="num" data-value="100">100.0%</td>');
+  assert.match(row('VI'), /no hospitals with a payment decision/);
+  // The off-grid rows follow the tiles, and every tiled code keeps its row.
+  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, Object.keys(TILES).length + 2);
+  // The national share counts every state; the range spans every row with a share.
+  const [, takeaway] = /<span class="fig__n">Figure 3\.<\/span> ([^<]*)</.exec(body);
+  assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
+  assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
+  // Without an off-grid code there is no note.
+  assert.doesNotMatch(String(statesFigure({ states: STATES, n: 3, source: 's', fy: DATA.fy })), /fig__note/);
 });
 
 test('the hospital table section: the controls for client/program.js, the asset, and without JavaScript a sentence and the CSV link', () => {
@@ -255,7 +279,7 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
   const caps = captions(text).map(([, t]) => t);
   assert.ok(caps[1].includes(`${count(yes)} of ${count(scores.length)}`));
   assert.ok(caps[2].includes(national));
-  const shares = Object.entries(states).filter(([c, s]) => Object.hasOwn(TILES, c) && s.decided > 0).map(([, s]) => toUnit(100 * s.yes / s.decided, 1));
+  const shares = Object.values(states).filter((s) => s.decided > 0).map((s) => toUnit(100 * s.yes / s.decided, 1));
   const allowed = new Set([count(yes), count(scores.length), national, pct(Math.min(...shares) / 100, 1), pct(Math.max(...shares) / 100, 1),
     cmsText(MEDIAN.totalText), DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes]);
   for (const t of caps) for (const x of numbers(t)) assert.ok(allowed.has(x), `"${x}" in "${t}"`);

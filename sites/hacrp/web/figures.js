@@ -2,6 +2,7 @@
 // measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
 // the median hospital against CMS's line (the formula stepper's last step), the histogram of Total HAC Scores and
 // the state tile grid. Every takeaway is filled from the data the figure draws; copy.js holds the words.
+import { has } from '../../../engine/js/has.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
@@ -156,17 +157,20 @@ const shareText = (x) => pct(x / 100, SHARE_DP);
 
 // Program page: per state, the hospitals CMS cut of those with a payment decision; states: stateCounts() (view.js).
 // A state whose hospitals are not subject to the reduction, one with no hospital in CMS's file and one with no
-// decision are hatched, never 0. The national share is the states' own total.
+// decision are hatched, never 0. A code with no tile (a territory such as GU) is not drawn: its row is in the table
+// and a note under the grid names it. The national share is the states' own total; the range spans the table's rows.
 export function statesFigure({ states, n, source, fy }) {
-  for (const code of Object.keys(states)) if (!Object.hasOwn(TILES, code)) throw new RangeError(`statesFigure: state code ${code} has no tile`);
-  const tiles = Object.keys(TILES).map((code) => {
+  const entry = (code) => {
     const s = states[code];
     if (!s) return { code, label: t('figStatesNone') };
     if (s.decided === 0) return { code, s, label: t(s.na > 0 ? 'figStatesNA' : 'figStatesNoDecision') };
     const value = shareOf(s);
     return { code, s, value, label: fill('figStatesTile', { yes: count(s.yes), decided: count(s.decided), share: shareText(value) }) };
-  });
-  const shares = tiles.filter((x) => x.value !== undefined).map((x) => x.value);
+  };
+  const tiles = Object.keys(TILES).map(entry);
+  const offGrid = Object.keys(states).filter((code) => !has(TILES, code)).sort().map(entry);
+  const listed = [...tiles, ...offGrid];
+  const shares = listed.filter((x) => x.value !== undefined).map((x) => x.value);
   const none = num('—', null);
   const total = (k) => Object.values(states).reduce((sum, s) => sum + s[k], 0);
   return figure({
@@ -178,9 +182,10 @@ export function statesFigure({ states, n, source, fy }) {
       id: 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0),
       states: Object.fromEntries(tiles.map(({ code, value, label }) => [code, value === undefined ? { hatched: true, label } : { value, label }])),
     }),
+    note: offGrid.length ? fill('figStatesOffGrid', { codes: offGrid.map((x) => x.code).join(', ') }) : null,
     table: {
       columns: [{ name: t('figColState') }, { name: t('figColCut'), numeric: true }, { name: t('figColDecided'), numeric: true }, { name: t('figColShare'), numeric: true }],
-      rows: tiles.map(({ code, s, value, label }) => (value === undefined
+      rows: listed.map(({ code, s, value, label }) => (value === undefined
         ? [code, none, none, num(label, null)]
         : [code, num(count(s.yes), s.yes), num(count(s.decided), s.decided), num(shareText(value), value)])),
     },
