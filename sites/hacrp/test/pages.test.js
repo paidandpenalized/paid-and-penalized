@@ -71,6 +71,9 @@ test('production, released: every hospital page plus /hacrp/, one <h1> each; odd
       // Twelve measure cells, and the score in the hero when CMS published one.
       if (path !== '/hacrp/') assert.ok(cells.length >= (text.includes('class="hero__num') ? 13 : 12), `${path}: CMS cells found`);
       for (const [, cell] of cells) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
+      // A page loads the figure script exactly when it has a figure, and the cite script when it has the citation.
+      assert.equal(text.includes(`src="${ASSETS.js.figure}"`), text.includes(' data-figure>'), `${path}: figure script`);
+      assert.equal(text.includes(`src="${ASSETS.js.cite}"`), text.includes(' data-cite-copy '), `${path}: cite script`);
     }
 
     // Scored pages may be indexed; a page with no score never is, even in production on a released site. Only a

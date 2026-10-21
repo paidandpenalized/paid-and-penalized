@@ -228,7 +228,7 @@ test('hostile text in a name is text in the citation, never markup', () => {
 
 test('a page with the citation block needs the cite script path', () => {
   const noCite = { ...ASSETS, js: { ...ASSETS.js, cite: undefined } };
-  assert.throws(() => programPage({ ...PROGRAM_ARGS, assets: noCite }), /cite script/);
+  assert.throws(() => programPage({ ...PROGRAM_ARGS, assets: noCite }), /every script must be a path/);
 });
 
 // ---------- the Copy script ----------

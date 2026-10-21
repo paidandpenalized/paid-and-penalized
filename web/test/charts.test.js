@@ -14,7 +14,6 @@ import { tileMap } from '../charts/tileMap.js';
 import { compareRows, tableCsv } from '../client/figure.js';
 import { citation } from '../render/components.js';
 import { Safe } from '../render/html.js';
-import { page } from '../render/layout.js';
 
 // Synthetic inputs only: no real hospital, measure values chosen by hand.
 const BARS = {
@@ -295,28 +294,8 @@ test('figure refuses a missing number, takeaway, alt, source or SVG, and a bad C
   assert.throws(() => figure({ ...FIG, svg: '<svg>' }), /svg/);
 });
 
-test('page loads the figure script after the theme script only when the body has a figure', () => {
-  const assets = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js', figure: '/assets/figure.dddddddd.js' } };
-  const base = { title: 'T', description: 'D', path: '/x/', assets };
-  const without = page({ ...base, body: new Safe('<h1>x</h1>') });
-  assert.ok(!without.includes('figure.dddddddd.js'));
-  const withFig = page({ ...base, body: figure(FIG), scripts: ['/assets/x.eeeeeeee.js'] });
-  const at = (s) => withFig.indexOf(s);
-  assert.ok(at('theme.bbbbbbbb.js') < at('figure.dddddddd.js') && at('figure.dddddddd.js') < at('x.eeeeeeee.js'));
-  assert.throws(() => page({ ...base, assets: { css: assets.css, js: { theme: assets.js.theme } }, body: figure(FIG) }), /figure/);
-});
-
-test('page loads the cite script after the theme script only when the body has the citation block', () => {
-  const assets = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js', figure: '/assets/figure.dddddddd.js', cite: '/assets/cite.ffffffff.js' } };
-  const base = { title: 'T', description: 'D', path: '/x/', assets };
+test('the citation block escapes its text and hides its Copy button until the cite script shows it', () => {
   const block = citation({ heading: 'Cite', text: 'A & B', button: 'Copy', copied: 'Copied', failed: 'Not copied' });
-  assert.ok(!page({ ...base, body: new Safe('<h1>x</h1>') }).includes('cite.ffffffff.js'));
-  const withCite = page({ ...base, body: block, scripts: ['/assets/x.eeeeeeee.js'] });
-  const at = (s) => withCite.indexOf(s);
-  assert.ok(at('theme.bbbbbbbb.js') < at('cite.ffffffff.js') && at('cite.ffffffff.js') < at('x.eeeeeeee.js'));
-  assert.ok(!withCite.includes('figure.dddddddd.js'));
-  assert.throws(() => page({ ...base, assets: { css: assets.css, js: { theme: assets.js.theme } }, body: block }), /cite/);
-  // The text is escaped; the button is hidden until the script shows it.
   assert.ok(String(block).includes('<p class="cite__text" data-cite-text>A &amp; B</p>'));
   assert.ok(String(block).includes('data-cite-copy hidden>Copy</button>'));
 });

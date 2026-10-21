@@ -36,7 +36,7 @@ export const sourceLine = ({ text, href, linkText }) => html`<p class="source">$
 
 // The citation block: the text to cite, selectable without JavaScript, and a Copy button the script (web/client/cite.js)
 // shows. The button's words and the two status messages are the site's; the script reads the messages from data-copied
-// and data-failed. layout.js loads the script on any page holding this block.
+// and data-failed. A page holding this block lists the script (assets.js.cite) in its scripts.
 export const citation = ({ heading, text, button, copied, failed }) => html`<section class="block cite" aria-labelledby="cite-h" data-copied="${copied}" data-failed="${failed}">
 <h2 id="cite-h" class="h-sm">${heading}</h2>
 <p class="cite__text" data-cite-text>${text}</p>

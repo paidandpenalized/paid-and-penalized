@@ -68,6 +68,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
   const small = smallNumber(view);
   const home = SITE.sites.hacrp.path;
   const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets) : null;
+  const figs = figures(view, ranges, source);
 
   const body = html`<article class="wrap page">
 <header class="page__head">
@@ -96,7 +97,7 @@ ${printout(html`<table class="gb gb--measures">
 <thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th><th scope="col">${t('colNotes')}</th></tr></thead>
 <tbody>${view.measures.map(measureRow)}</tbody>
 </table>`)}
-${figures(view, ranges, source)}
+${figs}
 </section>
 ${what?.body}
 ${asofBar({ fy: view.fy, periods: view.periods, source })}
@@ -113,7 +114,7 @@ ${sourceLine({ fy: view.fy, source })}
     path: view.path,
     robots,
     body,
-    scripts: what ? [what.script] : [],
+    scripts: [...(figs.length ? [assets.js.figure] : []), assets.js.cite, ...(what ? [what.script] : [])],
     assets,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
   });

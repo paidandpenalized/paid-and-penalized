@@ -162,7 +162,7 @@ ${sourceLine({ fy, source })}
     path: PATH,
     robots,
     body,
-    scripts: [assets.js['hacrp-program']],
+    scripts: [...(steps || histogram || tiles ? [assets.js.figure] : []), assets.js.cite, assets.js['hacrp-program']],
     assets,
   });
 }

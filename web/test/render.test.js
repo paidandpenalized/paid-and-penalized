@@ -130,6 +130,7 @@ test('page rejects missing parts and a path without a leading slash', () => {
   assert.throws(() => page({ ...PAGE, path: 'hacrp/' }), RangeError);
   assert.throws(() => page({ ...PAGE, title: '' }), TypeError);
   assert.throws(() => page({ ...PAGE, assets: { css: '/x.css', js: {} } }), TypeError);
+  assert.throws(() => page({ ...PAGE, scripts: [undefined] }), /script/, 'a script path the assets lack');
 });
 
 test('theme.js stores nothing and sets only data-theme', () => {

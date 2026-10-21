@@ -2,7 +2,7 @@
 // <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
 import { COPY } from '../copy.js';
 import { SITE } from '../site.js';
-import { Safe, html, jsonText, raw } from './html.js';
+import { html, jsonText, raw } from './html.js';
 
 const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
 const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
@@ -30,18 +30,15 @@ const footer = html`<footer class="foot">
   </div>
 </footer>`;
 
-// body: Safe markup (a plain string is escaped, never trusted). scripts: extra module URLs after the theme script.
-// A body holding a figure (web/charts/figure.js) also loads the figure script, right after the theme script; one
-// holding the citation block (components.js) loads the cite script after that.
+// body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
+// after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
+// block (components.js) assets.js.cite, then its own.
 export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
-  const figures = body instanceof Safe && body.text.includes('<figure class="fig"');
-  if (figures && !assets.js.figure) throw new TypeError('page: a body with a figure needs the figure script path');
-  const cites = body instanceof Safe && body.text.includes('<section class="block cite"');
-  if (cites && !assets.js.cite) throw new TypeError('page: a body with a citation block needs the cite script path');
-  const modules = [assets.js.theme, ...(figures ? [assets.js.figure] : []), ...(cites ? [assets.js.cite] : []), ...scripts];
+  if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
+  const modules = [assets.js.theme, ...scripts];
   return html`<!doctype html>
 <html lang="en">
 <head>
