@@ -156,18 +156,19 @@ export function statesFigure({ states, n, source, fy }) {
   const offGrid = Object.keys(states).filter((code) => !has(TILES, code)).sort().map(entry);
   const listed = [...tiles, ...offGrid];
   const shares = listed.filter((x) => x.value !== undefined).map((x) => x.value);
+  const [low, high] = [shareText(Math.min(...shares)), shareText(Math.max(...shares))];
   const none = num('—', null);
   const total = (k) => Object.values(states).reduce((sum, s) => sum + s[k], 0);
   // A share that rests on few decisions prints its counts, not a percentage that would read as precise.
   const tileText = ({ s, value, few }) => (few ? fill('figStatesFewText', { yes: count(s.yes), decided: count(s.decided) }) : shareText(value));
   const legend = {
-    title: t('figColShare'), high: shareText(Math.max(...shares)), zero: t('figStatesZero'),
+    title: t('figColShare'), high, zero: t('figStatesZero'),
     few: fill('figStatesFew', { n: count(FEW_DECIDED) }),
   };
   return figure({
     n, source, alt: t('figStatesAlt'), csvName: `hacrp-fy${fy}-states`,
     takeaway: fill('figStatesTakeaway', {
-      share: pct(total('yes') / total('decided'), SHARE_DP), low: shareText(Math.min(...shares)), high: shareText(Math.max(...shares)),
+      share: pct(total('yes') / total('decided'), SHARE_DP), low, high,
     }),
     ...variants((width) => tileMap({
       id: width === WIDE ? 'states-wide' : 'states', ramp: TILE_STEPS_PCT, format: (x) => pct(x / 100, 0), width, showValues: width === WIDE, legend,
