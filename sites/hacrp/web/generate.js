@@ -31,11 +31,11 @@ export function a1Summary({ ok, a, b, info }) {
 
 // The hospitals asset (/assets/hacrp-hospitals.<hash>.json) the program page's client reads: { hospitalPath, rows },
 // one row per hospital, [ccn, name, city, state, total, decision]: the CCN as CMS writes it (a page is at
-// hospitalPath + the CCN in lowercase + "/"), names from the hospital master, CMS's Total HAC Score text (true minus;
-// "N/A" when none) and CMS's payment reduction text. Rows are in the hospital table's default order (state, then
+// hospitalPath + the CCN in lowercase + "/"), names from the hospital master, CMS's Total HAC Score text as published
+// (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none) and CMS's payment reduction text. Rows are in the hospital table's default order (state, then
 // name; hospital-table.js); the search sorts its own list by name.
 export function hospitalRows(views) {
-  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.text, v.decision.text]).sort(compareDefault);
+  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows };
 }
 

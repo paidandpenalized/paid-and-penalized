@@ -9,9 +9,9 @@ import { SITE } from '../../../../web/site.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fill, sourceText, t } from '../copy.js';
 import { lineFigure, scoresFigure, statesFigure } from '../figures.js';
-import { LINKS, csvPath, dictionaryPath } from '../links.js';
+import { LINKS } from '../links.js';
 import { stepRows, stepSum } from '../stepper.js';
-import { asofBar, citation, sourceLine } from './parts.js';
+import { asofBar, citation, dataLinks, sourceLine } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
@@ -58,7 +58,7 @@ const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', '
 const hospitalTable = ({ fy, searchUrl }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${t('tableHeading')}</h2>
 <p class="ht-nojs">${t('tableNoScript')}</p>
-<p><a href="${csvPath(fy)}">${t('dataCsv')}</a> · <a href="${dictionaryPath(fy)}">${t('dataDictionary')}</a></p>
+${dataLinks(fy)}
 <div class="ht" data-src="${searchUrl}" hidden>
 <p>${t('tableIntro')}</p>
 <div class="ht__controls">
@@ -92,7 +92,7 @@ export function programPage({ fy, counts, boundaryText, measures, periods, searc
   const line = sourceText({ fy, source });
   let n = 0;
   const steps = whatif && stepper(whatif, { boundaryText, n: ++n, line, fy });
-  const histogram = scores && scoresFigure({ scores, boundary, n: ++n, source: line, fy });
+  const histogram = scores && scoresFigure({ scores, boundary, boundaryText, n: ++n, source: line, fy });
   const tiles = states && statesFigure({ states, n: ++n, source: line, fy });
 
   const body = html`<article class="wrap page">

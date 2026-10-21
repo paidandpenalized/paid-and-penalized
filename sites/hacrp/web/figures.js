@@ -33,9 +33,9 @@ export function measureRanges(model) {
 
 // Hospital page: each scored measure's part of the Total HAC Score (its z-score divided by the number scored).
 export function partsFigure(view, n, source) {
-  // The plotted part is the view's own text of it (so the bar, its table and the takeaway agree to the digit).
+  // The plotted part is the number the view's text shows (so the bar, its table and the takeaway agree to the digit).
   const parts = view.measures.filter((m) => m.contribution !== null).map((m) => ({
-    m, value: Number(m.contributionText.replace('−', '-')), label: m.assigned ? fill('figPartsAssigned', { short: m.short }) : m.short,
+    m, value: m.contributionRaw, label: m.assigned ? fill('figPartsAssigned', { short: m.short }) : m.short,
   }));
   const largest = view.largest && view.measures.find((m) => m.id === view.largest.id);
   const takeaway = largest
@@ -99,7 +99,7 @@ export function lineFigure({ hospital, model, range, boundaryText, n, source, fy
     takeaway: fill(...words),
     svg: ramp({
       domain: rampDomain(range, { actual: hospital.total, highestNo, lowestYes }), actual: hospital.total, band: [highestNo, lowestYes],
-      labels: { actual: label, line: t('whatifRampLine') }, format: (v) => decimal(v, DP),
+      labels: { actual: label, line: t('whatifRampLine'), lineTip: fill('line', boundaryText) }, format: (v) => decimal(v, DP),
     }),
     table: {
       columns: [{ name: t('figColMark') }, { name: t('figColScore'), numeric: true }],
@@ -112,15 +112,16 @@ export function lineFigure({ hospital, model, range, boundaryText, n, source, fy
   });
 }
 
-// Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. CMS's lowest
-// Yes score is a bin edge, so a bin at or above it holds only Yes decisions and a bin below it only No; a decision
-// on the wrong side of that score stops the build.
-export function scoresFigure({ scores, boundary, n, source, fy }) {
-  const edge = boundary.lowestYes;
-  const wrong = scores.find((s) => s.yes !== (s.total >= edge));
-  if (wrong) throw new RangeError(`scoresFigure: a ${wrong.yes ? 'Yes' : 'No'} decision at ${wrong.total} is on the wrong side of CMS's lowest Yes score, ${edge}`);
-  const values = scores.map((s) => s.total);
-  const bins = histogramBins(values, BINS, edge);
+// Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. CMS's line is
+// the gap between its highest No score and its lowest Yes score (boundary: the numbers; boundaryText: CMS's text),
+// and every word about it names both. The chart draws it at the lowest Yes score, a bin edge, so a bin at or above
+// it holds only Yes decisions and a bin below it only No; a decision on the wrong side of that score stops the build.
+// The table lists the bins with the line between them.
+export function scoresFigure({ scores, boundary, boundaryText, n, source, fy }) {
+  const { highestNo, lowestYes } = boundary;
+  const wrong = scores.find((s) => s.yes !== (s.total >= lowestYes));
+  if (wrong) throw new RangeError(`scoresFigure: a ${wrong.yes ? 'Yes' : 'No'} decision at ${wrong.total} is on the wrong side of CMS's lowest Yes score, ${lowestYes}`);
+  const bins = histogramBins(scores.map((s) => s.total), BINS, lowestYes);
   const decisionOf = (b) => (b.count === 0 ? '' : t(b.above ? 'flagYes' : 'flagNo'));
   const at = (v) => decimal(v, DP);
   const tip = (b) => {
@@ -129,13 +130,21 @@ export function scoresFigure({ scores, boundary, n, source, fy }) {
     const decision = decisionOf(b);
     return b.count === 1 ? fill('figScoresTipOne', { ...span, decision }) : fill('figScoresTip', { ...span, decision, count: count(b.count) });
   };
+  const lineName = t('whatifRampLine');
+  const binRow = (b) => [num(at(b.x0), b.x0), num(at(b.x1), b.x1), num(count(b.count), b.count), decisionOf(b)];
+  const lineRow = [num(boundaryText.highestNo, highestNo), num(boundaryText.lowestYes, lowestYes), num('—', null), lineName];
+  const firstAbove = bins.findIndex((b) => b.above);
+  const rows = bins.map(binRow);
+  rows.splice(firstAbove < 0 ? rows.length : firstAbove, 0, lineRow);
   return figure({
     n, source, alt: t('figScoresAlt'), csvName: `hacrp-fy${fy}-scores`,
     takeaway: fill('figScoresTakeaway', { yes: count(scores.filter((s) => s.yes).length), decided: count(scores.length) }),
-    svg: histogram({ values, bins: BINS, boundary: edge, markLabel: t('whatifRampLine'), tip }),
+    svg: histogram({
+      binned: bins, boundary: lowestYes, markLabel: lineName, markTip: fill('line', boundaryText), markValue: [highestNo, lowestYes], tip,
+    }),
     table: {
       columns: [{ name: t('figColFrom'), numeric: true }, { name: t('figColTo'), numeric: true }, { name: t('figColHospitals'), numeric: true }, { name: t('figColDecision') }],
-      rows: bins.map((b) => [num(at(b.x0), b.x0), num(at(b.x1), b.x1), num(count(b.count), b.count), decisionOf(b)]),
+      rows,
     },
   });
 }

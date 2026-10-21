@@ -4,7 +4,7 @@ import { footnoteList } from '../../../engine/js/footnotes.js';
 import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
-import { cmsText, decimal, signed } from '../../../web/render/format.js';
+import { cmsText, decimal, shown, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { measureLabel } from './copy.js';
 import { SHORT_NAMES } from './constants.js';
@@ -72,6 +72,8 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
       maxErrorText: ceilText(estimate[id].maxError),
       contribution,
       contributionText: contribution === null ? null : signed(contribution, DP),
+      // The number that text shows, for a figure to plot.
+      contributionRaw: contribution === null ? null : shown(contribution, DP),
       footnotes: footnoteList(footnotes, [m.valueFootnote, m.zFootnote].join(',')),
     };
   });
@@ -96,8 +98,9 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     status: st,
     // A hospital with a score gets the distance sentence, the what-if and (on a released site) indexing.
     scored,
-    // CMS's Total HAC Score text ("N/A" when CMS published none) and its footnotes.
-    score: { text: cmsText(h.totalText), footnotes: footnoteList(footnotes, h.totalFootnote) },
+    // CMS's Total HAC Score text ("N/A" when CMS published none) with a true minus, as published (raw), and its
+    // footnotes.
+    score: { text: cmsText(h.totalText), raw: h.totalText, footnotes: footnoteList(footnotes, h.totalFootnote) },
     decision: { text: h.paymentReduction, footnotes: footnoteList(footnotes, h.paymentReductionFootnote) },
     distance: scored ? distance(st, h.total, model.boundary) : null,
     boundaryText: bt,

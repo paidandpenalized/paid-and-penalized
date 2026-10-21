@@ -3,7 +3,8 @@
 // label, and, if given, a hypothetical score as a hollow ▲ (past the domain, clamped to the edge with an arrow). The
 // geometry is the what-if ramp's (web/whatif/marks.js), on a viewBox `width` units wide.
 //   domain        [low, high] of scores (e.g. rampDomain from marks.js)
-//   labels        { actual, line, hypothetical (only with a hypothetical) }   the caller's words
+//   labels        { actual, line, hypothetical (only with a hypothetical), lineTip (optional) }   the caller's words;
+//                 lineTip is the line's tooltip (default: the line's label with the band's two scores)
 //   format        score -> text (default: the number as given, with a true minus)
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
@@ -35,7 +36,7 @@ export function ramp({ domain, actual, hypothetical = null, band: [highestNo, lo
     kind: 'ramp', width, height: HEIGHT, body: html`<rect class="chart-zone" x="${r2(xAt(line))}" y="18" width="${r2(xAt(1) - xAt(line))}" height="22"/>
 <g transform="translate(0 ${AXIS_Y})">${axis({ scale, orient: 'top', ticks: 5 })}</g>
 ${mark({
-    tip: `${labels.line} (${format(highestNo)}, ${format(lowestYes)})`, value: [highestNo, lowestYes],
+    tip: labels.lineTip ?? `${labels.line} (${format(highestNo)}, ${format(lowestYes)})`, value: [highestNo, lowestYes],
     hit: { x: xAt(line) - 6, y: 8, width: 12, height: 40 },
     body: html`<line class="chart-line" x1="${r2(xAt(line))}" x2="${r2(xAt(line))}" y1="16" y2="${MARK_Y}"/>`,
   })}

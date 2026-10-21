@@ -40,6 +40,10 @@ export const decimal = (x, dp) => withSign(x, dp, '');
 // As decimal, with + for positives.
 export const signed = (x, dp = 1) => withSign(x, dp, '+');
 
+// The number decimal(x, dp) and signed(x, dp) show, so a chart can plot exactly what its text says (Intl's rounding,
+// not toFixed's: the two split some ties).
+export const shown = (x, dp) => Number(fixed(x, dp, 'decimal').replaceAll(',', '')) + 0; // + 0: never -0
+
 function longForm(year, month, day, source) {
   const d = new Date(Date.UTC(year, month - 1, day));
   if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {

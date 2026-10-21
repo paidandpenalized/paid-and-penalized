@@ -11,7 +11,7 @@ import { HUB } from '../../../hub/pages.js';
 import { build } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { count } from '../../../web/render/format.js';
+import { cmsText, count } from '../../../web/render/format.js';
 import { loadHacrp } from '../web/data.js';
 import { measureRanges } from '../web/figures.js';
 import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.js';
@@ -212,7 +212,7 @@ test('the build writes the hospitals asset with one row per hospital, in the tab
     assert.ok(new Set(rows.map((r) => r[3])).size > 1, 'the slice spans states');
     for (const [ccn, , , , total] of rows) {
       const text = read(dir, `${hospitalPath}${ccn.toLowerCase()}/`);
-      assert.ok(total === 'N/A' ? text.includes('No score published') : text.includes(`cms">${total}<`), ccn);
+      assert.ok(total === 'N/A' ? text.includes('No score published') : text.includes(`cms">${cmsText(total)}<`), ccn);
     }
   }));
 

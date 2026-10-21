@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
-import { cmsText, count, isoDate, longDate, pct, signed } from '../render/format.js';
+import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
 import { fillCopy, footnoteLegend, pill } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
@@ -56,6 +56,15 @@ test('count, pct and signed', () => {
   assert.equal(signed(0, 2), '0.00');
   assert.equal(signed(-0.0001, 2), '0.00');
   assert.equal(signed(-1234.5, 1), '−1,234.5');
+});
+
+test('shown is the number decimal and signed show, where toFixed rounds a tie the other way; never -0', () => {
+  for (const x of [-0.24275, 0.29105, 0.19965, 1 / 6, -1234.56789, 0.00005]) {
+    assert.equal(shown(x, 4), Number(decimal(x, 4).replace('−', '-').replaceAll(',', '')), String(x));
+  }
+  assert.equal(shown(-0.24275, 4), -0.2428);
+  assert.notEqual(Number((-0.24275).toFixed(4)), -0.2428, 'toFixed splits this tie');
+  assert.ok(Object.is(shown(-0.00001, 4), 0));
 });
 
 test('longDate and isoDate spell the month out and reject non-dates', () => {

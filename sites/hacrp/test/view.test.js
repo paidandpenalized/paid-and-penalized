@@ -21,7 +21,7 @@ test('a scored "Yes" hospital: the whole view', () => {
     periods: PERIODS,
     status: 'yes',
     scored: true,
-    score: { text: '0.3000', footnotes: [] },
+    score: { text: '0.3000', raw: '0.3000', footnotes: [] },
     decision: { text: 'Yes', footnotes: [] },
     distance: { to: 'highestNo', value: 0.05, text: '0.0500' },
     boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
@@ -30,21 +30,21 @@ test('a scored "Yes" hospital: the whole view', () => {
     measures: [
       { id: 'PSI90', label: 'Patient safety and adverse events composite', short: 'PSI 90', valueText: '1.0600',
         zText: '0.5000', valueRaw: '1.0600', zRaw: '0.5000', hasValue: true, hasZ: true, assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.5 / 6,
-        contributionText: '+0.0833', footnotes: [] },
+        contributionText: '+0.0833', contributionRaw: 0.0833, footnotes: [] },
       { id: 'CLABSI', label: 'Central line–associated bloodstream infections', short: 'CLABSI', valueText: '0.990',
         zText: '0.9000', valueRaw: '0.990', zRaw: '0.9000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0007', contribution: 0.9 / 6,
-        contributionText: '+0.1500', footnotes: [] },
+        contributionText: '+0.1500', contributionRaw: 0.15, footnotes: [] },
       { id: 'CAUTI', label: 'Catheter-associated urinary tract infections', short: 'CAUTI', valueText: '0.464',
         zText: '−0.2000', valueRaw: '0.464', zRaw: '-0.2000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0008', contribution: -0.2 / 6,
-        contributionText: '−0.0333', footnotes: [] },
+        contributionText: '−0.0333', contributionRaw: -0.0333, footnotes: [] },
       { id: 'SSI', label: 'Surgical site infections after colon surgery or abdominal hysterectomy', short: 'SSI',
         valueText: '0.909', zText: '0.1000', valueRaw: '0.909', zRaw: '0.1000', hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001',
-        contribution: 0.1 / 6, contributionText: '+0.0167', footnotes: [] },
+        contribution: 0.1 / 6, contributionText: '+0.0167', contributionRaw: 0.0167, footnotes: [] },
       { id: 'CDI', label: 'Clostridioides difficile (C. diff) infections', short: 'CDI', valueText: '0.481',
         zText: '0.4000', valueRaw: '0.481', zRaw: '0.4000', hasValue: true, hasZ: true, assigned: false, tagged: true, maxErrorText: '0.0021', contribution: 0.4 / 6,
-        contributionText: '+0.0667', footnotes: [] },
+        contributionText: '+0.0667', contributionRaw: 0.0667, footnotes: [] },
       { id: 'MRSA', label: 'MRSA bloodstream infections', short: 'MRSA', valueText: '0.745', zText: '0.1000', valueRaw: '0.745', zRaw: '0.1000',
-        hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001', contribution: 0.1 / 6, contributionText: '+0.0167',
+        hasValue: true, hasZ: true, assigned: false, tagged: false, maxErrorText: '0.0001', contribution: 0.1 / 6, contributionText: '+0.0167', contributionRaw: 0.0167,
         footnotes: [] },
     ],
     largest: { id: 'CLABSI', contributionText: '+0.1500' },
@@ -54,7 +54,7 @@ test('a scored "Yes" hospital: the whole view', () => {
 test('a scored "No" hospital: distance to the lowest Yes; an unscored measure kept, in order, with its footnotes', () => {
   const v = view('no');
   assert.equal(v.status, 'no');
-  assert.equal(v.score.text, '−0.1000');
+  assert.deepEqual([v.score.text, v.score.raw], ['−0.1000', '-0.1000']);
   assert.deepEqual(v.distance, { to: 'lowestYes', value: 0.3507, text: '0.3507' });
   assert.equal(v.n, 5);
   assert.deepEqual(v.measures.map((m) => m.id), MEASURE_IDS);
@@ -90,7 +90,7 @@ test('no score, decision No: not scored (no what-if, never indexed), no distance
   const v = view('noScore');
   assert.equal(v.status, 'no-score');
   assert.equal(v.scored, false);
-  assert.deepEqual(v.score, { text: 'N/A', footnotes: [fn('5')] });
+  assert.deepEqual(v.score, { text: 'N/A', raw: 'N/A', footnotes: [fn('5')] });
   assert.deepEqual(v.decision, { text: 'No', footnotes: [] });
   assert.deepEqual([v.distance, v.n, v.oneMeasure, v.largest], [null, 0, false, null]);
   assert.ok(v.measures.every((m) => m.contribution === null && m.footnotes.length === 2));
@@ -100,7 +100,7 @@ test('the row reading Yes with no score: status yes-no-score, CMS\'s values only
   const v = view('yesNoScore');
   assert.equal(v.status, 'yes-no-score');
   assert.equal(v.scored, false);
-  assert.deepEqual(v.score, { text: 'N/A', footnotes: [fn('5')] });
+  assert.deepEqual(v.score, { text: 'N/A', raw: 'N/A', footnotes: [fn('5')] });
   assert.deepEqual(v.decision, { text: 'Yes', footnotes: [] });
   assert.deepEqual([v.distance, v.largest], [null, null]);
 });
@@ -131,7 +131,7 @@ test('largest is null when every scored measure is CMS-assigned', () => {
 
 test('largest is null when no measure adds above zero; a scored hospital\'s total footnote is shown', () => {
   const v = view('totalFootnote');
-  assert.deepEqual(v.score, { text: '−0.0500', footnotes: [fn('23')] });
+  assert.deepEqual(v.score, { text: '−0.0500', raw: '-0.0500', footnotes: [fn('23')] });
   assert.equal(v.scored, true);
   assert.deepEqual(byId(v, 'PSI90').footnotes, [fn('23')]);
   assert.equal(v.largest, null);

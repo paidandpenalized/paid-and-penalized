@@ -10,7 +10,7 @@ import { CCN } from '../../../engine/js/ccn.js';
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
 import { compareByName, decodeState, filterRows, sortRows, stateCodes, withState } from '../web/hospital-table.js';
-import { count } from '../../../web/render/format.js';
+import { cmsText, count } from '../../../web/render/format.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { mountFromPage } from './whatif.js';
 
@@ -75,7 +75,8 @@ if (box) {
 
 const table = document.querySelector('.ht[data-src]');
 
-function mountTable({ hospitalPath, rows }) {
+// linked: the page was opened from a link naming a state (#state=XX), so a valid one brings the table into view.
+function mountTable({ hospitalPath, rows }, { linked }) {
   const section = table.closest('section');
   const select = table.querySelector('#ht-state');
   const search = table.querySelector('#ht-name');
@@ -110,7 +111,7 @@ function mountTable({ hospitalPath, rows }) {
     a.href = `${hospitalPath}${ccn.toLowerCase()}/`;
     a.textContent = name;
     th.append(a);
-    tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(total, 'score'), cell(decision, 'decision'));
+    tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(cmsText(total), 'score'), cell(decision, 'decision'));
     return tr;
   }
   // Each row's <tr> is built once; a filter or sort only puts the built rows in a new order.
@@ -128,8 +129,12 @@ function mountTable({ hospitalPath, rows }) {
     else status.textContent = text;
   }
 
+  // The rows in the reader's sort, built once per sort change: the asset's own order is the default (hospitalRows),
+  // and a filter keeps the order it is given, so a keystroke only filters.
+  let ordered = rows;
+
   function render({ typing = false } = {}) {
-    const matches = sortRows(filterRows(rows, view), view.key, view.dir);
+    const matches = filterRows(ordered, view);
     const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
     const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
     body.replaceChildren(...shown.map(rowOf));
@@ -172,6 +177,7 @@ function mountTable({ hospitalPath, rows }) {
       view.key = key;
       for (const h of heads) h.removeAttribute('aria-sort');
       th.setAttribute('aria-sort', view.dir > 0 ? 'ascending' : 'descending');
+      ordered = sortRows(rows, view.key, view.dir);
       render();
     });
   }
@@ -181,6 +187,8 @@ function mountTable({ hospitalPath, rows }) {
   render();
   section.querySelector('.ht-nojs').hidden = true;
   table.hidden = false;
+  // Never animated (a smooth scroll started on load does not run in a background tab); focus stays where it is.
+  if (linked && view.state) section.scrollIntoView({ block: 'start', behavior: 'auto' });
 }
 
 if (table) {
@@ -190,16 +198,17 @@ if (table) {
   // building the table is not caught here, so it reaches the console as itself.
   let observer = null;
   let mounted = false;
+  const linked = /(^#|&)state=/.test(window.location.hash);
   const load = () => hospitals(table.dataset.src).then(
     (data) => {
       if (mounted) return;
       mounted = true;
       observer?.disconnect();
-      mountTable(data);
+      mountTable(data, { linked });
     },
     (error) => { console.error(error); },
   );
-  if (!/(^#|&)state=/.test(window.location.hash) && 'IntersectionObserver' in window) {
+  if (!linked && 'IntersectionObserver' in window) {
     observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));
   } else {

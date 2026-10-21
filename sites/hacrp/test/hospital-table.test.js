@@ -4,13 +4,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compareByName, compareDefault, decodeState, filterRows, scoreOf, sortRows, stateCodes, withState } from '../web/hospital-table.js';
 
-// [ccn, name, city, state, total (CMS text, true minus), decision]
+// [ccn, name, city, state, total (CMS's text, hyphen-minus), decision]
 const ROWS = [
   ['990011', 'Sample Medical Center', 'Sampleville', 'MD', '0.4000', 'N/A'],
   ['990012', 'Example General Hospital', 'Exampleton', 'AL', '0.3000', 'Yes'],
-  ['990013', 'Example General Hospital', 'Aardvark', 'AL', '−0.1000', 'No'],
+  ['990013', 'Example General Hospital', 'Aardvark', 'AL', '-0.1000', 'No'],
   ['990014', 'Zeta Community Hospital', 'Exampleton', 'AL', 'N/A', 'No'],
-  ['990015', 'Alpha Regional Hospital', 'Testburg', 'CA', '−1.2500', 'No'],
+  ['990015', 'Alpha Regional Hospital', 'Testburg', 'CA', '-1.2500', 'No'],
   ['990016', 'Alpha Regional Hospital', 'Testburg', 'CA', '2.0000', 'Yes'],
 ];
 const ccns = (rows) => rows.map((r) => r[0]);
@@ -39,8 +39,10 @@ test('decodeState accepts only #state=XX for a code in the data, any case, and i
 });
 
 test('scores sort by value, with "N/A" and blanks last in either direction; text sorts by locale; ties keep order', () => {
-  assert.equal(scoreOf('−0.1000'), -0.1);
-  assert.ok(Number.isNaN(scoreOf('N/A')) && Number.isNaN(scoreOf('')) && Number.isNaN(scoreOf('1e3')));
+  assert.equal(scoreOf('-0.1000'), -0.1);
+  assert.equal(scoreOf('0.4000'), 0.4);
+  // CMS's own text only: display text (a true minus), "N/A", blanks and other spellings are not scores.
+  for (const s of ['N/A', '', ' ', '1e3', '−0.1000', '+0.1', '0x10', '.5']) assert.ok(Number.isNaN(scoreOf(s)), s);
   const base = [...ROWS].sort(compareDefault);
   assert.deepEqual(ccns(sortRows(base, 'score', 1)), ['990015', '990013', '990012', '990011', '990016', '990014']);
   assert.deepEqual(ccns(sortRows(base, 'score', -1)), ['990016', '990011', '990012', '990013', '990015', '990014']);
@@ -57,6 +59,17 @@ test('filterRows keeps one state and names containing the query, case-insensitiv
   assert.deepEqual(ccns(filterRows(ROWS, { state: 'CA', query: 'alpha' })), ['990015', '990016']);
   assert.deepEqual(ccns(filterRows(ROWS, { state: 'CA', query: 'general' })), []);
   assert.deepEqual(ccns(filterRows(ROWS, {})), ccns(ROWS));
+});
+
+test('a sorted order, filtered, equals the filtered rows sorted: the browser sorts once and filters as the reader types', () => {
+  const base = [...ROWS].sort(compareDefault);
+  const views = [{ state: 'AL' }, { query: 'hospital' }, { state: 'CA', query: 'ALPHA' }, { query: 'none' }, {}];
+  for (const [key, dir] of [[null, 1], ['score', 1], ['score', -1], ['name', 1], ['city', -1], ['decision', 1], ['state', -1]]) {
+    const ordered = sortRows(base, key, dir);
+    for (const v of views) {
+      assert.deepEqual(ccns(filterRows(ordered, v)), ccns(sortRows(filterRows(base, v), key, dir)), `${key} ${dir} ${JSON.stringify(v)}`);
+    }
+  }
 });
 
 test('withState sets or clears only the state= part of the fragment and keeps the rest', () => {

@@ -155,12 +155,31 @@ test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No
   const counts = [...body.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
   assert.equal(counts.reduce((a, b) => a + b, 0), COUNTS.decided, 'every decided hospital in one bin');
   // Bins above the line hold the Yes decisions, the rest the No.
-  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, n: 2, source: 's', fy: DATA.fy });
+  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 2, source: 's', fy: DATA.fy });
   assert.ok(String(yes).includes('<td>Yes</td>') && String(yes).includes('<td>No</td>'));
   // A No at or above CMS's lowest Yes score (or a Yes below it) would put both decisions in one bin: the build stops.
   for (const odd of [{ total: model.boundary.lowestYes, yes: false }, { total: model.boundary.highestNo, yes: true }]) {
-    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, n: 2, source: 's', fy: DATA.fy }), /wrong side/);
+    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, boundaryText: DATA.boundaryText, n: 2, source: 's', fy: DATA.fy }), /wrong side/);
   }
+});
+
+test('CMS\'s line means one thing in both program figures: the gap between CMS\'s highest No and lowest Yes, named by both', () => {
+  const { highestNo, lowestYes } = model.boundary;
+  const sentence = esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${DATA.boundaryText.lowestYes} or higher and none at ${DATA.boundaryText.highestNo} or lower.`);
+  const [ramp, hist] = figures(program()).map(([, , body]) => body);
+  // Both lines are marks whose tooltip is the line sentence and whose values are CMS's two scores.
+  const lineMark = new RegExp(`<g class="chart-mark" data-mark data-value="${highestNo} ${lowestYes}"><title>([^<]*)</title>`);
+  assert.equal(lineMark.exec(ramp)?.[1], sentence, 'Figure 1');
+  assert.equal(lineMark.exec(hist)?.[1], sentence, 'Figure 2');
+  // The histogram's table lists the line between the last No bin and the first Yes bin, by both of CMS's scores.
+  const rows = [...hist.matchAll(/<tr><th scope="row"[^>]*>([^<]*)<\/th><td[^>]*>([^<]*)<\/td><td[^>]*>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => m.slice(1));
+  const at = rows.findIndex((r) => r[3] === 'CMS&#39;s line');
+  assert.deepEqual(rows[at], [DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes, '—', 'CMS&#39;s line']);
+  assert.equal(rows.filter((r) => r[3] === 'CMS&#39;s line').length, 1);
+  assert.ok(rows.slice(0, at).every((r) => r[3] !== 'Yes') && rows.slice(at + 1).every((r) => r[3] !== 'No'));
+  assert.equal(rows[at + 1][0], decimal(lowestYes, 4), 'the first bin above starts at CMS\'s lowest Yes score');
+  // No word on either figure gives the line as a single score.
+  for (const body of [ramp, hist]) assert.doesNotMatch(body, /CMS&#39;s line \(/);
 });
 
 test('the state tile grid: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no code drawn as zero', () => {
@@ -270,6 +289,7 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
     for (const m of view.measures.filter((x) => x.contribution !== null)) {
       assert.ok(fig.includes(`>${m.contributionText}</text>`), `scored row ${i} ${m.id}: bar label`);
       assert.ok(fig.includes(`data-value="${Number(m.contributionText.replace('−', '-'))}">${m.contributionText}</td>`), `scored row ${i} ${m.id}: table`);
+      assert.equal(m.contributionRaw, Number(m.contributionText.replace('−', '-')), `scored row ${i} ${m.id}: the view's number is its text's`);
     }
   }
 });

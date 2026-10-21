@@ -3,7 +3,11 @@
 // so no bin straddles the line, and span the boundary even when the data don't; each value lands in exactly one
 // bin (histogramBins).
 //   bins     about how many bins (d3-array's tickStep picks a round width)
+//   binned   histogramBins(values, bins, boundary), when the caller already has them for its table (values and bins
+//            are then not read), so the chart and the table share one binning
 //   format   a bin edge -> text; tip(bin) -> a column's tooltip (default: "lo – hi: count")
+//   markTip  the boundary's tooltip, and markValue the value or values it stands for (the caller's table holds them):
+//            the boundary is then a mark; without markTip it is drawn but is not one
 import { bin, tickStep } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { count } from '../render/format.js';
@@ -37,8 +41,8 @@ export function histogramBins(values, bins, boundary) {
   return out.map((b) => ({ x0: b.x0, x1: b.x1, count: b.length, above: b.x0 >= boundary }));
 }
 
-export function histogram({ values, bins = 20, boundary, markLabel, width = WIDTH, format = plain, tip }) {
-  const data = histogramBins(values, bins, boundary);
+export function histogram({ values, bins = 20, binned = null, boundary, markLabel, markTip = null, markValue = null, width = WIDTH, format = plain, tip }) {
+  const data = binned ?? histogramBins(values, bins, boundary);
   const tipOf = tip ?? ((b) => `${format(b.x0)} – ${format(b.x1)}: ${count(b.count)}`);
   const x = scaleLinear().domain([data[0].x0, data[data.length - 1].x1]).range([M.left, width - M.right]);
   const most = Math.max(...data.map((b) => b.count));
@@ -48,6 +52,7 @@ export function histogram({ values, bins = 20, boundary, markLabel, width = WIDT
   const bx = r2(x(boundary));
   const t = (x(boundary) - M.left) / (width - M.left - M.right);
   const { anchor, dx } = labelAt(t);
+  const line = html`<line class="chart-boundary" x1="${bx}" x2="${bx}" y1="${M.top - 12}" y2="${base}"/>`;
 
   return frame({
     kind: 'histogram', width, height: HEIGHT, body: html`<g transform="translate(${M.left} 0)">${axis({ scale: y, orient: 'left', ticks: yTicks, format: count, grid: width - M.left - M.right })}</g>
@@ -62,7 +67,7 @@ ${data.map((b) => {
     })}
 `;
   })}<g transform="translate(0 ${base})">${axis({ scale: x, orient: 'bottom', ticks: 5 })}</g>
-<line class="chart-boundary" x1="${bx}" x2="${bx}" y1="${M.top - 12}" y2="${base}"/>
+${markTip === null ? line : mark({ tip: markTip, value: markValue, hit: { x: bx - 6, y: M.top - 12, width: 12, height: base - M.top + 12 }, body: line })}
 ${text({ x: bx, y: M.top - 16, anchor, dx, cls: 'chart-label', body: markLabel })}`,
   });
 }

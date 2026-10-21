@@ -1,14 +1,16 @@
 // The program page's hospital table, as plain functions the page build (generate.js, hospitalRows) and the browser
 // (client/program.js) share: the default order, the reader's sort, the state and name filters, and the #state=XX
 // fragment that keeps the chosen state in the URL. Rows are the hospitals asset's: [ccn, name, city, state, total,
-// decision], the total as CMS's text with a true minus ("N/A" when CMS published none). No DOM.
+// decision], the total as CMS published it, with its hyphen-minus ("N/A" when CMS published none); the browser shows
+// it with a true minus. No DOM.
 
 import { compareNumbers } from '../../../engine/js/stats.js';
 
 // Each column's place in a row; all but the CCN are sortable.
 const INDEX = Object.freeze({ ccn: 0, name: 1, city: 2, state: 3, score: 4, decision: 5 });
 const SORTABLE = ['name', 'city', 'state', 'score', 'decision'];
-const text = (a, b) => a.localeCompare(b, 'en');
+// One collator for every text comparison (building one per comparison is what localeCompare costs).
+const text = new Intl.Collator('en').compare;
 // Rows by these columns' text, in turn.
 const by = (...keys) => (x, y) => keys.reduce((d, k) => d || text(x[INDEX[k]], y[INDEX[k]]), 0);
 
@@ -38,14 +40,14 @@ export function withState(hash, code) {
   return parts.length ? `#${parts.join('&')}` : '';
 }
 
-// A Total HAC Score's text as a number (CMS's decimal text with a true or hyphen minus); NaN for "N/A" or blank.
+// A Total HAC Score as a number, from CMS's own decimal text (hyphen-minus); NaN for "N/A", blank or anything else.
 export function scoreOf(s) {
-  const t = String(s).replace(/^−/, '-');
-  return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
+  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
 }
 
 // A sorted copy: by key ('name', 'city', 'state', 'score' or 'decision') in dir 1 (ascending) or -1, ties kept in the
-// order given; with no key, the default order. Scores sort by value with "N/A" last in either direction.
+// order given; with no key, the default order. Scores sort by value with "N/A" last in either direction. Filtering a
+// sorted list keeps its order, so the browser sorts once per sort change and filters that order as the reader types.
 export function sortRows(rows, key, dir) {
   if (key === null || key === undefined) return [...rows].sort(compareDefault);
   if (!SORTABLE.includes(key)) throw new RangeError(`sortRows: unknown key "${key}"`);
