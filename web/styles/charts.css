@@ -45,8 +45,9 @@
 .fig__sort:hover { background: var(--paper-2); }
 /* The ring sits inside the button: the table's scroll box clips anything drawn past the cell. */
 .fig__sort:focus-visible { outline-offset: -3px; }
-th[aria-sort="ascending"] .fig__sort::after { content: " \25B2" / ""; }
-th[aria-sort="descending"] .fig__sort::after { content: " \25BC" / ""; }
+/* Arrows, not triangles: the ▲ means "this hospital" in every chart. */
+th[aria-sort="ascending"] .fig__sort::after { content: " \2191" / ""; color: var(--ink-2); }
+th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: var(--ink-2); }
 .fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
 
 /* ---------- the SVG ---------- */
