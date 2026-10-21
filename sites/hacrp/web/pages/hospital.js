@@ -155,7 +155,7 @@ const geoFrame = (placement, svg) => html`<span class="geo geo--${placement}">${
 
 // The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields. map: the state map's
 // markup when its placement is in the card (e, f, g or j), with that placement; else null.
-function recordCard(view, { careSource, masterFy, map, placement }) {
+function recordCard(view, { careSource, map, placement }) {
   const here = (p) => (map && placement === p ? map : null);
   const fy = String(view.fy);
   const location = locationText(view);
@@ -164,7 +164,7 @@ function recordCard(view, { careSource, masterFy, map, placement }) {
   const fields = [
     (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true, aside: here('e') }),
     (no) => formField({ no, label: t('fieldLocation'), value: location, note: view.county, aside: here('f') }),
-    type && ((no) => formField({ no, label: t('fieldType'), value: type, size: 'sm', note: masterFy ? fill('typeNote', { fy: String(masterFy) }) : null })),
+    type && ((no) => formField({ no, label: t('fieldType'), value: type, size: 'sm' })),
     view.scored
       ? (no) => formField({ no, label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: view.status === 'maryland' ? t('scoreNote') : html`${t('scoreNote')}<br>${heroLineText(view.boundaryText)}` })
       : (no) => formField({ no, label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div' }),
@@ -231,7 +231,7 @@ const placedMap = (svg, placement) => svg && geoFrame(placement, svg);
 // for the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
 // searchUrl: the hospitals asset the top bar's search reads (null: no search box). shapes: stateShapes(topology) for
 // the state map (null: none). careSource: Care Compare's manifest facts ({ modified }) for the stars' note.
-// masterFy: the hospital master's fiscal year, for the Type field's note.
+// masterFy: the hospital master's fiscal year, for the data list's source of the Type field's facts.
 // mapPlacement: where the state map goes (MAP_PLACEMENTS, e the default).
 export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null, mapPlacement = 'e' }) {
   if (!MAP_PLACEMENTS.includes(mapPlacement)) throw new RangeError(`hospitalPage: map placement "${mapPlacement}" is not one of ${MAP_PLACEMENTS.join(', ')}`);
@@ -249,7 +249,7 @@ export function hospitalPage({ view, source, robots, assets, ranges = null, what
 
   const body = html`<article class="wrap page page--article hosp">
 <div class="hosp__top hosp__top--${mapPlacement}">
-${recordCard(view, { careSource, masterFy, map, placement: mapPlacement })}
+${recordCard(view, { careSource, map, placement: mapPlacement })}
 <section class="hosp__verdict" aria-label="${t('heroLabel')}">
 ${at('h') ? html`<div class="hosp__stamprow">${stampOf(view)}${map}</div>` : stampOf(view)}
 ${leadSentences(view).map((s, i) => html`<p class="${i ? 'hosp__why' : 'hosp__summary'}">${s}</p>`)}
@@ -269,7 +269,7 @@ ${largest && html`<p>${largest}</p>`}
 ${measureTable(view.measures)}`, figure: figs.length ? figs : null })}
 ${what?.body}
 <p class="page__links">${printLink(home, t('backToProgram'))}</p>
-${asofBar({ fy: view.fy, periods: view.periods, source, geocoded: Boolean(map) && view.geo === 'address' })}
+${asofBar({ fy: view.fy, periods: view.periods, source, typeFy: masterFy && typeText(view.profile) ? masterFy : null, geocoded: Boolean(map) && view.geo === 'address' })}
 ${legend(view)}
 ${dataLinks(view.fy, source)}
 ${citation({ fy: view.fy, title: heading, path: view.path, source })}

@@ -263,7 +263,6 @@ export const COPY = {
   typeMDH: { text: 'Medicare-dependent hospital', claim: null },
   typeIHS: { text: 'Indian Health Service', claim: null },
   typeEACH: { text: 'Essential access community hospital', claim: null },
-  typeNote: { text: "Teaching, urban and special status: CMS's FY{fy} IPPS impact file. Beds: CMS's Provider of Services file.", claim: null },
   fieldScore: { text: 'Total HAC Score', claim: null },
   scoreNote: { text: 'As CMS reports it', claim: null },
   fieldStars: { text: 'Care Compare stars', claim: null },
@@ -349,6 +348,11 @@ export const COPY = {
   asofLatest: { text: 'FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
   asofReleasedLabel: { text: 'Provider Data Catalog release', claim: null },
   asofReleased: { text: '{date}', claim: null },
+  // A hospital page's record: where its Type field's facts come from (shown with the field).
+  asofTypeLabel: { text: 'Teaching, urban and special status', claim: null },
+  asofType: { text: "CMS's FY{fy} IPPS impact file", claim: null },
+  asofBedsLabel: { text: 'Beds', claim: null },
+  asofBeds: { text: "CMS's Provider of Services file", claim: null },
   // A hospital page whose map dot is a geocoded street address: the geocoder, named once.
   asofMapLabel: { text: 'Map location', claim: null },
   asofMap: { text: 'U.S. Census Bureau Geocoder', claim: null },
