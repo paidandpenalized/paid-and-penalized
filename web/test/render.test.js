@@ -244,3 +244,9 @@ test('markdownSections: a title, an intro, sections with ids, lists, a labelled 
   assert.ok(body.includes('<tr><th scope="row"><code>c1</code></th><td>says &lt;b&gt;</td></tr>'));
   assert.ok(body.includes('<div class="printout"><div class="printout__scroll">'));
 });
+
+test('markdownSections: a line outside the subset ("### x", a "|" line with no rule under it) is a paragraph', async () => {
+  const { markdownSections } = await import('../render/markdown.js');
+  const { sections } = markdownSections('### Not a heading\n\n| a | b\nnext line\n', { idPrefix: 'd' });
+  assert.equal(String(sections[0].body), '<p>### Not a heading</p><p>| a | b next line</p>');
+});

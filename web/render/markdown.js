@@ -10,6 +10,16 @@ const cells = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map((c) =
 const RULE = /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/;
 const slug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+// The run of lines from start while keep(line) holds: [the run, the index of the first line after it].
+function take(lines, start, keep) {
+  let end = start;
+  while (end < lines.length && keep(lines[end])) end++;
+  return [lines.slice(start, end), end];
+}
+const isItem = (line) => line.startsWith('- ');
+const isRow = (line) => line.startsWith('|');
+const inParagraph = (line) => line.trim() && !/^(#|- |\|)/.test(line);
+
 // { title, intro, sections: [{ heading, id, body }] }: the "# " title's text, the first paragraph's plain text, and
 // each "## " section with its body as markup (blocks before the first "## " form a section with no heading). idPrefix
 // names each heading's id; a section's table is labelled by its heading and sits in the printout frame
@@ -20,34 +30,36 @@ export function markdownSections(text, { idPrefix, tableClass = 'gb' }) {
   let intro = null;
   const section = () => sections[sections.length - 1];
   const lines = text.replace(/\r\n/g, '\n').split('\n');
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
-    if (!line.trim()) continue;
-    if (line.startsWith('# ')) {
+    if (!line.trim()) {
+      i += 1;
+    } else if (line.startsWith('# ')) {
       title = line.slice(2).trim();
+      i += 1;
     } else if (line.startsWith('## ')) {
       const heading = line.slice(3).trim();
       sections.push({ heading, id: `${idPrefix}-${slug(heading)}`, blocks: [] });
-    } else if (line.startsWith('- ')) {
-      const items = [];
-      for (; i < lines.length && lines[i].startsWith('- '); i++) items.push(lines[i].slice(2).trim());
-      i--;
-      section().blocks.push(html`<ul>${items.map((item) => html`<li>${inline(item)}</li>`)}</ul>`);
-    } else if (line.startsWith('|') && RULE.test(lines[i + 1] ?? '')) {
+      i += 1;
+    } else if (isItem(line)) {
+      const [items, next] = take(lines, i, isItem);
+      i = next;
+      section().blocks.push(html`<ul>${items.map((item) => html`<li>${inline(item.slice(2).trim())}</li>`)}</ul>`);
+    } else if (isRow(line) && RULE.test(lines[i + 1] ?? '')) {
       const head = cells(line);
-      const rows = [];
-      for (i += 2; i < lines.length && lines[i].startsWith('|'); i++) rows.push(cells(lines[i]));
-      i--;
+      const [rows, next] = take(lines, i + 2, isRow);
+      i = next;
       const label = section().id;
       section().blocks.push(printout(html`<table class="${tableClass}"${label ? html` aria-labelledby="${label}"` : ''}>
 <thead><tr>${head.map((c) => html`<th scope="col">${inline(c)}</th>`)}</tr></thead>
-<tbody>${rows.map((row) => html`<tr>${row.map((c, j) => (j === 0 ? html`<th scope="row">${inline(c)}</th>` : html`<td>${inline(c)}</td>`))}</tr>`)}</tbody>
+<tbody>${rows.map(cells).map((row) => html`<tr>${row.map((c, j) => (j === 0 ? html`<th scope="row">${inline(c)}</th>` : html`<td>${inline(c)}</td>`))}</tr>`)}</tbody>
 </table>`));
     } else {
-      const para = [];
-      for (; i < lines.length && lines[i].trim() && !/^(#|- |\|)/.test(lines[i]); i++) para.push(lines[i].trim());
-      i--;
-      const joined = para.join(' ');
+      // A paragraph: this line and the plain lines after it.
+      const [rest, next] = take(lines, i + 1, inParagraph);
+      i = next;
+      const joined = [line, ...rest].map((l) => l.trim()).join(' ');
       intro ??= joined.replace(/`/g, '');
       section().blocks.push(html`<p>${inline(joined)}</p>`);
     }
