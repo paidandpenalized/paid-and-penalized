@@ -612,6 +612,7 @@ export const COPY = {
   sumDistanceYes: { text: "This hospital's score is {distance} above {highestNo}, the highest score CMS marked No.", claim: null },
   sumDistanceNo: { text: "This hospital's score is {distance} below {lowestYes}, the lowest score CMS marked Yes.", claim: null },
   // The one measure whose name doesn't say what it counts, defined under it in the ledger (draft ML1).
+  defineMore: { text: '(what it counts)', claim: null },
   definePSI90: {
     text: 'Safety problems such as bedsores, falls that break a bone and blood clots after surgery, found by CMS in traditional Medicare claims. A value of {one} matches the national rate.',
     claim: 'HACRP-06',

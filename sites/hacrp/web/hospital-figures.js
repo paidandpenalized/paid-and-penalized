@@ -75,6 +75,13 @@ function rankWords(nat, id, value, median) {
   return t('rankMiddle');
 }
 
+// A measure's short name; PSI 90's (the one name that doesn't say what it counts) opens a box with its definition on
+// a click or tap, with no script (a <details>).
+function shortName(m) {
+  if (m.id !== 'PSI90') return m.short;
+  return html`<details class="def"><summary>${m.short}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('defineMore')}</span></summary><p class="def__box">${fill('definePSI90', { one: decimal(1, 0) })}</p></details>`;
+}
+
 // view.largest's id, the part that raised the score most (the page marks it in red).
 // notes(m): the measure's notes markup (CMS's footnotes, the estimate tag).
 export function ledgerFigure({ view, nat, model, n, source, notes }) {
@@ -97,7 +104,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
     const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
     const dash = html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`;
     return { m, r, value, fmt, rank, markup: html`<li class="${cls}">
-<div class="ledger__name"><p class="ledger__short">${m.short}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</p><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
+<div class="ledger__name"><div class="ledger__short">${shortName(m)}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</div><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
 <div class="ledger__ruler">${svg}</div>
 <p class="ledger__num"><span class="ledger__k">${t('colValue')}</span><span class="cms">${m.hasValue ? m.valueText : dash}</span></p>
 <p class="ledger__num"><span class="ledger__k">${t('colZ')}</span><span class="cms">${m.hasZ ? m.zText : dash}</span></p>
