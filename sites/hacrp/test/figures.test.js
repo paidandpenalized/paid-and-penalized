@@ -1,62 +1,75 @@
-// The HACRP figures on the pages: a hospital page's two figures (synthetic hospitals), and the program page's
-// formula stepper on the median hospital, its histogram, its state tile grid and its hospital table section (the
-// pinned model and data). Every takeaway's numbers come from data.
+// The HACRP figures on the pages: a hospital page's two figures (synthetic hospitals), and the program page's thirteen
+// (the pinned model and data): Part 1's five steps on the median hospital, Part 2's picture of the year, and the US
+// map. Every takeaway's numbers come from data: each is checked against numbers worked out here from CMS's rows, on the
+// pinned file and again on a thinned copy of it, so a number typed into the code would not follow the data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { decidedHospitals, isAssigned } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
-import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { clamp, toUnit } from '../../../engine/js/stats.js';
-import { cmsText, count, decimal, isoDate, pct } from '../../../web/render/format.js';
+import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
+import { medianAt } from '../../../engine/js/hacrp/params.js';
+import { toUnit } from '../../../engine/js/stats.js';
+import { cmsText, count, decimal, isoDate, ordinal, pct } from '../../../web/render/format.js';
 import { US_MAP_CODES } from '../../../web/charts/geo.js';
-import { SHORT_NAMES } from '../web/constants.js';
+import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../web/constants.js';
+import { biggestLever } from '../web/compare.js';
 import { csvPath } from '../web/links.js';
-import { partsFigure, scoresFigure, statesFigure } from '../web/figures.js';
+import { partsFigure, statesFigure } from '../web/figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
-import { programPage } from '../web/pages/program.js';
-import { lineStep, stepRows } from '../web/stepper.js';
+import { buildPlaces } from '../web/places.js';
+import { TYPE_KINDS, programData, spearman } from '../web/program-data.js';
+import { mapFigure, part1, part2 } from '../web/program-figures.js';
 import { hospitalView, stateCounts } from '../web/view.js';
-import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
-import { DATA, RANGE, PAGE_CTX } from './pinned.js';
+import { ASSETS, CASES, inputs, master } from './fixtures.js';
+import { DATA, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
 
 const { model, estimate } = DATA;
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
-const SCORES = decidedHospitals(DATA.hospitals).map((h) => ({ total: h.total, yes: h.paymentReduction === 'Yes' }));
-const COUNTS = { decided: SCORES.length, yes: SCORES.filter((s) => s.yes).length, scored: DATA.hospitals.filter((h) => h.total !== null).length };
-const VIEWS = DATA.hospitals.map((h) => hospitalView({ hospital: h, model, estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }));
+const COUNTS = { decided: PD.counts.decided, yes: PD.counts.yes, scored: PD.counts.scored };
 const STATES = stateCounts(VIEWS);
 
 // A hospital page with its what-if (scored hospitals), whose bars are the page's last figure.
 const render = (h) => hospitalPage({
-    ...PAGE_CTX,
+  ...PAGE_CTX,
   view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS,
   whatif: h.total === null ? null : { hospital: h, model, estimate, range: RANGE },
 });
-const program = (overrides = {}) => programPage({
-  fy: DATA.fy, counts: COUNTS, boundaryText: DATA.boundaryText, periods: DATA.periods,
-  searchUrl: '/assets/hacrp-hospitals.0000abcd.json', source: DATA.source, robots: null, assets: ASSETS,
-  whatif: { hospital: MEDIAN, model, estimate, range: RANGE }, scores: SCORES, boundary: model.boundary, states: STATES, shapes: DATA.shapes, ...overrides,
-});
+const PAGE = renderProgram();
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
-// One variant of a figure that draws its chart twice (phone wide, and wide for 720px and up).
-const variant = (body, fit) => new RegExp(`<svg role="img"[^>]*data-fit="${fit}"[\\s\\S]*?</svg>`).exec(body)[0];
+const figureBody = (text, n) => figures(text).find(([, id]) => Number(id) === n)[2];
+const drawings = (text) => [...text.matchAll(/<svg[\s\S]*?<\/svg>/g)].reduce((n, [m]) => n + m.length, 0);
 // Each figure's [number, takeaway]; the takeaway's non-breaking hyphens (z-score's, a glyph only) read as hyphens.
-const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1).map((s) => s.replaceAll('\u2011', '-')));
+const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1).map((s) => s.replaceAll('‑', '-')));
 // Every number written in a sentence: digits with their commas, decimal point and sign.
 // Measure short names (PSI 90) are CMS's names, not numbers.
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s.replaceAll('&#39;', "'")).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
+// A figure's table, body rows only: each cell's text.
+const tableRows = (body) => [...body.slice(body.indexOf('<tbody>')).matchAll(/<tr>(.*?)<\/tr>/gs)].map(([, tr]) => [...tr.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => c[1]));
+// The panel takeaways of a figure that shows one measure at a time, by measure.
+const panelTakes = (body) => Object.fromEntries([...body.matchAll(/<div class="mpanel" data-measure="(\w+)"[^>]*>\s*<p class="mpanel__take">([^<]*)<\/p>/g)].map((m) => [m[1], m[2]]));
 
 test('a figure\'s source line, the citation and the periods keep each date whole', () => {
   const text = render(CASES.yes);
   const date = isoDate(DATA.source.pdcReleased);
   for (const [, , body] of figures(text)) assert.ok(body.includes(`released <span class="nw">${date}</span>.`), 'figure source line');
   assert.match(text, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
-  const periods = /<section class="block" aria-labelledby="periods-h">([\s\S]*?)<\/section>/.exec(program())[1];
-  assert.equal(periods.match(/<span class="nw">\w+ \d+, \d{4}<\/span> to <span class="nw">\w+ \d+, \d{4}<\/span>/g).length, 2);
+  // The program page: every figure's source line, its citation, the summary form's data windows and payment year, and the as-of strip.
+  const found = figures(PAGE);
+  assert.equal(found.length, 13);
+  for (const [, id, body] of found) assert.ok(body.includes(`released <span class="nw">${date}</span>.`), `figure ${id}: source line`);
+  assert.match(PAGE, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
+  const range = /<span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span> to <span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span>/g;
+  const asof = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(PAGE)[1];
+  assert.equal(asof.match(range).length, 2, 'the as-of strip: both periods');
+  const summary = /<div class="form prog__summary">([\s\S]*?)<\/div>\n<p class="stamp">/.exec(PAGE)[1];
+  assert.equal(summary.match(range).length, 3, 'the summary form: both data windows and the payment year');
+  assert.ok(summary.includes(`CMS data released <span class="nw">${date}</span>`));
 });
 
 test('every table in a scroll box carries a label in the page, which names the box when it scrolls (web/client/figure.js)', () => {
-  for (const text of [program(), render(CASES.yes), render(CASES.maryland)]) {
+  const place = PLACES.places.get('state:oh') ?? PLACES.list.find((p) => p.kind === 'state' && p.children.length > 0);
+  const metro = PLACES.list.find((p) => p.kind === 'metro' && p.stateCodes.length > 1);
+  for (const text of [PAGE, render(CASES.yes), render(CASES.maryland), renderPlace(place), renderPlace(metro)]) {
     const tables = [...text.matchAll(/<div class="printout__scroll"><table([^>]*)>\n(?:<caption[^>]*id="([^"]+)")?/g)];
     assert.ok(tables.length >= 3);
     for (const [, attrs, captionId] of tables) {
@@ -65,201 +78,290 @@ test('every table in a scroll box carries a label in the page, which names the b
       assert.ok(text.includes(`id="${id}"`), `no element with id ${id}`);
     }
   }
+  // The program page has every figure's table, the sandbox's, the hospitals' and no other.
+  const labels = [...PAGE.matchAll(/<div class="printout__scroll"><table([^>]*)>/g)].map((m) => /aria-labelledby="([^"]+)"/.exec(m[1])?.[1] ?? 'caption');
+  assert.equal(labels.filter((l) => /^figure-\d+-cap$/.test(l)).length, 13);
 });
 
-test('the program page\'s stepper walks the median hospital with medianHospital\'s numbers and the model\'s', () => {
-  const text = program();
-  const steps = /<section class="block" aria-labelledby="steps-h">([\s\S]*?)<\/section>/.exec(text)[1];
-  assert.ok(steps.includes(esc("so its numbers are this site’s, not CMS’s")), 'the stepper says its hospital is synthetic');
-  const rows = stepRows(MEDIAN, model);
-  assert.deepEqual(rows.map((r) => r.id), MEASURE_IDS);
-  for (const r of rows) {
-    const m = MEDIAN.measures[r.id];
-    const p = model.params[r.id];
-    assert.equal(r.valueText, cmsText(m.valueText));
-    assert.equal(r.zText, cmsText(m.zText));
-    assert.equal(r.floorText, decimal(p.floor, p.decimals));
-    assert.equal(r.capText, decimal(p.cap, p.decimals));
-    assert.equal(r.limitedText, decimal(clamp(m.value, p.floor, p.cap), p.decimals));
-    assert.equal(r.meanText, decimal(p.mean, r.fitDp));
-    assert.equal(r.sdText, decimal(p.sd, r.fitDp));
-    // The z step reproduces from its own displayed cells.
-    const num = (x) => Number(x.replace('−', '-'));
-    assert.equal(decimal(toUnit((num(r.limitedText) - num(r.meanText)) / num(r.sdText), 4), 4), r.zText, `${r.id}: z from the shown cells`);
-    for (const step of ['value', 'z']) {
-      const row = new RegExp(`<tr data-measure="${r.id}" data-step="${step}">([\\s\\S]*?)</tr>`).exec(steps)[1];
-      const cells = [...row.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => c[1]);
-      assert.deepEqual(cells, step === 'value'
-        ? [r.short, r.valueText, r.floorText, r.capText, r.limitedText]
-        : [r.short, r.limitedText, r.meanText, r.sdText, r.zText], `${r.id} ${step}`);
-    }
+test('the program page numbers its figures 1 to 13, each once, from the data\'s five steps through the year to the map', () => {
+  const numbersOnPage = figures(PAGE).map(([, id]) => Number(id));
+  assert.deepEqual([...numbersOnPage].sort((a, b) => a - b), Array.from({ length: 13 }, (_, i) => i + 1));
+  assert.deepEqual(captions(PAGE).map(([n]) => Number(n)).sort((a, b) => a - b), Array.from({ length: 13 }, (_, i) => i + 1), 'a caption says its figure\'s number');
+  // The keyboard hint for the map is named by its figure.
+  assert.match(PAGE, /<p id="figure-13-keys" hidden>/);
+});
+
+test('Part 1 walks the formula in five steps, each beside its own figure, then the sandbox; its method numbers come from the constants', () => {
+  const part = /<section class="part" id="how"[\s\S]*?<\/section>\n<section class="part" id="fy"/.exec(PAGE)[0];
+  for (let n = 1; n <= 5; n++) {
+    const step = new RegExp(`<section class="step" id="step-${n}" aria-labelledby="step-${n}-h">\\n<div class="step__text">\\n<p class="step__n" aria-hidden="true">${n}</p>[\\s\\S]*?</div>\\n<div class="step__fig">\\n<figure class="fig" id="figure-${n}" data-figure>`).exec(part);
+    assert.ok(step, `step ${n}: its words beside figure ${n}`);
   }
-  // One number of decimals for the fitted mean and SD: the fewest, from four, that reproduce every row's z.
-  const dp = rows[0].fitDp;
-  assert.ok(dp >= 4 && rows.every((r) => r.fitDp === dp));
-  if (dp > 4) {
-    const again = rows.map((r) => {
-      const p = model.params[r.id];
-      const z = (clamp(MEDIAN.measures[r.id].value, p.floor, p.cap) - toUnit(p.mean, dp - 1)) / toUnit(p.sd, dp - 1);
-      return decimal(toUnit(z, 4), 4) === r.zText;
-    });
-    assert.ok(again.includes(false), 'one decimal fewer would not reproduce some row');
+  // The sandbox is the step after them, on the median hospital.
+  assert.ok(part.indexOf('id="step-5"') < part.indexOf('id="step-6"') && part.indexOf('id="step-6"') < part.indexOf('id="whatif"'));
+  assert.match(part, /id="step-6"[^>]*>6</, 'numbered 6');
+  assert.equal([...part.matchAll(/id="whatif"/g)].length, 1);
+  // The first step: how many measures, how many are infections, and the data windows, all from the engine's list and CMS's file.
+  assert.ok(part.includes(`CMS scores hospitals on ${MEASURE_IDS.length} measures`));
+  assert.ok(part.includes(`CMS scores each hospital on ${MEASURE_IDS.filter(isSir).length} kinds of infection`));
+  const window = (period) => `<span class="nw">${isoShort(period.start)}</span> to <span class="nw">${isoShort(period.end)}</span>`;
+  assert.ok(part.includes(`This year’s data cover ${window(DATA.periods.psi90)} for ${SHORT_NAMES.PSI90}, and ${window(DATA.periods.hai)} for infections.`));
+  // The constants CMS publishes: the winsorizing percentiles, the cutoff percentile and the size of the cut.
+  assert.ok(part.includes(`floor at the ${ordinal(WINSOR_LOW)} percentile of each measure’s results and a cap at the ${ordinal(WINSOR_HIGH)}`));
+  assert.ok(part.includes(`above the ${ordinal(CUTOFF_PERCENTILE)} percentile of all scores. A hospital it cuts is paid ${REDUCTION_TEXT} less`));
+});
+// A period's date as the page's prose writes it (a short month, no leading zero).
+function isoShort(mmddyyyy) {
+  const [m, d, y] = mmddyyyy.split('/').map(Number);
+  return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${d}, ${y}`;
+}
+
+test('the measure figures (2, 3, 4) tabulate each measure from CMS\'s published values and the model\'s fitted numbers', () => {
+  const fmt = (id) => (v) => decimal(v, model.params[id].decimals);
+  const published = (id) => DATA.hospitals.map((h) => h.measures[id].value).filter((v) => v !== null);
+  // Figure 2: how many have a value, how many are at zero, the national median, how many are above one.
+  assert.deepEqual(tableRows(figureBody(PAGE, 2)), MEASURE_IDS.map((id) => {
+    const v = published(id);
+    return [SHORT_NAMES[id], count(v.length), count(v.filter((x) => x === 0).length), fmt(id)(medianAt(model.params[id])), count(v.filter((x) => x > 1).length)];
+  }));
+  // Figure 3: the floor and cap, and how many published values sit at or past each.
+  assert.deepEqual(tableRows(figureBody(PAGE, 3)), MEASURE_IDS.map((id) => {
+    const p = model.params[id];
+    const v = published(id);
+    return [SHORT_NAMES[id], fmt(id)(p.floor), fmt(id)(p.cap), count(v.filter((x) => x <= p.floor).length), count(v.filter((x) => x >= p.cap).length)];
+  }));
+  // Figure 4: the floor, cap, mean and standard deviation the model fits to CMS's z-scores.
+  assert.deepEqual(tableRows(figureBody(PAGE, 4)), MEASURE_IDS.map((id) => {
+    const p = model.params[id];
+    return [SHORT_NAMES[id], fmt(id)(p.floor), fmt(id)(p.cap), fmt(id)(p.mean), fmt(id)(p.sd)];
+  }));
+  // Only the first measure's drawings are in the page; the others come from the explore asset, so each panel says so.
+  for (const n of [2, 3, 4]) {
+    const body = figureBody(PAGE, n);
+    assert.equal((body.match(/<div class="mpanel"/g) ?? []).length, MEASURE_IDS.length, `figure ${n}: one panel per measure`);
+    assert.equal((body.match(/<div class="mpanel"[^>]* data-lazy/g) ?? []).length, MEASURE_IDS.length - 1, `figure ${n}: the others are drawn by the page script`);
+    assert.equal(Object.keys(panelTakes(body)).length, MEASURE_IDS.length, `figure ${n}: each says what it shows`);
   }
-  const sum = toUnit(MEASURE_IDS.reduce((t, id) => t + MEDIAN.measures[id].z, 0), 4);
-  assert.ok(steps.includes(`add up to ${decimal(sum, 4)}, and ${decimal(sum, 4)} ÷ 6 is ${cmsText(MEDIAN.totalText)}, the Total HAC Score.`));
-  // The last step says it in words and points to the sandbox: no figure, no ramp (the sandbox below draws it).
-  assert.doesNotMatch(steps, /<figure|chart--ramp/);
-  const last = steps.slice(steps.lastIndexOf('<li>'));
-  assert.ok(last.includes(esc(`This site’s hypothetical median hospital scores ${cmsText(MEDIAN.totalText)}, at or below ${DATA.boundaryText.highestNo}, the highest score CMS marked No, so its decision would be No. The sandbox below starts at this score.`)));
-  assert.ok(text.indexOf('The sandbox below starts') < text.indexOf('id="whatif"'), 'the pointer comes before the sandbox');
-  for (const [decision, pattern] of [['Yes', /at or above .*, so its decision would be Yes\.$/], ['too-close', /between .* and .*, so its decision would be too close to call\.$/]]) {
-    assert.match(lineStep({ ...MEDIAN, paymentReduction: decision }, DATA.boundaryText), pattern);
-  }
-  assert.throws(() => lineStep({ ...MEDIAN, paymentReduction: 'N/A' }, DATA.boundaryText), /unexpected decision/);
+});
+
+test('the median hospital\'s worksheet under the slide rule: its z-scores, their mean and the Total HAC Score, from medianHospital and the model', () => {
+  const ws = /<div class="ws ws--prog"[\s\S]*?<\/div>/.exec(figureBody(PAGE, 4))[0];
+  const terms = [...ws.matchAll(/<span class="ws__v">([^<]*)<\/span><span class="ws__k">([^<]*)<\/span>/g)].map((m) => [m[1], m[2]]);
+  const zs = MEASURE_IDS.map((id) => MEDIAN.measures[id].z);
+  // Each z-score as CMS prints it at four decimals (the first signed, the rest after their + or −), then the count and the total.
+  assert.deepEqual(terms.slice(0, MEASURE_IDS.length).map(([, k]) => k), MEASURE_IDS.map((id) => SHORT_NAMES[id]));
+  assert.deepEqual(terms.slice(0, MEASURE_IDS.length).map(([v], i) => (i ? v : v.replace('−', '-'))), zs.map((z, i) => decimal(i ? Math.abs(z) : z, 4).replace('−', '-')));
+  assert.equal(terms[MEASURE_IDS.length][0], String(MEASURE_IDS.length));
+  assert.equal(terms.at(-1)[0], cmsText(MEDIAN.totalText));
+  const operators = [...ws.matchAll(/<span class="ws__op">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(operators.slice(0, MEASURE_IDS.length - 1), zs.slice(1).map((z) => (z < 0 ? '−' : '+')));
+  // The total is the mean of the z-scores, to the rounding of four-decimal figures.
+  assert.ok(Math.abs(zs.reduce((a, b) => a + b, 0) / zs.length - MEDIAN.total) <= 1e-4);
+  // The median hospital sits at each measure's median value.
+  for (const id of MEASURE_IDS) assert.equal(MEDIAN.measures[id].value, medianAt(model.params[id]));
   assert.equal(MEDIAN.paymentReduction, 'No', 'the pinned median hospital sits below the line');
 });
 
-test('the program page\'s histogram: Total HAC Scores of hospitals with a Yes/No decision, the line marked, the brief\'s takeaway', () => {
-  const text = program();
-  const caps = captions(text);
-  assert.deepEqual(caps.map(([n]) => n), ['1', '2']);
-  assert.equal(caps[0][1], esc(`CMS cut payments to ${count(COUNTS.yes)} of ${count(COUNTS.decided)} hospitals with a payment decision: those whose Total HAC Score was above its line.`));
-  const body = figures(text)[0][2];
-  assert.match(body, /class="chart chart--histogram"/);
-  assert.match(body, /class="chart-boundary"/);
-  const countsIn = (svg) => [...svg.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)">/g)].map((m) => Number(m[1]));
-  const counts = countsIn(variant(body, 'narrow'));
-  assert.equal(counts.reduce((a, b) => a + b, 0), COUNTS.decided, 'every decided hospital in one bin');
-  assert.deepEqual(countsIn(variant(body, 'wide')), counts, 'the wide variant draws the same bins');
-  assert.match(variant(body, 'wide'), /viewBox="0 0 560 /);
-  // Bins above the line hold the Yes decisions, the rest the No.
-  const yes = scoresFigure({ scores: SCORES, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy });
-  assert.ok(String(yes).includes('<td>Yes</td>') && String(yes).includes('<td>No</td>'));
-  // A No at or above CMS's lowest Yes score (or a Yes below it) would put both decisions in one bin: the build stops.
-  for (const odd of [{ total: model.boundary.lowestYes, yes: false }, { total: model.boundary.highestNo, yes: true }]) {
-    assert.throws(() => scoresFigure({ scores: [odd, ...SCORES], boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy }), /wrong side/);
-  }
-});
-
-test('CMS\'s line in the histogram is the gap between CMS\'s highest No and lowest Yes, named by both', () => {
+test('the program page\'s swarm (Figure 6): every hospital with a Yes/No decision, CMS\'s line marked, its takeaway and a table that splits at the line', () => {
   const { highestNo, lowestYes } = model.boundary;
-  const sentence = esc(`Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of ${DATA.boundaryText.lowestYes} or higher and none at ${DATA.boundaryText.highestNo} or lower.`);
-  const [hist] = figures(program()).map(([, , body]) => body);
-  // The line is a mark whose tooltip is the line sentence and whose values are CMS's two scores.
-  const lineMark = new RegExp(`<g class="chart-mark" data-mark data-value="${highestNo} ${lowestYes}"><title>([^<]*)</title>`);
-  assert.equal(lineMark.exec(hist)?.[1], sentence);
-  // The histogram's table lists the line between the last No bin and the first Yes bin, by both of CMS's scores.
-  const rows = [...hist.matchAll(/<tr><th scope="row"[^>]*>([^<]*)<\/th><td[^>]*>([^<]*)<\/td><td[^>]*>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => m.slice(1));
-  const at = rows.findIndex((r) => r[3] === 'CMS’s line');
-  assert.deepEqual(rows[at], [DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes, '—', 'CMS’s line']);
-  assert.equal(rows.filter((r) => r[3] === 'CMS’s line').length, 1);
-  assert.ok(rows.slice(0, at).every((r) => r[3] !== 'Yes') && rows.slice(at + 1).every((r) => r[3] !== 'No'));
-  assert.equal(rows[at + 1][0], decimal(lowestYes, 4), 'the first bin above starts at CMS’s lowest Yes score');
-  // No word on the figure gives the line as a single score.
-  assert.doesNotMatch(hist, /CMS’s line \(/);
+  const body = figureBody(PAGE, 6);
+  assert.deepEqual(numbers(captions(PAGE).find(([n]) => n === '6')[1]), [count(COUNTS.yes), count(COUNTS.decided), decimal(lowestYes - highestNo, 4)]);
+  assert.match(body, /<div class="swarm" data-band="\[[\d.]+,[\d.]+\]"/);
+  assert.deepEqual(JSON.parse(/data-band="([^"]+)"/.exec(body)[1]), [Number(DATA.boundaryText.highestNo), Number(DATA.boundaryText.lowestYes)], 'the line is CMS\'s two scores');
+  // Both drawings (phone and wide) name the two sides' counts and CMS's two scores, in CMS's own text.
+  const svgs = [...body.matchAll(/<svg[^>]*data-fit="(narrow|wide)"[^>]*class="chart chart--swarm"[\s\S]*?<\/svg>/g)];
+  assert.deepEqual(svgs.map((s) => s[1]), ['narrow', 'wide']);
+  for (const [svg] of svgs) {
+    assert.ok(svg.includes(`>Not cut · ${count(COUNTS.decided - COUNTS.yes)}</text>`));
+    assert.ok(svg.includes(`>Cut · ${count(COUNTS.yes)}</text>`));
+    assert.ok(svg.includes(`>${DATA.boundaryText.highestNo} highest not cut</text>`));
+    assert.ok(svg.includes(`>${DATA.boundaryText.lowestYes} lowest cut</text>`));
+    assert.match(svg, /class="chart-boundary"/);
+  }
+  // The table: bins of scores with CMS's line as an edge; the hospitals add up, and a bin says Yes only above the line.
+  const rows = tableRows(body).map(([from, to, n, decision]) => ({ from: Number(from.replace('−', '-')), to: Number(to.replace('−', '-')), n: Number(n.replaceAll(',', '')), decision }));
+  assert.equal(rows.reduce((s, r) => s + r.n, 0), COUNTS.decided, 'every hospital with a decision is in one bin');
+  assert.equal(rows.filter((r) => r.decision === 'Yes').reduce((s, r) => s + r.n, 0), COUNTS.yes);
+  assert.equal(rows.filter((r) => r.decision === 'No').reduce((s, r) => s + r.n, 0), COUNTS.decided - COUNTS.yes);
+  assert.ok(rows.filter((r) => r.n).every((r) => r.decision === (r.from >= lowestYes - 5e-5 ? 'Yes' : 'No')), 'a bin\'s decision follows its side of the line');
+  // A bin ends exactly where the next begins (no hospital between them), and the line is one of the edges.
+  rows.slice(1).forEach((r, i) => assert.equal(r.from, rows[i].to));
+  assert.ok(rows.some((r) => r.from === Number(decimal(lowestYes, 4))), 'the line is a bin edge');
+  // The magnifier sits on the line: Maryland's scored hospitals are said not to be shown, with the counts from CMS's file.
+  assert.ok(PAGE.includes(`Not shown: Maryland’s ${count(PD.maryland.scored)} scored hospitals. ${count(PD.maryland.above)} of them`));
 });
 
-test('the US map: hospitals cut of hospitals with a decision; Maryland hatched "not subject to the reduction"; no state drawn as zero', () => {
-  const text = program();
-  const body = figures(text)[1][2];
+test('the line sentence on the program page is CMS\'s: the gap between its highest No and lowest Yes, named by both, in the summary form', () => {
+  const { highestNo, lowestYes } = DATA.boundaryText;
+  const summary = /<div class="form prog__summary">([\s\S]*?)<\/div>\n<p class="stamp">/.exec(PAGE)[1];
+  assert.match(summary, new RegExp(`<span class="field__no">4</span>CMS’s line</p>\\n<p class="field__value">${lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${highestNo}\\.</div>`));
+  // The boundary is CMS's, scored hospitals with a decision on each side of it only.
+  const decided = decidedHospitals(DATA.hospitals);
+  assert.ok(decided.filter((h) => h.paymentReduction === 'Yes').every((h) => h.total >= Number(lowestYes)));
+  assert.ok(decided.filter((h) => h.paymentReduction === 'No').every((h) => h.total <= Number(highestNo)));
+  assert.equal(Number(highestNo), model.boundary.highestNo);
+  assert.equal(Number(lowestYes), model.boundary.lowestYes);
+});
+
+test('the US map (Figure 13): hospitals cut of hospitals with a decision, a state a mark; Maryland hatched "not subject to the reduction"; no state drawn as zero', () => {
+  const body = figureBody(PAGE, 13);
   assert.match(body, /class="chart chart--us-map"/);
-  const tile = (code) => new RegExp(`<g class="chart-mark" data-mark data-state="${code}"[^>]*>([\\s\\S]*?)</g>`).exec(body);
-  assert.match(tile('MD')[0], /<title>Maryland: not subject to the reduction<\/title>/);
-  assert.doesNotMatch(tile('MD')[0], /data-value/);
-  assert.match(tile('MD')[1], /chart-tile-na/);
-  assert.equal(Object.hasOwn(STATES, 'PR'), false, 'PR has no hospitals in the pinned file');
-  assert.equal(tile('PR'), null, 'Puerto Rico has no place on the US map');
-  const al = STATES.AL;
-  assert.ok(tile('AL')[0].includes(`<title>Alabama: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})</title>`));
-  assert.doesNotMatch(body.slice(0, body.indexOf('chart-legend')), /<rect class="chart-hit"/, 'a state is its own hit area');
-  assert.ok(text.includes('<p id="figure-2-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
-  assert.ok(body.includes('<th scope="col" data-numeric>Share cut</th>'));
-  // The table carries the full sentence.
-  assert.ok(body.includes(`${al.yes}</td>`));
-  for (const fit of ['narrow', 'wide']) assert.equal(variant(body, fit).match(/data-state="/g).length, US_MAP_CODES.length, fit);
-  assert.match(variant(body, 'wide'), /<pattern id="chart-states-wide-hatch"/, 'each variant names its own hatch');
-  // The table lists every tile.
-  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length);
-  const [, takeaway] = captions(text)[1];
-  assert.match(takeaway, /^Nationally, CMS cut payments to \d+\.\d% of hospitals with a payment decision; by state, the share ran from \d+\.\d% to \d+\.\d%\.$/);
+  const mark = (code, fit) => new RegExp(`<g class="chart-mark" data-mark data-state="${code}"([^>]*)><title>([^<]*)</title><path class="([^"]*)"`, 'g').exec(body.slice(body.indexOf(`data-fit="${fit}"`), body.indexOf('</svg>', body.indexOf(`data-fit="${fit}"`))));
+  for (const fit of ['narrow', 'wide']) {
+    const md = mark('MD', fit);
+    assert.equal(md[2], 'Maryland: not subject to the reduction');
+    assert.doesNotMatch(md[1], /data-value/, 'no value on a state with none to show');
+    assert.match(md[3], /chart-tile-na/);
+    assert.equal(mark('PR', fit), null, 'Puerto Rico has no place on the US map');
+    // A state with a share: its counts and its share, from the places' own counts, and a value to step the shade by.
+    const al = PLACES.places.get('state:al').counts;
+    const marked = mark('AL', fit);
+    assert.equal(marked[2], `Alabama: ${al.yes} of ${al.decided} cut (${pct(al.yes / al.decided, 1)})`);
+    assert.match(marked[1], /data-value="\d/);
+    assert.equal(body.slice(body.indexOf(`data-fit="${fit}"`), body.indexOf('</svg>', body.indexOf(`data-fit="${fit}"`))).match(/data-state="/g).length, US_MAP_CODES.length, fit);
+  }
+  assert.match(body, /<pattern id="chart-states-wide-hatch"/, 'each variant names its own hatch');
+  // The table lists every state the places hold, with its counts; Maryland has none with a decision, so its share is a dash.
+  const rows = tableRows(body);
+  assert.equal(rows.length, PLACES.list.filter((p) => p.kind === 'state').length);
+  const md = PLACES.places.get('state:md').counts;
+  assert.deepEqual(rows.find(([code]) => code === 'MD'), ['MD', count(md.yes), count(md.decided), '—']);
+  assert.equal(md.decided, 0);
+  assert.deepEqual(rows.map(([code]) => code), [...rows.map(([code]) => code)].sort(), 'by state code');
+  // The wide map also draws every hospital as a dot over the states, and the figure says what the dots mean.
+  assert.match(body, /usmap__sw--pen"><\/span>Cut</);
+  assert.match(body, /class="chart-dots chart-dots--pen"/);
+  assert.ok(PAGE.includes('<p id="figure-13-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
+  const [, takeaway] = captions(PAGE).find(([n]) => n === '13');
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
 });
 
-test('stateCounts counts by the master\'s state', () => {
-  const total = Object.values(STATES).reduce((t, s) => t + s.hospitals, 0);
-  assert.equal(total, DATA.hospitals.length);
-  assert.equal(Object.values(STATES).reduce((t, s) => t + s.decided, 0), COUNTS.decided);
-  assert.equal(Object.values(STATES).reduce((t, s) => t + s.yes, 0), COUNTS.yes);
-  assert.equal(STATES.MD.decided, 0);
-  assert.ok(STATES.MD.na > 0);
-  // Only a scored "N/A" counts as not subject to the reduction.
-  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decided: false, decision: { text: 'N/A' } }]);
-  assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
+test('a state with no hospitals in CMS\'s file is drawn plain with its reason, never as zero', () => {
+  // Places built from every hospital outside one state: that state has no place, so its mark is empty, not a 0% shade.
+  const [gone] = PLACES.list.filter((p) => p.kind === 'state' && p.counts.decided > 20);
+  const kept = DATA.hospitals.filter((h) => DATA.master.get(h.ccn).state !== gone.key.toUpperCase());
+  const pd = programData({ hospitals: kept, master: DATA.master, model });
+  const places = buildPlaces({ hospitals: kept, master: DATA.master, rows: pd.rows });
+  const body = String(mapFigure({ pd, places, shapes: DATA.shapes, n: 13, source: 's' }));
+  const code = gone.key.toUpperCase();
+  const empty = new RegExp(`<g class="chart-mark" data-mark data-state="${code}"><title>[^<]*: no hospitals in CMS’s file</title><path class="chart-tile-empty chart-geo-state"`);
+  assert.match(body, empty);
+  assert.doesNotMatch(body, new RegExp(`data-state="${code}" data-value`));
+  assert.equal(tableRows(body).length, PLACES.list.filter((p) => p.kind === 'state').length - 1, 'and it has no row in the table');
 });
 
-test('a state code with no place on the map (a territory) is not drawn: its row is in the table and a note names it', () => {
-  // Synthetic hospitals the master places in GU and VI, codes the grid has no tile for.
-  const gu = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { state: 'GU' }) }));
-  const vi = hospitalView(inputs(CASES.noScore, { master: master(CASES.noScore.ccn, { state: 'VI' }) }));
-  const extra = stateCounts([gu, vi]);
-  assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
-  const states = { ...STATES, ...extra };
-  const body = String(statesFigure({ states, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy }));
-  const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
-  assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
-  assert.equal(svg.match(/data-state="/g).length, US_MAP_CODES.length);
-  assert.ok(body.includes('<p class="small muted fig__note">Not on the map: GU, VI.</p>'));
-  const row = (code) => new RegExp(`<tr><th scope="row">${code}</th>([\\s\\S]*?)</tr>`).exec(body)?.[1];
-  assert.equal(row('GU'), '<td class="num" data-value="1">1</td><td class="num" data-value="1">1</td><td class="num" data-value="100">100.0%</td>');
-  assert.match(row('VI'), /no hospitals with a payment decision/);
-  // The off-map rows follow the drawn states', and every drawn state keeps its row.
-  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length + 2);
-  // The national share counts every state; the range spans every row with a share.
-  const [, takeaway] = /<span class="fig__n">Figure 2\.<\/span> ([^<]*)</.exec(body);
-  assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
-  assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
-  // Without an off-grid code there is no note.
-  assert.doesNotMatch(String(statesFigure({ states: STATES, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
-});
-
-test('the hospital table section: the controls for client/program.js, the asset, and without JavaScript a sentence and the CSV link', () => {
-  const text = program();
-  const section = /<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">([\s\S]*?)<\/section>/.exec(text)[1];
+test('the hospital table section: the controls for client/table.js, the asset, and without JavaScript a sentence and the CSV link', () => {
+  const section = /<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">([\s\S]*?)<\/section>/.exec(PAGE)[1];
   assert.ok(section.includes(`<a href="${csvPath(DATA.fy)}"`));
   assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
   assert.match(section, /<p class="ht-nojs">[^<]+<\/p>/);
-  assert.ok(section.includes('<p class="ht-retry" role="status"></p>'), 'an empty live region for a failed load (client/program.js)');
-  assert.match(section, /<div class="ht" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  assert.ok(section.includes('<p class="ht-retry" role="status"></p>'), 'an empty live region for a failed load (client/table.js)');
+  assert.match(section, new RegExp(`<div class="ht" data-src="${SEARCH_URL.replaceAll('.', '\\.')}" hidden>`), 'every hospital: no data-area');
   assert.match(section, /<select id="ht-state">/);
   assert.match(section, /<input id="ht-name" type="search"/);
   assert.match(section, /aria-live="polite"/);
+  assert.match(section, /<tbody><\/tbody>/, 'no hospital row in the page: the script fills them');
   for (const key of ['name', 'city', 'state', 'score', 'decision']) assert.match(section, new RegExp(`<th scope="col" data-key="${key}"${key === 'state' ? ' aria-sort="ascending"' : ''}${key === 'score' ? ' class="num"' : ''}><button type="button" class="fig__sort">`));
-  assert.doesNotMatch(text, /Exampleton|EXAMPLE GENERAL/, 'no hospital list inlined');
-  // Small but for its two inline maps (the US map's phone and wide variants, about 115 kB together): no hospital data.
-  const maps = [...text.matchAll(/<svg[^>]*chart--us-map[\s\S]*?<\/svg>/g)].reduce((n, [m]) => n + m.length, 0);
-  assert.ok(maps < 130_000, `the maps stay thinned (${maps} bytes)`);
-  assert.ok(text.length - maps < 120_000, `the program page stays small (${text.length - maps} bytes besides its maps)`);
+  // No hospital is listed in the page's words: a CCN anywhere outside the drawings and the figures' tables would be one.
+  const words = PAGE.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<details class="fig__table">[\s\S]*?<\/details>/g, '');
+  const ccns = new Set(DATA.hospitals.map((h) => h.ccn));
+  assert.deepEqual([...words.matchAll(/\b\d{6}\b/g)].map((m) => m[0]).filter((c) => ccns.has(c)), [], 'no hospital list inlined');
+  // The weight of the page: its drawings (about 630 kB of inline SVG) and, besides them, its words and tables (about 120 kB).
+  assert.ok(drawings(PAGE) < 800_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
+  assert.ok(PAGE.length - drawings(PAGE) < 160_000, `the program page stays small (${PAGE.length - drawings(PAGE)} bytes besides its drawings)`);
 });
 
+// ---------- every takeaway's numbers ----------
+
+// The numbers each figure's takeaway should hold, worked out from CMS's rows alone (not from programData): by figure.
+function expectedNumbers(hospitals) {
+  const six = String(MEASURE_IDS.length);
+  const decided = decidedHospitals(hospitals);
+  const yes = decided.filter((h) => h.paymentReduction === 'Yes');
+  const scoredOn = (h) => MEASURE_IDS.filter((id) => h.measures[id].z !== null);
+  const sd = (xs) => { const m = xs.reduce((s, x) => s + x, 0) / xs.length; return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length); };
+  const spread = (k) => sd(decided.filter((h) => scoredOn(h).length === k).map((h) => h.total));
+  // Figure 7: the share cut in each group of hospital, from the master.
+  const shares = TYPE_KINDS.flatMap(([, groups]) => groups.map(([, test]) => {
+    const members = decided.filter((h) => test(DATA.master.get(h.ccn)));
+    return members.length ? members.filter((h) => h.paymentReduction === 'Yes').length / members.length : null;
+  })).filter((s) => s !== null);
+  // Figure 9: the two pairs of measures that agree most.
+  const rho = [];
+  for (let i = 0; i < MEASURE_IDS.length; i++) {
+    for (let j = i + 1; j < MEASURE_IDS.length; j++) {
+      const both = hospitals.filter((h) => h.measures[MEASURE_IDS[i]].value !== null && h.measures[MEASURE_IDS[j]].value !== null);
+      rho.push(spearman(both.map((h) => h.measures[MEASURE_IDS[i]].value), both.map((h) => h.measures[MEASURE_IDS[j]].value)));
+    }
+  }
+  rho.sort((a, b) => b - a);
+  // Figure 11: cut hospitals that one measure at the national median would have put at or under CMS's highest No.
+  const escaped = yes.filter((h) => { const lever = biggestLever(h, model); return lever && lever.after <= model.boundary.highestNo; }).length;
+  // Figure 10 (in the words beside Figure 11): the measure with the largest z-score, for each cut hospital.
+  const driver = Object.fromEntries(MEASURE_IDS.map((id) => [id, 0]));
+  for (const h of yes) driver[MEASURE_IDS.reduce((best, id) => (h.measures[id].z !== null && (best === null || h.measures[id].z > h.measures[best].z) ? id : best), null)] += 1;
+  const drive = Object.values(driver).sort((a, b) => b - a);
+  // Figure 12: decided hospitals CMS gave its worst score on a measure, those it cut, and those with no measured result.
+  const given = decided.filter((h) => MEASURE_IDS.some((id) => isAssigned(h.measures[id])));
+  // Figure 13: the share cut by state (the places hold every state and DC), nationally and at each end.
+  const byState = new Map();
+  for (const h of decided) byState.set(DATA.master.get(h.ccn).state, [...(byState.get(DATA.master.get(h.ccn).state) ?? []), h]);
+  const stateShares = [...byState.values()].map((hs) => toUnit((100 * hs.filter((h) => h.paymentReduction === 'Yes').length) / hs.length, 1));
+  return {
+    1: [count(hospitals.filter((h) => scoredOn(h).length === MEASURE_IDS.length).length), count(hospitals.length), six, count(hospitals.filter((h) => scoredOn(h).length === 1).length), count(hospitals.filter((h) => scoredOn(h).length === 0).length)],
+    5: [count(yes.length)],
+    6: [count(yes.length), count(decided.length), decimal(model.boundary.lowestYes - model.boundary.highestNo, 4)],
+    7: [pct(Math.max(...shares), 0), pct(Math.min(...shares), 0), pct(yes.length / decided.length, 1)],
+    8: [decimal(spread(1) / spread(MEASURE_IDS.length), 1), six, decimal(spread(1), 2), decimal(spread(MEASURE_IDS.length), 2)],
+    9: [decimal(rho[0], 2), decimal(rho[1], 2)],
+    10: [count(drive[0]), count(yes.length), count(drive.at(-1))],
+    11: [count(escaped), count(yes.length)],
+    12: [count(given.length), count(given.filter((h) => h.paymentReduction === 'Yes').length), count(given.filter((h) => scoredOn(h).every((id) => isAssigned(h.measures[id]))).length)],
+    13: [pct(yes.length / decided.length, 1), pct(Math.min(...stateShares) / 100, 1), pct(Math.max(...stateShares) / 100, 1)],
+  };
+}
+
+// The panels' takeaways for the measures one at a time (Figures 2, 3 and 4), from the published values.
+function expectedPanels(hospitals) {
+  const out = { 2: {}, 3: {}, 4: {} };
+  for (const id of MEASURE_IDS) {
+    const p = model.params[id];
+    const fmt = (v) => decimal(v, p.decimals);
+    const v = hospitals.map((h) => h.measures[id].value).filter((x) => x !== null);
+    const atCap = count(v.filter((x) => x >= p.cap).length);
+    out[2][id] = isSir(id) ? [count(v.filter((x) => x === 0).length), count(v.length), fmt(medianAt(p))] : ['1.0', fmt(medianAt(p)), count(v.filter((x) => x > 1).length), count(v.length), '1.0'];
+    out[3][id] = p.floor > 0 ? [atCap, fmt(p.cap), fmt(p.cap), count(v.filter((x) => x <= p.floor).length), fmt(p.floor), fmt(p.floor)] : [atCap, fmt(p.cap), fmt(p.cap)];
+    out[4][id] = [fmt(p.mean), fmt(p.sd)];
+  }
+  return out;
+}
+
+// Part 1, Part 2 and the map, drawn from a list of CMS's rows alone.
+function drawFrom(hospitals) {
+  const pd = programData({ hospitals, master: DATA.master, model });
+  const places = buildPlaces({ hospitals, master: DATA.master, rows: pd.rows });
+  return String(part1({ pd, model, periods: DATA.periods, median: MEDIAN, source: 's' })) + String(part2({ pd, model, source: 's', n0: 6 })) + String(mapFigure({ pd, places, shapes: DATA.shapes, n: 13, source: 's' }));
+}
+
 test('no figure takeaway holds a hand-typed number: every number in it comes from the data it was built from', () => {
-  // The program page: change the data and every number in its takeaways changes with it. Each figure counts its own
-  // data, so the histogram's takeaway follows its scores and the tile grid's national share follows its states.
-  const scores = SCORES.filter((_, i) => i % 3 === 0);
-  const yes = scores.filter((s) => s.yes).length;
-  const states = { ...STATES, AL: { ...STATES.AL, yes: 1, decided: 8 } };
-  const total = (k) => Object.values(states).reduce((t, s) => t + s[k], 0);
-  const national = pct(total('yes') / total('decided'), 1);
-  assert.notEqual(national, pct(COUNTS.yes / COUNTS.decided, 1));
-  const text = program({ scores, states });
-  const caps = captions(text).map(([, t]) => t);
-  assert.ok(caps[0].includes(`${count(yes)} of ${count(scores.length)}`));
-  assert.ok(caps[1].includes(national));
-  const shares = Object.values(states).filter((s) => s.decided > 0).map((s) => toUnit(100 * s.yes / s.decided, 1));
-  const allowed = new Set([count(yes), count(scores.length), national, pct(Math.min(...shares) / 100, 1), pct(Math.max(...shares) / 100, 1),
-    cmsText(MEDIAN.totalText), DATA.boundaryText.highestNo, DATA.boundaryText.lowestYes]);
-  for (const t of caps) for (const x of numbers(t)) assert.ok(allowed.has(x), `"${x}" in "${t}"`);
-  // The figure builders take their words from copy.js and their numbers only from their arguments.
-  assert.ok(String(scoresFigure({ scores, boundary: model.boundary, boundaryText: DATA.boundaryText, n: 1, source: 's', fy: DATA.fy })).includes('Figure 1.'));
+  // The same checks run on the pinned file and on a copy with every third hospital left out: change the data and every
+  // number in every takeaway changes with it, to the number worked out here from the rows alone.
+  const thinned = DATA.hospitals.filter((_, i) => i % 3 !== 0);
+  const drawn = [DATA.hospitals, thinned].map((hospitals) => {
+    const text = drawFrom(hospitals);
+    const takeaways = Object.fromEntries(captions(text).map(([n, t]) => [Number(n), numbers(t)]));
+    const expected = expectedNumbers(hospitals);
+    for (const [n, list] of Object.entries(expected)) assert.deepEqual(takeaways[n], list, `Figure ${n}${hospitals === thinned ? ' (thinned data)' : ''}`);
+    // The figures that show one measure at a time say the same of each, in their panels.
+    const panels = expectedPanels(hospitals);
+    for (const n of [2, 3, 4]) {
+      const found = panelTakes(figureBody(text, n));
+      for (const id of MEASURE_IDS) assert.deepEqual(numbers(found[id]), panels[n][id], `Figure ${n}, ${id}${hospitals === thinned ? ' (thinned data)' : ''}`);
+    }
+    return takeaways;
+  });
+  // And they are different numbers: nothing in a takeaway with a number in it stayed put when the data changed.
+  for (const n of Object.keys(expectedNumbers(DATA.hospitals))) assert.notDeepEqual(drawn[0][n], drawn[1][n], `Figure ${n}: its numbers follow the data`);
 });
 
 test('hostile names stay text in the hospital page\'s figures', () => {
@@ -285,4 +387,48 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
       assert.equal(m.contributionRaw, Number(m.contributionText.replace('−', '-')), `scored row ${i} ${m.id}: the view’s number is its text’s`);
     }
   }
+});
+
+// ---------- figures.js statesFigure and view.js stateCounts: no page draws them now (the program page's map is program-figures.js mapFigure) ----------
+
+test('stateCounts counts by the master\'s state', () => {
+  const total = Object.values(STATES).reduce((t, s) => t + s.hospitals, 0);
+  assert.equal(total, DATA.hospitals.length);
+  assert.equal(Object.values(STATES).reduce((t, s) => t + s.decided, 0), COUNTS.decided);
+  assert.equal(Object.values(STATES).reduce((t, s) => t + s.yes, 0), COUNTS.yes);
+  assert.equal(STATES.MD.decided, 0);
+  assert.ok(STATES.MD.na > 0);
+  // Only a scored "N/A" counts as not subject to the reduction.
+  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decided: false, decision: { text: 'N/A' } }]);
+  assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
+  // The places' state counts are the same numbers, state by state.
+  for (const p of PLACES.list.filter((x) => x.kind === 'state')) {
+    const s = STATES[p.key.toUpperCase()];
+    assert.deepEqual([p.counts.file, p.counts.decided, p.counts.yes], [s.hospitals, s.decided, s.yes], p.id);
+  }
+});
+
+test('a state code with no place on the map (a territory) is not drawn: its row is in the table and a note names it', () => {
+  // Synthetic hospitals the master places in GU and VI, codes the grid has no tile for.
+  const gu = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { state: 'GU' }) }));
+  const vi = hospitalView(inputs(CASES.noScore, { master: master(CASES.noScore.ccn, { state: 'VI' }) }));
+  const extra = stateCounts([gu, vi]);
+  assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
+  const states = { ...STATES, ...extra };
+  const body = String(statesFigure({ states, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy }));
+  const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
+  assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
+  assert.equal(svg.match(/data-state="/g).length, US_MAP_CODES.length);
+  assert.ok(body.includes('<p class="small muted fig__note">Not on the map: GU, VI.</p>'));
+  const row = (code) => new RegExp(`<tr><th scope="row">${code}</th>([\\s\\S]*?)</tr>`).exec(body)?.[1];
+  assert.equal(row('GU'), '<td class="num" data-value="1">1</td><td class="num" data-value="1">1</td><td class="num" data-value="100">100.0%</td>');
+  assert.match(row('VI'), /no hospitals with a payment decision/);
+  // The off-map rows follow the drawn states', and every drawn state keeps its row.
+  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length + 2);
+  // The national share counts every state; the range spans every row with a share.
+  const [, takeaway] = /<span class="fig__n">Figure 2\.<\/span> ([^<]*)</.exec(body);
+  assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
+  assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
+  // Without an off-grid code there is no note.
+  assert.doesNotMatch(String(statesFigure({ states: STATES, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
 });

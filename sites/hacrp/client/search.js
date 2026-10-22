@@ -11,8 +11,13 @@ import { hospitalLoader } from './hospitals.js';
 
 const hospitals = hospitalLoader();
 
-// A state's entry joins here when the site has state pages: { type: 'state', key, label, sub, href }.
-export const STATE_ENTRIES = [];
+// The asset's places as search entries: [kind, key, name, path, hospitals]; a state also matches its code.
+const kindWord = (kind) => fill(`searchKind${kind[0].toUpperCase()}${kind.slice(1)}`);
+export function placeEntries({ places = [] }) {
+  return places.map(([kind, key, name, path, n]) => ({
+    type: kind, key: kind === 'state' ? key.toUpperCase() : `${kind}-${key}`, label: name, sub: n === 1 ? fill('searchPlaceSubOne', { kind: kindWord(kind) }) : fill('searchPlaceSub', { kind: kindWord(kind), n: count(n) }), extra: '', href: path,
+  }));
+}
 
 // The asset's rows as search entries: [ccn, name, city, state, total, decision, zip].
 export function hospitalEntries({ hospitalPath, rows }) {
@@ -21,14 +26,20 @@ export function hospitalEntries({ hospitalPath, rows }) {
   }));
 }
 
-const form = typeof document === 'undefined' ? null : document.querySelector('form.omni[data-src]');
-if (form) {
+// Every search box on the page (the top bar's, and the program page's larger one in its hero): one index, loaded once.
+const forms = typeof document === 'undefined' ? [] : [...document.querySelectorAll('form.omni[data-src]')];
+let entries = null;
+const load = (src) => (entries ??= hospitals(src).then((data) => buildIndex([...placeEntries(data), ...hospitalEntries(data)])).catch((error) => {
+  entries = null;
+  throw error;
+}));
+for (const form of forms) {
   const inTable = Boolean(document.querySelector('#ht-name'));
   mountOmnibox(form, {
-    load: async () => buildIndex([...STATE_ENTRIES, ...hospitalEntries(await hospitals(form.dataset.src))]),
+    load: () => load(form.dataset.src),
     words: {
       empty: fill('searchEmpty'),
-      kind: { hospital: fill('searchKindHospital') },
+      kind: { hospital: fill('searchKindHospital'), state: fill('searchKindState'), metro: fill('searchKindMetro'), region: fill('searchKindRegion'), division: fill('searchKindDivision') },
       count: (n) => (n === 0 ? fill('searchEmpty') : n === 1 ? fill('searchCountOne') : fill('searchCount', { n: count(n) })),
       failed: fill('searchFailed'),
       more: inTable ? (n) => fill('searchMore', { n: count(n) }) : null,

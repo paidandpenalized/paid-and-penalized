@@ -14,6 +14,7 @@
 //   legend   { title, high, zero, few }: the stepped bar's title and the text at its right end (the highest value),
 //            both required, and the legend rows for a zero value and for few cases (required when some tile is zero
 //            or few)
+import { has } from '../../engine/js/has.js';
 import { scaleThreshold } from 'd3-scale';
 import { capitalize } from '../render/format.js';
 import { html } from '../render/html.js';
@@ -36,7 +37,7 @@ export const DARK_FROM = 3;
 const stepsFor = (k) => Array.from({ length: k }, (_, i) => Math.round((i * (STEPS - 1)) / (k - 1)) + 1);
 
 function checkStates(states) {
-  for (const code of Object.keys(states)) if (!Object.hasOwn(TILES, code)) throw new RangeError(`tileMap: unknown code ${code}`);
+  for (const code of Object.keys(states)) if (!has(TILES, code)) throw new RangeError(`tileMap: unknown code ${code}`);
   for (const code of Object.keys(TILES)) {
     const s = states[code];
     if (!s) throw new RangeError(`tileMap: no entry for ${code} (a code with no data is hatched with a label, never left out)`);

@@ -6,6 +6,7 @@ import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geo
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, mark, plain, r2, WIDTH } from './svg.js';
+import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 
 // The states, DC and Puerto Rico: postal code, Census FIPS code (us-atlas's geometry id) and name, as
@@ -27,6 +28,11 @@ export const STATES = Object.freeze([
 ]);
 export const STATE_NAMES = Object.freeze(Object.fromEntries(STATES.map(([code, , name]) => [code, name])));
 const CODE_OF_FIPS = new Map(STATES.map(([code, fips]) => [fips, code]));
+// A state's counties (us-atlas county ids begin with the state's FIPS code).
+export const countiesOf = (counties, code) => {
+  const fips = STATES.find(([c]) => c === code)?.[1];
+  return fips ? counties.filter((f) => String(f.id).startsWith(fips)) : [];
+};
 
 // The codes the US map draws: the states and DC (geoAlbersUsa has no place for Puerto Rico), in STATES order.
 export const US_MAP_CODES = Object.freeze(STATES.map(([code]) => code).filter((code) => code !== 'PR'));
@@ -39,6 +45,7 @@ const DIGITS = 1;
 const THIN = 1;
 // The US map's fifty states are each drawn smaller than a locator map's one, so its outlines take a coarser thinning.
 const THIN_US = 1.5;
+const US_THIN_WIDTH = 560;
 // A locator map's margin inside its frame, and the tallest it may be as a share of its width (a tall state, such as
 // California, fits the height and is centered across).
 const PAD = 8;
@@ -95,7 +102,7 @@ function thinned(projection, thin = THIN) {
       const filter = {
         point(x, y) {
           if (!ring) return sink.point(x, y);
-          const last = ring.at(-1);
+          const last = ring[ring.length - 1];
           if (!last || (x - last[0]) ** 2 + (y - last[1]) ** 2 >= min2) {
             ring.push([x, y]);
             skipped = null;
@@ -168,7 +175,9 @@ function usPaths(shapes, width) {
   const height = Math.round(width * US_ASPECT);
   const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
   const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
-  const path = outlinePath(projection, THIN_US);
+  // Wider than the wide variant, the outlines thin in proportion, so a map drawn across a page keeps the wide one's
+  // detail per state, not twice its markup.
+  const path = outlinePath(projection, THIN_US * Math.max(1, width / US_THIN_WIDTH));
   // A state the thinning would leave with no ring (DC, on the phone variant) keeps its full outline.
   const full = geoPath(projection).digits(DIGITS);
   const paths = new Map(US_MAP_CODES.map((code) => [code, shapes.has(code) ? path(shapes.get(code)) || full(shapes.get(code)) : null]));
@@ -192,7 +201,7 @@ function checkUsStates(states) {
 // tooltip and data-state, so web/client/figure.js steps through them by keyboard and a page script can act on one.
 // A value of zero takes the neutral mark; hatched is not in the program; empty is nothing to show; few gets a dashed
 // outline over the state. Every code in US_MAP_CODES must be given, and only those codes.
-export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WIDTH, format = plain }) {
+export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WIDTH, format = plain, overlay = '' }) {
   checkId(id, 'usMap');
   checkUsStates(states);
   checkLegend({ ramp, words, states, who: 'usMap' });
@@ -213,7 +222,7 @@ export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WI
   const legend = stepLegend({ id, top: height, ramp, format, words, states });
   return frame({
     kind: 'us-map', width, height: legend.height, body: html`${hatchDefs(id)}
-${marks}${legend.body}`,
+${marks}${overlay}${legend.body}`,
   });
 }
 
@@ -279,4 +288,86 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
     + html`${ringsDrawn}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
     + '</svg>');
+}
+
+// ---------- hospitals as dots ----------
+
+// A dot for each hospital at its place on the US map (Albers USA, the choropleth's projection and frame at the same
+// width: Alaska and Hawaii inset), as one path per class (web/charts/dots.js), each class's diameter its own: an
+// overlay for usMap. points [{ point, cls }]; sizes { [cls]: diameter }. A point the projection has no place for is
+// left out.
+export function usPoints({ shapes, points, sizes, width }) {
+  const { height } = usPaths(shapes, width);
+  const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
+  const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
+  const byCls = new Map(Object.keys(sizes).map((cls) => [cls, []]));
+  for (const p of points) {
+    const at = Array.isArray(p.point) ? projection(p.point) : null;
+    if (at) byCls.get(p.cls)?.push(at);
+  }
+  return html`<g class="chart-us__points">${[...byCls].map(([cls, pts]) => dotsPath(pts, cls, sizes[cls]))}</g>`;
+}
+
+// A place's map: the states it holds (or a metro's area, fitted around its hospitals) in the panel tone with their
+// neighbors faint around them, counties as hairlines, and each hospital a dot that is a mark (its tooltip; data-href
+// opens its page). fit: 'states' (codes: the place's states; Alaska and Hawaii inset by Albers USA when the place
+// holds more than one state) or 'points' (a metro). points [{ point, cls, tip, href }]; label: the image's name.
+// dense: { [cls]: diameter } to draw the dots as one path per class instead (a region's thousand hospitals), with no
+// tooltips. ownCounties: county ids (FIPS) shaded as the place's own (a metro's).
+const PLACE_PAD = 14;
+export function placeMap({ shapes, counties = [], codes, fit = 'states', points, label, width, aspect = 0.68, dense = null, ownCounties = null }) {
+  if (typeof label !== 'string' || !label) throw new TypeError('placeMap: label is required');
+  const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+  const placed = points.filter((p) => ok(p.point));
+  const mine = codes.map((c) => shapes.get(c)).filter(Boolean);
+  if (!mine.length && !placed.length) return null;
+  const height = Math.round(width * aspect);
+  const extent = [[PLACE_PAD, PLACE_PAD], [width - PLACE_PAD, height - PLACE_PAD]];
+  let projection;
+  if (fit === 'points') {
+    if (placed.length < 1) return null;
+    const lons = placed.map((p) => p.point[0]);
+    const lats = placed.map((p) => p.point[1]);
+    const [w, e, s, n] = [Math.min(...lons) - 0.3, Math.max(...lons) + 0.3, Math.min(...lats) - 0.25, Math.max(...lats) + 0.25];
+    const lon = (w + e) / 2;
+    const lat = (s + n) / 2;
+    projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
+      .fitExtent(extent, { type: 'MultiPoint', coordinates: [[w, s], [e, n], [w, n], [e, s]] });
+  } else if (mine.length > 1) {
+    projection = geoAlbersUsa().fitExtent(extent, { type: 'FeatureCollection', features: mine });
+  } else {
+    const f = mine[0];
+    const [[, south], [, north]] = geoBounds(f);
+    const inset = (north - south) * PARALLEL_INSET;
+    projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitExtent(extent, f);
+  }
+  if (fit !== 'states' || mine.length === 1) projection.clipExtent([[0, 0], [width, height]]).precision(0);
+  const path = outlinePath(projection);
+  const inPlace = new Set(codes);
+  const others = fit === 'points' || mine.length === 1
+    ? [...shapes].filter(([code]) => !inPlace.has(code) && LOCATOR_CODES.has(code)).map(([, f]) => path(f)).filter(Boolean)
+    : [];
+  const inside = mine.map((f) => path(f)).filter(Boolean);
+  // Counties only for a single state or a metro (a region's would be thousands of hairlines).
+  const countyLines = fit === 'points' || mine.length === 1
+    ? counties.filter((f) => {
+      const [[fw, fs], [fe, fn]] = boundsOf(f);
+      const [a, b] = [projection([fw, fn]), projection([fe, fs])];
+      return a && b && b[0] >= 0 && a[0] <= width && b[1] >= 0 && a[1] <= height;
+    }).map((f) => ({ d: path(f), own: Boolean(ownCounties?.has(String(f.id))) })).filter((c) => c.d)
+    : [];
+  const dots = dense ? Object.entries(dense).map(([cls, d]) => dotsPath(placed.filter((p) => p.cls === cls).map((p) => projection(p.point)).filter(Boolean), cls, d).text).join('') : placed.map((p) => {
+    const at = projection(p.point);
+    if (!at) return '';
+    const [x, y] = at.map(r2);
+    return mark({ tip: p.tip, value: null, data: p.href ? { href: p.href } : {}, hit: null, body: html`<circle class="chart-place__dot ${p.cls}" cx="${x}" cy="${y}" r="${p.r ?? 4}"/>` }).text;
+  }).join('');
+  return new Safe(html`<svg class="chart chart--place-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
+    + `<rect class="chart-sea" width="${width}" height="${height}"/>`
+    + others.map((d) => `<path class="chart-geo-land chart-geo-near" d="${d}"/>`).join('')
+    + inside.map((d) => `<path class="chart-geo-land chart-geo-mine" d="${d}"/>`).join('')
+    + countyLines.filter((c) => c.own).map((c) => `<path class="chart-geo-land chart-geo-mine" d="${c.d}"/>`).join('')
+    + `<g class="chart-geo-counties">${countyLines.map((c) => `<path d="${c.d}"/>`).join('')}</g>`
+    + inside.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')
+    + dots + '</svg>');
 }

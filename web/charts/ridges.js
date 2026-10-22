@@ -22,7 +22,7 @@ export function ridges({ edges, rows, band: [highestNo, lowestYes], actual, labe
   const right = wide ? width - 56 : width - 4;
   const head = wide ? 0 : 20;
   const rowH = head + PLOT_H + GAP;
-  const scale = scaleLinear().domain([edges[0], edges.at(-1)]).range([left, right]);
+  const scale = scaleLinear().domain([edges[0], edges[edges.length - 1]]).range([left, right]);
   const x = (v) => r2(scale(v));
   const top = 18;
   const line = lineScore({ highestNo, lowestYes });

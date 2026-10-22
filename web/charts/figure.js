@@ -19,6 +19,7 @@
 //                shown with a true minus, kept in data-value for sorting and the CSV (value null or absent: none);
 //                data: optional { name: text } data-* attributes, hooks for a script that updates the cell
 //   csvName      the download's file name without .csv (default figure-N)
+import { has } from '../../engine/js/has.js';
 import { numberOrNaN } from '../../engine/js/stats.js';
 import { COPY } from '../copy.js';
 import { printout } from '../render/components.js';
@@ -46,7 +47,7 @@ function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table
   if (!(source instanceof Safe) && (typeof source !== 'string' || !source)) throw new TypeError(`figure ${n}: a source line is required`);
   if (chart === null && !isChart(svg)) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
   if (svgWide !== null && !isChart(svgWide)) throw new TypeError(`figure ${n}: svgWide must be a chart from web/charts`);
-  if (!Object.hasOwn(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
+  if (!has(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
   if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
   if (key !== null && !(Array.isArray(key) && key.length && key.every((k) => KEY_SWATCHES.includes(k?.swatch) && typeof k.label === 'string' && k.label))) {
     throw new TypeError(`figure ${n}: a key is a list of { swatch, label } with swatch one of ${KEY_SWATCHES.join(', ')}`);

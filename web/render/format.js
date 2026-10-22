@@ -68,3 +68,8 @@ export function isoDate(text) {
   if (!m) throw new RangeError(`expected YYYY-MM-DD, got "${text}"`);
   return longForm(Number(m[1]), Number(m[2]), Number(m[3]), text);
 }
+
+// The same dates with the month cut to three letters ("Aug 13, 2026"; May stays May), for a narrow field or a stamp.
+const short = (long) => long.replace(/^([A-Z][a-z]{2})[a-z]+/, '$1');
+export const shortDate = (text) => short(longDate(text));
+export const shortIsoDate = (text) => short(isoDate(text));

@@ -63,13 +63,14 @@ export const siteHeader = lastCall(({ fy, current, searchUrl }) => [fy, current,
   });
 });
 
-// The top bar's search: a combobox over the hospitals asset (data-src) that client/search.js mounts and shows; hidden
-// without JavaScript, where the nav's "Every hospital" and the data links stand in. The visible "Find" begins the
-// box's name, which goes on for screen readers.
-function searchBox(searchUrl) {
-  return html`<form class="omni" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
-<label class="omni__field" for="omni-q"><span class="omni__label cap">${t('searchFind')}<span class="vh"> ${t('searchFindRest')}</span></span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${t('searchPlaceholder')}"></label>
-<ul class="omni__list" id="omni-list" role="listbox" aria-label="${t('searchHeading')}" hidden></ul>
+// A search box: a combobox over the hospitals asset (data-src), with the places the site has pages for, that
+// client/search.js mounts and shows; hidden without JavaScript, where the nav's "Every hospital" and the data links
+// stand in. The visible "Find" begins the box's name, which goes on for screen readers. id: the box's own prefix
+// (a page may hold the top bar's and a larger one in its hero); hero: the larger box's words and class.
+export function searchBox(searchUrl, { id = 'omni', hero = false } = {}) {
+  return html`<form class="omni${hero ? ' omni--hero' : ''}" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
+<label class="omni__field" for="${id}-q"><span class="omni__label cap">${t('searchFind')}<span class="vh"> ${t(hero ? 'heroFindRest' : 'searchFindRest')}</span></span><input id="${id}-q" type="search" role="combobox" aria-expanded="false" aria-controls="${id}-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${t(hero ? 'heroPlaceholder' : 'searchPlaceholder')}"></label>
+<ul class="omni__list" id="${id}-list" role="listbox" aria-label="${t('searchHeading')}" hidden></ul>
 <p class="vh" role="status" aria-live="polite"></p>
 </form>`;
 }

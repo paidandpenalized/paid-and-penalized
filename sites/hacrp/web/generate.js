@@ -15,8 +15,11 @@ import { compareDefault } from './hospital-table.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
 import { dictionaryPage } from './pages/dictionary.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
+import { placePage } from './pages/place.js';
 import { hospitalPage } from './pages/hospital.js';
 import { nationalContext } from './compare.js';
+import { exploreAsset, programData } from './program-data.js';
+import { KINDS, buildPlaces } from './places.js';
 import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
@@ -36,10 +39,15 @@ function a1Summary({ ok, a, b, info }) {
 // Score text as published (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none) and CMS's payment
 // reduction text. Rows are in the hospital table's default order (state, then name; hospital-table.js); the search
 // ranks its own matches.
-export function hospitalRows(views) {
+export function hospitalRows(views, places = null) {
   const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip]).sort(compareDefault);
-  return { hospitalPath: HOSPITALS_PATH, rows };
+  return { hospitalPath: HOSPITALS_PATH, rows, ...(places ? { places: placeEntries(places) } : {}) };
 }
+
+// The places the search finds, [kind, key, name, path, hospitals in CMS's file], in kind order then by name.
+export const placeEntries = (places) => places.list
+  .map((p) => [p.kind, p.key, p.name, p.path, p.counts.file])
+  .sort((a, b) => KINDS.indexOf(a[0]) - KINDS.indexOf(b[0]) || a[2].localeCompare(b[2], 'en'));
 
 // The what-if ramp's national span: the RAMP_LOW_PCT and RAMP_HIGH_PCT percentiles of CMS's published Total HAC
 // Scores (SAS's default definition, as elsewhere), so a hospital's ramp shows its score among most others'.
@@ -70,10 +78,17 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
-  // The hospitals asset: the top bar's search on every page, and the program page's table.
-  const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views)));
+  // What the program page and the place pages draw, computed once.
+  const pd = programData({ hospitals, master, model });
+  const places = buildPlaces({ hospitals, master, rows: pd.rows });
+  // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
+  const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
   ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
+  // The explore asset: what the explorable figures draw in the browser (program-data.js exploreAsset).
+  const exploreUrl = ctx.asset('hacrp-explore', 'json', JSON.stringify(exploreAsset(pd, model)));
+  // The hero's suggestions: the state and the metro area with the most hospitals with a payment decision.
+  const most = (kind) => places.list.filter((p) => p.kind === kind).sort((a, b) => b.counts.decided - a.counts.decided || a.name.localeCompare(b.name, 'en'))[0];
   ctx.emit({
     path: PROGRAM_PATH,
     robots: programRobots,
@@ -88,13 +103,24 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       robots: programRobots,
       assets,
       whatif: { hospital: medianHospital(model, { fiscalYear: String(fy), periods }), model, estimate, range },
-      // The histogram's population is A1(b)'s too.
-      scores: decidedHospitals(hospitals).map((h) => ({ total: h.total, yes: h.paymentReduction === 'Yes' })),
-      boundary: model.boundary,
-      states: stateCounts(views),
+      pd,
+      exploreUrl,
+      tryPlaces: { state: most('state'), metro: most('metro') },
+      places,
       shapes,
     }),
   });
+
+  // A page for every place: each region, division, state and metro area. Its map needs each hospital's place and
+  // page, from the views.
+  const hospitalRowsByCcn = new Map(views.map((v) => [v.ccn, { name: v.name, city: v.city, state: v.state, totalText: v.score.raw, decision: v.decision.text, point: v.point, href: v.path }]));
+  for (const place of places.list) {
+    ctx.emit({
+      path: place.path,
+      robots: programRobots,
+      text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets }),
+    });
+  }
 
   // What every hospital page compares a hospital with, computed once.
   const nat = nationalContext({ hospitals, master, model });
@@ -111,7 +137,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
-  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
+  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
   styles: ['sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };

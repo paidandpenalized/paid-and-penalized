@@ -15,6 +15,13 @@ const MARKS = [
   '.wi-bar', '.wi-bars__row--assigned .wi-bar', '.wi-tri--cms', '.wi-tri--hyp', '.wi-ramp__line', '.wi-ramp__zone',
   // hatched page parts
   '.pill--na', '.hosp__none',
+  // the program and place pages' marks (sites/hacrp/web/styles.css)
+  '.chart-dots--pen', '.chart-dots--hl', '.chart-dots--ink', '.chart-dots--faint', '.chart-dots--pen-faint', '.chart-dots--ring', '.chart-dots--scatter',
+  '.chart-rule__ink', '.chart-rule__pen', '.chart-rule__bar', '.chart-rule__hl', '.chart-rule__line', '.chart-punch__card', '.chart-punch__hole',
+  '.chart-punch__bar', '.chart-punch__yes', '.chart-ref', '.chart-same', '.chart-sil', '.chart-pull__line', '.chart-slide__stock', '.chart-slide__hair',
+  '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
+  '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
+  '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

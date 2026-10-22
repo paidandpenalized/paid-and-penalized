@@ -17,6 +17,8 @@ import { generateHacrp } from '../web/generate.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
+import { buildPlaces } from '../web/places.js';
+import { programData } from '../web/program-data.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
 import { DATA, PROGRAM_ARGS, PAGE_CTX } from './pinned.js';
 import { hospitalView } from '../web/view.js';
@@ -167,7 +169,10 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
     assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
-    assert.equal(ctx.pages, 1 + 1 + 4);
+    // The program page, the dictionary page, the four hospitals and a page for each place they are in.
+    const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
+    assert.ok(places.list.length > 0);
+    assert.equal(ctx.pages, 1 + 1 + 4 + places.list.length);
     assert.ok(!ctx.indexable.some((p) => p.startsWith('/data/')));
     // The page: the file's own words in the site shell, its columns table labelled by its heading, column names in mono.
     assert.ok(ctx.indexable.includes(DICTIONARY_PAGE));

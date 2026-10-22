@@ -6,7 +6,7 @@
 const SYNONYMS = { saint: ['st'], st: ['saint'], mount: ['mt'], mt: ['mount'], fort: ['ft'], ft: ['fort'] };
 // Kinds of entry outrank one another at equal match: a state over a hospital (states join the index when a site has
 // state pages; buildIndex takes them as entries like any other).
-const TYPE_WEIGHT = { state: 30, metro: 20, hospital: 0 };
+const TYPE_WEIGHT = { state: 30, region: 25, division: 22, metro: 20, hospital: 0 };
 export const LIMIT = 10;
 
 // Lowercase, accents and apostrophes dropped, everything else not a letter or digit a single space.

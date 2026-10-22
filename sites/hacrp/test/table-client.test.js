@@ -1,9 +1,13 @@
-// The program page's table script (client/program.js) against a stand-in DOM: a failed fetch of the hospitals asset
-// says so and offers Try again, which fetches again; a fetch that then works mounts the table and clears the message.
-// Both the observer's path and a linked #state= path go through the same load. On a phone the sort buttons leave the
-// tab order.
+// The hospital table's script (client/table.js, started by the program page's script, client/program.js, and by the place
+// pages', client/place.js) against a stand-in DOM: a failed fetch of the hospitals asset says so and offers Try again,
+// which fetches again; a fetch that then works mounts the table and clears the message. Both the observer's path and
+// a linked #state= path go through the same load. On a phone the sort buttons leave the tab order. On a place page the
+// table lists the place's hospitals only (data-area). A state picked on the program page's US map opens its page.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { count } from '../../../web/render/format.js';
+import { TABLE_FIRST_ROWS } from '../web/constants.js';
+import { fill } from '../web/copy.js';
 
 const ORIGINAL = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch, error: console.error };
 
@@ -20,8 +24,10 @@ function el(name) {
   return node;
 }
 
-async function run(t, { hash = '', results, heads = [], media, maps = [] }) {
-  const parts = { '#ht-state': el('select'), '#ht-name': el('input'), '#ht-count': el('count'), tbody: el('tbody'), '#ht-all': el('all') };
+// entry: the page script that starts the table. area: a place page's data-area (its CCNs); a place page has no state menu.
+async function run(t, { hash = '', results, heads = [], media, maps = [], figs = [], entry = 'program', area = null, asset = ASSET }) {
+  const parts = { '#ht-name': el('input'), '#ht-count': el('count'), tbody: el('tbody'), '#ht-all': el('all') };
+  if (!area) parts['#ht-state'] = el('select');
   const retry = el('retry');
   const nojs = el('nojs');
   const section = el('section');
@@ -29,17 +35,22 @@ async function run(t, { hash = '', results, heads = [], media, maps = [] }) {
   const table = el('table');
   table.hidden = true;
   table.dataset.src = '/assets/hacrp-hospitals.test.json';
+  if (area) table.dataset.area = area;
   table.closest = () => section;
   table.querySelector = (s) => parts[s] ?? null;
   table.querySelectorAll = () => heads;
   const fetched = [];
   const errors = [];
-  globalThis.document = { activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : []), createElement: el };
-  globalThis.window = { location: { hash, pathname: '/hacrp/', search: '' }, history: { replaceState() {} }, addEventListener() {}, ...(media && { matchMedia: media }) };
+  globalThis.document = {
+    activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), createElement: el,
+    querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : s === '.fig:has(.usmap)' ? figs : []),
+  };
+  const opened = [];
+  globalThis.window = { location: { hash, pathname: '/hacrp/', search: '', assign: (url) => opened.push(url) }, history: { replaceState() {} }, addEventListener() {}, ...(media && { matchMedia: media }) };
   globalThis.fetch = async (url) => {
     fetched.push(url);
     const ok = results.shift();
-    return { ok, status: ok ? 200 : 503, json: async () => ASSET };
+    return { ok, status: ok ? 200 : 503, json: async () => asset };
   };
   console.error = (e) => errors.push(e);
   t.after(() => {
@@ -49,10 +60,10 @@ async function run(t, { hash = '', results, heads = [], media, maps = [] }) {
       else globalThis[k] = ORIGINAL[k];
     }
   });
-  await import(`../client/program.js?run=${Math.random()}`);
+  await import(`../client/${entry}.js?run=${Math.random()}`);
   const settle = () => new Promise((r) => setTimeout(r, 0));
   await settle();
-  return { table, retry, nojs, parts, fetched, errors, settle, section };
+  return { table, retry, nojs, parts, fetched, errors, settle, section, opened };
 }
 
 const ASSET = {
@@ -125,22 +136,23 @@ test('on a phone the sort buttons leave the tab order (the Sort by menu stands i
   assert.deepEqual(tabs(), ['-1', '-1', '-1', '-1', '-1']);
 });
 
-test('a state picked on the US map, by a click or by Enter on the active mark, goes in the URL and brings the table into view', async (t) => {
+test('a state picked on the US map, by a click or by Enter on the active mark, opens that state\'s page', async (t) => {
   const mark = (code) => ({ dataset: { state: code } });
   const active = mark('MD');
   const svg = el('svg');
   svg.querySelector = (s) => (s === '.chart-mark.is-active[data-state]' ? active : null);
-  const s = await run(t, { results: [true, true], maps: [svg] });
-  let scrolled = 0;
-  s.section.scrollIntoView = () => { scrolled++; };
+  const fig = el('fig');
+  fig.querySelector = () => null;
+  fig.querySelectorAll = (s) => (s === 'svg.chart--us-map' ? [svg] : []);
+  const s = await run(t, { results: [true], figs: [fig] });
   svg.handlers.click({ target: { closest: () => mark('AL') } });
-  assert.equal(globalThis.window.location.hash, '#state=AL');
+  assert.deepEqual(s.opened, ['/hacrp/state/al/']);
   svg.handlers.keydown({ key: 'Enter' });
-  assert.equal(globalThis.window.location.hash, '#state=MD');
+  assert.deepEqual(s.opened, ['/hacrp/state/al/', '/hacrp/state/md/']);
   svg.handlers.keydown({ key: 'ArrowRight' });
   svg.handlers.click({ target: { closest: () => null } });
-  assert.equal(globalThis.window.location.hash, '#state=MD', 'a key other than Enter, or a click off the states, picks nothing');
-  assert.equal(scrolled, 2);
+  assert.equal(s.opened.length, 2, 'a key other than Enter, or a click off the states, opens nothing');
+  assert.equal(globalThis.window.location.hash, '', 'the table\'s state filter is the menu\'s and the URL\'s #state=, not the map\'s');
 });
 
 test("arriving with #state=XX (a hospital page's Location link) filters the table, marks the state on each US map and brings the table into view", async (t) => {
@@ -162,4 +174,43 @@ test("arriving with #state=XX (a hospital page's Location link) filters the tabl
   s.parts['#ht-state'].value = '';
   s.parts['#ht-state'].handlers.change();
   assert.deepEqual(marks.map((m) => m.classes.has('is-picked')), [false, false]);
+});
+
+// ---------- a place page's table ----------
+
+const rowCcns = (tbody) => tbody.children.map((tr) => /\/([0-9a-z]{6})\/$/.exec(tr.children[0].children[0].href)[1]);
+
+test("a place page's table lists the place's hospitals only (data-area), whatever else the asset holds; no state menu, so #state= does nothing", async (t) => {
+  // 990051 is in the area; 990052 is not; 999999 is in the area but not in the asset.
+  for (const hash of ['', '#state=MD']) {
+    const s = await run(t, { entry: 'place', hash, area: '990051 999999', results: [true] });
+    assert.equal(s.fetched.length, 1);
+    assert.equal(s.table.hidden, false);
+    assert.deepEqual(rowCcns(s.parts.tbody), ['990051'], `hash "${hash}"`);
+    assert.equal(s.parts['#ht-count'].textContent, 'One hospital shown.');
+    assert.equal(s.nojs.hidden, true);
+  }
+  // An area naming every hospital in the asset lists them all, in the asset's order.
+  const all = await run(t, { entry: 'place', area: '990052 990051', results: [true] });
+  assert.deepEqual(rowCcns(all.parts.tbody), ['990051', '990052']);
+  // An area holding none of them lists none, and says so.
+  const none = await run(t, { entry: 'place', area: '990099', results: [true] });
+  assert.deepEqual(rowCcns(none.parts.tbody), []);
+  assert.equal(none.parts['#ht-count'].textContent, 'No hospital matches.');
+  // The program page's table, with no area, lists every hospital.
+  const program = await run(t, { results: [true] });
+  assert.deepEqual(rowCcns(program.parts.tbody), ['990051', '990052']);
+});
+
+test('a place page with more hospitals than the first screenful shows the first rows and a button for the rest', async (t) => {
+  const rows = Array.from({ length: TABLE_FIRST_ROWS + 10 }, (_, i) => [`9902${String(i).padStart(2, '0')}`, `Example ${String(i).padStart(2, '0')}`, 'Exampleton', 'AL', '0.1000', 'No']);
+  const area = rows.map((r) => r[0]).join(' ');
+  const s = await run(t, { entry: 'place', area, asset: { hospitalPath: '/hacrp/hospital/', rows: [...rows, ...ASSET.rows] }, results: [true] });
+  assert.equal(s.parts.tbody.children.length, TABLE_FIRST_ROWS);
+  assert.equal(s.parts['#ht-all'].hidden, false);
+  assert.equal(s.parts['#ht-all'].textContent, fill('tableShowAll', { n: count(TABLE_FIRST_ROWS + 10) }));
+  assert.equal(s.parts['#ht-count'].textContent, fill('tableCountFirst', { shown: count(TABLE_FIRST_ROWS), n: count(TABLE_FIRST_ROWS + 10) }));
+  s.parts['#ht-all'].handlers.click();
+  assert.deepEqual(rowCcns(s.parts.tbody), rows.map((r) => r[0]), 'all of them, none of the asset\'s others');
+  assert.equal(s.parts['#ht-all'].hidden, true);
 });

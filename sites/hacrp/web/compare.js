@@ -69,7 +69,7 @@ export function nationalContext({ hospitals, master, model }) {
   const scored = scoredHospitals(hospitals);
   const scores = scored.map((h) => h.total).sort((a, b) => a - b);
   const decided = new Set(decidedHospitals(hospitals));
-  const domain = [scores[0], scores.at(-1)];
+  const domain = [scores[0], scores[scores.length - 1]];
   const edges = edgesAround(domain[0], domain[1], lowestYes, RIDGE_BINS);
 
   // Each hospital with a score, as the comparisons read it.

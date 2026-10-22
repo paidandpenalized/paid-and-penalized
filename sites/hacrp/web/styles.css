@@ -163,21 +163,21 @@
 /* The what-if on a hospital page runs the page's full width, as the sections above it do, its measures in compact
    rows (the short name over the long one; the slider; the value), so all of them fit beside the sticky result. */
 .page--hosp > .whatif { padding-top: 28px; border-top: 1px solid var(--line); }
-@media (min-width: 900px) { .page--hosp .wi-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; } }
-.page--hosp .wi-fields { gap: 0; }
-.page--hosp .wi-measure { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: 0 18px; align-items: center; padding: 10px 0 8px; }
-.page--hosp .wi-measure > :not(.wi-measure__label) { grid-column: 2; }
-.page--hosp .wi-measure__label { grid-row: 1 / span 3; align-self: start; display: grid; gap: 2px; }
-.page--hosp .wi-measure__short { order: -1; font: 700 var(--fs-base)/1.2 var(--font-type); }
-.page--hosp .wi-measure__short::before, .page--hosp .wi-measure__short::after { content: none; }
-.page--hosp .wi-measure__name { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
-.page--hosp .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 12px; }
-.page--hosp .wi-number { order: 2; padding: 4px 8px; }
-.page--hosp .wi-facts { font-size: var(--fs-xs); line-height: 1.4; }
+@media (min-width: 900px) { .page:is(.page--hosp, .page--prog) .wi-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; } }
+.page:is(.page--hosp, .page--prog) .wi-fields { gap: 0; }
+.page:is(.page--hosp, .page--prog) .wi-measure { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: 0 18px; align-items: center; padding: 10px 0 8px; }
+.page:is(.page--hosp, .page--prog) .wi-measure > :not(.wi-measure__label) { grid-column: 2; }
+.page:is(.page--hosp, .page--prog) .wi-measure__label { grid-row: 1 / span 3; align-self: start; display: grid; gap: 2px; }
+.page:is(.page--hosp, .page--prog) .wi-measure__short { order: -1; font: 700 var(--fs-base)/1.2 var(--font-type); }
+.page:is(.page--hosp, .page--prog) .wi-measure__short::before, .page:is(.page--hosp, .page--prog) .wi-measure__short::after { content: none; }
+.page:is(.page--hosp, .page--prog) .wi-measure__name { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.page:is(.page--hosp, .page--prog) .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 12px; }
+.page:is(.page--hosp, .page--prog) .wi-number { order: 2; padding: 4px 8px; }
+.page:is(.page--hosp, .page--prog) .wi-facts { font-size: var(--fs-xs); line-height: 1.4; }
 @media (max-width: 640px) {
-  .page--hosp .wi-measure { grid-template-columns: minmax(0, 1fr); }
-  .page--hosp .wi-measure > :not(.wi-measure__label), .page--hosp .wi-measure__label { grid-column: 1; grid-row: auto; }
-  .page--hosp .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+  .page:is(.page--hosp, .page--prog) .wi-measure { grid-template-columns: minmax(0, 1fr); }
+  .page:is(.page--hosp, .page--prog) .wi-measure > :not(.wi-measure__label), .page:is(.page--hosp, .page--prog) .wi-measure__label { grid-column: 1; grid-row: auto; }
+  .page:is(.page--hosp, .page--prog) .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 5.5rem; }
 }
 
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
@@ -296,3 +296,301 @@
 .page--article > .whatif > * { grid-column: main; }
 .page--article > .whatif > .wi-grid { grid-column: main-start / full-end; }
 @media (min-width: 900px) { .page--article .wi-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* ---------- the program page (pages/program.js), M2: full width, after Thirty Day Readmissions' front page ----------
+   The top: the name, lede and hero search beside the summary form under its stamp (7fr 5fr from 960px), then the
+   score rule as the page's bold rule. Parts open with a tag, a display heading and a line; steps and sections set
+   their words beside their figures. */
+.prog { gap: 0; }
+.prog > * + * { margin-top: 0; }
+.page--prog .prog__top { padding-block: 16px 20px; }
+.prog__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
+.prog__lede strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
+.prog__find { display: grid; gap: 8px; margin-top: 6px; max-width: 38rem; }
+.omni--hero .omni__field { min-height: 56px; border-color: var(--pen); }
+.omni--hero .omni__label { border-right-color: var(--pen); font-size: var(--fs-sm); padding-inline: 14px; }
+.omni--hero input { font-size: var(--fs-md); padding-inline: 14px; }
+.prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
+.prog__try a { color: var(--ink); text-decoration-color: var(--pen); }
+.page--prog .prog__summary > .field { flex: 1 1 210px; }
+.page--prog .prog__card .stamp { margin-top: 4px; }
+
+/* The score rule: the silhouette over a 5px ink bar; its captions in small caps; a pointer finds the hospital. */
+.rulefig { display: grid; gap: 6px; margin: 4px 0 0; }
+.rulefig .chart { max-width: none; }
+.chart--score-rule { cursor: crosshair; }
+.chart-rule__ink { fill: var(--ink-3); }
+.chart-rule__pen { fill: var(--pen); }
+.chart-rule__bar { fill: var(--ink); }
+.chart-rule__line { stroke: var(--ink); stroke-width: 1.5px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.chart-rule__hl { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-rule__hl--pen { stroke: var(--pen-ink); }
+.rulefig:has(.chart-rule__hl) :is(.chart-rule__ink, .chart-rule__pen) { fill-opacity: 0.45; }
+.chart-rule__cursor { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.rulefig__cap { max-width: 80ch; color: var(--ink-2); font: 400 var(--fs-xs)/1.45 var(--font-type); }
+
+/* Parts: the tag in a red box, the heading in the display face, a line under it; a heavy double rule above. */
+.part { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 64px; padding-top: 28px; border-top: 5px double var(--ink); }
+.part__head { display: grid; gap: 10px; margin-bottom: 8px; }
+.part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
+.part__title { font: 400 clamp(2rem, 5vw, 3.4rem)/1.02 var(--font-display); letter-spacing: -0.005em; }
+.part__intro { max-width: 52ch; color: var(--ink-2); font-size: var(--fs-md); line-height: 1.5; }
+
+/* Part 3's two columns: the table, and the way down by region. */
+.prog__browse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; margin-top: 36px; align-items: start; }
+@media (min-width: 1040px) { .prog__browse { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); } }
+.prog__browse > * { min-width: 0; margin-top: 0; }
+
+/* The foot: sources beside the data facts, downloads and citation, over a bold rule. */
+.prog__foot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 56px; margin-top: 64px; padding-top: 24px; border-top: 5px solid var(--ink); }
+@media (min-width: 980px) { .prog__foot { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+.prog__foot > * { margin-top: 0; min-width: 0; }
+.prog__facts { display: grid; gap: 20px; align-content: start; }
+.prog__facts .asof { padding-top: 0; border-top: 0; }
+
+/* Part 1's steps: a big red numeral and the heading over the words, left (sticky); the figure right, 5fr 7fr from
+   980px; stacked under that. Each step opens on a red hairline. */
+.step { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 56px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); align-items: start; }
+.step__text, .step__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; align-content: start; }
+@media (min-width: 980px) {
+  .step { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .step__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+}
+.step__n { color: var(--pen); font: 400 clamp(3rem, 6vw, 4.5rem)/0.85 var(--font-display); }
+.step__title { font: 700 clamp(1.3rem, 2.2vw, 1.6rem)/1.2 var(--font-body); }
+.step__text > p:not(.step__n) { line-height: 1.6; }
+.page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
+.step__fig .chart, .page--prog .fig .chart { max-width: none; }
+
+/* A figure's measure buttons: one row of mono labels in boxes, the picked one inked. */
+.mtoggle { display: flex; flex-wrap: wrap; gap: 0; }
+@media (max-width: 560px) {
+  .mtoggle:not(.usmap__modes) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mtoggle:not(.usmap__modes) .mtoggle__b + .mtoggle__b { margin-left: 0; }
+  .mtoggle:not(.usmap__modes) .mtoggle__b { margin: 0 -1.5px -1.5px 0; }
+}
+.mtoggle[hidden] { display: none; }
+.mtoggle__b { min-height: var(--target-min); padding: 6px 12px; border: 1.5px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 var(--fs-sm)/1.2 var(--font-type); letter-spacing: 0.04em; cursor: pointer; }
+.mtoggle__b + .mtoggle__b { margin-left: -1.5px; }
+.mtoggle__b[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.mtoggle__b:hover:not([aria-pressed="true"]) { background: var(--paper-2); }
+.mpanel { display: grid; gap: 8px; }
+.mpanel[hidden] { display: none; }
+.mpanel__take { font: 400 var(--fs-sm)/1.5 var(--font-type); }
+
+/* The punch card: card stock in the panel tone with an ink edge; holes punched through in ink; the counts over it. */
+.chart-punch__card { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
+.chart-punch__hole { fill: var(--ink); }
+.chart-punch__digit { fill: var(--ink-3); font: 400 9px var(--font-type); }
+.chart-punch__row { fill: var(--ink); font: 700 11px var(--font-type); }
+.chart-punch__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.chart-punch__bar { fill: var(--ink-3); }
+.chart-punch__yes { fill: var(--pen); }
+.chart-punch__n { font-size: 10px; text-anchor: middle; }
+
+/* Dots drawn as one path each (web/charts/dots.js): round caps make each zero-length segment a dot. */
+.chart-dots { fill: none; stroke-linecap: round; }
+.chart-dots--ink { stroke: var(--ink-2); }
+.chart-dots--faint { stroke: var(--ink-3); stroke-opacity: 0.35; }
+.chart-dots--pen { stroke: var(--pen); }
+.chart-dots--hl { stroke: var(--ink); }
+.chart-ref { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.chart-same { fill: var(--hatch); fill-opacity: 0.35; }
+.chart-pull__line { fill: none; stroke: var(--ink-3); stroke-opacity: 0.55; stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+
+/* The slide rule: boxwood stock, the cursor a glass window with a red hairline, its readings in mono. */
+.chart-slide__stock { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__mid { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__tick { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__num { fill: var(--ink); font: 400 10px var(--font-type); text-anchor: middle; }
+.chart-slide__num--zero { font-weight: 700; }
+.chart-slide__mean { stroke: var(--ink); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.chart-slide__glass { fill: var(--paper); fill-opacity: 0.12; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__hair { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__read { fill: var(--pen-ink); font: 700 12px var(--font-type); }
+.chart-slide__cursor { cursor: ew-resize; touch-action: none; }
+.chart--slide:focus-visible { outline: 2px solid var(--focus); }
+.ws--prog { border-color: var(--ink); }
+.ws__head { margin-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The halving demonstration: its button over the strips, and the unchanged count under them. */
+.halve__row { margin: 0; }
+.halve__btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.halve__same { font: 600 var(--fs-sm)/1.5 var(--font-type); }
+.chart-punch__share { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.chart-punch__share--hot { fill: var(--pen-ink); font-weight: 700; }
+
+/* The sandbox closes Part 1 as a sixth step: the what-if at the page's width, its measures in the hospital page's
+   compact rows beside the sticky result. */
+.prog .whatif { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); }
+.chart-sil { fill: var(--ink-3); fill-opacity: 0.45; }
+.chart-sil--ink { fill: var(--ink-2); fill-opacity: 0.85; }
+[data-shift] { transform-box: view-box; transition: transform 0.9s cubic-bezier(0.45, 0, 0.25, 1); }
+[data-shift].is-halved { transform: scale(0.5, 2); }
+@media (prefers-reduced-motion: reduce) { [data-shift] { transition: none; } }
+
+/* Part 2's sections: words left, figure right (5fr 7fr from 980px); a wide one sets its words across the top. */
+.psec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 56px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); align-items: start; }
+.psec__text, .psec__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; align-content: start; }
+.psec__title { font: 400 clamp(1.5rem, 2.8vw, 2rem)/1.1 var(--font-display); }
+.psec__text > p { line-height: 1.6; }
+@media (min-width: 980px) {
+  .psec:not(.psec--wide) { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .psec:not(.psec--wide) .psec__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+  .psec--wide .psec__text { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); column-gap: 56px; }
+  .psec--wide .psec__text > h3 { grid-column: 1 / -1; }
+}
+.psec__text .fig { margin-top: 12px; }
+
+/* The swarm: its group buttons in labeled rows over the chart; the dots; the magnifier. */
+.swarm { display: grid; gap: 14px; }
+.swarm__pick { display: grid; gap: 6px; }
+.swarm__pick[hidden] { display: none; }
+.swarm__lead { color: var(--ink-2); }
+.swarm__pick { padding: 10px 12px; border: var(--rule) solid var(--pen); }
+.swarm__kinds { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); align-items: start; gap: 2px 8px; max-width: none; }
+.swarm__opts { display: flex; flex-wrap: wrap; gap: 0 6px; }
+@media (max-width: 560px) { .swarm__kinds { grid-template-columns: minmax(0, 1fr); } }
+.swarm__kind { padding-top: 5px; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target-min); padding: 2px 8px 2px 4px; border: 0; background: none; color: var(--ink); font: 400 var(--fs-sm)/1.2 var(--font-type); cursor: pointer; }
+/* A form's check box before each choice: empty, or marked in the penalty ink when picked. */
+.chip::before { content: ""; flex: none; width: 13px; height: 13px; border: 1.5px solid var(--ink); background: var(--paper); }
+.chip[aria-pressed="true"]::before { background: linear-gradient(45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), var(--paper); border-color: var(--pen); }
+.chip[aria-pressed="true"] { font-weight: 700; }
+.chip:hover::before { background-color: var(--paper-2); }
+@media (forced-colors: active) { .chip[aria-pressed="true"]::before { background: Highlight; } }
+.swarm__readout { min-height: 1.5em; font: 600 var(--fs-sm)/1.5 var(--font-type); }
+.swarm__art { position: relative; }
+.swarm__art .chart { max-width: none; }
+.chart--swarm { cursor: crosshair; }
+.chart-dots--pen-faint { stroke: var(--pen); stroke-opacity: 0.22; }
+.chart-loupe__glass { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-loupe__beam { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.chart-loupe__gap { stroke: var(--pen); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.chart-swarm__ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+
+/* The share dots: a track, a stem from the nation's share, a dot sized by the group. */
+.chart-share__track { stroke: var(--line); stroke-opacity: 0.45; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-share__stem { stroke: var(--ink-2); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.chart-share__stem--pen { stroke: var(--pen); }
+.chart-share__dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-share__dot--pen { fill: var(--pen); stroke: var(--pen); }
+
+/* The sina columns' whiskers. */
+.chart-sina__whisker { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+
+/* The agreement grid and its scatter, side by side from 640px. */
+.agree { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 640px) { .agree { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); } }
+.agree .chart { max-width: none; }
+.chart-agree__cell { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-agree__cell.is-picked { stroke: var(--ink); stroke-width: 2.5px; }
+.chart--agree .chart-mark { cursor: pointer; }
+.chart-agree__sq { fill: var(--ink-3); fill-opacity: 0.55; }
+.chart-agree__v { fill: var(--ink); font: 700 10px var(--font-type); }
+.chart-scatter__bg { fill: var(--paper-2); }
+.chart-dots--scatter { stroke: var(--ink-2); stroke-opacity: 0.45; }
+
+
+/* The cards of hospitals scored without data. */
+.chart-card { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-card--pen { stroke: var(--pen); stroke-width: 2px; }
+.chart-card__m { fill: var(--ink-2); }
+.chart-card__a { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-card__none { fill: none; stroke: var(--line); stroke-width: 1px; stroke-dasharray: 1 1.5; vector-effect: non-scaling-stroke; }
+
+/* Part 3: the map at the page's width, two ways. In the dots mode (wide screens) the states turn plain and every
+   hospital's dot shows over them; the key names the dots. */
+.usmap { display: grid; gap: 12px; }
+.usmap .chart { max-width: none; }
+.usmap .chart[data-fit="wide"] { max-width: 980px; margin-inline: auto; }
+.chart-us__points, .usmap__key { display: none; }
+.usmap[data-mode="dots"] .chart-us__points { display: inline; }
+.usmap[data-mode="dots"] .usmap__key { display: flex; }
+.usmap[data-mode="dots"] .chart--us-map .chart-tile, .usmap[data-mode="dots"] .chart--us-map .chart-tile-na { fill: var(--paper-2); }
+.usmap[data-mode="dots"] .chart--us-map .chart-legend, .usmap[data-mode="dots"] .chart--us-map .chart-geo-few { display: none; }
+.chart-dots--ring { stroke: var(--ink); stroke-opacity: 0.55; }
+.usmap__key { flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--ink-2); }
+.page--place .usmap__key { display: flex; }
+.usmap__key li { display: inline-flex; align-items: center; gap: 6px; }
+.usmap__sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.usmap__sw--pen { background: var(--pen); }
+.usmap__sw--ring { background: var(--ink); opacity: 0.55; }
+.usmap__sw--faint { background: var(--ink-3); opacity: 0.4; }
+/* The dots need room: on a phone the map shows its shares only. */
+@media (max-width: 559px) { .usmap__modes { display: none !important; } }
+
+/* The way down by place: regions, divisions, states, each a line with its count and a bar of its share on one scale. */
+.browse { display: grid; gap: 8px; align-content: start; }
+.browse ol { margin: 0; padding: 0; list-style: none; }
+.browse__regions { display: grid; gap: 14px; }
+.browse__divs { display: grid; gap: 6px; margin-top: 6px !important; padding-left: 12px !important; border-left: 2px solid var(--line); }
+.browse__states { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0 10px; margin-top: 2px !important; padding-left: 10px !important; }
+.browse__a { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name pct" "bar bar"; gap: 1px 8px; padding: 3px 0; color: var(--ink); text-decoration: none; }
+.browse__a:hover .browse__name { text-decoration: underline; }
+.browse__name { grid-area: name; font-weight: 600; }
+.browse__a--region .browse__name { font: 400 var(--fs-lg)/1.2 var(--font-display); }
+.browse__a--state .browse__name { font-weight: 400; font-size: var(--fs-sm); }
+.browse__n { display: none; }
+.browse__pct { grid-area: pct; color: var(--ink-2); font: 400 var(--fs-xs)/1.5 var(--font-type); }
+/* The bar: the share on a scale to half (no share here comes near it), the nation's share a tick. */
+.browse__bar { grid-area: bar; position: relative; height: 4px; background: var(--paper-2); }
+.browse__bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--share) * 200%); max-width: 100%; background: var(--pen); }
+.browse__bar::after { content: ""; position: absolute; top: -2px; bottom: -2px; left: calc(var(--nation) * 200%); width: 1.5px; background: var(--ink); }
+.browse__a--state .browse__bar { height: 3px; }
+@media (forced-colors: active) { .browse__bar::before { background: CanvasText; } .browse__bar::after { background: Highlight; } }
+
+/* ---------- place pages (pages/place.js) ----------
+   The program page's frame: the breadcrumb, the name in the display face beside the summary form, the score rule
+   with the place's ticks. */
+.crumbs ol { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.crumbs li + li::before { content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
+.crumbs a { color: var(--ink); }
+.crumbs [aria-current] { color: var(--ink-2); }
+.page--place .place__top { padding-top: 8px; }
+.place__title { font: 400 clamp(2.4rem, 7vw, 5rem)/0.98 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.place__card { display: grid; gap: 16px; align-content: start; }
+.place__card .stamp { justify-self: end; margin-right: 6px; font-size: clamp(1.3rem, 2.6vw, 1.8rem); }
+.page--place .psec:first-of-type { margin-top: 28px; }
+.place__kids { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+.gb--kids tbody th { font-weight: 600; }
+.kids__share { display: grid; grid-template-columns: 4.5em minmax(5rem, 9rem); align-items: center; gap: 8px; }
+.kids__share .browse__bar { order: 2; }
+.kids__pct { font: 400 var(--fs-sm)/1.2 var(--font-type); }
+.page--place .hospitals { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+/* A place's map: the place's land in the panel tone, its neighbors fainter, its hospitals as dots. */
+.chart--place-map { max-width: none; border: var(--rule) solid var(--ink); }
+.chart-geo-near { fill: var(--paper); stroke: var(--line); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+.chart-geo-mine { fill: var(--paper-2); }
+.chart--place-map .chart-geo-state { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-place__dot { stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-place__dot--pen { fill: var(--pen); stroke: var(--paper); }
+.chart-place__dot--ring { fill: var(--paper); stroke: var(--ink); }
+.chart-place__dot--faint { fill: var(--ink-3); stroke: var(--paper); opacity: 0.6; }
+.chart--place-map .chart-mark[data-href] { cursor: pointer; }
+.chart--place-map .chart-mark.is-active .chart-place__dot { stroke-width: 3px; }
+.chart-outline { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* The program page's stamp: one line, sized to its column. */
+.page--prog .prog__card .stamp { white-space: nowrap; font-size: clamp(1.05rem, 2.2vw, 1.55rem); }
+/* The sandbox is step 6: its numeral on the step's red hairline, the what-if's own heading under it. */
+.step__n--sandbox { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); }
+.prog .step__n--sandbox + .whatif { margin-top: 10px; padding-top: 0; border-top: 0; }
+/* A place map with its hospitals drawn as rings and dots (not the dense paths): the key shows a ring for not cut. */
+.usmap__key--rings .usmap__sw--ring { background: var(--paper); border: 1.5px solid var(--ink); opacity: 1; }
+.usmap__key--rings .usmap__sw--faint { background: var(--ink-3); opacity: 0.6; }
+
+/* Forced colors (Windows contrast themes) for the program and place pages' marks: the cut in CanvasText, everything
+   else in GrayText, frames and rules in CanvasText, panels on Canvas (charts.css sets the kit's own). */
+@media (forced-colors: active) {
+  .chart-dots--pen, .chart-dots--hl, .chart-dots--ink, .chart-rule__hl, .chart-rule__hl--pen, .chart-slide__hair, .chart-loupe__gap, .chart-share__stem--pen { stroke: CanvasText; }
+  .chart-dots--faint, .chart-dots--pen-faint, .chart-dots--ring, .chart-dots--scatter, .chart-pull__line, .chart-share__stem, .chart-share__track, .chart-loupe__beam, .chart-ref { stroke: GrayText; }
+  .chart-punch__hole, .chart-punch__yes, .chart-rule__pen, .chart-rule__bar, .chart-share__dot--pen, .chart-card__m, .chart-agree__sq, .chart-place__dot--pen { fill: CanvasText; }
+  .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
+  .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
+  .chart-card__a { stroke: CanvasText; }
+  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
+  .chart-agree__cell.is-picked { stroke: Highlight; }
+  .chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+}

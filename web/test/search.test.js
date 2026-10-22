@@ -39,6 +39,19 @@ test('saint/st, mount/mt and fort/ft match each other; an exact key or label ran
   assert.deepEqual(keys('md', { types: ['hospital'] }), ['990002']);
 });
 
+test('at equal match a state ranks over a region, a region over a division, a division over a metro area, and any place over a hospital', () => {
+  const index = buildIndex([
+    { type: 'hospital', key: '990009', label: 'Pacific Example Hospital', href: '/h/990009/' },
+    { type: 'metro', key: 'metro-99001', label: 'Pacific Example, XX', href: '/m/99001/' },
+    { type: 'division', key: 'division-pacific', label: 'Pacific Example', href: '/d/pacific/' },
+    { type: 'region', key: 'region-pacific', label: 'Pacific Example', href: '/r/pacific/' },
+    { type: 'state', key: 'PE', label: 'Pacific Example', href: '/s/pe/' },
+  ]);
+  const { results } = search('pacific example', index);
+  // The three with the label as the query rank first by kind; the metro area and the hospital follow (longer labels).
+  assert.deepEqual(results.map((r) => r.type), ['state', 'region', 'division', 'metro', 'hospital']);
+});
+
 test('results stop at the limit; total counts every match', () => {
   const many = buildIndex(Array.from({ length: 25 }, (_, i) => ({ type: 'hospital', key: `9900${String(i).padStart(2, '0')}`, label: `Example ${i}`, href: '/' })));
   const { results, total } = search('example', many);
