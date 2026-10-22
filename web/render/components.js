@@ -143,15 +143,14 @@ export function footnoteLegend({ heading, lists }) {
 // A boxed form field, Thirty Day Readmissions' signature device: a numbered label (no: its number or letter, or
 // null), the value (text or Safe; `as` sets its element, e.g. 'h1' for a record's name) and an optional note under
 // it. Fields sit in a .form grid, whose red rules box them. size: 'big' or 'sm' for the value; wide: the full row.
-// aside: markup set beside the value, at its right (e.g. a small map), or null. fieldCls: classes on the field's box
-// (a page's layout hook).
-export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null, aside = null, fieldCls = '' }) {
+// fieldCls: classes on the field's box (a page's layout hook).
+export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null, fieldCls = '' }) {
   const valueClass = `field__value${size ? ` field__value--${size}` : ''}${cls ? ` ${cls}` : ''}`;
   const tag = /^(p|h1|div)$/.test(as) ? as : 'p';
   const shown = html`${raw(`<${tag} class="${escapeHtml(valueClass)}"${id ? ` id="${escapeHtml(id)}"` : ''}>`)}${value}${raw(`</${tag}>`)}`;
   return html`<div class="field${wide ? ' field--wide' : ''}${fieldCls ? ` ${fieldCls}` : ''}">
 <p class="field__label">${no === null ? '' : html`<span class="field__no">${String(no)}</span>`}${label}</p>
-${aside ? html`<div class="field__row">${shown}${aside}</div>` : shown}
+${shown}
 ${note && html`<div class="field__note">${note}</div>`}</div>`;
 }
 

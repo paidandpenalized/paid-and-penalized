@@ -7,7 +7,8 @@ import { isAssigned } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
-import { GROUP_KINDS, bedBand, biggestLever, countBins, edgesAround, miles } from '../web/compare.js';
+import { GROUP_KINDS, bedBand, biggestLever, countBins, edgesAround } from '../web/compare.js';
+import { miles } from '../../../web/charts/geo.js';
 import { BED_BANDS, FEW_IN_GROUP, NEAREST } from '../web/constants.js';
 import { CASES } from './fixtures.js';
 import { DATA, NAT } from './pinned.js';
@@ -84,6 +85,11 @@ test('nearest: the closest other hospitals with a score and a place, nearest fir
   assert.ok(near.every((x) => x.ccn !== h.ccn));
   for (let i = 1; i < near.length; i++) assert.ok(near[i].miles >= near[i - 1].miles);
   assert.deepEqual(NAT.nearest(h.ccn, null), []);
+  // The k kept in one pass are the first k of every other placed hospital sorted by distance (then CCN).
+  const all = DATA.hospitals.filter((x) => x.total !== null && x.ccn !== h.ccn && Number.isFinite(DATA.master.get(x.ccn).lat))
+    .map((x) => ({ ccn: x.ccn, d: miles([r.lon, r.lat], [DATA.master.get(x.ccn).lon, DATA.master.get(x.ccn).lat]) }))
+    .sort((a, b) => a.d - b.d || (a.ccn < b.ccn ? -1 : 1));
+  assert.deepEqual(near.map((x) => x.ccn), all.slice(0, NEAREST).map((x) => x.ccn));
 });
 
 test('biggestLever: the measured measure above its median whose median lowers the score most, as the engine\'s what-if computes it', () => {

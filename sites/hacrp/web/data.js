@@ -62,6 +62,7 @@ export function loadHacrp() {
   const footnotes = parseFootnotes(readPinned(FOOTNOTES_ID));
   const manifest = readManifest();
   const hgi = manifest.find((e) => e.id === HGI_ID);
+  const topo = JSON.parse(readPinned(ATLAS_ID));
   return {
     fy: data.fy,
     hospitals: data.hospitals,
@@ -75,10 +76,8 @@ export function loadHacrp() {
     footnotes,
     careCompare: careCompareRatings(readPinned(HGI_ID), footnotes),
     careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
-    ...(() => {
-      const topo = JSON.parse(readPinned(ATLAS_ID));
-      return { shapes: stateShapes(topo), counties: countyShapes(topo) };
-    })(),
+    shapes: stateShapes(topo),
+    counties: countyShapes(topo),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };

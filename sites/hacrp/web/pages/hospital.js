@@ -8,20 +8,19 @@
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { count, isoDate, ordinal } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { biggestLever } from '../compare.js';
-import { leadSentences, noteSentences, smallNumber } from '../sentences.js';
+import { distanceSentence, leadSentence, measureNote, noteSentences, smallNumber, whySentences } from '../sentences.js';
 import { fill, fillKeep, sourceText, t } from '../copy.js';
 import { partsFigure } from '../figures.js';
 import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../hospital-figures.js';
 import { careCompareHref } from '../links.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
-import { cmsText, decimal } from '../../../../web/render/format.js';
 import { SCORE_DECIMALS as DP } from '../../../../engine/js/hacrp/score.js';
 import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
@@ -43,7 +42,7 @@ const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code
 function measureNotes(m) {
   const tag = m.tagged && m.hasValue && html`<details class="est"><summary>${t('estimateTag')}</summary>
 <p class="est__body small">${fill('estimateNote', { maxError: m.maxErrorText })} <a href="/methods/#estimate">${t('estimateMore')}</a></p></details>`;
-  const note = m.assigned && fill('assigned');
+  const note = measureNote(m);
   if (!note && !m.footnotes.length && !tag) return '';
   return html`<div class="ledger__notes">${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}</div>`;
 }
@@ -69,9 +68,9 @@ function typeText({ teach, beds, own, urban, types }) {
 }
 
 // Care Compare's stars: the rating as filled and empty stars (hidden from screen readers, which hear "4 of 5 stars"),
-// or CMS's own words where it published no rating, with CMS's footnotes. null when Care Compare doesn't list the
-// hospital.
-function starsField(view, no, careSource) {
+// or CMS's own words where it published no rating, with CMS's footnotes, as formField options. null when Care
+// Compare doesn't list the hospital.
+function starsSpec(view, careSource) {
   const cc = view.careCompare;
   if (!cc || !careSource) return null;
   const n = /^[1-9]$/.test(cc.rating) ? Number(cc.rating) : null;
@@ -79,7 +78,7 @@ function starsField(view, no, careSource) {
     ? html`<span class="stars" aria-hidden="true">${'★'.repeat(n)}<span class="stars__off">${'☆'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
     : cc.rating;
   const note = html`${fillKeep('starsNote', { date: isoDate(careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br><a href="${careCompareHref(view.ccn)}" target="_blank" rel="noopener">${t('starsLink')}<span class="vh">${SHARED.newTab}</span></a>`;
-  return formField({ no, label: t('fieldStars'), value, note, size: n === null ? 'sm' : null, fieldCls: 'f-stars' });
+  return { label: t('fieldStars'), value, note, size: n === null ? 'sm' : null, fieldCls: 'f-stars' };
 }
 
 // The Location field's words, the state a link to the program page's map and table for that state (#state=XX, which
@@ -96,9 +95,9 @@ function locationText(view) {
 // null where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). How the dot was placed
 // is in Methods; the page's data list credits the geocoder for a geocoded address.
 const WATERMARK_DOT = 1.25;
-export function locatorMap(view, shapes, dot = WATERMARK_DOT) {
+function locatorMap(view, shapes) {
   if (!shapes || !view.point) return null;
-  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
+  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot: WATERMARK_DOT });
 }
 
 // The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
@@ -106,22 +105,18 @@ export function locatorMap(view, shapes, dot = WATERMARK_DOT) {
 function recordCard(view, { careSource, map }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
-  const fields = [
-    (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true }),
-    (no) => formField({ no, label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' }),
-    type && ((no) => formField({ no, label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' })),
+  // Each field's formField options, numbered in order once the fields with nothing to show are left out.
+  const specs = [
+    { label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true },
+    { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' },
+    type && { label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' },
     view.scored
-      ? (no) => formField({ no, label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote'), fieldCls: 'f-score' })
-      : (no) => formField({ no, label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div', fieldCls: 'f-score' }),
-    (no) => formField({ no, label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }), fieldCls: 'f-pay' }),
-    (no) => starsField(view, no, careSource),
+      ? { label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote'), fieldCls: 'f-score' }
+      : { label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div', fieldCls: 'f-score' },
+    { label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }), fieldCls: 'f-pay' },
+    starsSpec(view, careSource),
   ].filter(Boolean);
-  let no = 0;
-  const [name, ...rest] = fields.map((field) => {
-    const markup = field(no + 1);
-    if (markup) no++;
-    return markup;
-  }).filter(Boolean);
+  const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
 ${map && html`<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j">${map}</span></div>
 `}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
@@ -149,15 +144,13 @@ function stampOf(view) {
 // the hospital's rank.
 const DECISION_AT = '\u0001';
 function leadMarkup(view) {
-  const facts = { fy: String(view.fy), name: view.name, decision: DECISION_AT };
-  const [before, after] = (view.scored ? fill('leadScored', { ...facts, total: view.score.text }) : fill('leadNoScore', facts)).split(DECISION_AT);
+  const [before, after] = leadSentence(view, DECISION_AT).split(DECISION_AT);
   const pen = view.status === 'yes' || view.status === 'yes-no-score';
   return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
 }
 
 function verdict(view, nat) {
-  const [, ...why] = leadSentences(view);
-  const words = [...why, ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
+  const words = [...whySentences(view), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
 ${stampOf(view)}
 <p class="hosp__summary">${leadMarkup(view)}</p>
@@ -170,9 +163,9 @@ ${lineBarBlock(view, nat)}
 </section>`;
 }
 
-// A numbered section: its words (heading first) beside its figure from 980px, stacked under that. wide: the words
+// A numbered section, named by its heading (id-h): its words (heading first) beside its figure from 980px, stacked under that. wide: the words
 // run across the top in two columns and the figure takes the page's width under them.
-const section = ({ id, label, text, figure, wide = false }) => html`<section class="block hsec${wide ? ' hsec--full' : ''}" id="${id}" aria-labelledby="${label}">
+const section = ({ id, text, figure, wide = false }) => html`<section class="block hsec${wide ? ' hsec--full' : ''}" id="${id}" aria-labelledby="${id}-h">
 <div class="hsec__text">
 ${text}
 </div>
@@ -224,7 +217,8 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const next = () => ++n;
 
   const ledger = ledgerFigure({ view, nat, model, n: next(), source: line, notes: measureNotes });
-  const lever = view.scored && (hospital ?? whatif?.hospital) ? leverText(view, hospital ?? whatif.hospital, model) : null;
+  const row = hospital ?? whatif?.hospital;
+  const lever = view.scored && row ? leverText(view, row, model) : null;
   const sum = view.scored ? sumFigure({ view, n: next(), source: line }) : null;
   const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, next()) : null;
   const peers = peersFigure({ view, nat, master, n: n + 1, source: line });
@@ -232,44 +226,42 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
   if (nearby?.fig) next();
   const nearRank = peers?.rows.filter((r) => r.g.kind === 'state' || r.g.kind === 'metro') ?? [];
-  const hasFigures = n > 0;
+  const notes = noteSentences(view);
 
   const body = html`<article class="wrap page page--hosp hosp">
 <div class="hosp__top">
 ${recordCard(view, { careSource, map })}
 ${verdict(view, nat)}
 </div>
-${noteSentences(view).length > 1 || small ? html`<div class="hosp__notes">
-${noteSentences(view).slice(0, -1).map((s) => html`<p>${s}</p>`)}
+${notes.length || small ? html`<div class="hosp__notes">
+${notes.map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
 </div>` : ''}
 ${section({
-    id: 'measures', label: 'measures-h', wide: true,
+    id: 'measures', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
 <p>${fill('ledgerIntro', { n: String(view.n), all: String(view.measures.length) })}</p>
 ${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}`,
     figure: ledger,
   })}
 ${sum && section({
-    id: 'sum', label: 'sum-h',
+    id: 'sum',
     text: html`<h2 id="sum-h">${t('sumHeading')}</h2>
 <p>${fill('sumIntro', { n: String(view.n) })}</p>
 ${worksheet(view)}
-${view.distance && html`<p class="hsec__stat">${view.distance.to === 'highestNo'
-    ? fill('sumDistanceYes', { distance: view.distance.text, highestNo: view.boundaryText.highestNo })
-    : fill('sumDistanceNo', { distance: view.distance.text, lowestYes: view.boundaryText.lowestYes })} ${t('claimRecomputedNote')}</p>`}`,
+${view.distance && html`<p class="hsec__stat">${distanceSentence(view)}</p>`}`,
     figure: sum,
   })}
 ${what?.body}
 ${peers && section({
-    id: 'peers', label: 'peers-h',
+    id: 'peers',
     text: html`<h2 id="peers-h">${t('peersHeading')}</h2>
 <p>${t('peersIntro')}</p>
 ${nearRank.map((r) => html`<p class="hsec__stat">${fill('peersRank', { group: r.label, share: r.higher, n: count(r.g.scored) })}</p>`)}`,
     figure: peers.fig,
   })}
 ${nearby && section({
-    id: 'nearby', label: 'nearby-h',
+    id: 'nearby',
     text: html`<h2 id="nearby-h">${t('nearbyHeading')}</h2>
 <p>${fill('nearbyIntro', { k: String(nearby.count) })}</p>
 ${nearby.fig}${nearby.keys}`,
@@ -295,7 +287,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [...(hasFigures ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
     topbar: siteHeader({ fy: view.fy, current: 'hospitals', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

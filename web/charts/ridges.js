@@ -8,7 +8,7 @@
 //            tooltip); band [highestNo, lowestYes]; actual: this score; labels { actual, actualValue, line }
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
-import { labelAt } from '../whatif/marks.js';
+import { labelAt, lineScore } from '../whatif/marks.js';
 import { axis } from './axis.js';
 import { frame, mark, r2, text, triangle } from './svg.js';
 
@@ -25,17 +25,19 @@ export function ridges({ edges, rows, band: [highestNo, lowestYes], actual, labe
   const scale = scaleLinear().domain([edges[0], edges.at(-1)]).range([left, right]);
   const x = (v) => r2(scale(v));
   const top = 18;
-  const line = (highestNo + lowestYes) / 2;
+  const line = lineScore({ highestNo, lowestYes });
   const drawn = rows.map((row, i) => {
     const y0 = top + i * rowH + head;
     const base = y0 + PLOT_H;
     const most = Math.max(...row.counts, 1);
-    const cols = row.counts.map((c, j) => {
-      if (!c) return '';
-      const h = (PLOT_H * c) / most;
-      const pen = edges[j] >= lowestYes;
-      return html`<rect class="${pen ? 'chart-col chart-col--pen' : 'chart-col'}" x="${r2(scale(edges[j]) + 0.5)}" y="${r2(base - h)}" width="${r2(Math.max(scale(edges[j + 1]) - scale(edges[j]) - 1, 0.5))}" height="${r2(h)}"/>`;
+    // The columns as two paths, those short of the line and those at or past it, each column a box up from the base.
+    const paths = { below: '', above: '' };
+    row.counts.forEach((c, j) => {
+      if (!c) return;
+      const side = edges[j] >= lowestYes ? 'above' : 'below';
+      paths[side] += `M${r2(scale(edges[j]) + 0.5)} ${r2(base)}v${r2(-(PLOT_H * c) / most)}h${r2(Math.max(scale(edges[j + 1]) - scale(edges[j]) - 1, 0.5))}V${r2(base)}z`;
     });
+    const cols = html`${paths.below && html`<path class="chart-col" d="${paths.below}"/>`}${paths.above && html`<path class="chart-col chart-col--pen" d="${paths.above}"/>`}`;
     const words = wide
       ? html`${text({ x: 0, y: base - 14, anchor: 'start', cls: 'chart-label', body: row.label })}${text({ x: 0, y: base - 1, anchor: 'start', cls: 'chart-note', body: row.sub })}${text({ x: width, y: base - 8, anchor: 'end', cls: 'chart-value', body: row.share })}`
       : html`${text({ x: left, y: y0 - 6, anchor: 'start', cls: 'chart-label chart-label--halo', body: html`${row.label} <tspan class="chart-note">${row.sub}</tspan>` })}${text({ x: right, y: y0 - 6, anchor: 'end', cls: 'chart-value chart-label--halo', body: row.share })}`;

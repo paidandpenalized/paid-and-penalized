@@ -5,25 +5,32 @@
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
-import { figure, keysHint } from '../../../web/charts/figure.js';
+import { figure, imageOf, keysHint } from '../../../web/charts/figure.js';
 import { STATE_NAMES, areaMap } from '../../../web/charts/geo.js';
 import { lineBar } from '../../../web/charts/lineBar.js';
+import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
+import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
-import { pill } from '../../../web/render/components.js';
+import { pill, printout } from '../../../web/render/components.js';
+import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
+import { WIDE, variants } from './figures.js';
 import { BED_BANDS, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
+import { pillOf } from './whatif-text.js';
 import { hospitalHref } from './hospital-table.js';
 
 const num = (text, value) => ({ text, value });
 const at = (v) => decimal(v, DP);
 const share = (part, whole) => pct(whole ? part / whole : 0, 0);
-const WIDE = 440;
+// The line bar's wide drawing, about the verdict column's width.
+const LINE_BAR_WIDE = 440;
+// The ledger's wide rulers, about their column's width on a wide screen.
+const RULER_WIDE = 520;
 
 // ---------- the line bar ----------
 
@@ -39,12 +46,11 @@ export function lineBarBlock(view, nat) {
     high: fill('barHigh', { high: cmsText(at(hi)) }), zone: fill('pillYes', { pct: REDUCTION_TEXT }),
   };
   const alt = fill('barAlt', { low: cmsText(at(lo)), high: cmsText(at(hi)), score: view.score.text, middle: cmsText(at(nat.medianScore)), lowestYes });
-  const draw = (width) => lineBar({ domain: nat.domain, actual: Number(view.score.raw), band: [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))], middle: nat.medianScore, labels: words, width });
-  const image = (svg, fit) => new Safe(html`<svg role="img" aria-label="${alt}" data-fit="${fit}" `.text + svg.text.slice('<svg '.length));
-  const rank = nat.rankOf(Number(view.score.raw));
+  const draw = (width) => lineBar({ domain: nat.domain, actual: view.total, band: [view.boundary.highestNo, view.boundary.lowestYes], middle: nat.medianScore, labels: words, width });
+  const rank = nat.rankOf(view.total);
   return html`<div class="hosp__bar">
-${image(draw(300), 'narrow')}
-${image(draw(WIDE), 'wide')}
+${imageOf(draw(WIDTH), alt, 'narrow')}
+${imageOf(draw(LINE_BAR_WIDE), alt, 'wide')}
 </div>
 <p class="hosp__rank">${fill('rankHigher', { share: share(rank.below, rank.n - 1), n: count(rank.n) })}</p>`;
 }
@@ -78,7 +84,7 @@ function rankWords(nat, id, value, median) {
 // A measure's short name, which opens a box with its definition on a click or tap, with no script (a <details>). The
 // value that means "as expected": PSI 90's national composite is one; an infection ratio's, SIR_EXPECTED.
 function shortName(m) {
-  const one = m.id === 'PSI90' ? decimal(1, 0) : SIR_EXPECTED_TEXT;
+  const one = isSir(m.id) ? SIR_EXPECTED_TEXT : decimal(1, 0);
   return html`<details class="def"><summary>${m.short}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('defineMore')}</span></summary><p class="def__box">${fill(`define${m.id}`, { one })}</p></details>`;
 }
 
@@ -100,7 +106,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
       });
       return new Safe(`<svg aria-hidden="true" data-fit="${fit}" ${svg.text.slice('<svg '.length)}`);
     };
-    const svg = html`${draw(300, 'narrow')}${draw(520, 'wide')}`;
+    const svg = html`${draw(WIDTH, 'narrow')}${draw(RULER_WIDE, 'wide')}`;
     const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
     const dash = html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`;
     return { m, r, value, fmt, rank, markup: html`<li class="${cls}">
@@ -139,12 +145,12 @@ export function worksheet(view) {
   const terms = view.measures.filter((m) => m.hasZ);
   if (!terms.length) return null;
   const topId = view.largest?.id ?? null;
-  const sum = terms.reduce((s, m) => s + Number(m.zRaw), 0);
+  const sum = terms.reduce((acc, m) => acc + Number(m.zRaw), 0);
   const recomputed = toUnit(sum / terms.length, DP);
   const exact = at(recomputed) === view.score.raw;
   const term = (m, i) => {
     const neg = m.zRaw.startsWith('-');
-    const op = i === 0 ? (neg ? '−' : '') : neg ? '−' : '+';
+    const op = neg ? '−' : '+';
     const digits = neg ? m.zRaw.slice(1) : m.zRaw;
     return html`${i ? html`<span class="ws__op">${op}</span>` : ''}<span class="ws__term${m.id === topId ? ' is-top' : ''}${m.assigned ? ' is-assigned' : ''}"><span class="ws__v">${i === 0 && neg ? '−' : ''}${digits}</span><span class="ws__k">${m.short}</span></span>`;
   };
@@ -159,8 +165,8 @@ export function sumFigure({ view, n, source }) {
   if (!parts.length) return null;
   const topId = view.largest?.id ?? null;
   const { highestNo, lowestYes } = view.boundaryText;
-  const band = [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))];
-  const total = Number(view.score.raw);
+  const band = [view.boundary.highestNo, view.boundary.lowestYes];
+  const total = view.total;
   const nText = String(view.n);
   let run = 0;
   const rows = parts.map((m) => {
@@ -168,15 +174,15 @@ export function sumFigure({ view, n, source }) {
     return { m, running: toUnit(run, DP) };
   });
   const draw = (width) => waterfall({
-    id: width === 300 ? 'sum' : 'sum-wide', band, width,
+    id: width === WIDE ? 'sum-wide' : 'sum', band, width,
     rows: rows.map(({ m }) => ({ label: m.short, value: m.contributionRaw, valueText: m.contributionText, assigned: m.assigned, pen: m.id === topId, tip: fill('sumPartTip', { short: m.short, z: m.zText, n: nText, part: m.contributionText }) })),
     total: { label: t('sumTotal'), value: total, valueText: view.score.text, pen: view.status === 'yes', tip: fill('sumTotalTip', { total: view.score.text }) },
     labels: { line: t('barLine'), lineTip: fill('heroLine', { highestNo, lowestYes }), zone: fill('pillYes', { pct: REDUCTION_TEXT }) },
   });
   return figure({
-    n, source, alt: t('figSumAlt'), claimLevel: 'recomputed', csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-parts`,
+    n, source, alt: t('figSumAlt'), claimLevel: 'recomputed', csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-sum`,
     takeaway: fill('figSumTakeaway', { total: view.score.text, side: t(total >= band[1] ? 'figSumAbove' : 'figSumBelow') }),
-    svg: draw(300), svgWide: draw(520),
+    ...variants(draw),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }, { name: t('figColRunning'), numeric: true }],
       rows: [
@@ -210,9 +216,9 @@ export function peersFigure({ view, nat, master, n, source }) {
   if (!view.scored) return null;
   const groups = nat.groupsOf(view.ccn);
   if (groups.length < 2) return null;
-  const total = Number(view.score.raw);
+  const total = view.total;
   const { highestNo, lowestYes } = view.boundaryText;
-  const band = [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))];
+  const band = [view.boundary.highestNo, view.boundary.lowestYes];
   const rows = groups.map((g) => {
     const label = groupLabel(g, master);
     const s = share(g.yes, g.decided);
@@ -229,7 +235,7 @@ export function peersFigure({ view, nat, master, n, source }) {
   const fig = figure({
     n, source, alt: t('figPeersAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-groups`,
     takeaway: fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
-    svg: draw(300), svgWide: draw(560),
+    ...variants(draw),
     table: {
       columns: [{ name: t('figColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }, { name: t('figColMiddle'), numeric: true }, { name: t('figColHigher'), numeric: true }],
       rows: [
@@ -244,18 +250,16 @@ export function peersFigure({ view, nat, master, n, source }) {
 
 // ---------- the nearest hospitals ----------
 
-const FLAG_CLASS = { worse: 'mg--worse', better: 'mg--better', assigned: 'mg--assigned', none: 'mg--none' };
 const DECISION = { Yes: 'nearbyCut', No: 'nearbyNotCut', 'N/A': 'nearbyNA' };
 const decisionWord = (d) => (DECISION[d] ? t(DECISION[d]) : d);
-// The decision as the record card shows it: a pill, its word carrying the meaning.
-const decisionMark = (d) => (d === 'Yes' ? pill({ kind: 'pen', label: fill('pillYes', { pct: REDUCTION_TEXT }) })
-  : d === 'No' ? pill({ label: t('pillNo') }) : d === 'N/A' ? pill({ kind: 'na', label: t('pillNA') }) : d);
+// The decision as the record card shows it: a pill, its word carrying the meaning (CMS's text for any other value).
+const decisionMark = (d) => (DECISION[d] ? pill(pillOf(d)) : d);
 
 // The measure glyph: one square per measure in order, with its count in words for screen readers.
 function glyph(flags) {
   const scored = flags.filter((f) => f !== 'none').length;
   const worse = flags.filter((f) => f === 'worse' || f === 'assigned').length;
-  return html`<span class="mg" aria-hidden="true">${flags.map((f) => html`<span class="${FLAG_CLASS[f]}"></span>`)}</span><span class="vh">${fill('nearbyGlyph', { worse: String(worse), scored: String(scored) })}</span>`;
+  return html`<span class="mg" aria-hidden="true">${flags.map((f) => html`<span class="mg--${f}"></span>`)}</span><span class="vh">${fill('nearbyGlyph', { worse: String(worse), scored: String(scored) })}</span>`;
 }
 
 export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
@@ -264,20 +268,20 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (near.length < 2) return null;
   const miles = (x) => count(Math.round(x));
   const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), miles: miles(h.miles) });
-  const cls = (h) => (h.decision === 'Yes' ? 'chart-pin--yes' : h.decision === 'No' ? 'chart-pin--no' : 'chart-pin--na');
+  const kind = (h) => (h.decision === 'Yes' ? 'yes' : h.decision === 'No' ? 'no' : 'na');
   const far = near.at(-1).miles;
   const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
   const map = areaMap({
     shapes, counties, rings, label: t('figNearbyAlt'), width: 460,
     center: { point: view.point, tip: `${t('nearbyThis')}: ${view.name}` },
-    points: near.map((h, i) => ({ point: h.point, n: i + 1, cls: cls(h), tip: tip(h, i) })),
+    points: near.map((h, i) => ({ point: h.point, n: i + 1, cls: `chart-pin--${kind(h)}`, tip: tip(h, i) })),
   });
   const yes = near.filter((h) => h.decision === 'Yes').length;
   const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
-  const table = html`<div class="printout"><div class="printout__scroll"><table class="gb gb--near" aria-labelledby="nearby-h">
+  const table = printout(html`<table class="gb gb--near" aria-labelledby="nearby-h">
 <thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
-<tbody>${near.map((h, i) => html`<tr class="near--${cls(h).slice('chart-pin--'.length)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td><td>${glyph(h.flags)}</td></tr>`)}</tbody>
-</table></div></div>`;
+<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td><td>${glyph(h.flags)}</td></tr>`)}</tbody>
+</table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
     takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), miles: miles(near[0].miles) }),

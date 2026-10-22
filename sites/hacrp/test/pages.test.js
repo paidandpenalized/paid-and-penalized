@@ -16,10 +16,9 @@ import { HACRP, generateHacrp, hospitalRows, scoreRange } from '../web/generate.
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
-import { largestSentence } from '../web/sentences.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
-import { DATA, PROGRAM_ARGS, RANGES, PAGE_CTX } from './pinned.js';
+import { DATA, PROGRAM_ARGS, PAGE_CTX } from './pinned.js';
 
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -162,7 +161,7 @@ test('A1 failing stops the build and names the mismatched CCN', async () => {
 test('hostile text in a hospital name renders as text in the page, the title and the JSON-LD', () => {
   const name = '<script>alert("x")</script> & Sons\' Hospital';
   const view = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name, city: 'A<b' }) }));
-  const text = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: 'noindex', assets: ASSETS, ranges: RANGES });
+  const text = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: 'noindex', assets: ASSETS });
   assert.ok(!text.includes('<script>alert'));
   assert.ok(text.includes(`<h1 class="field__value hosp__name">${esc(name)}</h1>`));
   assert.ok(text.includes(`aria-label="Map of`) || !text.includes('chart--state-map'));
@@ -221,7 +220,7 @@ test('the build writes the hospitals asset with one row per hospital, in the tab
   }));
 
 // The hospital page as the build renders it, for a synthetic case.
-const render = (h, overrides) => hospitalPage({ ...PAGE_CTX, view: hospitalView(inputs(h, overrides)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+const render = (h, overrides) => hospitalPage({ ...PAGE_CTX, view: hospitalView(inputs(h, overrides)), source: DATA.source, robots: null, assets: ASSETS });
 const meta = (text, name) => new RegExp(`<meta name="${name}" content="([^"]*)">`).exec(text)[1];
 
 test('a hospital with no score shows a hatched "No score published" block, not an N/A headline', () => {
@@ -414,7 +413,7 @@ test("the phone's Sort by menu offers each column head's key both ways, the defa
 });
 
 test('the as-of strip is a list of facts, each a term and its value from their own copy entries', () => {
-  const text = hospitalPage({ ...PAGE_CTX, view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const text = hospitalPage({ ...PAGE_CTX, view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS });
   const list = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(text)[1];
   const rows = [...list.matchAll(/<div><dt>(.*?)<\/dt><dd>(.*?)<\/dd><\/div>/g)].map(([, dt, dd]) => [dt.replace(/<[^>]+>/g, ''), dd.replace(/<[^>]+>/g, '')]);
   const fy = String(DATA.fy);
@@ -452,7 +451,7 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   assert.match(header, /data-nav="how" aria-current="true"/);
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
   const view = hospitalView(inputs(CASES.yes));
-  const hosp = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const hosp = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS });
   assert.match(/<header class="topbar">[\s\S]*?<\/header>/.exec(hosp)[0], /data-nav="hospitals" aria-current="true"/);
 });
 
@@ -461,7 +460,7 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   const page = (overrides, careCompare = null, state = 'AL') => hospitalPage({
     ...PAGE_CTX,
     view: hospitalView(inputs(CASES.no, { master: master('990002', { state, ...profile, ...overrides }), careCompare })),
-    source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, shapes: DATA.shapes, careSource: DATA.careCompareSource, masterFy: 2027,
+    source: DATA.source, robots: null, assets: ASSETS, shapes: DATA.shapes, careSource: DATA.careCompareSource, masterFy: 2027,
   });
   const text = page({}, { rating: '4', footnotes: [] });
   assert.ok(text.includes('<p class="field__value field__value--sm">Major teaching · 1,234 beds · Government · Urban · Rural referral center · Sole community hospital</p>'));

@@ -26,7 +26,9 @@ export function ruler({ id, domain: [lo, hi], counts, floor, cap, median, value,
   const x = (v) => r2(PAD + ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (width - 2 * PAD));
   const step = (width - 2 * PAD) / counts.length;
   const most = Math.max(...counts, 1);
-  const cols = counts.map((c, i) => (c ? html`<rect class="chart-dist" x="${r2(PAD + i * step + 0.5)}" y="${r2(AXIS - ((AXIS - COL_TOP) * c) / most)}" width="${r2(Math.max(step - 1, 0.5))}" height="${r2(((AXIS - COL_TOP) * c) / most)}"/>` : ''));
+  // The columns as one path (a page draws a dozen rulers): each a box from the axis up to its count.
+  const w = r2(Math.max(step - 1, 0.5));
+  const cols = counts.map((c, i) => (c ? `M${r2(PAD + i * step + 0.5)} ${AXIS}v${r2(-((AXIS - COL_TOP) * c) / most)}h${w}V${AXIS}z` : '')).join('');
   const dead = [[PAD, x(floor)], [x(cap), width - PAD]].filter(([a, b]) => b - a > 0.5);
   const xm = x(median);
   const nearRight = xm > width * 0.72;
@@ -48,7 +50,7 @@ ${text({ x: xg - 10, y: MARK + 10, anchor: 'end', cls: 'chart-note chart-label--
 ${text({ x: xv + (right ? 9 : -9), y: MARK + 10, anchor: right ? 'start' : 'end', cls: 'chart-value chart-value--mark chart-label--halo', body: format(value) })}`;
   }
   return frame({
-    kind: 'ruler', width, height: HEIGHT, body: html`${hatchDefs(id)}<g aria-hidden="true">${cols}</g>
+    kind: 'ruler', width, height: HEIGHT, body: html`${hatchDefs(id)}${cols && html`<path class="chart-dist" aria-hidden="true" d="${cols}"/>`}
 ${mark({
     tip: `${labels.same} (${format(floor)}, ${format(cap)})`, value: [floor, cap], hit: null,
     body: html`${dead.map(([a, b]) => html`<rect class="chart-dead" fill="${hatchFill(id)}" x="${r2(a)}" y="${AXIS - HATCH / 2}" width="${r2(b - a)}" height="${HATCH}"/>`)}${dead.map(([a, b]) => html`<line class="chart-dead__end" x1="${a === PAD ? b : a}" x2="${a === PAD ? b : a}" y1="${AXIS - HATCH / 2}" y2="${AXIS + HATCH / 2}"/>`)}`,

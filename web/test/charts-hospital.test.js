@@ -27,7 +27,8 @@ test('ruler: a ▲ at a value (in the penalty ink when marked), a note without o
   assert.doesNotMatch(none, /chart-this|chart-hyp/);
   assert.ok(none.includes('no value'));
   assert.match(String(ruler({ ...base, value: null, ghost: true })), /<path class="chart-hyp"/);
-  assert.equal((String(ruler({ ...base, value: 0.9 })).match(/class="chart-dist"/g) ?? []).length, 3, 'an empty column draws nothing');
+  const d = /<path class="chart-dist" aria-hidden="true" d="([^"]*)"/.exec(String(ruler({ ...base, value: 0.9 })))[1];
+  assert.equal(d.match(/z/g).length, 3, 'one box per column with a count; an empty column draws nothing');
 });
 
 test('waterfall: each part starts where the last ended, the sum bar starts at zero, and the line is a mark', () => {

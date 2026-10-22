@@ -6,7 +6,7 @@ import { parseCsv } from '../../engine/js/csv.js';
 import { mulberry32 } from '../../engine/js/test/prng.js';
 import { axis } from '../charts/axis.js';
 import { contribBars } from '../charts/contribBars.js';
-import { dotRange, dotRanges } from '../charts/dotRange.js';
+import { ruler } from '../charts/ruler.js';
 import { figure } from '../charts/figure.js';
 import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
@@ -25,7 +25,7 @@ const BARS = {
     { id: 'c', label: 'Measure C <&>', value: 0.5, assigned: true },
   ],
 };
-const DOT = { value: 1.2, floor: 0.4, cap: 2, median: 0.9, label: 'This hospital', medianLabel: 'Median', sameLabel: 'Scores the same' };
+const RULER = { id: 'r1', domain: [0, 2.4], counts: [1, 4, 6, 3, 1, 0, 2], value: 1.2, floor: 0.4, cap: 2, median: 0.9, format: String, labels: { median: 'median 0.9', value: 'This hospital', same: 'Scores the same', note: null } };
 const RAMP = { domain: [-1, 1], actual: 0.3, band: [-0.05, 0.05], labels: { actual: 'This hospital', line: "CMS's line" } };
 const HIST = { values: [-0.9, -0.5, -0.45, -0.1, 0, 0.12, 0.2, 0.61, 0.9], bins: 4, boundary: 0.05, markLabel: "CMS's line" };
 const STATES = Object.fromEntries(Object.keys(TILES).map((st, i) => [st, { value: (i % 5) / 4, label: `${st} label` }]));
@@ -37,7 +37,7 @@ const FIG = { n: 1, takeaway: 'Measure C adds the most.', svg: contribBars(BARS)
 const OUTPUTS = () => ({
   axis: axis({ scale: scaleLinear().domain([0, 1]).range([0, 100]), orient: 'bottom', ticks: 2 }),
   contribBars: contribBars(BARS),
-  dotRange: dotRange(DOT),
+  ruler: ruler(RULER),
   ramp: ramp(RAMP),
   histogram: histogram(HIST),
   tileMap: tileMap(MAP),
@@ -104,68 +104,6 @@ test('an assigned part of zero still shows a hatched stub at the zero line', () 
   const z = /data-row="z"[\s\S]*?<\/g>/.exec(s)[0];
   assert.match(z, /class="chart-bar-na" fill="url\(#chart-z1-hatch\)"/);
   assert.doesNotMatch(String(contribBars({ id: 'z2', rows: [{ id: 'z', label: 'Z', value: 0 }] })), /chart-bar/);
-});
-
-test('dotRange hatches the values that score the same past the floor and the cap, each with a hairline where it starts', () => {
-  const s = String(dotRange(DOT));
-  assert.equal(s.match(/<rect class="chart-dead" fill="url\(#chart-range-hatch\)"/g).length, 2, 'below the floor and past the cap');
-  assert.equal(s.match(/class="chart-dead__end"/g).length, 2);
-  assert.ok(s.includes('<title>Scores the same (0.4, 2)</title>'));
-  // A floor at zero starts the axis: nothing to hatch below it, and no room left under zero.
-  const sir = String(dotRange({ ...DOT, floor: 0 }));
-  assert.equal(sir.match(/class="chart-dead"/g).length, 1, 'past the cap only');
-  assert.ok(sir.includes('<title>Scores the same (2)</title>'));
-  assert.match(sir, /<text class="chart-axis__label" x="18" y="-12" text-anchor="middle">0\.0<\/text>/, 'the axis starts at zero, its labels clear of the marks');
-});
-
-test('dotRange draws the median as an ink tick crossing the axis, drops any axis tick beside it, and this hospital as a triangle under the axis', () => {
-  const s = String(dotRange({ ...DOT, floor: 0, median: 1 }));
-  assert.match(s, /<line class="chart-median" x1="([\d.]+)" x2="\1" y1="17" y2="31"\/>/);
-  const at = /<line class="chart-median" x1="([\d.]+)"/.exec(s)[1];
-  assert.doesNotMatch(s, new RegExp(`class="chart-axis__tick" x1="${at}"`), 'no axis tick under the median');
-  assert.ok(s.includes(`<text class="chart-axis__label" x="${at}" y="-12" text-anchor="middle">1.0</text>`), 'its label stays');
-  assert.match(s, /class="chart-this"/);
-  assert.ok(s.includes('>This hospital</text>'));
-  assert.ok(!String(dotRange({ ...DOT, value: null })).includes('chart-this'), 'no value, no triangle');
-});
-
-test('dotRanges stacks one titled dotRange per row, each on its own scale and format, in one SVG', () => {
-  const rows = [
-    { id: 'b', title: 'Row B <&>', value: null, floor: 0, cap: 10, median: 5, label: 'This hospital', note: 'no value <here>' },
-    { id: 'a', title: 'Row A', ...DOT, format: (v) => v.toFixed(2) },
-    { id: 'c', title: 'Row C', ...DOT },
-  ];
-  const s = String(dotRanges({ rows, medianLabel: 'Median', sameLabel: 'Scores the same' }));
-  assert.match(s, /^<svg class="chart chart--dot-ranges" viewBox="0 0 300 \d+"/);
-  assert.equal(s.match(/<svg /g).length, 1, 'one SVG');
-  assert.equal(s.match(/<defs>/g).length, 1, 'one hatch pattern for every row');
-  assert.equal(s.match(/class="chart-median"/g).length, 3);
-  assert.equal(s.match(/class="chart-this"/g).length, 2, 'no triangle where the value is null');
-  assert.ok(s.includes('>no value &lt;here&gt;</text>'), "a null value's note stands in its place, as text");
-  assert.equal(s.match(/>This hospital<\/text>/g).length, 1, "the triangle's label prints once, under the first triangle");
-  assert.ok(s.includes('>Row A</text>') && s.includes('>Row B &lt;&amp;&gt;</text>'));
-  assert.ok(s.includes('<title>This hospital: 1.20</title>'), 'each row keeps its own format');
-  assert.ok(s.includes('<title>This hospital: 1.2</title>'), 'every triangle keeps its tooltip');
-  assert.ok(s.includes('<title>Median: 5</title>'));
-  assert.throws(() => dotRanges({ rows: [], medianLabel: 'M', sameLabel: 'S' }), /rows/);
-});
-
-test('a ruler prints its value beside the triangle, in mono on a halo, on the side with more room; dotRanges says its cue once', () => {
-  const at = (s) => /<text class="chart-value chart-value--mark chart-label--halo" x="([\d.]+)" y="[\d.]+" text-anchor="(start|end)">([^<]+)<\/text>/.exec(s).slice(1);
-  const tri = (s) => Number(/<path class="chart-this" d="M([\d.]+) /.exec(s)[1]);
-  const low = String(dotRange({ ...DOT, value: 0.5 }));
-  const [lx, lAnchor, lText] = at(low);
-  assert.deepEqual([lAnchor, lText], ['start', '0.5'], 'left of center: the number on the right');
-  assert.ok(Number(lx) > tri(low));
-  const high = String(dotRange({ ...DOT, value: 1.9 }));
-  const [hx, hAnchor] = at(high);
-  assert.equal(hAnchor, 'end', 'right of center: the number on the left');
-  assert.ok(Number(hx) < tri(high));
-  const rows = [{ title: 'A', ...DOT }, { title: 'B', ...DOT }];
-  const withCue = String(dotRanges({ rows, medianLabel: 'M', sameLabel: 'S', cue: 'Lower <is> better' }));
-  assert.equal(withCue.match(/>Lower &lt;is&gt; better<\/text>/g).length, 1);
-  assert.ok(withCue.includes('<text class="chart-axis__title" x="300" y="10" text-anchor="end">'), 'at the top right');
-  assert.ok(!String(dotRanges({ rows, medianLabel: 'M', sameLabel: 'S' })).includes('chart-axis__title'), 'no cue unless given');
 });
 
 test('histogramBins puts each value in exactly one bin, with CMS\'s line as a bin edge', () => {
@@ -404,7 +342,7 @@ test('figure: a chart that is not a kit SVG frames as given, in place of svg, wi
 });
 
 test('figure: every plotted value must be in the table, or the figure refuses to build', () => {
-  for (const svg of [contribBars(BARS), dotRange(DOT), ramp(RAMP), histogram(HIST), tileMap(MAP)]) {
+  for (const svg of [contribBars(BARS), ruler(RULER), ramp(RAMP), histogram(HIST), tileMap(MAP)]) {
     const values = [...String(svg).matchAll(/data-value="([^"]+)"/g)].flatMap((m) => m[1].split(' '));
     assert.ok(values.length > 0);
     const table = { columns: [{ name: 'Value', numeric: true }], rows: values.map((v) => [v]) };
@@ -501,12 +439,6 @@ const SNAPSHOTS = {
 <g class="chart-mark" data-mark data-row="b" data-value="-0.125"><title>Measure B: −0.125</title><rect class="chart-hit" x="0" y="32" width="300" height="28"/><text class="chart-label" x="0" y="50" text-anchor="start">Measure B</text><path class="chart-bar" d="M174 38H162.5A4 4 0 0 0 158.5 42V50A4 4 0 0 0 162.5 54H174Z"/><text class="chart-value" x="300" y="50" text-anchor="end">−0.125</text></g>
 <g class="chart-mark" data-mark data-row="c" data-value="0.5"><title>Measure C &lt;&amp;&gt;: 0.5</title><rect class="chart-hit" x="0" y="60" width="300" height="28"/><text class="chart-label" x="0" y="78" text-anchor="start">Measure C &lt;&amp;&gt;</text><path class="chart-bar-na" fill="url(#chart-c1-hatch)" d="M174 66H232A4 4 0 0 1 236 70V78A4 4 0 0 1 232 82H174Z"/><text class="chart-value" x="300" y="78" text-anchor="end">0.5</text></g>
 <line class="chart-zero" x1="174" x2="174" y1="0" y2="92"/></svg>`,
-  dotRange: `<svg class="chart chart--dot-range" viewBox="0 0 300 61" width="100%" focusable="false" style="--vb: 300"><defs><pattern id="chart-range-hatch" class="chart-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="1.5" height="6" fill="currentColor"/></pattern></defs><g class="chart-mark" data-mark data-value="0.4 2"><title>Scores the same (0.4, 2)</title><rect class="chart-dead" fill="url(#chart-range-hatch)" x="18" y="20" width="22" height="8"/><rect class="chart-dead" fill="url(#chart-range-hatch)" x="260" y="20" width="22" height="8"/><line class="chart-dead__end" x1="40" x2="40" y1="20" y2="28"/><line class="chart-dead__end" x1="260" x2="260" y1="20" y2="28"/></g>
-<g transform="translate(0 24)"><g class="chart-axis"><line class="chart-axis__line" x1="18" x2="282" y1="0" y2="0"/><line class="chart-axis__tick" x1="53.75" x2="53.75" y1="0" y2="-4"/><text class="chart-axis__label" x="53.75" y="-12" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="122.5" x2="122.5" y1="0" y2="-4"/><text class="chart-axis__label" x="122.5" y="-12" text-anchor="middle">1.0</text><line class="chart-axis__tick" x1="191.25" x2="191.25" y1="0" y2="-4"/><text class="chart-axis__label" x="191.25" y="-12" text-anchor="middle">1.5</text><line class="chart-axis__tick" x1="260" x2="260" y1="0" y2="-4"/><text class="chart-axis__label" x="260" y="-12" text-anchor="middle">2.0</text></g></g>
-<g class="chart-mark" data-mark data-value="0.9"><title>Median: 0.9</title><rect class="chart-hit" x="102.75" y="16" width="12" height="16"/><line class="chart-median" x1="108.75" x2="108.75" y1="17" y2="31"/></g>
-<g class="chart-mark" data-mark data-value="1.2"><title>This hospital: 1.2</title><rect class="chart-hit" x="141" y="31" width="18" height="16"/><path class="chart-this" d="M150 33l6 11h-12z"/></g>
-<text class="chart-value chart-value--mark chart-label--halo" x="159" y="42.5" text-anchor="start">1.2</text>
-<text class="chart-label" x="150" y="58" text-anchor="middle">This hospital</text></svg>`,
   ramp: `<svg class="chart chart--ramp" viewBox="0 0 300 91" width="100%" focusable="false" style="--vb: 300"><rect class="chart-zone" x="150" y="14" width="135" height="26"/>
 <g transform="translate(0 40)"><g class="chart-axis"><line class="chart-axis__line" x1="15" x2="285" y1="0" y2="0"/><line class="chart-axis__tick" x1="15" x2="15" y1="0" y2="4"/><text class="chart-axis__label" x="15" y="14" text-anchor="middle">−1.0</text><line class="chart-axis__tick" x1="82.5" x2="82.5" y1="0" y2="4"/><text class="chart-axis__label" x="82.5" y="14" text-anchor="middle">−0.5</text><line class="chart-axis__tick" x1="150" x2="150" y1="0" y2="4"/><text class="chart-axis__label" x="150" y="14" text-anchor="middle">0.0</text><line class="chart-axis__tick" x1="217.5" x2="217.5" y1="0" y2="4"/><text class="chart-axis__label" x="217.5" y="14" text-anchor="middle">0.5</text><line class="chart-axis__tick" x1="285" x2="285" y1="0" y2="4"/><text class="chart-axis__label" x="285" y="14" text-anchor="middle">1.0</text></g></g>
 <g class="chart-mark" data-mark data-value="-0.05 0.05"><title>CMS&#39;s line (−0.05, 0.05)</title><rect class="chart-hit" x="144" y="4" width="12" height="44"/><line class="chart-line" x1="150" x2="150" y1="12" y2="44"/></g>
@@ -547,7 +479,6 @@ test('each chart part matches its inline snapshot', () => {
   assert.equal(String(axis({ scale: scaleLinear().domain([0, 1]).range([0, 100]), orient: 'bottom', ticks: 2 })), SNAPSHOTS.axis, 'axis');
   assert.equal(String(axis({ scale: scaleLinear().domain([0, 10]).range([50, 0]), orient: 'left', ticks: [0, 10], grid: 80 })), SNAPSHOTS.axisLeft, 'axisLeft');
   assert.equal(String(contribBars(BARS)), SNAPSHOTS.contribBars, 'contribBars');
-  assert.equal(String(dotRange(DOT)), SNAPSHOTS.dotRange, 'dotRange');
   assert.equal(String(ramp(RAMP)), SNAPSHOTS.ramp, 'ramp');
   assert.equal(String(histogram(HIST)), SNAPSHOTS.histogram, 'histogram');
   assert.equal(String(figure({ ...FIG, claimLevel: 'estimate' })), SNAPSHOTS.figure, 'figure');

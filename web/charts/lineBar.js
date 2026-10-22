@@ -7,7 +7,7 @@
 //   domain   [lowest, highest] score; actual: this score; band: [highestNo, lowestYes]; middle: the middle score
 //   labels   { actual, line, lineValue, middle, middleValue, low, high, zone }  the caller's words, values formatted
 import { html } from '../render/html.js';
-import { labelAt } from '../whatif/marks.js';
+import { labelAt, lineScore } from '../whatif/marks.js';
 import { WIDTH, frame, mark, r2, text, triangle } from './svg.js';
 
 const PAD = 4;
@@ -21,7 +21,7 @@ const endWidth = (label) => String(label).length * 6.9 + 14;
 export function lineBar({ domain: [lo, hi], actual, band: [highestNo, lowestYes], middle, labels, width = WIDTH }) {
   if (!(lo < hi) || !(highestNo < lowestYes)) throw new RangeError('lineBar: need lowest < highest and highestNo < lowestYes');
   const x = (v) => PAD + ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (width - 2 * PAD);
-  const xl = x((highestNo + lowestYes) / 2);
+  const xl = x(lineScore({ highestNo, lowestYes }));
   const xm = x(middle);
   const xa = x(actual);
   const ta = (xa - PAD) / (width - 2 * PAD);

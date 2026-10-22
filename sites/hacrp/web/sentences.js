@@ -1,36 +1,33 @@
 // The plain-language layer of a hospital page, built from its view (view.js). CMS's values are said as "CMS
 // reports"; this site's arithmetic as "this site recomputes". Odd rows get CMS's values and notes and nothing more.
 import { REDUCTION_TEXT } from './constants.js';
-import { fill, t } from './copy.js';
+import { fill } from './copy.js';
 
 const notes = (list) => list.map((f) => f.text).join(' ');
 
-// What CMS reports, CMS's notes, what the decision means (scored Yes/No only), then what the score is. (That it is
-// not a grade of the quality of care is said beside the record, on the first screen: pages/hospital.js.)
-export function summary(view) {
-  const [lead, ...why] = leadSentences(view);
-  const [scoreIs, ...notes] = [...noteSentences(view)].reverse();
-  return [lead, ...notes.reverse(), ...why, scoreIs];
+// What CMS reports. decision: the text set in the decision's place (CMS's own, by default; a page may pass a marker to
+// set it apart in markup).
+export function leadSentence(view, decision = view.decision.text) {
+  const facts = { fy: String(view.fy), name: view.name, decision };
+  return view.scored ? fill('leadScored', { ...facts, total: view.score.text }) : fill('leadNoScore', facts);
 }
 
-// The verdict's plain words beside the record card: what CMS reports, and what the decision means (scored Yes/No).
-export function leadSentences(view) {
-  const facts = { fy: String(view.fy), name: view.name, decision: view.decision.text };
-  const out = [view.scored ? fill('leadScored', { ...facts, total: view.score.text }) : fill('leadNoScore', facts)];
-  if (view.status === 'yes') out.push(fill('whyYes', { pct: REDUCTION_TEXT }));
-  if (view.status === 'no') out.push(fill('whyNo'));
-  return out;
+// What the decision means: scored Yes or No only.
+export function whySentences(view) {
+  if (view.status === 'yes') return [fill('whyYes', { pct: REDUCTION_TEXT })];
+  if (view.status === 'no') return [fill('whyNo')];
+  return [];
 }
 
-// The rest, under the record: CMS's notes on the score and the decision, verbatim, then what the score is.
+// CMS's notes on the score and the decision, verbatim.
 export function noteSentences(view) {
   const out = [];
   if (view.score.footnotes.length) out.push(fill('noteScore', { notes: notes(view.score.footnotes) }));
   if (view.decision.footnotes.length) out.push(fill('noteDecision', { notes: notes(view.decision.footnotes) }));
-  out.push(fill('scoreIs'));
   return out;
 }
 
+// This site's distance from the score to CMS's line, quoting CMS's text for the line's two scores; null without one.
 export function distanceSentence(view) {
   const d = view.distance;
   if (!d) return null;
@@ -42,12 +39,6 @@ export function distanceSentence(view) {
 
 export function smallNumber(view) {
   return view.oneMeasure ? fill('oneMeasure') : null;
-}
-
-export function largestSentence(view) {
-  if (!view.largest) return null;
-  const { id, short, contributionText } = view.largest;
-  return fill('largest', { label: t(`measure${id}`), short, contribution: contributionText });
 }
 
 // The note beside a measure CMS assigned (its footnote text sits alongside); null for any other measure.

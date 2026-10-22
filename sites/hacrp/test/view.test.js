@@ -34,6 +34,8 @@ test('a scored "Yes" hospital: the whole view', () => {
     decision: { text: 'Yes', footnotes: [] },
     distance: { to: 'highestNo', value: 0.05, text: '0.0500' },
     boundaryText: { highestNo: '0.2500', lowestYes: '0.2507' },
+    boundary: { highestNo: 0.25, lowestYes: 0.2507 },
+    total: 0.3,
     n: 6,
     oneMeasure: false,
     measures: [

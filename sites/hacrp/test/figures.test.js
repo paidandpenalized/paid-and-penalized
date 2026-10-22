@@ -17,7 +17,7 @@ import { programPage } from '../web/pages/program.js';
 import { lineStep, stepRows } from '../web/stepper.js';
 import { hospitalView, stateCounts } from '../web/view.js';
 import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
-import { DATA, RANGE, RANGES, PAGE_CTX } from './pinned.js';
+import { DATA, RANGE, PAGE_CTX } from './pinned.js';
 
 const { model, estimate } = DATA;
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
@@ -29,7 +29,7 @@ const STATES = stateCounts(VIEWS);
 // A hospital page with its what-if (scored hospitals), whose bars are the page's last figure.
 const render = (h) => hospitalPage({
     ...PAGE_CTX,
-  view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES,
+  view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS,
   whatif: h.total === null ? null : { hospital: h, model, estimate, range: RANGE },
 });
 const program = (overrides = {}) => programPage({
@@ -265,7 +265,7 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
 test('hostile names stay text in the hospital page\'s figures', () => {
   const name = '<img src=x onerror=alert(1)> & "Sons"';
   const view = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name }) }));
-  const text = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const text = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS });
   assert.ok(!text.includes('<img src=x'));
   for (const [, , body] of figures(text)) assert.ok(!body.includes(name));
 });

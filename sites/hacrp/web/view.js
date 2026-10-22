@@ -114,6 +114,10 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     decision: { text: h.paymentReduction, footnotes: footnoteList(footnotes, h.paymentReductionFootnote) },
     distance: scored ? distance(st, h.total, model.boundary) : null,
     boundaryText: bt,
+    // CMS's line as numbers ({ highestNo, lowestYes }), for the figures that draw it; boundaryText says it in words.
+    boundary: model.boundary,
+    // CMS's Total HAC Score as a number (null without one).
+    total: h.total,
     n,
     oneMeasure: n === 1,
     measures,

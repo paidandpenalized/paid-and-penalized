@@ -8,8 +8,10 @@ export class Safe {
 const ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
 // For text and for quoted attribute values alike.
+const SPECIAL = /[&<>"']/;
 export function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (c) => ENTITIES[c]);
+  const s = String(value);
+  return SPECIAL.test(s) ? s.replace(/[&<>"']/g, (c) => ENTITIES[c]) : s;
 }
 
 // Trusted markup only: the caller vouches for it.
@@ -19,6 +21,8 @@ function render(value) {
   if (value instanceof Safe) return value.text;
   if (Array.isArray(value)) return value.map(render).join('');
   if (value === null || value === undefined || value === false) return '';
+  // A number has nothing to escape (charts interpolate thousands of coordinates).
+  if (typeof value === 'number') return String(value);
   return escapeHtml(value);
 }
 

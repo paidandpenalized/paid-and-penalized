@@ -67,7 +67,7 @@
 .hosp__notes { display: grid; gap: 12px; }
 .hosp__top + .hsec, .hosp__notes + .hsec { padding-top: 0; border-top: 0; }
 
-/* A numbered section: words left, the figure right from 980px (the figure wider in hsec--wide); stacked under that.
+/* A numbered section: words left, the figure right from 980px (in hsec--full, the words across the top and the figure under them); stacked under that.
    Each section opens on a hairline. */
 .hsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 56px; padding-top: 28px; border-top: 1px solid var(--line); align-items: start; }
 .hsec__text, .hsec__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; align-content: start; }
@@ -211,28 +211,6 @@
 /* The US map's states take a pointer: a click lists the state's hospitals in the table (client/program.js). */
 .chart--us-map .chart-mark[data-state] { cursor: pointer; }
 
-/* Measure table: as wide as its content (never stretched across the page), right-aligned number columns, and the
-   notes column, when there is one, taking the room left. */
-.gb--measures { table-layout: auto; width: auto; min-width: min(100%, var(--table-min)); max-width: var(--table-max); }
-.gb--measures.gb--notes { width: 100%; max-width: none; }
-.gb--measures.gb--notes tbody th { width: 30%; }
-.gb--measures .num { width: 1%; }
-.gb .notes { font-family: var(--font-body); }
-.gb .notes p + p { margin-top: 4px; }
-
-/* Narrow screens: each measure row stacks into a block (name; CMS value · z-score; notes), so nothing scrolls
-   sideways. The header row is hidden visually; each number cell names itself. */
-@media (max-width: 640px) {
-  .gb--measures, .gb--measures tbody, .gb--measures tr { display: block; width: 100%; }
-  .gb--measures thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .gb--measures tr { display: flex; flex-wrap: wrap; gap: 2px 16px; padding: 10px 10px 12px; }
-  .gb--measures tr + tr { border-top: 1px solid var(--line); }
-  .gb--measures tbody th, .gb--measures td { display: block; padding: 0; }
-  .gb--measures tbody th, .gb--measures .notes { flex: 1 1 100%; width: auto; }
-  .gb--measures .num { width: auto; text-align: left; }
-  .gb--measures .num::before { content: attr(data-label) ": "; font: 600 var(--fs-xs)/1.35 var(--font-body); color: var(--ink-2); }
-  .gb--measures .notes:empty { display: none; }
-}
 /* The estimate tag: the plain word, dotted underline, no box (it is a note to open, not a state). */
 .est summary { display: inline-block; min-height: 24px; padding-block: 2px; color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-body); text-decoration: underline dotted 1px; text-underline-offset: 3px; cursor: pointer; list-style: none; }
 .est summary::-webkit-details-marker { display: none; }

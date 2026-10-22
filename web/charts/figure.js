@@ -84,7 +84,7 @@ const tableCell = (cell, column, j) => {
 };
 
 // The chart as an image named by alt; fit: 'narrow' or 'wide' when the figure carries both variants.
-const imageOf = (svg, alt, fit) => new Safe(html`<svg role="img" aria-label="${alt}"${fit ? html` data-fit="${fit}"` : ''} `.text + svg.text.slice('<svg '.length));
+export const imageOf = (svg, alt, fit) => new Safe(html`<svg role="img" aria-label="${alt}"${fit ? html` data-fit="${fit}"` : ''} `.text + svg.text.slice('<svg '.length));
 
 export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
   checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key });

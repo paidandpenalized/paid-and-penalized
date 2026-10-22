@@ -8,6 +8,7 @@
 //   band     [highestNo, lowestYes]: the line between; labels { line, zone }
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
+import { lineScore } from '../whatif/marks.js';
 import { axis } from './axis.js';
 import { barPath, checkId, frame, hatchDefs, hatchFill, mark, r2, text } from './svg.js';
 
@@ -26,7 +27,7 @@ export function waterfall({ id, rows, total, band: [highestNo, lowestYes], label
   const room = (hi - lo) * 0.06;
   const scale = scaleLinear().domain([lo - room, hi + room]).nice().range([LABEL_W, width - VALUE_W]);
   const x = (v) => r2(scale(v));
-  const line = (highestNo + lowestYes) / 2;
+  const line = lineScore({ highestNo, lowestYes });
   const bottom = TOP + (steps.length + 1) * ROW + 6;
   const yOf = (i) => TOP + i * ROW + (ROW - BAR) / 2;
   const bar = (from, to, y, cls, fill = null) => {
@@ -36,12 +37,11 @@ export function waterfall({ id, rows, total, band: [highestNo, lowestYes], label
   const drawn = steps.map((s, i) => {
     const y = yOf(i);
     const cls = s.assigned ? 'chart-step chart-step--na' : s.pen ? 'chart-step chart-step--pen' : s.value < 0 ? 'chart-step chart-step--down' : 'chart-step';
-    const next = i + 1 < steps.length ? yOf(i + 1) : yOf(steps.length);
     return html`${mark({
       tip: s.tip, value: s.value, hit: { x: LABEL_W, y: TOP + i * ROW, width: width - LABEL_W, height: ROW },
       body: html`${bar(s.from, s.to, y, cls, s.assigned ? hatchFill(id) : null)}${text({ x: 0, y: y + BAR - 3, anchor: 'start', cls: s.pen ? 'chart-label chart-label--pen' : 'chart-label', body: s.label })}${text({ x: width, y: y + BAR - 3, anchor: 'end', cls: 'chart-value', body: s.valueText })}`,
     })}
-<line class="chart-connector" x1="${x(s.to)}" x2="${x(s.to)}" y1="${y + BAR}" y2="${next}"/>
+<line class="chart-connector" x1="${x(s.to)}" x2="${x(s.to)}" y1="${y + BAR}" y2="${yOf(i + 1)}"/>
 `;
   });
   const yt = yOf(steps.length);

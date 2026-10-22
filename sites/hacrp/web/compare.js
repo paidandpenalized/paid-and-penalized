@@ -3,34 +3,18 @@
 // belongs to (its state, region and metro area, teaching status, size, ownership, urban or rural) with each group's
 // scores and share cut, the measure that would lower its score most at the national median, and its nearest
 // hospitals. Pure: data in, result out. nationalContext() is built once per build; every page reads it.
-import { isAssigned, isDecided } from '../../../engine/js/hacrp/hospital.js';
+import { bisectLeft, bisectRight } from 'd3-array';
+import { decidedHospitals, isAssigned, scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { median } from '../../../engine/js/stats.js';
+import { miles } from '../../../web/charts/geo.js';
 import { BED_BANDS, FEW_IN_GROUP, NEAREST, RIDGE_BINS } from './constants.js';
 
-// Miles per radian of the Earth's mean radius (IUGG), for great-circle distances between hospitals.
-const EARTH_MILES = 3958.8;
-const RAD = Math.PI / 180;
-export function miles([lon1, lat1], [lon2, lat2]) {
-  const a = Math.sin(((lat2 - lat1) * RAD) / 2) ** 2 + Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(((lon2 - lon1) * RAD) / 2) ** 2;
-  return 2 * EARTH_MILES * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
 // How many of a sorted list are below x, and how many above it.
-function below(sorted, x) {
-  let lo = 0;
-  let hi = sorted.length;
-  while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < x) lo = mid + 1; else hi = mid; }
-  return lo;
-}
-function above(sorted, x) {
-  let lo = 0;
-  let hi = sorted.length;
-  while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] <= x) lo = mid + 1; else hi = mid; }
-  return sorted.length - lo;
-}
+const below = (sorted, x) => bisectLeft(sorted, x);
+const above = (sorted, x) => sorted.length - bisectRight(sorted, x);
 
 // Equal-width bin edges over [lo, hi] with `at` as an edge (CMS's lowest Yes score, so no bin straddles the line).
 export function edgesAround(lo, hi, at, bins) {
@@ -82,9 +66,9 @@ function measureFlag(m, p) {
 // hospitals: CMS's rows; master: Map ccn -> master record; model: { params, boundary }.
 export function nationalContext({ hospitals, master, model }) {
   const { lowestYes } = model.boundary;
-  const scored = hospitals.filter((h) => h.total !== null);
+  const scored = scoredHospitals(hospitals);
   const scores = scored.map((h) => h.total).sort((a, b) => a - b);
-  const decided = hospitals.filter(isDecided);
+  const decided = new Set(decidedHospitals(hospitals));
   const domain = [scores[0], scores.at(-1)];
   const edges = edgesAround(domain[0], domain[1], lowestYes, RIDGE_BINS);
 
@@ -96,7 +80,7 @@ export function nationalContext({ hospitals, master, model }) {
       total: h.total,
       totalText: h.totalText,
       decision: h.paymentReduction,
-      decided: isDecided(h),
+      decided: decided.has(h),
       keys: Object.fromEntries(KINDS.map(([kind, of]) => [kind, of(r)])),
       point: Number.isFinite(r.lat) && Number.isFinite(r.lon) ? [r.lon, r.lat] : null,
       name: r.name,
@@ -107,7 +91,7 @@ export function nationalContext({ hospitals, master, model }) {
   });
   const byCcn = new Map(rows.map((row) => [row.ccn, row]));
 
-  // Each measure's published values, sorted, and its distribution on the ruler's own axis (ruler.js domain).
+  // Each measure's published values, sorted (the ledger bins them on its rulers' axes: hospital-figures.js rulerOf).
   const measures = Object.fromEntries(MEASURE_IDS.map((id) => {
     const values = hospitals.map((h) => h.measures[id].value).filter((v) => v !== null).sort((a, b) => a - b);
     return [id, { values, n: values.length }];
@@ -140,7 +124,6 @@ export function nationalContext({ hospitals, master, model }) {
     domain,
     edges,
     medianScore: median(scores),
-    decidedCount: decided.length,
     measures,
     // Where x sits among every scored hospital's score: how many are below it and above it, of n.
     rankOf: (x) => ({ below: below(scores, x), above: above(scores, x), n: scores.length }),
@@ -156,13 +139,21 @@ export function nationalContext({ hospitals, master, model }) {
         .filter((g) => g && g.decided >= FEW_IN_GROUP)
         .map((g) => ({ ...g, below: below(g.scores, row.total), above: above(g.scores, row.total) }));
     },
-    // The NEAREST other hospitals with a score and a place, nearest first: { ...row, miles }.
+    // The NEAREST other hospitals with a score and a place, nearest first: { ...row, miles }. One pass keeps the k
+    // nearest in a short sorted list, so a page never sorts every hospital.
     nearest(ccn, point, k = NEAREST) {
       if (!point) return [];
-      return rows.filter((row) => row.ccn !== ccn && row.point)
-        .map((row) => ({ ...row, miles: miles(point, row.point) }))
-        .sort((a, b) => a.miles - b.miles || (a.ccn < b.ccn ? -1 : 1))
-        .slice(0, k);
+      const best = [];
+      for (const row of rows) {
+        if (row.ccn === ccn || !row.point) continue;
+        const d = miles(point, row.point);
+        if (best.length === k && !(d < best[k - 1].miles || (d === best[k - 1].miles && row.ccn < best[k - 1].row.ccn))) continue;
+        let i = best.length;
+        while (i > 0 && (d < best[i - 1].miles || (d === best[i - 1].miles && row.ccn < best[i - 1].row.ccn))) i--;
+        best.splice(i, 0, { row, miles: d });
+        if (best.length > k) best.pop();
+      }
+      return best.map(({ row, miles: d }) => ({ ...row, miles: d }));
     },
   };
 }

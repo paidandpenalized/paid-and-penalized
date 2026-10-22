@@ -1,17 +1,14 @@
-// The HACRP figures (DES-31), drawn with the chart kit (web/charts/) in HACRP's words: on a hospital page, each
-// measure's part of the Total HAC Score and each measure's value against the national range; on the program page,
+// The HACRP figures (DES-31), drawn with the chart kit (web/charts/) in HACRP's words: on a hospital page, the
+// what-if's bars (each measure's part of the Total HAC Score; the page's other figures are in hospital-figures.js); on the program page,
 // the histogram of Total HAC Scores and the US map of states. Every takeaway is filled from the data the figure draws; copy.js holds the words.
 import { has } from '../../../engine/js/has.js';
-import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { contribBars } from '../../../web/charts/contribBars.js';
-import { dotRanges } from '../../../web/charts/dotRange.js';
 import { figure, keysHint } from '../../../web/charts/figure.js';
 import { histogram, histogramBins } from '../../../web/charts/histogram.js';
 import { US_MAP_CODES, usMap } from '../../../web/charts/geo.js';
-import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
-import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { count, decimal, pct, signed } from '../../../web/render/format.js';
 import { FEW_DECIDED, MAP_STEPS_PCT } from './constants.js';
 import { fill, t } from './copy.js';
 import { flagText } from './whatif-text.js';
@@ -20,20 +17,11 @@ import { html } from '../../../web/render/html.js';
 // Scores, z-scores and parts of the score are shown at CMS's decimals (DP).
 const BINS = 20;
 // The wide variant's viewBox width, for screens 560px and up (figure.js svgWide).
-const WIDE = 560;
+export const WIDE = 560;
 const SHARE_DP = 1;
 const num = (text, value) => ({ text, value });
 // A chart drawn twice, on the kit's narrow viewBox and WIDE, for figure()'s svg and svgWide.
-const variants = (draw) => ({ svg: draw(undefined), svgWide: draw(WIDE) });
-
-// Each measure's national range, from the model: CMS's floor and cap as published, and the national median of
-// published values at CMS's decimals (as the what-if shows it). { [id]: { floor, cap, median, decimals } }.
-export function measureRanges(model) {
-  return Object.fromEntries(MEASURE_IDS.map((id) => {
-    const p = model.params[id];
-    return [id, { floor: p.floor, cap: p.cap, median: medianAt(p), decimals: p.decimals }];
-  }));
-}
+export const variants = (draw) => ({ svg: draw(undefined), svgWide: draw(WIDE) });
 
 // Hospital page: each scored measure's part of the Total HAC Score (its z-score divided by the number scored). chart:
 // the what-if's live bars to frame in place of the static bar chart. The takeaway and the table's part column are
@@ -58,43 +46,6 @@ export function partsFigure(view, n, source, chart = null) {
         ...(chart ? [{ text: t('whatifSame'), value, data: { wi: `part-${m.id}`, same: '' } }] : [])]),
     },
   });
-}
-
-// Hospital page: each measure's value against the national range, one row per measure on its own scale, with its
-// keyboard hint after it. null when no measure has a published value.
-export function rangeFigure(view, ranges, n, source) {
-  const rows = view.measures.map((m) => {
-    const { floor, cap, median, decimals } = ranges[m.id];
-    return { m, floor, cap, median, value: m.hasValue ? Number(m.valueRaw) : null, format: (v) => decimal(v, decimals) };
-  });
-  const valued = rows.filter((r) => r.value !== null);
-  if (!valued.length) return null;
-  const notes = rows.some(({ m }) => m.footnotes.length);
-  const above = valued.filter((r) => r.value > r.median).length;
-  const takeaway = valued.length === 1
-    ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
-    : fill('figRangeTakeaway', { k: String(valued.length), above: String(above), rest: String(valued.length - above) });
-  const fig = figure({
-    n, takeaway, source, claimLevel: 'recomputed', alt: t('figRangeAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-ranges`,
-    key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'same', label: t('figRangeSame') }],
-    svg: dotRanges({
-      medianLabel: t('figRangeMedian'), sameLabel: t('figRangeSame'), cue: t('whatifPsiHelp'),
-      rows: rows.map(({ m, ...row }) => ({ ...row, title: m.short, label: t('figRangeThis'), note: m.hasValue ? null : t('noValue') })),
-    }),
-    // A Notes column (CMS's footnotes) only when some measure has one.
-    table: {
-      columns: [{ name: t('colMeasure') }, { name: t('colValue'), numeric: true }, { name: t('figColFloor'), numeric: true },
-        { name: t('figRangeMedian'), numeric: true }, { name: t('figColCap'), numeric: true }, ...(notes ? [{ name: t('colNotes') }] : [])],
-      rows: rows.map(({ m, floor, cap, median, format }) => [
-        m.short,
-        m.hasValue ? m.valueRaw : num(t('noValue'), null),
-        num(format(floor), floor), num(format(median), median), num(format(cap), cap),
-        ...(notes ? [m.footnotes.map((f) => f.text).join(' ')] : []),
-      ]),
-    },
-  });
-  return html`${fig}
-${keysHint(n, t('figRangeKeys'))}`;
 }
 
 // Program page: the Total HAC Scores of hospitals with a Yes or No decision. scores: [{ total, yes }]. CMS's line is

@@ -24,26 +24,8 @@ export const COPY = {
     text: "Its score was at or below CMS's line, so this program did not cut its Medicare payments for the year.",
     claim: 'HACRP-01',
   },
-  scoreIs: {
-    text: 'The Total HAC Score compares hospitals with each other on the infection and patient-safety measures each hospital was scored on.',
-    claim: 'HACRP-15',
-  },
-  // Site framing, not a claim about CMS's program: the hero's last row on a page with a score.
-  notAGrade: { text: 'The score is not a grade of the quality of care.', claim: null },
 
   // This site's arithmetic.
-  distanceYes: {
-    text: "This site recomputes the distance to CMS's line: the score is {distance} above {highestNo}, the highest score CMS marked No.",
-    claim: null,
-  },
-  distanceNo: {
-    text: "This site recomputes the distance to CMS's line: the score is {distance} below {lowestYes}, the lowest score CMS marked Yes.",
-    claim: null,
-  },
-  largest: {
-    text: "Of the measures with a measured result, {label} ({short}) added the most to the score. This site recomputes its part as {contribution} (the measure's z-score divided by the number of measures scored).",
-    claim: 'HACRP-04',
-  },
   oneMeasure: {
     text: 'CMS scored this hospital on a single measure, so that measure alone set its Total HAC Score.',
     claim: 'HACRP-04',
@@ -277,13 +259,8 @@ export const COPY = {
   stampCms: { text: '{decision}', claim: null },
   numLine: { text: 'between {highestNo} and {lowestYes}', claim: null },
   numLineNote: { text: 'The highest score CMS marked No and the lowest it marked Yes', claim: null },
-  fieldDistance: { text: 'Distance to the line', claim: null },
-  numDistanceYes: { text: 'Above {highestNo}; this site recomputes', claim: null },
-  numDistanceNo: { text: 'Below {lowestYes}; this site recomputes', claim: null },
   // The locator map: its name for screen readers.
   mapLabel: { text: "Map of {state} with this hospital's location marked", claim: null },
-  // The map as a cell of the numbers card (placement i).
-  fieldMap: { text: 'On the map', claim: null },
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
@@ -292,8 +269,6 @@ export const COPY = {
     claim: null,
   },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
-  // Under the verdict beside the record card, so the data's date sits near the headline as well as at the foot.
-  placeData: { text: 'Data: CMS, released {date}', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
   // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.
   heroLine: { text: "CMS's line: between {highestNo} and {lowestYes}", claim: null },
@@ -306,14 +281,9 @@ export const COPY = {
   // The row CMS marked Yes with no score: CMS's literal value, nothing inferred.
   pillCms: { text: '{decision}', claim: null },
   measuresHeading: { text: 'The measures', claim: null },
-  measuresIntro: {
-    text: "CMS's published value and z-score for each measure. A higher z-score adds more to the Total HAC Score.",
-    claim: 'HACRP-04',
-  },
   colMeasure: { text: 'Measure', claim: null },
   colValue: { text: 'CMS value', claim: null },
   colZ: { text: 'Z-score', claim: null },
-  colNotes: { text: 'Notes', claim: null },
   noValue: { text: 'no value published', claim: null },
   footnoteLead: { text: 'CMS footnote {code}:', claim: null },
   estimateTag: { text: 'estimate', claim: null },
@@ -460,28 +430,18 @@ export const COPY = {
   figPartsHypNone: { text: 'Hypothetical: no measured result adds to the score.', claim: 'HACRP-04' },
   figColPart: { text: 'Part of the score', claim: null },
   // Hospital page, Figure: each measure's value against the national range.
-  figRangeTakeaway: {
-    text: "Of the {k} measures with a published value, this hospital's value is above the national median on {above} and at or below it on {rest}.",
-    claim: null,
-  },
   figRangeOne: {
     text: 'This hospital has a published value for one measure, {short}, and it is {side} the national median.',
     claim: null,
   },
   figSideAbove: { text: 'above', claim: null },
   figSideBelow: { text: 'at or below', claim: null },
-  figRangeAlt: {
-    text: "For each measure, this hospital's value (triangle) against the national median (tick); hatched values score the same as CMS's floor or cap.",
-    claim: 'HACRP-03',
-  },
   // Said as the chart's description once it takes focus.
   figRangeKeys: { text: 'Arrow keys step through the measures.', claim: null },
   figRangeThis: { text: 'This hospital', claim: null },
   figRangeMedian: { text: 'National median', claim: null },
   // The figure's hatch: values past CMS's floor or cap, which score the same as that end.
   figRangeSame: { text: "Scores the same as CMS's floor or cap", claim: 'HACRP-03' },
-  figColFloor: { text: 'CMS floor', claim: 'HACRP-03' },
-  figColCap: { text: 'CMS cap', claim: 'HACRP-03' },
 
   // Program page: the formula stepper on the median hospital.
   stepsHeading: { text: 'How a score is built, step by step', claim: null },
@@ -586,7 +546,6 @@ export const COPY = {
   barThis: { text: 'This hospital', claim: null },
   barLow: { text: 'lowest {low}', claim: null },
   barHigh: { text: 'highest {high}', claim: null },
-  barZone: { text: 'cut', claim: null },
   barAlt: {
     text: "Every Total HAC Score CMS published, from {low} to {high}: this hospital's is {score}, the middle hospital's {middle}, and CMS cut scores of {lowestYes} and above.",
     claim: null,
@@ -608,9 +567,8 @@ export const COPY = {
     claim: null,
   },
   leverTry: { text: 'Try it in the what-if', claim: null },
-  claimRecomputedNote: { text: '(This site recomputes.)', claim: null },
-  sumDistanceYes: { text: "This hospital's score is {distance} above {highestNo}, the highest score CMS marked No.", claim: null },
-  sumDistanceNo: { text: "This hospital's score is {distance} below {lowestYes}, the lowest score CMS marked Yes.", claim: null },
+  distanceYes: { text: "This hospital's score is {distance} above {highestNo}, the highest score CMS marked No. (This site recomputes.)", claim: null },
+  distanceNo: { text: "This hospital's score is {distance} below {lowestYes}, the lowest score CMS marked Yes. (This site recomputes.)", claim: null },
   // The one measure whose name doesn't say what it counts, defined under it in the ledger (draft ML1).
   defineMore: { text: '(what it counts)', claim: null },
   // Each measure's definition, in the box its short name opens in the ledger (draft words, checked in the accuracy
@@ -670,7 +628,6 @@ export const COPY = {
     text: "Added from CMS's rounded z-scores the parts make {recomputed}; CMS reports {total}, from its unrounded values.",
     claim: null,
   },
-  wsZ: { text: 'z-scores', claim: null },
   wsN: { text: 'measures', claim: null },
   wsTotal: { text: 'Total HAC Score', claim: null },
   figSumTakeaway: { text: 'The parts add up to {total}, {side} CMS\'s line.', claim: null },
@@ -781,8 +738,12 @@ export const fill = (key, values) => fillCopy(COPY, key, values);
 export const fillKeep = (key, values, keep) => fillCopyKeep(COPY, key, values, keep);
 // The hero's short form of the line, its two scores kept on one line; the what-if's ramp repeats it.
 export const heroLineText = (boundaryText) => fillKeep('heroLine', boundaryText, [['highestNo', 'lowestYes']]);
-// A word or sentence with no placeholders.
-export const t = (key) => fill(key);
+// A word or sentence with no placeholders, filled once per key.
+const WORDS = new Map();
+export const t = (key) => {
+  if (!WORDS.has(key)) WORDS.set(key, fill(key));
+  return WORDS.get(key);
+};
 
 // The source line's values: the fiscal year, the dataset id and its release date.
 const sourceValues = ({ fy, source }) => ({ fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) });

@@ -2,7 +2,7 @@
 // locator map) and the US choropleth, each state filled by a step of the pen ramp (a figure's chart, like the tile
 // map it replaces). d3-geo projects and draws them here, at build time, as inline SVG: no map code ships to browsers.
 // Colors come from classes in web/styles/charts.css, never from here.
-import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoPath } from 'd3-geo';
+import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, mark, plain, r2, WIDTH } from './svg.js';
@@ -226,8 +226,10 @@ const AREA_PAD = 22;
 const BOUNDS = new WeakMap();
 const boundsOf = (f) => { if (!BOUNDS.has(f)) BOUNDS.set(f, geoBounds(f)); return BOUNDS.get(f); };
 const AREA_ASPECT = 0.8;
-// Statute miles per degree of great-circle arc (the Earth's mean radius, 3,958.8 miles).
-const MILES_PER_DEGREE = (3958.8 * Math.PI) / 180;
+// The Earth's mean radius in statute miles (IUGG), and the great-circle distance in miles between two [lon, lat] points.
+export const EARTH_MILES = 3958.8;
+export const miles = (a, b) => geoDistance(a, b) * EARTH_MILES;
+const MILES_PER_DEGREE = (EARTH_MILES * Math.PI) / 180;
 export function areaMap({ shapes, counties = [], center, points, rings = [], label, width = WIDTH }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
@@ -241,7 +243,8 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
   const all = { type: 'MultiPoint', coordinates: [center.point, ...span, ...placed.map((p) => p.point)] };
   const projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
     .fitExtent([[AREA_PAD, AREA_PAD], [width - AREA_PAD, height - AREA_PAD]], all);
-  projection.clipExtent([[0, 0], [width, height]]);
+  // Clipped to the frame, and no adaptive resampling: at a few hundred miles across, straight segments are exact enough.
+  projection.clipExtent([[0, 0], [width, height]]).precision(0);
   // Only the shapes whose bounds meet the frame's (a degree of slack) are drawn.
   const corners = [[0, 0], [width, 0], [0, height], [width, height]].map((c) => projection.invert(c));
   const [w, e] = [Math.min(...corners.map((c) => c[0])) - 1, Math.max(...corners.map((c) => c[0])) + 1];
