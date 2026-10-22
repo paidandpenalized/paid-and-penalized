@@ -2,7 +2,7 @@
 // locator map) and the US choropleth, each state filled by a step of the pen ramp (a figure's chart, like the tile
 // map it replaces). d3-geo projects and draws them here, at build time, as inline SVG: no map code ships to browsers.
 // Colors come from classes in web/styles/charts.css, never from here.
-import { geoAlbersUsa, geoBounds, geoCentroid, geoConicEqualArea, geoPath } from 'd3-geo';
+import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, mark, plain, r2, WIDTH } from './svg.js';
@@ -67,6 +67,20 @@ export function stateShapes(topo) {
     SHAPES.set(topo, shapes);
   }
   return shapes;
+}
+
+// Every county's GeoJSON feature, decoded once per topology (us-atlas counties-10m's `counties` object): the area
+// map's faint inner lines.
+const COUNTIES = new WeakMap();
+export function countyShapes(topo) {
+  let list = COUNTIES.get(topo);
+  if (!list) {
+    const object = topo?.objects?.counties;
+    if (!object) throw new TypeError('countyShapes: the topology has no "counties" object (us-atlas counties-10m)');
+    list = feature(topo, object).features;
+    COUNTIES.set(topo, list);
+  }
+  return list;
 }
 
 // A projection's stream with each ring thinned: a point closer than thin to the last one kept is dropped (a ring's
@@ -201,4 +215,65 @@ export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WI
     kind: 'us-map', width, height: legend.height, body: html`${hatchDefs(id)}
 ${marks}${legend.body}`,
   });
+}
+
+// The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
+// numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
+// steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
+//   center   { point, tip }; points [{ point, n, cls, tip }] (n: the number printed on the dot; cls: its class)
+//   label    the image's accessible name
+const AREA_PAD = 22;
+const BOUNDS = new WeakMap();
+const boundsOf = (f) => { if (!BOUNDS.has(f)) BOUNDS.set(f, geoBounds(f)); return BOUNDS.get(f); };
+const AREA_ASPECT = 0.8;
+// Statute miles per degree of great-circle arc (the Earth's mean radius, 3,958.8 miles).
+const MILES_PER_DEGREE = (3958.8 * Math.PI) / 180;
+export function areaMap({ shapes, counties = [], center, points, rings = [], label, width = WIDTH }) {
+  if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
+  const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+  const placed = points.filter((p) => ok(p.point));
+  if (!ok(center.point) || placed.length < 2) return null;
+  const height = Math.round(width * AREA_ASPECT);
+  // Fitted around the points and a small square about the center (a quarter degree each way), so a lone near pair
+  // keeps some country around it.
+  const [lon, lat] = center.point;
+  const span = [[lon - 0.25, lat - 0.25], [lon + 0.25, lat + 0.25]];
+  const all = { type: 'MultiPoint', coordinates: [center.point, ...span, ...placed.map((p) => p.point)] };
+  const projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
+    .fitExtent([[AREA_PAD, AREA_PAD], [width - AREA_PAD, height - AREA_PAD]], all);
+  projection.clipExtent([[0, 0], [width, height]]);
+  // Only the shapes whose bounds meet the frame's (a degree of slack) are drawn.
+  const corners = [[0, 0], [width, 0], [0, height], [width, height]].map((c) => projection.invert(c));
+  const [w, e] = [Math.min(...corners.map((c) => c[0])) - 1, Math.max(...corners.map((c) => c[0])) + 1];
+  const [s, n] = [Math.min(...corners.map((c) => c[1])) - 1, Math.max(...corners.map((c) => c[1])) + 1];
+  const meets = (f) => {
+    const [[fw, fs], [fe, fn]] = boundsOf(f);
+    return fe >= w && fw <= e && fn >= s && fs <= n;
+  };
+  const path = outlinePath(projection);
+  const land = [...shapes.values()].filter(meets).map((f) => path(f)).filter(Boolean);
+  const inner = counties.filter(meets).map((f) => path(f)).filter(Boolean);
+  // Distance rings about the center: each { miles, label }, a circle of that great-circle radius.
+  const ringPath = geoPath(projection).digits(DIGITS);
+  const ringsDrawn = rings.map((r) => {
+    const d = ringPath(geoCircle().center(center.point).radius(r.miles / MILES_PER_DEGREE).precision(3)());
+    if (!d) return '';
+    const [rx, ry] = projection([lon, lat + r.miles / MILES_PER_DEGREE]).map(r2);
+    return html`<path class="chart-ring" d="${d}"/><text class="chart-ring__label" x="${rx}" y="${ry}" dy="-3" text-anchor="middle">${r.label}</text>`;
+  });
+  const at = (p) => projection(p).map(r2);
+  const [cx, cy] = at(center.point);
+  const dots = placed.map((p) => {
+    const [x, y] = at(p.point);
+    return mark({
+      tip: p.tip, value: null, hit: null,
+      body: html`<circle class="chart-pin ${p.cls}" cx="${x}" cy="${y}" r="9"/><text class="chart-pin__n" x="${x}" y="${y}" dy="0.35em" text-anchor="middle">${String(p.n)}</text>`,
+    });
+  });
+  return new Safe(html`<svg class="chart chart--area-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
+    + `<rect class="chart-sea" width="${width}" height="${height}"/>${land.map((d) => `<path class="chart-geo-land" d="${d}"/>`).join('')}`
+    + `<g class="chart-geo-counties">${inner.map((d) => `<path d="${d}"/>`).join('')}</g>`
+    + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
+    + html`${ringsDrawn}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
+    + '</svg>');
 }

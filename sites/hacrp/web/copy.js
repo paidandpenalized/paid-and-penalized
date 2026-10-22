@@ -284,16 +284,6 @@ export const COPY = {
   mapLabel: { text: "Map of {state} with this hospital's location marked", claim: null },
   // The map as a cell of the numbers card (placement i).
   fieldMap: { text: 'On the map', claim: null },
-  // The preview index (a preview build only, never the site): the map's placements on sample hospital pages.
-  previewTitle: { text: 'State map placements: previews', claim: null },
-  previewIntro: { text: 'Sample hospital pages, each built with the state map in a different place. A preview build only: these pages are never indexed or published.', claim: null },
-  previewLink: { text: '{name}, {state}', claim: null },
-  previewE: { text: 'e. In the Hospital field, right of the name, as tall as the name (the default)', claim: null },
-  previewF: { text: 'f. A thumbnail in the Location field, right of the address', claim: null },
-  previewG: { text: "g. A postmark over the record card's top-right corner", claim: null },
-  previewH: { text: 'h. Beside the stamp, at the top of the right column', claim: null },
-  previewI: { text: "i. A third cell in the numbers card, after CMS's line and the distance", claim: null },
-  previewJ: { text: "j. A faint watermark behind the record card's fields", claim: null },
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
@@ -582,6 +572,141 @@ export const COPY = {
   figColCut: { text: 'Hospitals cut', claim: null },
   figColDecided: { text: 'With a decision', claim: null },
   figColShare: { text: 'Share cut', claim: null },
+
+  // ---------- The hospital page's redesign (draft words: claims are checked in the accuracy pass) ----------
+  // The verdict beside the record card.
+  scoreCompares: {
+    text: 'The score compares hospitals with each other; it is not a grade of the quality of care.',
+    claim: 'HACRP-15',
+  },
+  lineCut: { text: 'CMS cut scores of {lowestYes} and above.', claim: null },
+  barLine: { text: "CMS's line", claim: null },
+  barLineValue: { text: '{lowestYes} and up', claim: null },
+  barMiddle: { text: 'Middle hospital', claim: null },
+  barThis: { text: 'This hospital', claim: null },
+  barLow: { text: 'lowest {low}', claim: null },
+  barHigh: { text: 'highest {high}', claim: null },
+  barZone: { text: 'cut', claim: null },
+  barAlt: {
+    text: "Every Total HAC Score CMS published, from {low} to {high}: this hospital's is {score}, the middle hospital's {middle}, and CMS cut scores of {lowestYes} and above.",
+    claim: null,
+  },
+  rankHigher: { text: 'Higher than {share} of the {n} scores CMS published. A higher score is worse.', claim: null },
+
+  // Figure: the ledger of measures.
+  ledgerHeading: { text: 'Where the score came from', claim: null },
+  ledgerIntro: {
+    text: 'CMS scored this hospital on {n} of the {all} measures. On every measure a lower value is better. Each row puts the hospital among every hospital with a value: the gray columns are those hospitals, the tall tick is the national median, and the hatched ends score the same as CMS\'s floor or cap.',
+    claim: 'HACRP-03',
+  },
+  leverOne: {
+    text: 'Bringing {short} down to the national median ({median}) would lower the score the most: by {drop}, to {after}.',
+    claim: null,
+  },
+  leverTry: { text: 'Try it in the what-if', claim: null },
+  leverFlip: { text: "That change alone would put the score under CMS's line.", claim: null },
+  leverNone: { text: 'None of its measured values is above the national median, so no single measure at the median would lower its score.', claim: null },
+  ledgerColRuler: { text: 'Among all hospitals', claim: null },
+  ledgerBetter: { text: 'better', claim: null },
+  ledgerWorse: { text: 'worse', claim: null },
+  ledgerColPart: { text: 'Part of score', claim: null },
+  ledgerTop: { text: 'added the most', claim: null },
+  rankWorse: { text: 'Worse than {share} of {n} hospitals', claim: null },
+  rankBetter: { text: 'Better than {share} of {n} hospitals', claim: null },
+  rankMiddle: { text: 'At the national median', claim: null },
+  rankNone: { text: 'Not scored on this measure', claim: null },
+  rulerMedian: { text: 'median {median}', claim: null },
+  figLedgerTakeaway: {
+    text: 'Of its {k} measures with a value, this hospital is above the national median on {above}; {short} added the most to its score.',
+    claim: null,
+  },
+  figLedgerTakeawayNone: { text: 'Of its {k} measures with a value, this hospital is above the national median on {above}.', claim: null },
+  figLedgerNoValues: { text: 'CMS published no measure values for this hospital.', claim: null },
+  figColMedian: { text: 'National median', claim: null },
+  figColRank: { text: 'Among hospitals', claim: null },
+
+  // Figure: how the parts add up.
+  sumHeading: { text: 'How the parts add up', claim: null },
+  sumIntro: {
+    text: 'CMS adds the z-scores and divides by the number of measures scored, so each measure counts the same. Each bar below is one z-score divided by {n}; a bar right of zero raised the score and one left of zero lowered it.',
+    claim: 'HACRP-04',
+  },
+  sumRounded: {
+    text: "Added from CMS's rounded z-scores the parts make {recomputed}; CMS reports {total}, from its unrounded values.",
+    claim: null,
+  },
+  wsZ: { text: 'z-scores', claim: null },
+  wsN: { text: 'measures', claim: null },
+  wsTotal: { text: 'Total HAC Score', claim: null },
+  figSumTakeaway: { text: 'The parts add up to {total}, {side} CMS\'s line.', claim: null },
+  figSumAbove: { text: 'above', claim: null },
+  figSumBelow: { text: 'below', claim: null },
+  figSumAlt: {
+    text: "Bars stacking each measure's part of the Total HAC Score from zero, ending at the score, with CMS's line drawn through them.",
+    claim: null,
+  },
+  figColRunning: { text: 'Running total', claim: null },
+  sumTotal: { text: 'Score', claim: null },
+  sumPartTip: { text: '{short}: z-score {z} divided by {n} = {part}', claim: null },
+  sumTotalTip: { text: 'Total HAC Score: {total}', claim: null },
+
+  // Figure: among hospitals like it.
+  peersHeading: { text: 'Among hospitals like it', claim: null },
+  peersIntro: {
+    text: "Each row is a group this hospital belongs to, drawn from every hospital in it with a payment decision. Red columns are hospitals past CMS's line, the ones CMS cut; the short tick is the group's middle score.",
+    claim: null,
+  },
+  peersRank: { text: 'In {group}, its score is higher than {share} of the {n} scored there.', claim: null },
+  groupNation: { text: 'All hospitals', claim: null },
+  groupRegion: { text: '{region} region', claim: null },
+  groupState: { text: '{state}', claim: null },
+  groupMetro: { text: '{metro} area', claim: null },
+  groupTeachmajor: { text: 'Major teaching', claim: null },
+  groupTeachminor: { text: 'Minor teaching', claim: null },
+  groupTeachnone: { text: 'Not teaching', claim: null },
+  groupBedsUnder: { text: 'Under {beds} beds', claim: null },
+  groupBedsRange: { text: '{low} to {high} beds', claim: null },
+  groupBedsUp: { text: '{beds} beds and up', claim: null },
+  groupOwnNonprofit: { text: 'Nonprofit', claim: null },
+  groupOwnGovernment: { text: 'Government', claim: null },
+  'groupOwnFor-profit': { text: 'For-profit', claim: null },
+  groupUrbantrue: { text: 'Urban', claim: null },
+  groupUrbanfalse: { text: 'Rural', claim: null },
+  groupSub: { text: '{n} hospitals', claim: null },
+  groupShare: { text: '{share} cut', claim: null },
+  groupTip: { text: '{group}: CMS cut {yes} of {decided} ({share}); middle score {median}', claim: null },
+  figPeersTakeaway: {
+    text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut runs from {low} ({lowGroup}) to {high} ({highGroup}).',
+    claim: null,
+  },
+  figPeersAlt: {
+    text: "Small distributions of Total HAC Scores, one for each group this hospital belongs to, with CMS's line and this hospital's score drawn through all of them.",
+    claim: null,
+  },
+  figColGroup: { text: 'Group', claim: null },
+  figColMiddle: { text: 'Middle score', claim: null },
+  figColHigher: { text: 'Hospital higher than', claim: null },
+
+  // Figure: the nearest hospitals.
+  nearbyHeading: { text: 'The nearest hospitals', claim: null },
+  nearbyIntro: {
+    text: "The {k} closest hospitals with a Total HAC Score, in a straight line. The squares are each hospital's measures in order: filled, above the national median; open, at or below it; hatched, assigned by CMS; blank, not scored.",
+    claim: null,
+  },
+  nearbyColName: { text: 'Hospital', claim: null },
+  nearbyColMiles: { text: 'Miles', claim: null },
+  nearbyColScore: { text: 'Score', claim: null },
+  nearbyColDecision: { text: 'Decision', claim: null },
+  nearbyColMeasures: { text: 'Measures', claim: null },
+  nearbyGlyph: { text: 'Above the national median on {worse} of {scored} measures', claim: null },
+  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {miles} miles', claim: null },
+  nearbyThis: { text: 'This hospital', claim: null },
+  nearbyRing: { text: '{miles} mi', claim: null },
+  figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {miles} miles away.', claim: null },
+  figNearbyAlt: { text: 'Map of the area around this hospital, with its nearest scored hospitals numbered as in the table.', claim: null },
+  nearbyCut: { text: 'cut', claim: null },
+  nearbyNotCut: { text: 'not cut', claim: null },
+  nearbyNA: { text: 'not subject', claim: null },
 
   // Program page: the table of every hospital (client/program.js fills it from the hospitals asset).
   tableHeading: { text: "Every hospital in CMS's file", claim: null },

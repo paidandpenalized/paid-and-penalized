@@ -32,7 +32,7 @@
 //   solver { question, caption, columns: [3 strings], rows(solver) -> [{ id, label, answer, note }] }
 //   weight(n)                              "each measure weighs 1 ÷ n"
 //   fieldsHelp [strings]                   lines said once over the measures (what a value means, what the track marks)
-//   measure(input, m) -> { label, short, facts, slider, placeholder, assignedHelp, invalid }
+//   measure(input, m) -> { label, name, short, facts, slider, placeholder, assignedHelp, invalid }
 //                                          input: a vm.inputs entry; m: its vm.result.measures entry; facts: the parts
 //                                          of one line (its starting value, median, floor, cap and leverage), each kept
 //                                          whole, with a separator before every part but the first
@@ -144,7 +144,7 @@ function measure(input, w) {
   const ids = { number: `wi-${id}-n`, slider: `wi-${id}-r`, facts: `wi-${id}-m`, assigned: `wi-${id}-a`, error: `wi-${id}-e` };
   const describedBy = [FIELDS_HELP, ids.facts, input.assigned && ids.assigned].filter(Boolean).join(' ');
   return html`<div class="wi-measure" data-measure="${id}">
-<label class="wi-measure__label" for="${ids.number}">${w.label}</label>
+<label class="wi-measure__label" for="${ids.number}">${w.name ? html`<span class="wi-measure__name">${w.name}</span> <span class="wi-measure__short">${w.short}</span>` : w.label}</label>
 <div class="wi-measure__controls">
 <input class="wi-number" type="number" id="${ids.number}" data-wi="number" min="0" max="${input.limit}" step="${input.step}" value="${fieldText(input)}"${w.placeholder ? html` placeholder="${w.placeholder}"` : ''} inputmode="decimal" autocomplete="off" aria-describedby="${describedBy}">
 <div class="wi-track">

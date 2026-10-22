@@ -11,13 +11,13 @@ import { cmsText, count, decimal, isoDate, pct } from '../../../web/render/forma
 import { US_MAP_CODES } from '../../../web/charts/geo.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { csvPath } from '../web/links.js';
-import { partsFigure, rangeFigure, scoresFigure, statesFigure } from '../web/figures.js';
+import { partsFigure, scoresFigure, statesFigure } from '../web/figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { lineStep, stepRows } from '../web/stepper.js';
 import { hospitalView, stateCounts } from '../web/view.js';
 import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
-import { DATA, RANGE, RANGES } from './pinned.js';
+import { DATA, RANGE, RANGES, PAGE_CTX } from './pinned.js';
 
 const { model, estimate } = DATA;
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
@@ -28,6 +28,7 @@ const STATES = stateCounts(VIEWS);
 
 // A hospital page with its what-if (scored hospitals), whose bars are the page's last figure.
 const render = (h) => hospitalPage({
+    ...PAGE_CTX,
   view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES,
   whatif: h.total === null ? null : { hospital: h, model, estimate, range: RANGE },
 });
@@ -45,76 +46,6 @@ const captions = (text) => figures(text).map(([, , body]) => /<figcaption class=
 // Measure short names (PSI 90) are CMS's names, not numbers.
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s.replaceAll('&#39;', "'")).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
 
-test('a scored hospital page has Figure 1 (each value against the national range) and Figure 2 (each measure\'s part: the what-if\'s live bars)', () => {
-  const text = render(CASES.yes);
-  assert.deepEqual(captions(text).map(([n]) => n), ['1', '2']);
-  const [[, range], [, part]] = captions(text);
-  const view = hospitalView(inputs(CASES.yes));
-  assert.equal(part, esc(`CLABSI added the most to this hospital’s Total HAC Score of ${view.score.text} among its measured results: ${view.largest.contributionText}.`));
-  assert.match(range, /^Of the 6 measures with a published value, this hospital’s value is above the national median on \d and at or below it on \d\.$/);
-  assert.ok(text.indexOf('id="figure-1"') > text.indexOf('gb--measures'));
-  // Figure 2 frames the what-if's bars, inside the what-if: no static copy of them anywhere else.
-  const whatif = text.slice(text.indexOf('id="whatif"'));
-  assert.match(whatif, /<figure class="fig" id="figure-2" data-figure>[\s\S]*?<div class="wi-bars" data-wi="bars">/);
-  assert.doesNotMatch(text, /chart--bars/, 'no static bar chart');
-  assert.equal(text.match(/data-wi="bars"/g).length, 1);
-  assert.match(figures(text)[1][2], /<span class="fig__claim">This site recomputes<\/span> · Source/);
-  // The bars move with the reader's edits, and so does the table: CMS's part, then a Hypothetical column that reads
-  // "same" until the reader's part differs (dom.js fills each data-wi="part-…" cell). The caption is the figure's only title.
-  const fig2 = figures(text)[1][2];
-  assert.match(fig2, /<th scope="col" data-numeric>Part of the score<\/th><th scope="col" data-numeric>Hypothetical<\/th><\/tr>/);
-  const view2 = hospitalView(inputs(CASES.yes));
-  const clabsi = view2.measures.find((m) => m.id === 'CLABSI');
-  assert.ok(fig2.includes(`<td class="num" data-value="${clabsi.contributionRaw}" data-wi="part-CLABSI" data-same="">same</td>`));
-  assert.doesNotMatch(fig2, /fig__note|class="h-sm"/);
-  // Placed right after the inputs, inside the inputs' column (beside the result on a wide screen).
-  assert.ok(whatif.indexOf('id="figure-2"') > whatif.indexOf('</fieldset>'));
-  assert.ok(whatif.indexOf('id="figure-2"') < whatif.indexOf('class="small print-only"'));
-  assert.ok(text.includes('<script type="module" src="/assets/figure.test.js"></script>'));
-});
-
-test('Figure 2 hatches an assigned measure, says so in its label, and never names it as the largest', () => {
-  const text = render(CASES.assignedLargest);
-  const [, fig] = figures(text);
-  assert.match(fig[2], /<li data-bar="SSI" class="wi-bars__row wi-bars__row--assigned">/);
-  assert.match(fig[2], /data-bar="SSI"[\s\S]*?\(assigned by CMS\)/);
-  assert.doesNotMatch(captions(text)[1][1], /SSI/);
-});
-
-test('the bars figure with no measured result that adds to the score says what each bar is; one measure gives one bar', () => {
-  const text = render(CASES.allAssigned);
-  const view = hospitalView(inputs(CASES.allAssigned));
-  assert.equal(captions(text)[0][1], esc(`Each bar is one measure’s part of this hospital’s Total HAC Score of ${view.score.text}: its z-score divided by 2, the number of measures scored.`));
-  assert.deepEqual(captions(text).map(([n]) => n), ['1'], 'no range figure: no measure has a published value, so the bars are Figure 1');
-  const one = render(CASES.oneMeasure);
-  assert.equal(figures(one)[1][2].match(/data-bar="/g).length, 1);
-  assert.match(captions(one)[0][1], /^This hospital has a published value for one measure, PSI 90, and it is (above|at or below) the national median\.$/);
-});
-
-test('Figure 1: a measure with no value has no triangle and says so; its table quotes CMS\'s footnotes', () => {
-  const text = render(CASES.no);
-  const [[, , body]] = figures(text);
-  assert.equal(body.match(/class="chart-this"/g).length, 5, 'one triangle per published value');
-  assert.ok(body.includes('>SSI</text>') && body.includes('class="chart-note" x="76" y="42" text-anchor="start">no value published</text>'), 'the row keeps its title and says it has no value');
-  // A key names the marks once; the ▲'s own label prints only under the first ▲.
-  assert.equal(body.match(/>This hospital<\/text>/g).length, 1);
-  assert.match(body, /<ul class="fig__key" role="list"><li><span class="fig__swatch fig__swatch--this" aria-hidden="true"><\/span>This hospital<\/li><li><span class="fig__swatch fig__swatch--median" aria-hidden="true"><\/span>National median<\/li><li><span class="fig__swatch fig__swatch--same" aria-hidden="true"><\/span>Scores the same as CMS’s floor or cap<\/li><\/ul>/);
-  const footnote = hospitalView(inputs(CASES.no)).measures.find((m) => m.id === 'SSI').footnotes[0];
-  assert.ok(body.includes(esc(footnote.text)), 'CMS footnote text in the table');
-  // The range's ends and median are the model's: CMS's floor and cap and the median at CMS's decimals.
-  const r = RANGES.CLABSI;
-  assert.deepEqual(r, { floor: model.params.CLABSI.floor, cap: model.params.CLABSI.cap, median: toUnit(model.params.CLABSI.median, model.params.CLABSI.decimals), decimals: 3 });
-  assert.ok(body.includes(`<title>National median: ${decimal(r.median, 3)}</title>`));
-});
-
-test('the range figure is named for what it draws, and its keyboard hint follows it, hidden until the script names it', () => {
-  const text = render(CASES.yes);
-  const [, n, body] = figures(text).find(([, , b]) => b.includes('chart--dot-ranges'));
-  const svg = /<svg role="img" aria-label="([^"]*)"/.exec(body)[1];
-  assert.equal(svg, esc('For each measure, this hospital’s value (triangle) against the national median (tick); hatched values score the same as CMS’s floor or cap.'));
-  assert.ok(text.includes(`</figure>\n<p id="figure-${n}-keys" hidden>Arrow keys step through the measures.</p>`));
-});
-
 test('a figure\'s source line, the citation and the periods keep each date whole', () => {
   const text = render(CASES.yes);
   const date = isoDate(DATA.source.pdcReleased);
@@ -122,16 +53,6 @@ test('a figure\'s source line, the citation and the periods keep each date whole
   assert.match(text, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
   const periods = /<section class="block" aria-labelledby="periods-h">([\s\S]*?)<\/section>/.exec(program())[1];
   assert.equal(periods.match(/<span class="nw">\w+ \d+, \d{4}<\/span> to <span class="nw">\w+ \d+, \d{4}<\/span>/g).length, 2);
-});
-
-test('no-score pages and the unscored "Yes" row get no figures; Maryland gets both', () => {
-  for (const h of [CASES.noScore, CASES.yesNoScore]) {
-    const text = hospitalPage({ view: hospitalView(inputs(h)), source: DATA.source, robots: null, assets: ASSETS });
-    assert.equal(figures(text).length, 0);
-    assert.doesNotMatch(text, /figure\.test\.js/);
-  }
-  assert.deepEqual(captions(render(CASES.maryland)).map(([n]) => n), ['1', '2']);
-  assert.throws(() => hospitalPage({ view: hospitalView(inputs(CASES.yes)), source: DATA.source, robots: null, assets: ASSETS }), /ranges/);
 });
 
 test('every table in a scroll box carries a label in the page, which names the box when it scrolls (web/client/figure.js)', () => {
@@ -321,18 +242,6 @@ test('the hospital table section: the controls for client/program.js, the asset,
 });
 
 test('no figure takeaway holds a hand-typed number: every number in it comes from the data it was built from', () => {
-  // Hospital pages: each number in a takeaway is the score, the largest part, or a count of the view's measures.
-  for (const h of Object.values(CASES).filter((x) => x.total !== null)) {
-    const view = hospitalView(inputs(h));
-    const valued = view.measures.filter((m) => m.hasValue);
-    const above = valued.filter((m) => Number(m.valueRaw) > RANGES[m.id].median).length;
-    const allowed = new Set([view.score.text, view.largest?.contributionText, String(view.n), String(valued.length), String(above), String(valued.length - above)]);
-    for (const [, takeaway] of captions(render(h))) for (const x of numbers(takeaway)) assert.ok(allowed.has(x), `${h.ccn}: "${x}" in "${takeaway}"`);
-  }
-  // Counts in a hospital takeaway follow the data: drop a measure's value and the count drops with it.
-  const fewer = { ...CASES.yes, measures: { ...CASES.yes.measures, MRSA: { ...CASES.yes.measures.MRSA, value: null, valueText: 'N/A' } } };
-  assert.match(captions(render(fewer))[0][1], /^Of the 5 measures/);
-
   // The program page: change the data and every number in its takeaways changes with it. Each figure counts its own
   // data, so the histogram's takeaway follows its scores and the tile grid's national share follows its states.
   const scores = SCORES.filter((_, i) => i % 3 === 0);
@@ -356,16 +265,14 @@ test('no figure takeaway holds a hand-typed number: every number in it comes fro
 test('hostile names stay text in the hospital page\'s figures', () => {
   const name = '<img src=x onerror=alert(1)> & "Sons"';
   const view = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name }) }));
-  const text = hospitalPage({ view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
+  const text = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES });
   assert.ok(!text.includes('<img src=x'));
   for (const [, , body] of figures(text)) assert.ok(!body.includes(name));
 });
 
-test('partsFigure and rangeFigure: plotted values all in their tables (figure() checks), CSV names per hospital', () => {
+test('partsFigure: plotted values all in its table (figure() checks), CSV name per hospital', () => {
   const view = hospitalView(inputs(CASES.yes));
   assert.ok(String(partsFigure(view, 1, 's')).includes(`data-figure-csv="hacrp-fy${DATA.fy}-990001-parts.csv"`));
-  assert.ok(String(rangeFigure(view, RANGES, 2, 's')).includes(`data-figure-csv="hacrp-fy${DATA.fy}-990001-ranges.csv"`));
-  assert.equal(rangeFigure(hospitalView(inputs(CASES.allAssigned)), RANGES, 2, 's'), null);
 });
 
 test('Figure 1\'s bars, table and takeaway carry the same text for each part (one rounding)', () => {
@@ -378,15 +285,4 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
       assert.equal(m.contributionRaw, Number(m.contributionText.replace('−', '-')), `scored row ${i} ${m.id}: the view’s number is its text’s`);
     }
   }
-});
-
-test('the range figure\'s table has a Notes column only when some measure has a CMS footnote', () => {
-  for (const name of ['yes', 'no']) {
-    const view = hospitalView(inputs(CASES[name]));
-    const body = String(rangeFigure(view, RANGES, 1, 's'));
-    const any = view.measures.some((m) => m.footnotes.length);
-    assert.equal(body.includes('>Notes</th>'), any, name);
-  }
-  assert.ok(hospitalView(inputs(CASES.no)).measures.some((m) => m.footnotes.length), 'the "no" case exercises the column');
-  assert.ok(!hospitalView(inputs(CASES.yes)).measures.some((m) => m.footnotes.length), 'the "yes" case exercises its absence');
 });

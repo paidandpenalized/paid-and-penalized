@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
-import { stateShapes } from '../../../web/charts/geo.js';
+import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { boundaryText } from './view.js';
@@ -75,7 +75,10 @@ export function loadHacrp() {
     footnotes,
     careCompare: careCompareRatings(readPinned(HGI_ID), footnotes),
     careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
-    shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
+    ...(() => {
+      const topo = JSON.parse(readPinned(ATLAS_ID));
+      return { shapes: stateShapes(topo), counties: countyShapes(topo) };
+    })(),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };

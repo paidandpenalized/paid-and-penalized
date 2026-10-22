@@ -72,6 +72,9 @@
 .wi-measure { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
 .wi-measure > * { min-width: 0; }
 .wi-measure__label { font-weight: 600; }
+/* A label in two parts (the name and the short name) reads "Name (SHORT)". */
+.wi-measure__short::before { content: "("; }
+.wi-measure__short::after { content: ")"; }
 .wi-measure__controls { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 14px; align-items: center; }
 .wi-number { width: 100%; padding: 6px 8px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
 .wi-number[aria-invalid="true"] { border-color: var(--pen); box-shadow: 0 0 0 1px var(--pen); }

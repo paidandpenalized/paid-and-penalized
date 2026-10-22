@@ -18,7 +18,7 @@ import { DICTIONARY_PAGE, csvPath, dictionaryPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { programPage } from '../web/pages/program.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
-import { DATA, PROGRAM_ARGS, RANGES } from './pinned.js';
+import { DATA, PROGRAM_ARGS, RANGES, PAGE_CTX } from './pinned.js';
 import { hospitalView } from '../web/view.js';
 
 const DICTIONARY = readFileSync(join(REPO_ROOT, 'sites/hacrp/DATA-DICTIONARY.md'), 'utf8');
@@ -185,7 +185,7 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
 const hospitalHtml = (h, overrides = {}) => {
   const view = hospitalView({ ...inputs(h, { model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, boundaryText: DATA.boundaryText }), ...overrides });
   const whatif = view.scored ? { hospital: h, model: DATA.model, estimate: DATA.estimate, range: { low: -0.5, high: 0.8 } } : null;
-  return { view, html: hospitalPage({ view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, whatif }) };
+  return { view, html: hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS, ranges: RANGES, whatif }) };
 };
 const sourceText = `Source: CMS Provider Data Catalog, HACRP FY${DATA.fy} (${DATA.source.id}), released ${isoDate(DATA.source.pdcReleased)}.`;
 const citeBlock = (page) => /<section class="block cite"[\s\S]*?<\/section>/.exec(page)?.[0];

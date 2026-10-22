@@ -20,7 +20,7 @@ import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/wha
 import { whatIfTexts } from '../web/whatif-text.js';
 import { LEVERAGE_STEP } from '../web/constants.js';
 import { ASSETS, esc, master, pick as pickFrom, STANDING, textsFor, WHATIF_STANDING } from './fixtures.js';
-import { DATA as D, RANGE, RANGES } from './pinned.js';
+import { DATA as D, RANGE, RANGES, PAGE_CTX } from './pinned.js';
 
 const { model, estimate } = D;
 const SIRS = ['CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'];
@@ -228,6 +228,7 @@ test('one helper line under the buttons says what the median button does; the bu
 // The pages, on pinned rows picked by property.
 const pick = (pred, what) => pickFrom(D.hospitals, pred, what);
 const pageFor = (h) => hospitalPage({
+    ...PAGE_CTX,
   view: hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: D.master.get(h.ccn), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText }),
   source: D.source, robots: 'noindex', assets: ASSETS, ranges: RANGES, whatif: { hospital: h, model, estimate, range: RANGE },
 });
@@ -281,7 +282,7 @@ test('no score, and the "Yes" row with no score: no what-if, no inputs, no page 
 test('hostile text in a hospital name stays text in the page data', () => {
   const h = { ...H.no, name: '</script><script>alert(1)</script>' };
   const view = hospitalView({ hospital: h, model, estimate, footnotes: D.footnotes, master: master(h.ccn, { name: '<b>&"x"' }), fy: D.fy, periods: D.periods, boundaryText: D.boundaryText });
-  const text = hospitalPage({ view, source: D.source, robots: 'noindex', assets: ASSETS, ranges: RANGES, whatif: { hospital: h, model, estimate, range: RANGE } });
+  const text = hospitalPage({ ...PAGE_CTX, view, source: D.source, robots: 'noindex', assets: ASSETS, ranges: RANGES, whatif: { hospital: h, model, estimate, range: RANGE } });
   assert.ok(!text.includes('<script>alert'));
   const json = /<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(text)[1];
   assert.ok(!json.includes('<'));

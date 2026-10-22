@@ -285,6 +285,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       };
       return {
         label: `${measureLabel(id)} (${short})`,
+        name: measureLabel(id),
         short,
         facts: factsOf(input, values, baseline === 'cms' ? hospital.measures[id] : null),
         slider: fill('whatifSliderLabel', { short }),

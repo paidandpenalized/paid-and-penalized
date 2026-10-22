@@ -1,21 +1,23 @@
 /* The HACRP site's own styles, bundled after the shared ones in web/styles/: the hospital page's top (record card, stamp, map), the measure table, the
    estimate tag and the measure lists. Colors come only from web/styles/tokens.css. */
 
-/* ---------- the hospital page's top (pages/hospital.js), after Thirty Day Readmissions' .hosp__top ----------
-   Two columns from 980px, 3fr and 2fr: the record card, and the verdict (stamp, summary, numbers card, map). Under
-   980px they stack, the record first. */
-.hosp { gap: 28px; }
-.hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 36px; padding-top: 4px; }
-@media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+/* ---------- the hospital page (pages/hospital.js), after Thirty Day Readmissions' hospital record ----------
+   The page runs the full width. The top: the record card and the verdict, 3fr and 2fr from 980px and the same
+   height, over a bold rule; stacked under 980px, the record first. */
+.hosp { gap: 0; }
+.hosp > * + * { margin-top: 56px; }
+.hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; padding: 4px 0 32px; border-bottom: 5px solid var(--ink); }
+@media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: stretch; } }
 .hosp__top > * { min-width: 0; }
 /* The record's fields wrap as boxes about 190px and up, each row's boxes growing to fill it, so the form never ends
-   on an empty box; the title and the name take whole rows. */
-.hosp__id { display: flex; flex-wrap: wrap; align-self: start; }
-.hosp__id > .field { flex: 1 1 190px; }
-.hosp__id > :is(.form__title, .field--wide) { flex-basis: 100%; }
-.hosp__name { margin-top: 6px; font: 400 clamp(1.8rem, 4.4vw, 3rem)/1.02 var(--font-display); letter-spacing: 0.005em; }
+   on an empty box; the title and the name take whole rows. The rows stretch to the verdict's height. */
+.hosp__id { position: relative; display: flex; flex-direction: column; }
+.hosp__id > :not(.hosp__wm) { position: relative; }
+.hosp__fields { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-content: stretch; }
+.hosp__fields > .field { flex: 1 1 190px; }
+.hosp__name { margin-top: 6px; font: 400 clamp(1.9rem, 4.6vw, 3.25rem)/1.02 var(--font-display); letter-spacing: 0.005em; }
 /* The score: CMS's text in IBM Plex Mono 700, the most important glyphs on the page. */
-.hosp__score { font-weight: 700; font-size: clamp(2.25rem, 7vw, 3rem); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.hosp__score { font-weight: 700; font-size: clamp(2.3rem, 5.4vw, 3.4rem); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .hosp__score .dp { margin-inline: -0.18em; }
 .hosp__none { display: grid; align-content: center; justify-items: start; min-height: 3.5rem; padding: 8px; border: 1px solid var(--line); background: var(--hatch-fill); }
 .hosp__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-base)/1.3 var(--font-body); }
@@ -23,66 +25,147 @@
 .hero__pill .pill { padding: 5px 12px 4px; font-size: var(--fs-lg); }
 .stars { color: var(--ink); letter-spacing: 0.05em; }
 .stars__off { color: var(--ink-3); }
-.hosp__verdict { display: grid; gap: 14px; align-content: start; }
-.hosp__verdict .stamp { margin: 6px 0 4px; font-size: clamp(1.6rem, 3.4vw, 2.3rem); }
-.hosp__summary { font-size: var(--fs-md); line-height: 1.5; }
-.hosp__note { font-size: var(--fs-sm); line-height: 1.57; color: var(--ink-2); }
-.hosp__nums { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
-.hosp__nums .field__value--sm .nw { font-variant-numeric: tabular-nums; }
-/* The state map's placements (pages/hospital.js MAP_PLACEMENTS). Every one draws the dot in the penalty ink's red. */
+/* The state's outline, faint behind the fields, its dot still red. Letters over it keep a thin paper halo. */
+.hosp__wm { position: absolute; inset: 2.5rem 10px 10px; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
 .geo { display: block; }
 .geo .chart { display: block; }
-.geo .chart-geo-dot, .geo .chart-geo-halo { fill: var(--pen); }
-.geo .chart-geo-halo { fill-opacity: 0.2; }
-/* A value with a map at its right (components.js formField aside). */
-.field__row { display: flex; align-items: stretch; gap: 12px; }
-.field__row > :first-child { flex: 1 1 auto; min-width: 0; }
-/* e: right of the name, as tall as two lines of it (most names take two; the frame takes the name's size). */
-.geo--e { flex: none; align-self: center; max-width: 34%; height: 2.04em; margin-top: 6px; font-size: clamp(1.8rem, 4.4vw, 3rem); }
-.geo--e .chart { width: auto; height: 100%; max-width: 100%; }
-/* f: a thumbnail right of the address. */
-.geo--f { flex: none; align-self: center; }
-.geo--f .chart { width: auto; height: 3.25rem; }
-/* g: a postmark over the card's top-right corner: cancellation lines and a double ring around the outline, in ink,
-   rotated and grain-masked like the stamp. The title bar and the name keep clear of it. */
-.hosp__top--g { padding-top: 36px; }
-.hosp__top--g .hosp__id { position: relative; }
-.hosp__top--g .hosp__id > .form__title { padding-right: 150px; }
-.hosp__top--g .hosp__id > .field--wide { padding-right: 96px; }
-.postmark { position: absolute; top: -32px; right: -4px; display: flex; align-items: center; color: var(--ink); transform: rotate(-9deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); pointer-events: none; }
-.postmark__waves { width: 60px; margin-right: -6px; stroke-width: 1.5; }
-.postmark__ring { display: grid; justify-items: center; align-content: center; gap: 2px; width: 96px; height: 96px; border: 5px double currentColor; border-radius: 50%; background: var(--paper); }
-.postmark .geo .chart { width: auto; height: 50px; max-width: 66px; }
-.postmark .chart-geo-state { fill: none; stroke: currentColor; stroke-width: 2px; }
-.postmark__waves, .postmark__code { flex: none; }
-@media (max-width: 480px) {
-  .postmark__waves { display: none; }
-  .hosp__top--g .hosp__id > .form__title { padding-right: 100px; }
-}
-.postmark__code { font: 700 var(--fs-cap)/1 var(--font-type); letter-spacing: 0.1em; }
-/* h: beside the stamp. */
-.hosp__stamprow { display: flex; align-items: center; gap: 18px; }
-.geo--h .chart { width: auto; height: 4.5rem; max-width: 7rem; }
-/* i: the numbers card's third cell, at its right, beside CMS's line and the distance stacked. */
-.hosp__nums--map { grid-template-columns: minmax(0, 1fr) auto; }
-.hosp__nums--map > .field:last-child { grid-column: 2; grid-row: 1 / span 2; }
-.hosp__nums--map > .field:only-child { grid-column: 1 / -1; grid-row: auto; }
-.geo--i .chart { width: auto; height: 5rem; max-width: 7rem; margin-top: 4px; }
-/* j: a faint outline behind the record's fields, the dot still red; the fields sit over it. */
-.hosp__top--j .hosp__id { position: relative; }
-.hosp__top--j .hosp__id > :not(.hosp__wm) { position: relative; }
-.hosp__wm { position: absolute; inset: 2.5rem 8px 8px; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
 .geo--j { height: 100%; }
 .geo--j .chart { width: auto; height: 100%; max-width: 100%; }
-.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.2; }
-.geo--j .chart-geo-halo { fill-opacity: 0.12; }
+.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.25; }
+.geo .chart-geo-dot, .geo .chart-geo-halo { fill: var(--pen); }
+.geo--j .chart-geo-halo { fill-opacity: 0.14; }
+.hosp__id .field__value, .hosp__id .field__note, .hosp__id .field__label { text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper), 0 0 1px var(--paper); }
+.hosp__id .field__value .pill { text-shadow: none; }
+/* The verdict: the stamp, the summary, CMS's line in words, the line bar and the rank. */
+.hosp__verdict { display: flex; flex-direction: column; gap: 12px; }
+.hosp__verdict .stamp { align-self: flex-start; margin: 6px 0 4px; font-size: clamp(1.7rem, 3.4vw, 2.4rem); }
+.hosp__summary { font-size: var(--fs-md); line-height: 1.5; }
+.hosp__why { color: var(--ink-2); }
+.hosp__line { margin-top: 6px; font: 700 var(--fs-md)/1.35 var(--font-body); }
+.hosp__line .nw { font-family: var(--font-type); }
+.hosp__bar .chart { max-width: none; }
+.hosp__bar .chart-cap { font-size: 11px; }
+.hosp__bar .chart-value--mark { font-size: 13px; }
+.hosp__bar .chart-label { font-size: 13px; }
+.hosp__bar .chart-end { font-size: 11px; }
+.hosp__rank { font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
+.hosp__data { margin-top: auto; padding-top: 8px; }
+.hosp__notes { display: grid; gap: 12px; }
+.hosp__top + .hsec, .hosp__notes + .hsec { padding-top: 0; border-top: 0; }
+
+/* A numbered section: words left, the figure right from 980px (the figure wider in hsec--wide); stacked under that.
+   Each section opens on a hairline. */
+.hsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 56px; padding-top: 28px; border-top: 1px solid var(--line); align-items: start; }
+.hsec__text, .hsec__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; align-content: start; }
+.hsec__text > h2 + * { margin-top: 4px; }
+@media (min-width: 980px) {
+  .hsec { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .hsec:not(.hsec--full) .hsec__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+  .hsec--full { grid-template-columns: minmax(0, 1fr); }
+  .hsec--full > .hsec__text { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); column-gap: 56px; align-items: start; }
+  .hsec--full > .hsec__text > h2 { grid-column: 1 / -1; }
+  .hsec--full > .hsec__text > .hsec__lever { grid-column: 2; grid-row: 2 / span 2; }
+}
+.hsec__lever { padding: 10px 12px; border-left: 4px solid var(--pen); background: var(--pen-tint); font-weight: 600; }
+.hsec__try { display: inline-block; margin-top: 4px; font-weight: 600; white-space: nowrap; }
+.hsec__try::after { content: " \2192" / ""; }
+.hsec__lever--ink { border-left-color: var(--ink); background: var(--paper-2); }
+.hsec__stat { font: 400 var(--fs-sm)/1.5 var(--font-type); }
+/* The figure frame, as Thirty Day Readmissions numbers its figures: "FIGURE 1." in red caps over the takeaway. */
+.hsec .fig__n, .hosp .whatif .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.hosp .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
+
+/* The ledger (hospital-figures.js ledgerFigure): one row per measure, its name and rank, its ruler among every
+   hospital's values, then CMS's value, z-score and this site's part of the score. */
+.ledger { display: grid; }
+.ledger__head, .ledger__row { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 34rem) repeat(3, minmax(4.6rem, 1fr)); gap: 0 18px; align-items: center; }
+.ledger__head { padding: 0 8px 6px; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); font: 600 var(--fs-xs)/1.2 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.ledger__head .num { text-align: right; }
+.ledger__dir { display: flex; justify-content: space-between; gap: 8px; }
+.ledger__dir > :nth-child(2) { color: var(--ink); }
+.ledger__rows { margin: 0; padding: 0; list-style: none; }
+.ledger__row { max-width: none; padding: 10px 8px 8px; border-bottom: 1px solid var(--line); }
+.ledger__row.is-better { background: var(--paper-2); }
+.ledger__row.is-top { box-shadow: inset 4px 0 0 var(--pen); }
+.ledger__short { font: 700 var(--fs-base)/1.2 var(--font-type); }
+.ledger__row.is-top .ledger__short { color: var(--pen-ink); }
+.ledger__tag { margin-left: 4px; padding: 1px 5px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 2px; }
+.ledger__label { margin-top: 2px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.35; }
+.ledger__rank { margin-top: 4px; font: 400 var(--fs-xs)/1.35 var(--font-type); color: var(--ink); }
+.ledger__notes { margin-top: 6px; display: grid; gap: 4px; font-size: var(--fs-xs); line-height: 1.4; color: var(--ink-2); }
+.ledger__ruler .chart { max-width: none; }
+.ledger__ruler .chart-note { font-size: 11px; }
+.ledger__num { display: grid; justify-items: end; font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
+.ledger__part { font-weight: 700; }
+.ledger__row.is-top .ledger__part { color: var(--pen-ink); }
+.ledger__k { display: none; }
+@media (max-width: 720px) {
+  .ledger__head { display: none; }
+  .ledger__row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; padding: 12px 8px; }
+  .ledger__name, .ledger__ruler { grid-column: 1 / -1; }
+  .ledger__num { justify-items: start; }
+  .ledger__k { display: block; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; }
+}
+
+/* The worksheet: the sum in the hospital's own numbers, each term over its short name. */
+.ws { padding: 14px 12px 12px; border: var(--rule) solid var(--pen); background: var(--paper); }
+.ws__line { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 6px; max-width: none; font: 400 var(--fs-md)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
+.ws__term { display: grid; justify-items: center; gap: 2px; }
+.ws__k { color: var(--ink-2); font: 600 0.625rem/1.2 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.ws__op, .ws__paren { color: var(--ink-2); }
+.ws__paren { font-size: 1.4em; line-height: 0.9; }
+.ws__term.is-top .ws__v { color: var(--pen-ink); font-weight: 700; }
+.ws__term.is-assigned .ws__v { text-decoration: underline wavy var(--ink-3) 1px; text-underline-offset: 4px; }
+.ws__term--total .ws__v { font-weight: 700; }
+
+/* The nearest hospitals' table: the number in a dot like the map's, the measure glyph. */
+.gb--near tbody th { font-weight: 600; }
+.gb--near tbody th a { display: block; }
+.near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
+.near--yes .near__n { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
+.near--na .near__n { border-style: dashed; }
+.mg { display: inline-flex; gap: 2px; vertical-align: middle; }
+.mg > span { width: 9px; height: 9px; border: 1.5px solid var(--ink-2); }
+.mg .mg--worse { background: var(--pen); border-color: var(--pen); }
+.mg .mg--assigned { background: var(--hatch-fill); border-color: var(--ink-2); }
+.mg .mg--none { border-style: dotted; border-color: var(--line); }
+
+/* The foot: the data facts, downloads and footnotes beside the standing line and the citation. */
+.hosp__foot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 56px; padding-top: 24px; border-top: 5px solid var(--ink); }
+@media (min-width: 980px) { .hosp__foot { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } }
+.hosp__facts, .hosp__cite { display: grid; gap: 20px; align-content: start; min-width: 0; }
+.hosp__foot .asof { padding-top: 0; border-top: 0; }
+
+/* The what-if on a hospital page runs the page's full width, as the sections above it do, its measures in compact
+   rows (the short name over the long one; the slider; the value), so all of them fit beside the sticky result. */
+.page--hosp > .whatif { padding-top: 28px; border-top: 1px solid var(--line); }
+@media (min-width: 900px) { .page--hosp .wi-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; } }
+.page--hosp .wi-fields { gap: 0; }
+.page--hosp .wi-measure { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: 0 18px; align-items: center; padding: 10px 0 8px; }
+.page--hosp .wi-measure > :not(.wi-measure__label) { grid-column: 2; }
+.page--hosp .wi-measure__label { grid-row: 1 / span 3; align-self: start; display: grid; gap: 2px; }
+.page--hosp .wi-measure__short { order: -1; font: 700 var(--fs-base)/1.2 var(--font-type); }
+.page--hosp .wi-measure__short::before, .page--hosp .wi-measure__short::after { content: none; }
+.page--hosp .wi-measure__name { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.page--hosp .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 12px; }
+.page--hosp .wi-number { order: 2; padding: 4px 8px; }
+.page--hosp .wi-facts { font-size: var(--fs-xs); line-height: 1.4; }
+@media (max-width: 640px) {
+  .page--hosp .wi-measure { grid-template-columns: minmax(0, 1fr); }
+  .page--hosp .wi-measure > :not(.wi-measure__label), .page--hosp .wi-measure__label { grid-column: 1; grid-row: auto; }
+  .page--hosp .wi-measure__controls { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+}
+
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
   .hosp__none span { background: Canvas; color: CanvasText; }
   .geo .chart-geo-dot { fill: CanvasText; }
   .geo .chart-geo-halo { fill: none; }
-  .postmark { -webkit-mask-image: none; mask-image: none; }
   .stars__off { color: GrayText; }
+  .ledger__row.is-top { border-left: 4px solid Highlight; }
+  .mg > span, .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .mg .mg--worse, .near--yes .near__n { background: CanvasText; color: Canvas; }
 }
 
 /* ---------- the program page's top (pages/program.js programTop), after Thirty Day Readmissions' front page ----------
@@ -208,7 +291,6 @@
    with its result box in the room beside the text. The what-if's own words stay in the column (subgrid). */
 .page--article { grid-template-columns: [full-start] minmax(0, 1fr) [main-start] minmax(0, 46rem) [main-end] minmax(0, 1fr) [full-end]; column-gap: 0; }
 .page--article > * { grid-column: main; }
-.page--article > .hosp__top { grid-column: full; }
 .page--article > .whatif { grid-column: full; grid-template-columns: subgrid; column-gap: 0; }
 .page--article > .whatif > * { grid-column: main; }
 .page--article > .whatif > .wi-grid { grid-column: main-start / full-end; }

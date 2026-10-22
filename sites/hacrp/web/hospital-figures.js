@@ -1,0 +1,284 @@
+// The hospital page's figures beyond the what-if, each built from CMS's values and the national context
+// (compare.js): the line bar beside the record, the ledger of measures (each value on a ruler among every hospital's),
+// the worksheet and waterfall that add the parts up to the score, the groups the hospital belongs to, and its nearest
+// hospitals. Every takeaway is filled from the data the figure draws; copy.js holds the words.
+import { medianAt } from '../../../engine/js/hacrp/params.js';
+import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
+import { toUnit } from '../../../engine/js/stats.js';
+import { figure, keysHint } from '../../../web/charts/figure.js';
+import { STATE_NAMES, areaMap } from '../../../web/charts/geo.js';
+import { lineBar } from '../../../web/charts/lineBar.js';
+import { ridges } from '../../../web/charts/ridges.js';
+import { ruler } from '../../../web/charts/ruler.js';
+import { waterfall } from '../../../web/charts/waterfall.js';
+import { cmsText, count, decimal, pct, signed } from '../../../web/render/format.js';
+import { Safe, html } from '../../../web/render/html.js';
+import { pill } from '../../../web/render/components.js';
+import { countBins } from './compare.js';
+import { BED_BANDS, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS } from './constants.js';
+import { fill, t } from './copy.js';
+import { HOSPITALS_PATH } from './view.js';
+import { hospitalHref } from './hospital-table.js';
+
+const num = (text, value) => ({ text, value });
+const at = (v) => decimal(v, DP);
+const share = (part, whole) => pct(whole ? part / whole : 0, 0);
+const WIDE = 440;
+
+// ---------- the line bar ----------
+
+// Beside the record: this score on the span of every published score, with CMS's line and the middle hospital. Two
+// drawings (a phone's and a wider one), shown one at a time as a figure's are (charts.css data-fit).
+export function lineBarBlock(view, nat) {
+  if (!view.scored) return null;
+  const { highestNo, lowestYes } = view.boundaryText;
+  const [lo, hi] = nat.domain;
+  const words = {
+    actual: t('barThis'), actualValue: view.score.text, line: t('barLine'), lineValue: fill('barLineValue', { lowestYes }),
+    middle: t('barMiddle'), middleValue: cmsText(at(nat.medianScore)), low: fill('barLow', { low: cmsText(at(lo)) }),
+    high: fill('barHigh', { high: cmsText(at(hi)) }), zone: fill('pillYes', { pct: REDUCTION_TEXT }),
+  };
+  const alt = fill('barAlt', { low: cmsText(at(lo)), high: cmsText(at(hi)), score: view.score.text, middle: cmsText(at(nat.medianScore)), lowestYes });
+  const draw = (width) => lineBar({ domain: nat.domain, actual: Number(view.score.raw), band: [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))], middle: nat.medianScore, labels: words, width });
+  const image = (svg, fit) => new Safe(html`<svg role="img" aria-label="${alt}" data-fit="${fit}" `.text + svg.text.slice('<svg '.length));
+  const rank = nat.rankOf(Number(view.score.raw));
+  return html`<div class="hosp__bar">
+${image(draw(300), 'narrow')}
+${image(draw(WIDE), 'wide')}
+</div>
+<p class="hosp__rank">${fill('rankHigher', { share: share(rank.below, rank.n - 1), n: count(rank.n) })}</p>`;
+}
+
+// ---------- the ledger ----------
+
+// A measure's ruler axis and its national distribution, once per build: from zero (or just under a floor above
+// zero) to past the cap, the values counted on RULER_BINS equal columns.
+const RULERS = new WeakMap();
+function rulerOf(nat, model, id) {
+  let byId = RULERS.get(nat);
+  if (!byId) RULERS.set(nat, (byId = new Map()));
+  if (!byId.has(id)) {
+    const p = model.params[id];
+    const lo = p.floor > 0 ? p.floor - (p.cap - p.floor) * 0.15 : 0;
+    const hi = p.cap + (p.cap - lo) * 0.18;
+    const edges = Array.from({ length: RULER_BINS + 1 }, (_, i) => lo + ((hi - lo) * i) / RULER_BINS);
+    byId.set(id, { domain: [lo, hi], counts: countBins(nat.measures[id].values, edges), p, median: medianAt(p) });
+  }
+  return byId.get(id);
+}
+
+// Where a value sits among the measure's published values, in words.
+function rankWords(nat, id, value, median) {
+  const r = nat.measureRank(id, value);
+  if (value > median) return fill('rankWorse', { share: share(r.below, r.n), n: count(r.n) });
+  if (value < median) return fill('rankBetter', { share: share(r.above, r.n), n: count(r.n) });
+  return t('rankMiddle');
+}
+
+// view.largest's id, the part that raised the score most (the page marks it in red).
+// notes(m): the measure's notes markup (CMS's footnotes, the estimate tag).
+export function ledgerFigure({ view, nat, model, n, source, notes }) {
+  const topId = view.largest?.id ?? null;
+  const rows = view.measures.map((m) => {
+    const r = rulerOf(nat, model, m.id);
+    const value = m.hasValue ? Number(m.valueRaw) : null;
+    const fmt = (v) => decimal(v, r.p.decimals);
+    const better = value !== null && value <= r.median && !m.assigned;
+    const rank = m.assigned ? null : value === null ? (m.hasZ ? null : t('rankNone')) : rankWords(nat, m.id, value, r.median);
+    const draw = (width, fit) => {
+      const svg = ruler({
+        id: `ruler-${m.id.toLowerCase()}-${fit}`, domain: r.domain, counts: r.counts, floor: r.p.floor, cap: r.p.cap, median: r.median, value,
+        labels: { median: fill('rulerMedian', { median: fmt(r.median) }), value: t('barThis'), same: t('figRangeSame'), note: value === null ? (m.assigned ? t('valueAssigned') : t('noValue')) : null },
+        format: fmt, width, pen: m.id === topId, ghost: m.assigned,
+      });
+      return new Safe(`<svg aria-hidden="true" data-fit="${fit}" ${svg.text.slice('<svg '.length)}`);
+    };
+    const svg = html`${draw(300, 'narrow')}${draw(520, 'wide')}`;
+    const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
+    const dash = html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`;
+    return { m, r, value, fmt, rank, markup: html`<li class="${cls}">
+<div class="ledger__name"><p class="ledger__short">${m.short}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</p><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
+<div class="ledger__ruler">${svg}</div>
+<p class="ledger__num"><span class="ledger__k">${t('colValue')}</span><span class="cms">${m.hasValue ? m.valueText : dash}</span></p>
+<p class="ledger__num"><span class="ledger__k">${t('colZ')}</span><span class="cms">${m.hasZ ? m.zText : dash}</span></p>
+<p class="ledger__num ledger__part"><span class="ledger__k">${t('ledgerColPart')}</span><span>${m.contributionText ?? dash}</span></p>
+</li>` };
+  });
+  const valued = rows.filter((row) => row.value !== null && !row.m.assigned);
+  const above = valued.filter((row) => row.value > row.r.median).length;
+  const takeaway = !valued.length ? t('figLedgerNoValues')
+    : valued.length === 1 ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
+    : view.largest ? fill('figLedgerTakeaway', { k: String(valued.length), above: String(above), short: view.largest.short })
+      : fill('figLedgerTakeawayNone', { k: String(valued.length), above: String(above) });
+  const chart = html`<div class="ledger">
+<div class="ledger__head" aria-hidden="true"><span>${t('colMeasure')}</span><span class="ledger__dir"><span>← ${t('ledgerBetter')}</span><span>${t('ledgerColRuler')}</span><span>${t('ledgerWorse')} →</span></span><span class="num">${t('colValue')}</span><span class="num">${t('colZ')}</span><span class="num">${t('ledgerColPart')}</span></div>
+<ol class="ledger__rows" role="list">${rows.map((row) => row.markup)}</ol>
+</div>`;
+  return figure({
+    n, takeaway, source, chart, claimLevel: 'official', csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-measures`,
+    key: [{ swatch: 'this', label: t('figRangeThis') }, { swatch: 'median', label: t('figRangeMedian') }, { swatch: 'same', label: t('figRangeSame') }],
+    table: {
+      columns: [{ name: t('colMeasure') }, { name: t('colValue'), numeric: true }, { name: t('figColMedian'), numeric: true }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }, { name: t('figColRank') }],
+      rows: rows.map(({ m, r, fmt, rank }) => [m.short, m.hasValue ? m.valueRaw : num(t('noValue'), null), num(fmt(r.median), r.median), m.hasZ ? m.zRaw : num(t('noValue'), null), m.contributionText === null ? num(t('noValue'), null) : num(m.contributionText, m.contributionRaw), rank ?? '']),
+    },
+  });
+}
+
+// ---------- the worksheet and the waterfall ----------
+
+// The arithmetic in the hospital's own numbers: (z₁ + z₂ + …) ÷ n = score, each term over its short name, the part
+// that raised the score most in red, a term CMS assigned hatched. CMS's text throughout.
+export function worksheet(view) {
+  const terms = view.measures.filter((m) => m.hasZ);
+  if (!terms.length) return null;
+  const topId = view.largest?.id ?? null;
+  const sum = terms.reduce((s, m) => s + Number(m.zRaw), 0);
+  const recomputed = toUnit(sum / terms.length, DP);
+  const exact = at(recomputed) === view.score.raw;
+  const term = (m, i) => {
+    const neg = m.zRaw.startsWith('-');
+    const op = i === 0 ? (neg ? '−' : '') : neg ? '−' : '+';
+    const digits = neg ? m.zRaw.slice(1) : m.zRaw;
+    return html`${i ? html`<span class="ws__op">${op}</span>` : ''}<span class="ws__term${m.id === topId ? ' is-top' : ''}${m.assigned ? ' is-assigned' : ''}"><span class="ws__v">${i === 0 && neg ? '−' : ''}${digits}</span><span class="ws__k">${m.short}</span></span>`;
+  };
+  return html`<div class="ws" role="group" aria-label="${t('sumHeading')}">
+<p class="ws__line"><span class="ws__paren">(</span>${terms.map(term)}<span class="ws__paren">)</span><span class="ws__op">÷</span><span class="ws__term ws__term--n"><span class="ws__v">${String(terms.length)}</span><span class="ws__k">${t('wsN')}</span></span><span class="ws__op">=</span><span class="ws__term ws__term--total"><span class="ws__v">${view.score.text}</span><span class="ws__k">${t('wsTotal')}</span></span></p>
+${exact ? '' : html`<p class="small muted">${fill('sumRounded', { recomputed: cmsText(at(recomputed)), total: view.score.text })}</p>`}
+</div>`;
+}
+
+export function sumFigure({ view, n, source }) {
+  const parts = view.measures.filter((m) => m.contribution !== null);
+  if (!parts.length) return null;
+  const topId = view.largest?.id ?? null;
+  const { highestNo, lowestYes } = view.boundaryText;
+  const band = [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))];
+  const total = Number(view.score.raw);
+  const nText = String(view.n);
+  let run = 0;
+  const rows = parts.map((m) => {
+    run += m.contributionRaw;
+    return { m, running: toUnit(run, DP) };
+  });
+  const draw = (width) => waterfall({
+    id: width === 300 ? 'sum' : 'sum-wide', band, width,
+    rows: rows.map(({ m }) => ({ label: m.short, value: m.contributionRaw, valueText: m.contributionText, assigned: m.assigned, pen: m.id === topId, tip: fill('sumPartTip', { short: m.short, z: m.zText, n: nText, part: m.contributionText }) })),
+    total: { label: t('sumTotal'), value: total, valueText: view.score.text, pen: view.status === 'yes', tip: fill('sumTotalTip', { total: view.score.text }) },
+    labels: { line: t('barLine'), lineTip: fill('heroLine', { highestNo, lowestYes }), zone: fill('pillYes', { pct: REDUCTION_TEXT }) },
+  });
+  return figure({
+    n, source, alt: t('figSumAlt'), claimLevel: 'recomputed', csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-parts`,
+    takeaway: fill('figSumTakeaway', { total: view.score.text, side: t(total >= band[1] ? 'figSumAbove' : 'figSumBelow') }),
+    svg: draw(300), svgWide: draw(520),
+    table: {
+      columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }, { name: t('figColRunning'), numeric: true }],
+      rows: [
+        ...rows.map(({ m, running }) => [m.short, m.zRaw, num(m.contributionText, m.contributionRaw), num(cmsText(at(running)), running)]),
+        [t('wsTotal'), num('', null), num('', null), num(view.score.text, view.score.raw)],
+        [t('barLine'), num('', null), num(highestNo, band[0]), num(lowestYes, band[1])],
+      ],
+    },
+  });
+}
+
+// ---------- among hospitals like it ----------
+
+function groupLabel(g, master) {
+  switch (g.kind) {
+    case 'nation': return t('groupNation');
+    case 'region': return fill('groupRegion', { region: g.key });
+    case 'state': return fill('groupState', { state: STATE_NAMES[g.key] ?? g.key });
+    case 'metro': return fill('groupMetro', { metro: master.cbsaName ?? g.key });
+    case 'teach': return t(`groupTeach${g.key}`);
+    case 'beds': return g.key === 0 ? fill('groupBedsUnder', { beds: count(BED_BANDS[0]) })
+      : g.key === BED_BANDS.length ? fill('groupBedsUp', { beds: count(BED_BANDS.at(-1)) })
+        : fill('groupBedsRange', { low: count(BED_BANDS[g.key - 1]), high: count(BED_BANDS[g.key] - 1) });
+    case 'own': return t(`groupOwn${g.key}`);
+    case 'urban': return t(`groupUrban${g.key}`);
+    default: throw new RangeError(`groupLabel: unknown kind ${g.kind}`);
+  }
+}
+
+export function peersFigure({ view, nat, master, n, source }) {
+  if (!view.scored) return null;
+  const groups = nat.groupsOf(view.ccn);
+  if (groups.length < 2) return null;
+  const total = Number(view.score.raw);
+  const { highestNo, lowestYes } = view.boundaryText;
+  const band = [Number(highestNo.replace('−', '-')), Number(lowestYes.replace('−', '-'))];
+  const rows = groups.map((g) => {
+    const label = groupLabel(g, master);
+    const s = share(g.yes, g.decided);
+    return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: share(g.below, g.scored - 1) };
+  });
+  const draw = (width) => ridges({
+    edges: nat.edges, band, actual: total, width,
+    rows: rows.map((r) => ({ label: r.label, sub: r.sub, counts: r.g.bins, median: r.g.median, share: fill('groupShare', { share: r.share }), tip: fill('groupTip', { group: r.label, yes: count(r.g.yes), decided: count(r.g.decided), share: r.share, median: cmsText(at(r.g.median)) }) })),
+    labels: { actual: t('barThis'), actualValue: view.score.text, line: t('barLine'), lineTip: fill('heroLine', { highestNo, lowestYes }) },
+  });
+  const shares = rows.map((r) => ({ r, v: r.g.yes / r.g.decided }));
+  const low = shares.reduce((a, b) => (b.v < a.v ? b : a));
+  const high = shares.reduce((a, b) => (b.v > a.v ? b : a));
+  const fig = figure({
+    n, source, alt: t('figPeersAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-groups`,
+    takeaway: fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
+    svg: draw(300), svgWide: draw(560),
+    table: {
+      columns: [{ name: t('figColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }, { name: t('figColMiddle'), numeric: true }, { name: t('figColHigher'), numeric: true }],
+      rows: [
+        ...rows.map((r) => [r.label, num(count(r.g.decided), r.g.decided), num(count(r.g.yes), r.g.yes), num(r.share, r.g.yes / r.g.decided), num(cmsText(at(r.g.median)), r.g.median), num(r.higher, r.g.below / Math.max(r.g.scored - 1, 1))]),
+        [t('barThis'), num('', null), num('', null), num('', null), num(view.score.text, view.score.raw), num('', null)],
+        [t('barLine'), num('', null), num('', null), num('', null), num(highestNo, band[0]), num(lowestYes, band[1])],
+      ],
+    },
+  });
+  return { fig, rows };
+}
+
+// ---------- the nearest hospitals ----------
+
+const FLAG_CLASS = { worse: 'mg--worse', better: 'mg--better', assigned: 'mg--assigned', none: 'mg--none' };
+const DECISION = { Yes: 'nearbyCut', No: 'nearbyNotCut', 'N/A': 'nearbyNA' };
+const decisionWord = (d) => (DECISION[d] ? t(DECISION[d]) : d);
+// The decision as the record card shows it: a pill, its word carrying the meaning.
+const decisionMark = (d) => (d === 'Yes' ? pill({ kind: 'pen', label: fill('pillYes', { pct: REDUCTION_TEXT }) })
+  : d === 'No' ? pill({ label: t('pillNo') }) : d === 'N/A' ? pill({ kind: 'na', label: t('pillNA') }) : d);
+
+// The measure glyph: one square per measure in order, with its count in words for screen readers.
+function glyph(flags) {
+  const scored = flags.filter((f) => f !== 'none').length;
+  const worse = flags.filter((f) => f === 'worse' || f === 'assigned').length;
+  return html`<span class="mg" aria-hidden="true">${flags.map((f) => html`<span class="${FLAG_CLASS[f]}"></span>`)}</span><span class="vh">${fill('nearbyGlyph', { worse: String(worse), scored: String(scored) })}</span>`;
+}
+
+export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
+  if (!view.point || !shapes) return null;
+  const near = nat.nearest(view.ccn, view.point);
+  if (near.length < 2) return null;
+  const miles = (x) => count(Math.round(x));
+  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), miles: miles(h.miles) });
+  const cls = (h) => (h.decision === 'Yes' ? 'chart-pin--yes' : h.decision === 'No' ? 'chart-pin--no' : 'chart-pin--na');
+  const far = near.at(-1).miles;
+  const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
+  const map = areaMap({
+    shapes, counties, rings, label: t('figNearbyAlt'), width: 460,
+    center: { point: view.point, tip: `${t('nearbyThis')}: ${view.name}` },
+    points: near.map((h, i) => ({ point: h.point, n: i + 1, cls: cls(h), tip: tip(h, i) })),
+  });
+  const yes = near.filter((h) => h.decision === 'Yes').length;
+  const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
+  const table = html`<div class="printout"><div class="printout__scroll"><table class="gb gb--near" aria-labelledby="nearby-h">
+<thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
+<tbody>${near.map((h, i) => html`<tr class="near--${cls(h).slice('chart-pin--'.length)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td><td>${glyph(h.flags)}</td></tr>`)}</tbody>
+</table></div></div>`;
+  const fig = map && figure({
+    n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
+    takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), miles: miles(near[0].miles) }),
+    table: {
+      columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
+      rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),
+    },
+  });
+  return { table, fig, keys: fig ? keysHint(n, t('figRangeKeys')) : '', count: near.length };
+}
+

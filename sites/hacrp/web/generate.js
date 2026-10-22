@@ -11,13 +11,12 @@ import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
 import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
-import { measureRanges } from './figures.js';
 import { compareDefault } from './hospital-table.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
 import { dictionaryPage } from './pages/dictionary.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
-import { MAP_PLACEMENTS, hospitalPage } from './pages/hospital.js';
-import { previewIndex } from './pages/preview.js';
+import { hospitalPage } from './pages/hospital.js';
+import { nationalContext } from './compare.js';
 import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
@@ -53,7 +52,7 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, masterFy } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy } = data;
   const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
@@ -97,45 +96,16 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     }),
   });
 
-  const ranges = measureRanges(model);
-  const render = ({ hospital, view }, robots, mapPlacement) => hospitalPage({ view, source, robots, assets, ranges, searchUrl, shapes, careSource: careCompareSource, masterFy, mapPlacement, whatif: { hospital, model, estimate, range } });
-  for (const p of pages) {
-    const robots = robotsFor({ env, released, eligible: p.view.scored });
-    ctx.emit({ path: p.view.path, robots, text: render(p, robots, MAP_PLACEMENT) });
+  // What every hospital page compares a hospital with, computed once.
+  const nat = nationalContext({ hospitals, master, model });
+  for (const { hospital, view } of pages) {
+    const robots = robotsFor({ env, released, eligible: view.scored });
+    ctx.emit({
+      path: view.path,
+      robots,
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range } }),
+    });
   }
-  // A preview build (no PP_ENV) only: sample hospital pages in each map placement, and an index of them; never in
-  // a production build, always noindex, never in the sitemap.
-  if (!env) emitPreviews(ctx, previewSamples(pages), render);
-}
-
-// The map placement every hospital page is built with (pages/hospital.js MAP_PLACEMENTS).
-export const MAP_PLACEMENT = 'e';
-const PREVIEW_ROOT = '/preview/';
-
-// One hospital page per kind the owner compares placements on, picked by property in CCN order: a scored cut, a
-// scored no-cut, Maryland, and a scored hospital in Alaska or Hawaii (whose maps fit far from the mainland). A kind
-// the data lack is left out.
-export function previewSamples(pages) {
-  const byCcn = [...pages].sort((x, y) => (x.view.ccn < y.view.ccn ? -1 : 1));
-  const kinds = [
-    (v) => v.status === 'yes',
-    (v) => v.status === 'no',
-    (v) => v.status === 'maryland',
-    (v) => v.scored && (v.state === 'AK' || v.state === 'HI'),
-  ];
-  return kinds.map((kind) => byCcn.find((p) => kind(p.view))).filter(Boolean);
-}
-
-function emitPreviews(ctx, samples, render) {
-  const links = [];
-  for (const placement of MAP_PLACEMENTS) {
-    for (const p of samples) {
-      const path = `${PREVIEW_ROOT}map-${placement}${p.view.path}`;
-      ctx.emit({ path, robots: 'noindex', text: render(p, 'noindex', placement) });
-      links.push({ placement, path, view: p.view });
-    }
-  }
-  ctx.emit({ path: PREVIEW_ROOT, robots: 'noindex', text: previewIndex(links, ctx.assets) });
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).

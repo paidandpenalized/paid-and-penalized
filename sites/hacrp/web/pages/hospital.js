@@ -1,30 +1,33 @@
-// One hospital's page, after Thirty Day Readmissions' hospital view: the record card (name, place, type, CMS's score
-// and decision, Care Compare's stars) beside the verdict (a stamp, the plain summary, CMS's line and the distance to
-// it, and the state map), then what CMS's notes say, the measure table with CMS's values and footnotes, the figures
-// and the what-if (scored hospitals only), then where the data come from. Odd rows show CMS's values and add no
-// inference.
+// One hospital's page, after Thirty Day Readmissions' hospital record and beyond it. The top: the record card (name,
+// place, type, CMS's score and decision, Care Compare's stars; the state's outline a watermark behind it) beside the
+// verdict (a stamp, the summary, CMS's line in plain words and the line bar), the two the same height over a bold
+// rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
+// hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the what-if, the groups the
+// hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
+// show CMS's values and add no inference.
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
-import { footnoteLegend, footnoteNote, formField, formTitle, printout, stamp } from '../../../../web/render/components.js';
+import { footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { count, isoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CARE_COMPARE_STARS, REDUCTION_TEXT } from '../constants.js';
-import { largestSentence, leadSentences, measureNote, noteSentences, smallNumber } from '../sentences.js';
-import { fill, fillKeep, heroLineText, sourceText, t } from '../copy.js';
-import { partsFigure, rangeFigure } from '../figures.js';
+import { biggestLever } from '../compare.js';
+import { distanceSentence, leadSentences, noteSentences, smallNumber } from '../sentences.js';
+import { fill, fillKeep, sourceText, t } from '../copy.js';
+import { partsFigure } from '../figures.js';
+import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../hospital-figures.js';
 import { careCompareHref } from '../links.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader, split } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
+import { cmsText, decimal } from '../../../../web/render/format.js';
+import { SCORE_DECIMALS as DP } from '../../../../engine/js/hacrp/score.js';
+import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
+import { encode } from '../../../../web/whatif/fragment.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
-
-// A CMS value cell: CMS's text, or a dash (with words for screen readers) where CMS published none.
-const value = (text, published) => (published
-  ? text
-  : html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`);
 
 // The hero's number, its decimal point in a span the CSS pulls in: a monospace point takes a full cell, which opens
 // a gap at hero size. The digits stay tabular, and the text is CMS's, unchanged.
@@ -35,35 +38,14 @@ function heroNumber(text) {
 
 const footnote = (f) => footnoteNote({ lead: fill('footnoteLead', { code: f.code }), text: f.text });
 
-// A measure's notes: this site's note (measureNote(m)), CMS's footnotes and the estimate tag ('' when it has none). The
-// tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
-function measureNotes(m, note) {
+// A measure's notes in the ledger: this site's note on an assigned measure, CMS's footnotes and the estimate tag.
+// The tag marks a recompute from a measured value, so a measure with no value (unscored or assigned) has none.
+function measureNotes(m) {
   const tag = m.tagged && m.hasValue && html`<details class="est"><summary>${t('estimateTag')}</summary>
 <p class="est__body small">${fill('estimateNote', { maxError: m.maxErrorText })} <a href="/methods/#estimate">${t('estimateMore')}</a></p></details>`;
-  return html`${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}`;
-}
-
-// notes: the row's Notes cell, or null when the table has no Notes column (no measure has a note).
-function measureRow(m, notes) {
-  return html`<tr>
-<th scope="row">${m.label} <span class="short">(${m.short})</span></th>
-<td class="num cms" data-label="${t('colValue')}">${value(m.valueText, m.hasValue)}</td>
-<td class="num cms" data-label="${t('colZ')}">${value(m.zText, m.hasZ)}</td>
-${notes !== null && html`<td class="notes">${notes}</td>
-`}</tr>`;
-}
-
-// The measure table, with a Notes column only when some measure has a note; the column takes the page's width only
-// for prose (this site's note or CMS's footnotes), not for estimate tags alone. Without prose, its rules end with it.
-function measureTable(measures) {
-  const notes = measures.map(measureNote);
-  const cells = measures.map((m, i) => measureNotes(m, notes[i]));
-  const withNotes = cells.some((cell) => String(cell) !== '');
-  const prose = measures.some((m, i) => notes[i] || m.footnotes.length);
-  return printout(html`<table class="gb gb--measures${prose ? ' gb--notes' : ''}" aria-labelledby="measures-h">
-<thead><tr><th scope="col">${t('colMeasure')}</th><th scope="col" class="num">${t('colValue')}</th><th scope="col" class="num">${t('colZ')}</th>${withNotes && html`<th scope="col">${t('colNotes')}</th>`}</tr></thead>
-<tbody>${measures.map((m, i) => measureRow(m, withNotes ? cells[i] : null))}</tbody>
-</table>`, { fit: !prose });
+  const note = m.assigned && fill('assigned');
+  if (!note && !m.footnotes.length && !tag) return '';
+  return html`<div class="ledger__notes">${note && html`<p>${note}</p>`}${m.footnotes.map(footnote)}${tag}</div>`;
 }
 
 // Every CMS footnote the page quotes, once, in the order it first appears.
@@ -71,36 +53,6 @@ const legend = (view) => footnoteLegend({
   heading: t('footnotesHeading'),
   lists: [view.score.footnotes, view.decision.footnotes, ...view.measures.map((m) => m.footnotes)],
 });
-
-// The what-if for a scored hospital, CMS's values to start, shared by link (pages/whatif.js has its page data). Its
-// bars are the page's figure n: each measure's part of the score, live as the reader changes a value.
-function whatIfBlock(view, whatif, source, assets, n) {
-  const script = assets.js['hacrp-hospital'];
-  if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
-  const page = { name: view.name, fy: view.fy, path: view.path, source, boundaryText: view.boundaryText, baseline: 'cms', share: true };
-  const wrapBars = (chart) => partsFigure(view, n, sourceText({ fy: view.fy, source }), chart);
-  return { body: whatIfSection(whatif, page, 'hacrp-hospital', wrapBars), script };
-}
-
-// A scored hospital's figures before the what-if: each measure's value against the national range (when any
-// measure has a published value). The what-if's bars follow as the next number.
-function figures(view, ranges, source) {
-  if (!view.scored) return [];
-  if (!ranges) throw new TypeError('hospitalPage: a scored hospital needs ranges (measureRanges in figures.js)');
-  const line = sourceText({ fy: view.fy, source });
-  return [rangeFigure(view, ranges, 1, line)].filter(Boolean);
-}
-
-// The state map's placements on a hospital page, for the owner to choose among (preview pages show each):
-//   e  in the Hospital field, right of the name, as tall as the name
-//   f  a thumbnail in the Location field, right of the address
-//   g  a postmark (ring, outline, dot and cancellation lines) over the record card's top-right corner
-//   h  beside the stamp, at the top of the verdict column
-//   i  a third cell of the numbers card
-//   j  a faint watermark behind the record card's fields
-export const MAP_PLACEMENTS = Object.freeze(['e', 'f', 'g', 'h', 'i', 'j']);
-// Each placement's dot scale: the smaller the map is drawn, the larger its dot is in the map's own units.
-const DOT = { e: 3, f: 4, g: 4.5, h: 2.5, i: 3, j: 1.25 };
 
 // The record card's Type field: what the master knows, in the site's words (the ownership as the master writes it);
 // null when it knows nothing.
@@ -124,7 +76,7 @@ function starsField(view, no, careSource) {
   if (!cc || !careSource) return null;
   const n = /^[1-9]$/.test(cc.rating) ? Number(cc.rating) : null;
   const value = n !== null && n <= CARE_COMPARE_STARS
-    ? html`<span class="stars" aria-hidden="true">${'\u2605'.repeat(n)}<span class="stars__off">${'\u2606'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
+    ? html`<span class="stars" aria-hidden="true">${'★'.repeat(n)}<span class="stars__off">${'☆'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
     : cc.rating;
   const note = html`${fillKeep('starsNote', { date: isoDate(careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br><a href="${careCompareHref(view.ccn)}" target="_blank" rel="noopener">${t('starsLink')}<span class="vh">${SHARED.newTab}</span></a>`;
   return formField({ no, label: t('fieldStars'), value, note, size: n === null ? 'sm' : null });
@@ -140,49 +92,44 @@ function locationText(view) {
   return html`${before}<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>${after}`;
 }
 
-// The postmark's cancellation lines (placement g): wavy rules left of its ring, in its ink. Shape constants only.
-const WAVES = { lines: 4, gap: 8, amp: 3, len: 10, half: 3 };
-const wavesSvg = (() => {
-  const { lines, gap, amp, len, half } = WAVES;
-  const width = len * half * 2;
-  const height = gap * (lines - 1) + 2 * amp + 2;
-  const d = Array.from({ length: lines }, (_, i) => `M0 ${amp + 1 + i * gap}q${len / 2} ${-2 * amp} ${len} 0${` t${len} 0`.repeat(half * 2 - 1)}`).join('');
-  return html`<svg class="postmark__waves" viewBox="0 0 ${String(width)} ${String(height)}" aria-hidden="true" focusable="false"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
-})();
+// The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red);
+// null where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). How the dot was placed
+// is in Methods; the page's data list credits the geocoder for a geocoded address.
+const WATERMARK_DOT = 1.25;
+export function locatorMap(view, shapes, dot = WATERMARK_DOT) {
+  if (!shapes || !view.point) return null;
+  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
+}
 
-// The state map in its placement's frame (the dot in the penalty ink's red; see styles.css .geo).
-const geoFrame = (placement, svg) => html`<span class="geo geo--${placement}">${svg}</span>`;
-
-// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields. map: the state map's
-// markup when its placement is in the card (e, f, g or j), with that placement; else null.
-function recordCard(view, { careSource, map, placement }) {
-  const here = (p) => (map && placement === p ? map : null);
+// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
+// outline (map: its markup, or null).
+function recordCard(view, { careSource, map }) {
   const fy = String(view.fy);
-  const location = locationText(view);
   const type = typeText(view.profile);
-  // Each field as (its number) => markup, numbered in order; a field with nothing to show is left out.
   const fields = [
-    (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true, aside: here('e') }),
-    (no) => formField({ no, label: t('fieldLocation'), value: location, note: view.county, aside: here('f') }),
+    (no) => formField({ no, label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true }),
+    (no) => formField({ no, label: t('fieldLocation'), value: locationText(view), note: view.county }),
     type && ((no) => formField({ no, label: t('fieldType'), value: type, size: 'sm' })),
     view.scored
-      ? (no) => formField({ no, label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: view.status === 'maryland' ? t('scoreNote') : html`${t('scoreNote')}<br>${heroLineText(view.boundaryText)}` })
+      ? (no) => formField({ no, label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote') })
       : (no) => formField({ no, label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div' }),
     (no) => formField({ no, label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }) }),
     (no) => starsField(view, no, careSource),
   ].filter(Boolean);
   let no = 0;
-  const mark = here('g');
-  return html`<div class="form hosp__id">
-${here('j') && html`<div class="hosp__wm">${here('j')}</div>
-`}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
-${mark && html`<div class="postmark">${wavesSvg}<span class="postmark__ring">${mark}<span class="postmark__code">${view.state}</span></span></div>
-`}${fields.map((field) => {
+  const [name, ...rest] = fields.map((field) => {
     const markup = field(no + 1);
     if (markup) no++;
-    return markup && html`${markup}
-`;
-  })}</div>`;
+    return markup;
+  }).filter(Boolean);
+  return html`<div class="form hosp__id">
+${map && html`<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j">${map}</span></div>
+`}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
+${name}
+<div class="hosp__fields">
+${rest.map((markup) => html`${markup}
+`)}</div>
+</div>`;
 }
 
 // The stamp: the cut in the penalty ink; no cut, no score and not subject in ink. The row CMS marked Yes with no score
@@ -197,82 +144,136 @@ function stampOf(view) {
   }
 }
 
-// The numbers card beside the record: CMS's line (every scored hospital), this site's distance to it (a Yes or No
-// decision) and, in placement i, the state map as the last cell; null when it has none of them.
-const CELL_LETTERS = 'ABC';
-function numbersCard(view, map) {
-  const cells = [];
-  if (view.scored) {
-    const { highestNo, lowestYes } = view.boundaryText;
-    const d = view.distance;
-    cells.push((no) => formField({ no, label: t('lineHeading'), value: fillKeep('numLine', { highestNo, lowestYes }, [['highestNo', 'lowestYes']]), size: 'sm', note: view.status === 'maryland' ? t('lineMaryland') : t('numLineNote') }));
-    if (d) cells.push((no) => formField({ no, label: t('fieldDistance'), value: d.text, note: d.to === 'highestNo' ? fill('numDistanceYes', { highestNo }) : fill('numDistanceNo', { lowestYes }) }));
-  }
-  if (map) cells.push((no) => formField({ no, label: t('fieldMap'), value: map, as: 'div', cls: 'hosp__map-cell' }));
-  if (!cells.length) return null;
-  return html`<div class="form hosp__nums${map ? ' hosp__nums--map' : ''}">
-${cells.map((cell, i) => html`${cell(CELL_LETTERS[i])}
-`)}</div>`;
+// The verdict beside the record: the stamp, what CMS reports and why (with what the score is, in one sentence),
+// CMS's line in plain words, then the line bar, the hospital's rank and this site's distance to the line.
+function verdict(view, nat, source) {
+  const [lead, ...why] = leadSentences(view);
+  const distance = distanceSentence(view);
+  return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
+${stampOf(view)}
+<p class="hosp__summary">${lead}</p>
+${why.map((s) => html`<p class="hosp__why">${s}${view.scored ? html` ${t('scoreCompares')}` : ''}</p>`)}${!why.length && view.scored ? html`<p class="hosp__why">${t('scoreCompares')}</p>` : ''}
+${view.scored && html`<p class="hosp__line">${fillKeep('lineCut', { lowestYes: view.boundaryText.lowestYes }, ['lowestYes'])}</p>
+${lineBarBlock(view, nat)}`}
+${distance && html`<p class="small muted">${distance}</p>`}
+<p class="small muted hosp__data">${fillKeep('placeData', { date: isoDate(source.pdcReleased) }, ['date'])}</p>
+</section>`;
 }
 
-// The state outline with the hospital's dot; null where geo.js draws no map (a territory, no point, or a point the
-// outline doesn't hold). dot: the dot's scale (DOT, by placement). How the dot was placed is in Methods; the page's
-// data list credits the geocoder for a geocoded address.
-export function locatorMap(view, shapes, dot = 1) {
-  if (!shapes || !view.point) return null;
-  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot });
+// A numbered section: its words (heading first) beside its figure from 980px, stacked under that. wide: the words
+// run across the top in two columns and the figure takes the page's width under them.
+const section = ({ id, label, text, figure, wide = false }) => html`<section class="block hsec${wide ? ' hsec--full' : ''}" id="${id}" aria-labelledby="${label}">
+<div class="hsec__text">
+${text}
+</div>
+<div class="hsec__fig">
+${figure}
+</div>
+</section>`;
+
+// The lever sentence: the measure that would lower the score most at the national median, and whether that alone
+// would cross CMS's line.
+function leverText(view, hospital, model) {
+  const lever = biggestLever(hospital, model);
+  if (!lever) return view.measures.some((m) => m.hasValue && !m.assigned) ? t('leverNone') : null;
+  const m = view.measures.find((x) => x.id === lever.id);
+  const fmt = (v) => decimal(v, model.params[lever.id].decimals);
+  const sentence = fill('leverOne', { short: m.short, median: fmt(lever.median), drop: cmsText(decimal(lever.drop, DP)), after: cmsText(decimal(lever.after, DP)) });
+  const words = view.status === 'yes' && lever.flag === 'No' ? `${sentence} ${t('leverFlip')}` : sentence;
+  // The same change, opened in the what-if (its scenario link).
+  return html`${words} <a class="hsec__try" href="${encode({ [lever.id]: lever.median }, MEASURE_IDS)}">${t('leverTry')}</a>`;
 }
 
-// The map in its placement's frame; null with no map.
-const placedMap = (svg, placement) => svg && geoFrame(placement, svg);
+// The what-if for a scored hospital, CMS's values to start, shared by link (pages/whatif.js has its page data). Its
+// bars are the page's figure n: each measure's part of the score, live as the reader changes a value.
+function whatIfBlock(view, whatif, source, assets, n) {
+  const script = assets.js['hacrp-hospital'];
+  if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-hospital module for the what-if');
+  const pageData = { name: view.name, fy: view.fy, path: view.path, source, boundaryText: view.boundaryText, baseline: 'cms', share: true };
+  const wrapBars = (chart) => partsFigure(view, n, sourceText({ fy: view.fy, source }), chart);
+  return { body: whatIfSection(whatif, pageData, 'hacrp-hospital', wrapBars), script };
+}
 
-// robots: null for an indexable page, else the meta robots value. ranges: each measure's national range
-// (measureRanges(model) in figures.js), required for a scored hospital. whatif: { hospital, model, estimate, range }
-// for the what-if (range from scoreRange() in generate.js); a hospital with no score never gets one.
-// searchUrl: the hospitals asset the top bar's search reads (null: no search box). shapes: stateShapes(topology) for
-// the state map (null: none). careSource: Care Compare's manifest facts ({ modified }) for the stars' note.
-// masterFy: the hospital master's fiscal year, for the data list's source of the Type field's facts.
-// mapPlacement: where the state map goes (MAP_PLACEMENTS, e the default).
-export function hospitalPage({ view, source, robots, assets, ranges = null, whatif = null, searchUrl = null, shapes = null, careSource = null, masterFy = null, mapPlacement = 'e' }) {
-  if (!MAP_PLACEMENTS.includes(mapPlacement)) throw new RangeError(`hospitalPage: map placement "${mapPlacement}" is not one of ${MAP_PLACEMENTS.join(', ')}`);
+// robots: null for an indexable page, else the meta robots value. nat: nationalContext() (compare.js). hospital:
+// CMS's row; model: the fitted model. whatif: { hospital, model, estimate, range } for the what-if (range from
+// scoreRange() in generate.js); a hospital with no score never gets one. searchUrl: the hospitals asset the top
+// bar's search reads (null: no search box). shapes: stateShapes(topology) for the maps (null: none). careSource:
+// Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
+// the data list's source of the Type field's facts. master: the hospital's master record (its metro's name).
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null }) {
+  if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
   const heading = fill('hospitalTitle', where);
   const title = `${heading} · ${SITE.name}`;
-  const largest = largestSentence(view);
   const small = smallNumber(view);
   const home = SITE.sites.hacrp.path;
-  const figs = figures(view, ranges, source);
-  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, figs.length + 1) : null;
-  const map = placedMap(locatorMap(view, shapes, DOT[mapPlacement]), mapPlacement);
-  const at = (placement) => (mapPlacement === placement ? map : null);
+  const line = sourceText({ fy: view.fy, source });
+  const map = locatorMap(view, shapes);
+  let n = 0;
+  const next = () => ++n;
 
-  const body = html`<article class="wrap page page--article hosp">
-<div class="hosp__top hosp__top--${mapPlacement}">
-${recordCard(view, { careSource, map, placement: mapPlacement })}
-<section class="hosp__verdict" aria-label="${t('heroLabel')}">
-${at('h') ? html`<div class="hosp__stamprow">${stampOf(view)}${map}</div>` : stampOf(view)}
-${leadSentences(view).map((s, i) => html`<p class="${i ? 'hosp__why' : 'hosp__summary'}">${s}</p>`)}
-${view.scored && html`<p class="hosp__note">${t('notAGrade')}</p>`}
-${numbersCard(view, at('i'))}
-<p class="small muted">${fillKeep('placeData', { date: isoDate(source.pdcReleased) }, ['date'])}</p>
-</section>
+  const ledger = ledgerFigure({ view, nat, model, n: next(), source: line, notes: measureNotes });
+  const lever = view.scored && (hospital ?? whatif?.hospital) ? leverText(view, hospital ?? whatif.hospital, model) : null;
+  const sum = view.scored ? sumFigure({ view, n: next(), source: line }) : null;
+  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, next()) : null;
+  const peers = peersFigure({ view, nat, master, n: n + 1, source: line });
+  if (peers) next();
+  const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
+  if (nearby?.fig) next();
+  const nearRank = peers?.rows.filter((r) => r.g.kind === 'state' || r.g.kind === 'metro') ?? [];
+  const hasFigures = n > 0;
+
+  const body = html`<article class="wrap page page--hosp hosp">
+<div class="hosp__top">
+${recordCard(view, { careSource, map })}
+${verdict(view, nat, source)}
 </div>
-<div class="prose">
-${noteSentences(view).map((s) => html`<p>${s}</p>`)}
+${noteSentences(view).length > 1 || small ? html`<div class="hosp__notes">
+${noteSentences(view).slice(0, -1).map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
-<p class="standing">${t('standing')}</p>
-</div>
-${split({ label: 'measures-h', text: html`<h2 id="measures-h">${t('measuresHeading')}</h2>
-<p>${t('measuresIntro')}</p>
-${largest && html`<p>${largest}</p>`}
-${measureTable(view.measures)}`, figure: figs.length ? figs : null })}
+</div>` : ''}
+${section({
+    id: 'measures', label: 'measures-h', wide: true,
+    text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
+<p>${fill('ledgerIntro', { n: String(view.n), all: String(view.measures.length) })}</p>
+${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}`,
+    figure: ledger,
+  })}
+${sum && section({
+    id: 'sum', label: 'sum-h',
+    text: html`<h2 id="sum-h">${t('sumHeading')}</h2>
+<p>${fill('sumIntro', { n: String(view.n) })}</p>
+${worksheet(view)}`,
+    figure: sum,
+  })}
 ${what?.body}
-<p class="page__links">${printLink(home, t('backToProgram'))}</p>
+${peers && section({
+    id: 'peers', label: 'peers-h',
+    text: html`<h2 id="peers-h">${t('peersHeading')}</h2>
+<p>${t('peersIntro')}</p>
+${nearRank.map((r) => html`<p class="hsec__stat">${fill('peersRank', { group: r.label, share: r.higher, n: count(r.g.scored) })}</p>`)}`,
+    figure: peers.fig,
+  })}
+${nearby && section({
+    id: 'nearby', label: 'nearby-h',
+    text: html`<h2 id="nearby-h">${t('nearbyHeading')}</h2>
+<p>${fill('nearbyIntro', { k: String(nearby.count) })}</p>
+${nearby.fig}${nearby.keys}`,
+    figure: nearby.table,
+  })}
+<div class="hosp__foot">
+<div class="hosp__facts">
 ${asofBar({ fy: view.fy, periods: view.periods, source, typeFy: masterFy && typeText(view.profile) ? masterFy : null, geocoded: Boolean(map) && view.geo === 'address' })}
-${legend(view)}
 ${dataLinks(view.fy, source)}
+${legend(view)}
+<p class="page__links">${printLink(home, t('backToProgram'))}</p>
+</div>
+<div class="hosp__cite">
+<p class="standing">${t('standing')}</p>
 ${citation({ fy: view.fy, title: heading, path: view.path, source })}
+</div>
+</div>
 </article>`;
 
   return page({
@@ -281,7 +282,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [...(figs.length || what ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [...(hasFigures ? [assets.js.figure] : []), assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
     topbar: siteHeader({ fy: view.fy, current: 'hospitals', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

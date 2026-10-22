@@ -33,6 +33,18 @@ export const FEW_DECIDED = 10;
 export const CARE_COMPARE_STARS = 5;
 // The program page's hospital table shows this many rows until the reader asks for all (or picks a state).
 export const TABLE_FIRST_ROWS = 50;
+// Hospital page comparisons (display constants). The size groups' bed-count edges (under the first, between each
+// pair, the last and up); a group drawn only with at least this many hospitals with a payment decision; the number
+// of nearest hospitals listed; about how many columns each group's distribution of scores takes; and about how many
+// a measure's distribution takes on its ruler.
+export const BED_BANDS = Object.freeze([100, 300, 500]);
+export const FEW_IN_GROUP = 5;
+export const NEAREST = 8;
+export const RIDGE_BINS = 36;
+export const RULER_BINS = 28;
+// The nearest-hospitals map's distance rings, in miles: those inside the farthest hospital shown, at most RINGS_MAX.
+export const RING_MILES = Object.freeze([5, 10, 25, 50, 100, 250]);
+export const RINGS_MAX = 3;
 
 export const CLAIMS = {
   REDUCTION_PCT: 'HACRP-01',
