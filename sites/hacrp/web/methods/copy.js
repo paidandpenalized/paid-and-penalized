@@ -85,7 +85,7 @@ export const COPY = {
   sidesOn: { text: 'In {years}, the published scores reproduce the cut exactly: CMS cut every hospital above that percentile and no other.', claim: null },
   sidesFew: { text: 'In {years}, CMS’s line sits a little above the percentile: {n} hospitals scored above it and were not cut.', claim: null },
   sidesWell: { text: 'In {years}, it sits further above: {n} hospitals.', claim: null },
-  sidesLower: { text: 'In {years}, CMS’s line sits at or below the percentile, so a little more than a quarter were cut.', claim: null },
+  sidesLower: { text: 'In {years}, CMS’s line sits below the percentile: it cut some hospitals that scored at or below it.', claim: null },
   sidesWhy: { text: 'This site can’t say why from the public files; the table gives each year’s line as a percentile.', claim: null },
   sidesTies: { text: "Ties matter: in fiscal year {fy}, {n} hospitals scored exactly {line}, the line itself, and none was cut. CMS cuts only scores above the line.", claim: 'HACRP-02' },
   sidesTakeaway: { text: 'Across {years}, {decided} payment decisions; {wrong} out of order with the scores.', claim: null },

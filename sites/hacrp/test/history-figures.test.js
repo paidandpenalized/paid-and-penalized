@@ -391,7 +391,7 @@ test('flipSince: the fiscal year since which rural and the smallest hospitals ha
   assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2, 0.3, 0.3])), 2021);
   assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.2, null, 0.2, 0.2, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), 2022, 'the later of the two, the other way round');
   // A share that prints the same as the nation's at one decimal is not above it, so it ends the run (25.0% and 25.0%).
-  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2504, 0.3, 0.3])), 2021, 'FY2020 prints the same as the nation, so the run starts after it');
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2504, 0.3, 0.3])), null, 'FY2020 prints the same as the nation: the run starts after it, and a level year is not a year below');
   assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2506, 0.3, 0.3])), 2020, 'a share that prints higher is above');
   // No flip: never above in the end, above all along, or above and then not.
   assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.2, null, 0.2, 0.2, 0.2], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural never above');

@@ -58,17 +58,20 @@ export function mountStatePicker({ box, svgs, geomOf, ready, pick }) {
   };
   picker.hidden = false;
   select.addEventListener('change', () => {
-    ready().then((s) => {
+    const show = (s) => {
       const code = select.value;
-      const g = code ? stateGrid(s.hist, code) : null;
+      const g = s && code ? stateGrid(s.hist, code) : null;
       const picked = g?.ccns.length ? g : null;
       // Either way each drawing's content is swapped, which takes the column outline with it.
       if (picked) draw(picked, s.hist.fys, code);
       else restore();
       link.hidden = !picked;
       pick(picked);
-    }, () => {
+    };
+    // A pick whose data won't load goes back to every state, so the select never names a state the grid doesn't show.
+    ready().then(show, () => {
       select.value = '';
+      show(null);
     });
   });
 }

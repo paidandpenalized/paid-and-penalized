@@ -368,13 +368,15 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   assert.match(page, /<section class="msec" id="estimate"/);
 });
 
-test('the line notes say which side of the percentile CMS\'s line sits: a year with none above the percentile left uncut is at or below it, and a year with no hospital left uncut says nothing', () => {
+test('the line notes say which side of the percentile CMS\'s line sits: a year with no hospital above the percentile left uncut, or none left uncut at all, sits below it', () => {
   const base = HD.checks.filter((c) => c.check.yes);
+  // Patch the two newest years, leaving the others (the years well above among them) as they are.
+  assert.ok(base.length >= 4, 'the committed history has the years this test patches');
   const at = (c, over) => ({ ...c, check: { ...c.check, ...over } });
   // One year where CMS cut everyone above the percentile and more (none above it uncut, off its gap), one where it cut
   // every hospital it decided on (no uncut hospital, so no side to say).
-  const lower = at(base[2], { p75InGap: false, aboveNotCut: 0 });
-  const allCut = at(base[3], { p75InGap: false, aboveNotCut: null });
+  const lower = at(base.at(-1), { p75InGap: false, aboveNotCut: 0 });
+  const allCut = at(base.at(-2), { p75InGap: false, aboveNotCut: null });
   const checks = HD.checks.map((c) => (c.fy === lower.fy ? lower : c.fy === allCut.fy ? allCut : c));
   const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
   const page = methodsPage({
@@ -383,10 +385,12 @@ test('the line notes say which side of the percentile CMS\'s line sits: a year w
     robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
   });
   const paragraphs = [...page.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => strip(m[1]));
-  const lowerNote = paragraphs.find((p) => p.includes('at or below the percentile'));
-  assert.ok(lowerNote && lowerNote.includes(`FY${lower.fy}`) && !lowerNote.includes(`FY${allCut.fy}`), lowerNote);
+  const lowerNote = paragraphs.find((p) => p.includes('sits below the percentile'));
+  assert.ok(lowerNote && lowerNote.includes(`FY${lower.fy}`) && lowerNote.includes(`FY${allCut.fy}`), lowerNote);
+  assert.ok(paragraphs.some((p) => p.startsWith('This site can’t say why')));
   for (const key of ['a little above the percentile', 'further above']) {
     const note = paragraphs.find((p) => p.includes(key));
-    assert.ok(!note || (!note.includes(`FY${lower.fy}`) && !note.includes(`FY${allCut.fy}`)), note);
+    assert.ok(note, `the note "${key}" is still there for the other years`);
+    assert.ok(!note.includes(`FY${lower.fy}`) && !note.includes(`FY${allCut.fy}`), note);
   }
 });

@@ -46,7 +46,7 @@ export const ABOVE_BY = 0.005;
 const countRange = (ns) => {
   const lo = Math.min(...ns);
   const hi = Math.max(...ns);
-  return lo === hi ? count(lo) : fill('keyRange', { from: count(lo), to: count(hi) });
+  return lo === hi ? count(lo) : fill('valueRange', { from: count(lo), to: count(hi) });
 };
 
 // What the decision check found beyond order: CMS's rule for the line, the years the published scores reproduce the
@@ -55,10 +55,11 @@ const countRange = (ns) => {
 function sidesNotes(checks) {
   const decided = checks.filter((c) => c.check.yes);
   const on = decided.filter((c) => c.check.p75InGap);
-  // Off the percentile: CMS's line above it (some hospitals above the percentile not cut), or at or below it.
-  const off = decided.filter((c) => !c.check.p75InGap && c.check.aboveNotCut !== null);
+  // Off the percentile: CMS's line above it (some hospitals above the percentile not cut), or below it (none above it
+  // uncut, so CMS cut some at or below it; a year it cut every hospital it decided on has no uncut one at all).
+  const off = decided.filter((c) => !c.check.p75InGap);
   const higher = off.filter((c) => c.check.aboveNotCut > 0);
-  const lower = off.filter((c) => c.check.aboveNotCut === 0);
+  const lower = off.filter((c) => !(c.check.aboveNotCut > 0));
   const isWell = (c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY;
   const well = higher.filter(isWell);
   const few = higher.filter((c) => !isWell(c));

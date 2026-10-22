@@ -55,6 +55,7 @@ const pointOf = (r) => (r && Number.isFinite(r.lon) && Number.isFinite(r.lat) ? 
 // notes: the rows carry a note at the right (a place's share cut, then the nation's), which takes room and height.
 function rollGeom(width, notes) {
   const narrow = isNarrow(width);
+  // The notes' margin holds the longest note, "100.0% · 100.0%" at about 6px a character in the 10px type.
   if (notes) return narrow ? [30, 90, 12, 4] : [40, 100, 18, 4];
   return narrow ? [30, 0, 11, 4] : [40, 0, 17, 4];
 }
@@ -214,7 +215,7 @@ export function flipSince(hd) {
     let k = cut.length;
     while (k > 0 && above(cut[k - 1])) k--;
     const before = cut.slice(0, k);
-    return k < cut.length && before.length && shownAbove(nation[before[0]], shares[before[0]]) && !before.some(above) ? cut[k] : null;
+    return k < cut.length && before.length && before.every((i) => shownAbove(nation[i], shares[i])) ? cut[k] : null;
   };
   const at = [since(RURAL), since(SMALLEST)];
   return at.includes(null) ? null : hd.fys[Math.max(...at)];
@@ -294,12 +295,14 @@ export function statesYearsFigure(hd, { n, source }) {
   });
   // One key for every map: the steps of the share cut, none cut, no decision, and the two states the takeaway names.
   const edges = [0, ...MAP_STEPS_PCT];
-  const step = (i) => (i === edges.length - 1 ? fill('keyUp', { from: `${edges[i]}%` }) : fill('keyRange', { from: `${edges[i]}%`, to: `${edges[i + 1]}%` }));
+  const step = (i) => (i === edges.length - 1 ? fill('keyUp', { from: `${edges[i]}%` }) : fill('valueRange', { from: `${edges[i]}%`, to: `${edges[i + 1]}%` }));
   const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li><li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
   const chart = html`${key}<div class="smallmaps">${maps}</div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-cut-by-state-year',
-    takeaway: fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), low: STATE_NAMES[least.st], lowK: String(least.below), few: String(FEW_DECIDED) }),
+    takeaway: least.below > 0 && least.st !== best.st
+      ? fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), low: STATE_NAMES[least.st], lowK: String(least.below), few: String(FEW_DECIDED) })
+      : fill('statesHTakeawayAbove', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), few: String(FEW_DECIDED) }),
     table: {
       columns: [{ name: t('rollColFy') }, ...[...hd.byState.keys()].map((st) => ({ name: st || t('statesHNoState'), numeric: true }))],
       rows: hd.fys.map((fy, i) => [fyLabel(fy), ...[...hd.byState.values()].map((v) => pctCell(v.years[i].decided ? v.years[i].cut / v.years[i].decided : null))]),

@@ -141,6 +141,7 @@ export const COPY = {
   keyRing: { text: 'Outlined: {a} and {b}', claim: null },
   statesHTakeaway: { text: 'Among states with at least {few} hospitals every year, {state} was cut above the nation’s share in {k} of the {n} years CMS cut anyone; {low}, below it in {lowK}.', claim: null },
   statesHNoState: { text: 'State not given', claim: null },
+  statesHTakeawayAbove: { text: 'Among states with at least {few} hospitals every year, {state} was cut above the nation’s share in {k} of the {n} years CMS cut anyone.', claim: null },
   statesHMapAlt: { text: 'Fiscal year {fy}: each state shaded by the share of its hospitals CMS cut.', claim: null },
 
   // The rule changes noted on the figures.
