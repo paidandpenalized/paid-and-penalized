@@ -53,6 +53,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `source_manifest`, `sources`, `built_at`, `fy`.
 
 ## Rules
+- **Aim high visually.** Pages should be creative and visually impressive, with many analyses and graphs that let readers explore the data. Start from an existing site's page components and improve on them; a section of text usually sits beside a figure. Draft first, then verify: claims and copy review follow the look and never cut a visual.
 - **Anchor on CMS.** Every reproduction must equal CMS's published values exactly where CMS publishes them.
   Acceptance tests must pass or the build fails.
 - **No hand-typed numbers.** Every number in page copy or code comes from data. Exceptions: method constants
