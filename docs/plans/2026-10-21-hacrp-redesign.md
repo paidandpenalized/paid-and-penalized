@@ -21,13 +21,13 @@ Use their facts and direction. Don't copy their notes into this repo.
 ## Milestones
 - [x] **M1, hospital page.** Build it complete, then send the owner screenshots and wait for his reaction.
 - [x] **Checkpoint M1:** /simplify → `make test` → /code-review → /security-review if inputs changed → verify in Chrome beside TDR.
-- [ ] **M2, program page and place pages.**
+- [x] **M2, program page and place pages.**
   - Program page: Parts 1–3 (How it works, the FY picture, map and every hospital).
   - Place pages: region, division, state, metro.
   - Search across places.
 
   Send screenshots after.
-- [ ] **Checkpoint M2:** same as Checkpoint M1, including /security-review for search.
+- [x] **Checkpoint M2:** same as Checkpoint M1, including /security-review for search.
 - [ ] **M3, history and Methods.**
   - Part 4 history, per DATA-A-03. Name the prior-year files and their sizes before downloading them, then pin them.
   - `/hacrp/methods/`.
