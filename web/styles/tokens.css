@@ -12,6 +12,7 @@
   --pen: #c4303a;           /* penalty: marks, bars, pills */
   --pen-ink: #a5222c;       /* penalty-colored text on paper */
   --pen-tint: #f7e1e2;
+  --pen-scar: #e8a2a2;      /* a mark cut in an earlier year: lighter than the pen, darker than the tint */
   --rew: #00876f;           /* money paid to hospitals: marks, bars, pills */
   --neutral: #9a999f;
   --on-mark: #ffffff;       /* text on a filled meaning-ink pill */
@@ -57,7 +58,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #15161a; --paper-2: #1f2126; --ink: #ecebe5; --ink-2: #bdbcb5; --ink-3: #8d8c87; --line: #5f5e64;
-    --pen: #ef5b55; --pen-ink: #ff7d74; --pen-tint: #3a1d21; --rew: #1ea68a; --neutral: #6f6e74; --on-mark: #15161a;
+    --pen: #ef5b55; --pen-ink: #ff7d74; --pen-tint: #3a1d21; --pen-scar: #a0484a; --rew: #1ea68a; --neutral: #6f6e74; --on-mark: #15161a;
     --hatch: rgba(236, 235, 229, 0.28);
     --pen-seq-1: #7e3238; --pen-seq-2: #a43f45; --pen-seq-3: #d85f5e; --pen-seq-4: #f47e75; --pen-seq-5: #ffb0a6;
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -73,7 +74,7 @@
   :root {
     --paper: #ffffff !important; --paper-2: #f0f1ec !important; --ink: #1c1b1d !important;
     --ink-2: #49484d !important; --ink-3: #75747a !important; --line: #8a898f !important;
-    --pen: #c4303a !important; --pen-ink: #a5222c !important; --pen-tint: #f7e1e2 !important;
+    --pen: #c4303a !important; --pen-ink: #a5222c !important; --pen-tint: #f7e1e2 !important; --pen-scar: #e8a2a2 !important;
     --rew: #00876f !important; --neutral: #9a999f !important; --on-mark: #ffffff !important;
     --hatch: rgba(28, 27, 29, 0.3) !important; --pen-seq-1: #e8a2a2 !important; --pen-seq-2: #d9706f !important;
     --pen-seq-3: #c4303a !important; --pen-seq-4: #9a1f28 !important; --pen-seq-5: #6a1119 !important;

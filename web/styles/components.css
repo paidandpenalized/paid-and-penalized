@@ -47,6 +47,7 @@
 .nav li { flex: none; max-width: none; }
 .nav a { display: block; min-height: var(--target-min); padding: 9px 0 7px; margin-right: 24px; border-bottom: 3px solid transparent; color: var(--ink-2); font: 600 var(--fs-sm)/1 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; }
 .nav__num { margin-right: 6px; color: var(--pen-ink); font: 400 var(--fs-sm)/1 var(--font-type); }
+@media (max-width: 600px) { .nav ol { flex-wrap: wrap; white-space: normal; column-gap: 16px; } .nav a { margin-right: 0; } }
 .nav a:hover, .nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .nav a:focus-visible { outline-offset: -2px; }
 .topbar__sub .byline { margin-left: auto; padding-block: 6px; font-size: var(--fs-xs); white-space: nowrap; }
@@ -120,7 +121,7 @@
    focus as a region are set by web/client/figure.js). */
 .printout[data-more]::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px; background: linear-gradient(to right, transparent, var(--paper)); pointer-events: none; }
 .printout__scroll:focus-visible { outline-offset: -2px; }
-.printout__scroll { overflow-x: auto; }
+.printout__scroll { overflow-x: auto; position: relative; }
 .printout--fit { width: fit-content; max-width: 100%; }
 .gb { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
 /* The head's height when it sticks, for what must clear it: the head row's 1.25 line of --fs-sm and its 9px of padding

@@ -20,7 +20,7 @@ export function staircase({ cols, width, format }) {
     return mark({
       tip: c.tip, value: [c.cut, c.ever], hit: { x: M.left + i * step, y: M.top, width: step, height: H },
       body: html`<path class="chart-stair__ever" d="${columnPath(x, w, y(0), y(c.ever))}"/><path class="chart-col--pen" d="${columnPath(x + w * 0.18, w * 0.64, y(0), y(c.cut))}"/>
-${text({ x: x + w / 2, y: y(c.ever) - 5, cls: 'chart-value chart-value--mark', body: narrow && i % 2 ? '' : format(c.ever) })}
+${text({ x: x + w / 2, y: y(c.ever) - 5, cls: 'chart-value chart-value--mark', body: narrow && (cols.length - 1 - i) % 2 ? '' : format(c.ever) })}
 ${text({ x: x + w / 2, y: M.top + H + 15, cls: 'chart-tick', body: narrow && (cols.length - 1 - i) % 2 ? '' : c.label })}`,
     });
   });

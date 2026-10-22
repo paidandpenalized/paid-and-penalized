@@ -9,8 +9,9 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { count, decimal, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
-import { FEW_DECIDED, SHORT_NAMES } from '../web/constants.js';
+import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
+import { t as words } from '../web/history/copy.js';
 import {
   HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, cutYears, everFigure, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
   part4, placeMembers, placeYearsFigure, recordStrip, rollAsset, rollFigure, ruleBreaks, spikeYear, statesYearsFigure, yearMapFigure, yearsFigure,
@@ -47,6 +48,11 @@ const everCut = (hd) => [...hd.recs.values()].filter((r) => r.includes('Y')).len
 const pct0 = (x) => pct(x, 0);
 const pct1 = (x) => pct(x, 1);
 const classes = (svgMarkup) => [...String(svgMarkup).matchAll(/class="([^"]+)"/g)].map((m) => m[1]);
+// The narrow drawing of a figure (the wide one follows it), and the text of each <text class="cls"> in a drawing.
+const narrowOf = (fig) => String(fig).slice(0, String(fig).indexOf('data-fit="wide"'));
+const textsOf = (svg, cls) => [...String(svg).matchAll(new RegExp(`<text class="${cls}"[^>]*>([^<]*)</text>`, 'g'))].map((m) => text(m[1]));
+// A figure's note (the line under the chart).
+const noteOf = (fig) => text(/fig__note">([^<]*)</.exec(String(fig))[1]);
 
 // ---------- the source line, the roll call and its asset ----------
 
@@ -109,9 +115,22 @@ test('rollFigure: the roll call with the numbers of ever cut, hospitals and neve
     assert.equal(rows.length, hd.fys.length);
     rows.forEach((row, i) => assert.deepEqual(row, [`FY${hd.fys[i]}`, count(hd.counts[i].decided), count(hd.counts[i].cut), count(hd.counts[i].first), count(hd.counts[i].ever)]));
     // Without the assets it is a picture: no picker, no data attributes for the script.
-    assert.doesNotMatch(String(fig), /data-roll=|data-src=|roll__pick/);
+    assert.doesNotMatch(String(fig), /data-roll=|data-src=|roll__pick|data-hint/);
     assert.ok(String(fig).includes('class="roll__readout small" aria-live="polite"'));
-    assert.deepEqual(Object.keys(JSON.parse(attr(fig, 'data-geom'))).sort(), [String(WIDTH), String(HIST_WIDE)].sort());
+    const geom = JSON.parse(attr(fig, 'data-geom'));
+    assert.deepEqual(Object.keys(geom).sort(), [String(WIDTH), String(HIST_WIDE)].sort());
+    // The geometry the script reads: [label column, right margin, row height, top], each drawing's own.
+    assert.deepEqual(geom[String(WIDTH)], [30, 0, 11, 4]);
+    assert.deepEqual(geom[String(HIST_WIDE)], [40, 0, 17, 4]);
+    // The drawing agrees: the viewBox is the top, a row a year at that row height, and the room for the brackets.
+    for (const svg of String(fig).split('<svg ').slice(1).filter((x) => /chart--roll/.test(x))) {
+      const [width, height] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
+      const [, , rowH, top] = geom[String(width)];
+      assert.equal(height, top + hd.fys.length * rowH + 30, `width ${width}`);
+      const ys = new Set([...svg.matchAll(/ ([\d.]+)H[\d.]+v/g)].map((m) => Number(m[1])));
+      const rows = hd.fys.map((_, i) => top + i * rowH);
+      assert.ok(ys.size > 0 && [...ys].every((y) => rows.includes(y)), `width ${width}: every cell begins on a row of the geometry`);
+    }
   }
 });
 
@@ -119,6 +138,9 @@ test('rollFigure with the assets: the script\'s attributes and a picker of the s
   const fig = rollFigure(S, { n: 1, source: SRC, rollUrl: '/assets/h.json', src: '/assets/p.json' });
   assert.equal(attr(fig, 'data-roll'), '/assets/h.json');
   assert.equal(attr(fig, 'data-src'), '/assets/p.json');
+  // When the script can run, the readout carries the hint it starts with; the markup alone leaves it empty.
+  assert.equal(attr(/<p class="roll__readout[^>]*>/.exec(String(fig))[0], 'data-hint'), words('rollHint'));
+  assert.ok(words('rollHint').length > 0);
   const options = [...String(fig).matchAll(/<option value="([^"]*)">([^<]*)<\/option>/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(options.slice(1), [['AL', STATE_NAMES.AL], ['GA', STATE_NAMES.GA], ['MD', STATE_NAMES.MD]]);
   assert.equal(options[0][0], '');
@@ -237,6 +259,11 @@ test('hospitalInfectionsFigure: a panel per measure with two or more years of re
   assert.deepEqual(headOf(fig).slice(1).length, 3);
   same(numbers(takeaway(fig)), ['2', '3', '2021', '2024'], 'two of three measures fell between the first and the last result');
   assert.deepEqual(rowsOf(fig).map((r) => r[0]), ['2021', '2022', '2024']);
+  // The nation's middle hospital is the solid gray line under each panel, named once, on the first panel; the dashed
+  // line at one is the reference, named once too.
+  const narrow = narrowOf(fig);
+  assert.equal([...narrow.matchAll(/<path class="chart-lines__under chart-lines__under--solid"/g)].length, 3);
+  assert.deepEqual(textsOf(narrow, 'chart-cap chart-label--halo').sort(), ['Nation’s middle', 'as predicted'].sort());
   // Only one year of results, or none, draws nothing.
   assert.equal(hospitalInfectionsFigure([sir(2021, 1)], S, { n: 1, source: SRC }), null);
   assert.equal(hospitalInfectionsFigure([], S, { n: 1, source: SRC }), null);
@@ -267,6 +294,8 @@ test('chanceFigure: the panel by times cut against chance; its takeaway names th
   const nums2 = numbers(takeaway(chanceFigure(HD, { n: 1, source: SRC })));
   for (const x of [count(real.hospitals), String(real.years), count(real.observed[0]), count(real.observed[real.years])]) assert.ok(nums2.includes(x), `${x} in "${takeaway(chanceFigure(HD, { n: 1, source: SRC }))}"`);
   assert.equal(real.years, cutYears(HD));
+  // A key under the chart names the dot and the ring, and the side.
+  assert.match(noteOf(fig), /^● What happened\s+○ .*random.*hospitals/);
 });
 
 test('gapFigure: the share cut again after a cut, and after no cut, by years apart; the takeaway reads the first, second and furthest gap', () => {
@@ -279,21 +308,31 @@ test('gapFigure: the share cut again after a cut, and after no cut, by years apa
   same(numbers(takeaway(fig)), [pct0(again(one)), pct0(fresh(one)), pct0(again(two)), pct0(fresh(two)), String(far.k), pct0(again(far)), pct0(fresh(far))]);
   // The note names the years CMS cut no one, whose pairs are left out.
   assert.match(String(fig), /fig__note">[^<]*2023/);
+  // The drawing labels its points at one year apart, two, and the furthest: the line's value and the other line's, in
+  // that order at each; the axis is named; the comparison is the solid gray line, named under its last point.
+  const narrow = narrowOf(fig);
+  const at = [S.gaps[0], S.gaps[1], far];
+  assert.deepEqual(textsOf(narrow, 'chart-value chart-value--mark chart-label--halo'), at.flatMap((g) => [pct0(again(g)), pct0(fresh(g))]));
+  assert.deepEqual(textsOf(narrow, 'chart-cap'), ['Years apart']);
+  assert.deepEqual(textsOf(narrow, 'chart-cap chart-label--halo'), ['Cut, after no cut']);
+  assert.equal([...narrow.matchAll(/<path class="chart-lines__under chart-lines__under--solid"/g)].length, 1);
   // On the committed history a cut makes a repeat likelier than none, at every gap.
   for (const g of HD.gaps) assert.ok(again(g) > fresh(g), `${g.k} years apart`);
   assert.deepEqual(HD.gaps.map((g) => g.k), Array.from({ length: HD.gaps.length }, (_, i) => i + 1));
 });
 
-test('kindsFigure: a panel per kind of hospital against the nation, and the rural against the urban rate in the takeaway', () => {
+test('kindsFigure: a panel per kind of hospital against the nation (solid gray), and the rural share cut against the nation\'s in the takeaway', () => {
   const fig = kindsFigure(S, { n: 9, source: SRC });
   const group = (kind, key) => S.byType.find((k) => k.kind === kind).groups.find((g) => g.key === key).years;
   const rate1 = (y) => y.cut / y.decided;
   const rural = group('urban', 'false');
   const urban = group('urban', 'true');
-  const ratio = (i) => rate1(rural[i]) / rate1(urban[i]);
+  const nation = (i) => S.counts[i].cut / S.counts[i].decided;
   const last = S.fys.length - 1;
-  same(numbers(takeaway(fig)), [String(S.fys[0]), decimal(ratio(0), 1), String(S.fys[last]), decimal(ratio(last), 1)]);
-  assert.deepEqual([decimal(ratio(0), 1), decimal(ratio(last), 1)], ['0.7', '0.3'], 'rural hospitals were cut 0.7 times as often as urban ones in FY2021 and 0.3 times in FY2025');
+  // Rural hospitals against all hospitals, the first year and the newest: the share cut, and the nation's beside it.
+  same(numbers(takeaway(fig)), [String(S.fys[0]), pct0(rate1(rural[0])), pct0(nation(0)), String(S.fys[last]), pct0(rate1(rural[last])), pct0(nation(last))]);
+  assert.deepEqual([pct0(rate1(rural[0])), pct0(nation(0)), pct0(rate1(rural[last])), pct0(nation(last))], ['20%', '29%', '9%', '19%'], 'FY2021: 2 of 10 rural hospitals against 6 of 21; FY2025: 1 of 11 against 4 of 21');
+  assert.match(takeaway(fig), /^Rural hospitals flipped: in fiscal year 2021, CMS cut 20% of them against 29% of all hospitals; in fiscal year 2025, 9% against 19%\.$/);
   // The table: a row a year; the nation first; a year CMS cut no one is blank.
   const rows = rowsOf(fig);
   assert.equal(rows.length, S.fys.length);
@@ -303,7 +342,11 @@ test('kindsFigure: a panel per kind of hospital against the nation, and the rura
   assert.ok(urbanTrue > 0);
   assert.equal(rows[0][urbanTrue], pct1(rate1(urban[0])));
   // Six panels: each says how many cut years it sat above the nation.
-  assert.equal([...String(fig).slice(0, String(fig).indexOf('data-fit="wide"')).matchAll(/above in \d+ of 4/g)].length, 6);
+  const narrow = narrowOf(fig);
+  assert.equal([...narrow.matchAll(/above in \d+ of 4/g)].length, 6);
+  // The nation is drawn solid and gray under each panel's line (not the dashed reference of the other charts).
+  assert.equal([...narrow.matchAll(/<path class="chart-lines__under chart-lines__under--solid"/g)].length, 6);
+  assert.equal([...narrow.matchAll(/<path class="chart-lines__under"/g)].length, 0);
 });
 
 test('coverageFigure: the share cut by what CMS scored a hospital on, four bars; the takeaway has the PSI 90-alone and no-PSI 90 shares and the years', () => {
@@ -313,6 +356,10 @@ test('coverageFigure: the share cut by what CMS scored a hospital on, four bars;
   assert.deepEqual(rowsOf(fig).map((r) => r.slice(1)), [g.every, g.all, g.psiOnly, g.noPsi].map((x) => [count(x.decided), count(x.cut), pct1(share(x))]));
   same(numbers(takeaway(fig)).filter((x) => x.endsWith('%')), [pct0(share(g.psiOnly)), pct0(share(g.noPsi))]);
   assert.ok(numbers(takeaway(fig)).includes('2021') && numbers(takeaway(fig)).includes('2025'));
+  // The bars and the table's rows are named the same short way.
+  const names = ['Every hospital', 'Every measure', `${SHORT_NAMES.PSI90} only`, 'Infections only'];
+  assert.deepEqual(rowsOf(fig).map((r) => r[0]), names);
+  assert.deepEqual(textsOf(narrowOf(fig), 'chart-punch__row'), names);
   // On the committed history, a hospital scored on PSI 90 alone is rarely cut, and one with no PSI 90 score often is.
   assert.ok(share(HD.coverage.groups.psiOnly) < 0.1 && share(HD.coverage.groups.noPsi) > 0.4);
   assert.deepEqual(rowsOf(coverageFigure(HD, { n: 1, source: SRC }))[0].slice(1), [count(HD.coverage.groups.every.decided), count(HD.coverage.groups.every.cut), pct1(share(HD.coverage.groups.every))]);
@@ -330,6 +377,25 @@ test('statesYearsFigure: one small map a year, a state\'s column of shares in th
   same(numbers(takeaway(fig)), [String(FEW_DECIDED), '4', '4', '3']);
   assert.match(takeaway(fig), new RegExp(`${STATE_NAMES.AL} was cut above`));
   assert.match(takeaway(fig), new RegExp(`${STATE_NAMES.GA}, below it in 3`));
+  // One key above the maps, in HTML: a swatch for each step of the share cut, none cut, no decision, and the two states
+  // the takeaway names, outlined on every map.
+  const key = /<ul class="smallmaps__key" role="list">([\s\S]*?)<\/ul>/.exec(String(fig));
+  assert.ok(key && String(fig).indexOf('smallmaps__key') < String(fig).indexOf('class="smallmaps"'), 'the key comes before the maps');
+  const items = [...key[1].matchAll(/<li><span class="smallmaps__sw smallmaps__sw--(\w+)"><\/span>([^<]*)<\/li>/g)].map((m) => [m[1], m[2]]);
+  const edges = [0, ...MAP_STEPS_PCT];
+  assert.deepEqual(items, [
+    ...edges.map((e, i) => [String(i + 1), i === edges.length - 1 ? `${e}% and up` : `${e}% to ${edges[i + 1]}%`]),
+    ['zero', 'None cut'], ['empty', 'No decision'], ['ring', `Outlined: ${STATE_NAMES.AL} and ${STATE_NAMES.GA}`],
+  ]);
+  // Each small map outlines those two states (when they have a decision that year) and no other.
+  const maps = String(fig).split('<div class="smallmaps__m">').slice(1);
+  assert.equal(maps.length, S.fys.length);
+  maps.forEach((m, i) => {
+    const ringed = m.split('<g class="chart-mark"').slice(1).filter((g) => g.includes('chart-tile-ring')).map((g) => /data-state="(\w+)"/.exec(g)[1]);
+    assert.deepEqual(ringed, S.fys[i] === 2023 ? [] : ['AL', 'GA'], `FY${S.fys[i]}`);
+  });
+  // A state resting on few hospitals (Maryland: under ten) carries the dashed inner outline in the maps.
+  assert.match(maps[0], /data-state="MD"[^>]*>[\s\S]*?chart-tile-few/);
 });
 
 // ---------- the hospital page's record ----------
@@ -370,6 +436,8 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   assert.equal(rows[0][2], pct1(16 / 21));
   assert.deepEqual(rows[S.fys.indexOf(2023)].slice(1, 3), ['', ''], 'FY2023: no score, no place');
   same(numbers(takeaway(fig)), ['4', '4']);
+  // A key under the chart names the red dot and the hollow one.
+  assert.match(noteOf(fig), /^● Red: a year CMS cut it\s+○ Hollow: a year it didn’t$/);
   // A never-cut hospital: the sentence has only the years decided.
   same(numbers(takeaway(yearsFigure(S.recordOf('990104'), S, { n: 5, source: SRC }))), ['4']);
   // On the committed history, a hospital that was cut in some year and decided in more than one.
@@ -382,17 +450,44 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
 
 // ---------- a place's years ----------
 
-const place = (over = {}) => ({ kind: 'state', name: 'Example State', ccns: SYNTH_RECORDS.AL.map(([c]) => c), stateCodes: [], ...over });
+const AL = SYNTH_RECORDS.AL.map(([c]) => c);
+const GA = SYNTH_RECORDS.GA.map(([c]) => c);
+const place = (over = {}) => ({ kind: 'state', key: 'al', name: 'Example State', ccns: AL, stateCodes: [], ...over });
+// A place of metro shape that holds only the hospitals it is given (the synthetic master places none in an area).
+const metro = (ccns, over = {}) => place({ kind: 'metro', key: '99999', ccns, ...over });
 
-test('placeMembers: the place\'s hospitals with a record; a state, region or division also takes its state\'s hospitals the master no longer places', () => {
-  assert.deepEqual(placeMembers(place(), S, SM).sort(), SYNTH_RECORDS.AL.map(([c]) => c));
-  // Metro areas take only their own; a hospital with no record (Maryland-style) is left out of any place.
-  const mixed = place({ kind: 'metro', ccns: ['990101', '990301', '990999'], stateCodes: ['AL'] });
-  assert.deepEqual(placeMembers(mixed, S, SM), ['990101']);
-  // A state whose place knows its state codes adds the closed hospital (990303: in the history and the MD file, not in the master).
-  const md = place({ ccns: ['990302'], stateCodes: ['MD'] });
-  assert.deepEqual(placeMembers(md, S, SM).sort(), ['990302', '990303']);
-  assert.deepEqual(placeMembers(place({ kind: 'metro', ccns: ['990302'], stateCodes: ['MD'] }), S, SM), ['990302'], 'a metro area does not');
+test('placeMembers: a state takes its own hospitals with a record, a region or division those of its hospitals\' states, a metro area those of its CBSA', () => {
+  // A state: every hospital with a record whose master state is its own code, whatever its list of hospitals holds.
+  assert.deepEqual(placeMembers(place(), S, SM).sort(), AL);
+  assert.deepEqual(placeMembers(place({ ccns: ['990101'] }), S, SM).sort(), AL, 'the state\'s code, not the hospitals listed, decides');
+  assert.deepEqual(placeMembers(place({ key: 'ga', ccns: [] }), S, SM).sort(), GA);
+  // A hospital with no record (Maryland-style: 990301 has a decision in no year) is in no place.
+  assert.ok(!placeMembers(place({ key: 'md', ccns: ['990301', '990302'] }), S, SM).includes('990301'));
+  // Including one the master no longer places (990303: in the history and the Maryland file, not in the master): its
+  // last file's state stands in.
+  assert.ok(!SM.has('990303') && S.stateOf.get('990303') === 'MD');
+  assert.deepEqual(placeMembers(place({ key: 'md', ccns: ['990302'] }), S, SM).sort(), ['990302', '990303']);
+  assert.ok(!placeMembers(place(), S, SM).includes('990303'), 'and it is not another state\'s');
+  // The master's state wins over the history's: a hospital the master now puts in Georgia has left Alabama's list.
+  const moved = new Map(SM).set('990101', { ...SM.get('990101'), state: 'GA' });
+  assert.equal(S.stateOf.get('990101'), 'AL');
+  assert.ok(!placeMembers(place({ ccns: ['990102'] }), S, moved).includes('990101'));
+  assert.ok(placeMembers(place({ key: 'ga', ccns: [] }), S, moved).includes('990101'));
+  // A region or a division: the states its hospitals are in (the master's), each state's every hospital.
+  for (const kind of ['division', 'region']) {
+    assert.deepEqual(placeMembers(place({ kind, key: 'south', ccns: ['990101', '990201'] }), S, SM).sort(), [...AL, ...GA], kind);
+    assert.deepEqual(placeMembers(place({ kind, key: 'south', ccns: ['990302'] }), S, SM).sort(), ['990302', '990303'], `${kind}: the closed hospital comes with its state`);
+  }
+  // A hospital of its own that the master cannot place gives no state, but is still listed if it has a record.
+  assert.deepEqual(placeMembers(place({ kind: 'division', key: 'south', ccns: ['990303'] }), S, SM), ['990303']);
+  // A metro area: its own hospitals, and any other with a record whose master CBSA is its key; never a state's.
+  const cbsa = new Map(SM);
+  for (const [ccn, area] of [['990101', '10001'], ['990103', '10001'], ['990201', '10002']]) cbsa.set(ccn, { ...SM.get(ccn), cbsa: area });
+  assert.deepEqual(placeMembers(metro(['990101'], { key: '10001' }), S, cbsa).sort(), ['990101', '990103']);
+  assert.deepEqual(placeMembers(metro(['990101', '990999'], { key: '10001' }), S, cbsa).sort(), ['990101', '990103'], 'a hospital with no record is left out');
+  assert.deepEqual(placeMembers(metro(['990302'], { key: '10003' }), S, cbsa), ['990302'], 'no hospital in that area but its own: the closed Maryland one, with no CBSA in the master, is not added');
+  assert.deepEqual(placeMembers(metro([], { key: '10002' }), S, cbsa), ['990201'], 'an area with no hospital listed takes the history\'s hospitals in it');
+  assert.deepEqual(placeMembers(metro(['990101']), S, SM), ['990101'], 'no CBSA in the master: only its own');
 });
 
 test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut each year beside the nation\'s, in the table, and the inline order the script reads', () => {
@@ -409,7 +504,7 @@ test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut
   });
   // Alabama was above the nation's share in all 4 cut years; 6 of its 10 hospitals were ever cut.
   same(numbers(takeaway(fig)), ['4', '4', '6', '10']);
-  assert.ok(takeaway(fig).startsWith('Alabama') || takeaway(fig).includes('Alabama'));
+  assert.ok(takeaway(fig).startsWith('Alabama’s share cut was above'), takeaway(fig));
   // The script's names: the grid's own order inline, aligned.
   const inline = JSON.parse(attr(fig, 'data-inline'));
   assert.deepEqual(inline.fys, S.fys);
@@ -417,19 +512,39 @@ test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut
   inline.ccns.forEach((ccn, j) => { assert.equal(inline.recs[j], S.recs.get(ccn)); assert.equal(inline.states[j], 'AL'); });
   assert.deepEqual(inline.recs.slice(0, 3), ['YY.YY', 'YN.NY', 'YN.NN'], 'cut first');
   assert.equal(attr(fig, 'data-src'), '/assets/p.json');
-  assert.deepEqual(Object.keys(JSON.parse(attr(fig, 'data-geom'))).sort(), [String(WIDTH), '760'].sort());
-  assert.doesNotMatch(String(placeYearsFigure({ place: place(), hd: S, master: SM, next: () => 1, source: SRC })), /data-src=/);
+  // The geometry the script reads: [label column, right margin for the notes, row height, top], by drawn width.
+  const geom = JSON.parse(attr(fig, 'data-geom'));
+  assert.deepEqual(geom, { [String(WIDTH)]: [30, 70, 12, 4], 760: [40, 90, 18, 4] });
+  for (const svg of String(fig).split('<svg ').slice(1).filter((x) => /chart--roll/.test(x))) {
+    const [width, height] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
+    const [, , rowH, top] = geom[String(width)];
+    assert.equal(height, top + S.fys.length * rowH + 30, `width ${width}: the top, a row a year at the geometry's height, and the brackets`);
+  }
+  // With the script's assets the readout carries its starting hint; without, it is a picture.
+  assert.equal(attr(/<p class="roll__readout[^>]*>/.exec(String(fig))[0], 'data-hint'), words('rollHint'));
+  const picture = String(placeYearsFigure({ place: place(), hd: S, master: SM, next: () => 1, source: SRC }));
+  assert.doesNotMatch(picture, /data-src=|data-hint/);
+});
+
+test('placeYearsFigure names a region or a division with "the" in its takeaway, and a state or a metro area as it is', () => {
+  const start = (p) => takeaway(placeYearsFigure({ place: p, hd: S, master: SM, next: () => 1, source: SRC }));
+  assert.ok(start(place({ kind: 'region', key: 'south', name: 'South', ccns: ['990101'] })).startsWith('The South’s share cut was above'));
+  assert.ok(start(place({ kind: 'division', key: 'east-south-central', name: 'East South Central', ccns: ['990101'] })).startsWith('The East South Central’s share cut was above'));
+  assert.ok(start(place({ name: 'Alabama' })).startsWith('Alabama’s share cut'));
+  assert.ok(start(metro(AL, { name: 'Example Metro' })).startsWith('Example Metro’s share cut'));
 });
 
 test('placeYearsFigure draws nothing for a place with fewer than two hospitals that have a record, and takes no figure number', () => {
   let drawn = 0;
   const next = () => ++drawn;
-  assert.equal(placeYearsFigure({ place: place({ ccns: ['990101'] }), hd: S, master: SM, next, source: SRC }), null);
-  assert.equal(placeYearsFigure({ place: place({ ccns: ['990301', '990302'] }), hd: S, master: SM, next, source: SRC }), null, 'one with no record');
-  assert.equal(placeYearsFigure({ place: place({ ccns: [] }), hd: S, master: SM, next, source: SRC }), null);
+  assert.equal(placeYearsFigure({ place: metro(['990101']), hd: S, master: SM, next, source: SRC }), null);
+  assert.equal(placeYearsFigure({ place: metro(['990301', '990302']), hd: S, master: SM, next, source: SRC }), null, 'one with no record');
+  assert.equal(placeYearsFigure({ place: metro([]), hd: S, master: SM, next, source: SRC }), null);
+  // A state with none of its own hospitals in the history (and a single listed one) is the same.
+  assert.equal(placeYearsFigure({ place: place({ key: 'ak', ccns: ['990101'] }), hd: S, master: SM, next, source: SRC }), null);
   assert.equal(drawn, 0);
   // A place whose hospitals were never cut has no "ever cut" brackets, and says so with zero.
-  const none = placeYearsFigure({ place: place({ ccns: ['990104', '990107'] }), hd: S, master: SM, next: () => 1, source: SRC });
+  const none = placeYearsFigure({ place: metro(['990104', '990107']), hd: S, master: SM, next: () => 1, source: SRC });
   assert.ok(numbers(takeaway(none)).includes('2') && numbers(takeaway(none)).includes('0'), takeaway(none));
 });
 

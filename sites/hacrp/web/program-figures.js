@@ -8,7 +8,7 @@ import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../we
 import { compareHist } from '../../../web/charts/compareHist.js';
 import { printout } from '../../../web/render/components.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
-import { placeCounts } from './places.js';
+import { nameInText, placeCounts } from './places.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { punchCard } from '../../../web/charts/punchCard.js';
@@ -50,7 +50,9 @@ export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = n
   const ranks = highlight ? [...highlight].map((ccn) => rank.get(ccn)).filter((i) => i !== undefined).sort((a, b) => a - b) : null;
   const labels = { low: fill('ruleLow', { value: decimal(scores[0], DP) }), high: fill('ruleHigh', { value: decimal(scores[scores.length - 1], DP) }), average: t('ruleAverage'), line: fill('ruleLine'), cut: here === null ? fill('ruleCut', { yes: count(yes) }) : fill('ruleCutHere', { yes: count(yes), here: count(here) }) };
   const alt = fill('ruleAlt', { decided: count(decided), yes: count(yes) });
-  const draw = (width) => imageOf(scoreRule({ scores, cut: yes, labels, width, highlight: ranks }), alt, width === WIDTH ? 'narrow' : 'wide');
+  // The phone's drawing has room for the short form of a place's cut count.
+  const narrowLabels = here === null ? labels : { ...labels, cut: fill('ruleCutHereShort', { yes: count(yes), here: count(here) }) };
+  const draw = (width) => imageOf(scoreRule({ scores, cut: yes, labels: width === WIDTH ? narrowLabels : labels, width, highlight: ranks }), alt, width === WIDTH ? 'narrow' : 'wide');
   return html`<figure class="rulefig"${searchUrl ? html` data-src="${searchUrl}"` : ''} data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">
 ${draw(WIDTH)}
 ${draw(PAGE_WIDE)}
@@ -558,7 +560,7 @@ export function placeMapFigure({ place, places, pd, shapes, counties, hospitalRo
       tip: fill('placeMapTip', { name: h.name, city: h.city, score: cmsText(h.totalText), decision: decision(r) }), href: h.href,
     };
   });
-  const label = fill('placeMapAlt', { name: place.name });
+  const label = fill('placeMapAlt', { name: nameInText(place) });
   const sizes = (width) => (dense ? { 'chart-dots--faint': width > WIDTH ? 4 : 2.6, 'chart-dots--ring': width > WIDTH ? 5.4 : 3.4, 'chart-dots--pen': width > WIDTH ? 6.2 : 4 } : null);
   const lines = place.kind === 'state' ? countiesOf(counties, codes[0]) : place.kind === 'metro' ? counties : [];
   const own = place.kind === 'metro' ? new Set(place.ccns.map((c) => master.get(c)?.fips).filter(Boolean)) : null;
@@ -573,7 +575,7 @@ ${dotKey({ rings: !dense })}`;
   const states = dense ? codes.map((code) => places.places.get(`state:${code.toLowerCase()}`)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'en')) : null;
   return figure({
     n: next(), chart, source, csvName: `hacrp-${place.kind}-${place.key}-map`,
-    takeaway: fill('placeMapTakeaway', { name: place.name, yes: count(c.yes), decided: count(c.decided) }),
+    takeaway: fill('placeMapTakeaway', { name: nameInText(place, { start: true }), yes: count(c.yes), decided: count(c.decided) }),
     table: dense ? {
       columns: [{ name: t('placeColPlace') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }],
       rows: states.map((p) => [p.name, num(count(p.counts.decided), p.counts.decided), num(count(p.counts.yes), p.counts.yes)]),

@@ -8,7 +8,7 @@ import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { cmsText, count, decimal, ordinal, pct } from '../../../web/render/format.js';
 import { FEW_DECIDED } from '../web/constants.js';
 import { ancestors, placeCounts } from '../web/places.js';
-import { DATA, PD, PLACES, SEARCH_URL, renderPlace } from './pinned.js';
+import { DATA, HD, PD, PLACES, SEARCH_URL, renderPlace } from './pinned.js';
 import { ASSETS, esc } from './fixtures.js';
 
 const of = (kind) => PLACES.list.filter((p) => p.kind === kind);
@@ -39,7 +39,7 @@ test('every place page: one h1 with its name, the title and canonical address, i
     assert.deepEqual(h1s(text), [`<h1 class="place__title">${esc(place.name)}</h1>`], place.id);
     assert.ok(text.includes(`<title>${esc(place.name)}: hospital-acquired conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`), `${place.id}: title`);
     assert.ok(text.includes(`<link rel="canonical" href="https://paidandpenalized.org${place.path}">`), `${place.id}: canonical`);
-    assert.match(text, new RegExp(`<meta name="description" content="CMS’s FY${DATA.fy} Hospital-Acquired Condition Reduction Program scores and payment decisions for hospitals in ${esc(place.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, compared with the nation\\.">`), place.id);
+    assert.match(text, new RegExp(`<meta name="description" content="CMS’s FY${DATA.fy} Hospital-Acquired Condition Reduction Program scores and payment decisions for hospitals in ${esc(['region', 'division'].includes(place.kind) ? `the ${place.name}` : place.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, compared with the nation\\.">`), place.id);
     assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hacrp-place']}"></script>`), `${place.id}: the place script`);
     assert.ok(!text.includes(ASSETS.js['hacrp-program']), `${place.id}: not the program page's`);
     assert.match(text, /data-nav="map" aria-current="true"/, `${place.id}: the top bar's Map item`);
@@ -134,6 +134,9 @@ test('the figures: the map, the scores against the nation\'s and the measures, n
   assert.deepEqual([...text.matchAll(/<section class="psec" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures']);
   // The rule is every hospital with a decision, with the place's ticked: it reads the hospitals asset for names.
   assert.match(text, new RegExp(`<figure class="rulefig" data-src="${SEARCH_URL.replaceAll('.', '\\.')}"`));
+  // The score rule is drawn twice, a phone's and a page's: the phone's names the place's cut count in the short form.
+  const cutLabels = [...(/<figure class="rulefig"[\s\S]*?<\/figure>/.exec(text)[0]).matchAll(/<text class="chart-cap chart-cap--pen"[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+  assert.deepEqual(cutLabels, [`${count(STATE.counts.yes)} of ${count(PD.counts.yes)} here`, `${count(PD.counts.yes)} cut nationally · ${count(STATE.counts.yes)} here`], 'phone, then page');
   assert.ok(text.includes(`Every hospital in the nation with a payment decision, lowest score to highest, each as tall as its score (above the rule, worse than average); the solid hairlines are ${esc(STATE.name)}’s, red where CMS cut.`));
   // The map's takeaway and the score figure's name this place's counts and the nation's share.
   const caps = Object.fromEntries([...text.matchAll(/<figcaption class="fig__cap" id="figure-(\d+)-cap"><span class="fig__n">Figure \d+\.<\/span> ([^<]*)<\/figcaption>/g)].map((m) => [m[1], m[2]]));
@@ -180,7 +183,10 @@ test('the hospital table lists exactly the place\'s hospitals (data-area), its h
     assert.deepEqual([...ccns].sort(), [...place.ccns].sort(), `${place.id}: exactly the place's hospitals`);
     assert.equal(ccns.length, place.counts.file);
     assert.ok(ccns.every((c) => /^[0-9A-Z]{6}$/.test(c)));
-    assert.ok(section.includes(`<h2 id="hospitals-h">Every hospital in ${esc(place.name)}</h2>`), `${place.id}: heading`);
+    // A Census region or division takes "the" ("Every hospital in the South"); a state or a metro area does not.
+    const inText = place.kind === 'region' || place.kind === 'division' ? `the ${place.name}` : place.name;
+    assert.ok(section.includes(`<h2 id="hospitals-h">Every hospital in ${esc(inText)}</h2>`), `${place.id}: heading`);
+    assert.ok(section.includes(`id="hospitals-cap">Every hospital in CMS’s file in ${esc(inText)}, with`), `${place.id}: the table's caption`);
     assert.doesNotMatch(section, /id="ht-state"/, `${place.id}: no state menu`);
     assert.match(section, /<select id="ht-sort">/);
     assert.match(section, /<input id="ht-name" type="search"/);
@@ -199,10 +205,27 @@ test('hostile text in a place\'s name renders as text in the page, the title, th
   assert.ok(text.includes(`<li aria-current="page">${esc(name)}</li>`));
   assert.ok(text.includes(`<h2 id="hospitals-h">Every hospital in ${esc(name)}</h2>`));
   assert.ok(text.includes(`<title>${esc(name)}: hospital-acquired conditions`));
+  // A region's name, which a sentence puts after "the", is text there too.
+  const region = renderPlace({ ...REGION, name });
+  assert.ok(region.includes(`<h2 id="hospitals-h">Every hospital in the ${esc(name)}</h2>`));
+  assert.ok(!region.includes('<script>alert'));
   // A hostile name above a place (a division's) reaches the breadcrumb as text too.
   const division = PLACES.places.get(STATE.parent);
   const places = { ...PLACES, places: new Map([...PLACES.places, [division.id, { ...division, name }]]) };
   const below = renderPlace(STATE, { places });
   assert.ok(below.includes(`<a href="${division.path}">${esc(name)}</a>`));
   assert.ok(!below.includes('<script>alert'));
+});
+
+test('a region\'s or division\'s years figure takes "the" in its heading, its words and its takeaway; a state\'s does not', () => {
+  for (const place of [REGION, DIVISION, STATE]) {
+    const text = renderPlace(place, { hd: HD });
+    const article = place.kind === 'state' ? '' : 'the ';
+    const Article = place.kind === 'state' ? '' : 'The ';
+    const years = text.slice(text.indexOf('id="years"'), text.indexOf('id="years"') + 3000);
+    assert.ok(years.includes(`<h2 class="psec__title" id="years-h">${Article}${esc(place.name)}, year by year</h2>`), `${place.id}: heading`);
+    assert.ok(years.includes(`<p>Every hospital in ${article}${esc(place.name)} with a payment decision in any year`), `${place.id}: words`);
+    assert.ok(years.includes(`the share of ${article}${esc(place.name)}’s hospitals cut that year`), `${place.id}: the share`);
+    assert.ok(years.includes(`</span> ${Article}${esc(place.name)}’s share cut was above the nation’s`), `${place.id}: takeaway`);
+  }
 });

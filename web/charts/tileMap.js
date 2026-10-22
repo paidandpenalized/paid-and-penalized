@@ -133,9 +133,11 @@ export const fewOutline = (x, y, size, on) => html`<rect class="chart-tile-few${
 
 // A tile map small enough to repeat (one per year in a grid of them): tiles only, shaded by the same steps, with no
 // codes and no legend (the figure carries one legend for all). states as tileMap's; a tile with no value is an empty
-// outline.
-export function miniTiles({ states, ramp, width }) {
+// outline, and one resting on few cases carries the dashed inner outline. outline: codes drawn with an ink border
+// (states the figure's words name).
+export function miniTiles({ states, ramp, width, outline = [] }) {
   checkStates(states);
+  if (!Array.isArray(ramp) || !ramp.length) throw new RangeError('miniTiles: a ramp of thresholds is required');
   const { stepOf } = stepScale(ramp);
   const pitch = width / GRID.cols;
   const size = pitch - 1.5;
@@ -143,8 +145,10 @@ export function miniTiles({ states, ramp, width }) {
     const s = states[code];
     const box = html`x="${r2(c * pitch)}" y="${r2(r * pitch)}" width="${r2(size)}" height="${r2(size)}"`;
     if (s.empty || s.hatched || s.value === null) return html`<rect class="chart-tile-empty" ${box}/>`;
-    const cls = s.value === 0 ? 'chart-tile-zero' : `chart-seq-${stepOf(s.value)}`;
-    return mark({ tip: `${code}: ${s.label}`, value: s.value, data: { state: code }, hit: null, body: html`<rect class="chart-tile ${cls}" ${box} rx="1"/>` });
+    const step = s.value === 0 ? null : stepOf(s.value);
+    const cls = step === null ? 'chart-tile-zero' : `chart-seq-${step}`;
+    const ring = outline.includes(code) ? html`<rect class="chart-tile-ring" ${box}/>` : '';
+    return mark({ tip: `${code}: ${s.label}`, value: s.value, data: { state: code }, hit: null, body: html`<rect class="chart-tile ${cls}" ${box} rx="1"/>${s.few ? fewOutline(c * pitch, r * pitch, size, step !== null && step >= DARK_FROM) : ''}${ring}` });
   });
   return frame({ kind: 'mini-tiles', width, height: GRID.rows * pitch, body: html`${tiles}` });
 }

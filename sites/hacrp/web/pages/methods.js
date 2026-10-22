@@ -4,7 +4,7 @@
 // decision against the line this site finds, each year), the formula, what comes from CMS and what this site works
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
 // glossary, and a link to the family's page for feedback, privacy and AI.
-import { stamp } from '../../../../web/render/components.js';
+import { stamp, typeset } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -125,7 +125,7 @@ ${para(fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: Str
     { id: 'reading', heading: t('readHeading'), body: html`<ol class="reading">${['read1', 'read2', 'read3', 'read4', ['read5', { short: SHORT_NAMES.PSI90 }], ['read6', { pct: REDUCTION_TEXT }], 'read7'].map((k) => html`<li>${Array.isArray(k) ? fill(k[0], k[1]) : t(k)}</li>`)}</ol>` },
     { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(t('sourcesCode'))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}
-<ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${i}</li>`)}</ul></li>`)}</ol>
+<ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${typeset(i)}</li>`)}</ul></li>`)}</ol>
 ${para(t('changedCorrections'))}` },
     { id: 'glossary', heading: t('glossaryHeading'), body: html`<dl class="glossary">${GLOSSARY({ eqFy }).map(([term, def, values, termValues]) => html`<div class="glossary__item"><dt>${termValues ? fill(term, termValues) : t(term)}</dt><dd>${values ? fill(def, values) : t(def)}</dd></div>`)}</dl>` },
     { id: 'more', heading: t('familyHeading'), body: html`<p>${t('familyText')} <a href="/methods/">${t('familyLink')}</a>.</p>

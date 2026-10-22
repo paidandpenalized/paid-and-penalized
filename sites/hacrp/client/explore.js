@@ -397,12 +397,30 @@ export function mountRoll(fig, { hospitals }) {
     const row = s.names.get(ccn);
     const cut = s.hist.fys.filter((_, i) => rec[i] === 'Y').map((fy) => `FY${String(fy).slice(-2)}`);
     const decided = [...rec].filter((c) => c !== '.').length;
-    readout.textContent = fill(cut.length ? 'rollSay' : 'rollSayNone', { name: row ? row[1] : fill('rollClosed', { ccn }), state: row ? row[3] : s.hist.states[j], cut: String(cut.length), decided: String(decided), years: cut.join(', ') });
+    const who = { name: row ? row[1] : fill('rollClosed', { ccn }), state: row ? row[3] : s.hist.states[j], decided: String(decided) };
+    readout.textContent = cut.length ? fill('rollSay', { ...who, cut: String(cut.length), years: cut.join(', ') }) : fill('rollSayNone', who);
   };
+  // The column under the pointer, outlined on the grid.
+  const cursor = (svg, j, n, years) => {
+    const width = svg.viewBox.baseVal.width;
+    const [label, right, rowH, top] = geom[String(width)];
+    const w = (width - label - right) / n;
+    let rect = svg.querySelector('.chart-roll__cursor');
+    if (!rect) {
+      rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('class', 'chart-roll__cursor');
+      rect.setAttribute('y', String(top - 2));
+      rect.setAttribute('height', String(years * rowH + 2));
+      svg.append(rect);
+    }
+    rect.setAttribute('x', (label + j * w - 1).toFixed(1));
+    rect.setAttribute('width', Math.max(2, w + 2).toFixed(1));
+  };
+  if (readout.dataset.hint) readout.textContent = readout.dataset.hint;
   for (const svg of svgs) {
     svg.addEventListener('pointerenter', () => { ready().catch(() => {}); });
     svg.addEventListener('pointermove', (e) => {
-      ready().then((s) => { const j = at(svg, e, s.hist.ccns.length); if (j !== null) say(s, j); }, () => {});
+      ready().then((s) => { const j = at(svg, e, s.hist.ccns.length); if (j !== null) { say(s, j); cursor(svg, j, s.hist.ccns.length, s.hist.fys.length); } }, () => {});
     });
     svg.addEventListener('click', (e) => {
       ready().then((s) => {
@@ -423,7 +441,12 @@ export function mountRoll(fig, { hospitals }) {
         const [label, right] = geom[String(width)];
         const n = s.hist.ccns.length;
         const x = (j) => label + ((j + 0.5) * (width - label - right)) / n;
-        const d = s.hist.states.map((st, j) => (st === select.value ? `M${x(j).toFixed(1)} 0V${(height - 26).toFixed(1)}` : '')).join('');
+        // A tick through each of the state's hospitals, broken around a year no hospital had a decision.
+        const [, , rowH, top] = geom[String(width)];
+        const rows = s.hist.fys.map((_, i) => s.hist.recs.some((r) => r[i] !== '.'));
+        const runs = [];
+        rows.forEach((on, i) => { if (on && (i === 0 || !rows[i - 1])) runs.push([i, i + 1]); else if (on) runs[runs.length - 1][1] = i + 1; });
+        const d = s.hist.states.map((st, j) => (st === select.value ? runs.map(([a, b]) => `M${x(j).toFixed(1)} ${(top + a * rowH).toFixed(1)}V${(top + b * rowH - 2).toFixed(1)}`).join('') : '')).join('');
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('class', 'chart-roll__pick');
         path.setAttribute('d', d);
@@ -431,7 +454,7 @@ export function mountRoll(fig, { hospitals }) {
       }
       box.classList.toggle('is-picked', Boolean(select.value));
       const k = s.hist.states.filter((st) => st === select.value).length;
-      readout.textContent = select.value ? fill('rollPicked', { n: count(k), state: select.selectedOptions[0].textContent }) : '';
+      readout.textContent = select.value ? fill('rollPicked', { n: count(k), state: select.selectedOptions[0].textContent }) : readout.dataset.hint ?? '';
     }, () => {});
   });
 }

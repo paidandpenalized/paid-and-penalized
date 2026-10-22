@@ -33,9 +33,13 @@ export function rankYears({ years, breaks = [], labels, width }) {
   })));
   const every = width < 400 && n > 8 ? 2 : 1;
   const xLabels = years.map((yr, i) => ((n - 1 - i) % every === 0 ? text({ x: cx(i), y: M.top + H + 16, cls: 'chart-tick', body: yr.label }) : ''));
-  const rules = breaks.map((b) => {
+  // A break's label runs right of its rule, or left when the next break would meet it (its width estimated at the
+  // caps' 6.4 units a character).
+  const rules = breaks.map((b, i) => {
     const x = M.left + b.at * colW;
-    return html`<line class="chart-rank__break" x1="${r2(x)}" x2="${r2(x)}" y1="${M.top - 14}" y2="${r2(M.top + H)}"/>${text({ x: x + 3, y: M.top - 6, anchor: 'start', cls: 'chart-cap', body: b.label })}`;
+    const next = breaks[i + 1];
+    const crowded = next && M.left + next.at * colW - x < String(b.label).length * 6.4 + 10;
+    return html`<line class="chart-rank__break" x1="${r2(x)}" x2="${r2(x)}" y1="${M.top - 14}" y2="${r2(M.top + H)}"/>${text({ x: crowded ? x - 3 : x + 3, y: M.top - 6, anchor: crowded ? 'end' : 'start', cls: 'chart-cap', body: b.label })}`;
   });
   const height = M.top + H + M.bottom;
   return frame({

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
-import { KINDS, ancestors, buildPlaces, placeCounts, placePath, slug } from '../web/places.js';
+import { KINDS, ancestors, buildPlaces, nameInText, placeCounts, placePath, slug } from '../web/places.js';
 import { DATA, PLACES } from './pinned.js';
 
 const { hospitals, master } = DATA;
@@ -198,6 +198,23 @@ test('buildPlaces on synthetic hospitals: the ones the site cannot place are lef
   assert.deepEqual(get('state:ny').counts, { file: 3, scored: 3, decided: 3, yes: 2, median: 0.1, allSix: 1, assigned: 1 });
   assert.equal(get('region:northeast').counts.file, 6);
   assert.equal(get('metro:99001').counts.file, 3);
+});
+
+test('nameInText: Census regions and divisions take "the" in a sentence (capital when the name opens it); states and metro areas do not', () => {
+  assert.equal(nameInText({ kind: 'region', name: 'South' }), 'the South');
+  assert.equal(nameInText({ kind: 'division', name: 'Middle Atlantic' }), 'the Middle Atlantic');
+  assert.equal(nameInText({ kind: 'region', name: 'South' }, { start: true }), 'The South');
+  assert.equal(nameInText({ kind: 'division', name: 'Middle Atlantic' }, { start: true }), 'The Middle Atlantic');
+  for (const kind of ['state', 'metro']) {
+    assert.equal(nameInText({ kind, name: 'Example Name' }), 'Example Name', kind);
+    assert.equal(nameInText({ kind, name: 'Example Name' }, { start: true }), 'Example Name', `${kind}: the name is the same at the start`);
+  }
+  // Every place the pinned data holds: only the two Census kinds are changed, and the name is never altered.
+  for (const p of PLACES.list) {
+    const said = nameInText(p);
+    if (p.kind === 'region' || p.kind === 'division') assert.equal(said, `the ${p.name}`, p.id);
+    else assert.equal(said, p.name, p.id);
+  }
 });
 
 test('placeCounts: scored, decided, cut, the middle score, all six measures and CMS-assigned, over the rows given', () => {

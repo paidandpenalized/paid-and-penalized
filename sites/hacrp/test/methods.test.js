@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { createContext } from '../../../pipeline/site/context.js';
+import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, isoDate } from '../../../web/render/format.js';
 import { HISTORY_PINS } from '../pipeline/history.js';
@@ -154,8 +155,11 @@ test('the changes and the sources: every changelog entry with its date and items
   assert.equal([...changed.matchAll(/<p class="changes__date">/g)].length, DATA.changes.length);
   for (const c of DATA.changes) {
     assert.ok(changed.includes(`<p class="changes__date">${isoDate(c.date)}</p>`), c.date);
-    for (const item of c.items) assert.ok(strip(changed).includes(item), item);
+    // Each item is typeset as copy is (curly apostrophes and quotes, z‑score with a non-breaking hyphen).
+    for (const item of c.items) assert.ok(strip(changed).includes(typeset(item)), item);
   }
+  assert.doesNotMatch(strip(changed), /\w'\w|z-score/, 'no straight apostrophe inside a word, no breaking hyphen in z-score');
+  assert.match(strip(changed), /\w’\w/, 'the entries do hold apostrophes, set curly');
   const sources = /<table class="gb receipts">[\s\S]*?<\/table>/.exec(PAGE)[0];
   const manifest = DATA.manifest;
   for (const pin of HISTORY_PINS.flatMap((p) => [p.id, p.cutList]).filter(Boolean)) {
@@ -178,6 +182,8 @@ test('the pipeline\'s six stations carry the newest year\'s real numbers', () =>
   assert.ok(stations[3][4].includes(count(last.scored)));
   assert.ok(stations[4][4].includes(decimal(last.maxError, 5)));
   assert.ok(PAGE.includes(`<span class="nw">${pin.sha256.slice(0, 12)}…</span>`));
+  // The fingerprint's note: the algorithm and the fingerprint, then the consequence after a middle dot.
+  assert.match(PAGE, /<p class="pipe__note">Fingerprint \([^)]+\) <span class="nw">[0-9a-f]{12}…<\/span> · if one byte changes, the tests fail<\/p>/);
   assert.ok(stations[5][4].includes(count(WITH.ctx.pages)), 'the pages the build wrote: the program page, Methods, the dictionary, every hospital and every place');
 });
 
@@ -195,6 +201,9 @@ test('the periods figure: a row a year with the dates behind it, and the lead fr
   const lead = (HD.fys.at(-1) - 1) * 12 + 10 - Math.min(start(newest.psi90.start), start(newest.hai.start));
   const take = text(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/.exec(fig)[0].replace(/<[^>]+>/g, ''));
   assert.ok(numbers(take).includes(String(lead)), `${lead} months in "${take}"`);
+  // The three bars are named by their ink in a line under the chart (a note, not a swatch key).
+  assert.match(text(/fig__note">([^<]*)</.exec(fig)[1]), new RegExp(`^Gray: ${SHORT_NAMES.PSI90} claims\\. Black: infection reports\\. Red: the fiscal year the cut applies\\.$`));
+  assert.doesNotMatch(fig, /fig__key/);
 });
 
 // ---------- without the history ----------

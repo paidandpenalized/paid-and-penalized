@@ -55,11 +55,11 @@ export function ruleStack({ rows, width }) {
     const pen = parts.filter((p) => p.yes).map(shape).join('');
     const lineX = r.line === null ? null : r2(xAt(n - r.line));
     return html`<g class="chart-rules__row">
-${text({ x: 0, y: zero - UP - 4, anchor: 'start', cls: 'chart-proof__label', body: r.label })}
-${text({ x: width, y: zero - UP - 4, anchor: 'end', cls: 'chart-cap', body: r.note })}
 ${ink ? html`<path class="chart-rule__ink" d="${ink}"/>` : ''}${pen ? html`<path class="chart-rule__pen" d="${pen}"/>` : ''}
 <rect class="chart-rule__bar" x="0" y="${r2(zero - 1)}" width="${width}" height="2"/>
 ${lineX === null ? '' : html`<line class="chart-rule__line" x1="${lineX}" x2="${lineX}" y1="${r2(zero - UP)}" y2="${r2(zero + DOWN)}"/>`}
+${text({ x: 0, y: zero - UP - 4, anchor: 'start', cls: 'chart-proof__label chart-label--halo', body: r.label })}
+${text({ x: width, y: zero - UP - 4, anchor: 'end', cls: 'chart-cap chart-label--halo', body: r.note })}
 </g>`;
   });
   return frame({ kind: 'rules', width, height, body: html`${body}` });

@@ -182,7 +182,7 @@ export const COPY = {
   escapeTakeaway: { text: '{escaped} of the {yes} hospitals CMS cut would have been under its line had their costliest measure been at the national median.', claim: null },
   escapeAlt: { text: 'Each hospital CMS cut as a dot, stacked by its score as CMS scored it and again with its costliest measure at the national median; on the lower stack, dots left of CMS\'s line would not have been cut.', claim: null },
   escapeTop: { text: 'As CMS scored them', claim: null },
-  escapeBottom: { text: 'With the costliest measure at the national median', claim: null },
+  escapeBottom: { text: 'Costliest measure at the national median', claim: null },
   escapeOut: { text: '{n} under the line', claim: null },
   escapeStuck: { text: '{n} still past it', claim: null },
   escapeNone: { text: '{n} with no measured result above the median', claim: null },
@@ -253,6 +253,7 @@ export const COPY = {
   kpiAssignedNote: { text: 'Hospitals CMS gave its worst score on a measure', claim: null },
   placeStamp: { text: '{share} cut', claim: null },
   ruleCutHere: { text: '{yes} cut nationally · {here} here', claim: null },
+  ruleCutHereShort: { text: '{here} of {yes} here', claim: null },
   placeRuleCaption: { text: "Every hospital in the nation with a payment decision, lowest score to highest, each as tall as its score (above the rule, worse than average); the solid hairlines are {name}'s, red where CMS cut.", claim: null },
 
   placeMapHeading: { text: 'On the map', claim: null },

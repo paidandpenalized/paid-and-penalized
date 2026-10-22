@@ -5,6 +5,7 @@
 // national medians, its children (divisions, states or metro areas) and its hospitals. The foot: the data facts,
 // downloads and citation.
 import { historySource, placeYearsFigure } from '../history-figures.js';
+import { nameInText } from '../places.js';
 import { fill as hfill } from '../history/copy.js';
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, ordinal, pct } from '../../../../web/render/format.js';
@@ -80,9 +81,9 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const heading = fill('placeTitle', { name: place.name, fy: fyText });
   const line = sourceText({ fy, source });
   const deck = c.decided > 1
-    ? fill('placeDeck', { yes: count(c.yes), decided: count(c.decided), name: place.name, fy: fyText, share: pct(c.yes / c.decided, 1), nation: pct(nation, 1) })
-    : c.decided === 1 ? fill(c.yes ? 'placeDeckOneYes' : 'placeDeckOneNo', { name: place.name, fy: fyText })
-      : c.file === 1 ? fill('placeDeckNoneOne', { name: place.name, fy: fyText }) : fill('placeDeckNone', { n: count(c.file), name: place.name, fy: fyText });
+    ? fill('placeDeck', { yes: count(c.yes), decided: count(c.decided), name: nameInText(place), fy: fyText, share: pct(c.yes / c.decided, 1), nation: pct(nation, 1) })
+    : c.decided === 1 ? fill(c.yes ? 'placeDeckOneYes' : 'placeDeckOneNo', { name: nameInText(place), fy: fyText })
+      : c.file === 1 ? fill('placeDeckNoneOne', { name: nameInText(place), fy: fyText }) : fill('placeDeckNone', { n: count(c.file), name: nameInText(place), fy: fyText });
   const notes = [
     place.kind === 'metro' && place.stateCodes.length > 1 && fill('placeMultiState', { states: place.stateCodes.join(', ') }),
     place.rows.some((r) => r.yes === null) && t('placeMarylandNote'),
@@ -108,13 +109,13 @@ ${notes.map((s) => html`<p class="note">${s}</p>`)}
 </div>
 ${placeCard(place, { pd, places, fy })}
 </header>
-${ruleFigure(pd, { highlight: ccns, searchUrl, caption: fill('placeRuleCaption', { name: place.name }), here: c.yes })}
+${ruleFigure(pd, { highlight: ccns, searchUrl, caption: fill('placeRuleCaption', { name: nameInText(place) }), here: c.yes })}
 ${map && psec({ id: 'where', level: 2, heading: t('placeMapHeading'), text: html`<p>${t('placeMapText')}</p>`, figure: map })}
 ${hist && psec({ id: 'scores', level: 2, heading: t('placeHistHeading'), text: html`<p>${t('placeHistText')}</p>`, figure: hist })}
 ${measures && psec({ id: 'measures', level: 2, heading: t('placeMeasuresHeading'), text: html`<p>${t('placeMeasuresText')}</p>`, figure: measures })}
-${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeHistHeading', { name: place.name }), text: html`<p>${hfill('placeHistText', { name: place.name })}</p>`, figure: years })}
+${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeHistHeading', { name: nameInText(place, { start: true }) }), text: html`<p>${hfill('placeHistText', { name: nameInText(place) })}</p>`, figure: years })}
 ${kids ?? ''}
-${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: place.name }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: place.name }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}
+${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: nameInText(place) }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: nameInText(place) }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}
 <div class="prog__foot">
 <div class="prog__facts">
 ${asofBar({ fy, periods, source })}
@@ -130,7 +131,7 @@ ${citation({ fy, title: heading, path: place.path, source })}
 
   return page({
     title: `${heading} · ${SITE.name}`,
-    description: fill('placeDescription', { fy: fyText, name: place.name }),
+    description: fill('placeDescription', { fy: fyText, name: nameInText(place) }),
     path: place.path,
     robots,
     body,

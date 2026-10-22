@@ -29,6 +29,8 @@ const attr = (tag, name) => new RegExp(`\\b${name}="([^"]*)"`).exec(tag)?.[1];
 const num = (tag, name) => Number(attr(tag, name));
 // The text of every <text class="cls"> element.
 const texts = (s, cls) => [...s.matchAll(new RegExp(`<text class="${cls}"[^>]*>([^<]*)</text>`, 'g'))].map((m) => m[1]);
+// The opening tags and the texts of one class of <text> element, in order: a text's attributes and its words.
+const textTags = (s, cls) => tags(s, cls).map((t, i) => ({ x: num(t, 'x'), y: num(t, 'y'), anchor: attr(t, 'text-anchor'), dx: attr(t, 'dx'), body: texts(s, cls)[i] }));
 // What every chart returns: Safe markup in one responsive SVG with no color value and none of JavaScript's non-numbers.
 function sound(out, kind) {
   assert.ok(out instanceof Safe, kind);
@@ -85,7 +87,8 @@ test('proofStrips: a strip, two hatched zones and one silhouette a row, five tic
   assert.equal(tags(s, 'chart-proof__spike').length, 3);
   assert.deepEqual(viewBox(s), [640, 22 + 3 * 46 + 24]);
   assert.deepEqual(texts(s, 'chart-tick'), ['t-0.001', 't-0.0005', 't0', 't0.0005', 't0.001']);
-  assert.deepEqual(texts(s, 'chart-proof__label'), ['FY2026', 'FY2025', 'FY2023']);
+  assert.deepEqual(texts(s, 'chart-proof__label chart-label--halo'), ['FY2026', 'FY2025', 'FY2023'], 'a row\'s label carries a halo, so a spike behind it does not cut it');
+  assert.deepEqual(texts(s, 'chart-cap chart-label--halo'), ['3,000 scores', '1 score', 'none'], 'and so does its note');
   assert.ok(s.includes('>← Fails the build</text>') && s.includes('>Fails the build →</text>'));
   // A bin with a count is one stepped outline; a row with no differences draws none.
   const spikes = tags(s, 'chart-proof__spike').map((t) => attr(t, 'd'));
@@ -95,7 +98,9 @@ test('proofStrips: a strip, two hatched zones and one silhouette a row, five tic
   // The tallest bin is the spike's full height; a lone difference beside it keeps a visible sliver.
   const rise = (d, base) => base - Number(/V([\d.]+)h/.exec(d)[1]);
   assert.equal(rise(spikes[0], 22 + 46 - 6), 26);
-  assert.equal(rise(spikes[1], 22 + 2 * 46 - 6), 1.5);
+  assert.equal(rise(spikes[1], 22 + 2 * 46 - 6), 26, 'a strip with one difference stands at full height: each strip is scaled to its own tallest bin');
+  // The zero line is drawn before the rows, so the strips and their labels lie over it.
+  assert.ok(s.indexOf('chart-proof__zero') < s.indexOf('<g class="chart-proof__row">'));
   assert.equal(String(proofStrips(out)), s, 'the same call gives the same markup');
 });
 
@@ -111,6 +116,17 @@ test('proofStrips: the silhouette is where the differences are, and a difference
   const d = attr(tags(s, 'chart-proof__spike')[0], 'd');
   const [, left, w] = /^M([\d.]+) [\d.]+V[\d.]+h([\d.]+)/.exec(d).map(Number);
   assert.ok(Math.abs(left + w / 2 - mid) < 0.02, `${left + w / 2} vs ${mid}`);
+});
+
+test('proofStrips: every strip is scaled to its own tallest bin, so a thin spread beside a huge spike still shows; a lone difference beside a tall bin keeps a sliver', () => {
+  const s = String(proofStrips({ ...PROOF(), rows: [
+    { label: 'a', note: '', diffs: [...new Array(1000).fill(0), 0.0002] },
+    { label: 'b', note: '', diffs: [0.0002, 0.0002, -0.0004] },
+  ] }));
+  const rises = (d, base) => [...d.matchAll(/V([\d.]+)h/g)].map((m) => Math.round((base - Number(m[1])) * 100) / 100);
+  const [a, b] = tags(s, 'chart-proof__spike').map((t) => attr(t, 'd'));
+  assert.deepEqual(rises(a, 22 + 46 - 6).sort((x, y) => x - y), [1.5, 26], 'the zero bin full height; the lone difference a sliver');
+  assert.deepEqual(rises(b, 22 + 2 * 46 - 6).sort((x, y) => x - y), [13, 26], 'the other strip: its own two bins, a half and the whole, whatever the first strip holds');
 });
 
 test('proofStrips escapes a row label and its note', () => {
@@ -140,8 +156,17 @@ test('ruleStack: a row a year, the not-cut hairlines in one ink and the cut ones
   assert.equal(lines.length, 1, 'a year with no line draws none');
   assert.equal(num(lines[0], 'x1'), 200);
   assert.equal(num(lines[0], 'x2'), 200);
-  assert.deepEqual(texts(s, 'chart-proof__label'), ['FY2026', 'FY2025']);
-  assert.deepEqual(texts(s, 'chart-cap'), ['2 of 6 cut', '2 of 6 cut']);
+  assert.deepEqual(texts(s, 'chart-proof__label chart-label--halo'), ['FY2026', 'FY2025']);
+  assert.deepEqual(texts(s, 'chart-cap chart-label--halo'), ['2 of 6 cut', '2 of 6 cut']);
+  // A row's label and note are drawn after its shapes, its baseline and its line, so they lie over the hairlines.
+  const rows = s.split('<g class="chart-rules__row">').slice(1);
+  rows.forEach((row, i) => {
+    const label = row.indexOf('chart-proof__label');
+    for (const mark of ['chart-rule__ink', 'chart-rule__pen', 'chart-rule__bar', ...(i === 0 ? ['chart-rule__line'] : [])]) {
+      assert.ok(row.indexOf(mark) >= 0 && row.indexOf(mark) < label, `row ${i}: ${mark} before the label`);
+    }
+    assert.ok(row.indexOf('chart-cap') > label, `row ${i}: the note after the label`);
+  });
 });
 
 test('ruleStack: decisions out of order with the scores show as extra runs of the other ink', () => {
@@ -286,6 +311,9 @@ test('rollCall: brackets under the grid, the right margin kept clear, a tick for
   assert.equal(count(s, /<path class="chart-roll__bracket( chart-roll__bracket--pen)?"/g), 2);
   assert.equal(tags(s, 'chart-roll__bracket chart-roll__bracket--pen').length, 1);
   assert.ok(s.includes('>Ever cut: 2</text>') && s.includes('>Never cut: 2</text>'));
+  // A label that fits sits under the middle of its bracket (columns are 47.5 wide from 40: 87.5 and 182.5).
+  assert.deepEqual(textTags(s, 'chart-cap chart-cap--pen').map((c) => [c.x, c.anchor]), [[87.5, 'middle']]);
+  assert.deepEqual(textTags(s, 'chart-cap').map((c) => [c.x, c.anchor]), [[182.5, 'middle']]);
   assert.equal(count(attr(tags(s, 'chart-roll__hl')[0], 'd'), /M/g), 2);
   assert.doesNotMatch(plain, /chart-roll__hl|chart-roll__bracket/);
   assert.deepEqual(texts(s, 'chart-roll__note'), ['12% · 10%', '', '33% · 30%']);
@@ -293,6 +321,19 @@ test('rollCall: brackets under the grid, the right margin kept clear, a tick for
   // No cell reaches into the right margin (each H is a cell's right edge).
   const right = Math.max(...[...attr(tags(s, 'chart-roll__no')[0], 'd').matchAll(/H([\d.]+)/g)].map((m) => Number(m[1])));
   assert.ok(right <= 300 - 70, `${right}`);
+});
+
+test('rollCall: a bracket label too wide for its bracket is held inside the drawing, against the label column on the left or the edge on the right', () => {
+  const records = ['YN.', 'YNN', 'NY.', 'NNN'];
+  const draw = (brackets) => String(rollCall({ records, years: YEARS, width: 300, label: 40, right: 70, brackets }));
+  // About 6.4 units a character: 25 characters need 160, wider than the 95 under a two-column bracket.
+  const left = textTags(draw([{ from: 0, to: 2, label: 'L'.repeat(25), pen: true }]), 'chart-cap chart-cap--pen');
+  assert.deepEqual(left.map((c) => [c.x, c.anchor]), [[40, 'start']], 'it would run past the label column: it starts there');
+  const right = textTags(draw([{ from: 2, to: 4, label: 'R'.repeat(40) }]), 'chart-cap');
+  assert.deepEqual(right.map((c) => [c.x, c.anchor]), [[300, 'end']], 'it would run past the right edge: it ends there');
+  // One that fits at its middle is not moved, even close to an end.
+  const fits = textTags(draw([{ from: 2, to: 4, label: 'Fits' }]), 'chart-cap');
+  assert.deepEqual(fits.map((c) => [c.x, c.anchor]), [[182.5, 'middle']]);
 });
 
 test('rollCall: a year in which no hospital had a decision says so, only when asked', () => {
@@ -354,10 +395,19 @@ test('rankYears: rule changes are dashed lines with their labels; a phone with m
   const narrow = String(rankYears({ years, breaks: [{ at: 3, label: 'z-scores' }, { at: 5, label: 'equal' }], labels: RANK_LABELS, width: 300 }));
   assert.equal(tags(narrow, 'chart-rank__break').length, 2);
   assert.ok(narrow.includes('>z-scores</text>') && narrow.includes('>equal</text>'));
+  // Ten years across 252 units is 25.2 a column: the rules at columns 3 and 5 are 50.4 apart, and "z-scores" needs about
+  // 61, so it runs left of its rule (ending 3 before it); the last label always runs right.
+  const caps = textTags(narrow, 'chart-cap');
+  assert.deepEqual(caps.map((c) => [c.body, c.anchor]), [['z-scores', 'end'], ['equal', 'start']]);
+  assert.deepEqual(caps.map((c) => c.x), [40 + 3 * 25.2 - 3, 40 + 5 * 25.2 + 3].map((x) => Math.round(x * 100) / 100));
   assert.deepEqual(texts(narrow, 'chart-tick').slice(3), ['16', '18', '20', '22', '24'], 'the newest year is always labelled');
   const wide = String(rankYears({ years, labels: RANK_LABELS, width: 640 }));
   assert.equal(texts(wide, 'chart-tick').length, 3 + 10);
   assert.equal(tags(wide, 'chart-rank__break').length, 0);
+  // With room (59.2 a column: the rules 118 apart), each label runs right of its own rule.
+  const roomy = textTags(String(rankYears({ years, breaks: [{ at: 3, label: 'z-scores' }, { at: 5, label: 'equal' }], labels: RANK_LABELS, width: 640 })), 'chart-cap');
+  assert.deepEqual(roomy.map((c) => [c.body, c.anchor]), [['z-scores', 'start'], ['equal', 'start']]);
+  assert.deepEqual(roomy.map((c) => c.x), [40 + 3 * 59.2 + 3, 40 + 5 * 59.2 + 3].map((x) => Math.round(x * 100) / 100));
 });
 
 test('rankYears escapes tooltips and labels', () => {
@@ -394,10 +444,16 @@ test('staircase: a pale column of everyone cut by the year and a red one in fron
   assert.equal(String(staircase({ cols: COLS, width: 640, format: (v) => `n${v}` })), s, 'the same call gives the same markup');
 });
 
-test('staircase: on a phone every other number and year is left off, ending on the newest', () => {
+test('staircase: on a phone every other number and year is left off, counting back from the newest, which is always labeled', () => {
   const s = String(staircase({ cols: COLS, width: 300, format: String }));
-  assert.deepEqual(texts(s, 'chart-value chart-value--mark'), ['700', '', '900', '']);
+  assert.deepEqual(texts(s, 'chart-value chart-value--mark'), ['', '900', '', '1100']);
   assert.deepEqual(texts(s, 'chart-tick'), ['', '16', '', '18']);
+  // An odd count of columns keeps the oldest as well; the numbers and the years are left off together.
+  const five = String(staircase({ cols: [{ label: '14', cut: 300, ever: 300, tip: 't' }, ...COLS], width: 300, format: String }));
+  assert.deepEqual(texts(five, 'chart-value chart-value--mark'), ['300', '', '900', '', '1100']);
+  assert.deepEqual(texts(five, 'chart-tick'), ['14', '', '16', '', '18']);
+  // A wide drawing prints them all.
+  assert.deepEqual(texts(String(staircase({ cols: COLS, width: 640, format: String })), 'chart-value chart-value--mark'), ['700', '900', '900', '1100']);
 });
 
 const KS = [
@@ -455,17 +511,71 @@ test('smallLines: a panel each, a dot for each year with a value, a gap in the l
   const lines = [...s.matchAll(/<path class="chart-lines__line(?: chart-lines__line--pen)?" d="([^"]*)"/g)].map((m) => m[1]);
   assert.deepEqual(lines.map((d) => count(d, /M/g)), [2, 1, 0], 'the missing year breaks the first line in two; the empty panel has no line');
   assert.deepEqual(texts(s, 'chart-label'), ['Measure A', 'Measure B', 'Measure C &lt;&amp;&gt;']);
-  assert.deepEqual(texts(s, 'chart-value chart-value--mark(?: chart-label--pen)?'), ['−50%', '+80%'], 'an empty change prints nothing');
+  assert.deepEqual(texts(s, 'chart-value chart-value--mark'), ['−50%', '+80%'], 'an empty change prints nothing');
   assert.equal(tags(s, 'chart-lines__under').length, 1);
   assert.ok(s.includes('>Nation</text>'));
-  assert.deepEqual(viewBox(s), [640, 18 + 120 + 30], 'three panels across a wide drawing: one row');
+  assert.deepEqual(texts(s, 'chart-cap chart-label--halo'), ['As predicted', 'Nation'], 'the reference\'s name and the second line\'s lie over the lines with a halo');
+  // Three panels of 201 units are narrow (under 230): the corner text takes a line of its own, and the top grows by 12.
+  assert.deepEqual(viewBox(s), [640, 18 + 12 + 120 + 30], 'three panels across a wide drawing: one row');
   assert.equal(String(smallLines(LINES())), s, 'the same call gives the same markup');
 });
 
-test('smallLines: the reference line crosses every panel and is named once; without one the top of the scale is printed', () => {
+test('smallLines: a narrow panel puts its corner text on a line of its own under the title; a roomy one keeps it at the right of the title', () => {
+  // 3 panels across 640: (640 - 36) / 3 = 201.3 each, under 230. The title rises to 18 above the panel's top (30),
+  // and the corner text sits 6 above it, at the panel's left.
+  const narrow = String(smallLines(LINES()));
+  const r2 = (n) => Math.round(n * 100) / 100;
+  const pw = (640 - 36) / 3;
+  assert.deepEqual(textTags(narrow, 'chart-label').map((t) => [t.x, t.y]), [[0, 12], [r2(pw + 18), 12], [r2(2 * (pw + 18)), 12]]);
+  assert.deepEqual(textTags(narrow, 'chart-value chart-value--mark').map((t) => [t.x, t.y, t.anchor]), [[0, 24, 'start'], [r2(pw + 18), 24, 'start']]);
+  // 3 panels across 800: 254.7 each. The title and the corner text share the line, the text at the right edge.
+  const roomy = String(smallLines(LINES({ width: 800 })));
+  assert.deepEqual(viewBox(roomy), [800, 18 + 120 + 30], 'no extra line');
+  assert.deepEqual(textTags(roomy, 'chart-label').map((t) => t.y), [12, 12, 12]);
+  const wpw = (800 - 36) / 3;
+  assert.deepEqual(textTags(roomy, 'chart-value chart-value--mark').map((t) => [t.x, t.y, t.anchor]), [[r2(wpw), 12, 'end'], [r2(wpw + 18 + wpw), 12, 'end']]);
+  // Narrow panels with no corner text anywhere have nothing to move: the top stays at 18.
+  const bare = String(smallLines(LINES({ panels: LINES().panels.map((p) => ({ ...p, change: '' })) })));
+  assert.deepEqual(viewBox(bare), [640, 18 + 120 + 30]);
+  assert.deepEqual(textTags(bare, 'chart-label').map((t) => t.y), [12, 12, 12]);
+  // A phone's two panels across (141 each) are narrow too.
+  assert.deepEqual(viewBox(String(smallLines(LINES({ width: 300 })))), [300, 2 * (18 + 12 + 120 + 30)]);
+});
+
+test('smallLines: the x range ends 14 units inside the panel, and the last tick sits against that end, anchored at its right', () => {
+  const s = String(smallLines(LINES()));
+  const pw = (640 - 2 * 18) / 3;
+  const x = (v) => 28 + ((v - 2020) * (pw - 14 - 28)) / 4;
+  const round = (n) => Math.round(n * 100) / 100;
+  // The first panel's four dots (no value for 2022): from the left axis to 14 short of the panel's right edge.
+  assert.deepEqual(tags(s, 'chart-lines__dot chart-lines__dot--pen').map((t) => num(t, 'cx')), [2020, 2021, 2023, 2024].map((v) => round(x(v))));
+  assert.equal(num(tags(s, 'chart-lines__dot chart-lines__dot--pen')[0], 'cx'), 28);
+  assert.equal(num(tags(s, 'chart-lines__dot chart-lines__dot--pen')[3], 'cx'), round(pw - 14));
+  // The lines and the axis run from the left axis to the panel's edge; the ticks are every other year.
+  const ticks = textTags(s, 'chart-tick').filter((t) => t.body.startsWith('’')).slice(0, 3);
+  assert.deepEqual(ticks.map((t) => t.body), ['’20', '’22', '’24']);
+  assert.deepEqual(ticks.map((t) => t.anchor), ['middle', 'middle', 'end'], 'the last tick is anchored at its end');
+  assert.deepEqual(ticks.map((t) => t.x), [2020, 2022, 2024].map((v) => round(x(v))));
+  assert.deepEqual(ticks.map((t) => t.dx ?? null), [null, null, '6'], 'and nudged 6 units right, so its end sits near the panel\'s edge');
+  // The last tick of each panel is the one anchored at its end.
+  assert.equal(textTags(s, 'chart-tick').filter((t) => t.anchor === 'end' && t.body.startsWith('’')).length, 3);
+});
+
+test('smallLines: the reference line crosses every panel and is named once, in the first panel, at its left; without one the top of the scale is printed', () => {
   const s = String(smallLines(LINES()));
   assert.equal(tags(s, 'chart-ref').length, 3);
-  assert.equal(texts(s, 'chart-cap').filter((t) => t === 'As predicted').length, 1);
+  const named = textTags(s, 'chart-cap chart-label--halo').filter((t) => t.body === 'As predicted');
+  assert.equal(named.length, 1);
+  // At the left of the first panel (its axis at 28, then 2 in), just above the line.
+  assert.deepEqual([named[0].x, named[0].anchor], [30, 'start']);
+  const ref = num(tags(s, 'chart-ref')[0], 'y1');
+  assert.equal(named[0].y, ref - 4);
+  assert.equal(num(tags(s, 'chart-ref')[0], 'x1'), 28, 'the line starts at the axis');
+  // With no name for it, the line is drawn and nothing is printed.
+  const unnamed = String(smallLines(LINES({ labels: { x: (v) => String(v) } })));
+  assert.equal(tags(unnamed, 'chart-ref').length, 3);
+  assert.ok(!unnamed.includes('As predicted'));
+  assert.deepEqual(texts(unnamed, 'chart-cap chart-label--halo'), ['Nation']);
   const none = String(smallLines(LINES({ ref: null })));
   assert.equal(tags(none, 'chart-ref').length, 0);
   assert.equal(texts(none, 'chart-tick').filter((t) => t === 'f1.5').length, 3, 'the top of the shared scale on each panel');
@@ -476,12 +586,58 @@ test('smallLines: the reference line crosses every panel and is named once; with
 
 test('smallLines: two panels across on a phone, so more rows; a tall panel is taller; the years are thinned out', () => {
   const narrow = sound(smallLines(LINES({ width: 300 })), 'lines');
-  assert.deepEqual(viewBox(narrow), [300, 2 * (18 + 120 + 30)]);
+  assert.deepEqual(viewBox(narrow), [300, 2 * (18 + 12 + 120 + 30)]);
   assert.deepEqual(viewBox(sound(smallLines(LINES({ cols: 1 })), 'lines')), [640, 3 * (18 + 120 + 30)]);
   assert.deepEqual(viewBox(sound(smallLines(LINES({ tall: true, cols: 1 })), 'lines')), [640, 3 * (18 + 204 + 30)]);
   const ticks = (s) => texts(s, 'chart-tick').filter((t) => t.startsWith('’'));
   assert.deepEqual(ticks(String(smallLines(LINES()))).slice(0, 3), ['’20', '’22', '’24'], 'every other year, ending on the newest');
   assert.deepEqual(ticks(narrow).slice(0, 2), ['’21', '’24'], 'every third on a phone');
+});
+
+test('smallLines: labels.point and a panel\'s labelAt print the values at those points, on both lines; labels.xTitle names the axis and adds room under each row', () => {
+  const panels = [
+    { label: 'A', points: pts([1.2, 1, null, 0.8, 0.6]), change: '', labelAt: [1, 2, 9] },
+    { label: 'B', points: pts([0.5, 0.6, 0.7, 0.8, 0.9]), under: pts([0.4, 0.4, 0.5, 0.5, 0.6]), change: '', labelAt: [0, 4] },
+    { label: 'C', points: pts([0.1, 0.2, 0.3, 0.4, 0.5]), change: '' },
+  ];
+  const labels = { x: (v) => String(v), point: (v) => `p${v}` };
+  const s = String(smallLines(LINES({ panels, labels, ref: null })));
+  const halo = textTags(s, 'chart-value chart-value--mark chart-label--halo');
+  // A: index 1 (index 2 has no value, 9 is past the end: nothing); B: the line's value, then the other line's, at 0 and 4.
+  assert.deepEqual(halo.map((t) => t.body), ['p1', 'p0.5', 'p0.4', 'p0.9', 'p0.6']);
+  assert.ok(halo.every((t) => t.anchor === 'middle'));
+  // The line's value 9 above its point, the second line's 16 below its own (panel B: top 18, 120 high, scale 1.5).
+  const pw = (640 - 2 * 18) / 3;
+  const yAt = (v) => 18 + 120 - (v / 1.5) * (120 - 4);
+  const round = (n) => Math.round(n * 100) / 100;
+  const bx = (v) => pw + 18 + 28 + ((v - 2020) * (pw - 14 - 28)) / 4;
+  assert.deepEqual(halo.slice(1).map((t) => [t.x, t.y]), [[bx(2020), yAt(0.5) - 9], [bx(2020), yAt(0.4) + 16], [bx(2024), yAt(0.9) - 9], [bx(2024), yAt(0.6) + 16]].map(([x, y]) => [round(x), round(y)]));
+  // Panel C has no labelAt: it prints no values (the five above are all there are).
+  assert.equal(halo.length, 5);
+  // The axis's name sits under the row, once for each panel, and the row is 30 taller.
+  const titled = String(smallLines(LINES({ panels, labels: { ...labels, xTitle: 'Years apart' }, ref: null })));
+  assert.deepEqual(texts(titled, 'chart-cap'), ['Years apart', 'Years apart', 'Years apart']);
+  assert.deepEqual(viewBox(titled)[1] - viewBox(s)[1], 30);
+  assert.deepEqual(textTags(titled, 'chart-cap').slice(0, 1).map((t) => [t.x, t.y]), [[round((28 + pw - 14) / 2), 18 + 120 + 32]]);
+  assert.equal(texts(s, 'chart-cap').length, 0, 'no name, no title');
+  // Rows add it each: two rows of panels are 60 taller.
+  assert.equal(viewBox(String(smallLines(LINES({ panels, labels: { ...labels, xTitle: 'x' }, ref: null, cols: 2 }))))[1] - viewBox(String(smallLines(LINES({ panels, labels, ref: null, cols: 2 }))))[1], 60);
+});
+
+test('smallLines: a panel\'s underSolid draws its second line solid (a comparison), else it is the dashed reference kind', () => {
+  const points = pts([0.5, 0.6, 0.7, 0.8, 0.9]);
+  const under = pts([0.4, 0.4, 0.5, 0.5, 0.6]);
+  const solid = String(smallLines(LINES({ panels: [{ label: 'a', points, under, underSolid: true, underLabel: 'Nation', change: '' }] })));
+  assert.equal(tags(solid, 'chart-lines__under chart-lines__under--solid').length, 1);
+  assert.equal(tags(solid, 'chart-lines__under').length, 0, 'the plain class is not on it');
+  const dashed = String(smallLines(LINES({ panels: [{ label: 'a', points, under, underLabel: 'Nation', change: '' }] })));
+  assert.equal(tags(dashed, 'chart-lines__under').length, 1);
+  assert.equal(tags(dashed, 'chart-lines__under chart-lines__under--solid').length, 0);
+  // Either way the line is under the panel's own, and its name lies over them with a halo.
+  for (const s of [solid, dashed]) {
+    assert.ok(s.indexOf('chart-lines__under') < s.indexOf('chart-lines__line'));
+    assert.deepEqual(texts(s, 'chart-cap chart-label--halo').filter((t) => t === 'Nation'), ['Nation']);
+  }
 });
 
 test('smallLines: a second line with no values draws no label; panel labels and tooltips are escaped', () => {
@@ -512,6 +668,16 @@ test('barRows: the label column is the width asked for, else by the width of the
   const full = String(barRows({ rows: [{ label: 'a', value: 0.5, valueText: '50%', tip: 't' }], max: 0.5, width: 300, labelW: 150 }));
   assert.match(attr(tags(full, 'chart-bar')[0], 'd'), /A[\d. ]+ 256 /, 'ends at width − 44 = 256');
   assert.equal(String(barRows({ rows, max: 0.5, width: 300, labelW: 150 })), custom, 'the same call gives the same markup');
+});
+
+test('barRows: every value is printed in one column, 6 units past the track\'s end, whatever the length of its bar', () => {
+  const rows = [{ label: 'Short', value: 0.1, valueText: '10%', tip: 'a' }, { label: 'Long', value: 0.5, valueText: '50%', tip: 'b', pen: true }];
+  const values = (s) => textTags(s, 'chart-value chart-value--mark');
+  const phone = values(String(barRows({ rows, max: 0.5, width: 300, labelW: 150 })));
+  assert.deepEqual(phone.map((t) => [t.body, t.x, t.anchor]), [['10%', 262, 'start'], ['50%', 262, 'start']], 'the track ends at 300 − 44 = 256');
+  const wide = values(String(barRows({ rows, max: 0.5, width: 640 })));
+  assert.deepEqual(wide.map((t) => t.x), [602, 602]);
+  assert.deepEqual(wide.map((t) => t.y), [6 + 16, 6 + 26 + 16], 'a row each, level with its bar');
 });
 
 // ---------- mini tile maps ----------
@@ -552,6 +718,47 @@ test('miniTiles: a tile for every state, a mark for each one with a value, no co
   assert.ok(s.includes('top &lt;step&gt;') && !s.includes('<step>'));
   assert.doesNotMatch(s, /<text|chart-legend|<defs/, 'tiles only: the figure carries the one legend');
   assert.equal(String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220 })), s, 'the same call gives the same markup');
+});
+
+test('miniTiles refuses a missing or empty ramp, which it could not shade by', () => {
+  const { states } = MINI();
+  for (const ramp of [undefined, null, [], 'x', 5]) assert.throws(() => miniTiles({ states, ramp, width: 220 }), /miniTiles: a ramp/, String(ramp));
+});
+
+test('miniTiles: a tile resting on few cases carries the dashed inner outline, in the on-mark ink over a dark step, and not over a light one or a zero', () => {
+  const states = { ...MINI().states, VT: { value: 10, label: 'light few', few: true }, NH: { value: 90, label: 'dark few', few: true }, ME: { value: 0, label: 'zero few', few: true }, MA: { value: 90, label: 'dark, plenty' } };
+  const s = String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220 }));
+  const mark = (code) => new RegExp(`data-state="${code}"[^>]*>(?:(?!</g>)[\\s\\S])*</g>`).exec(s)[0];
+  assert.match(mark('VT'), /<rect class="chart-tile-few" /);
+  assert.match(mark('NH'), /<rect class="chart-tile-few chart-tile-few--on" /);
+  assert.match(mark('ME'), /<rect class="chart-tile-few" /, 'a zero is the neutral tile: the ink');
+  assert.doesNotMatch(mark('MA'), /chart-tile-few/);
+  assert.equal(tags(s, 'chart-tile-few').length + tags(s, 'chart-tile-few chart-tile-few--on').length, 3, 'only the three');
+  // The outline lies inside its tile, 2.5 units in from each side.
+  const tile = tags(mark('VT'), 'chart-tile chart-seq-1')[0];
+  const few = tags(mark('VT'), 'chart-tile-few')[0];
+  assert.equal(num(few, 'x') - num(tile, 'x'), 2.5);
+  assert.equal(num(tile, 'width') - num(few, 'width'), 5);
+  // An empty or hatched tile has no value and so no outline.
+  const empty = String(miniTiles({ states: { ...MINI().states, AK: { empty: true, few: true, label: 'x' } }, ramp: [20, 40, 60, 80], width: 220 }));
+  assert.doesNotMatch(empty, /chart-tile-few/);
+});
+
+test('miniTiles: the codes in outline get an ink ring on their tile, drawn over it; no other tile, and no empty one, has one', () => {
+  const states = { ...MINI().states, VT: { value: 0, label: 'none cut' }, AK: { empty: true, label: 'no decision' } };
+  const s = String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220, outline: ['NH', 'VT', 'AK'] }));
+  const rings = s.split('<g class="chart-mark"').slice(1).filter((g) => g.includes('chart-tile-ring')).map((g) => /data-state="(\w+)"/.exec(g)[1]);
+  assert.deepEqual(rings.sort(), ['NH', 'VT'], 'the empty tile (AK) is an outline already, and no ring');
+  assert.equal(tags(s, 'chart-tile-ring').length, 2);
+  // The ring is the tile's own square, after the tile in the markup, so it lies over it.
+  const nh = /data-state="NH"[^>]*>(?:(?!<\/g>)[\s\S])*<\/g>/.exec(s)[0];
+  const [tile] = tags(nh, 'chart-tile chart-seq-\\d');
+  const [ring] = tags(nh, 'chart-tile-ring');
+  for (const name of ['x', 'y', 'width', 'height']) assert.equal(num(ring, name), num(tile, name), name);
+  assert.ok(nh.indexOf('chart-tile-ring') > nh.indexOf('chart-tile '));
+  // The default is none; the markup then has no ring.
+  assert.doesNotMatch(String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220 })), /chart-tile-ring/);
+  assert.equal(String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220, outline: ['NH'] })), String(miniTiles({ states, ramp: [20, 40, 60, 80], width: 220, outline: ['NH'] })), 'the same call gives the same markup');
 });
 
 // ---------- the year map's dots ----------

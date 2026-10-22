@@ -11,7 +11,7 @@ export const COPY = {
   rollSay: { text: '{name}, {state}: cut in {cut} of {decided} years ({years})', claim: null },
   rollSayNone: { text: '{name}, {state}: never cut in {decided} years', claim: null },
   rollClosed: { text: 'CCN {ccn}, no longer in CMS’s file', claim: null },
-  rollPicked: { text: '{n} hospitals in {state}, ticked in black', claim: null },
+  rollPicked: { text: '{n} hospitals in {state}, marked', claim: null },
   setJoin: { text: '{a} + {b}', claim: null },
   fig2TakeSir: { text: '{zero} of the {n} hospitals with a {short} value reported zero infections; the middle hospital sits at {median}.', claim: null },
   fig2TakePsi: { text: '{short} values bunch near {one}; the middle hospital sits at {median}, and {above} of {n} are above {one}.', claim: null },

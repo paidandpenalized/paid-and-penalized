@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { mountRoll, mountYearMap } from '../client/explore.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
 import { fill } from '../web/explore/copy.js';
+import { t as historyText } from '../web/history/copy.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { count } from '../../../web/render/format.js';
 import { historyData } from '../web/history-data.js';
@@ -45,8 +46,8 @@ function el(over = {}) {
 const PX = 2;
 const at = (x) => ({ clientX: x * PX, clientY: 0 });
 
-// A roll call's SVG: its drawn width and height as the viewBox, the pointer matrix, and the one picked-state path the
-// picker adds and removes.
+// A roll call's SVG: its drawn width and height as the viewBox, the pointer matrix, and the two nodes the script adds
+// and takes away: the picked-state path (the picker's) and the outline of the column under the pointer.
 function rollSvg(width, height = 100) {
   const svg = el({
     viewBox: { baseVal: { width, height } },
@@ -55,20 +56,22 @@ function rollSvg(width, height = 100) {
       return pt;
     },
     getScreenCTM: () => ({ inverse: () => ({ k: 1 / PX }) }),
-    append(path) {
-      svg.pick = path;
-      path.remove = () => { svg.pick = null; };
+    append(node) {
+      const key = node.attrs.class === 'chart-roll__cursor' ? 'cursor' : 'pick';
+      svg[key] = node;
+      node.remove = () => { svg[key] = null; };
     },
   });
   svg.pick = null;
-  svg.querySelector = (s) => (s === '.chart-roll__pick' ? svg.pick : null);
+  svg.cursor = null;
+  svg.querySelector = (s) => ({ '.chart-roll__pick': svg.pick, '.chart-roll__cursor': svg.cursor })[s] ?? null;
   return svg;
 }
 
-// The figure around a roll call: the box (its data-* attributes), the readout, the SVGs at the given [width, height]s
-// and, when asked, the state picker. options: the picker's options [{ value, textContent }].
-function rollRig({ dataset, sizes, options = null }) {
-  const readout = el();
+// The figure around a roll call: the box (its data-* attributes), the readout (hint: its data-* attributes), the SVGs at
+// the given [width, height]s and, when asked, the state picker. options: the picker's options [{ value, textContent }].
+function rollRig({ dataset, sizes, options = null, readoutData = {} }) {
+  const readout = el({ dataset: { ...readoutData } });
   const svgs = sizes.map(([w, h]) => rollSvg(w, h));
   const select = options && el();
   if (select) Object.defineProperty(select, 'selectedOptions', { get: () => [options.find((o) => o.value === select.value)] });
@@ -120,6 +123,9 @@ function hospitalsStub(rows, hospitalPath = '/hacrp/hospital/') {
   return load;
 }
 
+// A document that makes the SVG nodes the roll call draws (the column outline, the picked-state ticks).
+const documentStub = () => ({ createElementNS: (ns, tag) => el({ ns, tag }) });
+
 // A window that records the pages it is sent to.
 const windowStub = () => {
   const assigned = [];
@@ -155,7 +161,7 @@ const openTag = (svg) => /^<svg[^>]*>/.exec(svg)[0];
 function rigFromMarkup(markup) {
   const sizes = drawings(markup, 'roll').map((s) => viewBoxOf(openTag(s)));
   const options = /class="roll__pick"/.test(markup) ? [...markup.matchAll(/<option value="([^"]*)">([^<]*)<\/option>/g)].map(([, value, textContent]) => ({ value, textContent: unescape(textContent) })) : null;
-  return rollRig({ dataset: datasetOf(/<div class="roll"[^>]*>/.exec(markup)[0]), sizes, options });
+  return rollRig({ dataset: datasetOf(/<div class="roll"[^>]*>/.exec(markup)[0]), sizes, options, readoutData: datasetOf(/<p class="roll__readout[^>]*>/.exec(markup)[0]) });
 }
 
 // The runs (or cells) the drawing paints in its first row, by ink: [start, end] in SVG units. The first row's cells
@@ -192,7 +198,8 @@ const SYN_ROWS = [
   ['99A003', 'Example Three', 'Gammaville', 'MD', '0.1000', 'No', '21000'],
   ['990005', 'Example Five', 'Epsilonville', 'AL', '-0.2000', 'No', '35001'],
 ];
-const SYN_GEOM = { 300: [30, 0], 1180: [40, 0] };
+// The geometry the build writes (history-figures.js ROLL_GEOM): [label column, right margin, row height, top] by width.
+const SYN_GEOM = { 300: [30, 0, 11, 4], 1180: [40, 0, 17, 4] };
 // The middle of grid column j at a drawn width.
 const middle = (j, width, [label, right], n = SYN.ccns.length) => label + ((j + 0.5) * (width - label - right)) / n;
 const synRig = (extra = {}) => rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), roll: ROLL_URL, src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], ...extra });
@@ -206,7 +213,7 @@ test('mountRoll: a figure without a roll call is left alone', () => {
 });
 
 test('mountRoll, the program page: nothing is fetched until the pointer arrives, and each asset only once; the hospital under the pointer is named', () =>
-  withGlobals({ window: windowStub() }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, async () => {
     const f = synFetch();
     const hospitals = hospitalsStub(SYN_ROWS);
     await withGlobals({ fetch: f }, async () => {
@@ -231,7 +238,7 @@ test('mountRoll, the program page: nothing is fetched until the pointer arrives,
   }));
 
 test('mountRoll names a hospital CMS no longer lists by its CCN, in the state the history recorded', () =>
-  withGlobals({ window: windowStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
     const rig = synRig();
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     rig.svgs[1].handlers.pointermove(at(middle(3, 1180, SYN_GEOM[1180])));
@@ -241,7 +248,7 @@ test('mountRoll names a hospital CMS no longer lists by its CCN, in the state th
   })));
 
 test('mountRoll: at each drawn width the pointer finds the column under it, and the label column and the right margin name no one', () =>
-  withGlobals({ window: windowStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
     // Two geometries: the program page's (no right margin) and a place page's (notes at the right).
     for (const geom of [SYN_GEOM, { 300: [30, 70], 760: [40, 90] }]) {
       const widths = Object.keys(geom).map(Number);
@@ -274,7 +281,7 @@ test('mountRoll: at each drawn width the pointer finds the column under it, and 
   })));
 
 test('mountRoll: a pointer off the grid leaves the readout as it was', () =>
-  withGlobals({ window: windowStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => withGlobals({ fetch: synFetch() }, async () => {
     const rig = synRig();
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     const [svg] = rig.svgs;
@@ -287,8 +294,76 @@ test('mountRoll: a pointer off the grid leaves the readout as it was', () =>
     assert.equal(rig.readout.textContent, said);
   })));
 
+test('mountRoll: a hospital never cut is named without error, by its name, state and the years it had a decision', () =>
+  withGlobals({ window: windowStub(), document: documentStub() }, () => noUnhandled(async () => {
+    await withGlobals({ fetch: synFetch() }, async () => {
+      const rig = synRig();
+      mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+      // Column 4 (990005) was decided in all three years and never cut.
+      rig.svgs[0].handlers.pointermove(at(middle(4, 300, SYN_GEOM[300])));
+      await settle();
+      assert.equal(rig.readout.textContent, fill('rollSayNone', { name: 'Example Five', state: 'AL', decided: '3' }));
+      assert.match(rig.readout.textContent, /never cut in 3 years/);
+      // And the pointer moving on to a cut hospital says that one's cuts again.
+      rig.svgs[0].handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
+      await settle();
+      assert.match(rig.readout.textContent, /cut in 2 of 3 years \(FY24, FY25\)/);
+    });
+  })));
+
+test('mountRoll: the readout starts as the build\'s hint when there is one, until a hospital is named; with none it is left as built', () =>
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, async () => {
+    const hint = 'Point at a sliver to name its hospital.';
+    const hinted = synRig({ readoutData: { hint } });
+    mountRoll(hinted.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    assert.equal(hinted.readout.textContent, hint, 'seeded at mount, before any pointer');
+    hinted.svgs[0].handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
+    await settle();
+    assert.match(hinted.readout.textContent, /Example One/, 'a hospital replaces the hint');
+    // Off the grid, the readout keeps what it said.
+    const said = hinted.readout.textContent;
+    hinted.svgs[0].handlers.pointermove(at(5));
+    await settle();
+    assert.equal(hinted.readout.textContent, said);
+    const plain = synRig();
+    plain.readout.textContent = 'as built';
+    mountRoll(plain.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    assert.equal(plain.readout.textContent, 'as built', 'no hint, nothing written');
+  }));
+
+test('mountRoll: an outline marks the column under the pointer, one rect that moves, and stays put when the pointer is off the grid', () =>
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, async () => {
+    const rig = synRig();
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    const [narrow, wide] = rig.svgs;
+    assert.deepEqual([narrow.cursor, wide.cursor], [null, null], 'nothing outlined until the pointer is on the grid');
+    narrow.handlers.pointermove(at(middle(2, 300, SYN_GEOM[300])));
+    await settle();
+    const rect = narrow.cursor;
+    assert.equal(rect.attrs.class, 'chart-roll__cursor');
+    assert.equal(rect.ns, 'http://www.w3.org/2000/svg');
+    assert.equal(rect.tag, 'rect');
+    // Five columns over 270 units (300 less the 30 of labels): 54 each. Column 2 starts at 138; the outline is a unit
+    // wider at each side; it runs over the grid's rows from the geometry: from 2 above the top (4) for 3 years of 11.
+    assert.deepEqual([rect.attrs.x, rect.attrs.width, rect.attrs.y, rect.attrs.height], ['137.0', '56.0', '2', '35']);
+    narrow.handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
+    await settle();
+    assert.equal(narrow.cursor, rect, 'the same rect, moved rather than another added');
+    assert.equal(rect.attrs.x, '29.0');
+    // Off the grid (the label column, past the right edge): it stays on the column it was.
+    for (const x of [5, 29, 400]) narrow.handlers.pointermove(at(x));
+    await settle();
+    assert.equal(rect.attrs.x, '29.0');
+    assert.equal(wide.cursor, null, 'each drawing has its own outline, drawn when its own pointer arrives');
+    // A column CMS's file no longer lists (990004) is outlined all the same: the history names it.
+    wide.handlers.pointermove(at(middle(3, 1180, SYN_GEOM[1180])));
+    await settle();
+    const w = (1180 - 40) / SYN.ccns.length;
+    assert.deepEqual([wide.cursor.attrs.x, wide.cursor.attrs.width], [(40 + 3 * w - 1).toFixed(1), (w + 2).toFixed(1)]);
+  }));
+
 test('mountRoll, a place page: the grid\'s order is on the figure (data-inline) and the history asset is never fetched', () =>
-  withGlobals({ window: windowStub() }, () => withGlobals({ fetch: fetchStub({ [ROLL_URL]: fail(500) }) }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => withGlobals({ fetch: fetchStub({ [ROLL_URL]: fail(500) }) }, async () => {
     const geom = { 300: [30, 70], 760: [40, 90] };
     const hospitals = hospitalsStub(SYN_ROWS);
     // data-roll is not on a place's figure; if it were, the inline order still wins.
@@ -306,17 +381,21 @@ test('mountRoll, a place page: the grid\'s order is on the figure (data-inline) 
     assert.equal(rig.readout.textContent, before);
   })));
 
+// The ticks the picker draws through the given columns at a drawn width: for each, one vertical stroke per run of years
+// (the given [first, past-the-last] pairs), from the top of its first row to the bottom of its last cell.
+const pickTicks = (width, js, runs, geom = SYN_GEOM, n = SYN.ccns.length) => {
+  const [, , rowH, top] = geom[width];
+  return js.map((j) => runs.map(([a, b]) => `M${middle(j, width, geom[width], n).toFixed(1)} ${(top + a * rowH).toFixed(1)}V${(top + b * rowH - 2).toFixed(1)}`).join('')).join('');
+};
+
 test('mountRoll, the state picker: it shows, ticks the state\'s columns at each width, says how many, and clears', () =>
-  withGlobals({ window: windowStub() }, () => withGlobals({
-    fetch: synFetch(),
-    document: { createElementNS: (ns, tag) => el({ ns, tag }) },
-  }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, async () => {
     const options = [{ value: '', textContent: 'Every state' }, { value: 'AL', textContent: 'Alabama' }, { value: 'MD', textContent: 'Maryland' }];
     const rig = synRig({ options });
     assert.equal(rig.picker.hidden, true, 'hidden until the script runs');
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     assert.equal(rig.picker.hidden, false);
-    const ticks = (width, height, js) => js.map((j) => `M${middle(j, width, SYN_GEOM[width]).toFixed(1)} 0V${(height - 26).toFixed(1)}`).join('');
+    const all = [[0, SYN.fys.length]];
     const pick = async (value) => {
       rig.select.value = value;
       rig.select.handlers.change();
@@ -325,23 +404,45 @@ test('mountRoll, the state picker: it shows, ticks the state\'s columns at each 
     await pick('AL');
     for (const [svg, width] of [[rig.svgs[0], 300], [rig.svgs[1], 1180]]) {
       assert.equal(svg.pick.attrs.class, 'chart-roll__pick');
-      assert.equal(svg.pick.attrs.d, ticks(width, 100, [0, 1, 4]), `width ${width}: a tick through each Alabama column`);
+      assert.equal(svg.pick.attrs.d, pickTicks(width, [0, 1, 4], all), `width ${width}: a tick through each Alabama column, from the first row to the last, by the geometry's row height and top`);
     }
     assert.equal(rig.box.classes.has('is-picked'), true);
     assert.equal(rig.readout.textContent, fill('rollPicked', { n: '3', state: 'Alabama' }));
+    assert.match(rig.readout.textContent, /, marked$/);
     // Another state replaces the ticks; it does not add to them.
     await pick('MD');
-    assert.equal(rig.svgs[0].pick.attrs.d, ticks(300, 100, [2, 3]));
+    assert.equal(rig.svgs[0].pick.attrs.d, pickTicks(300, [2, 3], all));
     assert.equal(rig.readout.textContent, fill('rollPicked', { n: '2', state: 'Maryland' }));
     // "Every state" takes them away.
     await pick('');
     assert.deepEqual(rig.svgs.map((s) => s.pick), [null, null]);
     assert.equal(rig.box.classes.has('is-picked'), false);
     assert.equal(rig.readout.textContent, '');
-  })));
+  }));
+
+// Four years, the second of which no hospital had a decision in (CMS cut no one, scored no one): a break in each tick.
+const GAPPED = { fys: [2024, 2025, 2026, 2027], ccns: SYN.ccns, recs: ['Y.YN', 'N.NN', 'Y.N.', '..YY', 'N.NN'], states: SYN.states };
+
+test('mountRoll, the state picker: a tick runs through each stretch of years that have any decision, and breaks around a year with none', () =>
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({}) }, async () => {
+    const options = [{ value: '', textContent: 'Every state' }, { value: 'AL', textContent: 'Alabama' }];
+    const rig = rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), inline: JSON.stringify(GAPPED), src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], options });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    rig.select.value = 'AL';
+    rig.select.handlers.change();
+    await settle();
+    // Years 0, then 2 and 3: two strokes in each Alabama column (0, 1 and 4).
+    const runs = [[0, 1], [2, 4]];
+    for (const [svg, width] of [[rig.svgs[0], 300], [rig.svgs[1], 1180]]) {
+      assert.equal(svg.pick.attrs.d, pickTicks(width, [0, 1, 4], runs, SYN_GEOM, GAPPED.ccns.length), `width ${width}`);
+      assert.equal(svg.pick.attrs.d.match(/M/g).length, 6, 'two strokes a column, three columns');
+    }
+    // By hand at 300 (row 11, top 4): the first year's row is 4 to 13; the third and fourth are 26 to 46.
+    assert.ok(rig.svgs[0].pick.attrs.d.startsWith(`M${middle(0, 300, SYN_GEOM[300]).toFixed(1)} 4.0V13.0M${middle(0, 300, SYN_GEOM[300]).toFixed(1)} 26.0V46.0`));
+  }));
 
 test('mountRoll: a history asset that will not load is let go quietly, and the next pointer tries again', () =>
-  withGlobals({ window: windowStub() }, () => noUnhandled(async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => noUnhandled(async () => {
     let attempt = 0;
     const f = fetchStub({ [ROLL_URL]: () => (attempt++ === 0 ? fail(503)() : ok(SYN)()) });
     await withGlobals({ fetch: f }, async () => {
@@ -363,7 +464,7 @@ test('mountRoll: a history asset that will not load is let go quietly, and the n
   })));
 
 test('mountRoll: a hospitals asset that will not load is let go quietly too', () =>
-  withGlobals({ window: windowStub() }, () => noUnhandled(async () => {
+  withGlobals({ window: windowStub(), document: documentStub() }, () => noUnhandled(async () => {
     let attempt = 0;
     const hospitals = async () => {
       if (attempt++ === 0) throw new Error('hospital list: HTTP 503');
@@ -392,7 +493,10 @@ test('the program page\'s roll call: its attributes are what the script reads, a
   assert.equal(rig.box.dataset.src, HOSPITALS_URL);
   const geom = JSON.parse(rig.box.dataset.geom);
   assert.deepEqual(rig.svgs.map((s) => String(s.viewBox.baseVal.width)).sort(), Object.keys(geom).sort(), 'the script is told the geometry of each width drawn, and only those');
-  assert.match(markup, /<p class="roll__readout[^"]*" aria-live="polite"><\/p>/);
+  // The readout is empty in the markup and carries, when the script can run, the hint it starts with.
+  assert.match(markup, /<p class="roll__readout[^"]*" aria-live="polite" data-hint="[^"]+"><\/p>/);
+  assert.equal(rig.readout.dataset.hint, historyText('rollHint'));
+  assert.doesNotMatch(rollFigure(HD, { n: 1, source: 'Synthetic source' }).toString(), /data-hint/, 'a picture without its script has no hint to show');
   // The picker offers "every state" and each state the asset's hospitals are in, by its name.
   assert.ok(rig.picker && rig.select, 'a picker, for the script to show');
   assert.equal(rig.select.selectedOptions[0].textContent.length > 0, true);
@@ -400,7 +504,7 @@ test('the program page\'s roll call: its attributes are what the script reads, a
   assert.deepEqual(offered.map(([st]) => st).sort(), [...new Set(ASSET.states.filter((st) => STATE_NAMES[st]))].sort(), 'a state for each the history has hospitals in');
   for (const [st, name] of offered) assert.equal(name, STATE_NAMES[st]);
 
-  return withGlobals({ window: windowStub(), fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, async () => {
+  return withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, async () => {
     // Every hospital in the asset has a row, named from its CCN.
     const rows = ASSET.ccns.map((ccn, j) => [ccn, `Example ${ccn}`, 'Exampleton', ASSET.states[j], '0.0000', 'No', '00000']);
     mountRoll(rig.fig, { hospitals: hospitalsStub(rows) });
@@ -439,7 +543,7 @@ test('the program page\'s roll call names a hospital CMS no longer lists, from t
   // A hospital in the history that the current master no longer places, and its column.
   const j = ASSET.ccns.findIndex((ccn, k) => !DATA.master.get(ccn) && ASSET.recs[k].includes('Y'));
   assert.ok(j >= 0, 'the pinned history holds a closed hospital that was cut');
-  return withGlobals({ window: windowStub(), fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, async () => {
+  return withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, async () => {
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     const width = rig.svgs[1].viewBox.baseVal.width;
     rig.svgs[1].handlers.pointermove(at(middle(j, width, geom[String(width)], ASSET.ccns.length)));
@@ -466,7 +570,7 @@ test('a place page\'s roll call: the order is on the figure, agrees with the his
   const geom = JSON.parse(rig.box.dataset.geom);
   assert.deepEqual(rig.svgs.map((s) => String(s.viewBox.baseVal.width)).sort(), Object.keys(geom).sort());
 
-  return withGlobals({ window: windowStub(), fetch: fetchStub({}) }, async () => {
+  return withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({}) }, async () => {
     const rows = inline.ccns.map((ccn, j) => [ccn, `Example ${ccn}`, 'Exampleton', inline.states[j], '0.0000', 'No', '00000']);
     mountRoll(rig.fig, { hospitals: hospitalsStub(rows) });
     const svgs = drawings(markup, 'roll');
@@ -764,7 +868,7 @@ function pageDocument(nodes) {
     const m = /^\.([\w-]+)(?:\[data-([\w-]+)\])?$/.exec(selector);
     return Boolean(m) && node.classes.has(m[1]) && (!m[2] || node.dataset[m[2]] !== undefined);
   };
-  return { querySelector: () => null, querySelectorAll: (selector) => nodes.filter((n) => matches(n, selector)), createElement: () => el() };
+  return { querySelector: () => null, querySelectorAll: (selector) => nodes.filter((n) => matches(n, selector)), createElement: () => el(), createElementNS: (ns, tag) => el({ ns, tag }) };
 }
 
 test('program.js mounts every roll call and year map on the page, with the hospitals asset the page names', async () => {

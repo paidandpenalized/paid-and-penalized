@@ -32,12 +32,13 @@ export function proofStrips({ rows, limit, step, labels, width, format }) {
   const mid = (x0 + x1) / 2;
   const x = (v) => mid + (v / limit) * span;
   const bins = rows.map((r) => proofBins(r.diffs, { limit, step }));
-  const peak = Math.max(1, ...bins.flatMap((b) => b.counts));
   const binW = (span * step) / limit;
   const height = TOP + rows.length * ROW + AXIS;
   const body = rows.map((r, i) => {
     const base = TOP + i * ROW + ROW - 6;
     const { half, counts } = bins[i];
+    // Each strip to its own tallest bin, so every year's spike shows whatever its spread.
+    const peak = Math.max(1, ...counts);
     // The silhouette: a stepped outline across the bins with any count, closed along the ruler.
     let d = '';
     counts.forEach((c, k) => {
@@ -51,15 +52,15 @@ export function proofStrips({ rows, limit, step, labels, width, format }) {
 <rect class="chart-proof__fail" x="${r2(x0)}" y="${r2(base - SPIKE)}" width="${r2(x(-limit) - x0)}" height="${SPIKE + 4}"/>
 <rect class="chart-proof__fail" x="${r2(x(limit))}" y="${r2(base - SPIKE)}" width="${r2(x1 - x(limit))}" height="${SPIKE + 4}"/>
 <path class="chart-proof__spike" d="${d}"/>
-${text({ x: x0, y: base - SPIKE - 4, anchor: 'start', cls: 'chart-proof__label', body: r.label })}
-${text({ x: x1, y: base - SPIKE - 4, anchor: 'end', cls: 'chart-cap', body: r.note })}
+${text({ x: x0, y: base - SPIKE - 4, anchor: 'start', cls: 'chart-proof__label chart-label--halo', body: r.label })}
+${text({ x: x1, y: base - SPIKE - 4, anchor: 'end', cls: 'chart-cap chart-label--halo', body: r.note })}
 </g>`;
   });
   const axisY = TOP + rows.length * ROW;
   const ticks = [-limit, -limit / 2, 0, limit / 2, limit];
   return frame({
-    kind: 'proof', width, height, body: html`${body}
-<line class="chart-proof__zero" x1="${r2(mid)}" x2="${r2(mid)}" y1="${TOP - 4}" y2="${r2(axisY + 4)}"/>
+    kind: 'proof', width, height, body: html`<line class="chart-proof__zero" x1="${r2(mid)}" x2="${r2(mid)}" y1="${TOP - 4}" y2="${r2(axisY + 4)}"/>
+${body}
 ${ticks.map((v) => text({ x: x(v), y: axisY + 16, cls: 'chart-tick', body: format(v) }))}
 ${text({ x: x0, y: 10, anchor: 'start', cls: 'chart-cap chart-cap--pen', body: `← ${labels.fail}` })}
 ${text({ x: x1, y: 10, anchor: 'end', cls: 'chart-cap chart-cap--pen', body: `${labels.fail} →` })}`,

@@ -16,6 +16,7 @@ import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
 import { groupLabel, kindLabel } from './groups.js';
+import { nameInText } from './places.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
 import { YEAR_CLASSES, yearClass } from './year-classes.js';
 import { fill, t } from './history/copy.js';
@@ -50,9 +51,9 @@ function rollOrder(hd) {
   });
 }
 
-// The roll call's geometry by drawn width: [label column, right margin], which the page script reads to find the
-// hospital under the pointer.
-const ROLL_GEOM = (width) => (width < 400 ? [30, 0] : [40, 0]);
+// The roll call's geometry by drawn width: [label column, right margin, row height, top], which the page script reads
+// to find the hospital under the pointer and to mark a state's hospitals (rollCall.js draws its rows from TOP = 4).
+const ROLL_GEOM = (width) => (width < 400 ? [30, 0, 11, 4] : [40, 0, 17, 4]);
 
 // The history asset the roll call's script reads: the grid's hospitals in drawing order with their records and
 // states, and the years.
@@ -75,9 +76,9 @@ export function rollFigure(hd, { n, source, rollUrl = null, src = null }) {
   const never = records.length - ever;
   const years = hd.fys.map((fy) => String(fy));
   const draw = (width) => {
-    const [label, right] = ROLL_GEOM(width);
+    const [label, right, rowH] = ROLL_GEOM(width);
     return rollCall({
-      records, years, width, rowH: width < 400 ? 11 : 17, label, right, blank: t('rollNone'),
+      records, years, width, rowH, label, right, blank: t('rollNone'),
       brackets: [{ from: 0, to: ever, label: fill('rollEver', { n: count(ever) }), pen: true }, { from: ever, to: records.length, label: fill('rollNever', { n: count(never) }) }],
     });
   };
@@ -87,7 +88,7 @@ export function rollFigure(hd, { n, source, rollUrl = null, src = null }) {
   const chart = html`<div class="roll"${rollUrl ? html` data-roll="${rollUrl}" data-src="${src}"` : ''} data-geom="${JSON.stringify(geom)}">
 ${rollUrl ? html`<p class="roll__pick" hidden><label for="roll-state">${t('rollPick')}</label> <select id="roll-state"><option value="">${t('rollAll')}</option>${states.map((st) => html`<option value="${st}">${STATE_NAMES[st]}</option>`)}</select></p>` : ''}
 ${imagePair(pair, t('rollAlt'))}
-<p class="roll__readout small" aria-live="polite"></p>
+<p class="roll__readout small" aria-live="polite"${rollUrl ? html` data-hint="${t('rollHint')}"` : ''}></p>
 </div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-history-years',
@@ -124,7 +125,7 @@ export function chanceFigure(hd, { n, source }) {
   const chance = allChance.slice(0, years + 1);
   const ks = observed.map((o, k) => ({ k, observed: o, chance: chance[k], tip: fill('chanceTip', { k: String(k), observed: count(o), chance: chanceText(chance[k]) }) }));
   return figure({
-    n, source, csvName: 'hacrp-times-cut', alt: t('chanceAlt'), claimLevel: 'recomputed',
+    n, source, csvName: 'hacrp-times-cut', alt: t('chanceAlt'), claimLevel: 'recomputed', note: t('chanceKey'),
     takeaway: fill('chanceTakeaway', { hospitals: count(hospitals), years: String(years), never: count(observed[0]), chanceNever: count(Math.round(chance[0])), all: count(observed[years]), chanceAll: chanceText(chance[years]) }),
     ...drawn((width) => chanceDots({ ks, labels: { x: t('chanceX') }, width, format: count })),
     table: {
@@ -148,12 +149,12 @@ export function gapFigure(hd, { n, source }) {
   const fresh = (g) => share(g.cutNew, g.notBefore);
   const xs = gaps.map((g) => g.k);
   const pt = (g, y, key) => ({ x: g.k, y, tip: fill(key, { k: String(g.k), share: pct0(y) }) });
-  const panels = [{ label: t('gapAgain'), points: gaps.map((g) => pt(g, again(g), 'gapTipAgain')), under: gaps.map((g) => ({ x: g.k, y: fresh(g) })), underLabel: t('gapFresh'), change: '' }];
+  const panels = [{ label: t('gapAgain'), points: gaps.map((g) => pt(g, again(g), 'gapTipAgain')), under: gaps.map((g) => ({ x: g.k, y: fresh(g) })), underSolid: true, underLabel: t('gapFresh'), change: '', labelAt: [0, 1, gaps.length - 1] }];
   const yMax = Math.ceil(Math.max(...gaps.map(again)) * 10) / 10;
   const one = gaps[0];
   const two = gaps[1];
   const far = gaps[gaps.length - 1];
-  const draw = (width) => smallLines({ panels, xs, yMax, ref: null, labels: { x: (v) => String(v) }, width, format: (v) => pct0(v), cols: 1, tall: true });
+  const draw = (width) => smallLines({ panels, xs, yMax, ref: null, labels: { x: (v) => String(v), point: pct0, xTitle: t('gapColK') }, width, format: (v) => pct0(v), cols: 1, tall: true });
   return figure({
     n, source, csvName: 'hacrp-cut-again-by-gap', alt: t('gapAlt'), claimLevel: 'recomputed',
     takeaway: fill('gapTakeaway', { one: pct0(again(one)), oneFresh: pct0(fresh(one)), two: pct0(again(two)), twoFresh: pct0(fresh(two)), far: String(far.k), farAgain: pct0(again(far)), farFresh: pct0(fresh(far)) }),
@@ -183,18 +184,17 @@ export function kindsFigure(hd, { n, source }) {
       return { x: fy, y: v, tip: v === null ? '' : `${groupLabel(kind, key)}, ${fyLabel(fy)}: ${pct0(v)} (${count(y.cut)} of ${count(y.decided)})` };
     });
     const above = points.filter((p, i) => p.y !== null && p.y > nation[i]).length;
-    return { label: groupLabel(kind, key), points, under: hd.fys.map((fy, i) => ({ x: fy, y: hd.counts[i].cut ? nation[i] : null })), change: fill('kindsAbove', { k: String(above), n: String(cutYears(hd)) }), kind, key, above };
+    return { label: groupLabel(kind, key), points, underSolid: true, under: hd.fys.map((fy, i) => ({ x: fy, y: hd.counts[i].cut ? nation[i] : null })), change: fill('kindsAbove', { k: String(above), n: String(cutYears(hd)) }), kind, key, above };
   }).filter(Boolean);
   // The takeaway: rural hospitals against urban ones, first year and newest.
-  const urban = groupOf('urban', 'true');
   const rural = groupOf('urban', 'false');
-  const ratio = (i) => share(share(rural.years[i].cut, rural.years[i].decided), share(urban.years[i].cut, urban.years[i].decided));
+  const ruralShare = (i) => share(rural.years[i].cut, rural.years[i].decided);
   const lastI = hd.fys.length - 1;
   const draw = (width) => smallLines({ panels, xs: hd.fys, yMax: 0.5, ref: null, labels: { x: (v) => `’${String(v).slice(-2)}` }, width, format: (v) => pct0(v) });
   const groups = hd.byType.flatMap((k) => k.groups.map((g) => ({ label: groupLabel(k.kind, g.key), years: g.years })));
   return figure({
     n, source, csvName: 'hacrp-cut-by-kind', alt: t('kindsAlt'),
-    takeaway: fill('kindsTakeaway', { first: String(hd.fys[0]), firstRatio: decimal(ratio(0), 1), last: String(hd.fys[lastI]), lastRatio: decimal(ratio(lastI), 1) }),
+    takeaway: fill('kindsTakeaway', { first: String(hd.fys[0]), a: pct0(ruralShare(0)), na: pct0(nation[0]), last: String(hd.fys[lastI]), b: pct0(ruralShare(lastI)), nb: pct0(nation[lastI]) }),
     ...drawn(draw, 760),
     table: {
       columns: [{ name: t('rollColFy') }, { name: t('typesHNation'), numeric: true }, ...groups.map((g) => ({ name: g.label, numeric: true }))],
@@ -210,7 +210,7 @@ export function coverageFigure(hd, { n, source }) {
   const rows = [['every', 'covEvery'], ['all', 'covAll'], ['psiOnly', 'covPsiOnly'], ['noPsi', 'covNoPsi']].map(([k, key]) => {
     const g = groups[k];
     const v = share(g.cut, g.decided);
-    const label = k === 'psiOnly' || k === 'noPsi' ? fill(key, { short: SHORT_NAMES.PSI90 }) : t(key);
+    const label = k === 'psiOnly' ? fill(key, { short: SHORT_NAMES.PSI90 }) : t(key);
     return { label, value: v, valueText: pct0(v), tip: `${label}: ${count(g.cut)} of ${count(g.decided)}`, pen: k === 'noPsi', g };
   });
   return figure({
@@ -244,9 +244,13 @@ export function statesYearsFigure(hd, { n, source }) {
       const s = share(y.cut, y.decided);
       return [code, { value: s * 100, label: `${STATE_NAMES[code] ?? code}: ${pct0(s)}`, few: y.decided < 10 }];
     }));
-    return html`<div class="smallmaps__m"><p class="smallmaps__fy">${fyLabel(fy)}</p>${imageOf(miniTiles({ states, ramp: MAP_STEPS_PCT, width: 220 }), fill('statesHMapAlt', { fy: String(fy) }), null)}</div>`;
+    return html`<div class="smallmaps__m"><p class="smallmaps__fy">${fyLabel(fy)}</p>${imageOf(miniTiles({ states, ramp: MAP_STEPS_PCT, width: 220, outline: [best.st, least.st] }), fill('statesHMapAlt', { fy: String(fy) }), null)}</div>`;
   });
-  const chart = html`<div class="smallmaps">${maps}</div>`;
+  // One key for every map: the steps of the share cut, none cut, no decision, and the two states the takeaway names.
+  const edges = [0, ...MAP_STEPS_PCT];
+  const step = (i) => (i === edges.length - 1 ? fill('keyUp', { from: `${edges[i]}%` }) : fill('keyRange', { from: `${edges[i]}%`, to: `${edges[i + 1]}%` }));
+  const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li><li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
+  const chart = html`${key}<div class="smallmaps">${maps}</div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-cut-by-state-year',
     takeaway: fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(cutYears(hd)), low: STATE_NAMES[least.st], lowK: String(cutYears(hd) - least.above), few: String(FEW_DECIDED) }),
@@ -292,7 +296,7 @@ export function yearsFigure(rec, hd, { n, source }) {
     };
   });
   return figure({
-    n, source, csvName: 'hacrp-hospital-years', alt: t('yearsAlt'), claimLevel: 'recomputed',
+    n, source, csvName: 'hacrp-hospital-years', alt: t('yearsAlt'), claimLevel: 'recomputed', note: t('yearsKey'),
     takeaway: rec.cut ? fill('yearsTakeaway', { cut: String(rec.cut), decided: String(rec.decided) }) : fill('yearsTakeawayNone', { decided: String(rec.decided) }),
     ...drawn((width) => rankYears({ years: years.map((y) => ({ ...y, value: y.share })), breaks: ruleBreaks(hd.fys), labels: { top: t('yearsTop'), mid: t('yearsMid'), bottom: t('yearsBottom'), none: t('yearsNone') }, width })),
     table: {
@@ -326,9 +330,12 @@ ${psec({ id: 'statemaps', wide: true, heading: t('statesHHeading'), text: para('
 // listed in an earlier year that the master no longer places.
 export function placeMembers(place, hd, master) {
   const set = new Set(place.ccns);
-  if (place.kind !== 'metro') {
-    const states = new Set(place.stateCodes ?? []);
-    for (const ccn of hd.recs.keys()) if (!master.get(ccn) && states.has(hd.stateOf.get(ccn))) set.add(ccn);
+  if (place.kind === 'metro') {
+    for (const ccn of hd.recs.keys()) if (master.get(ccn)?.cbsa === place.key) set.add(ccn);
+  } else {
+    // The place's states: a state's own code, or every state its hospitals are in (a region or division).
+    const states = new Set(place.kind === 'state' ? [place.key.toUpperCase()] : place.ccns.map((c) => master.get(c)?.state).filter(Boolean));
+    for (const ccn of hd.recs.keys()) if (states.has(master.get(ccn)?.state ?? hd.stateOf.get(ccn))) set.add(ccn);
   }
   return [...set].filter((ccn) => hd.recs.has(ccn));
 }
@@ -348,11 +355,11 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const above = own.filter((o, i) => o.decided && share(o.cut, o.decided) > nation[i]).length;
   const ever = records.filter((r) => r.includes(CUT)).length;
   const notes = own.map((o, i) => (o.decided ? `${pct0(share(o.cut, o.decided))} · ${pct0(nation[i])}` : ''));
-  const geom = (width) => (width < 400 ? [30, 70] : [40, 90]);
+  const geom = (width) => (width < 400 ? [30, 70, 12, 4] : [40, 90, 18, 4]);
   const draw = (width) => {
-    const [label, right] = geom(width);
+    const [label, right, rowH] = geom(width);
     return rollCall({
-      records, years: hd.fys.map(String), notes, width, rowH: width < 400 ? 12 : 18, label, right, blank: t('rollNone'),
+      records, years: hd.fys.map(String), notes, width, rowH, label, right, blank: t('rollNone'),
       brackets: ever && ever < records.length ? [{ from: 0, to: ever, label: fill('rollEver', { n: count(ever) }), pen: true }, { from: ever, to: records.length, label: fill('rollNever', { n: count(records.length - ever) }) }] : [],
     });
   };
@@ -362,11 +369,11 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const inline = { fys: hd.fys, ccns: order.map(([c]) => c), recs: records, states: order.map(([c]) => hd.stateOf.get(c) ?? '') };
   const chart = html`<div class="roll" data-inline="${JSON.stringify(inline)}"${src ? html` data-src="${src}"` : ''} data-geom="${JSON.stringify({ [String(WIDTH)]: geom(WIDTH), [String(PLACE_WIDE)]: geom(PLACE_WIDE) })}">
 ${imagePair(pair, t('rollAlt'))}
-<p class="roll__readout small" aria-live="polite"></p>
+<p class="roll__readout small" aria-live="polite"${src ? html` data-hint="${t('rollHint')}"` : ''}></p>
 </div>`;
   return figure({
     n: next(), source, chart, csvName: 'hacrp-place-years',
-    takeaway: fill('placeHistTakeaway', { name: place.name, k: String(above), n: String(cutYears(hd)), ever: count(ever), hospitals: count(records.length) }),
+    takeaway: fill('placeHistTakeaway', { name: nameInText(place, { start: true }), k: String(above), n: String(cutYears(hd)), ever: count(ever), hospitals: count(records.length) }),
     table: {
       columns: [{ name: t('rollColFy') }, { name: t('rollColDecided'), numeric: true }, { name: t('rollColCut'), numeric: true }, { name: t('placeHistColShare'), numeric: true }, { name: t('placeHistColNation'), numeric: true }],
       rows: own.map((o, i) => [fyLabel(hd.fys[i]), num(count(o.decided), o.decided), num(count(o.cut), o.cut), o.decided ? num(pct1(share(o.cut, o.decided)), share(o.cut, o.decided)) : '', num(pct1(nation[i]), nation[i])]),
@@ -479,12 +486,12 @@ export function hospitalInfectionsFigure(sir, hd, { n, source }) {
     const have = points.filter((p) => p.y !== null);
     if (have.length < 2) return null;
     const delta = have[have.length - 1].y - have[0].y;
-    return { id, label: t(HAI_NAMES[id]), points, under, change: `${have[0].y.toFixed(2)} → ${have[have.length - 1].y.toFixed(2)}`, delta };
+    return { id, label: t(HAI_NAMES[id]), points, under, underSolid: true, change: `${have[0].y.toFixed(2)} → ${have[have.length - 1].y.toFixed(2)}`, delta };
   }).filter(Boolean);
   if (!panels.length) return null;
   const top = Math.max(1.5, ...panels.flatMap((p) => p.points.map((pt) => pt.y ?? 0)));
   const yMax = Math.min(Math.ceil(top * 2) / 2, 6);
-  const clipped = panels.map((p) => ({ ...p, points: p.points.map((pt) => ({ ...pt, y: pt.y === null ? null : Math.min(pt.y, yMax) })) }));
+  const clipped = panels.map((p, i) => ({ ...p, ...(i === 0 ? { underLabel: t('hinfNation') } : {}), points: p.points.map((pt) => ({ ...pt, y: pt.y === null ? null : Math.min(pt.y, yMax) })) }));
   const down = panels.filter((p) => p.delta < 0).length;
   const draw = (width) => smallLines({ panels: clipped, xs, yMax, ref: 1, labels: { ref: t('infRef'), x: (v) => `’${String(v).slice(-2)}` }, width, format: (v) => String(v) });
   return figure({

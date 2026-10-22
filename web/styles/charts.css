@@ -340,12 +340,12 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-chance__stem, .chart-chance__stem--up, .chart-chance__ring { stroke: CanvasText; }
 }
 .chart-roll__note { fill: var(--ink-2); font: 400 10px var(--font-type); }
-.chart-roll__pick { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-roll__pick { stroke: var(--ink-2); stroke-opacity: 0.75; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-roll__blank { fill: var(--ink-3); font: 600 10px var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The year map (geo.js usYearMap). */
 .chart-years__land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 .chart-dots--years-clear { stroke: var(--ink-3); stroke-opacity: 0.55; }
-.chart-dots--years-scar { stroke: var(--pen); stroke-opacity: 0.3; }
+.chart-dots--years-scar { stroke: var(--pen-scar); }
 @media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } .chart-years__land path { stroke: CanvasText; } }
 /* Small lines (smallLines.js). */
 .chart-lines__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
@@ -355,3 +355,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 @media (forced-colors: active) { .chart-lines__line, .chart-lines__line--pen { stroke: CanvasText; } .chart-lines__dot, .chart-lines__dot--pen { fill: CanvasText; } }
 .chart-lines__under { fill: none; stroke: var(--ink-3); stroke-width: 1.5px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 @media (forced-colors: active) { .chart-lines__under { stroke: GrayText; } }
+.chart-roll__cursor { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.chart-lines__under--solid { stroke-dasharray: none; stroke-width: 2px; stroke-opacity: 0.6; }
+.chart-tile-ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) { .chart-tile-ring { stroke: CanvasText; } }

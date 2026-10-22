@@ -96,7 +96,7 @@ export function periodsFigure(years, { n, source }) {
   return figure({
     n, source, csvName: 'hacrp-periods', alt: t('periodsAlt'),
     takeaway: fill('periodsTakeaway', { fy: String(newest.fy), payStart: longDate(pay(newest.fy).start), lead: fill('periodsLead', { months: String(lead) }) }),
-    key: null,
+    note: fill('periodsKey', { short }),
     svg: draw(WIDTH), svgWide: draw(METHODS_WIDE),
     table: {
       columns: [{ name: t('periodsColFy') }, { name: fill('periodsColPsi', { short }) }, { name: t('periodsColHai') }, { name: t('periodsColPay') }],

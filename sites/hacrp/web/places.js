@@ -76,6 +76,14 @@ export function buildPlaces({ hospitals, master, rows }) {
   return { places, regions, list: [...places.values()] };
 }
 
+// A place's name inside a sentence: Census regions and divisions take "the" ("the South", "the Middle Atlantic");
+// start: the name opens the sentence.
+export function nameInText(place, { start = false } = {}) {
+  const article = place.kind === 'region' || place.kind === 'division';
+  if (!article) return place.name;
+  return `${start ? 'The' : 'the'} ${place.name}`;
+}
+
 // The chain of places above a place, from its region down to its parent (a metro's: its home state's chain).
 export function ancestors(places, place) {
   const out = [];
