@@ -8,8 +8,11 @@ import { COPY as SHARED } from '../copy.js';
 export const COPY = {
   ymapSay: { text: 'FY{fy}: {cut} cut that year; {ever} cut at least once so far', claim: null },
   ymapSayNone: { text: 'FY{fy}: CMS scored no hospital and cut none; {ever} cut at least once so far', claim: null },
-  rollSay: { text: '{name}, {state}: cut in {cut} of {decided} years ({years})', claim: null },
-  rollSayNone: { text: '{name}, {state}: never cut in {decided} years', claim: null },
+  rollSay: { text: '{who}: cut in {cut} of {decided} years ({years})', claim: null },
+  rollSayNone: { text: '{who}: never cut in {decided} years', claim: null },
+  rollSayOneCut: { text: '{who}: cut in its one year with a decision ({years})', claim: null },
+  rollSayOneNone: { text: '{who}: not cut in its one year with a decision', claim: null },
+  rollTapAgain: { text: 'Tap again to open its page.', claim: null },
   rollClosed: { text: 'CCN {ccn}, no longer in CMS’s file', claim: null },
   rollPicked: { text: '{n} hospitals in {state}, marked', claim: null },
   setJoin: { text: '{a} + {b}', claim: null },

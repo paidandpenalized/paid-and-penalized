@@ -28,12 +28,12 @@ Use their facts and direction. Don't copy their notes into this repo.
 
   Send screenshots after.
 - [x] **Checkpoint M2:** same as Checkpoint M1, including /security-review for search.
-- [ ] **M3, history and Methods.**
+- [x] **M3, history and Methods.**
   - Part 4 history, per DATA-A-03. Name the prior-year files and their sizes before downloading them, then pin them.
   - `/hacrp/methods/`.
 
   Send screenshots after.
-- [ ] **Checkpoint M3:** same as Checkpoint M1, including /security-review for the new history inputs and the roll
+- [x] **Checkpoint M3:** same as Checkpoint M1, including /security-review for the new history inputs and the roll
   call's script.
 - [ ] **Accuracy pass:**
   - claim ids and register rows for every factual sentence;

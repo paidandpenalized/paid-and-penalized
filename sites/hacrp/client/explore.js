@@ -422,8 +422,12 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
     const row = s.names.get(ccn);
     const cut = s.hist.fys.filter((_, i) => rec[i] === CUT).map((fy) => `FY${String(fy).slice(-2)}`);
     const decided = [...rec].filter((c) => c !== NONE).length;
-    const who = { name: row ? row[1] : fill('rollClosed', { ccn }), state: row ? row[3] : s.hist.states[j], decided: String(decided) };
-    readout.textContent = cut.length ? fill('rollSay', { ...who, cut: String(cut.length), years: cut.join(', ') }) : fill('rollSayNone', who);
+    const name = row ? row[1] : fill('rollClosed', { ccn });
+    const state = row ? row[3] : s.hist.states[j];
+    const who = state ? `${name}, ${state}` : name;
+    const years = cut.join(', ');
+    if (decided === 1) readout.textContent = cut.length ? fill('rollSayOneCut', { who, years }) : fill('rollSayOneNone', { who });
+    else readout.textContent = cut.length ? fill('rollSay', { who, cut: String(cut.length), decided: String(decided), years }) : fill('rollSayNone', { who, decided: String(decided) });
   };
   // The column under the pointer, outlined on the grid.
   const cursor = (svg, j, n, years) => {
@@ -442,15 +446,31 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
     rect.setAttribute('width', Math.max(2, w + 2).toFixed(1));
   };
   if (readout.dataset.hint) readout.textContent = readout.dataset.hint;
+  let armed = null;
   for (const svg of svgs) {
     svg.addEventListener('pointerenter', () => { ready().catch(() => {}); });
     svg.addEventListener('pointermove', (e) => {
       ready().then((s) => { const j = at(svg, e, s.hist.ccns.length); if (j !== null) { say(s, j); cursor(svg, j, s.hist.ccns.length, s.hist.fys.length); } }, () => {});
     });
+    // Leaving the grid takes the outline away and brings the hint back.
+    svg.addEventListener('pointerleave', () => {
+      svg.querySelector('.chart-roll__cursor')?.remove();
+      if (readout.dataset.hint && !select?.value) readout.textContent = readout.dataset.hint;
+    });
+    // A mouse click opens the hospital under it. A tap first names the hospital (a sliver is far narrower than a
+    // finger on a phone), and a second tap on the same one opens it.
     svg.addEventListener('click', (e) => {
       ready().then((s) => {
         const j = at(svg, e, s.hist.ccns.length);
-        if (j !== null && s.names.has(s.hist.ccns[j])) window.location.assign(hospitalHref(s.path, s.hist.ccns[j]));
+        if (j === null || !s.names.has(s.hist.ccns[j])) return;
+        if (e.pointerType === 'touch' && armed !== j) {
+          armed = j;
+          say(s, j);
+          cursor(svg, j, s.hist.ccns.length, s.hist.fys.length);
+          readout.textContent = `${readout.textContent} ${fill('rollTapAgain')}`;
+          return;
+        }
+        window.location.assign(hospitalHref(s.path, s.hist.ccns[j]));
       }, () => {});
     });
   }

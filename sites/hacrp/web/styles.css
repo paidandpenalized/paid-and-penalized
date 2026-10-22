@@ -540,7 +540,7 @@
 .takes__tag--cms { color: var(--ink); }
 .takes__tag--site { color: var(--ink-2); border-style: dashed; }
 .takes__tag--hyp { color: var(--pen-ink); }
-.msec .printout { max-width: none; }
+.msec__text > .printout { max-width: none; }
 .receipts__hash code { font-size: var(--fs-xs); }
 /* What changed: a dated list. */
 .changes { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: var(--measure); }
@@ -620,7 +620,7 @@
   .takes tr, .receipts tr { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .takes th, .takes td, .receipts th, .receipts td { display: block; padding: 0; border: 0; text-align: left; }
   .receipts .receipts__hash { display: none; }
-  .msec .printout__scroll { overflow-x: visible; }
+  .msec__text > .printout .printout__scroll { overflow-x: visible; }
 }
 
 .smallmaps__key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 12px; padding: 0; list-style: none; font-size: var(--fs-sm); }

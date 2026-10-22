@@ -237,11 +237,11 @@ test('mountRoll, the program page: nothing is fetched until the pointer arrives,
       // Column 0: cut in 2024 and 2025 of three years decided.
       svg.handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
       await settle();
-      assert.equal(rig.readout.textContent, fill('rollSay', { name: 'Example One', state: 'AL', cut: '2', decided: '3', years: 'FY24, FY25' }));
+      assert.equal(rig.readout.textContent, fill('rollSay', { who: 'Example One, AL', cut: '2', decided: '3', years: 'FY24, FY25' }));
       // Column 1: two years decided (the third is blank), cut in one; the hospitals asset's state, not the history's.
       svg.handlers.pointermove(at(middle(1, 300, SYN_GEOM[300])));
       await settle();
-      assert.equal(rig.readout.textContent, fill('rollSay', { name: 'Example Two', state: 'GA', cut: '1', decided: '2', years: 'FY24' }));
+      assert.equal(rig.readout.textContent, fill('rollSay', { who: 'Example Two, GA', cut: '1', decided: '2', years: 'FY24' }));
       assert.deepEqual([f.calls.length, hospitals.calls.length], [1, 1], 'moving the pointer fetches nothing more');
     });
   }));
@@ -252,7 +252,7 @@ test('mountRoll names a hospital CMS no longer lists by its CCN, in the state th
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     rig.svgs[1].handlers.pointermove(at(middle(3, 1180, SYN_GEOM[1180])));
     await settle();
-    assert.equal(rig.readout.textContent, fill('rollSay', { name: fill('rollClosed', { ccn: '990004' }), state: 'MD', cut: '2', decided: '2', years: 'FY25, FY26' }));
+    assert.equal(rig.readout.textContent, fill('rollSay', { who: `${fill('rollClosed', { ccn: '990004' })}, MD`, cut: '2', decided: '2', years: 'FY25, FY26' }));
     assert.match(rig.readout.textContent, /990004/);
   })));
 
@@ -311,7 +311,7 @@ test('mountRoll: a hospital never cut is named without error, by its name, state
       // Column 4 (990005) was decided in all three years and never cut.
       rig.svgs[0].handlers.pointermove(at(middle(4, 300, SYN_GEOM[300])));
       await settle();
-      assert.equal(rig.readout.textContent, fill('rollSayNone', { name: 'Example Five', state: 'AL', decided: '3' }));
+      assert.equal(rig.readout.textContent, fill('rollSayNone', { who: 'Example Five, AL', decided: '3' }));
       assert.match(rig.readout.textContent, /never cut in 3 years/);
       // And the pointer moving on to a cut hospital says that one's cuts again.
       rig.svgs[0].handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
@@ -558,7 +558,7 @@ test('the program page\'s roll call names a hospital CMS no longer lists, from t
     rig.svgs[1].handlers.pointermove(at(middle(j, width, geom[String(width)], ASSET.ccns.length)));
     await settle();
     const cut = [...ASSET.recs[j]].flatMap((c, i) => (c === 'Y' ? [`FY${String(ASSET.fys[i]).slice(-2)}`] : []));
-    assert.equal(rig.readout.textContent, fill('rollSay', { name: fill('rollClosed', { ccn: ASSET.ccns[j] }), state: ASSET.states[j], cut: String(cut.length), decided: String([...ASSET.recs[j]].filter((c) => c !== '.').length), years: cut.join(', ') }));
+    assert.equal(rig.readout.textContent, fill('rollSay', { who: `${fill('rollClosed', { ccn: ASSET.ccns[j] })}, ${ASSET.states[j]}`, cut: String(cut.length), decided: String([...ASSET.recs[j]].filter((c) => c !== '.').length), years: cut.join(', ') }));
   });
 });
 
@@ -908,7 +908,7 @@ test('place.js mounts the roll calls that name the hospitals asset, and no other
   const f = fetchStub({ [HOSPITALS_URL]: ok({ hospitalPath: '/hacrp/hospital/', rows: SYN_ROWS }) });
   await withGlobals({ document: pageDocument([named.box, unnamed.box, ymap.box], { [inline]: JSON.stringify(SYN) }), window: windowStub(), fetch: f }, async () => {
     await import('../client/place.js');
-    assert.deepEqual(Object.keys(named.svgs[0].handlers).sort(), ['click', 'pointerenter', 'pointermove']);
+    assert.deepEqual(Object.keys(named.svgs[0].handlers).sort(), ['click', 'pointerenter', 'pointerleave', 'pointermove']);
     assert.deepEqual(unnamed.svgs[0].handlers, {}, 'a grid without data-src is left a picture');
     assert.equal(ymap.controls.hidden, true, 'a place page has no year map to mount');
     named.svgs[1].handlers.pointermove(at(middle(0, 760, geom[760])));
@@ -917,3 +917,29 @@ test('place.js mounts the roll calls that name the hospitals asset, and no other
     assert.deepEqual(f.calls, [HOSPITALS_URL], 'only the hospitals asset; the order was inline');
   });
 });
+
+// The verify pass, M3: a hospital with one year of decisions reads in the singular; a tap names a hospital before a
+// second tap opens it; leaving the grid brings the hint back.
+test('mountRoll: one decided year reads in the singular; a tap names first and a second tap opens; leaving restores the hint', () =>
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, async () => {
+    const rig = synRig();
+    rig.readout.dataset.hint = 'Point at a sliver';
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    const [narrow] = rig.svgs;
+    const hint = rig.readout.textContent;
+    assert.equal(hint, 'Point at a sliver');
+    narrow.handlers.pointerenter?.({});
+    narrow.handlers.pointermove(at(middle(1, 300, SYN_GEOM[300])));
+    await settle();
+    assert.notEqual(rig.readout.textContent, hint);
+    assert.doesNotMatch(rig.readout.textContent, /\b1 years\b/);
+    narrow.handlers.pointerleave({});
+    assert.equal(rig.readout.textContent, hint, 'leaving the grid brings the hint back');
+    narrow.handlers.click({ ...at(middle(0, 300, SYN_GEOM[300])), pointerType: 'touch' });
+    await settle();
+    assert.ok(rig.readout.textContent.endsWith(fill('rollTapAgain')), 'the first tap names it and says to tap again');
+    assert.deepEqual(globalThis.window.assigned, [], 'the first tap opens nothing');
+    narrow.handlers.click({ ...at(middle(0, 300, SYN_GEOM[300])), pointerType: 'touch' });
+    await settle();
+    assert.equal(globalThis.window.assigned.length, 1, 'a second tap on the same hospital opens it');
+  }));
