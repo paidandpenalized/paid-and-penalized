@@ -29,6 +29,8 @@ test('a perfect year: every score recomputed, every decision in order, the line 
   close(c.p75, 6.25);
   assert.equal(c.p75InGap, true);
   assert.equal(c.linePct, 6 / 8, 'six of the eight scores are at or below the highest No');
+  assert.equal(c.lineShare, 6 / 8, 'six of the eight decided were not cut');
+  assert.equal(c.aboveNotCut, 0, 'every hospital above the percentile was cut');
   assert.deepEqual(c.sorted.scores, [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.deepEqual(c.sorted.yes, [false, false, false, false, false, false, true, true]);
   assert.equal(c.ok, true);
@@ -185,14 +187,17 @@ test('a tie between the highest not cut and the lowest cut is an order failure, 
   assert.equal(c.p75InGap, false, 'no gap when the two ends meet');
 });
 
-test('only decisions CMS gave count: N/A (Maryland), a missing decision and a missing score are not decided; they still stand in the percentile', () => {
+test('only decisions CMS gave count: N/A (Maryland), a missing decision and a missing score are not decided, and stay out of the percentile', () => {
   const rows = [...eight(), row(9, 0.5, 'N/A'), row(10, 0.25, null)];
   const c = yearCheck(rows);
   assert.equal(c.decided, 8);
   assert.equal(c.yes, 2);
   // linePct counts every published score at or below the highest not cut: the 0.5 and 0.25 as well as 1 to 6.
   assert.equal(c.linePct, 8 / 10);
-  close(c.p75, percentileInc([0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8], 0.75));
+  // The percentile and the line's share are over the decided alone, as CMS takes its percentile outside Maryland.
+  close(c.p75, percentileInc([1, 2, 3, 4, 5, 6, 7, 8], 0.75));
+  assert.equal(c.lineShare, 6 / 8);
+  assert.equal(c.p75InGap, true);
 });
 
 test('the 75th percentile line sits in CMS\'s gap, or does not', () => {
@@ -204,6 +209,7 @@ test('the 75th percentile line sits in CMS\'s gap, or does not', () => {
   // ...and a line moved up (only the top hospital cut) leaves it below the highest No.
   const higher = [1, 2, 3, 4, 5, 6, 7, 8].map((t) => row(t, t, t >= 8 ? 'Yes' : 'No'));
   assert.equal(yearCheck(higher).p75InGap, false);
+  assert.equal(yearCheck(higher).aboveNotCut, 1, 'the 7 scored above the percentile and was not cut');
   // The gap includes the highest No itself and excludes the lowest Yes.
   const atNo = [0, 1, 1, 1, 2].map((t, k) => row(k + 1, t, t >= 2 ? 'Yes' : 'No'));
   assert.equal(yearCheck(atNo).p75, 1);
@@ -213,11 +219,13 @@ test('the 75th percentile line sits in CMS\'s gap, or does not', () => {
   assert.equal(yearCheck(atYes).p75InGap, false, 'the 75th percentile is the lowest score cut');
 });
 
-test('percentileLine: the inclusive 75th percentile of the published scores, null with none', () => {
+test('percentileLine: the inclusive 75th percentile of the decided scores, null with none', () => {
   assert.equal(percentileLine([]), null);
   assert.equal(percentileLine([row(1, null, 'N/A')]), null);
+  assert.equal(percentileLine([row(1, 3, 'N/A')]), null, 'a Maryland score is not in it');
   close(percentileLine(eight()), 6.25);
   close(percentileLine([row(1, 4, 'No'), row(2, null, null), row(3, 2, 'No')]), 3.5);
+  close(percentileLine([row(1, 4, 'No'), row(2, 2, 'No'), row(3, 100, 'N/A'), row(4, 50, null)]), 3.5);
 });
 
 test('a year CMS scored no one (FY2023): nothing is checked and the year passes', () => {

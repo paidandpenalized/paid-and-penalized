@@ -10,7 +10,6 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { LINE_PERCENTILE } from '../../../../engine/js/hacrp/history.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
@@ -38,18 +37,32 @@ function withheldNote(checks) {
   return para(fill('proofText3', { years: listText(years), short: SHORT_NAMES.PSI90, n: count(withheld) }));
 }
 
-// A year's line counts as above the 75th percentile when it sits more than this share of the scores past it (a
-// display threshold: one or two hospitals either way is the arithmetic of whole hospitals, not a different line).
+// A year's line counts as well above the 75th percentile when more than this share of the decided hospitals scored
+// above the percentile and were not cut (a display threshold: a handful of hospitals either way is not a different
+// line).
 const ABOVE_BY = 0.005;
 
-// What the decision check found beyond order: the years the line lands on the 75th percentile of the published
-// scores, the years it sits above it, and the most hospitals ever tied exactly at the line.
+// "3" or "1 to 7": the range of a count across years.
+const countRange = (ns) => {
+  const lo = Math.min(...ns);
+  const hi = Math.max(...ns);
+  return lo === hi ? count(lo) : fill('countRange', { from: count(lo), to: count(hi) });
+};
+
+// What the decision check found beyond order: CMS's rule for the line, the years the published scores reproduce the
+// cut exactly, the years CMS's line sits a few hospitals above the percentile and the years it sits well above it,
+// and the most hospitals ever tied exactly at the line.
 function sidesNotes(checks) {
   const decided = checks.filter((c) => c.check.yes);
-  const on = decided.filter((c) => c.check.p75InGap).map((c) => fyLabel(c.fy));
-  const above = decided.filter((c) => !c.check.p75InGap && c.check.linePct > LINE_PERCENTILE + ABOVE_BY).map((c) => fyLabel(c.fy));
+  const pct = ordinal(CUTOFF_PERCENTILE);
+  const on = decided.filter((c) => c.check.p75InGap);
+  const off = decided.filter((c) => !c.check.p75InGap);
+  const well = off.filter((c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY);
+  const few = off.filter((c) => !well.includes(c));
+  const years = (cs) => listText(cs.map((c) => fyLabel(c.fy)));
+  const range = (cs) => countRange(cs.map((c) => c.check.aboveNotCut));
   const ties = [...decided].sort((a, b) => b.check.atLine - a.check.atLine)[0];
-  return html`${on.length ? para(fill('sidesOn', { years: listText(on), percentile: ordinal(CUTOFF_PERCENTILE) })) : ''}${above.length ? para(fill('sidesAbove', { years: listText(above), percentile: ordinal(CUTOFF_PERCENTILE) })) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
+  return html`${para(fill('sidesRule', { percentile: pct }))}${on.length ? para(fill('sidesOn', { years: years(on) })) : ''}${few.length ? para(fill('sidesFew', { years: years(few), n: range(few) })) : ''}${well.length ? para(fill('sidesWell', { years: years(well), n: range(well) })) : ''}${off.length ? para(t('sidesWhy')) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
 }
 
 // The glossary's entries, in reading order: [term key, definition key, values].
@@ -57,7 +70,7 @@ const GLOSSARY = (v) => [
   ['glHac', 'glHacIs'], ['glHai', 'glHaiIs'], ['glPsi', 'glPsiIs', null, { short: SHORT_NAMES.PSI90 }], ['glNhsn', 'glNhsnIs'],
   ['glSir', 'glSirIs', { one: SIR_EXPECTED_TEXT }], ['glPredicted', 'glPredictedIs', { one: SIR_EXPECTED_TEXT }], ['glSd', 'glSdIs'],
   ['glZ', 'glZIs'], ['glWinsor', 'glWinsorIs', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) }], ['glTotal', 'glTotalIs'],
-  ['glLine', 'glLineIs', { percentile: ordinal(CUTOFF_PERCENTILE) }], ['glCut', 'glCutIs', { pct: REDUCTION_TEXT }], ['glSubject', 'glSubjectIs'],
+  ['glLine', 'glLineIs', { percentile: ordinal(CUTOFF_PERCENTILE) }], ['glCut', 'glCutIs', { pct: REDUCTION_TEXT }], ['glSubject', 'glSubjectIs'], ['glDecided', 'glDecidedIs'],
   ['glFy', 'glFyIs'], ['glPeriod', 'glPeriodIs'], ['glAssigned', 'glAssignedIs'], ['glMaryland', 'glMarylandIs'], ['glCcn', 'glCcnIs'],
   ['glMedian', 'glMedianIs'], ['glDomain', 'glDomainIs', { eqFy: String(v.eqFy) }],
 ];

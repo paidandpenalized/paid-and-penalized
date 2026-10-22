@@ -78,7 +78,7 @@ export function sidesFigure(checks, { n, source }) {
       columns: [{ name: t('proofColYear') }, { name: t('sidesColDecided'), numeric: true }, { name: t('sidesColYes'), numeric: true }, { name: t('sidesColHighNo'), numeric: true }, { name: t('sidesColLowYes'), numeric: true }, { name: t('sidesColWrong'), numeric: true }, { name: t('sidesColPct'), numeric: true }],
       rows: checks.map(({ fy, check: c }) => [fyLabel(fy), num(count(c.decided), c.decided), num(count(c.yes), c.yes),
         c.highestNo === null ? '' : num(cmsText(decimal(c.highestNo, DP)), c.highestNo), c.lowestYes === null ? '' : num(cmsText(decimal(c.lowestYes, DP)), c.lowestYes),
-        num(count(c.wrongSide.length), c.wrongSide.length), pctText(c.linePct)]),
+        num(count(c.wrongSide.length), c.wrongSide.length), pctText(c.lineShare)]),
     },
   });
 }
