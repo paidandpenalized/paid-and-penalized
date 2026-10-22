@@ -14,7 +14,7 @@ const all = (name) => {
 };
 const LEAD = (total, decision) => `For fiscal year 2026, CMS reports a Total HAC Score of ${total} for Example General Hospital and a payment reduction decision of ${decision}.`;
 const LEAD_NONE = (decision) => `For fiscal year 2026, CMS reports no Total HAC Score for Example General Hospital and a payment reduction decision of ${decision}.`;
-const YES = 'Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.';
+const YES = 'Its score was above CMS’s line, so CMS cut its traditional Medicare inpatient payments by 1% for the year.';
 const NO = 'Its score was at or below CMS’s line, so this program did not cut its Medicare payments for the year.';
 const ABOVE = (d) => `This hospital’s score is ${d} above 0.2500, the highest score CMS marked No. (This site recomputes.)`;
 const BELOW = (d, line = '0.2507') => `This hospital’s score is ${d} below ${line}, the lowest score CMS marked Yes. (This site recomputes.)`;

@@ -1,5 +1,6 @@
 // The copy gate: no copy file holds a digit (every number arrives through a placeholder), every claim id is well
-// formed, and every id used resolves to a checked row of sites/hacrp/CLAIMS.md (and every row is used).
+// formed, and every id used resolves to a checked row of sites/hacrp/CLAIMS.md (and every row is used). A sentence
+// that states two sourced facts names both: `claim` is null, one id, or a list of ids.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -15,6 +16,8 @@ const copyFiles = () => ['web/', 'sites/', 'hub/']
 
 // A copy entry is a plain string (shared page chrome) or { text, claim }.
 const entries = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? { text: v, claim: null } : v]);
+// An entry's claim ids: none, one, or a list.
+const idsOf = (claim) => (claim === null ? [] : [claim].flat());
 
 test('the gate finds the shared copy and the HACRP copy', () => {
   const files = copyFiles();
@@ -29,7 +32,10 @@ for (const file of copyFiles()) {
     for (const [key, { text, claim }] of entries(COPY)) {
       assert.equal(typeof text, 'string', `${key}: text`);
       assert.doesNotMatch(text, /\d/, `${key}: a digit in copy`);
-      assert.ok(claim === null || (typeof claim === 'string' && CLAIM.test(claim)), `${key}: claim "${claim}"`);
+      const ids = idsOf(claim);
+      assert.ok(claim === null || ids.length > 0, `${key}: an empty claim list`);
+      for (const id of ids) assert.ok(typeof id === 'string' && CLAIM.test(id), `${key}: claim "${id}"`);
+      assert.equal(new Set(ids).size, ids.length, `${key}: a claim id named twice`);
     }
   });
 }
@@ -54,7 +60,7 @@ async function usedClaims() {
   const used = new Set(Object.values(CLAIMS));
   for (const file of copyFiles()) {
     const { COPY } = await import(pathToFileURL(REPO_ROOT + file));
-    for (const [, { claim }] of entries(COPY)) if (claim) used.add(claim);
+    for (const [, { claim }] of entries(COPY)) for (const id of idsOf(claim)) used.add(id);
   }
   return used;
 }

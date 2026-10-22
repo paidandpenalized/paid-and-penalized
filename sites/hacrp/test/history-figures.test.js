@@ -12,7 +12,7 @@ import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
 import { fill as wordsFill, t as words } from '../web/history/copy.js';
 import {
-  HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, everFigure, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
+  HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, everFigure, flipSince, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
   part4, placeMembers, placeYearsFigure, recordStrip, rollAsset, rollFigure, ruleBreaks, spikeYear, statesYearsFigure, yearMapFigure, yearsFigure,
 } from '../web/history-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -275,7 +275,8 @@ test('hospitalInfectionsFigure: a panel per measure with two or more years of re
   // CLABSI, CAUTI and CDI each have three years; the others none.
   assert.equal(captionOf(fig)[0], '7');
   assert.deepEqual(headOf(fig).slice(1).length, 3);
-  same(numbers(takeaway(fig)), ['2', '3', '2021', '2024'], 'two of three measures fell between the first and the last result');
+  same(numbers(takeaway(fig)), ['2', '3'], 'two of three measures fell between the first and the last result; the sentence names no year');
+  assert.equal(takeaway(fig), '2 of its 3 infection measures ended lower than they started.');
   assert.deepEqual(rowsOf(fig).map((r) => r[0]), ['2021', '2022', '2024']);
   // The nation's middle hospital is the solid gray line under each panel, named once, on the first panel; the dashed
   // line at one is the reference, named once too.
@@ -350,7 +351,8 @@ test('kindsFigure: a panel per kind of hospital against the nation (solid gray),
   // Rural hospitals against all hospitals, the first year and the newest: the share cut, and the nation's beside it.
   same(numbers(takeaway(fig)), [String(S.fys[0]), pct0(rate1(rural[0])), pct0(nation(0)), String(S.fys[last]), pct0(rate1(rural[last])), pct0(nation(last))]);
   assert.deepEqual([pct0(rate1(rural[0])), pct0(nation(0)), pct0(rate1(rural[last])), pct0(nation(last))], ['20%', '29%', '9%', '19%'], 'FY2021: 2 of 10 rural hospitals against 6 of 21; FY2025: 1 of 11 against 4 of 21');
-  assert.match(takeaway(fig), /^Rural hospitals flipped: in fiscal year 2021, CMS cut 20% of them against 29% of all hospitals; in fiscal year 2025, 9% against 19%\.$/);
+  // Below the nation both years, so no flip is claimed (the committed history's flip is tested with flipSince).
+  assert.match(takeaway(fig), /^Rural hospitals: in fiscal year 2021, CMS cut 20% of them against 29% of all hospitals; in fiscal year 2025, 9% against 19%\.$/);
   // The table: a row a year; the nation first; a year CMS cut no one is blank.
   const rows = rowsOf(fig);
   assert.equal(rows.length, S.fys.length);
@@ -362,9 +364,56 @@ test('kindsFigure: a panel per kind of hospital against the nation (solid gray),
   // Six panels: each says how many cut years it sat above the nation.
   const narrow = narrowOf(fig);
   assert.equal([...narrow.matchAll(/above in \d+ of 4/g)].length, 6);
+  // How many cut years each panel sat above the nation: major teaching, government, for-profit (FY2022 and FY2025), rural, under 100 beds, 500 and up.
+  const aboves = (f) => [...narrowOf(f).matchAll(/above in (\d+) of 4/g)].map((m) => Number(m[1]));
+  assert.deepEqual(aboves(fig), [0, 0, 2, 0, 0, 0]);
+  // A year the two shares print the same at one decimal is not above: for-profit hospitals' FY2025 share is 20.0%, and so
+  // is the nation's when it is a hair under (19.99%), though 0.2 is more than 0.1999.
+  const tied = { ...S, counts: S.counts.map((c, i) => (i === S.fys.indexOf(2025) ? { ...c, share: 0.1999 } : c)) };
+  assert.ok(0.2 > 0.1999 && pct1(0.2) === pct1(0.1999));
+  assert.deepEqual(aboves(kindsFigure(tied, { n: 9, source: SRC })), [0, 0, 1, 0, 0, 0]);
   // The nation is drawn solid and gray under each panel's line (not the dashed reference of the other charts).
   assert.equal([...narrow.matchAll(/<path class="chart-lines__under chart-lines__under--solid"/g)].length, 6);
   assert.equal([...narrow.matchAll(/<path class="chart-lines__under"/g)].length, 0);
+});
+
+// A history with only what flipSince reads: the fiscal years, the nation's share cut each year (null: CMS cut no one)
+// and the rural and the smallest hospitals' counts, whose shares are each given here (null: no decision in the group).
+const flipHd = (nation, rural, smallest) => {
+  const years = (shares) => shares.map((x) => (x === null ? { cut: 0, decided: 0 } : { cut: Math.round(x * 10000), decided: 10000 }));
+  return {
+    fys: nation.map((_, i) => 2016 + i),
+    counts: nation.map((share) => ({ share })),
+    byType: [{ kind: 'urban', groups: [{ key: 'false', years: years(rural) }] }, { kind: 'beds', groups: [{ key: '0', years: years(smallest) }] }],
+  };
+};
+
+test('flipSince: the fiscal year since which rural and the smallest hospitals have both sat above the nation every year CMS cut anyone, after a year below it; null if they have not flipped', () => {
+  // FY2019 is a year CMS cut no one: skipped, neither above nor below.
+  const nation = [0.25, 0.25, 0.25, null, 0.25, 0.25, 0.25];
+  // Rural above since FY2018 (across the empty year); the smallest since FY2021: the later of the two.
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2, 0.3, 0.3])), 2021);
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.2, null, 0.2, 0.2, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), 2022, 'the later of the two, the other way round');
+  // A share that prints the same as the nation's at one decimal is not above it, so it ends the run (25.0% and 25.0%).
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2504, 0.3, 0.3])), 2021, 'FY2020 prints the same as the nation, so the run starts after it');
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2506, 0.3, 0.3])), 2020, 'a share that prints higher is above');
+  // No flip: never above in the end, above all along, or above and then not.
+  assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.2, null, 0.2, 0.2, 0.2], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural never above');
+  assert.equal(flipSince(flipHd(nation, [0.3, 0.3, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural above in every year, so no year below to flip from');
+  assert.equal(flipSince(flipHd(nation, [0.3, 0.3, 0.3, null, 0.2, 0.2, 0.2], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural above early and not since');
+  // A group the history does not hold: no flip to name.
+  assert.equal(flipSince({ ...flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2, 0.3, 0.3]), byType: [] }), null);
+  // The synthetic history's rural hospitals never sat above (FY2022 prints the same as the nation's); the committed history flipped in FY2024.
+  assert.equal(flipSince(S), null);
+  assert.equal(flipSince(HD), 2024);
+});
+
+test('the kinds section names the year of the flip when there is one, and says nothing of a flip when there is none', () => {
+  // The section's words, up to its figure (whose takeaway is the figure's own sentence).
+  const kinds = (hd) => text(/<section class="psec" id="kinds"[\s\S]*?(?=<figure)/.exec(String(part4({ hd, figure: counter(1) })))[0].replace(/<[^>]+>/g, ' '));
+  assert.match(kinds(HD), new RegExp(`more often every year since fiscal year ${flipSince(HD)}\\.`));
+  assert.match(kinds(S), /for-profit hospitals, below\. Kinds are today’s/, 'no flip: the sentence about rural and small hospitals is left out');
+  assert.doesNotMatch(kinds(S), /flipped|since fiscal year/);
 });
 
 test('coverageFigure: the share cut by what CMS scored a hospital on, four bars; the takeaway has the PSI 90-alone and no-PSI 90 shares and the years', () => {
@@ -394,6 +443,15 @@ test('statesYearsFigure: one small map a year, a state\'s column of shares in th
   // Alabama sat above the nation's share in all 4 cut years; Georgia in 1 (so below it in 3). Maryland has too few hospitals to be named.
   same(numbers(takeaway(fig)), [String(FEW_DECIDED), '4', '4', '3']);
   assert.match(takeaway(fig), new RegExp(`${STATE_NAMES.AL} was cut above`));
+  // Alabama's FY2024 share (30.0%) against a nation's that prints the same (29.99%) is not above: three of the four.
+  const tied = { ...S, counts: S.counts.map((c, i) => (i === S.fys.indexOf(2024) ? { ...c, share: 0.2999 } : c)) };
+  assert.ok(0.3 > 0.2999 && pct1(0.3) === pct1(0.2999));
+  same(numbers(takeaway(statesYearsFigure(tied, { n: 11, source: SRC }))), [String(FEW_DECIDED), '3', '4', '3']);
+  // A hospital with no state in CMS's file is a column of its own, named; the committed history has one.
+  assert.ok(HD.byState.has(''), 'the committed history has hospitals with no state');
+  const committed = headOf(statesYearsFigure(HD, { n: 1, source: SRC }));
+  assert.equal(committed.filter((h) => h === 'State not given').length, 1, committed.join('|'));
+  assert.ok(!committed.includes(''), 'no column without a name');
   assert.match(takeaway(fig), new RegExp(`${STATE_NAMES.GA}, below it in 3`));
   // One key above the maps, in HTML: a swatch for each step of the share cut, none cut, no decision, and the two states
   // the takeaway names, outlined on every map.
@@ -550,6 +608,20 @@ test('placeYearsFigure names a region or a division with "the" in its takeaway, 
   assert.ok(start(place({ kind: 'division', key: 'east-south-central', name: 'East South Central', ccns: ['990101'] })).startsWith('The East South Central’s share cut was above'));
   assert.ok(start(place({ name: 'Alabama' })).startsWith('Alabama’s share cut'));
   assert.ok(start(metro(AL, { name: 'Example Metro' })).startsWith('Example Metro’s share cut'));
+});
+
+test('placeYearsFigure counts a year above the nation only when the two shares print differently at one decimal', () => {
+  const takeawayWith = (share0) => takeaway(placeYearsFigure({
+    place: place({ name: 'Alabama' }), hd: { ...S, counts: S.counts.map((c, i) => (i === 0 ? { ...c, share: share0 } : c)) }, master: SM, next: () => 1, source: SRC,
+  }));
+  // Alabama's FY2021 share is 3 of 10, 30.0%. The nation's, a hair under (29.99%), prints the same: not above, though 0.3 > 0.2999.
+  assert.ok(0.3 > 0.2999 && pct1(0.3) === pct1(0.2999));
+  same(numbers(takeawayWith(0.2999)), ['3', '4', '6', '10'], 'above in three of the four cut years');
+  // Exactly equal is not above either.
+  same(numbers(takeawayWith(0.3)), ['3', '4', '6', '10']);
+  // A tenth of a point under prints differently: above, so all four.
+  assert.ok(pct1(0.3) !== pct1(0.299));
+  same(numbers(takeawayWith(0.299)), ['4', '4', '6', '10'], 'above in all four');
 });
 
 test('placeYearsFigure draws nothing for a place with fewer than two hospitals that have a record, and takes no figure number', () => {

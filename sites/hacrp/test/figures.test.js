@@ -104,12 +104,12 @@ test('Part 1 walks the formula in five steps, each beside its own figure, then t
   assert.equal([...part.matchAll(/id="whatif"/g)].length, 1);
   // The first step: how many measures, how many are infections, and the data windows, all from the engine's list and CMS's file.
   assert.ok(part.includes(`CMS scores hospitals on ${MEASURE_IDS.length} measures`));
-  assert.ok(part.includes(`CMS scores each hospital on ${MEASURE_IDS.filter(isSir).length} kinds of infection`));
+  assert.ok(part.includes(`The measures are ${MEASURE_IDS.filter(isSir).length} kinds of infection and a patient-safety composite called ${SHORT_NAMES.PSI90}.`));
   const window = (period) => `<span class="nw">${isoShort(period.start)}</span> to <span class="nw">${isoShort(period.end)}</span>`;
   assert.ok(part.includes(`This year’s data cover ${window(DATA.periods.psi90)} for ${SHORT_NAMES.PSI90}, and ${window(DATA.periods.hai)} for infections.`));
   // The constants CMS publishes: the winsorizing percentiles, the cutoff percentile and the size of the cut.
   assert.ok(part.includes(`floor at the ${ordinal(WINSOR_LOW)} percentile of each measure’s results and a cap at the ${ordinal(WINSOR_HIGH)}`));
-  assert.ok(part.includes(`above the ${ordinal(CUTOFF_PERCENTILE)} percentile of all scores. A hospital it cuts is paid ${REDUCTION_TEXT} less`));
+  assert.ok(part.includes(`above the ${ordinal(CUTOFF_PERCENTILE)} percentile of the scores of hospitals outside Maryland. A hospital it cuts is paid ${REDUCTION_TEXT} less`));
 });
 // A period's date as the page's prose writes it (a short month, no leading zero).
 function isoShort(mmddyyyy) {

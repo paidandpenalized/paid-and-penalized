@@ -17,7 +17,7 @@ export const COPY = typesetCopy({
   estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
   aiHeading: 'How AI tools are used',
-  aiUse: "AI tools help write this site's code and draft its text. Every number comes from deterministic code run on CMS's public data and is checked against the values CMS published. A person reviews what is published.",
+  aiUse: "AI tools help write this site's code and draft its text. Every number comes from deterministic code run on public data, CMS's above all, and is checked against CMS's published values wherever CMS publishes them. A person reviews what is published.",
 
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',

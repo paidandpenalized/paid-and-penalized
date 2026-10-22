@@ -43,6 +43,8 @@ const pct0 = (x) => pct(x, 0);
 const pct1 = (x) => pct(x, 1);
 // A share as a table cell: its percent, or empty for none.
 const pctCell = (x) => (x === null ? '' : num(pct1(x), x));
+// A share above another as the tables print them: two shares that print the same are not above or below each other.
+const aboveShown = (a, b) => a !== null && b !== null && pct1(a) !== pct1(b) && a > b;
 // A fiscal year on a year axis: "’16".
 const yearTick = (v) => `’${String(v).slice(-2)}`;
 const pointOf = (r) => (r && Number.isFinite(r.lon) && Number.isFinite(r.lat) ? [r.lon, r.lat] : null);
@@ -198,6 +200,23 @@ const KIND_PANELS = [['teach', 'major'], ['own', 'Government'], ['own', 'For-pro
 // A group's share cut each year, in the years CMS cut anyone (null otherwise, or with no decision in the group).
 const groupShares = (hd, years) => years.map((y, i) => (y.decided && hd.counts[i].share !== null ? y.cut / y.decided : null));
 
+// The fiscal year since which rural hospitals and the smallest have both been cut more often than the nation, every year
+// CMS cut anyone, after an earlier year below it; null if they haven't flipped.
+export function flipSince(hd) {
+  const nation = hd.counts.map((c) => c.share);
+  const since = ([kind, key]) => {
+    const g = hd.byType.find((k) => k.kind === kind)?.groups.find((x) => x.key === key);
+    if (!g) return null;
+    const shares = groupShares(hd, g.years);
+    const cut = hd.fys.map((_, i) => i).filter((i) => nation[i] !== null && shares[i] !== null);
+    let k = cut.length;
+    while (k > 0 && aboveShown(shares[cut[k - 1]], nation[cut[k - 1]])) k--;
+    return k > 0 && k < cut.length ? cut[k] : null;
+  };
+  const at = [since(['urban', 'false']), since(['beds', '0'])];
+  return at.includes(null) ? null : hd.fys[Math.max(...at)];
+}
+
 // Who keeps getting cut: a panel per kind of hospital, its share cut each year (the line) over the nation's (dashed).
 export function kindsFigure(hd, { n, source }) {
   const nation = hd.counts.map((c) => c.share);
@@ -207,7 +226,7 @@ export function kindsFigure(hd, { n, source }) {
     if (!g) return null;
     const shares = groupShares(hd, g.years);
     const points = hd.fys.map((fy, i) => ({ x: fy, y: shares[i], tip: shares[i] === null ? '' : `${groupLabel(kind, key)}, ${fyLabel(fy)}: ${pct0(shares[i])} (${count(g.years[i].cut)} of ${count(g.years[i].decided)})` }));
-    const above = shares.filter((s, i) => s !== null && s > nation[i]).length;
+    const above = shares.filter((s, i) => aboveShown(s, nation[i])).length;
     return { label: groupLabel(kind, key), points, underSolid: true, under: hd.fys.map((fy, i) => ({ x: fy, y: nation[i] })), change: fill('kindsAbove', { k: String(above), n: String(hd.cutYears) }) };
   }).filter(Boolean);
   // The takeaway: rural hospitals against urban ones, first year and newest.
@@ -218,7 +237,7 @@ export function kindsFigure(hd, { n, source }) {
   const groups = hd.byType.flatMap((k) => k.groups.map((g) => ({ label: groupLabel(k.kind, g.key), shares: groupShares(hd, g.years) })));
   return figure({
     n, source, csvName: 'hacrp-cut-by-kind', alt: t('kindsAlt'),
-    takeaway: fill('kindsTakeaway', { first: String(hd.fys[0]), a: pct0(ruralShare(0)), na: pct0(nation[0]), last: String(hd.fys[lastI]), b: pct0(ruralShare(lastI)), nb: pct0(nation[lastI]) }),
+    takeaway: fill(flipSince(hd) ? 'kindsTakeaway' : 'kindsTakeawayNoFlip', { first: String(hd.fys[0]), a: pct0(ruralShare(0)), na: pct0(nation[0]), last: String(hd.fys[lastI]), b: pct0(ruralShare(lastI)), nb: pct0(nation[lastI]) }),
     ...drawn(draw, 760),
     table: {
       columns: [{ name: t('rollColFy') }, { name: t('typesHNation'), numeric: true }, ...groups.map((g) => ({ name: g.label, numeric: true }))],
@@ -256,7 +275,7 @@ export function statesYearsFigure(hd, { n, source }) {
   let least = null;
   for (const [st, v] of hd.byState) {
     if (!STATE_NAMES[st] || v.years.some((y, i) => nation[i] !== null && y.decided < FEW_DECIDED)) continue;
-    const above = v.years.filter((y, i) => nation[i] !== null && share(y.cut, y.decided) > nation[i]).length;
+    const above = v.years.filter((y, i) => nation[i] !== null && aboveShown(share(y.cut, y.decided), nation[i])).length;
     if (!best || above > best.above) best = { st, above };
     if (!least || above < least.above) least = { st, above };
   }
@@ -278,7 +297,7 @@ export function statesYearsFigure(hd, { n, source }) {
     n, source, chart, csvName: 'hacrp-cut-by-state-year',
     takeaway: fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), low: STATE_NAMES[least.st], lowK: String(hd.cutYears - least.above), few: String(FEW_DECIDED) }),
     table: {
-      columns: [{ name: t('rollColFy') }, ...[...hd.byState.keys()].map((st) => ({ name: st, numeric: true }))],
+      columns: [{ name: t('rollColFy') }, ...[...hd.byState.keys()].map((st) => ({ name: st || t('statesHNoState'), numeric: true }))],
       rows: hd.fys.map((fy, i) => [fyLabel(fy), ...[...hd.byState.values()].map((v) => pctCell(v.years[i].decided ? v.years[i].cut / v.years[i].decided : null))]),
     },
   });
@@ -350,7 +369,7 @@ ${shapes && master ? psec({ id: 'spread', wide: true, heading: t('ymapHeading'),
 ${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}
 ${psec({ id: 'chance', heading: t('chanceHeading'), text: html`${para('chanceText')}${para('chanceText2')}`, figure: chanceFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'again', heading: t('gapHeading'), text: html`${para('gapText')}${para('gapText2')}`, figure: gapFigure(hd, { n: fig(), source }) })}
-${psec({ id: 'kinds', heading: t('kindsHeading'), text: html`${para('kindsText')}${para('kindsText2')}`, figure: kindsFigure(hd, { n: fig(), source }) })}
+${psec({ id: 'kinds', heading: t('kindsHeading'), text: html`${para('kindsText')}${flipSince(hd) ? para('kindsText2', { since: String(flipSince(hd)) }) : para('kindsText2NoFlip')}`, figure: kindsFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'coverage', heading: t('covHeading'), text: html`${para('covText', { short: SHORT_NAMES.PSI90 })}${para('covText2')}`, figure: coverageFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'statemaps', wide: true, heading: t('statesHHeading'), text: para('statesHText'), figure: statesYearsFigure(hd, { n: fig(), source }) })}`;
 }
@@ -383,7 +402,7 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const records = order.map(([, r]) => r);
   const nation = hd.counts.map((c) => c.share);
   const own = tallyYears(sub, hd.fys.length).map((o) => ({ ...o, share: o.decided ? o.cut / o.decided : null }));
-  const above = own.filter((o, i) => o.share !== null && o.share > nation[i]).length;
+  const above = own.filter((o, i) => aboveShown(o.share, nation[i])).length;
   const ever = records.filter((r) => r.includes(CUT)).length;
   const notes = own.map((o, i) => (o.share === null ? '' : `${pct0(o.share)} · ${pct0(nation[i])}`));
   // The grid's own order on the page (a place holds a few hundred hospitals at most), for the page script's names.
@@ -526,7 +545,7 @@ export function hospitalInfectionsFigure(sir, hd, { n, source }) {
   const draw = (width) => smallLines({ panels: clipped, xs, yMax, ref: 1, labels: { ref: t('infRef'), x: yearTick }, width, format: (v) => String(v) });
   return figure({
     n, source, csvName: 'hacrp-hospital-infections', alt: t('hinfAlt'),
-    takeaway: fill('hinfTakeaway', { down: String(down), m: String(panels.length), first: String(first), last: String(last) }),
+    takeaway: fill('hinfTakeaway', { down: String(down), m: String(panels.length) }),
     key: null,
     note: top > yMax ? fill('hinfClip', { max: String(yMax) }) : null,
     ...drawn(draw, 640),

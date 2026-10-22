@@ -187,7 +187,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     const notSubject = DATA.hospitals.filter((h) => h.total !== null && h.paymentReduction === 'N/A');
     const above = notSubject.filter((h) => h.total >= Number(bt.lowestYes)).length;
     assert.ok(program.includes(esc(`Not shown: Maryland’s ${count(notSubject.length)} scored hospitals. ${count(above)} of them scored at or above the lowest score CMS cut elsewhere, and none were cut.`)));
-    assert.ok(program.includes(`<p>${esc("Maryland’s hospitals are scored but not cut. Maryland has a special payment arrangement with Medicare: the state sets what every payer, Medicare included, pays its hospitals, and it is held to a limit on the growth of Medicare’s total spending in the state.")}</p>`));
+    assert.ok(program.includes(`<p>${esc("Maryland’s hospitals are scored but not cut. Maryland has its own arrangement with Medicare: the state sets what its hospitals are paid, by Medicare as well as other payers, and it is held to a target for the growth of traditional Medicare spending in the state.")}</p>`));
     // Step 1 says once that a measure needs enough patients; the SIR's term opens a box with its arithmetic and baseline.
     assert.ok(program.includes(`${esc('for infections. Hospitals with too few patients for a measure aren’t scored on it.')}</p>`));
     const sir = /<div class="step__p">Each infection measure is a <details class="def def--inline"><summary>standardized infection ratio \(SIR\)[\s\S]*?<\/details>: the infections a hospital reported/.exec(program);
@@ -200,7 +200,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.ok(program.includes(`Lowest score: ${decimal(scores[0], 4)}`) && program.includes(`Highest score: ${decimal(scores.at(-1), 4)}`));
     assert.match(program, /<line class="chart-rule__avg"[^>]*\/>\n<text[^>]*>Average<\/text>/);
 
-    assert.ok(program.includes(`<strong>For fiscal year ${DATA.fy}, that was ${count(cut)} of the ${count(decided.length)} hospitals</strong> with a payment decision.`));
+    assert.ok(program.includes(`<strong>For fiscal year ${DATA.fy}, that was ${count(cut)} of the ${count(decided.length)} scored hospitals</strong> with a payment decision.`));
   }));
 
 test('released: false: every page is noindex in production and the sitemap lists none', () =>
@@ -648,12 +648,12 @@ test("the program page's top: the name with its last word in the penalty ink, th
   assert.ok(top.includes('<h1 class="prog__title">Hospital-Acquired <span class="prog__title-pen">Conditions</span></h1>'));
   assert.ok(top.includes('<p class="cap kicker prog__kicker">HACRP · fiscal year 2026</p>'));
   // The lede carries the counts as the build passes them (A1's), and the cut as the method constant.
-  assert.ok(top.includes('<strong>For fiscal year 2026, that was 310 of the 1,240 hospitals</strong> with a payment decision.'));
+  assert.ok(top.includes('<strong>For fiscal year 2026, that was 310 of the 1,240 scored hospitals</strong> with a payment decision.'));
   assert.match(top, /<p class="form__title"><span>Program summary · FY2026<\/span><span>CMS data released <span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span><\/span><\/p>/);
   const fields = [...top.matchAll(/<span class="field__no">(\d)<\/span>([^<]+)<\/p>\n<p class="field__value[^"]*">([\s\S]*?)<\/p>/g)].map((m) => [m[1], m[2], m[3]]);
   assert.deepEqual(fields.map(([n, label]) => [n, label]), [['1', 'Hospitals cut'], ['2', 'The cut'], ['3', 'Scored'], ['4', 'CMS’s line'], ['5', 'Data window'], ['6', 'Payment year']]);
   assert.deepEqual(fields.slice(0, 4).map(([, , v]) => v), ['310', '1%', '1,305', '0.2507 and up']);
-  assert.ok(top.includes('Of 1,240 with a Yes or No payment decision'));
+  assert.ok(top.includes('Of 1,240 scored hospitals with a Yes or No'));
   assert.ok(top.includes('The lowest score CMS cut. The highest it did not: 0.2500.'));
   // The data windows and the payment year, whole dates from the periods and the year.
   assert.ok(fields[4][2].includes(`PSI 90: <span class="nw">Jul 1, 2022</span> to <span class="nw">Jun 30, 2024</span><br>Infections: <span class="nw">Jan 1, 2023</span> to <span class="nw">Dec 31, 2024</span>`));

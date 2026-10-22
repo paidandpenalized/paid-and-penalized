@@ -4,6 +4,10 @@ Changes to how this site computes or shows HACRP's numbers, newest first. Correc
 corrections log.
 
 ## 2026-10-22
+- An accuracy pass: every sentence that states a fact about CMS's program now cites its source in the claims register,
+  and sentences the sources support less strongly now say less.
+- The Methods page takes CMS's line as the 75th percentile of the scores of hospitals outside Maryland, as CMS's FAQ
+  says, and counts how many hospitals sit between that percentile and CMS's line each year.
 - Each hospital's record by year, back to the program's first year, from CMS's archived files, and the program's history.
 - This Methods page, with the self-check drawn for every year.
 

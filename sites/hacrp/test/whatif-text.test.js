@@ -65,12 +65,12 @@ test('sentence: one worse change, crossing the line', () => {
 });
 
 test('sentence: a change in the dead zone names CMS\'s cap (or floor)', () => {
-  assert.equal(sentence('capped', { MRSA: 1.8 }), 'Lowering MRSA to 1.800 would not change the score: CMS caps MRSA at 1.762.');
-  assert.equal(sentence('capped', { MRSA: 2.2 }), 'Raising MRSA to 2.200 would not change the score: CMS caps MRSA at 1.762.');
+  assert.equal(sentence('capped', { MRSA: 1.8 }), 'Lowering MRSA to 1.800 would not change the score: it is still past the cap (1.762).');
+  assert.equal(sentence('capped', { MRSA: 2.2 }), 'Raising MRSA to 2.200 would not change the score: every value past the cap (1.762) scores the same.');
   assert.equal(sentence('capped', { PSI90: 0.7 }),
-    'Lowering PSI 90 to 0.7000 would not change the score: CMS gives every PSI 90 value at or below 0.7760 the same score.');
+    'Lowering PSI 90 to 0.7000 would not change the score: every PSI 90 value at or below the floor (0.7760) scores the same.');
   assert.equal(sentence('assigned', { SSI: 2.5 }),
-    'SSI at 2.500 (had it been submitted) would not change the score: CMS caps SSI at 2.118.');
+    'SSI at 2.500 (had it been submitted) would not change the score: every value past the cap (2.118) scores the same.');
 });
 
 test('sentence: an assigned measure, "had it been submitted"', () => {
@@ -85,7 +85,7 @@ test('sentence: two changes', () => {
   // One of them in the dead zone: the score moves, and the sentence says which change did not.
   assert.equal(sentence('capped', { CLABSI: 0.5, MRSA: 1.8 }),
     'With CLABSI at 0.500 instead of 0.300 and MRSA at 1.800 instead of 1.900, the Total HAC Score would rise from −0.3488 to −0.2715. '
-    + `${NO_CUT} CMS caps MRSA at 1.762, so the change to MRSA does not move the score.`);
+    + `${NO_CUT} MRSA stays past the cap (1.762), so the change to MRSA does not move the score.`);
   // Three: a list.
   assert.equal(sentence('no', { CLABSI: 0.6, CDI: 0.4, PSI90: 0.95 }).split(',').slice(0, 3).join(','),
     'With PSI 90 at 0.9500 instead of 1.0000, CLABSI at 0.600 instead of 0.800, and CDI at 0.400 instead of 0.500');
@@ -118,7 +118,7 @@ test('solver rows, flagged hospital: the value needed, or not possible with this
   ]);
 });
 
-test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, and no cushion', () => {
+test('solver rows, unflagged hospitals: the cushion, any value past the cap, and no cushion', () => {
   assert.deepEqual(rows('no'), [
     { id: 'PSI90', label: 'PSI 90', answer: 'up to 1.0908', note: null },
     { id: 'CLABSI', label: 'CLABSI', answer: 'up to 1.073', note: null },
@@ -128,8 +128,8 @@ test('solver rows, unflagged hospitals: the cushion, any value at CMS\'s cap, an
     { id: 'MRSA', label: 'MRSA', answer: 'up to 1.203', note: null },
   ]);
   assert.deepEqual(rows('capped').map((r) => r.answer), [
-    'any value: CMS caps PSI 90 at 1.3482', 'any value: CMS caps CLABSI at 1.572', 'any value: CMS caps CAUTI at 1.537',
-    'any value: CMS caps SSI at 2.118', 'any value: CMS caps CDI at 0.944', 'any value: CMS caps MRSA at 1.762',
+    'any value: every PSI 90 value past the cap (1.3482) scores the same', 'any value: every CLABSI value past the cap (1.572) scores the same', 'any value: every CAUTI value past the cap (1.537) scores the same',
+    'any value: every SSI value past the cap (2.118) scores the same', 'any value: every CDI value past the cap (0.944) scores the same', 'any value: every MRSA value past the cap (1.762) scores the same',
   ]);
   assert.deepEqual(rows('noCushion').find((r) => r.id === 'CLABSI'),
     { id: 'CLABSI', label: 'CLABSI', answer: 'no cushion', note: 'The current value is already the highest that keeps the decision at No.' });
@@ -216,20 +216,20 @@ test('the what-if words never say should, failed, caught, dodged, worst-performi
 });
 
 test('a change that moves the score into the dead zone names the bound, without saying the score stood still', () => {
-  const capNote = 'CMS caps MRSA at 1.762, so any value above it scores the same.';
+  const capNote = 'Past the cap (1.762), any MRSA value scores the same.';
   for (const v of [2, 3]) {
     const text = sentence('no', { MRSA: v });
     assert.equal(text, `With MRSA at ${v.toFixed(3)} instead of 0.900, the Total HAC Score would rise from 0.2734 to 0.5737. `
       + `${CUT} CMS reports a payment reduction decision of No. ${capNote}`);
   }
   // Exactly at the cap: named too.
-  assert.match(sentence('no', { MRSA: 1.762 }), /CMS caps MRSA at 1\.762, so any value above it scores the same\.$/);
+  assert.match(sentence('no', { MRSA: 1.762 }), /Past the cap \(1\.762\), any MRSA value scores the same\.$/);
   assert.equal(sentence('no', { PSI90: 0.7 }),
     `With PSI 90 at 0.7000 instead of 1.0000, the Total HAC Score would fall from 0.2734 to 0.0127. ${NO_CUT} `
-    + 'CMS gives every PSI 90 value at or below 0.7760 the same score.');
+    + 'At or below the floor (0.7760), any PSI 90 value scores the same.');
   // A floor of zero is no dead zone worth naming: SIRs can't go below it.
-  assert.doesNotMatch(sentence('no', { CLABSI: 0 }), /the same score/);
-  assert.doesNotMatch(sentence('no', { CLABSI: 0.6 }), /caps|the same score/);
+  assert.doesNotMatch(sentence('no', { CLABSI: 0 }), /scores the same/);
+  assert.doesNotMatch(sentence('no', { CLABSI: 0.6 }), /the cap|the floor|scores the same/);
 });
 
 test('the median hospital: this site\'s hypothetical, never described as CMS\'s values or decision', () => {

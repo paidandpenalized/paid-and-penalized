@@ -67,6 +67,16 @@ test('the sections run pipeline, check, decisions, formula, estimate, periods, b
   assert.ok(PAGE.includes('<a href="/methods/#estimate">'));
 });
 
+test('the glossary defines "Payment decision (in counts)" once, right after "Subject to the reduction", as the hospitals CMS scored and marked Yes or No', () => {
+  const entries = [...PAGE.matchAll(/<div class="glossary__item"><dt>([^<]*)<\/dt><dd>([\s\S]*?)<\/dd><\/div>/g)].map((m) => [text(m[1]), strip(m[2])]);
+  const terms = entries.map(([term]) => term);
+  assert.equal(terms.filter((t) => t === 'Payment decision (in counts)').length, 1);
+  assert.equal(terms.indexOf('Payment decision (in counts)'), terms.indexOf('Subject to the reduction') + 1);
+  const definition = entries.find(([term]) => term === 'Payment decision (in counts)')[1];
+  assert.match(definition, /^On these pages, a hospital CMS scored and marked Yes or No\. /);
+  assert.doesNotMatch(definition, /\d/, 'no number in a definition');
+});
+
 test('the nav marks Methods as current and nothing else; the page loads the figure, cite, top-bar and search scripts', () => {
   const bar = /<header class="topbar">[\s\S]*?<\/header>/.exec(PAGE)[0];
   const current = [...bar.matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
@@ -111,20 +121,35 @@ test('the proof and decision figures, numbered 1 and 2, say the same totals as t
   assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3], 'the proof strips, the decision rules and the periods');
 });
 
-test('the notes under the check state what the checks found: the rows withheld, the years the line is the 75th percentile, and the biggest tie at the line', () => {
+test('the notes under the check state what the checks found: the rows withheld, CMS\'s rule for the line and where its line sits against it, and the biggest tie at the line', () => {
   const paragraphs = [...PAGE.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => strip(m[1]));
   const withheldYears = HD.checks.filter((c) => c.check.withheld.length).map((c) => `FY${c.fy}`);
   const nWithheld = HD.checks.reduce((n, c) => n + c.check.withheld.length, 0);
-  const withheld = paragraphs.find((p) => p.includes('footnoted a part'));
+  const withheld = paragraphs.find((p) => p.includes('CMS left one part out of its file with a footnote'));
   assert.ok(withheld, 'a note about the withheld rows');
   assert.ok(withheld.includes(withheldYears.join(' and ')) && withheld.includes(count(nWithheld)), withheld);
   assert.deepEqual(withheldYears, ['FY2016', 'FY2017']);
-  // The years the line lands on the 75th percentile of the published scores.
-  const on = HD.checks.filter((c) => c.check.yes && c.check.p75InGap).map((c) => `FY${c.fy}`);
-  const onNote = paragraphs.find((p) => p.includes('lands exactly'));
-  assert.ok(onNote, 'a note about the years the line is the percentile');
+  // CMS's rule for the line, then the years the decided scores' 75th percentile reproduces the cut, and the years
+  // CMS's line sits above it, by how many hospitals scored above the percentile and were not cut.
+  assert.ok(paragraphs.some((p) => p.startsWith('CMS puts its line at the 75th percentile of the scores of hospitals outside Maryland')));
+  const decided = HD.checks.filter((c) => c.check.yes);
+  const on = decided.filter((c) => c.check.p75InGap).map((c) => `FY${c.fy}`);
+  assert.deepEqual(on, ['FY2015', 'FY2016'], 'the years the published scores reproduce the cut: true of the committed files');
+  const onNote = paragraphs.find((p) => p.includes('reproduce the cut exactly'));
+  assert.ok(onNote, 'a note about the years the percentile reproduces the cut');
   assert.ok(onNote.includes(listText(on)), `${onNote} vs ${on}`);
-  assert.ok(on.length < 3 || listText(on) === `${on.slice(0, -1).join(', ')}, and ${on.at(-1)}`, 'the site\'s one list joiner, as the what-if writes lists');
+  const off = decided.filter((c) => !c.check.p75InGap);
+  assert.ok(off.every((c) => c.check.aboveNotCut > 0), 'off the percentile, CMS\'s line is always above it, never below');
+  const well = off.filter((c) => c.check.aboveNotCut / c.check.decided > 0.005);
+  const few = off.filter((c) => !well.includes(c));
+  assert.deepEqual(well.map((c) => c.fy), [2017, 2018], 'the two years well above: true of the committed files');
+  const span = (cs) => cs.map((c) => c.check.aboveNotCut);
+  const fewNote = paragraphs.find((p) => p.includes('a little above the percentile'));
+  assert.ok(fewNote.includes(listText(few.map((c) => `FY${c.fy}`))) && fewNote.includes(`${count(Math.min(...span(few)))} to ${count(Math.max(...span(few)))} hospitals`), fewNote);
+  const wellNote = paragraphs.find((p) => p.includes('further above'));
+  assert.ok(wellNote.includes(listText(well.map((c) => `FY${c.fy}`))) && wellNote.includes(`${count(Math.min(...span(well)))} to ${count(Math.max(...span(well)))} hospitals`), wellNote);
+  assert.ok(paragraphs.some((p) => p.startsWith('This site can’t say why')));
+  assert.ok(off.length < 3 || listText(off.map((c) => `FY${c.fy}`)) === `${off.slice(0, -1).map((c) => `FY${c.fy}`).join(', ')}, and FY${off.at(-1).fy}`, 'the site\'s one list joiner, as the what-if writes lists');
   // The most hospitals tied at the line: the year, how many, and the score.
   const ties = [...HD.checks].sort((a, b) => b.check.atLine - a.check.atLine)[0];
   const tieNote = paragraphs.find((p) => p.startsWith('Ties matter'));
@@ -260,7 +285,7 @@ test('sidesFigure: a row a year of decisions, the cut, the highest score not cut
     if (c.yes) {
       assert.equal(rows[i][3], decimal(c.highestNo, 4));
       assert.equal(rows[i][4], decimal(c.lowestYes, 4));
-      assert.equal(rows[i][6], decimal(c.linePct * 100, 1));
+      assert.equal(rows[i][6], decimal(c.lineShare * 100, 1));
     } else assert.deepEqual([rows[i][3], rows[i][4], rows[i][6]], ['', '', ''], `FY${fy}: no cut, no line`);
   });
   const decided = checks.reduce((n, c) => n + c.check.decided, 0);

@@ -7,7 +7,7 @@ import { COPY as SHARED } from '../copy.js';
 
 export const COPY = {
   ymapSay: { text: 'FY{fy}: {cut} cut that year; {ever} cut at least once so far', claim: null },
-  ymapSayNone: { text: 'FY{fy}: CMS scored no hospital and cut none; {ever} cut at least once so far', claim: null },
+  ymapSayNone: { text: "FY{fy}: CMS scored no hospital and cut none; {ever} cut at least once so far", claim: 'HACRP-52' },
   rollSay: { text: '{who}: cut in {cut} of {decided} years ({years})', claim: null },
   rollSayNone: { text: '{who}: never cut in {decided} years', claim: null },
   rollSayOneCut: { text: '{who}: cut in its one year with a decision ({years})', claim: null },
@@ -20,8 +20,8 @@ export const COPY = {
   setJoin: { text: '{a} + {b}', claim: null },
   fig2TakeSir: { text: '{zero} of the {n} hospitals with a {short} value reported zero infections; the middle hospital sits at {median}.', claim: null },
   fig2TakePsi: { text: '{short} values bunch near {one}; the middle hospital sits at {median}, and {above} of {n} are above {one}.', claim: null },
-  fig2OneSir: { text: '{one} = as predicted', claim: null },
-  fig2OnePsi: { text: '{one} = national composite', claim: null },
+  fig2OneSir: { text: "{one} = as predicted", claim: 'HACRP-14' },
+  fig2OnePsi: { text: "{one} = national composite value", claim: 'HACRP-31' },
   fig2Median: { text: 'median {median}', claim: null },
   fig2Per: { text: 'Each dot: up to {per} hospitals', claim: null },
   fig2Zero: { text: '{zero} at zero', claim: null },

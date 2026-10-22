@@ -1,5 +1,5 @@
 // The HACRP site's words. No digit characters: every number arrives through a {placeholder}, formatted before it
-// is filled. `claim` names the row of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
+// is filled. `claim` names the row (or a list of rows) of sites/hacrp/CLAIMS.md that backs a statement about CMS's program (null for
 // sentences that only restate CMS's file or this site's arithmetic).
 import { fillCopy, fillCopyKeep, lastCall } from '../../../web/render/components.js';
 import { capitalize, isoDate } from '../../../web/render/format.js';
@@ -16,10 +16,7 @@ export const COPY = {
   },
   noteScore: { text: "CMS's note on the score: {notes}", claim: null },
   noteDecision: { text: "CMS's note on the payment reduction: {notes}", claim: null },
-  whyYes: {
-    text: "Its score was above CMS's line, so CMS cut its Medicare inpatient payments by {pct} for the year.",
-    claim: 'HACRP-01',
-  },
+  whyYes: { text: "Its score was above CMS's line, so CMS cut its traditional Medicare inpatient payments by {pct} for the year.", claim: ['HACRP-02', 'HACRP-01', 'HACRP-24'] },
   whyNo: {
     text: "Its score was at or below CMS's line, so this program did not cut its Medicare payments for the year.",
     claim: 'HACRP-01',
@@ -54,34 +51,19 @@ export const COPY = {
   whatifItem: { text: '{short} at {after} instead of {before}', claim: null },
   whatifItemAssigned: { text: '{short} at {after} (had it been submitted)', claim: null },
   // One change that doesn't move the score: past CMS's cap, or at or below its floor.
-  whatifCapLower: { text: 'Lowering {short} to {after} would not change the score: CMS caps {short} at {cap}.', claim: 'HACRP-03' },
-  whatifCapRaise: { text: 'Raising {short} to {after} would not change the score: CMS caps {short} at {cap}.', claim: 'HACRP-03' },
-  whatifCapAssigned: {
-    text: '{short} at {after} (had it been submitted) would not change the score: CMS caps {short} at {cap}.',
-    claim: 'HACRP-03',
-  },
-  whatifFloorLower: {
-    text: 'Lowering {short} to {after} would not change the score: CMS gives every {short} value at or below {floor} the same score.',
-    claim: 'HACRP-03',
-  },
-  whatifFloorRaise: {
-    text: 'Raising {short} to {after} would not change the score: CMS gives every {short} value at or below {floor} the same score.',
-    claim: 'HACRP-03',
-  },
+  whatifCapLower: { text: "Lowering {short} to {after} would not change the score: it is still past the cap ({cap}).", claim: 'HACRP-03' },
+  whatifCapRaise: { text: "Raising {short} to {after} would not change the score: every value past the cap ({cap}) scores the same.", claim: 'HACRP-03' },
+  whatifCapAssigned: { text: "{short} at {after} (had it been submitted) would not change the score: every value past the cap ({cap}) scores the same.", claim: 'HACRP-03' },
+  whatifFloorLower: { text: "Lowering {short} to {after} would not change the score: every {short} value at or below the floor ({floor}) scores the same.", claim: 'HACRP-03' },
+  whatifFloorRaise: { text: "Raising {short} to {after} would not change the score: every {short} value at or below the floor ({floor}) scores the same.", claim: 'HACRP-03' },
   // The same, for one change among several.
-  whatifCapNote: { text: 'CMS caps {short} at {cap}, so the change to {short} does not move the score.', claim: 'HACRP-03' },
+  whatifCapNote: { text: "{short} stays past the cap ({cap}), so the change to {short} does not move the score.", claim: 'HACRP-03' },
   // A change that moves the score and ends in the dead zone: past it, the value no longer matters.
-  whatifCapReached: { text: 'CMS caps {short} at {cap}, so any value above it scores the same.', claim: 'HACRP-03' },
-  whatifFloorReached: { text: 'CMS gives every {short} value at or below {floor} the same score.', claim: 'HACRP-03' },
-  whatifFloorNote: {
-    text: 'CMS gives every {short} value at or below {floor} the same score, so the change to {short} does not move the score.',
-    claim: 'HACRP-03',
-  },
-  whatifYes: {
-    text: "That would be above CMS's line, so the payment reduction decision would be Yes: a {pct} cut.",
-    claim: 'HACRP-01',
-  },
-  whatifNo: { text: "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.", claim: 'HACRP-01' },
+  whatifCapReached: { text: "Past the cap ({cap}), any {short} value scores the same.", claim: 'HACRP-03' },
+  whatifFloorReached: { text: "At or below the floor ({floor}), any {short} value scores the same.", claim: 'HACRP-03' },
+  whatifFloorNote: { text: "Every {short} value at or below the floor ({floor}) scores the same, so the change to {short} does not move the score.", claim: 'HACRP-03' },
+  whatifYes: { text: "That would be above CMS's line, so the payment reduction decision would be Yes: a {pct} cut.", claim: ['HACRP-02', 'HACRP-01'] },
+  whatifNo: { text: "That would be at or below CMS's line, so the payment reduction decision would be No: no cut.", claim: ['HACRP-02', 'HACRP-01'] },
   whatifClose: {
     text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}.",
     claim: 'HACRP-01',
@@ -98,7 +80,7 @@ export const COPY = {
   solverNeeded: { text: '{value} or lower', claim: null },
   solverNotPossible: { text: 'not possible with this measure alone', claim: null },
   solverCushion: { text: 'up to {value}', claim: null },
-  solverUnlimited: { text: 'any value: CMS caps {short} at {cap}', claim: 'HACRP-03' },
+  solverUnlimited: { text: "any value: every {short} value past the cap ({cap}) scores the same", claim: 'HACRP-03' },
   solverNoCushion: { text: 'no cushion', claim: null },
   solverNoCushionNote: { text: 'The current value is already the highest that keeps the decision at No.', claim: null },
   solverAssignedNote: { text: "CMS assigned this measure's score, so there is no submitted value to solve for.", claim: 'HACRP-05' },
@@ -156,10 +138,7 @@ export const COPY = {
   whatifSirHelp: { text: 'SIR {one} = as many infections as predicted', claim: 'HACRP-14' },
   whatifPsiHelp: { text: 'Lower is better', claim: 'HACRP-16' },
   // Said once over the measures: what each track marks.
-  whatifTrackKey: {
-    text: "On each track the tick is the national median; shaded values score the same as CMS's floor or cap.",
-    claim: 'HACRP-03',
-  },
+  whatifTrackKey: { text: "On each track the tick is the national median; shaded values score the same as the floor or cap, as this site fits them to CMS's values.", claim: 'HACRP-03' },
   // Each measure's facts in one line: its national median, CMS's floor (above zero) and cap, and what each step of
   // the value moves the score, between the floor and the cap.
   // On a hospital page the facts line starts with CMS's value, which the field and slider stop showing once changed.
@@ -168,8 +147,8 @@ export const COPY = {
   whatifFactsFloor: { text: 'median {median} · floor {floor} · cap {cap} · each {tenth} = {leverage}', claim: 'HACRP-03' },
   whatifSliderLabel: { text: '{short} value', claim: null },
   // A slider's aria-valuetext beside its value.
-  valueAtCap: { text: "{value}, at CMS's cap", claim: 'HACRP-03' },
-  valueAboveCap: { text: "{value}, above CMS's cap", claim: 'HACRP-03' },
+  valueAtCap: { text: "{value}, at the cap", claim: 'HACRP-03' },
+  valueAboveCap: { text: "{value}, above the cap", claim: 'HACRP-03' },
   valueAssigned: { text: 'no value: CMS assigned the worst score', claim: 'HACRP-05' },
   whatifInvalid: { text: 'Enter a number from {min} to {max}.', claim: null },
   whatifAssignedPlaceholder: { text: 'none (assigned z-score {z})', claim: null },
@@ -191,10 +170,7 @@ export const COPY = {
   },
   whatifCountSame: { text: "The same number of infections as at CMS's value.", claim: null },
   whatifBarsHeading: { text: "Each measure's part of the score", claim: 'HACRP-04' },
-  whatifBarsCaption: {
-    text: 'A measure adds its z-score divided by {n}, the number of measures scored. Bars right of the center line raise the score. Hatched: assigned by CMS.',
-    claim: 'HACRP-04',
-  },
+  whatifBarsCaption: { text: "A measure adds its z-score divided by {n}, the number of measures scored. Bars right of the center line raise the score. Hatched: assigned by CMS.", claim: ['HACRP-04', 'HACRP-05'] },
   whatifBarAssigned: { text: 'assigned by CMS', claim: 'HACRP-05' },
   solverCaption: { text: "From CMS's values, one measure at a time, with every other measure held at CMS's value.", claim: null },
   solverCaptionMedian: { text: 'From the starting values, one measure at a time, with every other measure held where it starts.', claim: null },
@@ -336,9 +312,9 @@ export const COPY = {
   summaryTitle: { text: 'Program summary · FY{fy}', claim: null },
   summaryReleased: { text: 'CMS data released {date}', claim: null },
   summaryCut: { text: 'Hospitals cut', claim: null },
-  summaryCutNote: { text: 'Of {decided} with a Yes or No payment decision', claim: null },
+  summaryCutNote: { text: "Of {decided} scored hospitals with a Yes or No", claim: null },
   summaryPct: { text: 'The cut', claim: 'HACRP-01' },
-  summaryPctNote: { text: 'Of each Medicare inpatient payment, for the fiscal year', claim: 'HACRP-01' },
+  summaryPctNote: { text: "Of each traditional Medicare inpatient payment, for the fiscal year", claim: ['HACRP-01', 'HACRP-24'] },
   summaryScored: { text: 'Scored', claim: null },
   summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
   // CMS's line, as a summary field and in a sentence.
@@ -445,10 +421,7 @@ export const COPY = {
     claim: null,
   },
   rankHigher: { text: 'Higher than {share} of the other {n} scores CMS published (higher is worse).', claim: null },
-  lineHow: {
-    text: "Each year CMS cuts the hospitals with the highest quarter of scores, those above the {percentile} percentile, so the line moves with every hospital's score.",
-    claim: 'HACRP-02',
-  },
+  lineHow: { text: "Each year CMS cuts the hospitals with the highest quarter of scores, those above the {percentile} percentile, so the line moves with other hospitals' scores.", claim: ['HACRP-02', 'HACRP-23'] },
 
   // Figure: the ledger of measures.
   ledgerHeading: { text: 'Where the score came from', claim: null },
@@ -467,30 +440,12 @@ export const COPY = {
   defineMore: { text: '(what it counts)', claim: null },
   // Each measure's definition, in the box its short name opens in the ledger (draft words, checked in the accuracy
   // pass). The infection measures' values are standardized infection ratios.
-  defineCLABSI: {
-    text: "Bloodstream infections tied to a central line, a tube placed in a large vein in the neck, chest or groin. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
-    claim: null,
-  },
-  defineCAUTI: {
-    text: "Urinary tract infections that start from a urinary catheter, a tube that drains the bladder. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
-    claim: null,
-  },
-  defineSSI: {
-    text: "Infections where surgery was done, after colon surgery or an abdominal hysterectomy, pooled into one measure. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
-    claim: null,
-  },
-  defineCDI: {
-    text: "C. diff infections, which cause diarrhea and inflammation of the colon, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
-    claim: null,
-  },
-  defineMRSA: {
-    text: "Bloodstream infections with MRSA, a germ that resists several antibiotics, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
-    claim: null,
-  },
-  definePSI90: {
-    text: 'Safety problems such as bedsores, falls that break a bone and blood clots after surgery, found by CMS in traditional Medicare claims. A value of {one} matches the national rate.',
-    claim: 'HACRP-06',
-  },
+  defineCLABSI: { text: "Bloodstream infections tied to a central line, a tube often placed in a large vein in the neck, chest or groin. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.", claim: ['HACRP-07', 'HACRP-37', 'HACRP-33', 'HACRP-14'] },
+  defineCAUTI: { text: "Urinary tract infections that start from a urinary catheter, a tube that drains the bladder. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.", claim: ['HACRP-08', 'HACRP-38', 'HACRP-33', 'HACRP-14'] },
+  defineSSI: { text: "Deep infections at the site of colon surgery or an abdominal hysterectomy, within a month of the operation, pooled into one measure. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.", claim: ['HACRP-09', 'HACRP-39', 'HACRP-53', 'HACRP-40', 'HACRP-33', 'HACRP-14'] },
+  defineCDI: { text: "C. diff infections, which cause diarrhea and inflammation of the colon, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.", claim: ['HACRP-10', 'HACRP-41', 'HACRP-42', 'HACRP-33', 'HACRP-14'] },
+  defineMRSA: { text: "Bloodstream infections with MRSA, a germ that resists several antibiotics, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.", claim: ['HACRP-11', 'HACRP-43', 'HACRP-44', 'HACRP-33', 'HACRP-14'] },
+  definePSI90: { text: "Safety problems such as serious bedsores, falls that break a bone and blood clots after surgery, found by CMS in traditional Medicare claims. A value of {one} matches the national composite value.", claim: ['HACRP-30', 'HACRP-70', 'HACRP-29', 'HACRP-31'] },
   leverFlip: { text: "That change alone would put the score under CMS's line.", claim: null },
   leverNone: { text: 'None of the measures CMS scored it on is above the national median, so no single measure at the median would lower its score.', claim: null },
   ledgerColRuler: { text: 'Among all hospitals', claim: null },
@@ -518,10 +473,7 @@ export const COPY = {
     text: 'CMS adds the z-scores and divides by the number of measures scored, so each measure counts the same. Each bar below is one z-score divided by {n}; a bar right of zero raised the score and one left of zero lowered it.',
     claim: 'HACRP-04',
   },
-  sumRounded: {
-    text: "Added from CMS's rounded z-scores the parts make {recomputed}; CMS reports {total}, from its unrounded values.",
-    claim: null,
-  },
+  sumRounded: { text: "Added from the rounded z-scores CMS published, the parts make {recomputed}; CMS reports {total}. The small difference is rounding.", claim: null },
   wsN: { text: 'measures', claim: null },
   wsTotal: { text: 'Total HAC Score', claim: null },
   figSumTakeaway: { text: 'The parts add up to {total}, {side} CMS\'s line.', claim: null },

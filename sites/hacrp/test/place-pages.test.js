@@ -110,7 +110,7 @@ test('notes: a metro area across a state line names its states; a small place sa
   assert.ok(!notes(STATE).some((n) => n.startsWith('This metro area reaches')));
   // Maryland-style places: some scored hospital has no decision, so the note about CMS's agreement with the state.
   assert.ok(NO_DECISION.rows.some((r) => r.yes === null));
-  assert.ok(notes(NO_DECISION).includes('Maryland’s hospitals are scored but not subject to the reduction: Maryland has a special payment arrangement with Medicare that exempts them.'));
+  assert.ok(notes(NO_DECISION).includes('Maryland’s hospitals are scored but not subject to the reduction: under an agreement with the state, CMS exempts them.'));
   assert.ok(!notes(STATE).some((n) => n.startsWith('Maryland’s')));
 });
 

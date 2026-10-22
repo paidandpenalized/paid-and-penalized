@@ -1,6 +1,6 @@
 // The program page's and the place pages' own words (pages/program.js, pages/place.js, program-figures.js), built
 // into the pages and never shipped to a browser. Same rules as copy.js: no digit characters, every number through a
-// {placeholder}; `claim` names a row of sites/hacrp/CLAIMS.md (null for this site's own framing or arithmetic).
+// {placeholder}; `claim` names a row of sites/hacrp/CLAIMS.md, or a list of rows (null for this site's own framing or arithmetic).
 // fill, fillKeep and t read here, then explore/copy.js, then copy.js.
 import { copyOf } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../copy.js';
@@ -10,8 +10,8 @@ export const COPY = {
   // ---------- the program page (pages/program.js) ----------
   // The top: the lede, the hero search, the summary form and the score rule under it.
   progLedeScore: { text: 'Every year Medicare scores general hospitals on infections and other harms patients develop during a stay.', claim: 'HACRP-17' },
-  progLedeCut: { text: 'CMS then cuts payments by {pct} for a full year to the quarter of hospitals with the highest scores.', claim: 'HACRP-01' },
-  progLedeCount: { text: 'For fiscal year {fy}, that was {yes} of the {decided} hospitals', claim: null },
+  progLedeCut: { text: "CMS then cuts payments by {pct} for a full year to the quarter of hospitals with the highest scores.", claim: ['HACRP-01', 'HACRP-02', 'HACRP-24'] },
+  progLedeCount: { text: "For fiscal year {fy}, that was {yes} of the {decided} scored hospitals", claim: null },
   progLedeEnd: { text: 'with a payment decision.', claim: null },
   heroTry: { text: 'Try {state}, {metro}, or {every}. New to this? Start with {how}.', claim: null },
   heroEvery: { text: 'browse every hospital', claim: null },
@@ -21,7 +21,7 @@ export const COPY = {
   summaryDataHai: { text: 'Infections: {start} to {end}', claim: null },
   summaryPayYear: { text: 'Payment year', claim: null },
   summaryPayYearValue: { text: '{start} to {end}', claim: null },
-  summaryPayYearNote: { text: 'Fiscal year {fy}: every traditional Medicare inpatient stay', claim: null },
+  summaryPayYearNote: { text: "Fiscal year {fy}: every traditional Medicare inpatient stay", claim: 'HACRP-24' },
   summaryLineValue: { text: '{lowestYes} and up', claim: null },
   summaryLineNote: { text: 'The lowest score CMS cut. The highest it did not: {highestNo}.', claim: null },
   stampReleased: { text: 'Final · released {date}', claim: null },
@@ -38,18 +38,18 @@ export const COPY = {
   part1Heading: { text: 'How the program works', claim: null },
   part1Intro: { text: 'CMS runs the same arithmetic for every hospital it scores. Here it is in five steps, on the real fiscal year {fy} numbers.', claim: 'HACRP-19' },
   part2Heading: { text: 'The fiscal year {fy} picture', claim: null },
-  part2Intro: { text: "Who landed past CMS's line, and why. Every chart here is drawn from CMS's file; pick, hover or tap to look closer.", claim: null },
+  part2Intro: { text: "Who landed past CMS's line, and on which measures. Every chart here is drawn from CMS's file; pick, hover or tap to look closer.", claim: null },
   part3Heading: { text: 'Where the cuts land', claim: null },
   part3Intro: { text: 'Pick a state to see its hospitals, or go down from a region to a state and a metro area.', claim: null },
 
   // Part 1: the five steps, each beside its figure, then the sandbox.
   stepLabel: { text: 'Step {n}', claim: null },
   measureToggle: { text: 'Measure', claim: null },
-  step1Heading: { text: 'CMS scores hospitals on {measureCount} measures', claim: null },
+  step1Heading: { text: "CMS scores hospitals on {measureCount} measures", claim: ['HACRP-06', 'HACRP-33'] },
   step1Who: { text: "The hospitals it scores are general acute care hospitals paid under Medicare's inpatient payment system.", claim: 'HACRP-18' },
-  step1a: { text: 'CMS scores each hospital on {haiCount} kinds of infection and on a patient-safety composite called {short}.', claim: 'HACRP-06' },
-  step1b: { text: "Hospitals report their infections to the CDC's National Healthcare Safety Network (NHSN), counting patients of every insurer. CMS finds the safety problems in {short}, such as bedsores and falls that break a bone, in hospitals' bills to traditional Medicare.", claim: null },
-  step1c: { text: "This year's data cover {psiStart} to {psiEnd} for {short}, and {haiStart} to {haiEnd} for infections. Hospitals with too few patients for a measure aren't scored on it.", claim: null },
+  step1a: { text: "The measures are {haiCount} kinds of infection and a patient-safety composite called {short}.", claim: ['HACRP-06', 'HACRP-33'] },
+  step1b: { text: "Hospitals report their infections to the CDC's National Healthcare Safety Network (NHSN), counting patients of every insurer. CMS finds the safety problems in {short}, such as serious bedsores and falls that break a bone, in hospitals' bills to traditional Medicare.", claim: ['HACRP-33', 'HACRP-34', 'HACRP-30', 'HACRP-70', 'HACRP-29'] },
+  step1c: { text: "This year's data cover {psiStart} to {psiEnd} for {short}, and {haiStart} to {haiEnd} for infections. Hospitals with too few patients for a measure aren't scored on it.", claim: ['HACRP-63', 'HACRP-35'] },
   fig1Takeaway: { text: "{all} of the {file} hospitals in CMS's file were scored on all {measureCount} measures; {one} on just one, and {none} on none at all.", claim: null },
   fig1Alt: { text: 'A punch card: one row per measure, one column per set of measures hospitals were scored on, with a bar over each column for how many hospitals share that set.', claim: null },
   fig1Other: { text: 'Other sets', claim: null },
@@ -71,10 +71,10 @@ export const COPY = {
   sirTerm: { text: 'standardized infection ratio (SIR)', claim: null },
   sirMore: { text: '(how CDC figures it)', claim: null },
   sirBoxMath: { text: 'SIR = infections reported ÷ infections predicted', claim: 'HACRP-14' },
-  sirBoxPredicted: { text: "CDC predicts each hospital's number from national data for {base}, its baseline year, adjusted for what predicts infections: the kind of unit, for example, or a surgical patient's age and health.", claim: 'HACRP-20' },
-  sirBoxBaseline: { text: "This year's SIRs use the {base} baseline. CDC is moving it to {next} data, a change that reaches this program in fiscal year {nextFy}.", claim: 'HACRP-21' },
-  step2b: { text: '{short} reads the same way: a value of {one} matches the national composite, and higher is worse.', claim: null },
-  step2c: { text: "When CDC's model predicts fewer than one infection, the hospital gets no result on that measure. Many small hospitals report none at all: see the column at zero.", claim: null },
+  sirBoxPredicted: { text: "CDC predicts each hospital's number from national data for {base}, its baseline year, adjusted for what predicts infections: the kind of unit, for example, or a surgical patient's age and health.", claim: ['HACRP-20', 'HACRP-45'] },
+  sirBoxBaseline: { text: "This year's SIRs use the {base} baseline. CDC is moving it to {next} data, a change that reaches this program in fiscal year {nextFy}.", claim: ['HACRP-20', 'HACRP-21'] },
+  step2b: { text: "{short} reads the same way: a value of {one} matches the national composite value, and higher is worse.", claim: 'HACRP-31' },
+  step2c: { text: "When CDC's model predicts less than a single infection, the hospital gets no result on that measure. Many hospitals with a result reported no infections at all: see the column at zero.", claim: 'HACRP-35' },
   fig2Takeaway: { text: "Every hospital's value on each measure, a dot for every few hospitals. Pick a measure.", claim: null },
   fig2ColN: { text: 'Hospitals with a value', claim: null },
   fig2ColZero: { text: 'At zero', claim: null },
@@ -83,7 +83,7 @@ export const COPY = {
 
   step3Heading: { text: 'Extreme results are pulled in to a floor and a cap', claim: 'HACRP-03' },
   step3a: { text: 'Before scoring, CMS sets a floor at the {low} percentile of each measure\'s results and a cap at the {high}. A result past either end counts as that end.', claim: 'HACRP-03' },
-  step3b: { text: 'That keeps a few extreme results from pulling the average for everyone. The lines show each hospital that moves.', claim: null },
+  step3b: { text: "That limits how far a few extreme results can pull the average for everyone. The lines show each hospital that moves.", claim: 'HACRP-64' },
   fig3Takeaway: { text: 'Each measure as reported and as scored: every hospital past the cap counts as the cap. Pick a measure.', claim: null },
   fig3ColFloor: { text: 'Floor', claim: null },
   fig3ColCap: { text: 'Cap', claim: null },
@@ -92,8 +92,8 @@ export const COPY = {
   floorCapNote: { text: 'Floor and cap as this site derives them from CMS\'s published values.', claim: null },
 
   step4Heading: { text: 'Each result becomes a z-score, and the z-scores are averaged', claim: 'HACRP-04' },
-  step4a: { text: 'CMS turns each result into a z-score: how far it sits from the average hospital on that measure, counted in standard deviations (a measure of how spread out the results are). Positive is worse than average; negative is better.', claim: 'HACRP-15' },
-  step4b: { text: 'The Total HAC Score is the plain average of a hospital\'s z-scores, so each measure it was scored on counts the same. A hospital that didn\'t submit an infection measure gets the worst z-score on it instead.', claim: 'HACRP-04' },
+  step4a: { text: "CMS turns each result into a z-score: how far it sits from the average hospital on that measure, counted in standard deviations (a measure of how spread out the results are). Positive is worse than average; negative is better.", claim: ['HACRP-15', 'HACRP-16', 'HACRP-65'] },
+  step4b: { text: "The Total HAC Score is the plain average of a hospital's z-scores, so each measure it was scored on counts the same. A hospital that didn't submit an infection measure gets the worst z-score on it instead.", claim: ['HACRP-04', 'HACRP-05'] },
   step4c: { text: 'Drag the cursor along the rule to read any value as a z-score. Under it, the sum for this site\'s hypothetical hospital at the national median on every measure.', claim: null },
   fig4Takeaway: { text: 'A value and its z-score line up on one rule; the score averages them. Pick a measure and drag the cursor.', claim: null },
   fig4Drag: { text: 'Drag the cursor, or use the arrow keys', claim: null },
@@ -102,10 +102,10 @@ export const COPY = {
   fig4Sum: { text: 'The hypothetical hospital at the national median', claim: null },
 
   step5Heading: { text: "CMS cuts payments to hospitals above its line", claim: 'HACRP-02' },
-  step5a: { text: 'CMS cuts payments to hospitals whose Total HAC Score is above the {percentile} percentile of all scores. A hospital it cuts is paid {pct} less for every traditional Medicare inpatient stay that fiscal year.', claim: 'HACRP-02' },
+  step5a: { text: "CMS cuts payments to hospitals whose Total HAC Score is above the {percentile} percentile of the scores of hospitals outside Maryland. A hospital it cuts is paid {pct} less for every traditional Medicare inpatient stay that fiscal year.", claim: ['HACRP-23', 'HACRP-01', 'HACRP-24'] },
   step5b: { text: "The line comes from every hospital's score, not a fixed bar. If every hospital had half as many infections, every SIR would halve, but every z-score would stay where it is, and so would the line: CMS would cut the same hospitals. Try it.", claim: null },
   step5c: { text: "Maryland's hospitals are scored but not cut.", claim: 'HACRP-13' },
-  step5d: { text: "Maryland has a special payment arrangement with Medicare: the state sets what every payer, Medicare included, pays its hospitals, and it is held to a limit on the growth of Medicare's total spending in the state.", claim: 'HACRP-22' },
+  step5d: { text: "Maryland has its own arrangement with Medicare: the state sets what its hospitals are paid, by Medicare as well as other payers, and it is held to a target for the growth of traditional Medicare spending in the state.", claim: ['HACRP-22', 'HACRP-27'] },
   fig5Takeaway: { text: 'Halve every hospital\'s {short}: the values move, the z-scores don\'t, and CMS still cuts the same {yes} hospitals.', claim: null },
   fig5Top: { text: '{short} as reported', claim: null },
   fig5TopHalf: { text: '{short} if every hospital had half the infections', claim: null },
@@ -122,7 +122,7 @@ export const COPY = {
 
   // Part 2: the year's picture.
   swarmHeading: { text: 'Every hospital, one dot each', claim: null },
-  swarmText: { text: "Each dot is a hospital with a payment decision, placed by its Total HAC Score; each column holds the hospitals with nearly the same score. CMS cut the ones at or past its line. Pick a kind of hospital to lift it out of the crowd; hover or tap a dot to see the hospital.", claim: null },
+  swarmText: { text: "Each dot is a hospital with a payment decision, placed by its Total HAC Score; each column holds the hospitals with nearly the same score. CMS cut the ones past its line. Pick a kind of hospital to lift it out of the crowd; hover or tap a dot to see the hospital.", claim: null },
   swarmMaryland: { text: "Not shown: Maryland's {scored} scored hospitals. {above} of them scored at or above the lowest score CMS cut elsewhere, and none were cut.", claim: 'HACRP-13' },
   swarmTakeaway: { text: "CMS cut {yes} of the {decided} hospitals with a payment decision; just {gap} separates the highest score it didn't cut from the lowest it did.", claim: null },
   swarmAlt: { text: "Every hospital's Total HAC Score as a dot, stacked by score, with CMS's line and the hospitals past it in red; a magnifier shows the scores on either side of the line.", claim: null },
@@ -143,7 +143,7 @@ export const COPY = {
 
   typesHeading: { text: 'Who lands past the line', claim: null },
   typesText: { text: "If the cut fell on hospitals at random, every kind of hospital would sit near the national share, {nation}. Some sit far from it. A stem to the right of the dashed line marks a group cut more often than hospitals overall.", claim: null },
-  typesText2: { text: 'The size of each dot is the number of hospitals in the group; a stem is red only where a group sits more than {band} points past the national share. These are differences in who was cut, not explanations of why.', claim: null },
+  typesText2: { text: "The size of each dot is the number of hospitals in the group; a stem is red only where a group sits more than {band} points past the national share. These are differences in who was cut, not explanations of why. Each hospital’s kind is as CMS’s newest files list it.", claim: null },
   typesSize: { text: 'Dot size: hospitals in the group. Red: more than {band} points above the reference.', claim: null },
   typesTakeaway: { text: '{high} hospitals were cut most often ({highShare}); {low} hospitals, least ({lowShare}). Nationally: {nation}.', claim: null },
   typesAlt: { text: 'The share of hospitals CMS cut in each group, by teaching status, size, ownership, location and special status, against the national share.', claim: null },
@@ -229,7 +229,7 @@ export const COPY = {
   placeDeckOneNo: { text: 'Of the hospitals in {name}, one has a payment decision for fiscal year {fy}, and CMS did not cut it.', claim: null },
   placeDeckNoneOne: { text: 'The one hospital CMS lists in {name} has no payment decision for fiscal year {fy}.', claim: null },
   placeDeckNone: { text: 'None of the {n} hospitals CMS lists in {name} has a payment decision for fiscal year {fy}.', claim: null },
-  placeMarylandNote: { text: "Maryland's hospitals are scored but not subject to the reduction: Maryland has a special payment arrangement with Medicare that exempts them.", claim: 'HACRP-13' },
+  placeMarylandNote: { text: "Maryland's hospitals are scored but not subject to the reduction: under an agreement with the state, CMS exempts them.", claim: ['HACRP-13', 'HACRP-26'] },
   placeMultiState: { text: 'This metro area reaches into {states}; this page shows all of its hospitals.', claim: null },
   placeSmall: { text: 'A share of a handful of hospitals moves a long way with one hospital; read it with its counts.', claim: null },
   placeCardTitle: { text: '{name} · FY{fy}', claim: null },
