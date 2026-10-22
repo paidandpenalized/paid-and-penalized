@@ -12,7 +12,7 @@ import { count, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
+import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
 import { biggestLever } from '../compare.js';
 import { leadSentences, noteSentences, smallNumber } from '../sentences.js';
 import { fill, fillKeep, sourceText, t } from '../copy.js';
@@ -247,7 +247,8 @@ ${section({
     id: 'measures', label: 'measures-h', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
 <p>${fill('ledgerIntro', { n: String(view.n), all: String(view.measures.length) })}</p>
-${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}`,
+${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}
+<p class="hsec__def"><strong class="type">${SHORT_NAMES.PSI90}</strong> ${fill('definePSI90', { one: decimal(1, 0) })}</p>`,
     figure: ledger,
   })}
 ${sum && section({

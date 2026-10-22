@@ -97,7 +97,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
     const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
     const dash = html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`;
     return { m, r, value, fmt, rank, markup: html`<li class="${cls}">
-<div class="ledger__name"><p class="ledger__short">${m.short}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</p><p class="ledger__label">${m.label}</p>${m.id === 'PSI90' ? html`<p class="ledger__def">${fill('definePSI90', { one: decimal(1, 0) })}</p>` : ''}${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
+<div class="ledger__name"><p class="ledger__short">${m.short}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</p><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
 <div class="ledger__ruler">${svg}</div>
 <p class="ledger__num"><span class="ledger__k">${t('colValue')}</span><span class="cms">${m.hasValue ? m.valueText : dash}</span></p>
 <p class="ledger__num"><span class="ledger__k">${t('colZ')}</span><span class="cms">${m.hasZ ? m.zText : dash}</span></p>
