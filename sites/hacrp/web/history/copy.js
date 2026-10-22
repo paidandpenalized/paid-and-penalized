@@ -11,7 +11,8 @@ export const COPY = {
   // ---------- Part 4 on the program page ----------
   part4Heading: { text: '{n} years, {k} rounds of cuts', claim: null },
   part4Intro: { text: 'Every year but one since fiscal year {first}, CMS has cut about a quarter of hospitals. Never the same quarter: {share} of hospitals have been cut at least once. And not at random either: a hospital cut one year is cut again the next far more often than chance would have it.', claim: null },
-  histSource: { text: 'Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog and its archives), and CMS’s cut lists for fiscal years {first} and {second}.', claim: null },
+  histSource: { text: 'Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog and its archives), and CMS’s cut lists for {lists}.', claim: null },
+  histSourceNoLists: { text: 'Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog and its archives).', claim: null },
   rollNone: { text: 'No hospital scored or cut', claim: null },
 
   // The roll call.
@@ -58,6 +59,8 @@ export const COPY = {
   infText: { text: 'The lines are the nation’s infection rates, each calendar year Care Compare published one: every hospital’s infections added up, over the number CDC’s model predicted from national data. Below the dashed line, fewer infections than predicted.', claim: null },
   infText2: { text: 'Most fell, some by half, with a jump in {spike}, the pandemic’s second year. The cut did not shrink with them: the rule takes the quarter of hospitals with the highest scores every year, however much every hospital improves.', claim: null },
   infTakeaway: { text: 'From {first} to {last}, the nation’s {a} rate fell {aPct} and its {b} rate {bPct}; CMS cut about a quarter of hospitals every year all the same.', claim: null },
+  infTakeawayOne: { text: 'From {first} to {last}, the nation’s {a} rate fell {aPct}; CMS cut about a quarter of hospitals every year all the same.', claim: null },
+  infTakeawayNone: { text: 'From {first} to {last}, the nation’s infection rates did not fall; CMS cut about a quarter of hospitals every year all the same.', claim: null },
   infQuarter: { text: 'Share of hospitals CMS cut, each fiscal year', claim: null },
   infRates: { text: 'Infections ÷ predicted, the nation, by calendar year', claim: null },
   infRef: { text: 'as predicted', claim: null },

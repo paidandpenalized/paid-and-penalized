@@ -695,12 +695,14 @@ test('barRows: the label column is the width asked for, else by the width of the
   assert.equal(String(barRows({ rows, max: 0.5, width: 300, labelW: 150 })), custom, 'the same call gives the same markup');
 });
 
-test('barRows: every value is printed in one column, 6 units past the track\'s end, whatever the length of its bar', () => {
+test('barRows: valuesAtEnd prints every value in one column, 6 units past the track\'s end; by default each sits just after its bar', () => {
   const rows = [{ label: 'Short', value: 0.1, valueText: '10%', tip: 'a' }, { label: 'Long', value: 0.5, valueText: '50%', tip: 'b', pen: true }];
   const values = (s) => textTags(s, 'chart-value chart-value--mark');
-  const phone = values(String(barRows({ rows, max: 0.5, width: 300, labelW: 150 })));
+  const after = values(String(barRows({ rows, max: 0.5, width: 300, labelW: 150 })));
+  assert.ok(after[0].x < after[1].x, "by default a shorter bar's value sits further left");
+  const phone = values(String(barRows({ rows, max: 0.5, width: 300, labelW: 150, valuesAtEnd: true })));
   assert.deepEqual(phone.map((t) => [t.body, t.x, t.anchor]), [['10%', 262, 'start'], ['50%', 262, 'start']], 'the track ends at 300 − 44 = 256');
-  const wide = values(String(barRows({ rows, max: 0.5, width: 640 })));
+  const wide = values(String(barRows({ rows, max: 0.5, width: 640, valuesAtEnd: true })));
   assert.deepEqual(wide.map((t) => t.x), [602, 602]);
   assert.deepEqual(wide.map((t) => t.y), [6 + 16, 6 + 26 + 16], 'a row each, level with its bar');
 });

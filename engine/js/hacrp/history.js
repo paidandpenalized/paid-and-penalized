@@ -58,22 +58,25 @@ export function partRanges(records) {
 //   'equal' solves for the one missing z-score; 'domains' for the missing domain (Domain 1 or Domain 2).
 export function withheldPart(rec, rule, ranges, scale) {
   if (rec.total === null) return null;
-  const valid = (key, v, weight) => {
+  // A solved part must lie in the year's published range for it; a single measure's score in tenths (Domain 1 is
+  // PSI 90's alone) must also be a whole number from 1 to 10. Domain 2, an average, need not be whole.
+  const valid = (key, v, weight, single) => {
     const slack = SCORE_TOLERANCE / weight;
     if (!ranges[key] || v < ranges[key][0] - slack || v > ranges[key][1] + slack) return false;
     const whole = Math.round(v);
-    return scale !== 'tenths' || (Math.abs(v - whole) < slack && whole >= 1 && whole <= 10);
+    return scale !== 'tenths' || !single || (Math.abs(v - whole) < slack && whole >= 1 && whole <= 10);
   };
   if (rule.rule === 'equal') {
     const have = publishedParts(rec);
     const weight = 1 / (have.length + 1);
     const v = rec.total / weight - have.reduce((s, z) => s + z, 0);
-    return Object.keys(rec.z).find((id) => rec.z[id] === null && rec.notes.has(id) && valid(id, v, weight)) ?? null;
+    return Object.keys(rec.z).find((id) => rec.z[id] === null && rec.notes.has(id) && valid(id, v, weight, true)) ?? null;
   }
   const [d1, d2] = domainsOf(rec);
   const [w1, w2] = rule.weights;
-  if (d1 === null && d2 !== null && rec.notes.has('D1')) return valid('D1', (rec.total - w2 * d2) / w1, w1) ? 'D1' : null;
-  if (d2 === null && d1 !== null && rec.notes.has('D2')) return valid('D2', (rec.total - w1 * d1) / w2, w2) ? 'D2' : null;
+  // Domain 1 is withheld when CMS footnoted it or PSI 90, its one measure.
+  if (d1 === null && d2 !== null && (rec.notes.has('D1') || rec.notes.has('PSI90'))) return valid('D1', (rec.total - w2 * d2) / w1, w1, true) ? 'D1' : null;
+  if (d2 === null && d1 !== null && rec.notes.has('D2')) return valid('D2', (rec.total - w1 * d1) / w2, w2, false) ? 'D2' : null;
   return null;
 }
 

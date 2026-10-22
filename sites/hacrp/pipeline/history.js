@@ -68,7 +68,7 @@ export function cutListFlags(text) {
   const out = new Map();
   for (const c of lines.slice(head + 1)) {
     if (!CCN.test(c[0])) continue;
-    if (!(c[col] in FLAG)) throw new RangeError(`cut list: CCN ${c[0]} has flag "${c[col]}"`);
+    if (!Object.hasOwn(FLAG, c[col])) throw new RangeError(`cut list: CCN ${c[0]} has flag "${c[col]}"`);
     if (out.has(c[0])) throw new RangeError(`cut list: CCN ${c[0]} appears twice`);
     out.set(c[0], { flag: FLAG[c[col]], total: c[totalCol], state: stateCol < 0 ? '' : c[stateCol] });
   }

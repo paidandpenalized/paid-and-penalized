@@ -77,3 +77,10 @@ test('on the pinned data, the history loads with the infection results: every ye
     for (const r of list) assert.ok(Object.values(r.sir).every((v) => v === null || (Number.isFinite(v) && v >= 0)));
   }
 });
+
+test('checkHistoryYear: a history that does not end with the HACRP file\'s year fails the build; none at all is fine', async () => {
+  const { checkHistoryYear } = await import('../web/data.js');
+  assert.doesNotThrow(() => checkHistoryYear(null, 2027));
+  assert.doesNotThrow(() => checkHistoryYear({ fy: 2027 }, 2027));
+  assert.throws(() => checkHistoryYear({ fy: 2026 }, 2027), /history ends at FY2026/);
+});

@@ -112,7 +112,7 @@ ${printout(html`<table class="gb takes">
   ].map(([what, from, label, kind]) => html`<tr><th scope="row">${t(what)}</th><td>${typeof from === 'string' ? t(from) : from}</td><td><span class="takes__tag takes__tag--${kind}">${t(label)}</span></td></tr>`)}</tbody>
 </table>`)}
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
-${para(fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }))}
+${para(estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) }))}
 <p><a href="/methods/#estimate">${t('estimateFamily')}</a></p>` },
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
     { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },

@@ -236,3 +236,18 @@ test('a year with decisions of one kind only has no line and no order to check',
   const onlyYes = yearCheck([row(1, 1, 'Yes'), row(2, 2, 'Yes')]);
   assert.deepEqual([onlyYes.highestNo, onlyYes.lowestYes, onlyYes.linePct, onlyYes.wrongSide.length, onlyYes.p75InGap, onlyYes.atLine, onlyYes.ok], [null, 1, null, 0, false, 0, true]);
 });
+
+// Code review, M3: Domain 2 is an average, so a withheld Domain 2 need not be whole in a tenths year; Domain 1 is
+// withheld when CMS footnoted PSI 90, its one measure, as well as when it footnoted the domain.
+test('withheldPart: a withheld Domain 2 in a tenths year may be fractional; a withheld Domain 1 may be footnoted on PSI 90', () => {
+  const rule = { rule: 'domains', weights: [0.25, 0.75] };
+  const ranges = { D1: [1, 10], D2: [1, 10] };
+  // Domain 1 = 4 (PSI 90), Domain 2 withheld: the total 0.25 * 4 + 0.75 * 5.3333 implies D2 = 5.3333.
+  const d2Missing = { total: 0.25 * 4 + 0.75 * 5.3333, z: { PSI90: 4, CLABSI: null, CAUTI: null }, d1: null, d2: null, notes: new Set(['D2']) };
+  assert.equal(withheldPart(d2Missing, rule, ranges, 'tenths'), 'D2');
+  // Domain 1 withheld, footnoted on PSI 90 only: the total implies D1 = 9, a whole score.
+  const psiNoted = { total: 0.25 * 9 + 0.75 * 6, z: { PSI90: null, CLABSI: 6, CAUTI: 6 }, d1: null, d2: null, notes: new Set(['PSI90']) };
+  assert.equal(withheldPart(psiNoted, rule, ranges, 'tenths'), 'D1');
+  // The same with an implied D1 of 8.5: not a whole score, so not excused.
+  assert.equal(withheldPart({ ...psiNoted, total: 0.25 * 8.5 + 0.75 * 6 }, rule, ranges, 'tenths'), null);
+});

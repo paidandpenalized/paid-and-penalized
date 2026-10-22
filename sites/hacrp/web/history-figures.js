@@ -13,7 +13,7 @@ import { miniTiles } from '../../../web/charts/tileMap.js';
 import { STATE_NAMES, usProjected, usYearMap } from '../../../web/charts/geo.js';
 import { TILES } from '../../../web/charts/states.js';
 import { lastCall } from '../../../web/render/components.js';
-import { cmsText, count, pct } from '../../../web/render/format.js';
+import { cmsText, count, listText, pct } from '../../../web/render/format.js';
 import { html, jsonScript } from '../../../web/render/html.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
 import { CUT, NONE, NOT_CUT, rollOrder, tallyYears } from '../../../engine/js/hacrp/trends.js';
@@ -33,8 +33,9 @@ const share = (part, whole) => (whole ? part / whole : 0);
 const SOURCES = new WeakMap();
 export const historySource = (hd) => {
   if (!SOURCES.has(hd)) {
-    const lists = hd.years.filter((y) => y.decisions === 'cut-list').map((y) => String(y.fy));
-    SOURCES.set(hd, fill('histSource', { first: String(hd.fys[0]), last: String(hd.fys[hd.fys.length - 1]), second: lists[1] ?? lists[0] ?? '' }));
+    const years = { first: String(hd.fys[0]), last: String(hd.fys[hd.fys.length - 1]) };
+    const lists = hd.years.filter((y) => y.decisions === 'cut-list').map((y) => `FY${y.fy}`);
+    SOURCES.set(hd, lists.length ? fill('histSource', { ...years, lists: listText(lists) }) : fill('histSourceNoLists', years));
   }
   return SOURCES.get(hd);
 };
@@ -239,7 +240,7 @@ export function coverageFigure(hd, { n, source }) {
   return figure({
     n, source, csvName: 'hacrp-cut-by-coverage', alt: t('covAlt'), claimLevel: 'recomputed',
     takeaway: fill('covTakeaway', { short: SHORT_NAMES.PSI90, only: pct0(rows[2].value), none: pct0(rows[3].value), first: String(first), last: String(last) }),
-    ...drawn((width) => barRows({ rows, max: Math.max(0.6, ...rows.map((r) => r.value)), width, labelW: isNarrow(width) ? 150 : 180 })),
+    ...drawn((width) => barRows({ rows, max: Math.max(0.6, ...rows.map((r) => r.value)), width, labelW: isNarrow(width) ? 150 : 180, valuesAtEnd: true })),
     table: {
       columns: [{ name: t('covColGroup') }, { name: t('covColYears'), numeric: true }, { name: t('rollColCut'), numeric: true }, { name: t('covColShare'), numeric: true }],
       rows: rows.map((r) => [r.label, num(count(r.g.decided), r.g.decided), num(count(r.g.cut), r.g.cut), num(pct1(r.value), r.value)]),
@@ -431,6 +432,14 @@ ${imageOf(svg, t('ymapAlt'), null)}
 
 // ---------- infections against the cut ----------
 
+// The infections takeaway: the two measures whose national rate fell most, one, or none.
+function infTakeaway(falls, years) {
+  const name = (p) => t(`${HAI_NAMES[p.id]}Short`);
+  if (falls.length >= 2) return fill('infTakeaway', { ...years, a: name(falls[0]), aPct: pct(-falls[0].delta, 0), b: name(falls[1]), bPct: pct(-falls[1].delta, 0) });
+  if (falls.length === 1) return fill('infTakeawayOne', { ...years, a: name(falls[0]), aPct: pct(-falls[0].delta, 0) });
+  return fill('infTakeawayNone', years);
+}
+
 const HAI_NAMES = { CLABSI: 'infCLABSI', CAUTI: 'infCAUTI', SSI_COLON: 'infSsiColon', SSI_HYST: 'infSsiHyst', MRSA: 'infMRSA', CDI: 'infCDI' };
 const pooled = (m) => (m && m.predicted > 0 ? m.observed / m.predicted : null);
 const signedPct = (x) => `${x > 0 ? '+' : x < 0 ? '−' : ''}${pct(Math.abs(x), 0)}`;
@@ -466,11 +475,12 @@ export function infectionsFigure(hd, { n, source }) {
       const v = y ? pooled(y.measures[id]) : null;
       return { x: cy, y: v === null ? null : toUnit(v, 3), tip: v === null ? '' : `${t(HAI_NAMES[id])}, ${cy}: ${v.toFixed(2)}` };
     });
-    const firstV = points.find((p) => p.y !== null).y;
-    const lastV = [...points].reverse().find((p) => p.y !== null).y;
-    const change = lastV / firstV - 1;
+    const have = points.filter((p) => p.y !== null);
+    if (!have.length) return null;
+    const change = have[have.length - 1].y / have[0].y - 1;
     return { id, label: t(HAI_NAMES[id]), points, change: signedPct(change), delta: change };
-  });
+  }).filter(Boolean);
+  if (!panels.length) return null;
   const yMax = Math.max(1.2, ...panels.flatMap((p) => p.points.map((pt) => pt.y ?? 0)));
   const falls = panels.filter((p) => p.delta < 0).sort((a, b) => a.delta - b.delta);
   const draw = (width) => smallLines({ panels, xs, yMax: ceilToUnit(yMax, 1), ref: 1, labels: { ref: t('infRef'), x: yearTick }, width, format: (v) => String(v) });
@@ -478,7 +488,7 @@ export function infectionsFigure(hd, { n, source }) {
   const chart = html`${quarter}<p class="infq__h cap">${t('infRates')}</p>${imagePair(drawn(draw, 760), t('infAlt'))}`;
   return figure({
     n, source, chart, csvName: 'hacrp-infections-by-year', claimLevel: 'recomputed',
-    takeaway: fill('infTakeaway', { first: String(first), last: String(last), a: t(`${HAI_NAMES[falls[0].id]}Short`), aPct: pct(-falls[0].delta, 0), b: t(`${HAI_NAMES[falls[1].id]}Short`), bPct: pct(-falls[1].delta, 0) }),
+    takeaway: infTakeaway(falls, { first: String(first), last: String(last) }),
     note: fill('infNote', { gaps: xs.filter((x) => !cys.includes(x)).map(String).join(' and ') }),
     table: {
       columns: [{ name: t('infColYear') }, ...panels.map((p) => ({ name: p.label, numeric: true }))],

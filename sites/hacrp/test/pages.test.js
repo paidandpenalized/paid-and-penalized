@@ -131,7 +131,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     // The program page and every place page are indexed as the program is: on a released production site, all of them.
     for (const place of PLACES.list) assert.ok(!pages.get(place.path).includes(NOINDEX), place.path);
     const scored = DATA.hospitals.filter((h) => h.total !== null).map(hospitalPath);
-    assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...PLACES.list.map((p) => p.path), METHODS_PATH, ...scored]);
+    assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...PLACES.list.map((p) => p.path), ...scored, METHODS_PATH]);
     assert.ok(!pages.get('/hacrp/').includes(NOINDEX));
 
     const maryland = page(pick((h) => h.paymentReduction === 'N/A' && h.paymentReductionFootnote === 'a', 'Maryland'));

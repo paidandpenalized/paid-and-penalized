@@ -1,7 +1,7 @@
 // What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, CMS's
 // footnote crosswalk, the dataset's manifest entry and the CSV's data dictionary, plus CMS's text for the line's two scores.
 // File reads live here; views and pages stay pure.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
@@ -10,7 +10,6 @@ import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
-import { existsSync } from 'node:fs';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -65,6 +64,11 @@ export function infectionsByHospital(files) {
   return out;
 }
 
+// The history, when there is one, must end with the HACRP file's year.
+export function checkHistoryYear(history, fy) {
+  if (history && history.fy !== fy) throw new RangeError(`HACRP: the history ends at FY${history.fy} but the HACRP file is FY${fy}; add the year to HISTORY_PINS and run make emit`);
+}
+
 // The master's HACRP program year must be the year of the HACRP file the pages show (the newest master is not
 // necessarily the one built for this program year).
 export function checkMasterYear(masterFile, fy) {
@@ -75,6 +79,10 @@ export function checkMasterYear(masterFile, fy) {
 export function loadHacrp() {
   const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
+  // The history, when the build holds one, must end with the year the pages show: a new year's pin without its
+  // history fails here rather than dropping the history from the site.
+  const history = existsSync(REPO_ROOT + 'data/emitted/hacrp-history') ? readJson(REPO_ROOT + historyPath(newestYear('data/emitted/hacrp-history'))) : null;
+  checkHistoryYear(history, data.fy);
   checkMasterYear(masterFile, data.fy);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
 
@@ -115,10 +123,14 @@ export function loadHacrp() {
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     changes: changelogEntries(readFileSync(REPO_ROOT + CHANGELOG_FILE, 'utf8')),
     // Every program year's file, when the build has them (the history; null without).
-    history: existsSync(REPO_ROOT + historyPath(data.fy)) ? readJson(REPO_ROOT + historyPath(data.fy)) : null,
-    infections: infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))),
+    history,
+    infections: history ? infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))) : new Map(),
+    // Every pinned input the pages rest on: the HACRP file's, the history's and the hospital master's sources, and the
+    // files the pages read directly.
+    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
     manifest,
-    sourceRows: parseCsv(readPinned(sourceId)).length,
+    // The emitted file keeps every row of CMS's file.
+    sourceRows: data.hospitals.length,
     source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };
 }

@@ -11,7 +11,7 @@ import { ESTIMATE_THRESHOLD } from '../../../engine/js/hacrp/params.js';
 import { totalFromZ } from '../../../engine/js/hacrp/score.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
-import { decimal } from '../../../web/render/format.js';
+import { decimal, listText } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT, SHORT_NAMES } from './constants.js';
 import { sourceText } from './copy.js';
@@ -70,7 +70,7 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed } = data;
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
@@ -91,6 +91,12 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master) });
   const dictionaryFilled = dictionaryText(dictionary, { fy, source });
   ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
+  // The pages this site writes, counted as they go (the Methods page, written last, reports the total).
+  let pageCount = 0;
+  const emitPage = (p) => {
+    pageCount++;
+    ctx.emit(p);
+  };
 
   const range = scoreRange(hospitals);
   const programRobots = robotsFor({ env, released });
@@ -100,12 +106,12 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
   const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
-  ctx.emit({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
+  emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
   // The explore asset: what the explorable figures draw in the browser (program-data.js exploreAsset).
   const exploreUrl = ctx.asset('hacrp-explore', 'json', JSON.stringify(exploreAsset(pd, model)));
   // The hero's suggestions: the state and the metro area with the most hospitals with a payment decision.
   const most = (kind) => places.list.filter((p) => p.kind === kind).sort((a, b) => b.counts.decided - a.counts.decided || a.name.localeCompare(b.name, 'en'))[0];
-  ctx.emit({
+  emitPage({
     path: PROGRAM_PATH,
     robots: programRobots,
     text: programPage({
@@ -134,28 +140,39 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // page, from the views.
   const hospitalRowsByCcn = new Map(views.map((v) => [v.ccn, { name: v.name, city: v.city, state: v.state, totalText: v.score.raw, decision: v.decision.text, point: v.point, href: v.path }]));
   for (const place of places.list) {
-    ctx.emit({
+    emitPage({
       path: place.path,
       robots: programRobots,
       text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets, hd }),
     });
   }
 
-  // The Methods page: the self-check for every year this build holds (checked above), or, without the history, the
+  // What every hospital page compares a hospital with, computed once.
+  const nat = nationalContext({ hospitals, master, model });
+  for (const { hospital, view } of pages) {
+    const robots = robotsFor({ env, released, eligible: view.scored });
+    emitPage({
+      path: view.path,
+      robots,
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null }),
+    });
+  }
+
+  // The Methods page, written last: the self-check for every year this build holds (checked above), or, without the history, the
   // newest year's; the pipeline's numbers for the newest.
   const checks = hd ? hd.checks.map((c) => ({ fy: c.fy, rule: mt(c.ruleKey), check: c.check })) : [{ fy, rule: mt('ruleEqual'), check: newestOnly(hospitals, fy) }];
   const tagged = MEASURE_IDS.filter((id) => estimate[id].tagged);
-  ctx.emit({
+  emitPage({
     path: METHODS_PATH,
     robots: programRobots,
     text: methodsPage({
       fy,
       checks,
       years: hd ? hd.years.map((y) => ({ fy: y.fy, periods: y.periods })) : [{ fy, periods }],
-      newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: hospitals.length + places.list.length + 3, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
-      pins: manifest,
+      newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: pageCount + 1, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
+      pins: pinsUsed,
       changes,
-      estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.map((id) => SHORT_NAMES[id]).join(' and '), maxError: Math.max(...tagged.map((id) => estimate[id].maxError)) },
+      estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.length ? listText(tagged.map((id) => SHORT_NAMES[id])) : null, maxError: tagged.length ? Math.max(...tagged.map((id) => estimate[id].maxError)) : null },
       boundaryText,
       eqFy: EQUAL_FROM,
       zFy: Z_FROM,
@@ -164,17 +181,6 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       searchUrl,
     }),
   });
-
-  // What every hospital page compares a hospital with, computed once.
-  const nat = nationalContext({ hospitals, master, model });
-  for (const { hospital, view } of pages) {
-    const robots = robotsFor({ env, released, eligible: view.scored });
-    ctx.emit({
-      path: view.path,
-      robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null }),
-    });
-  }
 }
 
 // The newest year's self-check, for a build without the history: each hospital's z-scores averaged again against

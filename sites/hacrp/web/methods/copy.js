@@ -139,6 +139,7 @@ export const COPY = {
   srcRow7Label: { text: 'CMS reports', claim: null },
   estimateHeading: { text: 'The estimate tag', claim: null },
   estimateText: { text: 'A recomputed z-score can differ slightly from CMS’s. This site tags a measure “estimate” when its recompute misses CMS’s z-score by more than {tolerance} for any hospital; for fiscal year {fy} that is {tagged}. The largest difference for a tagged measure is {maxError}.', claim: null },
+  estimateNone: { text: 'A recomputed z-score can differ slightly from CMS’s. This site tags a measure “estimate” when its recompute misses CMS’s z-score by more than {tolerance} for any hospital; for fiscal year {fy}, no measure does.', claim: null },
   estimateFamily: { text: 'What “estimate” means across Paid & Penalized', claim: null },
 
   // §6, the periods.
