@@ -25,6 +25,7 @@ import { COPY } from '../copy.js';
 import { printout } from '../render/components.js';
 import { cmsText } from '../render/format.js';
 import { Safe, html } from '../render/html.js';
+import { WIDTH } from './svg.js';
 
 const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COPY.claimEstimate, hypothetical: COPY.claimHypothetical };
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
@@ -84,9 +85,27 @@ const tableCell = (cell, column, j) => {
   return j === 0 ? html`<th scope="row"${value}>${cell.text}</th>` : html`<td${value}>${cell.text}</td>`;
 };
 
+// Numbers in page order: each call gives the next (a page's figures, a part's steps), so a figure left out takes no
+// number and none is typed by hand.
+export const counter = (from = 1) => {
+  let n = from - 1;
+  return () => ++n;
+};
+
+// A table cell that shows text and keeps a raw value (for sorting, the CSV and the plotted-value check).
+export const num = (text, value) => ({ text, value });
+// The wide variant's default viewBox width, for screens 560px and up.
+export const WIDE = 560;
+// A chart drawn twice, on the kit's narrow viewBox and a wide one, as figure() takes them: { svg, svgWide }.
+export const drawn = (draw, wide = WIDE) => ({ svg: draw(WIDTH), svgWide: draw(wide) });
+
 // The chart as an image named by alt; fit: 'narrow' or 'wide' when the figure carries both variants.
 // alt null: a drawing that repeats words beside it, hidden from screen readers.
 export const imageOf = (svg, alt, fit) => new Safe(html`<svg ${alt === null ? html`aria-hidden="true"` : html`role="img" aria-label="${alt}"`}${fit ? html` data-fit="${fit}"` : ''} `.text + svg.text.slice('<svg '.length));
+
+// A chart's two drawings ({ svg, svgWide }, as drawn() makes them) as the two images CSS shows one at a time.
+export const imagePair = ({ svg, svgWide }, alt) => html`${imageOf(svg, alt, 'narrow')}
+${imageOf(svgWide, alt, 'wide')}`;
 
 export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
   checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key });
@@ -95,8 +114,7 @@ export function figure({ n, takeaway, svg, svgWide = null, chart = null, source,
   if (chart === null) checkPlotted(n, svg, columns, cells);
   if (svgWide) checkPlotted(n, svgWide, columns, cells);
   const claim = CLAIMS[claimLevel];
-  const image = chart ?? (svgWide ? html`${imageOf(svg, alt, 'narrow')}
-${imageOf(svgWide, alt, 'wide')}` : imageOf(svg, alt, null));
+  const image = chart ?? (svgWide ? imagePair({ svg, svgWide }, alt) : imageOf(svg, alt, null));
   return html`<figure class="fig" id="figure-${n}" data-figure>
 <figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>

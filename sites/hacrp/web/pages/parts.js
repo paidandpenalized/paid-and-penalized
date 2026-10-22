@@ -1,6 +1,6 @@
 // HACRP's words for the shared page parts (web/render/components.js) the HACRP pages use: the decision pill, the
 // as-of bar, the kicker, the citation (which carries the source line) and the data links.
-import { asofBar as asofShell, citation as citationShell, keepWhole, lastCall, pill } from '../../../../web/render/components.js';
+import { asofBar as asofShell, citation as citationShell, keepWhole, lastCall, pill, printout } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
@@ -8,6 +8,7 @@ import { programHeader } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
 import { fill, fillKeep, sourcePlain, t } from '../copy.js';
+import { fill as pfill } from '../program/copy.js';
 import { DICTIONARY_PAGE, csvPath } from '../links.js';
 import { pillOf } from '../whatif-text.js';
 
@@ -75,21 +76,6 @@ export function searchBox(searchUrl, { id = 'omni', hero = false } = {}) {
 </form>`;
 }
 
-// A section whose words explain a figure: the words (its heading first) on the left and the figure on the right from
-// 980px, stacked under that (pages.css .split). Without a figure, a plain section. label: the heading's id.
-export const split = ({ label, text, figure = null, id = null }) => (figure
-  ? html`<section class="block split"${id ? html` id="${id}"` : ''} aria-labelledby="${label}">
-<div class="split__text">
-${text}
-</div>
-<div class="split__fig">
-${figure}
-</div>
-</section>`
-  : html`<section class="block"${id ? html` id="${id}"` : ''} aria-labelledby="${label}">
-${text}
-</section>`);
-
 // The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
 export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;
 
@@ -115,3 +101,38 @@ export const printLink = (href, text) => (href.startsWith('/')
 // The plain links to the dataset file, its dictionary (the page; the Markdown file sits beside the CSV) and CMS's
 // dataset page (source: the manifest entry). Built once for the pages that share them.
 export const dataLinks = lastCall((fy, source) => [fy, source], (fy, source) => html`<p class="data-links">${printLink(csvPath(fy), t('dataCsv'))} · ${printLink(DICTIONARY_PAGE, t('dataDictionary'))} · ${printLink(source.landingPage, t('datasetLink'))}</p>`);
+
+// The table of every hospital (or a place's: area, its CCNs): client/table.js fills it from the hospitals asset
+// (data-src) and shows it;
+// without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu (the same
+// keys, each way) stands in for them.
+const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
+export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading'), intro = t('tableIntro'), area = null }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
+<h2 id="hospitals-h">${heading}</h2>
+<p class="ht-nojs">${t('tableNoScript')}</p>
+<p class="ht-retry" role="status"></p>
+<div class="ht" data-src="${searchUrl}"${area ? html` data-area="${area}"` : ''} hidden>
+<p>${intro}</p>
+<div class="ht__controls">
+${area ? '' : html`<p class="ht__field"><label for="ht-state">${t('tableState')}</label> <select id="ht-state"><option value="">${t('tableAllStates')}</option></select></p>
+`}<p class="ht__field"><label for="ht-name">${t('tableName')}</label> <input id="ht-name" type="search" autocomplete="off"></p>
+<p class="ht__field ht__sort"><label for="ht-sort">${t('tableSortBy')}</label> <select id="ht-sort">${COLUMNS.flatMap(([key, label]) => [1, -1].map((dir) => html`<option value="${key}:${dir}"${key === 'state' && dir === 1 ? html` selected` : ''}>${fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: t(label) })}</option>`))}</select></p>
+</div>
+<p class="small" id="ht-count" aria-live="polite"></p>
+${printout(html`<table class="gb gb--hospitals">
+<caption class="vh" id="hospitals-cap">${t('tableCaption')}</caption>
+<thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
+<tbody></tbody>
+</table>`)}
+<p class="fig__actions"><button type="button" class="fig__btn" id="ht-all" hidden></button></p>
+</div>
+${dataLinks(fy, source)}
+</section>`;
+
+// A Part's head, after Thirty Day Readmissions: the tag, the heading in the display face and a line under it.
+export const partHead = ({ n, id, heading, intro }) => html`<header class="part__head">
+<p class="part__tag">${pfill('partTag', { n: String(n) })}</p>
+<h2 class="part__title" id="${id}-h">${heading}</h2>
+${intro && html`<p class="part__intro">${intro}</p>`}
+</header>`;
+

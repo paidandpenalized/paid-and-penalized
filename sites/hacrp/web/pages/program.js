@@ -13,15 +13,14 @@ import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
 import { sourceText } from '../copy.js';
-import { fill, fillKeep, t } from '../explore/copy.js';
+import { fill, fillKeep, t } from '../program/copy.js';
 import { LINKS } from '../links.js';
-import { PART2_FIGURES, browseList, mapFigure, part1, part2, ruleFigure } from '../program-figures.js';
-import { asofBar, citation, dataLinks, searchBox, siteHeader } from './parts.js';
+import { counter } from '../../../../web/charts/figure.js';
+import { browseList, mapFigure, part1, part2, ruleFigure } from '../program-figures.js';
+import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
-// Part 1's five steps each number one figure, from 1; the sandbox is the step after them; Part 2 and the map follow.
-const PART1_FIGURES = 5;
 
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
@@ -31,39 +30,6 @@ function sandbox(whatif, { fy, boundaryText, source }) {
   const data = { name: null, fy, path: PATH, source, boundaryText, baseline: 'sandbox', share: false };
   return whatIfSection(whatif, data, 'hacrp-program');
 }
-
-// The table of every hospital: client/program.js fills it from the hospitals asset (data-src) and shows it;
-// without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu (the same
-// keys, each way) stands in for them.
-const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
-export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading'), intro = t('tableIntro'), area = null }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
-<h2 id="hospitals-h">${heading}</h2>
-<p class="ht-nojs">${t('tableNoScript')}</p>
-<p class="ht-retry" role="status"></p>
-<div class="ht" data-src="${searchUrl}"${area ? html` data-area="${area}"` : ''} hidden>
-<p>${intro}</p>
-<div class="ht__controls">
-${area ? '' : html`<p class="ht__field"><label for="ht-state">${t('tableState')}</label> <select id="ht-state"><option value="">${t('tableAllStates')}</option></select></p>
-`}<p class="ht__field"><label for="ht-name">${t('tableName')}</label> <input id="ht-name" type="search" autocomplete="off"></p>
-<p class="ht__field ht__sort"><label for="ht-sort">${t('tableSortBy')}</label> <select id="ht-sort">${COLUMNS.flatMap(([key, label]) => [1, -1].map((dir) => html`<option value="${key}:${dir}"${key === 'state' && dir === 1 ? html` selected` : ''}>${fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: t(label) })}</option>`))}</select></p>
-</div>
-<p class="small" id="ht-count" aria-live="polite"></p>
-<div class="printout"><div class="printout__scroll"><table class="gb gb--hospitals">
-<caption class="vh" id="hospitals-cap">${t('tableCaption')}</caption>
-<thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
-<tbody></tbody>
-</table></div></div>
-<p class="fig__actions"><button type="button" class="fig__btn" id="ht-all" hidden></button></p>
-</div>
-${dataLinks(fy, source)}
-</section>`;
-
-// A Part's head, after Thirty Day Readmissions: the tag, the heading in the display face and a line under it.
-export const partHead = ({ n, id, heading, intro }) => html`<header class="part__head">
-<p class="part__tag">${fill('partTag', { n: String(n) })}</p>
-<h2 class="part__title" id="${id}-h">${heading}</h2>
-${intro && html`<p class="part__intro">${intro}</p>`}
-</header>`;
 
 // The page's top: the kicker, the program's name in the display face (its last word in the penalty ink), the lede
 // with this year's count, the hero search and a line of places to try; beside it the summary form under its stamp.
@@ -84,7 +50,7 @@ function programTop({ title, subtitle, fy, counts, boundaryText, periods, source
 <div class="prog__intro">
 <p class="cap kicker prog__kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
 <h1 class="prog__title">${at < 0 ? title : html`${title.slice(0, at)} <span class="prog__title-pen">${title.slice(at + 1)}</span>`}</h1>
-<p class="prog__lede">${fill('progLedeLead', { pct: REDUCTION_TEXT })} <strong>${fill('progLedeCount', { fy: fyText, yes: count(counts.yes), decided: count(counts.decided) })}</strong> ${t('progLedeEnd')}</p>
+<p class="prog__lede">${t('progLedeScore')} ${fill('progLedeCut', { pct: REDUCTION_TEXT })} <strong>${fill('progLedeCount', { fy: fyText, yes: count(counts.yes), decided: count(counts.decided) })}</strong> ${t('progLedeEnd')}</p>
 ${searchUrl && html`<div class="prog__find">
 ${searchBox(searchUrl, { id: 'hero', hero: true })}
 ${tryMarkup && html`<p class="prog__try">${tryMarkup}</p>`}
@@ -109,32 +75,40 @@ ${stamp({ label: fill('stampReleased', { date: shortIsoDate(source.pdcReleased) 
 
 // counts: { decided, yes, scored }. boundaryText: CMS's text for the line's two scores. searchUrl: the hospitals
 // asset the searches read (generate.js, hospitalRows). robots: null for an indexable page. whatif: { hospital, model,
-// estimate, range } for the sandbox (hospital: medianHospital(model)); without it the page has none. pd:
-// programData() (program-data.js), for the score rule and Part 2; places: buildPlaces() (places.js), for the
-// browse list and the hero's suggestions. figures: { part1, part2, part3 } markup the generator built
-// (program-figures.js). Each figure is left out without its data.
+// estimate, range } for Part 1 and the sandbox (hospital: medianHospital(model)). pd: programData() (program-data.js),
+// for the score rule and the parts; places: buildPlaces() (places.js) and shapes: stateShapes(topology), for the map,
+// the browse list and the hero's suggestions (tryPlaces); exploreUrl: the explore asset the page's scripts read. Each
+// part is left out without its data. Figures and Part 1's steps are numbered in page order.
 export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, pd = null, exploreUrl = null, tryPlaces = null, places = null, shapes = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const heading = fill('programTitle', { fy: fyText });
   const what = whatif && sandbox(whatif, { fy, boundaryText, source });
+  // The page's figures and Part 1's steps, numbered in page order.
+  const figureNo = counter();
+  const stepNo = counter();
+  const line = sourceText({ fy, source });
+  const parts = pd && whatif ? { one: part1({ pd, model: whatif.model, periods, median: whatif.hospital, source: line, figure: figureNo, step: stepNo }), two: part2({ pd, model: whatif.model, source: line, figure: figureNo }) } : null;
+  const map = pd && places && shapes ? mapFigure({ pd, places, shapes, n: figureNo(), source: line }) : '';
+  const sandboxNo = what ? stepNo() : null;
+  const partNo = counter();
 
   const body = html`<article class="wrap page page--prog prog"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
 ${programTop({ title, subtitle, fy, counts, boundaryText, periods, source, searchUrl, tryPlaces })}
 ${pd && ruleFigure(pd, { searchUrl })}
 <section class="part" id="how" aria-labelledby="how-h">
-${partHead({ n: 1, id: 'how', heading: t('part1Heading'), intro: fill('part1Intro', { fy: fyText }) })}
-${pd && whatif ? part1({ pd, model: whatif.model, periods, median: whatif.hospital, source: sourceText({ fy, source }) }) : ''}
-${what && html`<p class="step__n step__n--sandbox" id="step-6" aria-hidden="true">${String(PART1_FIGURES + 1)}</p>
+${partHead({ n: partNo(), id: 'how', heading: t('part1Heading'), intro: fill('part1Intro', { fy: fyText }) })}
+${parts?.one ?? ''}
+${what && html`<p class="step__n step__n--sandbox" id="step-${sandboxNo}" aria-hidden="true">${String(sandboxNo)}</p>
 ${what}`}
 </section>
 <section class="part" id="fy" aria-labelledby="fy-h">
-${partHead({ n: 2, id: 'fy', heading: fill('part2Heading', { fy: fyText }), intro: t('part2Intro') })}
-${pd && whatif ? part2({ pd, model: whatif.model, source: sourceText({ fy, source }), n0: PART1_FIGURES + 1 }) : ''}
+${partHead({ n: partNo(), id: 'fy', heading: fill('part2Heading', { fy: fyText }), intro: t('part2Intro') })}
+${parts?.two ?? ''}
 </section>
 <section class="part" id="map" aria-labelledby="map-h">
-${partHead({ n: 3, id: 'map', heading: t('part3Heading'), intro: t('part3Intro') })}
-${pd && places && shapes ? mapFigure({ pd, places, shapes, n: PART1_FIGURES + PART2_FIGURES + 1, source: sourceText({ fy, source }) }) : ''}
+${partHead({ n: partNo(), id: 'map', heading: t('part3Heading'), intro: t('part3Intro') })}
+${map}
 <div class="prog__browse">
 ${hospitalTable({ fy, searchUrl, source })}
 ${places ? browseList(places) : ''}

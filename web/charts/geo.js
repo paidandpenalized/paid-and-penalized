@@ -181,7 +181,7 @@ function usPaths(shapes, width) {
   // A state the thinning would leave with no ring (DC, on the phone variant) keeps its full outline.
   const full = geoPath(projection).digits(DIGITS);
   const paths = new Map(US_MAP_CODES.map((code) => [code, shapes.has(code) ? path(shapes.get(code)) || full(shapes.get(code)) : null]));
-  const entry = { shapes, height, paths };
+  const entry = { shapes, height, paths, projection };
   US.set(key, entry);
   return entry;
 }
@@ -235,6 +235,20 @@ const AREA_PAD = 22;
 const BOUNDS = new WeakMap();
 const boundsOf = (f) => { if (!BOUNDS.has(f)) BOUNDS.set(f, geoBounds(f)); return BOUNDS.get(f); };
 const AREA_ASPECT = 0.8;
+// Whether a feature's bounds meet a projected frame (with a degree of slack): the frame's corners and edge midpoints
+// taken back to longitude and latitude. A feature that crosses the antimeridian (its west bound east of its east
+// bound: Alaska) always counts, as does a frame a point of which has no place in the projection. Shapes the frame
+// misses are never projected, which is most of the country on a state's or a metro's map.
+function framed(projection, width, height) {
+  const at = [[0, 0], [width / 2, 0], [width, 0], [0, height / 2], [width, height / 2], [0, height], [width / 2, height], [width, height]].map((c) => projection.invert(c));
+  if (at.some((c) => !c || !c.every(Number.isFinite))) return () => true;
+  const [w, e] = [Math.min(...at.map((c) => c[0])) - 1, Math.max(...at.map((c) => c[0])) + 1];
+  const [s, n] = [Math.min(...at.map((c) => c[1])) - 1, Math.max(...at.map((c) => c[1])) + 1];
+  return (f) => {
+    const [[fw, fs], [fe, fn]] = boundsOf(f);
+    return fw > fe || (fe >= w && fw <= e && fn >= s && fs <= n);
+  };
+}
 // The Earth's mean radius in statute miles (IUGG), and the great-circle distance in miles between two [lon, lat] points.
 export const EARTH_MILES = 3958.8;
 export const miles = (a, b) => geoDistance(a, b) * EARTH_MILES;
@@ -255,13 +269,7 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
   // Clipped to the frame, and no adaptive resampling: at a few hundred miles across, straight segments are exact enough.
   projection.clipExtent([[0, 0], [width, height]]).precision(0);
   // Only the shapes whose bounds meet the frame's (a degree of slack) are drawn.
-  const corners = [[0, 0], [width, 0], [0, height], [width, height]].map((c) => projection.invert(c));
-  const [w, e] = [Math.min(...corners.map((c) => c[0])) - 1, Math.max(...corners.map((c) => c[0])) + 1];
-  const [s, n] = [Math.min(...corners.map((c) => c[1])) - 1, Math.max(...corners.map((c) => c[1])) + 1];
-  const meets = (f) => {
-    const [[fw, fs], [fe, fn]] = boundsOf(f);
-    return fe >= w && fw <= e && fn >= s && fs <= n;
-  };
+  const meets = framed(projection, width, height);
   const path = outlinePath(projection);
   const land = [...shapes.values()].filter(meets).map((f) => path(f)).filter(Boolean);
   const inner = counties.filter(meets).map((f) => path(f)).filter(Boolean);
@@ -297,9 +305,7 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
 // overlay for usMap. points [{ point, cls }]; sizes { [cls]: diameter }. A point the projection has no place for is
 // left out.
 export function usPoints({ shapes, points, sizes, width }) {
-  const { height } = usPaths(shapes, width);
-  const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
-  const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
+  const { projection } = usPaths(shapes, width);
   const byCls = new Map(Object.keys(sizes).map((cls) => [cls, []]));
   for (const p of points) {
     const at = Array.isArray(p.point) ? projection(p.point) : null;
@@ -313,9 +319,10 @@ export function usPoints({ shapes, points, sizes, width }) {
 // opens its page). fit: 'states' (codes: the place's states; Alaska and Hawaii inset by Albers USA when the place
 // holds more than one state) or 'points' (a metro). points [{ point, cls, tip, href }]; label: the image's name.
 // dense: { [cls]: diameter } to draw the dots as one path per class instead (a region's thousand hospitals), with no
-// tooltips. ownCounties: county ids (FIPS) shaded as the place's own (a metro's).
+// tooltips. ownCounties: county ids (FIPS) shaded as the place's own (a metro's). variant: 'narrow' or 'wide' when a
+// figure carries both drawings (charts.css shows one).
 const PLACE_PAD = 14;
-export function placeMap({ shapes, counties = [], codes, fit = 'states', points, label, width, aspect = 0.68, dense = null, ownCounties = null }) {
+export function placeMap({ shapes, counties = [], codes, fit = 'states', points, label, width, aspect = 0.68, dense = null, ownCounties = null, variant = null }) {
   if (typeof label !== 'string' || !label) throw new TypeError('placeMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
   const placed = points.filter((p) => ok(p.point));
@@ -344,17 +351,15 @@ export function placeMap({ shapes, counties = [], codes, fit = 'states', points,
   if (fit !== 'states' || mine.length === 1) projection.clipExtent([[0, 0], [width, height]]).precision(0);
   const path = outlinePath(projection);
   const inPlace = new Set(codes);
-  const others = fit === 'points' || mine.length === 1
-    ? [...shapes].filter(([code]) => !inPlace.has(code) && LOCATOR_CODES.has(code)).map(([, f]) => path(f)).filter(Boolean)
+  const clipped = fit === 'points' || mine.length === 1;
+  const meets = clipped ? framed(projection, width, height) : null;
+  const others = clipped
+    ? [...shapes].filter(([code, f]) => !inPlace.has(code) && LOCATOR_CODES.has(code) && meets(f)).map(([, f]) => path(f)).filter(Boolean)
     : [];
   const inside = mine.map((f) => path(f)).filter(Boolean);
   // Counties only for a single state or a metro (a region's would be thousands of hairlines).
-  const countyLines = fit === 'points' || mine.length === 1
-    ? counties.filter((f) => {
-      const [[fw, fs], [fe, fn]] = boundsOf(f);
-      const [a, b] = [projection([fw, fn]), projection([fe, fs])];
-      return a && b && b[0] >= 0 && a[0] <= width && b[1] >= 0 && a[1] <= height;
-    }).map((f) => ({ d: path(f), own: Boolean(ownCounties?.has(String(f.id))) })).filter((c) => c.d)
+  const countyLines = clipped
+    ? counties.filter(meets).map((f) => ({ d: path(f), own: Boolean(ownCounties?.has(String(f.id))) })).filter((c) => c.d)
     : [];
   const dots = dense ? Object.entries(dense).map(([cls, d]) => dotsPath(placed.filter((p) => p.cls === cls).map((p) => projection(p.point)).filter(Boolean), cls, d).text).join('') : placed.map((p) => {
     const at = projection(p.point);
@@ -362,7 +367,7 @@ export function placeMap({ shapes, counties = [], codes, fit = 'states', points,
     const [x, y] = at.map(r2);
     return mark({ tip: p.tip, value: null, data: p.href ? { href: p.href } : {}, hit: null, body: html`<circle class="chart-place__dot ${p.cls}" cx="${x}" cy="${y}" r="${p.r ?? 4}"/>` }).text;
   }).join('');
-  return new Safe(html`<svg class="chart chart--place-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
+  return new Safe(html`<svg class="chart chart--place-map"${variant ? html` data-fit="${variant}"` : ''} viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
     + `<rect class="chart-sea" width="${width}" height="${height}"/>`
     + others.map((d) => `<path class="chart-geo-land chart-geo-near" d="${d}"/>`).join('')
     + inside.map((d) => `<path class="chart-geo-land chart-geo-mine" d="${d}"/>`).join('')

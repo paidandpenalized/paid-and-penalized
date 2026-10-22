@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
-import { COL, STATUS_BITS, TYPE_KINDS, exploreAsset, inGroup, measureSummary, patternKey, programData, spearman } from '../web/program-data.js';
+import { COL, STATUS_BITS, TYPE_KINDS, exploreAsset, inGroup, measureSummary, patternKey, programData } from '../web/program-data.js';
+import { spearman } from '../../../engine/js/stats.js';
 import { CASES, MODEL, master } from './fixtures.js';
 import { DATA, PD } from './pinned.js';
 
@@ -226,7 +227,6 @@ test('exploreAsset: one row per scored hospital, its columns where COL says', ()
   const cols = Object.values(COL).sort((a, b) => a - b);
   assert.deepEqual(cols, cols.map((_, i) => i));
   const width = cols.length;
-  const escapes = new Map(PD.escapes.map((e) => [e.ccn, e.after]));
   asset.rows.forEach((row, i) => {
     const r = PD.rows[i];
     assert.equal(row.length, width, `${r.ccn}: ${width} columns`);
@@ -234,18 +234,10 @@ test('exploreAsset: one row per scored hospital, its columns where COL says', ()
     assert.equal(row[COL.total], r.total);
     assert.equal(row[COL.yes], r.yes === null ? null : r.yes ? 1 : 0);
     assert.deepEqual(row[COL.values], r.values);
-    assert.deepEqual(row[COL.z], r.z);
     assert.equal(row[COL.values].length, MEASURE_IDS.length);
-    assert.equal(row[COL.state], r.master.state ?? null);
     assert.equal(row[COL.region], r.master.region ?? null);
-    assert.equal(row[COL.cbsa], r.master.cbsa ?? null);
     assert.equal(row[COL.own], r.master.own ?? null);
     assert.equal(row[COL.teach], r.master.teach ?? null);
-    const bits = MEASURE_IDS.reduce((b, id, k) => b | (r.assigned.includes(id) ? 1 << k : 0), 0);
-    assert.equal(row[COL.assigned], bits, `${r.ccn}: assigned bits`);
-    // Only a cut hospital with a lever has a score-after.
-    assert.equal(row[COL.after], escapes.get(r.ccn) ?? null);
-    if (r.yes !== true) assert.equal(row[COL.after], null);
   });
   // Special statuses are bits SCH 1, MDH 2, RRC 4.
   assert.deepEqual(STATUS_BITS, { SCH: 1, MDH: 2, RRC: 4 });

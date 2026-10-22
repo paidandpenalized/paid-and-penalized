@@ -69,3 +69,39 @@ export function linearFit(xs, ys) {
   const slope = sxy / sxx;
   return { slope, intercept: my - slope * mx };
 }
+
+// Spearman's rank correlation of two equal-length lists, ties given their average rank.
+export function spearman(a, b) {
+  if (a.length !== b.length || a.length < 3) throw new RangeError('spearman: two lists of the same length, at least 3');
+  const ranks = (xs) => {
+    const order = xs.map((v, i) => [v, i]).sort((p, q) => p[0] - q[0]);
+    const r = new Array(xs.length);
+    for (let i = 0; i < order.length;) {
+      let j = i;
+      while (j + 1 < order.length && order[j + 1][0] === order[i][0]) j++;
+      const avg = (i + j) / 2;
+      for (let k = i; k <= j; k++) r[order[k][1]] = avg;
+      i = j + 1;
+    }
+    return r;
+  };
+  const ra = ranks(a);
+  const rb = ranks(b);
+  const [ma, mb] = [mean(ra), mean(rb)];
+  let num = 0;
+  let da = 0;
+  let db = 0;
+  for (let i = 0; i < ra.length; i++) {
+    num += (ra[i] - ma) * (rb[i] - mb);
+    da += (ra[i] - ma) ** 2;
+    db += (rb[i] - mb) ** 2;
+  }
+  // A list with every value the same has no ranks to compare: no correlation (null), never NaN.
+  return da === 0 || db === 0 ? null : num / Math.sqrt(da * db);
+}
+
+// The population standard deviation (divided by n, not n − 1): how spread a whole set is.
+export function populationSd(xs) {
+  const m = mean(xs);
+  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length);
+}

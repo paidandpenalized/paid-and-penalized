@@ -5,7 +5,7 @@
 import { count } from '../../../web/render/format.js';
 import { buildIndex } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
-import { fill } from '../web/copy.js';
+import { fill } from '../web/search/copy.js';
 import { hospitalHref } from '../web/hospital-table.js';
 import { hospitalLoader } from './hospitals.js';
 

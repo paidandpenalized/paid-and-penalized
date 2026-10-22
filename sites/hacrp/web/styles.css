@@ -201,7 +201,6 @@
 /* Sized to its column (container units), so the name keeps to two lines at any width. */
 .prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; }
 .prog__title-pen { display: block; color: var(--pen); }
-.prog__dek { font-size: clamp(1.125rem, 2.2vw, 1.375rem); line-height: 1.45; max-width: 34ch; }
 .prog__card { display: grid; gap: 16px; align-content: start; }
 /* The summary's fields wrap as the record card's do (each row filled), the title across the top. */
 .prog__summary { display: flex; flex-wrap: wrap; }
@@ -216,31 +215,6 @@
 .est summary::-webkit-details-marker { display: none; }
 .est[open] summary { color: var(--ink); }
 .est__body { margin-top: 4px; }
-
-/* The measures and periods: short names in mono in a left column, the words beside them. The rows share the columns
-   (subgrid); a long run of short names wraps in its column. */
-.measure-list { display: grid; grid-template-columns: minmax(7ch, max-content) minmax(0, 1fr); gap: 8px 16px; margin: 0; }
-.measure-list > div { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
-.measure-list dt { max-width: 16ch; font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
-.measure-list dd { margin: 0; }
-/* The narrowest phones: a narrower name column, so a whole date ("December 31, 2024") fits beside it. */
-@media (max-width: 360px) { .measure-list dt { max-width: 12ch; } }
-
-/* The formula stepper: numbered steps, each with its compact table (four numbers to a row, so it fits a phone). */
-.steps { display: grid; gap: 20px; margin: 0; padding-left: 1.5em; }
-.steps > li { min-width: 0; max-width: none; padding-left: 4px; }
-.steps > li > * + * { margin-top: 10px; }
-.steps > li::marker { font: 700 var(--fs-base)/1 var(--font-type); }
-.gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 6px; }
-.gb--steps tbody th { white-space: nowrap; }
-.steps .printout { max-width: var(--table-min); }
-/* A phone: a tighter indent, cells and caps, so five columns fit 375px with no scroll inside the table. */
-@media (max-width: 480px) {
-  .steps { padding-left: 1.2em; }
-  .gb--steps { font-size: var(--fs-xs); }
-  .gb--steps td, .gb--steps tbody th, .gb--steps thead th { padding-inline: 4px; }
-  .gb--steps thead th { letter-spacing: 0.02em; }
-}
 
 /* The hospital table: its controls in one row above it, wrapping on a phone. */
 .ht { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -318,15 +292,7 @@
 /* The score rule: the silhouette over a 5px ink bar; its captions in small caps; a pointer finds the hospital. */
 .rulefig { display: grid; gap: 6px; margin: 4px 0 0; }
 .rulefig .chart { max-width: none; }
-.chart--score-rule { cursor: crosshair; }
-.chart-rule__ink { fill: var(--ink-3); }
-.chart-rule__pen { fill: var(--pen); }
-.chart-rule__bar { fill: var(--ink); }
-.chart-rule__line { stroke: var(--ink); stroke-width: 1.5px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
-.chart-rule__hl { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-rule__hl--pen { stroke: var(--pen-ink); }
 .rulefig:has(.chart-rule__hl) :is(.chart-rule__ink, .chart-rule__pen) { fill-opacity: 0.45; }
-.chart-rule__cursor { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .rulefig__cap { max-width: 80ch; color: var(--ink-2); font: 400 var(--fs-xs)/1.45 var(--font-type); }
 
 /* Parts: the tag in a red box, the heading in the display face, a line under it; a heavy double rule above. */
@@ -380,38 +346,10 @@
 .mpanel__take { font: 400 var(--fs-sm)/1.5 var(--font-type); }
 
 /* The punch card: card stock in the panel tone with an ink edge; holes punched through in ink; the counts over it. */
-.chart-punch__card { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
-.chart-punch__hole { fill: var(--ink); }
-.chart-punch__digit { fill: var(--ink-3); font: 400 9px var(--font-type); }
-.chart-punch__row { fill: var(--ink); font: 700 11px var(--font-type); }
-.chart-punch__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
-.chart-punch__bar { fill: var(--ink-3); }
-.chart-punch__yes { fill: var(--pen); }
-.chart-punch__n { font-size: 10px; text-anchor: middle; }
 
 /* Dots drawn as one path each (web/charts/dots.js): round caps make each zero-length segment a dot. */
-.chart-dots { fill: none; stroke-linecap: round; }
-.chart-dots--ink { stroke: var(--ink-2); }
-.chart-dots--faint { stroke: var(--ink-3); stroke-opacity: 0.35; }
-.chart-dots--pen { stroke: var(--pen); }
-.chart-dots--hl { stroke: var(--ink); }
-.chart-ref { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
-.chart-same { fill: var(--hatch); fill-opacity: 0.35; }
-.chart-pull__line { fill: none; stroke: var(--ink-3); stroke-opacity: 0.55; stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
 
 /* The slide rule: boxwood stock, the cursor a glass window with a red hairline, its readings in mono. */
-.chart-slide__stock { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-slide__mid { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-slide__tick { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-slide__num { fill: var(--ink); font: 400 10px var(--font-type); text-anchor: middle; }
-.chart-slide__num--zero { font-weight: 700; }
-.chart-slide__mean { stroke: var(--ink); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
-.chart-slide__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
-.chart-slide__glass { fill: var(--paper); fill-opacity: 0.12; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-slide__hair { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-slide__read { fill: var(--pen-ink); font: 700 12px var(--font-type); }
-.chart-slide__cursor { cursor: ew-resize; touch-action: none; }
-.chart--slide:focus-visible { outline: 2px solid var(--focus); }
 .ws--prog { border-color: var(--ink); }
 .ws__head { margin-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
 
@@ -419,14 +357,10 @@
 .halve__row { margin: 0; }
 .halve__btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .halve__same { font: 600 var(--fs-sm)/1.5 var(--font-type); }
-.chart-punch__share { fill: var(--ink-2); font: 400 10px var(--font-type); }
-.chart-punch__share--hot { fill: var(--pen-ink); font-weight: 700; }
 
 /* The sandbox closes Part 1 as a sixth step: the what-if at the page's width, its measures in the hospital page's
    compact rows beside the sticky result. */
 .prog .whatif { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); }
-.chart-sil { fill: var(--ink-3); fill-opacity: 0.45; }
-.chart-sil--ink { fill: var(--ink-2); fill-opacity: 0.85; }
 [data-shift] { transform-box: view-box; transition: transform 0.9s cubic-bezier(0.45, 0, 0.25, 1); }
 [data-shift].is-halved { transform: scale(0.5, 2); }
 @media (prefers-reduced-motion: reduce) { [data-shift] { transition: none; } }
@@ -464,42 +398,15 @@
 .swarm__readout { min-height: 1.5em; font: 600 var(--fs-sm)/1.5 var(--font-type); }
 .swarm__art { position: relative; }
 .swarm__art .chart { max-width: none; }
-.chart--swarm { cursor: crosshair; }
-.chart-dots--pen-faint { stroke: var(--pen); stroke-opacity: 0.22; }
-.chart-loupe__glass { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-loupe__beam { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
-.chart-loupe__gap { stroke: var(--pen); stroke-width: 3px; vector-effect: non-scaling-stroke; }
-.chart-swarm__ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 
 /* The share dots: a track, a stem from the nation's share, a dot sized by the group. */
-.chart-share__track { stroke: var(--line); stroke-opacity: 0.45; stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-share__stem { stroke: var(--ink-2); stroke-width: 3px; vector-effect: non-scaling-stroke; }
-.chart-share__stem--pen { stroke: var(--pen); }
-.chart-share__dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
-.chart-share__dot--pen { fill: var(--pen); stroke: var(--pen); }
-
-/* The sina columns' whiskers. */
-.chart-sina__whisker { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 
 /* The agreement grid and its scatter, side by side from 640px. */
 .agree { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 640px) { .agree { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); } }
 .agree .chart { max-width: none; }
-.chart-agree__cell { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-agree__cell.is-picked { stroke: var(--ink); stroke-width: 2.5px; }
-.chart--agree .chart-mark { cursor: pointer; }
-.chart-agree__sq { fill: var(--ink-3); fill-opacity: 0.55; }
-.chart-agree__v { fill: var(--ink); font: 700 10px var(--font-type); }
-.chart-scatter__bg { fill: var(--paper-2); }
-.chart-dots--scatter { stroke: var(--ink-2); stroke-opacity: 0.45; }
-
 
 /* The cards of hospitals scored without data. */
-.chart-card { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-card--pen { stroke: var(--pen); stroke-width: 2px; }
-.chart-card__m { fill: var(--ink-2); }
-.chart-card__a { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-card__none { fill: none; stroke: var(--line); stroke-width: 1px; stroke-dasharray: 1 1.5; vector-effect: non-scaling-stroke; }
 
 /* Part 3: the map at the page's width, two ways. In the dots mode (wide screens) the states turn plain and every
    hospital's dot shows over them; the key names the dots. */
@@ -511,7 +418,6 @@
 .usmap[data-mode="dots"] .usmap__key { display: flex; }
 .usmap[data-mode="dots"] .chart--us-map .chart-tile, .usmap[data-mode="dots"] .chart--us-map .chart-tile-na { fill: var(--paper-2); }
 .usmap[data-mode="dots"] .chart--us-map .chart-legend, .usmap[data-mode="dots"] .chart--us-map .chart-geo-few { display: none; }
-.chart-dots--ring { stroke: var(--ink); stroke-opacity: 0.55; }
 .usmap__key { flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--ink-2); }
 .page--place .usmap__key { display: flex; }
 .usmap__key li { display: inline-flex; align-items: center; gap: 6px; }
@@ -561,17 +467,6 @@
 .kids__pct { font: 400 var(--fs-sm)/1.2 var(--font-type); }
 .page--place .hospitals { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
 /* A place's map: the place's land in the panel tone, its neighbors fainter, its hospitals as dots. */
-.chart--place-map { max-width: none; border: var(--rule) solid var(--ink); }
-.chart-geo-near { fill: var(--paper); stroke: var(--line); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
-.chart-geo-mine { fill: var(--paper-2); }
-.chart--place-map .chart-geo-state { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.chart-place__dot { stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-place__dot--pen { fill: var(--pen); stroke: var(--paper); }
-.chart-place__dot--ring { fill: var(--paper); stroke: var(--ink); }
-.chart-place__dot--faint { fill: var(--ink-3); stroke: var(--paper); opacity: 0.6; }
-.chart--place-map .chart-mark[data-href] { cursor: pointer; }
-.chart--place-map .chart-mark.is-active .chart-place__dot { stroke-width: 3px; }
-.chart-outline { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 /* The program page's stamp: one line, sized to its column. */
 .page--prog .prog__card .stamp { white-space: nowrap; font-size: clamp(1.05rem, 2.2vw, 1.55rem); }
 /* The sandbox is step 6: its numeral on the step's red hairline, the what-if's own heading under it. */
@@ -581,16 +476,5 @@
 .usmap__key--rings .usmap__sw--ring { background: var(--paper); border: 1.5px solid var(--ink); opacity: 1; }
 .usmap__key--rings .usmap__sw--faint { background: var(--ink-3); opacity: 0.6; }
 
-/* Forced colors (Windows contrast themes) for the program and place pages' marks: the cut in CanvasText, everything
-   else in GrayText, frames and rules in CanvasText, panels on Canvas (charts.css sets the kit's own). */
-@media (forced-colors: active) {
-  .chart-dots--pen, .chart-dots--hl, .chart-dots--ink, .chart-rule__hl, .chart-rule__hl--pen, .chart-slide__hair, .chart-loupe__gap, .chart-share__stem--pen { stroke: CanvasText; }
-  .chart-dots--faint, .chart-dots--pen-faint, .chart-dots--ring, .chart-dots--scatter, .chart-pull__line, .chart-share__stem, .chart-share__track, .chart-loupe__beam, .chart-ref { stroke: GrayText; }
-  .chart-punch__hole, .chart-punch__yes, .chart-rule__pen, .chart-rule__bar, .chart-share__dot--pen, .chart-card__m, .chart-agree__sq, .chart-place__dot--pen { fill: CanvasText; }
-  .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
-  .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
-  .chart-card__a { stroke: CanvasText; }
-  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
-  .chart-agree__cell.is-picked { stroke: Highlight; }
-  .chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
-}
+/* Forced colors: the swarm's check boxes keep their frames. */
+@media (forced-colors: active) { .chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; } }

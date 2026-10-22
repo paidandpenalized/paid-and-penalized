@@ -2,7 +2,7 @@
 // emits the program page, one page per hospital, and the dataset CSV with its data dictionary through the build
 // context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
-import { decidedHospitals, scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
@@ -20,7 +20,7 @@ import { hospitalPage } from './pages/hospital.js';
 import { nationalContext } from './compare.js';
 import { exploreAsset, programData } from './program-data.js';
 import { KINDS, buildPlaces } from './places.js';
-import { HOSPITALS_PATH, hospitalView, stateCounts } from './view.js';
+import { HOSPITALS_PATH, hospitalView } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
 

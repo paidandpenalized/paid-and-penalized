@@ -3,13 +3,28 @@
 // diameter (the caller sets it on the path). Shared by the build and the browser (a page script redraws a set).
 import { html } from '../render/html.js';
 
-const r1 = (x) => Math.round(x * 10) / 10;
-
-// [[x, y], ...] -> the path's d.
-export const dotsD = (points) => points.map(([x, y]) => `M${r1(x)} ${r1(y)}h0`).join('');
+// [[x, y], ...] -> the path's d: the dots in x then y order, the first placed absolutely and each next one by a
+// relative move from the last (a dot's h0 ends where it starts), so a path of thousands stays short. Coordinates are
+// rounded to a tenth before the differences are taken, so the moves add up exactly.
+const tenth = (v) => Math.round(v * 10);
+const step = (d) => (d / 10).toString();
+export function dotsD(points) {
+  const pts = points.map(([x, y]) => [tenth(x), tenth(y)]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let out = '';
+  let last = null;
+  for (const [x, y] of pts) {
+    if (!last) out += `M${step(x)} ${step(y)}h0`;
+    else {
+      const dy = step(y - last[1]);
+      out += `m${step(x - last[0])}${dy.startsWith('-') ? '' : ' '}${dy}h0`;
+    }
+    last = [x, y];
+  }
+  return out;
+}
 
 // One path of dots in a class, diameter d (viewBox units); '' when there are none.
-export const dotsPath = (points, cls, d) => (points.length ? html`<path class="chart-dots ${cls}" stroke-width="${r1(d)}" d="${dotsD(points)}"/>` : '');
+export const dotsPath = (points, cls, d) => (points.length ? html`<path class="chart-dots ${cls}" stroke-width="${step(tenth(d))}" d="${dotsD(points)}"/>` : '');
 
 // A stable spread in [0, 1) for item i (a golden-ratio sequence), for jitter that is the same on every build.
 export const spread = (i) => ((i * 0.6180339887498949) % 1 + 1) % 1;

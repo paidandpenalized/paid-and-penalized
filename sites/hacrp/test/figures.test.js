@@ -14,19 +14,20 @@ import { US_MAP_CODES } from '../../../web/charts/geo.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, WINSOR_HIGH, WINSOR_LOW } from '../web/constants.js';
 import { biggestLever } from '../web/compare.js';
 import { csvPath } from '../web/links.js';
-import { partsFigure, statesFigure } from '../web/figures.js';
+import { partsFigure } from '../web/figures.js';
+import { counter } from '../../../web/charts/figure.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { buildPlaces } from '../web/places.js';
-import { TYPE_KINDS, programData, spearman } from '../web/program-data.js';
+import { TYPE_KINDS, programData } from '../web/program-data.js';
+import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
-import { hospitalView, stateCounts } from '../web/view.js';
+import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
 import { DATA, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
 
 const { model, estimate } = DATA;
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
 const COUNTS = { decided: PD.counts.decided, yes: PD.counts.yes, scored: PD.counts.scored };
-const STATES = stateCounts(VIEWS);
 
 // A hospital page with its what-if (scored hospitals), whose bars are the page's last figure.
 const render = (h) => hospitalPage({
@@ -340,7 +341,8 @@ function expectedPanels(hospitals) {
 function drawFrom(hospitals) {
   const pd = programData({ hospitals, master: DATA.master, model });
   const places = buildPlaces({ hospitals, master: DATA.master, rows: pd.rows });
-  return String(part1({ pd, model, periods: DATA.periods, median: MEDIAN, source: 's' })) + String(part2({ pd, model, source: 's', n0: 6 })) + String(mapFigure({ pd, places, shapes: DATA.shapes, n: 13, source: 's' }));
+  const figure = counter();
+  return String(part1({ pd, model, periods: DATA.periods, median: MEDIAN, source: 's', figure, step: counter() })) + String(part2({ pd, model, source: 's', figure })) + String(mapFigure({ pd, places, shapes: DATA.shapes, n: figure(), source: 's' }));
 }
 
 test('no figure takeaway holds a hand-typed number: every number in it comes from the data it was built from', () => {
@@ -389,46 +391,3 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
   }
 });
 
-// ---------- figures.js statesFigure and view.js stateCounts: no page draws them now (the program page's map is program-figures.js mapFigure) ----------
-
-test('stateCounts counts by the master\'s state', () => {
-  const total = Object.values(STATES).reduce((t, s) => t + s.hospitals, 0);
-  assert.equal(total, DATA.hospitals.length);
-  assert.equal(Object.values(STATES).reduce((t, s) => t + s.decided, 0), COUNTS.decided);
-  assert.equal(Object.values(STATES).reduce((t, s) => t + s.yes, 0), COUNTS.yes);
-  assert.equal(STATES.MD.decided, 0);
-  assert.ok(STATES.MD.na > 0);
-  // Only a scored "N/A" counts as not subject to the reduction.
-  const unscoredNa = stateCounts([{ state: 'ZZ', scored: false, decided: false, decision: { text: 'N/A' } }]);
-  assert.deepEqual(unscoredNa.ZZ, { hospitals: 1, decided: 0, yes: 0, na: 0 });
-  // The places' state counts are the same numbers, state by state.
-  for (const p of PLACES.list.filter((x) => x.kind === 'state')) {
-    const s = STATES[p.key.toUpperCase()];
-    assert.deepEqual([p.counts.file, p.counts.decided, p.counts.yes], [s.hospitals, s.decided, s.yes], p.id);
-  }
-});
-
-test('a state code with no place on the map (a territory) is not drawn: its row is in the table and a note names it', () => {
-  // Synthetic hospitals the master places in GU and VI, codes the grid has no tile for.
-  const gu = hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { state: 'GU' }) }));
-  const vi = hospitalView(inputs(CASES.noScore, { master: master(CASES.noScore.ccn, { state: 'VI' }) }));
-  const extra = stateCounts([gu, vi]);
-  assert.deepEqual(extra.GU, { hospitals: 1, decided: 1, yes: 1, na: 0 });
-  const states = { ...STATES, ...extra };
-  const body = String(statesFigure({ states, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy }));
-  const svg = body.slice(body.indexOf('<svg'), body.indexOf('</svg>'));
-  assert.doesNotMatch(svg, /data-state="(GU|VI)"/);
-  assert.equal(svg.match(/data-state="/g).length, US_MAP_CODES.length);
-  assert.ok(body.includes('<p class="small muted fig__note">Not on the map: GU, VI.</p>'));
-  const row = (code) => new RegExp(`<tr><th scope="row">${code}</th>([\\s\\S]*?)</tr>`).exec(body)?.[1];
-  assert.equal(row('GU'), '<td class="num" data-value="1">1</td><td class="num" data-value="1">1</td><td class="num" data-value="100">100.0%</td>');
-  assert.match(row('VI'), /no hospitals with a payment decision/);
-  // The off-map rows follow the drawn states', and every drawn state keeps its row.
-  assert.equal(body.match(/<th scope="row">[A-Z]{2}<\/th>/g).length, US_MAP_CODES.length + 2);
-  // The national share counts every state; the range spans every row with a share.
-  const [, takeaway] = /<span class="fig__n">Figure 2\.<\/span> ([^<]*)</.exec(body);
-  assert.ok(takeaway.includes(pct((COUNTS.yes + 1) / (COUNTS.decided + 1), 1)), takeaway);
-  assert.ok(takeaway.endsWith('to 100.0%.'), takeaway);
-  // Without an off-grid code there is no note.
-  assert.doesNotMatch(String(statesFigure({ states: STATES, shapes: DATA.shapes, n: 2, source: 's', fy: DATA.fy })), /fig__note/);
-});

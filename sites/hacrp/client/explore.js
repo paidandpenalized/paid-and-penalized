@@ -3,15 +3,14 @@
 // the halving button (the strip's dots move between their two places), and the score rule (the hospital under the
 // pointer, named in a tooltip; a click opens its page). Without JavaScript each figure shows its first measure, its
 // starting state and its table. Motion follows the reader's reduced-motion setting.
-import { cmsText } from '../../../web/render/format.js';
-import { decimal } from '../../../web/render/format.js';
+import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { ruleRank } from '../../../web/charts/scoreRule.js';
+import { SLIDE_PAD } from '../../../web/charts/slideRule.js';
+import { zFromValue } from '../../../engine/js/hacrp/params.js';
 import { hospitalHref } from '../web/hospital-table.js';
-import { imageOf } from '../../../web/charts/figure.js';
+import { imageOf, imagePair } from '../../../web/charts/figure.js';
 import { COL, inGroup, measureSummary } from '../web/program-data.js';
 import { SCATTER_W, agreeScatterOf, pairPoints, pullPanel, slidePanel, stackPanel, swarmChart, swarmPositions } from '../web/explore-figures.js';
-import { WIDTH } from '../../../web/charts/svg.js';
-import { count, pct } from '../../../web/render/format.js';
 import { fill } from '../web/explore/copy.js';
 
 // ---------- the explore asset ----------
@@ -51,7 +50,7 @@ async function drawPanel(panel, load) {
     const data = await load();
     const settings = box.dataset.fig ? JSON.parse(box.dataset.fig) : {};
     const p = build(panel.dataset.measure, summaryOf(data, panel.dataset.measure), settings);
-    panel.insertAdjacentHTML('beforeend', `${imageOf(p.narrow, p.alt, 'narrow')}${imageOf(p.wide, p.alt, 'wide')}`);
+    panel.insertAdjacentHTML('beforeend', imagePair(p, p.alt).text);
     if (p.data) {
       panel.dataset.slide = p.data;
       mountSlideRules(panel.parentElement, panel);
@@ -60,6 +59,32 @@ async function drawPanel(panel, load) {
     panel.setAttribute('data-lazy', '');
     console.error(error);
   }
+}
+
+// A point in an SVG's own units, from a pointer event.
+const svgPoint = (svg, e) => {
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+};
+
+// A tooltip layer over a box (position: relative), shared by a figure's charts.
+function tipLayer(box, cls = '') {
+  const tip = document.createElement('div');
+  tip.className = `fig__tip${cls ? ` ${cls}` : ''}`;
+  tip.hidden = true;
+  box.append(tip);
+  return {
+    show(text, e) {
+      const r = box.getBoundingClientRect();
+      tip.textContent = text;
+      tip.style.left = `${Math.min(Math.max(e.clientX - r.left, 110), r.width - 110)}px`;
+      tip.style.top = `${e.clientY - r.top - 10}px`;
+      tip.hidden = false;
+    },
+    hide() { tip.hidden = true; },
+  };
 }
 
 // ---------- the measure buttons ----------
@@ -88,8 +113,6 @@ export function mountMeasureToggles(root = document, load = null) {
 
 // ---------- the slide rule ----------
 
-// The rule's left and right ends in viewBox units (slideRule draws from 10 to width − 10).
-const SLIDE_PAD = 10;
 
 export function mountSlideRules(root = document, only = null) {
   for (const panel of only ? [only] : root.querySelectorAll('.mpanel[data-slide]')) {
@@ -102,23 +125,17 @@ export function mountSlideRules(root = document, only = null) {
       const readZ = cursor.querySelector('[data-read="z"]');
       const width = svg.viewBox.baseVal.width;
       const toX = (v) => SLIDE_PAD + ((v - s.lo) / (s.hi - s.lo)) * (width - 2 * SLIDE_PAD);
-      let value = s.lo + ((Number(cursor.getAttribute('transform').match(/translate\(([-\d.]+)/)[1]) - SLIDE_PAD) / (width - 2 * SLIDE_PAD)) * (s.hi - s.lo);
+      let value = s.value;
       const set = (v) => {
         value = Math.min(s.hi, Math.max(s.lo, v));
-        const z = (Math.min(s.cap, Math.max(s.floor, value)) - s.mean) / s.sd;
+        const z = zFromValue(value, s);
         cursor.setAttribute('transform', `translate(${toX(value).toFixed(2)} 0)`);
         readValue.textContent = decimal(value, s.dp);
         readZ.textContent = cmsText(decimal(z, 2));
         svg.setAttribute('aria-valuenow', decimal(value, s.dp));
         svg.setAttribute('aria-valuetext', `${decimal(value, s.dp)}: z ${cmsText(decimal(z, 2))}`);
       };
-      const fromEvent = (e) => {
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const local = pt.matrixTransform(svg.getScreenCTM().inverse());
-        set(s.lo + ((local.x - SLIDE_PAD) / (width - 2 * SLIDE_PAD)) * (s.hi - s.lo));
-      };
+      const fromEvent = (e) => set(s.lo + ((svgPoint(svg, e).x - SLIDE_PAD) / (width - 2 * SLIDE_PAD)) * (s.hi - s.lo));
       svg.setAttribute('tabindex', '0');
       svg.setAttribute('role', 'slider');
       svg.setAttribute('aria-valuemin', decimal(s.lo, s.dp));
@@ -173,11 +190,8 @@ export function ruleOrder(rows) {
 
 export function mountRule(fig, load) {
   let order = null;
-  const tip = document.createElement('div');
-  tip.className = 'fig__tip rulefig__tip';
-  tip.hidden = true;
   fig.style.position = 'relative';
-  fig.append(tip);
+  const tip = tipLayer(fig, 'rulefig__tip');
   for (const svg of fig.querySelectorAll('svg.chart--score-rule')) {
     const width = svg.viewBox.baseVal.width;
     const cursor = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -186,57 +200,21 @@ export function mountRule(fig, load) {
     cursor.setAttribute('y2', String(svg.viewBox.baseVal.height));
     cursor.style.display = 'none';
     svg.append(cursor);
-    const at = (e) => {
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
-    };
-    const hide = () => { tip.hidden = true; cursor.style.display = 'none'; };
+    const hide = () => { tip.hide(); cursor.style.display = 'none'; };
     svg.addEventListener('pointerenter', () => { if (!order) load().then((data) => { order = ruleOrder(data.rows); order.path = data.hospitalPath; }, () => {}); });
     svg.addEventListener('pointermove', (e) => {
       if (!order) return;
-      const x = at(e);
+      const { x } = svgPoint(svg, e);
       const h = order[ruleRank(x, order.length, width)];
       cursor.setAttribute('x1', x.toFixed(1));
       cursor.setAttribute('x2', x.toFixed(1));
       cursor.style.display = '';
-      tip.textContent = `${h.name}, ${h.state}: ${cmsText(h.text)} · ${h.decision === 'Yes' ? fig.dataset.cut : fig.dataset.notCut}`;
-      const box = fig.getBoundingClientRect();
-      tip.style.left = `${Math.min(Math.max(e.clientX - box.left, 120), box.width - 120)}px`;
-      tip.style.top = `${e.clientY - box.top - 8}px`;
-      tip.hidden = false;
+      tip.show(fill('swarmTip', { name: h.name, state: h.state, score: cmsText(h.text), decision: h.decision === 'Yes' ? fig.dataset.cut : fig.dataset.notCut }), e);
       svg.dataset.href = hospitalHref(order.path, h.ccn);
     });
     svg.addEventListener('pointerleave', hide);
     svg.addEventListener('click', () => { if (svg.dataset.href) window.location.assign(svg.dataset.href); });
   }
-}
-
-// A point in an SVG's own units, from a pointer event.
-const svgPoint = (svg, e) => {
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX;
-  pt.y = e.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
-};
-
-// A tooltip layer over a box (position: relative), shared by a figure's charts.
-function tipLayer(box) {
-  const tip = document.createElement('div');
-  tip.className = 'fig__tip';
-  tip.hidden = true;
-  box.append(tip);
-  return {
-    show(text, e) {
-      const r = box.getBoundingClientRect();
-      tip.textContent = text;
-      tip.style.left = `${Math.min(Math.max(e.clientX - r.left, 110), r.width - 110)}px`;
-      tip.style.top = `${e.clientY - r.top - 10}px`;
-      tip.hidden = false;
-    },
-    hide() { tip.hidden = true; },
-  };
 }
 
 // ---------- the swarm ----------

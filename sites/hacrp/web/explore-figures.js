@@ -5,6 +5,7 @@
 // scripts never carry the build's map code.
 import { cmsText, count, decimal } from '../../../web/render/format.js';
 import { WIDTH } from '../../../web/charts/svg.js';
+import { drawn } from '../../../web/charts/figure.js';
 import { pullIn, stackedDots } from '../../../web/charts/measureDots.js';
 import { slideRule } from '../../../web/charts/slideRule.js';
 import { scoreSwarm, swarmLayout } from '../../../web/charts/scoreSwarm.js';
@@ -20,11 +21,11 @@ export const PAGE_WIDE = 1180;
 
 // A step figure's wide drawing, about its column on a wide screen.
 export const STEP_WIDE = 640;
-export const num = (text, value) => ({ text, value });
 const shortsOf = (ids) => ids.map((id) => SHORT_NAMES[id]);
 export const setName = (ids) => shortsOf(ids).reduce((a, b) => fill('setJoin', { a, b }));
 export const fmtOf = (id, model) => (v) => decimal(v, model.params[id].decimals);
-export const both = (draw) => ({ narrow: draw(WIDTH), wide: draw(STEP_WIDE) });
+// A step figure drawn twice, phone-narrow and at the step's width, as figure() takes them.
+export const both = (draw) => drawn(draw, STEP_WIDE);
 
 // Each measure's dot-plot axis: the SIRs from zero, PSI 90 around one; and the bins' width.
 const STACK = { sir: { domain: [0, 3], step: 0.05 }, psi: { domain: [0.4, 2], step: 0.025 } };
@@ -92,7 +93,7 @@ export function slidePanel(id, m) {
   const labels = { value: t('fig4Value'), z: t('fig4Z'), mean: t('fig4Mean') };
   const tickFmt = (v) => decimal(v, sir ? 2 : 1);
   const draw = (width) => slideRule({ p, domain: [lo, hi], value: m.median, labels, format: fmt, tickFormat: tickFmt, zFormat: (z) => cmsText(decimal(z, 2)), zTickFormat: (z) => (z > 0 ? `+${z}` : cmsText(String(z))), width, valueTicks, zTicks });
-  return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig4Alt', { short: SHORT_NAMES[id] }), take: slideTake(id, p), data: JSON.stringify({ floor: p.floor, cap: p.cap, mean: p.mean, sd: p.sd, lo, hi, dp: p.decimals }) };
+  return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig4Alt', { short: SHORT_NAMES[id] }), take: slideTake(id, p), data: JSON.stringify({ floor: p.floor, cap: p.cap, mean: p.mean, sd: p.sd, lo, hi, dp: p.decimals, value: m.median }) };
 }
 export const slideTake = (id, p) => fill('fig4TakeOne', { short: SHORT_NAMES[id], mean: decimal(p.mean, p.decimals), sd: decimal(p.sd, p.decimals) });
 

@@ -257,8 +257,6 @@ export const COPY = {
   stampNA: { text: 'Not subject', claim: 'HACRP-13' },
   stampNoScore: { text: 'No score', claim: null },
   stampCms: { text: '{decision}', claim: null },
-  numLine: { text: 'between {highestNo} and {lowestYes}', claim: null },
-  numLineNote: { text: 'The highest score CMS marked No and the lowest it marked Yes', claim: null },
   // The locator map: its name for screen readers.
   mapLabel: { text: "Map of {state} with this hospital's location marked", claim: null },
 
@@ -280,7 +278,6 @@ export const COPY = {
   pillNA: { text: 'N/A', claim: null },
   // The row CMS marked Yes with no score: CMS's literal value, nothing inferred.
   pillCms: { text: '{decision}', claim: null },
-  measuresHeading: { text: 'The measures', claim: null },
   colMeasure: { text: 'Measure', claim: null },
   colValue: { text: 'CMS value', claim: null },
   colZ: { text: 'Z-score', claim: null },
@@ -343,31 +340,7 @@ export const COPY = {
   summaryPctNote: { text: 'Of each Medicare inpatient payment, for the fiscal year', claim: 'HACRP-01' },
   summaryScored: { text: 'Scored', claim: null },
   summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
-  // The US map's section.
-  mapHeading: { text: 'By state', claim: null },
-  mapIntro: {
-    text: "Each state is shaded by the share of its hospitals with a payment decision that CMS cut. Pick a state on the map to list its hospitals in the table below.",
-    claim: null,
-  },
-  whatHeading: { text: 'What the program is', claim: null },
-  whatScore: {
-    text: 'Each year, CMS scores hospitals on measures of infections and complications patients develop in the hospital, and combines them into a Total HAC Score.',
-    claim: 'HACRP-17',
-  },
-  whatWho: { text: "The hospitals scored are those paid under Medicare's inpatient payment system.", claim: 'HACRP-18' },
-  whatCut: {
-    text: 'Hospitals whose score is above the {percentile} percentile of Total HAC Scores, as CMS calculates it, have their Medicare inpatient payments cut by {pct} for the fiscal year.',
-    claim: 'HACRP-02',
-  },
-  whatRelative: {
-    text: "Each measure compares a hospital with all hospitals scored on that measure, so the score reflects relative performance, not a fixed standard.",
-    claim: 'HACRP-15',
-  },
-  programMeasures: { text: "The Total HAC Score is the average of a hospital's z-scores on these measures.", claim: 'HACRP-04' },
-  programMeasuresZ: { text: 'Each z-score compares the hospital with all hospitals scored on that measure.', claim: 'HACRP-15' },
-  periodsHeading: { text: 'When the data are from', claim: null },
-  // Beside the measures' short names.
-  periodRange: { text: '{start} to {end}', claim: null },
+  // CMS's line, as a summary field and in a sentence.
   lineHeading: { text: "CMS's line", claim: null },
   line: {
     text: 'Among hospitals with a Yes or No payment decision, CMS cut those with a published Total HAC Score of {lowestYes} or higher and none at {highestNo} or lower.',
@@ -377,36 +350,14 @@ export const COPY = {
     text: "Maryland's hospitals are scored but not subject to the reduction.",
     claim: 'HACRP-13',
   },
-  lineRelative: {
-    text: "The line depends on other hospitals' scores, so a hospital can land above it without its own results getting worse.",
-    claim: 'HACRP-02',
-  },
-  countsHeading: { text: 'Fiscal year {fy} in counts', claim: null },
-  countDecided: {
-    text: 'CMS cut Medicare inpatient payments to {yes} of the {decided} hospitals with a Total HAC Score and a payment decision of Yes or No.',
-    claim: null,
-  },
-  countScored: { text: 'CMS published a Total HAC Score for {scored} hospitals.', claim: null },
-  // The top bar's search (pages/parts.js searchBox, client/search.js): its form's name, the visible "Find" and the rest
-  // of the box's name for screen readers, the placeholder, each option's kind, and what the status and list say.
+  // The top bar's search (pages/parts.js searchBox): its form's name, the visible "Find" and the rest of the box's
+  // name for screen readers, and the placeholder. What its list and status say is in search/copy.js.
   searchHeading: { text: 'Find a hospital', claim: null },
   searchFind: { text: 'Find', claim: null },
   searchFindRest: { text: 'a hospital or place by name, city, state, ZIP code or CCN', claim: null },
   searchPlaceholder: { text: 'Hospital, city, state or metro', claim: null },
-  searchKindHospital: { text: 'Hospital', claim: null },
-  searchKindState: { text: 'State', claim: null },
-  searchKindMetro: { text: 'Metro area', claim: null },
-  searchKindRegion: { text: 'Region', claim: null },
-  searchKindDivision: { text: 'Division', claim: null },
-  searchPlaceSub: { text: '{kind} · {n} hospitals', claim: null },
-  searchPlaceSubOne: { text: '{kind} · one hospital', claim: null },
   heroFindRest: { text: 'a hospital, state or metro area', claim: null },
   heroPlaceholder: { text: 'Look up a hospital, city, state or metro area', claim: null },
-  searchEmpty: { text: "No matches. Try a city, a ZIP code or the hospital's CCN.", claim: null },
-  searchCount: { text: '{n} matches', claim: null },
-  searchCountOne: { text: 'One match', claim: null },
-  searchFailed: { text: "The hospital list didn't load. Leave the box and come back to try again.", claim: null },
-  searchMore: { text: 'All {n} matches, in the table below', claim: null },
   sandboxLabel: { text: 'Sandbox: a hypothetical hospital at the national median on every measure', claim: null },
   linksHeading: { text: 'Sources and related sites', claim: null },
   linkCmsProgram: { text: "CMS: Hospital-Acquired Condition Reduction Program", claim: null },
@@ -417,8 +368,6 @@ export const COPY = {
   linkLeapfrogNote: { text: 'Related, different: a separate rating with its own method.', claim: null },
 
   // Figures (DES-31): each takeaway is one sentence filled from data; the alt text names what the chart shows.
-  figColMark: { text: 'Mark', claim: null },
-  figColScore: { text: 'Total HAC Score', claim: null },
   // Hospital page, Figure: each measure's part of the score.
   figPartsTakeaway: {
     text: "{short} added the most to this hospital's Total HAC Score of {total} among its measured results: {contribution}.",
@@ -451,73 +400,10 @@ export const COPY = {
   // The figure's hatch: values past CMS's floor or cap, which score the same as that end.
   figRangeSame: { text: "Scores the same as CMS's floor or cap", claim: 'HACRP-03' },
 
-  // Program page: the formula stepper on the median hospital.
-  stepsHeading: { text: 'How a score is built, step by step', claim: null },
-  stepsIntro: {
-    text: "These steps follow this site's hypothetical hospital at the national median on every measure, so its numbers are this site's, not CMS's. CMS takes the same steps for every hospital it scores.",
-    claim: 'HACRP-19',
-  },
-  stepValue: {
-    text: "Start from each measure's value. For this hospital, that is the national median of the values CMS published.",
-    claim: null,
-  },
-  stepLimit: {
-    text: "Limit each value to the measure's range: CMS sets a floor at the {low} percentile of values and a cap at the {high}, and a value past either end counts as that end.",
-    claim: 'HACRP-03',
-  },
-  stepZ: {
-    text: "Turn each limited value into a z-score: subtract the measure's mean and divide by its standard deviation. This site fits each mean and standard deviation to CMS's published values and z-scores.",
-    claim: 'HACRP-15',
-  },
-  stepAverage: {
-    text: 'Average the z-scores: the {n} z-scores add up to {sum}, and {sum} ÷ {n} is {total}, the Total HAC Score.',
-    claim: 'HACRP-04',
-  },
-  stepLine: { text: "Compare the score with CMS's line.", claim: null },
-  stepRounded: { text: 'Numbers are rounded for display.', claim: null },
-  stepColValue: { text: 'Value', claim: null },
-  stepColFloor: { text: 'Floor', claim: null },
-  stepColCap: { text: 'Cap', claim: null },
-  stepColLimited: { text: 'Limited', claim: null },
-  stepColMean: { text: 'Mean', claim: null },
-  stepColSd: { text: 'SD', claim: null },
-  stepTableValue: { text: "Each measure's value, CMS's floor and cap, and the value limited to them", claim: null },
-  stepTableZ: { text: "Each limited value, the measure's mean and standard deviation, and the z-score", claim: null },
-  // Program page: the stepper's last step, the median hospital against CMS's line, in words (the sandbox below
-  // draws it).
-  stepLineNo: {
-    text: "This site's hypothetical median hospital scores {total}, at or below {highestNo}, the highest score CMS marked No, so its decision would be No.",
-    claim: null,
-  },
-  stepLineYes: {
-    text: "This site's hypothetical median hospital scores {total}, at or above {lowestYes}, the lowest score CMS marked Yes, so its decision would be Yes.",
-    claim: null,
-  },
-  stepLineClose: {
-    text: "This site's hypothetical median hospital scores {total}, between {highestNo} and {lowestYes}, so its decision would be too close to call.",
-    claim: null,
-  },
-  stepSandbox: { text: 'The sandbox below starts at this score.', claim: null },
-  // Program page, Figure: the histogram of scores.
-  figScoresTakeaway: {
-    text: 'CMS cut payments to {yes} of {decided} hospitals with a payment decision: those whose Total HAC Score was above its line.',
-    claim: 'HACRP-02',
-  },
-  figScoresAlt: {
-    text: "Histogram of the Total HAC Scores of hospitals with a Yes or No payment decision, with CMS's line marked; the columns above the line are the hospitals CMS cut.",
-    claim: null,
-  },
-  figScoresTip: { text: "{count} hospitals scored from {from} to {to}; CMS's decision for each: {decision}", claim: null },
-  figScoresTipOne: { text: "One hospital scored from {from} to {to}; CMS's decision: {decision}", claim: null },
-  figScoresTipNone: { text: 'No hospital scored from {from} to {to}', claim: null },
-  // The histogram's direct labels: hospitals on each side of CMS's line.
-  figScoresCut: { text: 'Cut: {n}', claim: null },
-  figScoresNotCut: { text: 'Not cut: {n}', claim: null },
-  figColFrom: { text: 'Scores from', claim: null },
-  figColTo: { text: 'To', claim: null },
+  // Figure tables' column heads the program page shares.
   figColHospitals: { text: 'Hospitals', claim: null },
   figColDecision: { text: "CMS's decision", claim: null },
-  // Program page, Figure: the US map of states.
+  // Program page, Figure: the US map of states (program-figures.js mapFigure).
   figStatesTakeaway: {
     text: 'Nationally, CMS cut payments to {share} of hospitals with a payment decision; by state, the share ran from {low} to {high}.',
     claim: null,
@@ -535,7 +421,6 @@ export const COPY = {
   // The map's legend rows for a zero share and for a share that rests on few decisions.
   figStatesZero: { text: 'no hospitals cut', claim: null },
   figStatesFew: { text: 'fewer than {n} hospitals with a payment decision', claim: null },
-  figStatesOffMap: { text: 'Not on the map: {codes}.', claim: null },
   figColState: { text: 'State', claim: null },
   figColCut: { text: 'Hospitals cut', claim: null },
   figColDecided: { text: 'With a decision', claim: null },

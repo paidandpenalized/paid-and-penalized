@@ -8,7 +8,7 @@
 import { decidedHospitals, isAssigned, scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
-import { median } from '../../../engine/js/stats.js';
+import { median, populationSd, spearman } from '../../../engine/js/stats.js';
 import { biggestLever, bedBand } from './compare.js';
 
 // The kinds of hospital the share-cut figure compares, in the order it lists them, each with its groups: [key,
@@ -24,42 +24,6 @@ export const TYPE_KINDS = Object.freeze([
 
 // A measure set as a short key ("PSI90+CDI"), in MEASURE_IDS order.
 export const patternKey = (ids) => ids.join('+');
-
-// Spearman's rank correlation of two equal-length lists, ties given their average rank.
-export function spearman(a, b) {
-  if (a.length !== b.length || a.length < 3) throw new RangeError('spearman: two lists of the same length, at least 3');
-  const ranks = (xs) => {
-    const order = xs.map((v, i) => [v, i]).sort((p, q) => p[0] - q[0]);
-    const r = new Array(xs.length);
-    for (let i = 0; i < order.length;) {
-      let j = i;
-      while (j + 1 < order.length && order[j + 1][0] === order[i][0]) j++;
-      const avg = (i + j) / 2;
-      for (let k = i; k <= j; k++) r[order[k][1]] = avg;
-      i = j + 1;
-    }
-    return r;
-  };
-  const ra = ranks(a);
-  const rb = ranks(b);
-  const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
-  const [ma, mb] = [mean(ra), mean(rb)];
-  let num = 0;
-  let da = 0;
-  let db = 0;
-  for (let i = 0; i < ra.length; i++) {
-    num += (ra[i] - ma) * (rb[i] - mb);
-    da += (ra[i] - ma) ** 2;
-    db += (rb[i] - mb) ** 2;
-  }
-  // A list with every value the same has no ranks to compare: no correlation (null), never NaN.
-  return da === 0 || db === 0 ? null : num / Math.sqrt(da * db);
-}
-
-const sd = (xs) => {
-  const m = xs.reduce((s, x) => s + x, 0) / xs.length;
-  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length);
-};
 
 // One measure's published values (sorted) as the figures read them: how many, how many at zero, at or under the
 // floor and at or over the cap, how many hospitals CMS assigned its worst score (assigned), and the median as CMS's
@@ -151,7 +115,7 @@ export function programData({ hospitals, master, model }) {
     const k = i + 1;
     const members = decidedRows.filter((row) => row.ids.length === k);
     const scores = members.map((row) => row.total).sort((a, b) => a - b);
-    return { k, decided: members.length, yes: members.filter((row) => row.yes).length, median: scores.length ? median(scores) : null, sd: scores.length ? sd(scores) : null };
+    return { k, decided: members.length, yes: members.filter((row) => row.yes).length, median: scores.length ? median(scores) : null, sd: scores.length ? populationSd(scores) : null };
   });
   // The one-measure patterns, each with its count cut (the starkest contrast the funnel shows).
   const single = coverage.filter((p) => p.ids.length === 1 && p.decided > 0).map((p) => ({ id: p.ids[0], decided: p.decided, yes: p.yes, assigned: p.assigned }));
@@ -219,15 +183,14 @@ export function programData({ hospitals, master, model }) {
   };
 }
 
-// The explore asset the program page's and place pages' scripts read (hashed JSON, fetched when first needed): each
-// measure's fitted values, CMS's line, how many hospitals CMS assigned its worst score on each measure, and one row
-// per scored hospital: [ccn, total, yes (1, 0 or null), values (six, null for none), z-scores (six), teaching
-// ("major", "minor", "none" or null), bed band (0 to 3 or null), ownership, urban (1, 0 or null), special statuses
-// (SCH, MDH, RRC as bits 1, 2, 4), region, state, CBSA (or null), the measures CMS assigned (bits in MEASURE_IDS
-// order), and for a cut hospital its score had its costliest measure been at the national median (or null)].
+// The explore asset the program page's scripts read (hashed JSON, fetched when first needed): each measure's fitted
+// values, CMS's line, how many hospitals CMS assigned its worst score on each measure, and one row per scored hospital
+// with just what the browser draws: [ccn, total, yes (1, 0 or null), values (six, null for none), teaching ("major",
+// "minor", "none" or null), bed band (0 to 3 or null), ownership, urban (1, 0 or null), special statuses (SCH, MDH,
+// RRC as bits 1, 2, 4), region].
 export const STATUS_BITS = Object.freeze({ SCH: 1, MDH: 2, RRC: 4 });
 // The asset row's columns, by name.
-export const COL = Object.freeze({ ccn: 0, total: 1, yes: 2, values: 3, z: 4, teach: 5, beds: 6, own: 7, urban: 8, status: 9, region: 10, state: 11, cbsa: 12, assigned: 13, after: 14 });
+export const COL = Object.freeze({ ccn: 0, total: 1, yes: 2, values: 3, teach: 4, beds: 5, own: 6, urban: 7, status: 8, region: 9 });
 // Whether an asset row is in a group (kind, key as the share figure and the swarm's buttons name it).
 const TESTS = {
   teach: (r, key) => r[COL.teach] === key,
@@ -239,7 +202,6 @@ const TESTS = {
 };
 export const inGroup = (row, kind, key) => TESTS[kind](row, key);
 export function exploreAsset(pd, model) {
-  const after = new Map(pd.escapes.map((e) => [e.ccn, e.after]));
   return {
     ids: MEASURE_IDS,
     params: model.params,
@@ -248,9 +210,8 @@ export function exploreAsset(pd, model) {
     rows: pd.rows.map((r) => {
       const m = r.master;
       const bits = Object.entries(STATUS_BITS).reduce((b, [code, bit]) => b | ((m.types ?? []).includes(code) ? bit : 0), 0);
-      return [r.ccn, r.total, r.yes === null ? null : r.yes ? 1 : 0, r.values, r.z, m.teach ?? null, bedBand(m.beds), m.own ?? null,
-        m.urban === true ? 1 : m.urban === false ? 0 : null, bits, m.region ?? null, m.state ?? null, m.cbsa ?? null,
-        r.assigned.reduce((b, id) => b | (1 << MEASURE_IDS.indexOf(id)), 0), after.get(r.ccn) ?? null];
+      return [r.ccn, r.total, r.yes === null ? null : r.yes ? 1 : 0, r.values, m.teach ?? null, bedBand(m.beds), m.own ?? null,
+        m.urban === true ? 1 : m.urban === false ? 0 : null, bits, m.region ?? null];
     }),
   };
 }

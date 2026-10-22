@@ -9,9 +9,12 @@ import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { frame, r2, text } from './svg.js';
 
+// The rule's ends sit this far in from the drawing's edges (a page script maps a pointer back to a value with it).
+export const SLIDE_PAD = 10;
+
 export function slideRule({ p, domain: [lo, hi], value, labels, format, tickFormat = format, zFormat, zTickFormat = zFormat, width, valueTicks, zTicks }) {
-  const left = 10;
-  const right = width - 10;
+  const left = SLIDE_PAD;
+  const right = width - SLIDE_PAD;
   const x = scaleLinear().domain([lo, hi]).range([left, right]);
   const zOf = (v) => (Math.min(p.cap, Math.max(p.floor, v)) - p.mean) / p.sd;
   const top = 34;

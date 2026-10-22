@@ -5,8 +5,8 @@
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { toUnit } from '../../../engine/js/stats.js';
-import { figure, imageOf, keysHint } from '../../../web/charts/figure.js';
-import { STATE_NAMES, areaMap } from '../../../web/charts/geo.js';
+import { WIDE, drawn, figure, imageOf, keysHint, num } from '../../../web/charts/figure.js';
+import { areaMap } from '../../../web/charts/geo.js';
 import { lineBar } from '../../../web/charts/lineBar.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
@@ -17,12 +17,12 @@ import { html } from '../../../web/render/html.js';
 import { pill, printout } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
-import { WIDE, num, variants } from './figures.js';
-import { BED_BANDS, NEAR_MAP_WIDTH, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
+import { NEAR_MAP_WIDTH, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
 import { pillOf } from './whatif-text.js';
 import { hospitalHref } from './hospital-table.js';
+import { groupLabel } from './groups.js';
 
 const at = (v) => decimal(v, DP);
 const share = (part, whole) => pct(whole ? part / whole : 0, 0);
@@ -182,7 +182,7 @@ export function sumFigure({ view, n, source }) {
   return figure({
     n, source, alt: t('figSumAlt'), claimLevel: 'recomputed', csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-sum`,
     takeaway: fill('figSumTakeaway', { total: view.score.text, side: t(total >= band[1] ? 'figSumAbove' : 'figSumBelow') }),
-    ...variants(draw),
+    ...drawn(draw),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('colZ'), numeric: true }, { name: t('figColPart'), numeric: true }, { name: t('figColRunning'), numeric: true }],
       rows: [
@@ -196,21 +196,6 @@ export function sumFigure({ view, n, source }) {
 
 // ---------- among hospitals like it ----------
 
-function groupLabel(g, master) {
-  switch (g.kind) {
-    case 'nation': return t('groupNation');
-    case 'region': return fill('groupRegion', { region: g.key });
-    case 'state': return fill('groupState', { state: STATE_NAMES[g.key] ?? g.key });
-    case 'metro': return fill('groupMetro', { metro: master.cbsaName ?? g.key });
-    case 'teach': return t(`groupTeach${g.key}`);
-    case 'beds': return g.key === 0 ? fill('groupBedsUnder', { beds: count(BED_BANDS[0]) })
-      : g.key === BED_BANDS.length ? fill('groupBedsUp', { beds: count(BED_BANDS.at(-1)) })
-        : fill('groupBedsRange', { low: count(BED_BANDS[g.key - 1]), high: count(BED_BANDS[g.key] - 1) });
-    case 'own': return t(`groupOwn${g.key}`);
-    case 'urban': return t(`groupUrban${g.key}`);
-    default: throw new RangeError(`groupLabel: unknown kind ${g.kind}`);
-  }
-}
 
 export function peersFigure({ view, nat, master, n, source }) {
   if (!view.scored) return null;
@@ -220,7 +205,7 @@ export function peersFigure({ view, nat, master, n, source }) {
   const { highestNo, lowestYes } = view.boundaryText;
   const band = [view.boundary.highestNo, view.boundary.lowestYes];
   const rows = groups.map((g) => {
-    const label = groupLabel(g, master);
+    const label = groupLabel(g.kind, g.key, { metro: master?.cbsaName });
     const s = share(g.yes, g.decided);
     return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: share(g.below, g.scored - 1), others: g.scored - 1 };
   });
@@ -237,7 +222,7 @@ export function peersFigure({ view, nat, master, n, source }) {
     takeaway: low.r.share === high.r.share
       ? fill('figPeersSame', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), share: low.r.share })
       : fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
-    ...variants(draw),
+    ...drawn(draw),
     table: {
       columns: [{ name: t('figColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }, { name: t('figColMiddle'), numeric: true }, { name: t('figColHigher'), numeric: true }],
       rows: [

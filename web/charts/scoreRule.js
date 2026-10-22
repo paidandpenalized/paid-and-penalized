@@ -17,6 +17,17 @@ export const ruleX = (i, n, width) => M.left + ((i + 0.5) * (width - M.left - M.
 // The rank under an x, clamped to the list.
 export const ruleRank = (x, n, width) => Math.max(0, Math.min(n - 1, Math.floor(((x - M.left) / (width - M.left - M.right)) * n)));
 
+// The two silhouettes depend only on the scores, the cut, the width and the room above and under the rule: drawn once for every page that shows the same
+// rule (each place page's rule differs only in its ticks).
+const SILHOUETTES = new WeakMap();
+function silhouettes(scores, { cut, width, up, down }, shape) {
+  if (!SILHOUETTES.has(scores)) SILHOUETTES.set(scores, new Map());
+  const byWidth = SILHOUETTES.get(scores);
+  const key = `${width}:${cut}:${up}:${down}`;
+  if (!byWidth.has(key)) byWidth.set(key, { ink: shape(0, scores.length - cut), pen: shape(scores.length - cut, scores.length) });
+  return byWidth.get(key);
+}
+
 export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, highlight = null }) {
   const n = scores.length;
   if (!n || cut < 0 || cut > n) throw new RangeError('scoreRule: scores, and a cut count within them');
@@ -42,6 +53,7 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
     return `M${x0} ${r2(zero)}L${x0} ${pts[0].split(' ')[1]}L${pts.join('L')}L${x1} ${pts[pts.length - 1].split(' ')[1]}L${x1} ${r2(zero)}Z`;
   };
   const split = n - cut;
+  const { ink, pen } = silhouettes(scores, { cut, width, up, down }, shape);
   const lineX = r2(split < n ? ruleX(split, n, width) - (width - M.left - M.right) / n / 2 : width);
   const height = zero + down + M.bottom;
   // A highlighted hospital: its own hairline in ink, from the rule to its score, and a short tick under the rule so
@@ -50,8 +62,8 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
   const ticks = highlight ? highlight.filter((i) => i < n - cut).map(tick).join('') : '';
   const penTicks = highlight ? highlight.filter((i) => i >= n - cut).map(tick).join('') : '';
   return frame({
-    kind: 'score-rule', width, height, body: html`<path class="chart-rule__ink" d="${shape(0, split)}"/>
-<path class="chart-rule__pen" d="${shape(split, n)}"/>
+    kind: 'score-rule', width, height, body: html`<path class="chart-rule__ink" d="${ink}"/>
+<path class="chart-rule__pen" d="${pen}"/>
 <rect class="chart-rule__bar" x="0" y="${r2(zero - 2.5)}" width="${width}" height="5"/>
 ${ticks ? html`<path class="chart-rule__hl" d="${ticks}"/>` : ''}${penTicks ? html`<path class="chart-rule__hl chart-rule__hl--pen" d="${penTicks}"/>` : ''}
 <line class="chart-rule__line" x1="${lineX}" x2="${lineX}" y1="${M.top - 16}" y2="${r2(zero + down)}"/>

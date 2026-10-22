@@ -202,3 +202,93 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-pin__n, .chart-pin--yes + .chart-pin__n { fill: CanvasText; }
   .chart-pin--yes + .chart-pin__n { fill: Canvas; }
 }
+
+/* ---------- the program and place pages' charts (web/charts: scoreRule, punchCard, dots, measureDots, slideRule,
+   scoreSwarm, shareDots, agree, miniCards, compareHist, geo placeMap) ---------- */
+.chart--score-rule { cursor: crosshair; }
+.chart-rule__ink { fill: var(--ink-3); }
+.chart-rule__pen { fill: var(--pen); }
+.chart-rule__bar { fill: var(--ink); }
+.chart-rule__line { stroke: var(--ink); stroke-width: 1.5px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.chart-rule__hl { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-rule__hl--pen { stroke: var(--pen-ink); }
+.chart-rule__cursor { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-punch__card { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
+.chart-punch__hole { fill: var(--ink); }
+.chart-punch__row { fill: var(--ink); font: 700 11px var(--font-type); }
+.chart-punch__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.chart-punch__bar { fill: var(--ink-3); }
+.chart-punch__yes { fill: var(--pen); }
+.chart-punch__n { font-size: 10px; text-anchor: middle; }
+.chart-dots { fill: none; stroke-linecap: round; }
+.chart-dots--ink { stroke: var(--ink-2); }
+.chart-dots--faint { stroke: var(--ink-3); stroke-opacity: 0.35; }
+.chart-dots--pen { stroke: var(--pen); }
+.chart-dots--hl { stroke: var(--ink); }
+.chart-ref { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.chart-same { fill: var(--hatch); fill-opacity: 0.35; }
+.chart-pull__line { fill: none; stroke: var(--ink-3); stroke-opacity: 0.55; stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+.chart-slide__stock { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__mid { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__tick { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__num { fill: var(--ink); font: 400 10px var(--font-type); text-anchor: middle; }
+.chart-slide__num--zero { font-weight: 700; }
+.chart-slide__mean { stroke: var(--ink); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__word { fill: var(--ink-2); font: 600 10px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.chart-slide__glass { fill: var(--paper); fill-opacity: 0.12; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-slide__hair { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-slide__read { fill: var(--pen-ink); font: 700 12px var(--font-type); }
+.chart-slide__cursor { cursor: ew-resize; touch-action: none; }
+.chart--slide:focus-visible { outline: 2px solid var(--focus); }
+.chart-punch__share { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.chart-punch__share--hot { fill: var(--pen-ink); font-weight: 700; }
+.chart-sil { fill: var(--ink-3); fill-opacity: 0.45; }
+.chart-sil--ink { fill: var(--ink-2); fill-opacity: 0.85; }
+.chart--swarm { cursor: crosshair; }
+.chart-dots--pen-faint { stroke: var(--pen); stroke-opacity: 0.22; }
+.chart-loupe__glass { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-loupe__beam { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.chart-loupe__gap { stroke: var(--pen); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.chart-swarm__ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-share__track { stroke: var(--line); stroke-opacity: 0.45; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-share__stem { stroke: var(--ink-2); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.chart-share__stem--pen { stroke: var(--pen); }
+.chart-share__dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-share__dot--pen { fill: var(--pen); stroke: var(--pen); }
+.chart-agree__cell { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-agree__cell.is-picked { stroke: var(--ink); stroke-width: 2.5px; }
+.chart--agree .chart-mark { cursor: pointer; }
+.chart-agree__sq { fill: var(--ink-3); fill-opacity: 0.55; }
+.chart-agree__v { fill: var(--ink); font: 700 10px var(--font-type); }
+.chart-scatter__bg { fill: var(--paper-2); }
+.chart-dots--scatter { stroke: var(--ink-2); stroke-opacity: 0.45; }
+.chart-card { fill: var(--paper); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-card--pen { stroke: var(--pen); stroke-width: 2px; }
+.chart-card__m { fill: var(--ink-2); }
+.chart-card__a { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-card__none { fill: none; stroke: var(--line); stroke-width: 1px; stroke-dasharray: 1 1.5; vector-effect: non-scaling-stroke; }
+.chart-dots--ring { stroke: var(--ink); stroke-opacity: 0.55; }
+.chart--place-map { max-width: none; border: var(--rule) solid var(--ink); }
+.chart-geo-near { fill: var(--paper); stroke: var(--line); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+.chart-geo-mine { fill: var(--paper-2); }
+.chart--place-map .chart-geo-state { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-place__dot { stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-place__dot--pen { fill: var(--pen); stroke: var(--paper); }
+.chart-place__dot--ring { fill: var(--paper); stroke: var(--ink); }
+.chart-place__dot--faint { fill: var(--ink-3); stroke: var(--paper); opacity: 0.6; }
+.chart--place-map .chart-mark[data-href] { cursor: pointer; }
+.chart--place-map .chart-mark.is-active .chart-place__dot { stroke-width: 3px; }
+.chart-outline { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+
+/* Forced colors for those marks: the cut in CanvasText, everything else in GrayText, frames and rules in CanvasText,
+   panels on Canvas. */
+@media (forced-colors: active) {
+  .chart-dots--pen, .chart-dots--hl, .chart-dots--ink, .chart-rule__hl, .chart-rule__hl--pen, .chart-slide__hair, .chart-loupe__gap, .chart-share__stem--pen { stroke: CanvasText; }
+  .chart-dots--faint, .chart-dots--pen-faint, .chart-dots--ring, .chart-dots--scatter, .chart-pull__line, .chart-share__stem, .chart-share__track, .chart-loupe__beam, .chart-ref { stroke: GrayText; }
+  .chart-punch__hole, .chart-punch__yes, .chart-rule__pen, .chart-rule__bar, .chart-share__dot--pen, .chart-card__m, .chart-agree__sq, .chart-place__dot--pen { fill: CanvasText; }
+  .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
+  .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
+  .chart-card__a { stroke: CanvasText; }
+  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
+  .chart-agree__cell.is-picked { stroke: Highlight; }
+}

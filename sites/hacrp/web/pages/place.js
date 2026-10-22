@@ -9,15 +9,15 @@ import { cmsText, count, decimal, ordinal, pct } from '../../../../web/render/fo
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
+import { counter } from '../../../../web/charts/figure.js';
 import { SCORE_DECIMALS as DP } from '../../../../engine/js/hacrp/score.js';
 import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { FEW_DECIDED } from '../constants.js';
 import { sourceText } from '../copy.js';
-import { fill, t } from '../explore/copy.js';
+import { fill, t } from '../program/copy.js';
 import { childrenTable, placeHistFigure, placeMapFigure, placeMeasuresFigure, psec, ruleFigure } from '../program-figures.js';
 import { ancestors } from '../places.js';
-import { asofBar, citation, dataLinks, printLink, siteHeader } from './parts.js';
-import { hospitalTable } from './program.js';
+import { asofBar, citation, dataLinks, hospitalTable, printLink, siteHeader } from './parts.js';
 
 const KIND = { region: 'placeKindRegion', division: 'placeKindDivision', state: 'placeKindState', metro: 'placeKindMetro' };
 const KINDS_WORDS = { region: 'kpiKindsRegion', division: 'kpiKindsDivision', state: 'kpiKindsState' };
@@ -86,13 +86,11 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
     place.rows.some((r) => r.yes === null) && t('placeMarylandNote'),
     c.decided > 0 && c.decided < FEW_DECIDED && t('placeSmall'),
   ].filter(Boolean);
-  let n = 0;
-  const map = placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, n: ++n, source: line });
-  if (!map) n -= 1;
-  const hist = c.decided ? placeHistFigure({ place, pd, model, n: ++n, source: line }) : null;
-  if (!hist && c.decided) n -= 1;
-  const measures = placeMeasuresFigure({ place, model, n: n + 1, source: line });
-  if (measures) n += 1;
+  // Figures numbered in page order; a figure a place can't draw (no map, no decisions, no measures) takes no number.
+  const figureNo = counter();
+  const map = placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, next: figureNo, source: line });
+  const hist = c.decided ? placeHistFigure({ place, pd, model, next: figureNo, source: line }) : null;
+  const measures = placeMeasuresFigure({ place, model, next: figureNo, source: line });
   const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation });
   const ccns = new Set(place.ccns);
 

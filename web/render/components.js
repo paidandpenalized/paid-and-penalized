@@ -65,6 +65,21 @@ export function fillCopy(copy, key, values = {}, { plain = false } = {}) {
   return out;
 }
 
+// A site's words in layers: fill, fillKeep and t over several copy tables, each key read from the first table that
+// holds it (a page's own words over the words its scripts share over the site's). t fills a key with no placeholders,
+// once per key.
+export function copyOf(...tables) {
+  const source = (key) => tables.find((table) => has(table, key)) ?? tables[0];
+  const fill = (key, values) => fillCopy(source(key), key, values);
+  const fillKeep = (key, values, keep) => fillCopyKeep(source(key), key, values, keep);
+  const words = new Map();
+  const t = (key) => {
+    if (!words.has(key)) words.set(key, fill(key));
+    return words.get(key);
+  };
+  return { fill, fillKeep, t };
+}
+
 // Markup text with text.slice(start, end) kept on one line, in a .nw span.
 const nw = (text, start, end) => `${text.slice(0, start)}<span class="nw">${text.slice(start, end)}</span>${text.slice(end)}`;
 

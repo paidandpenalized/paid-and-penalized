@@ -1,33 +1,31 @@
 // The program page's figures and the place pages', drawn with the chart kit (web/charts/) in HACRP's words from
 // programData() (program-data.js). Every takeaway is filled from the data the figure draws; copy.js holds the words.
-import { html } from '../../../web/render/html.js';
+import { html, raw } from '../../../web/render/html.js';
 import { cmsText, count, decimal, ordinal, pct, shortDate } from '../../../web/render/format.js';
 import { scoreRule } from '../../../web/charts/scoreRule.js';
-import { figure, imageOf, keysHint } from '../../../web/charts/figure.js';
+import { figure, imageOf, imagePair, keysHint, num } from '../../../web/charts/figure.js';
 import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../web/charts/geo.js';
 import { compareHist } from '../../../web/charts/compareHist.js';
-import { Safe, raw } from '../../../web/render/html.js';
+import { printout } from '../../../web/render/components.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { placeCounts } from './places.js';
 import { toUnit } from '../../../engine/js/stats.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { punchCard } from '../../../web/charts/punchCard.js';
-import { pullIn, shiftStrip, stackedDots } from '../../../web/charts/measureDots.js';
-import { slideRule } from '../../../web/charts/slideRule.js';
-import { scoreSwarm, swarmLayout } from '../../../web/charts/scoreSwarm.js';
+import { escapeStacks, shiftStrip } from '../../../web/charts/measureDots.js';
 import { shareDots } from '../../../web/charts/shareDots.js';
 import { sina } from '../../../web/charts/sina.js';
-import { agreeGrid, agreeScatter } from '../../../web/charts/agree.js';
+import { agreeGrid } from '../../../web/charts/agree.js';
 import { miniCards } from '../../../web/charts/miniCards.js';
 import { barRows } from '../../../web/charts/barRows.js';
 import { histogramBins } from '../../../web/charts/histogram.js';
-import { escapeStacks } from '../../../web/charts/measureDots.js';
 import { countBins, edgesAround } from './compare.js';
 import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
-import { BED_BANDS, FEW_DECIDED, MAP_STEPS_PCT, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED, SIR_EXPECTED_TEXT, WINSOR_HIGH, WINSOR_LOW, CUTOFF_PERCENTILE } from './constants.js';
-import { fill, fillKeep, t } from './explore/copy.js';
-import { PAGE_WIDE, PER, STEP_WIDE, fmtOf, num, setName, SCATTER_W, SWARM_WIDE, agreeScatterOf, binCounts, both, pairPoints, pullPanel, pullTake, slidePanel, slideTake, stackOf, stackPanel, stackTake, swarmChart } from './explore-figures.js';
+import { FEW_DECIDED, MAP_STEPS_PCT, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED, SIR_EXPECTED_TEXT, WINSOR_HIGH, WINSOR_LOW, CUTOFF_PERCENTILE } from './constants.js';
+import { fill, fillKeep, t } from './program/copy.js';
+import { groupLabel, kindLabel } from './groups.js';
+import { PAGE_WIDE, PER, STEP_WIDE, fmtOf, setName, SCATTER_W, SWARM_WIDE, agreeScatterOf, binCounts, both, pairPoints, pullPanel, pullTake, slidePanel, slideTake, stackOf, stackPanel, stackTake, swarmChart } from './explore-figures.js';
 export { PAGE_WIDE };
 
 
@@ -36,12 +34,20 @@ export { PAGE_WIDE };
 // The bold rule under the page's top: every decided hospital's score, sorted, the cut in red. highlight: a set of
 // CCNs (a place's hospitals) drawn as ticks through it. The page script reads data-rule to find the hospital under
 // the pointer (it loads the explore asset for names).
+// The rule's order (lowest score first, ties by CCN), its scores and each hospital's rank, once per programData.
+const RULE_ORDER = new WeakMap();
+function ruleOrder(pd) {
+  if (!RULE_ORDER.has(pd)) {
+    const rows = [...pd.decidedRows].sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
+    RULE_ORDER.set(pd, { scores: rows.map((r) => r.total), rank: new Map(rows.map((r, i) => [r.ccn, i])) });
+  }
+  return RULE_ORDER.get(pd);
+}
+
 export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = null, here = null } = {}) {
-  const rows = [...pd.decidedRows].sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
-  const scores = rows.map((r) => r.total);
+  const { scores, rank } = ruleOrder(pd);
   const { yes, decided } = pd.counts;
-  const ranks = highlight ? rows.flatMap((r, i) => (highlight.has(r.ccn) ? [i] : [])) : null;
-  // (scoreRule inks a highlighted hairline past the line in the penalty ink.)
+  const ranks = highlight ? [...highlight].map((ccn) => rank.get(ccn)).filter((i) => i !== undefined).sort((a, b) => a - b) : null;
   const labels = { low: fill('ruleLow'), high: fill('ruleHigh'), line: fill('ruleLine'), cut: here === null ? fill('ruleCut', { yes: count(yes) }) : fill('ruleCutHere', { yes: count(yes), here: count(here) }) };
   const alt = fill('ruleAlt', { decided: count(decided), yes: count(yes) });
   const draw = (width) => imageOf(scoreRule({ scores, cut: yes, labels, width, highlight: ranks }), alt, width === WIDTH ? 'narrow' : 'wide');
@@ -72,13 +78,12 @@ ${fig}
 // takeaway and its two drawings. The figure's own takeaway says what all the panels show.
 export function measureFigure({ n, takeaway, panels, first, source, table, csvName, claimLevel = 'official', note = null, after = null, kind = null, data = null }) {
   const toggle = html`<div class="mtoggle" role="group" aria-label="${t('measureToggle')}" hidden>${panels.map((p) => html`<button type="button" class="mtoggle__b" data-measure="${p.id}" aria-pressed="${p.id === first ? 'true' : 'false'}">${p.short}</button>`)}</div>`;
-  // A lazy panel (no drawings yet: p.narrow absent) is drawn by the page script when first picked (data-kind names
+  // A lazy panel (no drawings yet: p.svg absent) is drawn by the page script when first picked (data-kind names
   // its builder in client/explore.js; data-fig holds the builder's settings).
   const chart = html`<div class="mfig"${kind ? html` data-kind="${kind}"` : ''}${data ? html` data-fig="${JSON.stringify(data)}"` : ''}>${toggle}
-${panels.map((p) => html`<div class="mpanel" data-measure="${p.id}"${p.data ? html` data-slide="${p.data}"` : ''}${p.narrow ? '' : html` data-lazy`}${p.id === first ? '' : html` hidden`}>
+${panels.map((p) => html`<div class="mpanel" data-measure="${p.id}"${p.data ? html` data-slide="${p.data}"` : ''}${p.svg ? '' : html` data-lazy`}${p.id === first ? '' : html` hidden`}>
 <p class="mpanel__take">${p.take}</p>
-${p.narrow ? html`${imageOf(p.narrow, p.alt, 'narrow')}
-${imageOf(p.wide, p.alt, 'wide')}` : ''}
+${p.svg ? html`${imagePair(p, p.alt)}` : ''}
 </div>`)}${after ?? ''}</div>`;
   return figure({ n, takeaway, chart, source, table, csvName, claimLevel, note });
 }
@@ -112,7 +117,7 @@ function punchFigure(pd, { n, source }) {
   return figure({
     n, source, alt: t('fig1Alt'), csvName: 'hacrp-measure-sets',
     takeaway: fill('fig1Takeaway', { all: count(all), file: count(pd.counts.file), measureCount: String(MEASURE_IDS.length), one: count(one), none: count(none?.n ?? 0) }),
-    svg: art.narrow, svgWide: art.wide, note: t('fig1Key'),
+    ...art, note: t('fig1Key'),
     table: { columns: [{ name: t('fig1ColSet') }, { name: t('fig1ColN'), numeric: true }, { name: t('fig1ColDecided'), numeric: true }, { name: t('fig1ColYes'), numeric: true }], rows: tableRows },
   });
 }
@@ -196,8 +201,7 @@ function halveFigure(pd, model, { n, source }) {
   const mid = sorted[Math.floor(sorted.length / 2)];
   const yes = count(pd.counts.yes);
   const chart = html`<p class="halve__row"><button type="button" class="fig__btn halve__btn" data-halve aria-pressed="false" data-on="${t('fig5Back')}" data-off="${t('fig5Halve')}" data-top-on="${fill('fig5TopHalf', { short })}" data-top-off="${fill('fig5Top', { short })}" hidden>${t('fig5Halve')}</button></p>
-${imageOf(art.narrow, fill('fig5Alt', { short }), 'narrow')}
-${imageOf(art.wide, fill('fig5Alt', { short }), 'wide')}
+${imagePair(art, fill('fig5Alt', { short }))}
 <p class="halve__same">${fill('fig5Same', { yes })}</p>`;
   return figure({
     n, takeaway: fill('fig5Takeaway', { short, yes }), chart, source, csvName: 'hacrp-halve', claimLevel: 'hypothetical',
@@ -211,38 +215,27 @@ ${imageOf(art.wide, fill('fig5Alt', { short }), 'wide')}
   });
 }
 
-// Part 1: the five steps, figures numbered from 1. median: medianHospital(model) (the sandbox's hospital).
-export function part1({ pd, model, periods, median, source }) {
+// Part 1: the five steps, each beside its figure. median: medianHospital(model) (the sandbox's hospital); figure and
+// step: the page's counters (web/charts/figure.js counter), so the sandbox after them takes the next step's number.
+export function part1({ pd, model, periods, median, source, figure: fig, step: stepNo }) {
   const psi = SHORT_NAMES.PSI90;
   const haiCount = MEASURE_IDS.filter(isSir).length;
-  const p = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
   const one = SIR_EXPECTED_TEXT;
-  return html`${step({
-    n: 1, id: 'step-1', heading: fill('step1Heading', { measureCount: String(MEASURE_IDS.length) }),
-    text: html`${p('step1a', { haiCount: String(haiCount), short: psi })}${p('step1b', { short: psi })}<p>${fillKeep('step1c', { short: psi, psiStart: shortDate(periods.psi90.start), psiEnd: shortDate(periods.psi90.end), haiStart: shortDate(periods.hai.start), haiEnd: shortDate(periods.hai.end) }, ['psiStart', 'psiEnd', 'haiStart', 'haiEnd'])}</p>${p('step1d', { measureCount: String(MEASURE_IDS.length) })}`,
-    figure: punchFigure(pd, { n: 1, source }),
-  })}
-${step({
-    n: 2, id: 'step-2', heading: t('step2Heading'),
-    text: html`${p('step2a', { one })}${p('step2b', { short: psi, one })}${p('step2c')}`,
-    figure: stackFigure(pd, model, { n: 2, source }),
-  })}
-${step({
-    n: 3, id: 'step-3', heading: t('step3Heading'),
-    text: html`${p('step3a', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) })}${p('step3b')}`,
-    figure: pullFigure(pd, model, { n: 3, source }),
-  })}
-${step({
-    n: 4, id: 'step-4', heading: t('step4Heading'),
-    text: html`${p('step4a')}${p('step4b')}${p('step4c')}`,
-    figure: slideFigure(pd, model, median, { n: 4, source }),
-  })}
-${step({
-    n: 5, id: 'step-5', heading: t('step5Heading'),
-    text: html`${p('step5a', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}${p('step5b')}${p('step5c')}`,
-    figure: halveFigure(pd, model, { n: 5, source }),
-  })}`;
+  const each = (heading, text, draw) => {
+    const n = stepNo();
+    return step({ n, id: `step-${n}`, heading, text, figure: draw(fig()) });
+  };
+  return html`${each(fill('step1Heading', { measureCount: String(MEASURE_IDS.length) }),
+    html`${para('step1a', { haiCount: String(haiCount), short: psi })}${para('step1Who')}${para('step1b', { short: psi })}<p>${fillKeep('step1c', { short: psi, psiStart: shortDate(periods.psi90.start), psiEnd: shortDate(periods.psi90.end), haiStart: shortDate(periods.hai.start), haiEnd: shortDate(periods.hai.end) }, ['psiStart', 'psiEnd', 'haiStart', 'haiEnd'])}</p>${para('step1d', { measureCount: String(MEASURE_IDS.length) })}`,
+    (n) => punchFigure(pd, { n, source }))}
+${each(t('step2Heading'), html`${para('step2a', { one })}${para('step2b', { short: psi, one })}${para('step2c')}`, (n) => stackFigure(pd, model, { n, source }))}
+${each(t('step3Heading'), html`${para('step3a', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) })}${para('step3b')}`, (n) => pullFigure(pd, model, { n, source }))}
+${each(t('step4Heading'), html`${para('step4a')}${para('step4b')}${para('step4c')}`, (n) => slideFigure(pd, model, median, { n, source }))}
+${each(t('step5Heading'), html`${para('step5a', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}${para('step5b')}${para('step5c')}`, (n) => halveFigure(pd, model, { n, source }))}`;
 }
+
+// A paragraph of the page's words: a key, filled with values when it has placeholders.
+const para = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
 
 // ---------- Part 2: the year's picture ----------
 
@@ -261,27 +254,6 @@ ${text}
 ${fig}
 </div>
 </section>`;
-
-// The groups the swarm can lift out and the share figure lists: [kind, key, label] per group, in order, with the
-// test on an explore-asset row (program-data.js exploreAsset) for the browser's use.
-const BED_LABELS = () => [
-  fill('groupBedsUnder', { beds: count(BED_BANDS[0]) }),
-  ...BED_BANDS.slice(1).map((edge, i) => fill('groupBedsRange', { low: count(BED_BANDS[i]), high: count(edge - 1) })),
-  fill('groupBedsUp', { beds: count(BED_BANDS.at(-1)) }),
-];
-export function groupLabel(kind, key) {
-  switch (kind) {
-    case 'teach': return t(`groupTeach${key}`);
-    case 'beds': return BED_LABELS()[Number(key)];
-    case 'own': return t(`groupOwn${key}`);
-    case 'urban': return t(`groupUrban${key}`);
-    case 'status': return t(`groupStatus${key}`);
-    case 'region': return fill('groupRegion', { region: key });
-    default: throw new RangeError(`groupLabel: unknown kind ${kind}`);
-  }
-}
-const KIND_WORDS = { teach: 'kindTeach', beds: 'kindBeds', own: 'kindOwn', urban: 'kindUrban', status: 'kindStatus', region: 'kindRegion' };
-export const kindLabel = (kind) => t(KIND_WORDS[kind]);
 
 // The groups the swarm's buttons offer, by kind: [{ kind, key, label }].
 function swarmGroups(pd) {
@@ -341,7 +313,7 @@ function typesFigure(pd, { n, source }) {
   const draw = (width) => shareDots({ sections, ref: nationShare, labels: { ref: fill('typesRef', { nation }) }, max, width, format: (v) => pct(v, 0), band: SHARE_BAND });
   const art = both(draw);
   return figure({
-    n, source, alt: t('typesAlt'), svg: art.narrow, svgWide: art.wide, csvName: 'hacrp-share-cut-by-type', note: fill('typesSize', { band: bandText }),
+    n, source, alt: t('typesAlt'), ...art, csvName: 'hacrp-share-cut-by-type', note: fill('typesSize', { band: bandText }),
     takeaway: fill('typesTakeaway', { high: hi.label, highShare: hi.valueText, low: lo.label, lowShare: lo.valueText, nation }),
     table: {
       columns: [{ name: t('typesColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }],
@@ -367,7 +339,7 @@ function funnelFigure(pd, { n, source, band }) {
   const one = pd.funnel[0];
   const six = pd.funnel.at(-1);
   return figure({
-    n, source, alt: t('funnelAlt'), svg: art.narrow, svgWide: art.wide, csvName: 'hacrp-scores-by-measure-count',
+    n, source, alt: t('funnelAlt'), ...art, csvName: 'hacrp-scores-by-measure-count',
     takeaway: fill('funnelTakeaway', { ratio: decimal(one.sd / six.sd, 1), six: String(six.k), sdOne: decimal(one.sd, 2), sdAll: decimal(six.sd, 2) }),
     table: {
       columns: [{ name: t('funnelColK'), numeric: true }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('funnelColMedian'), numeric: true }, { name: t('funnelColSd'), numeric: true }],
@@ -416,7 +388,7 @@ function escapeFigure(pd, { n, source, band }) {
   const art = both(draw);
   const none = pd.escapes.length - moved.length;
   return figure({
-    n, source, alt: t('escapeAlt'), svg: art.narrow, svgWide: art.wide, csvName: 'hacrp-one-measure', claimLevel: 'hypothetical',
+    n, source, alt: t('escapeAlt'), ...art, csvName: 'hacrp-one-measure', claimLevel: 'hypothetical',
     takeaway: fill('escapeTakeaway', { escaped: count(escaped), yes: count(pd.counts.yes) }),
     note: none ? fill('escapeNone', { n: count(none) }) : null,
     table: {
@@ -430,9 +402,9 @@ function escapeFigure(pd, { n, source, band }) {
 function driversFigure(pd, { n, source }) {
   const rows = MEASURE_IDS.map((id) => ({ id, n: pd.drivers[id] })).sort((a, b) => b.n - a.n);
   const max = rows[0].n;
-  const art = { narrow: barRows({ rows: rows.map((r, i) => ({ label: SHORT_NAMES[r.id], value: r.n, valueText: count(r.n), pen: i === 0, tip: fill('driversTip', { short: SHORT_NAMES[r.id], n: count(r.n) }) })), max, width: WIDTH }) };
+  const art = { svg: barRows({ rows: rows.map((r, i) => ({ label: SHORT_NAMES[r.id], value: r.n, valueText: count(r.n), pen: i === 0, tip: fill('driversTip', { short: SHORT_NAMES[r.id], n: count(r.n) }) })), max, width: WIDTH }) };
   return figure({
-    n, source, alt: t('driversAlt'), svg: art.narrow, csvName: 'hacrp-largest-part',
+    n, source, alt: t('driversAlt'), ...art, csvName: 'hacrp-largest-part',
     takeaway: fill('driversTakeaway', { top: SHORT_NAMES[rows[0].id], topN: count(rows[0].n), yes: count(pd.counts.yes), low: SHORT_NAMES[rows.at(-1).id], lowN: count(rows.at(-1).n) }),
     table: { columns: [{ name: t('colMeasure') }, { name: t('figColHospitals'), numeric: true }], rows: rows.map((r) => [SHORT_NAMES[r.id], num(count(r.n), r.n)]) },
   });
@@ -452,7 +424,7 @@ function assignedFigure(pd, { n, source }) {
   const yes = list.filter((a) => a.yes).length;
   const none = list.filter((a) => a.measuredNone).length;
   return figure({
-    n, source, alt: t('assignedAlt'), svg: art.narrow, svgWide: art.wide, csvName: 'hacrp-assigned',
+    n, source, alt: t('assignedAlt'), ...art, csvName: 'hacrp-assigned',
     takeaway: fill('assignedTakeaway', { n: count(list.length), yes: count(yes), none: count(none) }), note: fill('assignedSlots', { order: MEASURE_IDS.map((id) => SHORT_NAMES[id]).join(' · ') }),
     table: {
       columns: [{ name: t('assignedColWhat') }, { name: t('figColHospitals'), numeric: true }],
@@ -461,34 +433,36 @@ function assignedFigure(pd, { n, source }) {
   });
 }
 
-// Part 2, its figures numbered from n0.
-export const PART2_FIGURES = 7;
-export function part2({ pd, model, source, n0 }) {
+// Part 2, its figures numbered by the page's counter in the order the page shows them (the measure that added most
+// sits in the words beside the escapes' figure, so it comes first).
+export function part2({ pd, model, source, figure: fig }) {
   const band = [model.boundary.highestNo, model.boundary.lowestYes];
-  let n = n0;
-  const p = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
   const single = Object.fromEntries(pd.single.map((s) => [s.id, s]));
   const nation = pct(pd.counts.yes / pd.counts.decided, 1);
-  return html`${psec({
-    id: 'swarm', wide: true, heading: t('swarmHeading'),
-    text: html`${p('swarmText')}${p('swarmMaryland', { scored: count(pd.maryland.scored), above: count(pd.maryland.above) })}`,
-    figure: swarmFigure(pd, model, { n: n++, source }),
-  })}
-${psec({ id: 'types', heading: t('typesHeading'), text: html`${p('typesText', { nation })}${p('typesText2', { band: bandText })}`, figure: typesFigure(pd, { n: n++, source }) })}
+  const swarm = swarmFigure(pd, model, { n: fig(), source });
+  const types = typesFigure(pd, { n: fig(), source });
+  const funnel = funnelFigure(pd, { n: fig(), source, band });
+  const agree = agreeFigure(pd, { n: fig(), source });
+  const drivers = driversFigure(pd, { n: fig(), source });
+  const escape = escapeFigure(pd, { n: fig(), source, band });
+  const assigned = assignedFigure(pd, { n: fig(), source });
+  return html`${psec({ id: 'swarm', wide: true, heading: t('swarmHeading'), text: html`${para('swarmText')}${para('swarmMaryland', { scored: count(pd.maryland.scored), above: count(pd.maryland.above) })}`, figure: swarm })}
+${psec({ id: 'types', heading: t('typesHeading'), text: html`${para('typesText', { nation })}${para('typesText2', { band: bandText })}`, figure: types })}
 ${psec({
     id: 'funnel', heading: t('funnelHeading'),
-    text: html`${p('funnelText', { six: String(MEASURE_IDS.length) })}${single.PSI90 && single.CDI ? p('funnelText2', { psiN: count(single.PSI90.decided), psi: SHORT_NAMES.PSI90, psiYes: count(single.PSI90.yes), cdiN: count(single.CDI.decided), cdi: SHORT_NAMES.CDI, cdiYes: count(single.CDI.yes) }) : ''}`,
-    figure: funnelFigure(pd, { n: n++, source, band }),
+    text: html`${para('funnelText', { six: String(MEASURE_IDS.length) })}${single.PSI90 && single.CDI ? para('funnelText2', { psiN: count(single.PSI90.decided), psi: SHORT_NAMES.PSI90, psiYes: count(single.PSI90.yes), cdiN: count(single.CDI.decided), cdi: SHORT_NAMES.CDI, cdiYes: count(single.CDI.yes) }) : ''}`,
+    figure: funnel,
   })}
-${psec({ id: 'agree', heading: t('agreeHeading'), text: html`${p('agreeText')}${p('agreeText2')}`, figure: agreeFigure(pd, { n: n++, source }) })}
-${psec({
-    id: 'escape', heading: t('escapeHeading'), text: html`${p('escapeText')}${p('escapeText2')}${driversFigure(pd, { n: n++, source })}`,
-    figure: escapeFigure(pd, { n: n++, source, band }),
-  })}
-${psec({ id: 'assigned', heading: t('assignedHeading'), text: html`${p('assignedText')}${p('assignedText2')}`, figure: assignedFigure(pd, { n: n++, source }) })}`;
+${psec({ id: 'agree', heading: t('agreeHeading'), text: html`${para('agreeText')}${para('agreeText2')}`, figure: agree })}
+${psec({ id: 'escape', heading: t('escapeHeading'), text: html`${para('escapeText')}${para('escapeText2')}${drivers}`, figure: escape })}
+${psec({ id: 'assigned', heading: t('assignedHeading'), text: html`${para('assignedText')}${para('assignedText2')}`, figure: assigned })}`;
 }
 
 // ---------- Part 3: the map and the way down ----------
+
+// The key to a map's hospital dots: cut, not cut, and no decision. rings: the not-cut swatch as a ring (a place map
+// drawn with one mark per hospital) rather than a gray dot.
+const dotKey = ({ rings = false } = {}) => html`<ul class="usmap__key${rings ? ' usmap__key--rings' : ''}" role="list"><li><span class="usmap__sw usmap__sw--pen"></span>${t('mapDotsCut')}</li><li><span class="usmap__sw usmap__sw--ring"></span>${t('mapDotsNo')}</li><li><span class="usmap__sw usmap__sw--faint"></span>${t('mapDotsNA')}</li></ul>`;
 
 const shareText = (yes, decided) => pct(decided ? yes / decided : 0, 1);
 
@@ -517,7 +491,7 @@ export function mapFigure({ pd, places, shapes, n, source }) {
 <div class="mtoggle usmap__modes" role="group" aria-label="${t('mapModes')}" hidden><button type="button" class="mtoggle__b" data-mode="share" aria-pressed="true">${t('mapModeShare')}</button><button type="button" class="mtoggle__b" data-mode="dots" aria-pressed="false">${t('mapModeDots')}</button></div>
 ${imageOf(choro(WIDTH), alt, 'narrow')}
 ${imageOf(choro(PAGE_WIDE), alt, 'wide')}
-<ul class="usmap__key" role="list"><li><span class="usmap__sw usmap__sw--pen"></span>${t('mapDotsCut')}</li><li><span class="usmap__sw usmap__sw--ring"></span>${t('mapDotsNo')}</li><li><span class="usmap__sw usmap__sw--faint"></span>${t('mapDotsNA')}</li></ul>
+${dotKey()}
 </div>`;
   const total = (k) => drawn.reduce((s, x) => s + (x.p ? x.p.counts[k] : 0), 0);
   const listed = [...states.values()].sort((a, b) => a.key.localeCompare(b.key));
@@ -562,7 +536,7 @@ export function browseList(places) {
 // A place with more hospitals than this draws its map's dots as one path per kind, with no tooltips, and its
 // figure's table lists its states rather than every hospital (the table under the page lists them all).
 const DENSE = 160;
-export function placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, n, source }) {
+export function placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, next, source }) {
   const byCcn = new Map(pd.rows.map((r) => [r.ccn, r]));
   const codes = place.kind === 'metro' ? place.stateCodes : [...new Set(place.ccns.map((c) => hospitalRows.get(c).state))];
   const dense = place.ccns.length > DENSE;
@@ -580,17 +554,17 @@ export function placeMapFigure({ place, places, pd, shapes, counties, hospitalRo
   const sizes = (width) => (dense ? { 'chart-dots--faint': width > WIDTH ? 4 : 2.6, 'chart-dots--ring': width > WIDTH ? 5.4 : 3.4, 'chart-dots--pen': width > WIDTH ? 6.2 : 4 } : null);
   const lines = place.kind === 'state' ? countiesOf(counties, codes[0]) : place.kind === 'metro' ? counties : [];
   const own = place.kind === 'metro' ? new Set(place.ccns.map((c) => master.get(c)?.fips).filter(Boolean)) : null;
-  const draw = (width) => placeMap({ shapes, counties: lines, ownCounties: own, codes: place.kind === 'metro' ? [] : codes, fit: place.kind === 'metro' ? 'points' : 'states', points, label, width, aspect: place.kind === 'state' || place.kind === 'metro' ? 0.8 : 0.62, dense: sizes(width) });
+  const draw = (width) => placeMap({ variant: width > WIDTH ? 'wide' : 'narrow', shapes, counties: lines, ownCounties: own, codes: place.kind === 'metro' ? [] : codes, fit: place.kind === 'metro' ? 'points' : 'states', points, label, width, aspect: place.kind === 'state' || place.kind === 'metro' ? 0.8 : 0.62, dense: sizes(width) });
   const narrow = draw(WIDTH);
   const wide = draw(STEP_WIDE);
   if (!narrow || !wide) return null;
-  const chart = html`${new Safe(narrow.text.replace('<svg ', '<svg data-fit="narrow" '))}
-${new Safe(wide.text.replace('<svg ', '<svg data-fit="wide" '))}${html`
-<ul class="usmap__key${dense ? '' : ' usmap__key--rings'}" role="list"><li><span class="usmap__sw usmap__sw--pen"></span>${t('mapDotsCut')}</li><li><span class="usmap__sw usmap__sw--ring"></span>${t('mapDotsNo')}</li><li><span class="usmap__sw usmap__sw--faint"></span>${t('mapDotsNA')}</li></ul>`}`;
+  const chart = html`${narrow}
+${wide}
+${dotKey({ rings: !dense })}`;
   const c = place.counts;
   const states = dense ? codes.map((code) => places.places.get(`state:${code.toLowerCase()}`)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'en')) : null;
   return figure({
-    n, chart, source, csvName: `hacrp-${place.kind}-${place.key}-map`,
+    n: next(), chart, source, csvName: `hacrp-${place.kind}-${place.key}-map`,
     takeaway: fill('placeMapTakeaway', { name: place.name, yes: count(c.yes), decided: count(c.decided) }),
     table: dense ? {
       columns: [{ name: t('placeColPlace') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }],
@@ -604,7 +578,7 @@ ${new Safe(wide.text.replace('<svg ', '<svg data-fit="wide" '))}${html`
 
 // A place's scores against the nation's, as shares of each one's hospitals.
 const PLACE_BIN = 0.2;
-export function placeHistFigure({ place, pd, model, n, source }) {
+export function placeHistFigure({ place, pd, model, next, source }) {
   const band = [model.boundary.highestNo, model.boundary.lowestYes];
   const all = pd.decidedRows.map((r) => r.total);
   const edges = edgesAround(Math.min(...all), Math.max(...all), band[1], Math.round((Math.max(...all) - Math.min(...all)) / PLACE_BIN));
@@ -619,7 +593,7 @@ export function placeHistFigure({ place, pd, model, n, source }) {
   const art = both(draw);
   const c = place.counts;
   return figure({
-    n, source, alt: t('placeHistAlt'), svg: art.narrow, svgWide: art.wide, csvName: `hacrp-${place.kind}-${place.key}-scores`,
+    n: next(), source, alt: t('placeHistAlt'), ...art, csvName: `hacrp-${place.kind}-${place.key}-scores`,
     takeaway: fill('placeHistTakeaway', { share: pct(c.yes / c.decided, 1), nation: pct(pd.counts.yes / pd.counts.decided, 1), median: cmsText(decimal(c.median, DP)), nationMedian: cmsText(decimal(pd.medianScore, DP)) }),
     table: {
       columns: [{ name: t('swarmColFrom'), numeric: true }, { name: t('swarmColTo'), numeric: true }, { name: t('placeHistPlace'), numeric: true }, { name: t('placeHistNation'), numeric: true }],
@@ -629,7 +603,7 @@ export function placeHistFigure({ place, pd, model, n, source }) {
 }
 
 // A place's hospitals worse than the national median, measure by measure, against one half.
-export function placeMeasuresFigure({ place, model, n, source }) {
+export function placeMeasuresFigure({ place, model, next, source }) {
   const rows = MEASURE_IDS.map((id, i) => {
     const vals = place.rows.map((r) => r.values[i]).filter((v) => v !== null);
     const median = medianAt(model.params[id]);
@@ -649,7 +623,7 @@ export function placeMeasuresFigure({ place, model, n, source }) {
   const draw = (width) => shareDots({ sections, ref: 0.5, labels: { ref: t('placeMeasuresRef') }, max: 1, width, format: (v) => pct(v, 0), band: SHARE_BAND });
   const art = both(draw);
   return figure({
-    n, source, alt: t('placeMeasuresAlt'), svg: art.narrow, svgWide: art.wide, csvName: `hacrp-${place.kind}-${place.key}-measures`,
+    n: next(), source, alt: t('placeMeasuresAlt'), ...art, csvName: `hacrp-${place.kind}-${place.key}-measures`,
     takeaway: fill('placeMeasuresTakeaway', { worst: worst.label, worstShare: worst.valueText, best: best.label, bestShare: best.valueText }),
     table: {
       columns: [{ name: t('colMeasure') }, { name: t('fig2ColN'), numeric: true }, { name: t('placeMeasuresRef'), numeric: true }],
@@ -672,13 +646,13 @@ export function childrenTable({ place, places, nation }) {
   return html`<section class="block place__kids" aria-labelledby="kids-h">
 <h2 id="kids-h" class="psec__title">${heading}</h2>
 <p class="small muted">${t('placeChildrenIntro')}</p>
-<div class="printout"><div class="printout__scroll"><table class="gb gb--kids" aria-labelledby="kids-h">
+${printout(html`<table class="gb gb--kids" aria-labelledby="kids-h">
 <thead><tr><th scope="col">${t('placeColPlace')}</th><th scope="col" class="num">${t('figColDecided')}</th><th scope="col" class="num">${t('figColCut')}</th><th scope="col">${t('figColShare')}</th><th scope="col" class="num">${t('placeColMedian')}</th></tr></thead>
 <tbody>${kids.map((k) => {
     const c = k.counts;
     const share = c.decided ? c.yes / c.decided : 0;
     return html`<tr><th scope="row">${k.path ? html`<a href="${k.path}">${k.name}</a>` : k.name}</th><td class="num">${count(c.decided)}</td><td class="num">${count(c.yes)}</td><td><span class="kids__share"><span class="browse__bar" style="--share: ${share.toFixed(3)}; --nation: ${nation.toFixed(3)}" aria-hidden="true"></span><span class="kids__pct">${c.decided ? pct(share, 1) : '—'}</span></span></td><td class="num">${c.median === null ? '—' : cmsText(decimal(c.median, DP))}</td></tr>`;
   })}</tbody>
-</table></div></div>
+</table>`)}
 </section>`;
 }
