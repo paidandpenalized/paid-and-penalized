@@ -4,7 +4,7 @@
 // draws; history/copy.js holds the words.
 import { figure, drawn, imageOf, imagePair, num } from '../../../web/charts/figure.js';
 import { WIDTH, isNarrow } from '../../../web/charts/svg.js';
-import { rollCall } from '../../../web/charts/rollCall.js';
+import { everBrackets, rollCall } from '../../../web/charts/rollCall.js';
 import { chanceDots, staircase } from '../../../web/charts/yearCharts.js';
 import { barRows } from '../../../web/charts/barRows.js';
 import { rankYears } from '../../../web/charts/rankYears.js';
@@ -60,11 +60,7 @@ function rollGeom(width, notes) {
 
 // The brackets under a roll call: the hospitals ever cut, then those never cut (none when every hospital is on one
 // side).
-function rollBrackets(records) {
-  const ever = records.filter((r) => r.includes(CUT)).length;
-  if (!ever || ever === records.length) return [];
-  return [{ from: 0, to: ever, label: fill('rollEver', { n: count(ever) }), pen: true }, { from: ever, to: records.length, label: fill('rollNever', { n: count(records.length - ever) }) }];
-}
+const rollBrackets = (records) => everBrackets(records, { ever: (n) => fill('rollEver', { n: count(n) }), never: (n) => fill('rollNever', { n: count(n) }) });
 
 // A roll call in its box, at the phone's width and `wide`, with what the page script reads: attrs (where the grid's
 // order comes from; '' for a picture alone), its geometry, the state picker (or '') and, when the grid is live
@@ -112,7 +108,11 @@ export function rollFigure(hd, { n, source, rollUrl = null, src = null }) {
   const ever = records.filter((r) => r.includes(CUT)).length;
   const never = records.length - ever;
   const states = [...new Set(hd.order.map(([ccn]) => hd.stateOf.get(ccn)))].filter((st) => STATE_NAMES[st]).sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b], 'en'));
-  const picker = rollUrl ? html`<p class="roll__pick" hidden><label for="roll-state">${t('rollPick')}</label> <select id="roll-state"><option value="">${t('rollAll')}</option>${states.map((st) => html`<option value="${st}">${STATE_NAMES[st]}</option>`)}</select></p>` : '';
+  // The state picker, hidden until the page script runs; the script redraws the grid with the picked state's hospitals
+  // and links to the state's page. It carries what the script draws and says with: the grid's own words (the brackets'
+  // as templates) and the nation's share ever cut, from the takeaway's own counts.
+  const words = JSON.stringify({ rollEver: fill('rollEver', { n: '{n}' }), rollNever: fill('rollNever', { n: '{n}' }), rollNone: t('rollNone') });
+  const picker = rollUrl ? html`<p class="roll__pick" hidden data-nation="${pct0(share(ever, records.length))}" data-words="${words}"><label for="roll-state">${t('rollPick')}</label> <select id="roll-state"><option value="">${t('rollAll')}</option>${states.map((st) => html`<option value="${st}">${STATE_NAMES[st]}</option>`)}</select> <a class="roll__open" hidden></a></p>` : '';
   const chart = rollBox({ hd, records, wide: HIST_WIDE, attrs: rollUrl ? html` data-roll="${rollUrl}" data-src="${src}"` : '', picker, live: Boolean(rollUrl) });
   return figure({
     n, source, chart, csvName: 'hacrp-history-years',

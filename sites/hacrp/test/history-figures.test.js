@@ -10,7 +10,7 @@ import { count, decimal, pct } from '../../../web/render/format.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
-import { t as words } from '../web/history/copy.js';
+import { fill as wordsFill, t as words } from '../web/history/copy.js';
 import {
   HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, everFigure, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
   part4, placeMembers, placeYearsFigure, recordStrip, rollAsset, rollFigure, ruleBreaks, spikeYear, statesYearsFigure, yearMapFigure, yearsFigure,
@@ -145,6 +145,25 @@ test('rollFigure with the assets: the script\'s attributes and a picker of the s
   assert.equal(options[0][0], '');
   // Two drawings, a narrow one and a wide one, each with the grid's records as cells.
   assert.equal([...String(fig).matchAll(/<svg [^>]*class="chart chart--roll"/g)].length, 2);
+});
+
+test('rollFigure\'s picker carries what the script redraws a state with: the grid\'s own words, and the nation\'s share ever cut from the takeaway\'s counts; its link waits hidden', () => {
+  for (const hd of [S, HD]) {
+    const fig = String(rollFigure(hd, { n: 1, source: SRC, rollUrl: '/assets/h.json', src: '/assets/p.json' }));
+    const pick = /<p class="roll__pick" hidden[^>]*>/.exec(fig)[0];
+    const ever = everCut(hd);
+    assert.ok(numbers(takeaway(fig)).includes(count(ever)) && numbers(takeaway(fig)).includes(count(hd.recs.size)));
+    assert.equal(attr(pick, 'data-nation'), pct0(ever / hd.recs.size));
+    // The words are the national grid's own, with the count left to fill: the brackets read the same on a state's grid.
+    const kept = JSON.parse(attr(pick, 'data-words'));
+    assert.deepEqual(Object.keys(kept).sort(), ['rollEver', 'rollNever', 'rollNone']);
+    assert.equal(kept.rollEver.replace('{n}', '7'), wordsFill('rollEver', { n: '7' }));
+    assert.equal(kept.rollNever.replace('{n}', '7'), wordsFill('rollNever', { n: '7' }));
+    assert.equal(kept.rollNone, words('rollNone'));
+    for (const label of [wordsFill('rollEver', { n: count(ever) }), wordsFill('rollNever', { n: count(hd.recs.size - ever) })]) assert.ok(fig.includes(`>${label}</text>`), `the national grid's bracket "${label}"`);
+    // The link to the picked state's page is in the picker, hidden and with nowhere to go until the script sets it.
+    assert.match(fig, /<\/select> <a class="roll__open" hidden><\/a><\/p>/);
+  }
 });
 
 // ---------- the staircase and the year map ----------

@@ -28,6 +28,15 @@ function rowRuns(records, i) {
   return out;
 }
 
+// The brackets of a roll call in the pages' order (every hospital ever cut stands before every hospital never cut):
+// the hospitals ever cut, then those never cut, each labelled by its words for its count (labels: { ever, never },
+// each n -> text). None when every hospital is on one side.
+export function everBrackets(records, { ever, never }) {
+  const k = records.filter((r) => r.includes('Y')).length;
+  if (!k || k === records.length) return [];
+  return [{ from: 0, to: k, label: ever(k), pen: true }, { from: k, to: records.length, label: never(records.length - k) }];
+}
+
 // A bracket's label under its middle, kept inside the drawing: anchored at an end when it would run past one (its
 // width: capsWidth).
 function bracketLabel(b, { mid, label, width, y }) {

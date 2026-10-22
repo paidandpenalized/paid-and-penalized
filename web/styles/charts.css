@@ -341,7 +341,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-chance__stem, .chart-chance__stem--up, .chart-chance__ring { stroke: CanvasText; }
 }
 .chart-roll__note { fill: var(--ink-2); font: 400 10px var(--font-type); }
-.chart-roll__pick { stroke: var(--ink-2); stroke-opacity: 0.75; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-roll__blank { fill: var(--ink-3); font: 600 10px var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The year map (geo.js usYearMap). */
 .chart-years__land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }

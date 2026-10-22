@@ -11,7 +11,7 @@ import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../
 import { periodsChart } from '../charts/periods.js';
 import { proofBins, proofStrips } from '../charts/proofStrips.js';
 import { rankYears } from '../charts/rankYears.js';
-import { rollCall } from '../charts/rollCall.js';
+import { everBrackets, rollCall } from '../charts/rollCall.js';
 import { ruleStack } from '../charts/ruleStack.js';
 import { smallLines } from '../charts/smallLines.js';
 import { GRID, TILES } from '../charts/states.js';
@@ -345,6 +345,13 @@ test('rollCall: brackets under the grid, the right margin kept clear, notes at t
   // No cell reaches into the right margin (each H is a cell's right edge).
   const right = Math.max(...[...attr(tags(s, 'chart-roll__no')[0], 'd').matchAll(/H([\d.]+)/g)].map((m) => Number(m[1])));
   assert.ok(right <= 300 - 70, `${right}`);
+});
+
+test('everBrackets: the hospitals ever cut, then those never cut, each in its words for its count; none when every hospital is on one side', () => {
+  const labels = { ever: (n) => `Ever ${n}`, never: (n) => `Never ${n}` };
+  assert.deepEqual(everBrackets(['YN.', 'NY.', '.NN', 'NNN'], labels), [{ from: 0, to: 2, label: 'Ever 2', pen: true }, { from: 2, to: 4, label: 'Never 2' }]);
+  assert.deepEqual(everBrackets(['Y', 'Y'], labels), [], 'every hospital cut');
+  assert.deepEqual(everBrackets(['N', '.'], labels), [], 'none cut');
 });
 
 test('rollCall: a bracket label too wide for its bracket is held inside the drawing, against the label column on the left or the edge on the right', () => {

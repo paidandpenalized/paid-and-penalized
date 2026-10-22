@@ -16,6 +16,9 @@ import { fill } from '../web/explore/copy.js';
 import { dotsPath } from '../../../web/charts/dots.js';
 import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
+import { everBrackets, rollCall } from '../../../web/charts/rollCall.js';
+import { copyOf } from '../../../web/render/components.js';
+import { placePath } from '../web/place-paths.js';
 
 // ---------- the assets ----------
 
@@ -380,23 +383,27 @@ export function mountPlaceMaps(root = document) {
 
 // ---------- the roll call ----------
 
-// The runs of consecutive years in which any hospital had a decision, [first, end) as year indexes: a picked state's
-// ticks break around a year with none.
-function decidedRuns(hist) {
-  const runs = [];
-  hist.fys.forEach((_, i) => {
-    if (!hist.recs.some((r) => r[i] !== NONE)) return;
-    const last = runs[runs.length - 1];
-    if (last && last[1] === i) last[1] = i + 1;
-    else runs.push([i, i + 1]);
-  });
-  return runs;
+// A state's hospitals out of the grid's order, in that order: { ccns, recs, states }. The order is the pages' (trends.js
+// rollOrder, which ranks a hospital by its own record and CCN alone), so it is the order the state's page draws.
+function stateGrid(hist, code) {
+  const js = hist.states.flatMap((st, j) => (st === code ? [j] : []));
+  return { ccns: js.map((j) => hist.ccns[j]), recs: js.map((j) => hist.recs[j]), states: js.map((j) => hist.states[j]) };
+}
+
+// A grid drawn as the build draws the figure's (rollCall.js), at a drawing's width and geometry, in the grid's own words
+// (words: the picker's): its body and its viewBox, to put in that drawing's place.
+function rollDrawing(recs, fys, { width, geom: [label, right, rowH], words }) {
+  const brackets = everBrackets(recs, { ever: (n) => words.fill('rollEver', { n: count(n) }), never: (n) => words.fill('rollNever', { n: count(n) }) });
+  const art = rollCall({ records: recs, years: fys.map(String), brackets, blank: words.t('rollNone'), width, rowH, label, right }).text;
+  return { body: art.slice(art.indexOf('>') + 1, art.lastIndexOf('</svg>')), viewBox: /viewBox="([^"]*)"/.exec(art)[1] };
 }
 
 // The roll call (history-figures.js rollFigure): the hospital under the pointer, named with its record in the readout
-// under the grid (a click opens its page, when CMS's newest file lists it), and the state picker, which ticks that
-// state's hospitals through the grid. The grid's order, { fys, ccns, recs, states }: the history asset (the program
-// page, through history, the page's asset loaders) or a JSON script on the page that data-inline names (a place page).
+// under the grid (a click opens its page, when CMS's newest file lists it), and the state picker, which redraws the
+// grid with that state's hospitals alone, says in the readout how many were ever cut against the nation's share, and
+// links to the state's page; "every state" puts the drawings back as they were built. The grid's order, { fys, ccns,
+// recs, states }: the history asset (the program page, through history, the page's asset loaders) or a JSON script on
+// the page that data-inline names (a place page).
 export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
   const box = fig.querySelector('.roll');
   if (!box) return;
@@ -408,22 +415,27 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
   const geomOf = (svg) => geom[String(svg.viewBox.baseVal.width)];
   const order = async () => (box.dataset.inline ? JSON.parse(document.getElementById(box.dataset.inline).textContent) : history(box.dataset.roll));
   const ready = once(() => Promise.all([order(), hospitals(box.dataset.src)])
-    .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath, runs: decidedRuns(hist) })));
+    .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath })));
   const svgs = [...box.querySelectorAll('svg.chart--roll')];
+  // The state drawn, { ...stateGrid, say: its sentence }, or null for every hospital; the grid the pointer reads.
+  let picked = null;
+  const gridOf = (s) => picked ?? s.hist;
+  // What the readout rests on: the picked state's sentence, or the hint.
+  const rest = () => picked?.say ?? readout.dataset.hint;
   const at = (svg, e, n) => {
     const width = svg.viewBox.baseVal.width;
     const [label, right] = geomOf(svg);
     const j = Math.floor(((svgPoint(svg, e).x - label) / (width - label - right)) * n);
     return j >= 0 && j < n ? j : null;
   };
-  const say = (s, j) => {
-    const ccn = s.hist.ccns[j];
-    const rec = s.hist.recs[j];
+  const say = (s, g, j) => {
+    const ccn = g.ccns[j];
+    const rec = g.recs[j];
     const row = s.names.get(ccn);
     const cut = s.hist.fys.filter((_, i) => rec[i] === CUT).map((fy) => `FY${String(fy).slice(-2)}`);
     const decided = [...rec].filter((c) => c !== NONE).length;
     const name = row ? row[1] : fill('rollClosed', { ccn });
-    const state = row ? row[3] : s.hist.states[j];
+    const state = row ? row[3] : g.states[j];
     const who = state ? `${name}, ${state}` : name;
     const years = cut.join(', ');
     if (decided === 1) readout.textContent = cut.length ? fill('rollSayOneCut', { who, years }) : fill('rollSayOneNone', { who });
@@ -446,55 +458,73 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
     rect.setAttribute('width', Math.max(2, w + 2).toFixed(1));
   };
   if (readout.dataset.hint) readout.textContent = readout.dataset.hint;
+  // The hospital a first tap named (its CCN), which a second tap opens.
   let armed = null;
   for (const svg of svgs) {
     svg.addEventListener('pointerenter', () => { ready().catch(() => {}); });
     svg.addEventListener('pointermove', (e) => {
-      ready().then((s) => { const j = at(svg, e, s.hist.ccns.length); if (j !== null) { say(s, j); cursor(svg, j, s.hist.ccns.length, s.hist.fys.length); } }, () => {});
+      ready().then((s) => {
+        const g = gridOf(s);
+        const j = at(svg, e, g.ccns.length);
+        if (j !== null) { say(s, g, j); cursor(svg, j, g.ccns.length, s.hist.fys.length); }
+      }, () => {});
     });
-    // Leaving the grid takes the outline away and brings the hint back.
+    // Leaving the grid takes the outline away and brings back what the readout rests on.
     svg.addEventListener('pointerleave', () => {
       svg.querySelector('.chart-roll__cursor')?.remove();
-      if (readout.dataset.hint && !select?.value) readout.textContent = readout.dataset.hint;
+      if (rest()) readout.textContent = rest();
     });
     // A mouse click opens the hospital under it. A tap first names the hospital (a sliver is far narrower than a
     // finger on a phone), and a second tap on the same one opens it.
     svg.addEventListener('click', (e) => {
       ready().then((s) => {
-        const j = at(svg, e, s.hist.ccns.length);
-        if (j === null || !s.names.has(s.hist.ccns[j])) return;
-        if (e.pointerType === 'touch' && armed !== j) {
-          armed = j;
-          say(s, j);
-          cursor(svg, j, s.hist.ccns.length, s.hist.fys.length);
+        const g = gridOf(s);
+        const j = at(svg, e, g.ccns.length);
+        if (j === null || !s.names.has(g.ccns[j])) return;
+        if (e.pointerType === 'touch' && armed !== g.ccns[j]) {
+          armed = g.ccns[j];
+          say(s, g, j);
+          cursor(svg, j, g.ccns.length, s.hist.fys.length);
           readout.textContent = `${readout.textContent} ${fill('rollTapAgain')}`;
           return;
         }
-        window.location.assign(hospitalHref(s.path, s.hist.ccns[j]));
+        window.location.assign(hospitalHref(s.path, g.ccns[j]));
       }, () => {});
     });
   }
   if (!select) return;
+  // The picker's words for the grid (the brackets' and an empty year's) and the nation's share ever cut, from the build.
+  const words = copyOf(JSON.parse(picker.dataset.words));
+  const link = picker.querySelector('.roll__open');
+  // Each drawing as built ({ body, viewBox, label }), kept at the first pick for "every state" to put back.
+  const built = new Map();
+  const put = (svg, { body, viewBox, label }) => {
+    svg.innerHTML = body;
+    svg.setAttribute('viewBox', viewBox);
+    svg.setAttribute('aria-label', label);
+  };
   picker.hidden = false;
   select.addEventListener('change', () => {
     ready().then((s) => {
+      const code = select.value;
+      const name = select.selectedOptions[0]?.textContent ?? code;
+      armed = null;
+      const g = code ? stateGrid(s.hist, code) : null;
+      picked = g?.ccns.length ? g : null;
+      const label = picked && fill('rollStateAlt', { state: name, hospitals: count(picked.ccns.length) });
       for (const svg of svgs) {
-        svg.querySelector('.chart-roll__pick')?.remove();
-        if (!select.value) continue;
-        const width = svg.viewBox.baseVal.width;
-        const [label, right, rowH, top] = geomOf(svg);
-        const n = s.hist.ccns.length;
-        const x = (j) => label + ((j + 0.5) * (width - label - right)) / n;
-        // A tick through each of the state's hospitals, broken around a year no hospital had a decision.
-        const d = s.hist.states.map((st, j) => (st === select.value ? s.runs.map(([a, b]) => `M${x(j).toFixed(1)} ${(top + a * rowH).toFixed(1)}V${(top + b * rowH - 2).toFixed(1)}`).join('') : '')).join('');
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('class', 'chart-roll__pick');
-        path.setAttribute('d', d);
-        svg.append(path);
+        svg.querySelector('.chart-roll__cursor')?.remove();
+        if (!built.has(svg)) built.set(svg, { body: svg.innerHTML, viewBox: svg.getAttribute('viewBox'), label: svg.getAttribute('aria-label') });
+        put(svg, picked ? { ...rollDrawing(picked.recs, s.hist.fys, { width: svg.viewBox.baseVal.width, geom: geomOf(svg), words }), label } : built.get(svg));
       }
-      box.classList.toggle('is-picked', Boolean(select.value));
-      const k = s.hist.states.filter((st) => st === select.value).length;
-      readout.textContent = select.value ? fill('rollPicked', { n: count(k), state: select.selectedOptions[0].textContent }) : readout.dataset.hint ?? '';
+      if (picked) {
+        const ever = picked.recs.filter((r) => r.includes(CUT)).length;
+        picked.say = fill('rollStateSay', { state: name, ever: count(ever), hospitals: count(picked.recs.length), share: pct(ever / picked.recs.length, 0), nation: picker.dataset.nation });
+        link.setAttribute('href', placePath('state', code));
+        link.textContent = fill('rollStateLink', { state: name });
+      } else link.removeAttribute('href');
+      link.hidden = !picked;
+      readout.textContent = rest() ?? '';
     }, () => {});
   });
 }
