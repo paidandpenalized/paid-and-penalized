@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CUT, NONE, NOT_CUT, longestRun, panel, poissonBinomial, records, repeatsByGap, rollOrder, tallyYears, timesCut, timesCutVsChance, yearly, yearsDecided,
+  CUT, NONE, NOT_CUT, everCut, longestRun, panel, poissonBinomial, records, repeatsByGap, rollOrder, tallyYears, timesCut, timesCutVsChance, yearly, yearsDecided,
 } from '../../hacrp/trends.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
@@ -29,6 +29,12 @@ test('timesCut and yearsDecided count the characters', () => {
   assert.equal(timesCut('....'), 0);
   assert.equal(yearsDecided('YNY.'), 3);
   assert.equal(yearsDecided('....'), 0);
+});
+
+test('everCut counts the records cut in at least one year', () => {
+  assert.equal(everCut(['YNY.', 'NNN.', '..Y.', '....', 'NYNN']), 3);
+  assert.equal(everCut(['NN', '..']), 0);
+  assert.equal(everCut([]), 0);
 });
 
 test('tallyYears: per year, the hospitals with a decision and those cut, over any set of records', () => {

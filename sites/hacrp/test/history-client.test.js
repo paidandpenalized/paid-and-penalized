@@ -1,5 +1,5 @@
-// The history's page scripts (client/explore.js mountRoll and mountYearMap, and the two entry scripts that mount them)
-// against a stand-in DOM. Two kinds of test: the scripts on small synthetic assets (invented CCNs 990001 and so on,
+// The history's page scripts (client/explore.js mountRoll and mountYearMap, client/roll-picker.js mountStatePicker, and
+// the two entry scripts that mount them) against a stand-in DOM. Two kinds of test: the scripts on small synthetic assets (invented CCNs 990001 and so on,
 // invented names), where every expectation is worked out by hand; and the scripts on the markup the build writes for
 // the pinned data (rollFigure, placeYearsFigure, yearMapFigure) and the history asset it writes beside it (rollAsset),
 // where the check is that the drawing and the script agree: the widths the script is told about are the widths drawn, a
@@ -8,15 +8,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mountRoll, mountYearMap } from '../client/explore.js';
+import { mountStatePicker } from '../client/roll-picker.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
-import { fill } from '../web/explore/copy.js';
+import { fill, t } from '../web/explore/copy.js';
 import { fill as historyFill, t as historyText } from '../web/history/copy.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { count, pct } from '../../../web/render/format.js';
 import { historyData } from '../web/history-data.js';
 import { HIST_MAP_WIDE, placeMembers, placeYearsFigure, rollAsset, rollFigure, yearMapFigure } from '../web/history-figures.js';
 import { DATA, PLACES } from './pinned.js';
-import { rollCall } from '../../../web/charts/rollCall.js';
+import { rollParts } from '../../../web/charts/rollCall.js';
 import { placePath } from '../web/place-paths.js';
 
 const HD = historyData({ history: DATA.history, master: DATA.master });
@@ -48,13 +49,14 @@ function el(over = {}) {
 const PX = 2;
 const at = (x) => ({ clientX: x * PX, clientY: 0 });
 
-// A roll call's SVG: its drawn width and height as the viewBox, the pointer matrix, what the build drew (its body, its
+// A roll call's SVG: its drawn width and height as the viewBox, the pointer matrix, what the build drew (its nodes, its
 // viewBox and its label, which the state picker swaps), and the one node the script adds and takes away: the outline of
-// the column under the pointer.
+// the column under the pointer. Its content is a list of nodes, each standing for its markup; setting innerHTML or
+// replacing the children puts new ones in and, as in a browser, takes the outline away with the old.
 function rollSvg(width, height = 100) {
+  let nodes = [{ markup: `<path class="built-${width}"/>` }];
   const svg = el({
     viewBox: { baseVal: { width, height } },
-    innerHTML: `<path class="built-${width}"/>`,
     attrs: { viewBox: `0 0 ${width} ${height}`, 'aria-label': 'The national grid, as built' },
     createSVGPoint() {
       const pt = { x: 0, y: 0, matrixTransform: (m) => ({ x: pt.x * m.k, y: pt.y * m.k }) };
@@ -65,6 +67,14 @@ function rollSvg(width, height = 100) {
       svg.cursor = node;
       node.remove = () => { svg.cursor = null; };
     },
+    replaceChildren(...next) {
+      nodes = next;
+      svg.cursor = null;
+    },
+  });
+  Object.defineProperties(svg, {
+    innerHTML: { get: () => nodes.map((n) => n.markup).join(''), set: (markup) => svg.replaceChildren({ markup }) },
+    childNodes: { get: () => nodes },
   });
   svg.cursor = null;
   svg.querySelector = (s) => (s === '.chart-roll__cursor' ? svg.cursor : null);
@@ -73,13 +83,13 @@ function rollSvg(width, height = 100) {
 
 // The figure around a roll call: the box (its data-* attributes), the readout (hint: its data-* attributes), the SVGs at
 // the given [width, height]s and, when asked, the state picker with its link. options: the picker's options
-// [{ value, textContent }]; pickerData: its data-* attributes (the grid's words and the nation's share).
+// [{ value, textContent }]; pickerData: its data-* attributes (the nation's share).
 function rollRig({ dataset, sizes, options = null, readoutData = {}, pickerData = SYN_PICKER }) {
   const readout = el({ dataset: { ...readoutData } });
   const svgs = sizes.map(([w, h]) => rollSvg(w, h));
   const select = options && el();
   if (select) Object.defineProperty(select, 'selectedOptions', { get: () => [options.find((o) => o.value === select.value)] });
-  const link = options && el({ hidden: true, removeAttribute(k) { delete link.attrs[k]; } });
+  const link = options && el({ hidden: true });
   const picker = options && el({ hidden: true, dataset: { ...pickerData }, querySelector: (s) => ({ select, '.roll__open': link })[s] ?? null });
   const box = el({
     dataset,
@@ -128,8 +138,8 @@ function hospitalsStub(rows, hospitalPath = '/hacrp/hospital/') {
   return load;
 }
 
-// A document that makes the SVG nodes the roll call draws (the column outline, the picked-state ticks), and holds the
-// page's JSON scripts by id (scripts: { id: text }; a place page's grid order).
+// A document that makes the SVG node the roll call draws (the column outline), and holds the page's JSON scripts by id
+// (scripts: { id: text }; a place page's grid order).
 const documentStub = (scripts = {}) => ({ createElementNS: (ns, tag) => el({ ns, tag }), getElementById: (id) => (id in scripts ? { textContent: scripts[id] } : null) });
 
 // A window that records the pages it is sent to.
@@ -215,9 +225,9 @@ const SYN_ROWS = [
 ];
 // The geometry the build writes (history-figures.js rollGeom): [label column, right margin, row height, top] by width.
 const SYN_GEOM = { 300: [30, 0, 11, 4], 1180: [40, 0, 17, 4] };
-// The picker's data-* attributes as the build writes them (history-figures.js rollFigure): the grid's words, invented
-// here so a drawing shows it used them, and the nation's share ever cut (four of the five hospitals).
-const SYN_PICKER = { nation: '80%', words: JSON.stringify({ rollEver: 'Ever: {n}', rollNever: 'Never: {n}', rollNone: 'Nobody' }) };
+// The picker's data-* attributes as the build writes them (history-figures.js rollFigure): the nation's share ever cut
+// (four of the five hospitals).
+const SYN_PICKER = { nation: '80%' };
 // The middle of grid column j at a drawn width.
 const middle = (j, width, [label, right], n = SYN.ccns.length) => label + ((j + 0.5) * (width - label - right)) / n;
 const synRig = (extra = {}) => rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), roll: ROLL_URL, src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], ...extra });
@@ -415,8 +425,9 @@ test('mountRoll, the state picker: a state redraws each drawing with its hospita
     const hint = 'Point at a sliver';
     const rig = synRig({ options: AL_PICK, readoutData: { hint } });
     const built = rig.svgs.map((svg) => ({ body: svg.innerHTML, attrs: { ...svg.attrs } }));
+    const builtNodes = rig.svgs.map((svg) => [...svg.childNodes]);
     assert.equal(rig.picker.hidden, true, 'hidden until the script runs');
-    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS), picker: mountStatePicker });
     assert.equal(rig.picker.hidden, false);
     assert.equal(rig.link.hidden, true, 'no link until a state is picked');
     const pick = pickIn(rig);
@@ -428,15 +439,16 @@ test('mountRoll, the state picker: a state redraws each drawing with its hospita
     assert.equal(rig.svgs[0].cursor, null, 'the outline goes with the national grid');
     // Alabama: columns 0, 1 and 4 of the national order, in that order (records YYN, YN., NNN): ever cut 2, never 1.
     const recs = ['YYN', 'YN.', 'NNN'];
+    const [ever, never] = [fill('rollEver', { n: '2' }), fill('rollNever', { n: '1' })];
     for (const [svg, width, height] of [[rig.svgs[0], 300, 4 + 3 * 11 + 30], [rig.svgs[1], 1180, 4 + 3 * 17 + 30]]) {
       const [label, right, rowH] = SYN_GEOM[width];
-      const kit = rollCall({ records: recs, years: SYN.fys.map(String), brackets: [{ from: 0, to: 2, label: 'Ever: 2', pen: true }, { from: 2, to: 3, label: 'Never: 1' }], blank: 'Nobody', width, rowH, label, right }).text;
-      assert.equal(svg.innerHTML, kit.slice(kit.indexOf('>') + 1, -'</svg>'.length), `width ${width}: the kit's grid at the drawing's own width and geometry`);
+      const kit = rollParts({ records: recs, years: SYN.fys.map(String), brackets: [{ from: 0, to: 2, label: ever, pen: true }, { from: 2, to: 3, label: never }], blank: t('rollNone'), width, rowH, label, right });
+      assert.equal(svg.innerHTML, String(kit.body), `width ${width}: the kit's grid at the drawing's own width and geometry`);
       assert.equal(svg.attrs.viewBox, `0 0 ${width} ${height}`, `width ${width}: the same width; a row a year and the brackets`);
       // By hand: cut in 2024 and 2025, in 2024; not cut in 2026, in 2025, in all three. One cell each (90 units a column
       // at 300).
       assert.deepEqual([inkCells(svg.innerHTML, 'yes'), inkCells(svg.innerHTML, 'no')], [3, 5], `width ${width}`);
-      assert.ok(svg.innerHTML.includes('>Ever: 2</text>') && svg.innerHTML.includes('>Never: 1</text>'), 'the brackets in the picker\'s words, the state\'s own counts');
+      assert.ok(svg.innerHTML.includes(`>${ever}</text>`) && svg.innerHTML.includes(`>${never}</text>`), 'the brackets in the grid\'s own words, the state\'s own counts');
       assert.equal(svg.attrs['aria-label'], fill('rollStateAlt', { state: 'Alabama', hospitals: '3' }));
     }
     assert.equal(rig.readout.textContent, fill('rollStateSay', { state: 'Alabama', ever: '2', hospitals: '3', share: '67%', nation: '80%' }));
@@ -452,25 +464,41 @@ test('mountRoll, the state picker: a state redraws each drawing with its hospita
     assert.doesNotMatch(rig.svgs[0].innerHTML, /chart-roll__bracket/);
     assert.equal(rig.readout.textContent, fill('rollStateSay', { state: 'Maryland', ever: '2', hospitals: '2', share: '100%', nation: '80%' }));
     assert.equal(rig.link.attrs.href, placePath('state', 'MD'));
-    // Back to Alabama, then "Every state": each drawing as built, to the character; no link; the hint again.
+    // Back to Alabama, then "Every state": each drawing as built, its very nodes, so to the character; the outline on
+    // the state's grid goes with it; the link hidden; the hint again.
     await pick('AL');
+    rig.svgs[0].handlers.pointermove(at(middle(1, 300, SYN_GEOM[300], 3)));
+    await settle();
+    assert.ok(rig.svgs[0].cursor);
     await pick('');
-    rig.svgs.forEach((svg, i) => assert.deepEqual({ body: svg.innerHTML, attrs: { ...svg.attrs } }, built[i], `drawing ${i}`));
+    rig.svgs.forEach((svg, i) => {
+      assert.deepEqual({ body: svg.innerHTML, attrs: { ...svg.attrs } }, built[i], `drawing ${i}`);
+      assert.ok(svg.childNodes.length === builtNodes[i].length && svg.childNodes.every((node, k) => node === builtNodes[i][k]), `drawing ${i}: the nodes the build drew`);
+    });
+    assert.equal(rig.svgs[0].cursor, null, 'the outline goes with the state\'s grid');
     assert.equal(rig.link.hidden, true);
-    assert.equal(rig.link.attrs.href, undefined);
     assert.equal(rig.readout.textContent, hint);
     // With no hint, the readout is left empty.
     const plain = synRig({ options: AL_PICK });
-    mountRoll(plain.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    mountRoll(plain.fig, { hospitals: hospitalsStub(SYN_ROWS), picker: mountStatePicker });
     await pickIn(plain)('AL');
     await pickIn(plain)('');
     assert.equal(plain.readout.textContent, '');
   })));
 
+test('mountRoll without the picker\'s script (a place page\'s script carries none) leaves a picker as built: hidden, nothing listening', () =>
+  withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, () => {
+    const rig = synRig({ options: AL_PICK });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    assert.equal(rig.picker.hidden, true);
+    assert.equal(rig.select.handlers.change, undefined);
+    assert.ok(rig.svgs[0].handlers.pointermove, 'the grid itself is mounted');
+  }));
+
 test('mountRoll, a picked state: the pointer names the state\'s own columns, a click opens one, a tap names first, and leaving brings the state\'s sentence back', () =>
   withGlobals({ window: windowStub(), document: documentStub(), fetch: synFetch() }, () => noUnhandled(async () => {
     const rig = synRig({ options: AL_PICK, readoutData: { hint: 'Point at a sliver' } });
-    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS), picker: mountStatePicker });
     await pickIn(rig)('AL');
     const sentence = rig.readout.textContent;
     const [narrow, wide] = rig.svgs;
@@ -519,12 +547,12 @@ test('mountRoll, a picked state: the pointer names the state\'s own columns, a c
 // Four years, the second of which no hospital had a decision in (CMS cut no one, scored no one).
 const GAPPED = { fys: [2024, 2025, 2026, 2027], ccns: SYN.ccns, recs: ['Y.YN', 'N.NN', 'Y.N.', '..YY', 'N.NN'], states: SYN.states };
 
-test('mountRoll, a picked state: a year in which none of its hospitals had a decision says so, in the picker\'s words; a page\'s own order works too', () =>
+test('mountRoll, a picked state: a year in which none of its hospitals had a decision says so, in the grid\'s own words; a page\'s own order works too', () =>
   withGlobals({ window: windowStub(), document: documentStub({ gapped: JSON.stringify(GAPPED) }), fetch: fetchStub({}) }, () => noUnhandled(async () => {
     const rig = rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), inline: 'gapped', src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], options: AL_PICK });
-    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS), picker: mountStatePicker });
     await pickIn(rig)('AL');
-    for (const svg of rig.svgs) assert.equal([...svg.innerHTML.matchAll(/class="chart-roll__blank"[^>]*>Nobody</g)].length, 1, 'the second year, once');
+    for (const svg of rig.svgs) assert.equal([...svg.innerHTML.matchAll(new RegExp(`class="chart-roll__blank"[^>]*>${t('rollNone')}<`, 'g'))].length, 1, 'the second year, once');
     assert.equal(rig.svgs[0].attrs.viewBox, `0 0 300 ${4 + 4 * 11 + 30}`);
     assert.deepEqual(globalThis.fetch.calls, []);
   })));
@@ -534,7 +562,7 @@ test('mountRoll, the state picker: a history asset that will not load leaves the
     let attempt = 0;
     await withGlobals({ fetch: fetchStub({ [ROLL_URL]: () => (attempt++ === 0 ? fail(503)() : ok(SYN)()) }) }, async () => {
       const rig = synRig({ options: AL_PICK });
-      mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
+      mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS), picker: mountStatePicker });
       await pickIn(rig)('AL');
       assert.equal(rig.svgs[0].innerHTML, '<path class="built-300"/>');
       assert.equal(rig.link.hidden, true);
@@ -672,7 +700,7 @@ test('the program page\'s state picker on the pinned history: each state\'s grid
   const built = rig.svgs.map((svg) => svg.innerHTML);
   return withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, () => noUnhandled(async () => {
     const rows = ASSET.ccns.map((ccn, j) => [ccn, `Example ${ccn}`, 'Exampleton', ASSET.states[j], '0.0000', 'No', '00000']);
-    mountRoll(rig.fig, { hospitals: hospitalsStub(rows) });
+    mountRoll(rig.fig, { hospitals: hospitalsStub(rows), picker: mountStatePicker });
     const pick = pickIn(rig);
     let probed = 0;
     for (const code of codes) {
@@ -693,9 +721,11 @@ test('the program page\'s state picker on the pinned history: each state\'s grid
       for (const svg of rig.svgs) {
         const width = svg.viewBox.baseVal.width;
         const [label, right, rowH] = geom[String(width)];
-        // The kit's grid of the page's order at this drawing's width and geometry: the same hospitals, the same order.
-        const kit = rollCall({ records: own.recs, years: HD.fys.map(String), width, rowH, label, right, blank: historyText('rollNone'), brackets: !k || k === own.recs.length ? [] : [{ from: 0, to: k, label: historyFill('rollEver', { n: count(k) }), pen: true }, { from: k, to: own.recs.length, label: historyFill('rollNever', { n: count(own.recs.length - k) }) }] }).text;
-        assert.equal(svg.innerHTML, kit.slice(kit.indexOf('>') + 1, -'</svg>'.length), `${code} at ${width}`);
+        // The kit's grid of the page's order at this drawing's width and geometry, in the build's words: the same
+        // hospitals, the same order.
+        const kit = rollParts({ records: own.recs, years: HD.fys.map(String), width, rowH, label, right, blank: historyText('rollNone'), brackets: !k || k === own.recs.length ? [] : [{ from: 0, to: k, label: historyFill('rollEver', { n: count(k) }), pen: true }, { from: k, to: own.recs.length, label: historyFill('rollNever', { n: count(own.recs.length - k) }) }] });
+        assert.equal(svg.innerHTML, String(kit.body), `${code} at ${width}`);
+        assert.equal(svg.attrs.viewBox, `0 0 ${width} ${kit.height}`, `${code} at ${width}`);
         assert.equal(svg.attrs['aria-label'], fill('rollStateAlt', { state: name, hospitals: count(own.recs.length) }));
         // The biggest state and the smallest: a click on a drawn run opens one of the state's hospitals of that ink.
         if (!probeAt.includes(code)) continue;
@@ -1042,7 +1072,7 @@ test('program.js mounts every roll call and year map on the page, with the hospi
   const f = fetchStub({ [HOSPITALS_URL]: ok({ hospitalPath: '/hacrp/hospital/', rows: SYN_ROWS }), [ROLL_URL]: ok(SYN) });
   await withGlobals({ document: pageDocument([roll.box, ymap.box]), window: windowStub(), fetch: f }, async () => {
     await import('../client/program.js');
-    assert.equal(roll.picker.hidden, false, 'the roll call is mounted');
+    assert.equal(roll.picker.hidden, false, 'the roll call is mounted, with its state picker');
     assert.equal(ymap.controls.hidden, false, 'and the year map');
     roll.svgs[0].handlers.pointermove(at(middle(0, 300, SYN_GEOM[300])));
     await settle();

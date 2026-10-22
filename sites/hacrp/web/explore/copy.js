@@ -1,7 +1,8 @@
-// The words the program page's scripts draw with (client/explore.js and the panels explore-figures.js draws in the
-// browser), kept apart from the page's own words (program/copy.js) so the browser carries only these. Same rules as
-// copy.js: no digit characters, every number through a {placeholder}; `claim` names a row of sites/hacrp/CLAIMS.md
-// (null for this site's own framing or arithmetic). fill, fillKeep and t read here, then copy.js.
+// The words the program page's scripts draw with (client/explore.js, client/roll-picker.js and the panels
+// explore-figures.js draws in the browser), kept apart from the page's own words (program/copy.js) so the browser
+// carries only these. Same rules as copy.js: no digit characters, every number through a {placeholder}; `claim` names a
+// row of sites/hacrp/CLAIMS.md (null for this site's own framing or arithmetic). fill, fillKeep and t read here, then
+// copy.js.
 import { copyOf } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../copy.js';
 
@@ -14,6 +15,9 @@ export const COPY = {
   rollSayOneNone: { text: '{who}: not cut in its one year with a decision', claim: null },
   rollTapAgain: { text: 'Tap again to open its page.', claim: null },
   rollClosed: { text: 'CCN {ccn}, no longer in CMS’s file', claim: null },
+  rollEver: { text: 'Ever cut: {n}', claim: null },
+  rollNever: { text: 'Never cut: {n}', claim: null },
+  rollNone: { text: "No hospital scored or cut", claim: 'HACRP-52' },
   rollStateSay: { text: '{state}: {ever} of {hospitals} hospitals ever cut ({share}), against {nation} nationally.', claim: null },
   rollStateAlt: { text: 'The grid for {state}: each of its {hospitals} hospitals with a payment decision in any year as a column, one row per fiscal year, red where CMS cut it.', claim: null },
   rollStateLink: { text: 'Open the {state} page', claim: null },

@@ -1,7 +1,8 @@
 // The history's words: the program page's Part 4, the place pages' history and the hospital page's record
 // (history-figures.js, pages/*.js), built into the pages and never shipped to a browser. Same rules as copy.js: no
 // digit characters, every number through a {placeholder}; `claim` names a row of sites/hacrp/CLAIMS.md, or a list of rows (null for this
-// site's own framing or arithmetic). fill, fillKeep and t read here, then program/copy.js, then copy.js.
+// site's own framing or arithmetic). fill, fillKeep and t read here, then program/copy.js, then explore/copy.js (which
+// holds the roll call's grid words, since the browser redraws the grid with them), then copy.js.
 import { copyOf } from '../../../../web/render/components.js';
 import { COPY as PROGRAM } from '../program/copy.js';
 import { COPY as EXPLORE } from '../explore/copy.js';
@@ -13,15 +14,12 @@ export const COPY = {
   part4Intro: { text: "Every year but one since fiscal year {first}, CMS has cut about a quarter of hospitals. Never the same quarter: {share} of hospitals have been cut at least once. And not at random either: a hospital cut one year is cut again the next far more often than chance would have it.", claim: 'HACRP-52' },
   histSource: { text: "Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog, its archives and, for the oldest years, the Internet Archive’s copies), and CMS’s cut lists for {lists}.", claim: null },
   histSourceNoLists: { text: "Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog, its archives and, for the oldest years, the Internet Archive’s copies).", claim: null },
-  rollNone: { text: "No hospital scored or cut", claim: 'HACRP-52' },
 
   // The roll call.
   rollHeading: { text: 'Every hospital, every year', claim: null },
   rollText: { text: "Each sliver is one hospital, each row one fiscal year. Red: CMS cut it that year; gray: it didn’t; blank: no decision that year (not in that year’s file, not scored, in Maryland, or the year CMS scored no one).", claim: ['HACRP-13', 'HACRP-52'] },
   rollText2: { text: 'Hospitals are lined up by the first year CMS cut them, so the red steps down and to the right as each year adds hospitals that had never been cut before. The gray block at the right is every hospital never cut at all.', claim: null },
   rollTakeaway: { text: '{ever} of the {hospitals} hospitals with a payment decision since fiscal year {first} have been cut at least once; {never} never have.', claim: null },
-  rollEver: { text: 'Ever cut: {n}', claim: null },
-  rollNever: { text: 'Never cut: {n}', claim: null },
   rollAlt: { text: 'A grid of every hospital with a payment decision in any year as a thin column, one row per fiscal year, red where CMS cut it; the red forms steps moving right as new hospitals are cut each year.', claim: null },
   rollColFy: { text: 'Fiscal year', claim: null },
   rollColDecided: { text: 'Hospitals with a decision', claim: null },

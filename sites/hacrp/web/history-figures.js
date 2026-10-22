@@ -16,7 +16,7 @@ import { lastCall } from '../../../web/render/components.js';
 import { cmsText, count, listText, pct, shownAbove } from '../../../web/render/format.js';
 import { html, jsonScript } from '../../../web/render/html.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
-import { CUT, NONE, NOT_CUT, rollOrder, tallyYears } from '../../../engine/js/hacrp/trends.js';
+import { CUT, NONE, NOT_CUT, everCut, rollOrder, tallyYears } from '../../../engine/js/hacrp/trends.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { groupLabel } from './groups.js';
 import { nameInText } from './places.js';
@@ -50,7 +50,7 @@ const pointOf = (r) => (r && Number.isFinite(r.lon) && Number.isFinite(r.lat) ? 
 // ---------- the roll call ----------
 
 // A roll call's geometry by drawn width: [label column, right margin, row height, top], which the page script reads
-// to find the hospital under the pointer and to mark a state's hospitals (rollCall.js draws its rows from TOP = 4).
+// to find the hospital under the pointer and to draw a picked state's grid (rollCall.js draws its rows from TOP = 4).
 // notes: the rows carry a note at the right (a place's share cut, then the nation's), which takes room and height.
 function rollGeom(width, notes) {
   const narrow = isNarrow(width);
@@ -58,18 +58,20 @@ function rollGeom(width, notes) {
   return narrow ? [30, 0, 11, 4] : [40, 0, 17, 4];
 }
 
-// The brackets under a roll call: the hospitals ever cut, then those never cut (none when every hospital is on one
-// side).
-const rollBrackets = (records) => everBrackets(records, { ever: (n) => fill('rollEver', { n: count(n) }), never: (n) => fill('rollNever', { n: count(n) }) });
+// The brackets under a roll call of n hospitals, ever of them ever cut: those ever cut, then those never cut (none when
+// every hospital is on one side).
+const rollBrackets = (n, ever) => everBrackets(n, ever, { ever: (k) => fill('rollEver', { n: count(k) }), never: (k) => fill('rollNever', { n: count(k) }) });
 
-// A roll call in its box, at the phone's width and `wide`, with what the page script reads: attrs (where the grid's
-// order comes from; '' for a picture alone), its geometry, the state picker (or '') and, when the grid is live
-// (live), the readout's hint. after: markup inside the box after the readout (a place's order, as JSON).
-function rollBox({ hd, records, notes = null, wide, attrs, picker = '', live, after = '' }) {
+// A roll call in its box (ever: how many of its records were ever cut), at the phone's width and `wide`, with what the
+// page script reads: attrs (where the grid's order comes from; '' for a picture alone), its geometry, the state picker
+// (or '') and, when the grid is live (live), the readout's hint. after: markup inside the box after the readout (a
+// place's order, as JSON).
+function rollBox({ hd, records, ever, notes = null, wide, attrs, picker = '', live, after = '' }) {
   const years = hd.fys.map(String);
+  const brackets = rollBrackets(records.length, ever);
   const draw = (width) => {
     const [label, right, rowH] = rollGeom(width, notes);
-    return rollCall({ records, years, notes, width, rowH, label, right, blank: t('rollNone'), brackets: rollBrackets(records) });
+    return rollCall({ records, years, notes, width, rowH, label, right, blank: t('rollNone'), brackets });
   };
   const geom = Object.fromEntries([WIDTH, wide].map((w) => [String(w), rollGeom(w, notes)]));
   return html`<div class="roll"${attrs} data-geom="${JSON.stringify(geom)}">
@@ -105,15 +107,14 @@ export function rollAsset(hd, { shapes = null, master = null } = {}) {
 // rollUrl and src: the history and hospitals assets, for the page script (without them, the figure is a picture).
 export function rollFigure(hd, { n, source, rollUrl = null, src = null }) {
   const records = hd.order.map(([, rec]) => rec);
-  const ever = records.filter((r) => r.includes(CUT)).length;
+  const ever = everCut(records);
   const never = records.length - ever;
   const states = [...new Set(hd.order.map(([ccn]) => hd.stateOf.get(ccn)))].filter((st) => STATE_NAMES[st]).sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b], 'en'));
-  // The state picker, hidden until the page script runs; the script redraws the grid with the picked state's hospitals
-  // and links to the state's page. It carries what the script draws and says with: the grid's own words (the brackets'
-  // as templates) and the nation's share ever cut, from the takeaway's own counts.
-  const words = JSON.stringify({ rollEver: fill('rollEver', { n: '{n}' }), rollNever: fill('rollNever', { n: '{n}' }), rollNone: t('rollNone') });
-  const picker = rollUrl ? html`<p class="roll__pick" hidden data-nation="${pct0(share(ever, records.length))}" data-words="${words}"><label for="roll-state">${t('rollPick')}</label> <select id="roll-state"><option value="">${t('rollAll')}</option>${states.map((st) => html`<option value="${st}">${STATE_NAMES[st]}</option>`)}</select> <a class="roll__open" hidden></a></p>` : '';
-  const chart = rollBox({ hd, records, wide: HIST_WIDE, attrs: rollUrl ? html` data-roll="${rollUrl}" data-src="${src}"` : '', picker, live: Boolean(rollUrl) });
+  // The state picker, hidden until the page script runs; the script (client/roll-picker.js) redraws the grid with the
+  // picked state's hospitals, in the grid's own words (explore/copy.js), and links to the state's page. It carries the
+  // nation's share ever cut, from the takeaway's own counts, for the script's sentence.
+  const picker = rollUrl ? html`<p class="roll__pick" hidden data-nation="${pct0(share(ever, records.length))}"><label for="roll-state">${t('rollPick')}</label> <select id="roll-state"><option value="">${t('rollAll')}</option>${states.map((st) => html`<option value="${st}">${STATE_NAMES[st]}</option>`)}</select> <a class="roll__open" hidden></a></p>` : '';
+  const chart = rollBox({ hd, records, ever, wide: HIST_WIDE, attrs: rollUrl ? html` data-roll="${rollUrl}" data-src="${src}"` : '', picker, live: Boolean(rollUrl) });
   return figure({
     n, source, chart, csvName: 'hacrp-history-years',
     takeaway: fill('rollTakeaway', { ever: count(ever), hospitals: count(records.length), first: String(hd.fys[0]), never: count(never) }),
@@ -406,11 +407,11 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const nation = hd.counts.map((c) => c.share);
   const own = tallyYears(sub, hd.fys.length).map((o) => ({ ...o, share: o.decided ? o.cut / o.decided : null }));
   const above = own.filter((o, i) => shownAbove(o.share, nation[i])).length;
-  const ever = records.filter((r) => r.includes(CUT)).length;
+  const ever = everCut(records);
   const notes = own.map((o, i) => (o.share === null ? '' : `${pct0(o.share)} · ${pct0(nation[i])}`));
   // The grid's own order on the page (a place holds a few hundred hospitals at most), for the page script's names.
   const inline = { fys: hd.fys, ccns: order.map(([c]) => c), recs: records, states: order.map(([c]) => hd.stateOf.get(c) ?? '') };
-  const chart = rollBox({ hd, records, notes, wide: PLACE_WIDE, attrs: html` data-inline="${PLACE_ORDER_ID}"${src ? html` data-src="${src}"` : ''}`, live: Boolean(src), after: jsonScript(PLACE_ORDER_ID, inline) });
+  const chart = rollBox({ hd, records, ever, notes, wide: PLACE_WIDE, attrs: html` data-inline="${PLACE_ORDER_ID}"${src ? html` data-src="${src}"` : ''}`, live: Boolean(src), after: jsonScript(PLACE_ORDER_ID, inline) });
   return figure({
     n: next(), source, chart, csvName: 'hacrp-place-years',
     takeaway: fill('placeYearsTakeaway', { name: nameInText(place, { start: true }), k: String(above), n: String(hd.cutYears), ever: count(ever), hospitals: count(records.length) }),

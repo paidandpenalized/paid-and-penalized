@@ -10,6 +10,7 @@ import { count, decimal, pct } from '../../../web/render/format.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
+import { everCut } from '../../../engine/js/hacrp/trends.js';
 import { fill as wordsFill, t as words } from '../web/history/copy.js';
 import {
   HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, everFigure, flipSince, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
@@ -43,7 +44,8 @@ const attr = (markup, name) => {
   const m = new RegExp(`${name}="([^"]*)"`).exec(String(markup));
   return m ? text(m[1]) : null;
 };
-const everCut = (hd) => [...hd.recs.values()].filter((r) => r.includes('Y')).length;
+// How many of a history's hospitals were ever cut.
+const everOf = (hd) => everCut([...hd.recs.values()]);
 const pct0 = (x) => pct(x, 0);
 const pct1 = (x) => pct(x, 1);
 const classes = (svgMarkup) => [...String(svgMarkup).matchAll(/class="([^"]+)"/g)].map((m) => m[1]);
@@ -82,7 +84,7 @@ test('rollAsset: the grid\'s hospitals in drawing order with their records and s
   assert.deepEqual(asset.recs.slice(0, 2), ['YY.YY', 'YY.YN']);
   // Hospitals never cut are the block at the end.
   const firstNever = asset.recs.findIndex((r) => !r.includes('Y'));
-  assert.equal(firstNever, everCut(S));
+  assert.equal(firstNever, everOf(S));
   assert.ok(asset.recs.slice(firstNever).every((r) => !r.includes('Y')));
   assert.ok(!('at' in asset), 'no places without the atlas and the master');
   // Each year's counts, as the year map's script says them: cut that year, and ever cut by then.
@@ -104,7 +106,7 @@ test('rollAsset with the atlas and the master: each hospital\'s place on the yea
 test('rollFigure: the roll call with the numbers of ever cut, hospitals and never cut in its takeaway, a row a year in its table', () => {
   for (const hd of [S, HD]) {
     const fig = rollFigure(hd, { n: 4, source: SRC });
-    const ever = everCut(hd);
+    const ever = everOf(hd);
     assert.equal(captionOf(fig)[0], '4');
     const nums = numbers(takeaway(fig));
     for (const x of [count(ever), count(hd.recs.size), count(hd.recs.size - ever), String(hd.fys[0])]) assert.ok(nums.includes(x), `${x} in "${takeaway(fig)}"`);
@@ -147,19 +149,13 @@ test('rollFigure with the assets: the script\'s attributes and a picker of the s
   assert.equal([...String(fig).matchAll(/<svg [^>]*class="chart chart--roll"/g)].length, 2);
 });
 
-test('rollFigure\'s picker carries what the script redraws a state with: the grid\'s own words, and the nation\'s share ever cut from the takeaway\'s counts; its link waits hidden', () => {
+test('rollFigure\'s picker carries the nation\'s share ever cut, from the takeaway\'s counts; the national grid\'s brackets say those counts; its link waits hidden', () => {
   for (const hd of [S, HD]) {
     const fig = String(rollFigure(hd, { n: 1, source: SRC, rollUrl: '/assets/h.json', src: '/assets/p.json' }));
     const pick = /<p class="roll__pick" hidden[^>]*>/.exec(fig)[0];
-    const ever = everCut(hd);
+    const ever = everOf(hd);
     assert.ok(numbers(takeaway(fig)).includes(count(ever)) && numbers(takeaway(fig)).includes(count(hd.recs.size)));
     assert.equal(attr(pick, 'data-nation'), pct0(ever / hd.recs.size));
-    // The words are the national grid's own, with the count left to fill: the brackets read the same on a state's grid.
-    const kept = JSON.parse(attr(pick, 'data-words'));
-    assert.deepEqual(Object.keys(kept).sort(), ['rollEver', 'rollNever', 'rollNone']);
-    assert.equal(kept.rollEver.replace('{n}', '7'), wordsFill('rollEver', { n: '7' }));
-    assert.equal(kept.rollNever.replace('{n}', '7'), wordsFill('rollNever', { n: '7' }));
-    assert.equal(kept.rollNone, words('rollNone'));
     for (const label of [wordsFill('rollEver', { n: count(ever) }), wordsFill('rollNever', { n: count(hd.recs.size - ever) })]) assert.ok(fig.includes(`>${label}</text>`), `the national grid's bracket "${label}"`);
     // The link to the picked state's page is in the picker, hidden and with nowhere to go until the script sets it.
     assert.match(fig, /<\/select> <a class="roll__open" hidden><\/a><\/p>/);
@@ -670,7 +666,7 @@ test('part4 on the committed history: every part draws, and its figures\' number
   // The roll call and the staircase: the same ever-cut count, the history's.
   const ever = HD.counts.at(-1).ever;
   assert.ok(String(markup).includes(count(ever)));
-  assert.equal(ever, everCut(HD));
+  assert.equal(ever, everOf(HD));
   assert.ok(HD.cutYears === HD.fys.length - 1, 'every year but one');
   assert.equal(attr(markup, 'data-roll'), HISTORY_URL);
 });

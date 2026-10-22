@@ -1,11 +1,12 @@
-// The program page's scripts: the hospital table (client/table.js), the explorable figures (client/explore.js) and
-// the sandbox: the what-if on the median hospital, mounted from the page's own data (client/whatif.js), whose share
-// is false: the URL is never read or written by it.
+// The program page's scripts: the hospital table (client/table.js), the explorable figures (client/explore.js, and the
+// roll call's state picker, client/roll-picker.js) and the sandbox: the what-if on the median hospital, mounted from
+// the page's own data (client/whatif.js), whose share is false: the URL is never read or written by it.
 import { hospitalLoader } from './hospitals.js';
 
 const hospitals = hospitalLoader();
 import { mountFromPage } from './whatif.js';
 import { assetLoaders, exploreLoader, mountAgree, mountHalving, mountMeasureToggles, mountRoll, mountRule, mountYearMap, mountSlideRules, mountSwarm, mountUsMap } from './explore.js';
+import { mountStatePicker } from './roll-picker.js';
 import { placePath } from '../web/place-paths.js';
 import { startTable } from './table.js';
 
@@ -24,9 +25,10 @@ const figuresWith = (part) => [...document.querySelectorAll(part)].map((el) => e
 if (explore && searchSrc) for (const fig of figuresWith('.swarm')) mountSwarm(fig, { explore, hospitals, src: searchSrc });
 if (explore) for (const fig of figuresWith('.agree')) mountAgree(fig, explore);
 for (const fig of figuresWith('.usmap')) mountUsMap(fig, (code) => placePath('state', code));
-// The roll call and the year map read one history asset, fetched once for both.
+// The roll call and the year map read one history asset, fetched once for both. Only this page's roll call has the
+// state picker.
 const history = assetLoaders();
-for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals, history });
+for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals, history, picker: mountStatePicker });
 for (const fig of figuresWith('.ymap')) mountYearMap(fig, history);
 
 // After the search and the table, so a fault in the sandbox never takes them with it.

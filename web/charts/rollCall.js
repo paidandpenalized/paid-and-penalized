@@ -8,6 +8,8 @@
 //   brackets  [{ from, to, label, pen }]: column ranges to bracket under the grid (to exclusive)
 //   notes     optional text per row, printed at the right of its row (e.g. the row's share cut)
 //   blank     optional text printed across a row with no hospital in it (a year with no decisions)
+// rollParts gives the drawing unframed, { width, height, body }, for a page script that redraws an svg already on the
+// page; rollCall frames it.
 import { html } from '../render/html.js';
 import { capsWidth, frame, r2, text } from './svg.js';
 
@@ -28,13 +30,12 @@ function rowRuns(records, i) {
   return out;
 }
 
-// The brackets of a roll call in the pages' order (every hospital ever cut stands before every hospital never cut):
-// the hospitals ever cut, then those never cut, each labelled by its words for its count (labels: { ever, never },
-// each n -> text). None when every hospital is on one side.
-export function everBrackets(records, { ever, never }) {
-  const k = records.filter((r) => r.includes('Y')).length;
-  if (!k || k === records.length) return [];
-  return [{ from: 0, to: k, label: ever(k), pen: true }, { from: k, to: records.length, label: never(records.length - k) }];
+// The brackets of a roll call of n hospitals in the pages' order (every hospital ever cut stands before every hospital
+// never cut), k of them ever cut: the hospitals ever cut, then those never cut, each labelled by its words for its
+// count (labels: { ever, never }, each count -> text). None when every hospital is on one side.
+export function everBrackets(n, k, { ever, never }) {
+  if (!k || k === n) return [];
+  return [{ from: 0, to: k, label: ever(k), pen: true }, { from: k, to: n, label: never(n - k) }];
 }
 
 // A bracket's label under its middle, kept inside the drawing: anchored at an end when it would run past one (its
@@ -47,7 +48,7 @@ function bracketLabel(b, { mid, label, width, y }) {
   return text({ x: mid, y, cls, body: b.label });
 }
 
-export function rollCall({ records, years, brackets = [], notes = null, blank = null, width, rowH = 16, label = 54, right = 0 }) {
+export function rollParts({ records, years, brackets = [], notes = null, blank = null, width, rowH = 16, label = 54, right = 0 }) {
   const n = records.length;
   if (!n || !years.length || records.some((r) => r.length !== years.length)) throw new RangeError('rollCall: one record per hospital, one character per year');
   const x = (j) => label + (j * (width - label - right)) / n;
@@ -79,12 +80,14 @@ export function rollCall({ records, years, brackets = [], notes = null, blank = 
 ${bracketLabel(b, { mid, label, width, y: bracketY + 14 })}`;
   });
   const height = gridBottom + (brackets.length ? 30 : 6);
-  return frame({
-    kind: 'roll', width, height, body: html`${years.map((yr, i) => text({ x: 0, y: yOf(i) + rowH - GAP - 3, anchor: 'start', cls: 'chart-roll__year', body: yr }))}
+  return {
+    width, height, body: html`${years.map((yr, i) => text({ x: 0, y: yOf(i) + rowH - GAP - 3, anchor: 'start', cls: 'chart-roll__year', body: yr }))}
 <path class="chart-roll__no" stroke-width="${band}" d="${kept.join('')}"/>
 <path class="chart-roll__yes" stroke-width="${band}" d="${cut.join('')}"/>
 ${blank ? years.map((_, i) => (records.every((r) => r[i] === '.') ? text({ x: (label + width - right) / 2, y: yOf(i) + rowH - GAP - 3, cls: 'chart-roll__blank', body: blank }) : '')) : ''}
 ${notes ? notes.map((note, i) => text({ x: width, y: yOf(i) + rowH - GAP - 3, anchor: 'end', cls: 'chart-roll__note', body: note })) : ''}
 ${marks}`,
-  });
+  };
 }
+
+export const rollCall = (opts) => frame({ kind: 'roll', ...rollParts(opts) });

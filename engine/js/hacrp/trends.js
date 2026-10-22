@@ -25,6 +25,8 @@ export function records(years) {
 const countOf = (rec, ch) => [...rec].filter((c) => c === ch).length;
 export const timesCut = (rec) => countOf(rec, CUT);
 export const yearsDecided = (rec) => rec.length - countOf(rec, NONE);
+// How many of a list of records were cut in at least one year.
+export const everCut = (recs) => recs.filter((rec) => rec.includes(CUT)).length;
 
 // Per year, over a Map(ccn -> record) of any set of hospitals: those with a decision and those cut, [{ decided, cut }].
 export function tallyYears(recs, n) {

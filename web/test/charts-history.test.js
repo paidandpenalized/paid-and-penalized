@@ -11,7 +11,7 @@ import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../
 import { periodsChart } from '../charts/periods.js';
 import { proofBins, proofStrips } from '../charts/proofStrips.js';
 import { rankYears } from '../charts/rankYears.js';
-import { everBrackets, rollCall } from '../charts/rollCall.js';
+import { everBrackets, rollCall, rollParts } from '../charts/rollCall.js';
 import { ruleStack } from '../charts/ruleStack.js';
 import { smallLines } from '../charts/smallLines.js';
 import { GRID, TILES } from '../charts/states.js';
@@ -349,9 +349,25 @@ test('rollCall: brackets under the grid, the right margin kept clear, notes at t
 
 test('everBrackets: the hospitals ever cut, then those never cut, each in its words for its count; none when every hospital is on one side', () => {
   const labels = { ever: (n) => `Ever ${n}`, never: (n) => `Never ${n}` };
-  assert.deepEqual(everBrackets(['YN.', 'NY.', '.NN', 'NNN'], labels), [{ from: 0, to: 2, label: 'Ever 2', pen: true }, { from: 2, to: 4, label: 'Never 2' }]);
-  assert.deepEqual(everBrackets(['Y', 'Y'], labels), [], 'every hospital cut');
-  assert.deepEqual(everBrackets(['N', '.'], labels), [], 'none cut');
+  assert.deepEqual(everBrackets(4, 2, labels), [{ from: 0, to: 2, label: 'Ever 2', pen: true }, { from: 2, to: 4, label: 'Never 2' }]);
+  assert.deepEqual(everBrackets(5, 1, labels), [{ from: 0, to: 1, label: 'Ever 1', pen: true }, { from: 1, to: 5, label: 'Never 4' }]);
+  assert.deepEqual(everBrackets(2, 2, labels), [], 'every hospital cut');
+  assert.deepEqual(everBrackets(2, 0, labels), [], 'none cut');
+});
+
+test('rollParts: what rollCall frames, unframed: the drawing\'s width and height, and the markup inside its svg', () => {
+  const opts = {
+    records: ['Y.N', 'Y.N', 'N.Y', 'N.N'], years: YEARS, width: 300, label: 40, right: 70, blank: 'None',
+    brackets: [{ from: 0, to: 2, label: 'Ever cut: 2', pen: true }, { from: 2, to: 4, label: 'Never cut: 2' }],
+    notes: ['12% · 10%', '', '33% · 30%'],
+  };
+  const parts = rollParts(opts);
+  assert.ok(parts.body instanceof Safe);
+  const s = sound(rollCall(opts), 'roll');
+  assert.deepEqual(viewBox(s), [parts.width, parts.height]);
+  assert.equal(s, `${/^<svg[^>]*>/.exec(s)[0]}${parts.body}</svg>`, 'the frame around the body, and nothing else');
+  assert.ok(String(parts.body).includes('chart-roll__bracket') && String(parts.body).includes('chart-roll__blank'));
+  assert.throws(() => rollParts({ ...opts, records: [] }), /one record per hospital/);
 });
 
 test('rollCall: a bracket label too wide for its bracket is held inside the drawing, against the label column on the left or the edge on the right', () => {

@@ -16,9 +16,6 @@ import { fill } from '../web/explore/copy.js';
 import { dotsPath } from '../../../web/charts/dots.js';
 import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
-import { everBrackets, rollCall } from '../../../web/charts/rollCall.js';
-import { copyOf } from '../../../web/render/components.js';
-import { placePath } from '../web/place-paths.js';
 
 // ---------- the assets ----------
 
@@ -383,33 +380,16 @@ export function mountPlaceMaps(root = document) {
 
 // ---------- the roll call ----------
 
-// A state's hospitals out of the grid's order, in that order: { ccns, recs, states }. The order is the pages' (trends.js
-// rollOrder, which ranks a hospital by its own record and CCN alone), so it is the order the state's page draws.
-function stateGrid(hist, code) {
-  const js = hist.states.flatMap((st, j) => (st === code ? [j] : []));
-  return { ccns: js.map((j) => hist.ccns[j]), recs: js.map((j) => hist.recs[j]), states: js.map((j) => hist.states[j]) };
-}
-
-// A grid drawn as the build draws the figure's (rollCall.js), at a drawing's width and geometry, in the grid's own words
-// (words: the picker's): its body and its viewBox, to put in that drawing's place.
-function rollDrawing(recs, fys, { width, geom: [label, right, rowH], words }) {
-  const brackets = everBrackets(recs, { ever: (n) => words.fill('rollEver', { n: count(n) }), never: (n) => words.fill('rollNever', { n: count(n) }) });
-  const art = rollCall({ records: recs, years: fys.map(String), brackets, blank: words.t('rollNone'), width, rowH, label, right }).text;
-  return { body: art.slice(art.indexOf('>') + 1, art.lastIndexOf('</svg>')), viewBox: /viewBox="([^"]*)"/.exec(art)[1] };
-}
-
 // The roll call (history-figures.js rollFigure): the hospital under the pointer, named with its record in the readout
-// under the grid (a click opens its page, when CMS's newest file lists it), and the state picker, which redraws the
-// grid with that state's hospitals alone, says in the readout how many were ever cut against the nation's share, and
-// links to the state's page; "every state" puts the drawings back as they were built. The grid's order, { fys, ccns,
-// recs, states }: the history asset (the program page, through history, the page's asset loaders) or a JSON script on
-// the page that data-inline names (a place page).
-export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
+// under the grid (a click opens its page, when CMS's newest file lists it). The grid's order, { fys, ccns, recs,
+// states }: the history asset (the program page, through history, the page's asset loaders) or a JSON script on the
+// page that data-inline names (a place page). picker: the state picker's script (client/roll-picker.js
+// mountStatePicker), passed by the program page's script alone so the place pages' script never carries it; it
+// redraws the grid with a state's hospitals and tells the roll call, through pick, which grid the pointer reads.
+export function mountRoll(fig, { hospitals, history = assetLoaders(), picker = null }) {
   const box = fig.querySelector('.roll');
   if (!box) return;
   const readout = box.querySelector('.roll__readout');
-  const picker = box.querySelector('.roll__pick');
-  const select = picker?.querySelector('select');
   const geom = JSON.parse(box.dataset.geom);
   // A drawing's geometry, by its width: [label column, right margin, row height, top].
   const geomOf = (svg) => geom[String(svg.viewBox.baseVal.width)];
@@ -417,7 +397,7 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
   const ready = once(() => Promise.all([order(), hospitals(box.dataset.src)])
     .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath })));
   const svgs = [...box.querySelectorAll('svg.chart--roll')];
-  // The state drawn, { ...stateGrid, say: its sentence }, or null for every hospital; the grid the pointer reads.
+  // The state drawn, { ccns, recs, states, say: its sentence }, or null for every hospital; the grid the pointer reads.
   let picked = null;
   const gridOf = (s) => picked ?? s.hist;
   // What the readout rests on: the picked state's sentence, or the hint.
@@ -472,7 +452,8 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
     // Leaving the grid takes the outline away and brings back what the readout rests on.
     svg.addEventListener('pointerleave', () => {
       svg.querySelector('.chart-roll__cursor')?.remove();
-      if (rest()) readout.textContent = rest();
+      const text = rest();
+      if (text) readout.textContent = text;
     });
     // A mouse click opens the hospital under it. A tap first names the hospital (a sliver is far narrower than a
     // finger on a phone), and a second tap on the same one opens it.
@@ -492,41 +473,14 @@ export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
       }, () => {});
     });
   }
-  if (!select) return;
-  // The picker's words for the grid (the brackets' and an empty year's) and the nation's share ever cut, from the build.
-  const words = copyOf(JSON.parse(picker.dataset.words));
-  const link = picker.querySelector('.roll__open');
-  // Each drawing as built ({ body, viewBox, label }), kept at the first pick for "every state" to put back.
-  const built = new Map();
-  const put = (svg, { body, viewBox, label }) => {
-    svg.innerHTML = body;
-    svg.setAttribute('viewBox', viewBox);
-    svg.setAttribute('aria-label', label);
+  // A state picked (its grid, { ccns, recs, states, say }) or null for every hospital: a tap named on the old grid is
+  // let go, and the readout rests on the state's sentence or the hint.
+  const pick = (g) => {
+    armed = null;
+    picked = g;
+    readout.textContent = rest() ?? '';
   };
-  picker.hidden = false;
-  select.addEventListener('change', () => {
-    ready().then((s) => {
-      const code = select.value;
-      const name = select.selectedOptions[0]?.textContent ?? code;
-      armed = null;
-      const g = code ? stateGrid(s.hist, code) : null;
-      picked = g?.ccns.length ? g : null;
-      const label = picked && fill('rollStateAlt', { state: name, hospitals: count(picked.ccns.length) });
-      for (const svg of svgs) {
-        svg.querySelector('.chart-roll__cursor')?.remove();
-        if (!built.has(svg)) built.set(svg, { body: svg.innerHTML, viewBox: svg.getAttribute('viewBox'), label: svg.getAttribute('aria-label') });
-        put(svg, picked ? { ...rollDrawing(picked.recs, s.hist.fys, { width: svg.viewBox.baseVal.width, geom: geomOf(svg), words }), label } : built.get(svg));
-      }
-      if (picked) {
-        const ever = picked.recs.filter((r) => r.includes(CUT)).length;
-        picked.say = fill('rollStateSay', { state: name, ever: count(ever), hospitals: count(picked.recs.length), share: pct(ever / picked.recs.length, 0), nation: picker.dataset.nation });
-        link.setAttribute('href', placePath('state', code));
-        link.textContent = fill('rollStateLink', { state: name });
-      } else link.removeAttribute('href');
-      link.hidden = !picked;
-      readout.textContent = rest() ?? '';
-    }, () => {});
-  });
+  picker?.({ box, svgs, geomOf, ready, pick });
 }
 
 // ---------- the year map ----------
