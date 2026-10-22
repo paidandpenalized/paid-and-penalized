@@ -8,7 +8,8 @@ import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { RAMP_HIGH_PCT, RAMP_LOW_PCT } from './constants.js';
+import { RAMP_HIGH_PCT, RAMP_LOW_PCT, SHORT_NAMES } from './constants.js';
+import { sourceText } from './copy.js';
 import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
 import { compareDefault } from './hospital-table.js';
@@ -17,6 +18,18 @@ import { dictionaryPage } from './pages/dictionary.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { placePage } from './pages/place.js';
 import { hospitalPage } from './pages/hospital.js';
+import { methodsPage, METHODS_PATH } from './pages/methods.js';
+import { yearCheck } from '../../../engine/js/hacrp/history.js';
+import { totalFromZ } from '../../../engine/js/hacrp/score.js';
+import { scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { t as mt } from './methods/copy.js';
+import { historyData } from './history-data.js';
+import { historySource, rollAsset } from './history-figures.js';
+
+// The scoring rules' names on the Methods page, by eras.js rule.
+const RULE_WORDS = { equal: 'ruleEqual', domains: 'ruleDomainsZ' };
+const ruleWords = (c, scale) => mt(c.rule.rule === 'domains' && scale === 'tenths' ? 'ruleDomainsTenths' : RULE_WORDS[c.rule.rule]);
 import { nationalContext } from './compare.js';
 import { exploreAsset, programData } from './program-data.js';
 import { KINDS, buildPlaces } from './places.js';
@@ -60,7 +73,13 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections } = data;
+  // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
+  const hd = history ? historyData({ history, master }) : null;
+  if (hd) {
+    const failed = hd.checks.filter((c) => !c.check.ok);
+    if (failed.length) throw new Error(`HACRP self-check failed for ${failed.map((c) => `FY${c.fy} (largest miss ${c.check.maxError}; out of order: ${c.check.wrongSide.length})`).join(', ')}`);
+  }
   const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);
@@ -108,6 +127,9 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       tryPlaces: most('state') && most('metro') ? { state: most('state'), metro: most('metro') } : null,
       places,
       shapes,
+      hd,
+      rollUrl: hd ? ctx.asset('hacrp-history', 'json', JSON.stringify(rollAsset(hd, { shapes, master }))) : null,
+      master,
     }),
   });
 
@@ -118,9 +140,33 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     ctx.emit({
       path: place.path,
       robots: programRobots,
-      text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets }),
+      text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets, hd }),
     });
   }
+
+  // The Methods page: the self-check for every year this build holds, the pipeline's numbers for the newest.
+  const check = newestCheck(hospitals);
+  if (!check.ok) throw new Error(`HACRP self-check failed for FY${fy}: largest miss ${check.maxError}; wrong side: ${check.wrongSide.join(', ') || 'none'}`);
+  const tagged = MEASURE_IDS.filter((id) => estimate[id].tagged);
+  ctx.emit({
+    path: METHODS_PATH,
+    robots: programRobots,
+    text: methodsPage({
+      fy,
+      checks: hd ? hd.checks.map((c, i) => ({ fy: c.fy, rule: ruleWords(c, hd.years[i].scale), check: c.check })) : [{ fy, rule: mt('ruleEqual'), check }],
+      years: hd ? hd.years.map((y) => ({ fy: y.fy, periods: y.periods })) : [{ fy, periods }],
+      newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: hospitals.length + places.list.length + 3, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
+      pins: manifest,
+      changes,
+      estimate: { tolerance: 0.001, tagged: tagged.map((id) => SHORT_NAMES[id]).join(' and '), maxError: Math.max(...tagged.map((id) => estimate[id].maxError)) },
+      boundaryText,
+      eqFy: 2020,
+      zFy: 2018,
+      robots: programRobots,
+      assets,
+      searchUrl,
+    }),
+  });
 
   // What every hospital page compares a hospital with, computed once.
   const nat = nationalContext({ hospitals, master, model });
@@ -129,9 +175,18 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     ctx.emit({
       path: view.path,
       robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range } }),
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null }),
     });
   }
+}
+
+// The newest year's self-check, as the Methods page draws it: each hospital's z-scores averaged again against CMS's
+// Total HAC Score, and CMS's decisions against the line this site finds.
+export function newestCheck(hospitals) {
+  return yearCheck(hospitals.map((h) => {
+    const ids = scoredMeasures(h);
+    return { ccn: h.ccn, total: h.total, recomputed: ids.length ? totalFromZ(ids.map((id) => h.measures[id].z)) : null, decision: h.paymentReduction };
+  }));
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).

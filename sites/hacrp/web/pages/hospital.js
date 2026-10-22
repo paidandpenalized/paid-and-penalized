@@ -24,6 +24,8 @@ import { whatIfSection } from './whatif.js';
 import { SCORE_DECIMALS as DP } from '../../../../engine/js/hacrp/score.js';
 import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
+import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
+import { fill as hfill, t as ht } from '../history/copy.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
@@ -149,7 +151,7 @@ function leadMarkup(view) {
   return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
 }
 
-function verdict(view, nat) {
+function verdict(view, nat, history) {
   const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
 ${stampOf(view)}
@@ -160,6 +162,7 @@ ${view.scored && html`<div class="hosp__lineblock">
 <p class="hosp__how">${fill('lineHow', { percentile: ordinal(CUTOFF_PERCENTILE) })}</p>
 ${lineBarBlock(view, nat)}
 </div>`}
+${history?.rec ? recordStrip(history.rec, history.hd.fys) : ''}
 </section>`;
 }
 
@@ -203,7 +206,7 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // bar's search reads (null: no search box). shapes: stateShapes(topology) for the maps (null: none). careSource:
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
 // the data list's source of the Type field's facts. master: the hospital's master record (its metro's name).
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null }) {
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -221,6 +224,10 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const lever = view.scored && row ? leverText(view, row, model) : null;
   const sum = view.scored ? numbered(sumFigure({ view, n: n + 1, source: line })) : null;
   const what = view.scored && whatif ? numbered(whatIfBlock(view, whatif, source, assets, n + 1)) : null;
+  // Its years: where its score fell each year CMS published one, when the build holds the history and the hospital
+  // had a decision in more than one year.
+  const years = history?.rec && history.rec.decided > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
+  const infections = history ? numbered(hospitalInfectionsFigure(history.sir, history.hd, { n: n + 1, source: hfill('hinfSource', { first: String(history.hd.infections[0]?.cy ?? ''), last: String(history.hd.infections.at(-1)?.cy ?? '') }) })) : null;
   const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
   const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
   numbered(nearby?.fig);
@@ -230,7 +237,7 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const body = html`<article class="wrap page page--hosp hosp">
 <div class="hosp__top">
 ${recordCard(view, { careSource, map })}
-${verdict(view, nat)}
+${verdict(view, nat, history)}
 </div>
 ${notes.length || small ? html`<div class="hosp__notes">
 ${notes.map((s) => html`<p>${s}</p>`)}
@@ -252,6 +259,19 @@ ${view.distance && html`<p class="hsec__stat">${distanceSentence(view)}</p>`}`,
     figure: sum,
   })}
 ${what?.body}
+${years && section({
+    id: 'years',
+    text: html`<h2 id="years-h">${ht('yearsHeading')}</h2>
+<p>${ht('yearsIntro')}</p>
+${history.rec.run > 1 ? html`<p class="hsec__stat">${hfill('yearsRun', { run: String(history.rec.run) })}</p>` : ''}`,
+    figure: years,
+  })}
+${infections && section({
+    id: 'infections',
+    text: html`<h2 id="infections-h">${ht('hinfHeading')}</h2>
+<p>${ht('hinfIntro')}</p>`,
+    figure: infections,
+  })}
 ${peers && section({
     id: 'peers',
     text: html`<h2 id="peers-h">${t('peersHeading')}</h2>
@@ -288,7 +308,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
-    topbar: siteHeader({ fy: view.fy, current: 'hospitals', searchUrl }),
+    topbar: siteHeader({ fy: view.fy, current: 'map', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
     // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.
     preloadFonts: HERO_FONTS,

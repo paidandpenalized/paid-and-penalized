@@ -8,7 +8,7 @@
 // constant.
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
-import { count, isoDate, shortDate, shortIsoDate } from '../../../../web/render/format.js';
+import { count, isoDate, pct, shortDate, shortIsoDate } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
@@ -16,7 +16,9 @@ import { sourceText } from '../copy.js';
 import { fill, fillKeep, t } from '../program/copy.js';
 import { LINKS } from '../links.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { browseList, mapFigure, part1, part2, ruleFigure } from '../program-figures.js';
+import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
+import { cutYears, historySource, part4 } from '../history-figures.js';
+import { fill as hfill } from '../history/copy.js';
 import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
 
@@ -79,7 +81,7 @@ ${stamp({ label: fill('stampReleased', { date: shortIsoDate(source.pdcReleased) 
 // for the score rule and the parts; places: buildPlaces() (places.js) and shapes: stateShapes(topology), for the map,
 // the browse list and the hero's suggestions (tryPlaces); exploreUrl: the explore asset the page's scripts read. Each
 // part is left out without its data. Figures and Part 1's steps are numbered in page order.
-export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, pd = null, exploreUrl = null, tryPlaces = null, places = null, shapes = null }) {
+export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, pd = null, exploreUrl = null, tryPlaces = null, places = null, shapes = null, hd = null, rollUrl = null, master = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const heading = fill('programTitle', { fy: fyText });
@@ -114,6 +116,10 @@ ${hospitalTable({ fy, searchUrl, source })}
 ${places && pd ? browseList(places, pd.counts.yes / pd.counts.decided) : ''}
 </div>
 </section>
+${hd ? html`<section class="part" id="history" aria-labelledby="history-h">
+${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: String(hd.fys.length), k: String(cutYears(hd)) }), intro: hfill('part4Intro', { first: String(hd.fys[0]), share: pct(hd.counts[hd.counts.length - 1].ever / hd.recs.size, 0) }) })}
+${part4({ hd, source: historySource(hd), figure: figureNo, psec, rollUrl, src: searchUrl, shapes, master })}
+</section>` : ''}
 <div class="prog__foot">
 <section class="block" aria-labelledby="links-h">
 <h2 id="links-h" class="h-sm">${t('linksHeading')}</h2>

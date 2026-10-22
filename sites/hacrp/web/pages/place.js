@@ -4,6 +4,8 @@
 // the place's hospitals ticked through it. Then its map, its scores against the nation's, its measures against the
 // national medians, its children (divisions, states or metro areas) and its hospitals. The foot: the data facts,
 // downloads and citation.
+import { historySource, placeYearsFigure } from '../history-figures.js';
+import { fill as hfill } from '../history/copy.js';
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
@@ -71,7 +73,7 @@ ${share !== null ? stamp({ label: fill('placeStamp', { share: pct(share, 0) }), 
 
 // place: a buildPlaces() entry; places: all of them; pd: programData(); hospitalRows: Map ccn -> { name, city,
 // totalText, decision, point, href } for the map; shapes, counties: the atlas; searchUrl: the hospitals asset.
-export function placePage({ place, places, pd, model, hospitalRows, master, shapes, counties, fy, periods, source, searchUrl, exploreUrl = null, robots, assets }) {
+export function placePage({ place, places, pd, model, hospitalRows, master, shapes, counties, fy, periods, source, searchUrl, exploreUrl = null, robots, assets, hd = null }) {
   const c = place.counts;
   const fyText = String(fy);
   const nation = pd.counts.yes / pd.counts.decided;
@@ -91,6 +93,7 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const map = placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, next: figureNo, source: line });
   const hist = c.decided ? placeHistFigure({ place, pd, model, next: figureNo, source: line }) : null;
   const measures = placeMeasuresFigure({ place, model, next: figureNo, source: line });
+  const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
   const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation });
   const ccns = new Set(place.ccns);
 
@@ -109,6 +112,7 @@ ${ruleFigure(pd, { highlight: ccns, searchUrl, caption: fill('placeRuleCaption',
 ${map && psec({ id: 'where', level: 2, heading: t('placeMapHeading'), text: html`<p>${t('placeMapText')}</p>`, figure: map })}
 ${hist && psec({ id: 'scores', level: 2, heading: t('placeHistHeading'), text: html`<p>${t('placeHistText')}</p>`, figure: hist })}
 ${measures && psec({ id: 'measures', level: 2, heading: t('placeMeasuresHeading'), text: html`<p>${t('placeMeasuresText')}</p>`, figure: measures })}
+${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeHistHeading', { name: place.name }), text: html`<p>${hfill('placeHistText', { name: place.name })}</p>`, figure: years })}
 ${kids ?? ''}
 ${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: place.name }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: place.name }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}
 <div class="prog__foot">

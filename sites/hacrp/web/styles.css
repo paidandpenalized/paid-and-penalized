@@ -333,8 +333,8 @@
 .def--inline .def__mark { display: inline-grid; margin-left: 4px; vertical-align: 0.12em; }
 .def--inline .def__box { display: block; top: calc(100% + 6px); left: 0; right: 0; width: auto; }
 .def__math { display: block; margin-bottom: 4px; font: 700 var(--fs-sm)/1.4 var(--font-type); }
-.page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
-.page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
+.page--prog .fig__n, .page--meth .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.page--prog .fig__cap, .page--meth .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
 .step__fig .chart, .page--prog .fig .chart { max-width: none; }
 
 /* A figure's measure buttons: one row of mono labels in boxes, the picked one inked. */
@@ -486,3 +486,135 @@
 
 /* Forced colors: the swarm's check boxes keep their frames. */
 @media (forced-colors: active) { .chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; } }
+
+/* ---------- The Methods page (pages/methods.js) ---------- */
+.meth__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 16px 20px; }
+@media (min-width: 960px) { .meth__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
+.meth__intro { display: grid; gap: 14px; align-content: start; container-type: inline-size; }
+.meth__title { font: 400 clamp(2.4rem, 13cqi, 6.4rem)/0.92 var(--font-display); letter-spacing: -0.01em; }
+.meth__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
+.meth__lede2 { max-width: 52ch; color: var(--ink-2); }
+.meth__card { display: grid; gap: 16px; align-content: start; }
+.meth__card .form { display: flex; flex-wrap: wrap; }
+.meth__card .form > .field { flex: 1 1 200px; }
+.meth__card .form > .form__title { flex-basis: 100%; }
+.meth__card .stamp { justify-self: end; margin-right: 6px; white-space: nowrap; font-size: clamp(1.05rem, 2.2vw, 1.55rem); }
+.meth__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 48px; margin-top: 40px; border-top: 5px solid var(--ink); }
+@media (min-width: 1120px) { .meth__body { grid-template-columns: 200px minmax(0, 1fr); } }
+.meth__toc { display: none; }
+@media (min-width: 1120px) {
+  .meth__toc { display: block; position: sticky; top: calc(var(--sticky-top, 0px) + 20px); align-self: start; padding-top: 28px; }
+}
+.meth__toc-h { margin-bottom: 10px; color: var(--pen-ink); }
+.meth__toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.meth__toc a { display: grid; grid-template-columns: 2.2em 1fr; padding: 3px 0; color: var(--ink); text-decoration: none; font-size: var(--fs-sm); line-height: 1.3; }
+.meth__toc a:hover { text-decoration: underline; }
+.meth__toc-n { color: var(--pen-ink); font: 700 var(--fs-xs)/1.6 var(--font-type); }
+.meth__main { min-width: 0; }
+.msec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 48px; padding-top: 28px; margin-top: 36px; border-top: 1px solid var(--line); align-items: start; }
+.msec:first-child { margin-top: 0; border-top: 0; }
+@media (min-width: 980px) {
+  .msec--fig { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); }
+  .msec--fig .msec__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+}
+.msec__text { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.msec__text > p, .msec__text > ol, .msec__text > dl { max-width: var(--measure); }
+.msec__title { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
+.msec__sub { margin-top: 12px; font: 700 var(--fs-md)/1.3 var(--font-body); }
+.msec__fig { min-width: 0; }
+/* The pipeline: six stations joined by a rule, the check's station in the penalty ink. */
+.pipe { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; counter-reset: none; max-width: none !important; }
+@media (min-width: 720px) { .pipe { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pipe__st { position: relative; display: grid; gap: 4px; align-content: start; padding: 14px 14px 16px; border: var(--rule) solid var(--ink); margin: 0 -1px -1px 0; background: var(--paper); }
+.pipe__st--check { border-color: var(--pen); box-shadow: inset 0 0 0 1px var(--pen); background: var(--pen-tint); z-index: 1; }
+.pipe__n { color: var(--pen-ink); font: 700 var(--fs-xs) var(--font-type); }
+.pipe__name { font: 700 var(--fs-sm)/1.25 var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; }
+.pipe__value { font: 400 clamp(1.3rem, 2.4vw, 1.7rem)/1.1 var(--font-type); }
+.pipe__note { color: var(--ink-2); font: 400 var(--fs-xs)/1.45 var(--font-type); }
+/* The formula: four definitions set like a printout. */
+.formula { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; margin: 4px 0; padding: 16px 18px; border: var(--rule) solid var(--ink); background: var(--paper-2); font: 400 var(--fs-sm)/1.45 var(--font-type); }
+.formula dt { font-weight: 700; text-align: right; }
+.formula dt::after { content: ' ='; }
+.formula dd { margin: 0; }
+@media (max-width: 560px) { .formula { grid-template-columns: minmax(0, 1fr); } .formula dt { text-align: left; } .formula dd { margin-bottom: 6px; } }
+/* What comes from CMS: each row's label as a tag. */
+.takes { max-width: none; }
+.takes__tag { display: inline-block; padding: 1px 7px; border: 1.5px solid currentColor; font: 700 var(--fs-xs)/1.5 var(--font-type); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.takes__tag--cms { color: var(--ink); }
+.takes__tag--site { color: var(--ink-2); border-style: dashed; }
+.takes__tag--hyp { color: var(--pen-ink); }
+.msec .printout { max-width: none; }
+.receipts__hash code { font-size: var(--fs-xs); }
+/* What changed: a dated list. */
+.changes { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: var(--measure); }
+.changes > li { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 4px 16px; padding-top: 10px; border-top: 1px solid var(--line); }
+.changes__date { font: 700 var(--fs-xs)/1.6 var(--font-type); text-transform: uppercase; letter-spacing: 0.05em; color: var(--pen-ink); }
+.changes ul { margin: 0; padding-left: 1.1em; }
+@media (max-width: 560px) { .changes > li { grid-template-columns: minmax(0, 1fr); } }
+/* The glossary: terms in two columns on a wide screen. */
+.glossary { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 40px; max-width: none !important; margin: 0; }
+@media (min-width: 900px) { .glossary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.glossary__item { padding: 12px 0; border-top: 1px solid var(--line); break-inside: avoid; }
+.glossary dt { font: 700 var(--fs-base)/1.3 var(--font-body); }
+.glossary dd { margin: 4px 0 0; color: var(--ink-2); }
+.reading { display: grid; gap: 10px; padding-left: 1.3em; }
+.reading li::marker { color: var(--pen-ink); font-family: var(--font-type); font-weight: 700; }
+
+/* ---------- History (history-figures.js) ---------- */
+.smallmaps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; }
+@media (min-width: 640px) { .smallmaps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .smallmaps { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.smallmaps__fy { margin-bottom: 4px; font: 700 var(--fs-xs)/1 var(--font-type); letter-spacing: 0.05em; }
+.smallmaps .chart { max-width: none; }
+/* The hospital page's record strip. */
+.hrec { display: grid; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.hrec__head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.hrec__head .cap { color: var(--ink-2); }
+.hrec__sum { font: 700 var(--fs-sm)/1.2 var(--font-type); }
+.hrec__row { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(28px, 1fr)); gap: 3px; }
+.hrec__y { display: grid; gap: 2px; text-align: center; }
+.hrec__fy { color: var(--ink-3); font: 400 10px/1 var(--font-type); }
+.hrec__v { display: block; padding: 5px 0 4px; border: 1.5px solid var(--ink); font: 700 9px/1 var(--font-type); text-transform: uppercase; letter-spacing: 0.04em; }
+.hrec__y--cut .hrec__v { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
+.hrec__y--none .hrec__v { border-style: dashed; border-color: var(--ink-3); color: var(--ink-3); }
+.roll { position: relative; display: grid; gap: 8px; }
+.roll .chart { max-width: none; cursor: crosshair; }
+.roll__pick { display: flex; gap: 10px; align-items: center; }
+.roll__pick select { min-height: var(--control-h); padding: 0 8px; border: var(--rule) solid var(--ink); background: var(--paper); font: inherit; }
+.roll__readout { min-height: 1.5em; font-family: var(--font-type); }
+.roll.is-picked .chart-roll__yes, .roll.is-picked .chart-roll__no { opacity: 0.45; }
+/* The receipt: the self-check as an adding-machine tape, its foot torn. */
+.meth__card { position: relative; justify-items: center; }
+.receipt { position: relative; width: min(100%, 25rem); padding: 18px 20px 30px; background: var(--paper); border: 1px solid var(--line); border-bottom: 0; box-shadow: 0 1px 0 var(--line), 3px 4px 0 var(--paper-2); font: 400 var(--fs-sm)/1.5 var(--font-type); font-variant-numeric: tabular-nums; transform: rotate(0.6deg); }
+.receipt::after { content: ''; position: absolute; left: -1px; right: -1px; bottom: -10px; height: 10px; background: linear-gradient(-45deg, transparent 7px, var(--paper) 0) 0 0 / 14px 10px repeat-x, linear-gradient(45deg, transparent 7px, var(--paper) 0) 0 0 / 14px 10px repeat-x; }
+.receipt__head { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1.5px dashed var(--ink-3); text-align: center; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--fs-xs); }
+.receipt__t { width: 100%; border-collapse: collapse; }
+.receipt__t th, .receipt__t td { padding: 1px 0; text-align: right; font-weight: 400; }
+.receipt__t th:first-child { text-align: left; }
+.receipt__t thead th { color: var(--ink-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; }
+.receipt__ok { padding-left: 10px !important; color: var(--ink-2); text-transform: uppercase; font-size: var(--fs-xs); }
+.receipt__sum { display: grid; gap: 2px; margin: 10px 0 0; padding-top: 8px; border-top: 1.5px dashed var(--ink-3); }
+.receipt__sum div { display: flex; justify-content: space-between; gap: 12px; }
+.receipt__sum dt { text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
+.receipt__sum dd { margin: 0; font-weight: 700; }
+.meth__card { padding-bottom: 34px; }
+.meth__card .stamp { position: absolute; right: 6%; bottom: 0; justify-self: auto; font-size: clamp(1.15rem, 2.4vw, 1.7rem); }
+.roll__readout { max-width: none; }
+.ymap { display: grid; gap: 10px; }
+.ymap .chart { max-width: none; }
+.ymap__controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ymap__play { min-height: var(--control-h); padding: 0 16px; border: var(--rule) solid var(--ink); background: var(--ink); color: var(--paper); font: 700 var(--fs-sm) var(--font-body); cursor: pointer; }
+.ymap__years { display: flex; flex-wrap: wrap; gap: 3px; }
+.ymap__y { min-width: 34px; min-height: var(--control-h); border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 600 var(--fs-xs) var(--font-type); cursor: pointer; }
+.ymap__y[aria-pressed="true"] { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
+.ymap__key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.ymap__key li { display: flex; gap: 6px; align-items: center; }
+.ymap__sw { width: 10px; height: 10px; border-radius: 50%; }
+.ymap__sw--now { background: var(--pen); }
+.ymap__sw--scar { background: var(--pen-tint); box-shadow: inset 0 0 0 1px var(--pen); }
+.ymap__sw--clear { background: var(--ink-3); opacity: 0.6; }
+.ymap__readout { font: 700 var(--fs-md)/1.3 var(--font-type); }
+.infq { display: grid; gap: 6px; margin-bottom: 14px; }
+.infq__h { color: var(--ink-2); }
+.fig .infq__h + svg, .fig p.infq__h { margin-top: 6px; }
+.infq__h { max-width: none; }

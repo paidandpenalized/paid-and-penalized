@@ -1,8 +1,9 @@
 """Python entry point: `python3 -I pipeline/py/run.py <command>`.
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
-here instead, so nothing needs installing. Commands: `test`, `emit`, `extract-pos <raw POS csv>`, and `geocode`,
-which calls the U.S. Census Bureau Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
+here instead, so nothing needs installing. Commands: `test`, `emit`, `extract-pos <raw POS csv>`,
+`extract-hai <zip> <pin id>` (see pp_pipeline/hai_extract.py), and `geocode`, which calls the U.S. Census Bureau
+Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
 """
 import sys
 import unittest
@@ -33,6 +34,9 @@ def main(argv):
     if command == "extract-pos" and len(args) == 1:
         from pp_pipeline import pos_extract
         return pos_extract.main(args[0])
+    if command == "extract-hai" and len(args) == 2:
+        from pp_pipeline import hai_extract
+        return hai_extract.main(args[0], args[1])
     print(__doc__.strip(), file=sys.stderr)
     return 2
 

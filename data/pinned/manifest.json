@@ -131,5 +131,336 @@
     "note": "One batch request. The service's answers change as its address data does, so this result can't be re-fetched byte for byte; it is pinned as made.",
     "landingPage": "https://geocoding.geo.census.gov/geocoder/",
     "retrieved": "2026-10-20"
+  },
+  {
+    "id": "hacrp-fy2015",
+    "title": "HAC Reduction Program hospital file, FY2015 (Hospital Compare revised flat files, October 2015)",
+    "path": "hacrp-fy2015/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+    "bytes": 478142,
+    "sha256": "75f9fb5e02b4b8bcbd439e88c6ba7570589acebefedc537e5b473823c6bd1a80",
+    "memberOf": {
+      "file": "hos_revised_flatfiles_archive_10_2015.zip",
+      "bytes": 13634432,
+      "sha256": "bb12e42af97ec16b74a56d9096e22e00994c9b649e4041e0487ec3690b8043ef",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+      "downloadUrl": "https://web.archive.org/web/20210512142524id_/https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2015/hos_revised_flatfiles_archive_10_2015.zip",
+      "originalUrl": "https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2015/hos_revised_flatfiles_archive_10_2015.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2016",
+    "title": "HAC Reduction Program hospital file, FY2016 (Hospital Compare revised flat files, May 2016)",
+    "path": "hacrp-fy2016/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL_02_26_2016.csv",
+    "bytes": 416026,
+    "sha256": "5e907c7f06d81a60ecca83bceffbd7c3b7c80d76f64b5becc17e09ead9488da2",
+    "memberOf": {
+      "file": "hos_revised_flatfiles_archive_05_2016.zip",
+      "bytes": 14440165,
+      "sha256": "e3e58866abb8f8707729f89b480fc77a21777c44d0af89fa4fc0899a9c766765",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL_02_26_2016.csv",
+      "downloadUrl": "https://web.archive.org/web/20210512142839id_/https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2016/hos_revised_flatfiles_archive_05_2016.zip",
+      "originalUrl": "https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2016/hos_revised_flatfiles_archive_05_2016.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2017",
+    "title": "HAC Reduction Program hospital file, FY2017 (Hospital Compare revised flat files, April 2017)",
+    "path": "hacrp-fy2017/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+    "bytes": 453840,
+    "sha256": "5f6bae379ae0abc981b171b0fe4fb4279b1f7120bd4f6e0a5a9e70c1622456f6",
+    "memberOf": {
+      "file": "hos_revised_flatfiles_archive_04_2017.zip",
+      "bytes": 17177735,
+      "sha256": "575b5ac11d0c9edf5dcf91b09a6b214970f28fece55ab26242576acde5b86421",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+      "downloadUrl": "https://web.archive.org/web/20210512143119id_/https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2017/hos_revised_flatfiles_archive_04_2017.zip",
+      "originalUrl": "https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2017/hos_revised_flatfiles_archive_04_2017.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2018",
+    "title": "HAC Reduction Program hospital file, FY2018 (Hospital Compare revised flat files, October 2018)",
+    "path": "hacrp-fy2018/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+    "bytes": 783233,
+    "sha256": "6c03ed654163d97346b89660bd83a6caa249eb3839e28b9223fe167e9e65da3d",
+    "memberOf": {
+      "file": "hos_revised_flatfiles_archive_10_2018.zip",
+      "bytes": 14889985,
+      "sha256": "a9c6cc3c6dc77851a64c7d69c9d30b76dad235ea54c706c7cdc549fded4fa6de",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+      "downloadUrl": "https://web.archive.org/web/20210512143310id_/https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2018/hos_revised_flatfiles_archive_10_2018.zip",
+      "originalUrl": "https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2018/hos_revised_flatfiles_archive_10_2018.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2019",
+    "title": "HAC Reduction Program hospital file, FY2019 (Provider Data Catalog hospitals archive, 2019-10-31)",
+    "path": "hacrp-fy2019/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+    "bytes": 590671,
+    "sha256": "db54f283a7b04ceceae0e756dc9d92bb8c905efa6d40445269f1652cca06caa5",
+    "memberOf": {
+      "file": "hospitals_2019-10-31.zip",
+      "bytes": 17056453,
+      "sha256": "9118772dc7e95068cb6508c7a685cc282e15393bcc3e2214d6761828c65b628d",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2019-10-31.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2020",
+    "title": "HAC Reduction Program hospital file, FY2020 (Provider Data Catalog hospitals archive, 2020-01-04)",
+    "path": "hacrp-fy2020/HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+    "bytes": 486579,
+    "sha256": "b1fd6157074a7e7600f64daf14497f75614255d83d921c7bcf1500e52d53936a",
+    "memberOf": {
+      "file": "hospitals_2020-01-04.zip",
+      "bytes": 16188156,
+      "sha256": "a8b320477f7d93cfc9907ae44fb9d84c77676188d9b86b8cff41b6abfb71ec8b",
+      "member": "HOSPITAL_QUARTERLY_HAC_DOMAIN_HOSPITAL.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2020-01-04.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2021",
+    "title": "HAC Reduction Program hospital file, FY2021 (Provider Data Catalog hospitals archive, 2021-07-21)",
+    "path": "hacrp-fy2021/FY_2021_HAC_Reduction_Program_Hospital.csv",
+    "bytes": 483873,
+    "sha256": "a9dbc5614583d48014f3861daa1581b98ee0c6f53b60160bfe00a9b9597df663",
+    "memberOf": {
+      "file": "hospitals_2021-07-21.zip",
+      "bytes": 14374687,
+      "sha256": "2eae19c287e7a7e9999cae01ec1fdb2e61d4446554f17374fcdbdf66cd0a0810",
+      "member": "FY_2021_HAC_Reduction_Program_Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2021-07-21.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2022",
+    "title": "HAC Reduction Program hospital file, FY2022 (Provider Data Catalog hospitals archive, 2022-10-06)",
+    "path": "hacrp-fy2022/FY_2022_HAC_Reduction_Program_Hospital.csv",
+    "bytes": 475111,
+    "sha256": "dc2a3c2db3882e635c78e411ec6baba465dca51f6eee372227b779c9622f72db",
+    "memberOf": {
+      "file": "hospitals_2022-10-06.zip",
+      "bytes": 14753205,
+      "sha256": "cd258649ad9b0ae9928321a891a6060c85fe90b87f6e7be5b2ad9d81e0359038",
+      "member": "hospitals_10_2022/FY_2022_HAC_Reduction_Program_Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2022-10-06.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2023",
+    "title": "HAC Reduction Program hospital file, FY2023 (Provider Data Catalog hospitals archive, 2023-01-06)",
+    "path": "hacrp-fy2023/FY_2023_HAC_Reduction_Program_Hospital.csv",
+    "bytes": 543387,
+    "sha256": "0a2d77ace4fc5f3ea6ee447c3c1f6ec9238c2d317a6b5363afadae2108472e16",
+    "memberOf": {
+      "file": "hospitals_2023-01-06.zip",
+      "bytes": 16142558,
+      "sha256": "a4b617e313a0b1f47df4331bd001f089493674ddfdff5622fe1d3e9af51624aa",
+      "member": "hospitals_01_2023/FY_2023_HAC_Reduction_Program_Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2023-01-06.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2024",
+    "title": "HAC Reduction Program hospital file, FY2024 (Provider Data Catalog hospitals archive, 2024-01-31)",
+    "path": "hacrp-fy2024/FY_2024_HAC_Reduction_Program_Hospital.csv",
+    "bytes": 604533,
+    "sha256": "6663d94716f0d5a231a07b13e75fcba536654227bfaa031fef2951a2e1754f63",
+    "memberOf": {
+      "file": "hospitals_2024-01-31.zip",
+      "bytes": 14240989,
+      "sha256": "940976162678c4e1e64c3ac7e5b5bc5897f8b212a2f53808ec882da261b2d487",
+      "member": "FY_2024_HAC_Reduction_Program_Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2024-01-31.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2025",
+    "title": "HAC Reduction Program hospital file, FY2025 (Provider Data Catalog hospitals archive, 2025-02-19)",
+    "path": "hacrp-fy2025/FY_2025_HAC_Reduction_Program_Hospital.csv",
+    "bytes": 599330,
+    "sha256": "7bac93954908d3bfbaed39f2b24f908abb17c318b9a4e2a42955188c0cdb18d6",
+    "memberOf": {
+      "file": "hospitals_2025-02-19.zip",
+      "bytes": 15297582,
+      "sha256": "632d67c2a1c9a5840a8833e11f2961260c50b243f7bd0358f22f9ae5d58227f1",
+      "member": "FY_2025_HAC_Reduction_Program_Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2025-02-19.zip"
+    },
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hacrp-fy2015-cut-list",
+    "title": "FY2015 IPPS final rule Table 17: HAC Reduction Program hospitals in the top quartile (December 2014)",
+    "path": "hacrp-fy2015/table-17-fy2015.txt",
+    "bytes": 63122,
+    "sha256": "85326c37657a5d24f3cfaa7a627376aace409c7d5e03af14fb9bdc02c50a35de",
+    "memberOf": {
+      "file": "fy2015-fr-table17.zip",
+      "bytes": 102636,
+      "sha256": "8c5a80dae5d2f20af6630a6ee6a431d17f6ab483a656a9c414f11d3e2fd2a86a",
+      "member": "Table 17 (CMS-1607-F)_FY15_Dec 2014.txt",
+      "downloadUrl": "https://www.cms.gov/medicare/medicare-fee-for-service-payment/acuteinpatientpps/downloads/fy2015-fr-table17.zip"
+    },
+    "retrieved": "2026-10-22",
+    "landingPage": "https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/AcuteInpatientPPS/Acute-Inpatient-Files-for-Download-Items/FY2015-Final-Rule-CorrectionNotice-Files"
+  },
+  {
+    "id": "hacrp-fy2016-cut-list",
+    "title": "FY2016 HAC Reduction Program results: hospitals in the top quartile (updated February 2016)",
+    "path": "hacrp-fy2016/hac-results-fy2016.txt",
+    "bytes": 67486,
+    "sha256": "d72c2973da4a284c8e1c6a9b7ced3941ccda304224cea902d5c996c315232a03",
+    "memberOf": {
+      "file": "FY2016-HAC-Reduction-Program-Information.zip",
+      "bytes": 100484,
+      "sha256": "3b8d57224bd1cbd1580ac840b3213f9fda15936653eb38944fd44de69d463c9e",
+      "member": "HAC_Results_FY16_Feb 2016.txt",
+      "downloadUrl": "https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/AcuteInpatientPPS/Downloads/FY2016-HAC-Reduction-Program-Information.zip"
+    },
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2017",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2017: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2017/hai_hospital_cy2017.csv",
+    "bytes": 833211,
+    "sha256": "e809ce51e104793aeef3a0ce2490908b98004c3fb32d76ae5feb20fdcd31957f",
+    "derivedFrom": {
+      "file": "hos_revised_flatfiles_archive_10_2018.zip",
+      "bytes": 14889985,
+      "sha256": "a9c6cc3c6dc77851a64c7d69c9d30b76dad235ea54c706c7cdc549fded4fa6de",
+      "member": "Healthcare Associated Infections - Hospital.csv",
+      "downloadUrl": "https://web.archive.org/web/20210512143310id_/https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2018/hos_revised_flatfiles_archive_10_2018.zip",
+      "originalUrl": "https://data.cms.gov/provider-data/sites/default/files/archive/Hospitals/2018/hos_revised_flatfiles_archive_10_2018.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2018",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2018: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2018/hai_hospital_cy2018.csv",
+    "bytes": 821416,
+    "sha256": "149eeee894c04645c40f167762c6977b476e33c96db899032a28a2237bc1a6a8",
+    "derivedFrom": {
+      "file": "hospitals_2019-10-31.zip",
+      "bytes": 17056453,
+      "sha256": "9118772dc7e95068cb6508c7a685cc282e15393bcc3e2214d6761828c65b628d",
+      "member": "Healthcare Associated Infections - Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2019-10-31.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2019",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2019: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2019/hai_hospital_cy2019.csv",
+    "bytes": 871084,
+    "sha256": "7c1d42343b4401c7218c568695fb62e185e695ec18c611639ce3e5cc58e735b2",
+    "derivedFrom": {
+      "file": "hospitals_2021-04-28.zip",
+      "bytes": 14625171,
+      "sha256": "1aedd054556e45eb56d8de3e59c5fdc4aa0f96b8780356bb55fbf684edde3fd8",
+      "member": "Healthcare_Associated_Infections-Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2021-04-28.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2021",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2021: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2021/hai_hospital_cy2021.csv",
+    "bytes": 842264,
+    "sha256": "12fcfaf5331d6d0cc145a0ca9bd93327ca500bb36585a2daa4f569d2b1e57c4a",
+    "derivedFrom": {
+      "file": "hospitals_2022-10-06.zip",
+      "bytes": 14753205,
+      "sha256": "cd258649ad9b0ae9928321a891a6060c85fe90b87f6e7be5b2ad9d81e0359038",
+      "member": "hospitals_10_2022/Healthcare_Associated_Infections-Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2022-10-06.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2022",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2022: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2022/hai_hospital_cy2022.csv",
+    "bytes": 835309,
+    "sha256": "5aa2f9e8ceac22113e149a577bd094773761a9c0b6d6b2d9e5335edf99e71d9b",
+    "derivedFrom": {
+      "file": "hospitals_2023-11-06.zip",
+      "bytes": 16527213,
+      "sha256": "2a39f58397aeed70bb4281e85b57f41aa84322c9c6eb0c760c2d8d5e62e4534f",
+      "member": "hospitals_11_2023/Healthcare_Associated_Infections-Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2023-11-06.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2023",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2023: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2023/hai_hospital_cy2023.csv",
+    "bytes": 825519,
+    "sha256": "ce05c248f8823d8bf4fa367ed820ff69c8c304a8129f88ac32913e8334c2ea25",
+    "derivedFrom": {
+      "file": "hospitals_2024-10-30.zip",
+      "bytes": 15146617,
+      "sha256": "c0bb9ca111aeec16b9220da52b1aa5b33582284ecfd9cf29f1c3c39f1250ae8b",
+      "member": "Healthcare_Associated_Infections-Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2024-10-30.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2024",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2024: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2024/hai_hospital_cy2024.csv",
+    "bytes": 831872,
+    "sha256": "4c6847c44370bca2e70c85a7edf456ad8086e36d64dc0466b6d5bbe55d78e0e6",
+    "derivedFrom": {
+      "file": "hospitals_2025-11-26.zip",
+      "bytes": 15810924,
+      "sha256": "f3d447ccb50d2ba189c19bbb0d84f72031452bb36ca03b51df9e0d8924b52e72",
+      "member": "Healthcare_Associated_Infections-Hospital.csv",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2025-11-26.zip"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
+    "retrieved": "2026-10-22"
   }
 ]

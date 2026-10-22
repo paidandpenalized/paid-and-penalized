@@ -376,3 +376,25 @@ export function placeMap({ shapes, counties = [], codes, fit = 'states', points,
     + inside.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')
     + dots + '</svg>');
 }
+
+// Hospitals projected onto the US map at a width (Albers USA, the choropleth's frame): [x, y] to a tenth of a unit for
+// each point, or null where the projection has no place for it. A page script redraws dots from these.
+export function usProjected(shapes, points, width) {
+  const { projection } = usPaths(shapes, width);
+  return points.map((p) => {
+    const at = Array.isArray(p) ? projection(p) : null;
+    return at ? at.map((v) => Math.round(v * 10) / 10) : null;
+  });
+}
+
+// The year map: every state's outline as a faint land, and the hospitals as dots, one path per class (drawn in the
+// order given, so the last class sits on top). groups [{ cls, points: [[x, y]] }] already projected (usProjected) at
+// this width; size: the dots' diameter.
+export function usYearMap({ shapes, groups, size, width }) {
+  const { height, paths } = usPaths(shapes, width);
+  const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean);
+  return frame({
+    kind: 'us-years', width, height, body: html`<g class="chart-years__land">${land.map((d) => html`<path d="${d}"/>`)}</g>
+<g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, size))}</g>`,
+  });
+}

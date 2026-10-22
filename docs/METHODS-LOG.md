@@ -15,6 +15,28 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - No number changes. `source_manifest` now hashes only each pinned input's id and SHA-256, so fixing a
   manifest entry's dates, title or URLs no longer changes the emitted file.
 
+## hacrp-history methods_version 1 (2026-10-22)
+- `data/emitted/hacrp-history/fy2026/hacrp_history.json` holds CMS's HACRP hospital file for every program year,
+  FY2015 to FY2026, one row per hospital in one shape, CMS's text kept as written: CCN, state, Total HAC Score,
+  payment reduction, each listed measure's part (a z-score from FY2018 on; a score in tenths before) and, for years
+  scored in domains (FY2015 to FY2019), the two domain scores.
+- Earlier years come from CMS's archives: the Provider Data Catalog's quarterly hospital snapshots (FY2019 to FY2025)
+  and the Wayback Machine's copies of retired Hospital Compare zips (FY2015 to FY2018). For each year the pin is the
+  last version CMS published (several years were reissued with corrections); each member is pinned byte for byte with
+  the zip it came from recorded in the manifest (`memberOf`).
+- FY2015 and FY2016 files have no payment column; their decisions come from CMS's cut lists (FY2015 IPPS final rule
+  Table 17; the FY2016 HAC results file). Hospitals on a cut list that the year's hospital file leaves out are added
+  with the list's own total and decision and no parts.
+- Period dates are written MM/DD/YYYY whatever form the file used (DD-MON-YY in FY2015, MMDDYYYY in FY2016 and
+  FY2017). FY2019's "Not Available" decision is written N/A, as in later years.
+- `footnoted` lists, per year, the CCNs whose score or parts CMS footnoted or marked with asterisks. The self-check
+  lets a recomputed score miss CMS's only on these rows (CMS used a part its file withholds: FY2016 has 1 such row,
+  FY2017 44, most of them Maryland's), and counts them; any other miss fails the build.
+- FY2023 is the year CMS scored no hospital: every total is 0.0000 with no parts, and the pages read it as no score.
+- `infections` sums Care Compare's per-hospital infection results for each calendar year with a full-year file
+  (CY2017 to CY2019 and CY2021 to CY2024; extracts pinned by `pipeline/py/pp_pipeline/hai_extract.py`): per measure,
+  the hospitals with an SIR and their median, and the observed and predicted infections over hospitals with both counts.
+
 ## hospital methods_version 1 (2026-10-20)
 - `data/emitted/hospital/fy2027/hospital_master.json` holds one record per CCN listed in Care Compare's Hospital
   General Information, the FY2027 IPPS impact file, or a program file (HACRP FY2026; HRRP FY2027 from Thirty Day

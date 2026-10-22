@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hacrp-history.schema.json",
+  "title": "HAC Reduction Program emitted data, every program year",
+  "description": "CMS's hospital file for each fiscal year, one row per hospital in one shape, CMS's text kept as written: [CCN, state, Total HAC Score, payment reduction, then each listed measure's z-score, then (years scored in domains) the two domain scores]. Empty text where CMS published none.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "methods_version",
+    "source_manifest",
+    "sources",
+    "built_at",
+    "fy",
+    "years",
+    "infections"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "methods_version": {
+      "$ref": "common.schema.json#/$defs/methodsVersion"
+    },
+    "source_manifest": {
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "sources": {
+      "$ref": "common.schema.json#/$defs/sources"
+    },
+    "built_at": {
+      "$ref": "common.schema.json#/$defs/builtAt"
+    },
+    "fy": {
+      "$ref": "common.schema.json#/$defs/fy"
+    },
+    "years": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/year"
+      }
+    },
+    "infections": {
+      "description": "Care Compare's infection results for single calendar years, summed over the nation per measure.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/infectionYear"
+      }
+    }
+  },
+  "$defs": {
+    "measureId": {
+      "enum": [
+        "PSI90",
+        "CLABSI",
+        "CAUTI",
+        "SSI",
+        "CDI",
+        "MRSA"
+      ]
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{2}/\\d{2}/\\d{4}$"
+    },
+    "period": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/date"
+        },
+        "end": {
+          "$ref": "#/$defs/date"
+        }
+      }
+    },
+    "year": {
+      "type": "object",
+      "required": [
+        "fy",
+        "rule",
+        "measures",
+        "scale",
+        "domains",
+        "decisions",
+        "periods",
+        "footnoted",
+        "hospitals"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fy": {
+          "$ref": "common.schema.json#/$defs/fy"
+        },
+        "rule": {
+          "enum": [
+            "equal",
+            "domains"
+          ]
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/measureId"
+          }
+        },
+        "domains": {
+          "type": "boolean"
+        },
+        "decisions": {
+          "description": "Where the year's payment decisions come from: the hospital file's own column, or CMS's separate cut list (FY2015 and FY2016).",
+          "enum": [
+            "file",
+            "cut-list"
+          ]
+        },
+        "periods": {
+          "description": "CMS's period dates for the year (MM/DD/YYYY); a period is null when the file gives none.",
+          "type": "object",
+          "required": [
+            "psi90",
+            "hai"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "psi90": {
+              "$ref": "#/$defs/nullablePeriod"
+            },
+            "hai": {
+              "$ref": "#/$defs/nullablePeriod"
+            }
+          }
+        },
+        "hospitals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "description": "[CCN, state, Total HAC Score, payment reduction, z-scores..., domain scores...] (the emitter checks each column).",
+            "type": "array",
+            "minItems": 4,
+            "items": {
+              "type": "string",
+              "pattern": "^([0-9A-Z]{6}|[A-Z]{2}|Yes|No|N/A|Not Available|-?\\d+(\\.\\d+)?|)\\**$"
+            }
+          }
+        },
+        "scale": {
+          "description": "What each measure's part is: a z-score (FY2018 on) or a score in tenths (FY2015 to FY2017).",
+          "enum": [
+            "z",
+            "tenths"
+          ]
+        },
+        "footnoted": {
+          "description": "CCNs whose score or parts CMS footnoted or marked.",
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/ccn"
+          }
+        }
+      }
+    },
+    "nullablePeriod": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/date"
+        },
+        "end": {
+          "$ref": "#/$defs/date"
+        }
+      }
+    },
+    "infectionMeasure": {
+      "type": "object",
+      "required": [
+        "hospitals",
+        "median",
+        "counted",
+        "observed",
+        "predicted"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hospitals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "median": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "counted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observed": {
+          "type": "number",
+          "minimum": 0
+        },
+        "predicted": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "infectionYear": {
+      "type": "object",
+      "required": [
+        "cy",
+        "measures"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cy": {
+          "type": "integer",
+          "minimum": 2010,
+          "maximum": 2100
+        },
+        "measures": {
+          "type": "object",
+          "required": [
+            "CLABSI",
+            "CAUTI",
+            "SSI_COLON",
+            "SSI_HYST",
+            "MRSA",
+            "CDI"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "CLABSI": {
+              "$ref": "#/$defs/infectionMeasure"
+            },
+            "CAUTI": {
+              "$ref": "#/$defs/infectionMeasure"
+            },
+            "SSI_COLON": {
+              "$ref": "#/$defs/infectionMeasure"
+            },
+            "SSI_HYST": {
+              "$ref": "#/$defs/infectionMeasure"
+            },
+            "MRSA": {
+              "$ref": "#/$defs/infectionMeasure"
+            },
+            "CDI": {
+              "$ref": "#/$defs/infectionMeasure"
+            }
+          }
+        }
+      }
+    }
+  }
+}

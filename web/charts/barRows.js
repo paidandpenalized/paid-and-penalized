@@ -1,12 +1,12 @@
 // Plain horizontal bars, a row each: the label at the left, the bar on a light track, its value printed after it.
 // One row may be marked (pen: the penalty ink). Each row is a mark.
-//   rows [{ label, value, valueText, tip, pen }]; max: the track's full length in values
+//   rows [{ label, value, valueText, tip, pen }]; max: the track's full length in values; labelW: the label column's
+//   width (default: by the drawing's width)
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { barPath, frame, mark, r2, text } from './svg.js';
 
-export function barRows({ rows, max, width }) {
-  const labelW = width < 400 ? 70 : 96;
+export function barRows({ rows, max, width, labelW = width < 400 ? 70 : 96 }) {
   const right = width - 44;
   const x = scaleLinear().domain([0, max]).range([labelW, right]);
   const rowH = 26;

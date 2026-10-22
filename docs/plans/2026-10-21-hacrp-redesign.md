@@ -33,6 +33,8 @@ Use their facts and direction. Don't copy their notes into this repo.
   - `/hacrp/methods/`.
 
   Send screenshots after.
+- [ ] **Checkpoint M3:** same as Checkpoint M1, including /security-review for the new history inputs and the roll
+  call's script.
 - [ ] **Accuracy pass:**
   - claim ids and register rows for every factual sentence;
   - the copy gate;

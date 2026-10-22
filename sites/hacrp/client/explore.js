@@ -13,6 +13,8 @@ import { imageOf, imagePair } from '../../../web/charts/figure.js';
 import { COL, inGroup, measureSummary } from '../web/program-data.js';
 import { SCATTER_W, agreeScatterOf, pairPoints, pullPanel, slidePanel, stackPanel, swarmChart, swarmPositions } from '../web/explore-figures.js';
 import { fill } from '../web/explore/copy.js';
+import { dotsPath } from '../../../web/charts/dots.js';
+import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
 
 // ---------- the explore asset ----------
 
@@ -363,4 +365,129 @@ export function mountPlaceMaps(root = document) {
       if (href) window.location.assign(href);
     });
   }
+}
+
+// ---------- the roll call ----------
+
+// The roll call (history-figures.js rollFigure): the hospital under the pointer, named with its record in the readout
+// under the grid (a click opens its page, when CMS's newest file lists it), and the state picker, which ticks that
+// state's hospitals through the grid. The history asset holds the grid's order: { fys, ccns, recs, states }.
+export function mountRoll(fig, { hospitals }) {
+  const box = fig.querySelector('.roll');
+  if (!box) return;
+  const readout = box.querySelector('.roll__readout');
+  const picker = box.querySelector('.roll__pick');
+  const select = picker?.querySelector('select');
+  const geom = JSON.parse(box.dataset.geom);
+  // The grid's order: the history asset (the program page), or inline on the figure (a place page).
+  const order = () => (box.dataset.inline ? Promise.resolve(JSON.parse(box.dataset.inline))
+    : fetch(box.dataset.roll).then((res) => { if (!res.ok) throw new Error(`history: HTTP ${res.status}`); return res.json(); }));
+  const ready = once(() => Promise.all([order(), hospitals(box.dataset.src)])
+    .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath })));
+  const svgs = [...box.querySelectorAll('svg.chart--roll')];
+  const at = (svg, e, n) => {
+    const width = svg.viewBox.baseVal.width;
+    const [label, right] = geom[String(width)];
+    const j = Math.floor(((svgPoint(svg, e).x - label) / (width - label - right)) * n);
+    return j >= 0 && j < n ? j : null;
+  };
+  const say = (s, j) => {
+    const ccn = s.hist.ccns[j];
+    const rec = s.hist.recs[j];
+    const row = s.names.get(ccn);
+    const cut = s.hist.fys.filter((_, i) => rec[i] === 'Y').map((fy) => `FY${String(fy).slice(-2)}`);
+    const decided = [...rec].filter((c) => c !== '.').length;
+    readout.textContent = fill(cut.length ? 'rollSay' : 'rollSayNone', { name: row ? row[1] : fill('rollClosed', { ccn }), state: row ? row[3] : s.hist.states[j], cut: String(cut.length), decided: String(decided), years: cut.join(', ') });
+  };
+  for (const svg of svgs) {
+    svg.addEventListener('pointerenter', () => { ready().catch(() => {}); });
+    svg.addEventListener('pointermove', (e) => {
+      ready().then((s) => { const j = at(svg, e, s.hist.ccns.length); if (j !== null) say(s, j); }, () => {});
+    });
+    svg.addEventListener('click', (e) => {
+      ready().then((s) => {
+        const j = at(svg, e, s.hist.ccns.length);
+        if (j !== null && s.names.has(s.hist.ccns[j])) window.location.assign(hospitalHref(s.path, s.hist.ccns[j]));
+      }, () => {});
+    });
+  }
+  if (!select) return;
+  picker.hidden = false;
+  select.addEventListener('change', () => {
+    ready().then((s) => {
+      for (const svg of svgs) {
+        svg.querySelector('.chart-roll__pick')?.remove();
+        if (!select.value) continue;
+        const width = svg.viewBox.baseVal.width;
+        const height = svg.viewBox.baseVal.height;
+        const [label, right] = geom[String(width)];
+        const n = s.hist.ccns.length;
+        const x = (j) => label + ((j + 0.5) * (width - label - right)) / n;
+        const d = s.hist.states.map((st, j) => (st === select.value ? `M${x(j).toFixed(1)} 0V${(height - 26).toFixed(1)}` : '')).join('');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'chart-roll__pick');
+        path.setAttribute('d', d);
+        svg.append(path);
+      }
+      box.classList.toggle('is-picked', Boolean(select.value));
+      const k = s.hist.states.filter((st) => st === select.value).length;
+      readout.textContent = select.value ? fill('rollPicked', { n: count(k), state: select.selectedOptions[0].textContent }) : '';
+    }, () => {});
+  });
+}
+
+// ---------- the year map ----------
+
+// The year map (history-figures.js yearMapFigure): the year buttons redraw its dots for that year from the history
+// asset (each hospital's record and place at each drawn width); Play steps through the years, oldest first, once.
+export function mountYearMap(fig) {
+  const box = fig.querySelector('.ymap');
+  if (!box?.dataset.roll) return;
+  const controls = box.querySelector('.ymap__controls');
+  const buttons = [...box.querySelectorAll('.ymap__y')];
+  const play = box.querySelector('.ymap__play');
+  const readout = box.querySelector('.ymap__readout');
+  const load = once(() => fetch(box.dataset.roll).then((res) => { if (!res.ok) throw new Error(`history: HTTP ${res.status}`); return res.json(); }));
+  const draw = (hist, i) => {
+    for (const svg of box.querySelectorAll('svg.chart--us-years')) {
+      const flat = hist.at?.[String(svg.viewBox.baseVal.width)];
+      const g = svg.querySelector('.chart-years__dots');
+      if (!flat || !g) continue;
+      const groups = Object.fromEntries(Object.keys(YEAR_CLASSES).map((k) => [k, []]));
+      hist.recs.forEach((rec, j) => {
+        const k = yearClass(rec, i);
+        if (k && flat[2 * j] !== null) groups[k].push([flat[2 * j] / 10, flat[2 * j + 1] / 10]);
+      });
+      g.innerHTML = Object.entries(YEAR_CLASSES).map(([k, cls]) => dotsPath(groups[k], cls, Number(g.dataset.size)).toString()).join('');
+    }
+    let cut = 0;
+    let ever = 0;
+    for (const rec of hist.recs) {
+      if (rec[i] === 'Y') cut++;
+      if (rec.slice(0, i + 1).includes('Y')) ever++;
+    }
+    const values = { fy: String(hist.fys[i]), cut: count(cut), ever: count(ever) };
+    readout.textContent = cut ? fill('ymapSay', values) : fill('ymapSayNone', { fy: values.fy, ever: values.ever });
+    buttons.forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+  };
+  const show = (i) => load().then((hist) => draw(hist, i), () => {});
+  controls.hidden = false;
+  for (const b of buttons) b.addEventListener('click', () => { stop(); show(Number(b.dataset.i)); });
+  let timer = null;
+  const stop = () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+    play.textContent = play.dataset.play;
+  };
+  play.addEventListener('click', () => {
+    if (timer) return stop();
+    let i = 0;
+    play.textContent = play.dataset.stop;
+    show(i);
+    timer = setInterval(() => {
+      i++;
+      if (i >= buttons.length) return stop();
+      show(i);
+    }, 1100);
+  });
 }

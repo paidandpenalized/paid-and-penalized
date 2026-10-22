@@ -8,6 +8,8 @@ import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
+import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
+import { existsSync } from 'node:fs';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -30,6 +32,37 @@ export function careCompareRatings(csvText, footnotes) {
   return out;
 }
 const DICTIONARY_FILE = 'sites/hacrp/DATA-DICTIONARY.md';
+const CHANGELOG_FILE = 'sites/hacrp/CHANGELOG.md';
+
+// The changelog's entries, newest first: [{ date (YYYY-MM-DD), items }], from its "## YYYY-MM-DD" headings and "- "
+// lines. Anything else (its title and opening paragraph) is for readers of the file itself.
+export function changelogEntries(text) {
+  const out = [];
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const date = /^## (\d{4}-\d{2}-\d{2})\s*$/.exec(line);
+    if (date) out.push({ date: date[1], items: [] });
+    else if (line.startsWith('- ')) {
+      if (!out.length) throw new RangeError('changelog: an item before the first dated heading');
+      out[out.length - 1].items.push(line.slice(2).trim());
+    }
+  }
+  if (out.some((e) => !e.items.length)) throw new RangeError('changelog: a dated heading with no items');
+  return out;
+}
+
+// Each hospital's infection results by calendar year, from the pinned Care Compare extracts: Map(ccn -> [{ cy, sir: {
+// CLABSI: number|null, … } }]), years oldest first; a hospital is listed for the years it appears in.
+export function infectionsByHospital(files) {
+  const out = new Map();
+  for (const { cy, rows } of files) {
+    for (const r of rows) {
+      const sir = Object.fromEntries(HAI_MEASURES.map(([id, k]) => [id, /^\d+(\.\d+)?$/.test(r[`hai_${k}_sir`]) ? Number(r[`hai_${k}_sir`]) : null]));
+      if (!out.has(r.ccn)) out.set(r.ccn, []);
+      out.get(r.ccn).push({ cy, sir });
+    }
+  }
+  return out;
+}
 
 // The master's HACRP program year must be the year of the HACRP file the pages show (the newest master is not
 // necessarily the one built for this program year).
@@ -79,6 +112,12 @@ export function loadHacrp() {
     shapes: stateShapes(topo),
     counties: countyShapes(topo),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
+    changes: changelogEntries(readFileSync(REPO_ROOT + CHANGELOG_FILE, 'utf8')),
+    // Every program year's file, when the build has them (the history; null without).
+    history: existsSync(REPO_ROOT + historyPath(data.fy)) ? readJson(REPO_ROOT + historyPath(data.fy)) : null,
+    infections: infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))),
+    manifest,
+    sourceRows: parseCsv(readPinned(sourceId)).length,
     source: { id: source.id, title: source.title, landingPage: source.landingPage, pdcReleased: source.pdcReleased },
   };
 }

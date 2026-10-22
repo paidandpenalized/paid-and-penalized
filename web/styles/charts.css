@@ -293,3 +293,65 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
   .chart-agree__cell.is-picked { stroke: Highlight; }
 }
+
+/* The proof strips (proofStrips.js): a recomputation's misses as a spike at zero between the failure zones. */
+.chart-proof__ruler { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-proof__fail { fill: var(--pen-tint); }
+.chart-proof__spike { fill: var(--ink); }
+.chart-proof__zero { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.chart-proof__label { fill: var(--ink); font: 700 11px var(--font-type); letter-spacing: 0.04em; }
+/* The periods chart (periods.js): the care behind each year's cut and the year it is paid. */
+.chart-periods__psi { fill: var(--ink-3); }
+.chart-periods__hai { fill: var(--ink); }
+.chart-periods__pay { fill: var(--pen); }
+@media (forced-colors: active) {
+  .chart-proof__spike, .chart-periods__hai, .chart-periods__pay { fill: CanvasText; }
+  .chart-proof__fail, .chart-periods__psi { fill: GrayText; }
+  .chart-proof__ruler, .chart-proof__zero { stroke: CanvasText; }
+}
+/* The roll call (rollCall.js): every hospital, every year. */
+.chart-roll__yes { fill: var(--pen); }
+.chart-roll__no { fill: var(--ink-3); fill-opacity: 0.28; }
+.chart-roll__year { fill: var(--ink-2); font: 600 10px var(--font-type); }
+.chart-roll__bracket { fill: none; stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-roll__bracket--pen { stroke: var(--pen-ink); }
+.chart-roll__hl { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* Standing in line (rankYears.js). */
+.chart-rank__zone { fill: var(--pen-tint); }
+.chart-rank__base { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-rank__path { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-rank__dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-rank__dot--cut { fill: var(--pen); stroke: var(--pen); }
+.chart-rank__break { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) {
+  .chart-roll__yes, .chart-rank__dot--cut { fill: CanvasText; }
+  .chart-roll__no, .chart-rank__zone { fill: GrayText; }
+  .chart-rank__path, .chart-rank__base, .chart-rank__dot, .chart-roll__hl { stroke: CanvasText; }
+}
+/* Year charts (yearCharts.js). */
+.chart-stair__ever { fill: var(--pen-tint); stroke: var(--pen); stroke-width: 1px; stroke-opacity: 0.35; vector-effect: non-scaling-stroke; }
+.chart-chance__stem { stroke: var(--ink-3); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-chance__stem--up { stroke: var(--pen); }
+.chart-chance__ring { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-chance__dot { fill: var(--ink); }
+@media (forced-colors: active) {
+  .chart-stair__ever { fill: GrayText; stroke: CanvasText; }
+  .chart-chance__dot { fill: CanvasText; }
+  .chart-chance__stem, .chart-chance__stem--up, .chart-chance__ring { stroke: CanvasText; }
+}
+.chart-roll__note { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.chart-roll__pick { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-roll__blank { fill: var(--ink-3); font: 600 10px var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+/* The year map (geo.js usYearMap). */
+.chart-years__land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.chart-dots--years-clear { stroke: var(--ink-3); stroke-opacity: 0.55; }
+.chart-dots--years-scar { stroke: var(--pen); stroke-opacity: 0.3; }
+@media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } .chart-years__land path { stroke: CanvasText; } }
+/* Small lines (smallLines.js). */
+.chart-lines__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-lines__line--pen { stroke: var(--pen); }
+.chart-lines__dot { fill: var(--ink); }
+.chart-lines__dot--pen { fill: var(--pen); }
+@media (forced-colors: active) { .chart-lines__line, .chart-lines__line--pen { stroke: CanvasText; } .chart-lines__dot, .chart-lines__dot--pen { fill: CanvasText; } }
+.chart-lines__under { fill: none; stroke: var(--ink-3); stroke-width: 1.5px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) { .chart-lines__under { stroke: GrayText; } }

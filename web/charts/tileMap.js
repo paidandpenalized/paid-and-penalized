@@ -130,3 +130,21 @@ export function stepLegend({ id, top, ramp, format = plain, words, states }) {
 
 // The few-cases mark: a dashed outline just inside a tile, in ink (on-mark ink over a dark step).
 export const fewOutline = (x, y, size, on) => html`<rect class="chart-tile-few${on ? ' chart-tile-few--on' : ''}" x="${r2(x + FEW_INSET)}" y="${r2(y + FEW_INSET)}" width="${r2(size - 2 * FEW_INSET)}" height="${r2(size - 2 * FEW_INSET)}"/>`;
+
+// A tile map small enough to repeat (one per year in a grid of them): tiles only, shaded by the same steps, with no
+// codes and no legend (the figure carries one legend for all). states as tileMap's; a tile with no value is an empty
+// outline.
+export function miniTiles({ states, ramp, width }) {
+  checkStates(states);
+  const { stepOf } = stepScale(ramp);
+  const pitch = width / GRID.cols;
+  const size = pitch - 1.5;
+  const tiles = Object.entries(TILES).map(([code, [c, r]]) => {
+    const s = states[code];
+    const box = html`x="${r2(c * pitch)}" y="${r2(r * pitch)}" width="${r2(size)}" height="${r2(size)}"`;
+    if (s.empty || s.hatched || s.value === null) return html`<rect class="chart-tile-empty" ${box}/>`;
+    const cls = s.value === 0 ? 'chart-tile-zero' : `chart-seq-${stepOf(s.value)}`;
+    return mark({ tip: `${code}: ${s.label}`, value: s.value, data: { state: code }, hit: null, body: html`<rect class="chart-tile ${cls}" ${box} rx="1"/>` });
+  });
+  return frame({ kind: 'mini-tiles', width, height: GRID.rows * pitch, body: html`${tiles}` });
+}
