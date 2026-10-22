@@ -45,6 +45,11 @@ export const RULER_BINS = 28;
 // The nearest-hospitals map's distance rings, in miles: those inside the farthest hospital shown, at most RINGS_MAX.
 export const RING_MILES = Object.freeze([5, 10, 25, 50, 100, 250]);
 export const RINGS_MAX = 3;
+// The ledger's ruler axes: room below a floor above zero, and past the cap, as shares of the floor-to-cap span, so the
+// hatched ends show; and the nearest-hospitals map's drawn width.
+export const RULER_ROOM_LOW = 0.15;
+export const RULER_ROOM_HIGH = 0.18;
+export const NEAR_MAP_WIDTH = 460;
 
 export const CLAIMS = {
   REDUCTION_PCT: 'HACRP-01',

@@ -134,8 +134,7 @@ export function nationalContext({ hospitals, master, model }) {
     groupsOf(ccn) {
       const row = byCcn.get(ccn);
       if (!row) return [];
-      return KINDS.map(([kind]) => row.keys[kind])
-        .map((key, i) => (key === null ? null : group(KINDS[i][0], key)))
+      return KINDS.map(([kind]) => (row.keys[kind] === null ? null : group(kind, row.keys[kind])))
         .filter((g) => g && g.decided >= FEW_IN_GROUP)
         .map((g) => ({ ...g, below: below(g.scores, row.total), above: above(g.scores, row.total) }));
     },
@@ -147,9 +146,11 @@ export function nationalContext({ hospitals, master, model }) {
       for (const row of rows) {
         if (row.ccn === ccn || !row.point) continue;
         const d = miles(point, row.point);
-        if (best.length === k && !(d < best[k - 1].miles || (d === best[k - 1].miles && row.ccn < best[k - 1].row.ccn))) continue;
+        // Nearer, or as near with the lower CCN (so ties break the same way on every build).
+        const closer = (e) => d < e.miles || (d === e.miles && row.ccn < e.row.ccn);
+        if (best.length === k && !closer(best[k - 1])) continue;
         let i = best.length;
-        while (i > 0 && (d < best[i - 1].miles || (d === best[i - 1].miles && row.ccn < best[i - 1].row.ccn))) i--;
+        while (i > 0 && closer(best[i - 1])) i--;
         best.splice(i, 0, { row, miles: d });
         if (best.length > k) best.pop();
       }

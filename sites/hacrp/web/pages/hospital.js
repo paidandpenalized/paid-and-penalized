@@ -150,7 +150,7 @@ function leadMarkup(view) {
 }
 
 function verdict(view, nat) {
-  const words = [...whySentences(view), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
+  const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
 ${stampOf(view)}
 <p class="hosp__summary">${leadMarkup(view)}</p>
@@ -178,7 +178,7 @@ ${figure}
 // would cross CMS's line.
 function leverText(view, hospital, model) {
   const lever = biggestLever(hospital, model);
-  if (!lever) return view.measures.some((m) => m.hasValue && !m.assigned) ? t('leverNone') : null;
+  if (!lever) return view.measures.some((m) => m.hasValue && m.hasZ && !m.assigned) ? t('leverNone') : null;
   const m = view.measures.find((x) => x.id === lever.id);
   const fmt = (v) => decimal(v, model.params[lever.id].decimals);
   const sentence = fill('leverOne', { short: m.short, median: fmt(lever.median), drop: cmsText(decimal(lever.drop, DP)), after: cmsText(decimal(lever.after, DP)) });
@@ -213,18 +213,17 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const home = SITE.sites.hacrp.path;
   const line = sourceText({ fy: view.fy, source });
   const map = locatorMap(view, shapes);
+  // Figures are numbered in page order, each taking the next number only if it is drawn.
   let n = 0;
-  const next = () => ++n;
-
-  const ledger = ledgerFigure({ view, nat, model, n: next(), source: line, notes: measureNotes });
+  const numbered = (fig) => { if (fig) n++; return fig; };
+  const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
-  const sum = view.scored ? sumFigure({ view, n: next(), source: line }) : null;
-  const what = view.scored && whatif ? whatIfBlock(view, whatif, source, assets, next()) : null;
-  const peers = peersFigure({ view, nat, master, n: n + 1, source: line });
-  if (peers) next();
+  const sum = view.scored ? numbered(sumFigure({ view, n: n + 1, source: line })) : null;
+  const what = view.scored && whatif ? numbered(whatIfBlock(view, whatif, source, assets, n + 1)) : null;
+  const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
   const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
-  if (nearby?.fig) next();
+  numbered(nearby?.fig);
   const nearRank = peers?.rows.filter((r) => r.g.kind === 'state' || r.g.kind === 'metro') ?? [];
   const notes = noteSentences(view);
 
@@ -257,7 +256,7 @@ ${peers && section({
     id: 'peers',
     text: html`<h2 id="peers-h">${t('peersHeading')}</h2>
 <p>${t('peersIntro')}</p>
-${nearRank.map((r) => html`<p class="hsec__stat">${fill('peersRank', { group: r.label, share: r.higher, n: count(r.g.scored) })}</p>`)}`,
+${nearRank.map((r) => html`<p class="hsec__stat">${fill('peersRank', { group: r.label, share: r.higher, n: count(r.g.scored - 1) })}</p>`)}`,
     figure: peers.fig,
   })}
 ${nearby && section({

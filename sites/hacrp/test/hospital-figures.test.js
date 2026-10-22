@@ -8,7 +8,7 @@ import { SHORT_NAMES } from '../web/constants.js';
 import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, CASES, esc, inputs, master } from './fixtures.js';
+import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
 import { DATA, NAT, PAGE_CTX, RANGE } from './pinned.js';
 
 const { model, estimate } = DATA;
@@ -62,7 +62,7 @@ test('the ledger: each row CMS\'s value and z-score, its rank among every hospit
     const r = NAT.measureRank(m.id, Number(m.valueRaw));
     const median = model.params[m.id].median;
     assert.ok(fig.includes(`<span class="cms">${m.valueText}</span>`), m.id);
-    assert.ok(/(Worse|Better) than \d+% of [\d,]+ hospitals|At the national median/.test(fig), m.id);
+    assert.ok(/(Worse|Better) than \d+% of the other [\d,]+ hospitals|At the national median/.test(fig), m.id);
     assert.ok(r.n > 0 && median > 0);
   }
   const ssi = /<li class="ledger__row[^"]*is-assigned">[\s\S]*?<\/li>/.exec(fig)[0];
@@ -78,7 +78,7 @@ test('the line bar: none without a score; the rank counts the scores below this 
   const block = String(lineBarBlock(pinnedView(h), NAT));
   const r = NAT.rankOf(h.total);
   const share = Math.round((100 * r.below) / (r.n - 1));
-  assert.ok(block.includes(`Higher than ${share}% of the ${r.n.toLocaleString('en-US')} scores CMS published (higher is worse).`), block.slice(-200));
+  assert.ok(block.includes(`Higher than ${share}% of the other ${(r.n - 1).toLocaleString('en-US')} scores CMS published (higher is worse).`), block.slice(-200));
 });
 
 test('among hospitals like it: each group\'s share cut is its counts\', the table holds every plotted median, and the takeaway names the lowest and highest share', () => {
@@ -131,4 +131,56 @@ test('hostile names stay text in every new figure', () => {
   const text = render(CASES.yes, { view: hospitalView(inputs(CASES.yes, { master: master(CASES.yes.ccn, { name }) })) });
   assert.ok(!text.includes('<img src=x'));
   assert.ok(MEASURE_IDS.length === 6);
+});
+
+// ---------- M1 code review: each finding reproduced ----------
+
+test('review: a Maryland page says its hospitals are scored but not subject to the reduction', () => {
+  const verdict = /<section class="hosp__verdict"[\s\S]*?<\/section>/.exec(render(CASES.maryland))[0];
+  assert.ok(verdict.includes(esc('Maryland’s hospitals are scored but not subject to the reduction.')));
+  assert.ok(!/<section class="hosp__verdict"[\s\S]*?<\/section>/.exec(render(CASES.yes))[0].includes('Maryland'));
+});
+
+test('review: the no-lever sentence speaks only of the measures CMS scored (a value with no z-score is not one)', () => {
+  const h = hospital('990050', {
+    total: '-0.5000', decision: 'No',
+    measures: { PSI90: measured('0.9000', '-0.5000'), CLABSI: { value: '2.000', valueFootnote: '', z: 'N/A', zFootnote: '5' } },
+  });
+  const text = render(h, { hospital: h });
+  assert.doesNotMatch(text, /None of its measured values/);
+  assert.match(text, /None of the measures CMS scored it on is above the national median/);
+});
+
+test('review: every rank counts the other hospitals, never more than all of them', () => {
+  const r = NAT.rankOf(NAT.domain[1]);
+  const block = String(lineBarBlock(pinnedView(DATA.hospitals.find((x) => x.total === NAT.domain[1])), NAT));
+  assert.ok(block.includes(`Higher than 100% of the other ${(r.n - 1).toLocaleString('en-US')} scores CMS published`), block.slice(-160));
+  const h = DATA.hospitals.find((x) => x.paymentReduction === 'Yes' && x.total !== null);
+  const ledger = String(ledgerFigure({ view: pinnedView(h), nat: NAT, model, n: 1, source: 's', notes: () => '' }));
+  for (const [, share, n] of ledger.matchAll(/(?:Worse|Better) than (\d+)% of the other ([\d,]+) hospitals/g)) assert.ok(Number(share) <= 100 && Number(n.replace(',', '')) > 0);
+  assert.doesNotMatch(ledger, /(?:Worse|Better) than \d+% of [\d,]+ hospitals/);
+});
+
+test('review: figures are numbered in order with no gaps, whichever figures a page has', () => {
+  const text = render(CASES.allAssigned);
+  const nums = captions(text).map(([n]) => Number(n));
+  assert.deepEqual(nums, nums.map((_, i) => i + 1));
+});
+
+test('review: when every group has the same share cut, the takeaway says so once', () => {
+  const view = hospitalView(inputs(CASES.yes));
+  const same = { ...NAT, groupsOf: () => ['nation', 'state'].map((kind) => ({ kind, key: kind === 'state' ? 'AL' : 'all', scored: 10, decided: 10, yes: 0, median: 0, scores: [], bins: NAT.groupsOf(DATA.hospitals[0].ccn)[0].bins, below: 5, above: 4 })) };
+  const [, takeaway] = /<span class="fig__n">Figure 4\.<\/span> ([^<]*)</.exec(String(peersFigure({ view, nat: same, master: master('990001'), n: 4, source: 's' }).fig));
+  assert.doesNotMatch(takeaway, /runs from/);
+  assert.match(takeaway, /0% in every group/);
+});
+
+test('review: a hospital less than a mile away reads "less than a mile", never 0 miles', () => {
+  const h = DATA.hospitals.find((x) => x.total !== null && Number.isFinite(DATA.master.get(x.ccn).lat));
+  const view = pinnedView(h);
+  const near = NAT.nearest(h.ccn, view.point);
+  const fake = { ...NAT, nearest: () => near.map((x, i) => ({ ...x, miles: i === 0 ? 0.2 : x.miles })) };
+  const block = nearbyBlock({ view, nat: fake, shapes: DATA.shapes, n: 5, source: 's' });
+  assert.match(String(block.fig), /the closest is less than a mile away\./);
+  assert.doesNotMatch(String(block.table), /<td class="num">0<\/td>/);
 });

@@ -19,7 +19,7 @@ const BINS = 20;
 // The wide variant's viewBox width, for screens 560px and up (figure.js svgWide).
 export const WIDE = 560;
 const SHARE_DP = 1;
-const num = (text, value) => ({ text, value });
+export const num = (text, value) => ({ text, value });
 // A chart drawn twice, on the kit's narrow viewBox and WIDE, for figure()'s svg and svgWide.
 export const variants = (draw) => ({ svg: draw(undefined), svgWide: draw(WIDE) });
 

@@ -13,18 +13,17 @@ import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
 import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
-import { Safe, html } from '../../../web/render/html.js';
+import { html } from '../../../web/render/html.js';
 import { pill, printout } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
-import { WIDE, variants } from './figures.js';
-import { BED_BANDS, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, SIR_EXPECTED_TEXT } from './constants.js';
+import { WIDE, num, variants } from './figures.js';
+import { BED_BANDS, NEAR_MAP_WIDTH, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
 import { pillOf } from './whatif-text.js';
 import { hospitalHref } from './hospital-table.js';
 
-const num = (text, value) => ({ text, value });
 const at = (v) => decimal(v, DP);
 const share = (part, whole) => pct(whole ? part / whole : 0, 0);
 // The line bar's wide drawing, about the verdict column's width.
@@ -52,7 +51,7 @@ export function lineBarBlock(view, nat) {
 ${imageOf(draw(WIDTH), alt, 'narrow')}
 ${imageOf(draw(LINE_BAR_WIDE), alt, 'wide')}
 </div>
-<p class="hosp__rank">${fill('rankHigher', { share: share(rank.below, rank.n - 1), n: count(rank.n) })}</p>`;
+<p class="hosp__rank">${fill('rankHigher', { share: share(rank.below, rank.n - 1), n: count(rank.n - 1) })}</p>`;
 }
 
 // ---------- the ledger ----------
@@ -65,8 +64,8 @@ function rulerOf(nat, model, id) {
   if (!byId) RULERS.set(nat, (byId = new Map()));
   if (!byId.has(id)) {
     const p = model.params[id];
-    const lo = p.floor > 0 ? p.floor - (p.cap - p.floor) * 0.15 : 0;
-    const hi = p.cap + (p.cap - lo) * 0.18;
+    const lo = p.floor > 0 ? p.floor - (p.cap - p.floor) * RULER_ROOM_LOW : 0;
+    const hi = p.cap + (p.cap - lo) * RULER_ROOM_HIGH;
     const edges = Array.from({ length: RULER_BINS + 1 }, (_, i) => lo + ((hi - lo) * i) / RULER_BINS);
     byId.set(id, { domain: [lo, hi], counts: countBins(nat.measures[id].values, edges), p, median: medianAt(p) });
   }
@@ -76,8 +75,9 @@ function rulerOf(nat, model, id) {
 // Where a value sits among the measure's published values, in words.
 function rankWords(nat, id, value, median) {
   const r = nat.measureRank(id, value);
-  if (value > median) return fill('rankWorse', { share: share(r.below, r.n), n: count(r.n) });
-  if (value < median) return fill('rankBetter', { share: share(r.above, r.n), n: count(r.n) });
+  const others = r.n - 1;
+  if (value > median) return fill('rankWorse', { share: share(r.below, others), n: count(others) });
+  if (value < median) return fill('rankBetter', { share: share(r.above, others), n: count(others) });
   return t('rankMiddle');
 }
 
@@ -104,7 +104,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
         labels: { median: fill('rulerMedian', { median: fmt(r.median) }), value: t('barThis'), same: t('figRangeSame'), note: value === null ? (m.assigned ? t('valueAssigned') : t('noValue')) : null },
         format: fmt, width, pen: m.id === topId, ghost: m.assigned,
       });
-      return new Safe(`<svg aria-hidden="true" data-fit="${fit}" ${svg.text.slice('<svg '.length)}`);
+      return imageOf(svg, null, fit);
     };
     const svg = html`${draw(WIDTH, 'narrow')}${draw(RULER_WIDE, 'wide')}`;
     const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
@@ -222,7 +222,7 @@ export function peersFigure({ view, nat, master, n, source }) {
   const rows = groups.map((g) => {
     const label = groupLabel(g, master);
     const s = share(g.yes, g.decided);
-    return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: share(g.below, g.scored - 1) };
+    return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: share(g.below, g.scored - 1), others: g.scored - 1 };
   });
   const draw = (width) => ridges({
     edges: nat.edges, band, actual: total, width,
@@ -234,7 +234,9 @@ export function peersFigure({ view, nat, master, n, source }) {
   const high = shares.reduce((a, b) => (b.v > a.v ? b : a));
   const fig = figure({
     n, source, alt: t('figPeersAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-groups`,
-    takeaway: fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
+    takeaway: low.r.share === high.r.share
+      ? fill('figPeersSame', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), share: low.r.share })
+      : fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
     ...variants(draw),
     table: {
       columns: [{ name: t('figColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }, { name: t('figColMiddle'), numeric: true }, { name: t('figColHigher'), numeric: true }],
@@ -266,13 +268,14 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (!view.point || !shapes) return null;
   const near = nat.nearest(view.ccn, view.point);
   if (near.length < 2) return null;
-  const miles = (x) => count(Math.round(x));
+  // Whole miles; a hospital under a mile away says so rather than "0".
+  const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
   const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), miles: miles(h.miles) });
   const kind = (h) => (h.decision === 'Yes' ? 'yes' : h.decision === 'No' ? 'no' : 'na');
   const far = near.at(-1).miles;
   const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
   const map = areaMap({
-    shapes, counties, rings, label: t('figNearbyAlt'), width: 460,
+    shapes, counties, rings, label: t('figNearbyAlt'), width: NEAR_MAP_WIDTH,
     center: { point: view.point, tip: `${t('nearbyThis')}: ${view.name}` },
     points: near.map((h, i) => ({ point: h.point, n: i + 1, cls: `chart-pin--${kind(h)}`, tip: tip(h, i) })),
   });
@@ -284,7 +287,7 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
-    takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), miles: miles(near[0].miles) }),
+    takeaway: near[0].miles < 1 ? fill('figNearbyTakeawayNear', { yes: String(yes), k: String(near.length) }) : fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), miles: miles(near[0].miles) }),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
       rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),

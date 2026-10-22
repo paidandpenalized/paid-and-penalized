@@ -370,7 +370,7 @@ test("the verdict says CMS's line in plain words, from CMS's text, over the line
     const text = render(h);
     assert.ok(text.includes(`<p class="hosp__line">${line}</p>`), h.ccn);
     assert.ok(text.indexOf('chart--line-bar') > text.indexOf('hosp__line'), `${h.ccn}: the bar under it`);
-    assert.match(text, /<p class="hosp__rank">Higher than \d+% of the [\d,]+ scores CMS published \(higher is worse\)\.<\/p>/);
+    assert.match(text, /<p class="hosp__rank">Higher than \d+% of the other [\d,]+ scores CMS published \(higher is worse\)\.<\/p>/);
   }
   for (const h of [CASES.noScore, CASES.yesNoScore]) assert.ok(!render(h).includes('hosp__line'), h.ccn);
 });
