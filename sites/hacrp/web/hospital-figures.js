@@ -15,7 +15,7 @@ import { cmsText, count, decimal, pct, signed } from '../../../web/render/format
 import { Safe, html } from '../../../web/render/html.js';
 import { pill } from '../../../web/render/components.js';
 import { countBins } from './compare.js';
-import { BED_BANDS, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS } from './constants.js';
+import { BED_BANDS, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
 import { hospitalHref } from './hospital-table.js';
@@ -75,11 +75,11 @@ function rankWords(nat, id, value, median) {
   return t('rankMiddle');
 }
 
-// A measure's short name; PSI 90's (the one name that doesn't say what it counts) opens a box with its definition on
-// a click or tap, with no script (a <details>).
+// A measure's short name, which opens a box with its definition on a click or tap, with no script (a <details>). The
+// value that means "as expected": PSI 90's national composite is one; an infection ratio's, SIR_EXPECTED.
 function shortName(m) {
-  if (m.id !== 'PSI90') return m.short;
-  return html`<details class="def"><summary>${m.short}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('defineMore')}</span></summary><p class="def__box">${fill('definePSI90', { one: decimal(1, 0) })}</p></details>`;
+  const one = m.id === 'PSI90' ? decimal(1, 0) : SIR_EXPECTED_TEXT;
+  return html`<details class="def"><summary>${m.short}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('defineMore')}</span></summary><p class="def__box">${fill(`define${m.id}`, { one })}</p></details>`;
 }
 
 // view.largest's id, the part that raised the score most (the page marks it in red).

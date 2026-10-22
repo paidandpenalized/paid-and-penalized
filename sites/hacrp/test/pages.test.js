@@ -257,7 +257,7 @@ test('the ledger says which measure added the most (its row tagged in red) and, 
   for (const h of [CASES.yes, CASES.no, CASES.maryland]) {
     const view = hospitalView(inputs(h));
     const text = render(h);
-    const row = new RegExp(`<li class="ledger__row is-top[^"]*">\\n<div class="ledger__name"><div class="ledger__short">(<details class="def"><summary>)?${view.largest.short}[\\s\\S]*? <span class="ledger__tag">added the most</span>`);
+    const row = new RegExp(`<li class="ledger__row is-top[^"]*">\\n<div class="ledger__name"><div class="ledger__short"><details class="def"><summary>${view.largest.short}[\\s\\S]*? <span class="ledger__tag">added the most</span>`);
     assert.match(text, row, `${h.ccn}: the largest part's row`);
     assert.equal(text.match(/class="ledger__row is-top/g).length, 1, `${h.ccn}: one row tagged`);
   }

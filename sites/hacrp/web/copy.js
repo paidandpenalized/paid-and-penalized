@@ -613,6 +613,28 @@ export const COPY = {
   sumDistanceNo: { text: "This hospital's score is {distance} below {lowestYes}, the lowest score CMS marked Yes.", claim: null },
   // The one measure whose name doesn't say what it counts, defined under it in the ledger (draft ML1).
   defineMore: { text: '(what it counts)', claim: null },
+  // Each measure's definition, in the box its short name opens in the ledger (draft words, checked in the accuracy
+  // pass). The infection measures' values are standardized infection ratios.
+  defineCLABSI: {
+    text: "Bloodstream infections tied to a central line, a tube placed in a large vein in the neck, chest or groin. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
+    claim: null,
+  },
+  defineCAUTI: {
+    text: "Urinary tract infections that start from a urinary catheter, a tube that drains the bladder. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
+    claim: null,
+  },
+  defineSSI: {
+    text: "Infections where surgery was done, after colon surgery or an abdominal hysterectomy, pooled into one measure. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
+    claim: null,
+  },
+  defineCDI: {
+    text: "C. diff infections, which cause diarrhea and inflammation of the colon, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
+    claim: null,
+  },
+  defineMRSA: {
+    text: "Bloodstream infections with MRSA, a germ that resists several antibiotics, found by a lab test and starting in the hospital. Hospitals report them to the CDC's National Healthcare Safety Network. A value of {one} means as many infections as the CDC's model predicted.",
+    claim: null,
+  },
   definePSI90: {
     text: 'Safety problems such as bedsores, falls that break a bone and blood clots after surgery, found by CMS in traditional Medicare claims. A value of {one} matches the national rate.',
     claim: 'HACRP-06',
