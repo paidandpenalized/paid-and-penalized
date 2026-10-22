@@ -19,8 +19,8 @@ Use their facts and direction. Don't copy their notes into this repo.
 - `make test` stays green, and the numbers stay proved against CMS.
 
 ## Milestones
-- [ ] **M1, hospital page.** Build it complete, then send the owner screenshots and wait for his reaction.
-- [ ] **Checkpoint M1:** /simplify → `make test` → /code-review → /security-review if inputs changed → verify in Chrome beside TDR.
+- [x] **M1, hospital page.** Build it complete, then send the owner screenshots and wait for his reaction.
+- [x] **Checkpoint M1:** /simplify → `make test` → /code-review → /security-review if inputs changed → verify in Chrome beside TDR.
 - [ ] **M2, program page and place pages.**
   - Program page: Parts 1–3 (How it works, the FY picture, map and every hospital).
   - Place pages: region, division, state, metro.
