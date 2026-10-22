@@ -111,7 +111,7 @@ ${partHead({ n: partNo(), id: 'map', heading: t('part3Heading'), intro: t('part3
 ${map}
 <div class="prog__browse">
 ${hospitalTable({ fy, searchUrl, source })}
-${places ? browseList(places) : ''}
+${places && pd ? browseList(places, pd.counts.yes / pd.counts.decided) : ''}
 </div>
 </section>
 <div class="prog__foot">

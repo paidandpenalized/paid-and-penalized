@@ -4,7 +4,8 @@
 // pointer, named in a tooltip; a click opens its page). Without JavaScript each figure shows its first measure, its
 // starting state and its table. Motion follows the reader's reduced-motion setting.
 import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
-import { ruleRank } from '../../../web/charts/scoreRule.js';
+import { ruleCompare, ruleRank } from '../../../web/charts/scoreRule.js';
+import { once } from '../../../web/client/once.js';
 import { SLIDE_PAD } from '../../../web/charts/slideRule.js';
 import { zFromValue } from '../../../engine/js/hacrp/params.js';
 import { hospitalHref } from '../web/hospital-table.js';
@@ -17,16 +18,11 @@ import { fill } from '../web/explore/copy.js';
 
 // The explore asset (program-data.js exploreAsset), fetched once when a figure first needs it; a failure is let go
 // so the next need tries again.
-export function exploreLoader(src) {
-  let pending = null;
-  return () => (pending ??= fetch(src).then((res) => {
-    if (!res.ok) throw new Error(`explore data: HTTP ${res.status}`);
-    return res.json();
-  }).catch((error) => {
-    pending = null;
-    throw error;
-  }));
-}
+export const exploreLoader = (src) => once(async () => {
+  const res = await fetch(src);
+  if (!res.ok) throw new Error(`explore data: HTTP ${res.status}`);
+  return res.json();
+});
 
 // One measure's summary from the asset, as the build makes it (measureSummary over the published values, sorted).
 const summaries = new Map();
@@ -185,7 +181,7 @@ export function mountHalving(root = document) {
 export function ruleOrder(rows) {
   return rows.filter((r) => (r[5] === 'Yes' || r[5] === 'No') && r[4] !== 'N/A' && r[4] !== '')
     .map((r) => ({ ccn: r[0], name: r[1], city: r[2], state: r[3], total: Number(r[4]), text: r[4], decision: r[5] }))
-    .sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
+    .sort(ruleCompare);
 }
 
 export function mountRule(fig, load) {
@@ -210,10 +206,14 @@ export function mountRule(fig, load) {
       cursor.setAttribute('x2', x.toFixed(1));
       cursor.style.display = '';
       tip.show(fill('swarmTip', { name: h.name, state: h.state, score: cmsText(h.text), decision: h.decision === 'Yes' ? fig.dataset.cut : fig.dataset.notCut }), e);
-      svg.dataset.href = hospitalHref(order.path, h.ccn);
     });
     svg.addEventListener('pointerleave', hide);
-    svg.addEventListener('click', () => { if (svg.dataset.href) window.location.assign(svg.dataset.href); });
+    // A click or tap opens the hospital under it, found from the click's own place (a tap moves no pointer first).
+    svg.addEventListener('click', (e) => {
+      if (!order) return;
+      const h = order[ruleRank(svgPoint(svg, e).x, order.length, width)];
+      window.location.assign(hospitalHref(order.path, h.ccn));
+    });
   }
 }
 
@@ -229,12 +229,11 @@ export function mountSwarm(fig, { explore, hospitals, src }) {
   const readout = box.querySelector('.swarm__readout');
   const band = JSON.parse(box.dataset.band);
   const tip = tipLayer(art);
-  let state = null;
-  const ready = () => (state ??= Promise.all([explore(), hospitals(src)]).then(([data, list]) => {
+  const ready = once(() => Promise.all([explore(), hospitals(src)]).then(([data, list]) => {
     const rows = data.rows.filter((r) => r[COL.yes] !== null);
     const names = new Map(list.rows.map((r) => [r[0], r]));
     return { rows, names, path: list.hospitalPath, group: null };
-  }).catch((error) => { state = null; throw error; }));
+  }));
   const items = (s) => s.rows.map((r) => ({ score: r[COL.total], yes: r[COL.yes] === 1, hl: s.group ? inGroup(r, s.group.kind, s.group.key) : false, ccn: r[COL.ccn] }));
   const draw = (s) => {
     const list = items(s);
@@ -264,42 +263,48 @@ export function mountSwarm(fig, { explore, hospitals, src }) {
       readout.textContent = fill('swarmReadout', { group: b.textContent.trim(), yes: count(yes), decided: count(members.length), share: pct(members.length ? yes / members.length : 0, 1), nation: readout.dataset.nation });
     } else readout.textContent = '';
   });
-  // The pointer: the dot nearest it, within a dot and a half.
-  art.addEventListener('pointermove', async (e) => {
+  // The dot nearest a pointer event, within a dot and a half: { svg, i, at, pitch } (i -1 for none).
+  const nearest = async (e) => {
     const svg = e.target.closest?.('svg.chart--swarm');
-    if (!svg) return;
+    if (!svg) return null;
     const s = await ready();
     if (!s.list) s.list = items(s);
     const width = svg.viewBox.baseVal.width;
     if (!s.pos?.get(width)) (s.pos ??= new Map()).set(width, swarmPositions({ items: s.list, band, width, hlOn: Boolean(s.group) }));
     const { at, pitch } = s.pos.get(width);
     const p = svgPoint(svg, e);
-    let best = -1;
+    let i = -1;
     let bestD = (pitch * 1.5) ** 2;
-    at.forEach(([x, y], i) => {
+    at.forEach(([x, y], k) => {
       const d = (x - p.x) ** 2 + (y - p.y) ** 2;
-      if (d < bestD) { bestD = d; best = i; }
+      if (d < bestD) { bestD = d; i = k; }
     });
+    return { s, svg, i, at, pitch };
+  };
+  art.addEventListener('pointermove', async (e) => {
+    const hit = await nearest(e);
+    if (!hit) return;
+    const { s, svg, i, at, pitch } = hit;
     let ring = svg.querySelector('.chart-swarm__ring');
-    if (best < 0) { tip.hide(); ring?.remove(); svg.removeAttribute('data-href'); return; }
+    if (i < 0) { tip.hide(); ring?.remove(); return; }
     if (!ring) {
       ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       ring.setAttribute('class', 'chart-swarm__ring');
       svg.append(ring);
     }
-    const [x, y] = at[best];
+    const [x, y] = at[i];
     ring.setAttribute('cx', x.toFixed(1));
     ring.setAttribute('cy', y.toFixed(1));
     ring.setAttribute('r', (pitch * 1.1).toFixed(1));
-    const item = s.list[best];
+    const item = s.list[i];
     const h = s.names.get(item.ccn);
     tip.show(fill('swarmTip', { name: h?.[1] ?? item.ccn, state: h?.[3] ?? '', score: cmsText(h?.[4] ?? String(item.score)), decision: item.yes ? box.dataset.cut : box.dataset.notCut }), e);
-    svg.dataset.href = hospitalHref(s.path, item.ccn);
   });
   art.addEventListener('pointerleave', () => { tip.hide(); art.querySelectorAll('.chart-swarm__ring').forEach((r) => r.remove()); });
-  art.addEventListener('click', (e) => {
-    const svg = e.target.closest?.('svg.chart--swarm');
-    if (svg?.dataset.href) window.location.assign(svg.dataset.href);
+  // A click or tap opens the hospital under it, found from the click's own place (a tap moves no pointer first).
+  art.addEventListener('click', async (e) => {
+    const hit = await nearest(e);
+    if (hit && hit.i >= 0) window.location.assign(hospitalHref(hit.s.path, hit.s.list[hit.i].ccn));
   });
 }
 

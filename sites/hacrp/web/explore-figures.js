@@ -98,7 +98,7 @@ export function slidePanel(id, m) {
 export const slideTake = (id, p) => fill('fig4TakeOne', { short: SHORT_NAMES[id], mean: decimal(p.mean, p.decimals), sd: decimal(p.sd, p.decimals) });
 
 // The swarm's bins: a twentieth of a point on a wide screen, a tenth on a phone, with CMS's line as an edge.
-const SWARM = { wide: { bin: 0.05, pitch: 4.2, cols: 3 }, narrow: { bin: 0.1, pitch: 2.6, cols: 3 } };
+const SWARM = { wide: { bin: 0.05, pitch: 4.2, cols: 3 }, narrow: { bin: 0.1, pitch: 2.3, cols: 3 } };
 export const swarmEdges = (scores, line, bin) => edgesAround(Math.min(...scores), Math.max(...scores), line, Math.round((Math.max(...scores) - Math.min(...scores)) / bin));
 const LOUPE = { from: -0.02, to: 0.02, step: 0.001 };
 

@@ -110,7 +110,7 @@ ${map && psec({ id: 'where', level: 2, heading: t('placeMapHeading'), text: html
 ${hist && psec({ id: 'scores', level: 2, heading: t('placeHistHeading'), text: html`<p>${t('placeHistText')}</p>`, figure: hist })}
 ${measures && psec({ id: 'measures', level: 2, heading: t('placeMeasuresHeading'), text: html`<p>${t('placeMeasuresText')}</p>`, figure: measures })}
 ${kids ?? ''}
-${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: place.name }), intro: t('placeTableIntro'), area: [...ccns].join(' ') })}
+${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: place.name }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: place.name }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}
 <div class="prog__foot">
 <div class="prog__facts">
 ${asofBar({ fy, periods, source })}

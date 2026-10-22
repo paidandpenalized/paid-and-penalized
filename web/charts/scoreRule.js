@@ -12,6 +12,10 @@ import { frame, r2, text } from './svg.js';
 const M = { left: 0, right: 0, top: 22, bottom: 20 };
 const THIN = 1.5;
 
+// The rule's order: lowest score first, ties by CCN. The build draws in it and the page script maps a pointer back
+// through it, so both sort with this.
+export const ruleCompare = (a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : a.ccn > b.ccn ? 1 : 0);
+
 // The x of rank i (0-based) of n across [left, right]: the middle of its slot.
 export const ruleX = (i, n, width) => M.left + ((i + 0.5) * (width - M.left - M.right)) / n;
 // The rank under an x, clamped to the list.

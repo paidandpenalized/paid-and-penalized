@@ -8,6 +8,7 @@ import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { fill } from '../web/search/copy.js';
 import { hospitalHref } from '../web/hospital-table.js';
 import { hospitalLoader } from './hospitals.js';
+import { once } from '../../../web/client/once.js';
 
 const hospitals = hospitalLoader();
 
@@ -28,13 +29,10 @@ export function hospitalEntries({ hospitalPath, rows }) {
 
 // Every search box on the page (the top bar's, and the program page's larger one in its hero): one index, loaded once.
 const forms = typeof document === 'undefined' ? [] : [...document.querySelectorAll('form.omni[data-src]')];
-let entries = null;
-const load = (src) => (entries ??= hospitals(src).then((data) => buildIndex([...placeEntries(data), ...hospitalEntries(data)])).catch((error) => {
-  entries = null;
-  throw error;
-}));
+const load = once((src) => hospitals(src).then((data) => buildIndex([...placeEntries(data), ...hospitalEntries(data)])));
 for (const form of forms) {
-  const inTable = Boolean(document.querySelector('#ht-name'));
+  // A place page's table lists only its hospitals, so the option to see every match there is the program page's.
+  const inTable = Boolean(document.querySelector('.ht:not([data-area]) #ht-name'));
   mountOmnibox(form, {
     load: () => load(form.dataset.src),
     words: {

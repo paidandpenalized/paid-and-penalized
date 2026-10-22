@@ -43,7 +43,8 @@ async function run(t, { hash = '', results, heads = [], media, maps = [], figs =
   const errors = [];
   globalThis.document = {
     activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), createElement: el,
-    querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : s === '.fig:has(.usmap)' ? figs : []),
+    // The map's figure is found from its .usmap part (client/program.js figuresWith).
+    querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : s === '.usmap' ? figs.map((fig) => ({ closest: (c) => (c === '.fig' ? fig : null) })) : []),
   };
   const opened = [];
   globalThis.window = { location: { hash, pathname: '/hacrp/', search: '', assign: (url) => opened.push(url) }, history: { replaceState() {} }, addEventListener() {}, ...(media && { matchMedia: media }) };

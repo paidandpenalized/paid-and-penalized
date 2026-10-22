@@ -107,9 +107,9 @@ export const dataLinks = lastCall((fy, source) => [fy, source], (fy, source) => 
 // without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu (the same
 // keys, each way) stands in for them.
 const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
-export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading'), intro = t('tableIntro'), area = null }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
+export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading'), intro = t('tableIntro'), caption = t('tableCaption'), noScript = t('tableNoScript'), area = null }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${heading}</h2>
-<p class="ht-nojs">${t('tableNoScript')}</p>
+<p class="ht-nojs">${noScript}</p>
 <p class="ht-retry" role="status"></p>
 <div class="ht" data-src="${searchUrl}"${area ? html` data-area="${area}"` : ''} hidden>
 <p>${intro}</p>
@@ -120,7 +120,7 @@ ${area ? '' : html`<p class="ht__field"><label for="ht-state">${t('tableState')}
 </div>
 <p class="small" id="ht-count" aria-live="polite"></p>
 ${printout(html`<table class="gb gb--hospitals">
-<caption class="vh" id="hospitals-cap">${t('tableCaption')}</caption>
+<caption class="vh" id="hospitals-cap">${caption}</caption>
 <thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
 <tbody></tbody>
 </table>`)}

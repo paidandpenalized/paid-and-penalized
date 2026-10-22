@@ -279,6 +279,8 @@ export const COPY = {
   placeColMedian: { text: 'Median score', claim: null },
   placeOutside: { text: 'Outside any metro area', claim: null },
   placeTableHeading: { text: 'Every hospital in {name}', claim: null },
+  placeTableCaption: { text: "Every hospital in CMS's file in {name}, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
+  placeTableNoScript: { text: "The sortable table of this place's hospitals needs JavaScript; the CSV file holds every hospital's values.", claim: null },
   placeTableIntro: { text: 'Sorted by state, then name. Sort by any column or search by name, city or CCN.', claim: null },
   placeBack: { text: 'Back to the national picture', claim: null },
 };

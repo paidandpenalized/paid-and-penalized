@@ -4,19 +4,12 @@
 // listed under every state it reaches. Pure: data in, result out.
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { median } from '../../../engine/js/stats.js';
-import { SITE } from '../../../web/site.js';
+import { KINDS, placePath } from './place-paths.js';
 
-export const KINDS = Object.freeze(['region', 'division', 'state', 'metro']);
-const ROOT = SITE.sites.hacrp.path;
+export { KINDS, placePath };
 
 // A name as a path segment: lowercase words joined by hyphens ("East North Central" -> "east-north-central").
 export const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
-// A place's page: /hacrp/<kind>/<key>/ (a state by its code in lowercase, a metro by its CBSA code).
-export const placePath = (kind, key) => {
-  if (!KINDS.includes(kind)) throw new RangeError(`placePath: unknown kind ${kind}`);
-  return `${ROOT}${kind}/${encodeURIComponent(String(key).toLowerCase())}/`;
-};
 
 // The counts every place page and every place row shows, over its rows (programData rows: each scored hospital)
 // and the number of CMS rows it holds (file): scored, decided (scored, Yes or No), cut, the middle score, how many

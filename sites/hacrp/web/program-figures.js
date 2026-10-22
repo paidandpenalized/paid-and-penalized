@@ -2,7 +2,7 @@
 // programData() (program-data.js). Every takeaway is filled from the data the figure draws; copy.js holds the words.
 import { html, raw } from '../../../web/render/html.js';
 import { cmsText, count, decimal, ordinal, pct, shortDate } from '../../../web/render/format.js';
-import { scoreRule } from '../../../web/charts/scoreRule.js';
+import { ruleCompare, scoreRule } from '../../../web/charts/scoreRule.js';
 import { figure, imageOf, imagePair, keysHint, num } from '../../../web/charts/figure.js';
 import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../web/charts/geo.js';
 import { compareHist } from '../../../web/charts/compareHist.js';
@@ -38,7 +38,7 @@ export { PAGE_WIDE };
 const RULE_ORDER = new WeakMap();
 function ruleOrder(pd) {
   if (!RULE_ORDER.has(pd)) {
-    const rows = [...pd.decidedRows].sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
+    const rows = [...pd.decidedRows].sort(ruleCompare);
     RULE_ORDER.set(pd, { scores: rows.map((r) => r.total), rank: new Map(rows.map((r, i) => [r.ccn, i])) });
   }
   return RULE_ORDER.get(pd);
@@ -513,9 +513,8 @@ ${keysHint(n, t('figStatesKeys'))}`;
 
 // The way down by place: each region, its divisions and their states, each a link to its page with its count cut
 // and a bar of its share (on the page's scale, the nation's share marked).
-export function browseList(places) {
+export function browseList(places, nation) {
   const { places: byId, regions } = places;
-  const nation = regions.reduce((s, r) => s + r.counts.yes, 0) / regions.reduce((s, r) => s + r.counts.decided, 0);
   const line = (p, cls) => {
     const c = p.counts;
     const share = c.decided ? c.yes / c.decided : 0;
