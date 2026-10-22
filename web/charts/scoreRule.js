@@ -4,7 +4,8 @@
 // silhouette is two filled shapes (thinned to about one point per THIN units), not a line per hospital, so it stays
 // small at any count; a page script maps a pointer's x back to the hospital under it (ruleRank).
 //   scores   sorted ascending; cut: how many at the high end are past the line
-//   labels   { low, high, line, cut } (text): the ends' captions, the line's name and the cut side's count
+//   labels   { low, high, line, cut, average } (text): the ends' captions, the line's name, the cut side's count and
+//            the name of the mark where the scores cross zero (the average); without `average`, no mark
 //   highlight  optional ranks to draw as ticks through the rule (a place's hospitals among the nation's)
 import { html } from '../render/html.js';
 import { frame, r2, text } from './svg.js';
@@ -62,6 +63,10 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
   const height = zero + down + M.bottom;
   // A highlighted hospital: its own hairline in ink, from the rule to its score, and a short tick under the rule so
   // one with a score near zero still shows.
+  // The average: a short mark through the rule where the sorted scores cross zero, named under the rule on its right
+  // (where no hospital hangs).
+  const z = scores.findIndex((s) => s >= 0);
+  const avgX = labels.average && z > 0 ? r2(ruleX(z, n, width) - (width - M.left - M.right) / n / 2) : null;
   const tick = (i) => `M${r2(ruleX(i, n, width))} ${r2(zero)}V${y(scores[i])}M${r2(ruleX(i, n, width))} ${r2(zero + 4)}v8`;
   const ticks = highlight ? highlight.filter((i) => i < n - cut).map(tick).join('') : '';
   const penTicks = highlight ? highlight.filter((i) => i >= n - cut).map(tick).join('') : '';
@@ -70,7 +75,9 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
 <path class="chart-rule__pen" d="${pen}"/>
 <rect class="chart-rule__bar" x="0" y="${r2(zero - 2.5)}" width="${width}" height="5"/>
 ${ticks ? html`<path class="chart-rule__hl" d="${ticks}"/>` : ''}${penTicks ? html`<path class="chart-rule__hl chart-rule__hl--pen" d="${penTicks}"/>` : ''}
-<line class="chart-rule__line" x1="${lineX}" x2="${lineX}" y1="${M.top - 16}" y2="${r2(zero + down)}"/>
+${avgX === null ? '' : html`<line class="chart-rule__avg" x1="${avgX}" x2="${avgX}" y1="${r2(zero - 12)}" y2="${r2(zero + 22)}"/>
+${text({ x: avgX + 5, y: zero + 20, anchor: 'start', cls: 'chart-cap', body: labels.average })}
+`}<line class="chart-rule__line" x1="${lineX}" x2="${lineX}" y1="${M.top - 16}" y2="${r2(zero + down)}"/>
 ${text({ x: 0, y: height - 4, anchor: 'start', cls: 'chart-cap', body: labels.low })}
 ${text({ x: width, y: height - 4, anchor: 'end', cls: 'chart-cap', body: labels.high })}
 ${text({ x: lineX - 6, y: M.top - 8, anchor: 'end', cls: 'chart-cap', body: labels.line })}

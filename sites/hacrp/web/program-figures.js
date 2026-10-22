@@ -22,7 +22,7 @@ import { histogramBins } from '../../../web/charts/histogram.js';
 import { countBins, edgesAround } from './compare.js';
 import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
-import { FEW_DECIDED, MAP_STEPS_PCT, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED, SIR_EXPECTED_TEXT, WINSOR_HIGH, WINSOR_LOW, CUTOFF_PERCENTILE } from './constants.js';
+import { FEW_DECIDED, MAP_STEPS_PCT, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW, CUTOFF_PERCENTILE } from './constants.js';
 import { fill, fillKeep, t } from './program/copy.js';
 import { groupLabel, kindLabel } from './groups.js';
 import { PAGE_WIDE, PER, STEP_WIDE, fmtOf, setName, SCATTER_W, SWARM_WIDE, agreeScatterOf, binCounts, both, pairPoints, pullPanel, pullTake, slidePanel, slideTake, stackOf, stackPanel, stackTake, swarmChart } from './explore-figures.js';
@@ -48,7 +48,7 @@ export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = n
   const { scores, rank } = ruleOrder(pd);
   const { yes, decided } = pd.counts;
   const ranks = highlight ? [...highlight].map((ccn) => rank.get(ccn)).filter((i) => i !== undefined).sort((a, b) => a - b) : null;
-  const labels = { low: fill('ruleLow'), high: fill('ruleHigh'), line: fill('ruleLine'), cut: here === null ? fill('ruleCut', { yes: count(yes) }) : fill('ruleCutHere', { yes: count(yes), here: count(here) }) };
+  const labels = { low: fill('ruleLow', { value: decimal(scores[0], DP) }), high: fill('ruleHigh', { value: decimal(scores[scores.length - 1], DP) }), average: t('ruleAverage'), line: fill('ruleLine'), cut: here === null ? fill('ruleCut', { yes: count(yes) }) : fill('ruleCutHere', { yes: count(yes), here: count(here) }) };
   const alt = fill('ruleAlt', { decided: count(decided), yes: count(yes) });
   const draw = (width) => imageOf(scoreRule({ scores, cut: yes, labels, width, highlight: ranks }), alt, width === WIDTH ? 'narrow' : 'wide');
   return html`<figure class="rulefig"${searchUrl ? html` data-src="${searchUrl}"` : ''} data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">
@@ -226,16 +226,25 @@ export function part1({ pd, model, periods, median, source, figure: fig, step: s
     return step({ n, id: `step-${n}`, heading, text, figure: draw(fig()) });
   };
   return html`${each(fill('step1Heading', { measureCount: String(MEASURE_IDS.length) }),
-    html`${para('step1a', { haiCount: String(haiCount), short: psi })}${para('step1Who')}${para('step1b', { short: psi })}<p>${fillKeep('step1c', { short: psi, psiStart: shortDate(periods.psi90.start), psiEnd: shortDate(periods.psi90.end), haiStart: shortDate(periods.hai.start), haiEnd: shortDate(periods.hai.end) }, ['psiStart', 'psiEnd', 'haiStart', 'haiEnd'])}</p>${para('step1d', { measureCount: String(MEASURE_IDS.length) })}`,
+    html`${para('step1a', { haiCount: String(haiCount), short: psi })}${para('step1Who')}${para('step1b', { short: psi })}<p>${fillKeep('step1c', { short: psi, psiStart: shortDate(periods.psi90.start), psiEnd: shortDate(periods.psi90.end), haiStart: shortDate(periods.hai.start), haiEnd: shortDate(periods.hai.end) }, ['psiStart', 'psiEnd', 'haiStart', 'haiEnd'])}</p>`,
     (n) => punchFigure(pd, { n, source }))}
-${each(t('step2Heading'), html`${para('step2a', { one })}${para('step2b', { short: psi, one })}${para('step2c')}`, (n) => stackFigure(pd, model, { n, source }))}
+${each(t('step2Heading'), html`${sirPara(one)}${para('step2b', { short: psi, one })}${para('step2c')}`, (n) => stackFigure(pd, model, { n, source }))}
 ${each(t('step3Heading'), html`${para('step3a', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) })}${para('step3b')}`, (n) => pullFigure(pd, model, { n, source }))}
 ${each(t('step4Heading'), html`${para('step4a')}${para('step4b')}${para('step4c')}`, (n) => slideFigure(pd, model, median, { n, source }))}
-${each(t('step5Heading'), html`${para('step5a', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}${para('step5b')}${para('step5c')}`, (n) => halveFigure(pd, model, { n, source }))}`;
+${each(t('step5Heading'), html`${para('step5a', { percentile: ordinal(CUTOFF_PERCENTILE), pct: REDUCTION_TEXT })}${para('step5b')}<p>${t('step5c')} ${t('step5d')}</p>`, (n) => halveFigure(pd, model, { n, source }))}`;
 }
 
 // A paragraph of the page's words: a key, filled with values when it has placeholders.
 const para = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
+
+// Step 2's first paragraph, its term a box that opens on a click or tap (no script) with the SIR's arithmetic and
+// baseline year. A <details> can't sit inside a <p>, so the paragraph is a div that reads as one.
+function sirPara(one) {
+  const [before, after] = fill('step2a', { sir: '\u0001', one }).split('\u0001');
+  const base = String(SIR_BASE_YEAR);
+  const box = html`<details class="def def--inline"><summary>${t('sirTerm')}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('sirMore')}</span></summary><span class="def__box"><strong class="def__math">${t('sirBoxMath')}</strong> ${fill('sirBoxPredicted', { base })} ${fill('sirBoxBaseline', { base, next: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) })}</span></details>`;
+  return html`<div class="step__p">${before}${box}${after}</div>`;
+}
 
 // ---------- Part 2: the year's picture ----------
 

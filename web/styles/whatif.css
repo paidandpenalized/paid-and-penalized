@@ -15,9 +15,11 @@
 @media (min-width: 900px) {
   .wi-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; }
   .wi-inputs { grid-column: 1; grid-row: 1; }
-  .wi-result { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--sticky-top, 0px) + 16px); }
+  .wi-side { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--sticky-top, 0px) + 16px); }
 }
 .wi-inputs { display: grid; gap: 12px; }
+/* The result box, with the what-if's standing line right under it. */
+.wi-side { display: grid; gap: 10px; }
 
 /* ---------- the result ---------- */
 .wi-result { display: grid; gap: 10px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }

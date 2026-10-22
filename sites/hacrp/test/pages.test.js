@@ -12,7 +12,7 @@ import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { cmsText, count, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
+import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -178,7 +178,18 @@ test('production, released: every hospital page and every place page plus /hacrp
     const notSubject = DATA.hospitals.filter((h) => h.total !== null && h.paymentReduction === 'N/A');
     const above = notSubject.filter((h) => h.total >= Number(bt.lowestYes)).length;
     assert.ok(program.includes(esc(`Not shown: Maryland’s ${count(notSubject.length)} scored hospitals. ${count(above)} of them scored at or above the lowest score CMS cut elsewhere, and none were cut.`)));
-    assert.ok(program.includes(esc("Maryland’s hospitals are scored but not cut, under an agreement between CMS and the state.")));
+    assert.ok(program.includes(`<p>${esc("Maryland’s hospitals are scored but not cut. Maryland has a special payment arrangement with Medicare: the state sets what every payer, Medicare included, pays its hospitals, and it is held to a limit on the growth of Medicare’s total spending in the state.")}</p>`));
+    // Step 1 says once that a measure needs enough patients; the SIR's term opens a box with its arithmetic and baseline.
+    assert.ok(program.includes(`${esc('for infections. Hospitals with too few patients for a measure aren’t scored on it.')}</p>`));
+    const sir = /<div class="step__p">Each infection measure is a <details class="def def--inline"><summary>standardized infection ratio \(SIR\)[\s\S]*?<\/details>: the infections a hospital reported/.exec(program);
+    assert.ok(sir, 'the SIR term opens a box, inside its sentence');
+    assert.match(sir[0], /SIR = infections reported ÷ infections predicted/);
+    assert.match(sir[0], /national data for 2015, its baseline year/);
+    assert.match(sir[0], /moving it to 2022 data, a change that reaches this program in fiscal year 2028\./);
+    // The score rule names its ends' scores and marks the average.
+    const scores = decided.map((h) => h.total).sort((a, b) => a - b);
+    assert.ok(program.includes(`Lowest score: ${decimal(scores[0], 4)}`) && program.includes(`Highest score: ${decimal(scores.at(-1), 4)}`));
+    assert.match(program, /<line class="chart-rule__avg"[^>]*\/>\n<text[^>]*>Average<\/text>/);
 
     assert.ok(program.includes(`<strong>For fiscal year ${DATA.fy}, that was ${count(cut)} of the ${count(decided.length)} hospitals</strong> with a payment decision.`));
   }));

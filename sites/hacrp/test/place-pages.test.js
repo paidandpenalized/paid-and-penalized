@@ -110,7 +110,7 @@ test('notes: a metro area across a state line names its states; a small place sa
   assert.ok(!notes(STATE).some((n) => n.startsWith('This metro area reaches')));
   // Maryland-style places: some scored hospital has no decision, so the note about CMS's agreement with the state.
   assert.ok(NO_DECISION.rows.some((r) => r.yes === null));
-  assert.ok(notes(NO_DECISION).includes('Maryland’s hospitals are scored but not subject to the reduction, under an agreement between CMS and the state.'));
+  assert.ok(notes(NO_DECISION).includes('Maryland’s hospitals are scored but not subject to the reduction: Maryland has a special payment arrangement with Medicare that exempts them.'));
   assert.ok(!notes(STATE).some((n) => n.startsWith('Maryland’s')));
 });
 
@@ -134,7 +134,7 @@ test('the figures: the map, the scores against the nation\'s and the measures, n
   assert.deepEqual([...text.matchAll(/<section class="psec" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures']);
   // The rule is every hospital with a decision, with the place's ticked: it reads the hospitals asset for names.
   assert.match(text, new RegExp(`<figure class="rulefig" data-src="${SEARCH_URL.replaceAll('.', '\\.')}"`));
-  assert.ok(text.includes(`Every hospital in the nation with a payment decision, lowest score to highest; the solid hairlines are ${esc(STATE.name)}’s, red where CMS cut.`));
+  assert.ok(text.includes(`Every hospital in the nation with a payment decision, lowest score to highest, each as tall as its score (above the rule, worse than average); the solid hairlines are ${esc(STATE.name)}’s, red where CMS cut.`));
   // The map's takeaway and the score figure's name this place's counts and the nation's share.
   const caps = Object.fromEntries([...text.matchAll(/<figcaption class="fig__cap" id="figure-(\d+)-cap"><span class="fig__n">Figure \d+\.<\/span> ([^<]*)<\/figcaption>/g)].map((m) => [m[1], m[2]]));
   assert.equal(caps[1], `${esc(STATE.name)}: ${count(STATE.counts.yes)} cut of ${count(STATE.counts.decided)} with a payment decision.`);

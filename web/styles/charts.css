@@ -210,6 +210,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-rule__pen { fill: var(--pen); }
 .chart-rule__bar { fill: var(--ink); }
 .chart-rule__line { stroke: var(--ink); stroke-width: 1.5px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.chart-rule__avg { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .chart-rule__hl { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .chart-rule__hl--pen { stroke: var(--pen-ink); }
 .chart-rule__cursor { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
@@ -289,6 +290,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
   .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
   .chart-card__a { stroke: CanvasText; }
-  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
+  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
   .chart-agree__cell.is-picked { stroke: Highlight; }
 }

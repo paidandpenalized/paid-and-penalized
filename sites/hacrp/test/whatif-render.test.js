@@ -39,7 +39,7 @@ const all = (text, re) => [...text.matchAll(re)];
 const inputsOf = (text, type) => all(text, new RegExp(`<input[^>]*type="${type}"[^>]*>`, 'g')).map(([tag]) => tag);
 const attr = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
 
-test('one section, one polite live region, "Hypothetical" in the result, the what-if standing line under it', () => {
+test('one section, one polite live region, "Hypothetical" in the result, the what-if standing line right under the result box', () => {
   const text = render(H.no);
   assert.equal(all(text, /<section[^>]*id="whatif"/g).length, 1);
   assert.equal(all(text, /aria-live=/g).length, 1);
@@ -47,7 +47,10 @@ test('one section, one polite live region, "Hypothetical" in the result, the wha
   const result = /data-wi="result"[\s\S]*?data-wi="copy"/.exec(text)[0];
   assert.match(result, /Hypothetical/);
   assert.ok(text.includes(esc(WHATIF_STANDING)));
-  assert.ok(text.lastIndexOf(esc(WHATIF_STANDING)) > text.lastIndexOf('data-wi="solver"'), 'standing line comes last');
+  const side = /<div class="wi-side">\n<div class="wi-result"[\s\S]*?<\/div>\n<p class="small standing">([^<]*)<\/p>\n<\/div>\n<div class="wi-inputs">/.exec(text);
+  assert.ok(side, 'the standing line sits under the result box, beside the inputs');
+  assert.equal(side[1], esc(WHATIF_STANDING));
+  assert.equal(text.split(esc(WHATIF_STANDING)).length, 2, 'once');
   assert.ok(text.includes(esc("CMS reports a Total HAC Score of 0.2734 and a payment reduction decision of No.")), 'sentence from CMS values');
 });
 

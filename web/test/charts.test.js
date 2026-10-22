@@ -7,6 +7,7 @@ import { mulberry32 } from '../../engine/js/test/prng.js';
 import { axis } from '../charts/axis.js';
 import { contribBars } from '../charts/contribBars.js';
 import { ruler } from '../charts/ruler.js';
+import { scoreRule } from '../charts/scoreRule.js';
 import { figure } from '../charts/figure.js';
 import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
@@ -494,4 +495,15 @@ test('figure: a table cell may carry data-* hooks for a script that updates it; 
   assert.ok(s.includes('<td class="num" data-value="0.25" data-part="a" data-same="">same</td>'));
   assert.throws(() => figure({ ...FIG, table: { ...table, rows: [['A', { text: 'x', value: '0.25', data: { 'Bad name': 1 } }], ...table.rows.slice(1)] } }), /data attribute/);
   assert.throws(() => figure({ ...FIG, table: { ...table, rows: [['A', { text: 'x', value: '0.25', data: { value: '1' } }], ...table.rows.slice(1)] } }), /data attribute/);
+});
+
+test('scoreRule: the average mark stands where the sorted scores cross zero, named on its right; none unasked or with no crossing', () => {
+  const labels = { low: 'Lowest', high: 'Highest', line: 'Line', cut: 'Cut' };
+  const scores = [-1, -0.5, -0.1, 0, 0.4, 1, 2, 3];
+  const svg = String(scoreRule({ scores, cut: 2, labels: { ...labels, average: 'Average' }, width: 800 }));
+  // Eight slots of 100: the crossing is at rank 3's left edge.
+  assert.match(svg, /<line class="chart-rule__avg" x1="300" x2="300" [^>]*\/>\n<text class="chart-cap" x="305"[^>]*>Average<\/text>/);
+  assert.doesNotMatch(String(scoreRule({ scores, cut: 2, labels, width: 800 })), /chart-rule__avg/);
+  assert.doesNotMatch(String(scoreRule({ scores: [0.1, 0.2], cut: 1, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all above zero');
+  assert.doesNotMatch(String(scoreRule({ scores: [-0.2, -0.1], cut: 0, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all below zero');
 });

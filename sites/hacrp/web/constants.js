@@ -16,6 +16,11 @@ export const WINSOR_HIGH = 95;
 // An SIR of this value means as many infections as NHSN's model predicted; the what-if's helper text says so.
 export const SIR_EXPECTED = 1;
 export const SIR_EXPECTED_TEXT = decimal(SIR_EXPECTED, 1);
+// CDC's SIRs predict each hospital's infections from one national baseline year; CDC is moving to a newer one, which
+// first reaches this program's scores in SIR_NEXT_FY.
+export const SIR_BASE_YEAR = 2015;
+export const SIR_NEXT_BASE_YEAR = 2022;
+export const SIR_NEXT_FY = 2028;
 
 // Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.
 export const RAMP_LOW_PCT = 5;
@@ -57,6 +62,9 @@ export const CLAIMS = {
   WINSOR_LOW: 'HACRP-03',
   WINSOR_HIGH: 'HACRP-03',
   SIR_EXPECTED: 'HACRP-14',
+  SIR_BASE_YEAR: 'HACRP-20',
+  SIR_NEXT_BASE_YEAR: 'HACRP-21',
+  SIR_NEXT_FY: 'HACRP-21',
 };
 
 // CMS's short names for the measures, read from its column names ("PSI 90 W Z Score" -> "PSI 90"). PSI 90 has a

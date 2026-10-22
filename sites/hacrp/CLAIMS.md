@@ -26,6 +26,9 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-17 | Every year CMS scores hospitals on measures of hospital-acquired conditions (infections and complications patients develop in the hospital) and combines them into a Total HAC Score. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-acquired-condition-reduction-program-hacrp | "on measures of hospital-acquired conditions. On an annual basis, CMS evaluates overall hospital performance by calculating Total HAC Scores" | 2026-10-20 |
 | HACRP-18 | The hospitals CMS scores are subsection (d) hospitals: general acute care hospitals paid under Medicare's inpatient prospective payment system, with Maryland's included. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-payment-reduction-methodology.pdf | "CMS includes all subsection (d) hospitals (that is, general acute care hospitals paid under the Inpatient Prospective Payment System), including Maryland hospitals" | 2026-10-20 |
 | HACRP-19 | CMS calculates every hospital's Total HAC Score by one set of steps: measure results, winsorized z-scores, the equal-weight average, then the line. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CMS follows these steps to calculate Total HAC Scores and the worst-performing quartile" | 2026-10-20 |
+| HACRP-20 | CDC predicts each hospital's infections from national data for a baseline year, 2015 for this year's SIRs, adjusted for factors that predict infections at that hospital. | https://www.cdc.gov/nhsn/pdfs/ps-analysis-resources/nhsn-sir-guide.pdf | "calculated based on the 2015 national HAI aggregate data and is adjusted for each facility using variables found to be significant predictors" | 2026-10-22 |
+| HACRP-21 | CDC is moving the SIR baseline from 2015 to 2022 data, a change that first affects the HAC Reduction Program in fiscal year 2028. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-fiscal-year-2027-key-dates.pdf | "CDC is updating the baseline to CY 2022 data" … "which will affect the HAC Reduction Program beginning in FY 2028." | 2026-10-22 |
+| HACRP-22 | Maryland has its own payment arrangement with Medicare: the state sets hospital prices for every payer, Medicare included, and is held to a limit on the growth of Medicare's total spending in the state. | https://www.cms.gov/priorities/innovation/innovation-models/md-tccm | "to establish pricing of medical services provided by hospitals, primary care doctors and specialists across all payers" | 2026-10-22 |
 
 ## Notes on the sources
 
@@ -54,6 +57,19 @@ A claim marked `unverified` may not be used in copy.
   the Total HAC Score, the worst-performing quartile). Its step 2 calculates z-scores "for each hospital", and CMS's
   FY2027 fact sheet says of step 3: "For each hospital, calculate the Total HAC Score as the equally weighted average
   of the hospital’s measure scores."
+- **HACRP-20** cites page 5 of CDC's SIR guide (June 2025 edition), which also gives the arithmetic: "The SIR is
+  calculated by dividing the number of observed infections by the number of predicted infections." Its Table 1 (the
+  SSI model for abdominal hysterectomy) lists the patient's age, diabetes, ASA score and BMI among the predictors; the
+  device-associated models adjust by location type (the guide's example: "CLABSIs in a Medical ICU").
+- **HACRP-21** cites footnote e of CMS's HAC Reduction Program FY2027 key dates (August 2026), which begins "Since
+  2016, CDC has used CY 2015 data as the baseline to calculate the SIR for its HAI measures." and cites the FY 2026
+  IPPS/LTCH PPS final rule, pages 36963–36965. The same table puts the FY2026 program's HAI period at 1/1/23 to
+  12/31/24, inside the 2015-baseline years.
+- **HACRP-22** cites CMS's Maryland Total Cost of Care Model page, which also says the model committed "the State to a
+  sustainable growth rate in per capita total cost of care spending for Medicare beneficiaries". The page says that
+  model ran from January 1, 2019, to December 31, 2025, and "transitioned to the AHEAD model and began its
+  implementation period in January 2026"; the site's copy names no model, so it holds across the change. Re-check it
+  at each fiscal year's release.
 - **HACRP-01** cites the statute, 42 U.S.C. 1395ww(p)(1), at Cornell's Legal Information Institute. The CMS rule
   says the same at 42 CFR 412.172(b).
 

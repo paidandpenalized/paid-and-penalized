@@ -239,7 +239,10 @@ export function renderWhatIf({ vm, texts, share, range, solver, wrapBars = null 
 ${share && html`<p class="wi-banner" data-wi="banner" hidden>${texts.banner.text} <a href="${texts.banner.href}">${texts.banner.linkText}</a></p>`}
 <p class="small muted" data-wi="nojs">${texts.noScript}</p>
 <div class="wi-grid">
+<div class="wi-side">
 ${result(vm, range, texts)}
+<p class="small standing">${texts.standing}</p>
+</div>
 <div class="wi-inputs">
 <div data-wi="controls" hidden>
 <div class="wi-actions">
@@ -264,6 +267,5 @@ ${!wrapBars && bars(vm, words, texts)}
 <p class="small print-only">${texts.print}</p>
 <p class="small muted">${texts.rampLegend}</p>
 <p class="small muted">${texts.held}</p>
-<p class="standing">${texts.standing}</p>
 </section>`;
 }

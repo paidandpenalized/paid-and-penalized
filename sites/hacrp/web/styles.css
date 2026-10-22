@@ -324,7 +324,15 @@
 }
 .step__n { color: var(--pen); font: 400 clamp(3rem, 6vw, 4.5rem)/0.85 var(--font-display); }
 .step__title { font: 700 clamp(1.3rem, 2.2vw, 1.6rem)/1.2 var(--font-body); }
-.step__text > p:not(.step__n) { line-height: 1.6; }
+.step__text > :is(p:not(.step__n), .step__p) { line-height: 1.6; }
+/* A paragraph with a term that opens a box: the box opens under the whole paragraph, as wide as it. */
+.step__p { position: relative; max-width: var(--measure); }
+/* inline-block: a <details>'s content part is a block, which would break the line inside the sentence. */
+.def--inline { position: static; display: inline-block; }
+.def--inline summary { display: inline; min-height: 0; }
+.def--inline .def__mark { display: inline-grid; margin-left: 4px; vertical-align: 0.12em; }
+.def--inline .def__box { display: block; top: calc(100% + 6px); left: 0; right: 0; width: auto; }
+.def__math { display: block; margin-bottom: 4px; font: 700 var(--fs-sm)/1.4 var(--font-type); }
 .page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
 .page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
 .step__fig .chart, .page--prog .fig .chart { max-width: none; }
