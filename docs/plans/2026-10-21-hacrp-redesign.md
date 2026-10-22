@@ -14,7 +14,7 @@ Use their facts and direction. Don't copy their notes into this repo.
 **Hard limits:**
 - No PHI. No real CCN or hospital name in code, tests, comments or commits.
 - Nothing public: no push to main, no deploy.
-- No installs or downloads without the owner's OK.
+- Installs and downloads are fine when they help: name each one, with source, version or file and size, before running it, and pin it.
 - Never use `--no-verify`.
 - `make test` stays green, and the numbers stay proved against CMS.
 
@@ -29,7 +29,7 @@ Use their facts and direction. Don't copy their notes into this repo.
   Send screenshots after.
 - [ ] **Checkpoint M2:** same as Checkpoint M1, including /security-review for search.
 - [ ] **M3, history and Methods.**
-  - Part 4 history, per DATA-A-03. **Before any download, list the files and sizes and get the owner's OK.**
+  - Part 4 history, per DATA-A-03. Name the prior-year files and their sizes before downloading them, then pin them.
   - `/hacrp/methods/`.
 
   Send screenshots after.
