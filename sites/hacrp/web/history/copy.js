@@ -135,7 +135,6 @@ export const COPY = {
   // By state.
   statesHHeading: { text: 'The map, year by year', claim: null },
   statesHText: { text: 'Each small map is one fiscal year, each square a state, shaded by the share of its hospitals CMS cut (key above the maps). Some states keep their shade year after year.', claim: null },
-  keyRange: { text: '{from} to {to}', claim: null },
   keyUp: { text: '{from} and up', claim: null },
   keyNone: { text: 'None cut', claim: null },
   keyNoDecision: { text: 'No decision', claim: null },

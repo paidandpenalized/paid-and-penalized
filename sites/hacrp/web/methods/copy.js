@@ -79,14 +79,14 @@ export const COPY = {
 
   // §3, the decisions.
   sidesHeading: { text: 'Every decision on its side of the line', claim: null },
-  sidesText: { text: "CMS's yearly files don't give its line (only its first two cut lists did), but its decisions show where it is: every hospital it cut should have scored higher than every hospital it didn't. This site checks that for every year, hospital by hospital.", claim: null },
+  sidesText: { text: "CMS's yearly files don't give its line (only its earliest cut lists did), but its decisions show where it is: every hospital it cut should have scored higher than every hospital it didn't. This site checks that for every year, hospital by hospital.", claim: null },
   sidesText2: { text: 'Each rule is one year: every hospital with a decision, sorted from lowest score to highest, its height the score. A hairline is red when CMS cut that hospital. The dashed tick is CMS’s line, between the highest score it did not cut and the lowest it did. A red hairline left of the tick, or a gray one right of it, would be a decision out of order.', claim: null },
   sidesRule: { text: "CMS puts its line at the {percentile} percentile of the scores of hospitals outside Maryland, the hospitals with a payment decision.", claim: ['HACRP-23', 'HACRP-60'] },
   sidesOn: { text: 'In {years}, the published scores reproduce the cut exactly: CMS cut every hospital above that percentile and no other.', claim: null },
   sidesFew: { text: 'In {years}, CMS’s line sits a little above the percentile: {n} hospitals scored above it and were not cut.', claim: null },
   sidesWell: { text: 'In {years}, it sits further above: {n} hospitals.', claim: null },
+  sidesLower: { text: 'In {years}, CMS’s line sits at or below the percentile, so a little more than a quarter were cut.', claim: null },
   sidesWhy: { text: 'This site can’t say why from the public files; the table gives each year’s line as a percentile.', claim: null },
-  countRange: { text: '{from} to {to}', claim: null },
   sidesTies: { text: "Ties matter: in fiscal year {fy}, {n} hospitals scored exactly {line}, the line itself, and none was cut. CMS cuts only scores above the line.", claim: 'HACRP-02' },
   sidesTakeaway: { text: 'Across {years}, {decided} payment decisions; {wrong} out of order with the scores.', claim: null },
   sidesTakeawayOne: { text: 'Of the {decided} payment decisions CMS published for fiscal year {fy}, {wrong} are out of order with the scores.', claim: null },

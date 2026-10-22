@@ -4,7 +4,8 @@
 // draws; history/copy.js holds the words.
 import { figure, drawn, imageOf, imagePair, num } from '../../../web/charts/figure.js';
 import { WIDTH, isNarrow } from '../../../web/charts/svg.js';
-import { everBrackets, rollCall } from '../../../web/charts/rollCall.js';
+import { rollCall } from '../../../web/charts/rollCall.js';
+import { rollBrackets } from './roll-words.js';
 import { chanceDots, staircase } from '../../../web/charts/yearCharts.js';
 import { barRows } from '../../../web/charts/barRows.js';
 import { rankYears } from '../../../web/charts/rankYears.js';
@@ -54,13 +55,10 @@ const pointOf = (r) => (r && Number.isFinite(r.lon) && Number.isFinite(r.lat) ? 
 // notes: the rows carry a note at the right (a place's share cut, then the nation's), which takes room and height.
 function rollGeom(width, notes) {
   const narrow = isNarrow(width);
-  if (notes) return narrow ? [30, 70, 12, 4] : [40, 90, 18, 4];
+  if (notes) return narrow ? [30, 90, 12, 4] : [40, 100, 18, 4];
   return narrow ? [30, 0, 11, 4] : [40, 0, 17, 4];
 }
 
-// The brackets under a roll call of n hospitals, ever of them ever cut: those ever cut, then those never cut (none when
-// every hospital is on one side).
-const rollBrackets = (n, ever) => everBrackets(n, ever, { ever: (k) => fill('rollEver', { n: count(k) }), never: (k) => fill('rollNever', { n: count(k) }) });
 
 // A roll call in its box (ever: how many of its records were ever cut), at the phone's width and `wide`, with what the
 // page script reads: attrs (where the grid's order comes from; '' for a picture alone), its geometry, the state picker
@@ -212,9 +210,11 @@ export function flipSince(hd) {
     if (!g) return null;
     const shares = groupShares(hd, g.years);
     const cut = hd.fys.map((_, i) => i).filter((i) => nation[i] !== null && shares[i] !== null);
+    const above = (i) => shownAbove(shares[i], nation[i]);
     let k = cut.length;
-    while (k > 0 && shownAbove(shares[cut[k - 1]], nation[cut[k - 1]])) k--;
-    return k > 0 && k < cut.length ? cut[k] : null;
+    while (k > 0 && above(cut[k - 1])) k--;
+    const before = cut.slice(0, k);
+    return k < cut.length && before.length && shownAbove(nation[before[0]], shares[before[0]]) && !before.some(above) ? cut[k] : null;
   };
   const at = [since(RURAL), since(SMALLEST)];
   return at.includes(null) ? null : hd.fys[Math.max(...at)];
@@ -279,8 +279,9 @@ export function statesYearsFigure(hd, { n, source }) {
   for (const [st, v] of hd.byState) {
     if (!STATE_NAMES[st] || v.years.some((y, i) => nation[i] !== null && y.decided < FEW_DECIDED)) continue;
     const above = v.years.filter((y, i) => shownAbove(share(y.cut, y.decided), nation[i])).length;
+    const below = v.years.filter((y, i) => shownAbove(nation[i], share(y.cut, y.decided))).length;
     if (!best || above > best.above) best = { st, above };
-    if (!least || above < least.above) least = { st, above };
+    if (!least || below > least.below) least = { st, below };
   }
   const maps = hd.fys.map((fy, i) => {
     const states = Object.fromEntries(codes.map((code) => {
@@ -298,7 +299,7 @@ export function statesYearsFigure(hd, { n, source }) {
   const chart = html`${key}<div class="smallmaps">${maps}</div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-cut-by-state-year',
-    takeaway: fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), low: STATE_NAMES[least.st], lowK: String(hd.cutYears - least.above), few: String(FEW_DECIDED) }),
+    takeaway: fill('statesHTakeaway', { state: STATE_NAMES[best.st], k: String(best.above), n: String(hd.cutYears), low: STATE_NAMES[least.st], lowK: String(least.below), few: String(FEW_DECIDED) }),
     table: {
       columns: [{ name: t('rollColFy') }, ...[...hd.byState.keys()].map((st) => ({ name: st || t('statesHNoState'), numeric: true }))],
       rows: hd.fys.map((fy, i) => [fyLabel(fy), ...[...hd.byState.values()].map((v) => pctCell(v.years[i].decided ? v.years[i].cut / v.years[i].decided : null))]),
@@ -408,7 +409,7 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const own = tallyYears(sub, hd.fys.length).map((o) => ({ ...o, share: o.decided ? o.cut / o.decided : null }));
   const above = own.filter((o, i) => shownAbove(o.share, nation[i])).length;
   const ever = everCut(records);
-  const notes = own.map((o, i) => (o.share === null ? '' : `${pct0(o.share)} · ${pct0(nation[i])}`));
+  const notes = own.map((o, i) => (o.share === null ? '' : `${pct1(o.share)} · ${pct1(nation[i])}`));
   // The grid's own order on the page (a place holds a few hundred hospitals at most), for the page script's names.
   const inline = { fys: hd.fys, ccns: order.map(([c]) => c), recs: records, states: order.map(([c]) => hd.stateOf.get(c) ?? '') };
   const chart = rollBox({ hd, records, ever, notes, wide: PLACE_WIDE, attrs: html` data-inline="${PLACE_ORDER_ID}"${src ? html` data-src="${src}"` : ''}`, live: Boolean(src), after: jsonScript(PLACE_ORDER_ID, inline) });

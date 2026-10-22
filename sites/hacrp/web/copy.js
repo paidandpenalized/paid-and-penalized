@@ -377,6 +377,8 @@ export const COPY = {
   // The figure's hatch: values past CMS's floor or cap, which score the same as that end.
   figRangeSame: { text: "Scores the same as CMS's floor or cap", claim: 'HACRP-03' },
 
+  // A range of two values, "5 to 7" (a map key's step, a count across years).
+  keyRange: { text: '{from} to {to}', claim: null },
   // Figure tables' column heads the program page shares.
   figColHospitals: { text: 'Hospitals', claim: null },
   figColDecision: { text: "CMS's decision", claim: null },

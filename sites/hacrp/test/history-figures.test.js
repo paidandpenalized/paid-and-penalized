@@ -397,6 +397,9 @@ test('flipSince: the fiscal year since which rural and the smallest hospitals ha
   assert.equal(flipSince(flipHd(nation, [0.2, 0.2, 0.2, null, 0.2, 0.2, 0.2], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural never above');
   assert.equal(flipSince(flipHd(nation, [0.3, 0.3, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural above in every year, so no year below to flip from');
   assert.equal(flipSince(flipHd(nation, [0.3, 0.3, 0.3, null, 0.2, 0.2, 0.2], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural above early and not since');
+  // "Less often in the early years" must hold: the first year below the nation, and no year above before the run.
+  assert.equal(flipSince(flipHd(nation, [0.3, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural above in the first year');
+  assert.equal(flipSince(flipHd(nation, [0.2504, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3])), null, 'rural level with the nation in the first year');
   // A group the history does not hold: no flip to name.
   assert.equal(flipSince({ ...flipHd(nation, [0.2, 0.2, 0.3, null, 0.3, 0.3, 0.3], [0.2, 0.2, 0.2, null, 0.2, 0.3, 0.3]), byType: [] }), null);
   // The synthetic history's rural hospitals never sat above (FY2022 prints the same as the nation's); the committed history flipped in FY2024.
@@ -586,7 +589,7 @@ test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut
   assert.equal(attr(fig, 'data-src'), '/assets/p.json');
   // The geometry the script reads: [label column, right margin for the notes, row height, top], by drawn width.
   const geom = JSON.parse(attr(fig, 'data-geom'));
-  assert.deepEqual(geom, { [String(WIDTH)]: [30, 70, 12, 4], 760: [40, 90, 18, 4] });
+  assert.deepEqual(geom, { [String(WIDTH)]: [30, 90, 12, 4], 760: [40, 100, 18, 4] });
   for (const svg of String(fig).split('<svg ').slice(1).filter((x) => /chart--roll/.test(x))) {
     const [width, height] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
     const [, , rowH, top] = geom[String(width)];

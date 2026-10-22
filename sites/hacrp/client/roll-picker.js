@@ -4,10 +4,11 @@
 // drawing's own width and geometry, says in the readout how many were ever cut against the nation's share, and links
 // to the state's page; "every state" puts the drawings back as they were built.
 import { count, pct } from '../../../web/render/format.js';
-import { everBrackets, rollParts } from '../../../web/charts/rollCall.js';
+import { rollParts } from '../../../web/charts/rollCall.js';
 import { everCut } from '../../../engine/js/hacrp/trends.js';
 import { fill, t } from '../web/explore/copy.js';
 import { placePath } from '../web/place-paths.js';
+import { rollBrackets } from '../web/roll-words.js';
 
 // A state's hospitals out of the grid's order, in that order: { ccns, recs, states }. The order is the pages' (trends.js
 // rollOrder, which ranks a hospital by its own record and CCN alone), so it is the order the state's page draws.
@@ -41,7 +42,7 @@ export function mountStatePicker({ box, svgs, geomOf, ready, pick }) {
     const name = select.selectedOptions[0]?.textContent ?? code;
     const n = g.recs.length;
     const ever = everCut(g.recs);
-    const brackets = everBrackets(n, ever, { ever: (k) => fill('rollEver', { n: count(k) }), never: (k) => fill('rollNever', { n: count(k) }) });
+    const brackets = rollBrackets(n, ever);
     const years = fys.map(String);
     const label = fill('rollStateAlt', { state: name, hospitals: count(n) });
     for (const svg of svgs) {
@@ -66,6 +67,8 @@ export function mountStatePicker({ box, svgs, geomOf, ready, pick }) {
       else restore();
       link.hidden = !picked;
       pick(picked);
-    }, () => {});
+    }, () => {
+      select.value = '';
+    });
   });
 }

@@ -46,7 +46,7 @@ export const ABOVE_BY = 0.005;
 const countRange = (ns) => {
   const lo = Math.min(...ns);
   const hi = Math.max(...ns);
-  return lo === hi ? count(lo) : fill('countRange', { from: count(lo), to: count(hi) });
+  return lo === hi ? count(lo) : fill('keyRange', { from: count(lo), to: count(hi) });
 };
 
 // What the decision check found beyond order: CMS's rule for the line, the years the published scores reproduce the
@@ -55,14 +55,17 @@ const countRange = (ns) => {
 function sidesNotes(checks) {
   const decided = checks.filter((c) => c.check.yes);
   const on = decided.filter((c) => c.check.p75InGap);
-  const off = decided.filter((c) => !c.check.p75InGap);
+  // Off the percentile: CMS's line above it (some hospitals above the percentile not cut), or at or below it.
+  const off = decided.filter((c) => !c.check.p75InGap && c.check.aboveNotCut !== null);
+  const higher = off.filter((c) => c.check.aboveNotCut > 0);
+  const lower = off.filter((c) => c.check.aboveNotCut === 0);
   const isWell = (c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY;
-  const well = off.filter(isWell);
-  const few = off.filter((c) => !isWell(c));
+  const well = higher.filter(isWell);
+  const few = higher.filter((c) => !isWell(c));
   const years = (cs) => listText(cs.map((c) => fyLabel(c.fy)));
   const range = (cs) => countRange(cs.map((c) => c.check.aboveNotCut));
   const ties = [...decided].sort((a, b) => b.check.atLine - a.check.atLine)[0];
-  return html`${para(fill('sidesRule', { percentile: ordinal(CUTOFF_PERCENTILE) }))}${on.length ? para(fill('sidesOn', { years: years(on) })) : ''}${few.length ? para(fill('sidesFew', { years: years(few), n: range(few) })) : ''}${well.length ? para(fill('sidesWell', { years: years(well), n: range(well) })) : ''}${off.length ? para(t('sidesWhy')) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
+  return html`${para(fill('sidesRule', { percentile: ordinal(CUTOFF_PERCENTILE) }))}${on.length ? para(fill('sidesOn', { years: years(on) })) : ''}${few.length ? para(fill('sidesFew', { years: years(few), n: range(few) })) : ''}${well.length ? para(fill('sidesWell', { years: years(well), n: range(well) })) : ''}${lower.length ? para(fill('sidesLower', { years: years(lower) })) : ''}${off.length ? para(t('sidesWhy')) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
 }
 
 // The glossary's entries, in reading order: [term key, definition key, values].

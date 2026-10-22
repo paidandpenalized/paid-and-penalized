@@ -557,7 +557,7 @@ test('mountRoll, a picked state: a year in which none of its hospitals had a dec
     assert.deepEqual(globalThis.fetch.calls, []);
   })));
 
-test('mountRoll, the state picker: a history asset that will not load leaves the drawings as built, and the next pick tries again', () =>
+test('mountRoll, the state picker: a history asset that will not load leaves the drawings as built and the picker on every state, and the next pick tries again', () =>
   withGlobals({ window: windowStub(), document: documentStub() }, () => noUnhandled(async () => {
     let attempt = 0;
     await withGlobals({ fetch: fetchStub({ [ROLL_URL]: () => (attempt++ === 0 ? fail(503)() : ok(SYN)()) }) }, async () => {
@@ -566,6 +566,7 @@ test('mountRoll, the state picker: a history asset that will not load leaves the
       await pickIn(rig)('AL');
       assert.equal(rig.svgs[0].innerHTML, '<path class="built-300"/>');
       assert.equal(rig.link.hidden, true);
+      assert.equal(rig.select.value, '', 'the picker never names a state the grid does not show');
       await pickIn(rig)('AL');
       assert.match(rig.svgs[0].innerHTML, /chart-roll__yes/);
       assert.equal(rig.link.hidden, false);

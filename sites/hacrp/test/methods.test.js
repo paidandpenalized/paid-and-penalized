@@ -367,3 +367,26 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
   assert.match(page, /<section class="msec" id="estimate"/);
 });
+
+test('the line notes say which side of the percentile CMS\'s line sits: a year with none above the percentile left uncut is at or below it, and a year with no hospital left uncut says nothing', () => {
+  const base = HD.checks.filter((c) => c.check.yes);
+  const at = (c, over) => ({ ...c, check: { ...c.check, ...over } });
+  // One year where CMS cut everyone above the percentile and more (none above it uncut, off its gap), one where it cut
+  // every hospital it decided on (no uncut hospital, so no side to say).
+  const lower = at(base[2], { p75InGap: false, aboveNotCut: 0 });
+  const allCut = at(base[3], { p75InGap: false, aboveNotCut: null });
+  const checks = HD.checks.map((c) => (c.fy === lower.fy ? lower : c.fy === allCut.fy ? allCut : c));
+  const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
+  const page = methodsPage({
+    fy: 2026, checks, years: HD.years ?? DATA.history.years.map((y) => ({ fy: y.fy, periods: y.periods })), newest: { rows: 3, source: DATA.source, pin, measures: 6, pages: 10, sourceLine: SRC },
+    pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
+    robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
+  });
+  const paragraphs = [...page.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => strip(m[1]));
+  const lowerNote = paragraphs.find((p) => p.includes('at or below the percentile'));
+  assert.ok(lowerNote && lowerNote.includes(`FY${lower.fy}`) && !lowerNote.includes(`FY${allCut.fy}`), lowerNote);
+  for (const key of ['a little above the percentile', 'further above']) {
+    const note = paragraphs.find((p) => p.includes(key));
+    assert.ok(!note || (!note.includes(`FY${lower.fy}`) && !note.includes(`FY${allCut.fy}`)), note);
+  }
+});
