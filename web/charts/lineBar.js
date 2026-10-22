@@ -15,8 +15,8 @@ const Y = { name: 11, value: 25, top: 34, bottom: 62, mark: 66, label: 94 };
 const TICK_OUT = 5;
 const HEIGHT = 100;
 // The lowest and highest scores, printed inside the track's ends, are left out where the hospital's needle would
-// cross them (within this share of the track from that end).
-const END_ROOM = 0.24;
+// cross them: an end label's width, from its characters (mono, about 0.62 em at the 11px the page sets) and its inset.
+const endWidth = (label) => String(label).length * 6.9 + 14;
 
 export function lineBar({ domain: [lo, hi], actual, band: [highestNo, lowestYes], middle, labels, width = WIDTH }) {
   if (!(lo < hi) || !(highestNo < lowestYes)) throw new RangeError('lineBar: need lowest < highest and highestNo < lowestYes');
@@ -31,8 +31,8 @@ export function lineBar({ domain: [lo, hi], actual, band: [highestNo, lowestYes]
   return frame({
     kind: 'line-bar', width, height: HEIGHT + (middleLeft ? 0 : 26), body: html`<rect class="chart-track" x="${PAD}" y="${Y.top}" width="${r2(width - 2 * PAD)}" height="${Y.bottom - Y.top}"/>
 <rect class="chart-zone" x="${r2(xl)}" y="${Y.top}" width="${r2(width - PAD - xl)}" height="${Y.bottom - Y.top}"/>
-${ta > END_ROOM ? text({ x: PAD + 6, y: Y.bottom - 10, anchor: 'start', cls: 'chart-end', body: labels.low }) : ''}
-${ta < 1 - END_ROOM ? text({ x: width - PAD - 6, y: Y.bottom - 10, anchor: 'end', cls: 'chart-end', body: labels.high }) : ''}
+${xa > PAD + endWidth(labels.low) ? text({ x: PAD + 6, y: Y.bottom - 10, anchor: 'start', cls: 'chart-end', body: labels.low }) : ''}
+${xa < width - PAD - endWidth(labels.high) ? text({ x: width - PAD - 6, y: Y.bottom - 10, anchor: 'end', cls: 'chart-end', body: labels.high }) : ''}
 ${labels.zone ? text({ x: width - PAD, y: Y.name, anchor: 'end', cls: 'chart-cap chart-cap--pen', body: labels.zone }) : ''}
 ${mark({
     tip: `${labels.middle}: ${labels.middleValue}`, value: middle, hit: { x: xm - 6, y: Y.top - TICK_OUT, width: 12, height: Y.bottom - Y.top + 2 * TICK_OUT },

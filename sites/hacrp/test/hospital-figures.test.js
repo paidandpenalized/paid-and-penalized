@@ -78,7 +78,7 @@ test('the line bar: none without a score; the rank counts the scores below this 
   const block = String(lineBarBlock(pinnedView(h), NAT));
   const r = NAT.rankOf(h.total);
   const share = Math.round((100 * r.below) / (r.n - 1));
-  assert.ok(block.includes(`Higher than ${share}% of the ${r.n.toLocaleString('en-US')} scores CMS published.`), block.slice(-200));
+  assert.ok(block.includes(`Higher than ${share}% of the ${r.n.toLocaleString('en-US')} scores CMS published (higher is worse).`), block.slice(-200));
 });
 
 test('among hospitals like it: each group\'s share cut is its counts\', the table holds every plotted median, and the takeaway names the lowest and highest share', () => {

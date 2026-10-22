@@ -371,7 +371,7 @@ test("the verdict says CMS's line in plain words, from CMS's text, over the line
     const text = render(h);
     assert.ok(text.includes(`<p class="hosp__line">${line}</p>`), h.ccn);
     assert.ok(text.indexOf('chart--line-bar') > text.indexOf('hosp__line'), `${h.ccn}: the bar under it`);
-    assert.match(text, /<p class="hosp__rank">Higher than \d+% of the [\d,]+ scores CMS published\. A higher score is worse\.<\/p>/);
+    assert.match(text, /<p class="hosp__rank">Higher than \d+% of the [\d,]+ scores CMS published \(higher is worse\)\.<\/p>/);
   }
   for (const h of [CASES.noScore, CASES.yesNoScore]) assert.ok(!render(h).includes('hosp__line'), h.ccn);
 });
@@ -425,9 +425,10 @@ test('the as-of strip is a list of facts, each a term and its value from their o
   assert.match(list, /<dd><span class="nw">[^<]+<\/span> to <span class="nw">[^<]+<\/span><\/dd>/, 'each period date whole');
 });
 
-test("a hospital page's verdict names the data's release; its foot sets the facts, data links, footnotes and way back beside the standing line and citation", () => {
+test("a hospital page's foot sets the facts (the data's release among them), data links, footnotes and way back beside the standing line and citation", () => {
   const text = hospitalPage({ ...PAGE_CTX, view: hospitalView(inputs(CASES.no)), source: DATA.source, robots: null, assets: ASSETS });
-  assert.ok(text.includes(`<p class="small muted hosp__data">Data: CMS, released <span class="nw">${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></p>\n</section>`), 'the release under the verdict');
+  const foot = text.slice(text.indexOf('class="hosp__foot"'));
+  assert.ok(foot.includes(`<dd><span class="nw">${cmsText(isoDateOf(DATA.source.pdcReleased))}</span></dd>`), 'the release in the facts');
   const at = (s) => text.indexOf(s);
   const order = ['class="hosp__foot"', 'class="asof"', 'class="data-links"', 'id="fn-h"', 'class="page__links"', 'class="hosp__cite"', 'class="standing"', 'id="cite-h"'].map(at);
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `foot order ${order}`);

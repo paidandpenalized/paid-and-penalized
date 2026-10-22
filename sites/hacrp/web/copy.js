@@ -17,11 +17,11 @@ export const COPY = {
   noteScore: { text: "CMS's note on the score: {notes}", claim: null },
   noteDecision: { text: "CMS's note on the payment reduction: {notes}", claim: null },
   whyYes: {
-    text: "CMS cut this hospital's Medicare inpatient payments by {pct} for that fiscal year because its score was above CMS's line.",
+    text: "Its score was above CMS's line, so CMS cut its Medicare inpatient payments by {pct} for the year.",
     claim: 'HACRP-01',
   },
   whyNo: {
-    text: "Its score was at or below CMS's line, so this program did not cut its Medicare inpatient payments for that fiscal year.",
+    text: "Its score was at or below CMS's line, so this program did not cut its Medicare payments for the year.",
     claim: 'HACRP-01',
   },
   scoreIs: {
@@ -591,7 +591,11 @@ export const COPY = {
     text: "Every Total HAC Score CMS published, from {low} to {high}: this hospital's is {score}, the middle hospital's {middle}, and CMS cut scores of {lowestYes} and above.",
     claim: null,
   },
-  rankHigher: { text: 'Higher than {share} of the {n} scores CMS published. A higher score is worse.', claim: null },
+  rankHigher: { text: 'Higher than {share} of the {n} scores CMS published (higher is worse).', claim: null },
+  lineHow: {
+    text: "Each year CMS cuts the hospitals with the highest quarter of scores, those above the {percentile} percentile, so the line moves with every hospital's score.",
+    claim: 'HACRP-02',
+  },
 
   // Figure: the ledger of measures.
   ledgerHeading: { text: 'Where the score came from', claim: null },
@@ -604,6 +608,14 @@ export const COPY = {
     claim: null,
   },
   leverTry: { text: 'Try it in the what-if', claim: null },
+  claimRecomputedNote: { text: '(This site recomputes.)', claim: null },
+  sumDistanceYes: { text: "This hospital's score is {distance} above {highestNo}, the highest score CMS marked No.", claim: null },
+  sumDistanceNo: { text: "This hospital's score is {distance} below {lowestYes}, the lowest score CMS marked Yes.", claim: null },
+  // The one measure whose name doesn't say what it counts, defined under it in the ledger (draft ML1).
+  definePSI90: {
+    text: 'Safety problems such as bedsores, falls that break a bone and blood clots after surgery, found by CMS in traditional Medicare claims. A value of {one} matches the national rate.',
+    claim: 'HACRP-06',
+  },
   leverFlip: { text: "That change alone would put the score under CMS's line.", claim: null },
   leverNone: { text: 'None of its measured values is above the national median, so no single measure at the median would lower its score.', claim: null },
   ledgerColRuler: { text: 'Among all hospitals', claim: null },

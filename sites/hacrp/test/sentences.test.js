@@ -20,7 +20,7 @@ test('a scored "Yes" hospital', () => {
   assert.deepEqual(all('yes'), {
     summary: [
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3000 for Example General Hospital and a payment reduction decision of Yes.',
-      "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
+      "Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.",
       SCORE_IS,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0500 above 0.2500, the highest score CMS marked No.",
@@ -34,7 +34,7 @@ test('a scored "No" hospital', () => {
   assert.deepEqual(all('no'), {
     summary: [
       'For fiscal year 2026, CMS reports a Total HAC Score of −0.1000 for Example General Hospital and a payment reduction decision of No.',
-      "Its score was at or below CMS’s line, so this program did not cut its Medicare inpatient payments for that fiscal year.",
+      "Its score was at or below CMS’s line, so this program did not cut its Medicare payments for the year.",
       SCORE_IS,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.3507 below 0.2507, the lowest score CMS marked Yes.",
@@ -88,7 +88,7 @@ test('a one-measure hospital gets the small-number warning', () => {
   assert.deepEqual(all('oneMeasure'), {
     summary: [
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3500 for Example General Hospital and a payment reduction decision of Yes.',
-      "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
+      "Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.",
       SCORE_IS,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.1000 above 0.2500, the highest score CMS marked No.",
@@ -102,7 +102,7 @@ test('the largest-contribution sentence never names a CMS-assigned measure', () 
   assert.deepEqual(all('assignedLargest'), {
     summary: [
       'For fiscal year 2026, CMS reports a Total HAC Score of 0.3250 for Example General Hospital and a payment reduction decision of Yes.',
-      "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
+      "Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.",
       SCORE_IS,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 0.0750 above 0.2500, the highest score CMS marked No.",
@@ -116,7 +116,7 @@ test('every scored measure CMS-assigned: no largest-contribution sentence', () =
   assert.deepEqual(all('allAssigned'), {
     summary: [
       'For fiscal year 2026, CMS reports a Total HAC Score of 2.2091 for Example General Hospital and a payment reduction decision of Yes.',
-      "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
+      "Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.",
       SCORE_IS,
     ],
     distance: "This site recomputes the distance to CMS’s line: the score is 1.9591 above 0.2500, the highest score CMS marked No.",
@@ -132,7 +132,7 @@ test('a tagged measure changes no sentence: the whole output equals the untagged
   assert.equal(v.measures.find((m) => m.id === 'PSI90').tagged, true);
   assert.deepEqual(summary(v), [
     'For fiscal year 2026, CMS reports a Total HAC Score of 0.3000 for Example General Hospital and a payment reduction decision of Yes.',
-    "CMS cut this hospital’s Medicare inpatient payments by 1% for that fiscal year because its score was above CMS’s line.",
+    "Its score was above CMS’s line, so CMS cut its Medicare inpatient payments by 1% for the year.",
     SCORE_IS,
   ]);
   assert.deepEqual(summary(v), summary(view('yes', { estimate: untagged })));
@@ -151,7 +151,7 @@ test('a scored hospital\'s total footnote is quoted after the lead', () => {
   assert.deepEqual(out.summary, [
     'For fiscal year 2026, CMS reports a Total HAC Score of −0.0500 for Example General Hospital and a payment reduction decision of No.',
     "CMS’s note on the score: The data are based on claims that the hospital or facility submitted to CMS. The hospital or facility has reported discrepancies in their claims data.",
-    "Its score was at or below CMS’s line, so this program did not cut its Medicare inpatient payments for that fiscal year.",
+    "Its score was at or below CMS’s line, so this program did not cut its Medicare payments for the year.",
     SCORE_IS,
   ]);
   assert.equal(out.largest, null);
