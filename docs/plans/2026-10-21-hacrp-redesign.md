@@ -35,10 +35,10 @@ Use their facts and direction. Don't copy their notes into this repo.
   Send screenshots after.
 - [x] **Checkpoint M3:** same as Checkpoint M1, including /security-review for the new history inputs and the roll
   call's script.
-- [ ] **Accuracy pass:**
+- [x] **Accuracy pass:**
   - claim ids and register rows for every factual sentence;
   - the copy gate;
   - the owner copy list;
   - the claims checked against sources;
   - fixes made inside the design.
-- [ ] **Final gate:** /simplify → `make test` → /code-review → /security-review → verify in a fresh clone. Then push the branch privately and ask the owner before any merge.
+- [x] **Final gate:** /simplify → `make test` → /code-review → /security-review → verify in a fresh clone. Then push the branch privately and ask the owner before any merge.
