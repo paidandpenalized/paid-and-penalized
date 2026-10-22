@@ -1,16 +1,17 @@
 // The Methods page's figures: the self-check drawn (every recomputed score against CMS's, every decision against the
 // line this site finds), the periods behind each year's cut, and the pipeline from CMS's file to the pages. Every
 // number comes from the checks the build runs (engine/js/hacrp/history.js) and the pinned-input manifest.
-import { figure, imagePair, num } from '../../../web/charts/figure.js';
+import { drawn, figure, num } from '../../../web/charts/figure.js';
 import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
-import { WIDTH } from '../../../web/charts/svg.js';
+import { printout } from '../../../web/render/components.js';
 import { cmsText, count, decimal, isoDate, longDate } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { SHORT_NAMES } from './constants.js';
+import { fyLabel } from './copy.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
 // The pinned-input manifest's fingerprint, by name.
@@ -19,24 +20,35 @@ const HASH_NAME = 'SHA-256';
 const PROOF_STEP = 0.00001;
 // The wide drawings' width, about the page's figure column.
 export const METHODS_WIDE = 640;
-const limitText = decimal(SCORE_TOLERANCE, 3);
+export const limitText = decimal(SCORE_TOLERANCE, 3);
 const missText = (x) => decimal(x, 5);
-const fyLabel = (fy) => `FY${fy}`;
-// "fiscal years 2015 to 2026", or "fiscal year 2026" for one.
-const yearsText = (checks) => (checks.length === 1 ? `FY${checks[0].fy}` : `FY${checks[0].fy}–FY${checks[checks.length - 1].fy}`);
+// "FY2015–FY2026", or "FY2026" for one.
+const yearsText = (checks) => (checks.length === 1 ? fyLabel(checks[0].fy) : `${fyLabel(checks[0].fy)}–${fyLabel(checks[checks.length - 1].fy)}`);
+
+// The self-check's totals over every year: scores recomputed, the largest miss, rows withheld, decisions, and
+// decisions out of order.
+export function checkTotals(checks) {
+  const sum = (f) => checks.reduce((n, c) => n + f(c.check), 0);
+  return {
+    scored: sum((c) => c.scored),
+    miss: Math.max(...checks.map((c) => c.check.maxError)),
+    withheld: sum((c) => c.withheld.length),
+    decided: sum((c) => c.decided),
+    wrong: sum((c) => c.wrongSide.length),
+  };
+}
 
 // checks: [{ fy, rule, check }] oldest first; check: yearCheck() (engine/js/hacrp/history.js).
 export function proofFigure(checks, { n, source }) {
   const rows = [...checks].reverse().map(({ fy, check }) => ({ label: fyLabel(fy), note: check.scored ? fill('proofNote', { scores: count(check.scored), miss: missText(check.maxError) }) : t('proofNoteNone'), diffs: check.diffs }));
   const draw = (width) => proofStrips({ rows, limit: SCORE_TOLERANCE, step: PROOF_STEP, labels: { fail: t('proofFail') }, width, format: (v) => cmsText(v === 0 ? '0' : decimal(v, 4)) });
-  const scores = checks.reduce((s, c) => s + c.check.scored, 0);
-  const miss = Math.max(...checks.map((c) => c.check.maxError));
+  const { scored, miss } = checkTotals(checks);
   const takeaway = checks.length === 1
-    ? fill('proofTakeawayOne', { scores: count(scores), fy: String(checks[0].fy), miss: missText(miss), limit: limitText })
-    : fill('proofTakeaway', { years: yearsText(checks), scores: count(scores), miss: missText(miss), limit: limitText });
+    ? fill('proofTakeawayOne', { scores: count(scored), fy: String(checks[0].fy), miss: missText(miss), limit: limitText })
+    : fill('proofTakeaway', { years: yearsText(checks), scores: count(scored), miss: missText(miss), limit: limitText });
   return figure({
     n, takeaway, source, claimLevel: 'recomputed', csvName: 'hacrp-score-check', alt: t('proofAlt'),
-    svg: draw(WIDTH), svgWide: draw(METHODS_WIDE),
+    ...drawn(draw, METHODS_WIDE),
     table: {
       columns: [{ name: t('proofColYear') }, { name: t('proofColScores'), numeric: true }, { name: fill('proofColWithin', { limit: limitText }), numeric: true }, { name: t('proofColMiss'), numeric: true }, { name: t('proofColWithheld'), numeric: true }, { name: t('proofColRule') }],
       rows: checks.map(({ fy, rule, check }) => [fyLabel(fy), num(count(check.scored), check.scored), num(count(check.within), check.within), num(missText(check.maxError), check.maxError), num(count(check.withheld.length), check.withheld.length), rule]),
@@ -53,8 +65,7 @@ export function sidesFigure(checks, { n, source }) {
     yes: check.sorted.yes,
     line: check.yes ? check.yes : null,
   }));
-  const decided = checks.reduce((s, c) => s + c.check.decided, 0);
-  const wrong = checks.reduce((s, c) => s + c.check.wrongSide.length, 0);
+  const { decided, wrong } = checkTotals(checks);
   const takeaway = checks.length === 1
     ? fill('sidesTakeawayOne', { decided: count(decided), fy: String(checks[0].fy), wrong: count(wrong) })
     : fill('sidesTakeaway', { decided: count(decided), years: yearsText(checks), wrong: count(wrong) });
@@ -62,7 +73,7 @@ export function sidesFigure(checks, { n, source }) {
   const pctText = (x) => (x === null ? '' : num(decimal(x * 100, 1), x * 100));
   return figure({
     n, takeaway, source, csvName: 'hacrp-decision-check', alt: t('sidesAlt'),
-    svg: draw(WIDTH), svgWide: draw(METHODS_WIDE),
+    ...drawn(draw, METHODS_WIDE),
     table: {
       columns: [{ name: t('proofColYear') }, { name: t('sidesColDecided'), numeric: true }, { name: t('sidesColYes'), numeric: true }, { name: t('sidesColHighNo'), numeric: true }, { name: t('sidesColLowYes'), numeric: true }, { name: t('sidesColWrong'), numeric: true }, { name: t('sidesColPct'), numeric: true }],
       rows: checks.map(({ fy, check: c }) => [fyLabel(fy), num(count(c.decided), c.decided), num(count(c.yes), c.yes),
@@ -97,7 +108,7 @@ export function periodsFigure(years, { n, source }) {
     n, source, csvName: 'hacrp-periods', alt: t('periodsAlt'),
     takeaway: fill('periodsTakeaway', { fy: String(newest.fy), payStart: longDate(pay(newest.fy).start), lead: fill('periodsLead', { months: String(lead) }) }),
     note: fill('periodsKey', { short }),
-    svg: draw(WIDTH), svgWide: draw(METHODS_WIDE),
+    ...drawn(draw, METHODS_WIDE),
     table: {
       columns: [{ name: t('periodsColFy') }, { name: fill('periodsColPsi', { short }) }, { name: t('periodsColHai') }, { name: t('periodsColPay') }],
       rows: years.map(({ fy, periods }) => [fyLabel(fy), ...[periods.psi90, periods.hai, pay(fy)].map((p) => (p ? `${longDate(p.start)} – ${longDate(p.end)}` : t('periodsNone')))]),
@@ -125,10 +136,10 @@ export function pipeline({ rows, source, pin, measures, check, pages }) {
 
 // The receipts: every pinned input this site's HACRP pages read, with its size and fingerprint.
 export function receipts(pins) {
-  return html`<div class="printout"><div class="printout__scroll"><table class="gb receipts">
+  return printout(html`<table class="gb receipts">
 <thead><tr><th scope="col">${t('sourcesColFile')}</th><th scope="col" class="num">${t('sourcesColBytes')}</th><th scope="col">${fill('sourcesColHash', { algo: HASH_NAME })}</th><th scope="col">${t('sourcesColGot')}</th></tr></thead>
 <tbody>${pins.map((p) => html`<tr><th scope="row">${p.landingPage || p.downloadUrl ? html`<a href="${p.landingPage || p.downloadUrl}">${p.title}</a>` : p.title}</th><td class="num">${count(p.bytes)}</td><td class="receipts__hash"><code>${p.sha256.slice(0, 16)}…</code></td><td>${isoDate(p.retrieved)}</td></tr>`)}</tbody>
-</table></div></div>`;
+</table>`);
 }
 
 // The receipt: the self-check as an adding-machine tape, one line a year (its scores recomputed and largest miss, its
@@ -136,11 +147,7 @@ export function receipts(pins) {
 export function receipt(checks) {
   const dash = t('receiptDash');
   const lines = checks.map(({ fy, check: c }) => html`<tr><th scope="row">${fyLabel(fy)}</th><td>${c.scored ? count(c.scored) : dash}</td><td>${c.scored ? missText(c.maxError) : dash}</td><td>${c.decided ? count(c.decided) : dash}</td><td class="receipt__ok">${!c.scored && !c.decided ? t('receiptNone') : c.ok ? t('receiptOk') : t('receiptFail')}</td></tr>`);
-  const scores = checks.reduce((n, c) => n + c.check.scored, 0);
-  const decided = checks.reduce((n, c) => n + c.check.decided, 0);
-  const wrong = checks.reduce((n, c) => n + c.check.wrongSide.length, 0);
-  const miss = Math.max(...checks.map((c) => c.check.maxError));
-  const withheld = checks.reduce((n, c) => n + c.check.withheld.length, 0);
+  const { scored, miss, withheld, decided, wrong } = checkTotals(checks);
   return html`<div class="receipt">
 <p class="receipt__head">${t('receiptHead')}</p>
 <table class="receipt__t">
@@ -148,7 +155,7 @@ export function receipt(checks) {
 <tbody>${lines}</tbody>
 </table>
 <dl class="receipt__sum">
-<div><dt>${t('receiptScores')}</dt><dd>${count(scores)}</dd></div>
+<div><dt>${t('receiptScores')}</dt><dd>${count(scored)}</dd></div>
 <div><dt>${t('receiptMiss')}</dt><dd>${missText(miss)}</dd></div>
 <div><dt>${t('receiptLimit')}</dt><dd>${limitText}</dd></div>
 ${withheld ? html`<div><dt>${t('receiptWithheld')}</dt><dd>${count(withheld)}</dd></div>` : ''}

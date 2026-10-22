@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
+import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
@@ -56,7 +57,7 @@ export function infectionsByHospital(files) {
   const out = new Map();
   for (const { cy, rows } of files) {
     for (const r of rows) {
-      const sir = Object.fromEntries(HAI_MEASURES.map(([id, k]) => [id, /^\d+(\.\d+)?$/.test(r[`hai_${k}_sir`]) ? Number(r[`hai_${k}_sir`]) : null]));
+      const sir = Object.fromEntries(HAI_MEASURES.map(([id, k]) => [id, numberOf(r[`hai_${k}_sir`], `hai_${k}_sir`)]));
       if (!out.has(r.ccn)) out.set(r.ccn, []);
       out.get(r.ccn).push({ cy, sir });
     }

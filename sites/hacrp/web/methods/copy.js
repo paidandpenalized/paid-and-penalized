@@ -6,24 +6,13 @@ import { copyOf } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../copy.js';
 
 export const COPY = {
-  methodsKicker: { text: '{subtitle} · Methods', claim: null },
   methodsTitle: { text: 'Show your work', claim: null },
   methodsPageTitle: { text: 'Methods: how this site checks every number', claim: null },
   methodsDescription: { text: "How this site turns CMS's public HACRP files into its pages, and the check that recomputes every hospital's score and decision against CMS's each time the site is built.", claim: null },
   methodsLede: { text: "Every number on these pages comes from CMS's own files. Each time the site is built, it adds up every hospital's score again and checks it against the one CMS published, then checks every payment decision against CMS's line. One miss and the build stops.", claim: null },
   methodsLede2: { text: 'Below: that check, drawn; what this site takes from CMS and what it works out; and the sources, terms and changes behind every page.', claim: null },
 
-  // The summary card and its stamp.
-  checkTitle: { text: 'The check · every build', claim: null },
-  checkYears: { text: 'Years checked', claim: null },
-  checkYearsValue: { text: '{n}', claim: null },
-  checkYearsNote: { text: 'Fiscal years {first} to {last}', claim: null },
-  checkScores: { text: 'Scores recomputed', claim: null },
-  checkScoresNote: { text: 'Every hospital CMS published a Total HAC Score for', claim: null },
-  checkMiss: { text: 'Largest miss', claim: null },
-  checkMissNote: { text: 'The build stops at {limit}', claim: null },
-  checkDecisions: { text: 'Decisions checked', claim: null },
-  checkDecisionsNote: { text: '{wrong} out of order with the scores', claim: null },
+  // The summary card's stamp and its receipt.
   checkStamp: { text: 'All checks pass', claim: null },
   receiptHead: { text: 'Self-check · every build', claim: null },
   receiptColFy: { text: 'Year', claim: null },
@@ -72,7 +61,7 @@ export const COPY = {
   proofHeading: { text: 'Every score, added up again', claim: null },
   proofText: { text: "For each hospital, this site takes the parts CMS published and adds them up the way CMS's method says. The result is compared with the Total HAC Score CMS published. CMS rounds every part to four decimals, so small misses are rounding; a miss of {limit} or more stops the build.", claim: null },
   proofText2: { text: "Each strip is one year. The spike in the middle is every hospital that year; it is so narrow because the recomputed scores land almost exactly on CMS's. The red ends are where a miss would stop the build. Nothing has come near them.", claim: null },
-  proofText3: { text: 'A few scores can’t be added up from the public file: in {years}, CMS footnoted a part it used but didn’t publish (for most, a {short} score for a Maryland hospital). The check counts those {n} rows apart and never lets an unfootnoted miss through.', claim: null },
+  proofText3: { text: 'A few scores can’t be added up from the public file: in {years}, CMS footnoted a part it used but didn’t publish (for most, a {short} score for a Maryland hospital), and the published total works out to a valid score for that part. The check counts those {n} rows apart; any other miss stops the build.', claim: null },
   proofTakeaway: { text: 'Across {years}, this site recomputed {scores} scores; the largest miss was {miss}, against a limit of {limit}.', claim: null },
   proofTakeawayOne: { text: 'This site recomputed {scores} scores for fiscal year {fy}; the largest miss was {miss}, against a limit of {limit}.', claim: null },
   proofFail: { text: 'Build stops', claim: null },
@@ -92,7 +81,6 @@ export const COPY = {
   sidesHeading: { text: 'Every decision on its side of the line', claim: null },
   sidesText: { text: "CMS doesn't publish its line, but its decisions show where it is: every hospital it cut should have scored higher than every hospital it didn't. This site checks that for every year, hospital by hospital.", claim: null },
   sidesText2: { text: 'Each rule is one year: every hospital with a decision, sorted from lowest score to highest, its height the score. A hairline is red when CMS cut that hospital. The dashed tick is CMS’s line, between the highest score it did not cut and the lowest it did. A red hairline left of the tick, or a gray one right of it, would be a decision out of order.', claim: null },
-  and: { text: 'and', claim: null },
   sidesOn: { text: 'In {years}, the line also lands exactly where the method says: the {percentile} percentile of every score CMS published.', claim: null },
   sidesAbove: { text: 'In {years}, it sits a little above the {percentile} percentile of the scores CMS published, so a little fewer than a quarter were cut. This site can’t say why from the public files; the table gives each year’s line as a percentile.', claim: null },
   sidesTies: { text: 'Ties matter: in fiscal year {fy}, {n} hospitals scored exactly {line}, the line itself, and none was cut. CMS cuts only scores above the line.', claim: null },
@@ -193,7 +181,6 @@ export const COPY = {
   sourcesColBytes: { text: 'Bytes', claim: null },
   sourcesColHash: { text: 'Fingerprint ({algo})', claim: null },
   sourcesColGot: { text: 'Retrieved', claim: null },
-  sourcesRules: { text: "CMS's program page, the HACRP fact sheets and FAQ, and the statute and regulations: section {statute} of the Social Security Act and the Medicare rules for the program.", claim: null },
   sourcesCode: { text: 'The code that builds these pages will be public when the site launches.', claim: null },
 
   // §10, what changed.

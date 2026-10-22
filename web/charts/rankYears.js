@@ -2,11 +2,11 @@
 // share (the bottom is the lowest score, the top the highest), with each year's cut zone shaded from CMS's line up.
 // Shares compare across years even where CMS changed how the score is built, which raw scores do not. Years where
 // the rule changed carry a dashed rule and its label.
-//   years    [{ label, share, cut, line, tip, value }]: share in [0, 1] or null (no score that year); cut: CMS cut it;
-//            line: the share at CMS's line that year (null: no cut that year); value: the number the table holds
+//   years    [{ label, share, cut, line, tip }]: share in [0, 1] or null (no score that year), the number the table
+//            holds; cut: CMS cut it; line: the share at CMS's line that year (null: no cut that year)
 //   breaks   [{ at, label }]: a rule change before years[at]
 import { html } from '../render/html.js';
-import { frame, mark, r2, text } from './svg.js';
+import { capsWidth, frame, isNarrow, lineD, mark, r2, text } from './svg.js';
 
 const M = { top: 22, bottom: 26, left: 40, right: 8 };
 const H = 150;
@@ -20,25 +20,18 @@ export function rankYears({ years, breaks = [], labels, width }) {
   // A year CMS scored no one: its column says so, on its side.
   const none = labels.none ? years.map((yr, i) => (yr.line === null && yr.share === null ? html`<text class="chart-cap" transform="translate(${r2(cx(i) + 3)} ${r2(y(0.5))}) rotate(-90)" text-anchor="middle">${labels.none}</text>` : '')) : '';
   // The path through the years with a score; a year without one breaks it.
-  let d = '';
-  let open = false;
-  years.forEach((yr, i) => {
-    if (yr.share === null) { open = false; return; }
-    d += `${open ? 'L' : 'M'}${r2(cx(i))} ${r2(y(yr.share))}`;
-    open = true;
-  });
+  const d = lineD(years.map((yr, i) => ({ x: i, y: yr.share })), cx, y);
   const dots = years.map((yr, i) => (yr.share === null ? '' : mark({
-    tip: yr.tip, value: yr.value, hit: { x: M.left + i * colW, y: M.top, width: colW, height: H },
-    body: html`<circle class="${yr.cut ? 'chart-rank__dot chart-rank__dot--cut' : 'chart-rank__dot'}" cx="${r2(cx(i))}" cy="${r2(y(yr.share))}" r="${width < 400 ? 4 : 5}"/>`,
+    tip: yr.tip, value: yr.share, hit: { x: M.left + i * colW, y: M.top, width: colW, height: H },
+    body: html`<circle class="${yr.cut ? 'chart-rank__dot chart-rank__dot--cut' : 'chart-rank__dot'}" cx="${r2(cx(i))}" cy="${r2(y(yr.share))}" r="${isNarrow(width) ? 4 : 5}"/>`,
   })));
-  const every = width < 400 && n > 8 ? 2 : 1;
+  const every = isNarrow(width) && n > 8 ? 2 : 1;
   const xLabels = years.map((yr, i) => ((n - 1 - i) % every === 0 ? text({ x: cx(i), y: M.top + H + 16, cls: 'chart-tick', body: yr.label }) : ''));
-  // A break's label runs right of its rule, or left when the next break would meet it (its width estimated at the
-  // caps' 6.4 units a character).
+  // A break's label runs right of its rule, or left when the next break would meet it (its width: capsWidth).
   const rules = breaks.map((b, i) => {
     const x = M.left + b.at * colW;
     const next = breaks[i + 1];
-    const crowded = next && M.left + next.at * colW - x < String(b.label).length * 6.4 + 10;
+    const crowded = next && M.left + next.at * colW - x < capsWidth(b.label) + 10;
     return html`<line class="chart-rank__break" x1="${r2(x)}" x2="${r2(x)}" y1="${M.top - 14}" y2="${r2(M.top + H)}"/>${text({ x: crowded ? x - 3 : x + 3, y: M.top - 6, anchor: crowded ? 'end' : 'start', cls: 'chart-cap', body: b.label })}`;
   });
   const height = M.top + H + M.bottom;

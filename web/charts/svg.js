@@ -14,6 +14,45 @@ export const MAX_THICKNESS = 24;
 // Coordinates to 0.01 unit, so the markup is short and stable.
 export const r2 = (x) => Math.round(x * 100) / 100;
 
+// A drawing this narrow is the phone's (the kit's WIDTH, not a wide variant): it sets its labels and marks smaller.
+export const isNarrow = (width) => width < 400;
+
+// A caption's width in viewBox units, estimated at the caps' 6.4 units a character.
+export const capsWidth = (text) => String(text).length * 6.4;
+
+// A line through points [{ x, y }] as a path's d, at (x(p.x), y(p.y)); a point with y null breaks it.
+export function lineD(points, x, y) {
+  let d = '';
+  let open = false;
+  for (const pt of points) {
+    if (pt.y === null) {
+      open = false;
+      continue;
+    }
+    d += `${open ? 'L' : 'M'}${r2(x(pt.x))} ${r2(y(pt.y))}`;
+    open = true;
+  }
+  return d;
+}
+
+// A silhouette of sorted scores, ranks a to b (b exclusive), as one closed path: up from the base at the run's left
+// edge x0, along the scores (rank i's hairline at x(i), thinned to about one point per SILHOUETTE_THIN units, the ends
+// always kept), and down to the base at its right edge x1. y(score): the score's height, rounded; '' for no ranks.
+const SILHOUETTE_THIN = 1.5;
+export function silhouette(scores, a, b, { x, x0, x1, y, base }) {
+  if (b <= a) return '';
+  const pts = [];
+  let last = -Infinity;
+  for (let i = a; i < b; i++) {
+    const xi = x(i);
+    if (i === a || i === b - 1 || xi - last >= SILHOUETTE_THIN) {
+      pts.push([r2(xi), y(scores[i])]);
+      last = xi;
+    }
+  }
+  return `M${r2(x0)} ${r2(base)}L${r2(x0)} ${pts[0][1]}L${pts.map(([px, py]) => `${px} ${py}`).join('L')}L${r2(x1)} ${pts[pts.length - 1][1]}L${r2(x1)} ${r2(base)}Z`;
+}
+
 // A value as the caller gave it: JavaScript's shortest digits (never re-rounded), with a true minus.
 export const plain = (v) => cmsText(String(v));
 

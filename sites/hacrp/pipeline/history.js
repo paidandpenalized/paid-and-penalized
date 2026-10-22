@@ -2,8 +2,10 @@
 // newest from the current pin), each row in one shape with CMS's text kept as written: the CCN, state, Total HAC
 // Score, payment decision, then the z-score of each measure the year's file has and, for years scored in domains,
 // the two domain scores. Pure: files and manifest in, object out.
+import { CCN } from '../../../engine/js/ccn.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { fileShape, normalName, noted, partColumn, ruleFor } from '../../../engine/js/hacrp/eras.js';
+import { fileShape, normalRow, noted, numberOf, partColumn, ruleFor } from '../../../engine/js/hacrp/eras.js';
+import { median } from '../../../engine/js/stats.js';
 import { envelope } from '../../../pipeline/contract.js';
 
 export const HISTORY_SCHEMA_VERSION = 1;
@@ -26,7 +28,8 @@ export const HAI_PINS = Object.freeze([2017, 2018, 2019, 2021, 2022, 2023, 2024]
 // Care Compare's HAI measure numbers, as this site names them.
 export const HAI_MEASURES = Object.freeze([['CLABSI', 1], ['CAUTI', 2], ['SSI_COLON', 3], ['SSI_HYST', 4], ['MRSA', 5], ['CDI', 6]]);
 
-const DEC = /^\d+(\.\d+)?$/;
+// To 3 decimals on the float as it stands (not stats.js toUnit, whose snapping would round a median such as 0.7245,
+// stored a hair under, the other way and move the emitted file).
 const round3 = (x) => Math.round(x * 1000) / 1000;
 // One year's extract -> the nation's results per measure: hospitals with an SIR and their median SIR; and, over
 // hospitals with both counts, the sums of observed and predicted infections (their ratio is the nation's pooled SIR).
@@ -35,15 +38,15 @@ export function infectionYear(cy, rows) {
   if (dates.size !== 1 || !dates.has(`${cy}-01-01 ${cy}-12-31`)) throw new RangeError(`HAI CY${cy}: the extract's period is ${[...dates].join(', ')}`);
   const measures = {};
   for (const [id, k] of HAI_MEASURES) {
-    const sirs = rows.map((r) => r[`hai_${k}_sir`]).filter((v) => DEC.test(v)).map(Number).sort((a, b) => a - b);
-    const both = rows.filter((r) => DEC.test(r[`hai_${k}_observed`]) && DEC.test(r[`hai_${k}_predicted`]));
-    const mid = sirs.length >> 1;
+    const col = (name) => `hai_${k}_${name}`;
+    const sirs = rows.map((r) => numberOf(r[col('sir')], col('sir'))).filter((v) => v !== null);
+    const both = rows.map((r) => [numberOf(r[col('observed')], col('observed')), numberOf(r[col('predicted')], col('predicted'))]).filter(([o, p]) => o !== null && p !== null);
     measures[id] = {
       hospitals: sirs.length,
-      median: sirs.length ? round3(sirs.length % 2 ? sirs[mid] : (sirs[mid - 1] + sirs[mid]) / 2) : null,
+      median: sirs.length ? round3(median(sirs)) : null,
       counted: both.length,
-      observed: both.reduce((n, r) => n + Number(r[`hai_${k}_observed`]), 0),
-      predicted: round3(both.reduce((n, r) => n + Number(r[`hai_${k}_predicted`]), 0)),
+      observed: both.reduce((n, [o]) => n + o, 0),
+      predicted: round3(both.reduce((n, [, p]) => n + p, 0)),
     };
   }
   return { cy, measures };
@@ -64,7 +67,7 @@ export function cutListFlags(text) {
   if (col < 0 || totalCol < 0) throw new RangeError('cut list: no "Top 25th Percentile" or "Total HAC Score" column');
   const out = new Map();
   for (const c of lines.slice(head + 1)) {
-    if (!/^[0-9A-Z]{6}$/.test(c[0])) continue;
+    if (!CCN.test(c[0])) continue;
     if (!(c[col] in FLAG)) throw new RangeError(`cut list: CCN ${c[0]} has flag "${c[col]}"`);
     if (out.has(c[0])) throw new RangeError(`cut list: CCN ${c[0]} appears twice`);
     out.set(c[0], { flag: FLAG[c[col]], total: c[totalCol], state: stateCol < 0 ? '' : c[stateCol] });
@@ -110,14 +113,14 @@ function listOnly(flags, ccns, parts) {
 export function historyYear(fy, rows, flags = null) {
   if (!rows.length) throw new RangeError(`HACRP FY${fy}: no rows`);
   const shape = fileShape(Object.keys(rows[0]));
-  const norm = rows.map((row) => Object.fromEntries(Object.entries(row).map(([k, v]) => [normalName(k), v.trim()])));
+  const norm = rows.map(normalRow);
   if (shape.fy) {
     const years = new Set(norm.map((r) => r[shape.fy]));
     if (years.size !== 1 || !years.has(String(fy))) throw new RangeError(`HACRP FY${fy}: the file's fiscal year is ${[...years].join(', ')}`);
   }
   const ccns = new Set();
   for (const r of norm) {
-    if (!/^[0-9A-Z]{6}$/.test(r[shape.ccn])) throw new RangeError(`HACRP FY${fy}: CCN "${r[shape.ccn]}" is not six digits or capital letters`);
+    if (!CCN.test(r[shape.ccn])) throw new RangeError(`HACRP FY${fy}: CCN "${r[shape.ccn]}" is not six digits or capital letters`);
     if (ccns.has(r[shape.ccn])) throw new RangeError(`HACRP FY${fy}: CCN ${r[shape.ccn]} appears twice`);
     ccns.add(r[shape.ccn]);
   }
@@ -140,8 +143,8 @@ export function historyYear(fy, rows, flags = null) {
     decisions: shape.decision ? 'file' : 'cut-list',
     periods: { psi90, hai },
     // The CCNs whose score or parts CMS footnoted or marked: a recompute that misses CMS's total is let pass only for
-    // these (CMS used a part its file withholds).
-    footnoted: norm.filter((_, i) => noted(rows[i])).map((r) => r[shape.ccn]),
+    // these, and only for a part CMS withheld (engine/js/hacrp/history.js withheldPart).
+    footnoted: norm.filter(noted).map((r) => r[shape.ccn]),
     hospitals: norm.map((r) => [
       r[shape.ccn], r.STATE, r.TOTAL_HAC_SCORE ?? '', decision(r) === 'Not Available' ? 'N/A' : decision(r),
       ...measures.map((id) => r[partColumn(shape, id)] ?? ''),

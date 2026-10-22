@@ -5,7 +5,7 @@ import { hospitalLoader } from './hospitals.js';
 
 const hospitals = hospitalLoader();
 import { mountFromPage } from './whatif.js';
-import { exploreLoader, mountAgree, mountHalving, mountMeasureToggles, mountRoll, mountRule, mountYearMap, mountSlideRules, mountSwarm, mountUsMap } from './explore.js';
+import { assetLoaders, exploreLoader, mountAgree, mountHalving, mountMeasureToggles, mountRoll, mountRule, mountYearMap, mountSlideRules, mountSwarm, mountUsMap } from './explore.js';
 import { placePath } from '../web/place-paths.js';
 import { startTable } from './table.js';
 
@@ -24,8 +24,10 @@ const figuresWith = (part) => [...document.querySelectorAll(part)].map((el) => e
 if (explore && searchSrc) for (const fig of figuresWith('.swarm')) mountSwarm(fig, { explore, hospitals, src: searchSrc });
 if (explore) for (const fig of figuresWith('.agree')) mountAgree(fig, explore);
 for (const fig of figuresWith('.usmap')) mountUsMap(fig, (code) => placePath('state', code));
-for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals });
-for (const fig of figuresWith('.ymap')) mountYearMap(fig);
+// The roll call and the year map read one history asset, fetched once for both.
+const history = assetLoaders();
+for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals, history });
+for (const fig of figuresWith('.ymap')) mountYearMap(fig, history);
 
 // After the search and the table, so a fault in the sandbox never takes them with it.
 mountFromPage('hacrp-program');

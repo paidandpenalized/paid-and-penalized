@@ -1,14 +1,16 @@
 // One program year's self-check (engine/js/hacrp/history.js) on small synthetic years: how close the recomputed
-// scores land, which misses are let pass (footnoted) and which are not, and whether CMS's decisions follow its scores.
+// scores land, which misses are let pass (a part CMS withheld) and which are not, and whether CMS's decisions follow
+// its scores.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { percentileInc } from '../../stats.js';
-import { LINE_PERCENTILE, SCORE_TOLERANCE, percentileLine, yearCheck } from '../../hacrp/history.js';
+import { ruleFor } from '../../hacrp/eras.js';
+import { LINE_PERCENTILE, SCORE_TOLERANCE, partRanges, percentileLine, withheldPart, yearCheck } from '../../hacrp/history.js';
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
 // A synthetic year: totals 1 to 8, the top quarter (7 and 8) cut, every recomputed score exact.
-const row = (n, total, decision, over = {}) => ({ ccn: `99000${n}`, total, recomputed: total, decision, noted: false, ...over });
+const row = (n, total, decision, over = {}) => ({ ccn: `99000${n}`, total, recomputed: total, decision, ...over });
 const eight = () => [1, 2, 3, 4, 5, 6, 7, 8].map((t) => row(t, t, t >= 7 ? 'Yes' : 'No'));
 
 test('constants: scores must land within a thousandth, the line is the 75th percentile', () => {
@@ -42,10 +44,12 @@ test('the decided are sorted lowest score first with ties by CCN, whatever order
   assert.equal(c.ok, false);
 });
 
-test('a miss on a footnoted row is withheld, counted apart and left out of the error; the same miss unexplained fails the year', () => {
+test('a miss explained by a withheld part is counted apart and left out of the error; the same miss unexplained fails the year', () => {
   const rows = eight();
-  rows[2] = { ...rows[2], recomputed: rows[2].total + 0.5, noted: true };
-  const withheld = yearCheck(rows);
+  rows[2] = { ...rows[2], recomputed: rows[2].total + 0.5 };
+  const asked = [];
+  const withheld = yearCheck(rows, (r) => { asked.push(r.ccn); return r.ccn === '990003' ? 'PSI90' : null; });
+  assert.deepEqual(asked, ['990003'], 'only a row that misses is asked about');
   assert.deepEqual(withheld.withheld, ['990003']);
   assert.deepEqual(withheld.unexplained, []);
   assert.equal(withheld.scored, 7, 'the withheld row is not a scored one');
@@ -53,9 +57,8 @@ test('a miss on a footnoted row is withheld, counted apart and left out of the e
   assert.equal(withheld.maxError, 0);
   assert.equal(withheld.ok, true);
 
-  rows[2] = { ...rows[2], noted: false };
   const unexplained = yearCheck(rows);
-  assert.deepEqual(unexplained.unexplained, ['990003']);
+  assert.deepEqual(unexplained.unexplained, ['990003'], 'by default no miss is explained');
   assert.deepEqual(unexplained.withheld, []);
   assert.equal(unexplained.scored, 8, 'an unexplained miss stays among the scored, where it counts against the year');
   close(unexplained.maxError, 0.5);
@@ -63,11 +66,63 @@ test('a miss on a footnoted row is withheld, counted apart and left out of the e
   assert.equal(unexplained.ok, false);
 });
 
-test('a footnote on a row that matches is no excuse and no mark: it is scored as any other', () => {
-  const rows = eight().map((r) => ({ ...r, noted: true }));
-  const c = yearCheck(rows);
+test('a row that matches is never asked about: it is scored as any other', () => {
+  const c = yearCheck(eight(), () => 'PSI90');
   assert.deepEqual([c.scored, c.within, c.withheld.length, c.unexplained.length], [8, 8, 0, 0]);
   assert.equal(c.ok, true);
+});
+
+// ---------- the withheld part ----------
+
+// An equal-weight year's records: z-scores for PSI 90 and CLABSI; notes, the parts CMS footnoted.
+const zRec = (psi, clabsi, total, notes = []) => ({ total, z: { PSI90: psi, CLABSI: clabsi }, d1: null, d2: null, notes: new Set(notes) });
+const EQUAL = ruleFor(2024);
+// The year's published parts: PSI 90 from -1 to 2, CLABSI from -0.5 to 0.5.
+const Z_RANGES = partRanges([zRec(-1, -0.5, 0), zRec(2, 0.5, 0), zRec(0.25, null, 0)]);
+
+test('partRanges: each part\'s lowest and highest published value that year, the domains\' too; a part never published has none', () => {
+  assert.deepEqual(Z_RANGES, { PSI90: [-1, 2], CLABSI: [-0.5, 0.5] });
+  assert.deepEqual(partRanges([{ z: { PSI90: 3 }, d1: 3, d2: 7.5 }, { z: { PSI90: null }, d1: null, d2: 2 }]), { PSI90: [3, 3], D1: [3, 3], D2: [2, 7.5] });
+  assert.deepEqual(partRanges([]), {});
+});
+
+test('withheldPart, equal weights: a missing, footnoted part whose value the total implies lies in the year\'s range of it', () => {
+  // CLABSI 0.2 published; the total 0.6 is the mean of it and a withheld PSI 90 of 1.0, inside PSI 90's range.
+  assert.equal(withheldPart(zRec(null, 0.2, 0.6, ['PSI90']), EQUAL, Z_RANGES, 'z'), 'PSI90');
+  // The same total with a footnote on the part that was published, not the missing one: no excuse.
+  assert.equal(withheldPart(zRec(null, 0.2, 0.6, ['CLABSI']), EQUAL, Z_RANGES, 'z'), null);
+  // No footnote at all: no excuse.
+  assert.equal(withheldPart(zRec(null, 0.2, 0.6), EQUAL, Z_RANGES, 'z'), null);
+  // A total that would need a PSI 90 of 3.0, past the highest CMS published that year: no excuse.
+  assert.equal(withheldPart(zRec(null, 0.2, 1.6, ['PSI90']), EQUAL, Z_RANGES, 'z'), null);
+  // Nothing missing: nothing withheld, whatever the footnotes.
+  assert.equal(withheldPart(zRec(1, 0.2, 0.9, ['PSI90', 'CLABSI']), EQUAL, Z_RANGES, 'z'), null);
+  // No total: nothing to solve.
+  assert.equal(withheldPart(zRec(null, 0.2, null, ['PSI90']), EQUAL, Z_RANGES, 'z'), null);
+  // The total is rounded: an implied part just past the range, by less than the rounding over the part's weight, fits.
+  assert.equal(withheldPart(zRec(null, 0.2, 1.1 + SCORE_TOLERANCE / 4, ['PSI90']), EQUAL, Z_RANGES, 'z'), 'PSI90');
+});
+
+// A domains year's record in tenths: PSI 90 (Domain 1) and two infections; notes as above.
+const tenthsRec = (psi, clabsi, cauti, total, notes = []) => ({ total, z: { PSI90: psi, CLABSI: clabsi, CAUTI: cauti }, d1: psi, d2: clabsi === null ? null : (clabsi + cauti) / 2, notes: new Set(notes) });
+const FY2016 = ruleFor(2016);
+const TENTHS_RANGES = { PSI90: [1, 10], CLABSI: [1, 10], CAUTI: [1, 10], D1: [1, 10], D2: [1, 10] };
+
+test('withheldPart, domains in tenths: the missing domain solved from the total is a whole score from 1 to 10 in its range', () => {
+  // Domain 2 is 8.5; a total of 0.25 x 9 + 0.75 x 8.5 = 8.625 implies Domain 1 = 9.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 8.625, ['D1', 'PSI90']), FY2016, TENTHS_RANGES, 'tenths'), 'D1');
+  // A total that implies 9.4 for Domain 1: not a score CMS gives in tenths.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 8.725, ['D1']), FY2016, TENTHS_RANGES, 'tenths'), null);
+  // One that implies 11: a whole number past the scale.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 0.25 * 11 + 0.75 * 8.5, ['D1']), FY2016, TENTHS_RANGES, 'tenths'), null);
+  // One that implies 3, a whole score, but below the lowest Domain 1 CMS published that year.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 0.25 * 3 + 0.75 * 8.5, ['D1']), FY2016, { ...TENTHS_RANGES, D1: [5, 10] }, 'tenths'), null);
+  // Domain 1 missing but only Domain 2 footnoted: no excuse.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 8.625, ['D2']), FY2016, TENTHS_RANGES, 'tenths'), null);
+  // The same total in a z-score year: the domain need not be whole, only in its range.
+  assert.equal(withheldPart(tenthsRec(null, 8, 9, 8.725, ['D1']), ruleFor(2018), TENTHS_RANGES, 'z'), 'D1');
+  // Domain 2 missing, footnoted, the total implying it from Domain 1.
+  assert.equal(withheldPart(tenthsRec(4, null, null, 0.25 * 4 + 0.75 * 7, ['D2']), FY2016, TENTHS_RANGES, 'tenths'), 'D2');
 });
 
 test('the tolerance: a miss under a thousandth is rounding, a miss of a thousandth or more is not', () => {

@@ -4,9 +4,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../hacrp/measures.js';
-import { PREFIX, RULES, TENTHS, fileShape, normalName, noted, numberOf, partColumn, recomputeTotal, ruleFor, toRecord } from '../../hacrp/eras.js';
+import { EQUAL_FROM, PREFIX, RULES, TENTHS, Z_FROM, domainsOf, fileShape, normalName, normalRow, noted as notedRow, numberOf, partColumn, partNotes as partNotesRow, recomputeTotal, ruleFor, toRecord as toRecordRow } from '../../hacrp/eras.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
+// The row readers take a row in its normal form (normalRow), read once by the caller.
+const noted = (row) => notedRow(normalRow(row));
+const toRecord = (row, shape) => toRecordRow(normalRow(row), shape);
+const partNotes = (row, shape) => partNotesRow(normalRow(row), shape);
 
 // The header of a z-score year (FY2018 on, in the words of FY2021's file) and of a tenths year (FY2016's).
 const Z_HEADER = [
@@ -104,6 +108,25 @@ test('noted: a footnote on the total, a domain or a measure part, or an asterisk
   assert.equal(noted({ ...clean, 'Payment Reduction': 'Yes*' }), false, 'the decision is not a score');
 });
 
+test('normalRow: each column by its normal name, its text trimmed', () => {
+  assert.deepEqual(normalRow({ 'Facility ID': ' 990001 ', 'PSI 90 W Z Score': '0.5', Extra: 3 }), { FACILITY_ID: '990001', PSI_90_W_Z_SCORE: '0.5', EXTRA: 3 });
+});
+
+test('partNotes: the parts whose own footnote column CMS filled, or whose score carries its asterisks; never the total\'s or the decision\'s', () => {
+  const z = fileShape([...Z_HEADER, 'PSI 90 W Z Footnote', 'CLABSI Footnote', 'Total HAC Footnote', 'Payment Reduction Footnote']);
+  const row = { 'Facility ID': '990001', 'PSI 90 W Z Score': 'N/A', 'PSI 90 W Z Footnote': '', 'CLABSI W Z Score': '0.5', 'CLABSI Footnote': '', 'Total HAC Footnote': '5', 'Payment Reduction Footnote': 'a' };
+  assert.deepEqual([...partNotes(row, z)], [], 'a footnote on the total or the decision is no part\'s');
+  assert.deepEqual([...partNotes({ ...row, 'PSI 90 W Z Footnote': '5' }, z)], ['PSI90'], 'FY2023 on: the z-score\'s own footnote');
+  assert.deepEqual([...partNotes({ ...row, 'CLABSI Footnote': '13' }, z)], ['CLABSI'], 'earlier z years: the plain footnote');
+  assert.deepEqual([...partNotes({ ...row, 'PSI 90 W Z Footnote': '  ' }, z)], [], 'blank is not a footnote');
+  // A tenths year: the measure's footnote in either spelling, the domains' own, and FY2015's asterisks on a score.
+  const tenths = fileShape([...TENTHS_HEADER, 'AHRQ_PSI_90_Score_Footnote', 'Domain_1_Score_Footnote', 'Domain_2_Score_Footnote', 'MRSA_Footnote']);
+  const t = { 'PROVIDER ID': '990002', AHRQ_PSI_90_Score: 'N/A', Domain_1_Score: 'N/A', AHRQ_PSI_90_Score_Footnote: '4', Domain_1_Score_Footnote: '4', CLABSI_Score: '9*' };
+  assert.deepEqual([...partNotes(t, tenths)].sort(), ['CLABSI', 'D1', 'PSI90']);
+  assert.deepEqual([...partNotes({ 'PROVIDER ID': '990003', Domain_2_Score: '8.0000*' }, tenths)], ['D2']);
+  assert.deepEqual([...partNotes({ 'PROVIDER ID': '990004', MRSA_Footnote: '5' }, fileShape([...TENTHS_HEADER, 'MRSA_Score', 'MRSA_Footnote']))], ['MRSA']);
+});
+
 test('toRecord on a z-score row: CCN, state, the total as number and as CMS wrote it, the decision, one z per measure; blanks are null', () => {
   const shape = fileShape(Z_HEADER);
   const row = {
@@ -141,6 +164,20 @@ test('toRecord on a tenths row: the measure scores in tenths, the two domain sco
   assert.deepEqual(rec.z, { PSI90: 1, CLABSI: 9, CAUTI: null, SSI: null });
   assert.deepEqual([rec.total, rec.totalText, rec.d1, rec.d2], [5.5, '5.5000*', 1, 8]);
   assert.throws(() => toRecord({ ...row, Domain_1_Score: 'x' }, shape), /DOMAIN_1_SCORE/);
+});
+
+test('the era years: equal weights from the first equal rule, z-scores from FY2018', () => {
+  assert.equal(EQUAL_FROM, ruleFor(EQUAL_FROM).from);
+  assert.equal(ruleFor(EQUAL_FROM).rule, 'equal');
+  assert.equal(ruleFor(EQUAL_FROM - 1).rule, 'domains');
+  assert.ok(Z_FROM < EQUAL_FROM);
+});
+
+test('domainsOf: Domain 1 is PSI 90\'s part and Domain 2 the infections\' average; the published domains only for a row with no parts', () => {
+  assert.deepEqual(domainsOf({ z: { PSI90: 4, CLABSI: 1, CAUTI: 3 }, d1: 9, d2: 9 }), [4, 2]);
+  assert.deepEqual(domainsOf({ z: { PSI90: null, CLABSI: 1, CAUTI: null }, d1: 9, d2: 9 }), [null, 1]);
+  assert.deepEqual(domainsOf({ z: { PSI90: null, CLABSI: null }, d1: 2, d2: 4 }), [2, 4]);
+  assert.deepEqual(domainsOf({ z: {} }), [null, null]);
 });
 
 test('ruleFor: the rule in force each fiscal year; equal weights from FY2020, and before FY2015 there is none', () => {

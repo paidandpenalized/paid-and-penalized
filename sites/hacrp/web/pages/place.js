@@ -113,7 +113,7 @@ ${ruleFigure(pd, { highlight: ccns, searchUrl, caption: fill('placeRuleCaption',
 ${map && psec({ id: 'where', level: 2, heading: t('placeMapHeading'), text: html`<p>${t('placeMapText')}</p>`, figure: map })}
 ${hist && psec({ id: 'scores', level: 2, heading: t('placeHistHeading'), text: html`<p>${t('placeHistText')}</p>`, figure: hist })}
 ${measures && psec({ id: 'measures', level: 2, heading: t('placeMeasuresHeading'), text: html`<p>${t('placeMeasuresText')}</p>`, figure: measures })}
-${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeHistHeading', { name: nameInText(place, { start: true }) }), text: html`<p>${hfill('placeHistText', { name: nameInText(place) })}</p>`, figure: years })}
+${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeYearsHeading', { name: nameInText(place, { start: true }) }), text: html`<p>${hfill('placeYearsText', { name: nameInText(place) })}</p>`, figure: years })}
 ${kids ?? ''}
 ${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: nameInText(place) }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: nameInText(place) }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}
 <div class="prog__foot">

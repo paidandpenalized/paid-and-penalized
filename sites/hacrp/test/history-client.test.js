@@ -14,7 +14,7 @@ import { t as historyText } from '../web/history/copy.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { count } from '../../../web/render/format.js';
 import { historyData } from '../web/history-data.js';
-import { placeMembers, placeYearsFigure, rollAsset, rollFigure, yearMapFigure } from '../web/history-figures.js';
+import { HIST_MAP_WIDE, placeMembers, placeYearsFigure, rollAsset, rollFigure, yearMapFigure } from '../web/history-figures.js';
 import { DATA, PLACES } from './pinned.js';
 
 const HD = historyData({ history: DATA.history, master: DATA.master });
@@ -123,8 +123,9 @@ function hospitalsStub(rows, hospitalPath = '/hacrp/hospital/') {
   return load;
 }
 
-// A document that makes the SVG nodes the roll call draws (the column outline, the picked-state ticks).
-const documentStub = () => ({ createElementNS: (ns, tag) => el({ ns, tag }) });
+// A document that makes the SVG nodes the roll call draws (the column outline, the picked-state ticks), and holds the
+// page's JSON scripts by id (scripts: { id: text }; a place page's grid order).
+const documentStub = (scripts = {}) => ({ createElementNS: (ns, tag) => el({ ns, tag }), getElementById: (id) => (id in scripts ? { textContent: scripts[id] } : null) });
 
 // A window that records the pages it is sent to.
 const windowStub = () => {
@@ -157,6 +158,9 @@ const viewBoxOf = (tag) => /viewBox="0 0 (\d+) (\d+)"/.exec(tag).slice(1).map(Nu
 const drawings = (markup, kind) => markup.split('<svg ').slice(1).map((chunk) => `<svg ${chunk}`).filter((s) => s.startsWith('<svg') && new RegExp(`^<svg [^>]*chart--${kind}[ "]`).test(s));
 const openTag = (svg) => /^<svg[^>]*>/.exec(svg)[0];
 
+// The JSON scripts in a figure's markup, by id, as a page's document holds them.
+const scriptsOf = (markup) => Object.fromEntries([...markup.matchAll(/<script type="application\/json" id="([^"]+)">([^<]*)<\/script>/g)].map(([, id, body]) => [id, body]));
+
 // The rig for a roll figure's markup: the box's attributes, a stand-in SVG at each drawn size, the picker's options.
 function rigFromMarkup(markup) {
   const sizes = drawings(markup, 'roll').map((s) => viewBoxOf(openTag(s)));
@@ -164,14 +168,17 @@ function rigFromMarkup(markup) {
   return rollRig({ dataset: datasetOf(/<div class="roll"[^>]*>/.exec(markup)[0]), sizes, options, readoutData: datasetOf(/<p class="roll__readout[^>]*>/.exec(markup)[0]) });
 }
 
-// The runs (or cells) the drawing paints in its first row, by ink: [start, end] in SVG units. The first row's cells
-// begin at y = 4 (the roll call's top margin).
+// The runs (or cells) the drawing paints in its first row, by ink: [start, end] in SVG units. Each run is a stroke
+// "M x y H x2" along its row's band; the first row's is the one highest up.
 function firstRowRuns(svg) {
-  const runs = (cls) => {
-    const d = new RegExp(`<path class="${cls}" d="([^"]*)"`).exec(svg)[1];
-    return [...d.matchAll(/M([\d.]+) 4H([\d.]+)v/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  const moves = (cls) => {
+    const d = new RegExp(`<path class="${cls}" stroke-width="[\\d.]+" d="([^"]*)"`).exec(svg)[1];
+    return [...d.matchAll(/M([\d.]+) ([\d.]+)H([\d.]+)/g)].map((m) => m.slice(1).map(Number));
   };
-  return { yes: runs('chart-roll__yes'), no: runs('chart-roll__no') };
+  const all = { yes: moves('chart-roll__yes'), no: moves('chart-roll__no') };
+  const top = Math.min(...[...all.yes, ...all.no].map(([, y]) => y));
+  const row = (list) => list.filter(([, y]) => y === top).map(([a, , b]) => [a, b]);
+  return { yes: row(all.yes), no: row(all.no) };
 }
 // Where to put the pointer for some of a list of runs (its first, middle and last): the middle of each, and just inside
 // both ends of one wide enough to have an inside.
@@ -191,6 +198,8 @@ const SYN = {
   ccns: ['990001', '990002', '99A003', '990004', '990005'],
   recs: ['YYN', 'YN.', 'NYN', '.YY', 'NNN'],
   states: ['AL', 'AL', 'MD', 'MD', 'AL'],
+  // Each year's [cut, ever cut by then].
+  counts: [[2, 2], [3, 4], [1, 4]],
 };
 const SYN_ROWS = [
   ['990001', 'Example One', 'Alphaville', 'AL', '0.5000', 'Yes', '35000'],
@@ -198,7 +207,7 @@ const SYN_ROWS = [
   ['99A003', 'Example Three', 'Gammaville', 'MD', '0.1000', 'No', '21000'],
   ['990005', 'Example Five', 'Epsilonville', 'AL', '-0.2000', 'No', '35001'],
 ];
-// The geometry the build writes (history-figures.js ROLL_GEOM): [label column, right margin, row height, top] by width.
+// The geometry the build writes (history-figures.js rollGeom): [label column, right margin, row height, top] by width.
 const SYN_GEOM = { 300: [30, 0, 11, 4], 1180: [40, 0, 17, 4] };
 // The middle of grid column j at a drawn width.
 const middle = (j, width, [label, right], n = SYN.ccns.length) => label + ((j + 0.5) * (width - label - right)) / n;
@@ -362,12 +371,12 @@ test('mountRoll: an outline marks the column under the pointer, one rect that mo
     assert.deepEqual([wide.cursor.attrs.x, wide.cursor.attrs.width], [(40 + 3 * w - 1).toFixed(1), (w + 2).toFixed(1)]);
   }));
 
-test('mountRoll, a place page: the grid\'s order is on the figure (data-inline) and the history asset is never fetched', () =>
-  withGlobals({ window: windowStub(), document: documentStub() }, () => withGlobals({ fetch: fetchStub({ [ROLL_URL]: fail(500) }) }, async () => {
+test('mountRoll, a place page: the grid\'s order is on the page (the JSON script data-inline names) and the history asset is never fetched', () =>
+  withGlobals({ window: windowStub(), document: documentStub({ 'place-order': JSON.stringify(SYN) }) }, () => withGlobals({ fetch: fetchStub({ [ROLL_URL]: fail(500) }) }, async () => {
     const geom = { 300: [30, 70], 760: [40, 90] };
     const hospitals = hospitalsStub(SYN_ROWS);
     // data-roll is not on a place's figure; if it were, the inline order still wins.
-    const rig = rollRig({ dataset: { geom: JSON.stringify(geom), inline: JSON.stringify(SYN), src: HOSPITALS_URL, roll: ROLL_URL }, sizes: [[300, 100], [760, 100]] });
+    const rig = rollRig({ dataset: { geom: JSON.stringify(geom), inline: 'place-order', src: HOSPITALS_URL, roll: ROLL_URL }, sizes: [[300, 100], [760, 100]] });
     mountRoll(rig.fig, { hospitals });
     rig.svgs[1].handlers.pointermove(at(middle(0, 760, geom[760])));
     await settle();
@@ -424,9 +433,9 @@ test('mountRoll, the state picker: it shows, ticks the state\'s columns at each 
 const GAPPED = { fys: [2024, 2025, 2026, 2027], ccns: SYN.ccns, recs: ['Y.YN', 'N.NN', 'Y.N.', '..YY', 'N.NN'], states: SYN.states };
 
 test('mountRoll, the state picker: a tick runs through each stretch of years that have any decision, and breaks around a year with none', () =>
-  withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({}) }, async () => {
+  withGlobals({ window: windowStub(), document: documentStub({ gapped: JSON.stringify(GAPPED) }), fetch: fetchStub({}) }, async () => {
     const options = [{ value: '', textContent: 'Every state' }, { value: 'AL', textContent: 'Alabama' }];
-    const rig = rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), inline: JSON.stringify(GAPPED), src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], options });
+    const rig = rollRig({ dataset: { geom: JSON.stringify(SYN_GEOM), inline: 'gapped', src: HOSPITALS_URL }, sizes: [[300, 100], [1180, 100]], options });
     mountRoll(rig.fig, { hospitals: hospitalsStub(SYN_ROWS) });
     rig.select.value = 'AL';
     rig.select.handlers.change();
@@ -557,7 +566,9 @@ test('a place page\'s roll call: the order is on the figure, agrees with the his
   const place = [...PLACES.list].filter((p) => p.kind === 'state').sort((a, b) => b.ccns.length - a.ccns.length)[0];
   const markup = placeYearsFigure({ place, hd: HD, master: DATA.master, next: () => 1, source: 'Synthetic source', src: HOSPITALS_URL }).toString();
   const rig = rigFromMarkup(markup);
-  const inline = JSON.parse(rig.box.dataset.inline);
+  const scripts = scriptsOf(markup);
+  const inline = JSON.parse(scripts[rig.box.dataset.inline]);
+  assert.deepEqual(Object.keys(scripts), [rig.box.dataset.inline], 'the order is one JSON script in the figure, named by data-inline');
   assert.equal(rig.box.dataset.roll, undefined, 'no history asset on a place page');
   assert.equal(rig.box.dataset.src, HOSPITALS_URL, 'place.js mounts the grids that name the hospitals asset');
   assert.deepEqual(inline.fys, HD.fys);
@@ -570,7 +581,7 @@ test('a place page\'s roll call: the order is on the figure, agrees with the his
   const geom = JSON.parse(rig.box.dataset.geom);
   assert.deepEqual(rig.svgs.map((s) => String(s.viewBox.baseVal.width)).sort(), Object.keys(geom).sort());
 
-  return withGlobals({ window: windowStub(), document: documentStub(), fetch: fetchStub({}) }, async () => {
+  return withGlobals({ window: windowStub(), document: documentStub(scripts), fetch: fetchStub({}) }, async () => {
     const rows = inline.ccns.map((ccn, j) => [ccn, `Example ${ccn}`, 'Exampleton', inline.states[j], '0.0000', 'No', '00000']);
     mountRoll(rig.fig, { hospitals: hospitalsStub(rows) });
     const svgs = drawings(markup, 'roll');
@@ -604,13 +615,13 @@ test('a place page\'s roll call: the order is on the figure, agrees with the his
 // ---------- mountYearMap ----------
 
 // The year map's figure: the box (its data-roll), the controls, a button for each year, the play button, the readout,
-// and an SVG with its dots group for each drawn width. The group starts with the markup the build drew.
-function yearRig({ roll = ROLL_URL, years = SYN.fys.length, widths = [300, 960], built = '<path class="built"/>', play = { play: 'Play', stop: 'Stop' } } = {}) {
+// and its one SVG with its dots group. The group starts with the markup the build drew.
+function yearRig({ roll = ROLL_URL, years = SYN.fys.length, widths = [960], built = '<path class="built"/>', play = { play: 'Play', stop: 'Stop' } } = {}) {
   const buttons = Array.from({ length: years }, (_, i) => el({ dataset: { i: String(i) }, attrs: { 'aria-pressed': String(i === years - 1) } }));
   const playButton = el({ dataset: play, textContent: play.play });
   const controls = el({ hidden: true });
   const readout = el({ textContent: 'as built' });
-  const groups = widths.map((w, i) => el({ dataset: { size: i ? '4.2' : '2.4' }, innerHTML: built }));
+  const groups = widths.map(() => el({ dataset: { size: '4.2' }, innerHTML: built }));
   const svgs = widths.map((w, i) => el({ viewBox: { baseVal: { width: w } }, querySelector: (s) => (s === '.chart-years__dots' ? groups[i] : null) }));
   const box = el({
     dataset: roll ? { roll } : {},
@@ -630,15 +641,13 @@ function dotsIn(innerHTML) {
 }
 const [CLEAR, SCAR, NOW] = [YEAR_CLASSES.clear, YEAR_CLASSES.scar, YEAR_CLASSES.now];
 
-// Five hospitals over three years with a place on the map at two widths (tenths of a unit; null: no place). Worked
-// by hand, A: 'YNN' B: 'NYN' C: '.YY' D: '..N' E: 'NNN' (no place).
+// Five hospitals over three years with a place on the map (tenths of a unit; null: no place), and each year's
+// [cut, ever cut]. Worked by hand, A: 'YNN' B: 'NYN' C: '.YY' D: '..N' E: 'NNN' (no place).
 const YEARS_ASSET = {
   fys: [2024, 2025, 2026],
   recs: ['YNN', 'NYN', '.YY', '..N', 'NNN'],
-  at: {
-    300: [100, 200, 300, 400, 500, 600, 700, 800, null, null],
-    960: [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, null, null],
-  },
+  counts: [[1, 1], [2, 3], [1, 3]],
+  at: [100, 200, 300, 400, 500, 600, 700, 800, null, null],
 };
 
 test('mountYearMap: a figure without a year map, or a year map without the history asset, is left as it was', () => {
@@ -650,7 +659,7 @@ test('mountYearMap: a figure without a year map, or a year map without the histo
   assert.deepEqual(rig.buttons.flatMap((b) => Object.keys(b.handlers)), []);
 });
 
-test('mountYearMap: the controls appear; a year\'s button draws that year\'s dots at each width, says it, and marks the button pressed', () =>
+test('mountYearMap: the controls appear; a year\'s button draws that year\'s dots, says it, and marks the button pressed', () =>
   withGlobals({ fetch: fetchStub({ [ROLL_URL]: ok(YEARS_ASSET) }) }, async () => {
     const rig = yearRig();
     mountYearMap(rig.fig);
@@ -662,11 +671,10 @@ test('mountYearMap: the controls appear; a year\'s button draws that year\'s dot
     };
     // 2024: A cut (now), B not cut yet cut never (clear); C and D have no decision, E has no place.
     await year(0);
-    let [narrow, wide] = rig.groups.map((g) => dotsIn(g.innerHTML));
+    let [narrow] = rig.groups.map((g) => dotsIn(g.innerHTML));
     assert.deepEqual(Object.keys(narrow).sort(), [CLEAR, NOW].sort());
     assert.equal(narrow[NOW].d, 'M10 20h0');
     assert.equal(narrow[CLEAR].d, 'M30 40h0');
-    assert.equal(wide[NOW].d, 'M100 200h0', 'the wide map reads the wide placements');
     assert.deepEqual(rig.buttons.map((b) => b.attrs['aria-pressed']), ['true', 'false', 'false']);
     assert.equal(rig.readout.textContent, fill('ymapSay', { fy: '2024', cut: '1', ever: '1' }));
     // 2025: B and C cut now; A cut earlier (scar); D has no decision yet.
@@ -690,7 +698,7 @@ test('mountYearMap: the controls appear; a year\'s button draws that year\'s dot
   }));
 
 test('mountYearMap: a year CMS cut no one says so; an asset with no placements still says the year and leaves the dots as built', () =>
-  withGlobals({ fetch: fetchStub({ [ROLL_URL]: ok({ fys: [2022, 2023], recs: ['YN', 'NN', 'N.'] }) }) }, async () => {
+  withGlobals({ fetch: fetchStub({ [ROLL_URL]: ok({ fys: [2022, 2023], recs: ['YN', 'NN', 'N.'], counts: [[1, 1], [0, 1]] }) }) }, async () => {
     const rig = yearRig({ years: 2, built: '<path class="built"/>' });
     mountYearMap(rig.fig);
     rig.buttons[0].handlers.click();
@@ -699,7 +707,7 @@ test('mountYearMap: a year CMS cut no one says so; an asset with no placements s
     rig.buttons[1].handlers.click();
     await settle();
     assert.equal(rig.readout.textContent, fill('ymapSayNone', { fy: '2023', ever: '1' }));
-    assert.deepEqual(rig.groups.map((g) => g.innerHTML), ['<path class="built"/>', '<path class="built"/>'], 'no placements, no redraw');
+    assert.deepEqual(rig.groups.map((g) => g.innerHTML), ['<path class="built"/>'], 'no placements, no redraw');
   }));
 
 test('mountYearMap: a history asset that will not load is let go quietly, and the next year asked for tries again', () => noUnhandled(async () => {
@@ -711,7 +719,7 @@ test('mountYearMap: a history asset that will not load is let go quietly, and th
     rig.buttons[0].handlers.click();
     await settle();
     assert.equal(rig.readout.textContent, 'as built');
-    assert.deepEqual(rig.groups.map((g) => g.innerHTML), ['<path class="built"/>', '<path class="built"/>']);
+    assert.deepEqual(rig.groups.map((g) => g.innerHTML), ['<path class="built"/>']);
     rig.buttons[0].handlers.click();
     await settle();
     assert.equal(rig.readout.textContent, fill('ymapSay', { fy: '2024', cut: '1', ever: '1' }));
@@ -808,14 +816,15 @@ function yearRigFromMarkup(markup) {
   return { ...rig, built, buttons: rig.buttons.map((b, i) => Object.assign(b, { dataset: buttons[i] })) };
 }
 
-test('the year map the build draws: the placements are at the widths drawn, and the newest year the script redraws is the one the build drew', () => {
+test('the year map the build draws: one drawing, the placements are its, and the newest year the script redraws is the one the build drew', () => {
   const markup = yearMapFigure(HD, { n: 1, source: 'Synthetic source', shapes: DATA.shapes, master: DATA.master, rollUrl: ROLL_URL }).toString();
   const rig = yearRigFromMarkup(markup);
   assert.equal(rig.box.dataset.roll, ROLL_URL);
   assert.equal(rig.buttons.length, HD.fys.length, 'a button for each year');
   assert.deepEqual(rig.buttons.map((b) => b.dataset.i), HD.fys.map((_, i) => String(i)));
-  assert.deepEqual(Object.keys(ASSET.at).sort(), rig.built.map((b) => String(b.width)).sort(), 'the asset places each hospital at the widths the map is drawn at');
-  for (const flat of Object.values(ASSET.at)) assert.equal(flat.length, 2 * ASSET.ccns.length);
+  assert.deepEqual(rig.built.map((b) => b.width), [HIST_MAP_WIDE], 'one drawing at every width; charts.css sizes its dots');
+  assert.equal(ASSET.at.length, 2 * ASSET.ccns.length);
+  assert.doesNotMatch(markup, /data-fit=/);
   assert.match(markup, /<ul class="ymap__key"/);
 
   return withGlobals({ fetch: fetchStub({ [ROLL_URL]: ok(ASSET) }) }, async () => {
@@ -844,7 +853,7 @@ test('the year map for every year: each ink\'s dots are the hospitals in it that
       cutNone += c.cut ? 0 : 1;
       assert.deepEqual(rig.buttons.map((b) => b.attrs['aria-pressed']), rig.buttons.map((_, k) => String(k === i)));
       for (const [g, built] of rig.groups.map((g, k) => [g, rig.built[k]])) {
-        const flat = ASSET.at[String(built.width)];
+        const flat = ASSET.at;
         const recs = ASSET.recs.filter(placed(flat));
         const dots = dotsIn(g.innerHTML);
         const n = (cls) => dots[cls]?.n ?? 0;
@@ -863,12 +872,12 @@ test('the year map for every year: each ink\'s dots are the hospitals in it that
 
 // A document whose queries find the given nodes by the one kind of selector the entry scripts use for them: a class,
 // and optionally an attribute that must be present (".roll[data-src]").
-function pageDocument(nodes) {
+function pageDocument(nodes, scripts = {}) {
   const matches = (node, selector) => {
     const m = /^\.([\w-]+)(?:\[data-([\w-]+)\])?$/.exec(selector);
     return Boolean(m) && node.classes.has(m[1]) && (!m[2] || node.dataset[m[2]] !== undefined);
   };
-  return { querySelector: () => null, querySelectorAll: (selector) => nodes.filter((n) => matches(n, selector)), createElement: () => el(), createElementNS: (ns, tag) => el({ ns, tag }) };
+  return { ...documentStub(scripts), querySelector: () => null, querySelectorAll: (selector) => nodes.filter((n) => matches(n, selector)), createElement: () => el() };
 }
 
 test('program.js mounts every roll call and year map on the page, with the hospitals asset the page names', async () => {
@@ -885,18 +894,19 @@ test('program.js mounts every roll call and year map on the page, with the hospi
     assert.deepEqual(f.calls, [ROLL_URL, HOSPITALS_URL]);
     ymap.buttons[0].handlers.click();
     await settle();
-    assert.equal(f.calls.at(-1), ROLL_URL);
+    assert.equal(ymap.readout.textContent, fill('ymapSay', { fy: '2024', cut: '2', ever: '2' }));
+    assert.deepEqual(f.calls, [ROLL_URL, HOSPITALS_URL], 'the year map reads the history asset the roll call fetched');
   });
 });
 
 test('place.js mounts the roll calls that name the hospitals asset, and no others', async () => {
   const geom = { 300: [30, 70], 760: [40, 90] };
-  const inline = JSON.stringify(SYN);
+  const inline = 'place-order';
   const named = rollRig({ dataset: { geom: JSON.stringify(geom), inline, src: HOSPITALS_URL }, sizes: [[300, 100], [760, 100]] });
   const unnamed = rollRig({ dataset: { geom: JSON.stringify(geom), inline }, sizes: [[300, 100]] });
   const ymap = yearRig();
   const f = fetchStub({ [HOSPITALS_URL]: ok({ hospitalPath: '/hacrp/hospital/', rows: SYN_ROWS }) });
-  await withGlobals({ document: pageDocument([named.box, unnamed.box, ymap.box]), window: windowStub(), fetch: f }, async () => {
+  await withGlobals({ document: pageDocument([named.box, unnamed.box, ymap.box], { [inline]: JSON.stringify(SYN) }), window: windowStub(), fetch: f }, async () => {
     await import('../client/place.js');
     assert.deepEqual(Object.keys(named.svgs[0].handlers).sort(), ['click', 'pointerenter', 'pointermove']);
     assert.deepEqual(unnamed.svgs[0].handlers, {}, 'a grid without data-src is left a picture');

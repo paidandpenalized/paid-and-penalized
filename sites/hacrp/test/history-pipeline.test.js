@@ -209,9 +209,8 @@ test('infectionYear: an odd count has the middle SIR for its median; the predict
   const y = infectionYear(2019, rows);
   assert.equal(y.measures.SSI_COLON.median, 2);
   assert.equal(y.measures.SSI_COLON.predicted, 0.3, '0.1 + 0.1 + 0.1 is 0.30000000000000004');
-  // A negative or non-decimal SIR is no SIR.
-  const odd = infectionYear(2019, [haiRow('990001', 2019, { 4: { hai_4_sir: '-1', hai_4_observed: '1e3', hai_4_predicted: '2' } })]);
-  assert.deepEqual(odd.measures.SSI_HYST, { hospitals: 0, median: null, counted: 0, observed: 0, predicted: 0 });
+  // Text that is neither a number nor Not Available stops the build (the extract holds only those; hai_extract.py).
+  assert.throws(() => infectionYear(2019, [haiRow('990001', 2019, { 4: { hai_4_sir: '1.0', hai_4_observed: '1e3', hai_4_predicted: '2' } })]), /"hai_4_observed" is not a number: "1e3"/);
 });
 
 test('infectionYear: the extract must be exactly the calendar year asked for', () => {

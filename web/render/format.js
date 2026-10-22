@@ -1,6 +1,7 @@
 // Display formatting. CMS's own text is shown as CMS published it; only the hyphen-minus becomes a true minus.
 const MINUS = '−';
 const NUMBER = new Intl.NumberFormat('en-US');
+const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
   'November', 'December'];
 
@@ -8,6 +9,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 export const cmsText = (text) => String(text).replace(/^-(?=[\d.])/, MINUS);
 
 export const count = (n) => NUMBER.format(n);
+
+// Words joined as a list: "A", "A and B", "A, B, and C".
+export const listText = (xs) => LIST.format(xs);
 
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);

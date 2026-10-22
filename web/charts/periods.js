@@ -2,9 +2,10 @@
 // payments change, as bars on one calendar axis, so the lag between the care and the cut reads as a staircase.
 //   rows   [{ label, spans: [{ kind, start, end, tip }] }]: start and end as [year, month (1-12), day]; kind names
 //          the bar's class (chart-periods__<kind>)
-//   ticks  the years to label on the axis (January 1 of each)
+//   kinds  the span kinds in the order their bars stack within a row
+// The axis runs over whole calendar years, each labeled at its middle (every other one on a phone).
 import { html } from '../render/html.js';
-import { frame, mark, r2, text } from './svg.js';
+import { frame, isNarrow, mark, r2, text } from './svg.js';
 
 const LABEL = 58;
 const ROW = 22;
@@ -25,10 +26,10 @@ export function periodsChart({ rows, kinds, width }) {
   const x = (d) => LABEL + ((d - lo) / (hi - lo)) * (width - LABEL);
   const height = TOP + rows.length * ROW + AXIS;
   const years = Array.from({ length: y1 - y0 + 1 }, (_, i) => y0 + i);
-  const every = width < 400 ? 2 : 1;
+  const every = isNarrow(width) ? 2 : 1;
   const grid = years.map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(TOP + rows.length * ROW)}"/>`);
   const tickLabels = years.slice(0, -1).filter((_, i) => i % every === 0)
-    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: TOP + rows.length * ROW + 15, cls: 'chart-tick', body: String(yr).slice(width < 400 ? 2 : 0) }));
+    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: TOP + rows.length * ROW + 15, cls: 'chart-tick', body: String(yr).slice(isNarrow(width) ? 2 : 0) }));
   const body = rows.map((r, i) => {
     const mid = TOP + i * ROW + ROW / 2;
     const bars = r.spans.map((s) => {

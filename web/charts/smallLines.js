@@ -1,9 +1,9 @@
 // Small multiples of one line each: a panel per series on a shared scale, the years along the bottom, a reference
 // line across every panel (e.g. an SIR of 1, as predicted), each year a dot with its tooltip, and the change from the
 // first point to the last printed in the panel's corner. A year with no value breaks the line.
-//   panels  [{ label, points: [{ x, y, tip }], change, pen, under }]: y null for no value; change: the corner's text;
-//           pen: draw the line in the penalty ink; under: optional points of a second, gray line drawn beneath (e.g.
-//           the nation's), with underLabel printed under its last point
+//   panels  [{ label, points: [{ x, y, tip }], change, under }]: y null for no value; change: the corner's text;
+//           under: optional points of a second, gray line drawn beneath (e.g. the nation's), with underLabel printed
+//           under it, about six tenths of the way along
 //   xs      every x the panels share, in order (their ticks)
 //   cols    panels per row; tall: a taller panel (a figure of one)
 //   labels  { x(v): a tick's text, ref: the reference line's name (first panel), point(v): a labeled point's text,
@@ -11,26 +11,21 @@
 //           underSolid: draw the second line solid gray (a comparison, set apart from the dashed reference)
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
-import { frame, mark, r2, text } from './svg.js';
+import { frame, isNarrow, lineD, mark, r2, text } from './svg.js';
 
 const PANEL_H = 120;
 const GAP_X = 18;
 const GAP_Y = 30;
 const TOP = 18;
 
-// A line through the points with a value; a point without one breaks it.
-function lineD(points, x, y) {
-  let d = '';
-  let open = false;
-  for (const pt of points) {
-    if (pt.y === null) { open = false; continue; }
-    d += `${open ? 'L' : 'M'}${r2(x(pt.x))} ${r2(y(pt.y))}`;
-    open = true;
-  }
-  return d;
+// The second line's label, under it about six tenths of the way along its points with a value.
+function underLabel(p, x, y) {
+  const at = p.under.filter((u) => u.y !== null);
+  const u = at[Math.floor(at.length * 0.6)];
+  return u ? text({ x: x(u.x), y: y(u.y) + 14, cls: 'chart-cap chart-label--halo', body: p.underLabel }) : '';
 }
 
-export function smallLines({ panels, xs, yMax, ref = null, labels, width, format, cols = width < 400 ? 2 : 3, tall = false }) {
+export function smallLines({ panels, xs, yMax, ref = null, labels, width, format, cols = isNarrow(width) ? 2 : 3, tall = false }) {
   const rows = Math.ceil(panels.length / cols);
   const pw = (width - GAP_X * (cols - 1)) / cols;
   const ph = tall ? PANEL_H * 1.7 : PANEL_H;
@@ -48,7 +43,7 @@ export function smallLines({ panels, xs, yMax, ref = null, labels, width, format
     const x = scaleLinear().domain([xs[0], xs[xs.length - 1]]).range([x0, x1]);
     const y = scaleLinear().domain([0, yMax]).range([oy + ph, oy + 4]);
     const d = lineD(p.points, x, y);
-    const every = width < 400 ? 3 : 2;
+    const every = isNarrow(width) ? 3 : 2;
     const valueAt = (pts, i, dy) => (pts[i]?.y == null ? '' : text({ x: x(pts[i].x), y: y(pts[i].y) + dy, cls: 'chart-value chart-value--mark chart-label--halo', body: labels.point(pts[i].y) }));
     return html`<g>
 ${text({ x: ox, y: oy - (twoLine ? 18 : 6), anchor: 'start', cls: 'chart-label', body: p.label })}
@@ -60,9 +55,9 @@ ${ref === null ? text({ x: x0 - 4, y: y(yMax) + 4, anchor: 'end', cls: 'chart-ti
 ${xs.map((v, i) => ((xs.length - 1 - i) % every === 0 ? text({ x: x(v), y: oy + ph + 14, anchor: i === xs.length - 1 ? 'end' : 'middle', dx: i === xs.length - 1 ? 6 : 0, cls: 'chart-tick', body: labels.x(v) }) : ''))}
 ${labels.xTitle ? text({ x: (x0 + x1) / 2, y: oy + ph + 32, cls: 'chart-cap', body: labels.xTitle }) : ''}
 ${p.under ? html`<path class="chart-lines__under${p.underSolid ? ' chart-lines__under--solid' : ''}" d="${lineD(p.under, x, y)}"/>` : ''}
-${p.underLabel ? (() => { const at = p.under.filter((u) => u.y !== null); const u = at[Math.floor(at.length * 0.6)]; return u ? text({ x: x(u.x), y: y(u.y) + 14, cls: 'chart-cap chart-label--halo', body: p.underLabel }) : ''; })() : ''}
-<path class="chart-lines__line${p.pen ? ' chart-lines__line--pen' : ''}" d="${d}"/>
-${p.points.filter((pt) => pt.y !== null).map((pt) => mark({ tip: pt.tip, value: pt.y, hit: { x: x(pt.x) - 8, y: oy, width: 16, height: ph }, body: html`<circle class="chart-lines__dot${p.pen ? ' chart-lines__dot--pen' : ''}" cx="${r2(x(pt.x))}" cy="${r2(y(pt.y))}" r="3"/>` }))}
+${p.underLabel ? underLabel(p, x, y) : ''}
+<path class="chart-lines__line" d="${d}"/>
+${p.points.filter((pt) => pt.y !== null).map((pt) => mark({ tip: pt.tip, value: pt.y, hit: null, body: html`<circle class="chart-lines__dot" cx="${r2(x(pt.x))}" cy="${r2(y(pt.y))}" r="3"/>` }))}
 ${(p.labelAt ?? []).map((i) => html`${valueAt(p.points, i, -9)}${p.under ? valueAt(p.under, i, 16) : ''}`)}
 </g>`;
   });

@@ -4,21 +4,21 @@
 // decision against the line this site finds, each year), the formula, what comes from CMS and what this site works
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
 // glossary, and a link to the family's page for feedback, privacy and AI.
-import { stamp, typeset } from '../../../../web/render/components.js';
-import { count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
+import { printout, stamp, typeset } from '../../../../web/render/components.js';
+import { count, decimal, isoDate, listText, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { LINE_PERCENTILE, SCORE_TOLERANCE } from '../../../../engine/js/hacrp/history.js';
+import { LINE_PERCENTILE } from '../../../../engine/js/hacrp/history.js';
 import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
+import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
+import { checkTotals, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
 import { kicker, siteHeader } from './parts.js';
 
 export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
 
-const ord = (n) => ordinal(n);
 const para = (text) => html`<p>${text}</p>`;
 
 // A section of the page: its heading, words, and (optionally) a figure beside them.
@@ -30,36 +30,34 @@ ${body}
 ${fig ? html`<div class="msec__fig">${fig}</div>` : ''}
 </section>`;
 
-// The rows CMS footnoted that the public parts don't add up to, by year, if any.
+// The rows whose total the public parts don't add up to because CMS withheld a part, by year, if any.
 function withheldNote(checks) {
-  const years = checks.filter((c) => c.check.withheld.length);
-  if (!years.length) return '';
-  const n = years.reduce((s, c) => s + c.check.withheld.length, 0);
-  return para(fill('proofText3', { years: listText(years.map((c) => `FY${c.fy}`)), short: SHORT_NAMES.PSI90, n: count(n) }));
+  const { withheld } = checkTotals(checks);
+  if (!withheld) return '';
+  const years = checks.filter((c) => c.check.withheld.length).map((c) => fyLabel(c.fy));
+  return para(fill('proofText3', { years: listText(years), short: SHORT_NAMES.PSI90, n: count(withheld) }));
 }
 
 // A year's line counts as above the 75th percentile when it sits more than this share of the scores past it (a
 // display threshold: one or two hospitals either way is the arithmetic of whole hospitals, not a different line).
 const ABOVE_BY = 0.005;
-// "A", "A and B", "A, B and C".
-const listText = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} ${t('and')} ${xs[xs.length - 1]}`);
 
 // What the decision check found beyond order: the years the line lands on the 75th percentile of the published
 // scores, the years it sits above it, and the most hospitals ever tied exactly at the line.
 function sidesNotes(checks) {
   const decided = checks.filter((c) => c.check.yes);
-  const on = decided.filter((c) => c.check.p75InGap).map((c) => `FY${c.fy}`);
-  const above = decided.filter((c) => !c.check.p75InGap && c.check.linePct > LINE_PERCENTILE + ABOVE_BY).map((c) => `FY${c.fy}`);
+  const on = decided.filter((c) => c.check.p75InGap).map((c) => fyLabel(c.fy));
+  const above = decided.filter((c) => !c.check.p75InGap && c.check.linePct > LINE_PERCENTILE + ABOVE_BY).map((c) => fyLabel(c.fy));
   const ties = [...decided].sort((a, b) => b.check.atLine - a.check.atLine)[0];
-  return html`${on.length ? para(fill('sidesOn', { years: listText(on), percentile: ord(CUTOFF_PERCENTILE) })) : ''}${above.length ? para(fill('sidesAbove', { years: listText(above), percentile: ord(CUTOFF_PERCENTILE) })) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
+  return html`${on.length ? para(fill('sidesOn', { years: listText(on), percentile: ordinal(CUTOFF_PERCENTILE) })) : ''}${above.length ? para(fill('sidesAbove', { years: listText(above), percentile: ordinal(CUTOFF_PERCENTILE) })) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
 }
 
 // The glossary's entries, in reading order: [term key, definition key, values].
 const GLOSSARY = (v) => [
   ['glHac', 'glHacIs'], ['glHai', 'glHaiIs'], ['glPsi', 'glPsiIs', null, { short: SHORT_NAMES.PSI90 }], ['glNhsn', 'glNhsnIs'],
   ['glSir', 'glSirIs', { one: SIR_EXPECTED_TEXT }], ['glPredicted', 'glPredictedIs', { one: SIR_EXPECTED_TEXT }], ['glSd', 'glSdIs'],
-  ['glZ', 'glZIs'], ['glWinsor', 'glWinsorIs', { low: ord(WINSOR_LOW), high: ord(WINSOR_HIGH) }], ['glTotal', 'glTotalIs'],
-  ['glLine', 'glLineIs', { percentile: ord(CUTOFF_PERCENTILE) }], ['glCut', 'glCutIs', { pct: REDUCTION_TEXT }], ['glSubject', 'glSubjectIs'],
+  ['glZ', 'glZIs'], ['glWinsor', 'glWinsorIs', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) }], ['glTotal', 'glTotalIs'],
+  ['glLine', 'glLineIs', { percentile: ordinal(CUTOFF_PERCENTILE) }], ['glCut', 'glCutIs', { pct: REDUCTION_TEXT }], ['glSubject', 'glSubjectIs'],
   ['glFy', 'glFyIs'], ['glPeriod', 'glPeriodIs'], ['glAssigned', 'glAssignedIs'], ['glMaryland', 'glMarylandIs'], ['glCcn', 'glCcnIs'],
   ['glMedian', 'glMedianIs'], ['glDomain', 'glDomainIs', { eqFy: String(v.eqFy) }],
 ];
@@ -72,11 +70,7 @@ export function methodsPage({ fy, checks, years, newest, pins, changes, estimate
   const { subtitle } = SITE.sites.hacrp;
   const figureNo = counter();
   const last = checks[checks.length - 1];
-  const sum = (k) => checks.reduce((s, c) => s + (typeof c.check[k] === 'number' ? c.check[k] : c.check[k].length), 0);
-  const miss = Math.max(...checks.map((c) => c.check.maxError));
-  const wrong = sum('wrongSide');
   const source = newest.sourceLine;
-  const limit = decimal(SCORE_TOLERANCE, 3);
 
   const top = html`<header class="page__head meth__top">
 <div class="meth__intro">
@@ -94,18 +88,18 @@ ${stamp({ label: t('checkStamp') })}
   const sections = [
     { id: 'pipeline', heading: t('pipeHeading'), body: html`${para(t('pipeText'))}
 ${pipeline({ rows: newest.rows, source: newest.source, pin: newest.pin, measures: newest.measures, check: last.check, pages: newest.pages })}` },
-    { id: 'check', heading: t('proofHeading'), body: html`${para(fill('proofText', { limit }))}${para(t('proofText2'))}${withheldNote(checks)}`, fig: proofFigure(checks, { n: figureNo(), source }) },
+    { id: 'check', heading: t('proofHeading'), body: html`${para(fill('proofText', { limit: limitText }))}${para(t('proofText2'))}${withheldNote(checks)}`, fig: proofFigure(checks, { n: figureNo(), source }) },
     { id: 'decisions', heading: t('sidesHeading'), body: html`${para(t('sidesText'))}${para(t('sidesText2'))}${sidesNotes(checks)}`, fig: sidesFigure(checks, { n: figureNo(), source }) },
     { id: 'formula', heading: t('formulaHeading'), body: html`${para(t('formulaText'))}
 <dl class="formula">
-<dt>${t('formulaLimited')}</dt><dd>${fill('formulaLimitedIs', { low: ord(WINSOR_LOW), high: ord(WINSOR_HIGH) })}</dd>
+<dt>${t('formulaLimited')}</dt><dd>${fill('formulaLimitedIs', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) })}</dd>
 <dt>${t('formulaZ')}</dt><dd>${t('formulaZIs')}</dd>
 <dt>${t('formulaTotal')}</dt><dd>${t('formulaTotalIs')}</dd>
-<dt>${t('formulaCut')}</dt><dd>${fill('formulaCutIs', { percentile: ord(CUTOFF_PERCENTILE) })}</dd>
+<dt>${t('formulaCut')}</dt><dd>${fill('formulaCutIs', { percentile: ordinal(CUTOFF_PERCENTILE) })}</dd>
 </dl>
 ${para(t('formulaText2'))}${para(fill('formulaText3', { eqFy: String(eqFy), zFy: String(zFy) }))}` },
     { id: 'estimate', heading: t('sourceHeading'), body: html`${para(t('sourceText'))}
-<div class="printout"><div class="printout__scroll"><table class="gb takes">
+${printout(html`<table class="gb takes">
 <thead><tr><th scope="col">${t('sourceColShown')}</th><th scope="col">${t('sourceColFrom')}</th><th scope="col">${t('sourceColLabel')}</th></tr></thead>
 <tbody>${[
     ['srcRow1', 'srcRow1From', 'srcRow1Label', 'cms'],
@@ -116,7 +110,7 @@ ${para(t('formulaText2'))}${para(fill('formulaText3', { eqFy: String(eqFy), zFy:
     ['srcRow6', 'srcRow6From', 'srcRow6Label', 'hyp'],
     ['srcRow7', 'srcRow7From', 'srcRow7Label', 'cms'],
   ].map(([what, from, label, kind]) => html`<tr><th scope="row">${t(what)}</th><td>${typeof from === 'string' ? t(from) : from}</td><td><span class="takes__tag takes__tag--${kind}">${t(label)}</span></td></tr>`)}</tbody>
-</table></div></div>
+</table>`)}
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
 ${para(fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }))}
 <p><a href="/methods/#estimate">${t('estimateFamily')}</a></p>` },

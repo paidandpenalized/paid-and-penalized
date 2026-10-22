@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CUT, NONE, NOT_CUT, longestRun, panel, poissonBinomial, records, repeats, repeatsByGap, rollCallOrder, timesCut, timesCutVsChance, yearly, yearsDecided,
+  CUT, NONE, NOT_CUT, longestRun, panel, poissonBinomial, records, repeatsByGap, rollOrder, tallyYears, timesCut, timesCutVsChance, yearly, yearsDecided,
 } from '../../hacrp/trends.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
@@ -29,6 +29,12 @@ test('timesCut and yearsDecided count the characters', () => {
   assert.equal(timesCut('....'), 0);
   assert.equal(yearsDecided('YNY.'), 3);
   assert.equal(yearsDecided('....'), 0);
+});
+
+test('tallyYears: per year, the hospitals with a decision and those cut, over any set of records', () => {
+  const recs = new Map([['a', 'YYN.'], ['b', 'NYY.'], ['c', '.NYY'], ['d', 'NNNN']]);
+  assert.deepEqual(tallyYears(recs, 4), [{ decided: 3, cut: 1 }, { decided: 4, cut: 2 }, { decided: 4, cut: 2 }, { decided: 2, cut: 1 }]);
+  assert.deepEqual(tallyYears(new Map(), 2), [{ decided: 0, cut: 0 }, { decided: 0, cut: 0 }]);
 });
 
 test('yearly: hospitals with a decision, those cut, those cut for the first time, and the running count ever cut', () => {
@@ -95,17 +101,6 @@ test('timesCutVsChance: a hospital cut in every year it was decided is as rare a
   assert.deepEqual(r.chance, [1, 2, 1]);
 });
 
-test('repeats: year to year, of those with a decision in both years, how many cut before were cut again and how many not cut before were cut', () => {
-  const recs = new Map([['a', 'YYN'], ['b', 'YNY'], ['c', 'NY.'], ['d', 'N.Y'], ['e', '.YY']]);
-  assert.deepEqual(repeats(recs, 3), [
-    // 2020 to 2021: a Y->Y, b Y->N, c N->Y; d and e have no decision in both.
-    { from: 0, to: 1, cutBefore: 2, cutAgain: 1, notBefore: 1, cutNew: 1 },
-    // 2021 to 2022: a Y->N, b N->Y, e Y->Y; c and d have no decision in both.
-    { from: 1, to: 2, cutBefore: 2, cutAgain: 1, notBefore: 1, cutNew: 1 },
-  ]);
-  assert.deepEqual(repeats(recs, 1), []);
-});
-
 test('repeatsByGap: each gap of k years pools every pair of years k apart, and a year with no decisions never forms a pair', () => {
   const recs = new Map([['a', 'YNY'], ['b', 'NYN']]);
   assert.deepEqual(repeatsByGap(recs, 3), [
@@ -120,12 +115,10 @@ test('repeatsByGap: each gap of k years pools every pair of years k apart, and a
   assert.deepEqual(repeatsByGap(new Map([['a', 'YYY']]), 3), []);
 });
 
-test('repeatsByGap and repeats agree at a gap of one year', () => {
+test('repeatsByGap at a gap of one year: every pair of consecutive years with a decision in both, pooled', () => {
   const recs = new Map([['a', 'YYNY.'], ['b', 'NYYN.'], ['c', '.NYYY'], ['d', 'YNNNY']]);
-  const byYear = repeats(recs, 5);
-  const one = repeatsByGap(recs, 5)[0];
-  assert.equal(one.k, 1);
-  for (const key of ['cutBefore', 'cutAgain', 'notBefore', 'cutNew']) assert.equal(one[key], sum(byYear.map((r) => r[key])), key);
+  // a: Y->Y, Y->N, N->Y; b: N->Y, Y->Y, Y->N; c: N->Y, Y->Y, Y->Y; d: Y->N, N->N, N->N, N->Y.
+  assert.deepEqual(repeatsByGap(recs, 5)[0], { k: 1, cutBefore: 7, cutAgain: 4, notBefore: 6, cutNew: 4 });
 });
 
 test('longestRun: the most years cut in a row, a year with no decision breaking the run', () => {
@@ -137,13 +130,17 @@ test('longestRun: the most years cut in a row, a year with no decision breaking 
   assert.equal(longestRun(''), 0);
 });
 
-test('rollCallOrder: cut before not cut before no decision, year by year from the oldest, ties by CCN', () => {
+test('rollOrder: records compared year by year with no decision read as not cut, cut first; ties by the record, then CCN', () => {
   const recs = new Map([['990004', 'NY'], ['990001', '..'], ['990002', 'YN'], ['990005', 'Y.'], ['990003', 'YY'], ['990007', 'NY'], ['990006', 'NY']]);
-  assert.deepEqual(rollCallOrder(recs).map(([ccn]) => ccn), ['990003', '990002', '990005', '990004', '990006', '990007', '990001']);
-  assert.deepEqual(rollCallOrder(recs)[0], ['990003', 'YY'], 'each entry keeps its record');
-  assert.deepEqual(rollCallOrder(new Map()), []);
+  assert.deepEqual(rollOrder(recs).map(([ccn]) => ccn), ['990003', '990002', '990005', '990004', '990006', '990007', '990001']);
+  assert.deepEqual(rollOrder(recs)[0], ['990003', 'YY'], 'each entry keeps its record');
+  assert.deepEqual(rollOrder(new Map()), []);
   // The input is not reordered.
   assert.deepEqual([...recs.keys()][0], '990004');
+  // A hospital cut in the second year stands before one first cut in the third, whatever the first year held.
+  assert.deepEqual(rollOrder(new Map([['990001', 'N.Y'], ['990002', '.YN']])).map(([ccn]) => ccn), ['990002', '990001']);
+  // Never cut stands last; among equal keys, a decision stands before no decision.
+  assert.deepEqual(rollOrder(new Map([['990001', '.N'], ['990002', 'NN'], ['990003', 'NY']])).map(([ccn]) => ccn), ['990003', '990002', '990001']);
 });
 
 test('panel: the hospitals with a decision in every one of the given years', () => {

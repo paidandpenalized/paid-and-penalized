@@ -14,17 +14,28 @@ import { COL, inGroup, measureSummary } from '../web/program-data.js';
 import { SCATTER_W, agreeScatterOf, pairPoints, pullPanel, slidePanel, stackPanel, swarmChart, swarmPositions } from '../web/explore-figures.js';
 import { fill } from '../web/explore/copy.js';
 import { dotsPath } from '../../../web/charts/dots.js';
+import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
 
-// ---------- the explore asset ----------
+// ---------- the assets ----------
 
-// The explore asset (program-data.js exploreAsset), fetched once when a figure first needs it; a failure is let go
-// so the next need tries again.
+// A JSON asset, fetched once when a figure first needs it; a failure is let go so the next need tries again. The
+// explore asset (program-data.js exploreAsset) is read this way.
 export const exploreLoader = (src) => once(async () => {
   const res = await fetch(src);
-  if (!res.ok) throw new Error(`explore data: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`${src}: HTTP ${res.status}`);
   return res.json();
 });
+
+// Loaders by URL, so the figures that read one asset share its fetch (the roll call and the year map read the history
+// asset): load(src) gives the asset's promise.
+export function assetLoaders() {
+  const byUrl = new Map();
+  return (src) => {
+    if (!byUrl.has(src)) byUrl.set(src, exploreLoader(src));
+    return byUrl.get(src)();
+  };
+}
 
 // One measure's summary from the asset, as the build makes it (measureSummary over the published values, sorted).
 const summaries = new Map();
@@ -369,25 +380,39 @@ export function mountPlaceMaps(root = document) {
 
 // ---------- the roll call ----------
 
+// The runs of consecutive years in which any hospital had a decision, [first, end) as year indexes: a picked state's
+// ticks break around a year with none.
+function decidedRuns(hist) {
+  const runs = [];
+  hist.fys.forEach((_, i) => {
+    if (!hist.recs.some((r) => r[i] !== NONE)) return;
+    const last = runs[runs.length - 1];
+    if (last && last[1] === i) last[1] = i + 1;
+    else runs.push([i, i + 1]);
+  });
+  return runs;
+}
+
 // The roll call (history-figures.js rollFigure): the hospital under the pointer, named with its record in the readout
 // under the grid (a click opens its page, when CMS's newest file lists it), and the state picker, which ticks that
-// state's hospitals through the grid. The history asset holds the grid's order: { fys, ccns, recs, states }.
-export function mountRoll(fig, { hospitals }) {
+// state's hospitals through the grid. The grid's order, { fys, ccns, recs, states }: the history asset (the program
+// page, through history, the page's asset loaders) or a JSON script on the page that data-inline names (a place page).
+export function mountRoll(fig, { hospitals, history = assetLoaders() }) {
   const box = fig.querySelector('.roll');
   if (!box) return;
   const readout = box.querySelector('.roll__readout');
   const picker = box.querySelector('.roll__pick');
   const select = picker?.querySelector('select');
   const geom = JSON.parse(box.dataset.geom);
-  // The grid's order: the history asset (the program page), or inline on the figure (a place page).
-  const order = () => (box.dataset.inline ? Promise.resolve(JSON.parse(box.dataset.inline))
-    : fetch(box.dataset.roll).then((res) => { if (!res.ok) throw new Error(`history: HTTP ${res.status}`); return res.json(); }));
+  // A drawing's geometry, by its width: [label column, right margin, row height, top].
+  const geomOf = (svg) => geom[String(svg.viewBox.baseVal.width)];
+  const order = async () => (box.dataset.inline ? JSON.parse(document.getElementById(box.dataset.inline).textContent) : history(box.dataset.roll));
   const ready = once(() => Promise.all([order(), hospitals(box.dataset.src)])
-    .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath })));
+    .then(([hist, list]) => ({ hist, names: new Map(list.rows.map((r) => [r[0], r])), path: list.hospitalPath, runs: decidedRuns(hist) })));
   const svgs = [...box.querySelectorAll('svg.chart--roll')];
   const at = (svg, e, n) => {
     const width = svg.viewBox.baseVal.width;
-    const [label, right] = geom[String(width)];
+    const [label, right] = geomOf(svg);
     const j = Math.floor(((svgPoint(svg, e).x - label) / (width - label - right)) * n);
     return j >= 0 && j < n ? j : null;
   };
@@ -395,15 +420,15 @@ export function mountRoll(fig, { hospitals }) {
     const ccn = s.hist.ccns[j];
     const rec = s.hist.recs[j];
     const row = s.names.get(ccn);
-    const cut = s.hist.fys.filter((_, i) => rec[i] === 'Y').map((fy) => `FY${String(fy).slice(-2)}`);
-    const decided = [...rec].filter((c) => c !== '.').length;
+    const cut = s.hist.fys.filter((_, i) => rec[i] === CUT).map((fy) => `FY${String(fy).slice(-2)}`);
+    const decided = [...rec].filter((c) => c !== NONE).length;
     const who = { name: row ? row[1] : fill('rollClosed', { ccn }), state: row ? row[3] : s.hist.states[j], decided: String(decided) };
     readout.textContent = cut.length ? fill('rollSay', { ...who, cut: String(cut.length), years: cut.join(', ') }) : fill('rollSayNone', who);
   };
   // The column under the pointer, outlined on the grid.
   const cursor = (svg, j, n, years) => {
     const width = svg.viewBox.baseVal.width;
-    const [label, right, rowH, top] = geom[String(width)];
+    const [label, right, rowH, top] = geomOf(svg);
     const w = (width - label - right) / n;
     let rect = svg.querySelector('.chart-roll__cursor');
     if (!rect) {
@@ -437,16 +462,11 @@ export function mountRoll(fig, { hospitals }) {
         svg.querySelector('.chart-roll__pick')?.remove();
         if (!select.value) continue;
         const width = svg.viewBox.baseVal.width;
-        const height = svg.viewBox.baseVal.height;
-        const [label, right] = geom[String(width)];
+        const [label, right, rowH, top] = geomOf(svg);
         const n = s.hist.ccns.length;
         const x = (j) => label + ((j + 0.5) * (width - label - right)) / n;
         // A tick through each of the state's hospitals, broken around a year no hospital had a decision.
-        const [, , rowH, top] = geom[String(width)];
-        const rows = s.hist.fys.map((_, i) => s.hist.recs.some((r) => r[i] !== '.'));
-        const runs = [];
-        rows.forEach((on, i) => { if (on && (i === 0 || !rows[i - 1])) runs.push([i, i + 1]); else if (on) runs[runs.length - 1][1] = i + 1; });
-        const d = s.hist.states.map((st, j) => (st === select.value ? runs.map(([a, b]) => `M${x(j).toFixed(1)} ${(top + a * rowH).toFixed(1)}V${(top + b * rowH - 2).toFixed(1)}`).join('') : '')).join('');
+        const d = s.hist.states.map((st, j) => (st === select.value ? s.runs.map(([a, b]) => `M${x(j).toFixed(1)} ${(top + a * rowH).toFixed(1)}V${(top + b * rowH - 2).toFixed(1)}`).join('') : '')).join('');
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('class', 'chart-roll__pick');
         path.setAttribute('d', d);
@@ -462,46 +482,40 @@ export function mountRoll(fig, { hospitals }) {
 // ---------- the year map ----------
 
 // The year map (history-figures.js yearMapFigure): the year buttons redraw its dots for that year from the history
-// asset (each hospital's record and place at each drawn width); Play steps through the years, oldest first, once.
-export function mountYearMap(fig) {
+// asset (each hospital's record, its place on the map's one drawing, and each year's counts); Play steps through the
+// years, oldest first, once. history: the page's asset loaders (shared with the roll call).
+export function mountYearMap(fig, history = assetLoaders()) {
   const box = fig.querySelector('.ymap');
   if (!box?.dataset.roll) return;
   const controls = box.querySelector('.ymap__controls');
   const buttons = [...box.querySelectorAll('.ymap__y')];
   const play = box.querySelector('.ymap__play');
   const readout = box.querySelector('.ymap__readout');
-  const load = once(() => fetch(box.dataset.roll).then((res) => { if (!res.ok) throw new Error(`history: HTTP ${res.status}`); return res.json(); }));
   const draw = (hist, i) => {
     for (const svg of box.querySelectorAll('svg.chart--us-years')) {
-      const flat = hist.at?.[String(svg.viewBox.baseVal.width)];
       const g = svg.querySelector('.chart-years__dots');
-      if (!flat || !g) continue;
+      if (!hist.at || !g) continue;
       const groups = Object.fromEntries(Object.keys(YEAR_CLASSES).map((k) => [k, []]));
       hist.recs.forEach((rec, j) => {
         const k = yearClass(rec, i);
-        if (k && flat[2 * j] !== null) groups[k].push([flat[2 * j] / 10, flat[2 * j + 1] / 10]);
+        if (k && hist.at[2 * j] !== null) groups[k].push([hist.at[2 * j] / 10, hist.at[2 * j + 1] / 10]);
       });
       g.innerHTML = Object.entries(YEAR_CLASSES).map(([k, cls]) => dotsPath(groups[k], cls, Number(g.dataset.size)).toString()).join('');
     }
-    let cut = 0;
-    let ever = 0;
-    for (const rec of hist.recs) {
-      if (rec[i] === 'Y') cut++;
-      if (rec.slice(0, i + 1).includes('Y')) ever++;
-    }
+    const [cut, ever] = hist.counts[i];
     const values = { fy: String(hist.fys[i]), cut: count(cut), ever: count(ever) };
     readout.textContent = cut ? fill('ymapSay', values) : fill('ymapSayNone', { fy: values.fy, ever: values.ever });
     buttons.forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
   };
-  const show = (i) => load().then((hist) => draw(hist, i), () => {});
-  controls.hidden = false;
-  for (const b of buttons) b.addEventListener('click', () => { stop(); show(Number(b.dataset.i)); });
+  const show = (i) => history(box.dataset.roll).then((hist) => draw(hist, i), () => {});
   let timer = null;
   const stop = () => {
     if (timer) clearInterval(timer);
     timer = null;
     play.textContent = play.dataset.play;
   };
+  controls.hidden = false;
+  for (const b of buttons) b.addEventListener('click', () => { stop(); show(Number(b.dataset.i)); });
   play.addEventListener('click', () => {
     if (timer) return stop();
     let i = 0;

@@ -30,8 +30,10 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Period dates are written MM/DD/YYYY whatever form the file used (DD-MON-YY in FY2015, MMDDYYYY in FY2016 and
   FY2017). FY2019's "Not Available" decision is written N/A, as in later years.
 - `footnoted` lists, per year, the CCNs whose score or parts CMS footnoted or marked with asterisks. The self-check
-  lets a recomputed score miss CMS's only on these rows (CMS used a part its file withholds: FY2016 has 1 such row,
-  FY2017 44, most of them Maryland's), and counts them; any other miss fails the build.
+  lets a recomputed score miss CMS's only on these rows, and only where CMS used a part its file withholds: a part
+  missing from the file, footnoted in its own column, that the published total works out to a valid score for (in its
+  year's published range and, in a year scored in tenths, a whole score from 1 to 10). FY2016 has 1 such row, FY2017
+  44, most of them Maryland's; they are counted, and any other miss fails the build.
 - FY2023 is the year CMS scored no hospital: every total is 0.0000 with no parts, and the pages read it as no score.
 - `infections` sums Care Compare's per-hospital infection results for each calendar year with a full-year file
   (CY2017 to CY2019 and CY2021 to CY2024; extracts pinned by `pipeline/py/pp_pipeline/hai_extract.py`): per measure,

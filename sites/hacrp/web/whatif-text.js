@@ -7,13 +7,12 @@ import { has } from '../../../engine/js/has.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
-import { cmsText, decimal, longDate, pct, signed } from '../../../web/render/format.js';
+import { cmsText, decimal, listText, longDate, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { assignedNow } from '../../../web/whatif/marks.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, heroLineText, measureLabel, sourcePlain } from './copy.js';
 
-const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
 
 // The words that depend on the starting values. counts: the NHSN fields, whose words compare with CMS's value.
@@ -148,7 +147,7 @@ export function scenarioSentence(vm, hospital, model, baseline) {
   if (!list.length) return fill(words.none, { score: before, decision: flagText(r.before.flag) });
   if (list.length === 1 && list[0].bound && !list[0].moved) return deadZone(list[0], model);
 
-  const items = LIST.format(list.map((c) => item(c, model)));
+  const items = listText(list.map((c) => item(c, model)));
   const out = [];
   if (after === before) out.push(fill('whatifStay', { changes: items, score: before }));
   else out.push(fill(r.after.score > r.before.score ? 'whatifRise' : 'whatifFall', { changes: items, before, after }));

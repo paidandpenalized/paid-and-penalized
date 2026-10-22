@@ -221,6 +221,7 @@ export const COPY = {
   edition: { text: '{subtitle} · FY{fy}', claim: null },
   navHow: { text: 'How it works', claim: null },
   navFy: { text: 'FY{fy}', claim: null },
+  fyShort: { text: 'FY{fy}', claim: null },
   navHistory: { text: 'History', claim: null },
   navHospitals: { text: 'Every hospital', claim: null },
 
@@ -650,5 +651,7 @@ export const sourceText = lastCall(sourceKey, (args) => fillKeep('source', sourc
 // The same line as plain text, for the citation and the what-if's "Copy for a slide".
 export const sourcePlain = lastCall(sourceKey, (args) => fill('source', sourceValues(args)));
 
+// A fiscal year as the history and Methods figures label it: "FY2016".
+export const fyLabel = (fy) => fill('fyShort', { fy: String(fy) });
 // A measure's name as a label (capitalized): "Central line–associated bloodstream infections".
 export const measureLabel = (id) => capitalize(fill(`measure${id}`));

@@ -15,6 +15,7 @@
 //            both required, and the legend rows for a zero value and for few cases (required when some tile is zero
 //            or few)
 import { has } from '../../engine/js/has.js';
+import { toUnit } from '../../engine/js/stats.js';
 import { scaleThreshold } from 'd3-scale';
 import { capitalize } from '../render/format.js';
 import { html } from '../render/html.js';
@@ -132,9 +133,9 @@ export function stepLegend({ id, top, ramp, format = plain, words, states }) {
 export const fewOutline = (x, y, size, on) => html`<rect class="chart-tile-few${on ? ' chart-tile-few--on' : ''}" x="${r2(x + FEW_INSET)}" y="${r2(y + FEW_INSET)}" width="${r2(size - 2 * FEW_INSET)}" height="${r2(size - 2 * FEW_INSET)}"/>`;
 
 // A tile map small enough to repeat (one per year in a grid of them): tiles only, shaded by the same steps, with no
-// codes and no legend (the figure carries one legend for all). states as tileMap's; a tile with no value is an empty
-// outline, and one resting on few cases carries the dashed inner outline. outline: codes drawn with an ink border
-// (states the figure's words name).
+// codes and no legend (the figure carries one legend for all), each tile's value kept to a tenth. states as tileMap's;
+// a tile with no value is an empty outline, and one resting on few cases carries the dashed inner outline. outline:
+// codes drawn with an ink border (states the figure's words name).
 export function miniTiles({ states, ramp, width, outline = [] }) {
   checkStates(states);
   if (!Array.isArray(ramp) || !ramp.length) throw new RangeError('miniTiles: a ramp of thresholds is required');
@@ -148,7 +149,7 @@ export function miniTiles({ states, ramp, width, outline = [] }) {
     const step = s.value === 0 ? null : stepOf(s.value);
     const cls = step === null ? 'chart-tile-zero' : `chart-seq-${step}`;
     const ring = outline.includes(code) ? html`<rect class="chart-tile-ring" ${box}/>` : '';
-    return mark({ tip: `${code}: ${s.label}`, value: s.value, data: { state: code }, hit: null, body: html`<rect class="chart-tile ${cls}" ${box} rx="1"/>${s.few ? fewOutline(c * pitch, r * pitch, size, step !== null && step >= DARK_FROM) : ''}${ring}` });
+    return mark({ tip: `${code}: ${s.label}`, value: toUnit(s.value, 1), data: { state: code }, hit: null, body: html`<rect class="chart-tile ${cls}" ${box} rx="1"/>${s.few ? fewOutline(c * pitch, r * pitch, size, step !== null && step >= DARK_FROM) : ''}${ring}` });
   });
   return frame({ kind: 'mini-tiles', width, height: GRID.rows * pitch, body: html`${tiles}` });
 }

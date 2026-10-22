@@ -9,7 +9,8 @@ import { clamp, linearFit, mean, median, percentileSas5, sampleSd, toUnit } from
 
 // Tolerance for comparing z-scores that CMS published to 4 decimals against the measure's min and max.
 export const EDGE = 1e-9;
-const ESTIMATE_THRESHOLD = 0.001;
+// A measure carries the estimate tag when the public-method recompute misses a published z-score by more than this.
+export const ESTIMATE_THRESHOLD = 0.001;
 
 function withValueAndZ(hospitals, id) {
   return hospitals.map((h) => ({ ccn: h.ccn, m: h.measures[id] })).filter(({ m }) => m.value !== null && m.z !== null);
@@ -95,7 +96,8 @@ export function publicMethodZ(hospitals, id) {
   return new Map(pairs.map(({ ccn }, i) => [ccn, (w[i] - mu) / sd]));
 }
 
-// A measure carries the estimate tag when the public-method recompute misses any published z by more than 0.001.
+// A measure carries the estimate tag when the public-method recompute misses any published z by more than
+// ESTIMATE_THRESHOLD.
 export function estimateTagged(hospitals, id) {
   const z = publicMethodZ(hospitals, id);
   const maxError = Math.max(...withValueAndZ(hospitals, id).map(({ ccn, m }) => Math.abs(z.get(ccn) - m.z)));

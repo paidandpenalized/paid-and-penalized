@@ -4,9 +4,11 @@
 // file: every year's self-check must pass, with the withheld rows only in the two years whose files withhold a part.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ruleFor } from '../../../engine/js/hacrp/eras.js';
-import { REPO_ROOT, readJson } from '../../../pipeline/files.js';
-import { historyPath } from '../pipeline/history.js';
+import { parseCsv } from '../../../engine/js/csv.js';
+import { fileShape, normalRow, partNotes, recomputeTotal, ruleFor, toRecord } from '../../../engine/js/hacrp/eras.js';
+import { partRanges, withheldPart, yearCheck } from '../../../engine/js/hacrp/history.js';
+import { REPO_ROOT, readJson, readPinned } from '../../../pipeline/files.js';
+import { historyFilesFrom, historyPath } from '../pipeline/history.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
 import { DATA } from './pinned.js';
@@ -25,14 +27,15 @@ test('yearRows, a z-score year: each hospital with its numbers, its recomputed s
   const rows = yearRows(history.years[0]);
   assert.equal(rows.length, 21 + 1, 'the hospitals in the year\'s file (the Maryland-style one among them)');
   const one = rows.find((r) => r.ccn === '990101');
-  assert.deepEqual([one.state, one.total, one.totalText, one.decision, one.noted], ['AL', 1.01, '1.0100', 'Yes', false]);
+  assert.deepEqual([one.state, one.total, one.totalText, one.decision, one.notes.size], ['AL', 1.01, '1.0100', 'Yes', 0]);
   assert.deepEqual(one.z, { PSI90: 1.01, CLABSI: 1.01 });
   assert.equal(one.recomputed, 1.01);
   assert.deepEqual([one.d1, one.d2], [null, null]);
-  // A hospital scored on one measure only: the withheld part is null and footnoted, and the mean is the other's.
+  // A hospital scored on one measure only: the withheld part is null and footnoted, and the mean is the other's. The
+  // emitted file keeps footnotes by row, so every part of the row reads as footnoted.
   const single = rows.find((r) => r.ccn === '990105');
   assert.deepEqual(single.z, { PSI90: null, CLABSI: -0.95 });
-  assert.equal(single.noted, true);
+  assert.deepEqual([...single.notes], ['PSI90', 'CLABSI']);
   assert.equal(single.recomputed, -0.95);
   // A Maryland-style row has a score and no decision.
   const md = rows.find((r) => r.ccn === '990301');
@@ -50,7 +53,7 @@ test('yearRows: a year CMS scored no one reads every total as none, although CMS
 test('yearRows, a footnoted miss: the parts CMS left out make the recomputed score differ from its total, and the row is noted', () => {
   const rows = yearRows(history.years[WITHHELD.at]);
   const row = rows.find((r) => r.ccn === WITHHELD.ccn);
-  assert.equal(row.noted, true);
+  assert.ok(row.notes.has('PSI90'));
   assert.ok(Math.abs(row.recomputed - row.total) > 0.3);
 });
 
@@ -70,7 +73,8 @@ test('yearRows, tenths and domains: the 15/85, 25/75 and 35/65 years from the pa
   assert.equal(rows[1].recomputed, 9);
   assert.equal(rows[1].decision, null, 'a row with no decision text reads as none');
   assert.equal(rows[2].recomputed, null);
-  assert.equal(rows[2].noted, true);
+  assert.deepEqual([...rows[2].notes], ['PSI90', 'CLABSI', 'CAUTI', 'D1', 'D2'], 'a footnoted domain year\'s row: its parts and its domains');
+  assert.equal(rows[0].notes.size, 0);
   assert.deepEqual([rows[0].d1, rows[0].d2], [2, 4]);
   // A row withheld from the year's totals altogether does not make it a year CMS scored no one.
   assert.ok(rows.some((r) => r.total !== null));
@@ -94,13 +98,13 @@ test('records: one character a year for each hospital with a decision somewhere;
 
 test('counts: hospitals decided, cut, cut for the first time, and ever cut, each year (FY2023 decides no one)', () => {
   assert.deepEqual(hd.counts, [
-    { decided: 21, cut: 6, first: 6, ever: 6 },
-    { decided: 22, cut: 4, first: 2, ever: 8 },
-    { decided: 0, cut: 0, first: 0, ever: 8 },
-    { decided: 22, cut: 5, first: 3, ever: 11 },
-    { decided: 21, cut: 4, first: 1, ever: 12 },
+    { decided: 21, cut: 6, first: 6, ever: 6, share: 6 / 21 },
+    { decided: 22, cut: 4, first: 2, ever: 8, share: 4 / 22 },
+    { decided: 0, cut: 0, first: 0, ever: 8, share: null },
+    { decided: 22, cut: 5, first: 3, ever: 11, share: 5 / 22 },
+    { decided: 21, cut: 4, first: 1, ever: 12, share: 4 / 21 },
   ]);
-  assert.deepEqual(hd.shareCut.map((s) => s && Math.round(s * 1000) / 1000), [0.286, 0.182, null, 0.227, 0.19]);
+  assert.equal(hd.cutYears, 4, 'every year but the one CMS cut no one');
 });
 
 test('checks: every year\'s self-check passes; the one footnoted miss is withheld, in FY2022 only; FY2023 scores no one', () => {
@@ -111,6 +115,7 @@ test('checks: every year\'s self-check passes; the one footnoted miss is withhel
   const none = hd.checks[NO_SCORE_AT].check;
   assert.deepEqual([none.scored, none.decided, none.yes, none.highestNo, none.lowestYes], [0, 0, 0, null, null]);
   assert.ok(hd.checks.every((c) => c.rule === ruleFor(c.fy)));
+  assert.ok(hd.checks.every((c) => c.scale === 'z' && c.ruleKey === 'ruleEqual'));
   // Years CMS cut anyone: the highest score not cut is below the lowest cut.
   for (const c of hd.checks.filter((x) => x.check.yes)) assert.ok(c.check.highestNo < c.check.lowestYes, `FY${c.fy}`);
 });
@@ -136,11 +141,7 @@ test('chance over every hospital with a decision: all 22, observed by times cut'
   assert.equal(sum(hd.chance.observed.map((n, k) => n * k)), 6 + 4 + 5 + 4, 'the hospital-years cut');
 });
 
-test('repeats and gaps: how often a cut repeats the next year, and k years on, with a year of no decisions never forming a pair', () => {
-  assert.equal(hd.repeats.length, 4);
-  assert.deepEqual(hd.repeats[0], { from: 0, to: 1, cutBefore: 6, cutAgain: 2, notBefore: 15, cutNew: 2 });
-  assert.deepEqual(hd.repeats[3], { from: 3, to: 4, cutBefore: 5, cutAgain: 2, notBefore: 16, cutNew: 2 });
-  for (const i of [1, 2]) assert.equal(hd.repeats[i].cutBefore + hd.repeats[i].notBefore, 0, `the pair into or out of FY2023 (${i})`);
+test('gaps: how often a cut repeats k years on, with a year of no decisions never forming a pair', () => {
   assert.deepEqual(hd.gaps[0], { k: 1, cutBefore: 11, cutAgain: 4, notBefore: 31, cutNew: 4 });
   assert.deepEqual(hd.gaps.map((g) => g.k), [1, 2, 3, 4]);
   // Each hospital-year pair at a gap is counted once: the gaps of 1 to 4 years pool every pair of scoring years.
@@ -170,9 +171,9 @@ test('byType and byState: the cut and decided each year by kind of hospital (the
   assert.equal(total('own'), 20);
   // By state: every hospital with a record, by the state its file gave.
   assert.deepEqual([...hd.byState.keys()], ['AL', 'GA', 'MD']);
-  assert.deepEqual(hd.byState.get('AL'), { years: [{ decided: 10, cut: 3 }, { decided: 10, cut: 2 }, { decided: 0, cut: 0 }, { decided: 10, cut: 3 }, { decided: 10, cut: 3 }], ever: 6, any: 10 });
+  assert.deepEqual(hd.byState.get('AL'), { years: [{ decided: 10, cut: 3 }, { decided: 10, cut: 2 }, { decided: 0, cut: 0 }, { decided: 10, cut: 3 }, { decided: 10, cut: 3 }] });
   assert.deepEqual(hd.byState.get('GA').years.map((y) => y.cut), [2, 2, 0, 1, 1]);
-  assert.deepEqual([hd.byState.get('MD').ever, hd.byState.get('MD').any], [2, 2], 'the Maryland-style hospital with no decision is not counted');
+  assert.deepEqual(hd.byState.get('MD').years.map((y) => y.decided), [1, 2, 0, 2, 1], 'the Maryland-style hospital with no decision is not counted');
   assert.equal(hd.stateOf.get('990303'), 'MD', 'a hospital the master lacks keeps its state');
 });
 
@@ -251,8 +252,8 @@ test('the committed history: every year\'s self-check passes (scores within a th
   }
 });
 
-test('the committed history: rows are withheld only in FY2016 and FY2017, and FY2023 scores no one', () => {
-  assert.deepEqual(real.checks.filter((c) => c.check.withheld.length).map((c) => c.fy), [2016, 2017]);
+test('the committed history: rows are withheld only in FY2016 (one) and FY2017 (44), and FY2023 scores no one', () => {
+  assert.deepEqual(real.checks.filter((c) => c.check.withheld.length).map((c) => [c.fy, c.check.withheld.length]), [[2016, 1], [2017, 44]]);
   const y2023 = real.checks.find((c) => c.fy === 2023).check;
   assert.deepEqual([y2023.scored, y2023.decided, y2023.yes], [0, 0, 0]);
   assert.equal(real.counts[real.fys.indexOf(2023)].cut, 0);
@@ -261,6 +262,29 @@ test('the committed history: rows are withheld only in FY2016 and FY2017, and FY
     assert.ok(check.scored > 2000 && check.decided > 2000, `FY${fy}: a year of hospitals`);
     assert.ok(check.yes / check.decided > 0.2 && check.yes / check.decided < 0.3, `FY${fy}: about a quarter cut`);
     assert.ok(check.highestNo < check.lowestYes, `FY${fy}: the highest score not cut is below the lowest cut`);
+  }
+});
+
+// The emitted file keeps CMS's footnotes by row; the pinned files have each part's own footnote column. The self-check
+// from the pinned files, with each part's own footnotes (eras.js partNotes), lets the same rows through as the pages'.
+test('the pinned files: with each part\'s own footnote, the self-check withholds exactly the rows the pages do, and explains every miss', () => {
+  for (const { fy, rows } of historyFilesFrom(readPinned, parseCsv)) {
+    const shape = fileShape(Object.keys(rows[0]));
+    const rule = ruleFor(fy);
+    const recs = rows.map(normalRow).map((r) => {
+      const rec = { ...toRecord(r, shape), notes: partNotes(r, shape) };
+      return { ...rec, recomputed: recomputeTotal(rec, rule) };
+    });
+    const ranges = partRanges(recs);
+    const check = yearCheck(recs, (r) => withheldPart(r, rule, ranges, shape.scale));
+    const page = real.checks.find((c) => c.fy === fy).check;
+    assert.deepEqual(check.withheld, page.withheld, `FY${fy}: the rows withheld`);
+    assert.deepEqual(check.unexplained, [], `FY${fy}: no unexplained miss`);
+    // Every row withheld has the part it implies footnoted on that part itself.
+    for (const ccn of check.withheld) {
+      const r = recs.find((x) => x.ccn === ccn);
+      assert.ok(r.notes.has(withheldPart(r, rule, ranges, shape.scale)), `FY${fy} ${ccn}`);
+    }
   }
 });
 

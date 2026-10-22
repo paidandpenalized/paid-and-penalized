@@ -2,35 +2,32 @@
 // emits the program page, one page per hospital, and the dataset CSV with its data dictionary through the build
 // context.
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
-import { scoredHospitals } from '../../../engine/js/hacrp/hospital.js';
+import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
+import { yearCheck } from '../../../engine/js/hacrp/history.js';
+import { scoredHospitals, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
+import { ESTIMATE_THRESHOLD } from '../../../engine/js/hacrp/params.js';
+import { totalFromZ } from '../../../engine/js/hacrp/score.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { RAMP_HIGH_PCT, RAMP_LOW_PCT, SHORT_NAMES } from './constants.js';
 import { sourceText } from './copy.js';
+import { nationalContext } from './compare.js';
 import { dictionaryText, hospitalsCsv } from './csv.js';
 import { loadHacrp } from './data.js';
-import { compareDefault } from './hospital-table.js';
-import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
-import { dictionaryPage } from './pages/dictionary.js';
-import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
-import { placePage } from './pages/place.js';
-import { hospitalPage } from './pages/hospital.js';
-import { methodsPage, METHODS_PATH } from './pages/methods.js';
-import { yearCheck } from '../../../engine/js/hacrp/history.js';
-import { totalFromZ } from '../../../engine/js/hacrp/score.js';
-import { scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
-import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { t as mt } from './methods/copy.js';
 import { historyData } from './history-data.js';
 import { historySource, rollAsset } from './history-figures.js';
-
-// The scoring rules' names on the Methods page, by eras.js rule.
-const RULE_WORDS = { equal: 'ruleEqual', domains: 'ruleDomainsZ' };
-const ruleWords = (c, scale) => mt(c.rule.rule === 'domains' && scale === 'tenths' ? 'ruleDomainsTenths' : RULE_WORDS[c.rule.rule]);
-import { nationalContext } from './compare.js';
+import { compareDefault } from './hospital-table.js';
+import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
+import { t as mt } from './methods/copy.js';
+import { dictionaryPage } from './pages/dictionary.js';
+import { hospitalPage } from './pages/hospital.js';
+import { methodsPage, METHODS_PATH } from './pages/methods.js';
+import { placePage } from './pages/place.js';
+import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { exploreAsset, programData } from './program-data.js';
 import { KINDS, buildPlaces } from './places.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
@@ -144,24 +141,24 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     });
   }
 
-  // The Methods page: the self-check for every year this build holds, the pipeline's numbers for the newest.
-  const check = newestCheck(hospitals);
-  if (!check.ok) throw new Error(`HACRP self-check failed for FY${fy}: largest miss ${check.maxError}; wrong side: ${check.wrongSide.join(', ') || 'none'}`);
+  // The Methods page: the self-check for every year this build holds (checked above), or, without the history, the
+  // newest year's; the pipeline's numbers for the newest.
+  const checks = hd ? hd.checks.map((c) => ({ fy: c.fy, rule: mt(c.ruleKey), check: c.check })) : [{ fy, rule: mt('ruleEqual'), check: newestOnly(hospitals, fy) }];
   const tagged = MEASURE_IDS.filter((id) => estimate[id].tagged);
   ctx.emit({
     path: METHODS_PATH,
     robots: programRobots,
     text: methodsPage({
       fy,
-      checks: hd ? hd.checks.map((c, i) => ({ fy: c.fy, rule: ruleWords(c, hd.years[i].scale), check: c.check })) : [{ fy, rule: mt('ruleEqual'), check }],
+      checks,
       years: hd ? hd.years.map((y) => ({ fy: y.fy, periods: y.periods })) : [{ fy, periods }],
       newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: hospitals.length + places.list.length + 3, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
       pins: manifest,
       changes,
-      estimate: { tolerance: 0.001, tagged: tagged.map((id) => SHORT_NAMES[id]).join(' and '), maxError: Math.max(...tagged.map((id) => estimate[id].maxError)) },
+      estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.map((id) => SHORT_NAMES[id]).join(' and '), maxError: Math.max(...tagged.map((id) => estimate[id].maxError)) },
       boundaryText,
-      eqFy: 2020,
-      zFy: 2018,
+      eqFy: EQUAL_FROM,
+      zFy: Z_FROM,
       robots: programRobots,
       assets,
       searchUrl,
@@ -180,13 +177,20 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   }
 }
 
-// The newest year's self-check, as the Methods page draws it: each hospital's z-scores averaged again against CMS's
-// Total HAC Score, and CMS's decisions against the line this site finds.
+// The newest year's self-check, for a build without the history: each hospital's z-scores averaged again against
+// CMS's Total HAC Score, and CMS's decisions against the line this site finds.
 export function newestCheck(hospitals) {
   return yearCheck(hospitals.map((h) => {
     const ids = scoredMeasures(h);
     return { ccn: h.ccn, total: h.total, recomputed: ids.length ? totalFromZ(ids.map((id) => h.measures[id].z)) : null, decision: h.paymentReduction };
   }));
+}
+
+// newestCheck, failing the build when it fails.
+function newestOnly(hospitals, fy) {
+  const check = newestCheck(hospitals);
+  if (!check.ok) throw new Error(`HACRP self-check failed for FY${fy}: largest miss ${check.maxError}; wrong side: ${check.wrongSide.join(', ') || 'none'}`);
+  return check;
 }
 
 // The HACRP site's build manifest (pipeline/site/build.js lists it).

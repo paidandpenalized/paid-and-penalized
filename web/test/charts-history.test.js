@@ -17,6 +17,7 @@ import { smallLines } from '../charts/smallLines.js';
 import { GRID, TILES } from '../charts/states.js';
 import { miniTiles } from '../charts/tileMap.js';
 import { chanceDots, staircase } from '../charts/yearCharts.js';
+import { capsWidth, isNarrow, lineD, silhouette } from '../charts/svg.js';
 import { Safe } from '../render/html.js';
 
 const HEX = /#[0-9a-f]{3,8}\b/i;
@@ -278,6 +279,27 @@ test('rollCall refuses no hospitals, no years, and a record whose length is not 
 // One path's cells: the M moves in it.
 const cells = (s, cls) => count(attr(tags(s, cls)[0], 'd'), /M/g);
 
+// ---------- the kit's shared pieces ----------
+
+test('lineD: a line through the points with a value, a point with none breaking it; capsWidth and isNarrow', () => {
+  const pts = [{ x: 0, y: 1 }, { x: 1, y: 2 }, { x: 2, y: null }, { x: 3, y: 0.5 }];
+  assert.equal(lineD(pts, (v) => v * 10, (v) => 100 - v * 10), 'M0 90L10 80M30 95');
+  assert.equal(lineD([{ x: 0, y: null }], (v) => v, (v) => v), '');
+  assert.equal(capsWidth('abcde'), 32);
+  assert.equal(capsWidth(12), 12.8, 'a number is measured as its text');
+  assert.deepEqual([isNarrow(300), isNarrow(399), isNarrow(400), isNarrow(1180)], [true, true, false, false]);
+});
+
+test('silhouette: up from the base at the left edge, along the scores (thinned, ends kept), down at the right edge, closed', () => {
+  const scores = [1, 2, 3, 4, 5];
+  const at = { x: (i) => i + 0.5, x0: 0, x1: 5, y: (v) => 10 - v, base: 10 };
+  // Hairlines a unit apart: under the thinning step, so only every other one is kept, with both ends.
+  assert.equal(silhouette(scores, 0, 5, at), 'M0 10L0 9L0.5 9L2.5 7L4.5 5L5 5L5 10Z');
+  // Wide apart, every one is kept.
+  assert.equal(silhouette(scores, 1, 3, { ...at, x: (i) => i * 2 }), 'M0 10L0 8L2 8L4 7L5 7L5 10Z');
+  assert.equal(silhouette(scores, 2, 2, at), '', 'no ranks, no shape');
+});
+
 test('rollCall: a cell for every hospital with a decision, in the ink of its decision, none where there is none', () => {
   const s = sound(rollCall({ records: ['YN.', 'YNN', 'NY.'], years: YEARS, width: 300 }), 'roll');
   // Row 2024: Y Y N; row 2025: N N Y; row 2026: . N .
@@ -285,6 +307,9 @@ test('rollCall: a cell for every hospital with a decision, in the ink of its dec
   assert.equal(cells(s, 'chart-roll__no'), 4);
   assert.deepEqual(texts(s, 'chart-roll__year'), YEARS);
   assert.deepEqual(viewBox(s), [300, 4 + 3 * 16 + 6], 'no brackets, no room for them');
+  // Each run is a stroke along its row's band (a row of 16 less the gap of 2), from its left edge to its right.
+  assert.deepEqual(['chart-roll__no', 'chart-roll__yes'].map((cls) => attr(tags(s, cls)[0], 'stroke-width')), ['14', '14']);
+  assert.ok([...attr(tags(s, 'chart-roll__yes')[0], 'd').matchAll(/M[\d.]+ ([\d.]+)H[\d.]+/g)].every((m) => [11, 27, 43].includes(Number(m[1]))), 'every run along a band\'s middle');
   assert.equal(String(rollCall({ records: ['YN.', 'YNN', 'NY.'], years: YEARS, width: 300 })), s, 'the same call gives the same markup');
 });
 
@@ -300,13 +325,13 @@ test('rollCall: narrow columns merge into runs, one move for each run of the sam
   assert.equal(cells(wide, 'chart-roll__no'), 100 + 50, '100 not cut in 2025, 50 in 2026; the 100 with no decision in 2026 are not drawn');
 });
 
-test('rollCall: brackets under the grid, the right margin kept clear, a tick for each highlighted hospital', () => {
+test('rollCall: brackets under the grid, the right margin kept clear, notes at the right', () => {
   const records = ['YN.', 'YNN', 'NY.', 'NNN'];
   const plain = String(rollCall({ records, years: YEARS, width: 300 }));
   const s = sound(rollCall({
     records, years: YEARS, width: 300, label: 40, right: 70,
     brackets: [{ from: 0, to: 2, label: 'Ever cut: 2', pen: true }, { from: 2, to: 4, label: 'Never cut: 2' }],
-    highlight: [1, 3], notes: ['12% · 10%', '', '33% · 30%'],
+    notes: ['12% · 10%', '', '33% · 30%'],
   }), 'roll');
   assert.equal(count(s, /<path class="chart-roll__bracket( chart-roll__bracket--pen)?"/g), 2);
   assert.equal(tags(s, 'chart-roll__bracket chart-roll__bracket--pen').length, 1);
@@ -314,8 +339,7 @@ test('rollCall: brackets under the grid, the right margin kept clear, a tick for
   // A label that fits sits under the middle of its bracket (columns are 47.5 wide from 40: 87.5 and 182.5).
   assert.deepEqual(textTags(s, 'chart-cap chart-cap--pen').map((c) => [c.x, c.anchor]), [[87.5, 'middle']]);
   assert.deepEqual(textTags(s, 'chart-cap').map((c) => [c.x, c.anchor]), [[182.5, 'middle']]);
-  assert.equal(count(attr(tags(s, 'chart-roll__hl')[0], 'd'), /M/g), 2);
-  assert.doesNotMatch(plain, /chart-roll__hl|chart-roll__bracket/);
+  assert.doesNotMatch(plain, /chart-roll__bracket/);
   assert.deepEqual(texts(s, 'chart-roll__note'), ['12% · 10%', '', '33% · 30%']);
   assert.ok(viewBox(s)[1] > viewBox(plain)[1], 'a drawing with brackets is taller');
   // No cell reaches into the right margin (each H is a cell's right edge).
@@ -495,7 +519,7 @@ test('chanceDots escapes the axis name and tooltips', () => {
 const pts = (ys, xs = [2020, 2021, 2022, 2023, 2024]) => ys.map((y, i) => ({ x: xs[i], y, tip: y === null ? '' : `${xs[i]}: ${y}` }));
 const LINES = (over = {}) => ({
   panels: [
-    { label: 'Measure A', points: pts([1.2, 1, null, 0.8, 0.6]), change: '−50%', pen: true },
+    { label: 'Measure A', points: pts([1.2, 1, null, 0.8, 0.6]), change: '−50%' },
     { label: 'Measure B', points: pts([0.5, 0.6, 0.7, 0.8, 0.9]), change: '+80%', under: pts([0.4, 0.4, 0.5, 0.5, 0.6]), underLabel: 'Nation' },
     { label: 'Measure C <&>', points: pts([null, null, null, null, null]), change: '' },
   ],
@@ -504,11 +528,11 @@ const LINES = (over = {}) => ({
 
 test('smallLines: a panel each, a dot for each year with a value, a gap in the line where there is none', () => {
   const s = sound(smallLines(LINES()), 'lines');
-  assert.equal(tags(s, 'chart-lines__line chart-lines__line--pen').length, 1);
-  assert.equal(tags(s, 'chart-lines__line').length, 2);
+  assert.equal(tags(s, 'chart-lines__line').length, 3);
   assert.equal(marks(s).length, 4 + 5 + 0, 'one mark per value, none for a panel with none');
-  assert.equal(tags(s, 'chart-lines__dot chart-lines__dot--pen').length, 4);
-  const lines = [...s.matchAll(/<path class="chart-lines__line(?: chart-lines__line--pen)?" d="([^"]*)"/g)].map((m) => m[1]);
+  assert.equal(tags(s, 'chart-lines__dot').length, 4 + 5);
+  assert.equal(tags(s, 'chart-hit').length, 0, 'a dot is its own hit area (charts.css gives it a wide transparent stroke)');
+  const lines = [...s.matchAll(/<path class="chart-lines__line" d="([^"]*)"/g)].map((m) => m[1]);
   assert.deepEqual(lines.map((d) => count(d, /M/g)), [2, 1, 0], 'the missing year breaks the first line in two; the empty panel has no line');
   assert.deepEqual(texts(s, 'chart-label'), ['Measure A', 'Measure B', 'Measure C &lt;&amp;&gt;']);
   assert.deepEqual(texts(s, 'chart-value chart-value--mark'), ['−50%', '+80%'], 'an empty change prints nothing');
@@ -548,9 +572,10 @@ test('smallLines: the x range ends 14 units inside the panel, and the last tick 
   const x = (v) => 28 + ((v - 2020) * (pw - 14 - 28)) / 4;
   const round = (n) => Math.round(n * 100) / 100;
   // The first panel's four dots (no value for 2022): from the left axis to 14 short of the panel's right edge.
-  assert.deepEqual(tags(s, 'chart-lines__dot chart-lines__dot--pen').map((t) => num(t, 'cx')), [2020, 2021, 2023, 2024].map((v) => round(x(v))));
-  assert.equal(num(tags(s, 'chart-lines__dot chart-lines__dot--pen')[0], 'cx'), 28);
-  assert.equal(num(tags(s, 'chart-lines__dot chart-lines__dot--pen')[3], 'cx'), round(pw - 14));
+  const first = tags(s, 'chart-lines__dot').slice(0, 4);
+  assert.deepEqual(first.map((t) => num(t, 'cx')), [2020, 2021, 2023, 2024].map((v) => round(x(v))));
+  assert.equal(num(first[0], 'cx'), 28);
+  assert.equal(num(first[3], 'cx'), round(pw - 14));
   // The lines and the axis run from the left axis to the panel's edge; the ticks are every other year.
   const ticks = textTags(s, 'chart-tick').filter((t) => t.body.startsWith('’')).slice(0, 3);
   assert.deepEqual(ticks.map((t) => t.body), ['’20', '’22', '’24']);

@@ -13,7 +13,6 @@ export const COPY = {
   part4Intro: { text: 'Every year but one since fiscal year {first}, CMS has cut about a quarter of hospitals. Never the same quarter: {share} of hospitals have been cut at least once. And not at random either: a hospital cut one year is cut again the next far more often than chance would have it.', claim: null },
   histSource: { text: 'Source: CMS, HACRP hospital files for fiscal years {first} to {last} (Provider Data Catalog and its archives), and CMS’s cut lists for fiscal years {first} and {second}.', claim: null },
   rollNone: { text: 'No hospital scored or cut', claim: null },
-  fyShort: { text: 'FY{fy}', claim: null },
 
   // The roll call.
   rollHeading: { text: 'Every hospital, every year', claim: null },
@@ -125,14 +124,10 @@ export const COPY = {
   chanceKey: { text: '● What happened   ○ If each year’s cut fell at random. Up the side: hospitals.', claim: null },
   chanceOneIn: { text: 'one in {n}', claim: null },
   chanceAlt: { text: 'For each number of years cut, the hospitals that were cut that many times, beside the number chance alone would give.', claim: null },
-  chanceObserved: { text: 'What happened', claim: null },
-  chanceChance: { text: 'Chance', claim: null },
   chanceX: { text: 'Years cut', claim: null },
   chanceColK: { text: 'Years cut', claim: null },
   chanceColObs: { text: 'Hospitals', claim: null },
   chanceColChance: { text: 'By chance', claim: null },
-
-
 
   // By state.
   statesHHeading: { text: 'The map, year by year', claim: null },
@@ -144,7 +139,6 @@ export const COPY = {
   keyRing: { text: 'Outlined: {a} and {b}', claim: null },
   statesHTakeaway: { text: 'Among states with at least {few} hospitals every year, {state} was cut above the nation’s share in {k} of the {n} years CMS cut anyone; {low}, below it in {lowK}.', claim: null },
   statesHMapAlt: { text: 'Fiscal year {fy}: each state shaded by the share of its hospitals CMS cut.', claim: null },
-  statesHAlt: { text: 'Small state maps, one per fiscal year, each state shaded by the share of its hospitals CMS cut.', claim: null },
 
   // The rule changes noted on the figures.
   breakZ: { text: 'z-scores', claim: null },
@@ -154,7 +148,6 @@ export const COPY = {
   recordHeading: { text: 'Its record, fiscal years {first} to {last}', claim: null },
   recordSummary: { text: 'Cut in {cut} of {decided} years', claim: null },
   recordSummaryNone: { text: 'Never cut in {decided} years', claim: null },
-  recordSummaryOne: { text: 'Cut in {cut} of one year', claim: null },
   recordCut: { text: 'Cut', claim: null },
   recordNo: { text: 'No', claim: null },
   recordNone: { text: '—', claim: null },
@@ -188,11 +181,11 @@ export const COPY = {
   hinfClip: { text: 'Rates above {max} are drawn at {max}; the table holds them.', claim: null },
 
   // ---------- the place pages ----------
-  placeHistHeading: { text: '{name}, year by year', claim: null },
-  placeHistText: { text: 'Every hospital in {name} with a payment decision in any year, one sliver each, one row per fiscal year; red where CMS cut it. At the right of each row: the share of {name}’s hospitals cut that year, then the nation’s.', claim: null },
-  placeHistColShare: { text: 'Share cut', claim: null },
-  placeHistColNation: { text: 'Nation', claim: null },
-  placeHistTakeaway: { text: '{name}’s share cut was above the nation’s in {k} of the {n} years CMS cut anyone; {ever} of its {hospitals} hospitals have been cut at least once.', claim: null },
+  placeYearsHeading: { text: '{name}, year by year', claim: null },
+  placeYearsText: { text: 'Every hospital in {name} with a payment decision in any year, one sliver each, one row per fiscal year; red where CMS cut it. At the right of each row: the share of {name}’s hospitals cut that year, then the nation’s.', claim: null },
+  placeYearsColShare: { text: 'Share cut', claim: null },
+  placeYearsColNation: { text: 'Nation', claim: null },
+  placeYearsTakeaway: { text: '{name}’s share cut was above the nation’s in {k} of the {n} years CMS cut anyone; {ever} of its {hospitals} hospitals have been cut at least once.', claim: null },
 };
 
 export const { fill, fillKeep, t } = copyOf(COPY, PROGRAM, EXPLORE, SHARED);

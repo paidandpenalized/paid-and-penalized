@@ -10,7 +10,7 @@ import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { count, decimal, isoDate } from '../../../web/render/format.js';
+import { count, decimal, isoDate, listText } from '../../../web/render/format.js';
 import { HISTORY_PINS } from '../pipeline/history.js';
 import { SHORT_NAMES } from '../web/constants.js';
 import { generateHacrp } from '../web/generate.js';
@@ -123,7 +123,8 @@ test('the notes under the check state what the checks found: the rows withheld, 
   const on = HD.checks.filter((c) => c.check.yes && c.check.p75InGap).map((c) => `FY${c.fy}`);
   const onNote = paragraphs.find((p) => p.includes('lands exactly'));
   assert.ok(onNote, 'a note about the years the line is the percentile');
-  assert.ok(onNote.includes(`${on.slice(0, -1).join(', ')} and ${on.at(-1)}`), `${onNote} vs ${on}`);
+  assert.ok(onNote.includes(listText(on)), `${onNote} vs ${on}`);
+  assert.ok(on.length < 3 || listText(on) === `${on.slice(0, -1).join(', ')}, and ${on.at(-1)}`, 'the site\'s one list joiner, as the what-if writes lists');
   // The most hospitals tied at the line: the year, how many, and the score.
   const ties = [...HD.checks].sort((a, b) => b.check.atLine - a.check.atLine)[0];
   const tieNote = paragraphs.find((p) => p.startsWith('Ties matter'));
@@ -267,7 +268,7 @@ test('sidesFigure: a row a year of decisions, the cut, the highest score not cut
   assert.ok(String(fig).includes('No hospital cut'));
   assert.match(figCaption(sidesFigure([checks[0]], { n: 1, source: SRC })), /fiscal year 2021/);
   // A decision out of order is counted in the takeaway.
-  const bad = yearCheck([{ ccn: '990001', total: 5, recomputed: 5, decision: 'Yes', noted: false }, { ccn: '990002', total: 9, recomputed: 9, decision: 'No', noted: false }]);
+  const bad = yearCheck([{ ccn: '990001', total: 5, recomputed: 5, decision: 'Yes' }, { ccn: '990002', total: 9, recomputed: 9, decision: 'No' }]);
   assert.ok(numbers(figCaption(sidesFigure([{ fy: 2025, rule: 'x', check: bad }], { n: 1, source: SRC }))).includes('2'), 'both ends of the swap');
 });
 
@@ -320,7 +321,7 @@ test('receipt: the year CMS scored no one is "none" with dashes, a year that fai
   // Without a withheld row, no such line; with an unexplained miss, the year fails.
   const clean = checks.map((c) => ({ ...c, check: { ...c.check, withheld: [] } }));
   assert.ok(!String(receipt(clean)).includes('Part withheld by CMS'));
-  const miss = yearCheck([{ ccn: '990001', total: 1, recomputed: 1.5, decision: 'No', noted: false }, { ccn: '990002', total: 2, recomputed: 2, decision: 'Yes', noted: false }]);
+  const miss = yearCheck([{ ccn: '990001', total: 1, recomputed: 1.5, decision: 'No' }, { ccn: '990002', total: 2, recomputed: 2, decision: 'Yes' }]);
   const failing = String(receipt([...checks.slice(0, 1), { fy: 2030, rule: 'x', check: miss }]));
   assert.match(failing, /<th scope="row">FY2030<\/th><td>2<\/td><td>0\.50000<\/td><td>2<\/td><td class="receipt__ok">fail<\/td>/);
   assert.ok(failing.includes('<dt>Largest miss</dt><dd>0.50000</dd>'));

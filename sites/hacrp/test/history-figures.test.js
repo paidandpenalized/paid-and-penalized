@@ -7,13 +7,12 @@ import assert from 'node:assert/strict';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, decimal, pct } from '../../../web/render/format.js';
-import { html } from '../../../web/render/html.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
 import { t as words } from '../web/history/copy.js';
 import {
-  HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, cutYears, everFigure, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
+  HIST_MAP_WIDE, HIST_WIDE, chanceFigure, coverageFigure, everFigure, gapFigure, historySource, hospitalInfectionsFigure, infectionsFigure, kindsFigure,
   part4, placeMembers, placeYearsFigure, recordStrip, rollAsset, rollFigure, ruleBreaks, spikeYear, statesYearsFigure, yearMapFigure, yearsFigure,
 } from '../web/history-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -51,6 +50,8 @@ const classes = (svgMarkup) => [...String(svgMarkup).matchAll(/class="([^"]+)"/g
 // The narrow drawing of a figure (the wide one follows it), and the text of each <text class="cls"> in a drawing.
 const narrowOf = (fig) => String(fig).slice(0, String(fig).indexOf('data-fit="wide"'));
 const textsOf = (svg, cls) => [...String(svg).matchAll(new RegExp(`<text class="${cls}"[^>]*>([^<]*)</text>`, 'g'))].map((m) => text(m[1]));
+// The grid order a place's roll call carries: the JSON script its data-inline names.
+const inlineOf = (markup) => JSON.parse(text(new RegExp(`<script type="application/json" id="${attr(markup, 'data-inline')}">([^<]*)</script>`).exec(String(markup))[1]));
 // A figure's note (the line under the chart).
 const noteOf = (fig) => text(/fig__note">([^<]*)</.exec(String(fig))[1]);
 
@@ -84,23 +85,19 @@ test('rollAsset: the grid\'s hospitals in drawing order with their records and s
   assert.equal(firstNever, everCut(S));
   assert.ok(asset.recs.slice(firstNever).every((r) => !r.includes('Y')));
   assert.ok(!('at' in asset), 'no places without the atlas and the master');
+  // Each year's counts, as the year map's script says them: cut that year, and ever cut by then.
+  assert.deepEqual(asset.counts, S.counts.map((c) => [c.cut, c.ever]));
   assert.deepEqual(JSON.parse(JSON.stringify(asset)), asset);
 });
 
-test('rollAsset with the atlas and the master: each hospital\'s place at both drawn widths, flat in tenths, nothing where there is no place', () => {
+test('rollAsset with the atlas and the master: each hospital\'s place on the year map\'s one drawing, flat in tenths, nothing where there is no place', () => {
   const asset = rollAsset(S, { shapes: DATA.shapes, master: SM });
-  assert.deepEqual(Object.keys(asset.at).sort(), [String(WIDTH), String(HIST_MAP_WIDE)].sort());
-  for (const flat of Object.values(asset.at)) {
-    assert.equal(flat.length, 2 * asset.ccns.length);
-    asset.ccns.forEach((ccn, j) => {
-      const [x, y] = [flat[2 * j], flat[2 * j + 1]];
-      if (!SM.has(ccn)) assert.deepEqual([x, y], [null, null], `${ccn} is not in the master`);
-      else assert.ok(Number.isInteger(x) && Number.isInteger(y), `${ccn}: tenths`);
-    });
-  }
-  // Wider width, farther apart: the same hospital sits further from the origin on the wider map.
-  const j = asset.ccns.indexOf('990101');
-  assert.ok(asset.at[String(HIST_MAP_WIDE)][2 * j] > asset.at[String(WIDTH)][2 * j]);
+  assert.equal(asset.at.length, 2 * asset.ccns.length);
+  asset.ccns.forEach((ccn, j) => {
+    const [x, y] = [asset.at[2 * j], asset.at[2 * j + 1]];
+    if (!SM.has(ccn)) assert.deepEqual([x, y], [null, null], `${ccn} is not in the master`);
+    else assert.ok(Number.isInteger(x) && Number.isInteger(y) && x > 0 && x < HIST_MAP_WIDE * 10, `${ccn}: tenths, inside the map`);
+  });
   assert.deepEqual(JSON.parse(JSON.stringify(asset)), asset, 'no NaN: it round-trips as JSON');
 });
 
@@ -127,9 +124,11 @@ test('rollFigure: the roll call with the numbers of ever cut, hospitals and neve
       const [width, height] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
       const [, , rowH, top] = geom[String(width)];
       assert.equal(height, top + hd.fys.length * rowH + 30, `width ${width}`);
-      const ys = new Set([...svg.matchAll(/ ([\d.]+)H[\d.]+v/g)].map((m) => Number(m[1])));
-      const rows = hd.fys.map((_, i) => top + i * rowH);
-      assert.ok(ys.size > 0 && [...ys].every((y) => rows.includes(y)), `width ${width}: every cell begins on a row of the geometry`);
+      // Each run is a stroke along its row's band: the band's middle, a row of the geometry down, as wide as the band.
+      const ys = new Set([...svg.matchAll(/M[\d.]+ ([\d.]+)H/g)].map((m) => Number(m[1])));
+      const rows = hd.fys.map((_, i) => top + i * rowH + (rowH - 2) / 2);
+      assert.ok(ys.size > 0 && [...ys].every((y) => rows.includes(y)), `width ${width}: every run lies along a row of the geometry`);
+      assert.deepEqual([...svg.matchAll(/class="chart-roll__(?:yes|no)" stroke-width="([\d.]+)"/g)].map((m) => Number(m[1])), [rowH - 2, rowH - 2]);
     }
   }
 });
@@ -293,7 +292,7 @@ test('chanceFigure: the panel by times cut against chance; its takeaway names th
   const real = HD.panelChance;
   const nums2 = numbers(takeaway(chanceFigure(HD, { n: 1, source: SRC })));
   for (const x of [count(real.hospitals), String(real.years), count(real.observed[0]), count(real.observed[real.years])]) assert.ok(nums2.includes(x), `${x} in "${takeaway(chanceFigure(HD, { n: 1, source: SRC }))}"`);
-  assert.equal(real.years, cutYears(HD));
+  assert.equal(real.years, HD.cutYears);
   // A key under the chart names the dot and the ring, and the side.
   assert.match(noteOf(fig), /^● What happened\s+○ .*random.*hospitals/);
 });
@@ -500,13 +499,13 @@ test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut
     assert.equal(row[0], `FY${S.fys[i]}`);
     assert.deepEqual(row.slice(1, 3), [count(d), count(c)]);
     assert.equal(row[3], d ? pct1(c / d) : '');
-    assert.equal(row[4], pct1(S.counts[i].decided ? S.counts[i].cut / S.counts[i].decided : 0));
+    assert.equal(row[4], S.counts[i].share === null ? '' : pct1(S.counts[i].share), 'the nation\'s, none in the year CMS cut no one');
   });
   // Alabama was above the nation's share in all 4 cut years; 6 of its 10 hospitals were ever cut.
   same(numbers(takeaway(fig)), ['4', '4', '6', '10']);
   assert.ok(takeaway(fig).startsWith('Alabama’s share cut was above'), takeaway(fig));
   // The script's names: the grid's own order inline, aligned.
-  const inline = JSON.parse(attr(fig, 'data-inline'));
+  const inline = inlineOf(fig);
   assert.deepEqual(inline.fys, S.fys);
   assert.equal(inline.ccns.length, 10);
   inline.ccns.forEach((ccn, j) => { assert.equal(inline.recs[j], S.recs.get(ccn)); assert.equal(inline.states[j], 'AL'); });
@@ -550,21 +549,22 @@ test('placeYearsFigure draws nothing for a place with fewer than two hospitals t
 
 // ---------- Part 4 as the program page assembles it ----------
 
-const psec = ({ id, wide = false, heading, text: body, figure: fig }) => html`<section id="${id}"${wide ? ' data-wide' : ''}><h3>${heading}</h3>${body}${fig}</section>`;
-const sections = (markup) => [...String(markup).matchAll(/<section id="([^"]+)"( data-wide)?>/g)].map((m) => m[1]);
+const sections = (markup) => [...String(markup).matchAll(/<section class="psec(?: psec--wide)?" id="([^"]+)"/g)].map((m) => m[1]);
 const figureNumbers = (markup) => [...String(markup).matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1]));
 
 test('part4 on the synthetic history: the nine sections in order, each beside one numbered figure, the year map only with the atlas and the master', () => {
-  const full = part4({ hd: S, source: SRC, figure: counter(5), psec, rollUrl: '/assets/h.json', src: '/assets/p.json', shapes: DATA.shapes, master: SM });
+  const full = part4({ hd: S, figure: counter(5), rollUrl: '/assets/h.json', src: '/assets/p.json', shapes: DATA.shapes, master: SM });
   assert.deepEqual(sections(full), ['roll', 'ever', 'spread', 'infections', 'chance', 'again', 'kinds', 'coverage', 'statemaps']);
   assert.deepEqual(figureNumbers(full), [5, 6, 7, 8, 9, 10, 11, 12, 13], 'numbered in page order, from the counter');
-  assert.deepEqual([...String(full).matchAll(/<section id="(\w+)" data-wide>/g)].map((m) => m[1]), ['roll', 'spread', 'statemaps']);
+  assert.deepEqual([...String(full).matchAll(/<section class="psec psec--wide" id="(\w+)"/g)].map((m) => m[1]), ['roll', 'spread', 'statemaps']);
+  // Every figure carries the history's own source line (the infections figure, Care Compare's).
+  assert.ok(String(full).includes(String(historySource(S))));
   // Without the atlas, the year map is left out and the rest are numbered without a gap.
-  const noMap = part4({ hd: S, source: SRC, figure: counter(), psec });
+  const noMap = part4({ hd: S, figure: counter() });
   assert.deepEqual(sections(noMap), ['roll', 'ever', 'infections', 'chance', 'again', 'kinds', 'coverage', 'statemaps']);
   assert.deepEqual(figureNumbers(noMap), [1, 2, 3, 4, 5, 6, 7, 8]);
   // Without infections, there is no infections section.
-  const noInf = part4({ hd: { ...S, infections: [] }, source: SRC, figure: counter(), psec });
+  const noInf = part4({ hd: { ...S, infections: [] }, figure: counter() });
   assert.ok(!sections(noInf).includes('infections'));
   assert.deepEqual(figureNumbers(noInf), [1, 2, 3, 4, 5, 6, 7]);
   // The spike year in the infections text is the one spikeYear finds.
@@ -573,14 +573,14 @@ test('part4 on the synthetic history: the nine sections in order, each beside on
 });
 
 test('part4 on the committed history: every part draws, and its figures\' numbers agree with the history', () => {
-  const markup = part4({ hd: HD, source: historySource(HD), figure: counter(14), psec, rollUrl: HISTORY_URL, src: SEARCH_URL, shapes: DATA.shapes, master: DATA.master });
+  const markup = part4({ hd: HD, figure: counter(14), rollUrl: HISTORY_URL, src: SEARCH_URL, shapes: DATA.shapes, master: DATA.master });
   assert.deepEqual(sections(markup), ['roll', 'ever', 'spread', 'infections', 'chance', 'again', 'kinds', 'coverage', 'statemaps']);
   assert.deepEqual(figureNumbers(markup), [14, 15, 16, 17, 18, 19, 20, 21, 22]);
   // The roll call and the staircase: the same ever-cut count, the history's.
   const ever = HD.counts.at(-1).ever;
   assert.ok(String(markup).includes(count(ever)));
   assert.equal(ever, everCut(HD));
-  assert.ok(cutYears(HD) === HD.fys.length - 1, 'every year but one');
+  assert.ok(HD.cutYears === HD.fys.length - 1, 'every year but one');
   assert.equal(attr(markup, 'data-roll'), HISTORY_URL);
 });
 
@@ -597,7 +597,7 @@ test('the program page with the history: Part 4 is #history, the figures run 1 t
   assert.deepEqual(['roll', 'ever', 'spread', 'infections', 'chance', 'again', 'kinds', 'coverage', 'statemaps'].filter((id) => !new RegExp(`id="${id}"`).test(part)), []);
   // The heading says how many years and rounds of cuts, from the history.
   const heading = text(/<h2[^>]*id="history-h"[^>]*>([\s\S]*?)<\/h2>/.exec(page)[1].replace(/<[^>]+>/g, ''));
-  same(numbers(heading), [String(HD.fys.length), String(cutYears(HD))]);
+  same(numbers(heading), [String(HD.fys.length), String(HD.cutYears)]);
   // Without the history the page has no Part 4, and its figures are the first thirteen.
   const without = renderProgram();
   assert.doesNotMatch(without, /id="history"/);
@@ -614,7 +614,7 @@ test('a place page with the history has the years figure for a place with two or
   assert.match(withHistory, /<section class="[^"]*" id="years"/);
   assert.doesNotMatch(without, /id="years"/);
   assert.match(withHistory, /<div class="roll" data-inline="/);
-  const inline = JSON.parse(attr(withHistory, 'data-inline'));
+  const inline = inlineOf(withHistory);
   assert.deepEqual(inline.fys, HD.fys);
   assert.ok(inline.ccns.length >= big.ccns.filter((c) => HD.recs.has(c)).length);
   // A place with one hospital draws no years figure.

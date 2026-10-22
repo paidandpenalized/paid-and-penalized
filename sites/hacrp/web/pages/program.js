@@ -17,7 +17,7 @@ import { fill, fillKeep, t } from '../program/copy.js';
 import { LINKS } from '../links.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
-import { cutYears, historySource, part4 } from '../history-figures.js';
+import { part4 } from '../history-figures.js';
 import { fill as hfill } from '../history/copy.js';
 import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
@@ -117,8 +117,8 @@ ${places && pd ? browseList(places, pd.counts.yes / pd.counts.decided) : ''}
 </div>
 </section>
 ${hd ? html`<section class="part" id="history" aria-labelledby="history-h">
-${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: String(hd.fys.length), k: String(cutYears(hd)) }), intro: hfill('part4Intro', { first: String(hd.fys[0]), share: pct(hd.counts[hd.counts.length - 1].ever / hd.recs.size, 0) }) })}
-${part4({ hd, source: historySource(hd), figure: figureNo, psec, rollUrl, src: searchUrl, shapes, master })}
+${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: String(hd.fys.length), k: String(hd.cutYears) }), intro: hfill('part4Intro', { first: String(hd.fys[0]), share: pct(hd.counts[hd.counts.length - 1].ever / hd.recs.size, 0) }) })}
+${part4({ hd, figure: figureNo, rollUrl, src: searchUrl, shapes, master })}
 </section>` : ''}
 <div class="prog__foot">
 <section class="block" aria-labelledby="links-h">

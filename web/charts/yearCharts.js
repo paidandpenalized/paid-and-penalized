@@ -3,10 +3,10 @@
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
-import { columnPath, frame, mark, r2, text } from './svg.js';
+import { columnPath, frame, isNarrow, mark, r2, text } from './svg.js';
 
 // The staircase. cols: [{ label, cut, ever, tip }] oldest first; the tall pale column is ever cut by that year, the
-// red one in front of it that year's cut. labels: { ever(n), cut(n) } print each column's numbers.
+// red one in front of it that year's cut; format(n) prints each column's ever-cut number over it.
 export function staircase({ cols, width, format }) {
   const M = { top: 26, bottom: 24, left: 4, right: 4 };
   const H = 200;
@@ -14,7 +14,7 @@ export function staircase({ cols, width, format }) {
   const y = scaleLinear().domain([0, max]).range([M.top + H, M.top]);
   const step = (width - M.left - M.right) / cols.length;
   const w = Math.max(6, step * 0.72);
-  const narrow = width < 400;
+  const narrow = isNarrow(width);
   const body = cols.map((c, i) => {
     const x = M.left + i * step + (step - w) / 2;
     return mark({
@@ -35,7 +35,7 @@ export function chanceDots({ ks, labels, width, format }) {
   const max = Math.max(...ks.flatMap((d) => [d.observed, d.chance]));
   const y = scaleLinear().domain([0, max]).nice().range([M.top + H, M.top]);
   const step = (width - M.left - M.right) / ks.length;
-  const r = width < 400 ? 3.5 : 5;
+  const r = isNarrow(width) ? 3.5 : 5;
   const body = ks.map((d, i) => {
     const cx = M.left + (i + 0.5) * step;
     const up = d.observed > d.chance;

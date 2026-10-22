@@ -4,7 +4,8 @@
 // read as one thin spike at zero. A row's label sits over its strip on the left, its note on the right.
 //   rows    [{ label, note, diffs }]: diffs are the row's differences (recomputed minus published)
 //   limit   the failure line (a difference at or past it fails the build)
-//   step    the bin width; labels: { fail, zero }; format(v): an axis tick's text
+//   step    the bin width; labels: { fail }: the failure zones' name; format(v): an axis tick's text
+import { clamp } from '../../engine/js/stats.js';
 import { html } from '../render/html.js';
 import { frame, r2, text } from './svg.js';
 
@@ -20,7 +21,7 @@ const PAST = 0.16;
 export function proofBins(diffs, { limit, step }) {
   const half = Math.round(limit / step);
   const counts = new Array(2 * half + 1).fill(0);
-  for (const d of diffs) counts[Math.max(0, Math.min(2 * half, Math.round(d / step) + half))]++;
+  for (const d of diffs) counts[clamp(Math.round(d / step) + half, 0, 2 * half)]++;
   return { half, counts };
 }
 

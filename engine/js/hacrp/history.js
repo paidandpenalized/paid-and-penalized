@@ -1,11 +1,12 @@
 // One program year's self-check, in any era of the program: how close this site's recomputed Total HAC Scores land
 // to CMS's published ones, and whether CMS's decisions follow its scores (every hospital it cut scored higher than
 // every hospital it didn't). Pure: records in, result out.
-//   records  [{ ccn, total, recomputed, decision, noted }]: total, CMS's published score (null: none); recomputed, this
-//            site's (null: none); decision, CMS's 'Yes', 'No' or 'N/A' (null: CMS published no decision that year);
-//            noted, CMS footnoted the row's score or parts
-// A recomputed score that misses CMS's is let pass only on a footnoted row (CMS used a part its file withholds, such as
-// a PSI 90 score it marks as not shown); those rows are counted as withheld, never hidden.
+//   records  [{ ccn, total, recomputed, decision }]: total, CMS's published score (null: none); recomputed, this site's
+//            (null: none); decision, CMS's 'Yes', 'No' or 'N/A' (null: CMS published no decision that year)
+// A recomputed score that misses CMS's is let pass only when CMS withheld a part it used (withheldPart: a part missing
+// from the file, footnoted, that the published total works out to a valid score for); those rows are counted as
+// withheld, never hidden. Any other miss fails the year.
+import { domainsOf, publishedParts } from './eras.js';
 import { percentileInc } from '../stats.js';
 
 // A recomputed score may miss CMS's by less than this: CMS rounds the parts and the total to 4 decimals, so a miss at
@@ -29,12 +30,61 @@ function linePercentile(records, highestNo) {
   return totals.filter((t) => t <= highestNo).length / totals.length;
 }
 
-export function yearCheck(records) {
+// Each part's [lowest, highest] value CMS published that year, by part: measure ids, and 'D1' and 'D2' for the domain
+// scores. records: eras.js toRecord() shapes.
+export function partRanges(records) {
+  const out = {};
+  const add = (key, v) => {
+    if (v === null || v === undefined) return;
+    const r = (out[key] ??= [v, v]);
+    if (v < r[0]) r[0] = v;
+    if (v > r[1]) r[1] = v;
+  };
+  for (const rec of records) {
+    for (const [id, v] of Object.entries(rec.z)) add(id, v);
+    add('D1', rec.d1);
+    add('D2', rec.d2);
+  }
+  return out;
+}
+
+// The part CMS used but didn't publish that a row's total implies, when the parts it did publish don't add up to the
+// total: a part missing from the file whose own footnote CMS filled (it withheld the part), and whose value, solved
+// from the total and the published parts by the year's rule, is a score that part takes that year: within the year's
+// published range of it and, in a year scored in tenths, a whole score from 1 to 10. CMS rounds the total, so the
+// solved part is known to within SCORE_TOLERANCE over the part's weight in it. null when no such part explains the row.
+//   rec     eras.js toRecord() with notes: the set of parts CMS footnoted (eras.js partNotes)
+//   rule    eras.js ruleFor(fy); ranges: partRanges() of the year; scale: the year's, 'z' or 'tenths'
+//   'equal' solves for the one missing z-score; 'domains' for the missing domain (Domain 1 or Domain 2).
+export function withheldPart(rec, rule, ranges, scale) {
+  if (rec.total === null) return null;
+  const valid = (key, v, weight) => {
+    const slack = SCORE_TOLERANCE / weight;
+    if (!ranges[key] || v < ranges[key][0] - slack || v > ranges[key][1] + slack) return false;
+    const whole = Math.round(v);
+    return scale !== 'tenths' || (Math.abs(v - whole) < slack && whole >= 1 && whole <= 10);
+  };
+  if (rule.rule === 'equal') {
+    const have = publishedParts(rec);
+    const weight = 1 / (have.length + 1);
+    const v = rec.total / weight - have.reduce((s, z) => s + z, 0);
+    return Object.keys(rec.z).find((id) => rec.z[id] === null && rec.notes.has(id) && valid(id, v, weight)) ?? null;
+  }
+  const [d1, d2] = domainsOf(rec);
+  const [w1, w2] = rule.weights;
+  if (d1 === null && d2 !== null && rec.notes.has('D1')) return valid('D1', (rec.total - w2 * d2) / w1, w1) ? 'D1' : null;
+  if (d2 === null && d1 !== null && rec.notes.has('D2')) return valid('D2', (rec.total - w1 * d1) / w2, w2) ? 'D2' : null;
+  return null;
+}
+
+// withheldOf(record): the part CMS withheld that explains a record's miss (withheldPart), or null; by default none is.
+export function yearCheck(records, withheldOf = () => null) {
   const both = records.filter((r) => r.total !== null && r.recomputed !== null);
   const misses = (r) => Math.abs(r.recomputed - r.total) >= SCORE_TOLERANCE;
-  const withheld = both.filter((r) => misses(r) && r.noted).map((r) => r.ccn);
-  const unexplained = both.filter((r) => misses(r) && !r.noted).map((r) => r.ccn);
-  const scored = both.filter((r) => !misses(r) || !r.noted);
+  const explained = new Set(both.filter((r) => misses(r) && withheldOf(r) !== null));
+  const withheld = both.filter((r) => explained.has(r)).map((r) => r.ccn);
+  const unexplained = both.filter((r) => misses(r) && !explained.has(r)).map((r) => r.ccn);
+  const scored = both.filter((r) => !explained.has(r));
   const diffs = scored.map((r) => r.recomputed - r.total);
   const maxError = diffs.reduce((m, d) => Math.max(m, Math.abs(d)), 0);
   // The decided: a score and a Yes or No from CMS, sorted lowest score first, as the rules draw them.

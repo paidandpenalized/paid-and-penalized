@@ -26,29 +26,33 @@ const countOf = (rec, ch) => [...rec].filter((c) => c === ch).length;
 export const timesCut = (rec) => countOf(rec, CUT);
 export const yearsDecided = (rec) => rec.length - countOf(rec, NONE);
 
-// Per year: hospitals with a decision, those cut, and the first-time cut (never cut in an earlier year), with the
-// running count of hospitals ever cut.
-export function yearly(recs, n) {
-  const out = [];
-  const ever = new Set();
-  for (let i = 0; i < n; i++) {
-    let decided = 0;
-    let cut = 0;
-    let first = 0;
-    for (const [ccn, rec] of recs) {
+// Per year, over a Map(ccn -> record) of any set of hospitals: those with a decision and those cut, [{ decided, cut }].
+export function tallyYears(recs, n) {
+  const out = Array.from({ length: n }, () => ({ decided: 0, cut: 0 }));
+  for (const rec of recs.values()) {
+    for (let i = 0; i < n; i++) {
       if (rec[i] === NONE) continue;
-      decided++;
-      if (rec[i] === CUT) {
-        cut++;
-        if (!ever.has(ccn)) {
-          first++;
-          ever.add(ccn);
-        }
-      }
+      out[i].decided++;
+      if (rec[i] === CUT) out[i].cut++;
     }
-    out.push({ decided, cut, first, ever: ever.size });
   }
   return out;
+}
+
+// Per year: tallyYears, and the first-time cut (never cut in an earlier year), with the running count of hospitals
+// ever cut.
+export function yearly(recs, n) {
+  const ever = new Set();
+  return tallyYears(recs, n).map((t, i) => {
+    let first = 0;
+    for (const [ccn, rec] of recs) {
+      if (rec[i] === CUT && !ever.has(ccn)) {
+        first++;
+        ever.add(ccn);
+      }
+    }
+    return { ...t, first, ever: ever.size };
+  });
 }
 
 // The chance a sum of independent yes/no draws with probabilities ps comes to k, for k = 0..ps.length.
@@ -82,32 +86,6 @@ export function timesCutVsChance(recs, shares, { minYears = 1 } = {}) {
   return { hospitals, observed, chance };
 }
 
-// Year-to-year: of the hospitals with a decision in both years, how many cut in the first were cut again, and how
-// many not cut in the first were cut in the second.
-export function repeats(recs, n) {
-  const out = [];
-  for (let i = 1; i < n; i++) {
-    let cutBefore = 0;
-    let cutAgain = 0;
-    let notBefore = 0;
-    let cutNew = 0;
-    for (const rec of recs.values()) {
-      const a = rec[i - 1];
-      const b = rec[i];
-      if (a === NONE || b === NONE) continue;
-      if (a === CUT) {
-        cutBefore++;
-        if (b === CUT) cutAgain++;
-      } else {
-        notBefore++;
-        if (b === CUT) cutNew++;
-      }
-    }
-    out.push({ from: i - 1, to: i, cutBefore, cutAgain, notBefore, cutNew });
-  }
-  return out;
-}
-
 // The longest run of consecutive years cut in a record (a year with no decision breaks a run).
 export function longestRun(rec) {
   let best = 0;
@@ -119,13 +97,16 @@ export function longestRun(rec) {
   return best;
 }
 
-// The roll-call order: records sorted as words with 'Y' before 'N' before '.', year by year from the oldest, so the
-// hospitals cut first stand first and each later year splits the groups again; ties by CCN.
-const RANK = { [CUT]: 0, [NOT_CUT]: 1, [NONE]: 2 };
-export function rollCallOrder(recs) {
+// The pages' order of hospitals: records compared year by year with no decision read as not cut, so the hospitals
+// cut first stand first and every hospital never cut stands at the end; ties by the record itself (a decision before
+// none), then CCN. recs: Map(ccn -> record) -> [[ccn, record]].
+export function rollOrder(recs) {
+  const key = (rec) => rec.replaceAll(NONE, NOT_CUT);
   return [...recs].sort(([ca, a], [cb, b]) => {
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return RANK[a[i]] - RANK[b[i]];
-    return ca < cb ? -1 : ca > cb ? 1 : 0;
+    const ka = key(a);
+    const kb = key(b);
+    if (ka !== kb) return ka < kb ? 1 : -1; // 'Y' > 'N': cut first
+    return a < b ? 1 : a > b ? -1 : ca < cb ? -1 : 1;
   });
 }
 
