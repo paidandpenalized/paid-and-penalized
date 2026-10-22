@@ -40,7 +40,7 @@ function withheldNote(checks) {
 // A year's line counts as well above the 75th percentile when more than this share of the decided hospitals scored
 // above the percentile and were not cut (a display threshold: a handful of hospitals either way is not a different
 // line).
-const ABOVE_BY = 0.005;
+export const ABOVE_BY = 0.005;
 
 // "3" or "1 to 7": the range of a count across years.
 const countRange = (ns) => {
@@ -54,15 +54,15 @@ const countRange = (ns) => {
 // and the most hospitals ever tied exactly at the line.
 function sidesNotes(checks) {
   const decided = checks.filter((c) => c.check.yes);
-  const pct = ordinal(CUTOFF_PERCENTILE);
   const on = decided.filter((c) => c.check.p75InGap);
   const off = decided.filter((c) => !c.check.p75InGap);
-  const well = off.filter((c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY);
-  const few = off.filter((c) => !well.includes(c));
+  const isWell = (c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY;
+  const well = off.filter(isWell);
+  const few = off.filter((c) => !isWell(c));
   const years = (cs) => listText(cs.map((c) => fyLabel(c.fy)));
   const range = (cs) => countRange(cs.map((c) => c.check.aboveNotCut));
   const ties = [...decided].sort((a, b) => b.check.atLine - a.check.atLine)[0];
-  return html`${para(fill('sidesRule', { percentile: pct }))}${on.length ? para(fill('sidesOn', { years: years(on) })) : ''}${few.length ? para(fill('sidesFew', { years: years(few), n: range(few) })) : ''}${well.length ? para(fill('sidesWell', { years: years(well), n: range(well) })) : ''}${off.length ? para(t('sidesWhy')) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
+  return html`${para(fill('sidesRule', { percentile: ordinal(CUTOFF_PERCENTILE) }))}${on.length ? para(fill('sidesOn', { years: years(on) })) : ''}${few.length ? para(fill('sidesFew', { years: years(few), n: range(few) })) : ''}${well.length ? para(fill('sidesWell', { years: years(well), n: range(well) })) : ''}${off.length ? para(t('sidesWhy')) : ''}${ties && ties.check.atLine > 1 ? para(fill('sidesTies', { fy: String(ties.fy), n: count(ties.check.atLine), line: decimal(ties.check.highestNo, 4) })) : ''}`;
 }
 
 // The glossary's entries, in reading order: [term key, definition key, values].

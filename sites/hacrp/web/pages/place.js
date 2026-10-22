@@ -8,7 +8,7 @@ import { historySource, placeYearsFigure } from '../history-figures.js';
 import { nameInText } from '../places.js';
 import { fill as hfill } from '../history/copy.js';
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, ordinal, pct } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, ordinal, pct, shownAbove } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -68,7 +68,7 @@ function placeCard(place, { pd, places, fy }) {
 ${formTitle(fill('placeCardTitle', { name: place.name, fy: String(fy) }), t('placeCardVs'))}
 ${fields.map((field, i) => html`${formField({ no: i + 1, ...field })}
 `)}</div>
-${share !== null ? stamp({ label: fill('placeStamp', { share: pct(share, 0) }), ink: share <= nation }) : ''}
+${share !== null ? stamp({ label: fill('placeStamp', { share: pct(share, 0) }), ink: !shownAbove(share, nation, 0) }) : ''}
 </div>`;
 }
 

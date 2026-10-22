@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { percentileInc } from '../../stats.js';
 import { ruleFor } from '../../hacrp/eras.js';
-import { LINE_PERCENTILE, SCORE_TOLERANCE, partRanges, percentileLine, withheldPart, yearCheck } from '../../hacrp/history.js';
+import { LINE_PERCENTILE, SCORE_TOLERANCE, partRanges, withheldPart, yearCheck } from '../../hacrp/history.js';
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -28,8 +28,8 @@ test('a perfect year: every score recomputed, every decision in order, the line 
   // percentileInc over 1..8 at 0.75 is 6.25, between the highest No (6) and the lowest Yes (7).
   close(c.p75, 6.25);
   assert.equal(c.p75InGap, true);
-  assert.equal(c.linePct, 6 / 8, 'six of the eight scores are at or below the highest No');
-  assert.equal(c.lineShare, 6 / 8, 'six of the eight decided were not cut');
+  assert.equal(c.linePctAll, 6 / 8, 'six of the eight scores are at or below the highest No');
+  assert.equal(c.linePctDecided, 6 / 8, 'six of the eight decided were not cut');
   assert.equal(c.aboveNotCut, 0, 'every hospital above the percentile was cut');
   assert.deepEqual(c.sorted.scores, [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.deepEqual(c.sorted.yes, [false, false, false, false, false, false, true, true]);
@@ -192,11 +192,11 @@ test('only decisions CMS gave count: N/A (Maryland), a missing decision and a mi
   const c = yearCheck(rows);
   assert.equal(c.decided, 8);
   assert.equal(c.yes, 2);
-  // linePct counts every published score at or below the highest not cut: the 0.5 and 0.25 as well as 1 to 6.
-  assert.equal(c.linePct, 8 / 10);
+  // linePctAll counts every published score at or below the highest not cut: the 0.5 and 0.25 as well as 1 to 6.
+  assert.equal(c.linePctAll, 8 / 10);
   // The percentile and the line's share are over the decided alone, as CMS takes its percentile outside Maryland.
   close(c.p75, percentileInc([1, 2, 3, 4, 5, 6, 7, 8], 0.75));
-  assert.equal(c.lineShare, 6 / 8);
+  assert.equal(c.linePctDecided, 6 / 8);
   assert.equal(c.p75InGap, true);
 });
 
@@ -219,20 +219,21 @@ test('the 75th percentile line sits in CMS\'s gap, or does not', () => {
   assert.equal(yearCheck(atYes).p75InGap, false, 'the 75th percentile is the lowest score cut');
 });
 
-test('percentileLine: the inclusive 75th percentile of the decided scores, null with none', () => {
-  assert.equal(percentileLine([]), null);
-  assert.equal(percentileLine([row(1, null, 'N/A')]), null);
-  assert.equal(percentileLine([row(1, 3, 'N/A')]), null, 'a Maryland score is not in it');
-  close(percentileLine(eight()), 6.25);
-  close(percentileLine([row(1, 4, 'No'), row(2, null, null), row(3, 2, 'No')]), 3.5);
-  close(percentileLine([row(1, 4, 'No'), row(2, 2, 'No'), row(3, 100, 'N/A'), row(4, 50, null)]), 3.5);
+test('the 75th percentile is the inclusive percentile of the decided scores alone, null with none', () => {
+  const p75 = (rows) => yearCheck(rows).p75;
+  assert.equal(p75([]), null);
+  assert.equal(p75([row(1, null, 'N/A')]), null);
+  assert.equal(p75([row(1, 3, 'N/A')]), null, 'a Maryland score is not in it');
+  close(p75(eight()), 6.25);
+  close(p75([row(1, 4, 'No'), row(2, null, null), row(3, 2, 'No')]), 3.5);
+  close(p75([row(1, 4, 'No'), row(2, 2, 'No'), row(3, 100, 'N/A'), row(4, 50, null)]), 3.5);
 });
 
 test('a year CMS scored no one (FY2023): nothing is checked and the year passes', () => {
   const rows = [1, 2, 3].map((n) => row(n, null, 'N/A', { recomputed: null }));
   const c = yearCheck(rows);
   assert.deepEqual([c.scored, c.within, c.maxError, c.decided, c.yes, c.wrongSide.length, c.atLine], [0, 0, 0, 0, 0, 0, 0]);
-  assert.deepEqual([c.highestNo, c.lowestYes, c.p75, c.linePct], [null, null, null, null]);
+  assert.deepEqual([c.highestNo, c.lowestYes, c.p75, c.linePctAll], [null, null, null, null]);
   assert.equal(c.p75InGap, false);
   assert.deepEqual(c.sorted, { scores: [], yes: [] });
   assert.equal(c.ok, true);
@@ -240,9 +241,9 @@ test('a year CMS scored no one (FY2023): nothing is checked and the year passes'
 
 test('a year with decisions of one kind only has no line and no order to check', () => {
   const onlyNo = yearCheck([row(1, 1, 'No'), row(2, 2, 'No')]);
-  assert.deepEqual([onlyNo.highestNo, onlyNo.lowestYes, onlyNo.linePct, onlyNo.wrongSide.length, onlyNo.p75InGap, onlyNo.ok], [2, null, null, 0, false, true]);
+  assert.deepEqual([onlyNo.highestNo, onlyNo.lowestYes, onlyNo.linePctAll, onlyNo.wrongSide.length, onlyNo.p75InGap, onlyNo.ok], [2, null, null, 0, false, true]);
   const onlyYes = yearCheck([row(1, 1, 'Yes'), row(2, 2, 'Yes')]);
-  assert.deepEqual([onlyYes.highestNo, onlyYes.lowestYes, onlyYes.linePct, onlyYes.wrongSide.length, onlyYes.p75InGap, onlyYes.atLine, onlyYes.ok], [null, 1, null, 0, false, 0, true]);
+  assert.deepEqual([onlyYes.highestNo, onlyYes.lowestYes, onlyYes.linePctAll, onlyYes.wrongSide.length, onlyYes.p75InGap, onlyYes.atLine, onlyYes.ok], [null, 1, null, 0, false, 0, true]);
 });
 
 // Code review, M3: Domain 2 is an average, so a withheld Domain 2 need not be whole in a tenths year; Domain 1 is

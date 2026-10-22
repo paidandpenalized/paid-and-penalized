@@ -16,7 +16,7 @@ import { SHORT_NAMES } from '../web/constants.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { METHODS_PATH, methodsPage } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
 import { ASSETS } from './fixtures.js';
 import { DATA, HD } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
@@ -140,7 +140,7 @@ test('the notes under the check state what the checks found: the rows withheld, 
   assert.ok(onNote.includes(listText(on)), `${onNote} vs ${on}`);
   const off = decided.filter((c) => !c.check.p75InGap);
   assert.ok(off.every((c) => c.check.aboveNotCut > 0), 'off the percentile, CMS\'s line is always above it, never below');
-  const well = off.filter((c) => c.check.aboveNotCut / c.check.decided > 0.005);
+  const well = off.filter((c) => c.check.aboveNotCut / c.check.decided > ABOVE_BY);
   const few = off.filter((c) => !well.includes(c));
   assert.deepEqual(well.map((c) => c.fy), [2017, 2018], 'the two years well above: true of the committed files');
   const span = (cs) => cs.map((c) => c.check.aboveNotCut);
@@ -285,7 +285,7 @@ test('sidesFigure: a row a year of decisions, the cut, the highest score not cut
     if (c.yes) {
       assert.equal(rows[i][3], decimal(c.highestNo, 4));
       assert.equal(rows[i][4], decimal(c.lowestYes, 4));
-      assert.equal(rows[i][6], decimal(c.lineShare * 100, 1));
+      assert.equal(rows[i][6], decimal(c.linePctDecided * 100, 1));
     } else assert.deepEqual([rows[i][3], rows[i][4], rows[i][6]], ['', '', ''], `FY${fy}: no cut, no line`);
   });
   const decided = checks.reduce((n, c) => n + c.check.decided, 0);

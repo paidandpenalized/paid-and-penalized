@@ -35,6 +35,10 @@ export function pct(x, dp = 1) {
   return fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
 }
 
+// Whether share a is above share b as the page prints them at dp decimals: two shares that print the same are neither
+// above nor below each other. Null (no share) is never above.
+export const shownAbove = (a, b, dp = 1) => a !== null && b !== null && pct(a, dp) !== pct(b, dp) && a > b;
+
 function withSign(x, dp, plus) {
   const body = fixed(Math.abs(x), dp, 'decimal');
   if (Number(body.replace(/,/g, '')) === 0) return body;

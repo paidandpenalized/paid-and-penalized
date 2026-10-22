@@ -1,7 +1,7 @@
 // The program page's figures and the place pages', drawn with the chart kit (web/charts/) in HACRP's words from
 // programData() (program-data.js). Every takeaway is filled from the data the figure draws; copy.js holds the words.
 import { html, raw } from '../../../web/render/html.js';
-import { cmsText, count, decimal, ordinal, pct, shortDate } from '../../../web/render/format.js';
+import { cmsText, count, decimal, ordinal, pct, shortDate, shownAbove } from '../../../web/render/format.js';
 import { ruleCompare, scoreRule } from '../../../web/charts/scoreRule.js';
 import { figure, imageOf, imagePair, keysHint, num } from '../../../web/charts/figure.js';
 import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../web/charts/geo.js';
@@ -101,7 +101,7 @@ function punchFigure(pd, { n, source }) {
   const none = pd.coverage.find((c) => !c.ids.length);
   const sum = (list, k) => list.reduce((s, c) => s + c[k], 0);
   const nation = pd.counts.yes / pd.counts.decided;
-  const shareOf = (yes, decided) => (decided ? { shareText: pct(yes / decided, 0), hot: yes / decided > nation } : {});
+  const shareOf = (yes, decided) => (decided ? { shareText: pct(yes / decided, 0), hot: shownAbove(yes / decided, nation, 0) } : {});
   const columns = [
     ...kept.map((c) => ({ holes: c.ids.map((id) => MEASURE_IDS.indexOf(id)), n: c.n, yes: c.yes, nText: count(c.n), ...shareOf(c.yes, c.decided), tip: fill('fig1Tip', { set: setName(c.ids), n: count(c.n), yes: count(c.yes) }) })),
     ...(rest.length ? [{ holes: null, n: sum(rest, 'n'), yes: sum(rest, 'yes'), nText: count(sum(rest, 'n')), ...shareOf(sum(rest, 'yes'), sum(rest, 'decided')), tip: fill('fig1TipOther', { k: count(rest.length), n: count(sum(rest, 'n')), yes: count(sum(rest, 'yes')) }) }] : []),

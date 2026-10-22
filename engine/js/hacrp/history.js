@@ -16,16 +16,9 @@ export const SCORE_TOLERANCE = 0.001;
 export const LINE_PERCENTILE = 0.75;
 
 const byTotal = (a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : a.ccn > b.ccn ? 1 : 0);
-// CMS's Yes or No: Maryland's hospitals are N/A, so in every year the decided are the scored hospitals outside
-// Maryland, the scores CMS takes its percentile over.
-const isDecided = (r) => r.total !== null && (r.decision === 'Yes' || r.decision === 'No');
-
-// The 75th percentile (inclusive definition) of the scores of the hospitals CMS made a decision on that year; null
-// with none.
-export function percentileLine(records) {
-  const totals = records.filter(isDecided).map((r) => r.total).sort((a, b) => a - b);
-  return totals.length ? percentileInc(totals, LINE_PERCENTILE) : null;
-}
+// A score and CMS's Yes or No. Maryland's hospitals are N/A, so in every year the decided are the scored hospitals
+// outside Maryland, the scores CMS takes its percentile over.
+const hasDecision = (r) => r.total !== null && (r.decision === 'Yes' || r.decision === 'No');
 
 // Where CMS's line sits as a percentile of every published score: the share of them at or below the highest score
 // CMS did not cut.
@@ -95,17 +88,20 @@ export function yearCheck(records, withheldOf = () => null) {
   const diffs = scored.map((r) => r.recomputed - r.total);
   const maxError = diffs.reduce((m, d) => Math.max(m, Math.abs(d)), 0);
   // The decided: a score and a Yes or No from CMS, sorted lowest score first, as the rules draw them.
-  const decided = records.filter(isDecided).sort(byTotal);
+  const decided = records.filter(hasDecision).sort(byTotal);
+  const scores = decided.map((r) => r.total);
   const yes = decided.filter((r) => r.decision === 'Yes');
   const no = decided.filter((r) => r.decision === 'No');
   const highestNo = no.length ? no[no.length - 1].total : null;
   const lowestYes = yes.length ? yes[0].total : null;
   // Decisions out of order: a hospital CMS did not cut scoring at or above one it cut. Both ends of any overlap
   // count, so a single swap shows as two.
-  const wrongSide = yes.length && no.length && highestNo >= lowestYes
+  const split = yes.length > 0 && no.length > 0;
+  const wrongSide = split && highestNo >= lowestYes
     ? decided.filter((r) => (r.decision === 'No' ? r.total >= lowestYes : r.total <= highestNo)).map((r) => r.ccn)
     : [];
-  const p75 = percentileLine(records);
+  // The 75th percentile (inclusive definition) of the decided scores.
+  const p75 = scores.length ? percentileInc(scores, LINE_PERCENTILE) : null;
   return {
     scored: scored.length,
     diffs,
@@ -122,13 +118,14 @@ export function yearCheck(records, withheldOf = () => null) {
     atLine: no.filter((r) => r.total === highestNo).length,
     // The 75th percentile of the decided scores; whether it falls in CMS's gap (the published scores reproduce the
     // cut); how many hospitals scored above it and were not cut (CMS's line sits that many hospitals higher); and
-    // where CMS's line sits among every published score (Maryland's too), as the hospital page draws it.
+    // where CMS's line sits as a share of the decided scores (the Methods table) and of every published score,
+    // Maryland's too (the hospital page's year chart, which places each score among them all).
     p75,
-    p75InGap: yes.length > 0 && no.length > 0 && p75 >= highestNo && p75 < lowestYes,
-    aboveNotCut: yes.length && no.length ? no.filter((r) => r.total > p75).length : null,
-    linePct: yes.length && no.length ? linePercentile(records, highestNo) : null,
-    lineShare: yes.length && no.length ? no.length / decided.length : null,
-    sorted: { scores: decided.map((r) => r.total), yes: decided.map((r) => r.decision === 'Yes') },
+    p75InGap: split && p75 >= highestNo && p75 < lowestYes,
+    aboveNotCut: split ? no.filter((r) => r.total > p75).length : null,
+    linePctDecided: split ? no.length / decided.length : null,
+    linePctAll: split ? linePercentile(records, highestNo) : null,
+    sorted: { scores, yes: decided.map((r) => r.decision === 'Yes') },
     // A year CMS scored no one (FY2023) checks nothing and passes.
     ok: unexplained.length === 0 && maxError < SCORE_TOLERANCE && wrongSide.length === 0,
   };
