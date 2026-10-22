@@ -1,6 +1,6 @@
 // Test setup read from the pinned HACRP data (fixtures.js holds only synthetic data): the loaded files, the
 // national ranges and score span the pages draw, the national context, what the program page and the place pages
-// draw, each hospital's view, and the program page's arguments for tests that vary one of them.
+// draw, each hospital's view, the history, and the program page's arguments for tests that vary one of them.
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { loadHacrp } from '../web/data.js';
 import { scoreRange } from '../web/generate.js';
@@ -10,6 +10,7 @@ import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
+import { historyData } from '../web/history-data.js';
 import { ASSETS, BOUNDARY_TEXT } from './fixtures.js';
 
 export const DATA = loadHacrp();
@@ -26,6 +27,12 @@ export const PLACES = buildPlaces({ hospitals: DATA.hospitals, master: DATA.mast
 export const VIEWS = DATA.hospitals.map((h) => hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }));
 export const HOSPITAL_ROWS = new Map(VIEWS.map((v) => [v.ccn, { name: v.name, city: v.city, state: v.state, totalText: v.score.raw, decision: v.decision.text, point: v.point, href: v.path }]));
 export const SEARCH_URL = '/assets/hacrp-hospitals.0000abcd.json';
+// Every program year (the emitted history) as the pages draw it, and the asset the roll call and year map read.
+// HISTORY_ARGS adds the history to a program page or a place page: renderProgram(HISTORY_ARGS) is the page as the build
+// renders it; without them, it is the page of the newest year alone.
+export const HD = historyData({ history: DATA.history, master: DATA.master });
+export const HISTORY_URL = '/assets/hacrp-history.0000abcd.json';
+export const HISTORY_ARGS = { hd: HD, rollUrl: HISTORY_URL, master: DATA.master };
 
 // The program page as the build renders it (generate.js): every part, the sandbox on the median hospital, the hero's
 // suggestions (the state and the metro area with the most hospitals with a decision). overrides replace any argument.

@@ -16,12 +16,13 @@ import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
+import { METHODS_PATH } from '../web/pages/methods.js';
 import { programPage } from '../web/pages/program.js';
 import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
-import { DATA, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -70,7 +71,7 @@ test('production, released: every hospital page and every place page plus /hacrp
   temp(async (dir) => {
     const ctx = await generate(dir, 'production', { released: true, data: DATA });
     assert.equal(DATA.hospitals.length, 3055);
-    assert.equal(ctx.pages, DATA.hospitals.length + PLACES.list.length + 2, 'the hospitals, the places, /hacrp/ and the data dictionary page');
+    assert.equal(ctx.pages, DATA.hospitals.length + PLACES.list.length + 3, 'the hospitals, the places, /hacrp/, the data dictionary page and Methods');
     assert.equal(readdirSync(join(dir, 'hacrp', 'hospital')).length, DATA.hospitals.length);
     // A page for every place, under its kind: the build writes exactly the places there are.
     for (const kind of KINDS) {
@@ -113,6 +114,14 @@ test('production, released: every hospital page and every place page plus /hacrp
     }
     assert.ok(pages.get('/hacrp/').includes(`<script type="module" src="${ASSETS.js['hacrp-program']}"></script>`));
 
+    // The Methods page: one h1, its ids once, its headings a step down at a time, the figure script because it has figures.
+    const methods = read(dir, METHODS_PATH);
+    assert.equal(methods.match(/<h1[\s>]/g)?.length, 1, 'Methods: one h1');
+    assert.deepEqual(brokenIds(methods), { repeated: [], missing: [] }, 'Methods: ids');
+    assert.ok(levels(methods).every((level, i, all) => (i === 0 ? level === 1 : level <= all[i - 1] + 1)), `Methods: heading levels ${levels(methods)}`);
+    assert.ok(methods.includes(' data-figure>') && methods.includes(`src="${ASSETS.js.figure}"`), 'Methods: figures, and the script that serves them');
+    assert.ok(!methods.includes(NOINDEX), 'Methods is indexed as the program page is');
+
     // Scored pages may be indexed; a page with no score never is, even in production on a released site. Only a
     // scored page has the what-if.
     for (const h of DATA.hospitals) {
@@ -122,7 +131,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     // The program page and every place page are indexed as the program is: on a released production site, all of them.
     for (const place of PLACES.list) assert.ok(!pages.get(place.path).includes(NOINDEX), place.path);
     const scored = DATA.hospitals.filter((h) => h.total !== null).map(hospitalPath);
-    assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...PLACES.list.map((p) => p.path), ...scored]);
+    assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...PLACES.list.map((p) => p.path), METHODS_PATH, ...scored]);
     assert.ok(!pages.get('/hacrp/').includes(NOINDEX));
 
     const maryland = page(pick((h) => h.paymentReduction === 'N/A' && h.paymentReductionFootnote === 'a', 'Maryland'));
@@ -209,9 +218,9 @@ test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
   temp(async (dir) => {
     const ctx = await generate(dir, undefined, { released: true, data: SLICE });
     assert.deepEqual(ctx.indexable, []);
-    // The hospitals, the places, /hacrp/ and the dictionary page.
-    assert.equal(ctx.pages, SLICE.hospitals.length + SLICE_PLACES.list.length + 2);
-    for (const path of ['/hacrp/', '/hacrp/data/', ...SLICE_PLACES.list.map((p) => p.path), ...SLICE.hospitals.map(hospitalPath)]) assert.ok(read(dir, path).includes(NOINDEX), path);
+    // The hospitals, the places, /hacrp/, the dictionary page and Methods.
+    assert.equal(ctx.pages, SLICE.hospitals.length + SLICE_PLACES.list.length + 3);
+    for (const path of ['/hacrp/', '/hacrp/data/', METHODS_PATH, ...SLICE_PLACES.list.map((p) => p.path), ...SLICE.hospitals.map(hospitalPath)]) assert.ok(read(dir, path).includes(NOINDEX), path);
   }));
 
 test('A1 failing stops the build and names the mismatched CCN', async () => {
@@ -535,21 +544,29 @@ test("a hospital page's foot sets the facts (the data's release among them), dat
 });
 
 test("the HACRP top bar: the program's name and FY tag, its nav to the program page's sections (each id on the page) and Methods", () => {
-  const program = renderProgram();
+  const program = renderProgram(HISTORY_ARGS);
   const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
   assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
-  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'map', 'hospitals', 'methods']);
+  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'map', 'history', 'methods']);
   for (const [id, href] of targets.slice(0, 4)) {
     assert.equal(href, `/hacrp/#${id}`);
     assert.match(program, new RegExp(`<[a-z]+ [^>]*id="${id}"`), `the program page holds #${id}`);
   }
-  assert.ok(header.includes('href="/methods/" data-nav="methods"'));
+  assert.equal(targets[4][1], METHODS_PATH, 'Methods is its own page under the program');
+  assert.ok(header.includes(`href="${METHODS_PATH}" data-nav="methods"`));
   assert.match(header, /data-nav="how" aria-current="true"/);
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
   const view = hospitalView(inputs(CASES.yes));
   const hosp = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS });
-  assert.match(/<header class="topbar">[\s\S]*?<\/header>/.exec(hosp)[0], /data-nav="hospitals" aria-current="true"/);
+  const barOf = (text) => /<header class="topbar">[\s\S]*?<\/header>/.exec(text)[0];
+  const currentOf = (text) => [...barOf(text).matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
+  // The hospital and place pages mark "Every hospital" (the program page's #map), the Methods page marks Methods, and
+  // each bar has the same five links.
+  assert.deepEqual(currentOf(hosp), ['map']);
+  assert.deepEqual(currentOf(renderPlace(PLACES.list[0], HISTORY_ARGS)), ['map']);
+  assert.deepEqual(currentOf(program), ['how']);
+  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">3<\/span>Every hospital</);
 });
 
 test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {

@@ -158,7 +158,7 @@ export function gapFigure(hd, { n, source }) {
     n, source, csvName: 'hacrp-cut-again-by-gap', alt: t('gapAlt'), claimLevel: 'recomputed',
     takeaway: fill('gapTakeaway', { one: pct0(again(one)), oneFresh: pct0(fresh(one)), two: pct0(again(two)), twoFresh: pct0(fresh(two)), far: String(far.k), farAgain: pct0(again(far)), farFresh: pct0(fresh(far)) }),
     key: null,
-    note: t('gapNote'),
+    note: fill('gapNote', { none: hd.fys.filter((_, i) => !hd.counts[i].cut).join(', ') }),
     ...drawn(draw, 640),
     table: {
       columns: [{ name: t('gapColK'), numeric: true }, { name: t('gapAgain'), numeric: true }, { name: t('gapFresh'), numeric: true }, { name: t('gapColPairs'), numeric: true }],
@@ -312,7 +312,7 @@ export function part4({ hd, source, figure: fig, psec, rollUrl = null, src = nul
   return html`${psec({ id: 'roll', wide: true, heading: t('rollHeading'), text: html`${para('rollText')}${para('rollText2')}`, figure: rollFigure(hd, { n: fig(), source, rollUrl, src }) })}
 ${psec({ id: 'ever', heading: t('everHeading'), text: para('everText'), figure: everFigure(hd, { n: fig(), source }) })}
 ${shapes && master ? psec({ id: 'spread', wide: true, heading: t('ymapHeading'), text: html`${para('ymapText')}${para('ymapText2')}`, figure: yearMapFigure(hd, { n: fig(), source, shapes, master, rollUrl }) }) : ''}
-${infSource ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2')}`, figure: infectionsFigure(hd, { n: fig(), source: infSource }) }) : ''}
+${infSource ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: infSource }) }) : ''}
 ${psec({ id: 'chance', heading: t('chanceHeading'), text: html`${para('chanceText')}${para('chanceText2')}`, figure: chanceFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'again', heading: t('gapHeading'), text: html`${para('gapText')}${para('gapText2')}`, figure: gapFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'kinds', heading: t('kindsHeading'), text: html`${para('kindsText')}${para('kindsText2')}`, figure: kindsFigure(hd, { n: fig(), source }) })}
@@ -416,6 +416,16 @@ ${imagePair(pair, t('ymapAlt'))}
 const HAI_NAMES = { CLABSI: 'infCLABSI', CAUTI: 'infCAUTI', SSI_COLON: 'infSsiColon', SSI_HYST: 'infSsiHyst', MRSA: 'infMRSA', CDI: 'infCDI' };
 const pooled = (m) => (m && m.predicted > 0 ? m.observed / m.predicted : null);
 const signedPct = (x) => `${x > 0 ? '+' : x < 0 ? '−' : ''}${pct(Math.abs(x), 0)}`;
+
+// The calendar year in which the most measures' national rates rose from the year before they had one.
+export function spikeYear(inf) {
+  let best = null;
+  for (let i = 1; i < inf.length; i++) {
+    const rose = Object.keys(HAI_NAMES).filter((id) => pooled(inf[i].measures[id]) > pooled(inf[i - 1].measures[id])).length;
+    if (!best || rose > best.rose) best = { cy: inf[i].cy, rose };
+  }
+  return best?.cy ?? inf[0].cy;
+}
 
 // The nation's infection rate per measure, each calendar year Care Compare published one (observed ÷ predicted
 // infections, summed over every hospital with both counts), over the share of hospitals CMS cut each fiscal year.

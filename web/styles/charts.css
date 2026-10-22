@@ -67,7 +67,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 }
 .chart-axis__line, .chart-axis__tick { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* Tick labels in --ink-2: --ink-3 sits just under 4.5:1 on the paper, short of AA for text. */
-.chart-axis__label { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-axis__label, .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart-grid { stroke: var(--line); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-label { fill: var(--ink); font-weight: 600; }

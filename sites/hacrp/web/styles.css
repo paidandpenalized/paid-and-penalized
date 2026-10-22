@@ -517,7 +517,7 @@
   .msec--fig { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); }
   .msec--fig .msec__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
 }
-.msec__text { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.msec__text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
 .msec__text > p, .msec__text > ol, .msec__text > dl { max-width: var(--measure); }
 .msec__title { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
 .msec__sub { margin-top: 12px; font: 700 var(--fs-md)/1.3 var(--font-body); }

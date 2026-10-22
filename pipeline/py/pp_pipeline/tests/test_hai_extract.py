@@ -229,7 +229,7 @@ def hai_entries():
 class Committed(unittest.TestCase):
     def test_every_year_is_pinned(self):
         self.assertEqual([e["id"] for e in hai_entries()],
-                         [f"hai-cy{y}" for y in (2017, 2018, 2019, 2021, 2023, 2024)])
+                         [f"hai-cy{y}" for y in (2017, 2018, 2019, 2021, 2022, 2023, 2024)])
 
     def test_manifest_entries_are_well_formed(self):
         for entry in hai_entries():

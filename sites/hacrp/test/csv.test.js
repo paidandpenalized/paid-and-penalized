@@ -3,7 +3,7 @@
 // on both page types, with its Copy script (web/client/cite.js) against a stand-in DOM.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
@@ -16,6 +16,7 @@ import { FOOTNOTES_ID } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
+import { METHODS_PATH } from '../web/pages/methods.js';
 import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
@@ -169,10 +170,11 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
     assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
-    // The program page, the dictionary page, the four hospitals and a page for each place they are in.
+    // The program page, the dictionary page, the Methods page, the four hospitals and a page for each place they are in.
     const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
     assert.ok(places.list.length > 0);
-    assert.equal(ctx.pages, 1 + 1 + 4 + places.list.length);
+    assert.equal(ctx.pages, 1 + 1 + 1 + 4 + places.list.length);
+    assert.ok(existsSync(join(dir, METHODS_PATH, 'index.html')), 'the Methods page is written');
     assert.ok(!ctx.indexable.some((p) => p.startsWith('/data/')));
     // The page: the file's own words in the site shell, its columns table labelled by its heading, column names in mono.
     assert.ok(ctx.indexable.includes(DICTIONARY_PAGE));
