@@ -28,8 +28,9 @@ adjustments (T', below), and that payment is the sum of a dozen pieces, only one
     HAC        = -at stake            (only for a hospital the program cuts)
     net        = HRRP$ + HVBP$ + HAC
 
-New-technology add-on payments (NTAP) are in none of these terms (see the ASSUMPTION at the federal payment): B, and
-so T, the HRRP and HVBP dollars and the at-stake figure, run slightly low for a hospital that receives them.
+ASSUMPTION (new-technology add-on payments, NTAP): they are in none of these terms. B, and so T, the HRRP and HVBP
+dollars and the at-stake figure, run slightly low for a hospital that receives them. The reasoning is at the federal
+payment in `_parts`; `estimate` and Methods point here.
 
 Below the estimate: a status for every hospital in the HACRP file (`status`), the row the emitter keeps for it
 (`hospital_row`, whole dollars), the national sums of those rows (`national`), and the checks that hold the sums against
@@ -45,7 +46,9 @@ from pp_engine.ipps import PUERTO_RICO, rate_key
 from pp_engine.parse import MARYLAND
 
 HAC_RATE = 0.01  # the HAC Reduction Program's payment reduction: 1% of the hospital's payments (SSA 1886(p))
-MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of its hospital-specific rate (42 CFR 412.108)
+# A Medicare-dependent hospital is paid 75% of the excess of its hospital-specific rate over the federal rate
+# (42 CFR 412.108).
+MDH_SHARE = 0.75
 
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass.
@@ -53,28 +56,32 @@ MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of i
 # HRRP: CMS's published "penalty as a share of payments", 0.44%: the All Hospitals row of Table I.G.7.-01 in the HRRP
 # impact discussion of the FY2026 IPPS/LTCH PPS final rule (90 FR 37265-37266; the rule numbers its HACRP impact table
 # I.G.7.-01 too, so the program and row name the table). The row reads 2,797 eligible, 2,304 penalized, 82.37%
-# penalized, 0.44%. CMS's words say the share is over every eligible hospital's payments: "The results in Table
-# I.G.7.-01 include 2,797 non-Maryland hospitals estimated as eligible to receive a penalty during the performance
-# period.", and the column's footnote: "calculated as the sum of all penalties for the group of hospitals with that
-# characteristic divided by total base operating DRG payments for all those hospitals". CMS's rows say otherwise. On the
-# pinned FY2026 files this module's HRRP dollars over B are 0.443% over the penalized hospitals and 0.387% over every
-# hospital with an HRRP row; over the penalized hospitals each of the table's nine census-division rows and its
-# non-teaching row reproduces to within 0.01 percentage point, and over all of them each runs 0.03 to 0.11 point low.
-# So the check divides by the penalized hospitals' B (`hrrp_base`), the reading that reproduces CMS's published rows,
-# and Methods says that CMS's footnote reads the other way. The band is 0.04 percentage points each way. Because the
-# denominator was chosen to match CMS's figure, passing proves little: it rules out a gross error in B or in the
-# factor join. The test of the HRRP dollars is the back-test against cost-report HRRP dollars.
+# penalized, 0.44%. The pinned HRRP supplemental file lists 2,945 hospitals, more than the table's 2,797 eligible. Its
+# 2,304 below a factor of 1 equal the table's penalized, so by count the 148 listed but not counted are among the 641
+# listed at 1 (the table's 493 eligible and unpenalized are the rest). This check divides by the penalized hospitals'
+# B alone, so those 148 do not enter it.
+# CMS's words say the share is over every eligible hospital's payments: "The results in Table I.G.7.-01 include 2,797
+# non-Maryland hospitals estimated as eligible to receive a penalty during the performance period.", and the column's
+# footnote: "calculated as the sum of all penalties for the group of hospitals with that characteristic divided by total
+# base operating DRG payments for all those hospitals". CMS's rows say otherwise. On the pinned FY2026 files this
+# module's HRRP dollars over B are 0.443% over the penalized hospitals and 0.387% over every hospital with an HRRP row;
+# over the penalized hospitals each of the table's nine census-division rows and its non-teaching row reproduces to
+# within 0.01 percentage point, and over all of them each runs 0.03 to 0.11 point low. So the check divides by the
+# penalized hospitals' B (`hrrp_base`), the reading that reproduces CMS's published rows; docs/METHODS-LOG.md (dollars
+# methods_version 4) records that CMS's footnote reads the other way. The band is 0.04 percentage points each way.
+# Because the denominator was chosen to match CMS's figure, passing proves little: it rules out a gross error in B or
+# in the factor join. The test of the HRRP dollars is the back-test against cost-report HRRP dollars.
 HRRP_SHARE = (0.0040, 0.0048)
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
 # 0.05 percentage points each way, because the cut hospitals are not an average quarter of payments.
 HAC_SHARE = (0.002, 0.003)
 # HVBP is budget-neutral: the 2% withheld from each participant's base operating payments is paid back out as incentive
-# payments, so the dollars net to about zero over the participants (42 CFR 412.162(b)(1): "The total amount available
-# for value based incentive payments to all hospitals for a fiscal year is equal to the total amount of base-operating
-# DRG payment reductions for that fiscal year"). The check holds |sum of HVBP dollars| to a tenth of the pool, 2% of the
-# base payments of the hospitals in Table 16B; the tenth allows for estimate error in B and for participants the
-# estimate cannot price.
+# payments, so the dollars net to about zero over the participants (42 CFR 412.162(b)(1): the total amount available for
+# value-based incentive payments "is equal to the total amount of base-operating DRG payment reductions for that fiscal
+# year, as estimated by the Secretary"). The check holds |sum of HVBP dollars| to a tenth of the pool, 2% of the base
+# payments of the hospitals in Table 16B; the tenth allows for estimate error in B and for participants the estimate
+# cannot price. It is vacuous if that base is zero (nothing joined), which the tests assert it is not.
 VBP_NET_OF_POOL = 0.10
 # The pool's rate, the "applicable percent": 42 CFR 412.160 defines it, "(5) For FY 2017 and subsequent fiscal years,
 # 2.0 percent", of the "base operating DRG payment amount" (eCFR, read 2026-10-22).
@@ -107,8 +114,8 @@ STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 # Keys every hospital must carry as numbers (or, for the flags, bools). The ones the file may leave blank (`hsp`,
 # `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`, `ucp_factor`) are handled where they are used and are
 # not listed.
-_NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
-            "ucp_per_claim", "gaf", "low_volume")
+_NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op",
+            "dsh_cap", "ucp_per_claim", "gaf", "low_volume")
 _FLAGS = ("sch", "mdh")
 _ADD_ONS = ("ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
@@ -124,6 +131,9 @@ def _check(inp):
     missing = [k for k in _NUMBERS if inp.get(k) is None] + [k for k in _FLAGS if k not in inp]
     if missing:
         raise ValueError(f"cannot price a hospital without {', '.join(missing)}")
+    for k in _FLAGS:
+        if not isinstance(inp[k], bool):  # 1, "Y" or None would be read as a truth value, not refused
+            raise ValueError(f"{k} must be True or False, not {inp[k]!r}")
     if inp["sch"] and inp["mdh"]:
         # A hospital is one or the other (an SCH that also qualifies is paid as an SCH); counting both would pay its
         # hospital-specific difference twice. The pinned file has no such hospital.
@@ -273,15 +283,23 @@ def _parts(inp, rates):
     low_volume = (inp["low_volume"] - 1.0) * (fed + mdh_addon + ime + ime_ma + dsh + outlier_op + sch_diff + capital
                                               + uc)
 
-    return {"fed": float(fed), "mdh_addon": float(mdh_addon), "ime": float(ime), "ime_ma": float(ime_ma), "dsh": float(dsh),
-            "outlier_op": float(outlier_op), "sch_diff": float(sch_diff), "low_volume": float(low_volume),
-            "capital": float(capital), "uc": float(uc)}
+    return {"fed": float(fed), "mdh_addon": float(mdh_addon), "ime": float(ime), "ime_ma": float(ime_ma),
+            "dsh": float(dsh), "outlier_op": float(outlier_op), "sch_diff": float(sch_diff),
+            "low_volume": float(low_volume), "capital": float(capital), "uc": float(uc)}
 
 
 def _factor(value, name):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not value > 0:
         raise ValueError(f"{name} must be a positive adjustment factor (1 = none), not {value!r}")
     return float(value)
+
+
+def _require_bool(cut):
+    """`cut` as the real bool it must be: CMS's Payment Reduction column says "Yes" or "No", and the string "No" is
+    truthy, so the emitter converts and this refuses anything else."""
+    if not isinstance(cut, bool):
+        raise ValueError(f"cut must be True or False, not {cut!r}")
+    return cut
 
 
 def _base(parts):
@@ -315,8 +333,14 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
       at_stake           0.01 x T' for every hospital
       hac                -at_stake if cut, else 0
       net                hrrp + hvbp + hac
-    then the parts of T (`PARTS`): fed, mdh_addon, ime, ime_ma, dsh, outlier_op, sch_diff, low_volume, capital, uc."""
-    hrrp_factor, vbp_factor = _factor(hrrp, "hrrp"), _factor(vbp, "vbp")
+    then the parts of T (`PARTS`): fed, mdh_addon, ime, ime_ma, dsh, outlier_op, sch_diff, low_volume, capital, uc.
+    Raises `ValueError` for a hospital it cannot price (a missing input, a factor that is not a positive finite number,
+    a `cut` that is not a bool, a hospital flagged both sole community and Medicare-dependent) and `SchemaError` for
+    quality or EHR flags `rate_key` does not know.
+    New-technology add-on payments are in none of these figures: see the module docstring's ASSUMPTION (reasoning at the
+    federal payment in `_parts`); B and so T, and the dollars taken on them, run slightly low for a hospital that
+    receives them."""
+    hrrp_factor, vbp_factor, cut = _factor(hrrp, "hrrp"), _factor(vbp, "vbp"), _require_bool(cut)
     parts = _parts(inp, rates)
     base = _base(parts)
     # HRRP and HVBP each adjust the base operating payment B and nothing else (not IME, DSH, capital or the rest), each
@@ -329,14 +353,6 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
 
 
 # --- the row, statuses and the national sums -------------------------------------------------------------------------
-
-def _require_bool(cut):
-    """`cut` as the real bool it must be: CMS's Payment Reduction column says "Yes" or "No", and the string "No" is
-    truthy, so the emitter converts and this refuses anything else."""
-    if not isinstance(cut, bool):
-        raise ValueError(f"cut must be True or False, not {cut!r}")
-    return cut
-
 
 def refuse_puerto_rico(ccns, where):
     """Raise if any of `ccns`, the hospitals a program file (`where`) lists, is in Puerto Rico. None of the three
@@ -375,7 +391,7 @@ def round_dollars(est, *, cut):
     are never a dollar from their parts. `est` is `estimate`'s dict; anything else in it (factors, `cases`) is left as
     it is, and the keys keep their order."""
     parts = {k: round(est[k]) for k in PARTS}
-    return {**est, **_chain(parts, round(est["hrrp"]), round(est["hvbp"]), cut, round), **parts}
+    return {**est, **_chain(parts, round(est["hrrp"]), round(est["hvbp"]), _require_bool(cut), round), **parts}
 
 
 def hospital_row(ccn, state, inp, rates, *, hrrp, vbp, cut, parhm):

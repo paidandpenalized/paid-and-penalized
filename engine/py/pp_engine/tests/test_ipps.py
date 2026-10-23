@@ -419,6 +419,25 @@ class Factors(unittest.TestCase):
             with self.assertRaisesRegex(SchemaError, "990002"):
                 read_vbp_factors(vbp_text(["990001", "1.01"], ["990002", bad]))
 
+    def test_a_factor_outside_what_the_program_can_pay_raises_naming_the_hospital(self):
+        # HRRP: 0.97 (the 3% floor) to 1. A percentage, a dollar figure or a ratio above 1 is a misread column. The cell
+        # that overflows a float ("1e999") is infinite, so unusable, not out of range.
+        for good in ("0.97", "0.9956", "1", "1.0"):
+            read_hrrp_factors(hrrp_text(["990001", good]))
+        for bad in ("0.96", "0.5", "1.0001", "1.5", "99.5", "4519.68", "1e999"):
+            with self.assertRaisesRegex(SchemaError, "990002", msg=bad):
+                read_hrrp_factors(hrrp_text(["990001", "0.99"], ["990002", bad]))
+        with self.assertRaisesRegex(SchemaError, r"HRRP supplemental file: factor 0\.96 for 990002 is outside 0\.97"):
+            read_hrrp_factors(hrrp_text(["990002", "0.96"]))
+        # VBP: about 1; 0.9 to 1.1 is the sanity bound
+        for good in ("0.98", "1.0021821642", "1.1", "0.9"):
+            read_vbp_factors(vbp_text(["990001", good, ""]))
+        for bad in ("0.89", "1.11", "2", "100", "1e999"):
+            with self.assertRaisesRegex(SchemaError, "990002", msg=bad):
+                read_vbp_factors(vbp_text(["990001", "1.01", ""], ["990002", bad, ""]))
+        with self.assertRaisesRegex(SchemaError, r"Table 16B: factor 1\.5 for 990002 is outside 0\.9 to 1\.1"):
+            read_vbp_factors(vbp_text(["990002", "1.5", ""]))
+
     def test_a_repeated_or_malformed_ccn_raises(self):
         with self.assertRaisesRegex(SchemaError, "duplicate CCN 990001"):
             read_hrrp_factors(hrrp_text(["990001", "0.99"], ["990001", "0.98"]))

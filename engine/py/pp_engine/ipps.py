@@ -330,7 +330,18 @@ def read_payment_inputs(text, fy=2026):
 
 # --- the HRRP and VBP factor files -----------------------------------------------------------------------------------
 
-def _factors(text, ccn_header, factor_header, label):
+# What a program's payment adjustment factor can be, checked where it is read: a column misread (a percentage, a dollar
+# figure, another year's file) stops the build instead of pricing a hospital on it. HRRP: the factor is the higher of
+# the ratio or the floor adjustment factor, 0.97 from FY 2015 (42 CFR 412.154(c)), and a ratio is 1 minus a share, so
+# at most 1. HVBP: the 2% withheld puts a hospital's factor at 0.98 or more and the incentive payment lifts it a little
+# above 1; 0.9 to 1.1 is a sanity bound well outside what CMS publishes, not a rule.
+HRRP_FACTOR_RANGE = (0.97, 1.0)
+VBP_FACTOR_RANGE = (0.9, 1.1)
+
+
+def _factors(text, ccn_header, factor_header, label, allowed):
+    low, high = allowed
+
     def build(r):
         try:
             v = _finite(r["factor"])
@@ -338,6 +349,8 @@ def _factors(text, ccn_header, factor_header, label):
             v = None
         if v is None or not v > 0:
             raise SchemaError(f"{label}: no usable factor for {r['ccn']} ({r['factor']!r})")
+        if not low <= v <= high:
+            raise SchemaError(f"{label}: factor {v} for {r['ccn']} is outside {low} to {high}")
         return v
     return index_by_ccn(table(rows(text, "\t"), ccn_header, {"ccn": ccn_header, "factor": factor_header}, label),
                         build, label)
@@ -346,13 +359,14 @@ def _factors(text, ccn_header, factor_header, label):
 def read_hrrp_factors(text):
     """An HRRP supplemental file's factor table (tab-delimited: FY2026's `FR FY 2026.txt`, FY2024's `... FR FY 2024 tab
     .txt`; the headers are the same) -> {ccn: the year's payment adjustment factor}, a multiplier of 1 or less (CMS's
-    published figure: the reduction is 1 minus it). Footer rows are skipped."""
-    return _factors(text, "Hospital CCN", "Payment adjustment factor", "HRRP supplemental file")
+    published figure: the reduction is 1 minus it), 0.97 to 1 (`HRRP_FACTOR_RANGE`). Footer rows are skipped."""
+    return _factors(text, "Hospital CCN", "Payment adjustment factor", "HRRP supplemental file", HRRP_FACTOR_RANGE)
 
 
 def read_vbp_factors(text, fy=2026):
     """Table 16B (tab-delimited) -> {ccn: the actual hospital VBP adjustment factor for `fy`}, a multiplier about 1
-    (CMS's published figure; Table 16A's were proxies). The factor's heading names the year ('Actual FY 2026 Hospital
-    VBP Adjustment Factor'), so another year's table fails. The footnote rows are skipped."""
+    (CMS's published figure; Table 16A's were proxies), 0.9 to 1.1 (`VBP_FACTOR_RANGE`). The factor's heading names the
+    year ('Actual FY 2026 Hospital VBP Adjustment Factor'), so another year's table fails. The footnote rows are
+    skipped."""
     return _factors(text, "CMS Certification Number (CCN)", f"Actual FY {fy} Hospital VBP Adjustment Factor",
-                    f"FY{fy} Table 16B")
+                    f"FY{fy} Table 16B", VBP_FACTOR_RANGE)

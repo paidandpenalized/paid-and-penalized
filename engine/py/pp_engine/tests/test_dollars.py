@@ -354,6 +354,16 @@ class Total(Close):
         with self.assertRaises(ValueError):
             est(h)
 
+    def test_a_flag_that_is_not_a_bool_raises_naming_it_not_only_one_that_is_missing(self):
+        # `sch` and `mdh` are true or false. A 1, a "Y" or a None would be read as a truth value (and "N" is truthy):
+        # the hospital is refused, not priced as whatever the value happens to mean.
+        for key in ("sch", "mdh"):
+            for bad in (1, 0, "Y", "N", "", None, 1.0):
+                with self.assertRaisesRegex(ValueError, f"{key} must be True or False", msg=(key, bad)):
+                    est(hospital(**{key: bad}))
+            est(hospital(**{key: False}))
+            est(hospital(**{key: True}))
+
 
 class Adjustments(Close):
     def test_hrrp_and_hvbp_are_taken_on_the_base_payment(self):
@@ -400,6 +410,25 @@ class Adjustments(Close):
             est(hrrp=None)
         with self.assertRaises(ValueError):
             est(vbp=None)
+
+    def test_a_factor_is_a_positive_finite_number_that_is_not_a_bool(self):
+        # A multiplier of 1 is none; zero or less would erase the base or flip its sign, a bool is not a quantity, and
+        # NaN or infinity would poison every sum. Each refuses, naming the factor.
+        for name in ("hrrp", "vbp"):
+            for bad in (True, False, 0, 0.0, -0.5, math.nan, math.inf, -math.inf, "0.99", [1.0]):
+                with self.assertRaisesRegex(ValueError, f"{name} must be a positive adjustment", msg=(name, bad)):
+                    est(**{name: bad})
+            self.assertEqual(est(**{name: 1})["after"], est(**{name: 1.0})["after"])  # an int is a number
+            est(**{name: 0.97})
+            est(**{name: 1.01})
+
+    def test_cut_must_be_a_real_bool_here_too_not_only_in_the_row(self):
+        # "No" is truthy: priced as a cut hospital, it would lose its at-stake dollars to a typo
+        for bad in ("Yes", "No", 1, 0, None):
+            with self.assertRaisesRegex(ValueError, "cut must be True or False", msg=repr(bad)):
+                est(cut=bad)
+            with self.assertRaisesRegex(ValueError, "cut must be True or False", msg=repr(bad)):
+                round_dollars(est(), cut=bad)
 
     def test_the_result_has_the_briefed_keys_then_the_components(self):
         e = est()
@@ -877,6 +906,9 @@ class Checks(unittest.TestCase):
         self.assertIs(self.check(uc_pool=24000.0)["uc_pool"]["pass"], False)  # half the pool: a join dropped hospitals
 
     def test_the_vbp_net_is_held_to_a_tenth_of_the_pool_either_way(self):
+        # With no Table 16B base the pool is zero and any net of zero passes: the check means nothing there, so these
+        # cases are worked on a base that is not zero.
+        self.assertGreater(NAT["vbp_base"], 0)
         pool = 0.02 * 240000  # 4,800: the 2% withheld from the Table 16B hospitals' base payments
         self.assertEqual(VBP_NET_OF_POOL * pool, 480.0)
         for hvbp, ok in ((0, True), (480, True), (-480, True), (481, False), (-481, False), (30000, False)):
@@ -886,7 +918,7 @@ class Checks(unittest.TestCase):
         # it scales with the base of the hospitals in Table 16B, not with all of them
         self.assertIs(self.check(hvbp=480, vbp_base=100000)["vbp_net"]["pass"], False)
 
-    def test_hac_count_check_equals_the_files_yes_count_less_exclusions(self):
+    def test_hac_count_check_equals_the_files_yes_count_whatever_the_status(self):
         # Every hospital CMS cut must be a row, whatever its status: the ones left without an estimate (a participant,
         # no inputs) are still counted in `yes`, and surface in yes_unestimated instead of vanishing.
         rows = [row("990001", cut=True), row("990002", cut=True, inp=hospital(cases=0.0)),
