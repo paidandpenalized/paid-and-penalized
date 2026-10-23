@@ -12,7 +12,7 @@ FY = BACKTEST_FY
 
 class RatesOnThePin(RatesCases, unittest.TestCase):
     FY = FY
-    UPDATE = {"qe": 3.1, "qn": 0.625, "ne": 2.275, "nn": -0.2}  # Table 1C's "(Update = 3.1)" reads as 1A's 3.1 percent
+    UPDATE = {"qe": 3.1, "qn": 0.625, "ne": 2.275, "nn": -0.2}
     # FY2024's labor shares: Table 1A "67.6 PERCENT LABOR SHARE/32.4 PERCENT NONLABOR SHARE", Table 1B 62/38.
     LABOR = {"1A": 0.676, "1B": 0.62}
     MDH_BUDGET_NEUTRALITY = None  # "updated to FY 2024 for SCH & MDH providers": the file's rate is the year's already

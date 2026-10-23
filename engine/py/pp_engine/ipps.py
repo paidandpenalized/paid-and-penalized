@@ -11,7 +11,7 @@ exactly, year stamps included, so another year's file fails instead of being rea
 """
 import math
 import re
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 from pp_engine.parse import SchemaError, index_by_ccn, num, rows, squash, table, to_int
 
@@ -22,7 +22,7 @@ from pp_engine.parse import SchemaError, index_by_ccn, num, rows, squash, table,
 # table heading; these two functions are the only places the mapping is written.
 RATE_KEYS = ("qe", "qn", "ne", "nn")  # q/n = quality data submitted / not; e/n = EHR user / not
 TABLE_TITLE = re.compile(r"table (1[a-e])\b", re.I)
-# A scenario heading's update: "(Update = 2.6 Percent)"; FY2024's Table 1C drops the word: "(Update = 3.1)".
+# A scenario heading's update: "(Update = 2.6 Percent)"; a heading may drop the word: "(Update = 3.1)".
 UPDATE = re.compile(r"\(update\s*=\s*(-?\d+(?:\.\d+)?)(?:\s*percent)?\)")
 
 
@@ -35,16 +35,15 @@ def rate_key(quality, ehr):
     return ("n" if quality else "q") + ("n" if ehr else "e")
 
 
-def _scenario_key(text, label, quality_default):
-    """The key a scenario header cell names. Table 1C's headings name the EHR status only (its 2.6 and 0.125 percent
-    updates are 1A's quality-data-submitted ones), so `quality_default` stands in for the quality half there."""
+def _scenario_key(text, label):
+    """The key a scenario header cell names."""
     t = squash(text).lower()
     if "did not submit quality data" in t:
         quality = "n"
     elif "submitted quality data" in t:
         quality = "q"
     else:
-        quality = quality_default
+        quality = None
     if "not a meaningful ehr user" in t:
         ehr = "n"
     elif "a meaningful ehr user" in t:
@@ -92,8 +91,8 @@ def _sections(grid):
     return out
 
 
-def _operating(section, name, quality_default):
-    """(`{key: (labor, nonlabor)}`, `{key: update percent}`) from a Table 1A, 1B or 1C section: the row of labor/nonlabor
+def _operating(section, name):
+    """(`{key: (labor, nonlabor)}`, `{key: update percent}`) from a Table 1A or 1B section: the row of labor/nonlabor
     headings, the scenario names (with their updates) on the row above it, the rates on the row below. A pair whose
     cells both say 'Not Applicable' is skipped."""
     label = f"Tables 1A-1E, Table {name}"
@@ -111,7 +110,7 @@ def _operating(section, name, quality_default):
         if all(_is(c, "not applicable") for c in cells):
             continue
         heading = names[j] if j < len(names) else ""
-        key = _scenario_key(heading, label, quality_default)
+        key = _scenario_key(heading, label)
         if key in out:
             raise SchemaError(f"{label}: scenario {key!r} appears twice")
         out[key] = (_rate(cells[0], label), _rate(cells[1], label))
@@ -131,45 +130,38 @@ def _capital(section):
 
 def read_rates(text, fy=2026):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
-    `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate, "update": {key: percent},
-    "mdh_factor": {key: multiplier}, "uc_pool": dollars}`.
-    1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%), 1C is Puerto Rico's (read so that a
-    change in the file's layout is caught; no hospital is priced on it, since no program applies in Puerto Rico). The keys
+    `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}}, "capital": rate, "mdh_factor": {key: multiplier},
+    "uc_pool": dollars}`.
+    1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%). Table 1C (Puerto Rico's) is not read:
+    no program applies to a Puerto Rico hospital, so none is priced on it (`dollars.refuse_puerto_rico`). The keys
     (`RATE_KEYS`, chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table
-    still prices right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
-    'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's update for the year in
-    percent ('Update = 2.6 Percent' -> 2.6), which the headings of Tables 1A and 1B state alike (and 1C's two, for the
-    scenarios it lists): a table that states another update for the same scenario raises. `mdh_factor` is the
+    still prices right. Capital is Table 1D's single federal rate. Each scenario's update for the year in percent
+    ('Update = 2.6 Percent' -> 2.6) is read from the headings of Tables 1A and 1B, which state it alike: a table that
+    states another update for the same scenario raises. `mdh_factor` is the
     multiplier that brings a Medicare-dependent hospital's hospital-specific rate, as the year's impact file gives it
     (`fy`), to the rule's year: where the file's rate is the year before's (`mdh_rate_prior_year`), 1 + the scenario's
-    `update` times the rule's budget-neutrality factors for hospital-specific rates (`hsp_budget_neutrality`), else 1.
+    update times the rule's budget-neutrality factors for hospital-specific rates (`hsp_budget_neutrality`), else 1.
     `uc_pool` is the year's uncompensated care pool (`ImpactYear.uc_pool`), which the impact file's `UCP_ADJ` shares
     out; it and the budget-neutrality factors are stated in the rule's text, not in these tables.
     The layout is the same in FY2024's and FY2026's files; the labor shares are not (FY2024's Table 1A is 67.6% labor),
     and are not read."""
     sections = _sections(rows(text, "\t"))
-    for name in ("1A", "1B", "1C", "1D"):
+    for name in ("1A", "1B", "1D"):
         if name not in sections:
             raise SchemaError(f"Tables 1A-1E: Table {name} not found")
-    (rates_a, updates_a), (rates_b, updates_b), (rates_c, updates_c) = (
-        _operating(sections["1A"], "1A", None), _operating(sections["1B"], "1B", None),
-        _operating(sections["1C"], "1C", "q"))
-    operating = {"1A": rates_a, "1B": rates_b, "1C": rates_c}
+    (rates_a, updates_a), (rates_b, updates_b) = _operating(sections["1A"], "1A"), _operating(sections["1B"], "1B")
+    operating = {"1A": rates_a, "1B": rates_b}
     for name in ("1A", "1B"):
         if sorted(operating[name]) != sorted(RATE_KEYS):
             raise SchemaError(f"Tables 1A-1E, Table {name}: expected the four scenarios, found {sorted(operating[name])}")
-    if sorted(operating["1C"]) != ["qe", "qn"]:
-        raise SchemaError(f"Tables 1A-1E, Table 1C: expected the EHR user and non-user scenarios, "
-                          f"found {sorted(operating['1C'])}")
-    for name, updates in (("1B", updates_b), ("1C", updates_c)):
-        for key, percent in updates.items():
-            if percent != updates_a[key]:
-                raise SchemaError(f"Tables 1A-1E, Table {name}: update {percent} for scenario {key!r}, "
-                                  f"Table 1A states {updates_a[key]}")
-    year = _year(fy)
+    for key, percent in updates_b.items():
+        if percent != updates_a[key]:
+            raise SchemaError(f"Tables 1A-1E, Table 1B: update {percent} for scenario {key!r}, "
+                              f"Table 1A states {updates_a[key]}")
+    year = impact_year(fy)
     mdh_factor = {key: ((1.0 + percent / 100.0) * math.prod(year.hsp_budget_neutrality)
                         if year.mdh_rate_prior_year else 1.0) for key, percent in updates_a.items()}
-    return {"operating": operating, "capital": _capital(sections["1D"]), "update": updates_a, "mdh_factor": mdh_factor,
+    return {"operating": operating, "capital": _capital(sections["1D"]), "mdh_factor": mdh_factor,
             "uc_pool": year.uc_pool}
 
 
@@ -181,14 +173,64 @@ def read_rates(text, fy=2026):
 # row of type 22 carries an SCH hospital-specific rate, `HSP Rate`, which only SCHs have).
 SCH_TYPES = frozenset({16, 17, 21, 22})
 PUERTO_RICO = "40"  # state code, the CCN's first two digits (dollars.refuse_puerto_rico; the back-test's exclusions)
+MARYLAND_CCN = "21"  # Maryland's, likewise (the back-test's exclusions)
 
 # Provider Type codes of Medicare-dependent hospitals in FY2024's file (its README: "14= Medicare Dependent Hospital
 # (MDH); 15=MDH/RRC"). FY2026's file marks them in a column of its own instead (`MDH Flag, CAA 2024`): the FY2026 rule
 # modeled the status expiring, and the law reinstated it after.
 MDH_TYPES = frozenset({14, 15})
 
-# How each final rule's impact file is read, and the two figures its columns need that the rule states in its text.
-# Both files share most column names; the year-stamped ones and the MDH and low-volume columns differ.
+class CheckTargets(NamedTuple):
+    """The ranges a year's national sums must land in (`dollars.checks`). Each is a fact of the year's final rule, so it
+    is kept with the year's other settings. None is fitted to the estimate: if a check fails, find the cause; a range is
+    not widened to make it pass."""
+    hrrp_share: tuple  # HRRP dollars lost over B of the penalized hospitals
+    outlier_share: tuple  # operating outliers over the federal DRG payment plus operating outliers
+    uc_pool_share: tuple  # uncompensated care over the year's pool (`ImpactYear.uc_pool`)
+
+
+_FY2026_CHECKS = CheckTargets(
+    # HRRP: CMS's published "penalty as a share of payments", 0.44%: the All Hospitals row of Table I.G.7.-01 in the
+    # HRRP impact discussion of the FY2026 IPPS/LTCH PPS final rule (90 FR 37265-37266; the rule numbers its HACRP
+    # impact table I.G.7.-01 too, so the program and row name the table). The row reads 2,797 eligible, 2,304 penalized,
+    # 82.37% penalized, 0.44%. The pinned HRRP supplemental file lists 2,945 hospitals, more than the table's 2,797
+    # eligible. Its 2,304 below a factor of 1 equal the table's penalized, so by count the 148 listed but not counted
+    # are among the 641 listed at 1 (the table's 493 eligible and unpenalized are the rest). This check divides by the
+    # penalized hospitals' B alone, so those 148 do not enter it. CMS's words say the share is over every eligible
+    # hospital's payments: "The results in Table I.G.7.-01 include 2,797 non-Maryland hospitals estimated as eligible to
+    # receive a penalty during the performance period.", and the column's footnote: "calculated as the sum of all
+    # penalties for the group of hospitals with that characteristic divided by total base operating DRG payments for all
+    # those hospitals". CMS's rows say otherwise. On the pinned FY2026 files the estimate's HRRP dollars over B are
+    # 0.443% over the penalized hospitals and 0.387% over every hospital with an HRRP row; over the penalized hospitals
+    # each of the table's nine census-division rows and its non-teaching row reproduces to within 0.01 percentage point,
+    # and over all of them each runs 0.03 to 0.11 point low. So the check divides by the penalized hospitals' B
+    # (`dollars.national`'s `hrrp_base`), the reading that reproduces CMS's published rows; docs/METHODS-LOG.md (dollars
+    # methods_version 4) records that CMS's footnote reads the other way. The band is 0.04 percentage points each way.
+    # Because the denominator was chosen to match CMS's figure, passing proves little: it rules out a gross error in B
+    # or in the factor join. The test of the HRRP dollars is the back-test against cost-report HRRP dollars.
+    hrrp_share=(0.0040, 0.0048),
+    # Operating outliers: the FY2026 final rule sets the outlier threshold so "outlier payments ... would equal 5.1
+    # percent of operating DRG payments" (90 FR 37228), the share CMS figures as "total outlier payments" over "total
+    # operating Federal payments plus total outlier payments" (90 FR 37227). The check holds the same ratio of the
+    # estimate's sums, operating outliers over the federal DRG payment plus operating outliers, to 5.1% and 0.5
+    # percentage point either way: the impact file's factors are CMS's own, so the ratio should land near CMS's target,
+    # and the half point allows for the estimate's hospitals (the HACRP file's) being fewer than CMS's (every IPPS
+    # claim). The band stops short of the statute's 6% ceiling, which the misread base (the factor taken on IME and DSH
+    # too) went past. Set before the ratio was computed on this base (2026-10-23).
+    outlier_share=(0.046, 0.056),
+    # Uncompensated care: the sum of the estimated hospitals' payments over the final rule's pool, Factor 1 x Factor 2
+    # (`ImpactYear.uc_pool`: $7,713,127,500, 90 FR 36886-36889). The impact file's factors share out the whole pool, so
+    # the sum falls short only by the hospitals outside the estimate: Puerto Rico's, those not in the HACRP file and
+    # those without inputs. More than 5% short would mean DSH hospitals dropped in the join. It can pass 1 only by the
+    # per-claim supplemental payments of IHS and Tribal hospitals (`dollars._uncompensated_care`), part of the roughly
+    # $108 million of supplemental payments in the rule's $7.821 billion total (90 FR 37262), so 2% over is the most it
+    # can be. Set before the sum was computed (2026-10-23).
+    uc_pool_share=(0.95, 1.02))
+
+
+# How each final rule's impact file is read, the figures the rule states in its text that the file's columns need, and
+# the national checks held to the year's estimate. Both files share most column names; the year-stamped ones and the MDH
+# and low-volume columns differ.
 class ImpactYear(NamedTuple):
     columns: dict  # the keys of a hospital's inputs -> the file's own header texts
     # Whether the file flags Medicare-dependent hospitals in a column of its own (else they are the Provider Types of
@@ -217,6 +259,12 @@ class ImpactYear(NamedTuple):
     # FY2024: "$10,015,191,021.88 * 0.5929 = $5,938,006,756.87" (FY2024 rule, 88 FR 59001). In each pinned file the
     # factors add up to 1.
     uc_pool: float
+    # The claims year of the file's volume (`cases`, `bills`, case-mix), two years before the rule's: FY2026's file uses
+    # FY2024 MedPAR; FY2024's, "MARCH 2023 UPDATE OF FY 2022 MEDPAR".
+    volume_fy: int
+    # The national checks the year's estimate is held to; None for a year whose estimate is not published (FY2024's is
+    # the back-test's, held to the cost reports instead).
+    checks: Optional[CheckTargets]
 
 
 _SHARED_COLUMNS = {
@@ -250,7 +298,8 @@ IMPACT_YEARS = {
         "mdh": "MDH Flag, CAA 2024",  # Y or blank
         "hsp_mdh": "HSP Rate for MDHs, FY 2025 extension",  # $/case
         "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
-    }, mdh_flag=True, mdh_rate_prior_year=True, hsp_budget_neutrality=(0.998580, 0.999897), uc_pool=7_713_127_500.0),
+    }, mdh_flag=True, mdh_rate_prior_year=True, hsp_budget_neutrality=(0.998580, 0.999897), uc_pool=7_713_127_500.0,
+       volume_fy=2024, checks=_FY2026_CHECKS),
     2024: ImpactYear({
         **_SHARED_COLUMNS,
         "cases": "CASETA41",  # README: "Transfer Adjusted Cases under Grouper V41 and FY 2024 Post-Acute Transfer Policy"
@@ -260,7 +309,8 @@ IMPACT_YEARS = {
         "ime_cmi": "IME_TACMIV41",
         "wi": "FY 2024 Wage Index",
         "low_volume": "Low Volume Hospital Adjustment",  # multiplier; 1 = none (the expanded tiers ran all of FY2024)
-    }, mdh_flag=False, mdh_rate_prior_year=False, hsp_budget_neutrality=(), uc_pool=5_938_006_756.87),
+    }, mdh_flag=False, mdh_rate_prior_year=False, hsp_budget_neutrality=(), uc_pool=5_938_006_756.87,
+       volume_fy=2022, checks=None),
 }
 _NOT_FLOAT = ("ccn", "bills", "quality", "ehr", "ptype", "mdh", "beds")
 
@@ -281,7 +331,8 @@ def _flag(s):
     return int(t) if t else None
 
 
-def _year(fy):
+def impact_year(fy):
+    """The settings of the final rule of year `fy` (`IMPACT_YEARS`); another year raises."""
     if fy not in IMPACT_YEARS:
         raise SchemaError(f"no reader settings for the FY{fy} final rule (have {sorted(IMPACT_YEARS)})")
     return IMPACT_YEARS[fy]
@@ -302,7 +353,7 @@ def read_payment_inputs(text, fy=2026):
 
     FY2024: `mdh` is `ptype in MDH_TYPES`, `hsp_mdh` the `HSP Rate` of those rows (None elsewhere), and `low_volume`
     the `Low Volume Hospital Adjustment` column; both programs were in force for the whole year."""
-    year = _year(fy)
+    year = impact_year(fy)
     columns = year.columns
     label = f"FY{fy} impact file"
     floats = tuple(k for k in columns if k not in _NOT_FLOAT)

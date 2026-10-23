@@ -38,7 +38,7 @@ class EveryRowAddsUp(unittest.TestCase):
     def test_every_row_adds_up(self):
         inputs, table, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
         for cut in (False, True):
-            rows = [hospital_row(ccn, "VA", h, table, hrrp=hrrp.get(ccn), vbp=vbp.get(ccn), cut=cut, parhm=frozenset())
+            rows = [hospital_row(ccn, "VA", h, table, hrrp=hrrp.get(ccn), vbp=vbp.get(ccn), cut=cut)
                     for ccn, h in inputs.items()]
             estimated = [r for r in rows if r["status"] == "estimated"]
             self.assertGreater(len(estimated), 3000)

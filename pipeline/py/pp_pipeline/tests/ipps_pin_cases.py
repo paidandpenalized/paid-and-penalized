@@ -20,15 +20,13 @@ class RatesCases:
         cls.op = cls.rates["operating"]
 
     def test_the_four_scenarios_and_their_updates(self):
-        self.assertEqual(sorted(self.op), ["1A", "1B", "1C"])
+        self.assertEqual(sorted(self.op), ["1A", "1B"])  # Table 1C (Puerto Rico's) is not read
         for table in ("1A", "1B"):
             self.assertEqual(sorted(self.op[table]), sorted(RATE_KEYS), table)
-        self.assertEqual(sorted(self.op["1C"]), ["qe", "qn"])  # the EHR split only
         for table in self.op.values():
             for labor, nonlabor in table.values():
                 self.assertGreater(min(labor, nonlabor), 0)
         self.assertGreater(self.rates["capital"], 0)
-        self.assertEqual(self.rates["update"], self.UPDATE)
         bn = self.MDH_BUDGET_NEUTRALITY
         for key, update in self.UPDATE.items():
             want = 1.0 if bn is None else (1 + update / 100) * bn[0] * bn[1]
@@ -48,11 +46,6 @@ class RatesCases:
             # a swapped column pair would miss by more than 1e-3
             self.assertAlmostEqual(full[key] / full["qe"], (1 + update / 100) / (1 + self.UPDATE["qe"] / 100),
                                    delta=1e-5, msg=key)
-
-    def test_puerto_rico_rates_are_the_low_wage_index_national_rates(self):
-        for key, pair in self.op["1C"].items():
-            self.assertEqual(pair, self.op["1B"][key], key)
-
 
 class PaymentInputsCases:
     """Attributes: FY; COUNTS (the impact file's hospitals, and how many are `mdh`, `sch`, in Puerto Rico (`pr`, by

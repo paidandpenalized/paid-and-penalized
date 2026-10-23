@@ -17,11 +17,6 @@ from pp_pipeline.files import read_zip_text_cp1252
 FY = 2026  # the final rule's year the estimates are built on: the year the dollar emitter checks
 BACKTEST_FY = 2024  # the final rule the back-test re-runs the estimate on
 
-# Pennsylvania Rural Health Model participants. CMS publishes no participant file with CCNs for FY2026 or FY2024, so no
-# hospital gets the `parhm` status by CCN; a published list would be a pinned input and replace this. (The back-test
-# leaves participants out by the model's own cost-report worksheet instead.)
-PARHM = frozenset()
-
 
 class Pins(NamedTuple):
     """One final rule's four files."""
@@ -87,7 +82,7 @@ def priced_rows(records, fy=FY):
     for r in records:
         inp = inputs.get(r["ccn"])
         row = dollars.hospital_row(r["ccn"], r["state"], inp, table, hrrp=hrrp.get(r["ccn"]), vbp=vbp.get(r["ccn"]),
-                                   cut=r["cut"], parhm=PARHM)
+                                   cut=r["cut"])
         if row["status"] == "estimated":
             row = {**row, "stratum": bands.stratum_of(inp)}
         out.append(row)

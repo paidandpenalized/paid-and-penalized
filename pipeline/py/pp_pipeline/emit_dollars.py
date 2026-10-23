@@ -17,21 +17,17 @@ each measure's `overall` band instead. It lives at the family level because more
 import sys
 from datetime import datetime, timezone
 
-from pp_engine import dollars
+from pp_engine import dollars, ipps
 from pp_engine.contract import camel, envelope, source_manifest_hash
 from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
-from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows, rates
+from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 4
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
 SCHEMA = "dollars.schema.json"
 
-# The years the estimate is built on. The rates (Tables 1A-1E) and the impact file are the final rule's (`FY`, in
-# ipps_pins), and the program year of the HACRP file must equal it; the impact file's cases and case-mix are FY2024
-# MedPAR claims.
-VOLUME_FY = 2024
 # The last day of the extension of Medicare-dependent hospital status and of the expanded low-volume-hospital tiers
 # (Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's FY2025-extension columns,
 # which the estimate reads, model both in force for the whole year.
@@ -128,11 +124,12 @@ def build_from_pins(built_at):
     ranges = backtest_dollars.bands_json()
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]
     national = dollars.national(built)
-    checks = (dollars.checks(national, hacrp_yes=site_yes_count(fy), uc_pool=rates(fy)["uc_pool"])
+    year = ipps.impact_year(fy)
+    checks = (dollars.checks(national, hacrp_yes=site_yes_count(fy), uc_pool=year.uc_pool, targets=year.checks)
               + backtest_dollars.checks(ranges))
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
-        "assumptions": {"ratesFy": FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
+        "assumptions": {"ratesFy": FY, "volumeFy": year.volume_fy, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
                         "ntap": NTAP},
         "national": totals_json(national),
         "headline": totals_json(dollars.national(headline)),

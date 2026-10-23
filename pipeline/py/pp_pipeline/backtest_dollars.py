@@ -47,10 +47,6 @@ HACRP = f"hacrp-fy{FY}"
 HCRIS = hcris_extract.PIN_ID
 SOURCES = (HACRP, *pin_ids(FY), HCRIS)
 WINDOW = (f"{FY - 1}-10-01", f"{FY}-09-30")  # the federal fiscal year, October through September
-# The claims year of the impact file's volume, two years before the rule's (FY2024's file: "MARCH 2023 UPDATE OF FY 2022
-# MEDPAR"; FY2026's, emit_dollars.VOLUME_FY, is FY2024).
-VOLUME_FY = FY - 2
-MARYLAND_CODE = "21"  # Maryland's CCNs begin with 21, Puerto Rico's (ipps.PUERTO_RICO) with 40
 # The HCRIS report status codes (RPT_STUS_CD) the file uses: 1 as submitted, 2 settled without audit, 3 settled with
 # audit, 4 reopened, 5 amended.
 STATUS_CODES = ("1", "2", "3", "4", "5")
@@ -105,7 +101,7 @@ def comparison_set(reports, priced):
         ccn = rep["ccn"]
         reason = ("outside_window" if (rep["fy_begin"], rep["fy_end"]) != WINDOW else
                   "no_part_a" if rep["part_a"] != "Y" else
-                  "maryland" if ccn[:2] == MARYLAND_CODE else
+                  "maryland" if ccn[:2] == ipps.MARYLAND_CCN else
                   "puerto_rico" if ccn[:2] == ipps.PUERTO_RICO else
                   "parhm" if rep["parhm"] == "Y" else
                   "not_in_hacrp" if ccn not in priced else
@@ -171,7 +167,7 @@ def bands_json():
     members = r["members"]
     return {
         "fy": FY,
-        "volumeFy": VOLUME_FY,
+        "volumeFy": ipps.impact_year(FY).volume_fy,
         "sources": list(SOURCES),
         "window": list(WINDOW),
         "minStratum": bands.MIN_STRATUM,
@@ -210,12 +206,9 @@ def checks(b):
 OTHER_STRATA = frozenset(bands.stratum_id(band, bands.OTHER) for band, _, _ in bands.BED_BANDS)
 
 
-def _rounded(x):
-    return None if x is None else round(x, bands.DECIMALS)
-
-
 def _median(values):
-    return _rounded(bands.percentile(values, 0.5)) if values else None
+    """The median of `values`, rounded as the bands' statistics are; None when there are none."""
+    return bands.summary(values)["median"]
 
 
 def diagnostics(members):
@@ -252,7 +245,8 @@ def diagnostics(members):
         vs_drg.append(hac - bands.log_ratio(m["model"]["fed"], m["actual"]["fed"]))
     return {
         "ma_ime": {"n": len(both),
-                   "weighted": _rounded(sum(m for m, _ in both) / sum(a for _, a in both)) if both else None,
+                   "weighted": (round(sum(m for m, _ in both) / sum(a for _, a in both), bands.DECIMALS)
+                                if both else None),
                    "median": _median([m / a for m, a in both]),
                    "line_only": sum(model == 0 and actual > 0 for model, actual, _ in ma),
                    "model_only": sum(model > 0 and actual == 0 for model, actual, _ in ma),

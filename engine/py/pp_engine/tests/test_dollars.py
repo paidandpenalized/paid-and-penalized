@@ -4,9 +4,10 @@ import math
 import random
 import unittest
 
-from pp_engine.dollars import (HAC_SHARE, HRRP_SHARE, OUTLIER_SHARE, PARTS, STATUSES, UC_POOL_SHARE, VBP_NET_OF_POOL,
+from pp_engine.dollars import (BASE, FEDERAL_OPERATING, HAC_SHARE, LOW_VOLUME_BASE, PARTS, STATUSES, VBP_NET_OF_POOL,
                                VBP_WITHHOLD, YES_UNESTIMATED_MAX, checks, estimate, hospital_row, national,
                                refuse_puerto_rico, round_dollars, status)
+from pp_engine.ipps import IMPACT_YEARS
 from pp_engine.parse import SchemaError
 from pp_engine.tests.fixtures import assert_adds_up
 
@@ -15,14 +16,12 @@ RATES = {
     "operating": {
         "1A": {"qe": (4000.0, 2000.0), "qn": (3900.0, 1900.0), "ne": (3800.0, 1800.0), "nn": (3700.0, 1700.0)},
         "1B": {"qe": (3000.0, 2500.0), "qn": (2900.0, 2400.0), "ne": (2800.0, 2300.0), "nn": (2700.0, 2200.0)},
-        "1C": {"qe": (3100.0, 2600.0), "qn": (3000.0, 2500.0)},
     },
     "capital": 500.0,
-    # The FY2026 update (percent) each scenario's heading states in Tables 1A/1B, invented and all different, and the
-    # multiplier a Medicare-dependent hospital's hospital-specific rate takes where the impact file's rate is the year
-    # before's (`ipps.read_rates` folds the rule's budget-neutrality factors into it; here it is 1 + the update alone,
-    # so the arithmetic below stays round).
-    "update": {"qe": 10.0, "qn": 5.0, "ne": 2.5, "nn": -5.0},
+    # The multiplier a Medicare-dependent hospital's hospital-specific rate takes where the impact file's rate is the
+    # year before's: 1 + the scenario's update (invented, all different: 10, 5, 2.5 and -5 percent). `ipps.read_rates`
+    # also folds the rule's budget-neutrality factors into it; here they are left out, so the arithmetic below stays
+    # round.
     "mdh_factor": {"qe": 1.10, "qn": 1.05, "ne": 1.025, "nn": 0.95},
     # The year's uncompensated care pool (Factor 1 x Factor 2), invented: a hospital's Factor 3 of 0.0006 is 600.
     "uc_pool": 1_000_000.0,
@@ -96,15 +95,6 @@ class Base(Close):
             self.assertDollars(est(quality=quality, ehr=ehr, **one)["base"], want, (quality, ehr))
         # and Table 1B's, wage index 1: 2900 + 2400 (qn)
         self.assertDollars(est(wi=1.0, ehr=1, **one)["base"], 5300.0)
-
-    def test_table_1c_is_never_read(self):
-        # No program applies in Puerto Rico, so no hospital is priced on Puerto Rico's table: with 1C gone from the
-        # rates, every scenario still prices (1B at a wage index of 0.8: 15 x (3000 x 0.8 + 2500) = 73,500)
-        no_1c = {**RATES, "operating": {k: v for k, v in RATES["operating"].items() if k != "1C"}}
-        for quality in (0, 1):
-            for ehr in (0, 1):
-                estimate(hospital(wi=0.8, quality=quality, ehr=ehr), no_1c, hrrp=1.0, vbp=1.0, cut=False)
-        self.assertDollars(estimate(hospital(wi=0.8), no_1c, hrrp=1.0, vbp=1.0, cut=False)["base"], 73500.0)
 
     def test_mdh_addon_is_three_quarters_of_the_shortfall_and_never_negative(self):
         # HSP side: 9000 x 1.10 (the qe update, 10%) x 1.6 (cmi_hsp) x 10 cases = 9,900 x 16 = 158,400;
@@ -481,15 +471,28 @@ class AllTerms(Close):
         self.assertDollars(e["base"], e["fed"] + e["mdh_addon"])
 
 
+class Bases(Close):
+    def test_each_base_is_listed_in_the_order_of_parts(self):
+        # the sums are added in this order, so a figure is the same however it is summed
+        for names in (BASE, FEDERAL_OPERATING, LOW_VOLUME_BASE):
+            self.assertEqual(names, tuple(k for k in PARTS if k in names), names)
+
+    def test_what_each_base_holds(self):
+        self.assertEqual(BASE, ("fed", "mdh_addon"))  # B
+        self.assertEqual(FEDERAL_OPERATING, ("fed", "ime", "dsh", "outlier_op", "uc"))  # F: no ime_ma, sch_diff, capital
+        self.assertEqual(LOW_VOLUME_BASE, tuple(k for k in PARTS if k != "low_volume"))  # every other part of T
+
+    def test_the_low_volume_part_is_a_share_of_the_other_parts(self):
+        e = est(hospital(low_volume=1.25, ime_op=0.1, dsh_op=0.2, outlier_op=0.05, gaf=1.0, ucp_factor=0.0006))
+        self.assertDollars(e["low_volume"], 0.25 * sum(e[k] for k in LOW_VOLUME_BASE))
+        self.assertGreater(e["low_volume"], 0)
+
+
 # --- statuses, rows and the national checks ---------------------------------------------------------------------------
 
 # Invented CCNs and states. A row's dollars are worked on the synthetic hospital above: B = T = 120,000 (no add-ons).
-NO_PARHM = frozenset()
-
-
-def row(ccn="990001", state="VA", inp=None, hrrp=None, vbp=None, cut=False, parhm=NO_PARHM):
-    return hospital_row(ccn, state, hospital() if inp is None else inp, RATES, hrrp=hrrp, vbp=vbp, cut=cut,
-                        parhm=parhm)
+def row(ccn="990001", state="VA", inp=None, hrrp=None, vbp=None, cut=False):
+    return hospital_row(ccn, state, hospital() if inp is None else inp, RATES, hrrp=hrrp, vbp=vbp, cut=cut)
 
 
 def bare(ccn, status_, cut=False, hrrp_listed=True, vbp_listed=True, **dollars):
@@ -521,26 +524,20 @@ class Status(unittest.TestCase):
         self.assertEqual(STATUSES, ("estimated", "maryland", "parhm", "no-inputs"))
 
     def test_a_priced_hospital_is_estimated(self):
-        self.assertEqual(status("990001", "VA", hospital(), NO_PARHM), "estimated")
+        self.assertEqual(status("VA", hospital()), "estimated")
 
     def test_maryland_is_maryland_whatever_else_is_true(self):
-        self.assertEqual(status("990001", "MD", hospital(), NO_PARHM), "maryland")
-        self.assertEqual(status("990001", "MD", None, NO_PARHM), "maryland")  # no impact row: still Maryland
-        self.assertEqual(status("990001", "MD", hospital(cases=0.0), frozenset({"990001"})), "maryland")
-
-    def test_a_participant_set_member_is_parhm_only_when_in_the_set(self):
-        self.assertEqual(status("990001", "PA", hospital(), frozenset({"990001"})), "parhm")
-        self.assertEqual(status("990002", "PA", hospital(), frozenset({"990001"})), "estimated")
-        # it outranks no-inputs: the reason shown to a reader is the program, not the missing file row
-        self.assertEqual(status("990001", "PA", None, frozenset({"990001"})), "parhm")
+        self.assertEqual(status("MD", hospital()), "maryland")
+        self.assertEqual(status("MD", None), "maryland")  # no impact row: still Maryland
+        self.assertEqual(status("MD", hospital(cases=0.0)), "maryland")
 
     def test_no_row_or_blank_or_zero_cases_or_case_mix_is_no_inputs(self):
         for inp in (None, hospital(cases=0.0), hospital(cases=None), hospital(cmi=0.0), hospital(cmi=None),
                     hospital(cases=-1.0), hospital(cmi=-0.5), hospital(cases=float("nan"))):
-            self.assertEqual(status("990001", "VA", inp, NO_PARHM), "no-inputs", inp)
+            self.assertEqual(status("VA", inp), "no-inputs", inp)
         # a row with no cases key at all is a hospital the file did not price
-        self.assertEqual(status("990001", "VA", {"cmi": 1.5}, NO_PARHM), "no-inputs")
-        self.assertEqual(status("990001", "VA", {}, NO_PARHM), "no-inputs")
+        self.assertEqual(status("VA", {"cmi": 1.5}), "no-inputs")
+        self.assertEqual(status("VA", {}), "no-inputs")
 
     def test_a_puerto_rico_hospital_in_a_program_file_stops_the_build(self):
         # No program applies in Puerto Rico (CCNs beginning 40): a file that lists one has changed, and the build stops
@@ -553,8 +550,8 @@ class Status(unittest.TestCase):
             refuse_puerto_rico({"40Z001": 0.99}, "the HRRP file")
 
     def test_state_is_matched_exactly(self):
-        for state in ("VA", "", "MA", "mD"):
-            self.assertEqual(status("990001", state, hospital(), NO_PARHM), "estimated", state)
+        for state in ("VA", "", "MA", "mD", "PA"):
+            self.assertEqual(status(state, hospital()), "estimated", state)
 
 
 class RoundDollars(unittest.TestCase):
@@ -640,8 +637,7 @@ class RowsAddUp(unittest.TestCase):
                          mdh=kind == "mdh", sch=kind == "sch", hsp_mdh=rng.uniform(2000, 12000),
                          hsp=rng.uniform(2000, 12000))
             out.append((h, hospital_row(f"99{i:04d}", "VA", h, RATES, hrrp=rng.uniform(0.97, 1.0),
-                                        vbp=rng.choice((None, rng.uniform(0.98, 1.02))), cut=rng.random() < 0.3,
-                                        parhm=NO_PARHM)))
+                                        vbp=rng.choice((None, rng.uniform(0.98, 1.02))), cut=rng.random() < 0.3)))
         return out
 
     def test_every_row_adds_up_exactly(self):
@@ -690,14 +686,13 @@ class HospitalRow(unittest.TestCase):
         r = row(hrrp=1.0, vbp=1.0)
         self.assertEqual((r["hrrp_listed"], r["vbp_listed"]), (True, True))
 
-    def test_maryland_parhm_and_no_inputs_rows_have_no_dollars(self):
+    def test_maryland_and_no_inputs_rows_have_no_dollars(self):
         # (Review Focus 1: no dollar key at all, so nothing downstream can print 0 or NaN for them.)
         keys = ["ccn", "status", "cut", "hrrp_listed", "vbp_listed"]
         self.assertEqual(list(row("990001", "MD", hrrp=0.97)), keys)
-        self.assertEqual(list(row("990002", "PA", parhm=frozenset({"990002"}))), keys)
         self.assertEqual(list(row("990003", inp=hospital(cases=0.0))), keys)
         self.assertEqual(list(row("990004", inp=hospital(cmi=None))), keys)
-        none = hospital_row("990005", "VA", None, RATES, hrrp=None, vbp=None, cut=True, parhm=NO_PARHM)
+        none = hospital_row("990005", "VA", None, RATES, hrrp=None, vbp=None, cut=True)
         self.assertEqual(none, {"ccn": "990005", "status": "no-inputs", "cut": True, "hrrp_listed": False,
                                 "vbp_listed": False})
 
@@ -838,24 +833,27 @@ class National(unittest.TestCase):
         self.assertEqual(rows, before)
 
 
+TARGETS = IMPACT_YEARS[2026].checks  # the ranges that come from the FY2026 final rule
+
+
 class Checks(unittest.TestCase):
     def check(self, nat=None, hacrp_yes=1, uc_pool=WORKED_POOL, parts=None, **changes):
         nat = dict(NAT if nat is None else nat, **changes)
         if parts:
             nat["parts"] = {**nat["parts"], **parts}
-        return {c["id"]: c for c in checks(nat, hacrp_yes=hacrp_yes, uc_pool=uc_pool)}
+        return {c["id"]: c for c in checks(nat, hacrp_yes=hacrp_yes, uc_pool=uc_pool, targets=TARGETS)}
 
     def test_the_constants(self):
-        self.assertEqual(HRRP_SHARE, (0.0040, 0.0048))
+        self.assertEqual(TARGETS.hrrp_share, (0.0040, 0.0048))
         self.assertEqual(HAC_SHARE, (0.002, 0.003))
-        self.assertEqual(OUTLIER_SHARE, (0.046, 0.056))  # CMS's 5.1% target, half a point either way
-        self.assertEqual(UC_POOL_SHARE, (0.95, 1.02))
+        self.assertEqual(TARGETS.outlier_share, (0.046, 0.056))  # CMS's 5.1% target, half a point either way
+        self.assertEqual(TARGETS.uc_pool_share, (0.95, 1.02))
         self.assertEqual(VBP_NET_OF_POOL, 0.10)
         self.assertEqual(VBP_WITHHOLD, 0.02)
         self.assertEqual(YES_UNESTIMATED_MAX, 9)
 
     def test_the_shape_and_order(self):
-        got = checks(NAT, hacrp_yes=1, uc_pool=WORKED_POOL)
+        got = checks(NAT, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
         self.assertEqual([c["id"] for c in got], ["hrrp_share", "vbp_net", "hac_share", "outlier_share", "uc_pool",
                                                   "hac_count", "yes_unestimated"])
         for c in got:
@@ -865,15 +863,15 @@ class Checks(unittest.TestCase):
     def test_the_worked_values(self):
         c = self.check()
         self.assertAlmostEqual(c["hrrp_share"]["value"], 2112 / 480000)  # 0.0044
-        self.assertEqual((c["hrrp_share"]["low"], c["hrrp_share"]["high"]), HRRP_SHARE)
+        self.assertEqual((c["hrrp_share"]["low"], c["hrrp_share"]["high"]), TARGETS.hrrp_share)
         self.assertEqual(c["vbp_net"]["value"], 0)
         self.assertEqual((c["vbp_net"]["low"], c["vbp_net"]["high"]), (0, 0.10 * 0.02 * 240000))  # up to 480
         self.assertAlmostEqual(c["hac_share"]["value"], 1285 / 516000)
         self.assertEqual((c["hac_share"]["low"], c["hac_share"]["high"]), HAC_SHARE)
         self.assertAlmostEqual(c["outlier_share"]["value"], 24000 / (480000 + 24000))  # 4.76%
-        self.assertEqual((c["outlier_share"]["low"], c["outlier_share"]["high"]), OUTLIER_SHARE)
+        self.assertEqual((c["outlier_share"]["low"], c["outlier_share"]["high"]), TARGETS.outlier_share)
         self.assertEqual(c["uc_pool"]["value"], 12000 / WORKED_POOL)  # the whole pool
-        self.assertEqual((c["uc_pool"]["low"], c["uc_pool"]["high"]), UC_POOL_SHARE)
+        self.assertEqual((c["uc_pool"]["low"], c["uc_pool"]["high"]), TARGETS.uc_pool_share)
         self.assertEqual((c["hac_count"]["value"], c["hac_count"]["low"], c["hac_count"]["high"]), (1, 1, 1))
         self.assertEqual((c["yes_unestimated"]["value"], c["yes_unestimated"]["low"], c["yes_unestimated"]["high"]),
                          (0, 0, YES_UNESTIMATED_MAX))
@@ -927,10 +925,10 @@ class Checks(unittest.TestCase):
         self.assertIs(self.check(hvbp=0, vbp_base=1)["vbp_net"]["pass"], True)
 
     def test_hac_count_check_equals_the_files_yes_count_whatever_the_status(self):
-        # Every hospital CMS cut must be a row, whatever its status: the ones left without an estimate (a participant,
-        # no inputs) are still counted in `yes`, and surface in yes_unestimated instead of vanishing.
+        # Every hospital CMS cut must be a row, whatever its status: the ones left without an estimate (Maryland's, no
+        # inputs) are still counted in `yes`, and surface in yes_unestimated instead of vanishing.
         rows = [row("990001", cut=True), row("990002", cut=True, inp=hospital(cases=0.0)),
-                row("990003", "PA", cut=True, parhm=frozenset({"990003"})), row("990004"), row("990005")]
+                row("990003", "MD", cut=True), row("990004"), row("990005")]
         nat = national(rows)
         self.assertEqual((nat["yes"], nat["cut"], nat["yes_unestimated"]), (3, 1, 2))
         file_yes = 3
@@ -963,16 +961,16 @@ class Checks(unittest.TestCase):
         # care (3,000): T = 129,000. HRRP 0.9956 -> -528 each; one cut: HAC = -0.01 x 128,472 = -1,284.72 -> -1,285
         rates = {**RATES, "uc_pool": WORKED_POOL}
         h = hospital(outlier_op=0.05, ucp_factor=0.25)
-        rows = [hospital_row(ccn, "VA", h, rates, hrrp=0.9956, vbp=vbp, cut=ccn == "990001", parhm=NO_PARHM)
+        rows = [hospital_row(ccn, "VA", h, rates, hrrp=0.9956, vbp=vbp, cut=ccn == "990001")
                 for ccn, vbp in (("990001", 1.0), ("990002", 1.0), ("990003", None), ("990004", None))]
         nat = national(rows)
         self.assertEqual({k: nat[k] for k in NAT}, NAT)
-        got = checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL)
+        got = checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
         self.assertEqual([c["pass"] for c in got], [True] * 7)
 
     def test_it_does_not_change_the_national_dict(self):
         nat = dict(NAT)
-        checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL)
+        checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
         self.assertEqual(nat, NAT)
 
 

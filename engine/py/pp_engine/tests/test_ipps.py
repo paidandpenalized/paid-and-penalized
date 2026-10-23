@@ -93,13 +93,12 @@ class Rates(unittest.TestCase):
         self.assertEqual(got["operating"]["1A"]["qe"], (660.00, 340.00))
         self.assertEqual(got["operating"]["1B"]["nn"], (589.00, 361.00))
         self.assertEqual(got["capital"], CAPITAL)
-        self.assertEqual(set(got), {"operating", "capital", "update", "mdh_factor", "uc_pool"})
-
-    def test_the_update_of_each_scenario_is_read_from_its_heading_as_a_percent(self):
-        # "(Update = 2.6 Percent)" -> 2.6; the fourth heading wraps a line and the update is negative
-        self.assertEqual(read_rates(rates_text())["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
+        self.assertEqual(set(got), {"operating", "capital", "mdh_factor", "uc_pool"})
+        self.assertEqual(sorted(got["operating"]), ["1A", "1B"])  # Table 1C (Puerto Rico's) is not read
 
     def test_the_mdh_factor_is_the_update_and_budget_neutrality_where_the_files_rate_is_the_year_before_s(self):
+        # Each scenario's update is read from its heading as a percent: "(Update = 2.6 Percent)" -> 2.6; the fourth
+        # heading wraps a line and its update is negative
         updates = {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7}
         # FY2026's MDH column is the FY2025 rate: it takes the update and, as the rule adjusts every hospital-specific
         # rate, the MS-DRG reclassification and recalibration factor 0.998580 and the 10% cap factor 0.999897
@@ -112,7 +111,6 @@ class Rates(unittest.TestCase):
         self.assertAlmostEqual(got["qe"], 1.0244376, places=7)  # what CMS's FY2027 file implies (ipps.ImpactYear)
         # FY2024's file gives the rate already updated: nothing more
         self.assertEqual(read_rates(rates_text(), fy=2024)["mdh_factor"], dict.fromkeys(updates, 1.0))
-        self.assertEqual(read_rates(rates_text(), fy=2024)["update"], updates)  # the headings' own updates are read alike
         with self.assertRaisesRegex(SchemaError, "FY2025"):
             read_rates(rates_text(), fy=2025)
 
@@ -124,10 +122,6 @@ class Rates(unittest.TestCase):
         self.assertAlmostEqual(12_412_500_000 * 0.6214, IMPACT_YEARS[2026].uc_pool, places=2)
         self.assertAlmostEqual(10_015_191_021.88 * 0.5929, IMPACT_YEARS[2024].uc_pool, delta=0.01)
 
-    def test_the_updates_follow_the_scenario_labels_not_their_position(self):
-        shuffled = read_rates(rates_text(order_a=("nn", "ne", "qn", "qe"), order_b=("ne", "qe", "nn", "qn")))
-        self.assertEqual(shuffled["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
-
     def test_a_scenario_with_no_update_or_a_table_that_disagrees_raises(self):
         # a heading with no "(Update = ... Percent)"
         with self.assertRaisesRegex(SchemaError, "update"):
@@ -138,14 +132,19 @@ class Rates(unittest.TestCase):
         second = text.index("(Update = 1.775 Percent)", first + 1)
         with self.assertRaisesRegex(SchemaError, "update"):
             read_rates(text[:second] + "(Update = 1.8 Percent)" + text[second + len("(Update = 1.775 Percent)"):])
-        # Table 1C states a different update from the same scenario's in Table 1A
-        with self.assertRaisesRegex(SchemaError, "update"):
-            read_rates(rates_text().replace("Equal to 1 (Update = 0.125 Percent)", "Equal to 1 (Update = 0.2 Percent)", 1))
 
-    def test_puerto_rico_table_has_the_ehr_split_only(self):
-        got = read_rates(rates_text())["operating"]["1C"]
-        self.assertEqual(got, {"qe": pair("1C", "qe"), "qn": pair("1C", "qn")})  # the wage-index-above-one columns say
-        # "Not Applicable" and are not read; the table has no quality-failure columns
+    def test_table_1c_is_neither_required_nor_read(self):
+        # No program applies in Puerto Rico, so nothing is priced on its table: the file without it reads the same, and
+        # a Table 1C that states another update or has an unreadable rate raises nothing
+        self.assertEqual(read_rates(rates_text(with_1c=False)), read_rates(rates_text()))
+        text = rates_text().replace("Equal to 1 (Update = 0.125 Percent)", "Equal to 1 (Update = 0.2 Percent)", 1)
+        self.assertNotEqual(text, rates_text())
+        self.assertEqual(read_rates(text), read_rates(rates_text()))
+        head, rest = rates_text().split("TABLE 1C", 1)
+        table_1c, tail = rest.split("TABLE 1D", 1)
+        self.assertIn(money(pair("1C", "qe")[0]), table_1c)
+        text = head + "TABLE 1C" + table_1c.replace(money(pair("1C", "qe")[0]), "n/a") + "TABLE 1D" + tail
+        self.assertEqual(read_rates(text), read_rates(rates_text()))
 
     def test_columns_follow_the_scenario_labels_not_their_position(self):
         shuffled = read_rates(rates_text(order_a=("nn", "ne", "qn", "qe"), order_b=("ne", "qe", "nn", "qn")))
@@ -175,13 +174,9 @@ class Rates(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "Table 1D"):
             read_rates(no_rate)
 
-    def test_the_cms_file_without_table_1c_raises_rather_than_dropping_puerto_rico(self):
-        with self.assertRaisesRegex(SchemaError, "Table 1C"):
-            read_rates(rates_text(with_1c=False))
-
     def test_an_update_written_without_the_word_percent_reads_the_same(self):
-        # FY2024's Table 1C headings end "(Update = 3.1)"; the number is the update all the same
-        text = rates_text().replace("Equal to 1 (Update = 2.6 Percent)", "Equal to 1 (Update = 2.6)", 1)
+        # a heading that ends "(Update = 3.1)"; the number is the update all the same
+        text = rates_text().replace("(Update = 2.6 Percent)", "(Update = 2.6)", 1)
         self.assertNotEqual(text, rates_text())
         self.assertEqual(read_rates(text), read_rates(rates_text()))
         with self.assertRaisesRegex(SchemaError, "update"):  # a number with another word after it is still no update
