@@ -205,7 +205,8 @@ test('the changes and the sources: every changelog entry with its date and items
     assert.ok(sources.includes(`<code>${entry.sha256.slice(0, 16)}…</code>`), `${pin}: fingerprint`);
     assert.ok(sources.includes(`<td class="num">${count(entry.bytes)}</td>`), `${pin}: size`);
   }
-  assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, manifest.length);
+  // The table lists the pins the HACRP pages read, not every pin: an input pinned before any page reads it sits in the manifest unlisted.
+  assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
 });
 
 test('the pipeline\'s six stations carry the newest year\'s real numbers', () => {
