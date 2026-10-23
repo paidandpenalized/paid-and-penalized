@@ -243,9 +243,9 @@ def _parts(inp, rates):
 
     # A sole community hospital is paid the higher of F and its hospital-specific rate. The difference is not part of B:
     # 42 CFR 412.152 defines the SCH base operating DRG payment amount to exclude it (an MDH's includes its add-on), so
-    # HRRP and HVBP adjust the federal base only. The real comparison is made payment by payment (the README says the
-    # per-claim uncompensated care amount feeds it); here it is made once, on the year's totals, which can only
-    # understate the difference for a hospital that wins on some claims and loses on others.
+    # HRRP and HVBP adjust the federal base only. The rule pays whichever rate yields the greater aggregate payment
+    # (HACRP-92), and the cost report settles it on the period's totals, so the comparison here is made once, on the
+    # year's totals, as the rule makes it.
     sch_diff = 0.0
     hsp_sch = _hsp_payment(inp["hsp"], inp) if inp["sch"] else None
     if hsp_sch is not None:

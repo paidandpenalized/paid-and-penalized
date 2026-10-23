@@ -341,3 +341,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   ($82,262,071,135, 90 FR 37227); FY2024's is 6.8% above (FY2024 rule, $79,484,223,474, 88 FR 59353). The cause is
   not established, so nothing is changed for it; the readmissions share and the value-based pool checks, which test
   the base's relative sizes, pass.
+- Corrected: the v1 entry says comparing a sole community or Medicare-dependent hospital's rates on the year's totals
+  "can only understate the difference". The FY2026 rule pays whichever rate yields "the greatest aggregate payment"
+  (90 FR 37231; HACRP-92), and the cost report settles it on the period's totals, so the year's totals are the rule's
+  own comparison, not an understatement. The code was already making that comparison; only the description changes.
