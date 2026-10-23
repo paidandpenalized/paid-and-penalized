@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
-import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
+import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
@@ -75,6 +75,14 @@ test('longDate and isoDate spell the month out and reject non-dates', () => {
   assert.throws(() => longDate('2022-07-01'), RangeError);
   assert.throws(() => isoDate('2026-02-30'), RangeError);
   assert.throws(() => isoDate('August 13, 2026'), RangeError);
+});
+
+test('isoMonth gives the month and the year of a date as separate words, and rejects non-dates', () => {
+  assert.deepEqual(isoMonth('2026-12-31'), { month: 'December', year: '2026' });
+  assert.deepEqual(isoMonth('2027-01-01'), { month: 'January', year: '2027' });
+  assert.deepEqual(isoMonth('2024-02-29'), { month: 'February', year: '2024' });
+  assert.throws(() => isoMonth('2026-02-30'), RangeError);
+  assert.throws(() => isoMonth('December 31, 2026'), RangeError);
 });
 
 test("page: og:type is website on the site's root and each program's hub page, article on every other page", () => {

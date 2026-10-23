@@ -35,6 +35,12 @@ export const FACT_SHEET_CUT = Object.freeze({ fy: 2016, cut: 758 });
 // fails if the two differ.
 export const MAJOR_TEACHING_RATIO = 0.25;
 
+// Display constant: Methods names the group of hospitals whose estimates ran furthest from their cost reports, and only
+// a group with at least this many hospitals of its own in the back-test can be named. A handful's median is no finding
+// about a kind of hospital. It sits below the back-test's MIN_STRATUM (pp_engine/bands.py, 30: the fewest a group's own
+// percentiles rest on; the data carries it as bands.minStratum) because a group is only named here, not given a range.
+export const HEADLINE_MIN = 10;
+
 // Display constant: the cliff's note counts the hospitals scored within this distance of CMS's line, either side.
 export const CLIFF_NEAR = 0.1;
 // Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.

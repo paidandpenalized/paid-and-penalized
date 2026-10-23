@@ -5,12 +5,12 @@
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
 // glossary, and a link to the family's page for feedback, privacy and AI.
 import { fillAround, printout, stamp, typeset } from '../../../../web/render/components.js';
-import { count, decimal, isoDate, listText, noun, numberWord, ordinal, pct } from '../../../../web/render/format.js';
+import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
+import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
 import { MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
@@ -32,7 +32,8 @@ ${body}
 ${fig ? html`<div class="msec__fig">${fig}</div>` : ''}
 </section>`;
 
-// The estimate tag is also on every dollar figure: a sentence that says so, its section's name linked to that section.
+// The estimate tag is also on every dollar figure: a sentence that says so, its section's name linked to that section
+// (so only on a page that has the section: methodsPage's `dollars`).
 function dollarsTagNote() {
   return html` ${fillAround((marks) => fill('estimateDollars', marks), { section: html`<a href="#${DOLLARS_ID}">${t('dollarsHeading')}</a>` })}`;
 }
@@ -116,9 +117,10 @@ ${backtestPart(bands, { fig, names, pins })}`,
 }
 
 // The group whose own estimates ran furthest from its cost reports: the stratum with the largest own median miss, in
-// either direction, among every stratum with hospitals of its own (each has its own n and median, as Figure 4 draws
-// them), whatever range it uses. undefined when none has hospitals. strata: bands.measures.hac.strata.
-export const furthestGroup = (strata) => strata.filter((s) => s.n > 0).reduce((a, s) => (!a || Math.abs(s.median) > Math.abs(a.median) ? s : a), undefined);
+// either direction, among the strata with at least HEADLINE_MIN hospitals of their own (each has its own n and median,
+// as Figure 4 draws them), whatever range it uses. A smaller group's median is too few hospitals to name. undefined
+// when no stratum has that many. strata: bands.measures.hac.strata.
+export const furthestGroup = (strata) => strata.filter((s) => s.n >= HEADLINE_MIN).reduce((a, s) => (!a || Math.abs(s.median) > Math.abs(a.median) ? s : a), undefined);
 
 // The back-test: what it is, the comparison set and what it leaves out, the strips (every cut hospital's estimate over its
 // cost report, each group's range), how many each range holds, the tilt, the national ratio, places, every figure's
@@ -148,7 +150,7 @@ ${uncompared > 0 ? para(fill('backtestUncompared', { cut: count(c.cut), n: count
 ${para(fill('backtestFig', { share, min: count(bands.minStratum) }))}
 ${backtestFigure(bands, { n: fig(), source, names })}
 ${para(fill('backtestInside', { low: pct(Math.min(...held), 0), high: pct(Math.max(...held), 0) }))}
-${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { group: groupWords, median: absLogPct(most.median, 1), hospitals: noun(most.n, 'hospital') })}` : ''}`)}
+${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { min: count(HEADLINE_MIN), group: groupWords, median: absLogPct(most.median, 1), n: count(most.n) })}` : ''}`)}
 ${para(fill('backtestNational', { ratio: pct(n.ratio, 1), share, low: pct(n.p10, 1), high: pct(n.p90, 1) }))}
 ${para(t('backtestPlaces'))}
 ${para(fill('backtestMeasures', { n: numberWord(MEASURE_WORDS.length) }))}
@@ -219,7 +221,7 @@ ${printout(html`<table class="gb takes">
   ].map(([what, from, label, kind]) => html`<tr><th scope="row">${t(what)}</th><td>${typeof from === 'string' ? t(from) : from}</td><td><span class="takes__tag takes__tag--${kind}">${t(label)}</span></td></tr>`)}</tbody>
 </table>`)}
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
-${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollarsTagNote()}`)}
+${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollars ? dollarsTagNote() : ''}`)}
 <p><a href="/methods/#estimate">${t('estimateFamily')}</a></p>` },
     ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },

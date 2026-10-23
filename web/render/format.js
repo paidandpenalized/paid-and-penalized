@@ -124,11 +124,22 @@ export function longDate(text) {
   return longForm(Number(m[3]), Number(m[1]), Number(m[2]), text);
 }
 
-// YYYY-MM-DD.
-export function isoDate(text) {
+// [year, month, day] of a YYYY-MM-DD text.
+function isoParts(text) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
   if (!m) throw new RangeError(`expected YYYY-MM-DD, got "${text}"`);
-  return longForm(Number(m[1]), Number(m[2]), Number(m[3]), text);
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+// YYYY-MM-DD.
+export const isoDate = (text) => longForm(...isoParts(text), text);
+
+// The month and year of a YYYY-MM-DD date, each for a sentence's own placeholder: { month: 'December', year: '2026' }.
+// The day is checked, not said.
+export function isoMonth(text) {
+  const [year, month, day] = isoParts(text);
+  longForm(year, month, day, text);
+  return { month: MONTHS[month - 1], year: String(year) };
 }
 
 // The same dates with the month cut to three letters ("Aug 13, 2026"; May stays May), for a narrow field or a stamp.

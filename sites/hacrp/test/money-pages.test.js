@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from '../../../pipeline/site/build.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { count, decimal, dollars, isoDate, money, moneyRange, pct } from '../../../web/render/format.js';
+import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
@@ -19,7 +19,7 @@ import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
-import { MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
+import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
@@ -360,6 +360,8 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   });
   const id = DOLLARS_HREF.split('#')[1];
   const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  // The estimate section's sentence on the dollars' tag links to this section, which the page has.
+  assert.match(page, new RegExp(`Every dollar figure carries the tag too: the dollars are this site’s estimate, explained under <a href="#${id}">`));
   const h = DATA.dollars.headline;
   const pipe = /<ol class="pipe pipe--dollars"[\s\S]*?<\/ol>/.exec(sec)[0];
   for (const x of [money(h.base), money(h.hrrp), money(h.hvbp), money(h.after), money(h.hac)]) assert.ok(strip(pipe).includes(x), x);
@@ -392,16 +394,18 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   assert.equal([...table.matchAll(/<tr><th scope="row"/g)].length, b.measures.hac.strata.length);
   // Every figure the back-test checks, in the summary table.
   assert.equal([...sec.matchAll(/<table class="gb bt-measures">[\s\S]*?<\/table>/g)].length, 1);
-  // The group named as running highest (or lowest) is the one with the largest own median miss among every group with
-  // hospitals of its own, whatever range it uses: on these pins, the largest own median, a positive one.
+  // The group named as running highest (or lowest) is the one with the largest own median miss among the groups with at
+  // least HEADLINE_MIN hospitals of their own, whatever range it uses: on these pins, the largest own median, a positive
+  // one, and the sentence says which groups it chose among.
   const hac = b.measures.hac;
   const withOwn = hac.strata.filter((s) => s.n > 0);
-  const largest = withOwn.reduce((a, s) => (s.median > a.median ? s : a));
+  const named = withOwn.filter((s) => s.n >= HEADLINE_MIN);
+  const largest = named.reduce((a, s) => (s.median > a.median ? s : a));
   assert.equal(furthestGroup(hac.strata), largest);
-  assert.ok(largest.median > 0 && withOwn.every((s) => Math.abs(s.median) <= largest.median));
+  assert.ok(largest.median > 0 && named.every((s) => Math.abs(s.median) <= largest.median));
   assert.ok(largest.pool !== 'stratum', 'on these pins the group runs on a borrowed range, which the old rule skipped');
   const words = stratumLabel(b.strata.find((s) => s.id === largest.stratum)).hospitals;
-  assert.ok(text.includes(`Hospitals with ${words} ran highest: by ${absLogPct(largest.median, 1)} at the median, across ${count(largest.n)} hospitals.`));
+  assert.ok(text.includes(`Of the groups with at least ${count(HEADLINE_MIN)} hospitals, hospitals with ${words} ran highest: by ${absLogPct(largest.median, 1)} at the median, across ${count(largest.n)} hospitals.`));
   // Coverage, from the data: each group's own hospitals inside the range it uses, in the notes and the table, and
   // the spread across the groups in words; never a promise.
   const inside = insideCounts(b);
@@ -456,6 +460,32 @@ test('a state\'s tooltip on the states map says how many of the hospitals CMS cu
   // All of them estimated: the plain count (one in the singular).
   const same = [...MD.byState.values()].find((s) => s.money > 0 && s.cut === s.cmsCut && s.cut > 1);
   assert.ok(part.includes(`${money(same.money)} from ${same.cut} cut hospitals</title>`), 'n');
+});
+
+test('the group named as furthest from its cost reports has at least HEADLINE_MIN hospitals of its own: a few-hospital group with a large miss is never named', () => {
+  const group = (stratum, n, median) => ({ stratum, n, median });
+  const strata = [group('a', HEADLINE_MIN, 0.05), group('few', 3, 0.9), group('almost', HEADLINE_MIN - 1, -0.8), group('d', HEADLINE_MIN, -0.2)];
+  assert.equal(furthestGroup(strata).stratum, 'd', 'the largest miss, in either direction, among the groups big enough');
+  assert.equal(furthestGroup(strata.filter((s) => s.n < HEADLINE_MIN)), undefined, 'none big enough, none named');
+  assert.equal(furthestGroup([group('none', 0, 0.9)]), undefined);
+  assert.equal(furthestGroup([]), undefined);
+  // On the page the sentence is left out when no group is big enough, and says the filter when one is.
+  const page = (hac) => {
+    const dollars = { ...DATA.dollars, bands: { ...DATA.dollars.bands, measures: { ...DATA.dollars.bands.measures, hac: { ...DATA.dollars.bands.measures.hac, strata: hac } } } };
+    return strip(methodsPage({
+      fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
+      newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
+      pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
+      robots: null, assets: ASSETS, searchUrl: null, dollars, names: () => null,
+    }));
+  };
+  const real = DATA.dollars.bands.measures.hac.strata;
+  const small = real.map((s) => ({ ...s, n: Math.min(s.n, HEADLINE_MIN - 1) }));
+  assert.doesNotMatch(page(small), /ran (highest|lowest)/);
+  assert.match(page(real), new RegExp(`Of the groups with at least ${HEADLINE_MIN} hospitals, hospitals with .* ran (highest|lowest): by `));
+  // The "lowest" twin says it too.
+  const lowest = real.map((s) => ({ ...s, median: -Math.abs(s.median) }));
+  assert.match(page(lowest), new RegExp(`Of the groups with at least ${HEADLINE_MIN} hospitals, hospitals with .* ran lowest: by `));
 });
 
 test('the treemap writes its tiles by hospital name, then CCN, not by size, and draws every group\'s tiles, the group too small to label included', () => {
@@ -531,6 +561,16 @@ test('a place\'s dollars follow its {cut, cmsCut}: none cut is $0 untagged; cut 
   assert.deepEqual(kidCells(renderPlace(parentOf(some), { md: someMd })).get(some.path), { dollars: money(pm.money), from: words });
 });
 
+test('the assumptions table names the month and the year the earlier of the two provisions ends, from the date, not from display text', () => {
+  const ends = (mdhEnd, lowVolumeEnd) => strip(String(assumptionsTable({ fy: 2026, assumptions: { volumeFy: 2024, mdhEnd, lowVolumeEnd }, backtestFy: 2024 })))
+    .match(/Both run through ([A-Z][a-z]+ \d{4}), after FY2026 ends, so they count for the whole year\./)?.[1];
+  assert.equal(ends('2026-12-31', '2026-12-31'), 'December 2026');
+  assert.equal(ends('2027-01-15', '2026-11-30'), 'November 2026', 'the earlier one, either way round');
+  assert.equal(ends('2026-11-30', '2027-01-15'), 'November 2026');
+  assert.equal(ends('2027-01-01', '2027-03-31'), 'January 2027', 'the year is the date\'s own');
+  assert.throws(() => assumptionsTable({ fy: 2026, assumptions: { volumeFy: 2024, mdhEnd: '2026-09-30', lowVolumeEnd: '2026-12-31' }, backtestFy: 2024 }), RangeError);
+});
+
 test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
@@ -544,8 +584,9 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   const rows = [...table.matchAll(/<tr><th scope="row">([\s\S]*?)<\/th><td>([\s\S]*?)<\/td><\/tr>/g)].map((m) => [strip(m[1]), strip(m[2])]);
   const row = (start) => rows.find(([a]) => a.startsWith(start)) ?? assert.fail(`no assumption "${start}"`);
   const a = DATA.dollars.assumptions;
-  const month = isoDate(a.mdhEnd).split(' ')[0];
-  assert.equal(row('The Medicare-dependent hospital add-on')[1], `Both run through ${month}, after FY${DATA.fy} ends, so they count for the whole year.`);
+  const [endYear, endMonth] = (a.mdhEnd < a.lowVolumeEnd ? a.mdhEnd : a.lowVolumeEnd).split('-');
+  const month = new Date(Date.UTC(Number(endYear), Number(endMonth) - 1, 1)).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+  assert.equal(row('The Medicare-dependent hospital add-on')[1], `Both run through ${month} ${endYear}, after FY${DATA.fy} ends, so they count for the whole year.`);
   assert.ok(a.mdhEnd > `${DATA.fy}-09-30` && a.lowVolumeEnd > `${DATA.fy}-09-30`, 'both end after the fiscal year');
   assert.equal(row('The add-on for hospitals with many dialysis patients')[0], 'The add-on for hospitals with many dialysis patients (the ESRD adjustment) and credits for replaced devices, which reduce a payment, are left out, though the HAC cut counts both.');
   assert.equal(row('The add-on for hospitals with many dialysis patients')[1], 'Both are small: leaving out the add-on makes the cut a hair low, leaving out the credits a hair high.');

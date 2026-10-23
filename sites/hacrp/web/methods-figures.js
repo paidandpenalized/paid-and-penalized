@@ -7,7 +7,7 @@ import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { capitalize, cmsText, count, decimal, dollars, isoDate, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
+import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -219,7 +219,7 @@ export function assumptionsTable({ fy, assumptions, backtestFy }) {
   if (!(endsOn > `${fy}-09-30`)) throw new RangeError(`the Medicare-dependent hospital program and the low-volume adjustment end ${endsOn}, not after FY${fy} ends`);
   const rows = [
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
-    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }, { month: isoDate(endsOn).split(' ')[0], fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeOtherParts', 'assumeOtherPartsE'], ['assumeAddons', 'assumeAddonsE'],
+    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }, { ...isoMonth(endsOn), fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeOtherParts', 'assumeOtherPartsE'], ['assumeAddons', 'assumeAddonsE'],
     ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSlots', 'assumeSlotsE'], ['assumeSch', 'assumeSchE'],
     ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE', { fy: String(fy) }], ['assumeParhm', 'assumeParhmE', { year: String(PARHM_THROUGH_YEAR) }],
     ['assumeFfs', 'assumeFfsE'],

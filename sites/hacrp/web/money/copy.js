@@ -80,8 +80,8 @@ export const COPY = {
     claim: ['HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-79'],
   },
   stmtOrder: {
-    text: 'The readmissions and value-based programs adjust only the base payment, the DRG rates times the hospital\'s cases. The HAC cut comes last and takes {pct} of everything left, teaching, low-income-patient, outlier, capital and uncompensated care payments included.',
-    claim: ['HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-75'],
+    text: 'The readmissions and value-based programs adjust only the base payment: the DRG rates times the hospital\'s cases, and a Medicare-dependent hospital\'s add-on. The HAC cut comes last and takes {pct} of everything left, teaching, low-income-patient, outlier, capital and uncompensated care payments included.',
+    claim: ['HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-75', 'HACRP-94'],
   },
   stmtTitle: { text: 'Estimated Medicare inpatient payments · FY{fy}', claim: null },
   stmtGroupPay: { text: 'What traditional Medicare pays it for inpatient stays', claim: null },

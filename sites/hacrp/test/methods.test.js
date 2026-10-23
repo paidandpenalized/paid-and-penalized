@@ -392,6 +392,10 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   assert.ok(page.includes(`<dt>Scores recomputed</dt><dd>${count(total)}</dd>`));
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
   assert.match(page, /<section class="msec" id="estimate"/);
+  // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
+  assert.doesNotMatch(page, /id="dollars"/);
+  assert.doesNotMatch(page, /href="#dollars"/);
+  assert.doesNotMatch(page, /Every dollar figure carries the tag/);
 });
 
 test('the line notes say which side of the percentile CMS\'s line sits: a year with no hospital above the percentile left uncut, or none left uncut at all, sits below it', () => {
