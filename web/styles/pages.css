@@ -110,3 +110,11 @@
 .pol__sec:first-child { margin-top: 0; border-top: 0; }
 .pol__h { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
 .pol__list { margin: 0; padding-left: 1.2em; }
+/* A long unbroken string (the corrections address) breaks rather than widen a phone's page. */
+.pol__sec :is(p, li) { overflow-wrap: break-word; }
+/* The corrections log (hub/corrections.js): an entry per dated block, ruled off from the one above; its date is the
+   heading, its title (if any) beside the date in the body weight. */
+.pol__entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pol__entry-h { font: 700 var(--fs-md)/1.25 var(--font-body); }
+.pol__entry-title { font-weight: 400; }
+.pol__entry-sub { font: 700 var(--fs-base)/1.3 var(--font-body); }

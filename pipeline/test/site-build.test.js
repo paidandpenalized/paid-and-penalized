@@ -4,9 +4,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { REPO_ROOT, repoFiles } from '../files.js';
+import { REPO_ROOT, dollarsPath, masterPath, newestYear, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
+import { generateHacrp, HACRP } from '../../sites/hacrp/web/generate.js';
+import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { historyPath } from '../../sites/hacrp/pipeline/history.js';
+import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { createSiteServer } from '../site/serve.js';
@@ -122,6 +126,60 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
     const url = ctx.asset('demo', 'json', '[1]');
     assert.equal(url, `/assets/demo.${hash8('[1]')}.json`);
     assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
+  }));
+
+test('setUpdated records a site\'s two dates once, as real calendar dates; updated is a Map read in the order they were set', () =>
+  withTemp(async (dir) => {
+    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
+    assert.ok(ctx.updated instanceof Map);
+    assert.equal(ctx.updated.size, 0);
+    ctx.setUpdated('hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' });
+    ctx.setUpdated('other', { cmsReleased: '2026-01-02', changed: '2026-01-03' });
+    assert.deepEqual([...ctx.updated], [['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['other', { cmsReleased: '2026-01-02', changed: '2026-01-03' }]]);
+    assert.throws(() => ctx.setUpdated('hacrp', { cmsReleased: '2026-08-14', changed: '2026-10-23' }), /"hacrp" is already set/);
+    assert.equal(ctx.updated.get('hacrp').cmsReleased, '2026-08-13');
+    for (const bad of [{}, { cmsReleased: '2026-08-13' }, { changed: '2026-08-13' }, { cmsReleased: '2026-02-30', changed: '2026-08-13' },
+      { cmsReleased: '2026-08-13', changed: '08/13/2026' }, { cmsReleased: '2026-08-13', changed: '2026-08-13T10:00:00Z' }, { cmsReleased: 20260813, changed: '2026-08-13' }]) {
+      assert.throws(() => ctx.setUpdated('x', bad), /setUpdated\(x\)/, JSON.stringify(bad));
+    }
+    assert.equal(ctx.updated.has('x'), false, 'a refused call records nothing');
+    assert.throws(() => ctx.setUpdated('', { cmsReleased: '2026-08-13', changed: '2026-08-13' }), TypeError);
+  }));
+
+// The newest built_at date among the emitted files the HACRP pages read (the HACRP file, the hospital master, the
+// history and the dollars), each file read from its newest year.
+const newestBuilt = () => [
+  emittedPath(newestYear('data/emitted/hacrp')), masterPath(newestYear('data/emitted/hospital')),
+  historyPath(newestYear('data/emitted/hacrp-history')), dollarsPath(newestYear('data/emitted/dollars')),
+].map((f) => JSON.parse(readFileSync(REPO_ROOT + f, 'utf8')).built_at.slice(0, 10)).sort().at(-1);
+
+// Every .html file under dir, as paths from it.
+const htmlFiles = (dir, rel = '') => readdirSync(join(dir, rel), { withFileTypes: true })
+  .flatMap((e) => (e.isDirectory() ? htmlFiles(dir, join(rel, e.name)) : e.name.endsWith('.html') ? [join(rel, e.name)] : []));
+
+test('HACRP gives the build its two dates, and the corrections address is on /corrections/ and no other built page', () =>
+  withTemp(async (dir) => {
+    const data = loadHacrp();
+    const slice = { ...data, hospitals: data.hospitals.slice(0, 4) };
+    const out = join(dir, 'dist');
+    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: true, data: slice, log: () => {} }) };
+    let updated;
+    const watch = { ...HUB, generate: (ctx) => { updated = new Map(ctx.updated); return HUB.generate(ctx); } };
+    await build({ outDir: out, env: 'production', sites: [hacrp, watch] });
+    assert.deepEqual([...updated.keys()], ['hacrp']);
+    const dates = updated.get('hacrp');
+    assert.match(dates.cmsReleased, /^\d{4}-\d{2}-\d{2}$/);
+    assert.match(dates.changed, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(dates.cmsReleased, data.source.pdcReleased);
+    assert.equal(dates.changed, newestBuilt());
+    const pages = htmlFiles(out);
+    assert.ok(pages.length > 10);
+    const withAddress = pages.filter((f) => readFileSync(join(out, f), 'utf8').includes('corrections@'));
+    assert.deepEqual(withAddress, [join('corrections', 'index.html')]);
+    // The page shows the site's two dates.
+    const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
+    assert.ok(text.includes(`<time datetime="${dates.cmsReleased}">`));
+    assert.ok(text.includes(`<time datetime="${dates.changed}">`));
   }));
 
 test('robotsFor: only a production build of a released site indexes, and only eligible pages', () => {

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
-import { changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
+import { changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
 
 test('the master must be built for the same HACRP year as the HACRP file; the message names both years', () => {
   checkMasterYear({ programYears: { hacrp: 2026 } }, 2026);
@@ -83,4 +83,19 @@ test('checkHistoryYear: a history that does not end with the HACRP file\'s year 
   assert.doesNotThrow(() => checkHistoryYear(null, 2027));
   assert.doesNotThrow(() => checkHistoryYear({ fy: 2027 }, 2027));
   assert.throws(() => checkHistoryYear({ fy: 2026 }, 2027), /history ends at FY2026/);
+});
+
+test('changedOn: the newest built_at date (UTC) among the files given; a file that is absent is skipped; a stamp that is not an ISO timestamp stops the build', () => {
+  const at = (built_at) => ({ built_at });
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z'), at('2026-10-23T14:02:59Z'), at('2026-10-22T12:15:15Z')]), '2026-10-23');
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z'), null, at('2026-10-19T00:00:00Z')]), '2026-10-20');
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z')]), '2026-10-20');
+  for (const bad of [at(undefined), at(''), at('2026-10-20'), at('10/20/2026'), at('2026-02-30T00:00:00Z'), {}]) {
+    assert.throws(() => changedOn([at('2026-10-20T16:29:57Z'), bad]), /built_at/, JSON.stringify(bad));
+  }
+  assert.throws(() => changedOn([null]), RangeError);
+});
+
+test('the pinned data\'s changed date is the newest built_at of the four files the pages read', () => {
+  assert.match(loadHacrp().changedOn, /^\d{4}-\d{2}-\d{2}$/);
 });

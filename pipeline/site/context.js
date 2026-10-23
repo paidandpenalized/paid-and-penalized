@@ -1,7 +1,9 @@
 // What each site's generator gets from the build: the output folder, the build's env and asset paths, emit() (the
 // one way a page or file is written; it counts pages and collects the paths that may be indexed, which the hub's
-// sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds the indexing rule.
+// sitemap lists), asset() for a site's own content-hashed data, and setUpdated() for the two dates the hub's
+// corrections page shows for the site. robotsFor holds the indexing rule.
 import { join } from 'node:path';
+import { isoDate } from '../../web/render/format.js';
 import { writeFileMkdir } from '../files.js';
 import { writeHashed } from './assets.js';
 
@@ -17,12 +19,30 @@ const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
 
 export function createContext({ outDir, env, assets }) {
   const written = new Set();
+  const updated = new Map();
   const ctx = {
     outDir,
     env,
     assets,
     pages: 0,
     indexable: [],
+    // site id -> { cmsReleased, changed }, in the order the sites set them (setUpdated).
+    updated,
+    // A site's two dates, each YYYY-MM-DD: when CMS released the file the site uses, and when the site's numbers last
+    // changed. Once per site; the hub's /corrections/ page lists them.
+    setUpdated(siteId, { cmsReleased, changed } = {}) {
+      if (typeof siteId !== 'string' || !siteId) throw new TypeError('setUpdated: the site id must be a non-empty string');
+      if (updated.has(siteId)) throw new RangeError(`setUpdated: "${siteId}" is already set`);
+      for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
+        try {
+          if (typeof date !== 'string') throw new TypeError(`expected a YYYY-MM-DD string, got ${typeof date}`);
+          isoDate(date);
+        } catch (err) {
+          throw new RangeError(`setUpdated(${siteId}): ${name}: ${err.message}`);
+        }
+      }
+      updated.set(siteId, { cmsReleased, changed });
+    },
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;
     // null lists the page in the sitemap. Leave it out for a file that is not a page.
     emit({ path, text, robots }) {

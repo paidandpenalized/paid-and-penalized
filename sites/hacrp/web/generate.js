@@ -73,13 +73,15 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
+  const { fy, changedOn, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
     const failed = hd.checks.filter((c) => !c.check.ok);
     if (failed.length) throw new Error(`HACRP self-check failed for ${failed.map((c) => `FY${c.fy} (largest miss ${c.check.maxError}; out of order: ${c.check.wrongSide.length})`).join(', ')}`);
   }
+  // The corrections page lists this site's two dates: the CMS file's release and the day its numbers last changed.
+  ctx.setUpdated('hacrp', { cmsReleased: source.pdcReleased, changed: changedOn });
   const a1 = checkA1(hospitals, model);
   log(a1Summary(a1));
   if (!a1.ok) throw new Error(`HACRP acceptance A1 failed; decision mismatches: ${a1.b.mismatches.join(', ') || 'none'}`);

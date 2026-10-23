@@ -1,0 +1,104 @@
+// The corrections page: the policy (the hub's policy template) with the log as its last section. The log is the dated
+// entries in corrections/ (YYYY-MM-DD-<slug>.md, newest first), each rendered from its Markdown; the folder is the
+// append-only record tools/ci/change-gate.js guards, and an absent or empty folder is an empty log. Another section
+// gives, per site, the date of the CMS file it uses and the date its numbers last changed (ctx.setUpdated).
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { isoDate } from '../web/render/format.js';
+import { html } from '../web/render/html.js';
+import { markdownSections } from '../web/render/markdown.js';
+import { SITE } from '../web/site.js';
+import { CORRECTIONS_EMAIL, CORRECTIONS_PATH } from './constants.js';
+import { COPY } from './copy.js';
+import { feedbackLink, para, section, sentence } from './parts.js';
+import { policyPage } from './policy.js';
+
+// An entry's file name, YYYY-MM-DD-<slug>.md with a real date: { date, slug }, or null. The rule is the change gate's
+// (tools/ci/change-gate.js isEntry; a test keeps the two equal), so the build refuses what the gate would not count.
+const NAME = /^(\d{4}-\d{2}-\d{2})-([a-z0-9][a-z0-9-]*)\.md$/;
+export function entryName(name) {
+  const m = NAME.exec(name);
+  if (!m || Number(m[1].slice(0, 4)) < 2000) return null;
+  try {
+    isoDate(m[1]);
+  } catch {
+    return null;
+  }
+  return { date: m[1], slug: m[2] };
+}
+
+// The dated entries in dir, newest first and by slug within a day: [{ date: 'YYYY-MM-DD', slug, body }]. A file the
+// change gate would not count as an entry (a name that is not corrections/YYYY-MM-DD-<slug>.md with a real date, or
+// not a regular file) or one with a blank body stops the build and names the file, rather than show a wrong date or
+// nothing. A README.md (which the gate allows) and dotfiles are not entries.
+export function readCorrections(dir) {
+  let files;
+  try {
+    files = readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
+  const entries = [];
+  for (const file of files) {
+    const { name } = file;
+    if (name.startsWith('.') || /^readme\.md$/i.test(name)) continue;
+    const parsed = entryName(name);
+    if (!parsed) throw new RangeError(`corrections/${name} is not an entry: a name is YYYY-MM-DD-<slug>.md, a real date, then lowercase letters, digits and hyphens`);
+    if (!file.isFile()) throw new RangeError(`corrections/${name} is not a regular file`);
+    const body = readFileSync(join(dir, name), 'utf8').trim();
+    if (!body) throw new RangeError(`corrections/${name} is blank`);
+    entries.push({ ...parsed, body });
+  }
+  return entries.sort((a, b) => (a.date === b.date ? (a.slug < b.slug ? -1 : 1) : a.date < b.date ? 1 : -1));
+}
+
+// A date (YYYY-MM-DD) as a reader says it, with the machine-readable one beside it.
+const time = (iso) => html`<time datetime="${iso}">${isoDate(iso)}</time>`;
+
+// One entry: its date (and its "# " title, if it has one) as the heading, then its Markdown body, escaped. A "## "
+// heading in the body sits a level below the date and labels the table under it.
+function entryBlock({ date, slug, body }) {
+  if (!body.trim()) throw new RangeError(`corrections entry ${date}-${slug} is blank`);
+  const { title, sections } = markdownSections(body, { idPrefix: `h-${date}-${slug}` });
+  return html`<article class="pol__entry" id="e-${date}-${slug}">
+<h3 class="pol__entry-h">${time(date)}${title ? html` <span class="pol__entry-title">${title}</span>` : ''}</h3>
+${sections.map((s) => html`${s.heading ? html`<h4 class="pol__entry-sub" id="${s.id}">${s.heading}</h4>
+` : ''}${s.body}
+`)}</article>
+`;
+}
+
+// One site's line: its name, the date of the CMS file it uses and the date its numbers last changed.
+function siteLine([id, { cmsReleased, changed }]) {
+  const site = SITE.sites[id];
+  if (!site) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
+  return html`<li>${sentence('correctionsSite', { cms: time(cmsReleased), changed: time(changed) }, { site: site.title })}</li>
+`;
+}
+
+// entries: readCorrections' result. updated: ctx.updated (site id -> { cmsReleased, changed }); with none, the sites
+// section is left out.
+export function correctionsPage({ entries, updated, assets, robots }) {
+  const email = html`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`;
+  const sites = [...updated].map(siteLine);
+  return policyPage({
+    path: CORRECTIONS_PATH,
+    title: COPY.correctionsTitle,
+    description: COPY.correctionsDescription,
+    brief: [COPY.correctionsBrief1, COPY.correctionsBrief2, COPY.correctionsBrief3, COPY.correctionsBrief4],
+    sections: [
+      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback: feedbackLink(CORRECTIONS_PATH), email })),
+      section('counts', 'correctionsCountsHeading', para('correctionsCounts')),
+      section('hospital', 'correctionsHospitalHeading', para('correctionsHospital')),
+      section('process', 'correctionsProcessHeading', para('correctionsProcess'), para('correctionsProcess2')),
+      section('cms', 'correctionsCmsHeading', para('correctionsCms')),
+      ...(sites.length ? [section('sites', 'correctionsSitesHeading', html`<ul class="pol__list">${sites}</ul>
+`)] : []),
+      section('log', 'correctionsLogHeading', entries.length ? html`${entries.map(entryBlock)}` : html`<p>${COPY.correctionsLogEmpty}</p>
+`),
+    ],
+    assets,
+    robots,
+  });
+}

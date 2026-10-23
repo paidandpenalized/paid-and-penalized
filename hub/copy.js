@@ -10,7 +10,7 @@ export const COPY = typesetCopy({
   sitesHeading: 'Programs',
 
   methodsTitle: 'Methods',
-  methodsDescription: 'How this site turns CMS public data into its pages, what it calls an estimate, and how it uses AI tools.',
+  methodsDescription: 'How this site turns CMS public data into its pages, and what it calls an estimate.',
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",

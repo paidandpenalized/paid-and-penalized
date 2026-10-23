@@ -23,7 +23,7 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    assert.equal(ctx.pages, 3 + 3 + 4);
+    assert.equal(ctx.pages, 3 + 3 + 5);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -37,6 +37,8 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     assert.doesNotMatch(methods, /id="ai"/);
     assert.doesNotMatch(methods, /deterministic code/);
     assert.match(methods, /href="\/about\/#ai"/);
+    // Its description says what the page covers now that the AI paragraph is on /about/.
+    assert.ok(methods.includes('<meta name="description" content="How this site turns CMS public data into its pages, and what it calls an estimate.">'));
 
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
@@ -66,12 +68,15 @@ const POLICY = [
   { path: '/privacy/', title: COPY.privacyTitle, description: COPY.privacyDescription, brief: 'privacyBrief' },
   { path: '/about/', title: COPY.aboutTitle, description: COPY.aboutDescription, brief: 'aboutBrief' },
   { path: '/accessibility/', title: COPY.a11yTitle, description: COPY.a11yDescription, brief: 'a11yBrief' },
+  { path: '/corrections/', title: COPY.correctionsTitle, description: COPY.correctionsDescription, brief: 'correctionsBrief' },
 ];
 
-// Builds the hub once in production mode and hands fn a reader for its files.
+// Builds the hub once in production mode and hands fn a reader for its files. A site has given its dates (for
+// /corrections/) and the corrections folder is one that does not exist, so the log is empty whatever the repo holds.
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-  await generateHub(ctx);
+  ctx.setUpdated('hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' });
+  await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections') });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
 
@@ -110,9 +115,9 @@ test('each policy page has one h1, the brief as a record card, an index of its s
     }
   }));
 
-test('every word of the four pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
+test('every word of the five pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
   withHub((read) => {
-    const stems = { '/terms/': 'terms', '/privacy/': 'privacy', '/about/': 'about', '/accessibility/': 'a11y' };
+    const stems = { '/terms/': 'terms', '/privacy/': 'privacy', '/about/': 'about', '/accessibility/': 'a11y', '/corrections/': 'corrections' };
     for (const { path } of POLICY) {
       const text = read(path);
       const words = textOf(text);

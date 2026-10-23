@@ -8,6 +8,7 @@ import { parseCsv } from '../../../engine/js/csv.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
+import { isoDate } from '../../../web/render/format.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
@@ -109,6 +110,22 @@ export function dollarsData(dollars, hospitals) {
   return { fy, byCcn, national, headline: { ...headline, cmsCut: headline.yes }, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
 }
 
+// The date (YYYY-MM-DD, UTC) the newest of these emitted files was built: the newest built_at among them. A file that is
+// absent (the history, in a build without one) is null and skipped; a built_at that is not an ISO timestamp stops the build.
+export function changedOn(files) {
+  const days = files.filter(Boolean).map((file) => {
+    const day = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.exec(file.built_at)?.[1];
+    try {
+      isoDate(day); // a real date, not just the right shape
+    } catch {
+      throw new RangeError(`HACRP: an emitted file's built_at is not an ISO timestamp: ${JSON.stringify(file.built_at)}`);
+    }
+    return day;
+  });
+  if (!days.length) throw new RangeError('HACRP: no emitted file to take a built_at from');
+  return days.sort().at(-1);
+}
+
 export function loadHacrp() {
   const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
@@ -142,6 +159,8 @@ export function loadHacrp() {
   const topo = JSON.parse(readPinned(ATLAS_ID));
   return {
     fy: data.fy,
+    // The day this site's numbers last changed (the corrections page shows it): the newest built_at of the files read.
+    changedOn: changedOn([data, masterFile, history, dollarsFile]),
     hospitals: data.hospitals,
     model: data.model,
     boundaryText: boundaryText(data.hospitals, data.model.boundary),
