@@ -69,6 +69,27 @@ test('the sections run pipeline, check, decisions, formula, estimate, dollars, p
   assert.ok(PAGE.includes('<a href="/methods/#estimate">'));
 });
 
+test('"Feedback, privacy and AI" points to the family\'s privacy page and the About page\'s AI section, and no longer says the site keeps nothing about readers', () => {
+  const more = /<section class="msec" id="more"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  assert.match(more, /<a href="\/privacy\/">what the site and its host can see<\/a>/);
+  assert.match(more, /<a href="\/about\/#ai">how AI tools are used<\/a>/);
+  assert.equal(strip(/<p>[\s\S]*?<\/p>/.exec(more)[0]), 'The same rules for feedback, privacy and AI tools cover every Paid & Penalized site: see what the site and its host can see and how AI tools are used.');
+  assert.doesNotMatch(more, /keeps about you|\(nothing\)|href="\/methods\/"/);
+});
+
+test('"What changed" links the family\'s corrections log', () => {
+  const changed = /<section class="msec" id="changed"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  assert.match(changed, /<a href="\/corrections\/">corrections log<\/a>/);
+  assert.ok(strip(changed).includes('Corrections go in the family’s public, dated corrections log; this site cannot change CMS’s values.'));
+});
+
+test('Methods carries the as-of bar the program page shows, the same items, after the page head and the sections', () => {
+  const bar = (page) => page.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
+  assert.equal(bar(PAGE)?.length, 1, 'one bar');
+  assert.deepEqual(bar(PAGE), bar(WITH.program));
+  assert.ok(PAGE.indexOf('<aside class="asof"') > PAGE.indexOf('</header>') && PAGE.indexOf('<aside class="asof"') > PAGE.indexOf('id="more"'), 'after the head and the last section');
+});
+
 test('the glossary defines "Payment decision (in counts)" once, right after "Subject to the reduction", as the hospitals CMS scored and marked Yes or No', () => {
   const entries = [...PAGE.matchAll(/<div class="glossary__item"><dt>([^<]*)<\/dt><dd>([\s\S]*?)<\/dd><\/div>/g)].map((m) => [text(m[1]), strip(m[2])]);
   const terms = entries.map(([term]) => term);
@@ -383,7 +404,7 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   const years = S.years.map((y) => ({ fy: y.fy, periods: y.periods }));
   const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
   const page = methodsPage({
-    fy: 2025, checks, years, newest: { rows: 3, source: DATA.source, pin, measures: 6, pages: 10, sourceLine: SRC },
+    fy: 2025, checks, years, newest: { rows: 3, source: DATA.source, periods: DATA.periods, pin, measures: 6, pages: 10, sourceLine: SRC },
     pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
     robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
   });
@@ -410,7 +431,7 @@ test('the line notes say which side of the percentile CMS\'s line sits: a year w
   const checks = HD.checks.map((c) => (c.fy === lower.fy ? lower : c.fy === allCut.fy ? allCut : c));
   const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
   const page = methodsPage({
-    fy: 2026, checks, years: HD.years ?? DATA.history.years.map((y) => ({ fy: y.fy, periods: y.periods })), newest: { rows: 3, source: DATA.source, pin, measures: 6, pages: 10, sourceLine: SRC },
+    fy: 2026, checks, years: HD.years ?? DATA.history.years.map((y) => ({ fy: y.fy, periods: y.periods })), newest: { rows: 3, source: DATA.source, periods: DATA.periods, pin, measures: 6, pages: 10, sourceLine: SRC },
     pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
     robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
   });

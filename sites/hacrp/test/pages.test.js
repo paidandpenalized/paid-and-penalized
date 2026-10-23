@@ -228,6 +228,28 @@ test('released: false: every page is noindex in production and the sitemap lists
     assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
+test('the data dictionary page carries the as-of bar the program page shows, after its sections', () =>
+  temp(async (dir) => {
+    await generate(dir, 'production', { released: true, data: SLICE });
+    const bar = (page) => page.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
+    const dictionary = read(dir, '/hacrp/data/');
+    assert.equal(bar(dictionary)?.length, 1, 'one bar');
+    assert.deepEqual(bar(dictionary), bar(read(dir, '/hacrp/')));
+    assert.ok(dictionary.indexOf('<aside class="asof"') > dictionary.indexOf('</header>') && dictionary.indexOf('<aside class="asof"') > dictionary.lastIndexOf('</section>'), 'after the head and the last section');
+  }));
+
+test('no built page links the hub Methods page\'s old AI anchor: the policy lives on About', () =>
+  temp(async (dir) => {
+    const out = join(dir, 'dist');
+    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: true, data: SLICE, log: quiet }) };
+    await build({ outDir: out, env: 'production', sites: [hacrp, HUB] });
+    const pages = readdirSync(out, { recursive: true }).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length));
+    for (const path of ['', 'methods/', 'about/', 'hacrp/', 'hacrp/methods/', 'hacrp/data/']) assert.ok(pages.includes(path), `the scan reads ${path || 'the home page'}`);
+    const links = pages.filter((f) => /href="[^"]*\/methods\/#ai"/.test(readFileSync(join(out, f, 'index.html'), 'utf8')));
+    assert.deepEqual(links, []);
+    assert.match(read(out, '/about/'), /id="ai"/);
+  }));
+
 test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
   temp(async (dir) => {
     const ctx = await generate(dir, undefined, { released: true, data: SLICE });

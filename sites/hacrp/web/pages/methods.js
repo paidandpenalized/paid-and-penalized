@@ -3,7 +3,8 @@
 // file to the pages with the newest run's real numbers, the check drawn (every recomputed score against CMS's, every
 // decision against the line this site finds, each year), the formula, what comes from CMS and what this site works
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
-// glossary, and a link to the family's page for feedback, privacy and AI.
+// glossary, and links to the family's pages for feedback, privacy, AI and corrections; the as-of bar closes the page,
+// as it does the program page.
 import { fillAround, printout, stamp, typeset } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
@@ -17,7 +18,7 @@ import { MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMea
 import { moneySourceText } from '../money-figures.js';
 import { cutCounts, rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
-import { kicker, siteHeader } from './parts.js';
+import { asofBar, kicker, siteHeader } from './parts.js';
 
 export { METHODS_PATH };
 
@@ -169,7 +170,8 @@ const GLOSSARY = (v) => [
 ];
 
 // checks: [{ fy, rule, check }] oldest first (yearCheck results); years: [{ fy, periods }] oldest first; newest: the
-// newest year's { rows (CMS's file), source, pin (its manifest entry), measures, pages }; pins: the manifest entries
+// newest year's { rows (CMS's file), source, periods (the performance periods the as-of bar shows), pin (its manifest
+// entry), measures, pages }; pins: the manifest entries
 // the HACRP pages read; changes: [{ date, items }] newest first; estimate: { tolerance, tagged, maxError };
 // boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
@@ -230,9 +232,9 @@ ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estima
     { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(t('sourcesCode'))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}
 <ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${typeset(i)}</li>`)}</ul></li>`)}</ol>
-${para(t('changedCorrections'))}` },
+${para(fillAround((marks) => fill('changedCorrections', marks), { log: html`<a href="/corrections/">${t('changedLogLink')}</a>` }))}` },
     { id: 'glossary', heading: t('glossaryHeading'), body: html`<dl class="glossary">${GLOSSARY({ eqFy }).map(([term, def, values, termValues]) => html`<div class="glossary__item"><dt>${termValues ? fill(term, termValues) : t(term)}</dt><dd>${values ? fill(def, values) : t(def)}</dd></div>`)}</dl>` },
-    { id: 'more', heading: t('familyHeading'), body: html`<p>${t('familyText')} <a href="/methods/">${t('familyLink')}</a>.</p>
+    { id: 'more', heading: t('familyHeading'), body: html`${para(fillAround((marks) => fill('familyText', marks), { privacy: html`<a href="/privacy/">${t('familyPrivacyLink')}</a>`, ai: html`<a href="/about/#ai">${t('familyAiLink')}</a>` }))}
 <h3 class="msec__sub">${t('reuseHeading')}</h3>${para(t('reuseText'))}
 <h3 class="msec__sub">${t('accessHeading')}</h3>${para(t('accessText'))}` },
   ];
@@ -248,6 +250,7 @@ ${top}
 ${sections.map(sec)}
 </div>
 </div>
+${asofBar({ fy, periods: newest.periods, source: newest.source })}
 </article>`;
 
   return page({

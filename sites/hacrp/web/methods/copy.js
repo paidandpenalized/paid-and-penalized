@@ -197,7 +197,8 @@ export const COPY = {
   // §10, what changed.
   changedHeading: { text: 'What changed', claim: null },
   changedText: { text: 'Each change to how this site computes its numbers, and each correction, with its date.', claim: null },
-  changedCorrections: { text: 'Corrections go in a public, dated log; this site cannot change CMS’s values.', claim: null },
+  changedCorrections: { text: 'Corrections go in the family’s public, dated {log}; this site cannot change CMS’s values.', claim: null },
+  changedLogLink: { text: 'corrections log', claim: null },
 
   // §11, glossary.
   glossaryHeading: { text: 'Glossary', claim: null },
@@ -247,8 +248,9 @@ export const COPY = {
 
   // §12, the family page and reuse.
   familyHeading: { text: 'Feedback, privacy and AI', claim: null },
-  familyText: { text: 'How to send feedback, what this site keeps about you (nothing), and how it uses AI tools are the same across Paid & Penalized:', claim: null },
-  familyLink: { text: 'the family’s methods page', claim: null },
+  familyText: { text: 'The same rules for feedback, privacy and AI tools cover every Paid & Penalized site: see {privacy} and {ai}.', claim: null },
+  familyPrivacyLink: { text: 'what the site and its host can see', claim: null },
+  familyAiLink: { text: 'how AI tools are used', claim: null },
   reuseHeading: { text: 'Reuse', claim: null },
   reuseText: { text: 'This site’s text, charts and derived data may be reused with credit to Paid & Penalized (CC BY). CMS’s data are U.S. government works. Every hospital’s CMS values are in one CSV file; keep the CCN as text so leading zeros survive.', claim: null },
   // ---------- How this site estimates the dollars (#dollars) ----------

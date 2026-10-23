@@ -112,7 +112,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
   const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places, dollars.byCcn)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
-  emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
+  emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, periods, source, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
   // The explore asset: what the explorable figures draw in the browser (program-data.js exploreAsset).
   const exploreUrl = ctx.asset('hacrp-explore', 'json', JSON.stringify(exploreAsset(pd, model)));
   // The hero's suggestions: the state and the metro area with the most hospitals with a payment decision.
@@ -180,7 +180,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       fy,
       checks,
       years: hd ? hd.years.map((y) => ({ fy: y.fy, periods: y.periods })) : [{ fy, periods }],
-      newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: pageCount + 1, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
+      newest: { rows: sourceRows, source, periods, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: pageCount + 1, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
       pins: pinsUsed,
       changes,
       estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.length ? listText(tagged.map((id) => SHORT_NAMES[id])) : null, maxError: tagged.length ? Math.max(...tagged.map((id) => estimate[id].maxError)) : null },

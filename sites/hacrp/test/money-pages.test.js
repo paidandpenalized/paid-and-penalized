@@ -354,7 +354,7 @@ test('the hospitals near the line: both sides, lowest score first, worked out on
 test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to; the back-test drawn where every range links', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
+    newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
     pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
     robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }),
   });
@@ -474,7 +474,7 @@ test('the group named as furthest from its cost reports has at least HEADLINE_MI
     const dollars = { ...DATA.dollars, bands: { ...DATA.dollars.bands, measures: { ...DATA.dollars.bands.measures, hac: { ...DATA.dollars.bands.measures.hac, strata: hac } } } };
     return strip(methodsPage({
       fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-      newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
+      newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
       pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
       robots: null, assets: ASSETS, searchUrl: null, dollars, names: () => null,
     }));
@@ -574,7 +574,7 @@ test('the assumptions table names the month and the year the earlier of the two 
 test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
+    newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
     pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
     robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => null,
   });
