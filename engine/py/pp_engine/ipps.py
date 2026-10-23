@@ -201,10 +201,12 @@ def _finite(s):
 
 
 def _flag(s):
-    v = to_int(s)
-    if v not in (None, 0, 1):
-        raise ValueError(f"flag {s!r} is not 0 or 1")
-    return v
+    """A proxy reduction flag: exactly "0", "1" or blank (None). The number reader would also take 1.0, "$1" or 1.4
+    (which `to_int` rounds to 1); a flag that is not written as 0 or 1 is not read as one."""
+    t = s.strip()
+    if t not in ("", "0", "1"):
+        raise ValueError(f"flag {s!r} is not 0, 1 or blank")
+    return int(t) if t else None
 
 
 def read_payment_inputs(text):
@@ -221,13 +223,15 @@ def read_payment_inputs(text):
     label = "impact file"
 
     def build(r):
-        try:
-            out = {k: _finite(r[k]) for k in _FLOATS}
-            out["bills"] = to_int(r["bills"])
-            out["quality"], out["ehr"] = _flag(r["quality"]), _flag(r["ehr"])
-            out["ptype"] = to_int(r["ptype"])
-        except ValueError as e:
-            raise SchemaError(f"{label}: unreadable value for {r['ccn']}: {e}") from None
+        def read(key, reader=_finite):
+            try:
+                return reader(r[key])
+            except (ValueError, OverflowError) as e:  # int() of an infinite count raises OverflowError, not ValueError
+                raise SchemaError(f"{label}: unreadable value for {r['ccn']} in {PAYMENT_COLUMNS[key]!r}: {e}") from None
+        out = {k: read(k) for k in _FLOATS}
+        out["bills"] = read("bills", to_int)
+        out["quality"], out["ehr"] = read("quality", _flag), read("ehr", _flag)
+        out["ptype"] = read("ptype", to_int)
         out["sch"] = out["ptype"] in SCH_TYPES
         out["mdh"] = r["mdh"].upper() == "Y"
         out["pr"] = r["ccn"][:2] == PUERTO_RICO

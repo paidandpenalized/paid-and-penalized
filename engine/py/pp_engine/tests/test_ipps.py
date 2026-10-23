@@ -250,6 +250,24 @@ class PaymentInputs(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "Low-Volume Hospital Payment Adjustment, FY 2025 extension"):
             read_payment_inputs(impact_text(hospital(), header=header))
 
+    def test_a_flag_is_0_1_or_blank_and_nothing_else(self):
+        # CMS writes the proxy reduction flags as 0 or 1. A cell that merely rounds to one (1.4, 0.6) or that the number
+        # reader would accept (1.0, "$1", 100%) is not a flag: it raises, naming the hospital and the column.
+        for column in ("Proxy Quality Reduction", "Proxy EHR Reduction"):
+            for bad in ("2", "-1", "1.0", "0.0", "0.6", "1.4", "$1", "100%", "yes", "Y", "n/a", ".", "--", "inf", "nan"):
+                with self.assertRaisesRegex(SchemaError, f"990001.*{column}", msg=(column, bad)):
+                    read_payment_inputs(impact_text(hospital(**{column: bad})))
+            for ok, want in (("0", 0), ("1", 1), ("", None), (" 1 ", 1)):
+                got = read_payment_inputs(impact_text(hospital(**{column: ok})))["990001"]
+                self.assertEqual(got["quality" if column == "Proxy Quality Reduction" else "ehr"], want, (column, ok))
+
+    def test_an_infinite_count_is_a_schema_error_not_an_overflow(self):
+        # int(round(inf)) raises OverflowError, which is not a ValueError: it must still name the hospital and column
+        for column in ("Bills", "Provider Type"):
+            for bad in ("inf", "-inf", "Infinity"):
+                with self.assertRaisesRegex(SchemaError, "990001", msg=(column, bad)):
+                    read_payment_inputs(impact_text(hospital(**{column: bad})))
+
     def test_a_non_numeric_cell_or_a_bad_flag_raises(self):
         for col, bad in (("CASETA43", "many"), ("FY 2026 Wage Index", "nan"), ("GAF", "inf"),
                          ("Proxy EHR Reduction", "2"), ("Proxy Quality Reduction", "yes")):
