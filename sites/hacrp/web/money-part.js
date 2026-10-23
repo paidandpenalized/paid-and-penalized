@@ -17,7 +17,7 @@ import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pc
 import { html } from '../../../web/render/html.js';
 import { MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
-import { estTag, rangeLine } from './money-figures.js';
+import { cutFrom, estTag, rangeLine } from './money-figures.js';
 import { countBins } from './compare.js';
 import { nearLine, sides, sum } from './money-data.js';
 import { cutCounts } from './money.js';
@@ -158,7 +158,7 @@ export function statesFigure(md, { n, source, shapes }) {
   const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1)).map((s) => ({ ...s, stay: Math.round(s.perStay) }));
   if (!states.length) throw new RangeError('statesFigure: no state with estimated money to draw');
   // A state's tooltip says how many of the hospitals CMS cut there the dollars come from when some have no estimate.
-  const tipTotal = (s) => (s.cut < s.cmsCut ? fill('statesTipTotal', { money: money(s.money), ...cutCounts(s) }) : fill('statesTipTotalAll', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }));
+  const tipTotal = (s) => (cutFrom(s) ? `${money(s.money)} ${cutFrom(s)}` : fill('statesTipTotalAll', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }));
   const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: tipTotal(s) }]));
   const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(s.stay) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];

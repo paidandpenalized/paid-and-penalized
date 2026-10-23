@@ -12,7 +12,7 @@ import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
-import { BASE_PARTS, OTHER_PARTS, hasMaTeaching, maKey } from './money.js';
+import { BASE_PARTS, OTHER_PARTS, cutCounts, hasMaTeaching, maKey } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
@@ -21,6 +21,11 @@ const FACTOR_DP = 4;
 // release date kept on one line. source: the HACRP dataset's manifest entry ({ id, pdcReleased }).
 export const moneySourceText = ({ fy, source }) => fillKeep('stmtSource', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }, ['date']);
 const zero = () => money(0);
+
+// Which of a group's CMS-cut hospitals its dollars come from, when some of them have no estimate: "from 3 of its 4 cut
+// hospitals" (a state's tooltip says it after the dollars, a place's page under them); '' when every one has.
+// group: { cut, cmsCut }, as cutCounts takes it.
+export const cutFrom = (group) => (group.cut < group.cmsCut ? fill('cutFrom', cutCounts(group)) : '');
 
 // The estimate tag every dollar figure carries (Thirty Day Readmissions' outlined tag), linking to how this site
 // makes the estimate.

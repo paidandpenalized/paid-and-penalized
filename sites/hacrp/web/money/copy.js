@@ -254,9 +254,8 @@ export const COPY = {
   statesTotal: { text: 'Dollars', claim: null },
   statesPerStay: { text: 'Per traditional Medicare stay', claim: null },
   statesToggle: { text: 'Show the money as', claim: null },
-  // A state's tooltip: its dollars, and how many of the hospitals CMS cut there they come from ({n} of {m} when some have
+  // A state's tooltip: its dollars, and how many of the hospitals CMS cut there they come from (cutFrom, when some have
   // no estimate, else all of them).
-  statesTipTotal: { text: '{money} from {cut} of its {yes} cut hospitals', claim: null },
   statesTipTotalAll: { text: '{money} from {hospitals}', claim: null },
   statesTipStay: { text: '{perStay} per traditional Medicare stay', claim: null },
   statesNone: { text: 'States whose hospitals CMS didn\'t cut, and Maryland, have no circle.', claim: 'HACRP-26' },
@@ -290,6 +289,9 @@ export const COPY = {
   threeColHospitals: { text: 'Hospitals adjusted', claim: null },
   threeColMoney: { text: 'Net estimated dollars (whole dollars)', claim: null },
   // A place page.
+  // Which of a group's cut hospitals its dollars come from, when some of them have no estimate: said after a state's
+  // dollars in its tooltip, and under a place's dollars on its page.
+  cutFrom: { text: 'from {cut} of its {yes} cut hospitals', claim: null },
   placeMoney: { text: 'Estimated dollars', claim: null },
   placeMoneyNote: { text: "{share} of the nation's {money}, this site's estimate", claim: null },
   placePerStay: { text: 'Per traditional Medicare stay', claim: null },

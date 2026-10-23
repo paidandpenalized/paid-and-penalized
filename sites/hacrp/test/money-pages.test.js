@@ -13,6 +13,7 @@ import { count, decimal, dollars, isoDate, money, moneyRange, pct } from '../../
 import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
+import { cutFrom } from '../web/money-figures.js';
 import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
 import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
@@ -29,22 +30,16 @@ const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section clas
 const captionText = (html) => strip(/<figcaption class="fig__cap"[^>]*>([\s\S]*?)<\/figcaption>/.exec(html)[1]);
 const captionOf = (html, id) => captionText(new RegExp(`<section class="psec[^"]*" id="${id}"[\\s\\S]*?</section>`).exec(html)[0]);
 
-test('every group carries the hospitals this site estimates the cut of and those CMS cut, from one rollup: the nation, each kind\'s group, each state, each place', () => {
+test('the nation, each state and each place carry the hospitals this site estimates the cut of and those CMS cut', () => {
   const h = DATA.dollars.headline;
   assert.deepEqual([MD.headline.cut, MD.headline.cmsCut], [h.cut, h.yes], 'the nation: the file\'s headline, CMS\'s count under the groups\' name');
-  // A kind's group: program-data\'s tally of the same group over every decided hospital.
-  for (const { kind, groups } of MD.byKind) {
-    for (const g of groups) {
-      const tally = PD.types.find((t) => t.kind === kind).groups.find((x) => x.key === g.key);
-      assert.equal(g.cmsCut, tally.yes, `${kind} ${g.key}`);
-      assert.ok(g.cut <= g.cmsCut, `${kind} ${g.key}`);
-    }
-  }
+  // A kind's group says how many hospitals it cuts and their dollars, not CMS's count (no page reads it).
+  for (const { groups } of MD.byKind) for (const g of groups) assert.deepEqual(Object.keys(g), ['key', 'cut', 'money', 'shareHospitals', 'shareMoney']);
   for (const s of MD.byState.values()) assert.ok(s.cut <= s.cmsCut, s.state);
-  for (const place of PLACES.list.filter((p) => p.kind === 'state' || p.kind === 'region')) {
+  for (const place of PLACES.list) {
     const pm = placeMoney(MD, place.ccns);
-    assert.equal(pm.cmsCut, place.counts.yes, `${place.key}: the hospitals CMS cut there`);
-    assert.ok(pm.cut <= pm.cmsCut, place.key);
+    assert.equal(pm.cmsCut, place.counts.yes, `${place.id}: the hospitals CMS cut there`);
+    assert.ok(pm.cut <= pm.cmsCut, place.id);
   }
   // The placeholders the copy\'s "{cut} of the {yes}" take, for any of them.
   assert.deepEqual(cutCounts({ cut: 1234, cmsCut: 1300 }), { cut: count(1234), yes: count(1300) });
@@ -194,18 +189,27 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   assert.equal([...wide.matchAll(/<circle class="chart-across__dot/g)].length, nearLine(MD, ACROSS_WINDOW).rows.length, 'every near-line hospital still has its dot');
 });
 
+// A place page's children table: each child's link -> { dollars: the cell's text, from: the note under it ('' for none) }.
+function kidCells(page) {
+  const cell = /<td class="num kids__money">([^<]*)(?:<span class="kids__from">([^<]*)<\/span>)?<\/td>/;
+  return new Map([...page.matchAll(/<tr><th scope="row"><a href="([^"]*)">[^<]*<\/a><\/th>(.*?)<\/tr>/g)].map((m) => {
+    const [, dollars, from = ''] = cell.exec(m[2]);
+    return [m[1], { dollars, from }];
+  }));
+}
+
 test('the children table\'s dollars: a child place with no estimated hospital (Maryland\'s are exempt) says "no estimate", not $0; the others say their dollars', () => {
   const byId = new Map(PLACES.list.map((p) => [p.id, p]));
   // The division holding Maryland, and the state of Maryland (its metro areas): every child's cell, by its page.
   for (const place of PLACES.list.filter((p) => (p.kind === 'division' && p.children.includes('state:md')) || p.id === 'state:md')) {
-    const cells = new Map([...renderPlace(place).matchAll(/<tr><th scope="row"><a href="([^"]*)">[^<]*<\/a><\/th>.*?<td class="num kids__money">([^<]*)<\/td><\/tr>/g)].map((m) => [m[1], m[2]]));
+    const cells = kidCells(renderPlace(place));
     assert.equal(cells.size, place.children.length, place.id);
     let none = 0;
     for (const id of place.children) {
       const kid = byId.get(id);
       const pm = placeMoney(MD, kid.ccns);
       if (!pm.rows.length) none++;
-      assert.equal(cells.get(kid.path), pm.rows.length ? money(pm.money) : 'no estimate', `${place.id} > ${id}`);
+      assert.equal(cells.get(kid.path).dollars, pm.rows.length ? money(pm.money) : 'no estimate', `${place.id} > ${id}`);
     }
     assert.ok(none > 0, `${place.id}: some child has no estimate`);
   }
@@ -483,6 +487,48 @@ test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS
   assert.match(field(card(none)), />\$0</);
   const some = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 0 && placeMoney(MD, p.ccns).money > 0);
   assert.match(field(card(some)), /class="est-tag"/);
+});
+
+// The estimates with some hospitals' taken out, as if the impact file had no row for them: a place page reads its dollars
+// from this (md.rows) and from the hospitals CMS cut (md.decided), which stay.
+const withoutEstimates = (ccns) => ({ ...MD, rows: MD.rows.filter((r) => !ccns.includes(r.ccn)) });
+const parentOf = (place) => PLACES.list.find((p) => p.children.includes(place.id));
+const cardOf = (place, md) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place, { md }))[0];
+// The estimated-dollars field of a place's card, its note too (up to the next field, or the card's end).
+const moneyField = (card) => card.split('<div class="field f-money">')[1].split(/\n<div class="field[ "]/)[0];
+
+test('a place\'s dollars follow its {cut, cmsCut}: none cut is $0 untagged; cut with no estimate says "no estimate"; some estimated says which of the cut hospitals', () => {
+  // Where every cut hospital has an estimate, the dollars carry no note.
+  const whole = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 0 && placeMoney(MD, p.ccns).cut === p.counts.yes);
+  assert.ok(whole, 'a state whose every cut hospital is estimated');
+  assert.doesNotMatch(strip(moneyField(cardOf(whole, MD))), /cut hospitals/);
+  assert.equal(cutFrom({ cut: 4, cmsCut: 4 }), '');
+  assert.equal(cutFrom({ cut: 3, cmsCut: 4 }), `from ${count(3)} of its ${count(4)} cut hospitals`);
+
+  // No estimate: a state whose cut hospitals (all of them) have none, though others do. Not $0 (CMS cut some), no tag, no per-stay figure.
+  const none = PLACES.list.find((p) => p.kind === 'state' && parentOf(p) && p.counts.yes > 0 && placeMoney(MD, p.ccns).rows.some((r) => !r.yes));
+  const noneMd = withoutEstimates(MD.rows.filter((r) => r.yes && none.ccns.includes(r.ccn)).map((r) => r.ccn));
+  const nopm = placeMoney(noneMd, none.ccns);
+  assert.deepEqual([nopm.cut, nopm.cmsCut > 0, nopm.rows.length > 0, nopm.estimate], [0, true, true, null]);
+  const card = cardOf(none, noneMd);
+  assert.match(strip(moneyField(card)).replace(/\s+/g, ' '), /^ ?\d+Estimated dollars no estimate /);
+  assert.doesNotMatch(card, /est-tag|\$0/);
+  assert.doesNotMatch(card, /Per traditional Medicare stay/);
+  assert.deepEqual(kidCells(renderPlace(parentOf(none), { md: noneMd })).get(none.path), { dollars: 'no estimate', from: '' });
+
+  // Some estimated: the dollars of the estimated cut hospitals, tagged, with which of the cut hospitals they come from.
+  const some = PLACES.list.find((p) => p.kind === 'state' && parentOf(p) && placeMoney(MD, p.ccns).cut >= 2);
+  const dropped = MD.rows.find((r) => r.yes && some.ccns.includes(r.ccn));
+  const someMd = withoutEstimates([dropped.ccn]);
+  const pm = placeMoney(someMd, some.ccns);
+  const words = `from ${count(pm.cut)} of its ${count(pm.cmsCut)} cut hospitals`;
+  assert.ok(pm.cut > 0 && pm.cut < pm.cmsCut);
+  assert.equal(pm.estimate, pm.money);
+  const field = moneyField(cardOf(some, someMd));
+  assert.ok(strip(field).includes(money(pm.money)));
+  assert.match(field, /class="est-tag"/);
+  assert.ok(strip(field).includes(words), strip(field));
+  assert.deepEqual(kidCells(renderPlace(parentOf(some), { md: someMd })).get(some.path), { dollars: money(pm.money), from: words });
 });
 
 test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {

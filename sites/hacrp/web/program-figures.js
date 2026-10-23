@@ -643,8 +643,8 @@ export function placeMeasuresFigure({ place, model, next, source }) {
 
 // A place's children (a region's divisions, a division's states, a state's metro areas and the rest of the state), as
 // a table: each a link with its counts, share bar and middle score.
-// money: { head, cell(ccns) -> { text, value } } adds a column of this site's estimated cut for each child (the place
-// pages pass it); null for none.
+// money: { head, cell(ccns) -> the cell's text or markup } adds a column of this site's estimated cut for each child
+// (the place pages pass it); null for none.
 export function childrenTable({ place, places, nation, money = null }) {
   const kids = place.children.map((id) => places.places.get(id));
   if (place.kind === 'state') {

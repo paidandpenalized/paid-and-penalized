@@ -24,7 +24,7 @@ import { asofBar, citation, dataLinks, hospitalTable, printLink, siteHeader } fr
 import { acrossFigure, ACROSS_WINDOW } from '../money-part.js';
 import { nearLine, placeMoney } from '../money-data.js';
 import { cutText } from '../money.js';
-import { estTag, moneySourceText, rangeLine } from '../money-figures.js';
+import { cutFrom, estTag, moneySourceText, rangeLine } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
 
 const KIND = { region: 'placeKindRegion', division: 'placeKindDivision', state: 'placeKindState', metro: 'placeKindMetro' };
@@ -53,14 +53,18 @@ function rankOf(places, place) {
 const points = (diff) => `${diff >= 0 ? '+' : '−'}${decimal(Math.abs(diff) * 100, 1)} pts`;
 
 // The place's estimate against the nation's: its cut hospitals' dollars as a share of the nation's, and its cut per
-// Medicare stay beside the nation's (formField options; none for a place this site has no estimate in).
+// Medicare stay beside the nation's (formField options; none for a place with no estimated hospital where CMS cut none).
+// The dollars are the place's {cut, cmsCut} (money-data.js placeMoney): where CMS cut no hospital, $0, its decision, with
+// no estimate tag; where it cut some and none has an estimate, the words, not $0, and no per-stay figure; where only
+// some have, the dollars, tagged, and which of the cut hospitals they come from.
 function moneyFields(place, md) {
   const pm = placeMoney(md, place.ccns);
-  if (!pm.rows.length) return [];
-  // A place where CMS cut no hospital has $0: CMS's decision, not an estimate, so no tag.
-  const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span>${pm.money === 0 && !place.counts.yes ? '' : html` ${estTag()}`}`;
+  if (!pm.rows.length && !pm.cmsCut) return [];
+  if (pm.estimate === null) return [{ label: mt('placeMoney'), value: html`<span class="money__field">${cutText(null)}</span>`, as: 'div', size: 'big', fieldCls: 'f-money' }];
+  const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span>${pm.cmsCut ? html` ${estTag()}` : ''}`;
+  const from = cutFrom(pm);
   return [
-    { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine(pm.range, { estimate: pm.money })}` },
+    { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${from && html`<span>${from}</span>`}${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine(pm.range, { estimate: pm.money })}` },
     pm.perStay !== null && { label: mt('placePerStay'), value: roundedDollars(pm.perStay), note: mfill('placePerStayNote', { nation: roundedDollars(md.perStay) }) },
   ].filter(Boolean);
 }
@@ -119,8 +123,16 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   // Its hospitals across the line, when any sits within the figure's window of it.
   const across = md && nearLine(md, ACROSS_WINDOW).rows.some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
   const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
-  // A child with no estimated hospital (Maryland's are exempt) has no dollars to say, not $0 (moneyFields leaves the field out).
-  const kidMoney = md && { head: mt('tableColMoney'), cell: (list) => { const pm = placeMoney(md, list ?? []); return cutText(pm.rows.length ? pm.money : null); } };
+  // A child's dollars as its own page says them (moneyFields): "no estimate", not $0, where none is estimated (Maryland's
+  // are exempt); and which of the cut hospitals they come from, where only some are.
+  const kidMoney = md && {
+    head: mt('tableColMoney'),
+    cell: (list) => {
+      const pm = placeMoney(md, list ?? []);
+      const from = pm.estimate === null ? '' : cutFrom(pm);
+      return html`${cutText(pm.estimate)}${from && html`<span class="kids__from">${from}</span>`}`;
+    },
+  };
   const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation, money: kidMoney });
 
   const body = html`<article class="wrap page page--prog page--place"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
