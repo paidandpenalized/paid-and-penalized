@@ -224,7 +224,7 @@ def diagnostics(members):
       ma_ime        the model's IME on Medicare Advantage stays (`ime_ma`) against line 29.01, over the hospitals with
                     both: n, the dollar-weighted ratio (sum over sum) and the median ratio; how many have only one;
                     and the median ratio apart for those whose line 29.01 includes a section 422 add-on (line 28.01),
-                    `add_on`, and the rest, `no_add_on` (the model takes the add-on to be in the IME factor)
+                    `add_on`, and the rest, `no_add_on` (the model leaves the add-on out: its IME factor carries none)
       ntap          line 54 (new-technology add-on payments, which the model leaves out) over lines 1.01 + 1.02,
                     summed over every hospital
       hac_base      the median of line 70.99 over lines 49 + 50 for the compared cut hospitals that are neither SCH nor

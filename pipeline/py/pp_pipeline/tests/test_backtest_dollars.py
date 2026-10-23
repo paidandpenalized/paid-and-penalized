@@ -199,8 +199,8 @@ class OnThePins(unittest.TestCase):
         self.assertEqual((ma["n"], ma["line_only"], ma["model_only"]), (179, 22, 5))
         self.assertLess(ma["weighted"], 1)
         self.assertLess(ma["median"], 1)
-        # Those whose line 29.01 includes a section 422 add-on (line 28.01) run no lower than the rest: no sign the
-        # add-on is missing from the model's IME factor
+        # Those whose line 29.01 includes a section 422 add-on (line 28.01) run no lower than the rest: the add-on,
+        # which the model leaves out (its IME factor carries none), is too small to show here
         self.assertEqual(ma["add_on"]["n"] + ma["no_add_on"]["n"], ma["n"])
         self.assertGreaterEqual(ma["add_on"]["median"], ma["no_add_on"]["median"])
 

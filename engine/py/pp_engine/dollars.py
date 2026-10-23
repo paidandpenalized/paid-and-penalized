@@ -46,19 +46,20 @@ MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of i
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass.
 #
-# HRRP: CMS's published "penalty as a share of payments", 0.44%, from the HRRP impact discussion of the FY2026
-# IPPS/LTCH PPS final rule (90 FR 36536, Appendix A; the rule numbers both its HRRP and HACRP impact tables I.G.7.-01,
-# so the program and row name the table). The All Hospitals row reads 2,797 eligible, 2,304 penalized, 82.37% penalized,
-# 0.44%. CMS's words: "The results in Table I.G.7.-01 include 2,797 non-Maryland hospitals estimated as eligible to
-# receive a penalty during the performance period." and "This is calculated as the sum of penalties for all hospitals
-# with that characteristic over the sum of all base operating DRG payments for those hospitals between October 1, 2023,
-# through September 30, 2024 (FY 2024)." Those words describe all hospitals, 2,797 of them. On the pinned FY2026 files
-# the ratio of this module's HRRP dollars to B over every hospital with an HRRP row is 0.387%, and over the penalized
-# hospitals alone 0.443%. The check uses the penalized hospitals (`hrrp_base`) because that is the ratio that reproduces
-# CMS's published figure. The denominator is unconfirmed (CMS's text and the pins disagree on which hospitals it
-# covers) and is flagged for the accuracy pass. The band is 0.04 percentage points each way. This check is fitted to
-# CMS's published figure, so passing it proves little: it only rules out a gross error in B or in the factor join. The
-# real test of the HRRP dollars is the milestone-3 back-test against cost-report HRRP dollars.
+# HRRP: CMS's published "penalty as a share of payments", 0.44%: the All Hospitals row of Table I.G.7.-01 in the HRRP
+# impact discussion of the FY2026 IPPS/LTCH PPS final rule (90 FR 37265-37266; the rule numbers its HACRP impact table
+# I.G.7.-01 too, so the program and row name the table). The row reads 2,797 eligible, 2,304 penalized, 82.37%
+# penalized, 0.44%. CMS's words say the share is over every eligible hospital's payments: "The results in Table
+# I.G.7.-01 include 2,797 non-Maryland hospitals estimated as eligible to receive a penalty during the performance
+# period.", and the column's footnote: "calculated as the sum of all penalties for the group of hospitals with that
+# characteristic divided by total base operating DRG payments for all those hospitals". CMS's rows say otherwise. On the
+# pinned FY2026 files this module's HRRP dollars over B are 0.443% over the penalized hospitals and 0.387% over every
+# hospital with an HRRP row; over the penalized hospitals each of the table's nine census-division rows and its
+# non-teaching row reproduces to within 0.01 percentage point, and over all of them each runs 0.03 to 0.11 point low.
+# So the check divides by the penalized hospitals' B (`hrrp_base`), the reading that reproduces CMS's published rows,
+# and Methods says that CMS's footnote reads the other way. The band is 0.04 percentage points each way. Because the
+# denominator was chosen to match CMS's figure, passing proves little: it rules out a gross error in B or in the
+# factor join. The test of the HRRP dollars is the back-test against cost-report HRRP dollars.
 HRRP_SHARE = (0.0040, 0.0048)
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
@@ -151,7 +152,10 @@ def _parts(inp, rates):
     # hospital, the size is not known.
 
     # ASSUMPTION: the IME and DSH add-on factors apply to the federal DRG payment (not to the MDH add-on or the SCH
-    # difference); `TCHOP` and `DSHOPP` are fractions of it, DSH after the 75% section 1886(r) reduction.
+    # difference); `TCHOP` and `DSHOPP` are fractions of it, DSH after the 75% section 1886(r) reduction. `TCHOP` is the
+    # base IME formula alone, 1.35 x ((1 + resident-to-bed ratio)^0.405 - 1), on every teaching row of the FY2026 and
+    # FY2024 files (to within 5e-6), so the section 422 IME add-on (42 CFR 412.105(e)(2); Worksheet E Part A line
+    # 28.01) is in no figure, for a hospital's own stays or its Medicare Advantage stays.
     ime = inp["ime_op"] * fed
     dsh = inp["dsh_op"] * fed
 
@@ -217,8 +221,8 @@ def _parts(inp, rates):
     # and IME factor as the hospital's own stays; blank columns (non-teaching hospitals) are none. It enters T only: it
     # is not part of the base HRRP and HVBP adjust; Worksheet E adds line 29.01 after the SCH and MDH comparison (line
     # 49), so it is outside F; and the low-volume adjustment, a percentage of payments per traditional Medicare
-    # discharge, does not take it. ASSUMPTION (verify in the accuracy pass): the section 422 IME add-on for these
-    # stays (line 28.01) is in the impact file's IME factor as it is for the hospital's own stays.
+    # discharge, does not take it. The section 422 IME add-on for these stays (line 28.01) is left out: `TCHOP` carries
+    # none (above).
     ime_ma = 0.0
     if not _missing(inp["ime_cases"]) and not _missing(inp["ime_cmi"]):
         ime_ma = inp["ime_op"] * inp["ime_cases"] * inp["ime_cmi"] * (labor * inp["wi"] + nonlabor * inp["cola"])
@@ -269,8 +273,12 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
     hrrp_factor, vbp_factor = _factor(hrrp, "hrrp"), _factor(vbp, "vbp")
     parts = _parts(inp, rates)
     base = _base(parts)
-    # ASSUMPTION: HRRP and HVBP each adjust the base operating payment B (not IME, DSH, capital or the rest); the HAC
-    # cut is then 1% of everything the hospital is paid after both.
+    # HRRP and HVBP each adjust the base operating payment B and nothing else (not IME, DSH, capital or the rest), each
+    # on its own: 42 CFR 412.154(b)(1), "an applicable hospital's base operating DRG payment amount is adjusted for each
+    # discharge", and 412.162(b)(2), "calculated by multiplying the base operating DRG payment amount by the value-based
+    # incentive payment percentage"; 412.152 and 412.160 define that amount "without regard to" the other program's
+    # adjustment. The HAC cut is then 1% of everything the hospital is paid after both (42 CFR 412.172). What B leaves
+    # out, new-technology add-on payments, is the assumption (at the federal payment, in `_parts`).
     return {**_chain(parts, base * (hrrp_factor - 1.0), base * (vbp_factor - 1.0), cut, float), **parts}
 
 
