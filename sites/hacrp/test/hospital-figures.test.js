@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SHORT_NAMES } from '../web/constants.js';
-import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
+import { ledgerFigure, lineBarBlock, nearTakeaway, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
@@ -183,4 +183,22 @@ test('review: a hospital less than a mile away reads "less than a mile", never 0
   const block = nearbyBlock({ view, nat: fake, shapes: DATA.shapes, n: 5, source: 's' });
   assert.match(String(block.fig), /the closest is less than a mile away\./);
   assert.doesNotMatch(String(block.table), /<td class="num">0<\/td>/);
+});
+
+test('the nearest hospitals\' takeaway says one mile in the singular, under a mile in words, and whole miles otherwise', () => {
+  const miles = (x) => String(Math.round(x));
+  const v = { yes: '2', k: '8' };
+  assert.equal(nearTakeaway(0.4, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is less than a mile away.');
+  assert.equal(nearTakeaway(1.3, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is about a mile away.');
+  assert.equal(nearTakeaway(3.2, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is 3 miles away.');
+  assert.doesNotMatch(nearTakeaway(1.49, v, miles), /\b1 miles\b/);
+});
+
+test('the rank under the line bar never rounds across 75: a hospital CMS didn\'t cut, just under it, reads lower', () => {
+  // A not-cut hospital whose score is above 74.5% but below 75% of the other scores (rounding would say 75%).
+  const others = NAT.scores.length - 1;
+  const h = pick((x) => x.paymentReduction === 'No' && x.total !== null && NAT.rankOf(x.total).below / others >= 0.745 && NAT.rankOf(x.total).below / others < 0.75, 'not cut, between 74.5% and 75%');
+  const bar = String(lineBarBlock(pinnedView(h), NAT));
+  assert.match(bar, /Higher than 74% of the other/);
+  assert.doesNotMatch(bar, /Higher than 75%/);
 });

@@ -35,6 +35,13 @@ export function pct(x, dp = 1) {
   return fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
 }
 
+// A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%
+// reads 74%, never 75%). A float a hair under a whole step (0.75 computed as 0.7499…) still reads the step.
+export function pctFloor(x, dp = 0) {
+  const unit = 10 ** (dp + 2);
+  return pct(Math.floor(x * unit + 1e-9) / unit, dp);
+}
+
 // Whether share a is above share b as the page prints them at dp decimals: two shares that print the same are neither
 // above nor below each other. Null (no share) is never above.
 export const shownAbove = (a, b, dp = 1) => a !== null && b !== null && pct(a, dp) !== pct(b, dp) && a > b;

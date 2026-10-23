@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, money, moneyRange, ordinal, pct, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, money, moneyRange, ordinal, pct, pctFloor, signed } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -51,4 +51,14 @@ test('capitalize upper-cases the first letter only, and leaves an empty string e
   assert.equal(capitalize('fewer than ten'), 'Fewer than ten');
   assert.equal(capitalize('Already'), 'Already');
   assert.equal(capitalize(''), '');
+});
+
+test('pctFloor rounds a share down, never across a step: higher-than sentences stay true', () => {
+  assert.equal(pctFloor(2195 / 2928), '74%', '74.97% is not higher than 75%');
+  assert.equal(pct(2195 / 2928, 0), '75%', 'which rounding would claim');
+  assert.equal(pctFloor(2196 / 2928), '75%', 'exactly 75%');
+  assert.equal(pctFloor(0.7499999999999), '75%', 'a float a hair under a step');
+  assert.equal(pctFloor(0.12345, 1), '12.3%');
+  assert.equal(pctFloor(0), '0%');
+  assert.equal(pctFloor(1), '100%');
 });

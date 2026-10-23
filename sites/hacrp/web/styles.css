@@ -686,6 +686,9 @@
 .hrec__v { display: block; padding: 5px 0 4px; border: 1.5px solid var(--ink); font: 700 9px/1 var(--font-type); text-transform: uppercase; letter-spacing: 0.04em; }
 .hrec__y--cut .hrec__v { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
 .hrec__y--none .hrec__v { border-style: dashed; border-color: var(--ink-3); color: var(--ink-3); }
+/* A decision CMS gave with no score: the decision's own box, ringed in a dashed outline; the note under the row says so. */
+.hrec__y--noscore .hrec__v { outline: 1.5px dashed var(--ink); outline-offset: 1.5px; }
+.hrec__note { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
 .roll { position: relative; display: grid; gap: 8px; }
 .roll .chart { max-width: none; cursor: crosshair; }
 .roll__pick { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }

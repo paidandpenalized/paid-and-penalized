@@ -46,11 +46,12 @@ export function cliff({ domain: [lo, hi], band: [highestNo, lowestYes], actual, 
   const actualAt = over
     ? (xa + 12 + actualW <= width ? { x: xa + 12, y: Y.floor - 12, anchor: 'start' } : { x: xa - 12, y: Y.floor - 12, anchor: 'end' })
     : (xa - 12 - actualW >= 0 ? { x: xa - 12, y: Y.ledge + 22, anchor: 'end' } : { x: xa + 12, y: Y.ledge + 22, anchor: 'start' });
-  // The highest score's label above its ring, a row higher when this hospital's label would run into it.
+  // The highest score's label just above its ring, ending at it; left off (the ring stays, and the table and the
+  // takeaway name it) where this hospital's label would run into it, as on a phone with the hospital near the line.
   const highText = `${labels.highest} ${labels.highestValue}`;
-  const clash = over && actualAt.anchor === 'start' && actualAt.x + actualW + 8 > x1 - labelWidth(highText);
-  const highY = clash ? Y.floor - 30 : Y.floor - 12;
   const showHigh = !(over && Math.abs(xa - x1) < 2 * DOT);
+  const clash = over && actualAt.x + (actualAt.anchor === 'start' ? actualW : 0) + 8 > x1 - labelWidth(highText);
+  const showHighLabel = showHigh && !clash;
   // The cut level's label inside the pit, just right of the drop: on one line where it fits, else its words on a second
   // line, ending at the right edge if they don't fit from the drop.
   const cutW = amountWidth(labels.cut, Y.amount) + 6 + labelWidth(labels.cutWords);
@@ -86,7 +87,7 @@ ${showHigh ? mark({
     tip: `${labels.highest}: ${labels.highestValue}`, value: hi, hit: { x: x1 - 8, y: Y.floor - 8, width: 16, height: 16 },
     body: html`<circle class="chart-cliff__ring" cx="${r2(x1)}" cy="${Y.floor}" r="${DOT - 1}"/>`,
   }) : ''}
-${showHigh ? text({ x: x1, y: highY, anchor: 'end', cls: 'chart-note', body: highText }) : ''}
+${showHighLabel ? text({ x: x1, y: Y.floor - 12, anchor: 'end', cls: 'chart-note', body: highText }) : ''}
 ${mark({
     tip: `${labels.actual}: ${labels.actualValue}`, value: actual, hit: { x: xa - 9, y: ya - 9, width: 18, height: 18 },
     body: html`<circle class="chart-cliff__dot${over ? ' chart-cliff__dot--over' : ''}" cx="${r2(xa)}" cy="${ya}" r="${DOT}"/>`,

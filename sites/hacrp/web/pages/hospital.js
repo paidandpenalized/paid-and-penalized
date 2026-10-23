@@ -241,9 +241,9 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const lever = view.scored && row ? leverText(view, row, model) : null;
   const sum = view.scored ? numbered(sumFigure({ view, n: n + 1, source: line })) : null;
   const what = view.scored && whatif ? numbered(whatIfBlock(view, whatif, source, assets, n + 1)) : null;
-  // Its years: where its score fell each year CMS published one, when the build holds the history and the hospital
-  // had a decision in more than one year.
-  const years = history?.rec && history.rec.decided > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
+  // Its years: where its score fell each year CMS published one, when the build holds the history and CMS published
+  // its score in more than one year.
+  const years = history?.rec && history.rec.years.filter((y) => y.share !== null).length > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
   const infections = history ? numbered(hospitalInfectionsFigure(history.sir, history.hd, { n: n + 1, source: hfill('hinfSource', { first: String(history.hd.infections[0]?.cy ?? ''), last: String(history.hd.infections.at(-1)?.cy ?? '') }) })) : null;
   const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
   const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line, cutOf }) : null;

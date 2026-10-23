@@ -564,6 +564,7 @@ export const COPY = {
   nearbyRing: { text: '{miles} mi', claim: null },
   figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {miles} miles away.', claim: null },
   figNearbyTakeawayNear: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is less than a mile away.', claim: null },
+  figNearbyTakeawayOne: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is about a mile away.', claim: null },
   // A distance under a mile, in the table.
   nearbyUnderMile: { text: 'under {one}', claim: null },
   figPeersSame: { text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut is {share} in every group.', claim: null },

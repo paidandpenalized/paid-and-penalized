@@ -735,3 +735,25 @@ test('a hospital page with the history: the record strip in the verdict, the yea
     assert.doesNotMatch(p1, /id="years"/);
   }
 });
+
+test('a hospital\'s own record counts a decision CMS gave without a score, marks it and says so; the national counts don\'t', () => {
+  const yes = DATA.hospitals.find((h) => h.total === null && h.paymentReduction === 'Yes');
+  assert.ok(yes, 'the pinned file has a Yes with no score');
+  const rec = HD.recordOf(yes.ccn);
+  const last = rec.years.at(-1);
+  assert.equal(last.fy, DATA.fy);
+  assert.equal(last.c, 'Y', 'the newest year counts as cut');
+  assert.equal(last.noScore, true);
+  assert.ok(rec.cut >= 1, 'never "Never cut"');
+  assert.ok(rec.noScore.includes(DATA.fy));
+  const strip = String(recordStrip(rec, HD.fys));
+  assert.doesNotMatch(strip, /Never cut/);
+  assert.match(strip, new RegExp(`Cut in ${rec.cut} of ${rec.decided} years`));
+  assert.match(strip, /hrec__y--cut hrec__y--noscore/);
+  assert.match(text(strip), new RegExp(`In [^<]*FY${DATA.fy}, CMS reports a payment reduction decision for this hospital but no Total HAC Score\\.`));
+  assert.match(strip, new RegExp(`title="Fiscal year ${DATA.fy}: cut, with no score published"`));
+  // The national record (records(): scored decisions only) is unchanged.
+  assert.equal(HD.recs.get(yes.ccn)?.at(-1) ?? '.', '.');
+  // A hospital with no decision in any year has no record; one with only unscored decisions has one.
+  assert.equal(HD.recordOf('999999'), null);
+});
