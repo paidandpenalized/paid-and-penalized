@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from '../../../pipeline/site/build.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
+import { count, decimal, dollars, isoDate, money, moneyRange, pct } from '../../../web/render/format.js';
 import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
@@ -17,10 +17,10 @@ import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
 import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
-import { nationalRange, rangeOf, sumRanges } from '../web/money.js';
+import { nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { MAJOR_TEACHING_RATIO, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
-import { absLogPct, insideCounts, stratumLabel } from '../web/methods-figures.js';
+import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
 import { ASSETS } from './fixtures.js';
 
@@ -375,8 +375,8 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   assert.equal(furthestGroup(hac.strata), largest);
   assert.ok(largest.median > 0 && withOwn.every((s) => Math.abs(s.median) <= largest.median));
   assert.ok(largest.pool !== 'stratum', 'on these pins the group runs on a borrowed range, which the old rule skipped');
-  const words = stratumLabel(b.strata.find((s) => s.id === largest.stratum)).words;
-  assert.ok(text.includes(`The estimates of ${words} ran highest, by ${absLogPct(largest.median, 1)} at the median across its ${count(largest.n)} hospitals.`));
+  const words = stratumLabel(b.strata.find((s) => s.id === largest.stratum)).hospitals;
+  assert.ok(text.includes(`Hospitals with ${words} ran highest: by ${absLogPct(largest.median, 1)} at the median, across ${count(largest.n)} hospitals.`));
   // Coverage, from the data: each group's own hospitals inside the range it uses, in the notes and the table, and
   // the spread across the groups in words; never a promise.
   const inside = insideCounts(b);
@@ -462,6 +462,44 @@ test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS
   assert.match(field(card(none)), />\$0</);
   const some = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 0 && placeMoney(MD, p.ccns).money > 0);
   assert.match(field(card(some)), /class="est-tag"/);
+});
+
+test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {
+  const page = methodsPage({
+    fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
+    newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
+    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
+    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => null,
+  });
+  const id = DOLLARS_HREF.split('#')[1];
+  const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  const table = /<table class="gb assume">[\s\S]*?<\/table>/.exec(sec)[0];
+  const rows = [...table.matchAll(/<tr><th scope="row">([\s\S]*?)<\/th><td>([\s\S]*?)<\/td><\/tr>/g)].map((m) => [strip(m[1]), strip(m[2])]);
+  const row = (start) => rows.find(([a]) => a.startsWith(start)) ?? assert.fail(`no assumption "${start}"`);
+  const a = DATA.dollars.assumptions;
+  const month = isoDate(a.mdhEnd).split(' ')[0];
+  assert.equal(row('The Medicare-dependent hospital add-on')[1], `Both run through ${month}, after FY${DATA.fy} ends, so they count for the whole year.`);
+  assert.ok(a.mdhEnd > `${DATA.fy}-09-30` && a.lowVolumeEnd > `${DATA.fy}-09-30`, 'both end after the fiscal year');
+  assert.equal(row('Payments for dialysis')[1], 'Both are small, so the HAC cut runs a hair low.');
+  assert.equal(row('Teaching payments leave out')[1], 'Hospitals that received those slots run a little low.');
+  assert.equal(row('Maryland’s hospitals')[0], `Maryland’s hospitals: no dollars from the HAC or readmissions programs, which exempt them, and none from the value-based program, whose FY${DATA.fy} factors list no Maryland hospital.`);
+  assert.equal(row('Hospitals in Pennsylvania’s Rural Health Model')[0], 'Hospitals in Pennsylvania’s Rural Health Model are estimated like any other hospital. CMS pays them through yearly global budgets and adjusts those budgets for the three programs.');
+  assert.equal(row('Traditional Medicare stays')[0], 'Traditional Medicare stays, plus the teaching payments Medicare makes on Medicare Advantage stays.');
+  assert.equal(row('Traditional Medicare stays')[1], 'What Medicare Advantage plans pay hospitals isn’t Medicare’s payment, and isn’t in any figure.');
+  assert.match(row('Teaching payments on a hospital’s Medicare Advantage stays')[1], new RegExp(`^That volume is two years old, and in this site’s check against FY${DATA.dollars.bands.fy} cost reports these payments came out lower than hospitals recorded, for reasons the check can’t separate\\. So a large teaching hospital’s estimate can run a little low\\.$`));
+  // Where they stand: the dialysis row after the new-technology row, the slots row after the Medicare Advantage teaching row.
+  const names = rows.map(([x]) => x);
+  assert.equal(names.findIndex((x) => x.startsWith('Payments for dialysis')), names.findIndex((x) => x.startsWith('New-technology')) + 1);
+  assert.equal(names.findIndex((x) => x.startsWith('Teaching payments leave out')), names.findIndex((x) => x.startsWith('Teaching payments on a hospital')) + 1);
+  // The national ratio's range is the middle share of the resampled ratios; the table covers the figures the page counts.
+  const b = DATA.dollars.bands;
+  const text = strip(sec);
+  assert.ok(text.includes(`resampling the hospitals puts the middle ${pct(rangeShare(b), 0)} of that between ${pct(b.national.p10, 1)} and ${pct(b.national.p90, 1)}.`));
+  const figures = [...sec.match(/<table class="gb bt-measures">[\s\S]*?<\/table>/)[0].matchAll(/<tr><th scope="row">/g)].length;
+  assert.equal(figures, 5);
+  assert.ok(text.includes('The same check for five of the figures the method makes'), 'the count in words, from the rows the table has');
+  // The tail of a stale date: provisions ending inside the year would make the row false, so the page does not build.
+  assert.throws(() => assumptionsTable({ fy: DATA.fy, volumeFy: 2024, backtestFy: 2024, endsOn: `${DATA.fy}-09-30` }), { name: 'RangeError', message: /not after FY2026 ends/ });
 });
 
 // Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element

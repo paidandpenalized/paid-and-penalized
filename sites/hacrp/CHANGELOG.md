@@ -3,6 +3,13 @@
 Changes to how this site computes or shows HACRP's numbers, newest first. Corrections of errors go in the public
 corrections log.
 
+## 2026-10-23
+- This site estimates what the HAC cut, the readmissions adjustment and the value-based adjustment come to in dollars,
+  for each hospital and in total, always labeled as its estimate and with a likely range from a check against earlier
+  cost reports. New: the money on every hospital's page and on the program and place pages, a Methods section on how
+  the dollars are estimated (the assumptions, the national checks and the back-test), and `_modeled` columns, with a
+  status column, in the CSV file.
+
 ## 2026-10-22
 - Methods notes the one year whose count of hospitals cut differs from CMS's results fact sheet (fiscal year 2016:
   these pages count CMS's updated cut list), and the program page's roll call links to the note.

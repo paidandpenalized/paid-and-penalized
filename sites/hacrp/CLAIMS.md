@@ -94,6 +94,10 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-85 | In Pennsylvania's Rural Health Model, hospitals are paid global budgets, which are adjusted for their results in the value-based purchasing, readmissions and HAC programs (the model's evaluation for CMS). | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | "Global budgets continue to be adjusted based on each hospital’s performance under applicable Medicare quality programs (i.e., … Hospital-Acquired Condition Reduction Program" | 2026-10-23 |
 | HACRP-86 | The readmissions program's payment adjustment factor is 1 minus a share of the hospital's payments, so it never exceeds 1: the program only reduces payments. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.154 | "The ratio is equal to 1 minus the ratio of the aggregate payments for excess readmissions … and the aggregate payments for all discharges" | 2026-10-23 |
 | HACRP-87 | A hospital's value-based purchasing adjustment factor is 1 plus the difference between its incentive payment percentage and the percent held back from every hospital, so it is above 1 for a hospital that earns more than was held back and below 1 for one that earns less. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.162 | "determined by subtracting the applicable percent … from the value-based incentive payment percentage and then adding that difference to one" | 2026-10-23 |
+| HACRP-88 | Congress extended the Medicare-dependent hospital program and the enhanced low-volume hospital adjustment through December 31, 2026, after FY2026 ends. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" … "extended through December 31, 2026" | 2026-10-23 |
+| HACRP-89 | The HAC cut is also taken on dialysis (ESRD) adjustment payments and on credits for replaced devices. | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are required to calculate the HAC reduction adjustment by FFY: … ESRD adjustment payments; … Credits for replaced devices" | 2026-10-23 |
+| HACRP-90 | A teaching hospital that counts added residents from an increase in its resident cap is paid teaching (indirect medical education) payments on the sum of two adjustment factors, its usual one and a second for the added residents. | https://www.ecfr.gov/current/title-42/section-412.105 | "an increase in its FTE resident cap … the sum of the following two indirect medical education adjustment factors" | 2026-10-23 |
+| HACRP-91 | Maryland's hospitals are not eligible for a penalty under the readmissions program, which CMS leaves them out of. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "this table does not include results for Maryland hospitals … because these hospitals are not eligible for a penalty under the program" | 2026-10-23 |
 
 ## Notes on the sources
 
@@ -133,9 +137,14 @@ A claim marked `unverified` may not be used in copy.
 - **HACRP-01** cites the statute, 42 U.S.C. 1395ww(p)(1), at Cornell's Legal Information Institute. The CMS rule
   says the same at 42 CFR 412.172(b).
 
-- **HACRP-22 and HACRP-27** describe Maryland under CMS's AHEAD model, which replaced the Maryland Total Cost of Care
-  Model in January 2026 (CMS's page for that model: https://www.cms.gov/priorities/innovation/innovation-models/md-tccm).
-  HACRP-22 cites CMS's Maryland addendum to the AHEAD hospital global budget method (version 3.2, September 2026):
+- **HACRP-22 and HACRP-27** describe Maryland under CMS's AHEAD model. CMS's Maryland addendum says "CY2026 is the first
+  AHEAD HGB performance year (PY1) for MD". The FY2026 IPPS final rule (August 2025) says of the earlier Maryland Total
+  Cost of Care Model, which began on January 1, 2019, that it "concludes on December 31, 2026". The two sources name
+  different events (a model's agreement ending, AHEAD's first performance year), and neither claim above depends on
+  the other: no copy says which model replaced which, or in which month (CMS's page for the Total Cost of Care Model:
+  https://www.cms.gov/priorities/innovation/innovation-models/md-tccm). Checked 2026-10-23 against the FY2026 rule's
+  sentence; an earlier version of this note said AHEAD "replaced" that model "in January 2026", which the rule does not
+  say. HACRP-22 cites CMS's Maryland addendum to the AHEAD hospital global budget method (version 3.2, September 2026):
   the state keeps Medicare rate-setting authority "until January 1, 2028", after which Medicare's Maryland hospital
   budgets follow CMS's own method. **Re-check HACRP-22 before the FY2028 pages** (FY2028 runs from October 2027). The
   same addendum says the state must pay at least 85 percent of in-state all-payer hospital revenue through its global
@@ -253,12 +262,37 @@ A claim marked `unverified` may not be used in copy.
   defines the value-based program's base in the same words. HACRP-85 is the model's second annual evaluation report,
   written for CMS by NORC at the University of Chicago (June 2022), which says its contents are the authors'
   responsibility, so the claim is worded as the evaluation's, not as a CMS rule.
-- **HACRP-86 and HACRP-87** back the dollar pages' wording (the M4 accuracy pass). They are 42 CFR 412.154(c) and 412.162(c), read on the eCFR (version dated 2026-10-20).
+- **HACRP-86 to HACRP-91** back the dollar pages' wording (the M4 accuracy pass).
+  - **HACRP-86 and HACRP-87** are 42 CFR 412.154(c) and 412.162(c), read on the eCFR (version dated 2026-10-20).
     412.154(c) makes the readmissions factor "the higher of the ratio … or the floor adjustment factor", the floor being
     0.97 from FY 2015; the ratio is 1 minus a share, so the factor is at most 1. 412.162(b)(1) says the total available
     for value-based incentive payments "is equal to the total amount of base-operating DRG payment reductions for that
     fiscal year, as estimated by the Secretary", and 412.162(a) that CMS "will make value-based incentive payments" to a
     hospital that meets or exceeds the performance standards: bonuses are paid for by other hospitals' cuts.
+  - **HACRP-88** is CMS's MLN Matters article MM14415 (transmittals R13703OTN and R13735OTN), which carries out
+    Pub. L. 119-75, sections 6201 (the low-volume adjustment, "through 2026 and the portion of fiscal year 2027
+    beginning on October 1, 2026, and ending on December 31, 2026") and 6202 (the Medicare-dependent hospital
+    program, "January 31, 2026" struck and "January 1, 2027" inserted). The Provider Reimbursement Manual text cited at
+    HACRP-76 to HACRP-79 says "The MDH program ends on September 30, 2025", and the FY2026 impact-file README gives MDH
+    status "through September 30, 2025"; both were written before the extensions. Both lapses inside FY2026 (October 1 to November 12, 2025, and January 31 to February 3,
+    2026) were closed retroactively by statute (Pub. L. 119-37, then Pub. L. 119-75), so no day of FY2026 is
+    uncovered. From January 1, 2027 CMS pays former MDHs at the federal rate (FY2027 IPPS final rule, 91 FR 49570).
+    MM14415 says a hospital that cancelled its rural classification, or applied for SCH status on or after
+    January 1, 2026, is not reinstated automatically; the estimate counts every hospital the impact file flags as MDH.
+  - **HACRP-89** is the same PRM section as HACRP-79 (4030.1, Exhibit 5): its list of the payment amounts "required to
+    calculate the HAC reduction adjustment" also names the low-volume adjustment, capital outlier reconciliation
+    amounts and new-technology payments. The estimate prices none of the ESRD payments and replaced-device credits;
+    its Methods table says so.
+  - **HACRP-90** is 42 CFR 412.105(e)(2), read on the eCFR (2026-10-20). 412.105(f)(1)(iv)(C) lists the increases in a
+    hospital's resident cap (the extra slots CMS awards under 42 CFR 413.79(c)(4), (n), (p) and (q)), and
+    412.105(d)(4) multiplies the second factor, the one for the added residents, by 0.66. CMS's impact-file teaching
+    factor (TCHOP) equals the first factor alone on every teaching row of both years' files, so the estimate leaves
+    the second out. That check is this site's own.
+  - **HACRP-91** is the FY2026 IPPS/LTCH final rule's note to the readmissions penalty table (90 FR 37266), the same
+    document as HACRP-80, HACRP-82 and HACRP-83. CMS's MLN Matters article MM14203 says the same of the Pricer: "Hospitals
+    not subject to a reduction under the HRRP in FY 2026 (such as Maryland hospitals and non-subsection (d) hospitals)
+    have an HRRP payment adjustment factor of 1." No CMS FY2026 text found names Maryland and the value-based program;
+    the pinned Table 16B lists no Maryland hospital, which the Methods table gives as this site's own reading.
 
 ## Link check (2026-10-22; extended 2026-10-23)
 
@@ -304,8 +338,10 @@ browser.
 | https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R3138CP.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.qualityreportingcenter.com/globalassets/2020/12/pch/hospital-compare_care-compare-refresh-and-overall-hospital-quality-star-rating-2021-updates.pdf | 200 | direct |
 | https://www.cms.gov/files/document/r25p240i.pdf | 200 (a PDF; read from the downloaded file) | direct |
+| https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |
 | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.154 | 200 | direct (one redirect) |
 | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.162 | 200 | direct (one redirect) |
+| https://www.ecfr.gov/current/title-42/section-412.105 | 200 | direct (one redirect) |

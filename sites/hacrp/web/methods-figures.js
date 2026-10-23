@@ -209,12 +209,15 @@ export function dollarsPipeline(headline) {
 }
 
 // The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
-export function assumptionsTable({ fy, volumeFy, backtestFy }) {
+export function assumptionsTable({ fy, volumeFy, backtestFy, endsOn }) {
+  // The two provisions end after the fiscal year does, which is what lets them count for all of it: a date inside the
+  // year would make the row false, so it stops the build. endsOn: the earlier of the two end dates (YYYY-MM-DD).
+  if (!(endsOn > `${fy}-09-30`)) throw new RangeError(`the Medicare-dependent hospital program and the low-volume adjustment end ${endsOn}, not after FY${fy} ends`);
   const rows = [
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
-    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'],
-    ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSch', 'assumeSchE'],
-    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
+    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }, { month: isoDate(endsOn).split(' ')[0], fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeOtherParts', 'assumeOtherPartsE'], ['assumeAddons', 'assumeAddonsE'],
+    ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSlots', 'assumeSlotsE'], ['assumeSch', 'assumeSchE'],
+    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE', { fy: String(fy) }], ['assumeParhm', 'assumeParhmE'],
     ['assumeFfs', 'assumeFfsE'],
   ];
   return printout(html`<table class="gb assume">
@@ -274,13 +277,15 @@ const ratioOf = (logRatio) => Math.exp(logRatio);
 
 // A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), and the band and
 // its kind as the group's words ("under 100 beds, other hospitals"), its name (capitalized: "Under 100 beds, other
-// hospitals") and its short name (the phone's).
+// hospitals"), its short name (the phone's) and the group as a description of hospitals ("under 100 beds that are sole
+// community or Medicare-dependent").
 export function stratumLabel(s) {
   const beds = s.bedsMin === 0 ? fill('btBedsUnder', { n: count(s.bedsMax + 1) })
     : s.bedsMax === null ? fill('btBedsOver', { n: count(s.bedsMin) }) : fill('btBedsBetween', { lo: count(s.bedsMin), hi: count(s.bedsMax) });
   const words = fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdh' : 'btKindOther') });
   const short = capitalize(fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdhShort' : 'btKindOtherShort') }));
-  return { beds, words, name: capitalize(words), short };
+  // `hospitals`: the group as a description of hospitals, after "Hospitals with".
+  return { beds, words, hospitals: fill(s.schMdh ? 'btHospitalsSchMdh' : 'btHospitalsOther', { beds }), name: capitalize(words), short };
 }
 const hospitalsText = (n) => noun(n, 'hospital');
 
@@ -350,7 +355,7 @@ export function backtestFigure(bands, { n, source, names }) {
 }
 
 // The words for each measure in the back-test's summary table, in the order the table lists them.
-const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp', 'btMeasureHrrp'], ['hvbp', 'btMeasureHvbp'], ['fed', 'btMeasureFed']];
+export const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp', 'btMeasureHrrp'], ['hvbp', 'btMeasureHvbp'], ['fed', 'btMeasureFed']];
 
 // Every measure the back-test checks, over all its hospitals: how many it compared, the median estimate over the
 // cost report, and the middle 80% (the 10th and 90th percentiles), as a printable table.

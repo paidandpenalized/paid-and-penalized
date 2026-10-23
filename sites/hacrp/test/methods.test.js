@@ -179,8 +179,12 @@ test('the count note: CMS\'s fact-sheet count and the updated list\'s for the ye
 test('the estimate section: what is shown, where it comes from and how it is labeled, and the tolerance and largest miss from the estimate', () => {
   const section = /<section class="msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
   const rows = [...section.matchAll(/<tr><th scope="row">[^<]*<\/th><td>[\s\S]*?<\/td><td><span class="takes__tag takes__tag--(\w+)">/g)].map((m) => m[1]);
-  assert.equal(rows.length, 7);
+  assert.equal(rows.length, 8, 'CMS\'s values, its line, the recomputes, the derived constants, the medians, the what-ifs, earlier years and the dollar estimates');
   assert.deepEqual([...new Set(rows)].sort(), ['cms', 'hyp', 'site']);
+  // The dollar estimates are a row of their own, made by this site and labeled as an estimate with a likely range.
+  assert.match(section, /<th scope="row">Dollar estimates<\/th><td>Made by this site from CMS’s payment files<\/td><td><span class="takes__tag takes__tag--site">Estimate, with a likely range</);
+  // The estimate tag is also on every dollar figure: a sentence says so, its section's name linking to that section.
+  assert.match(section, /Every dollar figure carries the tag too: the dollars are this site’s estimate, explained under <a href="#dollars">How this site estimates the dollars<\/a>\./);
   const tagged = MEASURE_IDS.filter((id) => DATA.estimate[id].tagged);
   const body = strip(section);
   assert.ok(body.includes(tagged.map((id) => SHORT_NAMES[id]).join(' and ')), tagged.join());

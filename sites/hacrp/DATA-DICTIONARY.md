@@ -10,6 +10,7 @@ schema_version: 3
 - CMS's footnote crosswalk, dataset y9us-9xdf, holds the text of each footnote code.
 - Name, city, state and county come from this site's hospital master, built from CMS and U.S. Census Bureau files.
 - The `_modeled` columns are this site's estimates, built from CMS's FY{fy} IPPS final rule files (the impact file, the rate tables and the value-based purchasing factors in Table 16B) and CMS's FY{fy} HRRP supplemental file. They are not CMS's numbers. The site's Methods page gives every assumption.
+- Facts about the programs here: CLAIMS.md HACRP-26, HACRP-79 and HACRP-87.
 
 ## Format
 
@@ -77,7 +78,7 @@ A footnote column holds CMS's footnote code exactly as CMS writes it. When a cel
 ## Reading the file
 
 - The Total HAC Score is not a grade of the quality of care. It compares hospitals with each other on the measures each was scored on.
-- Every column but the `_modeled` ones reports what CMS published. The `_modeled` columns are this site's estimates, in whole dollars that add exactly across a row; the estimate is not that precise. The file holds no what-ifs.
+- The `_modeled` columns are this site's estimates; `dollars_status` is this site's classification; name, city, state and county come from this site's hospital master; the rest report what CMS published. The readmissions, value-based, HAC and net columns are whole dollars that add exactly across a row; the estimate is not that precise. The file holds no what-ifs.
 
 ## License
 
