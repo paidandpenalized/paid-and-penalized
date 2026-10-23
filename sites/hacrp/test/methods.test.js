@@ -12,7 +12,8 @@ import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, isoDate, listText } from '../../../web/render/format.js';
 import { HISTORY_PINS } from '../pipeline/history.js';
-import { SHORT_NAMES } from '../web/constants.js';
+import { FACT_SHEET_CUT, SHORT_NAMES } from '../web/constants.js';
+import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
@@ -161,6 +162,17 @@ test('the notes under the check state what the checks found: the rows withheld, 
     return c.check.withheld.map((ccn) => state.get(ccn));
   });
   assert.ok(rows.filter((s) => s === 'MD').length > rows.length / 2, `${rows.filter((s) => s === 'MD').length} of ${rows.length} withheld rows are Maryland's`);
+});
+
+test('the count note: CMS\'s fact-sheet count and the updated list\'s for the year they differ, under its anchor, linked from the program page\'s roll call', () => {
+  const year = HD.checks.find((c) => c.fy === FACT_SHEET_CUT.fy);
+  assert.notEqual(year.check.yes, FACT_SHEET_CUT.cut, 'the updated list differs from the fact sheet: true of the committed files');
+  assert.equal(HD.counts[HD.fys.indexOf(FACT_SHEET_CUT.fy)].cut, year.check.yes, 'the roll call counts what the check counts');
+  const note = PAGE.match(new RegExp(`<p id="${COUNT_NOTE}">([\\s\\S]*?)</p>`));
+  assert.ok(note, 'the note, under its anchor');
+  for (const x of [`fiscal year ${FACT_SHEET_CUT.fy}`, count(FACT_SHEET_CUT.cut), count(year.check.yes)]) assert.ok(strip(note[1]).includes(x), `${x} in "${strip(note[1])}"`);
+  assert.equal(WITH.program.split(`<a href="${METHODS_PATH}#${COUNT_NOTE}">`).length, 2, 'the roll call links to it, once');
+  assert.ok(!WITHOUT.program.includes(`#${COUNT_NOTE}`) && !WITHOUT.page.includes(`id="${COUNT_NOTE}"`), 'without the history, neither');
 });
 
 test('the estimate section: what is shown, where it comes from and how it is labeled, and the tolerance and largest miss from the estimate', () => {

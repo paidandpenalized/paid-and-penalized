@@ -17,3 +17,7 @@ export const csvPath = (fy) => `/data/hacrp/fy${fy}/hacrp-hospitals.csv`;
 // Its data dictionary (sites/hacrp/DATA-DICTIONARY.md), beside it, and the same dictionary as a page.
 export const dictionaryPath = (fy) => `/data/hacrp/fy${fy}/DATA-DICTIONARY.md`;
 export const DICTIONARY_PAGE = `${SITE.sites.hacrp.path}data/`;
+// The Methods page, and its note on the one count of hospitals cut that differs from CMS's own (the program page's
+// roll call links to it).
+export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
+export const COUNT_NOTE = 'count-note';

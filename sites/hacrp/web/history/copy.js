@@ -19,6 +19,7 @@ export const COPY = {
   rollHeading: { text: 'Every hospital, every year', claim: null },
   rollText: { text: "Each sliver is one hospital, each row one fiscal year. Red: CMS cut it that year; gray: it didn’t; blank: no decision that year (not in that year’s file, not scored, in Maryland, or the year CMS scored no one).", claim: ['HACRP-13', 'HACRP-52'] },
   rollText2: { text: 'Hospitals are lined up by the first year CMS cut them, so the red steps down and to the right as each year adds hospitals that had never been cut before. The gray block at the right is every hospital never cut at all.', claim: null },
+  rollCountLink: { text: 'Why fiscal year {fy}’s count differs from CMS’s fact sheet', claim: 'HACRP-71' },
   rollTakeaway: { text: '{ever} of the {hospitals} hospitals with a payment decision since fiscal year {first} have been cut at least once; {never} never have.', claim: null },
   rollAlt: { text: 'A grid of every hospital with a payment decision in any year as a thin column, one row per fiscal year, red where CMS cut it; the red forms steps moving right as new hospitals are cut each year.', claim: null },
   rollColFy: { text: 'Fiscal year', claim: null },

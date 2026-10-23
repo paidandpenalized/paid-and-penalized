@@ -21,7 +21,8 @@ import { CUT, NONE, NOT_CUT, everCut, rollOrder, tallyYears } from '../../../eng
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { groupLabel } from './groups.js';
 import { nameInText } from './places.js';
-import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
+import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
+import { COUNT_NOTE, METHODS_PATH } from './links.js';
 import { YEAR_CLASSES, yearClass } from './year-classes.js';
 import { fyLabel } from './copy.js';
 import { psec } from './program-figures.js';
@@ -365,13 +366,18 @@ export function yearsFigure(rec, hd, { n, source }) {
 // ---------- Part 4 ----------
 
 const para = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
+// The roll call's link to Methods' note on the year whose count differs from CMS's fact sheet, when it does.
+const countLink = (hd) => {
+  const c = hd.counts[hd.fys.indexOf(FACT_SHEET_CUT.fy)];
+  return c && c.cut !== FACT_SHEET_CUT.cut ? html`<p><a href="${METHODS_PATH}#${COUNT_NOTE}">${fill('rollCountLink', { fy: String(FACT_SHEET_CUT.fy) })}</a></p>` : '';
+};
 
 // Part 4's sections, each its words beside its figure (the roll call and the maps at the page's width).
 export function part4({ hd, figure: fig, rollUrl = null, src = null, shapes = null, master = null }) {
   const source = historySource(hd);
   const inf = hd.infections?.length ? infAxis(hd.infections) : null;
   const flip = flipSince(hd);
-  return html`${psec({ id: 'roll', wide: true, heading: t('rollHeading'), text: html`${para('rollText')}${para('rollText2')}`, figure: rollFigure(hd, { n: fig(), source, rollUrl, src }) })}
+  return html`${psec({ id: 'roll', wide: true, heading: t('rollHeading'), text: html`${para('rollText')}${para('rollText2')}${countLink(hd)}`, figure: rollFigure(hd, { n: fig(), source, rollUrl, src }) })}
 ${psec({ id: 'ever', heading: t('everHeading'), text: para('everText'), figure: everFigure(hd, { n: fig(), source }) })}
 ${shapes && master ? psec({ id: 'spread', wide: true, heading: t('ymapHeading'), text: html`${para('ymapText')}${para('ymapText2')}`, figure: yearMapFigure(hd, { n: fig(), source, shapes, master, rollUrl }) }) : ''}
 ${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}

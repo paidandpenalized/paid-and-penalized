@@ -10,13 +10,14 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { CUTOFF_PERCENTILE, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
+import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
 import { checkTotals, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
+import { COUNT_NOTE, METHODS_PATH } from '../links.js';
 import { kicker, siteHeader } from './parts.js';
 
-export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
+export { METHODS_PATH };
 
 const para = (text) => html`<p>${text}</p>`;
 
@@ -35,6 +36,14 @@ function withheldNote(checks) {
   if (!withheld) return '';
   const years = checks.filter((c) => c.check.withheld.length).map((c) => fyLabel(c.fy));
   return para(fill('proofText3', { years: listText(years), short: SHORT_NAMES.PSI90, n: count(withheld) }));
+}
+
+// CMS's fact-sheet count against the updated cut list's, for the year CMS updated its list (the roll call links
+// here); nothing when the history lacks that year or the counts agree.
+function countNote(checks) {
+  const year = checks.find((c) => c.fy === FACT_SHEET_CUT.fy);
+  if (!year || year.check.yes === FACT_SHEET_CUT.cut) return '';
+  return html`<p id="${COUNT_NOTE}">${fill('sidesCount', { fy: String(FACT_SHEET_CUT.fy), sheet: count(FACT_SHEET_CUT.cut), n: count(year.check.yes) })}</p>`;
 }
 
 // A year's line counts as well above the 75th percentile when more than this share of the decided hospitals scored
@@ -106,7 +115,7 @@ ${stamp({ label: t('checkStamp') })}
     { id: 'pipeline', heading: t('pipeHeading'), body: html`${para(t('pipeText'))}
 ${pipeline({ rows: newest.rows, source: newest.source, pin: newest.pin, measures: newest.measures, check: last.check, pages: newest.pages })}` },
     { id: 'check', heading: t('proofHeading'), body: html`${para(fill('proofText', { limit: limitText }))}${para(t('proofText2'))}${withheldNote(checks)}`, fig: proofFigure(checks, { n: figureNo(), source }) },
-    { id: 'decisions', heading: t('sidesHeading'), body: html`${para(t('sidesText'))}${para(t('sidesText2'))}${sidesNotes(checks)}`, fig: sidesFigure(checks, { n: figureNo(), source }) },
+    { id: 'decisions', heading: t('sidesHeading'), body: html`${para(t('sidesText'))}${para(t('sidesText2'))}${sidesNotes(checks)}${countNote(checks)}`, fig: sidesFigure(checks, { n: figureNo(), source }) },
     { id: 'formula', heading: t('formulaHeading'), body: html`${para(t('formulaText'))}
 <dl class="formula">
 <dt>${t('formulaLimited')}</dt><dd>${fill('formulaLimitedIs', { low: ordinal(WINSOR_LOW), high: ordinal(WINSOR_HIGH) })}</dd>

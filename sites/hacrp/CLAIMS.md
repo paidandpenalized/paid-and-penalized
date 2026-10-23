@@ -77,6 +77,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-67 | A healthcare-associated infection is one a patient develops as a result of medical care. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "An infection that a patient develops as a result of medical care." | 2026-10-22 |
 | HACRP-68 | CCN stands for CMS Certification Number. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "Each IPPS Measure Exception is awarded at the CMS certification number (CCN) level" | 2026-10-22 |
 | HACRP-70 | PSI 90's pressure-ulcer component counts only serious bedsores: stage 3 or 4, or unstageable, and not present when the patient arrived. | https://qualityindicators.ahrq.gov/Downloads/Modules/PSI/V2024/TechSpecs/PSI_03_Pressure_Ulcer_Rate.pdf | "Stage 3 or 4 (or unstageable) pressure ulcers (secondary diagnosis not present on admission)" | 2026-10-22 |
+| HACRP-71 | CMS's results fact sheet for fiscal year 2016 put 758 hospitals in the worst-performing quartile. | https://www.cms.gov/newsroom/fact-sheets/fiscal-year-fy-2016-results-cms-hospital-acquired-conditions-hac-reduction-program | "In FY 2016, 758 out of 3,308 hospitals subject to the HAC Reduction Program are in the worst performing quartile" | 2026-10-22 |
 
 ## Notes on the sources
 
@@ -185,6 +186,10 @@ A claim marked `unverified` may not be used in copy.
   published figures. CMS states only that its measure weights are unrounded (FAQ question 34, footnote 9). The copy
   now says the published figures are rounded (true of every file this site pins) and that the small differences are
   rounding (the self-check's largest miss is 0.00009), as this site's own findings.
+- **HACRP-71:** the fact sheet is dated December 10, 2015. This site's FY2016 decisions come from CMS's updated cut list,
+  `HAC_Results_FY16_Feb 2016.txt` in `FY2016-HAC-Reduction-Program-Information.zip` (pinned as
+  `hacrp-fy2016-cut-list`), which names 750 hospitals. The same fact sheet's FY2015 count ("In FY 2015, 724 hospitals
+  were subject to a payment reduction") matches the FY2015 list (Table 17).
 - **HACRP-02** quotes CMS's program page, which says "all Total HAC Scores"; CMS's FAQ and scoring infographic narrow
   that to hospitals outside Maryland (HACRP-23). **HACRP-27:** CMS's Maryland addendum (HACRP-22's source) says
   "CY2026 is the first AHEAD HGB performance year (PY1) for MD." **HACRP-38:** the CDC page's key points add that a

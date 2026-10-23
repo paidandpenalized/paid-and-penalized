@@ -88,6 +88,7 @@ export const COPY = {
   sidesLower: { text: 'In {years}, CMS’s line sits below the percentile: it cut some hospitals that scored at or below it.', claim: null },
   sidesWhy: { text: 'This site can’t say why from the public files; the table gives each year’s line as a percentile.', claim: null },
   sidesTies: { text: "Ties matter: in fiscal year {fy}, {n} hospitals scored exactly {line}, the line itself, and none was cut. CMS cuts only scores above the line.", claim: 'HACRP-02' },
+  sidesCount: { text: 'One count differs from CMS’s own. For fiscal year {fy}, CMS’s results fact sheet put {sheet} hospitals in the worst-performing quarter; the updated cut list CMS published after it names {n}. These pages count the updated list.', claim: 'HACRP-71' },
   sidesTakeaway: { text: 'Across {years}, {decided} payment decisions; {wrong} out of order with the scores.', claim: null },
   sidesTakeawayOne: { text: 'Of the {decided} payment decisions CMS published for fiscal year {fy}, {wrong} are out of order with the scores.', claim: null },
   sidesNote: { text: '{yes} of {decided} cut · line {line}', claim: null },
