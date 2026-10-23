@@ -4,16 +4,18 @@
 // three quality programs side by side. Names only in tooltips (DES-25): no list, no ranking. Every takeaway is filled from
 // the data the figure draws (money-data.js).
 import { acrossLine } from '../../../web/charts/acrossLine.js';
+import { greatest, least } from 'd3-array';
+import { scaleLinear } from 'd3-scale';
 import { columns } from '../../../web/charts/columns.js';
 import { PAGE, drawn, figure, imageOf, imagePair, num } from '../../../web/charts/figure.js';
-import { STATE_NAMES, usBubbles } from '../../../web/charts/geo.js';
+import { STATE_NAMES, hasBubble, usBubbles } from '../../../web/charts/geo.js';
 import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
 import { paraOf } from '../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, money, noun, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, listText, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
-import { REDUCTION_TEXT } from './constants.js';
+import { REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
 import { estTag, rangeLine } from './money-figures.js';
 import { countBins } from './compare.js';
@@ -35,9 +37,6 @@ const share = (x) => num(pct(x, 1), x);
 // The columns and a row of the two tables that list groups of cut hospitals (the teaching groups, each kind of hospital).
 const GROUP_COLUMNS = [{ name: t('groupColGroup') }, { name: t('groupColHospitals'), numeric: true }, { name: t('groupColMoney'), numeric: true }, { name: t('groupColShareHospitals'), numeric: true }, { name: t('groupColShareMoney'), numeric: true }];
 const groupRow = (label, hospitals, cut, shareHospitals, shareMoney) => [label, cnt(hospitals), usd(cut), share(shareHospitals), share(shareMoney)];
-// The item of a list whose number is least, or greatest (the first of equals).
-const least = (list, by) => list.reduce((a, b) => (by(b) < by(a) ? b : a));
-const greatest = (list, by) => list.reduce((a, b) => (by(b) > by(a) ? b : a));
 
 // ---------- the bill ----------
 
@@ -97,11 +96,14 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   });
 }
 
-// A place's own hospitals within the window: how many on each side and their dollars.
+// A place's own hospitals within the window: how many on each side and their dollars. All on one side, only that side.
 function placeAcrossTakeaway(near, mine, { window, name }) {
   const own = near.rows.filter((r) => mine.has(r.ccn));
   const { over, under, overMoney, underMoney } = sides(own);
-  return fill(own.length === 1 ? 'placeAcrossTakeawayOne' : 'placeAcrossTakeaway', { k: count(own.length), n: count(near.rows.length), window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });
+  const [n, k] = [count(near.rows.length), count(own.length)];
+  if (!under.length) return fill('placeAcrossTakeawayOver', { n, window, name, over: noun(over.length, 'cut hospital'), overMoney: money(overMoney) });
+  if (!over.length) return fill('placeAcrossTakeawayUnder', { n, window, name, under: noun(under.length, 'hospital not cut', 'hospitals not cut'), underMoney: money(underMoney) });
+  return fill('placeAcrossTakeaway', { k, n, window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });
 }
 
 // ---------- shares ----------
@@ -122,6 +124,7 @@ export function sharesFigure(md, { n, source }) {
   }));
   // The takeaway: the group whose share of the money most outruns its share of the hospitals.
   const all = kinds.flatMap((k) => k.groups.map((g) => ({ kind: k.kind, ...g })));
+  if (!all.length) throw new RangeError('sharesFigure: no group of cut hospitals to draw');
   const top = greatest(all, (g) => g.shareMoney / g.shareHospitals);
   const labels = { a: t('sharesKeyHospitals'), b: t('sharesKeyMoney') };
   return figure({
@@ -148,10 +151,14 @@ export function statesFigure(md, { n, source, shapes }) {
   const chart = html`<div class="bubbles" data-view="total">
 <div class="mtoggle bubbles__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view="stay" aria-pressed="false">${t('statesPerStay')}</button></div>
 ${imagePair(art, t('statesAlt'))}</div>`;
+  if (!states.length) throw new RangeError('statesFigure: no state with estimated money to draw');
+  // A place with money the map has no circle for (Puerto Rico, if its hospitals were cut) is in the table; the note says so.
+  const offMap = states.filter((s) => !hasBubble(shapes, s.state)).map((s) => STATE_NAMES[s.state] ?? s.state);
+  const note = offMap.length ? `${t('statesNone')} ${fill('statesOffMap', { places: listText(offMap) })}` : t('statesNone');
   const [lo, hi] = [least(states, (s) => s.money), greatest(states, (s) => s.money)];
   const [loS, hiS] = [least(states, (s) => s.perStay), greatest(states, (s) => s.perStay)];
   return figure({
-    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-by-state', note: t('statesNone'),
+    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-by-state', note,
     takeaway: fill('statesTakeaway', { low: money(lo.money), high: money(hi.money), lowStay: dollars(loS.stay), highStay: dollars(hiS.stay) }),
     table: {
       columns: [{ name: t('statesColState') }, { name: t('statesColCut'), numeric: true }, { name: t('statesColMoney'), numeric: true }, { name: t('statesColStays'), numeric: true }, { name: t('statesColPerStay'), numeric: true }],
@@ -162,19 +169,49 @@ ${imagePair(art, t('statesAlt'))}</div>`;
 
 // ---------- three programs ----------
 
-// Bins of a share of the base payment, BIN wide, from lo to hi (fractions); each hospital in the bin its adjustment falls in
-// (a value a hair under an edge by float error, such as 1.003 − 1, counts in the bin above it). cls: a bin's class.
+// A panel's columns, over shares of the base payment. Exactly zero (no cut, no adjustment) is a column of its own, one bin
+// wide and centered on 0; every other share goes in a bin BIN wide, the bins of cuts below 0 and of bonuses above it,
+// so no cut or bonus is counted as none. Each hospital is in the bin its share falls in (a value a hair under an edge
+// by float error, such as 1.003 − 1, counts in the bin above it). The zero column takes room on the axis: every other
+// value stands half a bin out from 0, and the ticks name the shares they stand for. cls: a bin's class; reach: the
+// share the axis runs to at least.
 const BIN = 0.001;
+const GAP = BIN / 2;
 const EDGE_SLACK = 1e-12;
 const pctText = (x) => pct(x, 1);
-function binned(values, lo, hi, cls) {
-  const edges = Array.from({ length: Math.round((hi - lo) / BIN) + 1 }, (_, i) => lo + i * BIN);
-  const counts = countBins(values, edges.map((e) => e - EDGE_SLACK));
-  const bins = counts.map((n, i) => {
-    const bin = { x0: edges[i], x1: edges[i + 1], n };
-    return { ...bin, cls: cls(bin), tip: fill('threeTip', { hospitals: noun(n, 'hospital'), range: `${pctText(bin.x0)}–${pctText(bin.x1)}` }) };
+// A column of n hospitals at a range of shares, drawn from x0 to x1 on the axis.
+const column = (x0, x1, n, cls, range) => ({ x0, x1, n, cls, tip: fill('threeTip', { hospitals: noun(n, 'hospital'), range }) });
+const seat = (x, side = Math.sign(x)) => x + side * GAP;
+// A tick: whole percents as whole (1%), the rest to a tenth (1.5%).
+const tickText = (x) => pct(x, Math.abs(Math.round(x * 1000)) % 10 ? 1 : 0);
+function binned(values, cls, reach = 0) {
+  const nonzero = values.filter((x) => x !== 0);
+  // Edges at whole multiples of BIN, so 0 is an edge exactly; one bin past the largest value.
+  const first = Math.min(0, Math.floor(Math.min(...nonzero) / BIN));
+  const last = Math.max(0, Math.ceil(Math.max(...nonzero) / BIN)) + 1;
+  const edges = Array.from({ length: last - first + 1 }, (_, i) => (first + i) * BIN);
+  const counts = countBins(nonzero, edges.map((e) => e - EDGE_SLACK));
+  const columns = counts.map((n, i) => {
+    const [x0, x1] = [edges[i], edges[i + 1]];
+    const side = x0 >= 0 ? 1 : -1;
+    return column(seat(x0, side), seat(x1, side), n, cls(x0), `${pctText(x0)}–${pctText(x1)}`);
   });
-  return { bins, domain: [lo, hi] };
+  const none = values.length - nonzero.length;
+  // In axis order, so the keyboard and a screen reader meet the columns left to right.
+  columns.push(column(-GAP, GAP, none, 'chart-col', pct(0, 0)));
+  columns.sort((a, b) => a.x0 - b.x0);
+  const top = Math.max(reach, edges.at(-1));
+  const ticks = scaleLinear().domain([edges[0], top]).ticks(4);
+  const labels = new Map(ticks.map((x) => [seat(x), tickText(x)]));
+  return { columns, domain: [Math.min(-GAP, seat(edges[0])), seat(top)], ticks: [...labels.keys()], format: (x) => labels.get(x) };
+}
+
+// The HAC panel: a column at 0 (no cut) and one at the reduction, a share of the whole payment, each three bins wide, with
+// a half bin of room around them.
+export function hacAxis(reductionPct) {
+  const cutAt = reductionPct / 100;
+  const half = 1.5 * BIN;
+  return { columns: [[-half, half], [cutAt - half, cutAt + half]], domain: [-half - GAP, cutAt + half + GAP], ticks: [0, cutAt] };
 }
 
 export function programsFigure(md, { n, source }) {
@@ -186,18 +223,15 @@ export function programsFigure(md, { n, source }) {
   const [hrrpN, vbpN] = [hrrpCuts.filter((x) => x > 0).length, vbp.filter((x) => x !== 0).length];
   const bonus = rows.reduce((s, r) => s + Math.max(0, r.hvbp), 0);
   const penalty = rows.reduce((s, r) => s + Math.min(0, r.hvbp), 0);
-  const hrrp = binned(hrrpCuts, 0, Math.ceil(hrrpHigh / BIN) * BIN + BIN, (b) => (b.x0 === 0 ? 'chart-col' : 'chart-col chart-col--pen'));
-  const vbpBins = binned(vbp, Math.floor(vbpLow / BIN) * BIN, Math.ceil(vbpHigh / BIN) * BIN + BIN, (b) => (b.x0 >= 0 ? 'chart-col chart-col--rew' : 'chart-col chart-col--pen'));
+  // Readmissions only cuts (the axis runs to a whole percent); value-based cuts below 0 and pays above it.
+  const hrrp = binned(hrrpCuts, () => 'chart-col chart-col--pen', Math.ceil(hrrpHigh * 100 - 1e-9) / 100);
+  const vbpBins = binned(vbp, (x0) => (x0 >= 0 ? 'chart-col chart-col--rew' : 'chart-col chart-col--pen'));
   const cut = md.cutRows.length;
-  const hacBins = [
-    { x0: -0.0015, x1: 0.0015, n: rows.length - cut, cls: 'chart-col', tip: fill('threeTip', { hospitals: noun(rows.length - cut, 'hospital'), range: pct(0, 0) }) },
-    { x0: 0.0085, x1: 0.0115, n: cut, cls: 'chart-col chart-col--pen', tip: fill('threeTip', { hospitals: noun(cut, 'hospital'), range: REDUCTION_TEXT }) },
-  ];
-  // A tick: whole percents as whole (1%), the rest to a tenth (1.5%).
-  const fmt = (x) => pct(x, Math.abs(Math.round(x * 1000)) % 10 ? 1 : 0);
-  const hrrpDomain = [0, Math.ceil(hrrpHigh * 100 - 1e-9) / 100];
-  const panel = ({ key, total, shape, sub = null, bins, domain, axisKey, ticks }) => {
-    const draw = (width) => columns({ bins, domain, ticks, format: fmt, width, height: 150 });
+  const hac = hacAxis(REDUCTION_PCT);
+  const [hacNone, hacCut] = hac.columns;
+  const hacBins = [column(...hacNone, rows.length - cut, 'chart-col', pct(0, 0)), column(...hacCut, cut, 'chart-col chart-col--pen', REDUCTION_TEXT)];
+  const panel = ({ key, total, shape, sub = null, bins, domain, axisKey, ticks, format = tickText }) => {
+    const draw = (width) => columns({ bins, domain, ticks, format, width, height: 150 });
     return html`<div class="three__p">
 <p class="three__name">${t(key)}</p>
 <p class="three__money${total < 0 ? ' three__money--pen' : ''}">${money(total)}</p>
@@ -208,9 +242,9 @@ ${imageOf(draw(WIDTH), null, null)}
   };
   const hh = md.headline;
   const chart = html`<div class="three">
-${panel({ key: 'threeHrrp', total: hh.hrrp, shape: 'threeHrrpShape', bins: hrrp.bins, domain: [0, Math.max(hrrpDomain[1], hrrp.bins.at(-1).x1)], axisKey: 'threeHrrpAxis', ticks: 4 })}
-${panel({ key: 'threeHvbp', total: hh.hvbp, shape: 'threeHvbpShape', sub: fill('threeHvbpSplit', { bonus: money(bonus), penalty: money(-penalty) }), bins: vbpBins.bins, domain: vbpBins.domain, axisKey: 'threeHvbpAxis', ticks: 4 })}
-${panel({ key: 'threeHac', total: -hh.money, shape: 'threeHacShape', bins: hacBins, domain: [-0.002, 0.012], axisKey: 'threeHacAxis', ticks: [0, 0.01] })}
+${panel({ key: 'threeHrrp', total: hh.hrrp, shape: 'threeHrrpShape', bins: hrrp.columns, domain: hrrp.domain, axisKey: 'threeHrrpAxis', ticks: hrrp.ticks, format: hrrp.format })}
+${panel({ key: 'threeHvbp', total: hh.hvbp, shape: 'threeHvbpShape', sub: fill('threeHvbpSplit', { bonus: money(bonus), penalty: money(-penalty) }), bins: vbpBins.columns, domain: vbpBins.domain, axisKey: 'threeHvbpAxis', ticks: vbpBins.ticks, format: vbpBins.format })}
+${panel({ key: 'threeHac', total: -hh.money, shape: 'threeHacShape', bins: hacBins, domain: hac.domain, axisKey: 'threeHacAxis', ticks: hac.ticks })}
 </div>`;
   return figure({
     n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-three-programs', note: t('threeNote'),

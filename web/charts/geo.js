@@ -405,17 +405,19 @@ export function usYearMap({ shapes, groups, size, width }) {
 // in their insets), its area the state's value on that layer's own scale; the largest drawn first, so a small state's
 // circle shows on top of a big neighbor's. Each circle is a mark with its tooltip, value and data-state.
 //   layers   [{ id, states: { [code]: { value (> 0), label } } }] (codes from US_MAP_CODES; a state left out gets no
-//            circle); rMax: the largest circle's radius in each layer, in viewBox units (default: larger across a page than
+//            circle, as is a place the map has no room for: hasBubble); rMax: the largest circle's radius in each layer, in viewBox units (default: larger across a page than
 //            on a phone)
 // The land is background, drawn thinner than the choropleth's outlines (BUBBLE_THIN times as thinned) and to whole units.
 const BUBBLE_THIN = 3;
+// Whether the map can hold a circle for a state: it is one the map draws (not Puerto Rico) and the shapes outline it.
+export const hasBubble = (shapes, code) => US_MAP_CODES.includes(code) && Boolean(shapes.get(code));
 export function usBubbles({ shapes, layers, width, rMax = isNarrow(width) ? 22 : 52 }) {
   const { height, projection } = usPaths(shapes, width);
   const centroid = geoPath(projection);
   const coarse = outlinePath(projection, THIN_US * BUBBLE_THIN * Math.max(1, width / US_THIN_WIDTH), 0);
   const land = US_MAP_CODES.map((code) => (shapes.has(code) ? coarse(shapes.get(code)) : null)).filter(Boolean);
   const layer = ({ id, states }) => {
-    const entries = Object.entries(states).filter(([code, s]) => US_MAP_CODES.includes(code) && s.value > 0 && shapes.get(code));
+    const entries = Object.entries(states).filter(([code, s]) => hasBubble(shapes, code) && s.value > 0);
     const max = Math.max(...entries.map(([, s]) => s.value), 1);
     const circles = entries.map(([code, s]) => {
       const [cx, cy] = centroid.centroid(shapes.get(code));

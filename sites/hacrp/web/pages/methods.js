@@ -15,8 +15,7 @@ import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
 import { assumptionsTable, backtestPlaceholder, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
-import { DOLLARS_HREF } from '../links.js';
-import { COUNT_NOTE, METHODS_PATH } from '../links.js';
+import { COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { kicker, siteHeader } from './parts.js';
 
 export { METHODS_PATH };

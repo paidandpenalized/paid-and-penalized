@@ -233,6 +233,8 @@ export const COPY = {
   statesTipTotal: { text: '{money} from {hospitals}', claim: null },
   statesTipStay: { text: '{perStay} per Medicare stay', claim: null },
   statesNone: { text: 'States whose hospitals CMS didn\'t cut, and Maryland, have no circle.', claim: 'HACRP-26' },
+  // A place with money the map has no place for (Puerto Rico's): the table lists it, the drawing can't.
+  statesOffMap: { text: 'The map has no place for {places}, which the table lists.', claim: null },
   statesAlt: { text: "Map of the states with a circle on each, its area this site's estimate of the state's cut, or of its cut per Medicare stay.", claim: null },
   statesColState: { text: 'State', claim: null },
   statesColCut: { text: 'Hospitals cut', claim: null },
@@ -266,13 +268,19 @@ export const COPY = {
   placePerStayNote: { text: 'The nation: {nation}', claim: null },
   placeAcrossHeading: { text: '{name} across the line', claim: null },
   placeAcrossText: { text: "The nation's hospitals within {window} of CMS's line, {name}'s in full ink: scores a hair apart, money all or nothing.", claim: 'HACRP-01' },
+  // A place with hospitals on both sides of the line near it (so at least two).
   placeAcrossTakeaway: {
     text: "{k} of the nation's {n} hospitals within {window} of CMS's line are {name}'s: {over} cut, about {overMoney} by this site's estimate, and {under} not cut, where a cut would have been about {underMoney}.",
     claim: null,
   },
-  // The same for a place with exactly one of them.
-  placeAcrossTakeawayOne: {
-    text: "{k} of the nation's {n} hospitals within {window} of CMS's line is {name}'s: {over} cut, about {overMoney} by this site's estimate, and {under} not cut, where a cut would have been about {underMoney}.",
+  // A place whose hospitals near the line are all on one side says only that side ({over}, {under}: counted hospitals,
+  // singular for one).
+  placeAcrossTakeawayOver: {
+    text: "Of the nation's {n} hospitals within {window} of CMS's line, {name} has {over}, about {overMoney} by this site's estimate.",
+    claim: null,
+  },
+  placeAcrossTakeawayUnder: {
+    text: "Of the nation's {n} hospitals within {window} of CMS's line, {name} has {under}, where a cut would have been about {underMoney}.",
     claim: null,
   },
 };

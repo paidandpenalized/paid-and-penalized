@@ -23,6 +23,7 @@ import { ancestors } from '../places.js';
 import { asofBar, citation, dataLinks, hospitalTable, printLink, siteHeader } from './parts.js';
 import { acrossFigure, ACROSS_WINDOW } from '../money-part.js';
 import { nearLine, placeMoney } from '../money-data.js';
+import { cutText } from '../money.js';
 import { estTag, moneySourceText, rangeLine } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
 
@@ -117,7 +118,8 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   // Its hospitals across the line, when any sits within the figure's window of it.
   const across = md && nearLine(md, ACROSS_WINDOW).rows.some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
   const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
-  const kidMoney = md && { head: mt('tableColMoney'), cell: (list) => moneyText(placeMoney(md, list ?? []).money) };
+  // A child with no estimated hospital (Maryland's are exempt) has no dollars to say, not $0 (moneyFields leaves the field out).
+  const kidMoney = md && { head: mt('tableColMoney'), cell: (list) => { const pm = placeMoney(md, list ?? []); return cutText(pm.rows.length ? pm.money : null); } };
   const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation, money: kidMoney });
 
   const body = html`<article class="wrap page page--prog page--place"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
