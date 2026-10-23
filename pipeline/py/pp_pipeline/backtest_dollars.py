@@ -29,30 +29,26 @@ payments, not the model's; the FY2024 impact file's wage index predates the rule
 which corrected the wage index tables for some hospitals but posted no new impact file); the hospital-specific-rate
 comparisons are made once on the year's totals, not claim by claim.
 """
-import csv
 import functools
-import io
 import sys
 
-from pp_engine import bands, dollars
-from pp_engine.parse import MARYLAND
+from pp_engine import bands, dollars, ipps
+from pp_engine.contract import camel
+from pp_engine.parse import rows, table
 from pp_pipeline import hcris_extract
 from pp_pipeline.emit_hospital import read_hacrp
 from pp_pipeline.files import read_pinned_bytes
-from pp_pipeline.ipps_pins import BACKTEST_FY, hrrp_factors, payment_inputs, pin_ids, rates, vbp_factors
+from pp_pipeline.ipps_pins import BACKTEST_FY, pin_ids, priced_rows
 
 FY = BACKTEST_FY
 HACRP = f"hacrp-fy{FY}"
 HCRIS = hcris_extract.PIN_ID
 SOURCES = (HACRP, *pin_ids(FY), HCRIS)
-WINDOW = ("2023-10-01", "2024-09-30")  # the federal fiscal year FY2024
-# The claims year of the FY2024 impact file's volume (its README: "MARCH 2023 UPDATE OF FY 2022 MEDPAR"), two years
-# before the rule's, as FY2026's file's is FY2024 (emit_dollars.VOLUME_FY).
-VOLUME_FY = 2022
-STATE_CODES = {"21": MARYLAND, "40": "PR"}  # a CCN's first two digits: Maryland, Puerto Rico
-# CMS publishes no Pennsylvania Rural Health Model participant file with CCNs (as for FY2026, emit_dollars.PARHM); the
-# back-test leaves participants out by the model's own cost-report worksheet instead.
-PARHM = frozenset()
+WINDOW = (f"{FY - 1}-10-01", f"{FY}-09-30")  # the federal fiscal year, October through September
+# The claims year of the impact file's volume, two years before the rule's (FY2024's file: "MARCH 2023 UPDATE OF FY 2022
+# MEDPAR"; FY2026's, emit_dollars.VOLUME_FY, is FY2024).
+VOLUME_FY = FY - 2
+MARYLAND_CODE = "21"  # Maryland's CCNs begin with 21, Puerto Rico's (ipps.PUERTO_RICO) with 40
 # The HCRIS report status codes (RPT_STUS_CD) the file uses: 1 as submitted, 2 settled without audit, 3 settled with
 # audit, 4 reopened, 5 amended.
 STATUS_CODES = ("1", "2", "3", "4", "5")
@@ -90,26 +86,26 @@ def modeled(row):
 
 
 def read_reports(text):
-    return list(csv.DictReader(io.StringIO(text)))
+    """The HCRIS extract (pp_pipeline.hcris_extract) as a list of rows, each a dict of its columns' text."""
+    return table(rows(text, ","), hcris_extract.COLUMNS[0], {name: name for name in hcris_extract.COLUMNS},
+                 "HCRIS extract")
 
 
-def comparison_set(reports, records, rows, inputs):
-    """(members, excluded). `reports`: the HCRIS extract's rows; `records`: the FY2024 HACRP file's (read_hacrp);
-    `rows`: the model's hospital_row for each record, by CCN; `inputs`: the FY2024 impact file's, by CCN. `excluded`
-    counts each report left out by the first of EXCLUSIONS it meets; each member is {ccn, status, stratum, cut,
-    model, actual}."""
-    hacrp = {r["ccn"]: r for r in records}
+def comparison_set(reports, priced):
+    """(members, excluded). `reports`: the HCRIS extract's rows; `priced`: the model's priced row (ipps_pins.priced_rows)
+    for each hospital in the FY2024 HACRP file, by CCN. `excluded` counts each report left out by the first of
+    EXCLUSIONS it meets; each member is {ccn, status, stratum, cut, model, actual}."""
     excluded = dict.fromkeys(EXCLUSIONS, 0)
     members, seen = [], set()
     for rep in reports:
         ccn = rep["ccn"]
         reason = ("outside_window" if (rep["fy_begin"], rep["fy_end"]) != WINDOW else
                   "no_part_a" if rep["part_a"] != "Y" else
-                  "maryland" if STATE_CODES.get(ccn[:2]) == MARYLAND else
-                  "puerto_rico" if ccn[:2] in STATE_CODES else
+                  "maryland" if ccn[:2] == MARYLAND_CODE else
+                  "puerto_rico" if ccn[:2] == ipps.PUERTO_RICO else
                   "parhm" if rep["parhm"] == "Y" else
-                  "not_in_hacrp" if ccn not in hacrp else
-                  "not_estimated" if rows[ccn]["status"] != "estimated" else None)
+                  "not_in_hacrp" if ccn not in priced else
+                  "not_estimated" if priced[ccn]["status"] != "estimated" else None)
         if reason:
             excluded[reason] += 1
             continue
@@ -118,26 +114,25 @@ def comparison_set(reports, records, rows, inputs):
         if rep["status"] not in STATUS_CODES:
             raise ValueError(f"a cost report with status {rep['status']!r}, not one of {STATUS_CODES}")
         seen.add(ccn)
-        h = inputs[ccn]
-        members.append({"ccn": ccn, "status": rep["status"], "stratum": bands.stratum(h["beds"], h["sch"], h["mdh"]),
-                        "cut": rows[ccn]["cut"], "model": modeled(rows[ccn]), "actual": actuals(rep)})
-    if any(m["stratum"] is None for m in members):
-        raise ValueError("a comparison-set hospital has no bed count in the impact file")
+        row = priced[ccn]
+        members.append({"ccn": ccn, "status": rep["status"], "stratum": row["stratum"], "cut": row["cut"],
+                        "model": modeled(row), "actual": actuals(rep)})
     return members, excluded
 
 
-def measure_pairs(members, measure):
-    """The members a measure is tested on: the cut hospitals for the HAC cut, everyone for the rest."""
-    return [m for m in members if m["cut"]] if measure == "hac" else members
+def classify(members, measure):
+    """[(member, model, actual, kind)] for the members a measure is tested on, the cut hospitals for the HAC cut and
+    everyone for the rest: the model's and the cost report's figures, and which of bands.PAIR_KINDS they are."""
+    tested = [m for m in members if m["cut"]] if measure == "hac" else members
+    return [(m, m["model"][measure], m["actual"][measure], bands.pair_kind(m["model"][measure], m["actual"][measure]))
+            for m in tested]
 
 
-def measure_stats(members, measure):
-    """{pairs: {kind: count}, strata, overall} for one measure (pp_engine.bands.stratum_bands)."""
+def measure_stats(tested):
+    """{pairs: {kind: count}, strata, overall} for one measure, from its `classify` (pp_engine.bands.stratum_bands)."""
     kinds = dict.fromkeys(bands.PAIR_KINDS, 0)
     errors = {}
-    for m in measure_pairs(members, measure):
-        model, actual = m["model"][measure], m["actual"][measure]
-        kind = bands.pair_kind(model, actual)
+    for m, model, actual, kind in tested:
         kinds[kind] += 1
         if kind == "compared":
             errors.setdefault(m["stratum"], []).append(bands.log_ratio(model, actual))
@@ -147,38 +142,28 @@ def measure_stats(members, measure):
 
 @functools.lru_cache(maxsize=None)
 def run():
-    """The back-test on the pins: {records, rows, members, excluded, reports, measures, national}. Cached; callers must
-    not modify it."""
+    """The back-test on the pins: {rows, members, excluded, reports, measures, national, points}. `rows`: the model's
+    priced row for each hospital in the FY2024 HACRP file, by CCN; `reports`: the HCRIS extract's rows; `points`: the
+    HAC cut's compared pairs, by CCN. Cached; callers must not modify it."""
     hacrp = read_hacrp(read_pinned_bytes(HACRP).decode("utf-8"))
     if hacrp["fy"] != FY:
         raise ValueError(f"the back-test's HACRP file is for FY{hacrp['fy']}, not FY{FY}")
-    inputs, table, hrrp, vbp = payment_inputs(FY), rates(FY), hrrp_factors(FY), vbp_factors(FY)
-    rows = {r["ccn"]: dollars.hospital_row(r["ccn"], r["state"], inputs.get(r["ccn"]), table, hrrp=hrrp.get(r["ccn"]),
-                                           vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM)
-            for r in hacrp["records"]}
+    priced = {row["ccn"]: row for row in priced_rows(hacrp["records"], FY)}
     reports = read_reports(read_pinned_bytes(HCRIS).decode("ascii"))
-    members, excluded = comparison_set(reports, hacrp["records"], rows, inputs)
-    measures = {k: measure_stats(members, k) for k in MEASURES}
-    cut_pairs = [(m["model"]["hac"], m["actual"]["hac"]) for m in measure_pairs(members, "hac")
-                 if bands.pair_kind(m["model"]["hac"], m["actual"]["hac"]) == "compared"]
-    return {"records": hacrp["records"], "rows": rows, "members": members, "excluded": excluded, "reports": len(reports),
-            "measures": measures, "national": bands.bootstrap_ratio(cut_pairs)}
+    members, excluded = comparison_set(reports, priced)
+    tested = {k: classify(members, k) for k in MEASURES}
+    compared = [(m, model, actual) for m, model, actual, kind in tested["hac"] if kind == "compared"]
+    return {"rows": priced, "members": members, "excluded": excluded, "reports": reports,
+            "measures": {k: measure_stats(t) for k, t in tested.items()},
+            "national": bands.bootstrap_ratio([(model, actual) for _, model, actual in compared]),
+            "points": [{"ccn": m["ccn"], "stratum": m["stratum"], "model": model, "actual": actual}
+                       for m, model, actual in sorted(compared, key=lambda c: c[0]["ccn"])]}
 
 
-def _camel_pairs(kinds):
-    return {"compared": kinds["compared"], "signMismatch": kinds["sign_mismatch"], "zeroActual": kinds["zero_actual"],
-            "zeroModel": kinds["zero_model"], "bothZero": kinds["both_zero"]}
-
-
-def bands_json(result=None):
+def bands_json():
     """The `bands` object dollars.json carries (schemas/dollars.schema.json, $defs/bands)."""
-    r = result or run()
+    r = run()
     members = r["members"]
-    excluded = {"outsideWindow": r["excluded"]["outside_window"], "noPartA": r["excluded"]["no_part_a"],
-                "maryland": r["excluded"]["maryland"], "puertoRico": r["excluded"]["puerto_rico"],
-                "parhm": r["excluded"]["parhm"], "notInHacrp": r["excluded"]["not_in_hacrp"],
-                "notEstimated": r["excluded"]["not_estimated"]}
-    hac = [m for m in measure_pairs(members, "hac") if bands.pair_kind(m["model"]["hac"], m["actual"]["hac"]) == "compared"]
     return {
         "fy": FY,
         "volumeFy": VOLUME_FY,
@@ -187,32 +172,31 @@ def bands_json(result=None):
         "minStratum": bands.MIN_STRATUM,
         "lowPct": bands.LOW_PCT,
         "highPct": bands.HIGH_PCT,
-        "strata": [{"id": s, "band": bands.band_of(s), "bedsMin": low, "bedsMax": high, "schMdh": s.endswith("/sch-mdh")}
-                   for s in bands.STRATA for band, low, high in bands.BED_BANDS if band == bands.band_of(s)],
+        "strata": [{"id": bands.stratum_id(band, kind), "band": band, "bedsMin": low, "bedsMax": high,
+                    "schMdh": kind == bands.SCH_MDH}
+                   for band, low, high in bands.BED_BANDS for kind in bands.KINDS],
         "comparison": {
-            "reports": r["reports"], "excluded": excluded, "hospitals": len(members),
+            "reports": len(r["reports"]), "excluded": {camel(k): r["excluded"][k] for k in EXCLUSIONS},
+            "hospitals": len(members),
             "cut": sum(m["cut"] for m in members),
             "statusCodes": {code: sum(m["status"] == code for m in members) for code in STATUS_CODES},
         },
-        "measures": {k: {"pairs": _camel_pairs(v["pairs"]), "overall": v["overall"], "strata": v["strata"]}
+        "measures": {k: {"pairs": {camel(kind): v["pairs"][kind] for kind in bands.PAIR_KINDS},
+                         "overall": v["overall"], "strata": v["strata"]}
                      for k, v in r["measures"].items()},
         "national": r["national"],
-        "points": [{"ccn": m["ccn"], "stratum": m["stratum"], "model": m["model"]["hac"], "actual": m["actual"]["hac"]}
-                   for m in sorted(hac, key=lambda m: m["ccn"])],
+        "points": r["points"],
     }
 
 
 def checks(b):
     """The back-test's checks, in dollars.checks' shape: the HAC cut's median error, the comparison set's size and its
     cut hospitals' (the thresholds above)."""
-    median = b["measures"]["hac"]["overall"]["median"]
+    hac = b["measures"]["hac"]["overall"]
     return [
-        {"id": "backtest_hac_median", "value": median, "low": -HAC_MEDIAN_MAX, "high": HAC_MEDIAN_MAX,
-         "pass": median is not None and -HAC_MEDIAN_MAX <= median <= HAC_MEDIAN_MAX},
-        {"id": "backtest_hospitals", "value": b["comparison"]["hospitals"], "low": MIN_HOSPITALS,
-         "high": b["comparison"]["reports"], "pass": b["comparison"]["hospitals"] >= MIN_HOSPITALS},
-        {"id": "backtest_cut", "value": b["measures"]["hac"]["overall"]["n"], "low": MIN_CUT,
-         "high": b["comparison"]["cut"], "pass": b["measures"]["hac"]["overall"]["n"] >= MIN_CUT},
+        dollars.result("backtest_hac_median", hac["median"], -HAC_MEDIAN_MAX, HAC_MEDIAN_MAX),
+        dollars.result("backtest_hospitals", b["comparison"]["hospitals"], MIN_HOSPITALS, b["comparison"]["reports"]),
+        dollars.result("backtest_cut", hac["n"], MIN_CUT, b["comparison"]["cut"]),
     ]
 
 
@@ -230,7 +214,7 @@ def main():
     """Print the back-test: the set, the exclusions, each measure's statistics by stratum, the national ratio, the
     checks. Returns 1 if a check fails."""
     r = run()
-    b = bands_json(r)
+    b = bands_json()
     c = b["comparison"]
     print(f"HCRIS FY{FY} reports: {c['reports']}; comparison set {c['hospitals']} hospitals ({c['cut']} cut by CMS)")
     print("  excluded: " + ", ".join(f"{k} {v}" for k, v in c["excluded"].items()))
@@ -245,13 +229,12 @@ def main():
     n = b["national"]
     print(f"national: sum(actual)/sum(model) {n['ratio']} over {n['n']} cut hospitals; bootstrap p10 {n['p10']}, "
           f"p90 {n['p90']} ({n['draws']} draws)")
-    reports = read_reports(read_pinned_bytes(HCRIS).decode("ascii"))
     print("signs over every report (positive, negative): "
-          + ", ".join(f"{k} {v}" for k, v in sign_counts(reports).items()))
-    failed = [x for x in checks(b) if not x["pass"]]
-    for x in checks(b):
+          + ", ".join(f"{k} {v}" for k, v in sign_counts(r["reports"]).items()))
+    results = checks(b)
+    for x in results:
         print(f"check {x['id']}: {x['value']} in {x['low']} to {x['high']}: {'pass' if x['pass'] else 'FAIL'}")
-    return 1 if failed else 0
+    return 0 if all(x["pass"] for x in results) else 1
 
 
 if __name__ == "__main__":

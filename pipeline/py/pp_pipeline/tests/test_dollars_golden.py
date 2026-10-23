@@ -8,12 +8,12 @@ import unittest
 from unittest import mock
 
 from pp_engine import bands, dollars
-from pp_engine.contract import format_emitted, source_manifest_hash
+from pp_engine.contract import camel, format_emitted, source_manifest_hash
 from pp_engine.schema import validate
 from pp_engine.tests.fixtures import assert_adds_up
 from pp_pipeline import emit_dollars
-from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, camel,
-                                      committed_path, enforce_caps, site_yes_count, unlisted_counts, yes_count)
+from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, committed_path,
+                                      enforce_caps, site_yes_count, unlisted_counts, yes_count)
 from pp_pipeline.emit_hospital import HACRP
 from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
 from pp_pipeline.ipps_pins import payment_inputs
@@ -68,6 +68,9 @@ class Committed(unittest.TestCase):
         schemas = load_schemas()
         b = self.committed["bands"]
         hac = b["measures"]["hac"]
+        # A few hospitals stand in for the file: only the bands differ between the variants.
+        few = {**self.committed, "hospitals": self.hospitals[:3]}
+        self.assertEqual(validate(schemas[SCHEMA], few, schemas), [])
         broken = (
             None,  # methods_version 2 always has its ranges
             {**b, "extra": 1},
@@ -78,9 +81,9 @@ class Committed(unittest.TestCase):
         )
         for bad in broken:
             with self.subTest(bad=None if bad is None else sorted(bad)):
-                self.assertNotEqual(validate(schemas[SCHEMA], {**self.committed, "bands": bad}, schemas), [])
-        row = next(h for h in self.committed["hospitals"] if h["status"] == "estimated")
-        self.assertNotEqual(validate(schemas[SCHEMA], {**self.committed, "hospitals": [{**row, "stratum": "x"}]}, schemas), [])
+                self.assertNotEqual(validate(schemas[SCHEMA], {**few, "bands": bad}, schemas), [])
+        row = next(h for h in self.hospitals if h["status"] == "estimated")
+        self.assertNotEqual(validate(schemas[SCHEMA], {**few, "hospitals": [{**row, "stratum": "x"}]}, schemas), [])
 
     def test_it_lives_at_the_family_level_for_the_files_fiscal_year(self):
         fy = self.committed["fy"]

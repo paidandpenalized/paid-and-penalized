@@ -1,14 +1,17 @@
 """The back-test (pp_pipeline.backtest_dollars): the comparison set's rules on synthetic reports, the cost report's
 arithmetic, the checks, and on the pins: the counts, the signs of the program lines over the whole file, and the
 committed `bands` being a fresh run's. Counts on the pins are facts of the pinned bytes; no hospital is named."""
+import csv
+import io
 import statistics
 import unittest
 
 from pp_engine import bands
+from pp_engine.parse import SchemaError
 from pp_pipeline import backtest_dollars as bt
 from pp_pipeline.emit_dollars import committed_path
 from pp_pipeline.files import read_json, read_pinned_bytes
-from pp_pipeline.hcris_extract import CELLS
+from pp_pipeline.hcris_extract import CELLS, COLUMNS
 
 
 def report(ccn, begin="2023-10-01", end="2024-09-30", part_a="Y", parhm="N", status="1", **cells):
@@ -20,13 +23,10 @@ def report(ccn, begin="2023-10-01", end="2024-09-30", part_a="Y", parhm="N", sta
     return row
 
 
-def model_row(status="estimated", cut=False, fed=1000, hrrp=-10, hvbp=5, at_stake=50):
+def model_row(status="estimated", cut=False, fed=1000, hrrp=-10, hvbp=5, at_stake=50, stratum="100-299/other"):
     hac = -at_stake if cut else 0
     return {"status": status, "cut": cut, "fed": fed, "hrrp": hrrp, "hvbp": hvbp, "at_stake": at_stake, "hac": hac,
-            "net": hrrp + hvbp + hac}
-
-
-INPUT = {"beds": 120, "sch": False, "mdh": False}
+            "net": hrrp + hvbp + hac, "stratum": stratum}
 
 
 class CostReportArithmetic(unittest.TestCase):
@@ -37,19 +37,23 @@ class CostReportArithmetic(unittest.TestCase):
         self.assertEqual(bt.line(rep, "05400"), 0)
         self.assertEqual(bt.actuals(rep), {"fed": 1050, "hrrp": -35, "hvbp": 10, "hac": 70, "net": -35 + 10 - 70})
 
+    def test_the_extract_reads_by_column_name_and_a_missing_column_stops_the_build(self):
+        text = ",".join(COLUMNS) + "\n" + ",".join(f"v{i}" for i, _ in enumerate(COLUMNS)) + "\n"
+        self.assertEqual(bt.read_reports(text), [{name: f"v{i}" for i, name in enumerate(COLUMNS)}])
+        with self.assertRaisesRegex(SchemaError, "expected one column 'part_a'"):
+            bt.read_reports(text.replace("part_a", "partA", 1))
+
     def test_the_models_figures(self):
         self.assertEqual(bt.modeled(model_row(cut=True)), {"fed": 1000, "hrrp": -10, "hvbp": 5, "hac": 50, "net": -55})
 
 
 class ComparisonSet(unittest.TestCase):
     def setUp(self):
-        self.records = [{"ccn": c} for c in ("990001", "990002", "990003", "990004")]
         self.rows = {"990001": model_row(), "990002": model_row(cut=True), "990003": model_row(status="no-inputs"),
                      "990004": model_row()}
-        self.inputs = {c: dict(INPUT) for c in self.rows}
 
     def run_set(self, reports):
-        return bt.comparison_set(reports, self.records, self.rows, self.inputs)
+        return bt.comparison_set(reports, self.rows)
 
     def test_each_report_is_left_out_by_the_first_rule_it_fails(self):
         reports = [
@@ -81,15 +85,15 @@ class ComparisonSet(unittest.TestCase):
                     "actual": {"hac": 0 if i == 0 else 90 + i % 7, "net": -45, "hrrp": 0 if i < 40 else -3,
                                "hvbp": -5 if i == 1 else 5, "fed": 1000}}
                    for i in range(80)]
-        hac = bt.measure_stats(members, "hac")
+        hac = bt.measure_stats(bt.classify(members, "hac"))
         self.assertEqual(hac["pairs"], {"compared": 39, "sign_mismatch": 0, "zero_actual": 1, "zero_model": 0,
                                         "both_zero": 0})
         self.assertEqual(hac["overall"]["n"], 39)
-        self.assertEqual(bt.measure_stats(members, "hvbp")["pairs"], {"compared": 79, "sign_mismatch": 1,
-                                                                     "zero_actual": 0, "zero_model": 0, "both_zero": 0})
+        self.assertEqual(bt.measure_stats(bt.classify(members, "hvbp"))["pairs"],
+                         {"compared": 79, "sign_mismatch": 1, "zero_actual": 0, "zero_model": 0, "both_zero": 0})
         # The model has no readmissions dollars for any of them: nothing to compare, so no band, and the build stops
         with self.assertRaisesRegex(ValueError, "too few"):
-            bt.measure_stats(members, "hrrp")
+            bt.measure_stats(bt.classify(members, "hrrp"))
 
 
 class Checks(unittest.TestCase):
@@ -113,8 +117,12 @@ class OnThePins(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.result = bt.run()
-        cls.bands = bt.bands_json(cls.result)
-        cls.reports = bt.read_reports(read_pinned_bytes(bt.HCRIS).decode("ascii"))
+        cls.bands = bt.bands_json()
+        cls.reports = cls.result["reports"]
+
+    def test_the_reports_are_the_extracts_rows_as_written(self):
+        text = read_pinned_bytes(bt.HCRIS).decode("ascii")  # read here with the csv module, apart from the back-test's
+        self.assertEqual(self.reports, list(csv.DictReader(io.StringIO(text))))
 
     def test_the_committed_bands_are_a_fresh_run(self):
         self.assertEqual(read_json(committed_path())["bands"], self.bands)

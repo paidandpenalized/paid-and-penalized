@@ -17,12 +17,14 @@ class Strata(unittest.TestCase):
                          ["under-100", "under-100", "100-299", "100-299", "300-plus", "300-plus"])
         for missing in (None, 0, -3):
             self.assertIsNone(bands.bed_band(missing))
-            self.assertIsNone(bands.stratum(missing, True, False))
-        self.assertEqual(bands.stratum(45, True, False), "under-100/sch-mdh")
-        self.assertEqual(bands.stratum(45, False, True), "under-100/sch-mdh")
-        self.assertEqual(bands.stratum(150, False, False), "100-299/other")
+            self.assertIsNone(bands.stratum_of({"beds": missing, "sch": True, "mdh": False}))
+        self.assertEqual(bands.stratum_of({"beds": 45, "sch": True, "mdh": False}), "under-100/sch-mdh")
+        self.assertEqual(bands.stratum_of({"beds": 45, "sch": False, "mdh": True}), "under-100/sch-mdh")
+        self.assertEqual(bands.stratum_of({"beds": 150, "sch": False, "mdh": False}), "100-299/other")
+        self.assertEqual(bands.stratum_id("300-plus", bands.OTHER), "300-plus/other")
+        self.assertEqual(list(bands.STRATA), [bands.stratum_id(band, kind) for band, _, _ in bands.BED_BANDS
+                                              for kind in bands.KINDS])
         self.assertEqual(len(bands.STRATA), 6)
-        self.assertEqual(bands.band_of("300-plus/other"), "300-plus")
 
 
 class Pairs(unittest.TestCase):

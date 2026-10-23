@@ -1,55 +1,93 @@
-"""The pinned IPPS files, read and parsed (pp_engine.ipps does the parsing; this does the file access).
+"""The pinned IPPS files, read and parsed (pp_engine.ipps does the parsing; this does the file access), and the
+hospitals priced on them.
 
 Two final rules are pinned: FY2026's, which the dollar estimates are built on (`FY`), and FY2024's, which the back-test
 re-runs the estimate on (pp_pipeline.backtest_dollars). Each reader takes the rule's year (default `FY`); the year
-picks the pins (`pin_ids`), their members and the readers' column maps.
+picks the pins (`pin_ids`), their members and the readers' column maps. `priced_rows` runs the estimate over a HACRP
+file with those readers, for the emitter and the back-test alike.
 
 CMS writes all four members in Windows-1252. Results are cached and shared: callers must not modify them.
 """
 import functools
+from typing import NamedTuple
 
-from pp_engine import ipps
+from pp_engine import bands, dollars, ipps
 from pp_pipeline.files import read_zip_text_cp1252
 
 FY = 2026  # the final rule's year the estimates are built on: the year the dollar emitter checks
 BACKTEST_FY = 2024  # the final rule the back-test re-runs the estimate on
 
+# Pennsylvania Rural Health Model participants. CMS publishes no participant file with CCNs for FY2026 or FY2024, so no
+# hospital gets the `parhm` status by CCN; a published list would be a pinned input and replace this. (The back-test
+# leaves participants out by the model's own cost-report worksheet instead.)
+PARHM = frozenset()
+
+
+class Pins(NamedTuple):
+    """One final rule's four files."""
+    impact: str  # the impact file
+    rates: str  # Tables 1A-1E
+    hrrp: str  # the HRRP supplemental file
+    vbp: str  # Table 16B
+
 
 def pin_ids(fy):
-    """(impact file, Tables 1A-1E, HRRP supplemental file, Table 16B): the pin ids of one final rule's four files."""
-    return f"ipps-impact-fy{fy}", f"ipps-rates-fy{fy}", f"hrrp-supplemental-fy{fy}", f"hvbp-table16b-fy{fy}"
+    """The pin ids of one final rule's four files."""
+    return Pins(f"ipps-impact-fy{fy}", f"ipps-rates-fy{fy}", f"hrrp-supplemental-fy{fy}", f"hvbp-table16b-fy{fy}")
 
 
 IMPACT, RATES, HRRP, VBP = pin_ids(FY)
-# Each pin's member, as CMS names it inside the zip.
+# Each pin's member, as CMS names it inside the zip, by the rule's year.
 MEMBERS = {
-    **dict(zip(pin_ids(2026), ("FY 2026 IPPS Final Rule Impact File.txt", "CMS-1833-F Tables 1A - 1E.txt",
-                               "FR FY 2026.txt", "FY2026-Table-16B.txt"))),
-    **dict(zip(pin_ids(2024), ("FY 2024 IPPS Final Rule Impact File.txt", "CMS-1785-F Tables 1A - 1E.txt",
-                               "508 version of FY2024_Final_Rule_Supplemental_File Variations FR FY 2024 tab .txt",
-                               "FY2024_Table16B.txt"))),
+    2026: Pins("FY 2026 IPPS Final Rule Impact File.txt", "CMS-1833-F Tables 1A - 1E.txt", "FR FY 2026.txt",
+               "FY2026-Table-16B.txt"),
+    2024: Pins("FY 2024 IPPS Final Rule Impact File.txt", "CMS-1785-F Tables 1A - 1E.txt",
+               "508 version of FY2024_Final_Rule_Supplemental_File Variations FR FY 2024 tab .txt",
+               "FY2024_Table16B.txt"),
 }
 
 
-def pinned_text(pin_id):
-    return read_zip_text_cp1252(pin_id, MEMBERS[pin_id])
+def pinned_text(fy, name):
+    """The text of one of a final rule's files: `name` is a field of `Pins`."""
+    return read_zip_text_cp1252(getattr(pin_ids(fy), name), getattr(MEMBERS[fy], name))
 
 
 @functools.lru_cache(maxsize=None)
 def rates(fy=FY):
-    return ipps.read_rates(pinned_text(pin_ids(fy)[1]))
+    return ipps.read_rates(pinned_text(fy, "rates"), fy)
 
 
 @functools.lru_cache(maxsize=None)
 def payment_inputs(fy=FY):
-    return ipps.read_payment_inputs(pinned_text(pin_ids(fy)[0]), fy)
+    return ipps.read_payment_inputs(pinned_text(fy, "impact"), fy)
 
 
 @functools.lru_cache(maxsize=None)
 def hrrp_factors(fy=FY):
-    return ipps.read_hrrp_factors(pinned_text(pin_ids(fy)[2]))
+    return ipps.read_hrrp_factors(pinned_text(fy, "hrrp"))
 
 
 @functools.lru_cache(maxsize=None)
 def vbp_factors(fy=FY):
-    return ipps.read_vbp_factors(pinned_text(pin_ids(fy)[3]), fy)
+    return ipps.read_vbp_factors(pinned_text(fy, "vbp"), fy)
+
+
+def priced_rows(records, fy=FY):
+    """`dollars.hospital_row` for each of the HACRP file's `records` (`emit_hospital.read_hacrp`'s), in the file's order,
+    priced on the final rule of year `fy`. An estimated row also carries its `stratum` (`bands.stratum_of`: the impact
+    file's bed count, and whether the hospital is a sole community or Medicare-dependent one), the row of `bands` its
+    likely ranges come from; a hospital that would have an estimate but no bed count raises. The emitter and the
+    back-test both price through here, so the back-test prices a hospital as the pages do."""
+    inputs, table, hrrp, vbp = payment_inputs(fy), rates(fy), hrrp_factors(fy), vbp_factors(fy)
+    out = []
+    for r in records:
+        inp = inputs.get(r["ccn"])
+        row = dollars.hospital_row(r["ccn"], r["state"], inp, table, hrrp=hrrp.get(r["ccn"]), vbp=vbp.get(r["ccn"]),
+                                   cut=r["cut"], parhm=PARHM)
+        if row["status"] == "estimated":
+            stratum = bands.stratum_of(inp)
+            if stratum is None:
+                raise ValueError(f"an estimated hospital ({r['ccn'][:2]}xxxx) has no bed count in the impact file")
+            row = {**row, "stratum": stratum}
+        out.append(row)
+    return out

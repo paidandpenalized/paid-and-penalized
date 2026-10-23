@@ -18,9 +18,13 @@ RATES = {
     },
     "capital": 500.0,
     # The FY2026 update (percent) each scenario's heading states in Tables 1A/1B, invented and all different: the
-    # hospital-specific rate of a Medicare-dependent hospital is multiplied by (1 + update / 100).
+    # hospital-specific rate of a Medicare-dependent hospital is multiplied by (1 + mdh_update / 100), where the impact
+    # file's rate is the year before's (`update` is the headings' own; `mdh_update` what the rate takes).
     "update": {"qe": 10.0, "qn": 5.0, "ne": 2.5, "nn": -5.0},
+    "mdh_update": {"qe": 10.0, "qn": 5.0, "ne": 2.5, "nn": -5.0},
 }
+# The rates of a final rule whose impact file already gives the MDH rate updated to the year: no further update.
+RATES_UPDATED = {**RATES, "mdh_update": dict.fromkeys(RATES["mdh_update"], 0.0)}
 
 # The synthetic hospital: 10 cases at a case-mix of 1.5 and a wage index of 1.5 (Table 1A, quality + EHR scenario), so
 # its federal DRG payment is 10 x 1.5 x (4000 x 1.5 + 2000 x 1.0) = 15 x 8000 = 120,000. Everything else is off:
@@ -32,7 +36,7 @@ def hospital(**changes):
     h = {"cases": 10.0, "cmi": 1.5, "bills": 12, "cmi_hsp": 1.6, "wi": 1.5, "cola": 1.0, "quality": 0, "ehr": 0,
          "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None, "ime_op": 0.0, "ime_cap": 0.0,
          "dsh_op": 0.0, "dsh_cap": 0.0, "ucp_per_claim": 0.0, "outlier_op": 0.0, "outlier_cap": 0.0, "gaf": 0.0,
-         "low_volume": 1.0, "pr": False, "hsp_mdh_prior_year": True, "ime_cases": None, "ime_cmi": None}
+         "low_volume": 1.0, "pr": False, "ime_cases": None, "ime_cmi": None}
     h.update(changes)
     return h
 
@@ -129,19 +133,10 @@ class Base(Close):
         self.assertDollars(est(mdh=True, hsp_mdh=8000.0, quality=1, ehr=1)["mdh_addon"], 9637.5)
 
     def test_an_mdh_rate_the_file_already_updated_is_not_updated_again(self):
-        # FY2024's impact file states its MDH rates "updated to FY 2024": hsp_mdh_prior_year is False and the rate is
+        # FY2024's impact file states its MDH rates "updated to FY 2024": its rates' mdh_update is 0 and the rate is
         # used as it is. 8000 x 1.6 x 10 = 128,000 vs fed 120,000: shortfall 8,000; 75% = 6,000 (not 15,600)
-        self.assertDollars(est(mdh=True, hsp_mdh=8000.0, hsp_mdh_prior_year=False)["mdh_addon"], 6000.0)
-        # and a rates table with no updates is then not needed
-        no_update = {k: v for k, v in RATES.items() if k != "update"}
-        e = estimate(hospital(mdh=True, hsp_mdh=8000.0, hsp_mdh_prior_year=False), no_update, hrrp=1.0, vbp=1.0, cut=False)
+        e = estimate(hospital(mdh=True, hsp_mdh=8000.0), RATES_UPDATED, hrrp=1.0, vbp=1.0, cut=False)
         self.assertDollars(e["mdh_addon"], 6000.0)
-
-    def test_the_rate_year_flag_is_required(self):
-        h = hospital()
-        del h["hsp_mdh_prior_year"]
-        with self.assertRaisesRegex(ValueError, "hsp_mdh_prior_year"):
-            estimate(h, RATES, hrrp=1.0, vbp=1.0, cut=False)
 
     def test_a_puerto_rico_mdh_takes_the_update_of_its_ehr_scenario(self):
         # Table 1C qn (EHR reduced: +5%), wage index 0.8: fed 15 x (3000 x 0.8 + 2500) = 73,500; 8000 x 1.05 x 16 =
@@ -151,7 +146,7 @@ class Base(Close):
         self.assertDollars(e["mdh_addon"], 45675.0)
 
     def test_a_rates_table_without_the_update_raises_for_an_mdh_that_needs_it(self):
-        no_update = {k: v for k, v in RATES.items() if k != "update"}
+        no_update = {k: v for k, v in RATES.items() if k != "mdh_update"}
         with self.assertRaises(ValueError):
             estimate(hospital(mdh=True, hsp_mdh=8000.0), no_update, hrrp=1.0, vbp=1.0, cut=False)
         # a hospital that has no MDH rate to update does not need it

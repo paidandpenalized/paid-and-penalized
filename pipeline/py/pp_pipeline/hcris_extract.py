@@ -29,7 +29,6 @@ from pathlib import Path
 from pp_pipeline.files import PINNED_DIR, manifest_entry
 
 PIN_ID = "hcris-fy2024-wse"
-REPORTS, NUMBERS = "HOSP10_2024_rpt.csv", "HOSP10_2024_nmrc.csv"
 RPT_FIELDS = 18
 RPT = {"rpt": 0, "ccn": 2, "status": 4, "begin": 5, "end": 6}  # positions in a report row
 NMRC_FIELDS = 5
@@ -94,9 +93,9 @@ def extract(report_rows, number_rows):
     for r in number_rows:
         if len(r) != NMRC_FIELDS:
             raise ValueError(f"HCRIS numeric file: a row of {len(r)} fields, not {NMRC_FIELDS}")
-        rpt, sheet, line, col, value = (c.strip() for c in r)
-        if sheet not in (PART_A, PARHM):
+        if r[1].strip() not in (PART_A, PARHM):  # most of the file's rows: skipped before the rest are stripped
             continue
+        rpt, sheet, line, col, value = (c.strip() for c in r)
         if rpt not in reports:
             raise ValueError(f"HCRIS numeric file: report {rpt!r} is not in the report file")
         row = reports[rpt]

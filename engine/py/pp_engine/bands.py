@@ -25,7 +25,15 @@ import random
 BED_BANDS = (("under-100", 0, 99), ("100-299", 100, 299), ("300-plus", 300, None))
 # Whether the hospital is paid, in part, on a hospital-specific rate: a sole community or Medicare-dependent hospital.
 KINDS = ("sch-mdh", "other")
-STRATA = tuple(f"{band}/{kind}" for band, _, _ in BED_BANDS for kind in KINDS)
+SCH_MDH, OTHER = KINDS
+
+
+def stratum_id(band, kind):
+    """'<bed band>/<kind>': the id of one stratum."""
+    return f"{band}/{kind}"
+
+
+STRATA = tuple(stratum_id(band, kind) for band, _, _ in BED_BANDS for kind in KINDS)
 MIN_STRATUM = 30  # the fewest hospitals a stratum's own percentiles rest on; fewer borrow the bed band's
 LOW_PCT, HIGH_PCT = 0.10, 0.90  # the range brackets the middle 80% of the back-test's errors
 DECIMALS = 4  # log ratios and multipliers are written to 4 places
@@ -46,16 +54,13 @@ def bed_band(beds):
     raise ValueError(f"no bed band holds {beds!r}")
 
 
-def stratum(beds, sch, mdh):
-    """'<bed band>/<kind>' (one of STRATA), or None when the bed count is missing."""
-    band = bed_band(beds)
+def stratum_of(inp):
+    """A hospital's stratum (one of STRATA) from its impact-file inputs (`beds`, `sch`, `mdh`), or None when the bed
+    count is missing."""
+    band = bed_band(inp["beds"])
     if band is None:
         return None
-    return f"{band}/{'sch-mdh' if sch or mdh else 'other'}"
-
-
-def band_of(stratum_id):
-    return stratum_id.split("/")[0]
+    return stratum_id(band, SCH_MDH if inp["sch"] or inp["mdh"] else OTHER)
 
 
 def pair_kind(model, actual):
@@ -112,17 +117,19 @@ def stratum_bands(errors_by_stratum):
     everyone = [e for s in STRATA for e in errors_by_stratum.get(s, [])]
     if len(everyone) < MIN_STRATUM:
         raise ValueError(f"{len(everyone)} hospitals: too few for any band (at least {MIN_STRATUM})")
-    by_band = {band: [e for k in KINDS for e in errors_by_stratum.get(f"{band}/{k}", [])] for band, _, _ in BED_BANDS}
+    by_band = {band: [e for kind in KINDS for e in errors_by_stratum.get(stratum_id(band, kind), [])]
+               for band, _, _ in BED_BANDS}
     out = []
-    for s in STRATA:
-        own = errors_by_stratum.get(s, [])
-        band = by_band[band_of(s)]
-        pool, pooled = (("stratum", own) if len(own) >= MIN_STRATUM else
-                        ("beds", band) if len(band) >= MIN_STRATUM else ("all", everyone))
-        stats = summary(pooled)
-        low, high = multipliers(stats["p10"], stats["p90"])
-        out.append({"stratum": s, "n": len(own), "median": summary(own)["median"], "pool": pool, "poolN": len(pooled),
-                    "p10": stats["p10"], "p90": stats["p90"], "low": low, "high": high})
+    for band, _, _ in BED_BANDS:
+        for kind in KINDS:
+            s = stratum_id(band, kind)
+            own = errors_by_stratum.get(s, [])
+            pool, pooled = (("stratum", own) if len(own) >= MIN_STRATUM else
+                            ("beds", by_band[band]) if len(by_band[band]) >= MIN_STRATUM else ("all", everyone))
+            stats = summary(pooled)
+            low, high = multipliers(stats["p10"], stats["p90"])
+            out.append({"stratum": s, "n": len(own), "median": summary(own)["median"], "pool": pool,
+                        "poolN": len(pooled), "p10": stats["p10"], "p90": stats["p90"], "low": low, "high": high})
     return out, summary(everyone)
 
 

@@ -5,9 +5,11 @@ import io
 import re
 import unittest
 
-from pp_engine.ipps import (IMPACT_COLUMNS, MDH_TYPES, PAYMENT_COLUMNS, SCH_TYPES, rate_key, read_hrrp_factors,
-                            read_payment_inputs, read_rates, read_vbp_factors)
+from pp_engine.ipps import (IMPACT_YEARS, MDH_TYPES, SCH_TYPES, rate_key, read_hrrp_factors, read_payment_inputs,
+                            read_rates, read_vbp_factors)
 from pp_engine.parse import SchemaError
+
+PAYMENT_COLUMNS = IMPACT_YEARS[2026].columns
 
 # --- Tables 1A-1E ----------------------------------------------------------------------------------------------------
 
@@ -91,11 +93,20 @@ class Rates(unittest.TestCase):
         self.assertEqual(got["operating"]["1A"]["qe"], (660.00, 340.00))
         self.assertEqual(got["operating"]["1B"]["nn"], (589.00, 361.00))
         self.assertEqual(got["capital"], CAPITAL)
-        self.assertEqual(set(got), {"operating", "capital", "update"})
+        self.assertEqual(set(got), {"operating", "capital", "update", "mdh_update"})
 
     def test_the_update_of_each_scenario_is_read_from_its_heading_as_a_percent(self):
         # "(Update = 2.6 Percent)" -> 2.6; the fourth heading wraps a line and the update is negative
         self.assertEqual(read_rates(rates_text())["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
+
+    def test_the_mdh_update_is_the_scenarios_update_when_the_files_rate_is_the_year_before_s_else_zero(self):
+        updates = {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7}
+        self.assertTrue(IMPACT_YEARS[2026].mdh_rate_prior_year)
+        self.assertEqual(read_rates(rates_text())["mdh_update"], updates)  # FY2026's MDH column is the FY2025 rate
+        self.assertEqual(read_rates(rates_text(), fy=2024)["mdh_update"], dict.fromkeys(updates, 0.0))
+        self.assertEqual(read_rates(rates_text(), fy=2024)["update"], updates)  # the headings' own updates are read alike
+        with self.assertRaisesRegex(SchemaError, "FY2025"):
+            read_rates(rates_text(), fy=2025)
 
     def test_the_updates_follow_the_scenario_labels_not_their_position(self):
         shuffled = read_rates(rates_text(order_a=("nn", "ne", "qn", "qe"), order_b=("ne", "qe", "nn", "qn")))
@@ -198,8 +209,8 @@ class PaymentInputs(unittest.TestCase):
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
             "ime_op": 0.0655, "ime_cap": 0.05496, "dsh_op": 0.0298, "dsh_cap": 0.05731, "ucp_per_claim": 1400.27,
             "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0, "pr": False,
-            "beds": 212, "hsp_mdh_prior_year": True, "ime_cases": 1210.5, "ime_cmi": 1.8812})
-        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
+            "beds": 212, "ime_cases": 1210.5, "ime_cmi": 1.8812})
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr"}))
 
     def test_payment_inputs_blank_is_none(self):
         blanks = {k: "" for k in ("CASETA43", "TACMIV43", "OUTFACT_F", "COUTFACT_F", "HSP Rate", "UCP Per Claim Amount",
@@ -309,9 +320,9 @@ class PaymentInputs2024(unittest.TestCase):
         got = read_payment_inputs(impact_2024(GOOD_2024), fy=2024)["990001"]
         self.assertEqual((got["cases"], got["cmi"], got["cmi_hsp"], got["wi"], got["low_volume"], got["beds"]),
                          (2100.5, 1.5401, 1.5512, 0.9512, 1.1, 0))  # V41, not V40; a zero bed count stays 0
-        self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"], got["hsp_mdh_prior_year"]), (False, None, False, False))
+        self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"]), (False, None, False))
         self.assertEqual((got["ime_cases"], got["ime_cmi"]), (None, None))  # V41's blank, not V40's 1.0
-        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr"}))
 
     def test_mdh_is_the_provider_type_and_its_rate_is_the_hsp_rate(self):
         recs = [dict(GOOD_2024, **{"Provider Number": f"99{i:04d}", "Provider Type": t, "HSP Rate": "7100.25"})
@@ -330,7 +341,7 @@ class PaymentInputs2024(unittest.TestCase):
             read_payment_inputs(impact_text(hospital()), fy=2024)
         with self.assertRaisesRegex(SchemaError, "FY2025"):
             read_payment_inputs(impact_text(hospital()), fy=2025)
-        self.assertEqual(sorted(IMPACT_COLUMNS), [2024, 2026])
+        self.assertEqual(sorted(IMPACT_YEARS), [2024, 2026])
 
 
 # --- the HRRP and VBP factor files -----------------------------------------------------------------------------------

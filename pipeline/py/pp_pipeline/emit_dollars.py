@@ -16,12 +16,12 @@ lives at the family level because more than one site reads it.
 import sys
 from datetime import datetime, timezone
 
-from pp_engine import bands, dollars
-from pp_engine.contract import envelope, source_manifest_hash
+from pp_engine import dollars
+from pp_engine.contract import camel, envelope, source_manifest_hash
 from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
-from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
+from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 3
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
@@ -38,22 +38,12 @@ MDH_END = "2026-12-31"
 LOW_VOLUME_END = "2026-12-31"
 NTAP = "excluded"  # new-technology add-on payments are in no figure (dollars.py, the ASSUMPTION at the federal payment)
 
-# Pennsylvania Rural Health Model participants. CMS publishes no FY2026 participant file with CCNs, so no hospital gets
-# the `parhm` status yet; a published list would be a pinned input and replace this.
-PARHM = frozenset()
-
 # Hospitals that take adjustment factor 1 because a program file does not list them. Hospitals outside HVBP are common
 # and legitimate (too few measures to score, new hospitals), so neither count is an error by itself; each is capped so a
 # later file with more is looked at before it ships. Both counts are over estimated hospitals, on the pinned FY2026 files
 # (2026-10-22): 43 with no row in the HRRP supplemental file (38 of them not cut, 5 cut) and 524 with no row in Table 16B.
 HRRP_UNLISTED_MAX = 43
 VBP_UNLISTED_MAX = 524
-
-
-def camel(key):
-    """`at_stake` -> `atStake`: the repo's JSON keys are camelCase."""
-    head, *tail = key.split("_")
-    return head + "".join(word.capitalize() for word in tail)
 
 
 def _names(keys):
@@ -66,18 +56,6 @@ BARE_FIELDS = _names(("ccn", "status", "cut", "hrrp_listed", "vbp_listed"))
 ESTIMATED_FIELDS = _names(("ccn", "status", "cut", "cases", "bills", "base", "total", "hrrp_factor", "vbp_factor",
                            "hrrp_listed", "vbp_listed", "hrrp", "hvbp", "after", "at_stake", "hac", "net", "stratum"))
 PART_FIELDS = _names(dollars.PARTS)
-
-
-def with_stratum(row, inp):
-    """An estimated `hospital_row` with its `stratum` (pp_engine.bands: the impact file's bed count, and whether it is a
-    sole community or Medicare-dependent hospital), the row of `bands` its likely ranges come from; other rows as
-    they are."""
-    if row["status"] != "estimated":
-        return row
-    found = bands.stratum(inp["beds"], inp["sch"], inp["mdh"])
-    if found is None:
-        raise ValueError(f"an estimated hospital ({row['ccn'][:2]}xxxx) has no bed count in the impact file")
-    return {**row, "stratum": found}
 
 
 def unlisted_counts(hospital_rows):
@@ -138,12 +116,7 @@ def build_from_pins(built_at):
     fy, records = hacrp["fy"], hacrp["records"]
     if fy != FY:
         raise ValueError(f"the HACRP file is for FY{fy}, the rates and impact file for FY{FY}")
-    inputs, table_, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
-    def built_row(r):
-        inp = inputs.get(r["ccn"])
-        return with_stratum(dollars.hospital_row(r["ccn"], r["state"], inp, table_, hrrp=hrrp.get(r["ccn"]),
-                                                 vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM), inp)
-    built = [built_row(r) for r in records]
+    built = priced_rows(records)
     enforce_caps(built)
     ranges = backtest_dollars.bands_json()
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]

@@ -86,7 +86,7 @@ STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 # `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`) are handled where they are used and are not listed.
 _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
             "ucp_per_claim", "gaf", "low_volume")
-_FLAGS = ("sch", "mdh", "pr", "hsp_mdh_prior_year")
+_FLAGS = ("sch", "mdh", "pr")
 _ADD_ONS = ("ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
 SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # a row's dollar sums, which `national` adds up
@@ -132,17 +132,15 @@ def _hsp_payment(rate, inp):
 
 
 def _mdh_update(inp, rates):
-    """The multiplier that brings an MDH's hospital-specific rate to the rates' year: 1 + the update (percent) the Table
-    1A/1B heading states for the hospital's quality/EHR scenario when the file's rate is the year before's
-    (`hsp_mdh_prior_year`), else 1. ASSUMPTION (verify in the accuracy pass): hospital-specific rates are updated by the
+    """The multiplier that brings an MDH's hospital-specific rate to the rates' year: 1 + the hospital's quality/EHR
+    scenario's `mdh_update` (percent; `ipps.read_rates`: the update the Table 1A/1B heading states where the file's rate
+    is the year before's, else 0). ASSUMPTION (verify in the accuracy pass): hospital-specific rates are updated by the
     applicable percentage increase, the update those headings state. The FY2026 impact file's MDH column is the FY2025
     rate ("HSP Rate updated to FY 2025 for MDH providers"; the FY2026 rule modeled the MDH status expiring), while its
     SCH column is already "updated to FY 2026", so only the MDH rate takes this; FY2024's file has both updated."""
-    if not inp["hsp_mdh_prior_year"]:
-        return 1.0
     key = rate_key(inp["quality"], inp["ehr"])
     try:
-        return 1.0 + rates["update"][key] / 100.0
+        return 1.0 + rates["mdh_update"][key] / 100.0
     except KeyError:
         raise ValueError(f"the rates have no update for scenario {key!r}") from None
 
@@ -368,7 +366,8 @@ def _ratio(num, den):
     return num / den if den else None
 
 
-def _result(id_, value, low, high):
+def result(id_, value, low, high):
+    """One check's result: `{id, value, low, high, pass}`; a value of None fails."""
     return {"id": id_, "value": value, "low": low, "high": high,
             "pass": value is not None and low <= value <= high}
 
@@ -383,9 +382,9 @@ def checks(nat, *, hacrp_yes):
       yes_unestimated  cut hospitals with no estimate, at most YES_UNESTIMATED_MAX
     A share with nothing to divide by has value None and fails."""
     return [
-        _result("hrrp_share", _ratio(-nat["hrrp"], nat["hrrp_base"]), *HRRP_SHARE),
-        _result("vbp_net", abs(nat["hvbp"]), 0, VBP_NET_OF_POOL * VBP_WITHHOLD * nat["vbp_base"]),
-        _result("hac_share", _ratio(-nat["hac"], nat["total"]), *HAC_SHARE),
-        _result("hac_count", nat["yes"], hacrp_yes, hacrp_yes),
-        _result("yes_unestimated", nat["yes_unestimated"], 0, YES_UNESTIMATED_MAX),
+        result("hrrp_share", _ratio(-nat["hrrp"], nat["hrrp_base"]), *HRRP_SHARE),
+        result("vbp_net", abs(nat["hvbp"]), 0, VBP_NET_OF_POOL * VBP_WITHHOLD * nat["vbp_base"]),
+        result("hac_share", _ratio(-nat["hac"], nat["total"]), *HAC_SHARE),
+        result("hac_count", nat["yes"], hacrp_yes, hacrp_yes),
+        result("yes_unestimated", nat["yes_unestimated"], 0, YES_UNESTIMATED_MAX),
     ]
