@@ -78,12 +78,14 @@ export function hospitalsCsv(hospitals, master, dollars = new Map()) {
   return toCsv(COLUMNS, rows);
 }
 
-// The dictionary file with its fiscal year, CMS's dataset id and title (from the pinned manifest) and the release
+// The dictionary file with its fiscal year, the fiscal year of the cost reports the likely ranges were checked against
+// (backtestFy: the dollars file's `bands.fy`), CMS's dataset id and title (from the pinned manifest) and the release
 // date (worded as the pages' source line words it) filled in, so none of them is typed twice. fillCopy's rules hold:
 // an unknown placeholder, a missing value, or a value the file doesn't use throws.
-export function dictionaryText(raw, { fy, source }) {
+export function dictionaryText(raw, { fy, backtestFy, source }) {
   const { id, title, pdcReleased } = source;
   return fillCopy({ dictionary: raw }, 'dictionary', {
-    fy: String(fy), source_id: id, source_title: title, pdc_released: pdcReleased && isoDate(pdcReleased),
+    fy: String(fy), backtest_fy: String(backtestFy), source_id: id, source_title: title,
+    pdc_released: pdcReleased && isoDate(pdcReleased),
   }, { plain: true });
 }

@@ -215,7 +215,9 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   cut hospitals that are neither sole community nor Medicare-dependent, the HAC cut's error less the error of the
   model's total payment against lines 47 + 50 (operating without line 29.01, and capital) was -0.069 at the median
   for the 42 whose cost report has line 29.01 and -0.0002 for the 56 without: line 70.99's base holds something line
-  47 does not. And the national range sat entirely above the national estimate.
+  47 does not. (These two figures come from a one-off run of methods_version 2's model, made before the pinned extract
+  held line 29.01; `run.py backtest` prints only the current model's figures, so it does not reproduce them.) And the
+  national range sat entirely above the national estimate.
 - Why it is in the base: the cost report's HAC worksheet (Provider Reimbursement Manual, Part 2, chapter 40, Exhibit 5)
   lists "Operating IME payments for Medicare Advantage patients" among the payments "required to calculate the HAC
   reduction adjustment"; its line 15 is Worksheet E, Part A, line 49, which adds line 29.01 ("Total IME Payment -

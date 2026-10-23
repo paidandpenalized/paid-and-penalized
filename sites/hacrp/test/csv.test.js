@@ -153,16 +153,19 @@ test('the dictionary states the schema version, the licence, the footnote crossw
   assert.match(DICTIONARY, /\{source_id\}/);
 });
 
-test('dictionaryText fills the fiscal year, dataset id and release date, and refuses an unknown placeholder or an unused value', () => {
-  const text = dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source });
+test('dictionaryText fills the fiscal year, the back-test\'s year, dataset id and release date, and refuses an unknown placeholder or an unused value', () => {
+  const backtestFy = DATA.dollars.backtest.fy;
+  const text = dictionaryText(DICTIONARY, { fy: DATA.fy, backtestFy, source: DATA.source });
   assert.ok(text.includes(String(DATA.fy)));
+  assert.ok(text.includes(`against their FY${backtestFy} cost reports`), 'the back-test\'s year, from the dollars file');
+  assert.doesNotMatch(text, /undefined/);
   assert.ok(text.includes(DATA.source.id));
   assert.ok(text.includes(isoDate(DATA.source.pdcReleased)), 'the date as the pages word it');
   assert.ok(text.includes(`"${DATA.source.title}"`), "CMS's dataset title, from the manifest (the Markdown file is not typeset)");
   assert.doesNotMatch(text, /\{\w+\}/);
-  assert.throws(() => dictionaryText('a {nope} b', { fy: 1, source: DATA.source }), /nope/);
-  assert.throws(() => dictionaryText('a {source_title} b', { fy: 1, source: { ...DATA.source, title: undefined } }), /source_title/);
-  assert.throws(() => dictionaryText('{fy} {source_id} {source_title}', { fy: 1, source: DATA.source }), /unused value\(s\) pdc_released/);
+  assert.throws(() => dictionaryText('a {nope} b', { fy: 1, backtestFy: 2, source: DATA.source }), /nope/);
+  assert.throws(() => dictionaryText('a {source_title} b', { fy: 1, backtestFy: 2, source: { ...DATA.source, title: undefined } }), /source_title/);
+  assert.throws(() => dictionaryText('{fy} {source_id} {source_title}', { fy: 1, backtestFy: 2, source: DATA.source }), /unused value\(s\) backtest_fy, pdc_released/);
 });
 
 test('the build writes the CSV and the dictionary beside it (neither a page nor in the sitemap), and the dictionary as a page', () =>
@@ -174,7 +177,7 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     assert.equal(dictionaryPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/DATA-DICTIONARY.md`);
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
     assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn));
-    assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
+    assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, backtestFy: DATA.dollars.backtest.fy, source: DATA.source }));
     // The program page, the dictionary page, the Methods page, the four hospitals and a page for each place they are in.
     const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
     assert.ok(places.list.length > 0);
