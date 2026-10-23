@@ -132,8 +132,8 @@
     "id": "hcris-fy2024-wse",
     "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2024 file: every report, with the Worksheet E Part A lines the dollar estimates' back-test reads",
     "path": "hcris-fy2024/hcris_fy2024_wse.csv",
-    "bytes": 541830,
-    "sha256": "ec99834fd210f60f2d6488caef3d63e5df6b94a926cbba8ab9c4ed398145f5ca",
+    "bytes": 576678,
+    "sha256": "5b93e524c10907d341a88d1ba655b0aff45457d9d3468a57db9b08753baacd1e",
     "derivedFrom": {
       "file": "HOSP10FY2024.ZIP",
       "bytes": 135705434,

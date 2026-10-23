@@ -3,6 +3,7 @@ arithmetic, the checks, and on the pins: the counts, the signs of the program li
 committed `bands` being a fresh run's. Counts on the pins are facts of the pinned bytes; no hospital is named."""
 import csv
 import io
+import math
 import statistics
 import unittest
 
@@ -96,6 +97,37 @@ class ComparisonSet(unittest.TestCase):
             bt.measure_stats(bt.classify(members, "hrrp"))
 
 
+class Diagnostics(unittest.TestCase):
+    def member(self, ccn, cut, stratum, ime_ma, total, at_stake, **cells):
+        """A comparison-set member as `comparison_set` makes one; the model's DRG payments equal the report's."""
+        rep = report(ccn, **cells)
+        return {"ccn": ccn, "cut": cut, "stratum": stratum,
+                "model": {"hac": at_stake, "fed": bt.line(rep, "00101") + bt.line(rep, "00102")},
+                "actual": {"hac": bt.line(rep, "07099"), "fed": bt.line(rep, "00101") + bt.line(rep, "00102")},
+                "row": {"ime_ma": ime_ma, "total": total}, "report": rep}
+
+    def test_the_arithmetic(self):
+        members = [
+            # cut, other, with line 29.01: HAC error log(110/100), total error log(11000/10000): 0 beyond volume
+            self.member("990001", True, "100-299/other", 80, 11000, 110, l02901=100, l04900=9000, l05000=1000,
+                        l07099=100, l00102=8000, l05400=8),
+            # cut, other, no line 29.01: HAC error log(90/100), total error 0
+            self.member("990002", True, "300-plus/other", 0, 10000, 90, l04900=9500, l05000=500, l07099=100,
+                        l00102=2000),
+            # cut but SCH/MDH: left out of the base checks; the model's MA IME with no line
+            self.member("990003", True, "under-100/sch-mdh", 5, 100, 1, l04900=100, l07099=1, l00102=1000),
+        ]
+        d = bt.diagnostics(members)
+        self.assertEqual(d["ma_ime"], {"n": 1, "weighted": 0.8, "median": 0.8, "line_only": 0, "model_only": 1,
+                                       "add_on": {"n": 0, "median": None}, "no_add_on": {"n": 1, "median": 0.8}})
+        self.assertAlmostEqual(d["ntap"], 8 / 11000)
+        self.assertEqual(d["hac_base"], {"n": 2, "median": 0.01})
+        # The model's DRG payments are the cost report's in both (`member`), so less their error is the HAC error itself
+        self.assertEqual(d["after_volume"], {
+            "with_ma_ime": {"n": 1, "vs_total": 0.0, "vs_drg": round(math.log(1.1), 4)},
+            "without": {"n": 1, "vs_total": round(math.log(0.9), 4), "vs_drg": round(math.log(0.9), 4)}})
+
+
 class Checks(unittest.TestCase):
     def bands_with(self, median, hospitals, cut_n):
         return {"measures": {"hac": {"overall": {"median": median, "n": cut_n}}},
@@ -119,6 +151,7 @@ class OnThePins(unittest.TestCase):
         cls.result = bt.run()
         cls.bands = bt.bands_json()
         cls.reports = cls.result["reports"]
+        cls.diagnostics = bt.diagnostics(cls.result["members"])
 
     def test_the_reports_are_the_extracts_rows_as_written(self):
         text = read_pinned_bytes(bt.HCRIS).decode("ascii")  # read here with the csv module, apart from the back-test's
@@ -153,10 +186,33 @@ class OnThePins(unittest.TestCase):
     def test_the_hac_line_is_one_percent_of_the_operating_and_capital_payment(self):
         # Line 70.99 over line 49 (operating) + line 50 (capital), for the compared cut hospitals: 1% at the median,
         # which is what the program takes (Exhibit 5's base adds a few smaller items)
-        window = {r["ccn"]: r for r in self.reports if (r["fy_begin"], r["fy_end"]) == bt.WINDOW}
-        shares = [m["actual"]["hac"] / (bt.line(window[m["ccn"]], "04900") + bt.line(window[m["ccn"]], "05000"))
+        shares = [m["actual"]["hac"] / (bt.line(m["report"], "04900") + bt.line(m["report"], "05000"))
                   for m in self.result["members"] if m["cut"] and m["actual"]["hac"] > 0]
         self.assertAlmostEqual(statistics.median(shares), 0.01, delta=0.0005)
+        self.assertEqual(self.diagnostics["hac_base"], {"n": 98, "median": 0.0099})
+
+    def test_the_model_runs_below_the_cost_reports_on_medicare_advantage_teaching_payments(self):
+        # The model's IME on Medicare Advantage stays, from the impact file's FY2022 claims, against line 29.01: below
+        # it, dollar-weighted and at the median. The HAC cut's errors carry the gap.
+        ma = self.diagnostics["ma_ime"]
+        self.assertEqual((ma["n"], ma["line_only"], ma["model_only"]), (179, 22, 5))
+        self.assertLess(ma["weighted"], 1)
+        self.assertLess(ma["median"], 1)
+        # Those whose line 29.01 includes a section 422 add-on (line 28.01) run no lower than the rest: no sign the
+        # add-on is missing from the model's IME factor
+        self.assertEqual(ma["add_on"]["n"] + ma["no_add_on"]["n"], ma["n"])
+        self.assertGreaterEqual(ma["add_on"]["median"], ma["no_add_on"]["median"])
+
+    def test_after_volume_the_hac_cut_matches_its_base(self):
+        # For the compared cut hospitals neither SCH nor MDH (METHODS-LOG, dollars methods_version 3): the HAC error
+        # less the total payment's error is about zero with and without line 29.01, so the cut is figured on the cost
+        # report's base; less the DRG payments' error, those with line 29.01 still run low, the model's Medicare
+        # Advantage teaching payments being short
+        av = self.diagnostics["after_volume"]
+        self.assertEqual(av, {"with_ma_ime": {"n": 42, "vs_total": -0.0006, "vs_drg": -0.0389},
+                              "without": {"n": 56, "vs_total": -0.0002, "vs_drg": -0.0091}})
+        self.assertLess(av["with_ma_ime"]["vs_drg"], av["without"]["vs_drg"])
+        self.assertLess(self.diagnostics["ntap"], 0.001)  # new-technology payments: under 0.1% of DRG payments
 
     def test_each_measure_counts_every_pair_and_the_points_are_the_hac_comparisons(self):
         members = self.result["members"]

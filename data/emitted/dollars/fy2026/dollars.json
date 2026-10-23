@@ -1,7 +1,7 @@
 {
 "schema_version": 3,
 "methods_version": 3,
-"source_manifest": "4ba53c7852b8371d82e6171a48ff79075aef9200b2e93957048bc909088c4ba1",
+"source_manifest": "e98dedf2279f0845d63717b3ab02e7de5a4d50419343797b6980076a29965108",
 "sources": [
 "yq43-i98g",
 "ipps-impact-fy2026",
@@ -15,7 +15,7 @@
 "hvbp-table16b-fy2024",
 "hcris-fy2024-wse"
 ],
-"built_at": "2026-10-23T07:50:18Z",
+"built_at": "2026-10-23T12:54:16Z",
 "fy": 2026,
 "assumptions": {"ratesFy":2026,"volumeFy":2024,"mdhEnd":"2026-12-31","lowVolumeEnd":"2026-12-31","ntap":"excluded"},
 "national": {"hospitals":2971,"base":87153482013,"total":129772818726,"hrrp":-336618373,"hvbp":-3141656,"after":129433058697,"hac":-308317722,"net":-648077751,"cut":710,"hrrpBase":76067997858,"vbpBase":82025526038,"yes":719,"yesUnestimated":9,"byStatus":{"estimated":2971,"maryland":43,"parhm":0,"no-inputs":41},"parts":{"fed":87022842656,"mdhAddon":130639357,"ime":8173130247,"imeMa":8779578535,"dsh":3229031320,"outlierOp":5608377982,"schDiff":1110217835,"lowVolume":344682884,"capital":7980171761,"uc":7394146149}},

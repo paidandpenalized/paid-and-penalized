@@ -39,7 +39,8 @@ PART_A = "E00A18A"  # Worksheet E, Part A: inpatient hospital services under IPP
 # in the demonstration"). The back-test leaves those reports out; the extract only says whether one is there.
 PARHM = "E00S18A"
 # The Worksheet E, Part A lines read, each with the chapter's words for it (PRM-II ch. 40, Transmittal 25, 2026-02-27,
-# 4030.1). The first group is the back-test's ground truth; the second explains its misses (in the report it prints).
+# 4030.1). The first group is the back-test's ground truth (pp_pipeline.backtest_dollars.actuals); the second feeds
+# only the diagnostics `run.py backtest` prints (backtest_dollars.diagnostics), which explain its misses.
 LINES = (
     ("00101", "1.01: DRG payments \"paid for PPS discharges and transfers occurring prior to October 1\""),
     ("00102", "1.02: DRG payments \"paid for PPS discharges and transfers occurring on or after October 1\""),
@@ -50,8 +51,12 @@ LINES = (
     ("07093", "70.93: \"the payment adjustment amount for the HVBP program\""),
     ("07094", "70.94: \"the adjustment amount resulting from the HRR program\""),
     ("07099", "70.99: \"the HAC program payment reduction adjustment amount\" (line 71 subtracts it)"),
+    ("02801", "28.01: \"IME Add-On Adjustment - Managed Care\", for section 422 resident cap slots: \"the result of "
+              "line 3, multiplied by the factor on line 27\""),
+    ("02901", "29.01: \"Total IME Payment - Managed Care\": \"the sum of lines 22.01 and 28.01\""),
     ("04700", "47: \"the sum of lines 1, 1.01, 1.02, 2, 2.01, 2.02, 2.03, 2.04, 29, 34, 36, and 46\""),
-    ("04900", "49: the operating payment, \"the greater of line 47 or 48\" for an SCH"),
+    ("04900", "49: the operating payment; for a hospital neither SCH nor MDH, \"the amount from line 47, plus the "
+              "amount from line 29.01\""),
     ("05000", "50: \"the payment for inpatient program capital costs\""),
     ("05400", "54: \"the special add-on payment for new technologies\""),
 )
@@ -62,7 +67,8 @@ CELLS = tuple(f"l{line}_c{col}" for line, _ in LINES for col in COLUMNS_READ)
 COLUMNS = ("rpt_rec_num", "ccn", "status", "fy_begin", "fy_end", "part_a", "parhm", *CELLS)
 _LINES = {line for line, _ in LINES}
 DATE = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
-NUMBER = re.compile(r"-?\d+(\.\d+)?")
+# The lines read hold whole dollars; a decimal cell stops the extract (the back-test reads each cell as an integer).
+NUMBER = re.compile(r"-?\d+")
 
 
 def _iso(text, what):
@@ -109,7 +115,8 @@ def extract(report_rows, number_rows):
             raise ValueError(f"HCRIS numeric file: report {rpt}, Worksheet E Part A line {line} has column {col}, "
                              f"not one of {COLUMNS_READ}")
         if not NUMBER.fullmatch(value):
-            raise ValueError(f"HCRIS numeric file: report {rpt}, line {line} column {col}: {value!r} is not a number")
+            raise ValueError(f"HCRIS numeric file: report {rpt}, Worksheet E Part A line {line} column {col}: "
+                             f"{value!r} is not a whole number")
         cell = f"l{line}_c{col}"
         if cell in row:
             raise ValueError(f"HCRIS numeric file: report {rpt}, line {line} column {col} appears twice")

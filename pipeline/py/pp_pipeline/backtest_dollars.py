@@ -94,7 +94,8 @@ def read_reports(text):
 def comparison_set(reports, priced):
     """(members, excluded). `reports`: the HCRIS extract's rows; `priced`: the model's priced row (ipps_pins.priced_rows)
     for each hospital in the FY2024 HACRP file, by CCN. `excluded` counts each report left out by the first of
-    EXCLUSIONS it meets; each member is {ccn, status, stratum, cut, model, actual}."""
+    EXCLUSIONS it meets; each member is {ccn, status, stratum, cut, model, actual, row, report}: `model` and `actual`
+    the measures' figures (`modeled`, `actuals`); `row` and `report` the priced row and the cost report behind them."""
     excluded = dict.fromkeys(EXCLUSIONS, 0)
     members, seen = [], set()
     for rep in reports:
@@ -116,7 +117,7 @@ def comparison_set(reports, priced):
         seen.add(ccn)
         row = priced[ccn]
         members.append({"ccn": ccn, "status": rep["status"], "stratum": row["stratum"], "cut": row["cut"],
-                        "model": modeled(row), "actual": actuals(rep)})
+                        "model": modeled(row), "actual": actuals(rep), "row": row, "report": rep})
     return members, excluded
 
 
@@ -200,6 +201,66 @@ def checks(b):
     ]
 
 
+# The comparison set's strata of hospitals that are neither sole community nor Medicare-dependent: line 49 is their
+# line 47 plus line 29.01, with no hospital-specific comparison in it.
+OTHER_STRATA = frozenset(bands.stratum_id(band, bands.OTHER) for band, _, _ in bands.BED_BANDS)
+
+
+def _rounded(x):
+    return None if x is None else round(x, bands.DECIMALS)
+
+
+def _median(values):
+    return _rounded(bands.percentile(values, 0.5)) if values else None
+
+
+def diagnostics(members):
+    """What `main` prints beside the statistics to explain the HAC cut's misses, from the extract's second group of
+    lines, over the comparison set (`run()["members"]`):
+      ma_ime        the model's IME on Medicare Advantage stays (`ime_ma`) against line 29.01, over the hospitals with
+                    both: n, the dollar-weighted ratio (sum over sum) and the median ratio; how many have only one;
+                    and the median ratio apart for those whose line 29.01 includes a section 422 add-on (line 28.01),
+                    `add_on`, and the rest, `no_add_on` (the model takes the add-on to be in the IME factor)
+      ntap          line 54 (new-technology add-on payments, which the model leaves out) over lines 1.01 + 1.02,
+                    summed over every hospital
+      hac_base      the median of line 70.99 over lines 49 + 50 for the compared cut hospitals that are neither SCH nor
+                    MDH: the HAC line as a share of the operating and capital payment
+      after_volume  for those same hospitals, split by whether their cost report has line 29.01 (`with_ma_ime`,
+                    `without`): n, and the median of the HAC cut's error (a log) less another error. `vs_total`: less
+                    the error of the model's total payment against lines 49 + 50. Both include the teaching payments
+                    on Medicare Advantage stays, so this asks whether the cut is figured on the cost report's base, all
+                    else (volume, and how well each part is modeled) moving both alike. `vs_drg`: less the error of
+                    the DRG payments (`fed`, lines 1.01 + 1.02), so what is left is how the rest of the base is
+                    modeled, the Medicare Advantage teaching payments among it.
+    Ratios are rounded to bands.DECIMALS, except `ntap`, a share well under 1%."""
+    ma = [(m["row"]["ime_ma"], line(m["report"], "02901"), line(m["report"], "02801") > 0) for m in members]
+    both = [(model, actual) for model, actual, _ in ma if model > 0 and actual > 0]
+    by_add_on = {flag: [model / actual for model, actual, f in ma if model > 0 and actual > 0 and f == flag]
+                 for flag in (True, False)}
+    paid = lambda m: line(m["report"], "04900") + line(m["report"], "05000")  # noqa: E731 (operating + capital)
+    cut = [(m, paid(m)) for m in members if m["cut"] and m["stratum"] in OTHER_STRATA and paid(m) > 0
+           and bands.pair_kind(m["model"]["hac"], m["actual"]["hac"]) == "compared"]
+    beyond = {True: ([], []), False: ([], [])}
+    for m, p in cut:
+        hac = bands.log_ratio(m["model"]["hac"], m["actual"]["hac"])
+        vs_total, vs_drg = beyond[line(m["report"], "02901") > 0]
+        vs_total.append(hac - bands.log_ratio(m["row"]["total"], p))
+        vs_drg.append(hac - bands.log_ratio(m["model"]["fed"], m["actual"]["fed"]))
+    return {
+        "ma_ime": {"n": len(both),
+                   "weighted": _rounded(sum(m for m, _ in both) / sum(a for _, a in both)) if both else None,
+                   "median": _median([m / a for m, a in both]),
+                   "line_only": sum(model == 0 and actual > 0 for model, actual, _ in ma),
+                   "model_only": sum(model > 0 and actual == 0 for model, actual, _ in ma),
+                   **{key: {"n": len(by_add_on[flag]), "median": _median(by_add_on[flag])}
+                      for key, flag in (("add_on", True), ("no_add_on", False))}},
+        "ntap": sum(line(m["report"], "05400") for m in members) / sum(m["actual"]["fed"] for m in members),
+        "hac_base": {"n": len(cut), "median": _median([m["actual"]["hac"] / p for m, p in cut])},
+        "after_volume": {key: {"n": len(vs_total), "vs_total": _median(vs_total), "vs_drg": _median(vs_drg)}
+                         for key, (vs_total, vs_drg) in (("with_ma_ime", beyond[True]), ("without", beyond[False]))},
+    }
+
+
 def sign_counts(reports):
     """{line: (positive, negative)} over every report in the extract, for the program lines: the signs the module
     docstring states (70.94 and 70.91 negative, 70.99 positive, 70.93 and 70.90 either)."""
@@ -231,6 +292,18 @@ def main():
           f"p90 {n['p90']} ({n['draws']} draws)")
     print("signs over every report (positive, negative): "
           + ", ".join(f"{k} {v}" for k, v in sign_counts(r["reports"]).items()))
+    d = diagnostics(r["members"])
+    ma, base, av = d["ma_ime"], d["hac_base"], d["after_volume"]
+    print(f"diagnostics: the model's IME on Medicare Advantage stays / line 29.01, over {ma['n']} hospitals with both: "
+          f"{ma['weighted']} dollar-weighted, {ma['median']} median ({ma['line_only']} with the line only, "
+          f"{ma['model_only']} with the model's only); median {ma['add_on']['median']} for the {ma['add_on']['n']} "
+          f"with a section 422 add-on (line 28.01), {ma['no_add_on']['median']} for the {ma['no_add_on']['n']} without")
+    print(f"  line 54 (new technology) / lines 1.01 + 1.02, dollar-weighted: {d['ntap']:.3%}")
+    print(f"  line 70.99 / (line 49 + line 50), median over {base['n']} compared cut hospitals neither SCH nor MDH: "
+          f"{base['median']}")
+    for key, words in (("with_ma_ime", "with line 29.01"), ("without", "without it")):
+        print(f"  the same hospitals {words} (n {av[key]['n']}): median HAC error less the total payment's error "
+              f"(vs lines 49 + 50) {av[key]['vs_total']}, less the DRG payments' error {av[key]['vs_drg']}")
     results = checks(b)
     for x in results:
         print(f"check {x['id']}: {x['value']} in {x['low']} to {x['high']}: {'pass' if x['pass'] else 'FAIL'}")

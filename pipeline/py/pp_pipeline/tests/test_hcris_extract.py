@@ -72,7 +72,10 @@ class Extract(unittest.TestCase):
             ([report("3", "990001", begin="2023-10-01")], [], "MM/DD/YYYY"),
             ([report("3", "990001")], [["4", "E00A18A", "07099", "00100", "1"]], "not in the report file"),
             ([report("3", "990001")], [["3", "E00A18A", "07099", "00200", "1"]], "column 00200"),
-            ([report("3", "990001")], [["3", "E00A18A", "07099", "00100", "1e5"]], "not a number"),
+            ([report("3", "990001")], [["3", "E00A18A", "07099", "00100", "1e5"]], "not a whole number"),
+            # a decimal cell: the message names the report, the line and the column
+            ([report("3", "990001")], [["3", "E00A18A", "02901", "00101", "12.50"]],
+             r"report 3, Worksheet E Part A line 02901 column 00101: '12\.50' is not a whole number"),
             ([report("3", "990001")], [["3", "E00A18A", "07099", "00100", "1"]] * 2, "appears twice"),
             ([report("3", "990001")], [["3", "E00A18A", "07099", "00100"]], "5"),
         )
@@ -101,7 +104,9 @@ class Committed(unittest.TestCase):
         self.assertTrue(all(len(r) == len(COLUMNS) for r in body))
         self.assertTrue(all(re.fullmatch(r"[0-9A-Z]{6}", r[1]) for r in body))
         self.assertTrue(all(r[5] in "YN" and r[6] in "YN" for r in body))
+        # Every cell is a whole number of dollars or blank: no decimal (the back-test reads each cell as an integer)
         self.assertTrue(all(re.fullmatch(r"-?\d*", c) for r in body for c in r[7:]))
+        self.assertFalse(any("." in c for r in body for c in r[7:]))
         self.assertTrue({r[3] for r in body} <= {f"{y}-{m:02d}-{d:02d}" for y in (2023, 2024) for m in range(1, 13)
                                                  for d in range(1, 32)})
 

@@ -209,9 +209,11 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 ## dollars methods_version 3 (2026-10-23)
 - The payment the HAC cut is taken on (`total`, so `after`, `atStake`, `hac` and `net`) now includes the indirect medical
   education (IME) Medicare pays a teaching hospital on its Medicare Advantage stays, a new part, `imeMa`
-  (`schema_version` 3). Methods_version 2's model left it out, and its back-test showed the cost: among cut hospitals
-  that are neither sole community nor Medicare-dependent, those with these payments ran 6.9% low at the median after
-  volume drift, those without matched to 0.02%, and the national range sat entirely above the national estimate.
+  (`schema_version` 3). Methods_version 2's model left it out, and its back-test showed the cost. Among the compared
+  cut hospitals that are neither sole community nor Medicare-dependent, the HAC cut's error less the error of the
+  model's total payment against lines 47 + 50 (operating without line 29.01, and capital) was -0.069 at the median
+  for the 42 whose cost report has line 29.01 and -0.0002 for the 56 without: line 70.99's base holds something line
+  47 does not. And the national range sat entirely above the national estimate.
 - Why it is in the base: the cost report's HAC worksheet (Provider Reimbursement Manual, Part 2, chapter 40, Exhibit 5)
   lists "Operating IME payments for Medicare Advantage patients" among the payments "required to calculate the HAC
   reduction adjustment"; its line 15 is Worksheet E, Part A, line 49, which adds line 29.01 ("Total IME Payment -
@@ -223,15 +225,29 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   are none.
 - It enters `total` only: not the base the readmissions and value-based programs adjust, not the federal payment an
   SCH's or MDH's hospital-specific payment is compared with (line 49 adds line 29.01 after the comparison), and not the
-  low-volume adjustment's base (a percentage of payments per traditional Medicare discharge). Assumed, to verify: the
-  section 422 IME add-on for these stays (line 28.01) is in `TCHOP` as it is for the hospital's own stays.
-- On the pinned FY2024 files the modeled IME on Medicare Advantage stays is about 30% below what the cost reports
-  record on line 29.01 (dollar-weighted), likely Medicare Advantage growth between the impact file's FY2022 claims and
-  FY2024; the HAC back-test carries that in its errors. Every other rule of methods_version 2 stands.
+  low-volume adjustment's base (a percentage of payments per traditional Medicare discharge). Assumed: the section 422
+  IME add-on for these stays (line 28.01) is in `TCHOP` as it is for the hospital's own stays. The back-test does not
+  contradict it: the 39 comparison-set hospitals whose line 29.01 includes line 28.01 run at 0.74 of their line 29.01
+  at the median, the 140 without at 0.72.
+- On the pinned FY2024 files the modeled IME on Medicare Advantage stays is 0.70 of what the cost reports record on
+  line 29.01, dollar-weighted (0.72 at the median), over the 179 comparison-set hospitals with both; 22 have the line
+  and no modeled amount, 5 the reverse. The model's figure comes from the impact file's Medicare Advantage counts, two
+  years before the payment year; growth in Medicare Advantage stays since then is one likely cause, which this
+  back-test cannot separate from others. The HAC back-test carries the gap in its errors. Every other rule of
+  methods_version 2 stands.
 - The back-test with it: the HAC cut's median error is 0.0384 (p10 -0.123, p90 0.2694) over the same 131 cut hospitals;
-  those with Medicare Advantage teaching payments now match their cost reports to 0.06% after volume drift; the
-  national ratio of the cut hospitals' cost reports to the estimate is 0.9981, resampled 0.9785 to 1.0175, so the
+  the national ratio of the cut hospitals' cost reports to the estimate is 0.9981, resampled 0.9785 to 1.0175, so the
   national range holds the national estimate. The checks pass as set (median within 0.25; 498 hospitals; 131 cut).
+- What matched to 0.06%, and what did not: for the same 42 hospitals with line 29.01, the HAC cut's error less the
+  error of the model's total payment against lines 49 + 50 (both now with the Medicare Advantage teaching payments) is
+  -0.0006 at the median (-0.0002 for the 56 without). That says the cut is now figured on the cost report's base:
+  1% of the same parts. It does not say those parts are the right size. Less the DRG payments' error instead (the
+  volume drift alone), the 42 run -0.039 at the median against -0.009 for the 56, in line with the short Medicare
+  Advantage teaching payments above. The FY2026 estimate models them the same way, from the FY2026 impact file's
+  counts two years back, so teaching hospitals' FY2026 estimates can still run a little low; their ranges come from
+  errors that include this gap. `run.py backtest` prints each of these figures; `test_backtest_dollars` pins them.
+- The HCRIS extract (`hcris-fy2024-wse`) now also holds lines 28.01 and 29.01, read only for those figures; it was
+  re-derived from the same zip and re-pinned (576,678 bytes), and nothing the back-test computes changed.
 - The pages: a hospital page says "plus the teaching payments Medicare makes on its Medicare Advantage patients' stays"
   wherever the hospital's payment includes them, and its statement and worksheet show them as a line of their own. The
   CSV gains the HAC cut's likely range (`hac_dollars_low_modeled`, `hac_dollars_high_modeled`; CSV schema_version 3).
