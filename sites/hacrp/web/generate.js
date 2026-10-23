@@ -94,7 +94,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const views = pages.map((p) => p.view);
 
   // The dataset file and its dictionary: files, not pages (no robots: they are not in the sitemap).
-  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master, dollars.byCcn) });
+  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master, dollars.byCcn, dollars.bands) });
   const dictionaryFilled = dictionaryText(dictionary, { fy, source });
   ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
   // The pages this site writes, counted as they go (the Methods page, written last, reports the total).

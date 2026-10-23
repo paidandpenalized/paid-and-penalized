@@ -11,9 +11,9 @@ import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
-import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hospitalMoney, nationalRange, rangeOf, sumRanges } from '../web/money.js';
+import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, nationalRange, rangeOf, sumRanges } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
-import { t as mt } from '../web/money/copy.js';
+import { fill as mfill, t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, esc } from './fixtures.js';
@@ -43,6 +43,8 @@ const NEAR = pick((r, h) => r.status === 'estimated' && !r.cut && h.total === mo
 const MARYLAND = pick((r) => r.status === 'maryland', 'Maryland');
 const NO_INPUTS = pick((r) => r.status === 'no-inputs' && r.cut, 'cut, with no usable impact-file row');
 const YES_NO_SCORE = pick((r, h) => r.status === 'estimated' && r.cut && h.total === null, 'cut with no score');
+const TEACHING = pick((r, h) => r.status === 'estimated' && r.cut && h.total !== null && r.parts.imeMa > 0, 'estimated, scored, cut, with teaching payments on Medicare Advantage stays');
+const NO_TEACHING = pick((r, h) => r.status === 'estimated' && r.cut && h.total !== null && r.parts.ime === 0, 'estimated, scored, cut, not a teaching hospital');
 
 test('the pages read the dollars for the HACRP file\'s year, a row for every hospital, and list the dollars\' pins', () => {
   assert.equal(DATA.dollars.fy, DATA.fy);
@@ -113,7 +115,8 @@ test('the statement adds up, in the payment\'s order: the parts make the total, 
     const parts = lines.filter((l) => l.kind === 'part');
     assert.equal(parts.reduce((s, l) => s + l.amount, 0), row.total, `${row.ccn}: parts add to the total`);
     assert.ok(parts.every((l) => l.amount !== 0), 'zero parts are left out');
-    assert.deepEqual(none.length + parts.length, BASE_PARTS.length + OTHER_PARTS.length);
+    // Every part is a line or named as not paid, but for teaching on Medicare Advantage stays where there is no teaching at all.
+    assert.deepEqual(none.length + parts.length + (row.parts.ime === 0 ? 1 : 0), BASE_PARTS.length + OTHER_PARTS.length);
     assert.equal(at.total.amount + at.hrrp.amount + at.hvbp.amount, at.after.amount, `${row.ccn}: total and the two adjustments make after`);
     assert.equal(at.hac.amount, row.hac);
     assert.equal(at.net.amount, row.hrrp + row.hvbp + row.hac, `${row.ccn}: net`);
@@ -229,10 +232,12 @@ test('a production build refuses dollars without their ranges (any other build g
 });
 
 test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmissions ± value-based) × 1% = the cut; ÷ stays = per stay', () => {
-  for (const row of [CUT, NEAR]) {
+  for (const row of [CUT, NEAR, TEACHING]) {
     const m = moneyOf(row);
     const ws = text(moneyWorksheet(m));
-    for (const part of [dollars(row.total), dollars(Math.abs(row.hrrp)), dollars(Math.abs(row.hvbp)), REDUCTION_TEXT, dollars(row.atStake), count(row.bills), dollars(Math.round(m.perStay))]) assert.ok(ws.includes(part), `${row.ccn}: ${part}`);
+    // The payment, split where it includes teaching payments on Medicare Advantage stays.
+    const payment = row.parts.imeMa ? [dollars(row.total - row.parts.imeMa), dollars(row.parts.imeMa), 'teaching, MA stays'] : [dollars(row.total)];
+    for (const part of [...payment, dollars(Math.abs(row.hrrp)), dollars(Math.abs(row.hvbp)), REDUCTION_TEXT, dollars(row.atStake), count(row.bills), dollars(Math.round(m.perStay))]) assert.ok(ws.includes(part), `${row.ccn}: ${part}`);
     // The worksheet's arithmetic holds in whole dollars.
     assert.equal(Math.round((row.total + row.hrrp + row.hvbp) / 100), row.atStake);
   }
@@ -258,4 +263,26 @@ test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut a
   const rowsOf = [...near.matchAll(/<tr class="near--[^"]*"><td class="num"><span class="near__n">\d+<\/span><\/td><th scope="row"><a href="[^"]*\/([0-9a-z]{6})\/">.*?<td class="num near__cut[^"]*">([^<]*)<\/td>/g)];
   assert.equal(rowsOf.length, (near.match(/<tr class="near--/g) ?? []).length, 'a cut cell on every row');
   for (const [, ccn, cell] of rowsOf) assert.equal(cell, cutText(cutDollars(DATA.dollars.byCcn.get(ccn.toUpperCase()))), ccn);
+});
+
+test('teaching payments on Medicare Advantage stays: in the payment the cut is taken on, a line of the statement, and said in the words wherever a hospital has them', () => {
+  const t = moneyOf(TEACHING);
+  const n = moneyOf(NO_TEACHING);
+  assert.ok(hasMaTeaching(t) && !hasMaTeaching(n));
+  // In T and so in the cut; not in the base.
+  assert.equal(t.total, t.base + OTHER_PARTS.reduce((sum, k) => sum + t.parts[k], 0));
+  assert.equal(t.base, t.parts.fed + t.parts.mdhAddon);
+  const at = Object.fromEntries(statementLines(t).lines.map((l) => [l.key, l]));
+  assert.equal(at.imeMa.amount, t.parts.imeMa);
+  assert.equal(at.imeMa.label, mt('stmt_imeMa'));
+  assert.ok(!('imeMa' in Object.fromEntries(statementLines(n).lines.map((l) => [l.key, l]))));
+  assert.ok(!statementLines(n).none.includes(mt('stmtOff_imeMa')), 'no teaching at all: not named as missing');
+  // The words: the verdict and the pages' introductions say the base in full only where it holds these payments.
+  const say = (row) => text(moneyVerdict(viewOf(row.ccn), moneyOf(row)).below);
+  assert.match(say(TEACHING), /Medicare Advantage patients/);
+  assert.doesNotMatch(say(NO_TEACHING), /Medicare Advantage/);
+  const page = pageOf(TEACHING);
+  assert.ok(page.includes(esc(mfill('stmtIntroMa', { fy: String(DATA.fy) }))) && page.includes(esc(mt('stmtGroupPayMa'))));
+  const plain = pageOf(NO_TEACHING);
+  assert.ok(plain.includes(esc(mfill('stmtIntro', { fy: String(DATA.fy) }))) && !plain.includes('Medicare Advantage stays'));
 });

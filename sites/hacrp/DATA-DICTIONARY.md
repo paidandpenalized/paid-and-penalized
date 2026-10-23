@@ -1,8 +1,8 @@
 # Data dictionary: hacrp-hospitals.csv
 
-`hacrp-hospitals.csv` holds what CMS reports for every hospital in its Hospital-Acquired Condition Reduction Program (HACRP) file for fiscal year {fy}: the Total HAC Score, the payment reduction decision, each measure's value and z-score, CMS's footnote codes and the measurement periods. Its last columns, each named `_modeled`, are this site's own estimates of the dollars: what traditional Medicare pays the hospital for inpatient stays, and what the readmissions, value-based purchasing and HAC programs move. It is a file from Paid & Penalized (paidandpenalized.org). It holds no patient information.
+`hacrp-hospitals.csv` holds what CMS reports for every hospital in its Hospital-Acquired Condition Reduction Program (HACRP) file for fiscal year {fy}: the Total HAC Score, the payment reduction decision, each measure's value and z-score, CMS's footnote codes and the measurement periods. Its last columns, each named `_modeled`, are this site's own estimates of the dollars: what traditional Medicare pays the hospital for inpatient stays (with the teaching payments Medicare makes on its Medicare Advantage patients' stays), what the readmissions, value-based purchasing and HAC programs move, and the HAC cut's likely range. It is a file from Paid & Penalized (paidandpenalized.org). It holds no patient information.
 
-schema_version: 2
+schema_version: 3
 
 ## Source
 
@@ -61,11 +61,13 @@ schema_version: 2
 | `hai_start` | text | First day of the infection measures' measurement period. | HAI Measures Start Date | As above. |
 | `hai_end` | text | Last day of the infection measures' measurement period. | HAI Measures End Date | As above. |
 | `dollars_status` | text | Whether this site has a dollar estimate for the hospital, and if not, why. | (this site's estimate) | `estimated`; `maryland` (Maryland's hospitals are exempt from the HAC cut, and the dollar columns are blank); `parhm` (a hospital in Pennsylvania's Rural Health Model: no estimate); `no-inputs` (no usable row in CMS's IPPS impact file: no estimate). |
-| `inpatient_payment_modeled` | number | This site's estimate of what traditional Medicare pays the hospital for a year of inpatient stays, before the three programs, in whole dollars. | (this site's estimate) | Blank without an estimate. Volume is the impact file's (two years before the fiscal year); the rates are the fiscal year's. |
+| `inpatient_payment_modeled` | number | This site's estimate of what traditional Medicare pays the hospital for a year of inpatient stays, with the teaching payments Medicare makes on its Medicare Advantage patients' stays (which the HAC cut is also taken on), before the three programs, in whole dollars. | (this site's estimate) | Blank without an estimate. Volume is the impact file's (two years before the fiscal year); the rates are the fiscal year's. |
 | `hrrp_dollars_modeled` | number | The readmissions program's adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Zero or negative: negative is money Medicare keeps. Blank without an estimate. |
 | `hvbp_dollars_modeled` | number | The value-based purchasing adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Negative is money Medicare keeps; positive, a bonus. Blank without an estimate. |
 | `hac_at_stake_modeled` | number | 1% of the payment after those two adjustments, in whole dollars: what the HAC cut takes from a hospital CMS cuts. | (this site's estimate) | For every estimated hospital, cut or not. Blank without an estimate. |
 | `hac_dollars_modeled` | number | The HAC cut, in whole dollars. | (this site's estimate) | Minus `hac_at_stake_modeled` where `payment_reduction` is `Yes`, else 0. Blank without an estimate. |
+| `hac_dollars_low_modeled` | number | The low end of the HAC cut's likely range, in whole dollars: the larger cut. | (this site's estimate) | Same sign as `hac_dollars_modeled`. For a hospital CMS cut, minus the high end of the dollars at stake's likely range; 0 where `payment_reduction` is not `Yes`. Blank without an estimate. In the site's check against an earlier year's cost reports, 80% of hospitals of the same size and kind had an actual cut inside a range this wide around the estimate. |
+| `hac_dollars_high_modeled` | number | The high end of the HAC cut's likely range, in whole dollars: the smaller cut. | (this site's estimate) | Same sign as `hac_dollars_modeled`; 0 where `payment_reduction` is not `Yes`. Blank without an estimate. |
 | `net_dollars_modeled` | number | The three programs together, in whole dollars. | (this site's estimate) | `hrrp_dollars_modeled` + `hvbp_dollars_modeled` + `hac_dollars_modeled`; each row adds exactly. Blank without an estimate. |
 
 ## Footnotes

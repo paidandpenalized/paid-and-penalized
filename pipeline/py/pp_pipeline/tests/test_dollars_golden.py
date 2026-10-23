@@ -86,7 +86,7 @@ class Committed(unittest.TestCase):
         fy = self.committed["fy"]
         self.assertEqual(self.path, EMITTED_DIR / "dollars" / f"fy{fy}" / "dollars.json")
         self.assertEqual({r["Fiscal Year"] for r in hacrp_file()}, {str(fy)})
-        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (2, 2))
+        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (3, 3))
         self.assertEqual(self.committed["assumptions"], {"ratesFy": 2026, "volumeFy": 2024, "mdhEnd": "2026-12-31",
                                                          "lowVolumeEnd": "2026-12-31", "ntap": "excluded"})
         self.assertEqual(self.committed["bands"]["fy"], 2024)  # the back-test's year, two before the estimate's

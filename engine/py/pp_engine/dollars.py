@@ -16,7 +16,9 @@ adjustments (T', below), and that payment is the sum of a dozen pieces, only one
                                                                              SCH's or MDH's hospital-specific payment
                                                                              is compared with
     B          = fed + mdh_addon                                             base operating payment (HRRP, HVBP base)
-    T          = B + IME + DSH + outliers + SCH difference + low volume + capital + uncompensated care
+    IME (MA)   = IME factor x MA cases x MA cmi x (labor x wage index + nonlabor x cola)
+                                                                             IME paid for Medicare Advantage stays
+    T          = B + IME + IME (MA) + DSH + outliers + SCH difference + low volume + capital + uncompensated care
     T'         = T + B x (hrrp - 1) + B x (vbp - 1)
     at stake   = 0.01 x T'            (for every hospital; the dollars at risk)
     HAC        = -at stake            (only for a hospital the program cuts)
@@ -81,11 +83,11 @@ YES_UNESTIMATED_MAX = 9
 STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 
 # Keys every hospital must carry as numbers (or, for the flags, bools). The ones the file may leave blank (`hsp`,
-# `hsp_mdh`, `outlier_op`, `outlier_cap`) are handled where they are used and are not listed.
+# `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`) are handled where they are used and are not listed.
 _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
             "ucp_per_claim", "gaf", "low_volume")
 _FLAGS = ("sch", "mdh", "pr", "hsp_mdh_prior_year")
-_ADD_ONS = ("ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
+_ADD_ONS = ("ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
 SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # a row's dollar sums, which `national` adds up
 
@@ -214,7 +216,23 @@ def _parts(inp, rates):
     # care stays out, since the rule's list does not name it.
     low_volume = (inp["low_volume"] - 1.0) * (fed + mdh_addon + ime + dsh + outlier_op + sch_diff + capital)
 
-    return {"fed": float(fed), "mdh_addon": float(mdh_addon), "ime": float(ime), "dsh": float(dsh),
+    # IME for Medicare Advantage stays: a teaching hospital is paid IME on its Medicare Advantage discharges too, on the
+    # DRG payment those stays would have drawn ("Multiply the appropriate multiplier of the adjustment factor ... times
+    # line 3", the managed care simulated payments: PRM-II ch. 40, 4030.1, Worksheet E Part A line 22.01; line 29.01
+    # totals it). The HAC cut is taken on it: Exhibit 5 lists "Operating IME payments for Medicare Advantage patients"
+    # among the payments "required to calculate the HAC reduction adjustment". The impact file models those stays in
+    # its IME_CASETA and IME_TACMIV columns ("Transfer adjusted cases ... for Medicare Advantage cases submitted by
+    # teaching hospitals that receive a fee-for-service IME payment"), priced here at the same wage-adjusted rate pair
+    # and IME factor as the hospital's own stays; blank columns (non-teaching hospitals) are none. It enters T only: it
+    # is not part of the base HRRP and HVBP adjust; Worksheet E adds line 29.01 after the SCH and MDH comparison (line
+    # 49), so it is outside F; and the low-volume adjustment, a percentage of payments per traditional Medicare
+    # discharge, does not take it. ASSUMPTION (verify in the accuracy pass): the section 422 IME add-on for these
+    # stays (line 28.01) is in the impact file's IME factor as it is for the hospital's own stays.
+    ime_ma = 0.0
+    if not _missing(inp["ime_cases"]) and not _missing(inp["ime_cmi"]):
+        ime_ma = inp["ime_op"] * inp["ime_cases"] * inp["ime_cmi"] * (labor * inp["wi"] + nonlabor * inp["cola"])
+
+    return {"fed": float(fed), "mdh_addon": float(mdh_addon), "ime": float(ime), "ime_ma": float(ime_ma), "dsh": float(dsh),
             "outlier_op": float(outlier_op), "sch_diff": float(sch_diff), "low_volume": float(low_volume),
             "capital": float(capital), "uc": float(uc)}
 
@@ -256,7 +274,7 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
       at_stake           0.01 x T' for every hospital
       hac                -at_stake if cut, else 0
       net                hrrp + hvbp + hac
-    then the parts of T (`PARTS`): fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital, uc."""
+    then the parts of T (`PARTS`): fed, mdh_addon, ime, ime_ma, dsh, outlier_op, sch_diff, low_volume, capital, uc."""
     hrrp_factor, vbp_factor = _factor(hrrp, "hrrp"), _factor(vbp, "vbp")
     parts = _parts(inp, rates)
     base = _base(parts)

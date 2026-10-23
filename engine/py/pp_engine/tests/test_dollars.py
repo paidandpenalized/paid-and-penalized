@@ -32,7 +32,7 @@ def hospital(**changes):
     h = {"cases": 10.0, "cmi": 1.5, "bills": 12, "cmi_hsp": 1.6, "wi": 1.5, "cola": 1.0, "quality": 0, "ehr": 0,
          "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None, "ime_op": 0.0, "ime_cap": 0.0,
          "dsh_op": 0.0, "dsh_cap": 0.0, "ucp_per_claim": 0.0, "outlier_op": 0.0, "outlier_cap": 0.0, "gaf": 0.0,
-         "low_volume": 1.0, "pr": False, "hsp_mdh_prior_year": True}
+         "low_volume": 1.0, "pr": False, "hsp_mdh_prior_year": True, "ime_cases": None, "ime_cmi": None}
     h.update(changes)
     return h
 
@@ -289,6 +289,33 @@ class Total(Close):
             self.assertDollars(e["capital"], 9000.0)  # capital without its outlier term: 500 x 1.5 x 1.2 x 10
             self.assertDollars(e["total"], 129000.0)  # 120,000 + 9,000
 
+    def test_medicare_advantage_ime_is_priced_like_the_hospitals_own_ime_and_enters_t_only(self):
+        # IME factor 0.1 x 4 MA cases x MA cmi 2.0 x (4000 x 1.5 + 2000 x 1.0) = 0.1 x 8 x 8,000 = 6,400
+        e = est(ime_op=0.1, ime_cases=4.0, ime_cmi=2.0)
+        self.assertParts(nonzero(e), {"fed": 120000.0, "ime": 12000.0, "ime_ma": 6400.0})
+        self.assertDollars(e["base"], 120000.0)  # not in the base the readmissions and value-based programs adjust
+        self.assertDollars(e["total"], 120000.0 + 12000.0 + 6400.0)
+        self.assertDollars(e["at_stake"], 0.01 * 138400.0)  # but in the payment the HAC cut is taken on
+        # Table 1B, COLA and the hospital's scenario price it as they price its own stays: wage index 0.8, cola 1.2,
+        # quality failed (ne): 0.1 x 8 x (2800 x 0.8 + 2300 x 1.2) = 0.8 x 5,000 = 4,000
+        self.assertDollars(est(ime_op=0.1, ime_cases=4.0, ime_cmi=2.0, wi=0.8, cola=1.2, quality=1)["ime_ma"], 4000.0)
+        # no IME factor, or blank or zero MA columns: none
+        for changes in ({"ime_op": 0.0, "ime_cases": 4.0, "ime_cmi": 2.0}, {"ime_op": 0.1, "ime_cases": None, "ime_cmi": 2.0},
+                        {"ime_op": 0.1, "ime_cases": 4.0, "ime_cmi": None}, {"ime_op": 0.1, "ime_cases": 0.0, "ime_cmi": 2.0}):
+            self.assertEqual(est(**changes)["ime_ma"], 0, changes)
+
+    def test_medicare_advantage_ime_is_outside_the_sch_and_mdh_comparisons_and_the_low_volume_base(self):
+        # Worksheet E adds line 29.01 after the comparison (line 49): an MDH's add-on and an SCH's difference are what
+        # they are without it (13,230 and 12,000, worked above), and the low-volume base leaves it out (16,430.4 above).
+        ma = {"ime_cases": 4.0, "ime_cmi": 2.0}
+        e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, **ma)
+        self.assertDollars(e["mdh_addon"], 13230.0)
+        self.assertDollars(est(sch=True, ptype=16, hsp=9000.0, ime_op=0.1, low_volume=1.1, gaf=1.2, **ma)["sch_diff"], 12000.0)
+        lv = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
+                 ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0, **ma)
+        self.assertDollars(lv["low_volume"], 16430.4)
+        self.assertDollars(lv["ime_ma"], 6400.0)
+
     def test_a_hospital_flagged_both_sch_and_mdh_raises(self):
         with self.assertRaises(ValueError):
             est(sch=True, mdh=True, hsp=9000.0, hsp_mdh=9000.0)
@@ -365,7 +392,7 @@ class Adjustments(Close):
     def test_the_result_has_the_briefed_keys_then_the_components(self):
         e = est()
         self.assertEqual(list(e), ["base", "total", "hrrp", "hvbp", "after", "at_stake", "hac", "net", "fed",
-                                   "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital",
+                                   "mdh_addon", "ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital",
                                    "uc"])
         self.assertTrue(all(isinstance(v, float) for v in e.values()))
 
@@ -388,7 +415,7 @@ class AllTerms(Close):
                 ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0, hrrp=0.97, vbp=1.01, cut=True)
         want = {"base": 132780.0, "total": 181334.4, "hrrp": -3983.4, "hvbp": 1327.8, "after": 178678.8,
                 "at_stake": 1786.788, "hac": -1786.788, "net": -3983.4 + 1327.8 - 1786.788, "fed": 120000.0,
-                "mdh_addon": 12780.0, "ime": 12000.0, "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 0.0,
+                "mdh_addon": 12780.0, "ime": 12000.0, "ime_ma": 0.0, "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 0.0,
                 "low_volume": 16430.4, "capital": 10764.0, "uc": 600.0}
         self.assertParts(e, want)
 
@@ -401,7 +428,7 @@ class AllTerms(Close):
         e = est(sch=True, ptype=16, hsp=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
                 ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0, hrrp=0.97, vbp=1.01, cut=False)
         want = {"base": 120000.0, "total": 170180.4, "hrrp": -3600.0, "hvbp": 1200.0, "after": 167780.4,
-                "at_stake": 1677.804, "hac": 0.0, "net": -2400.0, "fed": 120000.0, "mdh_addon": 0.0, "ime": 12000.0,
+                "at_stake": 1677.804, "hac": 0.0, "net": -2400.0, "fed": 120000.0, "mdh_addon": 0.0, "ime": 12000.0, "ime_ma": 0.0,
                 "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 2640.0, "low_volume": 15416.4, "capital": 10764.0,
                 "uc": 600.0}
         self.assertParts(e, want)

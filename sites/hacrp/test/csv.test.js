@@ -12,6 +12,7 @@ import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { isoDate } from '../../../web/render/format.js';
 import { COLUMNS, CSV_SCHEMA_VERSION, dictionaryText, hospitalsCsv } from '../web/csv.js';
+import { rangeOf } from '../web/money.js';
 import { FOOTNOTES_ID } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
 import { DICTIONARY_PAGE, csvPath, dictionaryPath } from '../web/links.js';
@@ -121,8 +122,8 @@ test('RFC 4180 shape: UTF-8 without a BOM, CRLF line ends, a header row of the d
   assert.equal(csv.split('\r\n').length, 5);
   assert.equal(csv.split('\r\n')[0], COLUMNS.map((c) => c.name).join(','));
   assert.deepEqual(Object.keys(parseCsv(csv)[0]), COLUMNS.map((c) => c.name));
-  assert.equal(COLUMNS.length, 10 + 4 * MEASURE_IDS.length + 4 + 7);
-  assert.deepEqual(COLUMNS.slice(-7).map((c) => c.name).filter((name) => name.endsWith('_modeled')).length, 6, 'the estimates say so in their names');
+  assert.equal(COLUMNS.length, 10 + 4 * MEASURE_IDS.length + 4 + 9);
+  assert.deepEqual(COLUMNS.slice(-9).map((c) => c.name).filter((name) => name.endsWith('_modeled')).length, 8, 'the estimates say so in their names');
   assert.deepEqual(COLUMNS.slice(0, 2).map((c) => c.name), ['ccn', 'fiscal_year']);
 });
 
@@ -169,7 +170,7 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
     assert.equal(dictionaryPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/DATA-DICTIONARY.md`);
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
-    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn));
+    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
     // The program page, the dictionary page, the Methods page, the four hospitals and a page for each place they are in.
     const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
@@ -310,7 +311,7 @@ test('cite script: when the copy fails (or there is no clipboard), the text is s
 });
 
 test('the dollar columns are this site\'s estimates, from each hospital\'s row, whole dollars that add; blank without one', () => {
-  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn));
+  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
   let estimated = 0;
   rows.forEach((row, i) => {
     const d = DATA.dollars.byCcn.get(DATA.hospitals[i].ccn);
@@ -330,4 +331,27 @@ test('the dollar columns are this site\'s estimates, from each hospital\'s row, 
   const [blank] = parseCsv(hospitalsCsv([CASES.yes], masters(master('990001'))));
   assert.equal(blank.dollars_status, '');
   assert.equal(blank.hac_dollars_modeled, '');
+});
+
+test('the HAC cut\'s likely range: two columns in the cut\'s own sign, low the larger cut; 0 and 0 with no cut; blank without an estimate', () => {
+  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
+  let cut = 0;
+  for (const r of rows) {
+    const d = DATA.dollars.byCcn.get(r.ccn);
+    if (d.status !== 'estimated') {
+      assert.deepEqual([r.hac_dollars_low_modeled, r.hac_dollars_high_modeled], ['', ''], r.ccn);
+      continue;
+    }
+    const [low, high, est] = [Number(r.hac_dollars_low_modeled), Number(r.hac_dollars_high_modeled), Number(r.hac_dollars_modeled)];
+    if (!d.cut) {
+      assert.deepEqual([low, high, est], [0, 0, 0], r.ccn);
+      continue;
+    }
+    cut++;
+    const [lo, hi] = rangeOf(DATA.dollars.bands, 'hac', d.stratum, d.atStake);
+    assert.deepEqual([low, high], [-hi, -lo], r.ccn);
+    assert.ok(low < est && est < high, r.ccn);
+  }
+  assert.ok(cut > 500);
+  assert.throws(() => hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn), /no hac band/, 'an estimate needs its bands');
 });

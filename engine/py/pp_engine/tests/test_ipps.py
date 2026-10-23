@@ -170,7 +170,7 @@ IMPACT_HEADER = ["Provider Number", "Name", "FY 2026 Wage Index", "Cost of Livin
                  "CMIV43", "TACMIV43", "GAF", "OUTFACT_F", "COUTFACT_F", "Proxy Readmission Adjustment Factor",
                  "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag, CAA 2024",
                  "HSP Rate for MDHs, FY 2025 extension", "Low Volume Hospital Adjustment",
-                 "Low-Volume Hospital Payment Adjustment, FY 2025 extension", "Beds"]
+                 "Low-Volume Hospital Payment Adjustment, FY 2025 extension", "Beds", "IME_CASETA43", "IME_TACMIV43"]
 GOOD = {"Provider Number": "990001", "Name": "INVENTED A", "FY 2026 Wage Index": "1.0512",
         "Cost of Living Adjustment": "1", "TCHOP": "0.0655", "TCHCP": "0.05496", "DSHOPP": "0.0298",
         "DSHCPP": "0.05731", "UCP Per Claim Amount": "1400.27", "Provider Type": "0", "HSP Rate": "", "Bills": "3952",
@@ -178,7 +178,7 @@ GOOD = {"Provider Number": "990001", "Name": "INVENTED A", "FY 2026 Wage Index":
         "COUTFACT_F": "0.01269", "Proxy Readmission Adjustment Factor": "0.9975", "Proxy Quality Reduction": "0",
         "Proxy EHR Reduction": "0", "MDH Flag, CAA 2024": "", "HSP Rate for MDHs, FY 2025 extension": "",
         "Low Volume Hospital Adjustment": "1", "Low-Volume Hospital Payment Adjustment, FY 2025 extension": "1",
-        "Beds": "212"}
+        "Beds": "212", "IME_CASETA43": "1210.5", "IME_TACMIV43": "1.8812"}
 TITLE = ["FY 2026 IPPS Impact File -  Final Rule (August 2025)"] + [""] * 24
 
 
@@ -198,7 +198,7 @@ class PaymentInputs(unittest.TestCase):
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
             "ime_op": 0.0655, "ime_cap": 0.05496, "dsh_op": 0.0298, "dsh_cap": 0.05731, "ucp_per_claim": 1400.27,
             "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0, "pr": False,
-            "beds": 212, "hsp_mdh_prior_year": True})
+            "beds": 212, "hsp_mdh_prior_year": True, "ime_cases": 1210.5, "ime_cmi": 1.8812})
         self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
 
     def test_payment_inputs_blank_is_none(self):
@@ -291,10 +291,12 @@ class PaymentInputs(unittest.TestCase):
 IMPACT_HEADER_2024 = ["Provider Number", "Name", "FY 2024 Wage Index", "Cost of Living Adjustment", "Beds", "TCHOP",
                       "TCHCP", "DSHOPP", "DSHCPP", "UCP Per Claim Amount", "Provider Type", "HSP Rate", "Bills",
                       "CASETA40", "CMIV40", "TACMIV40", "CASETA41", "CMIV41", "TACMIV41", "GAF", "OUTFACT_F",
-                      "COUTFACT_F", "Low Volume Hospital Adjustment", "Proxy Quality Reduction", "Proxy EHR Reduction"]
+                      "COUTFACT_F", "Low Volume Hospital Adjustment", "Proxy Quality Reduction", "Proxy EHR Reduction",
+                      "IME_CASETA40", "IME_TACMIV40", "IME_CASETA41", "IME_TACMIV41"]
 GOOD_2024 = {**{k: v for k, v in GOOD.items() if k in IMPACT_HEADER_2024}, "FY 2024 Wage Index": "0.9512",
              "CASETA40": "1.0", "CMIV40": "1.0", "TACMIV40": "1.0", "CASETA41": "2100.5", "CMIV41": "1.5512",
-             "TACMIV41": "1.5401", "Low Volume Hospital Adjustment": "1.1", "Beds": "0"}
+             "TACMIV41": "1.5401", "Low Volume Hospital Adjustment": "1.1", "Beds": "0", "IME_CASETA40": "1.0",
+             "IME_TACMIV40": "1.0", "IME_CASETA41": "", "IME_TACMIV41": ""}
 
 
 def impact_2024(*records):
@@ -308,6 +310,7 @@ class PaymentInputs2024(unittest.TestCase):
         self.assertEqual((got["cases"], got["cmi"], got["cmi_hsp"], got["wi"], got["low_volume"], got["beds"]),
                          (2100.5, 1.5401, 1.5512, 0.9512, 1.1, 0))  # V41, not V40; a zero bed count stays 0
         self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"], got["hsp_mdh_prior_year"]), (False, None, False, False))
+        self.assertEqual((got["ime_cases"], got["ime_cmi"]), (None, None))  # V41's blank, not V40's 1.0
         self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
 
     def test_mdh_is_the_provider_type_and_its_rate_is_the_hsp_rate(self):

@@ -85,6 +85,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-76 | A hospital's Medicare cost report records the HAC Reduction Program's payment reduction on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the HAC program payment reduction adjustment amount effective for discharges occurring on or after October 1, 2014." | 2026-10-23 |
 | HACRP-77 | A hospital's Medicare cost report records the readmissions program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the adjustment amount resulting from the HRR program in accordance with ACA 2010, §3025" | 2026-10-23 |
 | HACRP-78 | A hospital's Medicare cost report records the value-based purchasing program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the payment adjustment amount for the HVBP program in accordance with ACA 2010, §3001" | 2026-10-23 |
+| HACRP-79 | The HAC cut is also taken on the teaching (IME) payments Medicare makes on a hospital's Medicare Advantage patients' stays. | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are required to calculate the HAC reduction adjustment by FFY: … Operating IME payments for Medicare Advantage patients" | 2026-10-23 |
 
 ## Notes on the sources
 
@@ -226,6 +227,12 @@ A claim marked `unverified` may not be used in copy.
   of lines 69, 70 through 70.86, 70.88, 70.90, 70.91, 70.92, 70.93, 70.94, and lines 70.96 through 70.98; minus the sum
   of lines 68, 70.87, 70.89, 70.95, and 70.99"). The back-test that reads them is described in docs/METHODS-LOG.md
   (dollars methods_version 2).
+- **HACRP-79** cites the same chapter's instructions for Exhibit 5, the HAC reduction calculation schedule (section
+  4030.1). Its line 15 is Worksheet E, Part A, line 49, which for every hospital is the federal operating payment (or the
+  SCH or MDH payment) "plus the amount from line 29.01", line 29.01 being "Total IME Payment - Managed Care"; line 32,
+  the HAC reduction (Worksheet E, Part A, line 70.99), is 1 percent of a subtotal that includes line 15. Worksheet E,
+  Part A, line 22.01 computes the managed care IME as the IME adjustment factor "times line 3", the managed care
+  simulated payments.
 
 ## Link check (2026-10-22)
 

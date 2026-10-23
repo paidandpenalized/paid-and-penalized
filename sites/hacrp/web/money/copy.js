@@ -16,6 +16,10 @@ export const COPY = {
   moneyZeroWhat: { text: 'from this program', claim: null },
   moneyWouldHave: { text: 'A cut would have taken about {amount}', claim: 'HACRP-01' },
   moneyWouldOf: { text: '{pct} of about {after}, everything traditional Medicare pays it for inpatient stays in a year.', claim: ['HACRP-01', 'HACRP-75'] },
+  // The same two for a teaching hospital Medicare also pays teaching (IME) payments on its Medicare Advantage stays: the
+  // cut is taken on those too, so the base is said in full.
+  moneyOfWholeMa: { text: "That is {pct} of about {after}: everything traditional Medicare pays it for inpatient stays in a year, plus the teaching payments Medicare makes on its Medicare Advantage patients' stays. About {perStay} per traditional Medicare stay.", claim: ['HACRP-01', 'HACRP-75', 'HACRP-79'] },
+  moneyWouldOfMa: { text: "{pct} of about {after}: everything traditional Medicare pays it for inpatient stays in a year, plus the teaching payments Medicare makes on its Medicare Advantage patients' stays.", claim: ['HACRP-01', 'HACRP-75', 'HACRP-79'] },
   moneyCliffNo: { text: 'Its score was {distance} under {lowestYes}, the lowest score CMS cut.', claim: null },
   moneyMaryland: { text: "Maryland's hospitals are exempt from this program's cut.", claim: 'HACRP-26' },
   moneyNone: { text: 'No dollar estimate', claim: null },
@@ -29,6 +33,10 @@ export const COPY = {
   cliffIntro: {
     text: "This program's cut doesn't grow with the score. Over CMS's line, a hospital loses {pct} of everything traditional Medicare pays it for inpatient stays that year; at or under the line, it loses nothing from this program.",
     claim: ['HACRP-01', 'HACRP-75'],
+  },
+  cliffIntroMa: {
+    text: "This program's cut doesn't grow with the score. Over CMS's line, a hospital loses {pct} of everything traditional Medicare pays it for inpatient stays that year, and of the teaching payments Medicare makes on its Medicare Advantage stays; at or under the line, it loses nothing from this program.",
+    claim: ['HACRP-01', 'HACRP-75', 'HACRP-79'],
   },
   cliffHow: {
     text: "The chart draws what the cut would be for this hospital at any Total HAC Score, from this site's estimate of its payments, with its own score marked.",
@@ -67,16 +75,22 @@ export const COPY = {
     text: "This site estimates what traditional Medicare pays the hospital for a year of inpatient stays, from CMS's FY{fy} payment files, then applies Medicare's three hospital quality programs in the order the law sets.",
     claim: 'HACRP-74',
   },
+  stmtIntroMa: {
+    text: "This site estimates what traditional Medicare pays the hospital for a year of inpatient stays, and the teaching payments Medicare makes on its Medicare Advantage patients' stays, from CMS's FY{fy} payment files, then applies Medicare's three hospital quality programs in the order the law sets.",
+    claim: ['HACRP-74', 'HACRP-79'],
+  },
   stmtOrder: {
     text: 'The readmissions and value-based programs adjust only the base payment, the DRG rates times the hospital\'s cases. The HAC cut comes last and takes {pct} of everything left, teaching, low-income-patient, outlier, capital and uncompensated care payments included.',
     claim: ['HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-75'],
   },
   stmtTitle: { text: 'Estimated Medicare inpatient payments · FY{fy}', claim: null },
   stmtGroupPay: { text: 'What traditional Medicare pays it for inpatient stays', claim: null },
+  stmtGroupPayMa: { text: 'What traditional Medicare pays it for inpatient stays, and for teaching on Medicare Advantage stays', claim: 'HACRP-79' },
   stmtGroupPrograms: { text: 'The three programs, in the order the law applies them', claim: 'HACRP-74' },
   stmt_fed: { text: 'DRG payments at the federal rates', claim: null },
   stmt_mdhAddon: { text: 'Medicare-dependent hospital add-on', claim: null },
   stmt_ime: { text: 'Teaching (indirect medical education)', claim: null },
+  stmt_imeMa: { text: 'Teaching on Medicare Advantage stays', claim: 'HACRP-79' },
   stmt_dsh: { text: 'Many low-income patients (disproportionate share)', claim: null },
   stmt_outlierOp: { text: 'Outliers: unusually costly stays', claim: null },
   stmt_schDiff: { text: 'Sole community hospital rate difference', claim: null },
@@ -87,6 +101,7 @@ export const COPY = {
   stmtOff_fed: { text: 'DRG payments', claim: null },
   stmtOff_mdhAddon: { text: 'a Medicare-dependent hospital add-on', claim: null },
   stmtOff_ime: { text: 'teaching payments', claim: null },
+  stmtOff_imeMa: { text: 'teaching payments on Medicare Advantage stays', claim: null },
   stmtOff_dsh: { text: 'low-income-patient payments', claim: null },
   stmtOff_outlierOp: { text: 'outlier payments', claim: null },
   stmtOff_schDiff: { text: 'a sole community hospital rate difference', claim: null },
@@ -128,6 +143,7 @@ export const COPY = {
   // The cut's worksheet, in the hospital's own numbers.
   wsMoneyLabel: { text: 'The HAC cut in this hospital\'s numbers', claim: null },
   wsPayment: { text: 'payment', claim: null },
+  wsMaTeaching: { text: 'teaching, MA stays', claim: null },
   wsHrrp: { text: 'readmissions', claim: null },
   wsHvbp: { text: 'value-based', claim: null },
   wsPct: { text: 'the cut', claim: null },
@@ -170,8 +186,8 @@ export const COPY = {
   // ---------- the program page's Part: the money ----------
   moneyPartHeading: { text: 'The money', claim: null },
   moneyPartIntro: {
-    text: "This site estimates the FY{fy} cut at about {money} (likely {range}), from {cut} of the {yes} hospitals CMS cut; CMS's impact file, which the estimate is built from, has no usable row for the other {missing}. The cut is {pct} of everything traditional Medicare pays a hospital for inpatient stays, so it lands hardest where those payments are largest.",
-    claim: ['HACRP-01', 'HACRP-75'],
+    text: "This site estimates the FY{fy} cut at about {money} (likely {range}), from {cut} of the {yes} hospitals CMS cut; CMS's impact file, which the estimate is built from, has no usable row for the other {missing}. The cut is {pct} of everything traditional Medicare pays a hospital for inpatient stays, teaching payments on its Medicare Advantage patients' stays included, so it lands hardest where those payments are largest.",
+    claim: ['HACRP-01', 'HACRP-75', 'HACRP-79'],
   },
   // The bill.
   billHeading: { text: 'Who carries the cut', claim: null },

@@ -77,7 +77,7 @@ class PaymentInputsOnThePin(unittest.TestCase):
         blanks = {k: self.count(lambda h: h[k] is None) for k in next(iter(self.inp.values()))
                   if k not in ("sch", "mdh", "pr")}
         self.assertEqual({k: n for k, n in blanks.items() if n}, {"hsp": 2677, "hsp_mdh": 2941, "outlier_op": 70,
-                                                                  "outlier_cap": 70})
+                                                                  "outlier_cap": 70, "ime_cases": 1842, "ime_cmi": 1842})
 
     def test_values_are_in_range(self):
         def span(key):
@@ -99,6 +99,8 @@ class PaymentInputsOnThePin(unittest.TestCase):
         self.assertGreaterEqual(span("low_volume")[0], 1.0)  # a multiplier: 1 = none
         self.assertLessEqual(span("low_volume")[1], 1.25)
         self.assertEqual(self.count(lambda h: h["low_volume"] > 1), 572)  # the extension's tiers apply to these
+        # Medicare Advantage IME cases: only teaching hospitals have them
+        self.assertFalse(any(h["ime_cases"] and not h["ime_op"] for h in self.inp.values()))
         self.assertEqual({h["quality"] for h in self.inp.values()} | {h["ehr"] for h in self.inp.values()}, {0, 1})
 
     def test_every_hospital_has_a_rate_and_puerto_rico_has_its_own(self):

@@ -200,6 +200,8 @@ IMPACT_COLUMNS = {
         "cases": "CASETA43",  # transfer-adjusted cases (grouper V43): these price B
         "cmi": "TACMIV43",  # transfer-adjusted case-mix index: prices B
         "cmi_hsp": "CMIV43",  # README: "generally applicable for SCH and MDH providers paid under their HSP rate"
+        "ime_cases": "IME_CASETA43",  # Medicare Advantage cases of teaching hospitals paid IME on them; blank for none
+        "ime_cmi": "IME_TACMIV43",  # their case-mix
         "wi": "FY 2026 Wage Index",
         "mdh": "MDH Flag, CAA 2024",  # Y or blank
         "hsp_mdh": "HSP Rate for MDHs, FY 2025 extension",  # $/case
@@ -210,6 +212,8 @@ IMPACT_COLUMNS = {
         "cases": "CASETA41",  # README: "Transfer Adjusted Cases under Grouper V41 and FY 2024 Post-Acute Transfer Policy"
         "cmi": "TACMIV41",
         "cmi_hsp": "CMIV41",  # README: "generally applicable for SCH & MDH providers paid under their HSP rate"
+        "ime_cases": "IME_CASETA41",
+        "ime_cmi": "IME_TACMIV41",
         "wi": "FY 2024 Wage Index",
         "low_volume": "Low Volume Hospital Adjustment",  # multiplier; 1 = none (the expanded tiers ran all of FY2024)
     },

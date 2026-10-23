@@ -21,7 +21,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": 2
+      "const": 3
     },
     "methods_version": {
       "$ref": "common.schema.json#/$defs/methodsVersion"
@@ -211,12 +211,13 @@
       }
     },
     "parts": {
-      "description": "What the payment is made of, whole dollars: the federal DRG payment (fed), the Medicare-dependent hospital add-on, indirect medical education, disproportionate share, operating outliers, the sole community hospital difference, the low-volume adjustment, capital and uncompensated care. Base = fed + mdhAddon; total = base + the rest.",
+      "description": "What the payment is made of, whole dollars: the federal DRG payment (fed), the Medicare-dependent hospital add-on, indirect medical education, indirect medical education on Medicare Advantage stays, disproportionate share, operating outliers, the sole community hospital difference, the low-volume adjustment, capital and uncompensated care. Base = fed + mdhAddon; total = base + the rest.",
       "type": "object",
       "required": [
         "fed",
         "mdhAddon",
         "ime",
+        "imeMa",
         "dsh",
         "outlierOp",
         "schDiff",
@@ -233,6 +234,10 @@
           "$ref": "#/$defs/count"
         },
         "ime": {
+          "$ref": "#/$defs/count"
+        },
+        "imeMa": {
+          "description": "Indirect medical education paid on the hospital's Medicare Advantage stays: in total (the HAC cut's base), not in base.",
           "$ref": "#/$defs/count"
         },
         "dsh": {

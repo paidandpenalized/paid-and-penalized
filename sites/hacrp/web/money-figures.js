@@ -11,7 +11,7 @@ import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
-import { BASE_PARTS, OTHER_PARTS } from './money.js';
+import { BASE_PARTS, OTHER_PARTS, hasMaTeaching } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
@@ -74,14 +74,14 @@ export function moneyVerdict(view, m) {
   if (m.cut) {
     return {
       beside: html`<div class="money money--cut"><p class="money__big">${money(m.atStake)}</p><p class="money__what">${fill('moneyCutWhat', { fy })} ${estTag()}</p></div>`,
-      below: html`<div class="money__below"><p class="money__of">${fill('moneyOfWhole', { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
+      below: html`<div class="money__below"><p class="money__of">${fill(hasMaTeaching(m) ? 'moneyOfWholeMa' : 'moneyOfWhole', { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
 ${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
     };
   }
   const distance = distanceText(view);
   return {
     beside: html`<div class="money money--zero"><p class="money__big">${zero()}</p><p class="money__what">${t('moneyZeroWhat')}</p></div>`,
-    below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill('moneyWouldOf', { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
+    below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill(hasMaTeaching(m) ? 'moneyWouldOfMa' : 'moneyWouldOf', { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
 ${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
   };
 }
@@ -172,7 +172,9 @@ export function statementLines(m) {
     amount: m.hac, bar: { scope: [0, at(m.after)], ...(m.cut ? { cut: [at(m.after - m.atStake), at(m.after)] } : {}) },
   });
   lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: m.ranges.net ? fill('stmtLikely', { range: rangeText(m.ranges.net) }) : null, amount: m.net, bar: null });
-  const none = [...BASE_PARTS, ...OTHER_PARTS].filter((key) => !shown.includes(key)).map((key) => t(`stmtOff_${key}`));
+  // Not paid: the parts left out, named once (a hospital with no teaching payments has none on Medicare Advantage
+  // stays either, which goes without saying).
+  const none = [...BASE_PARTS, ...OTHER_PARTS].filter((key) => !shown.includes(key) && !(key === 'imeMa' && !m.parts.ime)).map((key) => t(`stmtOff_${key}`));
   return { lines, none };
 }
 
@@ -201,7 +203,7 @@ ${barCell(l.bar)}
 <ul class="stmt__key" role="list" aria-hidden="true"><li><span class="stmt__sw stmt__sw--part"></span>${t('stmtKeyPart')}</li><li><span class="stmt__sw stmt__sw--scope"></span>${t('stmtKeyScope')}</li><li><span class="stmt__sw stmt__sw--cut"></span>${t('stmtKeyCut')}</li></ul>
 <table class="stmt__table">
 <tbody>
-${group('stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GROUP_BEFORE[l.key]) : ''}${row(l)}
+${group(hasMaTeaching(m) ? 'stmtGroupPayMa' : 'stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GROUP_BEFORE[l.key]) : ''}${row(l)}
 `)}</tbody>
 </table>
 ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(none) })}</p>` : ''}
@@ -213,7 +215,7 @@ ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(n
 // that over the hospital's Medicare stays.
 export function moneyWorksheet(m) {
   return html`<div class="ws ws--money${m.cut ? ' ws--cut' : ''}" role="group" aria-label="${t('wsMoneyLabel')}">
-<p class="ws__line"><span class="ws__paren">(</span>${wsTerm(dollars(m.total), t('wsPayment'))}${wsOp(m.hrrp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hrrp)), t('wsHrrp'))}${wsOp(m.hvbp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hvbp)), t('wsHvbp'))}<span class="ws__paren">)</span><span class="ws__tail">${wsOp('×')}${wsTerm(REDUCTION_TEXT, t('wsPct'))}${wsOp('=')}${wsTerm(dollars(m.atStake), t(m.cut ? 'wsCut' : 'wsStake'), 'ws__term--total')}</span></p>
+<p class="ws__line"><span class="ws__paren">(</span>${hasMaTeaching(m) ? html`${wsTerm(dollars(m.total - m.parts.imeMa), t('wsPayment'))}${wsOp('+')}${wsTerm(dollars(m.parts.imeMa), t('wsMaTeaching'))}` : wsTerm(dollars(m.total), t('wsPayment'))}${wsOp(m.hrrp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hrrp)), t('wsHrrp'))}${wsOp(m.hvbp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hvbp)), t('wsHvbp'))}<span class="ws__paren">)</span><span class="ws__tail">${wsOp('×')}${wsTerm(REDUCTION_TEXT, t('wsPct'))}${wsOp('=')}${wsTerm(dollars(m.atStake), t(m.cut ? 'wsCut' : 'wsStake'), 'ws__term--total')}</span></p>
 <p class="ws__line">${wsTerm(dollars(m.atStake), t(m.cut ? 'wsCut' : 'wsStake'))}${wsOp('÷')}${wsTerm(count(m.bills), t('wsStays'))}${wsOp('=')}${wsTerm(roundedDollars(m.perStay), t('wsPerStay'), 'ws__term--total')}</p>
 </div>`;
 }

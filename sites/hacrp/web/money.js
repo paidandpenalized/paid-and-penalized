@@ -6,9 +6,10 @@ import { money } from '../../../web/render/format.js';
 import { fill } from './copy.js';
 
 // What the inpatient payment is made of, in the order the statement lists it: the base the readmissions and
-// value-based programs adjust (the federal DRG payment and the Medicare-dependent hospital add-on), then the rest.
+// value-based programs adjust (the federal DRG payment and the Medicare-dependent hospital add-on), then the rest
+// (imeMa: the teaching payments on Medicare Advantage stays, which the HAC cut is taken on and the others are not).
 export const BASE_PARTS = ['fed', 'mdhAddon'];
-export const OTHER_PARTS = ['ime', 'dsh', 'outlierOp', 'schDiff', 'lowVolume', 'capital', 'uc'];
+export const OTHER_PARTS = ['ime', 'imeMa', 'dsh', 'outlierOp', 'schDiff', 'lowVolume', 'capital', 'uc'];
 
 // A hospital's HAC cut as the tables and the figures show it, this site's estimate in whole dollars: the size of the
 // HAC adjustment (the dollars at stake for a hospital CMS cut, 0 for one it didn't), 0 for Maryland's (exempt), null
@@ -68,6 +69,10 @@ export function sumRanges(ranges) {
 // money Medicare keeps), perStay: the dollars at stake per Medicare stay (bill), ranges: the likely range (rangeOf)
 // of its dollars at stake (hac) and of its net (net, null for a net of $0), and backtest: what a range means (backtest:
 // the share of the back-test's hospitals a range held, and the year it was run on). bands: dollars.json's.
+// Whether the hospital's payment includes teaching payments on Medicare Advantage stays: the words that call the
+// payment "everything traditional Medicare pays it" then say so. m: an estimated hospitalMoney().
+export const hasMaTeaching = (m) => m.parts.imeMa > 0;
+
 export function hospitalMoney(row, bands) {
   if (!row) throw new TypeError('hospitalMoney: a row of the dollar estimates is required');
   if (row.status !== 'estimated') return { status: row.status, cut: row.cut, estimated: false };

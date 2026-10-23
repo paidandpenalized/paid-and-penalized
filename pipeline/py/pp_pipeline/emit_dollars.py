@@ -23,7 +23,7 @@ from pp_pipeline.emit_hospital import HACRP, read_hacrp
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
 
-SCHEMA_VERSION, METHODS_VERSION = 2, 2
+SCHEMA_VERSION, METHODS_VERSION = 3, 3
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
 SCHEMA = "dollars.schema.json"
 

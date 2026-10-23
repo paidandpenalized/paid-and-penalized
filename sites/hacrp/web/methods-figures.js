@@ -211,7 +211,8 @@ export function dollarsPipeline(headline) {
 export function assumptionsTable({ fy, volumeFy, backtestFy }) {
   const rows = [
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
-    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'], ['assumeSch', 'assumeSchE'],
+    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'],
+    ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSch', 'assumeSchE'],
     ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
     ['assumeFfs', 'assumeFfsE'],
   ];

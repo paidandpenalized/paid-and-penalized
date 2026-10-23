@@ -74,7 +74,8 @@ class PaymentInputsOnThePin(unittest.TestCase):
         blanks = {k: self.count(lambda h: h[k] is None) for k in next(iter(self.inp.values()))
                   if k not in ("sch", "mdh", "pr", "hsp_mdh_prior_year")}
         self.assertEqual({k: n for k, n in blanks.items() if n}, {"hsp": 2554, "hsp_mdh": 3022, "outlier_op": 68,
-                                                                  "outlier_cap": 68})
+                                                                  "outlier_cap": 68, "ime_cases": 1980, "ime_cmi": 1966})
+        self.assertFalse(any(h["ime_cases"] and not h["ime_op"] for h in self.inp.values()))  # teaching hospitals only
 
     def test_values_are_in_range(self):
         def span(key):

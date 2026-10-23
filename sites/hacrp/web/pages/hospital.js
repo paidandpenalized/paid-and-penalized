@@ -28,6 +28,7 @@ import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } fro
 import { fill as hfill, t as ht } from '../history/copy.js';
 import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
+import { hasMaTeaching } from '../money.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
@@ -260,14 +261,14 @@ ${small && html`<p class="note">${small}</p>`}
 ${cliffFig && section({
     id: 'cliff', wide: true,
     text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
-<p>${mfill('cliffIntro', { pct: REDUCTION_TEXT })}</p>
+<p>${mfill(hasMaTeaching(money) ? 'cliffIntroMa' : 'cliffIntro', { pct: REDUCTION_TEXT })}</p>
 <p>${mt('cliffHow')}</p>`,
     figure: cliffFig,
   })}
 ${statement && section({
     id: 'money',
     text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
-<p>${mfill('stmtIntro', { fy })}</p>
+<p>${mfill(hasMaTeaching(money) ? 'stmtIntroMa' : 'stmtIntro', { fy })}</p>
 <p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
 ${moneyWorksheet(money)}`,
     figure: statement,
