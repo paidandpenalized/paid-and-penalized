@@ -103,7 +103,7 @@ test('the Part on the money: at least five figures, each beside its words, each 
   const all = MD.byKind.filter((k) => ['teach', 'beds', 'own', 'urban'].includes(k.kind)).flatMap((k) => k.groups);
   const top = all.reduce((a, b) => (b.shareMoney / b.shareHospitals > a.shareMoney / a.shareHospitals ? b : a));
   const shares = captionOf(part, 'shares');
-  assert.ok(shares.includes(`are ${pct(top.shareHospitals, 0)} of the hospitals CMS cut and ${pct(top.shareMoney, 0)} of the money by this site’s estimate`), shares);
+  assert.ok(shares.includes(`are ${pct(top.shareHospitals, 0)} of the cut hospitals this site estimates, and ${pct(top.shareMoney, 0)} of the money it estimates`), shares);
   // States: the range of the states' dollars.
   const states = [...MD.byState.values()].filter((s) => s.money > 0);
   const st = captionOf(part, 'states');
@@ -483,9 +483,9 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   assert.equal(row('Payments for dialysis')[1], 'Both are small, so the HAC cut runs a hair low.');
   assert.equal(row('Teaching payments leave out')[1], 'Hospitals that received those slots run a little low.');
   assert.equal(row('Maryland’s hospitals')[0], `Maryland’s hospitals: no dollars from the HAC or readmissions programs, which exempt them, and none from the value-based program, whose FY${DATA.fy} factors list no Maryland hospital.`);
-  assert.equal(row('Hospitals in Pennsylvania’s Rural Health Model')[0], 'Hospitals in Pennsylvania’s Rural Health Model are estimated like any other hospital. CMS pays them through yearly global budgets and adjusts those budgets for the three programs.');
+  assert.equal(row('Hospitals in Pennsylvania’s Rural Health Model')[0], 'Hospitals in Pennsylvania’s Rural Health Model are estimated like any other hospital. CMS pays them global budgets, which, its evaluator reports, are adjusted for their results in the three programs.');
   assert.equal(row('Traditional Medicare stays')[0], 'Traditional Medicare stays, plus the teaching payments Medicare makes on Medicare Advantage stays.');
-  assert.equal(row('Traditional Medicare stays')[1], 'What Medicare Advantage plans pay hospitals isn’t Medicare’s payment, and isn’t in any figure.');
+  assert.equal(row('Traditional Medicare stays')[1], 'What Medicare Advantage plans pay hospitals isn’t in any figure.');
   assert.match(row('Teaching payments on a hospital’s Medicare Advantage stays')[1], new RegExp(`^That volume is two years old, and in this site’s check against FY${DATA.dollars.bands.fy} cost reports these payments came out lower than hospitals recorded, for reasons the check can’t separate\\. So a large teaching hospital’s estimate can run a little low\\.$`));
   // Where they stand: the dialysis row after the new-technology row, the slots row after the Medicare Advantage teaching row.
   const names = rows.map(([x]) => x);

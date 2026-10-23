@@ -356,7 +356,8 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
   // A neutral sentence, the same for every verdict (ARCH-23): it names the hospital, the year and the kinds of facts the
   // page holds, and no decision, no score and no dollar figure. The Share control's sentence is the reader's to copy.
-  const description = esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, and this site’s estimate of the dollars, from public CMS data.`);
+  // These pages render with no estimate (PAGE_CTX), so the sentence doesn't mention dollars; money.test.js checks both.
+  const description = esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`);
   assert.equal(meta(text, 'description'), description);
   assert.equal(text.match(/<meta property="og:description" /g).length, 1, 'one og:description');
   assert.ok(text.includes(`<meta property="og:description" content="${description}">`), 'the same sentence');

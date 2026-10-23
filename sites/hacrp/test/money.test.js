@@ -229,7 +229,8 @@ test('the share sentence names CMS\'s decision and the dollars as this site\'s e
     const page = pageOf(row);
     // The description (and og:description) is the same neutral sentence whatever the verdict: no decision, no dollars.
     assert.ok(!page.includes(`<meta name="description" content="${esc(sentence)}">`), `${row.status}: the share sentence is not the description`);
-    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill('hospitalDescription', { name: view.name, city: view.city, state: view.state, fy: String(view.fy) }))}">`), `${row.status}: description`);
+    const key = hospitalMoney(row).estimated ? 'hospitalDescription' : 'hospitalDescriptionNone';
+    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill(key, { name: view.name, city: view.city, state: view.state, fy: String(view.fy) }))}">`), `${row.status}: description`);
     assert.ok(page.includes(esc(SITE.origin + view.path)), `${row.status}: the link to share`);
     assert.ok(page.includes(esc(sentence)), `${row.status}: the sentence to share`);
     assert.match(page, /<details class="share" data-share/);

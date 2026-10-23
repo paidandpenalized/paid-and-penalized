@@ -264,6 +264,11 @@ export const COPY = {
     text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, and this site's estimate of the dollars, from public CMS data.",
     claim: null,
   },
+  // The same, for a hospital this site has no estimate for (Maryland's, or one with no usable payment inputs).
+  hospitalDescriptionNone: {
+    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, from public CMS data.",
+    claim: null,
+  },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
   // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.

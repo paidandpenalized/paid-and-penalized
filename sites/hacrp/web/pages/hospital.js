@@ -335,7 +335,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     title,
     // A neutral sentence: no payment decision and no dollar figure, so a link's preview (Open Graph, ARCH-23) names neither.
     // The Share control's sentence (shareSentence) is what a reader chooses to copy.
-    description: fill('hospitalDescription', where),
+    description: fill(money.estimated ? 'hospitalDescription' : 'hospitalDescriptionNone', where),
     path: view.path,
     robots,
     body,

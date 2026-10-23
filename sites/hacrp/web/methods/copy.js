@@ -254,7 +254,7 @@ export const COPY = {
   // ---------- How this site estimates the dollars (#dollars) ----------
   dollarsHeading: { text: 'How this site estimates the dollars', claim: null },
   dollarsText: {
-    text: "CMS's HACRP file gives each hospital's payment decision, not the dollars it moves. So this site rebuilds each hospital's year of traditional Medicare inpatient payments, with the teaching payments Medicare makes on Medicare Advantage stays, from CMS's FY{fy} payment files, then applies Medicare's three hospital quality programs: the readmissions and value-based adjustments to the base payment, and the HAC cut last, as the law sets. Every dollar on these pages is this site's estimate and says so.",
+    text: "CMS's HACRP file gives each hospital's payment decision, not the dollars it moves. So this site rebuilds each hospital's year of traditional Medicare inpatient payments, with the teaching payments Medicare makes on Medicare Advantage stays, from CMS's FY{fy} payment files, then applies Medicare's three hospital quality programs: the readmissions and value-based adjustments to the base payment, and the HAC cut last, as the law sets. Every dollar figure this site estimates is tagged estimate.",
     claim: ['HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-79'],
   },
   dollarsOrder: {
@@ -320,7 +320,7 @@ export const COPY = {
   assumeAddonsE: { text: "Where CMS's arithmetic differs, those hospitals' totals shift a little.", claim: null },
   assumeMaIme: { text: "Teaching payments on a hospital's Medicare Advantage stays count in the payment the HAC cut is taken on, but not in the base the other two programs adjust. They are modeled from the Medicare Advantage cases and case mix in CMS's impact file.", claim: ['HACRP-72', 'HACRP-73', 'HACRP-79'] },
   assumeMaImeE: { text: "That volume is two years old, and in this site's check against FY{fy} cost reports these payments came out lower than hospitals recorded, for reasons the check can't separate. So a large teaching hospital's estimate can run a little low.", claim: null },
-  assumeSlots: { text: "Teaching payments leave out the extra add-on for residency slots CMS redistributed, which the teaching factor in CMS's impact file doesn't carry.", claim: 'HACRP-90' },
+  assumeSlots: { text: "Teaching payments leave out the second teaching factor for residents added under an increase in a hospital's resident cap, which CMS's impact file doesn't carry.", claim: 'HACRP-90' },
   assumeSlotsE: { text: 'Hospitals that received those slots run a little low.', claim: null },
   assumeSch: { text: 'A sole community or Medicare-dependent hospital paid its hospital-specific rate is compared with the federal payment on the year\'s totals, not stay by stay.', claim: 'HACRP-75' },
   assumeSchE: { text: 'This can only understate the difference such a hospital is paid.', claim: null },
@@ -334,10 +334,10 @@ export const COPY = {
   assumeUnlistedE: { text: 'Its readmissions or value-based dollars are zero.', claim: null },
   assumeMaryland: { text: "Maryland's hospitals: no dollars from the HAC or readmissions programs, which exempt them, and none from the value-based program, whose FY{fy} factors list no Maryland hospital.", claim: ['HACRP-26', 'HACRP-91'] },
   assumeMarylandE: { text: 'Left out of every total.', claim: null },
-  assumeParhm: { text: "Hospitals in Pennsylvania's Rural Health Model are estimated like any other hospital. CMS pays them through yearly global budgets and adjusts those budgets for the three programs.", claim: 'HACRP-85' },
+  assumeParhm: { text: "Hospitals in Pennsylvania's Rural Health Model are estimated like any other hospital. CMS pays them global budgets, which, its evaluator reports, are adjusted for their results in the three programs.", claim: 'HACRP-85' },
   assumeParhmE: { text: 'Their figures show the size of each adjustment, not the route the money takes.', claim: null },
   assumeFfs: { text: 'Traditional Medicare stays, plus the teaching payments Medicare makes on Medicare Advantage stays.', claim: ['HACRP-24', 'HACRP-79'] },
-  assumeFfsE: { text: "What Medicare Advantage plans pay hospitals isn't Medicare's payment, and isn't in any figure.", claim: null },
+  assumeFfsE: { text: "What Medicare Advantage plans pay hospitals isn't in any figure.", claim: null },
   // The national checks, as a receipt.
   dchecksSub: { text: 'The national checks', claim: null },
   dchecksText: { text: "Every build adds the estimate up nationally, checks the method against an earlier year's cost reports, and holds the results to fixed ranges written into the build; the build stops if one fails. This build's tape:", claim: null },

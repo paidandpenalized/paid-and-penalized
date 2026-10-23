@@ -237,7 +237,7 @@ export const COPY = {
   // Shares.
   sharesHeading: { text: 'The same hospitals, a different share of the money', claim: null },
   sharesText: { text: "For each kind of hospital: its share of the cut hospitals this site estimates, and its share of the dollars this site estimates they were cut.", claim: null },
-  sharesTakeaway: { text: "{group} are {shareHospitals} of the hospitals CMS cut and {shareMoney} of the money by this site's estimate.", claim: null },
+  sharesTakeaway: { text: "{group} are {shareHospitals} of the cut hospitals this site estimates, and {shareMoney} of the money it estimates.", claim: null },
   // A group as the takeaway names it, by kind.
   sharesNoun_teach: { text: '{group} hospitals', claim: null },
   sharesNoun_beds: { text: 'Hospitals of {group}', claim: null },
@@ -247,7 +247,7 @@ export const COPY = {
   sharesKeyMoney: { text: 'Share of the money', claim: null },
   sharesTipHospitals: { text: '{group}: {n} of the cut hospitals ({share})', claim: null },
   sharesTipMoney: { text: '{group}: {money} of the money ({share})', claim: null },
-  sharesAlt: { text: 'Paired bars for each kind of hospital: its share of the hospitals CMS cut and its share of the estimated dollars.', claim: null },
+  sharesAlt: { text: 'Paired bars for each kind of hospital: its share of the cut hospitals this site estimates and its share of the estimated dollars.', claim: null },
   // By state.
   statesHeading: { text: 'Where the money comes from', claim: null },
   statesText: { text: "Each state's circle is as large as this site's estimate of its hospitals' cuts. Switch to the cut per traditional Medicare stay to compare states of different sizes: the dollars over every traditional Medicare stay at the state's hospitals with a decision.", claim: null },
