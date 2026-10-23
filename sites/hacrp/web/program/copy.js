@@ -23,7 +23,7 @@ export const COPY = {
   summaryPayYearValue: { text: '{start} to {end}', claim: null },
   summaryPayYearNote: { text: "Fiscal year {fy}: the stays whose Medicare payments CMS cuts", claim: ['HACRP-24', 'HACRP-79'] },
   summaryLineValue: { text: '{lowestYes} and up', claim: null },
-  summaryLineNote: { text: 'The lowest score CMS cut. The highest it did not: {highestNo}.', claim: null },
+  summaryLineNote: { text: 'The lowest score CMS cut.', claim: null },
   stampReleased: { text: 'Final · released {date}', claim: null },
   ruleLow: { text: 'Lowest score: {value}', claim: null },
   ruleHigh: { text: 'Highest score: {value}', claim: null },

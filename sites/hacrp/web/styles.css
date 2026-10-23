@@ -745,6 +745,9 @@
 /* The summary form's estimate across both columns of the form. */
 .prog__summary > .field.f-money { flex-basis: 100%; }
 .prog__summary .f-money .field__note { display: grid; gap: 6px; justify-items: start; }
+/* The program card: the national estimate, its tag and its likely range on one line. */
+.prog__card .f-money .field__value { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.prog__card .f-money .money__range { margin-top: 0; }
 /* The states' map: one drawing, two layers of circles; the figure's data-view says which shows. */
 .bubbles { display: grid; gap: 8px; }
 .bubbles[data-view="total"] .chart-bubbles__layer--stay, .bubbles[data-view="stay"] .chart-bubbles__layer--total { display: none; }

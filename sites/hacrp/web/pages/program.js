@@ -40,7 +40,7 @@ function sandbox(whatif, { fy, boundaryText, source }) {
 // with this year's count, the hero search and a line of places to try; beside it the summary form under its stamp.
 function programTop({ title, subtitle, fy, counts, boundaryText, periods, source, searchUrl, tryPlaces, md }) {
   const at = title.lastIndexOf(' ');
-  const { highestNo, lowestYes } = boundaryText;
+  const { lowestYes } = boundaryText;
   const fyText = String(fy);
   const range = (key, { start, end }, more = {}) => fillKeep(key, { ...more, start: shortDate(start), end: shortDate(end) }, ['start', 'end']);
   const payYear = { start: `10/01/${fy - 1}`, end: `09/30/${fy}` };
@@ -68,7 +68,7 @@ ${[
     { label: t('summaryPct'), value: REDUCTION_TEXT, size: 'big', note: t('summaryPctNote') },
     md && { ...summaryMoneyField(md), wide: true },
     { label: t('summaryScored'), value: count(counts.scored), note: t('summaryScoredNote') },
-    { label: t('lineHeading'), value: fill('summaryLineValue', { lowestYes }), note: fill('summaryLineNote', { highestNo }) },
+    { label: t('lineHeading'), value: fill('summaryLineValue', { lowestYes }), note: t('summaryLineNote') },
     { label: t('summaryData'), value: html`${range('summaryDataPsi', periods.psi90, { short: SHORT_NAMES.PSI90 })}<br>${range('summaryDataHai', periods.hai)}`, size: 'sm' },
     { label: t('summaryPayYear'), value: range('summaryPayYearValue', payYear), size: 'sm', note: fill('summaryPayYearNote', { fy: fyText }) },
   ].filter(Boolean).map((field, i) => html`${formField({ no: i + 1, ...field })}

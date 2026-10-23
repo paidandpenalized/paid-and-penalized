@@ -197,7 +197,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     // The line is stated for Yes/No decisions only: Maryland hospitals score above it and were not cut.
     const program = kept.get('/hacrp/');
     assert.ok(DATA.hospitals.some((h) => h.paymentReduction === 'N/A' && h.total >= DATA.model.boundary.lowestYes), 'the scope matters in the pinned data');
-    assert.match(program, new RegExp(`<p class="field__value">${bt.lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${bt.highestNo}\\.</div>`), 'the summary form names the line by both of CMS\'s scores');
+    assert.match(program, new RegExp(`<p class="field__value">${bt.lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\.</div>`), 'the summary form names the line by CMS\'s lowest Yes score');
     const notSubject = DATA.hospitals.filter((h) => h.total !== null && h.paymentReduction === 'N/A');
     const above = notSubject.filter((h) => h.total >= Number(bt.lowestYes)).length;
     assert.ok(program.includes(esc(`Not shown: Maryland’s ${count(notSubject.length)} scored hospitals. ${count(above)} of them scored at or above the lowest score CMS cut elsewhere, and none were cut.`)));
@@ -281,7 +281,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
   assert.doesNotMatch(text, /<datalist/);
   assert.doesNotMatch(text, /application\/json/);
   // CMS's line, quoted from CMS's text for both scores, in the summary form.
-  assert.match(text, /<p class="field__value">0\.2507 and up<\/p>\n<div class="field__note">The lowest score CMS cut\. The highest it did not: 0\.2500\.<\/div>/);
+  assert.match(text, /<p class="field__value">0\.2507 and up<\/p>\n<div class="field__note">The lowest score CMS cut\.<\/div>/);
   // Without a search asset there is no hero box.
   assert.doesNotMatch(programPage({ ...PROGRAM_ARGS, searchUrl: null }), /omni--hero/);
 });
@@ -680,7 +680,7 @@ test("the program page's top: the name with its last word in the penalty ink, th
   assert.deepEqual(fields.map(([n, label]) => [n, label]), [['1', 'Hospitals cut'], ['2', 'The cut'], ['3', 'Scored'], ['4', 'CMS’s line'], ['5', 'Data window'], ['6', 'Payment year']]);
   assert.deepEqual(fields.slice(0, 4).map(([, , v]) => v), ['310', '1%', '1,305', '0.2507 and up']);
   assert.ok(top.includes('Of 1,240 scored hospitals with a Yes or No'));
-  assert.ok(top.includes('The lowest score CMS cut. The highest it did not: 0.2500.'));
+  assert.ok(top.includes('<div class="field__note">The lowest score CMS cut.</div>'));
   // The data windows and the payment year, whole dates from the periods and the year.
   assert.ok(fields[4][2].includes(`PSI 90: <span class="nw">Jul 1, 2022</span> to <span class="nw">Jun 30, 2024</span><br>Infections: <span class="nw">Jan 1, 2023</span> to <span class="nw">Dec 31, 2024</span>`));
   assert.ok(fields[5][2].includes(`<span class="nw">Oct 1, ${DATA.fy - 1}</span> to <span class="nw">Sep 30, ${DATA.fy}</span>`));

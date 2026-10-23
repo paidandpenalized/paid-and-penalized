@@ -341,7 +341,7 @@ export const COPY = {
   summaryCut: { text: 'Hospitals cut', claim: null },
   summaryCutNote: { text: "Of {decided} scored hospitals with a Yes or No", claim: null },
   summaryPct: { text: 'The cut', claim: 'HACRP-01' },
-  summaryPctNote: { text: "Of a hospital's Medicare inpatient payments, for the fiscal year", claim: ['HACRP-01', 'HACRP-24', 'HACRP-79'] },
+  summaryPctNote: { text: "Of a hospital's Medicare inpatient payments", claim: ['HACRP-01', 'HACRP-24', 'HACRP-79'] },
   summaryScored: { text: 'Scored', claim: null },
   summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
   // CMS's line, as a summary field and in a sentence.

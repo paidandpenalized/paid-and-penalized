@@ -302,10 +302,11 @@ ${psec({ id: 'three', wide: true, heading: t('threeHeading'), text: p('threeText
 // The Part's intro: the national estimate and its likely range, with the hospitals it leaves out named in the count.
 export const moneyPartIntro = (md, fy) => fill('moneyPartIntro', { fy: String(fy), money: money(md.headline.money), range: moneyRange(...md.headline.range), ...cutCounts(md.headline), missing: count(md.headline.yesUnestimated), pct: REDUCTION_TEXT });
 
-// The summary form's field: the national estimate, its tag, the hospitals it covers and its range.
+// The summary form's field: the national estimate, its tag and its range on one line (no range drawing, so the line
+// fits the card), then the hospitals it covers.
 export const summaryMoneyField = (md) => ({
   label: t('summaryMoney'),
-  value: html`<span class="money__field money__field--cut">${money(md.headline.money)}</span> ${estTag()}`,
+  value: html`<span class="money__field money__field--cut">${money(md.headline.money)}</span> ${estTag()}${rangeLine(md.headline.range)}`,
   as: 'div', size: 'big', fieldCls: 'f-money',
-  note: html`${fill('summaryMoneyNote', cutCounts(md.headline))}${rangeLine(md.headline.range, { estimate: md.headline.money })}`,
+  note: fill('summaryMoneyNote', cutCounts(md.headline)),
 });
