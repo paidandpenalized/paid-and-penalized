@@ -38,14 +38,17 @@ MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of i
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass.
 #
-# HRRP: CMS's published "penalty as a share of payments", 0.44% in the All Hospitals row of the HRRP impact table of the
-# FY2026 IPPS/LTCH PPS final rule (90 FR 36536; the rule numbers both its HRRP and HACRP impact tables I.G.7.-01, so
-# the row and program name the table), with a band of 0.04 percentage points each way. CMS defines the share as the sum
-# of the penalties over the sum of base operating DRG payments (FY2024) of the hospitals with the characteristic; the
-# All Hospitals row counts 2,797 eligible hospitals, 2,304 of them penalized. The ratio checked is the HRRP dollars lost
-# over the base operating payments (B) of the penalized hospitals (`hrrp_base`). On the pinned FY2026 files that is
-# 0.443%; over every hospital with an HRRP row it would be 0.387%, so the published 0.44% matches the penalized-only
-# ratio. Flagged for the accuracy pass, which confirms the denominator against the rule's text.
+# HRRP: CMS's published "penalty as a share of payments", 0.44%, from the HRRP impact discussion of the FY2026
+# IPPS/LTCH PPS final rule (90 FR 36536, Appendix A; the rule numbers both its HRRP and HACRP impact tables I.G.7.-01,
+# so the program and row name the table). The All Hospitals row reads 2,797 eligible, 2,304 penalized, 82.37% penalized,
+# 0.44%. CMS's words: "The results in Table I.G.7.-01 include 2,797 non-Maryland hospitals estimated as eligible to
+# receive a penalty during the performance period." and "This is calculated as the sum of penalties for all hospitals
+# with that characteristic over the sum of all base operating DRG payments for those hospitals between October 1, 2023,
+# through September 30, 2024 (FY 2024)." Those words describe all hospitals, 2,797 of them. On the pinned FY2026 files
+# the ratio of this module's HRRP dollars to B over every hospital with an HRRP row is 0.387%, and over the penalized
+# hospitals alone 0.443%. The check uses the penalized hospitals (`hrrp_base`) because that is the ratio that reproduces
+# CMS's published figure. The denominator is unconfirmed (CMS's text and the pins disagree on which hospitals it
+# covers) and is flagged for the accuracy pass. The band is 0.04 percentage points each way.
 HRRP_SHARE = (0.0040, 0.0048)
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
