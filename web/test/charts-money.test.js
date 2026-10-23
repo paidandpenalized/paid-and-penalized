@@ -60,6 +60,31 @@ test('the treemap: tiles are written in their own order (not by size) without mo
   }
 });
 
+test('the treemap: a box has a header only where its label is printed (one threshold), never a blank band; a box in the old gap between the two thresholds has none', () => {
+  const group = { label: 'Only', sub: 'o', value: 10, tiles: [{ value: 6, tip: 'One' }, { value: 4, tip: 'Two' }] };
+  // The top of the highest tile: a wide drawing writes each as a rect, a phone's (and any narrower than a page) as one path.
+  const tileTop = (svg) => Math.min(...[...svg.matchAll(/<rect data-mark x="[\d.]+" y="([\d.]+)"|M[\d.]+ ([\d.]+)h/g)].map((m) => Number(m[1] ?? m[2])));
+  // One group fills the whole drawing, so its box is the drawing: every height and width from a sliver to a full header.
+  const sizes = [];
+  for (const height of [20, 33, 34, 35, 36, 37, 38, 39, 40, 60, 200]) sizes.push([PAGE, height]);
+  for (const width of [40, 69, 70, 71, 120]) sizes.push([width, 200]);
+  for (const [width, h] of sizes) {
+    const svg = String(treemap({ groups: [group], width, height: h }));
+    const printed = svg.includes('chart-tree__label');
+    // A header's band (30 units) is reserved exactly where the label is printed: the tiles start below it, else at the top.
+    assert.equal(tileTop(svg) >= 30, printed, `${width} x ${h}: header iff label`);
+  }
+  // Heights in the gap the two thresholds used to leave (above a header and a gap, at or under the label's): a sliver.
+  for (const h of [35, 36, 37, 38]) {
+    const svg = String(treemap({ groups: [group], width: PAGE, height: h }));
+    assert.ok(!svg.includes('chart-tree__label'), `${h}: no label`);
+    assert.ok(tileTop(svg) < 5, `${h}: its tiles fill the box, no blank header above them`);
+  }
+  assert.ok(String(treemap({ groups: [group], width: PAGE, height: 39 })).includes('chart-tree__label'), 'a taller box keeps its header');
+  // Too narrow for the label: the same, whatever the height.
+  assert.ok(tileTop(String(treemap({ groups: [group], width: 69, height: 200 }))) < 5, 'a narrow box has no blank header either');
+});
+
 test('acrossLine: a phone\'s drawing has smaller, plain dots; a wide one names each dot with a tip, and a dot with no tip stays plain', () => {
   const dots = [
     { x: 0.1, value: 100, over: false, mine: true, tip: 'Mine' },

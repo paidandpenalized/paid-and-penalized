@@ -243,6 +243,20 @@ test('fillAround puts markup where placeholders stand, typesetting and escaping 
   // any function that fills a sentence will do; the words it returns are escaped, the markup is not escaped again
   assert.equal(String(fillAround(({ slot }) => `a<b ${slot} c&d`, { slot: raw('<i>x</i>') })), 'a&lt;b <i>x</i> c&amp;d');
   assert.equal(String(fillAround((marks) => fillCopy(copy, 'plain', marks), { slot: 'text' })), 'No text', 'plain text is escaped');
+  assert.equal(String(fillAround(() => 'a & b', {})), 'a &amp; b', 'no parts: the words, escaped');
+});
+
+test('fillAround keeps every part in its own place whatever the count, and a tab or a newline in the sentence stays what it is', () => {
+  // Twelve parts, past the tenth (the newline's code) and the ninth (the tab's): the words hold both characters.
+  const names = Array.from({ length: 12 }, (_, i) => `p${i}`);
+  const parts = Object.fromEntries(names.map((n, i) => [n, html`<b>${String(i)}</b>`]));
+  const copy = { all: `first\tcolumn\nsecond line: ${names.map((n) => `{${n}}`).join(' ')}\r\u000b\u0001 end` };
+  const got = String(fillAround((marks) => fillCopy(copy, 'all', marks), parts));
+  assert.equal(got, `first\tcolumn\nsecond line: ${names.map((_, i) => `<b>${i}</b>`).join(' ')}\r\u000b\u0001 end`);
+  // In another order than the parts', and one part repeated, each mark still finds its own markup.
+  const copy2 = { back: '{p11}\t{p9}\n{p10} {p0} {p9}' };
+  const some = Object.fromEntries(['p10', 'p0', 'p9', 'p11'].map((n) => [n, parts[n]]));
+  assert.equal(String(fillAround((marks) => fillCopy(copy2, 'back', marks), some)), '<b>11</b>\t<b>9</b>\n<b>10</b> <b>0</b> <b>9</b>');
 });
 
 test('lastCall returns its last result for the same key (by identity) and calls again for a new one', () => {

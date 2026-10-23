@@ -106,15 +106,18 @@ export function fillCopyKeep(copy, key, values, keep) {
 }
 
 // A sentence with markup (a link, a box) where some of its placeholders stand. `parts` maps a placeholder's name to the
-// markup that takes its place; `make` fills the sentence: it is called with { name: mark }, one control character
-// ("\u0001", "\u0002", ... in the order of `parts`) for each name, to be given as that placeholder's value, and returns
+// markup that takes its place; `make` fills the sentence: it is called with { name: mark }, one private-use character
+// ("\uE000", "\uE001", ... in the order of `parts`) for each name, to be given as that placeholder's value, and returns
 // the text (a fillCopy, or any function that fills one). The marks are then swapped for the markup and the words round
-// them are escaped.
+// them are escaped. Private-use characters, because no sentence has one, where the control characters this once used
+// ran into the tab and the newline from the tenth part on.
+const FIRST_MARK = 0xe000;
 export function fillAround(make, parts) {
   const names = Object.keys(parts);
-  const marks = Object.fromEntries(names.map((name, i) => [name, String.fromCharCode(i + 1)]));
-  const MARKS = new RegExp(`([\\u0001-\\u${names.length.toString(16).padStart(4, '0')}])`);
-  const markup = make(marks).split(MARKS).map((piece, i) => (i % 2 ? parts[names[piece.charCodeAt(0) - 1]] : piece));
+  if (!names.length) return html`${make({})}`;
+  const marks = Object.fromEntries(names.map((name, i) => [name, String.fromCharCode(FIRST_MARK + i)]));
+  const MARKS = new RegExp(`([\\u${FIRST_MARK.toString(16)}-\\u${(FIRST_MARK + names.length - 1).toString(16)}])`);
+  const markup = make(marks).split(MARKS).map((piece, i) => (i % 2 ? parts[names[piece.charCodeAt(0) - FIRST_MARK]] : piece));
   return html`${markup}`;
 }
 
