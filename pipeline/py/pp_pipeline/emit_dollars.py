@@ -10,8 +10,9 @@ the year and how much HRRP, HVBP and the HAC Reduction Program move that (a mode
 docstring and docs/METHODS-LOG.md, `dollars`), then the national sums, the sums over the hospitals the HACRP site
 counts in its headline, the checks that hold the sums against what CMS publishes, and `bands`: the likely ranges, from
 the back-test of the same estimate on FY2024 against hospitals' cost reports (pp_pipeline.backtest_dollars), whose
-checks join the others. Each estimated hospital carries its `stratum`, the row of `bands` its ranges come from. It
-lives at the family level because more than one site reads it.
+checks join the others. Each estimated hospital carries its `stratum`, which names the row of each measure's `strata`
+in `bands` that its ranges come from; `all`, a hospital the impact file gives no bed count, has no such row and takes
+each measure's `overall` band instead. It lives at the family level because more than one site reads it.
 """
 import sys
 from datetime import datetime, timezone
@@ -34,14 +35,16 @@ VOLUME_FY = 2024
 # The last day of the extension of Medicare-dependent hospital status and of the expanded low-volume-hospital tiers
 # (Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's FY2025-extension columns,
 # which the estimate reads, model both in force for the whole year.
+# Both fall after FY2026 ends (September 30, 2026), so the year is whole under either.
 MDH_END = "2026-12-31"
 LOW_VOLUME_END = "2026-12-31"
 NTAP = "excluded"  # new-technology add-on payments are in no figure (dollars.py, the ASSUMPTION at the federal payment)
 
 # Hospitals that take adjustment factor 1 because a program file does not list them. Hospitals outside HVBP are common
-# and legitimate (too few measures to score, new hospitals), so neither count is an error by itself; each is capped so a
-# later file with more is looked at before it ships. Both counts are over estimated hospitals, on the pinned FY2026 files
-# (2026-10-22): 43 with no row in the HRRP supplemental file (38 of them not cut, 5 cut) and 524 with no row in Table 16B.
+# and legitimate (too few measures to score, new hospitals), so neither count is an error by itself; each is capped so
+# a later file with more is looked at before it ships. Both counts are over estimated hospitals, on the pinned FY2026
+# files (2026-10-22): 43 with no row in the HRRP supplemental file (38 of them not cut, 5 cut) and 524 with no row in
+# Table 16B.
 HRRP_UNLISTED_MAX = 43
 VBP_UNLISTED_MAX = 524
 
@@ -94,11 +97,15 @@ def yes_count(site, manifest):
     the HACRP pin as `manifest` now has it: its `source_manifest` must equal the hash of the current entries for the
     sources it names, and one of them must be the HACRP pin. Otherwise the count is of an older file than the rows it
     is held against."""
-    stale = HACRP not in site["sources"] or site["source_manifest"] != source_manifest_hash(
-        [manifest_entry(pin, manifest) for pin in site["sources"]])
-    if stale:
-        raise ValueError("the HACRP site's emitted file was not built from the current HACRP pin: "
-                         "emit the HACRP site first (`make emit` does)")
+    hint = "emit the HACRP site first (`make emit` does)"
+    known = {entry["id"] for entry in manifest}
+    unknown = [pin for pin in site["sources"] if pin not in known]
+    if unknown:  # a pin the file names that the manifest no longer has: the file is older than the pins
+        raise ValueError(f"the HACRP site's emitted file names the pin {unknown[0]!r}, which the manifest does not "
+                         f"have: {hint}")
+    if HACRP not in site["sources"] or site["source_manifest"] != source_manifest_hash(
+            [manifest_entry(pin, manifest) for pin in site["sources"]]):
+        raise ValueError(f"the HACRP site's emitted file was not built from the current HACRP pin: {hint}")
     return sum(h["paymentReduction"] == "Yes" for h in site["hospitals"])
 
 

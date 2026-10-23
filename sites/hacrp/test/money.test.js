@@ -56,6 +56,11 @@ test('the pages read the dollars for the HACRP file\'s year, a row for every hos
   assert.equal(DATA.dollars.byCcn.size, DATA.hospitals.length);
 });
 
+test('the stratum of a hospital with no bed count is the schema\'s "all", beside its six strata (bands.py\'s ALL is checked against the same schema in the Python tests)', () => {
+  const { stratumId, rowStratum } = readJson(`${REPO_ROOT}schemas/dollars.schema.json`).$defs;
+  assert.deepEqual(rowStratum.enum, [...stratumId.enum, ALL_STRATUM]);
+});
+
 test('the contract: an estimated hospital has dollars at stake above $0, since the cliff and the what-if plot a drop to them; a file that breaks it stops the build, naming the row', () => {
   const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
   const estimated = file.hospitals.filter((r) => r.status === 'estimated');

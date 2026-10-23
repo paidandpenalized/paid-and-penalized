@@ -1,5 +1,6 @@
 """The HCRIS extract (pp_pipeline.hcris_extract): derived exactly from a small synthetic report file and numeric file,
 refused from anything else, and the committed extract's shape. Synthetic CCNs and report numbers only."""
+import contextlib
 import csv
 import hashlib
 import io
@@ -9,7 +10,9 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
+from pp_pipeline import hcris_extract
 from pp_pipeline.files import PINNED_DIR, manifest_entry, read_pinned_bytes
 from pp_pipeline.hcris_extract import CELLS, COLUMNS, PIN_ID, derive, extract
 
@@ -84,6 +87,39 @@ class Extract(unittest.TestCase):
                 extract(reports, numbers)
 
 
+class Main(unittest.TestCase):
+    """The command prints what is wrong with the zip it was given and returns 1; a bad file is never a traceback."""
+
+    def run_main(self, zip_path="synthetic.zip", **patch):
+        out = io.StringIO()
+        with mock.patch.object(hcris_extract, "derive", **patch), contextlib.redirect_stdout(out):
+            return hcris_extract.main(zip_path), out.getvalue()
+
+    def test_a_file_the_csv_reader_cannot_read_is_reported_not_raised(self):
+        # csv.Error is not a ValueError: a member with a field past the reader's limit would otherwise be a traceback
+        code, said = self.run_main(side_effect=csv.Error("field larger than field limit (131072)"))
+        self.assertEqual(code, 1)
+        self.assertEqual(said, "synthetic.zip: field larger than field limit (131072)\n")
+
+    def test_the_other_ways_a_zip_can_be_wrong_are_reported_too(self):
+        for err in (ValueError("not the zip the manifest names"), KeyError("members"), zipfile.BadZipFile("bad"),
+                    UnicodeDecodeError("ascii", b"\xff", 0, 1, "ordinal not in range")):
+            with self.subTest(err=type(err).__name__):
+                code, said = self.run_main(side_effect=err)
+                self.assertEqual(code, 1)
+                self.assertTrue(said.startswith("synthetic.zip: "), said)
+
+    def test_a_zip_that_is_not_the_manifests_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "other.zip"
+            with zipfile.ZipFile(path, "w") as zf:
+                zf.writestr("rpt.csv", csv_bytes(REPORTS))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(hcris_extract.main(str(path)), 1)
+            self.assertIn("not the zip the manifest names", out.getvalue())
+
+
 class Committed(unittest.TestCase):
     def test_the_manifest_entry(self):
         entry = manifest_entry(PIN_ID)
@@ -106,7 +142,6 @@ class Committed(unittest.TestCase):
         self.assertTrue(all(r[5] in "YN" and r[6] in "YN" for r in body))
         # Every cell is a whole number of dollars or blank: no decimal (the back-test reads each cell as an integer)
         self.assertTrue(all(re.fullmatch(r"-?\d*", c) for r in body for c in r[7:]))
-        self.assertFalse(any("." in c for r in body for c in r[7:]))
         self.assertTrue({r[3] for r in body} <= {f"{y}-{m:02d}-{d:02d}" for y in (2023, 2024) for m in range(1, 13)
                                                  for d in range(1, 32)})
 

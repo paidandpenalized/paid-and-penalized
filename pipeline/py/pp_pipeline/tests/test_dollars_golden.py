@@ -276,6 +276,27 @@ class Caps(unittest.TestCase):
             enforce_caps(self.rows(0, VBP_UNLISTED_MAX + 1))
 
 
+class FiscalYear(unittest.TestCase):
+    def test_a_hacrp_file_of_another_year_than_the_rates_stops_the_build(self):
+        # The rates and the impact file are one final rule's; pricing another year's HACRP decisions on them would pair
+        # a year's cut hospitals with another year's payments.
+        other = {"fy": ipps_pins.FY + 1, "records": []}
+        with mock.patch.object(emit_dollars, "read_hacrp", return_value=other), self.assertRaisesRegex(
+                ValueError, f"HACRP file is for FY{ipps_pins.FY + 1}, the rates and impact file for FY{ipps_pins.FY}"):
+            build_from_pins("2099-01-01T00:00:00Z")
+
+
+class StratumLiterals(unittest.TestCase):
+    """A hospital with no bed count has the stratum "all", written in bands.ALL, in the schema and in money.js (whose
+    test, money.test.js, reads the same schema). The six strata are the schema's too."""
+
+    def test_the_schema_lists_bands_strata_and_all(self):
+        defs = load_schemas()[SCHEMA]["$defs"]
+        self.assertEqual(defs["stratumId"]["enum"], list(bands.STRATA))
+        self.assertEqual(defs["rowStratum"]["enum"], [*bands.STRATA, bands.ALL])
+        self.assertEqual(bands.ALL, "all")
+
+
 class SiteYesCount(unittest.TestCase):
     """The Yes count the `hac_count` check reads from the HACRP site's emitted file: refused when that file was built
     from an older HACRP pin than the current one (the rows here come from the current pin, so a stale count would
@@ -301,6 +322,11 @@ class SiteYesCount(unittest.TestCase):
     def test_a_file_that_does_not_name_the_hacrp_pin_raises(self):
         site = self.site("aa" * 32, sources=("other-pin",))
         with self.assertRaisesRegex(ValueError, "emit the HACRP site first"):
+            yes_count(site, self.manifest("aa" * 32))
+
+    def test_a_file_that_names_a_pin_the_manifest_lacks_raises_naming_the_pin_and_how_to_fix_it(self):
+        site = self.site("aa" * 32, sources=(HACRP, "retired-pin"))
+        with self.assertRaisesRegex(ValueError, r"names the pin 'retired-pin'.*emit the HACRP site first"):
             yes_count(site, self.manifest("aa" * 32))
 
     def test_the_committed_site_file_is_fresh_and_its_count_is_the_csv_s(self):

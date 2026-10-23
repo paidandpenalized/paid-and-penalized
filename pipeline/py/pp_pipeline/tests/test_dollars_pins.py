@@ -14,7 +14,8 @@ class EveryHospitalOnThePin(unittest.TestCase):
         cls.estimates = {ccn: estimate(h, rates(), hrrp=1.0, vbp=1.0, cut=False) for ccn, h in payment_inputs().items()}
 
     def test_every_hospital_is_priced(self):
-        self.assertEqual(len(self.estimates), 3103)
+        # (How many hospitals the file holds is a fact of the pin: PaymentInputsOnThePin's counts.)
+        self.assertGreater(len(self.estimates), 3000)
         for ccn, e in self.estimates.items():
             self.assertTrue(all(math.isfinite(v) for v in e.values()), ccn[:2])
 

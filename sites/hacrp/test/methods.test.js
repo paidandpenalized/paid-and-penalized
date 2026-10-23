@@ -216,6 +216,8 @@ test('the changes and the sources: every changelog entry with its date and items
   // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   assert.deepEqual(manifest.filter((e) => !used.has(e.id)).map((e) => e.id), []);
+  // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
+  // was built from and is not held to the pages' list.
   const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;
   for (const id of dollarsSources) assert.ok(used.has(id), `${id}: a dollar estimates source the Methods page lists`);
 });

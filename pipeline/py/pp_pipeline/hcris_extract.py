@@ -153,7 +153,7 @@ def main(zip_path):
     entry = manifest_entry(PIN_ID)
     try:
         out = derive(Path(zip_path), entry["derivedFrom"])
-    except (ValueError, KeyError, zipfile.BadZipFile, UnicodeDecodeError) as err:
+    except (ValueError, KeyError, zipfile.BadZipFile, UnicodeDecodeError, csv.Error) as err:
         print(f"{zip_path}: {err}")
         return 1
     return write_derived_pin(entry, out)
