@@ -119,7 +119,7 @@ def build_from_pins(built_at):
     fy, records = hacrp["fy"], hacrp["records"]
     if fy != FY:
         raise ValueError(f"the HACRP file is for FY{fy}, the rates and impact file for FY{FY}")
-    built = priced_rows(records)
+    built = priced_rows(records, fy)
     enforce_caps(built)
     ranges = backtest_dollars.bands_json()
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]

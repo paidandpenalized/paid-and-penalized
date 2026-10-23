@@ -572,7 +572,7 @@
 .gb--kids tbody th { font-weight: 600; }
 .kids__share { display: grid; grid-template-columns: 4.5em minmax(5rem, 9rem); align-items: center; gap: 8px; }
 .kids__share .browse__bar { order: 2; }
-.kids__from { display: block; color: var(--ink-2); font: 400 var(--fs-sm)/1.3 var(--font-body); }
+.kids__from { display: block; color: var(--ink-2); font: 400 var(--fs-sm)/1.3 var(--font-type); }
 .kids__pct { font: 400 var(--fs-sm)/1.2 var(--font-type); }
 .page--place .hospitals { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
 /* A place's map: the place's land in the panel tone, its neighbors fainter, its hospitals as dots. */
