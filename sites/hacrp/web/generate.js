@@ -76,7 +76,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
   // Every dollar figure carries its likely range. Until the back-test's ranges exist the pages say they are pending
   // (money-figures.js rangeLine), which is for review only: a production build stops here.
-  if (env === 'production' && dollars.bands === null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is null); a production build cannot publish them');
+  if (env === 'production' && dollars.bands == null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is missing or null); a production build cannot publish them');
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {

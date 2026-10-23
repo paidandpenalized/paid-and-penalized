@@ -52,6 +52,21 @@ test('the pages read the dollars for the HACRP file\'s year, a row for every hos
   assert.equal(DATA.dollars.byCcn.size, DATA.hospitals.length);
 });
 
+test('the contract: an estimated hospital has dollars at stake above $0, since the cliff and the what-if plot a drop to them; a file that breaks it stops the build, naming the row', () => {
+  const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
+  const estimated = file.hospitals.filter((r) => r.status === 'estimated');
+  assert.ok(estimated.length > 0);
+  assert.ok(estimated.every((r) => r.atStake > 0), 'on the committed file');
+  // Zero, or anything but a number above zero, for one estimated row.
+  for (const atStake of [0, null]) {
+    const broken = { ...file, hospitals: file.hospitals.map((r) => (r === estimated[0] ? { ...r, atStake } : r)) };
+    assert.throws(() => dollarsData(broken, DATA.hospitals), new RegExp(`${estimated[0].ccn} is estimated .* above \\$0`), String(atStake));
+  }
+  // A row without an estimate has no dollars at stake to plot.
+  const other = file.hospitals.find((r) => r.status !== 'estimated');
+  assert.doesNotThrow(() => dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === other ? { ...r, atStake: 0 } : r)) }, DATA.hospitals));
+});
+
 test('hospitalMoney: an estimated row carries its dollars and the dollars at stake per Medicare stay; any other only its status', () => {
   for (const row of rows) {
     const m = moneyOf(row);
@@ -175,6 +190,8 @@ test('a hospital page: the cliff, then the statement, before the measures; the r
 test('a production build refuses dollars whose ranges are still pending (any other build goes on: the page tests build both ways)', async () => {
   assert.equal(DATA.dollars.bands, null, 'the pinned file\'s ranges are pending');
   await assert.rejects(generateHacrp({ env: 'production' }, { data: DATA, log: () => {} }), /no ranges yet/);
+  // Missing as well as null: a file without the field is as pending as one that says so.
+  for (const bands of [undefined, null]) await assert.rejects(generateHacrp({ env: 'production' }, { data: { ...DATA, dollars: { ...DATA.dollars, bands } }, log: () => {} }), /no ranges yet/, String(bands));
 });
 
 test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmissions ± value-based) × 1% = the cut; ÷ stays = per stay', () => {

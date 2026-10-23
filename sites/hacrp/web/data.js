@@ -87,6 +87,8 @@ export function checkDollarsYear(dollars, fy) {
 export function dollarsData(dollars, hospitals) {
   const byCcn = new Map(dollars.hospitals.map((r) => [r.ccn, r]));
   for (const h of hospitals) if (!byCcn.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
+  // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
+  for (const r of byCcn.values()) if (r.status === 'estimated' && !(r.atStake > 0)) throw new RangeError(`HACRP: ${r.ccn} is estimated but its dollars at stake is ${r.atStake}; the cliff and the what-if need an estimated hospital's dollars at stake above $0`);
   const { fy, national, headline, checks, assumptions, bands } = dollars;
   return { fy, byCcn, national, headline, checks, assumptions, bands };
 }
