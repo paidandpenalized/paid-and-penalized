@@ -14,7 +14,7 @@ import { miniTiles } from '../../../web/charts/tileMap.js';
 import { STATE_NAMES, usProjected, usYearMap } from '../../../web/charts/geo.js';
 import { TILES } from '../../../web/charts/states.js';
 import { lastCall } from '../../../web/render/components.js';
-import { cmsText, count, listText, pct, shownAbove } from '../../../web/render/format.js';
+import { cmsText, count, listText, pct, pctFloor, shownAbove } from '../../../web/render/format.js';
 import { html, jsonScript } from '../../../web/render/html.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
 import { CUT, NONE, NOT_CUT, everCut, rollOrder, tallyYears } from '../../../engine/js/hacrp/trends.js';
@@ -319,6 +319,8 @@ const RECORD = {
   [NOT_CUT]: { cls: 'no', label: 'recordNo', tip: 'recordTipNo' },
   [NONE]: { cls: 'none', label: 'recordNone', tip: 'recordTipNone' },
 };
+// A year of a record in words: what CMS decided, and that it gave the decision without a score where it did.
+const decisionWords = (y) => (y.noScore ? fill('recordTipNoScore', { what: t(RECORD[y.c].tip) }) : t(RECORD[y.c].tip));
 // One year's cell in a record strip: the year's last two digits over its value; tip: its tooltip, if any.
 const recordCell = (fy, cls, value, tip = null) => html`<li class="hrec__y hrec__y--${cls}"${tip ? html` title="${tip}"` : ''}><span class="hrec__fy">${String(fy).slice(-2)}</span><span class="hrec__v">${value}</span></li>`;
 
@@ -329,10 +331,9 @@ export function recordStrip(rec, fys) {
   const last = fys[fys.length - 1];
   const summary = rec.cut ? fill('recordSummary', { cut: String(rec.cut), decided: String(rec.decided) }) : fill('recordSummaryNone', { decided: String(rec.decided) });
   // A decision CMS gave without a score is marked (a dashed box) and said under the row.
-  const what = (y) => (y.noScore ? fill('recordTipNoScore', { what: t(RECORD[y.c].tip) }) : t(RECORD[y.c].tip));
   return html`<div class="hrec">
 <p class="hrec__head"><span class="cap">${fill('recordHeading', { first: String(first), last: String(last) })}</span> <span class="hrec__sum">${summary}</span></p>
-<ol class="hrec__row" role="list">${rec.years.map((y) => recordCell(y.fy, `${RECORD[y.c].cls}${y.noScore ? ' hrec__y--noscore' : ''}`, t(RECORD[y.c].label), fill('recordTip', { fy: String(y.fy), what: what(y) })))}</ol>
+<ol class="hrec__row" role="list">${rec.years.map((y) => recordCell(y.fy, `${RECORD[y.c].cls}${y.noScore ? ' hrec__y--noscore' : ''}`, t(RECORD[y.c].label), fill('recordTip', { fy: String(y.fy), what: decisionWords(y) })))}</ol>
 ${rec.noScore.length ? html`<p class="hrec__note">${fill('recordNoScoreNote', { years: listText(rec.noScore.map(fyLabel)) })}</p>` : ''}
 </div>`;
 }
@@ -347,13 +348,12 @@ export function ruleBreaks(fys) {
 const r4 = (x) => (x === null ? null : toUnit(x, 4));
 
 export function yearsFigure(rec, hd, { n, source }) {
-  const what = (c, noScore = false) => (noScore ? fill('recordTipNoScore', { what: t(RECORD[c].tip) }) : t(RECORD[c].tip));
   const years = rec.years.map((y, i) => ({
     label: String(y.fy).slice(-2),
     share: r4(y.share),
     cut: y.c === CUT,
     line: hd.checks[i].check.linePctAll,
-    tip: y.share === null ? `${fyLabel(y.fy)}: ${what(y.c, y.noScore)}` : fill('yearsTip', { fy: String(y.fy), score: cmsText(y.totalText), share: pct0(y.share), what: what(y.c) }),
+    tip: y.share === null ? `${fyLabel(y.fy)}: ${decisionWords(y)}` : fill('yearsTip', { fy: String(y.fy), score: cmsText(y.totalText), share: pctFloor(y.share), what: decisionWords(y) }),
   }));
   return figure({
     n, source, csvName: 'hacrp-hospital-years', alt: t('yearsAlt'), claimLevel: 'recomputed', note: t('yearsKey'),
@@ -361,7 +361,7 @@ export function yearsFigure(rec, hd, { n, source }) {
     ...drawn((width) => rankYears({ years, breaks: ruleBreaks(hd.fys), labels: { top: t('yearsTop'), mid: t('yearsMid'), bottom: t('yearsBottom'), none: t('yearsNone') }, width })),
     table: {
       columns: [{ name: t('yearsColFy') }, { name: t('yearsColScore'), numeric: true }, { name: t('yearsColShare'), numeric: true }, { name: t('yearsColDecision') }],
-      rows: rec.years.map((y) => [fyLabel(y.fy), y.totalText ? num(cmsText(y.totalText), y.totalText) : '', y.share === null ? '' : num(pct1(y.share), r4(y.share)), what(y.c, y.noScore)]),
+      rows: rec.years.map((y) => [fyLabel(y.fy), y.totalText ? num(cmsText(y.totalText), y.totalText) : '', y.share === null ? '' : num(pctFloor(y.share, 1), r4(y.share)), decisionWords(y)]),
     },
   });
 }

@@ -12,7 +12,7 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, pct, pctFloor } from '../../../web/render/format.js';
+import { cmsText, count, decimal, noun, pct, pctFloor } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { pill, printout } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
@@ -256,22 +256,18 @@ function glyph(flags) {
 // A hospital's estimated cut in a table: the dollars, in the penalty ink for a cut; words where there is no estimate.
 const cutCell = (dollars) => html`<td class="num near__cut${dollars > 0 ? ' near__cut--pen' : ''}">${cutText(dollars)}</td>`;
 
-// The nearest hospitals' takeaway: the closest one's distance in whole miles, "less than a mile" under one, and one
-// mile in the singular.
-export function nearTakeaway(closest, values, miles) {
-  if (closest < 1) return fill('figNearbyTakeawayNear', values);
-  if (Math.round(closest) === 1) return fill('figNearbyTakeawayOne', values);
-  return fill('figNearbyTakeaway', { ...values, miles: miles(closest) });
-}
+// A distance in the nearest hospitals' table: whole miles, "under 1" for a hospital under a mile away (never "0").
+const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
+// A distance in words, for a tooltip and the takeaway: "less than a mile" under one, "about a mile" for one when
+// rounded, whole miles ("3 miles") otherwise.
+export const milesText = (x) => (x < 1 ? t('milesUnder') : Math.round(x) === 1 ? t('milesAbout') : noun(Math.round(x), 'mile'));
 
 // The table's estimated-cut column reads each nearby hospital's cut from the national context (compare.js).
 export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (!view.point || !shapes) return null;
   const near = nat.nearest(view.ccn, view.point);
   if (near.length < 2) return null;
-  // Whole miles; a hospital under a mile away says so rather than "0".
-  const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
-  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), miles: miles(h.miles) });
+  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), distance: milesText(h.miles) });
   const kind = (h) => (h.decision === 'Yes' ? 'yes' : h.decision === 'No' ? 'no' : 'na');
   const far = near.at(-1).miles;
   const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
@@ -288,7 +284,7 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
-    takeaway: nearTakeaway(near[0].miles, { yes: String(yes), k: String(near.length) }, miles),
+    takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), distance: milesText(near[0].miles) }),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
       rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),

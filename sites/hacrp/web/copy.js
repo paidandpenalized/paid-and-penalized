@@ -556,13 +556,14 @@ export const COPY = {
   nearbyColDecision: { text: 'Decision', claim: null },
   nearbyColMeasures: { text: 'Measures', claim: null },
   nearbyGlyph: { text: 'Above the national median on {worse} of {scored} measures', claim: null },
-  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {miles} miles', claim: null },
+  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {distance}', claim: null },
   nearbyThis: { text: 'This hospital', claim: null },
   nearbyRing: { text: '{miles} mi', claim: null },
-  figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {miles} miles away.', claim: null },
-  figNearbyTakeawayNear: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is less than a mile away.', claim: null },
-  figNearbyTakeawayOne: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is about a mile away.', claim: null },
-  // A distance under a mile, in the table.
+  figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
+  // A distance in words (hospital-figures.js milesText): under a mile, a mile when rounded, else whole miles (a count and
+  // its noun); in the table, under a mile in its column of miles.
+  milesUnder: { text: 'less than a mile', claim: null },
+  milesAbout: { text: 'about a mile', claim: null },
   nearbyUnderMile: { text: 'under {one}', claim: null },
   figPeersSame: { text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut is {share} in every group.', claim: null },
   figNearbyAlt: { text: 'Map of the area around this hospital, with its nearest scored hospitals numbered as in the table.', claim: null },

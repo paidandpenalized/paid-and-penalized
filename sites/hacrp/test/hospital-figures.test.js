@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SHORT_NAMES } from '../web/constants.js';
-import { ledgerFigure, lineBarBlock, nearTakeaway, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
+import { ledgerFigure, lineBarBlock, milesText, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
@@ -185,13 +185,26 @@ test('review: a hospital less than a mile away reads "less than a mile", never 0
   assert.doesNotMatch(String(block.table), /<td class="num">0<\/td>/);
 });
 
-test('the nearest hospitals\' takeaway says one mile in the singular, under a mile in words, and whole miles otherwise', () => {
-  const miles = (x) => String(Math.round(x));
-  const v = { yes: '2', k: '8' };
-  assert.equal(nearTakeaway(0.4, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is less than a mile away.');
-  assert.equal(nearTakeaway(1.3, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is about a mile away.');
-  assert.equal(nearTakeaway(3.2, v, miles), 'CMS cut 2 of the 8 nearest hospitals; the closest is 3 miles away.');
-  assert.doesNotMatch(nearTakeaway(1.49, v, miles), /\b1 miles\b/);
+test('a distance in words: under a mile, about a mile for one, whole miles with their noun otherwise (a tooltip never reads "1 miles")', () => {
+  assert.equal(milesText(0.4), 'less than a mile');
+  assert.equal(milesText(1.3), 'about a mile');
+  assert.equal(milesText(1.49), 'about a mile');
+  assert.equal(milesText(3.2), '3 miles');
+  assert.equal(milesText(1.5), '2 miles');
+  for (const x of [0, 0.4, 0.99, 1, 1.3, 1.49, 1.5, 3.2, 40]) assert.doesNotMatch(milesText(x), /\b1 miles\b|under 1/, String(x));
+});
+
+test('the nearest hospitals\' takeaway and tooltips say the distance in words: under a mile, about a mile, whole miles', () => {
+  const h = DATA.hospitals.find((x) => x.total !== null && Number.isFinite(DATA.master.get(x.ccn).lat));
+  const view = pinnedView(h);
+  const near = NAT.nearest(h.ccn, view.point);
+  for (const [miles, takeaway, tip] of [[0.4, 'less than a mile away', 'less than a mile'], [1.2, 'about a mile away', 'about a mile'], [3.2, '3 miles away', '3 miles']]) {
+    const fake = { ...NAT, nearest: () => near.map((x, i) => ({ ...x, miles: i === 0 ? miles : x.miles })) };
+    const fig = String(nearbyBlock({ view, nat: fake, shapes: DATA.shapes, n: 5, source: 's' }).fig);
+    assert.match(fig, new RegExp(`the closest is ${takeaway}\\.`));
+    assert.ok(fig.includes(`, ${tip}</title>`), `the first marker's tooltip says ${tip}`);
+    assert.doesNotMatch(fig, /\b1 miles\b|under 1 miles/);
+  }
 });
 
 test('the rank under the line bar never rounds across 75: a hospital CMS didn\'t cut, just under it, reads lower', () => {

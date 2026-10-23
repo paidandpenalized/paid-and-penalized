@@ -7,13 +7,21 @@ export const CUT = 'Y';
 export const NOT_CUT = 'N';
 export const NONE = '.';
 
+// One year's character for a hospital's row ({ total, decision }). With scoreRequired, a decision counts only when CMS
+// published a score for the hospital (the national counts); without, a Yes or No CMS gave in a year it published no score
+// counts too (a hospital's own record).
+export function decisionChar({ total, decision }, { scoreRequired }) {
+  if (scoreRequired && total === null) return NONE;
+  return decision === 'Yes' ? CUT : decision === 'No' ? NOT_CUT : NONE;
+}
+
 // years: [{ fy, rows: [{ ccn, total, decision }] }] oldest first -> Map(ccn -> record string). A hospital has a
 // decision in a year when CMS published a score and a Yes or No for it.
 export function records(years) {
   const out = new Map();
   years.forEach(({ rows }, i) => {
     for (const r of rows) {
-      const c = r.total !== null && r.decision === 'Yes' ? CUT : r.total !== null && r.decision === 'No' ? NOT_CUT : NONE;
+      const c = decisionChar(r, { scoreRequired: true });
       if (c === NONE && !out.has(r.ccn)) continue;
       if (!out.has(r.ccn)) out.set(r.ccn, NONE.repeat(years.length).split(''));
       out.get(r.ccn)[i] = c;

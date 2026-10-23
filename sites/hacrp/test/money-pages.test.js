@@ -135,6 +135,21 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   assert.match(page, /chart-across__dot--faint/, 'the nation\'s other hospitals faint');
 });
 
+test('counts of one read in the singular: a state of one cut hospital, a bin of one hospital, a place with one hospital near the line', () => {
+  const one = [...MD.byState.values()].find((s) => s.cut === 1);
+  assert.ok(one, 'some state has exactly one cut hospital');
+  assert.ok(part.includes(`${money(one.money)} from 1 cut hospital</title>`), 'the states map\'s tooltip');
+  assert.match(part, /<title>1 hospital at /, 'the three programs\' columns');
+  assert.doesNotMatch(part, /\b1 (cut )?hospitals\b/);
+  // A place with exactly one of its hospitals within the window: "is", not "are".
+  const nearCcns = new Set(nearLine(MD, ACROSS_WINDOW).rows.map((r) => r.ccn));
+  const place = PLACES.list.find((p) => p.kind === 'state' && p.ccns.filter((c) => nearCcns.has(c)).length === 1);
+  assert.ok(place, 'some state has exactly one hospital near the line');
+  assert.match(captionOf(renderPlace(place), 'across'), /^Figure \d+\. 1 of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line is /);
+  const many = PLACES.list.find((p) => p.kind === 'state' && p.ccns.filter((c) => nearCcns.has(c)).length > 1);
+  assert.match(captionOf(renderPlace(many), 'across'), /^Figure \d+\. \d+ of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line are /);
+});
+
 test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, money, ordinal, pct, pctFloor, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, money, noun, ordinal, pct, pctFloor, signed } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -11,6 +11,15 @@ test('money shortens dollars as Thirty Day Readmissions does, a true minus for a
   for (const [x, want] of cases) assert.equal(money(x), want, String(x));
   assert.throws(() => money(NaN), RangeError);
   assert.throws(() => money(null), RangeError);
+});
+
+test('noun puts a count before its noun, singular for exactly one', () => {
+  assert.equal(noun(1, 'hospital'), '1 hospital');
+  assert.equal(noun(0, 'hospital'), '0 hospitals');
+  assert.equal(noun(1234, 'cut hospital'), '1,234 cut hospitals');
+  assert.equal(noun(2, 'mile'), '2 miles');
+  assert.equal(noun(1, 'child', 'children'), '1 child');
+  assert.equal(noun(3, 'child', 'children'), '3 children');
 });
 
 test('dollars writes whole dollars with separators; a sign on request', () => {

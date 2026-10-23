@@ -179,7 +179,7 @@ export const COPY = {
   billHeading: { text: 'Who carries the cut', claim: null },
   billText: { text: "Every hospital CMS cut is a tile, its area this site's estimate of its cut, grouped by teaching status. Point at or tap a tile for the hospital.", claim: null },
   billText2: { text: 'A few large hospitals carry much of the money: the cut is a share of a payment, and their payments are large.', claim: 'HACRP-01' },
-  billTakeaway: { text: "The largest tenth of the cuts, {n} hospitals, are {share} of the {money} this site estimates the program took.", claim: null },
+  billTakeaway: { text: "The largest tenth of the cuts, {hospitals}, are {share} of the {money} this site estimates the program took.", claim: null },
   billGroupSub: { text: '{n} · {money}', claim: null },
   billTip: { text: '{name}, {city}, {state}: {money}', claim: null },
   billAlt: { text: "Treemap of every hospital CMS cut, each tile's area this site's estimate of its cut, grouped by teaching status.", claim: null },
@@ -196,7 +196,7 @@ export const COPY = {
   acrossHeading: { text: 'Across the line', claim: null },
   acrossText: { text: "Every hospital that scored within {window} of CMS's line, each dot as large as the cut it took, or would have taken, by this site's estimate. Point at or tap a dot for the hospital.", claim: null },
   acrossText2: { text: 'A hair apart in score, the two sides are all or nothing in money.', claim: 'HACRP-01' },
-  acrossTakeaway: { text: "Within {window} of CMS's line, CMS cut {over} hospitals, about {overMoney} by this site's estimate; the {under} just under it kept about {underMoney}.", claim: null },
+  acrossTakeaway: { text: "Within {window} of CMS's line, CMS cut {over}, about {overMoney} by this site's estimate; the {under} just under it kept about {underMoney}.", claim: null },
   acrossUnder1: { text: '{n} not cut', claim: null },
   acrossUnder2: { text: '{money} at stake', claim: null },
   acrossOver1: { text: '{n} cut', claim: null },
@@ -233,7 +233,7 @@ export const COPY = {
   statesTotal: { text: 'Dollars', claim: null },
   statesPerStay: { text: 'Per Medicare stay', claim: null },
   statesToggle: { text: 'Show the money as', claim: null },
-  statesTipTotal: { text: '{money} from {n} cut hospitals', claim: null },
+  statesTipTotal: { text: '{money} from {hospitals}', claim: null },
   statesTipStay: { text: '{perStay} per Medicare stay', claim: null },
   statesNone: { text: 'States whose hospitals CMS didn\'t cut, and Maryland, have no circle.', claim: 'HACRP-26' },
   statesAlt: { text: "Map of the states with a circle on each, its area this site's estimate of the state's cut, or of its cut per Medicare stay.", claim: null },
@@ -256,7 +256,7 @@ export const COPY = {
   threeHvbpAxis: { text: 'Adjustment, share of the base payment', claim: null },
   threeHacAxis: { text: 'Cut, share of the whole payment', claim: null },
   threeHvbpSplit: { text: '{bonus} paid in bonuses, {penalty} taken in cuts', claim: null },
-  threeTip: { text: '{n} hospitals at {range}', claim: null },
+  threeTip: { text: '{hospitals} at {range}', claim: null },
   threeAlt: { text: 'Three column charts: how many hospitals each program moves by how much.', claim: null },
   threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75'] },
   threeColProgram: { text: 'Program', claim: null },
@@ -272,6 +272,11 @@ export const COPY = {
   placeChildMoney: { text: 'Est. cut ($, modeled)', claim: null },
   placeAcrossTakeaway: {
     text: "{k} of the nation's {n} hospitals within {window} of CMS's line are {name}'s: {over} cut, about {overMoney} by this site's estimate, and {under} not cut, where a cut would have been about {underMoney}.",
+    claim: null,
+  },
+  // The same for a place with exactly one of them.
+  placeAcrossTakeawayOne: {
+    text: "{k} of the nation's {n} hospitals within {window} of CMS's line is {name}'s: {over} cut, about {overMoney} by this site's estimate, and {under} not cut, where a cut would have been about {underMoney}.",
     claim: null,
   },
 };

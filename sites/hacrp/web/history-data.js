@@ -5,7 +5,7 @@
 import { bisectLeft } from 'd3-array';
 import { numberOf as cmsNumber, ruleFor, recomputeTotal } from '../../../engine/js/hacrp/eras.js';
 import { partRanges, withheldPart, yearCheck } from '../../../engine/js/hacrp/history.js';
-import { CUT, NONE, NOT_CUT, panel, records, repeatsByGap, rollOrder, tallyYears, timesCutVsChance, yearly, longestRun, timesCut, yearsDecided } from '../../../engine/js/hacrp/trends.js';
+import { NONE, decisionChar, panel, records, repeatsByGap, rollOrder, tallyYears, timesCutVsChance, yearly, longestRun, timesCut, yearsDecided } from '../../../engine/js/hacrp/trends.js';
 import { TYPE_KINDS } from './program-data.js';
 
 const numberOf = (text) => cmsNumber(text, 'history');
@@ -98,16 +98,18 @@ export function historyData({ history, master }) {
     // year it published no score for the hospital (noScore), so its page never calls a cut year "no decision".
     // null for a hospital with no decision in any year.
     recordOf(ccn) {
-      const scored = recs.get(ccn) ?? NONE.repeat(n);
       const out = years.map((y, i) => {
         const row = rowsBy[i].get(ccn) ?? null;
-        const noScore = scored[i] === NONE && row !== null && row.total === null && (row.decision === 'Yes' || row.decision === 'No');
-        const c = noScore ? (row.decision === 'Yes' ? CUT : NOT_CUT) : scored[i];
-        return { fy: y.fy, c, noScore, totalText: row?.totalText ?? null, share: place[i].get(ccn) ?? null };
+        const c = row ? decisionChar(row, { scoreRequired: false }) : NONE;
+        return { fy: y.fy, c, noScore: c !== NONE && row.total === null, totalText: row?.totalText ?? null, share: place[i].get(ccn) ?? null };
       });
       const rec = out.map((y) => y.c).join('');
       if (!yearsDecided(rec)) return null;
-      return { rec, cut: timesCut(rec), decided: yearsDecided(rec), run: longestRun(rec), years: out, noScore: out.filter((y) => y.noScore).map((y) => y.fy) };
+      return {
+        rec, cut: timesCut(rec), decided: yearsDecided(rec), run: longestRun(rec), years: out, noScore: out.filter((y) => y.noScore).map((y) => y.fy),
+        // Whether CMS published a score in more than one year: the years figure's share of scores needs two points.
+        hasScoreYears: out.filter((y) => y.share !== null).length > 1,
+      };
     },
   };
 }

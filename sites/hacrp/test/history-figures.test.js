@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, decimal, pct } from '../../../web/render/format.js';
+import { count, decimal, pct, pctFloor } from '../../../web/render/format.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
@@ -508,7 +508,7 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   const rows = rowsOf(fig);
   assert.equal(rows.length, S.fys.length);
   assert.deepEqual(rows[0].slice(0, 2), ['FY2021', '1.0100']);
-  assert.equal(rows[0][2], pct1(16 / 21));
+  assert.equal(rows[0][2], pctFloor(16 / 21, 1), 'a place in line is floored, never rounded across a step');
   assert.deepEqual(rows[S.fys.indexOf(2023)].slice(1, 3), ['', ''], 'FY2023: no score, no place');
   same(numbers(takeaway(fig)), ['4', '4']);
   // A key under the chart names the red dot and the hollow one.
@@ -521,6 +521,16 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   const realFig = yearsFigure(real, HD, { n: 2, source: SRC });
   same(numbers(takeaway(realFig)), [String(real.cut), String(real.decided)]);
   assert.equal(rowsOf(realFig).length, HD.fys.length);
+});
+
+test('yearsFigure: a place in line is never rounded up across a whole percent (74.96% is not "higher than 75%")', () => {
+  const rec = S.recordOf('990101');
+  const near = { ...rec, years: rec.years.map((y, i) => (i === 0 ? { ...y, share: 0.7496 } : y)) };
+  const fig = yearsFigure(near, S, { n: 5, source: SRC });
+  const tip = text(/<title>(FY2021: score[^<]*)<\/title>/.exec(String(fig))[1]);
+  assert.match(tip, /higher than 74% of scores/);
+  assert.doesNotMatch(tip, /75%/);
+  assert.equal(rowsOf(fig)[0][2], '74.9%', 'the table floors too');
 });
 
 // ---------- a place's years ----------

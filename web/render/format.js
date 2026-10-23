@@ -10,6 +10,10 @@ export const cmsText = (text) => String(text).replace(/^-(?=[\d.])/, MINUS);
 
 export const count = (n) => NUMBER.format(n);
 
+// A count with its noun, the noun singular for exactly one: noun(1, 'hospital') is "1 hospital", noun(12, 'cut hospital')
+// "12 cut hospitals". plural: for a noun that doesn't take an s.
+export const noun = (n, singular, plural = `${singular}s`) => `${count(n)} ${n === 1 ? singular : plural}`;
+
 // Words joined as a list: "A", "A and B", "A, B, and C".
 export const listText = (xs) => LIST.format(xs);
 

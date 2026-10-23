@@ -10,7 +10,7 @@ import { STATE_NAMES, usBubbles } from '../../../web/charts/geo.js';
 import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
-import { cmsText, count, decimal, dollars, money, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
@@ -53,7 +53,7 @@ export function billFigure(md, { n, source }) {
   return figure({
     n, source, claimLevel: 'estimate', alt: t('billAlt'), csvName: 'hacrp-dollars-by-teaching', note,
     svg: draw(...BILL.narrow, false), svgWide: draw(...BILL.wide, true),
-    takeaway: fill('billTakeaway', { n: count(md.tenth.n), share: pct0(md.tenth.money / total), money: money(total) }),
+    takeaway: fill('billTakeaway', { hospitals: noun(md.tenth.n, 'hospital'), share: pct0(md.tenth.money / total), money: money(total) }),
     table: {
       columns: [{ name: t('billColGroup') }, { name: t('billColHospitals'), numeric: true }, { name: t('billColMoney'), numeric: true }, { name: t('billColShareHospitals'), numeric: true }, { name: t('billColShareMoney'), numeric: true }],
       rows: groups.map((g) => [g.label, num(count(g.rows.length), g.rows.length), num(dollars(g.value), g.value), num(pct(g.rows.length / md.cutRows.length, 1), g.rows.length / md.cutRows.length), num(pct(g.value / total, 1), g.value / total)]),
@@ -81,7 +81,7 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   const draw = (width) => acrossLine({ dots: width < 400 ? dots.map((d) => ({ ...d, tip: null })) : dots, domain: [md.line - ACROSS_WINDOW, md.line + ACROSS_WINDOW], line: md.line, labels, values: { under: underMoney, over: overMoney }, width, rMax: width < 400 ? ACROSS_R.narrow : ACROSS_R.wide });
   return figure({
     n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName: 'hacrp-dollars-across-the-line', ...drawn(draw, PAGE),
-    takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
+    takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
     table: {
       columns: [{ name: t('acrossColSide') }, { name: t('acrossColHospitals'), numeric: true }, { name: t('acrossColMoney'), numeric: true }],
       rows: [[t('acrossSideUnder'), num(count(under.length), under.length), num(dollars(underMoney), underMoney)], [t('acrossSideOver'), num(count(over.length), over.length), num(dollars(overMoney), overMoney)]],
@@ -93,7 +93,7 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
 function placeAcrossTakeaway(near, mine, { window, name }) {
   const own = near.rows.filter((r) => mine.has(r.ccn));
   const { over, under, overMoney, underMoney } = sides(own);
-  return fill('placeAcrossTakeaway', { k: count(own.length), n: count(near.rows.length), window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });
+  return fill(own.length === 1 ? 'placeAcrossTakeawayOne' : 'placeAcrossTakeaway', { k: count(own.length), n: count(near.rows.length), window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });
 }
 
 // ---------- shares ----------
@@ -130,7 +130,7 @@ export function sharesFigure(md, { n, source }) {
 
 export function statesFigure(md, { n, source, shapes }) {
   const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1));
-  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), n: count(s.cut) }) }]));
+  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }) }]));
   const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(Math.round(s.perStay)) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
   const art = { svg: usBubbles({ shapes, layers, width: WIDTH, rMax: 22 }), svgWide: usBubbles({ shapes, layers, width: PAGE, rMax: 52 }) };
@@ -162,7 +162,7 @@ const binned = (values, lo, hi, cls, words) => {
   const k = Math.round((hi - lo) / BIN);
   const bins = Array.from({ length: k }, (_, i) => ({ x0: lo + i * BIN, x1: lo + (i + 1) * BIN, n: 0 }));
   for (const v of values) bins[Math.min(k - 1, Math.max(0, Math.floor((v - lo) / BIN + 1e-9)))].n++;
-  return bins.map((b) => ({ ...b, cls: cls(b), tip: fill('threeTip', { n: count(b.n), range: words(b) }) }));
+  return bins.map((b) => ({ ...b, cls: cls(b), tip: fill('threeTip', { hospitals: noun(b.n, 'hospital'), range: words(b) }) }));
 };
 const pctText = (x) => pct(x, 1);
 
@@ -179,8 +179,8 @@ export function programsFigure(md, { n, source }) {
   const vbpBins = binned(vbp, vbpLo, Math.ceil(vbpHigh / BIN) * BIN + BIN, (b) => (b.x0 >= 0 ? 'chart-col chart-col--rew' : 'chart-col chart-col--pen'), (b) => `${pctText(b.x0)}–${pctText(b.x1)}`);
   const cut = md.cutRows.length;
   const hacBins = [
-    { x0: -0.0015, x1: 0.0015, n: rows.length - cut, cls: 'chart-col', tip: fill('threeTip', { n: count(rows.length - cut), range: pct(0, 0) }) },
-    { x0: 0.0085, x1: 0.0115, n: cut, cls: 'chart-col chart-col--pen', tip: fill('threeTip', { n: count(cut), range: REDUCTION_TEXT }) },
+    { x0: -0.0015, x1: 0.0015, n: rows.length - cut, cls: 'chart-col', tip: fill('threeTip', { hospitals: noun(rows.length - cut, 'hospital'), range: pct(0, 0) }) },
+    { x0: 0.0085, x1: 0.0115, n: cut, cls: 'chart-col chart-col--pen', tip: fill('threeTip', { hospitals: noun(cut, 'hospital'), range: REDUCTION_TEXT }) },
   ];
   // A tick: whole percents as whole (1%), the rest to a tenth (1.5%).
   const fmt = (x) => pct(x, Math.abs(Math.round(x * 1000)) % 10 ? 1 : 0);
