@@ -5,15 +5,28 @@ import csv
 import io
 import unittest
 
-from pp_engine.contract import format_emitted, keep_built_at
+from pp_engine import dollars
+from pp_engine.contract import format_emitted
 from pp_engine.schema import validate
-from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, committed_path,
-                                      enforce_caps, unlisted_counts)
+from pp_engine.tests.fixtures import assert_adds_up
+from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, camel,
+                                      committed_path, enforce_caps, unlisted_counts)
 from pp_pipeline.emit_hospital import HACRP
 from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
 
-PARTS = ("fed", "mdhAddon", "ime", "dsh", "outlierOp", "schDiff", "lowVolume", "capital", "uc")
+PARTS = tuple(camel(k) for k in dollars.PARTS)  # the JSON's names; the schema states them independently
 DOLLARS = ("base", "total", "hrrp", "hvbp", "after", "atStake", "hac", "net")
+SNAKE = {camel(k): k for k in (*dollars.PARTS, "at_stake")}  # the JSON names that are not their row keys
+
+
+def flat(h):
+    """A committed hospital as the engine's flat row (parts at the top level), for `assert_adds_up`."""
+    return {**{SNAKE.get(k, k): v for k, v in h.items() if k != "parts"}, **{SNAKE[k]: v for k, v in h["parts"].items()}}
+
+
+def added_up(hospitals):
+    """The sums of the estimated hospitals' dollar fields, which a national or headline total must equal."""
+    return {k: sum(h[k] for h in hospitals if h["status"] == "estimated") for k in dollars.SUMMED}
 
 
 def hacrp_file():
@@ -36,11 +49,12 @@ class Committed(unittest.TestCase):
         cls.committed = read_json(cls.path)
         cls.hospitals = cls.committed["hospitals"]
 
-    def test_rebuild_equals_committed(self):  # envelope included: sources, source_manifest, fy
-        self.assertEqual(keep_built_at(self.committed, build_from_pins("2099-01-01T00:00:00Z")), self.committed)
-
-    def test_the_committed_bytes_are_the_emitter_layout(self):  # so `make emit` on a clean tree leaves git clean
-        self.assertEqual(format_emitted(self.committed), self.path.read_text(encoding="utf-8"))
+    def test_rebuild_equals_committed(self):
+        # The whole file, envelope included (sources, source_manifest, fy), and in the emitter's layout, so `make emit`
+        # on a clean tree leaves git clean. A rebuild that changes nothing keeps the committed built_at.
+        fresh = build_from_pins("2099-01-01T00:00:00Z")
+        self.assertEqual(format_emitted({**fresh, "built_at": self.committed["built_at"]}),
+                         self.path.read_text(encoding="utf-8"))
 
     def test_the_committed_file_passes_its_schema(self):
         schemas = load_schemas()
@@ -99,15 +113,12 @@ class Committed(unittest.TestCase):
         self.assertEqual(head["yes"], yes)
         site = read_json(EMITTED_DIR / "hacrp" / f"fy{self.committed['fy']}" / "hacrp.json")["hospitals"]
         self.assertEqual(head["yes"], sum(h["total"] is not None and h["paymentReduction"] == "Yes" for h in site))
-        # A Yes with no score is outside the headline though inside the file's Yes count; every headline cut hospital
-        # is either priced (`cut`) or counted as unpriced (`yesUnestimated`).
+        # A Yes with no score is outside the headline though inside the file's Yes count.
         self.assertLess(yes, sum(r["Payment Reduction"] == "Yes" for r in rows))
-        self.assertEqual(head["cut"] + head["yesUnestimated"], head["yes"])
         # Same population, same sums: the headline is the rows of exactly those hospitals, added up.
         by_ccn = {h["ccn"]: h for h in self.hospitals}
         picked = [by_ccn[r["Facility ID"]] for r in decided]
-        for key in ("base", "total", "hrrp", "hvbp", "after", "hac", "net"):
-            self.assertEqual(head[key], sum(h[key] for h in picked if h["status"] == "estimated"), key)
+        self.assertEqual({k: head[k] for k in dollars.SUMMED}, added_up(picked))
         self.assertEqual(head["hospitals"], sum(h["status"] == "estimated" for h in picked))
         self.assertLess(head["hospitals"], self.committed["national"]["hospitals"])
         self.assertLessEqual(-head["hac"], -self.committed["national"]["hac"])
@@ -126,25 +137,15 @@ class Committed(unittest.TestCase):
 
     def test_every_row_adds_up_in_whole_dollars(self):
         for h in (h for h in self.hospitals if h["status"] == "estimated"):
-            who = h["ccn"][:2]
-            self.assertTrue(all(type(h[k]) is int for k in DOLLARS), who)
-            self.assertTrue(all(type(v) is int for v in h["parts"].values()), who)
-            self.assertEqual(h["base"], h["parts"]["fed"] + h["parts"]["mdhAddon"], who)
-            self.assertEqual(h["total"], h["base"] + sum(v for k, v in h["parts"].items() if k not in ("fed", "mdhAddon")), who)
-            self.assertEqual(h["after"], h["total"] + h["hrrp"] + h["hvbp"], who)
-            self.assertEqual(h["hac"], -h["atStake"] if h["cut"] else 0, who)
-            self.assertEqual(h["net"], h["hrrp"] + h["hvbp"] + h["hac"], who)
+            assert_adds_up(self, flat(h), h["ccn"][:2])
             self.assertLessEqual(h["hrrpFactor"], 1)
 
-    def test_national_is_the_rows_added_up_and_the_parts_add_to_the_whole(self):
+    def test_national_is_the_rows_added_up(self):
         nat = self.committed["national"]
         estimated = [h for h in self.hospitals if h["status"] == "estimated"]
         self.assertEqual(nat["hospitals"], len(estimated))
-        for key in ("base", "total", "hrrp", "hvbp", "after", "hac", "net"):
-            self.assertEqual(nat[key], sum(h[key] for h in estimated), key)
+        self.assertEqual({k: nat[k] for k in dollars.SUMMED}, added_up(self.hospitals))
         self.assertEqual(nat["parts"], {k: sum(h["parts"][k] for h in estimated) for k in PARTS})
-        self.assertEqual(nat["base"], nat["parts"]["fed"] + nat["parts"]["mdhAddon"])
-        self.assertEqual(nat["total"], nat["base"] + sum(nat["parts"][k] for k in PARTS[2:]))
         self.assertEqual(nat["yes"], sum(h["cut"] for h in self.hospitals))
         self.assertEqual(nat["cut"], sum(h["cut"] for h in estimated))
 

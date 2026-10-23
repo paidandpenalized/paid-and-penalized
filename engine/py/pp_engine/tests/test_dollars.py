@@ -4,9 +4,10 @@ import math
 import random
 import unittest
 
-from pp_engine.dollars import (HAC_RATE, HAC_SHARE, HRRP_SHARE, PARTS, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
+from pp_engine.dollars import (HAC_SHARE, HRRP_SHARE, PARTS, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
                                YES_UNESTIMATED_MAX, checks, estimate, hospital_row, national, round_dollars, status)
 from pp_engine.parse import SchemaError
+from pp_engine.tests.fixtures import assert_adds_up
 
 # Invented standardized amounts (labor, nonlabor), all different so a mix-up of table, key or column shows.
 RATES = {
@@ -229,7 +230,6 @@ class Adjustments(Close):
 
     def test_hac_is_one_percent_of_total_after_both(self):
         e = est(ime_op=0.1, hrrp=0.97, vbp=1.01, cut=True)
-        self.assertEqual(HAC_RATE, 0.01)
         self.assertDollars(e["hac"], -0.01 * (e["total"] + e["hrrp"] + e["hvbp"]))
         # by hand: T = 120,000 + 12,000 = 132,000; HRRP -3,600; HVBP +1,200; after = 129,600; HAC = -1,296
         self.assertDollars(e["total"], 132000.0)
@@ -330,18 +330,6 @@ def money(base, hrrp=0, hvbp=0, hac=0, total=None):
     parts = {**dict.fromkeys(PARTS, 0), "fed": base, "uc": total - base}  # B is all federal payment; the rest, uc
     return {"base": base, "total": total, "hrrp": hrrp, "hvbp": hvbp, "after": total + hrrp + hvbp, "hac": hac,
             "net": hrrp + hvbp + hac, **parts}
-
-
-def assert_adds_up(case, r):
-    """Every sum in a whole-dollar row is exactly the sum of what is shown beside it."""
-    case.assertTrue(all(type(r[k]) is int for k in PARTS + ("base", "total", "hrrp", "hvbp", "after", "at_stake",
-                                                             "hac", "net")), r)
-    case.assertEqual(r["base"], r["fed"] + r["mdh_addon"])
-    case.assertEqual(r["total"], r["base"] + sum(r[k] for k in PARTS[2:]))
-    case.assertEqual(r["after"], r["total"] + r["hrrp"] + r["hvbp"])
-    case.assertEqual(r["at_stake"], round(0.01 * r["after"]))
-    case.assertEqual(r["hac"], -r["at_stake"] if r["cut"] else 0)
-    case.assertEqual(r["net"], r["hrrp"] + r["hvbp"] + r["hac"])
 
 
 NAT = {"hospitals": 4, "base": 480000, "total": 480000, "hrrp": -2112, "hvbp": 0, "after": 477888, "hac": -1195,
@@ -469,7 +457,7 @@ class RowsAddUp(unittest.TestCase):
     def test_every_row_adds_up_exactly(self):
         pairs = self.random_rows()
         for _, r in pairs:
-            assert_adds_up(self, r)
+            assert_adds_up(self, r, r["ccn"])  # invented CCNs
         # the test has teeth: rounding the sums themselves would often miss by a dollar
         self.assertGreater(sum(round(estimate(h, RATES, hrrp=1.0, vbp=1.0, cut=False)["total"]) != r["total"]
                                for h, r in pairs), 5)

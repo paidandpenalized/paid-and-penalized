@@ -1,4 +1,5 @@
-"""Shared test data: places, not hospitals."""
+"""Shared test data: places, not hospitals; and the one statement of how a whole-dollar hospital row adds up."""
+from pp_engine.dollars import PARTS
 
 # (state, Care Compare's county, impact-file FIPS, label) that the rules check (no doubt): the known cases, misspellings,
 # and the collisions. test_location runs them on its synthetic fixture, test_geo_pins on the pinned atlas.
@@ -23,3 +24,17 @@ CHECKED_COUNTIES = [
     ("MO", "ST. LOUIS COUNTY.", "29189", "St. Louis County"), ("TX", "HARRIS-COUNTY", "48201", "Harris County"),
     ("MO", "ST. LOUIS COUNTY.", None, "St. Louis County"), ("TX", "HARRIS-COUNTY", None, "Harris County"),  # no FIPS
 ]
+
+
+def assert_adds_up(case, r, who):
+    """Every figure in a whole-dollar `hospital_row` is an integer, and every sum is exactly the sum of what is shown
+    beside it. `who` is what a failure says about the row (a test on the pinned files gives the first two digits of the
+    CCN, not the CCN). The 0.01 is written out: this is the independent statement of the HAC rate."""
+    case.assertTrue(all(type(r[k]) is int for k in PARTS + ("base", "total", "hrrp", "hvbp", "after", "at_stake", "hac",
+                                                             "net")), who)
+    case.assertEqual(r["base"], r["fed"] + r["mdh_addon"], who)
+    case.assertEqual(r["total"], r["base"] + sum(r[k] for k in PARTS[2:]), who)
+    case.assertEqual(r["after"], r["total"] + r["hrrp"] + r["hvbp"], who)
+    case.assertEqual(r["at_stake"], round(0.01 * r["after"]), who)
+    case.assertEqual(r["hac"], -r["at_stake"] if r["cut"] else 0, who)
+    case.assertEqual(r["net"], r["hrrp"] + r["hvbp"] + r["hac"], who)

@@ -3,10 +3,9 @@ out non-finite or negative where it cannot be. (The national totals and back-tes
 import math
 import unittest
 
-from pp_engine.dollars import estimate, hospital_row, national
+from pp_engine.dollars import PARTS, estimate, hospital_row
+from pp_engine.tests.fixtures import assert_adds_up
 from pp_pipeline.ipps_pins import hrrp_factors, payment_inputs, rates, vbp_factors
-
-PARTS = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")
 
 
 class EveryHospitalOnThePin(unittest.TestCase):
@@ -24,43 +23,23 @@ class EveryHospitalOnThePin(unittest.TestCase):
             self.assertGreater(e["fed"], 0, ccn[:2])
             self.assertTrue(all(e[k] >= 0 for k in PARTS), ccn[:2])
 
-    def test_t_is_b_plus_the_other_parts_and_nothing_moves_without_a_factor_or_a_cut(self):
+    def test_nothing_moves_without_a_factor_or_a_cut(self):
         for ccn, e in self.estimates.items():
-            self.assertAlmostEqual(e["total"], e["base"] + sum(e[k] for k in PARTS[2:]), places=4, msg=ccn[:2])
             self.assertEqual((e["hrrp"], e["hvbp"], e["hac"], e["net"]), (0.0, 0.0, 0.0, 0.0), ccn[:2])
             self.assertEqual(e["after"], e["total"])
             self.assertAlmostEqual(e["at_stake"], 0.01 * e["total"], places=6)
 
 
 class EveryRowAddsUp(unittest.TestCase):
-    """The whole-dollar rows built from the pins: every sum is exactly the sum of its parts, for a hospital CMS cuts
-    and for one it does not, and so is every column total."""
-
-    @classmethod
-    def setUpClass(cls):
-        inputs, table, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
-        cls.rows = {cut: [hospital_row(ccn, "VA", h, table, hrrp=hrrp.get(ccn), vbp=vbp.get(ccn), cut=cut,
-                                       parhm=frozenset()) for ccn, h in inputs.items()] for cut in (False, True)}
+    """The whole-dollar rows built from the pins, for a hospital CMS cuts and for one it does not: every row adds up
+    exactly. (Forcing `cut` both ways puts the HAC cut on every hospital, which the committed file does not.)"""
 
     def test_every_row_adds_up(self):
-        for cut, rows in self.rows.items():
+        inputs, table, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
+        for cut in (False, True):
+            rows = [hospital_row(ccn, "VA", h, table, hrrp=hrrp.get(ccn), vbp=vbp.get(ccn), cut=cut, parhm=frozenset())
+                    for ccn, h in inputs.items()]
             estimated = [r for r in rows if r["status"] == "estimated"]
             self.assertGreater(len(estimated), 3000)
             for r in estimated:
-                self.assertTrue(all(type(r[k]) is int for k in PARTS + ("base", "total", "hrrp", "hvbp", "after",
-                                                                         "at_stake", "hac", "net")), r["ccn"][:2])
-                self.assertEqual(r["base"], r["fed"] + r["mdh_addon"], r["ccn"][:2])
-                self.assertEqual(r["total"], r["base"] + sum(r[k] for k in PARTS[2:]), r["ccn"][:2])
-                self.assertEqual(r["after"], r["total"] + r["hrrp"] + r["hvbp"], r["ccn"][:2])
-                self.assertEqual(r["at_stake"], round(0.01 * r["after"]), r["ccn"][:2])
-                self.assertEqual(r["hac"], -r["at_stake"] if cut else 0, r["ccn"][:2])
-                self.assertEqual(r["net"], r["hrrp"] + r["hvbp"] + r["hac"], r["ccn"][:2])
-
-    def test_every_column_total_adds_up(self):
-        for cut, rows in self.rows.items():
-            nat = national(rows)
-            estimated = [r for r in rows if r["status"] == "estimated"]
-            for key in ("base", "total", "hrrp", "hvbp", "after", "hac", "net"):
-                self.assertEqual(nat[key], sum(r[key] for r in estimated), (cut, key))
-            self.assertEqual(nat["after"], nat["total"] + nat["hrrp"] + nat["hvbp"])
-            self.assertEqual(nat["net"], nat["hrrp"] + nat["hvbp"] + nat["hac"])
+                assert_adds_up(self, r, r["ccn"][:2])

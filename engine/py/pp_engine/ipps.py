@@ -166,8 +166,9 @@ PAYMENT_COLUMNS = {
     "gaf": "GAF",
     "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
 }
-_FLOATS = ("cases", "cmi", "cmi_hsp", "wi", "cola", "hsp", "hsp_mdh", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
-           "ucp_per_claim", "outlier_op", "outlier_cap", "gaf", "low_volume")
+# The columns read as floats (a blank cell is None): all but the CCN, the integer counts and flags, and the Y/blank MDH
+# flag, which `read_payment_inputs` reads on their own.
+_FLOATS = tuple(k for k in PAYMENT_COLUMNS if k not in ("ccn", "bills", "quality", "ehr", "ptype", "mdh"))
 
 
 def _finite(s):
