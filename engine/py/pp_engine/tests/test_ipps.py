@@ -1,11 +1,12 @@
-"""The FY2026 IPPS readers, on synthetic text in the files' real layouts (invented numbers, synthetic CCNs)."""
+"""The IPPS readers, on synthetic text in the FY2026 and FY2024 files' real layouts (invented numbers, synthetic
+CCNs)."""
 import csv
 import io
 import re
 import unittest
 
-from pp_engine.ipps import (PAYMENT_COLUMNS, SCH_TYPES, rate_key, read_hrrp_factors, read_payment_inputs, read_rates,
-                            read_vbp_factors)
+from pp_engine.ipps import (IMPACT_COLUMNS, MDH_TYPES, PAYMENT_COLUMNS, SCH_TYPES, rate_key, read_hrrp_factors,
+                            read_payment_inputs, read_rates, read_vbp_factors)
 from pp_engine.parse import SchemaError
 
 # --- Tables 1A-1E ----------------------------------------------------------------------------------------------------
@@ -151,6 +152,14 @@ class Rates(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "Table 1C"):
             read_rates(rates_text(with_1c=False))
 
+    def test_an_update_written_without_the_word_percent_reads_the_same(self):
+        # FY2024's Table 1C headings end "(Update = 3.1)"; the number is the update all the same
+        text = rates_text().replace("Equal to 1 (Update = 2.6 Percent)", "Equal to 1 (Update = 2.6)", 1)
+        self.assertNotEqual(text, rates_text())
+        self.assertEqual(read_rates(text), read_rates(rates_text()))
+        with self.assertRaisesRegex(SchemaError, "update"):  # a number with another word after it is still no update
+            read_rates(rates_text().replace("(Update = 2.6 Percent)", "(Update = 2.6 Points)", 1))
+
 
 # --- the impact file -------------------------------------------------------------------------------------------------
 
@@ -161,14 +170,15 @@ IMPACT_HEADER = ["Provider Number", "Name", "FY 2026 Wage Index", "Cost of Livin
                  "CMIV43", "TACMIV43", "GAF", "OUTFACT_F", "COUTFACT_F", "Proxy Readmission Adjustment Factor",
                  "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag, CAA 2024",
                  "HSP Rate for MDHs, FY 2025 extension", "Low Volume Hospital Adjustment",
-                 "Low-Volume Hospital Payment Adjustment, FY 2025 extension"]
+                 "Low-Volume Hospital Payment Adjustment, FY 2025 extension", "Beds"]
 GOOD = {"Provider Number": "990001", "Name": "INVENTED A", "FY 2026 Wage Index": "1.0512",
         "Cost of Living Adjustment": "1", "TCHOP": "0.0655", "TCHCP": "0.05496", "DSHOPP": "0.0298",
         "DSHCPP": "0.05731", "UCP Per Claim Amount": "1400.27", "Provider Type": "0", "HSP Rate": "", "Bills": "3952",
         "CASETA43": "3878.43", "CMIV43": "1.9834", "TACMIV43": "1.9757", "GAF": "0.933856364", "OUTFACT_F": "0.01633",
         "COUTFACT_F": "0.01269", "Proxy Readmission Adjustment Factor": "0.9975", "Proxy Quality Reduction": "0",
         "Proxy EHR Reduction": "0", "MDH Flag, CAA 2024": "", "HSP Rate for MDHs, FY 2025 extension": "",
-        "Low Volume Hospital Adjustment": "1", "Low-Volume Hospital Payment Adjustment, FY 2025 extension": "1"}
+        "Low Volume Hospital Adjustment": "1", "Low-Volume Hospital Payment Adjustment, FY 2025 extension": "1",
+        "Beds": "212"}
 TITLE = ["FY 2026 IPPS Impact File -  Final Rule (August 2025)"] + [""] * 24
 
 
@@ -187,8 +197,9 @@ class PaymentInputs(unittest.TestCase):
             "cases": 3878.43, "cmi": 1.9757, "bills": 3952, "cmi_hsp": 1.9834, "wi": 1.0512, "cola": 1.0,
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
             "ime_op": 0.0655, "ime_cap": 0.05496, "dsh_op": 0.0298, "dsh_cap": 0.05731, "ucp_per_claim": 1400.27,
-            "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0, "pr": False})
-        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr"}))
+            "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0, "pr": False,
+            "beds": 212, "hsp_mdh_prior_year": True})
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
 
     def test_payment_inputs_blank_is_none(self):
         blanks = {k: "" for k in ("CASETA43", "TACMIV43", "OUTFACT_F", "COUTFACT_F", "HSP Rate", "UCP Per Claim Amount",
@@ -275,6 +286,50 @@ class PaymentInputs(unittest.TestCase):
                 read_payment_inputs(impact_text(hospital(**{col: bad})))
 
 
+# FY2024's impact file: other year stamps, no MDH or extension columns (MDH status is the provider type, its rate the
+# `HSP Rate`), and `Low Volume Hospital Adjustment` is the year's low-volume multiplier.
+IMPACT_HEADER_2024 = ["Provider Number", "Name", "FY 2024 Wage Index", "Cost of Living Adjustment", "Beds", "TCHOP",
+                      "TCHCP", "DSHOPP", "DSHCPP", "UCP Per Claim Amount", "Provider Type", "HSP Rate", "Bills",
+                      "CASETA40", "CMIV40", "TACMIV40", "CASETA41", "CMIV41", "TACMIV41", "GAF", "OUTFACT_F",
+                      "COUTFACT_F", "Low Volume Hospital Adjustment", "Proxy Quality Reduction", "Proxy EHR Reduction"]
+GOOD_2024 = {**{k: v for k, v in GOOD.items() if k in IMPACT_HEADER_2024}, "FY 2024 Wage Index": "0.9512",
+             "CASETA40": "1.0", "CMIV40": "1.0", "TACMIV40": "1.0", "CASETA41": "2100.5", "CMIV41": "1.5512",
+             "TACMIV41": "1.5401", "Low Volume Hospital Adjustment": "1.1", "Beds": "0"}
+
+
+def impact_2024(*records):
+    return tsv([["FY 2024 IPPS Impact File -  Final Rule (August 2023)"] + [""] * 24, IMPACT_HEADER_2024]
+               + [[r.get(h, "") for h in IMPACT_HEADER_2024] for r in records])
+
+
+class PaymentInputs2024(unittest.TestCase):
+    def test_a_row_reads_with_the_years_columns(self):
+        got = read_payment_inputs(impact_2024(GOOD_2024), fy=2024)["990001"]
+        self.assertEqual((got["cases"], got["cmi"], got["cmi_hsp"], got["wi"], got["low_volume"], got["beds"]),
+                         (2100.5, 1.5401, 1.5512, 0.9512, 1.1, 0))  # V41, not V40; a zero bed count stays 0
+        self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"], got["hsp_mdh_prior_year"]), (False, None, False, False))
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr", "hsp_mdh_prior_year"}))
+
+    def test_mdh_is_the_provider_type_and_its_rate_is_the_hsp_rate(self):
+        recs = [dict(GOOD_2024, **{"Provider Number": f"99{i:04d}", "Provider Type": t, "HSP Rate": "7100.25"})
+                for i, t in enumerate(("0", "14", "15", "16"))]
+        got = read_payment_inputs(impact_2024(*recs), fy=2024)
+        self.assertEqual([(got[f"99{i:04d}"]["mdh"], got[f"99{i:04d}"]["hsp_mdh"], got[f"99{i:04d}"]["sch"])
+                          for i in range(4)],
+                         [(False, None, False), (True, 7100.25, False), (True, 7100.25, False), (False, None, True)])
+        self.assertEqual(MDH_TYPES, {14, 15})
+        self.assertFalse(MDH_TYPES & SCH_TYPES)
+
+    def test_each_year_needs_its_own_columns(self):
+        with self.assertRaisesRegex(SchemaError, "FY2026 impact file: expected one column"):
+            read_payment_inputs(impact_2024(GOOD_2024))  # the FY2026 map on FY2024's file
+        with self.assertRaisesRegex(SchemaError, "FY2024 impact file: expected one column"):
+            read_payment_inputs(impact_text(hospital()), fy=2024)
+        with self.assertRaisesRegex(SchemaError, "FY2025"):
+            read_payment_inputs(impact_text(hospital()), fy=2025)
+        self.assertEqual(sorted(IMPACT_COLUMNS), [2024, 2026])
+
+
 # --- the HRRP and VBP factor files -----------------------------------------------------------------------------------
 
 HRRP_HEADER = ["Hospital CCN", "  Payment adjustment factor ", "Payment reduction percentage", "Dual proportion",
@@ -302,6 +357,13 @@ class Factors(unittest.TestCase):
     def test_vbp_factors_by_ccn_skipping_the_footnote(self):
         text = vbp_text(["990001", "1.0021821642", ""], ["990002", "0.9944241534", ""])
         self.assertEqual(read_vbp_factors(text), {"990001": 1.0021821642, "990002": 0.9944241534})
+
+    def test_table_16b_reads_the_years_factor_heading(self):
+        header_2024 = ["CMS Certification Number (CCN)", "Actual FY 2024 Hospital VBP Adjustment Factor", ""]
+        text = vbp_text(["990001", "0.9947894297", ""], header=header_2024)
+        self.assertEqual(read_vbp_factors(text, fy=2024), {"990001": 0.9947894297})
+        with self.assertRaisesRegex(SchemaError, "'Actual FY 2026 Hospital VBP Adjustment Factor'"):
+            read_vbp_factors(text)
 
     def test_a_missing_factor_column_raises_naming_it(self):
         with self.assertRaisesRegex(SchemaError, "'Payment adjustment factor'"):

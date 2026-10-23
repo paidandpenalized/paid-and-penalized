@@ -7,7 +7,7 @@ import io
 import unittest
 from unittest import mock
 
-from pp_engine import dollars
+from pp_engine import bands, dollars
 from pp_engine.contract import format_emitted, source_manifest_hash
 from pp_engine.schema import validate
 from pp_engine.tests.fixtures import assert_adds_up
@@ -16,6 +16,7 @@ from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MA
                                       committed_path, enforce_caps, site_yes_count, unlisted_counts, yes_count)
 from pp_pipeline.emit_hospital import HACRP
 from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
+from pp_pipeline.ipps_pins import payment_inputs
 
 PARTS = tuple(camel(k) for k in dollars.PARTS)  # the JSON's names; the schema states them independently
 DOLLARS = ("base", "total", "hrrp", "hvbp", "after", "atStake", "hac", "net")
@@ -63,14 +64,32 @@ class Committed(unittest.TestCase):
         schemas = load_schemas()
         self.assertEqual(validate(schemas[SCHEMA], self.committed, schemas), [])
 
+    def test_the_schema_holds_the_bands_to_their_shape(self):
+        schemas = load_schemas()
+        b = self.committed["bands"]
+        hac = b["measures"]["hac"]
+        broken = (
+            None,  # methods_version 2 always has its ranges
+            {**b, "extra": 1},
+            {k: v for k, v in b.items() if k != "national"},
+            {**b, "measures": {**b["measures"], "hac": {**hac, "strata": [{**hac["strata"][0], "pool": "nearby"}]}}},
+            {**b, "points": [{**b["points"][0], "stratum": "tiny/other"}]},
+            {**b, "comparison": {**b["comparison"], "excluded": {**b["comparison"]["excluded"], "other": 1}}},
+        )
+        for bad in broken:
+            with self.subTest(bad=None if bad is None else sorted(bad)):
+                self.assertNotEqual(validate(schemas[SCHEMA], {**self.committed, "bands": bad}, schemas), [])
+        row = next(h for h in self.committed["hospitals"] if h["status"] == "estimated")
+        self.assertNotEqual(validate(schemas[SCHEMA], {**self.committed, "hospitals": [{**row, "stratum": "x"}]}, schemas), [])
+
     def test_it_lives_at_the_family_level_for_the_files_fiscal_year(self):
         fy = self.committed["fy"]
         self.assertEqual(self.path, EMITTED_DIR / "dollars" / f"fy{fy}" / "dollars.json")
         self.assertEqual({r["Fiscal Year"] for r in hacrp_file()}, {str(fy)})
-        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (1, 1))
+        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (2, 2))
         self.assertEqual(self.committed["assumptions"], {"ratesFy": 2026, "volumeFy": 2024, "mdhEnd": "2026-12-31",
                                                          "lowVolumeEnd": "2026-12-31", "ntap": "excluded"})
-        self.assertIsNone(self.committed["bands"])
+        self.assertEqual(self.committed["bands"]["fy"], 2024)  # the back-test's year, two before the estimate's
 
     def test_every_hacrp_ccn_has_one_row(self):
         expected = [r["Facility ID"] for r in hacrp_file()]
@@ -84,7 +103,8 @@ class Committed(unittest.TestCase):
             self.assertTrue(c["pass"], c)
             self.assertTrue(c["low"] <= c["value"] <= c["high"], c)
         self.assertEqual([c["id"] for c in self.committed["checks"]],
-                         ["hrrp_share", "vbp_net", "hac_share", "hac_count", "yes_unestimated"])
+                         ["hrrp_share", "vbp_net", "hac_share", "hac_count", "yes_unestimated", "backtest_hac_median",
+                          "backtest_hospitals", "backtest_cut"])
         # The vbp_net check passes on an empty Table 16B join; and a share over a zero base has no value.
         self.assertGreater(nat["vbpBase"], 0)
         self.assertGreater(nat["hrrpBase"], 0)
@@ -128,7 +148,7 @@ class Committed(unittest.TestCase):
 
     def test_dollar_keys_exist_only_on_estimated_rows(self):
         bare = {"ccn", "status", "cut", "hrrpListed", "vbpListed"}
-        full = bare | {"cases", "bills", "hrrpFactor", "vbpFactor", "parts"} | set(DOLLARS)
+        full = bare | {"cases", "bills", "hrrpFactor", "vbpFactor", "parts", "stratum"} | set(DOLLARS)
         for h in self.hospitals:
             self.assertEqual(set(h), full if h["status"] == "estimated" else bare, h["ccn"][:2])
             self.assertIs(type(h["cut"]), bool)
@@ -151,6 +171,39 @@ class Committed(unittest.TestCase):
         self.assertEqual(nat["parts"], {k: sum(h["parts"][k] for h in estimated) for k in PARTS})
         self.assertEqual(nat["yes"], sum(h["cut"] for h in self.hospitals))
         self.assertEqual(nat["cut"], sum(h["cut"] for h in estimated))
+
+
+class Strata(unittest.TestCase):
+    """Each estimated hospital's `stratum` is the back-test stratum of its FY2026 impact-file row (bed count, and sole
+    community or Medicare-dependent), one of the strata `bands` lists; the estimates do not depend on the back-test."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.committed = read_json(committed_path())
+
+    def test_the_stratum_is_the_impact_files_beds_and_kind(self):
+        ids = [s["id"] for s in self.committed["bands"]["strata"]]
+        self.assertEqual(ids, list(bands.STRATA))
+        inputs = payment_inputs()
+        estimated = [h for h in self.committed["hospitals"] if h["status"] == "estimated"]
+        self.assertEqual(len(estimated), self.committed["national"]["hospitals"])
+        for h in estimated:
+            inp = inputs[h["ccn"]]
+            band = next(b for b in self.committed["bands"]["strata"] if b["id"] == h["stratum"])
+            self.assertGreaterEqual(inp["beds"], band["bedsMin"], h["ccn"][:2])
+            self.assertTrue(band["bedsMax"] is None or inp["beds"] <= band["bedsMax"], h["ccn"][:2])
+            self.assertEqual(band["schMdh"], inp["sch"] or inp["mdh"], h["ccn"][:2])
+        self.assertFalse(any("stratum" in h for h in self.committed["hospitals"] if h["status"] != "estimated"))
+
+    def test_the_estimates_do_not_depend_on_the_back_test(self):
+        # With the back-test replaced by nothing, the hospitals' figures and the sums are the committed ones: the ranges
+        # are added beside the estimates, never folded into them.
+        with mock.patch.object(emit_dollars.backtest_dollars, "bands_json", return_value={}), \
+                mock.patch.object(emit_dollars.backtest_dollars, "checks", return_value=[]):
+            bare = build_from_pins("2099-01-01T00:00:00Z")
+        for key in ("national", "headline", "hospitals"):
+            self.assertEqual(bare[key], self.committed[key], key)
+        self.assertEqual(bare["checks"], self.committed["checks"][:len(bare["checks"])])
 
 
 class Caps(unittest.TestCase):

@@ -187,10 +187,9 @@ test('a hospital page: the cliff, then the statement, before the measures; the r
   assert.equal(none.indexOf('id="money"'), -1);
 });
 
-test('a production build refuses dollars whose ranges are still pending (any other build goes on: the page tests build both ways)', async () => {
-  assert.equal(DATA.dollars.bands, null, 'the pinned file\'s ranges are pending');
-  await assert.rejects(generateHacrp({ env: 'production' }, { data: DATA, log: () => {} }), /no ranges yet/);
-  // Missing as well as null: a file without the field is as pending as one that says so.
+test('a production build refuses dollars without their ranges (any other build goes on: the page tests build both ways)', async () => {
+  assert.ok(DATA.dollars.bands, 'the pinned file carries the back-test\'s ranges');
+  // Missing as well as null: a file without the field has no ranges, as one that says so.
   for (const bands of [undefined, null]) await assert.rejects(generateHacrp({ env: 'production' }, { data: { ...DATA, dollars: { ...DATA.dollars, bands } }, log: () => {} }), /no ranges yet/, String(bands));
 });
 

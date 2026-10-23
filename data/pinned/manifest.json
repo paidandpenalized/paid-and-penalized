@@ -93,6 +93,64 @@
     "retrieved": "2026-10-22"
   },
   {
+    "id": "ipps-impact-fy2024",
+    "title": "FY2024 IPPS final rule impact file (the dollar estimates' back-test)",
+    "path": "ipps-impact-fy2024/fy2024-ipps-fr-impact-file.zip",
+    "bytes": 1658567,
+    "sha256": "296bf8ca432ea76a5b39348781e2b0c57d8c5b9fa9faf0fa49d45a3558e4f8f0",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy2024-ipps-fr-impact-file.zip",
+    "retrieved": "2026-10-23"
+  },
+  {
+    "id": "ipps-rates-fy2024",
+    "title": "FY2024 IPPS final rule Tables 1A-1E (standardized amounts and rate tables; the back-test)",
+    "path": "ipps-rates-fy2024/fy2024-ipps-fr-table-1a-1e.zip",
+    "bytes": 16027,
+    "sha256": "6dafcbdd0cb8f2e6b1f7b31c7a30205cf47060954fc7a0392462c561ccebfb28",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy2024-ipps-fr-table-1a-1e.zip",
+    "retrieved": "2026-10-23"
+  },
+  {
+    "id": "hrrp-supplemental-fy2024",
+    "title": "FY2024 Hospital Readmissions Reduction Program supplemental data file (the back-test)",
+    "path": "hrrp-fy2024/fy24-ipps-fr-hospital-readmissions-reduction-program-supplemental-data-file.zip",
+    "bytes": 1768890,
+    "sha256": "dd66f7ac64e97175a7ded19e982c1d2043a237ba4375da103999826f3ef1ef8a",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy24-ipps-fr-hospital-readmissions-reduction-program-supplemental-data-file.zip",
+    "retrieved": "2026-10-23"
+  },
+  {
+    "id": "hvbp-table16b-fy2024",
+    "title": "FY2024 IPPS Table 16B (actual Hospital Value-Based Purchasing Program adjustment factors; the back-test)",
+    "path": "hvbp-fy2024/fy24-ipps-final-rule-16b.zip",
+    "bytes": 97487,
+    "sha256": "6ef86dd51b7abdb2b2a4a3c76d41a947c3d85ac400249f384c0a3733c65533bf",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy24-ipps-final-rule-16b.zip",
+    "retrieved": "2026-10-23"
+  },
+  {
+    "id": "hcris-fy2024-wse",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2024 file: every report, with the Worksheet E Part A lines the dollar estimates' back-test reads",
+    "path": "hcris-fy2024/hcris_fy2024_wse.csv",
+    "bytes": 541830,
+    "sha256": "ec99834fd210f60f2d6488caef3d63e5df6b94a926cbba8ab9c4ed398145f5ca",
+    "derivedFrom": {
+      "file": "HOSP10FY2024.ZIP",
+      "bytes": 135705434,
+      "sha256": "291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "members": [
+        "HOSP10_2024_rpt.csv",
+        "HOSP10_2024_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2024.ZIP",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-10-23, and a later download of the same URL will differ. No archive copy is published."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris_extract.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2010-form",
+    "retrieved": "2026-10-23"
+  },
+  {
     "id": "pos-q2-2026",
     "title": "Provider of Services file, Q2 2026: hospital rows and the columns the hospital master reads",
     "path": "pos-q2-2026/pos_hospitals.csv",

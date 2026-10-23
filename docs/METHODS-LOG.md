@@ -141,3 +141,62 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
     a three-year average of claims the file does not carry.
   - HRRP and HVBP each adjust the base operating payment only (not IME, DSH, capital or the rest); the HAC cut is 1% of
     everything the hospital is paid after both.
+
+## dollars methods_version 2 (2026-10-23)
+- No estimate changes: every hospital's figures and the national and headline sums are as in methods_version 1. What
+  is new is `bands`, the likely ranges on the figures, from a back-test, and `stratum` on each estimated hospital (the
+  row of `bands` its ranges come from). `schema_version` is 2 (`bands` is an object, not null). The back-test's pins
+  join `sources`: the FY2024 HACRP file, the FY2024 final rule's impact file, Tables 1A-1E, HRRP supplemental file and
+  Table 16B, and an extract of CMS's HCRIS cost reports for FY2024.
+- The back-test (`pipeline/py/pp_pipeline/backtest_dollars.py`, `run.py backtest`; statistics in `pp_engine/bands.py`)
+  runs the same estimate (the same functions and assumptions: new-technology payments left out, the year's rates, the
+  impact file's volume, which for FY2024 is FY2022 claims) on the FY2024 rule's files and the FY2024 HACRP decisions,
+  and sets each hospital's figures beside its FY2024 Medicare cost report. The readers take the rule's year, which
+  picks the impact file's column names (FY2024: `CASETA41`, `TACMIV41`, `CMIV41`, `FY 2024 Wage Index`; Medicare-
+  dependent hospitals are provider types 14 and 15, their rate the `HSP Rate`, already updated to FY2024, so not
+  updated again; the low-volume multiplier is `Low Volume Hospital Adjustment`) and Table 16B's factor heading. FY2024's
+  Table 1C writes its updates without the word "Percent"; the rates reader takes both forms.
+- The cost reports: CMS's HCRIS file `HOSP10FY2024.ZIP` (Form CMS-2552-10; reports beginning 2023-10-01 to
+  2024-09-30), 136 MB, too large for the repo. The pin `hcris-fy2024-wse` is an extract
+  (`pipeline/py/pp_pipeline/hcris_extract.py`, `run.py extract-hcris`): one row per report, its identity and status,
+  whether it has Worksheet E Part A and the Pennsylvania Rural Health Model's worksheet, and the Part A lines read.
+  CMS regenerates the HCRIS zips as reports are filed and settled (this copy's Last-Modified is 2026-10-05), so the
+  manifest's SHA-256 is of the copy retrieved on 2026-10-23. No archive copy is published.
+- Ground truth, Worksheet E Part A (Provider Reimbursement Manual, Part 2, chapter 40, Transmittal 25, 4030.1), each
+  line summing its columns 1 and 1.01: the federal DRG payment, lines 1.01 + 1.02; HRRP, line 70.94 + 70.91 (the
+  Medicare-dependent hospital's part); HVBP, 70.93 + 70.90; the HAC cut, 70.99 (positive; line 71 subtracts it); the
+  net, 70.93 + 70.94 + 70.90 + 70.91 - 70.99. Over all 6,113 reports in the file, 70.94 is negative on 2,452 and
+  positive on 10, 70.91 negative on all 74, 70.99 positive on 866 and negative on 3, and 70.93 and 70.90 go both ways,
+  as the chapter's line 71 implies. The model's figures: `fed` (lines 1.01 and 1.02 do not hold a Medicare-dependent
+  hospital's add-on, which B does), `hrrp`, `hvbp`, `atStake` for the hospitals CMS cut, and `net`.
+- The comparison set (`bands.comparison`): reports covering exactly the federal year, 2023-10-01 to 2024-09-30, so the
+  program lines hold FY2024's factors only; with Worksheet E Part A; not Maryland's or Puerto Rico's; without the
+  Pennsylvania Rural Health Model's worksheet; for a hospital in the FY2024 HACRP file that the estimate prices. Each
+  report left out is counted by the first rule it fails: of 6,113, 5,249 cover another period, 358 have no Part A,
+  0 are Maryland's, 2 Puerto Rico's, 0 the model's, 3 are not in the HACRP file and 3 have no estimate; 498 hospitals
+  remain, one report each (246 as submitted, 93 settled without audit, 159 amended), 134 of them cut by CMS.
+- Per hospital and measure, the error is log(model / actual) where both are nonzero and of one sign. Opposite signs,
+  a zero on the cost report, a zero in the model, and both zero are counted (`pairs`), not dropped silently. The HAC
+  cut is tested on the cut hospitals only: 131 compared, 1 of opposite sign, 2 with no line 70.99. The net is tested
+  on every hospital with a nonzero net on its cost report.
+- Strata: the impact file's bed count (from cost reports) under 100, 100 to 299, 300 or more, crossed with whether the
+  hospital is a sole community or Medicare-dependent hospital. A stratum with fewer than 30 hospitals for a measure
+  takes the percentiles of its bed band (both kinds pooled), and a band with fewer than 30 takes every hospital's;
+  `pool` records which, `poolN` how many.
+- Bands: per stratum and measure, the 10th and 90th percentiles of the errors (linear interpolation between order
+  statistics, as Excel's PERCENTILE.INC), rounded to 4 places, and the multipliers exp(-p90) and exp(-p10), also to 4
+  places. A hospital's range is its estimate times the two: in the back-test, 8 in 10 hospitals' actual figures fell
+  in such a range around the model's. Each stratum's own median error (its bias) and the overall median are reported
+  beside the bands; the point estimates are not corrected for them. The net's band is back-tested directly, not
+  built from the others.
+- The national range: the sum of the cut hospitals' estimates times the 10th and 90th percentiles of sum(actual) /
+  sum(model) over the 131 compared cut hospitals, resampled with replacement 10,000 times (a bootstrap of hospitals;
+  Python's Mersenne Twister, seed 20261023). It reflects one year's back-test, not how the next year's will move.
+- Checks, set before any error was computed: the HAC cut's overall median error within -0.25 to 0.25 (a factor of
+  1.28 either way would mean a structural mistake, not drift); at least 180 hospitals in the comparison set (six strata
+  of 30) and at least 90 cut hospitals compared (three bed bands of 30). A failing check writes nothing, as the national
+  checks do. On these pins: median 0.0233, 498 hospitals, 131 cut hospitals.
+- Limits: one year; whole-year October reports only, so hospitals with other fiscal years are not tested; the FY2024
+  impact file's wage index is the final rule's, before the correction notice (CMS-1785-CN, which corrected wage index
+  tables for some hospitals and posted no corrected impact file); the cost reports are as CMS holds them today, many
+  not yet settled.

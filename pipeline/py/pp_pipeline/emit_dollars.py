@@ -8,20 +8,23 @@ file built from an older pin is refused). A failing check writes nothing and exi
 The file holds, for every hospital in the HACRP file, the estimate pp_engine.dollars makes of what Medicare pays it for
 the year and how much HRRP, HVBP and the HAC Reduction Program move that (a model, not a bill: see the engine's
 docstring and docs/METHODS-LOG.md, `dollars`), then the national sums, the sums over the hospitals the HACRP site
-counts in its headline, the checks that hold the sums against what CMS publishes, and `bands` (null until the
-back-test, milestone 3). It lives at the family level because more than one site reads it.
+counts in its headline, the checks that hold the sums against what CMS publishes, and `bands`: the likely ranges, from
+the back-test of the same estimate on FY2024 against hospitals' cost reports (pp_pipeline.backtest_dollars), whose
+checks join the others. Each estimated hospital carries its `stratum`, the row of `bands` its ranges come from. It
+lives at the family level because more than one site reads it.
 """
 import sys
 from datetime import datetime, timezone
 
-from pp_engine import dollars
+from pp_engine import bands, dollars
 from pp_engine.contract import envelope, source_manifest_hash
+from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
 
-SCHEMA_VERSION, METHODS_VERSION = 1, 1
-SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP)
+SCHEMA_VERSION, METHODS_VERSION = 2, 2
+SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
 SCHEMA = "dollars.schema.json"
 
 # The years the estimate is built on. The rates (Tables 1A-1E) and the impact file are the final rule's (`FY`, in
@@ -61,8 +64,20 @@ def _names(keys):
 # A row's fields in the JSON, in the order the file lists them; an estimated row also has `parts`.
 BARE_FIELDS = _names(("ccn", "status", "cut", "hrrp_listed", "vbp_listed"))
 ESTIMATED_FIELDS = _names(("ccn", "status", "cut", "cases", "bills", "base", "total", "hrrp_factor", "vbp_factor",
-                           "hrrp_listed", "vbp_listed", "hrrp", "hvbp", "after", "at_stake", "hac", "net"))
+                           "hrrp_listed", "vbp_listed", "hrrp", "hvbp", "after", "at_stake", "hac", "net", "stratum"))
 PART_FIELDS = _names(dollars.PARTS)
+
+
+def with_stratum(row, inp):
+    """An estimated `hospital_row` with its `stratum` (pp_engine.bands: the impact file's bed count, and whether it is a
+    sole community or Medicare-dependent hospital), the row of `bands` its likely ranges come from; other rows as
+    they are."""
+    if row["status"] != "estimated":
+        return row
+    found = bands.stratum(inp["beds"], inp["sch"], inp["mdh"])
+    if found is None:
+        raise ValueError(f"an estimated hospital ({row['ccn'][:2]}xxxx) has no bed count in the impact file")
+    return {**row, "stratum": found}
 
 
 def unlisted_counts(hospital_rows):
@@ -84,7 +99,7 @@ def enforce_caps(hospital_rows):
 def hospital_json(row):
     """One hospital's JSON, a camelCase projection of its `hospital_row`: `{ccn, status, cut, hrrpListed, vbpListed}`,
     and for an "estimated" row also its cases, Medicare bills, the two factors it took (1 where the program file does
-    not list it), the whole-dollar figures and `parts`."""
+    not list it), the whole-dollar figures, its `stratum` and `parts`."""
     if row["status"] != "estimated":
         return {name: row[key] for key, name in BARE_FIELDS}
     return {**{name: row[key] for key, name in ESTIMATED_FIELDS},
@@ -124,12 +139,16 @@ def build_from_pins(built_at):
     if fy != FY:
         raise ValueError(f"the HACRP file is for FY{fy}, the rates and impact file for FY{FY}")
     inputs, table_, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
-    built = [dollars.hospital_row(r["ccn"], r["state"], inputs.get(r["ccn"]), table_, hrrp=hrrp.get(r["ccn"]),
-                                  vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM) for r in records]
+    def built_row(r):
+        inp = inputs.get(r["ccn"])
+        return with_stratum(dollars.hospital_row(r["ccn"], r["state"], inp, table_, hrrp=hrrp.get(r["ccn"]),
+                                                 vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM), inp)
+    built = [built_row(r) for r in records]
     enforce_caps(built)
+    ranges = backtest_dollars.bands_json()
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]
     national = dollars.national(built)
-    checks = dollars.checks(national, hacrp_yes=site_yes_count(fy))
+    checks = dollars.checks(national, hacrp_yes=site_yes_count(fy)) + backtest_dollars.checks(ranges)
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
         "assumptions": {"ratesFy": FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
@@ -138,7 +157,7 @@ def build_from_pins(built_at):
         "headline": totals_json(dollars.national(headline)),
         "checks": checks,
         "hospitals": [hospital_json(row) for row in built],
-        "bands": None,
+        "bands": ranges,
     }
 
 

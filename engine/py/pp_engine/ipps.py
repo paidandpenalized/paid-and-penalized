@@ -1,11 +1,13 @@
-"""Readers for the FY2026 IPPS final-rule files behind the HACRP dollar estimates, over text (the caller reads the
-bytes and decodes them as Windows-1252, as CMS writes them). Every reader goes through `parse.table` or
-`parse.rows`, so a layout change raises SchemaError rather than producing wrong values.
+"""Readers for the IPPS final-rule files behind the HACRP dollar estimates, over text (the caller reads the bytes and
+decodes them as Windows-1252, as CMS writes them). Every reader goes through `parse.table` or `parse.rows`, so a
+layout change raises SchemaError rather than producing wrong values.
 
-Column names are the data files' own headers, which differ from the impact file's README in places (the README says
-`Wage Index`, the file `FY 2026 Wage Index`; README `UCP and IHS/PR Supplemental Payment Per Claim Amount`, file
-`UCP Per Claim Amount`; and so on). They are matched exactly, year stamps included, so another year's file fails
-instead of being read as this one.
+Two final rules are read: FY2026's, for the estimates the pages show, and FY2024's, for the back-test against hospitals'
+cost reports. The readers that depend on the year take it (`fy`), and the year picks the column names
+(`IMPACT_COLUMNS`, the Table 16B factor heading). Column names are the data files' own headers, which differ from the
+impact file's README in places (the README says `Wage Index`, the file `FY 2026 Wage Index`; README `UCP and IHS/PR
+Supplemental Payment Per Claim Amount`, file `UCP Per Claim Amount`; and so on). They are matched exactly, year stamps
+included, so another year's file fails instead of being read as this one.
 """
 import math
 import re
@@ -19,7 +21,8 @@ from pp_engine.parse import SchemaError, index_by_ccn, num, rows, squash, table,
 # table heading; these two functions are the only places the mapping is written.
 RATE_KEYS = ("qe", "qn", "ne", "nn")  # q/n = quality data submitted / not; e/n = EHR user / not
 TABLE_TITLE = re.compile(r"table (1[a-e])\b", re.I)
-UPDATE = re.compile(r"\(update\s*=\s*(-?\d+(?:\.\d+)?)\s*percent\)")  # a scenario heading's "(Update = 2.6 Percent)"
+# A scenario heading's update: "(Update = 2.6 Percent)"; FY2024's Table 1C drops the word: "(Update = 3.1)".
+UPDATE = re.compile(r"\(update\s*=\s*(-?\d+(?:\.\d+)?)(?:\s*percent)?\)")
 
 
 def rate_key(quality, ehr):
@@ -53,8 +56,9 @@ def _scenario_key(text, label, quality_default):
 
 
 def _scenario_update(text, label):
-    """The FY2026 update, in percent, a scenario heading states: 'Update = 2.6 Percent' -> 2.6, '(Update = -0.7 Percent)'
-    -> -0.7. The heading is the rate's own source for it, the one number the rule applies to a hospital-specific rate."""
+    """The year's update, in percent, a scenario heading states: '(Update = 2.6 Percent)' -> 2.6, '(Update = -0.7
+    Percent)' -> -0.7, '(Update = 3.1)' -> 3.1. The heading is the rate's own source for it, the one number the rule
+    applies to a hospital-specific rate."""
     m = UPDATE.search(squash(text).lower())
     if not m:
         raise SchemaError(f"{label}: no update stated in the scenario heading {squash(text)!r}")
@@ -127,12 +131,13 @@ def _capital(section):
 def read_rates(text):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
     `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate, "update": {key: percent}}`.
-    1A is for a wage index above 1 (66% labor), 1B for 1 or below (62%), 1C is Puerto Rico's. The keys (`RATE_KEYS`,
-    chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table still prices
-    right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
-    'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's FY2026 update in percent
-    ('Update = 2.6 Percent' -> 2.6), which the headings of Tables 1A and 1B state alike (and 1C's two, for the scenarios
-    it lists): a table that states another update for the same scenario raises."""
+    1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%), 1C is Puerto Rico's. The keys
+    (`RATE_KEYS`, chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table
+    still prices right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
+    'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's update for the year in
+    percent ('Update = 2.6 Percent' -> 2.6), which the headings of Tables 1A and 1B state alike (and 1C's two, for the
+    scenarios it lists): a table that states another update for the same scenario raises. The layout is the same in
+    FY2024's and FY2026's files; the labor shares are not (FY2024's Table 1A is 67.6% labor), and are not read."""
     sections = _sections(rows(text, "\t"))
     for name in ("1A", "1B", "1C", "1D"):
         if name not in sections:
@@ -164,20 +169,21 @@ def read_rates(text):
 SCH_TYPES = frozenset({16, 17, 21, 22})
 PUERTO_RICO = "40"  # state code, the CCN's first two digits
 
-PAYMENT_COLUMNS = {
+# Provider Type codes of Medicare-dependent hospitals in FY2024's file (its README: "14= Medicare Dependent Hospital
+# (MDH); 15=MDH/RRC"). FY2026's file marks them in a column of its own instead (`MDH Flag, CAA 2024`): the FY2026 rule
+# modeled the status expiring, and the law reinstated it after.
+MDH_TYPES = frozenset({14, 15})
+
+# The impact file's columns, per final rule. Both files share most names; the year-stamped ones and the MDH and
+# low-volume columns differ.
+_SHARED_COLUMNS = {
     "ccn": "Provider Number",
-    "cases": "CASETA43",  # transfer-adjusted cases (grouper V43): these price B
-    "cmi": "TACMIV43",  # transfer-adjusted case-mix index: prices B
-    "bills": "Bills",  # Medicare cases, FY2024 MedPAR: per-stay and per-claim figures
-    "cmi_hsp": "CMIV43",  # README: "generally applicable for SCH and MDH providers paid under their HSP rate"
-    "wi": "FY 2026 Wage Index",
+    "bills": "Bills",  # Medicare cases in the year's MedPAR (two years before the rule): per-stay and per-claim figures
     "cola": "Cost of Living Adjustment",  # operating
     "quality": "Proxy Quality Reduction",  # 1 = reduced update (failed quality reporting)
     "ehr": "Proxy EHR Reduction",  # 1 = reduced update (not a meaningful EHR user)
     "ptype": "Provider Type",
-    "mdh": "MDH Flag, CAA 2024",  # Y or blank
-    "hsp": "HSP Rate",  # SCH hospital-specific rate, $/case
-    "hsp_mdh": "HSP Rate for MDHs, FY 2025 extension",  # $/case
+    "hsp": "HSP Rate",  # hospital-specific rate, $/case (SCH; in FY2024's file, MDH too)
     "ime_op": "TCHOP",  # fractions
     "ime_cap": "TCHCP",
     "dsh_op": "DSHOPP",
@@ -186,11 +192,34 @@ PAYMENT_COLUMNS = {
     "outlier_op": "OUTFACT_F",  # fractions of federal payments
     "outlier_cap": "COUTFACT_F",
     "gaf": "GAF",
-    "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
+    "beds": "Beds",  # README: "The number of total beds obtained from cost report data"; zero may mean unavailable
 }
-# The columns read as floats (a blank cell is None): all but the CCN, the integer counts and flags, and the Y/blank MDH
-# flag, which `read_payment_inputs` reads on their own.
-_FLOATS = tuple(k for k in PAYMENT_COLUMNS if k not in ("ccn", "bills", "quality", "ehr", "ptype", "mdh"))
+IMPACT_COLUMNS = {
+    2026: {
+        **_SHARED_COLUMNS,
+        "cases": "CASETA43",  # transfer-adjusted cases (grouper V43): these price B
+        "cmi": "TACMIV43",  # transfer-adjusted case-mix index: prices B
+        "cmi_hsp": "CMIV43",  # README: "generally applicable for SCH and MDH providers paid under their HSP rate"
+        "wi": "FY 2026 Wage Index",
+        "mdh": "MDH Flag, CAA 2024",  # Y or blank
+        "hsp_mdh": "HSP Rate for MDHs, FY 2025 extension",  # $/case
+        "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
+    },
+    2024: {
+        **_SHARED_COLUMNS,
+        "cases": "CASETA41",  # README: "Transfer Adjusted Cases under Grouper V41 and FY 2024 Post-Acute Transfer Policy"
+        "cmi": "TACMIV41",
+        "cmi_hsp": "CMIV41",  # README: "generally applicable for SCH & MDH providers paid under their HSP rate"
+        "wi": "FY 2024 Wage Index",
+        "low_volume": "Low Volume Hospital Adjustment",  # multiplier; 1 = none (the expanded tiers ran all of FY2024)
+    },
+}
+PAYMENT_COLUMNS = IMPACT_COLUMNS[2026]
+# Whether the file's MDH hospital-specific rate is the year before the rule's and takes the year's update: FY2026's
+# column is the FY2025 rate ("HSP Rate updated to FY 2025 for MDH providers"); FY2024's README says its `HSP Rate` is
+# "updated to FY 2024 for SCH & MDH providers".
+MDH_RATE_PRIOR_YEAR = {2026: True, 2024: False}
+_NOT_FLOAT = ("ccn", "bills", "quality", "ehr", "ptype", "mdh", "beds")
 
 
 def _finite(s):
@@ -209,34 +238,52 @@ def _flag(s):
     return int(t) if t else None
 
 
-def read_payment_inputs(text):
-    """The FY2026 final-rule IPPS impact file (tab-delimited) -> {ccn: inputs}, one dict per hospital with the keys of
-    `PAYMENT_COLUMNS` (less `ccn`) plus the derived `sch` and `pr`. Numbers are floats (`bills`, `ptype`, `quality`
-    and `ehr` ints); a blank cell is None, a zero stays 0. `quality` and `ehr` are the file's proxy flags, 1 = reduced
-    update (`rate_key` turns them into a rate key). `mdh` is True for 'Y'. `sch` is `ptype in SCH_TYPES`, `pr` the
-    CCN's state code being Puerto Rico's.
+def _columns(fy):
+    if fy not in IMPACT_COLUMNS:
+        raise SchemaError(f"impact file: no column map for FY{fy} (have {sorted(IMPACT_COLUMNS)})")
+    return IMPACT_COLUMNS[fy]
 
-    Why the FY2025-extension columns: the law reinstated MDH status and the expanded low-volume tiers for all of
-    FY2026, so `mdh`, `hsp_mdh` and `low_volume` read the columns the file stamps 'CAA 2024' / 'FY 2025 extension'.
-    The column named for FY2026 (`Low Volume Hospital Adjustment`) models the tiers' expiry and is 1.0 for every
-    hospital; it is not read."""
-    label = "impact file"
+
+def read_payment_inputs(text, fy=2026):
+    """A final-rule IPPS impact file (tab-delimited) -> {ccn: inputs}, one dict per hospital with the keys of
+    `IMPACT_COLUMNS[2026]` (less `ccn`) plus the derived `sch`, `pr` and `hsp_mdh_prior_year`. `fy` is the rule's year
+    and picks the column names. Numbers are floats (`bills`, `ptype`, `quality`, `ehr` and `beds` ints); a blank cell is
+    None, a zero stays 0. `quality` and `ehr` are the file's proxy flags, 1 = reduced update (`rate_key` turns them into
+    a rate key). `sch` is `ptype in SCH_TYPES`, `pr` the CCN's state code being Puerto Rico's. `hsp_mdh_prior_year` is
+    `MDH_RATE_PRIOR_YEAR[fy]` on every row (the model updates the MDH rate only when it is True).
+
+    FY2026: `mdh` is the 'MDH Flag, CAA 2024' column being 'Y'. The law reinstated MDH status and the expanded
+    low-volume tiers for all of FY2026, so `mdh`, `hsp_mdh` and `low_volume` read the columns the file stamps 'CAA 2024'
+    / 'FY 2025 extension'. The column named for FY2026 (`Low Volume Hospital Adjustment`) models the tiers' expiry and is
+    1.0 for every hospital; it is not read.
+
+    FY2024: `mdh` is `ptype in MDH_TYPES`, `hsp_mdh` the `HSP Rate` of those rows (None elsewhere), and `low_volume`
+    the `Low Volume Hospital Adjustment` column; both programs were in force for the whole year."""
+    columns = _columns(fy)
+    label = f"FY{fy} impact file"
+    floats = tuple(k for k in columns if k not in _NOT_FLOAT)
 
     def build(r):
         def read(key, reader=_finite):
             try:
                 return reader(r[key])
             except (ValueError, OverflowError) as e:  # int() of an infinite count raises OverflowError, not ValueError
-                raise SchemaError(f"{label}: unreadable value for {r['ccn']} in {PAYMENT_COLUMNS[key]!r}: {e}") from None
-        out = {k: read(k) for k in _FLOATS}
+                raise SchemaError(f"{label}: unreadable value for {r['ccn']} in {columns[key]!r}: {e}") from None
+        out = {k: read(k) for k in floats}
         out["bills"] = read("bills", to_int)
         out["quality"], out["ehr"] = read("quality", _flag), read("ehr", _flag)
         out["ptype"] = read("ptype", to_int)
+        out["beds"] = read("beds", to_int)
         out["sch"] = out["ptype"] in SCH_TYPES
-        out["mdh"] = r["mdh"].upper() == "Y"
+        if "mdh" in columns:
+            out["mdh"] = r["mdh"].upper() == "Y"
+        else:
+            out["mdh"] = out["ptype"] in MDH_TYPES
+            out["hsp_mdh"] = out["hsp"] if out["mdh"] else None
+        out["hsp_mdh_prior_year"] = MDH_RATE_PRIOR_YEAR[fy]
         out["pr"] = r["ccn"][:2] == PUERTO_RICO
         return out
-    return index_by_ccn(table(rows(text, "\t"), PAYMENT_COLUMNS["ccn"], PAYMENT_COLUMNS, label), build, label)
+    return index_by_ccn(table(rows(text, "\t"), columns["ccn"], columns, label), build, label)
 
 
 # --- the HRRP and VBP factor files -----------------------------------------------------------------------------------
@@ -255,13 +302,15 @@ def _factors(text, ccn_header, factor_header, label):
 
 
 def read_hrrp_factors(text):
-    """HRRP supplemental file `FR FY 2026.txt` (tab-delimited) -> {ccn: the FY2026 payment adjustment factor}, a
-    multiplier of 1 or less (CMS's published figure: the reduction is 1 minus it). Footer rows are skipped."""
+    """An HRRP supplemental file's factor table (tab-delimited: FY2026's `FR FY 2026.txt`, FY2024's `... FR FY 2024 tab
+    .txt`; the headers are the same) -> {ccn: the year's payment adjustment factor}, a multiplier of 1 or less (CMS's
+    published figure: the reduction is 1 minus it). Footer rows are skipped."""
     return _factors(text, "Hospital CCN", "Payment adjustment factor", "HRRP supplemental file")
 
 
-def read_vbp_factors(text):
-    """Table 16B (tab-delimited) -> {ccn: the actual FY2026 hospital VBP adjustment factor}, a multiplier about 1
-    (CMS's published figure; Table 16A's were proxies). The footnote rows are skipped."""
-    return _factors(text, "CMS Certification Number (CCN)", "Actual FY 2026 Hospital VBP Adjustment Factor",
-                    "Table 16B")
+def read_vbp_factors(text, fy=2026):
+    """Table 16B (tab-delimited) -> {ccn: the actual hospital VBP adjustment factor for `fy`}, a multiplier about 1
+    (CMS's published figure; Table 16A's were proxies). The factor's heading names the year ('Actual FY 2026 Hospital
+    VBP Adjustment Factor'), so another year's table fails. The footnote rows are skipped."""
+    return _factors(text, "CMS Certification Number (CCN)", f"Actual FY {fy} Hospital VBP Adjustment Factor",
+                    f"FY{fy} Table 16B")

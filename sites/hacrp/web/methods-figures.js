@@ -220,6 +220,9 @@ export function assumptionsTable({ fy, volumeFy }) {
 </table>`);
 }
 
+// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22%.
+const logPct = (x, dp) => pct(Math.exp(x) - 1, dp, { sign: true });
+
 // How a dollar check's value and range read on the tape, by check.
 const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };
 const CHECK_FORMAT = {
@@ -228,6 +231,11 @@ const CHECK_FORMAT = {
   hac_share: SHARE,
   hac_count: { value: count, range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
   yes_unestimated: { value: count, range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
+  // The back-test's median error, log(estimate ÷ cost report), read as how far the middle hospital's estimate ran
+  // above (+) or below (−) its cost report.
+  backtest_hac_median: { value: (v) => logPct(v, 1), range: (c) => fill('dcheckRange', { low: logPct(c.low, 0), high: logPct(c.high, 0) }) },
+  backtest_hospitals: { value: count, range: (c) => fill('dcheckAtLeast', { low: count(c.low) }) },
+  backtest_cut: { value: count, range: (c) => fill('dcheckAtLeast', { low: count(c.low) }) },
 };
 
 // The national checks as an adding-machine tape, in the self-check's style: each check, this build's value, the range

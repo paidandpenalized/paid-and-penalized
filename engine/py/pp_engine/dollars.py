@@ -4,7 +4,9 @@ Value-Based Purchasing Program (HVBP) and the Hospital-Acquired Condition Reduct
 
 It is a model, not a bill. The inputs are the FY2026 final-rule impact file (`ipps.read_payment_inputs`) and Tables
 1A-1E (`ipps.read_rates`), which CMS built to model the year's payments, not to reproduce each hospital's claims. Every
-place this module chooses between readings of the rule is marked ASSUMPTION; Methods lists them.
+place this module chooses between readings of the rule is marked ASSUMPTION; Methods lists them. The back-test
+(`pp_pipeline.backtest_dollars`) runs the same functions on the FY2024 rule's files and holds them against hospitals'
+FY2024 cost reports; nothing here knows the year.
 
 Why T is built term by term: the HAC cut is 1% of the hospital's whole IPPS payment after the HRRP and HVBP
 adjustments (T', below), and that payment is the sum of a dozen pieces, only one of which the other two programs touch.
@@ -82,7 +84,7 @@ STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 # `hsp_mdh`, `outlier_op`, `outlier_cap`) are handled where they are used and are not listed.
 _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
             "ucp_per_claim", "gaf", "low_volume")
-_FLAGS = ("sch", "mdh", "pr")
+_FLAGS = ("sch", "mdh", "pr", "hsp_mdh_prior_year")
 _ADD_ONS = ("ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
 SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # a row's dollar sums, which `national` adds up
@@ -128,16 +130,19 @@ def _hsp_payment(rate, inp):
 
 
 def _mdh_update(inp, rates):
-    """The multiplier that brings an MDH's hospital-specific rate to FY2026: 1 + the update (percent) the Table 1A/1B
-    heading states for the hospital's quality/EHR scenario. ASSUMPTION (verify in the accuracy pass): hospital-specific
-    rates are updated by the applicable percentage increase, the update those headings state. The impact file's MDH
-    column is the FY2025 rate ("HSP Rate updated to FY 2025 for MDH providers"; the FY2026 rule modeled the MDH
-    status expiring), while its SCH column is already "updated to FY 2026", so only the MDH rate takes this."""
+    """The multiplier that brings an MDH's hospital-specific rate to the rates' year: 1 + the update (percent) the Table
+    1A/1B heading states for the hospital's quality/EHR scenario when the file's rate is the year before's
+    (`hsp_mdh_prior_year`), else 1. ASSUMPTION (verify in the accuracy pass): hospital-specific rates are updated by the
+    applicable percentage increase, the update those headings state. The FY2026 impact file's MDH column is the FY2025
+    rate ("HSP Rate updated to FY 2025 for MDH providers"; the FY2026 rule modeled the MDH status expiring), while its
+    SCH column is already "updated to FY 2026", so only the MDH rate takes this; FY2024's file has both updated."""
+    if not inp["hsp_mdh_prior_year"]:
+        return 1.0
     key = rate_key(inp["quality"], inp["ehr"])
     try:
         return 1.0 + rates["update"][key] / 100.0
     except KeyError:
-        raise ValueError(f"the rates have no FY2026 update for scenario {key!r}") from None
+        raise ValueError(f"the rates have no update for scenario {key!r}") from None
 
 
 def _parts(inp, rates):
@@ -179,8 +184,8 @@ def _parts(inp, rates):
     # hospital-specific rate is paid H = F + `sch_diff` in all, with nothing on top of it.
     federal_operating = fed + ime + dsh + outlier_op + uc
 
-    # Medicare-dependent hospital: F plus 75% of the amount by which its (FY2026-updated) hospital-specific payment
-    # exceeds F, never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns).
+    # Medicare-dependent hospital: F plus 75% of the amount by which its (updated) hospital-specific payment exceeds F,
+    # never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns) and all of FY2024.
     mdh_addon = 0.0
     hsp_mdh = _hsp_payment(inp["hsp_mdh"], inp) if inp["mdh"] else None
     if hsp_mdh is not None:

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "dollars.schema.json",
   "title": "Dollar estimates: what Medicare pays each hospital for the year, and what HRRP, HVBP and the HAC Reduction Program move",
-  "description": "A model, not a bill (docs/METHODS-LOG.md, dollars). One row per hospital in the HACRP file, in whole dollars that add exactly; dollar keys exist only on rows whose status is estimated. The checks hold the national sums against what CMS publishes.",
+  "description": "A model, not a bill (docs/METHODS-LOG.md, dollars). One row per hospital in the HACRP file, in whole dollars that add exactly; dollar keys exist only on rows whose status is estimated. The checks hold the national sums against what CMS publishes, and the back-test against hospitals' cost reports; bands holds the likely ranges the back-test gives.",
   "type": "object",
   "required": [
     "schema_version",
@@ -21,7 +21,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "methods_version": {
       "$ref": "common.schema.json#/$defs/methodsVersion"
@@ -64,8 +64,8 @@
       }
     },
     "bands": {
-      "description": "Back-tested ranges; null until the back-test (milestone 3).",
-      "type": "null"
+      "description": "The likely ranges: the same estimate run on an earlier year (bands.fy) and held against hospitals' Medicare cost reports (pp_pipeline/backtest_dollars.py).",
+      "$ref": "#/$defs/bands"
     }
   },
   "$defs": {
@@ -272,7 +272,10 @@
             "vbp_net",
             "hac_share",
             "hac_count",
-            "yes_unestimated"
+            "yes_unestimated",
+            "backtest_hac_median",
+            "backtest_hospitals",
+            "backtest_cut"
           ]
         },
         "value": {
@@ -383,6 +386,430 @@
         },
         "parts": {
           "$ref": "#/$defs/parts"
+        },
+        "stratum": {
+          "description": "The back-test stratum whose ranges this hospital's estimates take: its bed band (the impact file's beds) and whether it is a sole community or Medicare-dependent hospital.",
+          "$ref": "#/$defs/stratumId"
+        }
+      }
+    },
+    "stratumId": {
+      "enum": [
+        "under-100/sch-mdh",
+        "under-100/other",
+        "100-299/sch-mdh",
+        "100-299/other",
+        "300-plus/sch-mdh",
+        "300-plus/other"
+      ]
+    },
+    "errorSummary": {
+      "description": "The 10th and 90th percentiles and the median of log(model / actual) over n hospitals, 4 decimals; null with none.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "n",
+        "p10",
+        "p90",
+        "median"
+      ],
+      "properties": {
+        "n": {
+          "$ref": "#/$defs/count"
+        },
+        "p10": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "p90": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "median": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "stratumBand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stratum",
+        "n",
+        "median",
+        "pool",
+        "poolN",
+        "p10",
+        "p90",
+        "low",
+        "high"
+      ],
+      "properties": {
+        "stratum": {
+          "$ref": "#/$defs/stratumId"
+        },
+        "n": {
+          "description": "The stratum's own hospitals for this measure.",
+          "$ref": "#/$defs/count"
+        },
+        "median": {
+          "description": "The stratum's own median log(model / actual): its bias, reported, not corrected; null with no hospitals.",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pool": {
+          "description": "Whose percentiles the stratum takes: its own, its bed band's (both kinds pooled) or every hospital's, when it has too few (minStratum).",
+          "enum": [
+            "stratum",
+            "beds",
+            "all"
+          ]
+        },
+        "poolN": {
+          "description": "How many hospitals those percentiles rest on.",
+          "$ref": "#/$defs/count"
+        },
+        "p10": {
+          "type": "number"
+        },
+        "p90": {
+          "type": "number"
+        },
+        "low": {
+          "description": "exp(-p90): the multiplier for the low end of an estimate's range.",
+          "type": "number",
+          "minimum": 0
+        },
+        "high": {
+          "description": "exp(-p10): the multiplier for the high end.",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "pairs": {
+      "description": "How each hospital's figure and its cost report's compared: both nonzero with one sign (an error is taken), opposite signs, the cost report zero, the model zero, both zero.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "compared",
+        "signMismatch",
+        "zeroActual",
+        "zeroModel",
+        "bothZero"
+      ],
+      "properties": {
+        "compared": {
+          "$ref": "#/$defs/count"
+        },
+        "signMismatch": {
+          "$ref": "#/$defs/count"
+        },
+        "zeroActual": {
+          "$ref": "#/$defs/count"
+        },
+        "zeroModel": {
+          "$ref": "#/$defs/count"
+        },
+        "bothZero": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pairs",
+        "overall",
+        "strata"
+      ],
+      "properties": {
+        "pairs": {
+          "$ref": "#/$defs/pairs"
+        },
+        "overall": {
+          "$ref": "#/$defs/errorSummary"
+        },
+        "strata": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "$ref": "#/$defs/stratumBand"
+          }
+        }
+      }
+    },
+    "bands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fy",
+        "sources",
+        "window",
+        "minStratum",
+        "lowPct",
+        "highPct",
+        "strata",
+        "comparison",
+        "measures",
+        "national",
+        "points"
+      ],
+      "properties": {
+        "fy": {
+          "$ref": "common.schema.json#/$defs/fy"
+        },
+        "sources": {
+          "$ref": "common.schema.json#/$defs/sources"
+        },
+        "window": {
+          "description": "The cost-reporting period a report must cover exactly, first and last day.",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/isoDate"
+          }
+        },
+        "minStratum": {
+          "$ref": "#/$defs/count"
+        },
+        "lowPct": {
+          "type": "number"
+        },
+        "highPct": {
+          "type": "number"
+        },
+        "strata": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "band",
+              "bedsMin",
+              "bedsMax",
+              "schMdh"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/stratumId"
+              },
+              "band": {
+                "enum": [
+                  "under-100",
+                  "100-299",
+                  "300-plus"
+                ]
+              },
+              "bedsMin": {
+                "$ref": "#/$defs/count"
+              },
+              "bedsMax": {
+                "description": "null: no upper bound.",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "schMdh": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "comparison": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reports",
+            "excluded",
+            "hospitals",
+            "cut",
+            "statusCodes"
+          ],
+          "properties": {
+            "reports": {
+              "description": "Cost reports in the HCRIS file.",
+              "$ref": "#/$defs/count"
+            },
+            "excluded": {
+              "description": "Reports left out, each by the first rule it fails, in this order.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "outsideWindow",
+                "noPartA",
+                "maryland",
+                "puertoRico",
+                "parhm",
+                "notInHacrp",
+                "notEstimated"
+              ],
+              "properties": {
+                "outsideWindow": {
+                  "$ref": "#/$defs/count"
+                },
+                "noPartA": {
+                  "$ref": "#/$defs/count"
+                },
+                "maryland": {
+                  "$ref": "#/$defs/count"
+                },
+                "puertoRico": {
+                  "$ref": "#/$defs/count"
+                },
+                "parhm": {
+                  "$ref": "#/$defs/count"
+                },
+                "notInHacrp": {
+                  "$ref": "#/$defs/count"
+                },
+                "notEstimated": {
+                  "$ref": "#/$defs/count"
+                }
+              }
+            },
+            "hospitals": {
+              "description": "The comparison set: one report per hospital.",
+              "$ref": "#/$defs/count"
+            },
+            "cut": {
+              "description": "Of them, hospitals CMS cut.",
+              "$ref": "#/$defs/count"
+            },
+            "statusCodes": {
+              "description": "The set's reports by HCRIS status: 1 as submitted, 2 settled without audit, 3 settled with audit, 4 reopened, 5 amended.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ],
+              "properties": {
+                "1": {
+                  "$ref": "#/$defs/count"
+                },
+                "2": {
+                  "$ref": "#/$defs/count"
+                },
+                "3": {
+                  "$ref": "#/$defs/count"
+                },
+                "4": {
+                  "$ref": "#/$defs/count"
+                },
+                "5": {
+                  "$ref": "#/$defs/count"
+                }
+              }
+            }
+          }
+        },
+        "measures": {
+          "description": "hac: the dollars at stake of cut hospitals against line 70.99; net, hrrp, hvbp against the program lines; fed: the federal DRG payment against lines 1.01 and 1.02.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hac",
+            "net",
+            "hrrp",
+            "hvbp",
+            "fed"
+          ],
+          "properties": {
+            "hac": {
+              "$ref": "#/$defs/measure"
+            },
+            "net": {
+              "$ref": "#/$defs/measure"
+            },
+            "hrrp": {
+              "$ref": "#/$defs/measure"
+            },
+            "hvbp": {
+              "$ref": "#/$defs/measure"
+            },
+            "fed": {
+              "$ref": "#/$defs/measure"
+            }
+          }
+        },
+        "national": {
+          "description": "sum(actual) / sum(model) over the cut hospitals compared, and its 10th and 90th percentiles over draws resamples of them: the national range's multipliers.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "n",
+            "ratio",
+            "p10",
+            "p90",
+            "draws",
+            "seed"
+          ],
+          "properties": {
+            "n": {
+              "$ref": "#/$defs/count"
+            },
+            "ratio": {
+              "type": "number"
+            },
+            "p10": {
+              "type": "number"
+            },
+            "p90": {
+              "type": "number"
+            },
+            "draws": {
+              "$ref": "#/$defs/count"
+            },
+            "seed": {
+              "$ref": "#/$defs/count"
+            }
+          }
+        },
+        "points": {
+          "description": "The HAC back-test, hospital by hospital: the model's dollars at stake and the cost report's line 70.99.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ccn",
+              "stratum",
+              "model",
+              "actual"
+            ],
+            "properties": {
+              "ccn": {
+                "$ref": "common.schema.json#/$defs/ccn"
+              },
+              "stratum": {
+                "$ref": "#/$defs/stratumId"
+              },
+              "model": {
+                "$ref": "#/$defs/count"
+              },
+              "actual": {
+                "$ref": "#/$defs/count"
+              }
+            }
+          }
         }
       }
     }
