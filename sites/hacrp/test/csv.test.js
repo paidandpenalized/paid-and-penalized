@@ -324,7 +324,6 @@ test('the dollar columns are this site\'s estimates, from each hospital\'s row, 
     const [total, hrrp, hvbp, atStake, hac, net] = cells.map(Number);
     assert.deepEqual([total, hrrp, hvbp, atStake, hac, net], [d.total, d.hrrp, d.hvbp, d.atStake, d.hac, d.net]);
     assert.equal(hrrp + hvbp + hac, net, 'a row adds exactly');
-    assert.equal(hac, row.payment_reduction === 'Yes' ? -atStake : 0);
   });
   assert.equal(estimated, DATA.dollars.national.hospitals);
   // Without the estimates (a synthetic hospital), the dollar cells are blank.

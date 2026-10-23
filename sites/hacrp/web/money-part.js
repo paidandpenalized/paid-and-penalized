@@ -1,8 +1,8 @@
 // The program page's Part on the money, and the money on the place pages: this site's estimate of the cut, drawn so the
 // cliff is felt. Every hospital CMS cut as a tile of its dollars; the hospitals nearest the line as dots sized by the
 // cut taken or not; each kind of hospital's share of the cuts against its share of the money; the money by state; the
-// three quality programs side by side. Names only in tooltips (DES-25): no list, no
-// ranking. Every takeaway is filled from the data the figure draws (money-data.js).
+// three quality programs side by side. Names only in tooltips (DES-25): no list, no ranking. Every takeaway is filled from
+// the data the figure draws (money-data.js).
 import { acrossLine } from '../../../web/charts/acrossLine.js';
 import { columns } from '../../../web/charts/columns.js';
 import { PAGE, drawn, figure, imageOf, imagePair, num } from '../../../web/charts/figure.js';

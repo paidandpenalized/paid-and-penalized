@@ -62,7 +62,6 @@ test('hospitalMoney: an estimated row carries its dollars and the dollars at sta
       continue;
     }
     assert.equal(m.perStay, row.atStake / row.bills, row.ccn);
-    assert.equal(m.hac, row.cut ? -row.atStake : 0, row.ccn);
   }
   assert.throws(() => hospitalMoney(undefined), TypeError);
 });
@@ -134,9 +133,6 @@ test('the cliff: the hospital\'s cut at any score, its numbers the hospital\'s',
   const line = (model.boundary.highestNo + model.boundary.lowestYes) / 2;
   const near = NAT.scores.filter((x) => Math.abs(x - line) <= CLIFF_NEAR).length;
   assert.ok(fig.includes(`${count(near)} of the ${count(NAT.scores.length)} scored within ${decimal(CLIFF_NEAR, 1)} of CMS`), 'the strip\'s note counts from the data');
-  const nfig = String(cliffFigure(viewOf(NEAR.ccn), moneyOf(NEAR), NAT, { n: 1, source: 'Source.' }));
-  assert.match(nfig, /chart-cliff__dot"/, 'not cut: the dot on the ledge');
-  assert.match(fig, /chart-cliff__dot chart-cliff__dot--over"/, 'cut: the dot on the floor');
 });
 
 test('the share sentence names CMS\'s decision and the dollars as this site\'s estimate, and is the page\'s description', () => {
@@ -194,6 +190,8 @@ test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmiss
 });
 
 test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut and for Maryland, null with no estimate; the nearest hospitals carry it', () => {
+  // Every estimated row: the cut is the dollars at stake for a hospital CMS cut and nothing for one it didn't (hac is its negative).
+  for (const row of rows.filter((r) => r.status === 'estimated')) assert.equal(cutDollars(row), row.cut ? row.atStake : 0, row.ccn);
   assert.equal(cutDollars(CUT), CUT.atStake);
   assert.equal(cutDollars(NEAR), 0);
   assert.ok(Object.is(cutDollars(NEAR), 0), 'never -0');

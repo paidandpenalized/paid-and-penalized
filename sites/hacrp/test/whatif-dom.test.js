@@ -614,8 +614,9 @@ function valueFor(h, id, flag) {
   }
   return null;
 }
+const richMarkup = () => String(renderWhatIf({ vm: viewModel(initialState(RICH, model), RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, solver: solverOf(RICH, model) }));
 const mountRich = (stub) => {
-  const markup = String(renderWhatIf({ vm: viewModel(initialState(RICH, model), RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, solver: solverOf(RICH, model) }));
+  const markup = richMarkup();
   const root = node(/^<section[^>]*>/.exec(markup)[0], markup);
   mountWhatIf(root, { rules: whatIfRules(RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, env: stub.env });
   return root;
@@ -707,7 +708,7 @@ test('the dollars near the line: too close to call shows both, "$0 or $X", never
 test('no dollars at stake (the sandbox, Maryland, no estimate): no dollars row, no head figure, no cliff', () => {
   const markup = String(renderWhatIf({ vm: viewModel(initialState(H, model), H, model, estimate), texts, share: false, range: RANGE, solver: solverOf(H, model) }));
   for (const name of ['head-money', 'money', 'cliff', 'cliff-dot']) assert.ok(!markup.includes(`data-wi="${name}"`), name);
-  const rich = String(renderWhatIf({ vm: viewModel(initialState(RICH, model), RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, solver: solverOf(RICH, model) }));
+  const rich = richMarkup();
   for (const name of ['head-money', 'money', 'cliff', 'cliff-dot']) assert.ok(rich.includes(`data-wi="${name}"`), name);
   assert.match(rich, /class="wi-ramp wi-ramp--under"/, 'the ramp becomes the cliff\'s axis');
   assert.match(rich, /<p class="wi-solver__worth">Staying at or under CMS’s line keeps about \$654K/);

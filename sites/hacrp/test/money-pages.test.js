@@ -13,8 +13,9 @@ import { count, decimal, dollars, money, pct } from '../../../web/render/format.
 import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW } from '../web/money-part.js';
-import { moneyData, nearLine, placeMoney } from '../web/money-data.js';
-import { programData } from '../web/program-data.js';
+import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
+import { isDecided } from '../../../engine/js/hacrp/hospital.js';
+import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { DOLLARS_HREF } from '../web/links.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { DATA, HD, MD, PLACES, renderPlace, renderProgram } from './pinned.js';
@@ -33,10 +34,19 @@ test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s
   assert.equal(h.yes - MD.cutRows.length, h.yesUnestimated);
   assert.equal(MD.cutRows.reduce((s, r) => s + r.cut, 0), -h.hac);
   for (const key of ['hrrp', 'hvbp']) assert.equal(MD.rows.reduce((s, r) => s + DATA.dollars.byCcn.get(r.ccn)[key], 0), h[key], key);
-  // Each breakdown adds back to the whole.
-  for (const k of MD.byKind) assert.ok(k.groups.reduce((s, g) => s + g.money, 0) <= MD.headline.money, k.kind);
-  const teach = MD.byKind.find((k) => k.kind === 'teach');
-  assert.ok(teach.groups.every((g) => g.n > 0));
+  // Each breakdown adds back to the whole: the kinds that split hospitals into groups (a cut hospital the master has no fact for
+  // is in none of a kind's groups) plus the cut hospitals outside every group; the special statuses overlap, so each stays within it.
+  for (const [kind, groups] of TYPE_KINDS) {
+    const listed = MD.byKind.find((k) => k.kind === kind).groups;
+    assert.ok(listed.every((g) => g.n > 0), kind);
+    if (kind === 'status') {
+      for (const g of listed) assert.ok(g.money <= MD.headline.money, `${kind} ${g.key}`);
+      continue;
+    }
+    const outside = MD.cutRows.filter((r) => !groups.some(([, test]) => test(r.master)));
+    assert.equal(listed.reduce((s, g) => s + g.money, 0) + sum(outside, 'cut'), MD.headline.money, `${kind}: dollars`);
+    assert.equal(listed.reduce((s, g) => s + g.n, 0) + outside.length, MD.headline.cut, `${kind}: hospitals`);
+  }
   assert.equal([...MD.byState.values()].reduce((s, st) => s + st.money, 0), MD.headline.money, 'the states add to the nation');
   assert.equal([...MD.byState.values()].reduce((s, st) => s + st.cut, 0), MD.headline.cut);
   const sorted = MD.cutRows.map((r) => r.cut).sort((a, b) => b - a);
@@ -48,8 +58,15 @@ test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s
   // A place's money: its share of the nation's, and per stay over its hospitals' stays.
   const state = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 5);
   const pm = placeMoney(MD, state.ccns);
-  assert.equal(pm.money, MD.byState.get(state.key.toUpperCase())?.money ?? pm.money);
-  assert.equal(pm.share, pm.money / MD.headline.money);
+  assert.equal(pm.money, MD.byState.get(state.key.toUpperCase()).money, 'the state\'s page and the states map say the same dollars');
+  // Straight from the dollar estimates and CMS's rows: the cut hospitals' dollars, the stays of every decided hospital with an estimate.
+  const cms = new Map(DATA.hospitals.map((h) => [h.ccn, h]));
+  const decided = state.ccns.filter((c) => isDecided(cms.get(c)) && DATA.dollars.byCcn.get(c).status === 'estimated');
+  const cutDollars = decided.filter((c) => cms.get(c).paymentReduction === 'Yes').reduce((s, c) => s - DATA.dollars.byCcn.get(c).hac, 0);
+  const stays = decided.reduce((s, c) => s + DATA.dollars.byCcn.get(c).bills, 0);
+  assert.equal(pm.money, cutDollars);
+  assert.equal(pm.share, cutDollars / -DATA.dollars.headline.hac);
+  assert.equal(pm.perStay, cutDollars / stays);
 });
 
 test('the program page\'s summary and the Part on the money say how many of CMS\'s cut hospitals the national total covers, the file\'s own headline', () => {
