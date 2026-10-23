@@ -193,10 +193,10 @@ test('the program page\'s swarm (Figure 6): every hospital with a Yes/No decisio
   assert.ok(PAGE.includes(`Not shown: Maryland’s ${count(PD.maryland.scored)} scored hospitals. ${count(PD.maryland.above)} of them`));
 });
 
-test('the line sentence on the program page is CMS\'s: the gap between its highest No and lowest Yes, named by both, in the summary form', () => {
+test('the line on the program page is CMS\'s: its lowest Yes in the summary form, with every decided hospital on the right side of the gap', () => {
   const { highestNo, lowestYes } = DATA.boundaryText;
   const summary = /<div class="form prog__summary">([\s\S]*?)<\/div>\n<p class="stamp">/.exec(PAGE)[1];
-  assert.match(summary, new RegExp(`<span class="field__no">5</span>CMS’s line</p>\\n<p class="field__value">${lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${highestNo}\\.</div>`));
+  assert.match(summary, new RegExp(`<span class="field__no">5</span>CMS’s line</p>\\n<p class="field__value">${lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\.</div>`));
   // The boundary is CMS's, scored hospitals with a decision on each side of it only.
   const decided = decidedHospitals(DATA.hospitals);
   assert.ok(decided.filter((h) => h.paymentReduction === 'Yes').every((h) => h.total >= Number(lowestYes)));
