@@ -16,9 +16,6 @@ import { ASSETS, BOUNDARY_TEXT, NO_ESTIMATE } from './fixtures.js';
 
 export const DATA = loadHacrp();
 export const RANGE = scoreRange(DATA.hospitals);
-// The dollar estimates as a production build needs them: with the back-test's ranges in the file (a production build
-// refuses the dollars while they are pending). Nothing reads the ranges yet; only that check does.
-export const RANGED = { ...DATA.dollars, bands: {} };
 // What a hospital page compares a hospital with (compare.js), built once from the pinned data, and the model: every
 // hospitalPage call takes both, and a hospital's dollars (these tests' synthetic hospitals have no estimate; a test of the
 // dollars passes the pinned row's).

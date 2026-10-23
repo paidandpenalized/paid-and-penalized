@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, money, noun, ordinal, pct, pctFloor, roundedDollars, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, money, moneyRange, noun, ordinal, pct, pctFloor, roundedDollars, signed } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -39,6 +39,17 @@ test('roundedDollars writes the nearest whole dollar', () => {
   assert.equal(roundedDollars(1234.49), '$1,234');
   assert.equal(roundedDollars(-0.4), '$0');
   assert.equal(roundedDollars(615.6, { sign: true }), '+$616');
+});
+
+test('moneyRange says a shared unit once and never uses a dash beside a minus', () => {
+  assert.equal(moneyRange(1_000_000, 1_400_000), '$1.0–1.4M');
+  assert.equal(moneyRange(850_000, 1_200_000), '$850K–$1.2M');
+  assert.equal(moneyRange(400, 900), '$400–$900');
+  assert.equal(moneyRange(12_000, 12_400), '$12–12K');
+  assert.equal(moneyRange(-12_000, 40_000), '−$12K to $40K');
+  assert.equal(moneyRange(-1_400_000, -1_000_000), '−$1.4M to −$1.0M');
+  assert.throws(() => moneyRange(2, 1), RangeError);
+  assert.throws(() => moneyRange(NaN, 1), RangeError);
 });
 
 test('dollars writes whole dollars with separators; a sign on request', () => {

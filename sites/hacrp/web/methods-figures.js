@@ -1,12 +1,13 @@
 // The Methods page's figures: the self-check drawn (every recomputed score against CMS's, every decision against the
 // line this site finds), the periods behind each year's cut, and the pipeline from CMS's file to the pages. Every
 // number comes from the checks the build runs (engine/js/hacrp/history.js) and the pinned-input manifest.
+import { bandStrips } from '../../../web/charts/bandStrips.js';
 import { drawn, figure, num } from '../../../web/charts/figure.js';
 import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, isoDate, longDate, money, pct } from '../../../web/render/format.js';
+import { capitalize, cmsText, count, decimal, dollars, isoDate, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -207,16 +208,16 @@ export function dollarsPipeline(headline) {
 }
 
 // The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
-export function assumptionsTable({ fy, volumeFy }) {
+export function assumptionsTable({ fy, volumeFy, backtestFy }) {
   const rows = [
-    ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE'], ['assumeShare', 'assumeShareE'],
+    ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
     ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'], ['assumeSch', 'assumeSchE'],
     ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
     ['assumeFfs', 'assumeFfsE'],
   ];
   return printout(html`<table class="gb assume">
 <thead><tr><th scope="col">${t('assumeColA')}</th><th scope="col">${t('assumeColE')}</th></tr></thead>
-<tbody>${rows.map(([a, e, v]) => html`<tr><th scope="row">${v ? fill(a, v) : t(a)}</th><td>${t(e)}</td></tr>`)}</tbody>
+<tbody>${rows.map(([a, e, v, ev]) => html`<tr><th scope="row">${v ? fill(a, v) : t(a)}</th><td>${ev ? fill(e, ev) : t(e)}</td></tr>`)}</tbody>
 </table>`);
 }
 
@@ -254,5 +255,92 @@ export function dollarChecks(checks) {
 </div>`;
 }
 
-// The back-test's place: a placeholder, plainly one, until the check runs.
-export const backtestPlaceholder = () => html`<div class="backtest-pending"><p>${t('backtestPending')}</p></div>`;
+// ---------- the back-test ----------
+
+// Display constants: the back-test strip's axis ticks (estimate over cost report, on a log scale), those that fall in the
+// drawing's span; the span always reaches the inner four.
+const BACKTEST_TICKS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
+const BACKTEST_TICKS_NARROW = [0.25, 0.5, 1, 2];
+const BACKTEST_SPAN = [0.5, 2];
+// A ratio as the strip writes it: 0.75 reads "0.75×", 2 reads "2×".
+const times = (v) => `${String(Number(v.toFixed(2)))}×`;
+const ratioOf = (logRatio) => Math.exp(logRatio);
+
+// A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), its kind, and the
+// two as the group's name ("Under 100 beds, other hospitals").
+function stratumLabel(s) {
+  const beds = s.bedsMin === 0 ? fill('btBedsUnder', { n: count(s.bedsMax + 1) })
+    : s.bedsMax === null ? fill('btBedsOver', { n: count(s.bedsMin) }) : fill('btBedsBetween', { lo: count(s.bedsMin), hi: count(s.bedsMax) });
+  const kind = t(s.schMdh ? 'btKindSchMdh' : 'btKindOther');
+  const short = capitalize(fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdhShort' : 'btKindOtherShort') }));
+  return { beds, kind, name: capitalize(fill('btGroup', { beds, kind })), short };
+}
+const hospitalsText = (n) => noun(n, t('btHospital'), t('btHospitals'));
+
+// Where a stratum's range comes from, in words: its own hospitals, all of its bed band's, or every hospital's.
+const poolText = (band, label) => (band.pool === 'stratum' ? t('btPoolOwn') : band.pool === 'beds' ? fill('btPoolBeds', { beds: label.beds }) : t('btPoolAll'));
+
+// The back-test as the Methods page's figure n: one strip per stratum, every cut hospital in the comparison set a dot
+// at its estimate over its cost report's HAC amount (names only in the tooltips), its stratum's likely range behind,
+// hatched where borrowed. bands: dollars.json's; names(ccn): { name, city, state } or null.
+export function backtestFigure(bands, { n, source, names }) {
+  const hac = bands.measures.hac;
+  const labels = new Map(bands.strata.map((s) => [s.id, stratumLabel(s)]));
+  const rows = hac.strata.map((band) => {
+    const label = labels.get(band.stratum);
+    const dots = bands.points.filter((p) => p.stratum === band.stratum).map((p) => {
+      const who = names(p.ccn);
+      const values = { model: money(p.model), actual: money(p.actual), ratio: times(p.model / p.actual) };
+      return { x: p.model / p.actual, tip: who ? fill('btTip', { ...who, ...values }) : fill('btTipNoName', values) };
+    });
+    return {
+      label: label.name,
+      note: band.pool === 'stratum' ? fill('btNote', { hospitals: hospitalsText(band.n) }) : fill('btNoteBorrowed', { hospitals: hospitalsText(band.n), pool: poolText(band, label) }),
+      short: { label: label.short, note: fill(band.pool === 'stratum' ? 'btNote' : 'btNoteBorrowedShort', { hospitals: hospitalsText(band.n) }) },
+      band: [ratioOf(band.p10), ratioOf(band.p90)], borrowed: band.pool !== 'stratum', median: band.median === null ? null : ratioOf(band.median), dots,
+    };
+  });
+  const xs = rows.flatMap((r) => [...r.dots.map((d) => d.x), ...r.band]);
+  const domain = [Math.min(BACKTEST_SPAN[0], ...xs) / 1.06, Math.max(BACKTEST_SPAN[1], ...xs) * 1.06];
+  const inSpan = (v) => v >= domain[0] && v <= domain[1];
+  const ticks = BACKTEST_TICKS.filter(inSpan);
+  const narrowTicks = BACKTEST_TICKS_NARROW.filter(inSpan);
+  const overall = ratioOf(hac.overall.median);
+  const draw = (width) => bandStrips({ rows, domain, ticks, narrowTicks, format: times, overall, labels: { exact: t('btExact'), overall: fill('btOverall', { ratio: times(overall) }), axis: t('btAxis') }, width });
+  const median = overall - 1;
+  const takeaway = fill(median >= 0 ? 'btTakeawayHigh' : 'btTakeawayLow', { n: count(hac.overall.n), median: pct(Math.abs(median), 1), share: pct(bands.highPct - bands.lowPct, 0) });
+  return figure({
+    n, takeaway, source, claimLevel: 'estimate', csvName: 'hacrp-dollars-backtest', alt: t('btAlt'), note: t('btNote2'),
+    ...drawn(draw, METHODS_WIDE),
+    table: {
+      columns: [{ name: t('btColGroup') }, { name: t('btColHospitals'), numeric: true }, { name: t('btColMedian'), numeric: true }, { name: t('btColLow'), numeric: true }, { name: t('btColHigh'), numeric: true }, { name: t('btColFrom') }],
+      rows: hac.strata.map((band) => {
+        const label = labels.get(band.stratum);
+        const median = band.median === null ? null : ratioOf(band.median);
+        return [label.name, num(count(band.n), band.n), median === null ? num(t('receiptDash'), null) : num(times(median), median.toFixed(4)),
+          num(times(ratioOf(band.p10)), ratioOf(band.p10).toFixed(4)), num(times(ratioOf(band.p90)), ratioOf(band.p90).toFixed(4)), poolText(band, label)];
+      }),
+    },
+  });
+}
+
+// The words for each measure in the back-test's summary table, in the order the table lists them.
+const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp', 'btMeasureHrrp'], ['hvbp', 'btMeasureHvbp'], ['fed', 'btMeasureFed']];
+
+// Every measure the back-test checks, over all its hospitals: how many it compared, the median estimate over the
+// cost report, and the middle 80% (the 10th and 90th percentiles), as a printable table.
+export function backtestMeasures(bands) {
+  const cell = (x) => times(ratioOf(x));
+  return printout(html`<table class="gb bt-measures">
+<thead><tr><th scope="col">${t('btColMeasure')}</th><th scope="col" class="num">${t('btColHospitals')}</th><th scope="col" class="num">${t('btColMedian')}</th><th scope="col" class="num">${fill('btColMiddle', { share: pct(bands.highPct - bands.lowPct, 0) })}</th></tr></thead>
+<tbody>${MEASURE_WORDS.map(([key, words]) => {
+    const o = bands.measures[key].overall;
+    return html`<tr><th scope="row">${t(words)}</th><td class="num">${count(o.n)}</td><td class="num">${cell(o.median)}</td><td class="num">${fill('btMiddle', { low: cell(o.p10), high: cell(o.p90) })}</td></tr>`;
+  })}</tbody>
+</table>`);
+}
+
+// The comparison set's exclusions in words: each rule that left any report out, with its count, as one list.
+const EXCLUSION_WORDS = [['outsideWindow', 'btExWindow'], ['noPartA', 'btExPartA'], ['maryland', 'btExMaryland'], ['puertoRico', 'btExPuertoRico'], ['parhm', 'btExParhm'], ['notInHacrp', 'btExHacrp'], ['notEstimated', 'btExEstimate']];
+export const exclusionsText = (bands) => listText(EXCLUSION_WORDS.filter(([key]) => bands.comparison.excluded[key] > 0)
+  .map(([key, words]) => fill(words, { n: count(bands.comparison.excluded[key]), ...(key === 'notInHacrp' ? { fy: String(bands.fy) } : {}) })));

@@ -7,7 +7,7 @@ import { has } from '../../../engine/js/has.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
-import { cmsText, decimal, listText, longDate, money, pct, signed } from '../../../web/render/format.js';
+import { cmsText, decimal, listText, longDate, money, moneyRange, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { assignedNow, isEither, levelOf } from '../../../web/whatif/marks.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
@@ -246,8 +246,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   const hai = words.counts ? haiPeriod(hospital.periods.hai) : null;
   const slide = { name, fy, source, baseline };
   const printAt = (fragment) => fill('whatifPrint', { url: SITE.origin + path + fragment });
-  // The dollars at stake (this site's estimate), on the record where there is one.
+  // The dollars at stake (this site's estimate), on the record where there is one, and their likely range.
   const atStake = hospital.atStake ?? null;
+  const atStakeRange = hospital.atStakeRange ?? null;
   return {
     heading: fill('whatifHeading'),
     label: words.label && fill(words.label),
@@ -333,8 +334,10 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       row: fill('whatifRowMoney'),
       tag: { text: fill('estimateTag'), href: DOLLARS_HREF, label: fill('estimateTagLabel') },
       amount: moneyText,
-      // The words beside the head's figure, by the hypothetical's dollars.
-      head: (dollars) => fill(levelOf(dollars) > 0 ? 'whatifMoneyCut' : 'whatifMoneyNone'),
+      // The words beside the head's figure, by the hypothetical's dollars: a certain cut with its likely range; a score
+      // too close to call keeps its "$0 or $X", never a range around one number.
+      head: (dollars) => (levelOf(dollars) === 1 && atStakeRange ? fill('whatifMoneyCutRange', { range: moneyRange(...atStakeRange) })
+        : fill(levelOf(dollars) > 0 ? 'whatifMoneyCut' : 'whatifMoneyNone')),
       cliff: { zero: money(0), zeroWords: fill('whatifCliffNone'), cut: money(atStake), cutWords: pillOf('Yes').label },
     },
     held: fill('whatifHeld'),

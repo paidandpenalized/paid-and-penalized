@@ -78,6 +78,7 @@ export const COPY = {
   whatifRowMoney: { text: 'Estimated HAC cut', claim: null },
   whatifMoneyEither: { text: '{zero} or {amount}', claim: 'HACRP-01' },
   whatifMoneyCut: { text: 'estimated cut', claim: null },
+  whatifMoneyCutRange: { text: 'estimated cut, likely {range}', claim: null },
   whatifMoneyNone: { text: 'no cut', claim: null },
   whatifCliffNone: { text: 'no cut', claim: null },
   whatifWorthYes: { text: "Getting under CMS's line would keep about {amount}, this site estimates: the whole cut, however far under the score lands.", claim: 'HACRP-01' },

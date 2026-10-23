@@ -5,7 +5,7 @@
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
 // glossary, and a link to the family's page for feedback, privacy and AI.
 import { printout, stamp, typeset } from '../../../../web/render/components.js';
-import { count, decimal, isoDate, listText, ordinal } from '../../../../web/render/format.js';
+import { count, decimal, isoDate, listText, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -13,9 +13,9 @@ import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { assumptionsTable, backtestPlaceholder, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
+import { assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
-import { COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
+import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { kicker, siteHeader } from './parts.js';
 
 export { METHODS_PATH };
@@ -80,11 +80,13 @@ function sidesNotes(checks) {
 }
 
 // How this site estimates the dollars: the words, the payment order drawn on the year's proportions, the formula as
-// the pipeline with the real national numbers, the assumptions, the national checks as a tape and the back-test's
-// place. Its id is the one every dollar figure's estimate tag links to (links.js DOLLARS_HREF).
+// the pipeline with the real national numbers, the assumptions, the national checks as a tape and the back-test drawn
+// (where every likely range comes from). Its id is the one every dollar figure's estimate tag links to (links.js
+// DOLLARS_HREF); the back-test's is the one every range links to (BACKTEST_ID). fig: the page's figure counter;
+// names(ccn): a hospital's { name, city, state } for the back-test's tooltips, or null; pins: the manifest entries.
 export const DOLLARS_ID = DOLLARS_HREF.split('#')[1];
-function dollarsSection(dollars, { fy, n, sourceOf }) {
-  const { headline, national, checks, assumptions } = dollars;
+function dollarsSection(dollars, { fy, fig, sourceOf, names, pins }) {
+  const { headline, national, checks, assumptions, bands } = dollars;
   // A cut hospital CMS scored without a score, with an estimate: on its own page, outside the totals.
   const noScore = national.cut - headline.cut;
   const totals = { cut: count(headline.cut), yes: count(headline.yes), missing: count(headline.yesUnestimated) };
@@ -92,21 +94,50 @@ function dollarsSection(dollars, { fy, n, sourceOf }) {
   return {
     id: DOLLARS_ID, heading: t('dollarsHeading'), body: html`${para(fill('dollarsText', { fy: String(fy) }))}
 ${para(fill('dollarsOrder', { pct: REDUCTION_TEXT }))}
-${dollarsOrderFigure(headline, { n, source, fy })}
+${dollarsOrderFigure(headline, { n: fig(), source, fy })}
 ${para(noScore > 1 ? fill('dollarsTotals', { ...totals, noScore: count(noScore) }) : fill(noScore === 1 ? 'dollarsTotalsOne' : 'dollarsTotalsNone', totals))}
 ${para(t('dollarsMaryland'))}
 <h3 class="msec__sub">${t('dollarsFormulaSub')}</h3>
 ${dollarsPipeline(headline)}
 <h3 class="msec__sub">${t('assumeSub')}</h3>
 ${para(t('assumeText'))}
-${assumptionsTable({ fy, volumeFy: assumptions.volumeFy })}
+${assumptionsTable({ fy, volumeFy: assumptions.volumeFy, backtestFy: bands.fy })}
 <h3 class="msec__sub">${t('dchecksSub')}</h3>
 ${para(t('dchecksText'))}
 ${dollarChecks(checks)}
-<h3 class="msec__sub">${t('backtestSub')}</h3>
-${para(t('backtestText'))}
-${backtestPlaceholder()}`,
+${backtestPart(bands, { fig, names, pins })}`,
   };
+}
+
+// The back-test: what it is, the comparison set and what it leaves out, the strips (every cut hospital's estimate over its
+// cost report, each group's range), the tilt, the national ratio, places, every figure's check and the limits.
+function backtestPart(bands, { fig, names, pins }) {
+  const fy = String(bands.fy);
+  const c = bands.comparison;
+  const hcris = pins.find((e) => e.id === bands.sources.at(-1));
+  if (!hcris) throw new RangeError(`Methods: the back-test's cost-report pin ${bands.sources.at(-1)} is not among the pins`);
+  const hacrp = bands.sources[0];
+  const share = pct(bands.highPct - bands.lowPct, 0);
+  const signed = (x) => pct(Math.abs(Math.exp(x) - 1), 1);
+  // The group whose own estimates ran furthest from its cost reports, among groups with enough hospitals of their own.
+  const own = bands.measures.hac.strata.filter((s) => s.pool === 'stratum');
+  const most = own.reduce((a, s) => (Math.abs(s.median) > Math.abs(a.median) ? s : a), own[0]);
+  const group = most && bands.strata.find((s) => s.id === most.stratum);
+  const groupWords = group && fill('btGroup', { beds: group.bedsMin === 0 ? fill('btBedsUnder', { n: count(group.bedsMax + 1) }) : group.bedsMax === null ? fill('btBedsOver', { n: count(group.bedsMin) }) : fill('btBedsBetween', { lo: count(group.bedsMin), hi: count(group.bedsMax) }), kind: t(group.schMdh ? 'btKindSchMdh' : 'btKindOther') });
+  const source = fillKeep('btSource', { fy, id: hacrp, date: isoDate(hcris.retrieved) }, ['date']);
+  const n = bands.national;
+  return html`<h3 class="msec__sub" id="${BACKTEST_ID}">${t('backtestSub')}</h3>
+${para(fill('backtestText', { fy, volume: String(bands.volumeFy) }))}
+${para(t('backtestLines'))}
+${para(fill('backtestSet', { hospitals: count(c.hospitals), cut: count(c.cut), reports: count(c.reports), list: exclusionsText(bands) }))}
+${para(fill('backtestFig', { share, min: count(bands.minStratum) }))}
+${backtestFigure(bands, { n: fig(), source, names })}
+${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { group: groupWords, median: signed(most.median) })}` : ''}`)}
+${para(fill('backtestNational', { ratio: pct(n.ratio, 1), low: pct(n.p10, 1), high: pct(n.p90, 1) }))}
+${para(t('backtestPlaces'))}
+${para(t('backtestMeasures'))}
+${backtestMeasures(bands)}
+${para(t('backtestLimits'))}`;
 }
 
 // The glossary's entries, in reading order: [term key, definition key, values].
@@ -122,9 +153,10 @@ const GLOSSARY = (v) => [
 // checks: [{ fy, rule, check }] oldest first (yearCheck results); years: [{ fy, periods }] oldest first; newest: the
 // newest year's { rows (CMS's file), source, pin (its manifest entry), measures, pages }; pins: the manifest entries
 // the HACRP pages read; changes: [{ date, items }] newest first; estimate: { tolerance, tagged, maxError };
-// boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. dollars: the dollar
+// boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
+// { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
-export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null }) {
+export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null, names = () => null }) {
   const { subtitle } = SITE.sites.hacrp;
   const figureNo = counter();
   const last = checks[checks.length - 1];
@@ -172,7 +204,7 @@ ${printout(html`<table class="gb takes">
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
 ${para(estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) }))}
 <p><a href="/methods/#estimate">${t('estimateFamily')}</a></p>` },
-    ...(dollars ? [dollarsSection(dollars, { fy, n: figureNo(), sourceOf: newest.source })] : []),
+    ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
     { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },
     { id: 'reading', heading: t('readHeading'), body: html`<ol class="reading">${['read1', 'read2', 'read3', 'read4', ['read5', { short: SHORT_NAMES.PSI90 }], ['read6', { pct: REDUCTION_TEXT }], 'read7'].map((k) => html`<li>${Array.isArray(k) ? fill(k[0], k[1]) : t(k)}</li>`)}</ol>` },

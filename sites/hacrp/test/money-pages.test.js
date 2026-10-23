@@ -9,14 +9,15 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from '../../../pipeline/site/build.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { count, decimal, dollars, money, pct } from '../../../web/render/format.js';
+import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
 import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
 import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
-import { DOLLARS_HREF } from '../web/links.js';
+import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
+import { nationalRange, sumRanges } from '../web/money.js';
 import { REDUCTION_PCT } from '../web/constants.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { DATA, HD, MD, PLACES, renderPlace, renderProgram } from './pinned.js';
@@ -81,9 +82,14 @@ test('the program page\'s summary and the Part on the money say how many of CMS\
   assert.ok(intro.includes(money(-h.hac)));
   assert.ok(intro.includes(words));
   assert.ok(intro.includes(`no usable row for the other ${count(h.yesUnestimated)}`));
-  // Every dollar figure says it is an estimate, and the summary's range is pending (a production build refuses it).
+  // Every dollar figure says it is an estimate and carries its likely range: the nation's, from the back-test's resampled
+  // ratio, in the summary and the Part's intro, its words linking to the back-test.
+  const range = moneyRange(...nationalRange(DATA.dollars.bands, -h.hac));
   assert.match(summary, /class="est-tag" href="\/hacrp\/methods\/#dollars"/);
-  assert.match(summary, /money__range--pending/);
+  assert.ok(strip(summary).includes(`Likely range ${range}`), range);
+  assert.ok(summary.includes(`href="${BACKTEST_HREF}"`));
+  assert.ok(intro.includes(`(likely ${range})`), 'the intro');
+  assert.doesNotMatch(PROGRAM, /\bpending\b/i);
 });
 
 test('the Part on the money: at least five figures, each beside its words, each takeaway the data\'s', () => {
@@ -148,6 +154,10 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   const card = strip(/<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);
   assert.ok(card.includes(money(pm.money)));
   assert.ok(card.includes(`${pct(pm.share, 1)} of the nation’s ${money(MD.headline.money)}`));
+  // The place's likely range: its cut hospitals' ranges added up.
+  assert.deepEqual(pm.range, sumRanges(pm.rows.filter((r) => r.yes).map((r) => r.range)));
+  assert.ok(pm.range[0] < pm.money && pm.money < pm.range[1]);
+  assert.ok(card.includes(`Likely range ${moneyRange(...pm.range)}`));
   assert.ok(card.includes(dollars(Math.round(pm.perStay))) && card.includes(`The nation: ${dollars(Math.round(MD.perStay))}`));
   assert.match(page, /<th scope="col" class="num">Est\. cut \(\$, modeled\)<\/th>/);
   assert.match(page, /<section class="psec psec--wide" id="across"/);
@@ -312,12 +322,12 @@ test('the hospitals near the line: both sides, lowest score first, worked out on
   assert.ok(MD.rows.every((r) => Math.abs(r.total - MD.line) > ACROSS_WINDOW || near.rows.includes(r)), 'every hospital within the window is listed');
 });
 
-test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to', () => {
+test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to; the back-test drawn where every range links', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
     newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-    pins: [], changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars,
+    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
+    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }),
   });
   const id = DOLLARS_HREF.split('#')[1];
   const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
@@ -329,11 +339,30 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   const tape = /<div class="receipt receipt--dollars">[\s\S]*?<\/div>/.exec(sec)[0];
   assert.equal([...tape.matchAll(/<tr><th scope="row">/g)].length, DATA.dollars.checks.length);
   assert.equal([...tape.matchAll(/class="receipt__ok">pass</g)].length, DATA.dollars.checks.filter((c) => c.pass).length);
-  // The assumptions: two columns, NTAP among them; the back-test's place, pending.
+  // The assumptions: two columns, NTAP among them.
   assert.match(sec, /<th scope="col">Assumption<\/th><th scope="col">Effect on the estimate<\/th>/);
   assert.match(strip(sec), /New-technology add-on payments are left out/);
-  assert.match(sec, /class="backtest-pending"/);
   assert.match(strip(sec), new RegExp(`add the ${count(h.cut)} of CMS’s ${count(h.yes)} cut hospitals`));
+  // The back-test: no placeholder; at the anchor every range links to; the comparison set and every exclusion in words;
+  // one strip per stratum, a dot per compared cut hospital, its name only in its tooltip.
+  const b = DATA.dollars.bands;
+  assert.doesNotMatch(sec, /\bpending\b/i);
+  assert.ok(sec.includes(`id="${BACKTEST_HREF.split('#')[1]}"`));
+  const text = strip(sec);
+  assert.ok(text.includes(`${count(b.comparison.hospitals)} hospitals, ${count(b.comparison.cut)} of them cut by CMS`));
+  assert.ok(text.includes(`Of the ${count(b.comparison.reports)} reports`));
+  for (const [key, n] of Object.entries(b.comparison.excluded)) if (n > 0) assert.ok(text.includes(count(n)), key);
+  const fig = /<figure class="fig" id="figure-\d+" data-figure>(?:(?!<\/figure>)[\s\S])*?chart--bt[\s\S]*?<\/figure>/.exec(sec)[0];
+  const wide = /<svg[^>]*data-fit="wide"[^>]*>[\s\S]*?<\/svg>/.exec(fig)[0];
+  assert.equal([...wide.matchAll(/<circle class="chart-bt__dot"/g)].length, b.points.length);
+  assert.equal([...wide.matchAll(/<rect class="chart-bt__band/g)].length, b.measures.hac.strata.length);
+  assert.equal([...wide.matchAll(/<title>INVENTED HOSPITAL, NOWHERE, ZZ: estimate /g)].length, b.points.length);
+  assert.equal(strip(fig.replace(/<title>[\s\S]*?<\/title>/g, '')).includes('INVENTED HOSPITAL'), false, 'names only in tooltips');
+  // The table: one row per stratum, no hospital in it.
+  const table = /<table class="gb"[\s\S]*?<\/table>/.exec(fig)[0];
+  assert.equal([...table.matchAll(/<tr><th scope="row"/g)].length, b.measures.hac.strata.length);
+  // Every figure the back-test checks, in the summary table.
+  assert.equal([...sec.matchAll(/<table class="gb bt-measures">[\s\S]*?<\/table>/g)].length, 1);
 });
 
 // Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element

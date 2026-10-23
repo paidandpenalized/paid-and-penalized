@@ -19,7 +19,9 @@ const MARKS = [
   '.chart-dist',
   // the dollars on the hospital page (sites/hacrp/web/styles.css): the statement's bars and key, the hatched boxes
   '.stmt__part', '.stmt__scope', '.stmt__cut', '.stmt__add', '.stmt__sw--part', '.stmt__sw--scope', '.stmt__sw--cut',
-  '.money__range--pending',
+  '.money__range-bar',
+  // the back-test's strips (bandStrips.js)
+  '.chart-bt__ruler', '.chart-bt__band', '.chart-bt__band--borrowed', '.chart-bt__dot', '.chart-bt__exact',
   // the what-if's cliff
   '.wi-cliff__pit', '.wi-cliff__ledge', '.wi-cliff__drop', '.wi-cliff__floor', '.wi-cliff__dot', '.wi-cliff__dot.is-over', '.wi-cliff__start',
   // the what-if's bars and ramp

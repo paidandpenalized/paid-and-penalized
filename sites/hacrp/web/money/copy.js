@@ -21,9 +21,8 @@ export const COPY = {
   moneyNone: { text: 'No dollar estimate', claim: null },
   moneyNoInputs: { text: "CMS's FY{fy} impact file, which this site's estimate is built from, has no usable row for this hospital.", claim: null },
   moneyParhm: { text: "This site makes no estimate for hospitals in Pennsylvania's Rural Health Model.", claim: null },
-  // Until the back-test's ranges arrive, the range's place on every dollar figure (a page in review only: a production
-  // build refuses it).
-  rangePending: { text: 'Likely range: pending', claim: null },
+  // The likely range under a dollar figure (its words link to the back-test that made it).
+  rangeLikely: { text: 'Likely range', claim: null },
 
   // ---------- the cliff: the cut at any score, for this hospital ----------
   cliffHeading: { text: 'The money is a cliff', claim: null },
@@ -57,8 +56,8 @@ export const COPY = {
 
   // ---------- the record card ----------
   fieldMoney: { text: 'Estimated cut', claim: null },
-  fieldMoneyStay: { text: 'About {perStay} per Medicare stay', claim: null },
-  fieldMoneyWould: { text: 'A cut would have been {amount}', claim: 'HACRP-01' },
+  fieldMoneyStay: { text: 'Likely {range}; about {perStay} per Medicare stay', claim: null },
+  fieldMoneyWould: { text: 'A cut would have been {amount}, likely {range}', claim: 'HACRP-01' },
   fieldMoneyExempt: { text: 'Maryland: exempt', claim: 'HACRP-26' },
   fieldMoneyNoRow: { text: 'No usable impact-file row', claim: null },
 
@@ -104,11 +103,13 @@ export const COPY = {
   stmtHvbpUnlisted: { text: "not in CMS's value-based factors: no adjustment", claim: null },
   stmtAfter: { text: 'After these two', claim: null },
   stmtHac: { text: 'HAC Reduction Program', claim: null },
-  stmtHacAll: { text: '{pct} of everything above', claim: ['HACRP-01', 'HACRP-75'] },
+  stmtHacAll: { text: '{pct} of everything above; likely {range}', claim: ['HACRP-01', 'HACRP-75'] },
   stmtHacNone: { text: 'no cut; {pct} would have been {amount}', claim: 'HACRP-01' },
   stmtNet: { text: 'Net of the three programs', claim: null },
+  stmtLikely: { text: 'likely {range}', claim: null },
   stmtNone: { text: 'Not paid to this hospital: {list}.', claim: null },
   stmtWhole: { text: 'Whole dollars, so every line adds up; the estimate is not that precise.', claim: null },
+  stmtRanges: { text: 'Each likely range is as wide as the one that held {share} of hospitals like this one when this site checked its method against their FY{fy} cost reports.', claim: null },
   stmtKeyPart: { text: 'Part of the payment', claim: null },
   stmtKeyScope: { text: 'What a program applies to', claim: null },
   stmtKeyCut: { text: 'The adjustment', claim: null },
@@ -147,16 +148,16 @@ export const COPY = {
   shareNote: { text: 'No tracking: the buttons copy text to your clipboard, or hand it to your device to share.', claim: null },
   // The sentence a link carries (and the page's description): one per verdict, the source of any dollars named.
   shareYes: {
-    text: "In FY{fy}, Medicare cut {name}'s inpatient payments {pct} under the HAC Reduction Program: about {amount}, by {site}'s estimate. Its Total HAC Score was {distance} over the highest score CMS didn't cut.",
+    text: "In FY{fy}, Medicare cut {name}'s inpatient payments {pct} under the HAC Reduction Program: about {amount} (likely {range}), by {site}'s estimate. Its Total HAC Score was {distance} over the highest score CMS didn't cut.",
     claim: ['HACRP-01', 'HACRP-24'],
   },
   shareYesNoScore: {
-    text: "In FY{fy}, Medicare cut {name}'s inpatient payments {pct} under the HAC Reduction Program: about {amount}, by {site}'s estimate.",
+    text: "In FY{fy}, Medicare cut {name}'s inpatient payments {pct} under the HAC Reduction Program: about {amount} (likely {range}), by {site}'s estimate.",
     claim: ['HACRP-01', 'HACRP-24'],
   },
   shareYesNoEstimate: { text: "In FY{fy}, Medicare cut {name}'s inpatient payments {pct} under the HAC Reduction Program.", claim: ['HACRP-01', 'HACRP-24'] },
   shareNo: {
-    text: "In FY{fy}, Medicare's HAC Reduction Program did not cut {name}'s payments: its Total HAC Score was {distance} under the lowest score CMS cut. A cut would have been about {amount}, by {site}'s estimate.",
+    text: "In FY{fy}, Medicare's HAC Reduction Program did not cut {name}'s payments: its Total HAC Score was {distance} under the lowest score CMS cut. A cut would have been about {amount} (likely {range}), by {site}'s estimate.",
     claim: 'HACRP-01',
   },
   shareNoPlain: { text: "In FY{fy}, Medicare's HAC Reduction Program did not cut {name}'s payments.", claim: 'HACRP-01' },
@@ -169,7 +170,7 @@ export const COPY = {
   // ---------- the program page's Part: the money ----------
   moneyPartHeading: { text: 'The money', claim: null },
   moneyPartIntro: {
-    text: "This site estimates the FY{fy} cut at about {money}, from {cut} of the {yes} hospitals CMS cut; CMS's impact file, which the estimate is built from, has no usable row for the other {missing}. The cut is {pct} of everything traditional Medicare pays a hospital for inpatient stays, so it lands hardest where those payments are largest.",
+    text: "This site estimates the FY{fy} cut at about {money} (likely {range}), from {cut} of the {yes} hospitals CMS cut; CMS's impact file, which the estimate is built from, has no usable row for the other {missing}. The cut is {pct} of everything traditional Medicare pays a hospital for inpatient stays, so it lands hardest where those payments are largest.",
     claim: ['HACRP-01', 'HACRP-75'],
   },
   // The bill.

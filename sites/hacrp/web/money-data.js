@@ -5,7 +5,7 @@
 // file's own; what the file doesn't hold (the breakdowns) is summed here, over the rounded figures, so a reader adding a
 // table gets its total. Every dollar is this site's estimate, in whole dollars. Pure: data in, result out.
 import { lineScore } from '../../../web/whatif/marks.js';
-import { cutDollars } from './money.js';
+import { cutDollars, nationalRange, rangeOf, sumRanges } from './money.js';
 import { TYPE_KINDS } from './program-data.js';
 
 export const sum = (rows, key) => rows.reduce((s, r) => s + r[key], 0);
@@ -28,7 +28,7 @@ export function moneyData({ pd, dollars, model }) {
     if (d.status !== 'estimated') return [];
     return [{
       ccn: r.ccn, name: r.name, city: r.city, state: r.state, master: r.master, total: r.total, yes: r.yes,
-      atStake: d.atStake, cut: cutDollars(d), hvbp: d.hvbp, bills: d.bills,
+      atStake: d.atStake, cut: cutDollars(d), hvbp: d.hvbp, bills: d.bills, range: rangeOf(dollars.bands, 'hac', d.stratum, d.atStake),
       hrrpFactor: d.hrrpFactor, vbpFactor: d.vbpFactor, hrrpListed: d.hrrpListed, vbpListed: d.vbpListed,
     }];
   });
@@ -56,8 +56,9 @@ export function moneyData({ pd, dollars, model }) {
     rows,
     cutRows,
     // The file's headline: CMS's cut count (yes), the ones this site estimates (cut) and the rest (yesUnestimated); the
-    // dollars over the estimated ones (money, the HAC cut's size) and the other two programs' (hrrp, hvbp).
-    headline: { ...dollars.headline, money: -dollars.headline.hac },
+    // dollars over the estimated ones (money, the HAC cut's size) and the other two programs' (hrrp, hvbp); the
+    // money's likely range (range: the back-test's national ratio, money.js nationalRange).
+    headline: { ...dollars.headline, money: -dollars.headline.hac, range: nationalRange(dollars.bands, -dollars.headline.hac) },
     tenth: { n: tenth, money: sorted.slice(0, tenth).reduce((a, b) => a + b, 0) },
     byKind,
     byState,
@@ -66,13 +67,13 @@ export function moneyData({ pd, dollars, model }) {
   };
 }
 
-// A place's money: its estimated hospitals' rollup, and its cut dollars as a share of the nation's. ccns: the place's
-// hospitals.
+// A place's money: its estimated hospitals' rollup, its cut dollars as a share of the nation's, and their likely range
+// (range: its cut hospitals' ranges added up, money.js sumRanges; null with none cut). ccns: the place's hospitals.
 export function placeMoney(md, ccns) {
   const set = new Set(ccns);
   const rows = md.rows.filter((r) => set.has(r.ccn));
   const place = rollup(rows);
-  return { rows, ...place, share: place.money / md.headline.money };
+  return { rows, ...place, share: place.money / md.headline.money, range: sumRanges(rows.filter((r) => r.yes).map((r) => r.range)) };
 }
 
 // The two sides of CMS's line among some rows near it: the hospitals CMS cut (over) and those it didn't (under), with

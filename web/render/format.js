@@ -85,6 +85,16 @@ export function money(x, { sign = false } = {}) {
   return `${body === '0' ? '' : x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${body}`;
 }
 
+// A range of dollars, low to high, as money() writes each end: "$850K–$1.2M"; the unit said once when both ends share
+// it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K").
+export function moneyRange(lo, hi) {
+  if (!(lo <= hi)) throw new RangeError(`moneyRange: low ${lo} is above high ${hi}`);
+  const [a, b] = [money(lo), money(hi)];
+  if (lo < 0 || hi < 0) return `${a} to ${b}`;
+  const unit = (s) => /[KMB]$/.exec(s)?.[0] ?? '';
+  return unit(a) && unit(a) === unit(b) ? `${a.slice(0, -1)}–${b.slice(1)}` : `${a}–${b}`;
+}
+
 // Whole dollars with thousands separators, for a statement whose lines add exactly: "$48,691,794", "−$58,430".
 // sign: '+' before a positive amount (an adjustment's direction), else none.
 export function dollars(x, { sign = false } = {}) {

@@ -13,7 +13,7 @@ import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
 import { paraOf } from '../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, listText, money, noun, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
@@ -283,13 +283,13 @@ ${states ? psec({ id: 'states', wide: true, heading: t('statesHeading'), text: p
 ${psec({ id: 'three', wide: true, heading: t('threeHeading'), text: p('threeText'), figure: three })}`;
 }
 
-// The Part's intro: the national estimate, with the hospitals it leaves out named in the count.
-export const moneyPartIntro = (md, fy) => fill('moneyPartIntro', { fy: String(fy), money: money(md.headline.money), cut: count(md.headline.cut), yes: count(md.headline.yes), missing: count(md.headline.yesUnestimated), pct: REDUCTION_TEXT });
+// The Part's intro: the national estimate and its likely range, with the hospitals it leaves out named in the count.
+export const moneyPartIntro = (md, fy) => fill('moneyPartIntro', { fy: String(fy), money: money(md.headline.money), range: moneyRange(...md.headline.range), cut: count(md.headline.cut), yes: count(md.headline.yes), missing: count(md.headline.yesUnestimated), pct: REDUCTION_TEXT });
 
 // The summary form's field: the national estimate, its tag, the hospitals it covers and its range.
 export const summaryMoneyField = (md) => ({
   label: t('summaryMoney'),
   value: html`<span class="money__field money__field--cut">${money(md.headline.money)}</span> ${estTag()}`,
   as: 'div', size: 'big', fieldCls: 'f-money',
-  note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine()}`,
+  note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine(md.headline.range, { estimate: md.headline.money })}`,
 });

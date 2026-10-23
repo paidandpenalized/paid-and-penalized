@@ -1,16 +1,16 @@
 // The hospital page's dollars (this site's estimate, money.js): the verdict's figure, the record card's field, the
 // statement of the payment line by line, and the share control with its sentence (also the page's description).
-// Every dollar figure carries the estimate tag and its range (pending until the back-test). The money is a cliff: a
+// Every dollar figure carries the estimate tag and its likely range, from the back-test. The money is a cliff: a
 // hospital over CMS's line loses 1% of everything Medicare pays it for inpatient care; one under it loses nothing.
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { PAGE, drawn, figure, num } from '../../../web/charts/figure.js';
-import { cmsText, count, decimal, dollars, isoDate, listText, money, roundedDollars } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, isoDate, listText, money, moneyRange, pct, roundedDollars } from '../../../web/render/format.js';
 import { estTag as estTagShell, shareBlock as shareShell, wsOp, wsTerm } from '../../../web/render/components.js';
 import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
-import { DOLLARS_HREF } from './links.js';
+import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
 import { BASE_PARTS, OTHER_PARTS } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
@@ -25,9 +25,26 @@ const zero = () => money(0);
 // makes the estimate.
 export const estTag = () => estTagShell({ href: DOLLARS_HREF, label: t('estimateTagLabel'), text: t('estimateTag') });
 
-// The range line under a dollar figure: until the back-test's likely range arrives, a placeholder made to be seen in
-// review (a production build refuses it: generate.js).
-export const rangeLine = () => html`<p class="money__range money__range--pending">${t('rangePending')}</p>`;
+// The range line under a dollar figure: the back-test's likely range ("Likely range $1.0–1.4M"), its words linking to
+// where the range comes from. With `estimate`, a small drawing beside it: the range as a box and the estimate as a tick,
+// on one scale that spans both, since a range is not centred on its estimate (each kind of hospital's estimates ran
+// high or low by their own amount, and the nation's sum ran low enough that its range sits above it). '' with no range:
+// an estimate of $0 has none.
+export function rangeLine(range, { estimate = null } = {}) {
+  if (!range) return '';
+  const [from, to] = estimate === null ? range : [Math.min(range[0], estimate), Math.max(range[1], estimate)];
+  const at = (x) => ((x - from) / (to - from)).toFixed(3);
+  const bar = estimate === null || to === from ? ''
+    : html`<span class="money__range-bar" style="--lo: ${at(range[0])}; --hi: ${at(range[1])}; --at: ${at(estimate)}" aria-hidden="true"></span>`;
+  return html`<p class="money__range"><a class="money__range-k" href="${BACKTEST_HREF}">${t('rangeLikely')}</a> <span class="money__range-v">${moneyRange(...range)}</span>${bar}</p>`;
+}
+
+// A range in a sentence: "$1.0–1.4M". On the page, word joiners hold it on one line (a narrow column would break it
+// after the dash); a shared sentence, copied as text, has none.
+const JOIN = '\u2060';
+const rangeText = (range) => moneyRange(...range).replace('–', `${JOIN}–${JOIN}`);
+const rangePlain = (range) => moneyRange(...range);
+
 
 // The hospital's distance to CMS's line, as the verdict states it: over the highest score CMS didn't cut (a hospital
 // it cut), under the lowest it cut (one it didn't). null without a score.
@@ -58,14 +75,14 @@ export function moneyVerdict(view, m) {
     return {
       beside: html`<div class="money money--cut"><p class="money__big">${money(m.atStake)}</p><p class="money__what">${fill('moneyCutWhat', { fy })} ${estTag()}</p></div>`,
       below: html`<div class="money__below"><p class="money__of">${fill('moneyOfWhole', { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
-${rangeLine()}</div>`,
+${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
     };
   }
   const distance = distanceText(view);
   return {
     beside: html`<div class="money money--zero"><p class="money__big">${zero()}</p><p class="money__what">${t('moneyZeroWhat')}</p></div>`,
     below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill('moneyWouldOf', { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
-${rangeLine()}</div>`,
+${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
   };
 }
 
@@ -116,7 +133,8 @@ export function moneyField(m) {
   }
   // The $0 of a hospital CMS didn't cut is no estimate; what a cut would have been is.
   const value = m.cut ? html`<span class="money__field money__field--cut">${money(m.atStake)}</span> ${estTag()}` : html`<span class="money__field">${zero()}</span>`;
-  const note = m.cut ? fill('fieldMoneyStay', { perStay: money(m.perStay) }) : html`${fill('fieldMoneyWould', { amount: money(m.atStake) })} ${estTag()}`;
+  const range = rangeText(m.ranges.hac);
+  const note = m.cut ? fill('fieldMoneyStay', { range, perStay: money(m.perStay) }) : html`${fill('fieldMoneyWould', { amount: money(m.atStake), range })} ${estTag()}`;
   return { label, value, size: 'big', as: 'div', note, fieldCls: 'f-money' };
 }
 
@@ -150,10 +168,10 @@ export function statementLines(m) {
   lines.push({ key: 'after', kind: 'sum', label: t('stmtAfter'), sub: null, amount: m.after, bar: { part: [0, at(m.after)] } });
   lines.push({
     key: 'hac', kind: 'program', label: t('stmtHac'),
-    sub: m.cut ? fill('stmtHacAll', { pct: REDUCTION_TEXT }) : fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }),
+    sub: m.cut ? fill('stmtHacAll', { pct: REDUCTION_TEXT, range: rangeText(m.ranges.hac) }) : fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }),
     amount: m.hac, bar: { scope: [0, at(m.after)], ...(m.cut ? { cut: [at(m.after - m.atStake), at(m.after)] } : {}) },
   });
-  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: null, amount: m.net, bar: null });
+  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: m.ranges.net ? fill('stmtLikely', { range: rangeText(m.ranges.net) }) : null, amount: m.net, bar: null });
   const none = [...BASE_PARTS, ...OTHER_PARTS].filter((key) => !shown.includes(key)).map((key) => t(`stmtOff_${key}`));
   return { lines, none };
 }
@@ -187,7 +205,6 @@ ${group('stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GR
 `)}</tbody>
 </table>
 ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(none) })}</p>` : ''}
-${rangeLine()}
 </div>`;
 }
 
@@ -211,10 +228,10 @@ export function statementFigure(view, m, { n, source }) {
     chart: statementTable(view, m, s),
     source,
     claimLevel: 'estimate',
-    note: t('stmtWhole'),
+    note: `${t('stmtWhole')} ${fill('stmtRanges', { share: pct(m.backtest.share, 0), fy: String(m.backtest.fy) })}`,
     table: {
       columns: [{ name: t('stmtColLine') }, { name: t('stmtColAmount'), numeric: true }],
-      rows: s.lines.map((l) => [l.sub ? `${l.label} (${l.sub})` : l.label, num(signedAmount(l), String(l.amount))]),
+      rows: s.lines.map((l) => [l.sub ? `${l.label} (${l.sub.replaceAll(JOIN, '')})` : l.label, num(signedAmount(l), String(l.amount))]),
     },
     csvName: `hacrp-dollars-${view.ccn.toLowerCase()}`,
   });
@@ -234,9 +251,10 @@ export function shareSentence(view, m) {
   if (view.status === 'yes' || view.status === 'yes-no-score') {
     if (!est) return fill('shareYesNoEstimate', { ...values, pct: REDUCTION_TEXT });
     const amount = money(est.atStake);
-    return distance ? fill('shareYes', { ...values, pct: REDUCTION_TEXT, amount, site, distance }) : fill('shareYesNoScore', { ...values, pct: REDUCTION_TEXT, amount, site });
+    const range = rangePlain(est.ranges.hac);
+    return distance ? fill('shareYes', { ...values, pct: REDUCTION_TEXT, amount, range, site, distance }) : fill('shareYesNoScore', { ...values, pct: REDUCTION_TEXT, amount, range, site });
   }
-  return est && distance ? fill('shareNo', { ...values, distance, amount: money(est.atStake), site }) : fill('shareNoPlain', values);
+  return est && distance ? fill('shareNo', { ...values, distance, amount: money(est.atStake), range: rangePlain(est.ranges.hac), site }) : fill('shareNoPlain', values);
 }
 
 // The share control (components.js shareBlock) under the verdict: this page's link and its sentence.

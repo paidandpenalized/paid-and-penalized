@@ -20,7 +20,7 @@ import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
 import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
 import { ASSETS } from './fixtures.js';
-import { DATA, HD, RANGED } from './pinned.js';
+import { DATA, HD } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
 const quiet = () => {};
@@ -31,7 +31,7 @@ const strip = (markup) => text(markup.replace(/<[^>]+>/g, ''));
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
 
 // A few pinned hospitals are enough for the page build: the history and the Methods page do not depend on them.
-const SLICE = { ...DATA, dollars: RANGED, hospitals: DATA.hospitals.slice(0, 40) };
+const SLICE = { ...DATA, hospitals: DATA.hospitals.slice(0, 40) };
 const build = (data) => withTemp('pp-methods-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
   await generateHacrp(ctx, { released: true, data, log: quiet });
@@ -120,7 +120,7 @@ test('the proof and decision figures, numbered 1 and 2, say the same totals as t
   assert.ok(numbers(caption(1)).includes(decimal(Math.max(...HD.checks.map((c) => c.check.maxError)), 5)));
   assert.ok(numbers(caption(2)).includes(count(decided)));
   assert.ok(numbers(caption(2)).includes('0'), 'none out of order');
-  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3, 4], 'the proof strips, the decision rules, the payment order and the periods');
+  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3, 4, 5], 'the proof strips, the decision rules, the payment order, the back-test and the periods');
 });
 
 test('the notes under the check state what the checks found: the rows withheld, CMS\'s rule for the line and where its line sits against it, and the biggest tie at the line', () => {
@@ -234,7 +234,7 @@ test('the pipeline\'s six stations carry the newest year\'s real numbers', () =>
 });
 
 test('the periods figure: a row a year with the dates behind it, and the lead from the newest year\'s data to its payment year', () => {
-  const fig = /<figure class="fig" id="figure-4" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
+  const fig = /<figure class="fig" id="figure-5" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
   const rows = [...fig.slice(fig.indexOf('<tbody>')).matchAll(/<tr>(.*?)<\/tr>/gs)].map(([, tr]) => [...tr.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => text(c[1])));
   assert.equal(rows.length, HD.fys.length);
   assert.deepEqual(rows.map((r) => r[0]), HD.fys.map((fy) => `FY${fy}`));
@@ -259,7 +259,7 @@ test('a build without the history still writes the Methods page: the newest year
   assert.equal(page.match(/<h1[\s>]/g).length, 1);
   const card = /<div class="receipt">[\s\S]*?<\/dl>/.exec(page)[0];
   assert.deepEqual([...card.matchAll(/<tr><th scope="row">FY(\d+)<\/th>/g)].map((m) => Number(m[1])), [DATA.fy]);
-  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3, 4]);
+  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3, 4, 5]);
   assert.match(page, new RegExp(`This site recomputed [\\d,]+ scores for fiscal year ${DATA.fy}`));
   assert.match(page, new RegExp(`Of the [\\d,]+ payment decisions CMS published for fiscal year ${DATA.fy}`));
   // No withheld rows to count, so none are reported; the page names no other year.

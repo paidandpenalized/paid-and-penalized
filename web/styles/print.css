@@ -16,7 +16,7 @@
     display: none !important;
   }
   .print-only { display: block; overflow-wrap: anywhere; }
-  .pill, .hosp__none, .stamp, .form, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart, .wi-cliff, .stmt, .money__range--pending { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pill, .hosp__none, .stamp, .form, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart, .wi-cliff, .stmt, .money__range-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .wi-side { position: static; }
   figure, .hosp__top > *, .wi-result, .wi-bars, .ws, tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }

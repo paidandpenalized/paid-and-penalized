@@ -74,8 +74,8 @@ export function scoreRange(hospitals) {
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
   const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
-  // Every dollar figure carries its likely range. Until the back-test's ranges exist the pages say they are pending
-  // (money-figures.js rangeLine), which is for review only: a production build stops here.
+  // Every dollar figure carries its likely range, from the back-test (dollars.json bands). A file without them (missing
+  // or null) cannot be published: a production build stops here.
   if (env === 'production' && dollars.bands == null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is missing or null); a production build cannot publish them');
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
@@ -159,9 +159,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const nat = nationalContext({ hospitals, master, model, dollars });
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn));
-    // The what-if's record carries the dollars at stake where this site has an estimate: the build and the browser read it alike.
-    const record = money.estimated ? { ...hospital, atStake: money.atStake } : hospital;
+    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn), dollars.bands);
+    // The what-if's record carries the dollars at stake and their likely range where this site has an estimate: the
+    // build and the browser read it alike.
+    const record = money.estimated ? { ...hospital, atStake: money.atStake, atStakeRange: money.ranges.hac } : hospital;
     emitPage({
       path: view.path,
       robots,
@@ -191,6 +192,10 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       assets,
       searchUrl,
       dollars,
+      names: (ccn) => {
+        const m = master.get(ccn);
+        return m ? { name: m.name, city: m.city, state: m.state } : null;
+      },
     }),
   });
 }

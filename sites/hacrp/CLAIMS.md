@@ -82,6 +82,9 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-73 | The value-based purchasing program multiplies each discharge's base operating DRG payment by the hospital's adjustment factor. | https://www.law.cornell.edu/cfr/text/42/412.160 | "the number that will be multiplied by the base operating DRG payment amount for each discharge from a hospital" | 2026-10-22 |
 | HACRP-74 | The HAC Reduction Program's payment is figured after the readmissions and value-based adjustments: 99% of the payment left once both are applied. | https://www.law.cornell.edu/cfr/text/42/412.172 | "determined after the application of the payment adjustment under the Hospital Readmissions Reduction Program … and the adjustment made under the Hospital Value-Based Purchasing Program" | 2026-10-22 |
 | HACRP-75 | The HAC cut is taken from the whole inpatient payment: teaching, low-income-patient (including uncompensated care), outlier, low-volume and capital payments as well as the base. | https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R3138CP.pdf | "calculated after all other IPPS per discharge payments, which includes adjustments for DSH (including the uncompensated care payment), IME, outliers … and capital payments" | 2026-10-22 |
+| HACRP-76 | A hospital's Medicare cost report records the HAC Reduction Program's payment reduction on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the HAC program payment reduction adjustment amount effective for discharges occurring on or after October 1, 2014." | 2026-10-23 |
+| HACRP-77 | A hospital's Medicare cost report records the readmissions program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the adjustment amount resulting from the HRR program in accordance with ACA 2010, §3025" | 2026-10-23 |
+| HACRP-78 | A hospital's Medicare cost report records the value-based purchasing program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the payment adjustment amount for the HVBP program in accordance with ACA 2010, §3001" | 2026-10-23 |
 
 ## Notes on the sources
 
@@ -217,6 +220,12 @@ A claim marked `unverified` may not be used in copy.
   change request 8900 (Pub. 100-04, Transmittal 3138, November 26, 2014), which also says: "For SCHs and MDHs, the HAC
   Reduction Program adjustment amount applies to either the Federal rate payment amount or the hospital-specific rate
   payment amount, whichever results in a greater operating IPPS payment."
+- **HACRP-76 to HACRP-78** cite the Provider Reimbursement Manual, Part 2, chapter 40 (Form CMS-2552-10), Transmittal
+  25 (February 27, 2026), section 4030.1, Worksheet E, Part A: lines 70.99 (HAC), 70.94 (readmissions) and 70.93
+  (value-based purchasing). Line 71 adds 70.93 and 70.94 and subtracts 70.99 ("Enter the result of line 67 plus the sum
+  of lines 69, 70 through 70.86, 70.88, 70.90, 70.91, 70.92, 70.93, 70.94, and lines 70.96 through 70.98; minus the sum
+  of lines 68, 70.87, 70.89, 70.95, and 70.99"). The back-test that reads them is described in docs/METHODS-LOG.md
+  (dollars methods_version 2).
 
 ## Link check (2026-10-22)
 

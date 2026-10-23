@@ -1,16 +1,17 @@
 // The hospital page's dollars (money.js, money-figures.js, pages/hospital.js), on pinned rows picked by property: the
 // pages read the dollar estimates for the HACRP file's year; every figure's numbers come from the hospital's row and
-// add up; a hospital without an estimate says why; the share sentence is the page's description; and a production
-// build refuses the pending ranges.
+// add up; every estimate carries its likely range from the back-test (dollars.json bands); a hospital without an
+// estimate says why; the share sentence is the page's description; and a production build refuses dollars without
+// their ranges.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
-import { cmsText, count, decimal, dollars, money } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money, moneyRange } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { generateHacrp } from '../web/generate.js';
-import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hospitalMoney } from '../web/money.js';
+import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hospitalMoney, nationalRange, rangeOf, sumRanges } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
 import { t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -27,13 +28,14 @@ const pick = (pred, what) => {
   return row;
 };
 const viewOf = (ccn) => hospitalView({ hospital: cms.get(ccn), model, estimate, footnotes: DATA.footnotes, master: DATA.master.get(ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText });
-const moneyOf = hospitalMoney;
+const BANDS = DATA.dollars.bands;
+const moneyOf = (row) => hospitalMoney(row, BANDS);
 const pageOf = (row) => {
   const h = cms.get(row.ccn);
   const m = moneyOf(row);
-  return hospitalPage({ ...PAGE_CTX, view: viewOf(row.ccn), hospital: h, master: DATA.master.get(row.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: m.estimated ? { ...h, atStake: m.atStake } : h, model, estimate, range: RANGE }, money: m });
+  return hospitalPage({ ...PAGE_CTX, view: viewOf(row.ccn), hospital: h, master: DATA.master.get(row.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: m.estimated ? { ...h, atStake: m.atStake, atStakeRange: m.ranges.hac } : h, model, estimate, range: RANGE }, money: m });
 };
-const text = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+const text = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\u2060/g, '').replace(/\s+/g, ' ');
 
 // One row of each kind the pages draw.
 const CUT = pick((r, h) => r.status === 'estimated' && r.cut && h.total !== null, 'estimated, scored, cut');
@@ -67,7 +69,7 @@ test('the contract: an estimated hospital has dollars at stake above $0, since t
   assert.doesNotThrow(() => dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === other ? { ...r, atStake: 0 } : r)) }, DATA.hospitals));
 });
 
-test('hospitalMoney: an estimated row carries its dollars and the dollars at stake per Medicare stay; any other only its status', () => {
+test('hospitalMoney: an estimated row carries its dollars, the dollars at stake per Medicare stay and its likely ranges; any other only its status', () => {
   for (const row of rows) {
     const m = moneyOf(row);
     assert.equal(m.status, row.status);
@@ -77,8 +79,30 @@ test('hospitalMoney: an estimated row carries its dollars and the dollars at sta
       continue;
     }
     assert.equal(m.perStay, row.atStake / row.bills, row.ccn);
+    // The ranges: the estimate times its stratum's two multipliers, low first, in whole dollars
+    const band = BANDS.measures.hac.strata.find((s) => s.stratum === row.stratum);
+    assert.deepEqual(m.ranges.hac, [Math.round(row.atStake * band.low), Math.round(row.atStake * band.high)], row.ccn);
+    assert.ok(m.ranges.hac[0] < m.ranges.hac[1], row.ccn);
+    if (row.net === 0) assert.equal(m.ranges.net, null, `${row.ccn}: a $0 net has no range`);
+    else assert.ok(m.ranges.net[0] <= m.ranges.net[1], row.ccn);
+    assert.deepEqual(m.backtest, { share: BANDS.highPct - BANDS.lowPct, fy: BANDS.fy });
   }
   assert.throws(() => hospitalMoney(undefined), TypeError);
+});
+
+test('the likely ranges: by stratum and measure, low first whatever the sign; none for $0; the nation\'s from the resampled ratio; a place\'s the sum of its hospitals\'', () => {
+  const band = BANDS.measures.net.strata[0];
+  assert.deepEqual(rangeOf(BANDS, 'net', band.stratum, -1000), [Math.round(-1000 * band.high), Math.round(-1000 * band.low)]);
+  assert.deepEqual(rangeOf(BANDS, 'net', band.stratum, 1000), [Math.round(1000 * band.low), Math.round(1000 * band.high)]);
+  assert.equal(rangeOf(BANDS, 'net', band.stratum, 0), null);
+  assert.throws(() => rangeOf(BANDS, 'hac', 'tiny/other', 1000), /no hac band/);
+  assert.throws(() => rangeOf(null, 'hac', band.stratum, 1000), /no hac band/);
+  assert.throws(() => rangeOf(BANDS, 'hac', band.stratum, NaN), RangeError);
+  assert.deepEqual(nationalRange(BANDS, 1_000_000), [Math.round(1_000_000 * BANDS.national.p10), Math.round(1_000_000 * BANDS.national.p90)]);
+  assert.deepEqual(sumRanges([[1, 3], null, [10, 30]]), [11, 33]);
+  assert.equal(sumRanges([null]), null);
+  // Each stratum's multipliers bracket a range that sits around the estimate: below it at the low end, above at the high.
+  for (const s of BANDS.measures.hac.strata) assert.ok(s.low < 1 && s.high > 1, s.stratum);
 });
 
 test('the statement adds up, in the payment\'s order: the parts make the total, the two programs adjust the base, the HAC cut takes 1% of everything after them', () => {
@@ -93,6 +117,10 @@ test('the statement adds up, in the payment\'s order: the parts make the total, 
     assert.equal(at.total.amount + at.hrrp.amount + at.hvbp.amount, at.after.amount, `${row.ccn}: total and the two adjustments make after`);
     assert.equal(at.hac.amount, row.hac);
     assert.equal(at.net.amount, row.hrrp + row.hvbp + row.hac, `${row.ccn}: net`);
+    // The HAC line of a cut and the net carry their likely ranges; a $0 net has none.
+    if (row.cut) assert.ok(text(at.hac.sub).includes(moneyRange(...m.ranges.hac)), `${row.ccn}: the cut's range`);
+    assert.equal(at.net.sub === null, row.net === 0, `${row.ccn}: a range on the net unless it is $0`);
+    if (row.net !== 0) assert.ok(text(at.net.sub).includes(moneyRange(...m.ranges.net)), `${row.ccn}: the net's range`);
     assert.deepEqual(lines.slice(-6).map((l) => l.key), ['total', 'hrrp', 'hvbp', 'after', 'hac', 'net']);
     // What each program applies to: the base for the two, everything after them for the HAC cut.
     const scale = Math.max(row.total, row.after);
@@ -110,13 +138,16 @@ test('the verdict: a cut, big beside the stamp with what it is; no cut, $0 and w
   assert.match(String(v.beside), /class="money money--cut"/);
   assert.ok(text(v.beside).includes(money(CUT.atStake)));
   assert.match(String(v.beside), /class="est-tag"/);
-  for (const part of [REDUCTION_TEXT, money(CUT.after), money(cut.perStay), mt('rangePending')]) assert.ok(text(v.below).includes(part), part);
+  for (const part of [REDUCTION_TEXT, money(CUT.after), money(cut.perStay), mt('rangeLikely'), moneyRange(...cut.ranges.hac)]) assert.ok(text(v.below).includes(part), part);
+  assert.match(String(v.below), /class="money__range-bar" style="--lo: 0\.000; --hi: 1\.000; --at: 0\.\d{3}"/, 'the bar marks the estimate inside its range');
+  assert.doesNotMatch(String(v.below), /\bpending\b/i);
 
   const near = moneyOf(NEAR);
   const nv = moneyVerdict(viewOf(NEAR.ccn), near);
   assert.ok(text(nv.beside).includes(money(0)));
   assert.doesNotMatch(String(nv.beside), /est-tag/, 'a $0 CMS decided is not an estimate');
   assert.ok(text(nv.below).includes(money(NEAR.atStake)));
+  assert.ok(text(nv.below).includes(moneyRange(...near.ranges.hac)), 'what a cut would have been carries its range');
   assert.ok(text(nv.below).includes(cmsText(viewOf(NEAR.ccn).distance.text)));
 
   const md = moneyVerdict(viewOf(MARYLAND.ccn), moneyOf(MARYLAND));
@@ -132,8 +163,10 @@ test('the verdict: a cut, big beside the stamp with what it is; no cut, $0 and w
 test('the record card\'s field: the estimate for a cut, $0 and what a cut would have been, exempt, or none', () => {
   const f = moneyField(moneyOf(CUT));
   assert.ok(text(f.value).includes(money(CUT.atStake)));
+  assert.ok(text(f.note).includes(moneyRange(...moneyOf(CUT).ranges.hac)));
   assert.equal(f.fieldCls, 'f-money');
   assert.ok(text(moneyField(moneyOf(NEAR)).note).includes(money(NEAR.atStake)));
+  assert.ok(text(moneyField(moneyOf(NEAR)).note).includes(moneyRange(...moneyOf(NEAR).ranges.hac)));
   assert.equal(moneyField(moneyOf(MARYLAND)).value, money(0));
   assert.ok(text(moneyField(moneyOf(NO_INPUTS)).value).includes(mt('moneyNone')));
 });
@@ -177,7 +210,9 @@ test('a hospital page: the cliff, then the statement, before the measures; the r
   assert.match(page, /<div class="field f-money">/);
   const data = JSON.parse(/<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(page)[1]);
   assert.equal(data.hospital.atStake, CUT.atStake);
-  assert.ok(page.includes(mt('rangePending')), 'the range shows as pending');
+  assert.equal(data.hospital.atStakeRange.join(), moneyOf(CUT).ranges.hac.join(), 'the what-if gets the range of the dollars at stake');
+  assert.ok(page.includes(mt('rangeLikely')), 'the ranges show');
+  assert.doesNotMatch(page, /\bpending\b/i, 'nothing is pending');
   assert.match(page, /\/assets\/share\.test\.js/);
   // No estimate: no cliff, no statement, no dollars at stake in the what-if.
   const md = pageOf(MARYLAND);

@@ -22,12 +22,56 @@ export function cutDollars(row) {
 // A hospital's HAC cut in a table cell (cutDollars's number): the dollars, or the words where there is no estimate.
 export const cutText = (dollars) => (Number.isFinite(dollars) ? money(dollars) : fill('tableMoneyNone'));
 
+// ---------- the likely ranges (the back-test's bands: dollars.json `bands`) ----------
+
+// [low, high] in whole dollars, low first: an estimate times two multipliers. A range has two ends: an estimate of $0
+// (a net with nothing to net, a hospital no program moves) has none, so null.
+function scaled(estimate, a, b) {
+  if (!Number.isFinite(estimate)) throw new RangeError(`a likely range needs an estimate, not ${estimate}`);
+  if (estimate === 0) return null;
+  const [x, y] = [Math.round(estimate * a), Math.round(estimate * b)];
+  return x <= y ? [x, y] : [y, x];
+}
+
+// A hospital's likely range for one measure ('hac' for its dollars at stake, 'net' for the net of the three programs):
+// its estimate times its stratum's two multipliers for that measure, from the back-test (each stratum's `low` and
+// `high`: in the back-test, the actual figure of 8 in 10 hospitals of the stratum fell in such a range around the
+// model's). bands: dollars.json's; stratum: the hospital's row's.
+export function rangeOf(bands, measure, stratum, estimate) {
+  const band = bands?.measures?.[measure]?.strata.find((s) => s.stratum === stratum);
+  if (!band) throw new RangeError(`rangeOf: no ${measure} band for stratum ${stratum}`);
+  return scaled(estimate, band.low, band.high);
+}
+
+// The national range: a national sum of the cut times the back-test's resampled ratio of what cost reports recorded
+// to what the model estimated, its 10th and 90th percentiles (bands.national).
+export function nationalRange(bands, estimate) {
+  if (!bands?.national) throw new RangeError('nationalRange: the bands have no national ratio');
+  return scaled(estimate, bands.national.p10, bands.national.p90);
+}
+
+// What a likely range means, from the bands: the share of the back-test's hospitals whose actual figure fell inside
+// one (the spread between its two percentiles) and the year the back-test was run on.
+export const backtestOf = (bands) => ({ share: bands.highPct - bands.lowPct, fy: bands.fy });
+
+// A place's range: its hospitals' ranges added up, low ends and high ends, from each hospital's [low, high] (null for
+// none). As wide as if every hospital's estimate erred the same way, so wider than a sum's errors usually run (the
+// nation's own range, resampled, is narrower). null when no hospital has one.
+export function sumRanges(ranges) {
+  const some = ranges.filter(Boolean);
+  if (!some.length) return null;
+  return [some.reduce((a, r) => a + r[0], 0), some.reduce((a, r) => a + r[1], 0)];
+}
+
 // row: the hospital's row of the dollar estimates. status: 'estimated', 'maryland', 'parhm' or 'no-inputs'; cut: CMS's
 // decision is Yes. An estimated hospital is its row (every dollar figure the pages draw, in whole dollars; negative is
-// money Medicare keeps) and perStay: the dollars at stake per Medicare stay (bill).
-export function hospitalMoney(row) {
+// money Medicare keeps), perStay: the dollars at stake per Medicare stay (bill), ranges: the likely range (rangeOf)
+// of its dollars at stake (hac) and of its net (net, null for a net of $0), and backtest: what a range means (backtest:
+// the share of the back-test's hospitals a range held, and the year it was run on). bands: dollars.json's.
+export function hospitalMoney(row, bands) {
   if (!row) throw new TypeError('hospitalMoney: a row of the dollar estimates is required');
   if (row.status !== 'estimated') return { status: row.status, cut: row.cut, estimated: false };
   if (!(row.bills > 0)) throw new RangeError(`hospitalMoney: ${row.ccn} has no Medicare bills to divide by`);
-  return { ...row, estimated: true, perStay: row.atStake / row.bills };
+  const ranges = { hac: rangeOf(bands, 'hac', row.stratum, row.atStake), net: rangeOf(bands, 'net', row.stratum, row.net) };
+  return { ...row, estimated: true, perStay: row.atStake / row.bills, ranges, backtest: backtestOf(bands) };
 }

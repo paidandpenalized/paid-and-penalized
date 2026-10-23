@@ -23,3 +23,6 @@ export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
 export const COUNT_NOTE = 'count-note';
 // The Methods page's section on the dollar estimates: every dollar figure's estimate tag links to it.
 export const DOLLARS_HREF = `${METHODS_PATH}#dollars`;
+// Its part on the back-test, where the likely ranges come from: every range's words link to it.
+export const BACKTEST_ID = 'backtest';
+export const BACKTEST_HREF = `${METHODS_PATH}#${BACKTEST_ID}`;

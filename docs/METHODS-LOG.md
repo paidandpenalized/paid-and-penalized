@@ -192,6 +192,11 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - The national range: the sum of the cut hospitals' estimates times the 10th and 90th percentiles of sum(actual) /
   sum(model) over the 131 compared cut hospitals, resampled with replacement 10,000 times (a bootstrap of hospitals;
   Python's Mersenne Twister, seed 20261023). It reflects one year's back-test, not how the next year's will move.
+- On the pages (the HACRP site): a hospital's range is its estimate times its stratum's multipliers, the HAC cut's for
+  its dollars at stake and the net's for its net (no range on a net of $0); the nation's is the headline cut times the
+  bootstrap's two percentiles; a state's or metro area's is its cut hospitals' ranges added up, low ends and high ends,
+  as wide as if every hospital's estimate erred the same way (wider than the resampled national range). `bands.volumeFy`
+  is the claims year of the back-test's volume (FY2022: the FY2024 impact file's README, "FY 2022 MEDPAR").
 - Checks, set before any error was computed: the HAC cut's overall median error within -0.25 to 0.25 (a factor of
   1.28 either way would mean a structural mistake, not drift); at least 180 hospitals in the comparison set (six strata
   of 30) and at least 90 cut hospitals compared (three bed bands of 30). A failing check writes nothing, as the national

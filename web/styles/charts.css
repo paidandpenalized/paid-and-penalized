@@ -386,6 +386,19 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-tree__label { fill: var(--ink); font-weight: 700; font-size: 12px; }
 .chart-tree__sub { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; }
 /* Across the line (acrossLine.js): a cut is a filled dot, the cut not taken a ring; a place's own in full ink. */
+/* The back-test's strips (bandStrips.js): each group's likely range a pale band (hatched, dashed, where borrowed from
+   a wider group), every hospital a penalty dot ringed in the paper, exact a dotted hairline. */
+.chart-bt__ruler { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__band { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__band:not(.chart-bt__band--borrowed) { fill: var(--paper-2); }
+.chart-bt__band--borrowed { stroke-dasharray: 3 2; }
+.chart-bt__dot { fill: var(--pen); fill-opacity: 0.85; stroke: var(--paper); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__exact { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 1 3; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) {
+  .chart-bt__ruler, .chart-bt__band, .chart-bt__exact { stroke: CanvasText; }
+  .chart-bt__band:not(.chart-bt__band--borrowed) { fill: Canvas; }
+  .chart-bt__dot { fill: CanvasText; fill-opacity: 1; stroke: Canvas; }
+}
 .chart-across__dot { fill: var(--paper); fill-opacity: 0.6; stroke: var(--ink); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 .chart-across__dot--over { fill: var(--pen); fill-opacity: 0.85; stroke: var(--paper); }
 .chart-across__dot--faint { opacity: 0.22; }

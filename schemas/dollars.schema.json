@@ -554,6 +554,7 @@
       "additionalProperties": false,
       "required": [
         "fy",
+        "volumeFy",
         "sources",
         "window",
         "minStratum",
@@ -567,6 +568,10 @@
       ],
       "properties": {
         "fy": {
+          "$ref": "common.schema.json#/$defs/fy"
+        },
+        "volumeFy": {
+          "description": "The claims year of the back-test's impact-file volume.",
           "$ref": "common.schema.json#/$defs/fy"
         },
         "sources": {

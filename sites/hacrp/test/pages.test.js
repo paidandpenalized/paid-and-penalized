@@ -23,7 +23,7 @@ import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
-import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, RANGED, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -42,7 +42,6 @@ const generate = (dir, env, options) => {
 // that only check indexing; the production test keeps every hospital.
 const SLICE = {
   ...DATA,
-  dollars: RANGED,
   hospitals: [
     (h) => h.total !== null && h.paymentReduction === 'Yes',
     (h) => h.total !== null && h.paymentReduction === 'No',
@@ -71,7 +70,7 @@ const levels = (text) => [...text.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number
 
 test('production, released: every hospital page and every place page plus /hacrp/, one <h1> each; odd rows as CMS published them', () =>
   temp(async (dir) => {
-    const ctx = await generate(dir, 'production', { released: true, data: { ...DATA, dollars: RANGED } });
+    const ctx = await generate(dir, 'production', { released: true, data: DATA });
     assert.equal(DATA.hospitals.length, 3055);
     assert.equal(ctx.pages, DATA.hospitals.length + PLACES.list.length + 3, 'the hospitals, the places, /hacrp/, the data dictionary page and Methods');
     assert.equal(readdirSync(join(dir, 'hacrp', 'hospital')).length, DATA.hospitals.length);
@@ -229,7 +228,7 @@ test('A1 failing stops the build and names the mismatched CCN', async () => {
   const moved = DATA.hospitals.map((h) => ({ ...h }));
   const i = moved.findIndex((h) => h.total !== null && h.paymentReduction === 'No');
   moved[i] = { ...moved[i], ccn: '990001', paymentReduction: 'Yes' };
-  await temp((dir) => assert.rejects(generate(dir, 'production', { data: { ...DATA, dollars: RANGED, hospitals: moved } }), /A1 failed.*990001/));
+  await temp((dir) => assert.rejects(generate(dir, 'production', { data: { ...DATA, hospitals: moved } }), /A1 failed.*990001/));
 });
 
 test('hostile text in a hospital name renders as text in the page, the title and the JSON-LD', () => {

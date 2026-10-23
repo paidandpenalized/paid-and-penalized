@@ -314,3 +314,15 @@ test('NHSN fields need an HAI period whose start and end both read as dates; any
   }
   assert.equal(make({ start: '01/01/2023', end: '12/31/2024' }, 'sandbox').predicted, null, 'the baseline must be CMS’s');
 });
+
+test('the money in the head: a certain cut carries its likely range; too close to call keeps "$0 or $X"; no cut, none', () => {
+  const page = { name: 'INVENTED HOSPITAL', fy: 2026, path: '/hacrp/990012/', source: SOURCE, boundaryText: { highestNo: '0.3333', lowestYes: '0.3334' }, baseline: 'cms' };
+  const texts = whatIfTexts({ hospital: { ...H.yes, atStake: 250_000, atStakeRange: [200_000, 310_000] }, model, ...page });
+  assert.equal(texts.money.head({ lo: -250_000, hi: -250_000 }), 'estimated cut, likely $200–310K');
+  assert.equal(texts.money.head({ lo: -250_000, hi: 0 }), 'estimated cut');
+  assert.equal(texts.money.amount({ lo: -250_000, hi: 0 }), '$0 or $250K');
+  assert.equal(texts.money.head({ lo: 0, hi: 0 }), 'no cut');
+  // Without a range on the record (an older page's data), the head says what it said before.
+  const bare = whatIfTexts({ hospital: { ...H.yes, atStake: 250_000 }, model, ...page });
+  assert.equal(bare.money.head({ lo: -250_000, hi: -250_000 }), 'estimated cut');
+});

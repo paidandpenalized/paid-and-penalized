@@ -46,6 +46,9 @@ HACRP = f"hacrp-fy{FY}"
 HCRIS = hcris_extract.PIN_ID
 SOURCES = (HACRP, *pin_ids(FY), HCRIS)
 WINDOW = ("2023-10-01", "2024-09-30")  # the federal fiscal year FY2024
+# The claims year of the FY2024 impact file's volume (its README: "MARCH 2023 UPDATE OF FY 2022 MEDPAR"), two years
+# before the rule's, as FY2026's file's is FY2024 (emit_dollars.VOLUME_FY).
+VOLUME_FY = 2022
 STATE_CODES = {"21": MARYLAND, "40": "PR"}  # a CCN's first two digits: Maryland, Puerto Rico
 # CMS publishes no Pennsylvania Rural Health Model participant file with CCNs (as for FY2026, emit_dollars.PARHM); the
 # back-test leaves participants out by the model's own cost-report worksheet instead.
@@ -178,6 +181,7 @@ def bands_json(result=None):
     hac = [m for m in measure_pairs(members, "hac") if bands.pair_kind(m["model"]["hac"], m["actual"]["hac"]) == "compared"]
     return {
         "fy": FY,
+        "volumeFy": VOLUME_FY,
         "sources": list(SOURCES),
         "window": list(WINDOW),
         "minStratum": bands.MIN_STRATUM,
