@@ -6,11 +6,11 @@ import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { cmsText, count, decimal, isoDate, longDate } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, isoDate, longDate, money, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
-import { SHORT_NAMES } from './constants.js';
+import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
@@ -164,3 +164,89 @@ ${withheld ? html`<div><dt>${t('receiptWithheld')}</dt><dd>${count(withheld)}</d
 </dl>
 </div>`;
 }
+
+// ---------- how this site estimates the dollars ----------
+
+// The payment order, drawn on the year's real proportions: the national payment (the headline set's) as one bar split
+// into the base and everything else, a bracket over the base for the two programs that adjust it, and one under the
+// whole bar for the HAC cut, taken last. As the page's figure n.
+export function dollarsOrderFigure(headline, { n, source, fy }) {
+  const base = headline.base;
+  const rest = headline.total - headline.base;
+  const share = base / headline.total;
+  const chart = html`<div class="order" style="--base: ${share.toFixed(4)}" aria-hidden="true">
+<p class="order__brace order__brace--base"><span>${t('orderTwo')}</span></p>
+<div class="order__bar"><p class="order__base"><span class="order__name">${t('orderBase')}</span> <span class="order__money">${money(base)}</span><span class="order__note">${t('orderBaseNote')}</span></p><p class="order__rest"><span class="order__name">${t('orderRest')}</span> <span class="order__money">${money(rest)}</span><span class="order__note">${t('orderRestNote')}</span></p></div>
+<p class="order__brace order__brace--all"><span>${fill('orderHac', { pct: REDUCTION_TEXT })}</span></p>
+</div>`;
+  return figure({
+    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-payment-order',
+    takeaway: fill('orderTakeaway', { share: pct(share, 0), fy: String(fy) }),
+    table: {
+      columns: [{ name: t('orderColPart') }, { name: t('orderColMoney'), numeric: true }],
+      rows: [[t('orderBase'), num(dollars(base), base)], [t('orderRest'), num(dollars(rest), rest)]],
+    },
+  });
+}
+
+// The formula as the pipeline's stations, with the year's real national numbers (the headline set's), the HAC cut's
+// station set apart.
+export function dollarsPipeline(headline) {
+  const one = decimal(1, 0);
+  const stations = [
+    { name: t('dpipe1'), value: money(headline.base), note: fill('dpipe1Note', { hospitals: count(headline.hospitals) }) },
+    { name: t('dpipe2'), value: money(headline.hrrp), note: fill('dpipe2Note', { one }) },
+    { name: t('dpipe3'), value: money(headline.hvbp), note: fill('dpipe3Note', { one }) },
+    { name: t('dpipe4'), value: `+${money(headline.total - headline.base)}`, note: t('dpipe4Note') },
+    { name: t('dpipe5'), value: money(headline.after), note: t('dpipe5Note') },
+    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, cut: count(headline.cut), yes: count(headline.yes) }) },
+  ];
+  return html`<ol class="pipe pipe--dollars" role="list">${stations.map((s, i) => html`<li class="pipe__st${i === 5 ? ' pipe__st--check' : ''}">
+<p class="pipe__n">${String(i + 1)}</p>
+<p class="pipe__name">${s.name}</p>
+<p class="pipe__value">${s.value}</p>
+<p class="pipe__note">${s.note}</p>
+</li>`)}</ol>`;
+}
+
+// The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
+export function assumptionsTable({ fy, volumeFy }) {
+  const rows = [
+    ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE'], ['assumeShare', 'assumeShareE'],
+    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'], ['assumeSch', 'assumeSchE'],
+    ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
+    ['assumeFfs', 'assumeFfsE'],
+  ];
+  return printout(html`<table class="gb assume">
+<thead><tr><th scope="col">${t('assumeColA')}</th><th scope="col">${t('assumeColE')}</th></tr></thead>
+<tbody>${rows.map(([a, e, v]) => html`<tr><th scope="row">${v ? fill(a, v) : t(a)}</th><td>${t(e)}</td></tr>`)}</tbody>
+</table>`);
+}
+
+// How a dollar check's value and range read on the tape, by check.
+const CHECK_FORMAT = {
+  hrrp_share: { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) },
+  vbp_net: { value: (v) => money(v), range: (c) => fill('dcheckAtMost', { high: money(c.high) }) },
+  hac_share: { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) },
+  hac_count: { value: (v) => count(v), range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
+  yes_unestimated: { value: (v) => count(v), range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
+};
+
+// The national checks as an adding-machine tape, in the self-check's style: each check, this build's value, the range
+// it is held to, and pass or fail.
+export function dollarChecks(checks) {
+  return html`<div class="receipt receipt--dollars">
+<p class="receipt__head">${t('dchecksHead')}</p>
+<table class="receipt__t">
+<thead><tr><th scope="col">${t('dcheckColCheck')}</th><th scope="col">${t('dcheckColValue')}</th><th scope="col">${t('dcheckColRange')}</th><th scope="col"><span class="vh">${t('receiptColOk')}</span></th></tr></thead>
+<tbody>${checks.map((c) => {
+    const f = CHECK_FORMAT[c.id];
+    if (!f) throw new RangeError(`dollarChecks: no words for check "${c.id}"`);
+    return html`<tr><th scope="row">${t(`dcheck_${c.id}`)}</th><td>${c.value === null ? t('receiptDash') : f.value(c.value)}</td><td>${f.range(c)}</td><td class="receipt__ok">${t(c.pass ? 'dcheckPass' : 'dcheckFail')}</td></tr>`;
+  })}</tbody>
+</table>
+</div>`;
+}
+
+// The back-test's place: a placeholder, plainly one, until the check runs.
+export const backtestPlaceholder = () => html`<div class="backtest-pending"><p>${t('backtestPending')}</p></div>`;

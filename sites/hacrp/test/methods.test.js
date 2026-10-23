@@ -58,9 +58,9 @@ test('the Methods page is written, indexable, with one h1, its ids once and ever
   assert.ok(levels.every((l, i) => (i === 0 ? l === 1 : l <= levels[i - 1] + 1)), `heading levels ${levels}`);
 });
 
-test('the sections run pipeline, check, decisions, formula, estimate, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
+test('the sections run pipeline, check, decisions, formula, estimate, dollars, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
   const sections = [...PAGE.matchAll(/<section class="msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
-  assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
+  assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'dollars', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
   const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="meth__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
   assert.deepEqual(toc.map(([id]) => id), sections);
   assert.deepEqual(toc.map(([, n]) => n), sections.map((_, i) => i + 1));
@@ -83,7 +83,7 @@ test('the nav marks Methods as current and nothing else; the page loads the figu
   const bar = /<header class="topbar">[\s\S]*?<\/header>/.exec(PAGE)[0];
   const current = [...bar.matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   assert.deepEqual(current, ['methods']);
-  assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'map', 'history', 'methods']);
+  assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);
   for (const key of ['figure', 'topbar', 'hacrp-search']) assert.ok(PAGE.includes(`src="${ASSETS.js[key]}"`), key);
 });
 
@@ -120,7 +120,7 @@ test('the proof and decision figures, numbered 1 and 2, say the same totals as t
   assert.ok(numbers(caption(1)).includes(decimal(Math.max(...HD.checks.map((c) => c.check.maxError)), 5)));
   assert.ok(numbers(caption(2)).includes(count(decided)));
   assert.ok(numbers(caption(2)).includes('0'), 'none out of order');
-  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3], 'the proof strips, the decision rules and the periods');
+  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3, 4], 'the proof strips, the decision rules, the payment order and the periods');
 });
 
 test('the notes under the check state what the checks found: the rows withheld, CMS\'s rule for the line and where its line sits against it, and the biggest tie at the line', () => {
@@ -217,7 +217,7 @@ test('the changes and the sources: every changelog entry with its date and items
 });
 
 test('the pipeline\'s six stations carry the newest year\'s real numbers', () => {
-  const stations = [...PAGE.matchAll(/<li class="pipe__st( pipe__st--check)?">\n<p class="pipe__n">(\d)<\/p>\n<p class="pipe__name">([^<]*)<\/p>\n<p class="pipe__value">([^<]*)<\/p>/g)];
+  const stations = [.../<ol class="pipe" role="list">[\s\S]*?<\/ol>/.exec(PAGE)[0].matchAll(/<li class="pipe__st( pipe__st--check)?">\n<p class="pipe__n">(\d)<\/p>\n<p class="pipe__name">([^<]*)<\/p>\n<p class="pipe__value">([^<]*)<\/p>/g)];
   assert.deepEqual(stations.map((m) => m[2]), ['1', '2', '3', '4', '5', '6']);
   assert.deepEqual(stations.map((m) => Boolean(m[1])), [false, false, false, false, true, false], 'the check stands out');
   const last = HD.checks.at(-1).check;
@@ -234,7 +234,7 @@ test('the pipeline\'s six stations carry the newest year\'s real numbers', () =>
 });
 
 test('the periods figure: a row a year with the dates behind it, and the lead from the newest year\'s data to its payment year', () => {
-  const fig = /<figure class="fig" id="figure-3" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
+  const fig = /<figure class="fig" id="figure-4" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
   const rows = [...fig.slice(fig.indexOf('<tbody>')).matchAll(/<tr>(.*?)<\/tr>/gs)].map(([, tr]) => [...tr.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => text(c[1])));
   assert.equal(rows.length, HD.fys.length);
   assert.deepEqual(rows.map((r) => r[0]), HD.fys.map((fy) => `FY${fy}`));
@@ -259,7 +259,7 @@ test('a build without the history still writes the Methods page: the newest year
   assert.equal(page.match(/<h1[\s>]/g).length, 1);
   const card = /<div class="receipt">[\s\S]*?<\/dl>/.exec(page)[0];
   assert.deepEqual([...card.matchAll(/<tr><th scope="row">FY(\d+)<\/th>/g)].map((m) => Number(m[1])), [DATA.fy]);
-  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3]);
+  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3, 4]);
   assert.match(page, new RegExp(`This site recomputed [\\d,]+ scores for fiscal year ${DATA.fy}`));
   assert.match(page, new RegExp(`Of the [\\d,]+ payment decisions CMS published for fiscal year ${DATA.fy}`));
   // No withheld rows to count, so none are reported; the page names no other year.

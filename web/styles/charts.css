@@ -383,3 +383,39 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 }
 .chart-cliff__amount { fill: var(--ink); font-family: var(--font-type); font-weight: 700; letter-spacing: -0.02em; }
 .chart-cliff__amount--pen { fill: var(--pen-ink); }
+
+/* The treemap (treemap.js): tiles in the penalty ink on the paper's hairlines, each group boxed under its name. */
+.chart-tree__group { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-tree__tile, .chart-tree__tiles rect { fill: var(--pen); stroke: var(--paper); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.chart-tree__tiles .chart-mark:hover rect, .chart-tree__tiles .chart-mark.is-active rect { fill: var(--pen-seq-5); }
+.chart-tree__label { fill: var(--ink); font-weight: 700; font-size: 12px; }
+.chart-tree__sub { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; }
+/* Across the line (acrossLine.js): a cut is a filled dot, the cut not taken a ring; a place's own in full ink. */
+.chart-across__dot { fill: var(--paper); fill-opacity: 0.6; stroke: var(--ink); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.chart-across__dot--over { fill: var(--pen); fill-opacity: 0.85; stroke: var(--paper); }
+.chart-across__dot--faint { opacity: 0.22; }
+.chart-across__sub { font-weight: 400; fill: var(--ink-2); }
+/* Paired shares (pairBars.js): the count's share in ink, the money's in the penalty ink. */
+.chart-pair__a { fill: var(--ink-3); }
+.chart-pair__b { fill: var(--pen); }
+.chart-pair__v { font-size: 11px; fill: var(--ink-2); }
+.chart-pair__v--b { fill: var(--pen-ink); font-weight: 700; }
+/* Proportional circles on the US map (geo.js usBubbles). */
+.chart-bubbles__land { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.chart-bubble { fill: var(--pen); fill-opacity: 0.55; stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-mark:hover .chart-bubble, .chart-mark.is-active .chart-bubble { fill-opacity: 0.85; }
+/* A column chart's bonus columns (columns.js): money paid to a hospital. */
+.chart-col--rew { fill: var(--rew); }
+/* The rule by the money (moneyRule.js) shares the score rule's inks (chart-rule__*). */
+@media (forced-colors: active) {
+  .chart-tree__group { fill: Canvas; stroke: CanvasText; }
+  .chart-tree__tile, .chart-tree__tiles rect { fill: CanvasText; stroke: Canvas; }
+  .chart-across__dot { fill: Canvas; stroke: CanvasText; }
+  .chart-across__dot--over { fill: CanvasText; stroke: Canvas; }
+  .chart-across__dot--faint { opacity: 0.4; }
+  .chart-pair__a { fill: GrayText; }
+  .chart-pair__b { fill: CanvasText; }
+  .chart-bubbles__land { fill: Canvas; stroke: GrayText; }
+  .chart-bubble { fill: CanvasText; fill-opacity: 0.5; stroke: CanvasText; }
+  .chart-col--rew { fill: Highlight; }
+}

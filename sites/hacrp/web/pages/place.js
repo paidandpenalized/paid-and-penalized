@@ -8,7 +8,7 @@ import { historySource, placeYearsFigure } from '../history-figures.js';
 import { nameInText } from '../places.js';
 import { fill as hfill } from '../history/copy.js';
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, ordinal, pct, shownAbove } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, ordinal, pct, shownAbove } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -21,6 +21,11 @@ import { fill, t } from '../program/copy.js';
 import { childrenTable, placeHistFigure, placeMapFigure, placeMeasuresFigure, psec, ruleFigure } from '../program-figures.js';
 import { ancestors } from '../places.js';
 import { asofBar, citation, dataLinks, hospitalTable, printLink, siteHeader } from './parts.js';
+import { acrossFigure, ACROSS_WINDOW } from '../money-part.js';
+import { nearLine, placeMoney } from '../money-data.js';
+import { estTag, moneySourceText, rangeLine } from '../money-figures.js';
+import { fill as mfill, t as mt } from '../money/copy.js';
+import { money as moneyText } from '../../../../web/render/format.js';
 
 const KIND = { region: 'placeKindRegion', division: 'placeKindDivision', state: 'placeKindState', metro: 'placeKindMetro' };
 const KINDS_WORDS = { region: 'kpiKindsRegion', division: 'kpiKindsDivision', state: 'kpiKindsState' };
@@ -47,8 +52,20 @@ function rankOf(places, place) {
 
 const points = (diff) => `${diff >= 0 ? '+' : '−'}${decimal(Math.abs(diff) * 100, 1)} pts`;
 
+// The place's estimate against the nation's: its cut hospitals' dollars as a share of the nation's, and its cut per
+// Medicare stay beside the nation's (formField options; none for a place this site has no estimate in).
+function moneyFields(place, md) {
+  const pm = placeMoney(md, place.ccns);
+  if (!pm.rows.length) return [];
+  const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span> ${estTag()}`;
+  return [
+    { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine({ range: null })}` },
+    pm.perStay !== null && { label: mt('placePerStay'), value: dollars(Math.round(pm.perStay)), note: mfill('placePerStayNote', { nation: dollars(Math.round(md.perStay)) }) },
+  ].filter(Boolean);
+}
+
 // The summary form against the nation.
-function placeCard(place, { pd, places, fy }) {
+function placeCard(place, { pd, places, fy, md }) {
   const c = place.counts;
   const nation = pd.counts.yes / pd.counts.decided;
   const share = c.decided ? c.yes / c.decided : null;
@@ -62,6 +79,7 @@ function placeCard(place, { pd, places, fy }) {
     c.median !== null && { label: t('kpiMedian'), value: cmsText(decimal(c.median, DP)), note: fill('kpiMedianNote', { nation: cmsText(decimal(pd.medianScore, DP)) }) },
     c.scored > 0 && { label: fill('kpiAllSix', { six: String(MEASURE_IDS.length) }), value: count(c.allSix), note: fill('kpiAllSixNote', { scored: count(c.scored), share: pct(c.allSix / c.scored, 0), nation: pct(allSix, 0) }) },
     { label: t('kpiAssigned'), value: count(c.assigned), note: t('kpiAssignedNote') },
+    ...(md ? moneyFields(place, md) : []),
   ].filter(Boolean);
   return html`<div class="place__card">
 <div class="form prog__summary">
@@ -74,7 +92,9 @@ ${share !== null ? stamp({ label: fill('placeStamp', { share: pct(share, 0) }), 
 
 // place: a buildPlaces() entry; places: all of them; pd: programData(); hospitalRows: Map ccn -> { name, city,
 // totalText, decision, point, href } for the map; shapes, counties: the atlas; searchUrl: the hospitals asset.
-export function placePage({ place, places, pd, model, hospitalRows, master, shapes, counties, fy, periods, source, searchUrl, exploreUrl = null, robots, assets, hd = null }) {
+// md: moneyData() (money-data.js), for the place's estimate, its hospitals across the line and the children's dollars;
+// null for none.
+export function placePage({ place, places, pd, model, hospitalRows, master, shapes, counties, fy, periods, source, searchUrl, exploreUrl = null, robots, assets, hd = null, md = null }) {
   const c = place.counts;
   const fyText = String(fy);
   const nation = pd.counts.yes / pd.counts.decided;
@@ -94,9 +114,12 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const map = placeMapFigure({ place, places, pd, shapes, counties, hospitalRows, master, next: figureNo, source: line });
   const hist = c.decided ? placeHistFigure({ place, pd, model, next: figureNo, source: line }) : null;
   const measures = placeMeasuresFigure({ place, model, next: figureNo, source: line });
-  const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
-  const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation });
   const ccns = new Set(place.ccns);
+  // Its hospitals across the line, when any sits within the figure's window of it.
+  const across = md && nearLine(md, ACROSS_WINDOW).some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
+  const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
+  const kidMoney = md && { head: mt('placeChildMoney'), cell: (list) => moneyText(placeMoney(md, list ?? []).money) };
+  const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation, money: kidMoney });
 
   const body = html`<article class="wrap page page--prog page--place"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
 ${breadcrumb(places, place)}
@@ -107,12 +130,13 @@ ${breadcrumb(places, place)}
 <p class="prog__lede place__deck">${deck}</p>
 ${notes.map((s) => html`<p class="note">${s}</p>`)}
 </div>
-${placeCard(place, { pd, places, fy })}
+${placeCard(place, { pd, places, fy, md })}
 </header>
 ${ruleFigure(pd, { highlight: ccns, searchUrl, caption: fill('placeRuleCaption', { name: nameInText(place) }), here: c.yes })}
 ${map && psec({ id: 'where', level: 2, heading: t('placeMapHeading'), text: html`<p>${t('placeMapText')}</p>`, figure: map })}
 ${hist && psec({ id: 'scores', level: 2, heading: t('placeHistHeading'), text: html`<p>${t('placeHistText')}</p>`, figure: hist })}
 ${measures && psec({ id: 'measures', level: 2, heading: t('placeMeasuresHeading'), text: html`<p>${t('placeMeasuresText')}</p>`, figure: measures })}
+${across && psec({ id: 'across', level: 2, wide: true, heading: mfill('placeAcrossHeading', { name: nameInText(place, { start: true }) }), text: html`<p>${mfill('placeAcrossText', { window: decimal(ACROSS_WINDOW, 2), name: nameInText(place) })}</p>`, figure: across })}
 ${years && psec({ id: 'years', level: 2, wide: true, heading: hfill('placeYearsHeading', { name: nameInText(place, { start: true }) }), text: html`<p>${hfill('placeYearsText', { name: nameInText(place) })}</p>`, figure: years })}
 ${kids ?? ''}
 ${hospitalTable({ fy, searchUrl, source, heading: fill('placeTableHeading', { name: nameInText(place) }), intro: t('placeTableIntro'), caption: fill('placeTableCaption', { name: nameInText(place) }), noScript: t('placeTableNoScript'), area: [...ccns].join(' ') })}

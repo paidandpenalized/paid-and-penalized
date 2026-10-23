@@ -45,7 +45,7 @@ export const asofBar = lastCall(({ fy, periods, source, typeFy = null, geocoded 
 });
 
 // The program page's sections the top bar's nav links to, by id (program.js gives each section its id), then Methods.
-export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'history']);
+export const SECTIONS = Object.freeze(['how', 'fy', 'money', 'map', 'history']);
 
 // The HACRP top bar (layout.js programHeader): the program's name and edition tag, the search (markup, or '') and
 // the numbered nav to the program page's sections and Methods. current: the nav item to mark (an id), or null.
@@ -53,7 +53,7 @@ export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'history']);
 export const siteHeader = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current = null, searchUrl = null }) => {
   const { path, title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
-  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), map: t('navHospitals'), history: t('navHistory') };
+  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
   return programHeader({
     name: title,
     href: path,

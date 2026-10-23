@@ -749,3 +749,60 @@
 .smallmaps__sw--zero { background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--ink-3); }
 .smallmaps__sw--empty { box-shadow: inset 0 0 0 1px var(--ink-3); outline: 1px dashed var(--ink-3); outline-offset: -1px; }
 .smallmaps__sw--ring { box-shadow: inset 0 0 0 2px var(--ink); }
+
+/* ---------- the money on the program page (money-part.js) ---------- */
+/* The summary form's estimate across both columns of the form. */
+.prog__summary > .field.f-money { flex-basis: 100%; }
+.prog__summary .f-money .field__note { display: grid; gap: 6px; justify-items: start; }
+/* The score rule's two views: the buttons beside the caption. */
+.rulefig__view[hidden], .rulefig__cap [hidden] { display: none; }
+.rulefig__foot { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 24px; }
+.rulefig__foot .rulefig__cap { flex: 1 1 24rem; }
+.rulefig__pick { display: flex; gap: 0; order: 2; }
+.rulefig__pick[hidden] { display: none; }
+/* The states' map: one drawing, two layers of circles; the figure's data-view says which shows. */
+.bubbles { display: grid; gap: 8px; }
+.bubbles[data-view="total"] .chart-bubbles__layer--stay, .bubbles[data-view="stay"] .chart-bubbles__layer--total { display: none; }
+/* Three programs, three shapes: side by side from 900px, stacked under. */
+.three { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+@media (min-width: 900px) { .three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; } }
+.three__p { display: grid; gap: 2px; align-content: start; padding-top: 10px; border-top: 3px solid var(--ink); }
+.three__name { font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.three__money { font: 700 clamp(1.8rem, 3.4vw, 2.4rem)/1.05 var(--font-type); letter-spacing: -0.02em; }
+.three__money--pen { color: var(--pen-ink); }
+.three__shape { font: 400 var(--fs-md)/1.35 var(--font-display); }
+.three__shape span { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
+.three__axis { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.three .chart { max-width: none; }
+
+/* ---------- Methods: how this site estimates the dollars ---------- */
+/* The payment order: the bar on the year's proportions (--base), a bracket over the base and one under the whole. */
+.order { display: grid; gap: 6px; margin: 4px 0; }
+.order p { max-width: none; }
+.order__bar { display: grid; grid-template-columns: calc(var(--base) * 100%) minmax(0, 1fr); border: var(--rule) solid var(--ink); }
+.order__base, .order__rest { display: grid; gap: 2px; align-content: start; min-width: 0; padding: 10px 12px 12px; }
+.order__base { background: var(--ink-2); color: var(--paper); }
+.order__rest { background: var(--paper-2); border-left: var(--rule) solid var(--ink); }
+.order__name { font: 700 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.order__money { font: 700 var(--fs-lg)/1.1 var(--font-type); }
+.order__note { font: 400 var(--fs-xs)/1.35 var(--font-type); opacity: 0.85; }
+.order__brace { position: relative; margin: 0; padding: 4px 8px; font: 600 var(--fs-sm)/1.35 var(--font-body); }
+.order__brace--base { width: calc(var(--base) * 100%); border: 2px solid var(--ink); border-bottom: 0; border-radius: 6px 6px 0 0; }
+.order__brace--all { border: 2px solid var(--pen); border-top: 0; border-radius: 0 0 6px 6px; color: var(--pen-ink); background: var(--pen-tint); }
+@media (max-width: 600px) { .order__brace--base { width: auto; } }
+/* The assumptions: Thirty Day Readmissions' two columns. */
+.assume th[scope="row"] { font-weight: 400; font-family: var(--font-body); width: 55%; }
+.assume td { font-family: var(--font-body); color: var(--ink-2); }
+/* The dollar checks' tape: wider than the self-check's, its words in two columns. */
+.receipt--dollars { width: min(100%, 38rem); transform: rotate(-0.4deg); }
+.receipt--dollars .receipt__head { max-width: none; }
+.receipt--dollars .receipt__t th[scope="row"] { padding-right: 12px; text-align: left; }
+.receipt--dollars .receipt__t td { white-space: nowrap; padding-left: 10px; }
+/* The back-test's place until it runs: plainly a placeholder. */
+.backtest-pending { display: grid; place-items: center; min-height: 160px; border: 2px dashed var(--ink-2); background: var(--hatch-fill); }
+.backtest-pending p { padding: 4px 10px; background: var(--paper); font: 700 var(--fs-sm)/1.4 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+@media (forced-colors: active) {
+  .order__base { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  html :is(.backtest-pending) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
+  .backtest-pending p { background: Canvas; color: CanvasText; }
+}

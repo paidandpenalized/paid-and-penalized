@@ -548,12 +548,12 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
   assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
-  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'map', 'history', 'methods']);
-  for (const [id, href] of targets.slice(0, 4)) {
+  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'money', 'map', 'history', 'methods']);
+  for (const [id, href] of targets.slice(0, 5)) {
     assert.equal(href, `/hacrp/#${id}`);
     assert.match(program, new RegExp(`<[a-z]+ [^>]*id="${id}"`), `the program page holds #${id}`);
   }
-  assert.equal(targets[4][1], METHODS_PATH, 'Methods is its own page under the program');
+  assert.equal(targets[5][1], METHODS_PATH, 'Methods is its own page under the program');
   assert.ok(header.includes(`href="${METHODS_PATH}" data-nav="methods"`));
   assert.match(header, /data-nav="how" aria-current="true"/);
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
@@ -566,7 +566,7 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   assert.deepEqual(currentOf(hosp), ['map']);
   assert.deepEqual(currentOf(renderPlace(PLACES.list[0], HISTORY_ARGS)), ['map']);
   assert.deepEqual(currentOf(program), ['how']);
-  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">3<\/span>Every hospital</);
+  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">4<\/span>Every hospital</);
 });
 
 test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {
@@ -636,9 +636,14 @@ test('a section whose words explain a figure splits: each hospital section besid
   for (const [id, n, wide] of sections) {
     assert.match(program, new RegExp(`<section class="psec${wide}" id="${id}" aria-labelledby="${id}-h">\\n<div class="psec__text">\\n<h3 class="psec__title" id="${id}-h">[\\s\\S]*?</div>\\n<div class="psec__fig">\\n<figure class="fig" id="figure-${n}" data-figure>`), id);
   }
-  assert.deepEqual([...program.matchAll(/<section class="psec[ \w-]*" id="(\w+)"/g)].map((m) => m[1]), sections.map(([id]) => id));
-  // Part 3: the map's figure, then the table of every hospital beside the way down by place.
-  assert.match(program, /<section class="part" id="map" aria-labelledby="map-h">[\s\S]*?<figure class="fig" id="figure-13" data-figure>[\s\S]*?<div class="prog__browse">\n<section class="block hospitals"[\s\S]*?<nav class="block browse"/);
+  // The money's sections, each beside (or over) its figure.
+  const money = [['bill', 13, ' psec--wide'], ['across', 14, ' psec--wide'], ['shares', 15, ''], ['states', 16, ' psec--wide'], ['three', 17, ' psec--wide']];
+  for (const [id, n, wide] of money) {
+    assert.match(program, new RegExp(`<section class="psec${wide}" id="${id}" aria-labelledby="${id}-h">\\n<div class="psec__text">\\n<h3 class="psec__title" id="${id}-h">[\\s\\S]*?</div>\\n<div class="psec__fig">\\n<figure class="fig" id="figure-${n}" data-figure>`), id);
+  }
+  assert.deepEqual([...program.matchAll(/<section class="psec[ \w-]*" id="(\w+)"/g)].map((m) => m[1]), [...sections, ...money].map(([id]) => id));
+  // Part 4: the map's figure, then the table of every hospital beside the way down by place.
+  assert.match(program, /<section class="part" id="map" aria-labelledby="map-h">[\s\S]*?<figure class="fig" id="figure-18" data-figure>[\s\S]*?<div class="prog__browse">\n<section class="block hospitals"[\s\S]*?<nav class="block browse"/);
 });
 test("the program page's top: the name with its last word in the penalty ink, the lede, the search, and a summary form of this year's counts, the cut and CMS's line, under the stamp", () => {
   const counts = { decided: 1240, yes: 310, scored: 1305 };

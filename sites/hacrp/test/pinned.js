@@ -11,6 +11,7 @@ import { buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { historyData } from '../web/history-data.js';
+import { moneyData } from '../web/money-data.js';
 import { ASSETS, BOUNDARY_TEXT } from './fixtures.js';
 
 export const DATA = loadHacrp();
@@ -22,6 +23,8 @@ export const PAGE_CTX = { nat: NAT, model: DATA.model };
 // What the program page and the place pages draw (program-data.js, places.js), built once from the pinned data.
 export const PD = programData({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model });
 export const PLACES = buildPlaces({ hospitals: DATA.hospitals, master: DATA.master, rows: PD.rows });
+// What the money's figures draw (money-data.js), built once from the pinned data.
+export const MD = moneyData({ hospitals: DATA.hospitals, master: DATA.master, dollars: DATA.dollars, model: DATA.model });
 
 // Every pinned hospital's page view, and the rows a place page's map reads from them (generate.js builds the same).
 export const VIEWS = DATA.hospitals.map((h) => hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }));
@@ -42,13 +45,14 @@ export const renderProgram = (overrides = {}) => programPage({
   searchUrl: SEARCH_URL, source: DATA.source, robots: null, assets: ASSETS,
   whatif: { hospital: medianHospital(DATA.model, { fiscalYear: String(DATA.fy), periods: DATA.periods }), model: DATA.model, estimate: DATA.estimate, range: RANGE },
   pd: PD, exploreUrl: '/assets/hacrp-explore.0000abcd.json', tryPlaces: { state: most('state'), metro: most('metro') }, places: PLACES, shapes: DATA.shapes,
+  md: MD,
   ...overrides,
 });
 
 // A place page as the build renders it, for a buildPlaces() entry.
 export const renderPlace = (place, overrides = {}) => placePage({
   place, places: PLACES, pd: PD, model: DATA.model, hospitalRows: HOSPITAL_ROWS, master: DATA.master, shapes: DATA.shapes, counties: DATA.counties,
-  fy: DATA.fy, periods: DATA.periods, source: DATA.source, searchUrl: SEARCH_URL, robots: null, assets: ASSETS, ...overrides,
+  fy: DATA.fy, periods: DATA.periods, source: DATA.source, searchUrl: SEARCH_URL, robots: null, assets: ASSETS, md: MD, ...overrides,
 });
 
 export const PROGRAM_ARGS = {

@@ -3,12 +3,14 @@
 // line, a place with no payment decision), never by name. The build writing a page for every place, and its
 // indexing, are in pages.test.js.
 import { test } from 'node:test';
+import { ACROSS_WINDOW } from '../web/money-part.js';
+import { nearLine } from '../web/money-data.js';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { cmsText, count, decimal, ordinal, pct } from '../../../web/render/format.js';
 import { FEW_DECIDED } from '../web/constants.js';
 import { ancestors, placeCounts } from '../web/places.js';
-import { DATA, HD, PD, PLACES, SEARCH_URL, renderPlace } from './pinned.js';
+import { DATA, HD, MD, PD, PLACES, SEARCH_URL, renderPlace } from './pinned.js';
 import { ASSETS, esc } from './fixtures.js';
 
 const of = (kind) => PLACES.list.filter((p) => p.kind === kind);
@@ -128,10 +130,11 @@ test('a place with no hospital with a payment decision has no share, rank, stamp
   assert.match(text, /class="block hospitals"/);
 });
 
-test('the figures: the map, the scores against the nation\'s and the measures, numbered from 1 with the rule above them', () => {
+test('the figures: the map, the scores against the nation\'s, the measures and its hospitals across the line, numbered from 1 with the rule above them', () => {
   const text = renderPlace(STATE);
-  assert.deepEqual([...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3]);
-  assert.deepEqual([...text.matchAll(/<section class="psec" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures']);
+  const across = nearLine(MD, ACROSS_WINDOW).some((r) => STATE.ccns.includes(r.ccn));
+  assert.deepEqual([...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), across ? [1, 2, 3, 4] : [1, 2, 3]);
+  assert.deepEqual([...text.matchAll(/<section class="psec(?: psec--wide)?" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures', ...(across ? ['across'] : [])]);
   // The rule is every hospital with a decision, with the place's ticked: it reads the hospitals asset for names.
   assert.match(text, new RegExp(`<figure class="rulefig" data-src="${SEARCH_URL.replaceAll('.', '\\.')}"`));
   // The score rule is drawn twice, a phone's and a page's: the phone's names the place's cut count in the short form.
@@ -143,7 +146,7 @@ test('the figures: the map, the scores against the nation\'s and the measures, n
   assert.equal(caps[1], `${esc(STATE.name)}: ${count(STATE.counts.yes)} cut of ${count(STATE.counts.decided)} with a payment decision.`);
   assert.ok(caps[2].startsWith(`${pct(STATE.counts.yes / STATE.counts.decided, 1)} of hospitals here scored past CMS’s line, against ${pct(NATION, 1)} nationally; the middle score here is ${cmsText(decimal(STATE.counts.median, 4))}, and nationally ${cmsText(decimal(PD.medianScore, 4))}.`), caps[2]);
   // The measure figure's rows: each measure's hospitals here with a value, and the share above the national median.
-  const table = text.slice(text.indexOf('id="figure-3"'));
+  const table = /id="figure-3"[\s\S]*?<\/figure>/.exec(text)[0];
   const rows = [...table.slice(table.indexOf('<tbody>')).matchAll(/<tr><th scope="row">([^<]*)<\/th><td class="num" data-value="[^"]*">([^<]*)<\/td><td class="num" data-value="[^"]*">([^<]*)<\/td><\/tr>/g)];
   assert.ok(rows.length > 0 && rows.length <= MEASURE_IDS.length);
   for (const [, , n, share] of rows) assert.match(share, /^\d+%$/, `${n}: a share`);

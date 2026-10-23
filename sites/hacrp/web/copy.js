@@ -219,6 +219,7 @@ export const COPY = {
   navFy: { text: 'FY{fy}', claim: null },
   fyShort: { text: 'FY{fy}', claim: null },
   navHistory: { text: 'History', claim: null },
+  navMoney: { text: 'The money', claim: null },
   navHospitals: { text: 'Every hospital', claim: null },
 
   // Hospital page, the record card (pages/hospital.js recordCard): its title bar, then one numbered field each.

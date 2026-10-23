@@ -56,7 +56,7 @@ test('a figure\'s source line, the citation and the periods keep each date whole
   assert.match(text, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
   // The program page: every figure's source line, its citation, the summary form's data windows and payment year, and the as-of strip.
   const found = figures(PAGE);
-  assert.equal(found.length, 13);
+  assert.equal(found.length, 18);
   for (const [, id, body] of found) assert.ok(body.includes(`released <span class="nw">${date}</span>.`), `figure ${id}: source line`);
   assert.match(PAGE, new RegExp(`<p class="cite__text" data-cite-text>[^\\n]*released <span class="nw">${date}</span>\\.</p>`));
   const range = /<span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span> to <span class="nw">[A-Z][a-z]+ \d+, \d{4}<\/span>/g;
@@ -81,15 +81,15 @@ test('every table in a scroll box carries a label in the page, which names the b
   }
   // The program page has every figure's table, the sandbox's, the hospitals' and no other.
   const labels = [...PAGE.matchAll(/<div class="printout__scroll"><table([^>]*)>/g)].map((m) => /aria-labelledby="([^"]+)"/.exec(m[1])?.[1] ?? 'caption');
-  assert.equal(labels.filter((l) => /^figure-\d+-cap$/.test(l)).length, 13);
+  assert.equal(labels.filter((l) => /^figure-\d+-cap$/.test(l)).length, 18);
 });
 
-test('the program page numbers its figures 1 to 13, each once, from the data\'s five steps through the year to the map', () => {
+test('the program page numbers its figures 1 to 18, each once, from the data\'s five steps through the year and the money to the map', () => {
   const numbersOnPage = figures(PAGE).map(([, id]) => Number(id));
-  assert.deepEqual([...numbersOnPage].sort((a, b) => a - b), Array.from({ length: 13 }, (_, i) => i + 1));
-  assert.deepEqual(captions(PAGE).map(([n]) => Number(n)).sort((a, b) => a - b), Array.from({ length: 13 }, (_, i) => i + 1), 'a caption says its figure\'s number');
+  assert.deepEqual([...numbersOnPage].sort((a, b) => a - b), Array.from({ length: 18 }, (_, i) => i + 1));
+  assert.deepEqual(captions(PAGE).map(([n]) => Number(n)).sort((a, b) => a - b), Array.from({ length: 18 }, (_, i) => i + 1), 'a caption says its figure\'s number');
   // The keyboard hint for the map is named by its figure.
-  assert.match(PAGE, /<p id="figure-13-keys" hidden>/);
+  assert.match(PAGE, /<p id="figure-18-keys" hidden>/);
 });
 
 test('Part 1 walks the formula in five steps, each beside its own figure, then the sandbox; its method numbers come from the constants', () => {
@@ -195,7 +195,7 @@ test('the program page\'s swarm (Figure 6): every hospital with a Yes/No decisio
 test('the line sentence on the program page is CMS\'s: the gap between its highest No and lowest Yes, named by both, in the summary form', () => {
   const { highestNo, lowestYes } = DATA.boundaryText;
   const summary = /<div class="form prog__summary">([\s\S]*?)<\/div>\n<p class="stamp">/.exec(PAGE)[1];
-  assert.match(summary, new RegExp(`<span class="field__no">4</span>CMS’s line</p>\\n<p class="field__value">${lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${highestNo}\\.</div>`));
+  assert.match(summary, new RegExp(`<span class="field__no">5</span>CMS’s line</p>\\n<p class="field__value">${lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${highestNo}\\.</div>`));
   // The boundary is CMS's, scored hospitals with a decision on each side of it only.
   const decided = decidedHospitals(DATA.hospitals);
   assert.ok(decided.filter((h) => h.paymentReduction === 'Yes').every((h) => h.total >= Number(lowestYes)));
@@ -204,8 +204,8 @@ test('the line sentence on the program page is CMS\'s: the gap between its highe
   assert.equal(Number(lowestYes), model.boundary.lowestYes);
 });
 
-test('the US map (Figure 13): hospitals cut of hospitals with a decision, a state a mark; Maryland hatched "not subject to the reduction"; no state drawn as zero', () => {
-  const body = figureBody(PAGE, 13);
+test('the US map (Figure 18): hospitals cut of hospitals with a decision, a state a mark; Maryland hatched "not subject to the reduction"; no state drawn as zero', () => {
+  const body = figureBody(PAGE, 18);
   assert.match(body, /class="chart chart--us-map"/);
   const mark = (code, fit) => new RegExp(`<g class="chart-mark" data-mark data-state="${code}"([^>]*)><title>([^<]*)</title><path class="([^"]*)"`, 'g').exec(body.slice(body.indexOf(`data-fit="${fit}"`), body.indexOf('</svg>', body.indexOf(`data-fit="${fit}"`))));
   for (const fit of ['narrow', 'wide']) {
@@ -232,8 +232,8 @@ test('the US map (Figure 13): hospitals cut of hospitals with a decision, a stat
   // The wide map also draws every hospital as a dot over the states, and the figure says what the dots mean.
   assert.match(body, /usmap__sw--pen"><\/span>Cut</);
   assert.match(body, /class="chart-dots chart-dots--pen"/);
-  assert.ok(PAGE.includes('<p id="figure-13-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
-  const [, takeaway] = captions(PAGE).find(([n]) => n === '13');
+  assert.ok(PAGE.includes('<p id="figure-18-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
+  const [, takeaway] = captions(PAGE).find(([n]) => n === '18');
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
 });
 
@@ -267,8 +267,9 @@ test('the hospital table section: the controls for client/table.js, the asset, a
   const words = PAGE.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<details class="fig__table">[\s\S]*?<\/details>/g, '');
   const ccns = new Set(DATA.hospitals.map((h) => h.ccn));
   assert.deepEqual([...words.matchAll(/\b\d{6}\b/g)].map((m) => m[0]).filter((c) => ccns.has(c)), [], 'no hospital list inlined');
-  // The weight of the page: its drawings (about 630 kB of inline SVG) and, besides them, its words and tables (about 120 kB).
-  assert.ok(drawings(PAGE) < 800_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
+  // The weight of the page: its drawings (about 840 kB of inline SVG, some 300 kB of it the money's Part, mostly the
+  // treemap of every cut hospital) and, besides them, its words and tables (about 130 kB).
+  assert.ok(drawings(PAGE) < 880_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
   assert.ok(PAGE.length - drawings(PAGE) < 160_000, `the program page stays small (${PAGE.length - drawings(PAGE)} bytes besides its drawings)`);
 });
 

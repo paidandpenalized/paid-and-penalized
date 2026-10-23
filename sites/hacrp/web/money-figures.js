@@ -5,7 +5,7 @@
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { drawn, figure, num } from '../../../web/charts/figure.js';
-import { cmsText, count, decimal, dollars, listText, money } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, isoDate, listText, money } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { lineScore } from '../../../web/whatif/marks.js';
 import { SITE } from '../../../web/site.js';
@@ -13,9 +13,13 @@ import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { DOLLARS_HREF } from './links.js';
 import { countBins, edgesAround } from './compare.js';
 import { BASE_PARTS, OTHER_PARTS } from './money.js';
-import { fill, t } from './money/copy.js';
+import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
+
+// The source line every dollar figure carries: this site's arithmetic on CMS's payment files and the HACRP file, its
+// release date kept on one line. source: the HACRP dataset's manifest entry ({ id, pdcReleased }).
+export const moneySourceText = ({ fy, source }) => fillKeep('stmtSource', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }, ['date']);
 const zero = () => money(0);
 
 // The estimate tag every dollar figure carries (Thirty Day Readmissions' outlined tag), linking to how this site

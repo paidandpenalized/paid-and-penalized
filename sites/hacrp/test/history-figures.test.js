@@ -674,13 +674,13 @@ test('part4 on the committed history: every part draws, and its figures\' number
   assert.equal(attr(markup, 'data-roll'), HISTORY_URL);
 });
 
-test('the program page with the history: Part 4 is #history, the figures run 1 to 22 once each, and the nav, the ids and the headings hold', () => {
+test('the program page with the history: Part 5 is #history, the figures run 1 to 27 once each, and the nav, the ids and the headings hold', () => {
   const page = renderProgram(HISTORY_ARGS);
   assert.match(page, /<section class="part" id="history" aria-labelledby="history-h">/);
   const nums = figureNumbers(page);
-  assert.deepEqual([...nums].sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i + 1));
+  assert.deepEqual([...nums].sort((a, b) => a - b), Array.from({ length: 27 }, (_, i) => i + 1));
   assert.equal(new Set(nums).size, nums.length);
-  // Part 4 comes after the map and the hospital table, and holds the nine figures.
+  // Part 5 comes after the map and the hospital table, and holds the nine figures.
   const part = page.slice(page.indexOf('id="history"'), page.indexOf('class="prog__foot"'));
   assert.equal(figureNumbers(part).length, 9);
   assert.ok(page.indexOf('id="map"') < page.indexOf('id="history"'));
@@ -688,10 +688,10 @@ test('the program page with the history: Part 4 is #history, the figures run 1 t
   // The heading says how many years and rounds of cuts, from the history.
   const heading = text(/<h2[^>]*id="history-h"[^>]*>([\s\S]*?)<\/h2>/.exec(page)[1].replace(/<[^>]+>/g, ''));
   same(numbers(heading), [String(HD.fys.length), String(HD.cutYears)]);
-  // Without the history the page has no Part 4, and its figures are the first thirteen.
+  // Without the history the page has no history Part, and its figures are the first eighteen.
   const without = renderProgram();
   assert.doesNotMatch(without, /id="history"/);
-  assert.equal(figureNumbers(without).length, 13);
+  assert.equal(figureNumbers(without).length, 18);
 });
 
 // ---------- place and hospital pages ----------

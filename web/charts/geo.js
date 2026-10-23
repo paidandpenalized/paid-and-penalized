@@ -398,3 +398,32 @@ export function usYearMap({ shapes, groups, size, width }) {
 <g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, size))}</g>`,
   });
 }
+
+// Proportional circles on the US map: every state's outline as a faint land, drawn once, and over it one layer of
+// circles per view (a page script or CSS shows one layer at a time: the land is the drawing's weight, so the views
+// share it). In each layer, a circle at each state's center (the projected centroid of its outline; Alaska and Hawaii
+// in their insets), its area the state's value on that layer's own scale; the largest drawn first, so a small state's
+// circle shows on top of a big neighbor's. Each circle is a mark with its tooltip, value and data-state.
+//   layers   [{ id, states: { [code]: { value (> 0), label } } }] (codes from US_MAP_CODES; a state left out gets no
+//            circle); rMax: the largest circle's radius in each layer, in viewBox units
+// The land is background, drawn thinner than the choropleth's outlines (BUBBLE_THIN times as thinned).
+const BUBBLE_THIN = 3;
+export function usBubbles({ shapes, layers, width, rMax }) {
+  const { height, projection } = usPaths(shapes, width);
+  const centroid = geoPath(projection);
+  const coarse = outlinePath(projection, THIN_US * BUBBLE_THIN * Math.max(1, width / US_THIN_WIDTH));
+  const land = US_MAP_CODES.map((code) => (shapes.has(code) ? coarse(shapes.get(code)) : null)).filter(Boolean);
+  const layer = ({ id, states }) => {
+    const entries = Object.entries(states).filter(([code, s]) => US_MAP_CODES.includes(code) && s.value > 0 && shapes.get(code));
+    const max = Math.max(...entries.map(([, s]) => s.value), 1);
+    const circles = entries.map(([code, s]) => {
+      const [cx, cy] = centroid.centroid(shapes.get(code));
+      return { code, s, cx, cy, r: Math.sqrt(s.value / max) * rMax };
+    }).filter((c) => Number.isFinite(c.cx) && Number.isFinite(c.cy)).sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1));
+    return html`<g class="chart-bubbles__layer chart-bubbles__layer--${id}">${circles.map((c) => mark({ tip: `${STATE_NAMES[c.code]}: ${c.s.label}`, value: c.s.value, data: { state: c.code }, hit: null, body: html`<circle class="chart-bubble" cx="${r2(c.cx)}" cy="${r2(c.cy)}" r="${r2(Math.max(0.8, c.r))}"/>` }))}</g>`;
+  };
+  return frame({
+    kind: 'us-bubbles', width, height, body: html`<path class="chart-bubbles__land" d="${land.join('')}"/>
+${layers.map(layer)}`,
+  });
+}

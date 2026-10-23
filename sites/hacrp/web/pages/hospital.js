@@ -26,7 +26,7 @@ import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
 import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
 import { fill as hfill, t as ht } from '../history/copy.js';
-import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
+import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -233,7 +233,7 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   let n = 0;
   const numbered = (fig) => { if (fig) n++; return fig; };
   const m = money;
-  const moneySource = mfill('stmtSource', { fy, id: source.id });
+  const moneySource = moneySourceText({ fy: view.fy, source });
   const cliffFig = m?.estimated && view.scored ? numbered(cliffFigure(view, m, nat, { n: n + 1, source: moneySource })) : null;
   const statement = m?.estimated ? numbered(statementFigure(view, m, { n: n + 1, source: moneySource })) : null;
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));

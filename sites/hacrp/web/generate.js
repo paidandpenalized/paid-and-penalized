@@ -30,6 +30,7 @@ import { placePage } from './pages/place.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { exploreAsset, programData } from './program-data.js';
 import { hospitalMoney } from './money.js';
+import { moneyData } from './money-data.js';
 import { KINDS, buildPlaces } from './places.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
 
@@ -114,6 +115,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // What the program page and the place pages draw, computed once.
   const pd = programData({ hospitals, master, model });
   const places = buildPlaces({ hospitals, master, rows: pd.rows });
+  const md = moneyData({ hospitals, master, dollars, model });
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
   const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places, dollars.byCcn)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
@@ -144,6 +146,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       hd,
       rollUrl: hd ? ctx.asset('hacrp-history', 'json', JSON.stringify(rollAsset(hd, { shapes, master }))) : null,
       master,
+      md,
     }),
   });
 
@@ -154,7 +157,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     emitPage({
       path: place.path,
       robots: programRobots,
-      text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets, hd }),
+      text: placePage({ place, places, pd, model, hospitalRows: hospitalRowsByCcn, master, shapes, counties, fy, periods, source, searchUrl, robots: programRobots, assets, hd, md }),
     });
   }
 
@@ -192,6 +195,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       robots: programRobots,
       assets,
       searchUrl,
+      dollars,
     }),
   });
 }
