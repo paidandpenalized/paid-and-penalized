@@ -17,6 +17,9 @@ adjustments (T', below), and that payment is the sum of a dozen pieces, only one
     HAC        = -at stake            (only for a hospital the program cuts)
     net        = HRRP$ + HVBP$ + HAC
 
+New-technology add-on payments (NTAP) are in none of these terms (see the ASSUMPTION at the federal payment): B, and
+so T, the HRRP and HVBP dollars and the at-stake figure, run slightly low for a hospital that receives them.
+
 Pure: no file, network or clock.
 """
 import math
@@ -74,6 +77,11 @@ def _parts(inp, rates):
     labor, nonlabor = _rate_pair(inp, rates)
     # The operating COLA (Alaska and Hawaii) multiplies the nonlabor share only; the labor share takes the wage index.
     fed = inp["cases"] * inp["cmi"] * (labor * inp["wi"] + nonlabor * inp["cola"])
+
+    # ASSUMPTION: new-technology add-on payments (NTAP) are left out of B, and so out of T. They are not published per
+    # hospital (the impact file has no NTAP column). B, the HRRP and HVBP dollars (both taken on B) and the at-stake
+    # figure therefore run slightly low for a hospital that receives them; the direction is the same for every
+    # hospital, the size is not known.
 
     # Medicare-dependent hospital: the federal payment plus 75% of the amount by which its hospital-specific payment
     # exceeds it, never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns).
