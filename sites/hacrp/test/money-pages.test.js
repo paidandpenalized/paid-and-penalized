@@ -105,16 +105,23 @@ test('DES-25: no hospital is named on the money\'s Part outside a tooltip, and n
   assert.ok(rows.length < 120, `${rows.length} rows: no list of hospitals`);
 });
 
-test('the score rule\'s dollars view: drawn beside the hospitals\' view, its caption\'s share the data\'s', () => {
-  const fig = /<figure class="rulefig rulefig--views"[\s\S]*?<\/figure>/.exec(PROGRAM)[0];
-  assert.match(fig, /data-rule-view="hospitals"/);
-  assert.match(fig, /data-rule-view="money" hidden/);
-  assert.match(fig, /class="chart chart--money-rule"/);
-  const atStake = new Map(MD.rows.map((r) => [r.ccn, r.atStake]));
-  const total = MD.rows.reduce((s, r) => s + r.atStake, 0);
-  const cut = MD.cutRows.reduce((s, r) => s + r.atStake, 0);
-  assert.ok(atStake.size > 0);
-  assert.ok(strip(fig).includes(`the cut side is ${pct(cut / total, 0)} of the money at stake`));
+test('the treemap\'s groups add to the headline: every cut hospital this site estimates, every dollar; a group too small to label is named in the note', () => {
+  const bill = /<section class="psec[^"]*" id="bill"[\s\S]*?<\/section>/.exec(part)[0];
+  const table = /<details class="fig__table">[\s\S]*?<\/details>/.exec(bill)[0];
+  const rows = [...table.matchAll(/<tr><th scope="row">([^<]*)<\/th><td class="num" data-value="([^"]*)">[^<]*<\/td><td class="num" data-value="([^"]*)">/g)];
+  assert.ok(rows.length >= 3);
+  assert.equal(rows.reduce((s, r) => s + Number(r[2]), 0), MD.headline.cut, 'the groups\' hospitals');
+  assert.equal(rows.reduce((s, r) => s + Number(r[3]), 0), MD.headline.money, 'the groups\' dollars');
+  // Each group's header mark plots its dollars, so the drawing holds every group, labeled or not.
+  const wide = /<svg[^>]*data-fit="wide"[\s\S]*?<\/svg>/.exec(bill)[0];
+  const plotted = [...wide.matchAll(/<g class="chart-mark" data-mark data-value="(\d+)"><title>[^<]*<\/title><rect class="chart-tree__group"/g)].map((m) => Number(m[1]));
+  assert.equal(plotted.reduce((a, b) => a + b, 0), MD.headline.money);
+  const unknown = MD.cutRows.filter((r) => !['major', 'minor', 'none'].includes(r.master.teach));
+  if (unknown.length) {
+    const note = strip(/<p class="small muted fig__note">([^<]*)<\/p>/.exec(bill)[1]);
+    assert.ok(note.includes(unknown.length === 1 ? 'one of the cut hospitals' : `${count(unknown.length)} of the cut hospitals`), note);
+    assert.ok(note.includes(money(unknown.reduce((s, r) => s + r.cut, 0))), note);
+  }
 });
 
 test('a place page: its estimate against the nation\'s, its children\'s dollars, its hospitals across the line', () => {

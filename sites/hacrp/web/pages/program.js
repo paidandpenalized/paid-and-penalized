@@ -21,7 +21,7 @@ import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../progra
 import { part4 } from '../history-figures.js';
 import { fill as hfill } from '../history/copy.js';
 import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, siteHeader } from './parts.js';
-import { moneyPart, moneyPartIntro, moneyRuleView, summaryMoneyField } from '../money-part.js';
+import { moneyPart, moneyPartIntro, summaryMoneyField } from '../money-part.js';
 import { t as mt } from '../money/copy.js';
 import { whatIfSection } from './whatif.js';
 
@@ -107,7 +107,7 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
 
   const body = html`<article class="wrap page page--prog prog"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
 ${programTop({ title, subtitle, fy, counts, boundaryText, periods, source, searchUrl, tryPlaces, md: moneyTop })}
-${pd && ruleFigure(pd, { searchUrl, money: moneyTop ? moneyRuleView(moneyTop) : null })}
+${pd && ruleFigure(pd, { searchUrl })}
 <section class="part" id="how" aria-labelledby="how-h">
 ${partHead({ n: partNo(), id: 'how', heading: t('part1Heading'), intro: fill('part1Intro', { fy: fyText }) })}
 ${parts?.one ?? ''}

@@ -267,9 +267,9 @@ test('the hospital table section: the controls for client/table.js, the asset, a
   const words = PAGE.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<details class="fig__table">[\s\S]*?<\/details>/g, '');
   const ccns = new Set(DATA.hospitals.map((h) => h.ccn));
   assert.deepEqual([...words.matchAll(/\b\d{6}\b/g)].map((m) => m[0]).filter((c) => ccns.has(c)), [], 'no hospital list inlined');
-  // The weight of the page: its drawings (about 840 kB of inline SVG, some 300 kB of it the money's Part, mostly the
+  // The weight of the page: its drawings (about 830 kB of inline SVG, some 300 kB of it the money's Part, mostly the
   // treemap of every cut hospital) and, besides them, its words and tables (about 130 kB).
-  assert.ok(drawings(PAGE) < 880_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
+  assert.ok(drawings(PAGE) < 850_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
   assert.ok(PAGE.length - drawings(PAGE) < 160_000, `the program page stays small (${PAGE.length - drawings(PAGE)} bytes besides its drawings)`);
 });
 

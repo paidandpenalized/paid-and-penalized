@@ -754,12 +754,6 @@
 /* The summary form's estimate across both columns of the form. */
 .prog__summary > .field.f-money { flex-basis: 100%; }
 .prog__summary .f-money .field__note { display: grid; gap: 6px; justify-items: start; }
-/* The score rule's two views: the buttons beside the caption. */
-.rulefig__view[hidden], .rulefig__cap [hidden] { display: none; }
-.rulefig__foot { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 24px; }
-.rulefig__foot .rulefig__cap { flex: 1 1 24rem; }
-.rulefig__pick { display: flex; gap: 0; order: 2; }
-.rulefig__pick[hidden] { display: none; }
 /* The states' map: one drawing, two layers of circles; the figure's data-view says which shows. */
 .bubbles { display: grid; gap: 8px; }
 .bubbles__pick { display: flex; }

@@ -44,9 +44,7 @@ function ruleOrder(pd) {
   return RULE_ORDER.get(pd);
 }
 
-// money: the rule's dollars view (money-part.js moneyRuleView), drawn beside the hospitals' view with a pair of buttons
-// to switch (the page script shows them); null for none.
-export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = null, here = null, money = null } = {}) {
+export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = null, here = null } = {}) {
   const { scores, rank } = ruleOrder(pd);
   const { yes, decided } = pd.counts;
   const ranks = highlight ? [...highlight].map((ccn) => rank.get(ccn)).filter((i) => i !== undefined).sort((a, b) => a - b) : null;
@@ -55,26 +53,10 @@ export function ruleFigure(pd, { highlight = null, searchUrl = null, caption = n
   // The phone's drawing has room for the short form of a place's cut count.
   const narrowLabels = here === null ? labels : { ...labels, cut: fill('ruleCutHereShort', { yes: count(yes), here: count(here) }) };
   const draw = (width) => imageOf(scoreRule({ scores, cut: yes, labels: width === WIDTH ? narrowLabels : labels, width, highlight: ranks }), alt, width === WIDTH ? 'narrow' : 'wide');
-  const hospitalsView = html`${draw(WIDTH)}
-${draw(PAGE_WIDE)}`;
-  if (!money) {
-    return html`<figure class="rulefig"${searchUrl ? html` data-src="${searchUrl}"` : ''} data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">
-${hospitalsView}
+  return html`<figure class="rulefig"${searchUrl ? html` data-src="${searchUrl}"` : ''} data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">
+${draw(WIDTH)}
+${draw(PAGE_WIDE)}
 <figcaption class="rulefig__cap">${caption ?? fill('ruleCaption')}</figcaption>
-</figure>`;
-  }
-  const ccns = [];
-  for (const [ccn, i] of rank) ccns[i] = ccn;
-  const { draw: drawMoney, caption: moneyCaption } = money.view({ ccns, scores, cut: yes, labels });
-  const { words } = money;
-  return html`<figure class="rulefig rulefig--views"${searchUrl ? html` data-src="${searchUrl}"` : ''} data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">
-<div class="rulefig__view" data-rule-view="hospitals">${hospitalsView}</div>
-<div class="rulefig__view" data-rule-view="money" hidden>${imageOf(drawMoney(WIDTH), null, 'narrow')}
-${imageOf(drawMoney(PAGE_WIDE), null, 'wide')}</div>
-<div class="rulefig__foot">
-<p class="rulefig__pick" role="group" aria-label="${words.label}" hidden><button type="button" class="mtoggle__b" data-rule-pick="hospitals" aria-pressed="true">${words.hospitals}</button><button type="button" class="mtoggle__b" data-rule-pick="money" aria-pressed="false">${words.money}</button></p>
-<figcaption class="rulefig__cap"><span data-rule-cap="hospitals">${caption ?? fill('ruleCaption')}</span><span data-rule-cap="money" hidden>${moneyCaption}</span></figcaption>
-</div>
 </figure>`;
 }
 

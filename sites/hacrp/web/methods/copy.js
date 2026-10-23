@@ -325,7 +325,7 @@ export const COPY = {
   assumeFfsE: { text: "Medicare Advantage payments aren't in any figure.", claim: null },
   // The national checks, as a receipt.
   dchecksSub: { text: 'The national checks', claim: null },
-  dchecksText: { text: "Every build adds the estimate up nationally and holds the sums to ranges set before the estimate was made; the build stops if one fails. This build's tape:", claim: null },
+  dchecksText: { text: "Every build adds the estimate up nationally and holds the sums to fixed ranges written into the build; the build stops if one fails. This build's tape:", claim: null },
   dchecksHead: { text: 'Dollar checks · every build', claim: null },
   dcheck_hrrp_share: { text: 'Readmissions cuts, share of the penalized hospitals\' base', claim: null },
   dcheck_vbp_net: { text: 'Value-based purchasing, net, either way', claim: null },

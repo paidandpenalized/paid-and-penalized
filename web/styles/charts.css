@@ -406,7 +406,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-mark:hover .chart-bubble, .chart-mark.is-active .chart-bubble { fill-opacity: 0.85; }
 /* A column chart's bonus columns (columns.js): money paid to a hospital. */
 .chart-col--rew { fill: var(--rew); }
-/* The rule by the money (moneyRule.js) shares the score rule's inks (chart-rule__*). */
 @media (forced-colors: active) {
   .chart-tree__group { fill: Canvas; stroke: CanvasText; }
   .chart-tree__tile, .chart-tree__tiles rect { fill: CanvasText; stroke: Canvas; }

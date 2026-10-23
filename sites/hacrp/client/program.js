@@ -31,22 +31,6 @@ const history = assetLoaders();
 for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals, history, picker: mountStatePicker });
 for (const fig of figuresWith('.ymap')) mountYearMap(fig, history);
 
-// The score rule's two views, each hospital alike or each as wide as its dollars at stake: its buttons, the drawing
-// and the caption that goes with each.
-for (const fig of document.querySelectorAll('.rulefig--views')) {
-  const pick = fig.querySelector('.rulefig__pick');
-  if (!pick) continue;
-  pick.hidden = false;
-  pick.addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-rule-pick]');
-    if (!b) return;
-    const view = b.dataset.rulePick;
-    for (const x of pick.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
-    for (const v of fig.querySelectorAll('[data-rule-view]')) v.hidden = v.dataset.ruleView !== view;
-    for (const c of fig.querySelectorAll('[data-rule-cap]')) c.hidden = c.dataset.ruleCap !== view;
-  });
-}
-
 // The states' map: its buttons switch which layer of circles shows (the dollars, or the dollars per stay).
 for (const box of document.querySelectorAll('.bubbles')) {
   const pick = box.querySelector('.bubbles__pick');

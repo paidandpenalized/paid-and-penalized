@@ -1,13 +1,12 @@
 // The program page's Part on the money, and the money on the place pages: this site's estimate of the cut, drawn so the
 // cliff is felt. Every hospital CMS cut as a tile of its dollars; the hospitals nearest the line as dots sized by the
 // cut taken or not; each kind of hospital's share of the cuts against its share of the money; the money by state; the
-// three quality programs side by side; and the score rule by the money. Names only in tooltips (DES-25): no list, no
+// three quality programs side by side. Names only in tooltips (DES-25): no list, no
 // ranking. Every takeaway is filled from the data the figure draws (money-data.js).
 import { acrossLine } from '../../../web/charts/acrossLine.js';
 import { columns } from '../../../web/charts/columns.js';
 import { drawn, figure, imageOf, imagePair, num } from '../../../web/charts/figure.js';
 import { STATE_NAMES, usBubbles } from '../../../web/charts/geo.js';
-import { moneyRule } from '../../../web/charts/moneyRule.js';
 import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
@@ -46,8 +45,13 @@ export function billFigure(md, { n, source }) {
     groups: groups.map((g) => ({ label: g.label, sub: fill('billGroupSub', { n: count(g.rows.length), money: money(g.value) }), value: g.value, tiles: g.rows.map((r) => ({ value: r.cut, tip: tips ? tipOf(r) : null })) })),
   });
   const total = md.headline.money;
+  // The group of hospitals with no teaching status is a sliver too small to label: the note names it.
+  const unknown = groups.find((g) => g.key === 'unknown');
+  const note = !unknown ? t('billNote')
+    : unknown.rows.length === 1 ? fill('billNoteUnknownOne', { money: money(unknown.value) })
+      : fill('billNoteUnknown', { n: count(unknown.rows.length), money: money(unknown.value) });
   return figure({
-    n, source, claimLevel: 'estimate', alt: t('billAlt'), csvName: 'hacrp-dollars-by-teaching', note: t('billNote'),
+    n, source, claimLevel: 'estimate', alt: t('billAlt'), csvName: 'hacrp-dollars-by-teaching', note,
     svg: draw(...BILL.narrow, false), svgWide: draw(...BILL.wide, true),
     takeaway: fill('billTakeaway', { n: count(md.tenth.n), share: pct0(md.tenth.money / total), money: money(total) }),
     table: {
@@ -247,22 +251,3 @@ export const summaryMoneyField = (md) => ({
   as: 'div', size: 'big', fieldCls: 'f-money',
   note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine({ range: null })}`,
 });
-
-// ---------- the score rule by the money ----------
-
-// The rule's dollars view (program-figures.js ruleFigure draws it beside the hospitals' view): each hospital's hairline
-// as wide as its dollars at stake, none for a hospital without an estimate. view({ ccns, scores, cut, labels }): the
-// rule's order (CCNs and scores, lowest first), CMS's cut count and the rule's end labels -> { draw(width), caption }.
-export function moneyRuleView(md) {
-  const atStake = new Map(md.rows.map((r) => [r.ccn, r.atStake]));
-  return {
-    words: { label: t('ruleViewLabel'), hospitals: t('ruleViewHospitals'), money: t('ruleViewMoney') },
-    view({ ccns, scores, cut, labels }) {
-      const weights = ccns.map((ccn) => atStake.get(ccn) ?? 0);
-      const total = weights.reduce((s, w) => s + w, 0);
-      const share = pct0(weights.slice(ccns.length - cut).reduce((s, w) => s + w, 0) / total);
-      const words = { low: labels.low, high: labels.high, cut: fill('ruleMoneyCut', { share }), under: t('ruleMoneyUnder') };
-      return { draw: (width) => moneyRule({ scores, weights, cut, labels: words, width }), caption: fill('ruleMoneyCaption', { share }) };
-    },
-  };
-}
