@@ -541,7 +541,7 @@ class Status(unittest.TestCase):
 
     def test_a_puerto_rico_hospital_in_a_program_file_stops_the_build(self):
         # No program applies in Puerto Rico (CCNs beginning 40): a file that lists one has changed, and the build stops
-        refuse_puerto_rico(["990001", "210001", "990040"], "a file")  # none in Puerto Rico (a 40 elsewhere is no matter)
+        refuse_puerto_rico(["990001", "21Z901", "990040"], "a file")  # none in Puerto Rico (a 40 elsewhere is no matter)
         refuse_puerto_rico([], "a file")
         refuse_puerto_rico(iter(["990001"]), "a file")  # any iterable of CCNs (a generator, a dict's keys)
         with self.assertRaisesRegex(ValueError, r"Table 16B lists 2 Puerto Rico hospital\(s\) \(40xxxx\)"):
