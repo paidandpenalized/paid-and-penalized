@@ -5,6 +5,8 @@
 //
 // vm:
 //   result { available, n, before { score, flag }, after { score, flag }, measures { [id]: { changed, contribution } } }
+//   money { atStake, before, after } | null              a program's dollars at the start and in the hypothetical
+//                                                         (0, a negative amount, or [0, negative] too close to call)
 //   ramp { actual, hypothetical, highestNo, lowestYes }   the scores the ramp marks
 //   inputs [{ id, value (null: none), max, step, decimals, median, floor, cap, limit, valuetext, assigned, tagged }]
 //   counts { [id]: { delta } }                            NHSN count deltas (dom.js)
@@ -39,12 +41,16 @@
 //   bars { heading, caption(n), value(contribution), assigned }
 //   predicted null | { summary, label(id) -> string | null, help, invalid, result(delta) }   NHSN counts, in one
 //                                          folded section after the measures (label null: no field for that measure)
+//   money null | { row, tag { text, href, label }, amount(dollars), head(dollars), cliff { zero, zeroWords, cut,
+//                cutWords } }              the dollars (with vm.money): a row of the table, a line in the head, and the
+//                                          cliff over the ramp that the hypothetical rides: the money at any score
+//   solver.worth                           a line over the solver's table: what keeping under the line is worth, or null
 import { scaleLinear } from 'd3-scale';
 import { COPY } from '../copy.js';
 import { pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
-  afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
+  afterText, anyChanged, assignedNow, barClass, barSpan, cliffDotClass, cliffY, estimateNote, moneyClass, sameMoney, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
   RAMP_TICK, RAMP_Y, rampEdge, rampHeight, rampLabels, rampSide, rampWidthFrom, rampX, sliderValue, trackStart, trackMarks, zoneLabelAt,
 } from './marks.js';
 
@@ -59,7 +65,7 @@ const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
 // solid mark for the starting score and a hollow one for the hypothetical (at an edge, with an arrow, when it runs
 // past the range; hidden, with its label, while it equals the start), each label under its mark (stacked when they
 // would touch). Decorative: the table and the sentence say the same.
-function ramp(vm, range, texts) {
+function ramp(vm, range, texts, underCliff = false) {
   const domain = rampDomain(range, vm.ramp);
   const at = (score) => rampAt(score, domain);
   // The scale's own tick format (d3-format): the decimals that tell ticks a step apart, with a true minus.
@@ -75,7 +81,7 @@ function ramp(vm, range, texts) {
   const same = hiddenIf(unchanged);
   const stacked = labels.stacked && !unchanged;
   const Y = RAMP_Y;
-  return html`<svg class="wi-ramp" data-wi="ramp" width="100%" height="${rampHeight(stacked)}" aria-hidden="true" focusable="false">
+  return html`<svg class="wi-ramp${underCliff ? ' wi-ramp--under' : ''}" data-wi="ramp" width="100%" height="${rampHeight(stacked)}" aria-hidden="true" focusable="false">
 <defs><path id="wi-tri" d="M0 0L6 11H-6Z"/></defs>
 <rect class="wi-ramp__zone" x="${rampX(line)}" y="${Y.zoneTop}" width="${rampWidthFrom(line)}" height="${Y.axis - Y.zoneTop}"/>
 ${texts.rampZone && rampText(zoneLabelAt(line), Y.zoneLabel, texts.rampZone, 'wi-ramp__zone-label')}
@@ -91,6 +97,29 @@ ${html`<text class="wi-ramp__label" data-wi="hyp-label" x="${rampX(labels.hyp.t)
 </svg>`;
 }
 
+// The cliff over the ramp, on the ramp's own x (its margins and places): the money a flat cut takes at any score.
+// A ledge at $0 up to CMS's line, a drop, a floor at the whole cut out to the right; the hypothetical a dot riding
+// it, which falls when it crosses the line (CSS moves it; dom.js counts the head's figure to its new value), and a
+// ring where the starting score sits once the two differ. Too close to call, the dot hangs on the drop: either level.
+// Decorative: the head, the table and the sentence say the same.
+function cliff(vm, range, texts) {
+  const domain = rampDomain(range, vm.ramp);
+  const line = rampAt(lineScore(vm.ramp), domain);
+  const start = rampAt(vm.ramp.actual, domain);
+  const hyp = rampAt(vm.ramp.hypothetical, domain);
+  const c = texts.money.cliff;
+  const unchanged = vm.ramp.hypothetical === vm.ramp.actual;
+  return html`<div class="wi-cliff" data-wi="cliff" aria-hidden="true" style="--line: ${fraction(line)}">
+<div class="wi-cliff__plot">
+<span class="wi-cliff__pit"></span><span class="wi-cliff__ledge"></span><span class="wi-cliff__drop"></span><span class="wi-cliff__floor"></span>
+<span class="wi-cliff__level wi-cliff__level--zero"><b>${c.zero}</b> ${c.zeroWords}</span>
+<span class="wi-cliff__level wi-cliff__level--cut"><b>${c.cut}</b> ${c.cutWords}</span>
+<span class="wi-cliff__start" data-wi="cliff-start" style="--at: ${fraction(start)}; --y: ${cliffY(vm.money.before)}"${hiddenIf(unchanged)}></span>
+<span class="${cliffDotClass(vm.money.after)}" data-wi="cliff-dot" style="--at: ${fraction(hyp)}; --y: ${cliffY(vm.money.after)}"></span>
+</div>
+</div>`;
+}
+
 // A hypothetical cell: its value where it differs from the start, else "same" (marked data-same, so it reads quiet).
 const afterCell = (name, before, after, same) => html`<td class="wi-after" data-wi="${name}"${after === before ? html` data-same` : ''}>${afterText(before, after, same)}</td>`;
 
@@ -103,13 +132,17 @@ function head(vm, texts) {
   return html`<div class="wi-head" aria-hidden="true">
 <p class="cap wi-head__label" data-wi="head-label">${anyChanged(r) ? texts.hypothetical : texts.start}</p>
 <p class="wi-head__row"><span class="wi-head__score" data-wi="head-score">${headScore(texts.scores(vm))}</span> <span class="${pillClass(p.kind)}" data-wi="head-pill">${p.label}</span></p>
+${vm.money && texts.money && html`<p class="wi-head__money"><span class="wi-money__was" data-wi="head-money-was"${hiddenIf(sameMoney(vm.money))}>${texts.money.amount(vm.money.before)} →</span> <span class="wi-money${moneyClass(vm.money.after)}" data-wi="head-money">${texts.money.amount(vm.money.after)}</span> <span class="wi-head__money-words" data-wi="head-money-words">${texts.money.head(vm.money.after)}</span></p>`}
 </div>`;
 }
+
 
 function result(vm, range, texts) {
   const r = vm.result;
   const s = texts.scores(vm);
   const cutBefore = texts.cut(r.before.flag);
+  // The dollars, where the site has them for this what-if.
+  const money = vm.money && texts.money;
   return html`<div class="wi-result" data-wi="result" role="group" aria-label="${texts.resultLabel}">
 ${head(vm, texts)}
 <details class="wi-detail" data-wi="detail" open><summary>${COPY.showTable}</summary>
@@ -119,10 +152,12 @@ ${head(vm, texts)}
 <tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td>${afterCell('score', s.before, s.after, texts.same)}</tr>
 <tr class="wi-table__words"><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td>${afterCell('flag', texts.flag(r.before.flag), texts.flag(r.after.flag), texts.same)}</tr>
 ${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td>${afterCell('cut', cutBefore, texts.cut(r.after.flag), texts.same)}</tr>`}
+${money && html`<tr class="wi-table__money"><th scope="row">${money.row} <a class="est-tag" href="${money.tag.href}" aria-label="${money.tag.label}">${money.tag.text}</a></th><td>${money.amount(vm.money.before)}</td>${afterCell('money', money.amount(vm.money.before), money.amount(vm.money.after), texts.same)}</tr>`}
 </tbody>
 </table>
 </details>
-${ramp(vm, range, texts)}
+${money && cliff(vm, range, texts)}
+${ramp(vm, range, texts, Boolean(money))}
 ${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
 <p class="wi-sentence" data-wi="live" aria-live="polite"><span data-wi="sentence">${texts.sentence(vm)}</span><span class="vh" data-wi="sentence-est">${estimateNote(vm, texts)}</span></p>
 <p class="small wi-est" data-wi="estimate"${hiddenIf(!vm.estimated)}>${texts.estimate.text} <a href="${texts.estimate.href}">${texts.estimate.linkText}</a></p>
@@ -213,6 +248,7 @@ function solverBlock(answers, s) {
   const columns = withNote ? s.columns : s.columns.slice(0, 2);
   return html`<div class="wi-solver" id="wi-solver" data-wi="solver">
 <h3 class="h-sm" id="wi-solver-h">${s.question}</h3>
+${s.worth && html`<p class="wi-solver__worth">${s.worth}</p>`}
 <p class="small muted">${s.caption}</p>
 ${printout(html`<table class="gb wi-solver__table" aria-labelledby="wi-solver-h">
 <thead><tr>${columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead>

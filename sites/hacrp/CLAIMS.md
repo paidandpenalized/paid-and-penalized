@@ -78,6 +78,10 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-68 | CCN stands for CMS Certification Number. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "Each IPPS Measure Exception is awarded at the CMS certification number (CCN) level" | 2026-10-22 |
 | HACRP-70 | PSI 90's pressure-ulcer component counts only serious bedsores: stage 3 or 4, or unstageable, and not present when the patient arrived. | https://qualityindicators.ahrq.gov/Downloads/Modules/PSI/V2024/TechSpecs/PSI_03_Pressure_Ulcer_Rate.pdf | "Stage 3 or 4 (or unstageable) pressure ulcers (secondary diagnosis not present on admission)" | 2026-10-22 |
 | HACRP-71 | CMS's results fact sheet for fiscal year 2016 put 758 hospitals in the worst-performing quartile. | https://www.cms.gov/newsroom/fact-sheets/fiscal-year-fy-2016-results-cms-hospital-acquired-conditions-hac-reduction-program | "In FY 2016, 758 out of 3,308 hospitals subject to the HAC Reduction Program are in the worst performing quartile" | 2026-10-22 |
+| HACRP-72 | The readmissions program adjusts each discharge's base operating DRG payment: the DRG payment at Medicare's rates (with new-technology add-ons), not the teaching, low-income-patient, outlier or low-volume payments. | https://www.law.cornell.edu/cfr/text/42/412.154 | "an applicable hospital's base operating DRG payment amount is adjusted for each discharge occurring during the fiscal year." | 2026-10-22 |
+| HACRP-73 | The value-based purchasing program multiplies each discharge's base operating DRG payment by the hospital's adjustment factor. | https://www.law.cornell.edu/cfr/text/42/412.160 | "the number that will be multiplied by the base operating DRG payment amount for each discharge from a hospital" | 2026-10-22 |
+| HACRP-74 | The HAC Reduction Program's payment is figured after the readmissions and value-based adjustments: 99% of the payment left once both are applied. | https://www.law.cornell.edu/cfr/text/42/412.172 | "determined after the application of the payment adjustment under the Hospital Readmissions Reduction Program … and the adjustment made under the Hospital Value-Based Purchasing Program" | 2026-10-22 |
+| HACRP-75 | The HAC cut is taken from the whole inpatient payment: teaching, low-income-patient (including uncompensated care), outlier, low-volume and capital payments as well as the base. | https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R3138CP.pdf | "calculated after all other IPPS per discharge payments, which includes adjustments for DSH (including the uncompensated care payment), IME, outliers … and capital payments" | 2026-10-22 |
 
 ## Notes on the sources
 
@@ -201,6 +205,18 @@ A claim marked `unverified` may not be used in copy.
   indicates worse performance"). HACRP-36's "below one, fewer (better)": question 14, the clause after the quote.
   HACRP-46's one year against two: question 54, Table 6. HACRP-61's floor and cap: question 30.
 - **HACRP-70** cites AHRQ's PSI 03 specification (v2024): CMS's PSI 90 shares AHRQ's component definitions (HACRP-32).
+- **HACRP-72 to HACRP-75** are the order of the three programs' adjustments, which the dollar estimates follow.
+  HACRP-72 cites 42 CFR 412.154(b)(1); 412.152 defines the base operating DRG payment amount as "the wage-adjusted DRG
+  operating payment plus any applicable new technology add-on payments" and says it "does not include any additional
+  payments for indirect medical education under § 412.105, the treatment of a disproportionate share of low-income
+  patients under § 412.106, outliers under subpart F of this part, and a low volume of discharges under § 412.101"; for
+  a Medicare-dependent hospital it includes the hospital-specific-rate difference, for a sole community hospital it
+  doesn't. HACRP-73 cites 412.160's definition of the value-based incentive payment adjustment factor; the same section
+  defines the base operating DRG payment amount in the same words as 412.152. HACRP-74 is 42 CFR 412.172(b), which carries
+  out 42 U.S.C. 1395ww(p)(1) (HACRP-01's source). HACRP-75 is CMS's
+  change request 8900 (Pub. 100-04, Transmittal 3138, November 26, 2014), which also says: "For SCHs and MDHs, the HAC
+  Reduction Program adjustment amount applies to either the Federal rate payment amount or the hospital-specific rate
+  payment amount, whichever results in a greater operating IPPS payment."
 
 ## Link check (2026-10-22)
 
@@ -240,4 +256,8 @@ browser.
 | https://www.govinfo.gov/content/pkg/FR-2017-08-14/html/2017-16434.htm | 200 | direct |
 | https://www.govinfo.gov/content/pkg/FR-2018-08-17/html/2018-16766.htm | 200 | direct |
 | https://www.law.cornell.edu/uscode/text/42/1395ww | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.154 | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.160 | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.172 | 200 | direct |
+| https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R3138CP.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.qualityreportingcenter.com/globalassets/2020/12/pch/hospital-compare_care-compare-refresh-and-overall-hospital-quality-star-rating-2021-updates.pdf | 200 | direct |

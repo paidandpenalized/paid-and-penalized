@@ -161,3 +161,8 @@
 
 /* ---------- disclosure summaries: a figure's "Show table" and the what-if's result-table fold, one look ---------- */
 .fig__table summary, .wi-detail summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
+
+/* The estimate tag every modeled dollar figure carries (Thirty Day Readmissions' outlined tag), linking to how the
+   site makes the estimate. */
+.est-tag { display: inline-block; margin-left: 6px; padding: 2px 5px 1px; border: 1px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; vertical-align: 0.2em; white-space: nowrap; text-shadow: none; }
+.est-tag:hover { background: var(--pen); color: var(--on-mark); }

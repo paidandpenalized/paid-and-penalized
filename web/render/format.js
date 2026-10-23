@@ -55,6 +55,40 @@ export const signed = (x, dp = 1) => withSign(x, dp, '+');
 // not toFixed's: the two split some ties).
 export const shown = (x, dp) => Number(fixed(x, dp, 'decimal').replace(/,/g, '')) + 0; // + 0: never -0
 
+// Dollars, shortened as Thirty Day Readmissions writes them: "$640", "$48K", "$1.2M", "$342M", "$1.0B", a true minus
+// for a negative. Each threshold sits at its rounding point, so a value never prints as "$1000K" or "$1000M", and a
+// value that rounds to zero has no sign.
+const MONEY_STEPS = [
+  [999.5e6, (a) => `${(a / 1e9).toFixed(1)}B`],
+  [99.95e6, (a) => `${Math.round(a / 1e6)}M`],
+  [999.5e3, (a) => `${(a / 1e6).toFixed(1)}M`],
+  [999.5, (a) => `${Math.round(a / 1e3)}K`],
+  [0, (a) => String(Math.round(a))],
+];
+const moneyBody = (a) => MONEY_STEPS.find(([from]) => a >= from)[1](a);
+export function money(x) {
+  if (!Number.isFinite(x)) throw new RangeError(`money: not a number: ${x}`);
+  const body = moneyBody(Math.abs(x));
+  return `${x < 0 && body !== '0' ? MINUS : ''}$${body}`;
+}
+
+// A range of dollars, low to high: "$850K–$1.2M"; one unit said once when both ends share it ("$1.0–1.4M"); " to "
+// when an end is negative, where a dash would read as a minus ("−$12K to $40K").
+export function moneyRange(lo, hi) {
+  if (!(lo <= hi)) throw new RangeError(`moneyRange: low ${lo} is above high ${hi}`);
+  const [a, b] = [money(lo), money(hi)];
+  if (lo < 0 || hi < 0) return `${a} to ${b}`;
+  const unit = (s) => /[KMB]$/.exec(s)?.[0] ?? '';
+  return unit(a) && unit(a) === unit(b) ? `${a.slice(0, -1)}–${b.slice(1)}` : `${a}–${b}`;
+}
+
+// Whole dollars with thousands separators, for a statement whose lines add exactly: "$48,691,794", "−$58,430".
+// sign: '+' before a positive amount (an adjustment's direction), else none.
+export function dollars(x, { sign = false } = {}) {
+  if (!Number.isInteger(x)) throw new RangeError(`dollars: not whole dollars: ${x}`);
+  return `${x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${NUMBER.format(Math.abs(x))}`;
+}
+
 function longForm(year, month, day, source) {
   const d = new Date(Date.UTC(year, month - 1, day));
   if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {

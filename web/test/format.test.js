@@ -1,6 +1,34 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, ordinal, pct, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, money, moneyRange, ordinal, pct, signed } from '../render/format.js';
+
+test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
+  const cases = [
+    [0, '$0'], [640, '$640'], [999.4, '$999'], [999.5, '$1K'], [48_210, '$48K'], [999_499, '$999K'], [999_500, '$1.0M'],
+    [1_234_567, '$1.2M'], [99_949_999, '$99.9M'], [99_950_000, '$100M'], [342_400_000, '$342M'], [999_499_999, '$999M'],
+    [999_500_000, '$1.0B'], [1_049_999_999, '$1.0B'], [-280_437_699, '−$280M'], [-614_565, '−$615K'], [-0.4, '$0'],
+  ];
+  for (const [x, want] of cases) assert.equal(money(x), want, String(x));
+  assert.throws(() => money(NaN), RangeError);
+  assert.throws(() => money(null), RangeError);
+});
+
+test('moneyRange says a shared unit once and never uses a dash beside a minus', () => {
+  assert.equal(moneyRange(1_000_000, 1_400_000), '$1.0–1.4M');
+  assert.equal(moneyRange(850_000, 1_200_000), '$850K–$1.2M');
+  assert.equal(moneyRange(400, 900), '$400–$900');
+  assert.equal(moneyRange(-12_000, 40_000), '−$12K to $40K');
+  assert.equal(moneyRange(-1_400_000, -1_000_000), '−$1.4M to −$1.0M');
+  assert.throws(() => moneyRange(2, 1), RangeError);
+});
+
+test('dollars writes whole dollars with separators; a sign on request', () => {
+  assert.equal(dollars(48_691_794), '$48,691,794');
+  assert.equal(dollars(-58_430), '−$58,430');
+  assert.equal(dollars(106_253, { sign: true }), '+$106,253');
+  assert.equal(dollars(0, { sign: true }), '$0');
+  assert.throws(() => dollars(1.5), RangeError);
+});
 
 test('decimal keeps the given decimals, a true minus and no plus sign', () => {
   assert.equal(decimal(0.38, 4), '0.3800');

@@ -29,6 +29,7 @@ import { methodsPage, METHODS_PATH } from './pages/methods.js';
 import { placePage } from './pages/place.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { exploreAsset, programData } from './program-data.js';
+import { hospitalMoney } from './money.js';
 import { KINDS, buildPlaces } from './places.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
 
@@ -70,7 +71,7 @@ export function scoreRange(hospitals) {
 // data from loadHacrp() to read the files once.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed } = data;
+  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
@@ -151,10 +152,11 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const nat = nationalContext({ hospitals, master, model });
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
+    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn), dollars.bands);
     emitPage({
       path: view.path,
       robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null }),
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range, money }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money }),
     });
   }
 
@@ -199,10 +201,20 @@ function newestOnly(hospitals, fy) {
   return check;
 }
 
+// Every dollar figure carries its likely range. Until the back-test's ranges exist the pages say they are pending,
+// which is for review only: a production build of the site stops here.
+export function refusePendingRanges(env, dollars) {
+  if (env === 'production' && dollars.bands === null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is null); a production build cannot publish them');
+}
+
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
   entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
   styles: ['sites/hacrp/web/styles.css'],
-  generate: (ctx) => generateHacrp(ctx),
+  generate: (ctx) => {
+    const data = loadHacrp();
+    refusePendingRanges(ctx.env, data.dollars);
+    return generateHacrp(ctx, { data });
+  },
 };

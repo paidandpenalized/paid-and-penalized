@@ -208,16 +208,12 @@ test('the changes and the sources: every changelog entry with its date and items
   }
   // The table lists the pins the HACRP pages read, not every pin.
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
-  // A pin that no page declares (in a `sources` list that feeds pinsUsed) fails here, unless an emitted dollars file
-  // declares it: the FY2026 IPPS pins are read only by the dollar estimates, which no page loads yet. So the allowance
-  // empties itself when a page loads the dollars (their `sources` then join pinsUsed). This does not catch a page that
-  // reads such a pin without declaring it.
+  // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
+  // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
+  assert.deepEqual(manifest.filter((e) => !used.has(e.id)).map((e) => e.id), []);
   const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;
-  assert.deepEqual(
-    manifest.filter((e) => !used.has(e.id)).map((e) => e.id).sort(),
-    [...new Set(dollarsSources)].filter((id) => !used.has(id)).sort(),
-  );
+  for (const id of dollarsSources) assert.ok(used.has(id), `${id}: a dollar estimates source the Methods page lists`);
 });
 
 test('the pipeline\'s six stations carry the newest year\'s real numbers', () => {

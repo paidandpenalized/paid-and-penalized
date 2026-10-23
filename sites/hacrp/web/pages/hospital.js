@@ -26,6 +26,8 @@ import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
 import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
 import { fill as hfill, t as ht } from '../history/copy.js';
+import { cliffFigure, moneyField, moneyVerdict, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
+import { fill as mfill, t as mt } from '../money/copy.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
@@ -103,8 +105,9 @@ function locatorMap(view, shapes) {
 }
 
 // The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
-// outline (map: its markup, or null).
-function recordCard(view, { careSource, map }) {
+// outline (map: its markup, or null): the hospital, then where and what it is, then CMS's score and decision beside
+// this site's estimate of the money (m: hospitalMoney()), a row that reads score, decision, dollars.
+function recordCard(view, { careSource, map, m }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
   // Each field's formField options, numbered in order once the fields with nothing to show are left out.
@@ -112,11 +115,12 @@ function recordCard(view, { careSource, map }) {
     { label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true },
     { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' },
     type && { label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' },
+    starsSpec(view, careSource),
     view.scored
       ? { label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote'), fieldCls: 'f-score' }
       : { label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div', fieldCls: 'f-score' },
     { label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }), fieldCls: 'f-pay' },
-    starsSpec(view, careSource),
+    m && moneyField(m),
   ].filter(Boolean);
   const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
@@ -151,11 +155,16 @@ function leadMarkup(view) {
   return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
 }
 
-function verdict(view, nat, history) {
+function verdict(view, nat, history, m) {
   const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
+  const money = m && moneyVerdict(view, m);
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
+${money ? html`<div class="hosp__stampline">
 ${stampOf(view)}
+${money.beside}
+</div>` : stampOf(view)}
 <p class="hosp__summary">${leadMarkup(view)}</p>
+${money?.below}
 ${words && html`<p class="hosp__why">${words}</p>`}
 ${view.scored && html`<div class="hosp__lineblock">
 <p class="hosp__line">${fillKeep('lineCut', { lowestYes: view.boundaryText.lowestYes }, ['lowestYes'])}</p>
@@ -163,6 +172,7 @@ ${view.scored && html`<div class="hosp__lineblock">
 ${lineBarBlock(view, nat)}
 </div>`}
 ${history?.rec ? recordStrip(history.rec, history.hd.fys) : ''}
+${shareBlock(view, m)}
 </section>`;
 }
 
@@ -205,8 +215,10 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // scoreRange() in generate.js); a hospital with no score never gets one. searchUrl: the hospitals asset the top
 // bar's search reads (null: no search box). shapes: stateShapes(topology) for the maps (null: none). careSource:
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
-// the data list's source of the Type field's facts. master: the hospital's master record (its metro's name).
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null }) {
+// the data list's source of the Type field's facts. master: the hospital's master record (its metro's name). money:
+// this site's dollar estimate for the hospital (money.js hospitalMoney; the build always passes it; without it, a
+// test's synthetic hospital, the page shows no dollars).
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money = null }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -219,6 +231,10 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   // Figures are numbered in page order, each taking the next number only if it is drawn.
   let n = 0;
   const numbered = (fig) => { if (fig) n++; return fig; };
+  const m = money;
+  const moneySource = mfill('stmtSource', { fy, id: source.id });
+  const cliffFig = m?.estimated && view.scored ? numbered(cliffFigure(view, m, nat, { n: n + 1, source: moneySource })) : null;
+  const statement = m?.estimated ? numbered(statementFigure(view, m, { n: n + 1, source: moneySource })) : null;
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
@@ -236,13 +252,27 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
 
   const body = html`<article class="wrap page page--hosp hosp">
 <div class="hosp__top">
-${recordCard(view, { careSource, map })}
-${verdict(view, nat, history)}
+${recordCard(view, { careSource, map, m })}
+${verdict(view, nat, history, m)}
 </div>
 ${notes.length || small ? html`<div class="hosp__notes">
 ${notes.map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
 </div>` : ''}
+${cliffFig && section({
+    id: 'cliff', wide: true,
+    text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
+<p>${mfill('cliffIntro', { pct: REDUCTION_TEXT })}</p>
+<p>${mt('cliffHow')}</p>`,
+    figure: cliffFig,
+  })}
+${statement && section({
+    id: 'money',
+    text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
+<p>${mfill('stmtIntro', { fy })}</p>
+<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>`,
+    figure: statement,
+  })}
 ${section({
     id: 'measures', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
@@ -302,11 +332,12 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
 
   return page({
     title,
-    description: fill('hospitalDescription', where),
+    // The sentence a shared link carries, so a pasted link previews with the money.
+    description: m ? shareSentence(view, m) : fill('hospitalDescription', where),
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.share, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
     topbar: siteHeader({ fy: view.fy, current: 'map', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

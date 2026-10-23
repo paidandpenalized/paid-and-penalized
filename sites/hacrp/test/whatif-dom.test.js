@@ -599,3 +599,109 @@ test('the printed line names the shareable link: with a changed what-if\'s fragm
   type(field(sandbox, 'MRSA', 'number'), '1.4');
   assert.equal(line(sandbox), '', 'share: false reads no fragment, so it leaves the built line (the page\'s address) alone');
 });
+
+// ---------- the dollars: a synthetic hospital with dollars at stake (no estimate of any real hospital's) ----------
+const AT_STAKE = 654_321;
+const RICH = { ...H, atStake: AT_STAKE };
+// The smallest value of a measure, stepped up from the hospital's own, at which the decision reads flag (null if none).
+function valueFor(h, id, flag) {
+  const p = model.params[id];
+  let s = initialState(h, model);
+  for (let v = h.measures[id].value; v <= s.limits[id]; v = toUnit(v + 1 / 10 ** p.decimals, p.decimals)) {
+    s = initialState(h, model);
+    const next = viewModel({ ...s, values: { ...s.values, [id]: v } }, h, model, estimate);
+    if (next.result.after.flag === flag) return v;
+  }
+  return null;
+}
+const mountRich = (stub) => {
+  const markup = String(renderWhatIf({ vm: viewModel(initialState(RICH, model), RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, solver: solverOf(RICH, model) }));
+  const root = node(/^<section[^>]*>/.exec(markup)[0], markup);
+  mountWhatIf(root, { rules: whatIfRules(RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, env: stub.env });
+  return root;
+};
+
+test('the dollars: a crossing drops the cliff\'s dot to the cut and the head counts to it; reduced motion sets it at once', () => {
+  const yes = valueFor(RICH, 'MRSA', 'Yes');
+  assert.ok(yes !== null, 'MRSA raised far enough crosses the line');
+  // Reduced motion: no count, the new figure at once.
+  const still = windowStub();
+  still.env.matchMedia = (query) => ({ matches: query.includes('reduced-motion') });
+  still.env.requestAnimationFrame = () => assert.fail('no count under reduced motion');
+  const root = mountRich(still);
+  const dot = q(root, 'cliff-dot');
+  assert.equal(q(root, 'head-money').textContent, '$0');
+  type(field(root, 'MRSA', 'number'), String(yes));
+  assert.equal(q(root, 'head-money').textContent, '$654K');
+  assert.equal(q(root, 'head-money').getAttribute('class'), 'wi-money wi-money--cut');
+  assert.equal(q(root, 'money').textContent, '$654K', 'the table\'s Hypothetical cell');
+  assert.equal(q(root, 'head-money-was').hidden, false, 'before → after');
+  assert.equal(dot.style.props.get('--y'), '1', 'on the floor');
+  assert.equal(dot.getAttribute('data-motion'), 'fall');
+  assert.equal(dot.getAttribute('class'), 'wi-cliff__dot is-over');
+  assert.equal(q(root, 'cliff-start').hidden, false, 'the ring keeps the starting score');
+  q(root, 'reset').fire('click');
+  assert.equal(dot.style.props.get('--y'), '0');
+  assert.equal(dot.getAttribute('data-motion'), 'rise');
+  assert.equal(q(root, 'head-money').textContent, '$0');
+  assert.equal(q(root, 'money').textContent, 'same');
+
+  // With motion: the head counts frame by frame and lands on the figure.
+  const frames = [];
+  const moving = windowStub();
+  moving.env.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+  moving.env.cancelAnimationFrame = () => {};
+  const live = mountRich(moving);
+  type(field(live, 'MRSA', 'number'), String(yes));
+  const seen = [];
+  for (let now = 0, i = 0; i < frames.length; i++, now += 100) {
+    frames[i](now);
+    seen.push(q(live, 'head-money').textContent);
+  }
+  assert.ok(seen.length > 2 && seen.at(-1) === '$654K', seen.join(' '));
+  assert.ok(seen.slice(1, -1).some((s) => s !== '$0' && s !== '$654K'), 'it passes through amounts on the way');
+});
+
+test('the dollars near the line: too close to call shows both, "$0 or $X", never one number (head, table, sentence, slide)', () => {
+  const close = ['PSI90', 'CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'].map((id) => [id, valueFor(RICH, id, 'too-close')]).find(([, v]) => v !== null);
+  assert.ok(close, 'some measure lands too close to call');
+  const [id, v] = close;
+  const t = textsFor(RICH);
+  let s = initialState(RICH, model);
+  s = { ...s, values: { ...s.values, [id]: v } };
+  const vm = viewModel(s, RICH, model, estimate);
+  assert.deepEqual(vm.money.after, [0, -AT_STAKE]);
+  const both = '$0 or $654K';
+  assert.equal(t.money.amount(vm.money.after), both);
+  assert.ok(t.sentence(vm).includes(both), t.sentence(vm));
+  assert.ok(t.slide(vm).includes(`$0 → ${both}`), t.slide(vm));
+  const root = mountRich(windowStub());
+  type(field(root, id, 'number'), String(v));
+  assert.equal(q(root, 'head-money').textContent, both);
+  assert.equal(q(root, 'money').textContent, both);
+  assert.equal(q(root, 'cliff-dot').style.props.get('--y'), '0.5', 'hanging on the drop');
+  assert.equal(q(root, 'cliff-dot').getAttribute('class'), 'wi-cliff__dot is-close');
+});
+
+test('no dollars at stake (the sandbox, Maryland, no estimate): no dollars row, no head figure, no cliff', () => {
+  const markup = String(renderWhatIf({ vm: viewModel(initialState(H, model), H, model, estimate), texts, share: false, range: RANGE, solver: solverOf(H, model) }));
+  for (const name of ['head-money', 'money', 'cliff', 'cliff-dot']) assert.ok(!markup.includes(`data-wi="${name}"`), name);
+  const rich = String(renderWhatIf({ vm: viewModel(initialState(RICH, model), RICH, model, estimate), texts: textsFor(RICH), share: false, range: RANGE, solver: solverOf(RICH, model) }));
+  for (const name of ['head-money', 'money', 'cliff', 'cliff-dot']) assert.ok(rich.includes(`data-wi="${name}"`), name);
+  assert.match(rich, /class="wi-ramp wi-ramp--under"/, 'the ramp becomes the cliff\'s axis');
+  assert.match(rich, /<p class="wi-solver__worth">Staying at or under CMS’s line keeps about \$654K/);
+});
+
+test('the dollars out from under a cut: the sentence says what staying under the line keeps; the solver what it is worth', () => {
+  const cut = { ...modelHospital(model, '990029', { values: SYNTH_VALUES.yes }), atStake: AT_STAKE };
+  assert.equal(cut.paymentReduction, 'Yes');
+  const t = textsFor(cut);
+  let s = initialState(cut, model);
+  s = { ...s, values: Object.fromEntries(Object.entries(s.values).map(([id, v]) => [id, Math.min(v, s.medians[id])])) };
+  const vm = viewModel(s, cut, model, estimate);
+  assert.equal(vm.result.after.flag, 'No');
+  assert.deepEqual([vm.money.before, vm.money.after], [-AT_STAKE, 0]);
+  assert.ok(t.sentence(vm).includes('keep the whole cut, about $654K'), t.sentence(vm));
+  assert.ok(t.slide(vm).includes('Estimated HAC cut: $654K → $0'), t.slide(vm));
+  assert.equal(t.solver.worth, 'Getting under CMS’s line would keep about $654K, this site estimates: the whole cut, however far under the score lands.');
+});

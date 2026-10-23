@@ -81,7 +81,8 @@ export function mountScroll(scroll) {
 // live: the figure's polite live paragraph (a sort says its new order there, in the words the build wrote on the
 // table: data-sorted-up and data-sorted-down, each with a {column} for the column head's text).
 function mountTable(fig, live) {
-  const table = fig.querySelector('table');
+  // The figure's own table, in its "Show table" fold: a chart drawn as a table (a statement) is not it.
+  const table = fig.querySelector('.fig__table table');
   if (!table) return;
   const heads = [...table.tHead.rows[0].cells];
   heads.forEach((th, i) => {

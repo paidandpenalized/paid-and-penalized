@@ -21,3 +21,5 @@ export const DICTIONARY_PAGE = `${SITE.sites.hacrp.path}data/`;
 // roll call links to it).
 export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
 export const COUNT_NOTE = 'count-note';
+// The Methods page's section on the dollar estimates: every dollar figure's estimate tag links to it.
+export const DOLLARS_HREF = `${METHODS_PATH}#dollars`;

@@ -13,17 +13,18 @@
    on an empty box; the title and the name take whole rows. The rows stretch to the verdict's height. */
 .hosp__id { position: relative; display: flex; flex-direction: column; }
 .hosp__id > :not(.hosp__wm) { position: relative; }
-/* The fields on a six-column grid: Location beside a wider Type, then the score, the decision and the stars a third
-   each; a missing field's neighbors take its room. The rows stretch to the verdict's height. One column on a phone. */
+/* The fields on a six-column grid, a third each: where and what the hospital is (Location, Type, the stars), then the
+   row that reads score, decision, dollars. A missing field's neighbors take its room. The rows stretch to the verdict's
+   height. One column on a phone. */
 .hosp__fields { flex: 1 1 auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 1fr; }
 .hosp__fields > .field { grid-column: span 2; }
-.hosp__fields > .f-type { grid-column: span 4; }
-.hosp__fields:not(:has(> .f-type)) > .f-loc { grid-column: span 6; }
-.hosp__fields:not(:has(> .f-stars)) > :is(.f-score, .f-pay) { grid-column: span 3; }
+.hosp__fields:not(:has(> .f-stars)) > .f-type, .hosp__fields:not(:has(> .f-type)) > .f-loc { grid-column: span 4; }
+.hosp__fields:not(:has(> .f-type)):not(:has(> .f-stars)) > .f-loc { grid-column: span 6; }
+.hosp__fields:not(:has(> .f-money)) > :is(.f-score, .f-pay) { grid-column: span 3; }
 @media (max-width: 600px) {
   .hosp__fields { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
-  .hosp__fields > .field, .hosp__fields > .field.f-type { grid-column: 1 / -1; }
-  .hosp__fields:not(:has(> .f-type)) > .f-loc, .hosp__fields:not(:has(> .f-stars)) > :is(.f-score, .f-pay) { grid-column: 1 / -1; }
+  .hosp__fields > .field, .hosp__fields:not(:has(> .f-stars)) > .f-type, .hosp__fields:not(:has(> .f-type)) > .f-loc,
+  .hosp__fields:not(:has(> .f-type)):not(:has(> .f-stars)) > .f-loc, .hosp__fields:not(:has(> .f-money)) > :is(.f-score, .f-pay) { grid-column: 1 / -1; }
 }
 .hosp__name { margin-top: 6px; font: 400 clamp(1.9rem, 4.6vw, 3.25rem)/1.02 var(--font-display); letter-spacing: 0.005em; }
 /* The score: CMS's text in IBM Plex Mono 700, the most important glyphs on the page. */
@@ -66,6 +67,95 @@
 .hosp__rank { font: 400 var(--fs-sm)/1.5 var(--font-type); color: var(--ink-2); }
 .hosp__notes { display: grid; gap: 12px; }
 .hosp__top + .hsec, .hosp__notes + .hsec { padding-top: 0; border-top: 0; }
+
+/* ---------- the dollars (money-figures.js): this site's estimate, never CMS's ---------- */
+/* The verdict's dollars, beside the stamp: the stamp says the cut, the dollars say what it took. Under CMS's decision,
+   what the dollars are. */
+.hosp__stampline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.hosp__stampline .stamp { flex: none; }
+.hosp__stampline .money { flex: 1 1 0; min-width: 10.5rem; }
+.money { display: grid; gap: 2px; min-width: 0; padding: 2px 0 2px 14px; border-left: 4px solid var(--pen); }
+.money .est-tag { margin: 0 0 0 2px; }
+.money--zero { border-left-color: var(--ink); }
+.money--none { border-left: 0; padding-left: 0; }
+.money__below { display: grid; gap: 6px; justify-items: start; }
+.money__label { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; max-width: none; color: var(--pen-ink); font: 600 var(--fs-cap)/1.25 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.money--zero .money__label { color: var(--ink-2); }
+.money__label .est-tag { margin-left: 4px; }
+.money__big { max-width: none; margin-top: 2px; font: 700 clamp(2.4rem, 4.6vw, 3.3rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--pen-ink); }
+.money--zero .money__big { color: var(--ink); }
+.money__what { color: var(--ink-2); font: 600 var(--fs-sm)/1.35 var(--font-body); }
+.money__of, .money__would { font-size: var(--fs-sm); line-height: 1.5; }
+.money__none { display: grid; justify-items: start; padding: 8px; border: 1px solid var(--line); background: var(--hatch-fill); }
+.money__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-base)/1.3 var(--font-body); }
+/* Until the back-test's ranges arrive: a placeholder made to be seen (hatched, dashed, in caps); a production build
+   refuses a page that holds it. */
+.money__range--pending { justify-self: start; max-width: none; margin-top: 4px; padding: 2px 8px; border: 1.5px dashed var(--ink-2); background: var(--hatch-fill); font: 700 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+/* The record card's dollars field: the score's mono, in the penalty ink for a cut. */
+.money__field { font-weight: 700; font-size: clamp(1.9rem, 3.8vw, 2.6rem); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.money__field--cut { color: var(--pen-ink); }
+.f-money .est-tag { vertical-align: 0.6em; }
+
+/* The statement (statementFigure): the payment, line by line, in whole dollars, with one bar scale down the right. A
+   part fills its stretch of the payment, so the parts build the whole like a ledger's running total; a program's line
+   hatches the stretch it applies to (the base for two of them, everything for the HAC cut) and marks its adjustment at
+   the stretch's end. */
+.stmt { display: grid; gap: 10px; padding: 14px 16px 12px; border: var(--rule) solid var(--ink); background: var(--paper); }
+.stmt__title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; max-width: none; padding-bottom: 8px; border-bottom: 4px double var(--ink); font: 700 var(--fs-cap)/1.3 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.stmt__key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; color: var(--ink-2); font-size: var(--fs-xs); }
+.stmt__key li { display: flex; align-items: center; gap: 6px; }
+.stmt__sw { display: inline-block; width: 18px; height: 10px; }
+.stmt__sw--part { background: var(--ink-3); }
+.stmt__sw--scope { border: 1.5px solid var(--ink); background: var(--hatch-fill); }
+.stmt__sw--cut { width: 6px; background: var(--pen); }
+.stmt__table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.stmt__group th { padding: 14px 0 4px; border-bottom: 1px solid var(--line); color: var(--ink-2); text-align: left; font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.stmt__row > * { padding: 6px 0; vertical-align: middle; }
+.stmt__row th { padding-right: 12px; text-align: left; font-weight: 400; line-height: 1.3; }
+.stmt__sub { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.stmt__amt { padding-right: 14px; text-align: right; white-space: nowrap; font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.stmt__bar { width: 32%; }
+.stmt__track { position: relative; display: block; height: 14px; }
+.stmt__part, .stmt__scope, .stmt__cut, .stmt__add { position: absolute; top: 0; bottom: 0; left: calc(var(--from) * 100%); width: max(2px, calc((var(--to) - var(--from)) * 100%)); }
+.stmt__part { background: var(--ink-3); }
+.stmt__row:is([data-line="fed"], [data-line="mdhAddon"], [data-line="base"]) .stmt__part { background: var(--ink-2); }
+.stmt__row--sum .stmt__part { background: var(--ink); }
+.stmt__scope { outline: 1.5px solid var(--ink); outline-offset: -1.5px; background: var(--hatch-fill); }
+.stmt__cut { width: max(3px, calc((var(--to) - var(--from)) * 100%)); background: var(--pen); }
+.stmt__add { width: max(3px, calc((var(--to) - var(--from)) * 100%)); background: var(--rew); }
+.stmt__row--sum > * { border-top: 1px solid var(--ink); font-weight: 700; }
+.stmt__row--sum th { font-weight: 700; }
+.stmt__row[data-line="hac"] > * { padding-block: 10px; }
+.stmt__row[data-line="hac"] .stmt__name { font-weight: 700; }
+.stmt__row[data-line="hac"] .stmt__amt { color: var(--pen-ink); font-weight: 700; font-size: var(--fs-base); }
+.stmt__row--net > * { border-top: 4px double var(--ink); font-size: var(--fs-base); }
+.stmt__row--net th, .stmt__row--net .stmt__amt { font-weight: 700; }
+.stmt__none { color: var(--ink-2); font-size: var(--fs-xs); }
+@media (max-width: 600px) {
+  .stmt { padding-inline: 12px; }
+  .stmt__table, .stmt__table tbody { display: block; }
+  .stmt__group, .stmt__group th { display: block; }
+  .stmt__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name amt" "bar bar"; gap: 4px 10px; padding: 6px 0; }
+  .stmt__row > * { padding: 0; }
+  .stmt__row th { grid-area: name; }
+  .stmt__amt { grid-area: amt; padding-right: 0; }
+  .stmt__bar { grid-area: bar; display: block; width: auto; }
+  .stmt__row--sum, .stmt__row--net { border-top: 1px solid var(--ink); }
+  .stmt__row--net { border-top: 4px double var(--ink); }
+  .stmt__row--sum > *, .stmt__row--net > * { border-top: 0; }
+}
+
+/* The share control: a disclosure under the verdict, the sentence and link selectable inside it. */
+.share { padding-top: 10px; border-top: 1px solid var(--line); }
+.share__summary { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-h); padding: 6px 14px; border: var(--rule) solid var(--ink); background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; list-style: none; }
+.share__summary::-webkit-details-marker { display: none; }
+.share__summary::after { content: "+" / ""; font: 700 var(--fs-base)/1 var(--font-type); }
+.share[open] .share__summary { background: var(--ink); color: var(--paper); }
+.share[open] .share__summary::after { content: "\2212" / ""; }
+.share__body { display: grid; gap: 8px; margin-top: 10px; padding: 12px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); }
+.share__text { max-width: none; font-size: var(--fs-sm); line-height: 1.5; }
+.share__url { font-family: var(--font-type); color: var(--ink-2); overflow-wrap: anywhere; }
+.share__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* A numbered section: words left, the figure right from 980px (in hsec--full, the words across the top and the figure under them); stacked under that.
    Each section opens on a hairline. */
@@ -182,7 +272,12 @@
 
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
-  .hosp__none span { background: Canvas; color: CanvasText; }
+  .hosp__none span, .money__none span { background: Canvas; color: CanvasText; }
+  html :is(.money__none, .money__range--pending, .stmt__scope, .stmt__sw--scope) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; outline-color: CanvasText; background-color: Canvas; color: CanvasText; }
+  .stmt__part, .stmt__sw--part { forced-color-adjust: none; background: GrayText; }
+  .stmt__row--sum .stmt__part { background: CanvasText; }
+  .stmt__cut, .stmt__add, .stmt__sw--cut { forced-color-adjust: none; background: Highlight; }
+  .share[open] .share__summary { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .geo .chart-geo-dot { fill: CanvasText; }
   .geo .chart-geo-halo { fill: none; }
   .stars__off { color: GrayText; }

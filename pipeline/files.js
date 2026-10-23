@@ -25,6 +25,8 @@ export function newestYear(dir) {
 
 // The hospital master for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/master.py).
 export const masterPath = (fy) => `data/emitted/hospital/fy${fy}/hospital_master.json`;
+// The dollar estimates for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/dollars.py).
+export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
 
 export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');

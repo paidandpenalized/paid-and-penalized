@@ -119,3 +119,13 @@ export function barSpan(contribution, extent) {
   const width = clamp01(Math.abs(contribution) / extent) / 2;
   return { at: contribution < 0 ? 0.5 - width : 0.5, width };
 }
+
+// A program's dollars as a level on the cliff (render.js cliff, dom.js): 0 on the ledge ($0), 1 on the floor (the
+// cut), 0.5 hanging on the drop when too close to call (dollars [0, -cut]).
+export const cliffY = (dollars) => (Array.isArray(dollars) ? '0.5' : dollars < 0 ? '1' : '0');
+// The head's dollars: in the penalty ink while there is a cut.
+export const moneyClass = (dollars) => (!Array.isArray(dollars) && dollars < 0 ? ' wi-money--cut' : '');
+// The cliff's dot: filled on the floor (a cut), dashed when it hangs on the drop (too close to call).
+export const cliffDotClass = (dollars) => `wi-cliff__dot${Array.isArray(dollars) ? ' is-close' : dollars < 0 ? ' is-over' : ''}`;
+// The hypothetical's dollars are the start's (the same number, or the same pair).
+export const sameMoney = ({ before, after }) => String(before) === String(after);
