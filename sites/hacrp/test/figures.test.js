@@ -4,6 +4,7 @@
 // pinned file and again on a thinned copy of it, so a number typed into the code would not follow the data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { gzipSync } from 'node:zlib';
 import { decidedHospitals, isAssigned } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
@@ -23,7 +24,7 @@ import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
-import { DATA, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HISTORY_ARGS, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
 
 const { model, estimate } = DATA;
 const MEDIAN = medianHospital(model, { fiscalYear: String(DATA.fy), periods: DATA.periods });
@@ -38,7 +39,7 @@ const render = (h) => hospitalPage({
 const PAGE = renderProgram();
 const figures = (text) => [...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>([\s\S]*?)<\/figure>/g)];
 const figureBody = (text, n) => figures(text).find(([, id]) => Number(id) === n)[2];
-const drawings = (text) => [...text.matchAll(/<svg[\s\S]*?<\/svg>/g)].reduce((n, [m]) => n + m.length, 0);
+const drawingBytes = (text) => [...text.matchAll(/<svg[\s\S]*?<\/svg>/g)].reduce((n, [m]) => n + Buffer.byteLength(m), 0);
 // Each figure's [number, takeaway]; the takeaway's non-breaking hyphens (z-score's, a glyph only) read as hyphens.
 const captions = (text) => figures(text).map(([, , body]) => /<figcaption class="fig__cap" id="figure-\d+-cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/.exec(body).slice(1).map((s) => s.replaceAll('‑', '-')));
 // Every number written in a sentence: digits with their commas, decimal point and sign.
@@ -267,10 +268,17 @@ test('the hospital table section: the controls for client/table.js, the asset, a
   const words = PAGE.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<details class="fig__table">[\s\S]*?<\/details>/g, '');
   const ccns = new Set(DATA.hospitals.map((h) => h.ccn));
   assert.deepEqual([...words.matchAll(/\b\d{6}\b/g)].map((m) => m[0]).filter((c) => ccns.has(c)), [], 'no hospital list inlined');
-  // The weight of the page: its drawings (about 830 kB of inline SVG, some 300 kB of it the money's Part, mostly the
-  // treemap of every cut hospital) and, besides them, its words and tables (about 130 kB).
-  assert.ok(drawings(PAGE) < 850_000, `the drawings stay thinned (${drawings(PAGE)} bytes)`);
-  assert.ok(PAGE.length - drawings(PAGE) < 160_000, `the program page stays small (${PAGE.length - drawings(PAGE)} bytes besides its drawings)`);
+  // The weight of the page that ships: the program page as the build writes it, with every program year (HISTORY_ARGS),
+  // measured in bytes. Measured at 1,180,536 bytes of inline SVG (some 300 kB of it the money's Part, its treemap of every cut
+  // hospital the largest), 229,720 besides them (words, tables and the page's data), and 278,131 gzipped (level 9). Each
+  // budget is the measure plus about 5%: a change that adds weight raises it on purpose, with a reason.
+  const shipped = renderProgram(HISTORY_ARGS);
+  const bytes = Buffer.byteLength(shipped);
+  const svg = drawingBytes(shipped);
+  assert.ok(svg < 1_240_000, `the drawings stay thinned (${svg} bytes)`);
+  assert.ok(bytes - svg < 242_000, `the program page stays small (${bytes - svg} bytes besides its drawings)`);
+  const gzipped = gzipSync(shipped, { level: 9 }).length;
+  assert.ok(gzipped < 292_000, `the program page stays light on the wire (${gzipped} bytes gzipped)`);
 });
 
 // ---------- every takeaway's numbers ----------
