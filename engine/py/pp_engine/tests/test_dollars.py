@@ -344,6 +344,21 @@ class Total(Close):
         with self.assertRaises(ValueError):
             est(h)
 
+    def test_an_absent_optional_input_raises_naming_it_while_a_blank_one_prices(self):
+        # The keys the file may leave blank must still be in the dict, as None: an absent one is a hospital read some
+        # other way, and says which key, rather than failing on the first use with a bare KeyError.
+        for key in ("hsp", "hsp_mdh", "outlier_op", "outlier_cap", "ime_cases", "ime_cmi", "ucp_factor"):
+            h = hospital(**{key: None})
+            est(h)  # blank: priced
+            del h[key]
+            with self.assertRaisesRegex(ValueError, f"cannot price a hospital without .*{key}", msg=key):
+                est(h)
+        # several at once, each named; and a row of the file reaches the same refusal rather than a KeyError
+        h = hospital()
+        del h["hsp_mdh"], h["ime_cmi"]
+        with self.assertRaisesRegex(ValueError, "without hsp_mdh, ime_cmi"):
+            hospital_row("990001", "VA", h, RATES, hrrp=None, vbp=None, cut=False)
+
     def test_a_flag_that_is_not_a_bool_raises_naming_it_not_only_one_that_is_missing(self):
         # `sch` and `mdh` are true or false. A 1, a "Y" or a None would be read as a truth value (and "N" is truthy):
         # the hospital is refused, not priced as whatever the value happens to mean.
@@ -836,12 +851,17 @@ class National(unittest.TestCase):
 TARGETS = IMPACT_YEARS[2026].checks  # the ranges that come from the FY2026 final rule
 
 
+def checked_rates(uc_pool=WORKED_POOL, year=IMPACT_YEARS[2026]):
+    """The rates the hospitals were priced with, as `checks` reads them: the pool, and the year whose targets apply."""
+    return {**RATES, "uc_pool": uc_pool, "year": year}
+
+
 class Checks(unittest.TestCase):
     def check(self, nat=None, hacrp_yes=1, uc_pool=WORKED_POOL, parts=None, **changes):
         nat = dict(NAT if nat is None else nat, **changes)
         if parts:
             nat["parts"] = {**nat["parts"], **parts}
-        return {c["id"]: c for c in checks(nat, hacrp_yes=hacrp_yes, uc_pool=uc_pool, targets=TARGETS)}
+        return {c["id"]: c for c in checks(nat, hacrp_yes=hacrp_yes, rates=checked_rates(uc_pool))}
 
     def test_the_constants(self):
         self.assertEqual(TARGETS.hrrp_share, (0.0040, 0.0048))
@@ -853,7 +873,7 @@ class Checks(unittest.TestCase):
         self.assertEqual(YES_UNESTIMATED_MAX, 9)
 
     def test_the_shape_and_order(self):
-        got = checks(NAT, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
+        got = checks(NAT, hacrp_yes=1, rates=checked_rates())
         self.assertEqual([c["id"] for c in got], ["hrrp_share", "vbp_net", "hac_share", "outlier_share", "uc_pool",
                                                   "hac_count", "yes_unestimated"])
         for c in got:
@@ -959,19 +979,38 @@ class Checks(unittest.TestCase):
     def test_the_worked_example_end_to_end(self):
         # four hospitals, B = 120,000 each, outliers 0.05 x 120,000 = 6,000, a quarter of a 12,000 pool of uncompensated
         # care (3,000): T = 129,000. HRRP 0.9956 -> -528 each; one cut: HAC = -0.01 x 128,472 = -1,284.72 -> -1,285
-        rates = {**RATES, "uc_pool": WORKED_POOL}
+        rates = checked_rates()  # the rates the rows are priced with are the ones the checks read
         h = hospital(outlier_op=0.05, ucp_factor=0.25)
         rows = [hospital_row(ccn, "VA", h, rates, hrrp=0.9956, vbp=vbp, cut=ccn == "990001")
                 for ccn, vbp in (("990001", 1.0), ("990002", 1.0), ("990003", None), ("990004", None))]
         nat = national(rows)
         self.assertEqual({k: nat[k] for k in NAT}, NAT)
-        got = checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
+        got = checks(nat, hacrp_yes=1, rates=rates)
         self.assertEqual([c["pass"] for c in got], [True] * 7)
 
     def test_it_does_not_change_the_national_dict(self):
         nat = dict(NAT)
-        checks(nat, hacrp_yes=1, uc_pool=WORKED_POOL, targets=TARGETS)
+        checks(nat, hacrp_yes=1, rates=checked_rates())
         self.assertEqual(nat, NAT)
+
+    def test_the_pool_and_the_targets_come_from_the_rates_the_hospitals_were_priced_with_and_from_nowhere_else(self):
+        # No pool or targets argument: the one object that priced the hospitals names both.
+        with self.assertRaises(TypeError):
+            checks(NAT, hacrp_yes=1, rates=checked_rates(), uc_pool=WORKED_POOL)
+        with self.assertRaises(TypeError):
+            checks(NAT, hacrp_yes=1, rates=checked_rates(), targets=TARGETS)
+        # The pool the hospitals' uncompensated care was figured on is the pool the sum is held to: a hospital priced
+        # on a pool a quarter the size (a Factor 3 of 0.25) is a quarter of it, whole against the pool it was priced on.
+        rates = checked_rates(uc_pool=48000.0)
+        row = hospital_row("990001", "VA", hospital(ucp_factor=0.25), rates, hrrp=None, vbp=None, cut=False)
+        self.assertEqual(row["uc"], 12000)
+        nat = {**national([row]), "yes": 0}
+        self.assertEqual(checks(nat, hacrp_yes=0, rates=rates)[4]["value"], 12000 / 48000)
+        # A year with no published estimate has no targets to hold it to; rates that name no year cannot be checked.
+        with self.assertRaisesRegex(ValueError, "FY2024 has no national check targets"):
+            checks(NAT, hacrp_yes=1, rates=checked_rates(year=IMPACT_YEARS[2024]))
+        with self.assertRaisesRegex(SchemaError, "carry no year"):
+            checks(NAT, hacrp_yes=1, rates=RATES)
 
 
 if __name__ == "__main__":

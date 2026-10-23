@@ -54,7 +54,7 @@ def rates(fy=FY):
 
 @functools.lru_cache(maxsize=None)
 def payment_inputs(fy=FY):
-    return ipps.read_payment_inputs(pinned_text(fy, "impact"), fy)
+    return ipps.read_payment_inputs(pinned_text(fy, "impact"), rates(fy))  # read by the year of its rates
 
 
 @functools.lru_cache(maxsize=None)

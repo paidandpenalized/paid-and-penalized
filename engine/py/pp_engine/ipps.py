@@ -3,11 +3,13 @@ decodes them as Windows-1252, as CMS writes them). Every reader goes through `pa
 layout change raises SchemaError rather than producing wrong values.
 
 Two final rules are read: FY2026's, for the estimates the pages show, and FY2024's, for the back-test against hospitals'
-cost reports. The readers that depend on the year take it (`fy`), and the year picks the impact file's column names and
-other settings (`IMPACT_YEARS`) and the Table 16B factor heading. Column names are the data files' own headers, which
-differ from the impact file's README in places (the README says `Wage Index`, the file `FY 2026 Wage Index`; README
-`UCP and IHS/PR Supplemental Payment Per Claim Amount`, file `UCP Per Claim Amount`; and so on). They are matched
-exactly, year stamps included, so another year's file fails instead of being read as this one.
+cost reports. `read_rates` takes the year (`fy`) and returns its settings (`IMPACT_YEARS`) with the rates; the impact
+file is read by those rates (`read_payment_inputs`), so the two cannot be of different years, and `read_vbp_factors`
+takes the year for the Table 16B factor heading. The year picks the impact file's column names and other settings.
+Column names are the data files' own headers, which differ from the impact file's README in places (the README says
+`Wage Index`, the file `FY 2026 Wage Index`; README `UCP and IHS/PR Supplemental Payment Per Claim Amount`, file `UCP
+Per Claim Amount`; and so on). They are matched exactly, year stamps included, so another year's file fails instead of
+being read as this one.
 """
 import math
 import re
@@ -131,7 +133,7 @@ def _capital(section):
 def read_rates(text, fy=2026):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
     `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}}, "capital": rate, "mdh_factor": {key: multiplier},
-    "uc_pool": dollars}`.
+    "uc_pool": dollars, "year": ImpactYear}`.
     1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%). Table 1C (Puerto Rico's) is not read:
     no program applies to a Puerto Rico hospital, so none is priced on it (`dollars.refuse_puerto_rico`). The keys
     (`RATE_KEYS`, chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table
@@ -143,6 +145,9 @@ def read_rates(text, fy=2026):
     update times the rule's budget-neutrality factors for hospital-specific rates (`hsp_budget_neutrality`), else 1.
     `uc_pool` is the year's uncompensated care pool (`ImpactYear.uc_pool`), which the impact file's `UCP_ADJ` shares
     out; it and the budget-neutrality factors are stated in the rule's text, not in these tables.
+    `year` is the `ImpactYear` record the rates were read for. It is the one place a year is named: the impact file is
+    read by it (`read_payment_inputs` takes these rates, not a year of its own) and the national checks are read from it
+    (`dollars.checks`), so the rates, the hospitals' inputs and the checks cannot be of different years.
     The layout is the same in FY2024's and FY2026's files; the labor shares are not (FY2024's Table 1A is 67.6% labor),
     and are not read."""
     sections = _sections(rows(text, "\t"))
@@ -162,7 +167,7 @@ def read_rates(text, fy=2026):
     mdh_factor = {key: ((1.0 + percent / 100.0) * math.prod(year.hsp_budget_neutrality)
                         if year.mdh_rate_prior_year else 1.0) for key, percent in updates_a.items()}
     return {"operating": operating, "capital": _capital(sections["1D"]), "mdh_factor": mdh_factor,
-            "uc_pool": year.uc_pool}
+            "uc_pool": year.uc_pool, "year": year}
 
 
 # --- the impact file -------------------------------------------------------------------------------------------------
@@ -232,6 +237,7 @@ _FY2026_CHECKS = CheckTargets(
 # the national checks held to the year's estimate. Both files share most column names; the year-stamped ones and the MDH
 # and low-volume columns differ.
 class ImpactYear(NamedTuple):
+    fy: int  # the final rule's year
     columns: dict  # the keys of a hospital's inputs -> the file's own header texts
     # Whether the file flags Medicare-dependent hospitals in a column of its own (else they are the Provider Types of
     # MDH_TYPES, and `HSP Rate` is theirs).
@@ -286,8 +292,8 @@ _SHARED_COLUMNS = {
     "gaf": "GAF",
     "beds": "Beds",  # README: "The number of total beds obtained from cost report data"; zero may mean unavailable
 }
-IMPACT_YEARS = {
-    2026: ImpactYear({
+IMPACT_YEARS = {y.fy: y for y in (
+    ImpactYear(2026, {
         **_SHARED_COLUMNS,
         "cases": "CASETA43",  # transfer-adjusted cases (grouper V43): these price B
         "cmi": "TACMIV43",  # transfer-adjusted case-mix index: prices B
@@ -300,7 +306,7 @@ IMPACT_YEARS = {
         "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
     }, mdh_flag=True, mdh_rate_prior_year=True, hsp_budget_neutrality=(0.998580, 0.999897), uc_pool=7_713_127_500.0,
        volume_fy=2024, checks=_FY2026_CHECKS),
-    2024: ImpactYear({
+    ImpactYear(2024, {
         **_SHARED_COLUMNS,
         "cases": "CASETA41",  # README: "Transfer Adjusted Cases under Grouper V41 and FY 2024 Post-Acute Transfer Policy"
         "cmi": "TACMIV41",
@@ -311,7 +317,7 @@ IMPACT_YEARS = {
         "low_volume": "Low Volume Hospital Adjustment",  # multiplier; 1 = none (the expanded tiers ran all of FY2024)
     }, mdh_flag=False, mdh_rate_prior_year=False, hsp_budget_neutrality=(), uc_pool=5_938_006_756.87,
        volume_fy=2022, checks=None),
-}
+)}
 _NOT_FLOAT = ("ccn", "bills", "quality", "ehr", "ptype", "mdh", "beds")
 
 
@@ -338,11 +344,21 @@ def impact_year(fy):
     return IMPACT_YEARS[fy]
 
 
-def read_payment_inputs(text, fy=2026):
+def rates_year(rates):
+    """The `ImpactYear` a rates table (`read_rates`) was read for. A table not from `read_rates` raises."""
+    try:
+        return rates["year"]
+    except (KeyError, TypeError):
+        raise SchemaError("the rates carry no year: they must be the table `read_rates` returned") from None
+
+
+def read_payment_inputs(text, rates):
     """A final-rule IPPS impact file (tab-delimited) -> {ccn: inputs}, one dict per hospital with the keys of
-    the year's `IMPACT_YEARS` columns (less `ccn`) plus the derived `sch`. `fy` is the rule's year and picks the column
-    names. Numbers are floats (`bills`, `ptype`, `quality`, `ehr` and `beds` ints); a blank cell is None, a zero stays
-    0. `quality` and `ehr` are the file's proxy flags, 1 = reduced update (`rate_key` turns them into a rate key).
+    the year's `IMPACT_YEARS` columns (less `ccn`) plus the derived `sch`. `rates` is the table `read_rates` returned
+    for the same rule: the year it was read for (`rates_year`) picks the column names, and there is no other way to
+    name a year, so the inputs cannot be of another year than the rates they are priced with. Numbers are floats
+    (`bills`, `ptype`, `quality`, `ehr` and `beds` ints); a blank cell is None, a zero stays 0. `quality` and `ehr` are
+    the file's proxy flags, 1 = reduced update (`rate_key` turns them into a rate key).
     `sch` is `ptype in SCH_TYPES`. The file's Puerto Rico rows are read like the rest; no program applies to them
     (`dollars.refuse_puerto_rico`).
 
@@ -353,9 +369,9 @@ def read_payment_inputs(text, fy=2026):
 
     FY2024: `mdh` is `ptype in MDH_TYPES`, `hsp_mdh` the `HSP Rate` of those rows (None elsewhere), and `low_volume`
     the `Low Volume Hospital Adjustment` column; both programs were in force for the whole year."""
-    year = impact_year(fy)
+    year = rates_year(rates)
     columns = year.columns
-    label = f"FY{fy} impact file"
+    label = f"FY{year.fy} impact file"
     floats = tuple(k for k in columns if k not in _NOT_FLOAT)
 
     def build(r):

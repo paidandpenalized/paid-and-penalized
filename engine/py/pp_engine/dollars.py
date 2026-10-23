@@ -42,7 +42,7 @@ Pure: no file, network or clock.
 """
 import math
 
-from pp_engine.ipps import PUERTO_RICO, rate_key
+from pp_engine.ipps import PUERTO_RICO, rate_key, rates_year
 from pp_engine.parse import MARYLAND
 
 HAC_RATE = 0.01  # the HAC Reduction Program's payment reduction: 1% of the hospital's payments (SSA 1886(p))
@@ -52,8 +52,8 @@ MDH_SHARE = 0.75
 
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass. The ranges that come from a year's final rule (the HRRP share, the
-# outlier share and the uncompensated care pool) are the year's `ipps.CheckTargets`, which `checks` takes; the ones
-# below do not depend on the year.
+# outlier share and the uncompensated care pool) are the year's `ipps.CheckTargets`, which `checks` reads from the rates
+# the hospitals were priced with; the ones below do not depend on the year.
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
 # 0.05 percentage points each way, because the cut hospitals are not an average quarter of payments.
@@ -77,11 +77,12 @@ YES_UNESTIMATED_MAX = 9
 STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 
 # Keys every hospital must carry as numbers (or, for the flags, bools). The ones the file may leave blank (`hsp`,
-# `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`, `ucp_factor`) are handled where they are used and are
-# not listed.
+# `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`, `ucp_factor`) must still be there, with None for a
+# blank; where they are used, None is handled.
 _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op",
             "dsh_cap", "ucp_per_claim", "gaf", "low_volume")
 _FLAGS = ("sch", "mdh")
+_BLANKABLE = ("hsp", "hsp_mdh", "outlier_op", "outlier_cap", "ime_cases", "ime_cmi", "ucp_factor")
 BASE = ("fed", "mdh_addon")  # the parts of B
 _ADD_ONS = ("ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = BASE + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
@@ -98,7 +99,7 @@ def _missing(value):
 
 
 def _check(inp):
-    missing = [k for k in _NUMBERS if inp.get(k) is None] + [k for k in _FLAGS if k not in inp]
+    missing = [k for k in _NUMBERS if inp.get(k) is None] + [k for k in _FLAGS + _BLANKABLE if k not in inp]
     if missing:
         raise ValueError(f"cannot price a hospital without {', '.join(missing)}")
     for k in _FLAGS:
@@ -422,21 +423,27 @@ def result(id_, value, low, high):
             "pass": value is not None and low <= value <= high}
 
 
-def checks(nat, *, hacrp_yes, uc_pool, targets):
-    """Hold `national`'s sums against what CMS publishes about the programs and the payment. `targets` is the year's
-    `ipps.CheckTargets`. A list of `{id, value, low, high, pass}`:
+def checks(nat, *, hacrp_yes, rates):
+    """Hold `national`'s sums against what CMS publishes about the programs and the payment. `rates` is the table the
+    hospitals were priced with (`ipps.read_rates`): the final rule's uncompensated care pool is its `uc_pool`, and the
+    ranges the year's rule sets are the `ipps.CheckTargets` of the year it carries (a year with none, FY2024, raises).
+    A list of `{id, value, low, high, pass}`:
       hrrp_share       HRRP dollars lost over B of the penalized hospitals, in `targets.hrrp_share`
       vbp_net          |HVBP dollars| (the net of winners and losers), at most VBP_NET_OF_POOL of the 2% pool; with
                        no value-based base there is no pool to hold it to, so it has value None and fails
       hac_share        HAC dollars lost over everyone's T, in HAC_SHARE
       outlier_share    operating outliers over the federal DRG payment plus operating outliers, in
                        `targets.outlier_share`
-      uc_pool          uncompensated care over `uc_pool`, the final rule's pool (`rates["uc_pool"]`), in
+      uc_pool          uncompensated care over the final rule's pool (`rates["uc_pool"]`), in
                        `targets.uc_pool_share`
       hac_count        hospitals marked cut, any status, equal to `hacrp_yes`: the Yes count the caller reads from
                        the HACRP site's emitted file, not from the rows being checked
       yes_unestimated  cut hospitals with no estimate, at most YES_UNESTIMATED_MAX
     A share with nothing to divide by has value None and fails."""
+    year = rates_year(rates)
+    targets, uc_pool = year.checks, rates["uc_pool"]
+    if targets is None:
+        raise ValueError(f"FY{year.fy} has no national check targets: its estimate is not published")
     parts = nat["parts"]
     # On an empty value-based base the band is [0, 0], which a net of zero meets: that is no test, so it has no value.
     vbp_net = abs(nat["hvbp"]) if nat["vbp_base"] else None

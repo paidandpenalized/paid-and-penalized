@@ -22,7 +22,7 @@ from pp_engine.contract import camel, envelope, source_manifest_hash
 from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
-from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows
+from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows, rates
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 4
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
@@ -124,13 +124,12 @@ def build_from_pins(built_at):
     ranges = backtest_dollars.bands_json()
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]
     national = dollars.national(built)
-    year = ipps.impact_year(fy)
-    checks = (dollars.checks(national, hacrp_yes=site_yes_count(fy), uc_pool=year.uc_pool, targets=year.checks)
-              + backtest_dollars.checks(ranges))
+    table = rates(fy)  # the rates the rows were priced with: the checks read the pool and the targets from them
+    checks = dollars.checks(national, hacrp_yes=site_yes_count(fy), rates=table) + backtest_dollars.checks(ranges)
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
-        "assumptions": {"ratesFy": FY, "volumeFy": year.volume_fy, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
-                        "ntap": NTAP},
+        "assumptions": {"ratesFy": FY, "volumeFy": ipps.rates_year(table).volume_fy, "mdhEnd": MDH_END,
+                        "lowVolumeEnd": LOW_VOLUME_END, "ntap": NTAP},
         "national": totals_json(national),
         "headline": totals_json(dollars.national(headline)),
         "checks": checks,

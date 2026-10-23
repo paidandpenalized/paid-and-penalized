@@ -5,8 +5,8 @@ import io
 import re
 import unittest
 
-from pp_engine.ipps import (IMPACT_YEARS, MDH_TYPES, SCH_TYPES, rate_key, read_hrrp_factors, read_payment_inputs,
-                            read_rates, read_vbp_factors)
+from pp_engine.ipps import (IMPACT_YEARS, MDH_TYPES, SCH_TYPES, rate_key, rates_year, read_hrrp_factors,
+                            read_payment_inputs, read_rates, read_vbp_factors)
 from pp_engine.parse import SchemaError
 
 PAYMENT_COLUMNS = IMPACT_YEARS[2026].columns
@@ -79,6 +79,12 @@ def tsv(rows_):
     return out.getvalue()
 
 
+def read_inputs(text, fy=2026):
+    """`read_payment_inputs` for the rule of year `fy`: the impact file is read by the year of the rates, so the test
+    reads the year's rates (`rates_text` stands in for both years' tables, as the 2024 tests already do)."""
+    return read_payment_inputs(text, read_rates(rates_text(), fy))
+
+
 class Rates(unittest.TestCase):
     def test_rates_pairs_sum_to_the_full_rate(self):
         got = read_rates(rates_text())["operating"]
@@ -93,7 +99,8 @@ class Rates(unittest.TestCase):
         self.assertEqual(got["operating"]["1A"]["qe"], (660.00, 340.00))
         self.assertEqual(got["operating"]["1B"]["nn"], (589.00, 361.00))
         self.assertEqual(got["capital"], CAPITAL)
-        self.assertEqual(set(got), {"operating", "capital", "mdh_factor", "uc_pool"})
+        self.assertEqual(set(got), {"operating", "capital", "mdh_factor", "uc_pool", "year"})
+        self.assertIs(got["year"], IMPACT_YEARS[2026])  # the year record the rates were read for, named once
         self.assertEqual(sorted(got["operating"]), ["1A", "1B"])  # Table 1C (Puerto Rico's) is not read
 
     def test_the_mdh_factor_is_the_update_and_budget_neutrality_where_the_files_rate_is_the_year_before_s(self):
@@ -216,7 +223,7 @@ def hospital(**kw):
 
 class PaymentInputs(unittest.TestCase):
     def test_a_row_reads_into_numbers_and_flags(self):
-        got = read_payment_inputs(impact_text(hospital()))["990001"]
+        got = read_inputs(impact_text(hospital()))["990001"]
         self.assertEqual(got, {
             "cases": 3878.43, "cmi": 1.9757, "bills": 3952, "cmi_hsp": 1.9834, "wi": 1.0512, "cola": 1.0,
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
@@ -230,7 +237,7 @@ class PaymentInputs(unittest.TestCase):
         blanks = {k: "" for k in ("CASETA43", "TACMIV43", "OUTFACT_F", "COUTFACT_F", "HSP Rate", "UCP Per Claim Amount",
                                   "UCP_ADJ",
                                   "Proxy Quality Reduction", "Provider Type")}
-        got = read_payment_inputs(impact_text(hospital(**blanks)))["990001"]
+        got = read_inputs(impact_text(hospital(**blanks)))["990001"]
         for key in ("cases", "cmi", "outlier_op", "outlier_cap", "hsp", "ucp_per_claim", "ucp_factor", "quality",
                     "ptype"):
             self.assertIsNone(got[key], key)
@@ -238,13 +245,13 @@ class PaymentInputs(unittest.TestCase):
         self.assertEqual(got["wi"], 1.0512)  # the rest still reads
 
     def test_a_zero_stays_zero_and_is_not_blank(self):
-        got = read_payment_inputs(impact_text(hospital(**{"HSP Rate": "0", "OUTFACT_F": "0"})))["990001"]
+        got = read_inputs(impact_text(hospital(**{"HSP Rate": "0", "OUTFACT_F": "0"})))["990001"]
         self.assertEqual((got["hsp"], got["outlier_op"]), (0.0, 0.0))
 
     def test_sch_follows_the_provider_type(self):
         types = {"0": False, "7": False, "8": False, "16": True, "17": True, "21": True, "22": True}
         recs = [hospital(**{"Provider Number": f"99{i:04d}", "Provider Type": t}) for i, t in enumerate(types)]
-        got = read_payment_inputs(impact_text(*recs))
+        got = read_inputs(impact_text(*recs))
         self.assertEqual([got[f"99{i:04d}"]["sch"] for i in range(len(types))], list(types.values()))
         self.assertEqual(SCH_TYPES, {16, 17, 21, 22})
 
@@ -252,42 +259,42 @@ class PaymentInputs(unittest.TestCase):
         recs = [hospital(**{"Provider Number": "990002", "MDH Flag, CAA 2024": "Y",
                             "HSP Rate for MDHs, FY 2025 extension": "6500.5"}),
                 hospital(**{"Provider Number": "40Z999"}), hospital()]
-        got = read_payment_inputs(impact_text(*recs))
+        got = read_inputs(impact_text(*recs))
         self.assertEqual((got["990002"]["mdh"], got["990002"]["hsp_mdh"]), (True, 6500.5))
         # no flag of its own: the program files decide whether a hospital is priced, and none lists Puerto Rico's
         self.assertEqual(got["40Z999"], got["990001"])
 
     def test_the_low_volume_column_is_the_fy2025_extension_one(self):
-        got = read_payment_inputs(impact_text(hospital(**{
+        got = read_inputs(impact_text(hospital(**{
             "Low Volume Hospital Adjustment": "1",
             "Low-Volume Hospital Payment Adjustment, FY 2025 extension": "1.25"})))["990001"]
         self.assertEqual(got["low_volume"], 1.25)
 
     def test_columns_are_found_by_name_not_position(self):
-        got = read_payment_inputs(impact_text(hospital(), header=IMPACT_HEADER[:1] + IMPACT_HEADER[:0:-1]))
-        self.assertEqual(got, read_payment_inputs(impact_text(hospital())))
+        got = read_inputs(impact_text(hospital(), header=IMPACT_HEADER[:1] + IMPACT_HEADER[:0:-1]))
+        self.assertEqual(got, read_inputs(impact_text(hospital())))
 
     def test_payment_inputs_duplicate_ccn_raises(self):
         with self.assertRaisesRegex(SchemaError, "duplicate CCN 990001"):
-            read_payment_inputs(impact_text(hospital(), hospital(Name="INVENTED B")))
+            read_inputs(impact_text(hospital(), hospital(Name="INVENTED B")))
 
     def test_a_trailing_non_ccn_row_is_skipped_and_a_malformed_ccn_raises(self):
         text = impact_text(hospital()) + "End of worksheet\r\n"
-        self.assertEqual(list(read_payment_inputs(text)), ["990001"])
+        self.assertEqual(list(read_inputs(text)), ["990001"])
         with self.assertRaisesRegex(SchemaError, "malformed CCN"):
-            read_payment_inputs(impact_text(hospital(**{"Provider Number": "99001"})))
+            read_inputs(impact_text(hospital(**{"Provider Number": "99001"})))
 
     def test_missing_column_raises(self):
         for key, name in PAYMENT_COLUMNS.items():
             header = [h for h in IMPACT_HEADER if h != name]
             want = "header row" if key == "ccn" else "expected one column " + re.escape(repr(name))
             with self.assertRaisesRegex(SchemaError, want):
-                read_payment_inputs(impact_text(hospital(), header=header))
+                read_inputs(impact_text(hospital(), header=header))
 
     def test_the_fy2026_low_volume_column_alone_is_not_enough(self):
         header = [h for h in IMPACT_HEADER if not h.startswith("Low-Volume")]
         with self.assertRaisesRegex(SchemaError, "Low-Volume Hospital Payment Adjustment, FY 2025 extension"):
-            read_payment_inputs(impact_text(hospital(), header=header))
+            read_inputs(impact_text(hospital(), header=header))
 
     def test_a_flag_is_0_1_or_blank_and_nothing_else(self):
         # CMS writes the proxy reduction flags as 0 or 1. A cell that merely rounds to one (1.4, 0.6) or that the number
@@ -295,9 +302,9 @@ class PaymentInputs(unittest.TestCase):
         for column in ("Proxy Quality Reduction", "Proxy EHR Reduction"):
             for bad in ("2", "-1", "1.0", "0.0", "0.6", "1.4", "$1", "100%", "yes", "Y", "n/a", ".", "--", "inf", "nan"):
                 with self.assertRaisesRegex(SchemaError, f"990001.*{column}", msg=(column, bad)):
-                    read_payment_inputs(impact_text(hospital(**{column: bad})))
+                    read_inputs(impact_text(hospital(**{column: bad})))
             for ok, want in (("0", 0), ("1", 1), ("", None), (" 1 ", 1)):
-                got = read_payment_inputs(impact_text(hospital(**{column: ok})))["990001"]
+                got = read_inputs(impact_text(hospital(**{column: ok})))["990001"]
                 self.assertEqual(got["quality" if column == "Proxy Quality Reduction" else "ehr"], want, (column, ok))
 
     def test_an_infinite_count_is_a_schema_error_not_an_overflow(self):
@@ -305,13 +312,13 @@ class PaymentInputs(unittest.TestCase):
         for column in ("Bills", "Provider Type"):
             for bad in ("inf", "-inf", "Infinity"):
                 with self.assertRaisesRegex(SchemaError, "990001", msg=(column, bad)):
-                    read_payment_inputs(impact_text(hospital(**{column: bad})))
+                    read_inputs(impact_text(hospital(**{column: bad})))
 
     def test_a_non_numeric_cell_or_a_bad_flag_raises(self):
         for col, bad in (("CASETA43", "many"), ("FY 2026 Wage Index", "nan"), ("GAF", "inf"),
                          ("Proxy EHR Reduction", "2"), ("Proxy Quality Reduction", "yes")):
             with self.assertRaisesRegex(SchemaError, "990001"):
-                read_payment_inputs(impact_text(hospital(**{col: bad})))
+                read_inputs(impact_text(hospital(**{col: bad})))
 
 
 # FY2024's impact file: other year stamps, no MDH or extension columns (MDH status is the provider type, its rate the
@@ -335,7 +342,7 @@ def impact_2024(*records):
 
 class PaymentInputs2024(unittest.TestCase):
     def test_a_row_reads_with_the_years_columns(self):
-        got = read_payment_inputs(impact_2024(GOOD_2024), fy=2024)["990001"]
+        got = read_inputs(impact_2024(GOOD_2024), fy=2024)["990001"]
         self.assertEqual((got["cases"], got["cmi"], got["cmi_hsp"], got["wi"], got["low_volume"], got["beds"]),
                          (2100.5, 1.5401, 1.5512, 0.9512, 1.1, 0))  # V41, not V40; a zero bed count stays 0
         self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"]), (False, None, False))
@@ -345,7 +352,7 @@ class PaymentInputs2024(unittest.TestCase):
     def test_mdh_is_the_provider_type_and_its_rate_is_the_hsp_rate(self):
         recs = [dict(GOOD_2024, **{"Provider Number": f"99{i:04d}", "Provider Type": t, "HSP Rate": "7100.25"})
                 for i, t in enumerate(("0", "14", "15", "16"))]
-        got = read_payment_inputs(impact_2024(*recs), fy=2024)
+        got = read_inputs(impact_2024(*recs), fy=2024)
         self.assertEqual([(got[f"99{i:04d}"]["mdh"], got[f"99{i:04d}"]["hsp_mdh"], got[f"99{i:04d}"]["sch"])
                           for i in range(4)],
                          [(False, None, False), (True, 7100.25, False), (True, 7100.25, False), (False, None, True)])
@@ -354,12 +361,32 @@ class PaymentInputs2024(unittest.TestCase):
 
     def test_each_year_needs_its_own_columns(self):
         with self.assertRaisesRegex(SchemaError, "FY2026 impact file: expected one column"):
-            read_payment_inputs(impact_2024(GOOD_2024))  # the FY2026 map on FY2024's file
+            read_inputs(impact_2024(GOOD_2024))  # the FY2026 map on FY2024's file
         with self.assertRaisesRegex(SchemaError, "FY2024 impact file: expected one column"):
-            read_payment_inputs(impact_text(hospital()), fy=2024)
+            read_inputs(impact_text(hospital()), fy=2024)
         with self.assertRaisesRegex(SchemaError, "FY2025"):
-            read_payment_inputs(impact_text(hospital()), fy=2025)
+            read_inputs(impact_text(hospital()), fy=2025)
         self.assertEqual(sorted(IMPACT_YEARS), [2024, 2026])
+        self.assertTrue(all(fy == year.fy for fy, year in IMPACT_YEARS.items()))
+
+    def test_the_inputs_are_read_by_the_year_of_the_rates_and_cannot_be_paired_with_another(self):
+        # No year argument: the rates name it, once. FY2026's rates read FY2026's file; FY2024's read FY2024's.
+        rates_2026, rates_2024 = read_rates(rates_text()), read_rates(rates_text(), fy=2024)
+        self.assertEqual((rates_year(rates_2026).fy, rates_year(rates_2024).fy), (2026, 2024))
+        self.assertEqual(sorted(read_payment_inputs(impact_text(hospital()), rates_2026)), ["990001"])
+        self.assertEqual(sorted(read_payment_inputs(impact_2024(GOOD_2024), rates_2024)), ["990001"])
+        # A second year cannot be passed beside them, and each year's rates refuse the other year's file.
+        with self.assertRaises(TypeError):
+            read_payment_inputs(impact_2024(GOOD_2024), rates_2024, fy=2026)
+        with self.assertRaisesRegex(SchemaError, "FY2024 impact file: expected one column"):
+            read_payment_inputs(impact_text(hospital()), rates_2024)
+        with self.assertRaisesRegex(SchemaError, "FY2026 impact file: expected one column"):
+            read_payment_inputs(impact_2024(GOOD_2024), rates_2026)
+        # Rates that did not come from read_rates name no year, so they cannot read a file.
+        with self.assertRaisesRegex(SchemaError, "carry no year"):
+            read_payment_inputs(impact_text(hospital()), {k: v for k, v in rates_2026.items() if k != "year"})
+        with self.assertRaisesRegex(SchemaError, "carry no year"):
+            read_payment_inputs(impact_text(hospital()), None)
 
 
 # --- the HRRP and VBP factor files -----------------------------------------------------------------------------------
