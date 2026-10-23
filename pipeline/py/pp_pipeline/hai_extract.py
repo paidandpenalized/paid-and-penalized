@@ -21,7 +21,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from pp_pipeline.files import PINNED_DIR, manifest_entry
+from pp_pipeline.files import manifest_entry, write_derived_pin
 
 PIN_ID_PATTERN = re.compile(r"hai-cy(\d{4})")
 MEASURES = ((1, "CLABSI"), (2, "CAUTI"), (3, "SSI colon"), (4, "SSI hysterectomy"), (5, "MRSA"), (6, "CDI"))
@@ -164,12 +164,4 @@ def main(zip_path, pin_id):
     except (ValueError, KeyError, zipfile.BadZipFile) as err:
         print(f"{zip_path}: {err}")
         return 1
-    path = PINNED_DIR / entry["path"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(out)
-    sha = hashlib.sha256(out).hexdigest()
-    print(f"wrote {entry['path']}: {len(out)} bytes, sha256 {sha} (raw text: {encoding})")
-    if (len(out), sha) != (entry["bytes"], entry["sha256"]):
-        print(f"the manifest entry {pin_id} records {entry['bytes']} bytes, sha256 {entry['sha256']}")
-        return 1
-    return 0
+    return write_derived_pin(entry, out, note=f" (raw text: {encoding})")

@@ -11,7 +11,7 @@ import hashlib
 import io
 from pathlib import Path
 
-from pp_pipeline.files import PINNED_DIR, manifest_entry
+from pp_pipeline.files import manifest_entry, write_derived_pin
 
 PIN_ID = "pos-q2-2026"
 RAW_ENCODING = "cp1252"  # CMS writes Windows-1252: 0x96 is an en dash, not a control character
@@ -51,8 +51,4 @@ def main(raw_path):
     if (len(data), hashlib.sha256(data).hexdigest()) != (source["bytes"], source["sha256"]):
         print(f"{raw_path} is not the raw file the manifest names ({source['file']}, {source['sha256']})")
         return 1
-    out = extract(data.decode(RAW_ENCODING)).encode("utf-8")
-    (PINNED_DIR / entry["path"]).parent.mkdir(parents=True, exist_ok=True)
-    (PINNED_DIR / entry["path"]).write_bytes(out)
-    print(f"wrote {entry['path']}: {len(out)} bytes, sha256 {hashlib.sha256(out).hexdigest()}")
-    return 0
+    return write_derived_pin(entry, extract(data.decode(RAW_ENCODING)).encode("utf-8"))

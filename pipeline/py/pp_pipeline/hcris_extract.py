@@ -26,7 +26,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from pp_pipeline.files import PINNED_DIR, manifest_entry
+from pp_pipeline.files import manifest_entry, write_derived_pin
 
 PIN_ID = "hcris-fy2024-wse"
 RPT_FIELDS = 18
@@ -149,12 +149,4 @@ def main(zip_path):
     except (ValueError, KeyError, zipfile.BadZipFile, UnicodeDecodeError) as err:
         print(f"{zip_path}: {err}")
         return 1
-    path = PINNED_DIR / entry["path"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(out)
-    sha = hashlib.sha256(out).hexdigest()
-    print(f"wrote {entry['path']}: {len(out)} bytes, sha256 {sha}")
-    if (len(out), sha) != (entry["bytes"], entry["sha256"]):
-        print(f"the manifest entry {PIN_ID} records {entry['bytes']} bytes, sha256 {entry['sha256']}")
-        return 1
-    return 0
+    return write_derived_pin(entry, out)
