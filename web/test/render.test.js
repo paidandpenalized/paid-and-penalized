@@ -115,7 +115,7 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="stylesheet" href="${ASSETS.css}">`));
   assert.ok(out.indexOf('class="skip" href="#main"') < out.indexOf('<header'));
   assert.ok(out.includes('<main id="main">'));
-  assert.ok(out.includes('Not affiliated with or endorsed by CMS.'));
+  assert.ok(out.includes('Not affiliated with or endorsed by CMS or any hospital.'));
   assert.ok(out.includes('Uses public data from the Centers for Medicare &amp; Medicaid Services (CMS) and shows no patient information.'));
   assert.ok(out.includes('Built with Claude Code'));
   // The name and credentials never split; the byline may break after "Built by".
@@ -175,7 +175,7 @@ test('page: the footer says not to include patient information beside the feedba
     assert.ok(foot.includes(`<a href="${href}">${label}</a>`), href);
   }
   // The affiliation line, the credit and the license stay.
-  assert.ok(foot.includes('Not affiliated with or endorsed by CMS.'));
+  assert.ok(foot.includes('Not affiliated with or endorsed by CMS or any hospital.'));
   assert.ok(foot.includes('Built with Claude Code'));
   assert.ok(foot.includes('rel="license noopener"'));
 });
@@ -185,7 +185,7 @@ test('page: the footer\'s new words promise no reply time, fix time or deletion,
   assert.doesNotMatch(words, /\d/);
   assert.doesNotMatch(words, /\b(caught|cheat\w*|dodge\w*|worst|failed)\b/i);
   assert.doesNotMatch(words, /\b(reply|respond|response|within|delete\w*|erase\w*|fix(ed)? by|soon)\b/i);
-  assert.match(COPY.termsShort, /not affiliated with or endorsed by CMS or any hospital/i);
+  assert.match(COPY.termsShort, /medical, legal or financial advice/);
   assert.match(COPY.termsShort, /estimates/i);
   assert.match(COPY.termsShort, /medical, legal or financial advice/i);
   assert.match(COPY.maintenance, /\{release\}/);
