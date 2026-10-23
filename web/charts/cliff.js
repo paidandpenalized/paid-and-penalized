@@ -17,7 +17,7 @@ import { WIDTH, frame, mark, r2, text } from './svg.js';
 const PAD = 10;
 const DOT = 6;
 const LAYOUTS = {
-  narrow: { lineLabel: 11, levelLabel: 30, ledge: 42, cutLabel: 66, floor: 118, axis: 132, strip: 154, stripH: 18, height: 180, amount: 18 },
+  narrow: { lineLabel: 11, levelLabel: 30, ledge: 42, cutLabel: 66, floor: 130, axis: 144, strip: 166, stripH: 18, height: 192, amount: 18 },
   wide: { lineLabel: 13, levelLabel: 38, ledge: 52, cutLabel: 92, floor: 200, axis: 216, strip: 244, stripH: 34, height: 286, amount: 30 },
 };
 export const CLIFF_WIDE = 700;
@@ -49,11 +49,17 @@ export function cliff({ domain: [lo, hi], band: [highestNo, lowestYes], actual, 
   // The highest score's label above its ring, a row higher when this hospital's label would run into it.
   const highText = `${labels.highest} ${labels.highestValue}`;
   const clash = over && actualAt.anchor === 'start' && actualAt.x + actualW + 8 > x1 - labelWidth(highText);
-  const highY = clash ? Y.floor - 28 : Y.floor - 12;
+  const highY = clash ? Y.floor - 30 : Y.floor - 12;
   const showHigh = !(over && Math.abs(xa - x1) < 2 * DOT);
-  // The cut level's label inside the pit, just right of the drop; or ending at the right edge when the line sits near it.
+  // The cut level's label inside the pit, just right of the drop: on one line where it fits, else its words on a second
+  // line, ending at the right edge if they don't fit from the drop.
   const cutW = amountWidth(labels.cut, Y.amount) + 6 + labelWidth(labels.cutWords);
-  const cutAt = xl + 10 + cutW <= width ? { x: xl + 10, anchor: 'start' } : { x: width, anchor: 'end' };
+  const oneLine = xl + 10 + cutW <= width;
+  const wordsAt = xl + 10 + labelWidth(labels.cutWords) <= width ? { x: xl + 10, anchor: 'start' } : { x: width - 2, anchor: 'end' };
+  const cutLabel = oneLine
+    ? text({ x: xl + 10, y: Y.cutLabel, anchor: 'start', cls: 'chart-label chart-label--pen', body: level(labels.cut, labels.cutWords, true) })
+    : html`${text({ x: xl + 10, y: Y.cutLabel, anchor: 'start', cls: 'chart-label chart-label--pen', body: html`<tspan class="chart-cliff__amount chart-cliff__amount--pen" style="font-size: ${Y.amount}px">${labels.cut}</tspan>` })}
+${text({ x: wordsAt.x, y: Y.cutLabel + 16, anchor: wordsAt.anchor, cls: 'chart-label chart-label--pen', body: labels.cutWords })}`;
   const maxCount = strip ? Math.max(...strip.counts, 1) : 1;
   return frame({
     kind: 'cliff', width, height: Y.height, body: html`<rect class="chart-zone" x="${r2(xl)}" y="${Y.ledge}" width="${r2(x1 - xl)}" height="${Y.floor - Y.ledge}"/>
@@ -68,7 +74,7 @@ ${mark({
     body: html`<line class="chart-cliff__floor" x1="${r2(xl)}" x2="${r2(x1)}" y1="${Y.floor}" y2="${Y.floor}"/>`,
   })}
 ${text({ x: x0, y: Y.levelLabel, anchor: 'start', cls: 'chart-label', body: level(labels.zero, labels.zeroWords, false) })}
-${text({ x: cutAt.x, y: Y.cutLabel, anchor: cutAt.anchor, cls: 'chart-label chart-label--pen', body: level(labels.cut, labels.cutWords, true) })}
+${cutLabel}
 <g transform="translate(0 ${Y.axis})">${axis({ scale: x, ticks: width >= CLIFF_WIDE ? 9 : 4 })}</g>
 ${strip ? html`<g class="chart-cliff__strip">${strip.counts.map((c, i) => {
     if (!c) return '';

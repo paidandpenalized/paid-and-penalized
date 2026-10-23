@@ -230,8 +230,15 @@
 .ws__term.is-top .ws__v { color: var(--pen-ink); font-weight: 700; }
 .ws__term.is-assigned .ws__v { text-decoration: underline wavy var(--ink-3) 1px; text-underline-offset: 4px; }
 .ws__term--total .ws__v { font-weight: 700; }
+/* The cut's worksheet: its tail (× 1% = the cut) kept together; the per-stay line set apart under it. */
+.ws__tail { display: inline-flex; align-items: flex-start; gap: 6px; }
+.ws--money .ws__line + .ws__line { margin-top: 12px; padding-top: 10px; border-top: 1px dotted var(--line); }
+.ws--money:not(.ws--cut) { border-color: var(--ink); }
+.ws--cut .ws__term--total .ws__v { color: var(--pen-ink); }
 
-/* The nearest hospitals' table: the number in a dot like the map's, the measure glyph. */
+/* The nearest hospitals' table: the number in a dot like the map's, the measure glyph, the estimated cut. */
+.near__cut { white-space: nowrap; }
+.near__cut--pen { color: var(--pen-ink); font-weight: 700; }
 .gb--near tbody th { font-weight: 600; }
 .gb--near tbody th a { display: block; }
 .near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
@@ -322,6 +329,11 @@
 .ht select, .ht input { padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
 .ht input { width: min(100%, 22rem); }
 .gb--hospitals .num { width: 1%; }
+/* The estimated cut: this site's number, in the penalty's text ink where there is a cut. */
+.gb--hospitals .ht-money { white-space: nowrap; }
+/* Six columns in the article's width: the numeric heads wrap onto two lines rather than push the table wide. */
+.gb--hospitals thead th.num { white-space: normal; min-width: 6.5em; }
+.gb--hospitals .ht-money--cut { color: var(--pen-ink); font-weight: 700; }
 /* Wide screens: the five columns fit, so the table needs no sideways scroll box, and its header sticks to the top of
    the window (a scroll box would be its sticky container, and that box never scrolls down). */
 @media (min-width: 641px) { .ht .printout__scroll { overflow: visible; } }
@@ -345,7 +357,7 @@
   .gb--hospitals td::before { content: attr(data-label) ": "; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .gb--hospitals, .gb--hospitals tbody { display: block; width: 100%; }
   .gb--hospitals thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .gb--hospitals tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name name" "city state score" ". . decision"; gap: 2px 0; padding: 8px 10px 10px; }
+  .gb--hospitals tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name name" "city state score" "money money decision"; gap: 2px 0; padding: 8px 10px 10px; }
   .gb--hospitals tbody tr + tr { border-top: 1px solid var(--line); }
   .gb--hospitals tbody th, .gb--hospitals td { display: block; padding: 0; }
   .gb--hospitals tbody th { grid-area: name; margin-bottom: 2px; }
@@ -354,6 +366,7 @@
   .gb--hospitals .ht-state { grid-area: state; font-family: var(--font-body); color: var(--ink-2); }
   .gb--hospitals .ht-score { grid-area: score; width: auto; text-align: right; }
   .gb--hospitals .ht-decision { grid-area: decision; text-align: right; }
+  .gb--hospitals .ht-money { grid-area: money; width: auto; text-align: left; }
 }
 
 /* The article column: the head, hero, prose, tables and figures share one 46rem column, centered, so every rule ends

@@ -5,7 +5,7 @@
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { drawn, figure, num } from '../../../web/charts/figure.js';
-import { cmsText, decimal, dollars, listText, money } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, listText, money } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { REDUCTION_TEXT } from './constants.js';
@@ -200,6 +200,18 @@ ${group('stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GR
 </table>
 ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(none) })}</p>` : ''}
 ${rangeLine(m)}
+</div>`;
+}
+
+// The cut in the hospital's own numbers, as the score's worksheet writes its sum: the payment, the two adjustments
+// on the base, times the cut's percentage, equals the cut (or, for a hospital CMS didn't cut, what was at stake); then
+// that over the hospital's Medicare stays.
+export function moneyWorksheet(m) {
+  const term = (value, key, cls = '') => html`<span class="ws__term${cls}"><span class="ws__v">${value}</span><span class="ws__k">${t(key)}</span></span>`;
+  const op = (x) => html`<span class="ws__op">${x}</span>`;
+  return html`<div class="ws ws--money${m.cut ? ' ws--cut' : ''}" role="group" aria-label="${t('wsMoneyLabel')}">
+<p class="ws__line"><span class="ws__paren">(</span>${term(dollars(m.total), 'wsPayment')}${op(m.hrrp < 0 ? '−' : '+')}${term(dollars(Math.abs(m.hrrp)), 'wsHrrp')}${op(m.hvbp < 0 ? '−' : '+')}${term(dollars(Math.abs(m.hvbp)), 'wsHvbp')}<span class="ws__paren">)</span><span class="ws__tail">${op('×')}${term(REDUCTION_TEXT, 'wsPct')}${op('=')}${term(dollars(m.atStake), m.cut ? 'wsCut' : 'wsStake', ' ws__term--total')}</span></p>
+<p class="ws__line">${term(dollars(m.atStake), m.cut ? 'wsCut' : 'wsStake')}${op('÷')}${term(count(m.bills), 'wsStays')}${op('=')}${term(dollars(Math.round(m.perStay)), 'wsPerStay', ' ws__term--total')}</p>
 </div>`;
 }
 

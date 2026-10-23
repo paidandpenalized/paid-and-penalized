@@ -578,7 +578,7 @@ export const COPY = {
     text: 'The sortable table of every hospital needs JavaScript; the CSV file holds the same values.',
     claim: null,
   },
-  tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
+  tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them, and this site's estimate of the cut in dollars", claim: null },
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },
   tableName: { text: 'Name, city or CCN contains', claim: null },
@@ -591,6 +591,9 @@ export const COPY = {
   tableColState: { text: 'State', claim: null },
   tableColScore: { text: 'Total HAC Score', claim: null },
   tableColDecision: { text: 'Payment reduction', claim: null },
+  // This site's estimate of the HAC cut, in dollars ("modeled": not CMS's number).
+  tableColMoney: { text: 'Est. cut ($, modeled)', claim: null },
+  tableMoneyNone: { text: 'no estimate', claim: null },
   tableCount: { text: '{n} hospitals shown.', claim: null },
   tableCountOne: { text: 'One hospital shown.', claim: null },
   tableCountNone: { text: 'No hospital matches.', claim: null },

@@ -121,7 +121,8 @@ test('RFC 4180 shape: UTF-8 without a BOM, CRLF line ends, a header row of the d
   assert.equal(csv.split('\r\n').length, 5);
   assert.equal(csv.split('\r\n')[0], COLUMNS.map((c) => c.name).join(','));
   assert.deepEqual(Object.keys(parseCsv(csv)[0]), COLUMNS.map((c) => c.name));
-  assert.equal(COLUMNS.length, 10 + 4 * MEASURE_IDS.length + 4);
+  assert.equal(COLUMNS.length, 10 + 4 * MEASURE_IDS.length + 4 + 7);
+  assert.deepEqual(COLUMNS.slice(-7).map((c) => c.name).filter((name) => name.endsWith('_modeled')).length, 6, 'the estimates say so in their names');
   assert.deepEqual(COLUMNS.slice(0, 2).map((c) => c.name), ['ccn', 'fiscal_year']);
 });
 
@@ -168,7 +169,7 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
     assert.equal(dictionaryPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/DATA-DICTIONARY.md`);
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
-    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master));
+    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
     // The program page, the dictionary page, the Methods page, the four hospitals and a page for each place they are in.
     const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
@@ -306,4 +307,28 @@ test('cite script: when the copy fails (or there is no clipboard), the text is s
   const bare = await runCite(t, { clipboard: undefined, selection: false });
   await bare.click();
   assert.equal(bare.status.textContent, 'Not copied; the citation is selected.');
+});
+
+test('the dollar columns are this site\'s estimates, from each hospital\'s row, whole dollars that add; blank without one', () => {
+  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn));
+  let estimated = 0;
+  rows.forEach((row, i) => {
+    const d = DATA.dollars.byCcn.get(DATA.hospitals[i].ccn);
+    assert.equal(row.dollars_status, d.status);
+    const cells = ['inpatient_payment_modeled', 'hrrp_dollars_modeled', 'hvbp_dollars_modeled', 'hac_at_stake_modeled', 'hac_dollars_modeled', 'net_dollars_modeled'].map((k) => row[k]);
+    if (d.status !== 'estimated') {
+      assert.deepEqual(cells, ['', '', '', '', '', ''], d.status);
+      return;
+    }
+    estimated++;
+    const [total, hrrp, hvbp, atStake, hac, net] = cells.map(Number);
+    assert.deepEqual([total, hrrp, hvbp, atStake, hac, net], [d.total, d.hrrp, d.hvbp, d.atStake, d.hac, d.net]);
+    assert.equal(hrrp + hvbp + hac, net, 'a row adds exactly');
+    assert.equal(hac, row.payment_reduction === 'Yes' ? -atStake : 0);
+  });
+  assert.equal(estimated, DATA.dollars.national.hospitals);
+  // Without the estimates (a synthetic hospital), the dollar cells are blank.
+  const [blank] = parseCsv(hospitalsCsv([CASES.yes], masters(master('990001'))));
+  assert.equal(blank.dollars_status, '');
+  assert.equal(blank.hac_dollars_modeled, '');
 });

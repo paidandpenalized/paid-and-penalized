@@ -26,7 +26,7 @@ import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
 import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
 import { fill as hfill, t as ht } from '../history/copy.js';
-import { cliffFigure, moneyField, moneyVerdict, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
+import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
@@ -217,8 +217,9 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
 // the data list's source of the Type field's facts. master: the hospital's master record (its metro's name). money:
 // this site's dollar estimate for the hospital (money.js hospitalMoney; the build always passes it; without it, a
-// test's synthetic hospital, the page shows no dollars).
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money = null }) {
+// test's synthetic hospital, the page shows no dollars). cutOf: ccn -> any hospital's estimated cut (generate.js
+// cutDollars), for the nearest hospitals' table; null for none.
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money = null, cutOf = null }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -245,7 +246,7 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const years = history?.rec && history.rec.decided > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
   const infections = history ? numbered(hospitalInfectionsFigure(history.sir, history.hd, { n: n + 1, source: hfill('hinfSource', { first: String(history.hd.infections[0]?.cy ?? ''), last: String(history.hd.infections.at(-1)?.cy ?? '') }) })) : null;
   const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
-  const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
+  const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line, cutOf }) : null;
   numbered(nearby?.fig);
   const nearRank = peers?.rows.filter((r) => r.g.kind === 'state' || r.g.kind === 'metro') ?? [];
   const notes = noteSentences(view);
@@ -270,7 +271,8 @@ ${statement && section({
     id: 'money',
     text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
 <p>${mfill('stmtIntro', { fy })}</p>
-<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>`,
+<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
+${moneyWorksheet(m)}`,
     figure: statement,
   })}
 ${section({

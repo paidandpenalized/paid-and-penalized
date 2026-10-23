@@ -8,7 +8,7 @@
 import { TABLE_FIRST_ROWS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
 import { decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
-import { cmsText, count } from '../../../web/render/format.js';
+import { cmsText, count, money } from '../../../web/render/format.js';
 import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
 
 // Every match for a query, handed on by the top bar's search: the table shows them through its own text filter
@@ -59,14 +59,16 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
   // Each cell names its column (data-label), which a narrow screen, where the rows stack and the column heads are
   // hidden, gives to screen readers only, as generated text (styles.css): no extra node per cell.
   const label = Object.fromEntries(heads.map((th) => [th.dataset.key, th.textContent.trim()]));
-  const cell = (text, key) => {
+  const cell = (text, key, extra = '') => {
     const td = document.createElement('td');
-    td.className = key === 'score' ? `ht-${key} num` : `ht-${key}`;
+    td.className = `ht-${key}${key === 'score' || key === 'money' ? ' num' : ''}${extra}`;
     td.dataset.label = label[key];
     td.append(text);
     return td;
   };
-  function row([ccn, name, city, state, total, decision]) {
+  // This site's estimate of the cut (an estimate: the column head says so), or words where there is none.
+  const cut = (dollars) => (Number.isFinite(dollars) ? money(dollars) : fill('tableMoneyNone'));
+  function row([ccn, name, city, state, total, decision, , dollars = null]) {
     const tr = document.createElement('tr');
     const th = document.createElement('th');
     th.scope = 'row';
@@ -74,7 +76,7 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
     a.href = hospitalHref(hospitalPath, ccn);
     a.textContent = name;
     th.append(a);
-    tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(cmsText(total), 'score'), cell(decision, 'decision'));
+    tr.append(th, cell(city, 'city'), cell(state, 'state'), cell(cmsText(total), 'score'), cell(decision, 'decision'), cell(cut(dollars), 'money', dollars > 0 ? ' ht-money--cut' : ''));
     return tr;
   }
   // Each row's <tr> is built once; a filter or sort only puts the built rows in a new order.

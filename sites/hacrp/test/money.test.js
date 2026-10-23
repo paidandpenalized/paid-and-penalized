@@ -5,13 +5,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
-import { cmsText, decimal, dollars, money } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { refusePendingRanges } from '../web/generate.js';
 import { BASE_PARTS, OTHER_PARTS, hospitalMoney, rangeOf } from '../web/money.js';
-import { cliffFigure, moneyField, moneyVerdict, shareSentence, statementLines } from '../web/money-figures.js';
+import { cutDollars } from '../web/generate.js';
+import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
 import { t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
@@ -181,4 +182,30 @@ test('a production build refuses dollars whose ranges are still pending; any oth
   assert.throws(() => refusePendingRanges('production', { bands: null }), /no ranges yet/);
   assert.doesNotThrow(() => refusePendingRanges(undefined, { bands: null }));
   assert.doesNotThrow(() => refusePendingRanges('production', { bands: {} }));
+});
+
+test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmissions ± value-based) × 1% = the cut; ÷ stays = per stay', () => {
+  for (const row of [CUT, NEAR]) {
+    const m = moneyOf(row);
+    const ws = text(moneyWorksheet(m));
+    for (const part of [dollars(row.total), dollars(Math.abs(row.hrrp)), dollars(Math.abs(row.hvbp)), REDUCTION_TEXT, dollars(row.atStake), count(row.bills), dollars(Math.round(m.perStay))]) assert.ok(ws.includes(part), `${row.ccn}: ${part}`);
+    // The worksheet's arithmetic holds in whole dollars.
+    assert.equal(Math.round((row.total + row.hrrp + row.hvbp) / 100), row.atStake);
+  }
+  assert.match(String(moneyWorksheet(moneyOf(CUT))), /ws--cut/);
+  assert.doesNotMatch(String(moneyWorksheet(moneyOf(NEAR))), /ws--cut/);
+});
+
+test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut and for Maryland, null with no estimate; the nearest hospitals carry it', () => {
+  assert.equal(cutDollars(CUT), CUT.atStake);
+  assert.equal(cutDollars(NEAR), 0);
+  assert.equal(cutDollars(MARYLAND), 0);
+  assert.equal(cutDollars(NO_INPUTS), null);
+  assert.throws(() => cutDollars(undefined), RangeError);
+  const h = cms.get(CUT.ccn);
+  const m = moneyOf(CUT);
+  const page = hospitalPage({ ...PAGE_CTX, view: viewOf(CUT.ccn), hospital: h, master: DATA.master.get(CUT.ccn), source: DATA.source, robots: null, assets: ASSETS, shapes: DATA.shapes, money: m, cutOf: (ccn) => cutDollars(DATA.dollars.byCcn.get(ccn)) });
+  const near = /<table class="gb gb--near"[\s\S]*?<\/table>/.exec(page)[0];
+  assert.match(near, /<th scope="col" class="num">Est\. cut \(\$, modeled\)<\/th>/);
+  assert.equal((near.match(/class="num near__cut/g) ?? []).length, (near.match(/<tr class="near--/g) ?? []).length, 'a cut cell on every row');
 });

@@ -127,6 +127,16 @@ export const COPY = {
     text: "Source: CMS's FY{fy} IPPS final rule files (the impact file, the rate tables and the value-based factors), its FY{fy} HRRP supplemental file and HACRP FY{fy} ({id}); this site's arithmetic.",
     claim: null,
   },
+  // The cut's worksheet, in the hospital's own numbers.
+  wsMoneyLabel: { text: 'The HAC cut in this hospital\'s numbers', claim: null },
+  wsPayment: { text: 'payment', claim: null },
+  wsHrrp: { text: 'readmissions', claim: null },
+  wsHvbp: { text: 'value-based', claim: null },
+  wsPct: { text: 'the cut', claim: null },
+  wsCut: { text: 'HAC cut', claim: null },
+  wsStake: { text: 'at stake', claim: null },
+  wsStays: { text: 'Medicare stays', claim: null },
+  wsPerStay: { text: 'per stay', claim: null },
   stmtColLine: { text: 'Line', claim: null },
   stmtColAmount: { text: 'Amount (whole dollars)', claim: null },
 

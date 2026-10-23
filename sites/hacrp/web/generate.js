@@ -45,14 +45,24 @@ function a1Summary({ ok, a, b, info }) {
 }
 
 // The hospitals asset (/assets/hacrp-hospitals.<hash>.json) the program page's client reads: { hospitalPath, rows },
-// one row per hospital, [ccn, name, city, state, total, decision, zip]: the CCN as CMS writes it (a page is at
+// one row per hospital, [ccn, name, city, state, total, decision, zip, cut]: the CCN as CMS writes it (a page is at
 // hospitalPath + the CCN in lowercase + "/"), names, places and ZIP codes from the hospital master, CMS's Total HAC
-// Score text as published (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none) and CMS's payment
-// reduction text. Rows are in the hospital table's default order (state, then name; hospital-table.js); the search
-// ranks its own matches.
-export function hospitalRows(views, places = null) {
-  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip]).sort(compareDefault);
+// Score text as published (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none), CMS's payment
+// reduction text and, with dollars (Map of CCN -> row of the dollar estimates), this site's estimate of the HAC cut in
+// whole dollars (cutDollars). Rows are in the hospital table's default order (state, then name; hospital-table.js); the
+// search ranks its own matches.
+export function hospitalRows(views, places = null, dollars = null) {
+  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip, ...(dollars ? [cutDollars(dollars.get(v.ccn))] : [])]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows, ...(places ? { places: placeEntries(places) } : {}) };
+}
+
+// A hospital's HAC cut as the tables show it, this site's estimate in whole dollars: the dollars at stake for a
+// hospital CMS cut, 0 for one it didn't or for Maryland's (exempt), null with no estimate.
+export function cutDollars(row) {
+  if (!row) throw new RangeError('cutDollars: a row of the dollar estimates is required');
+  if (row.status === 'maryland') return 0;
+  if (row.status !== 'estimated') return null;
+  return row.cut ? row.atStake : 0;
 }
 
 // The places the search finds, [kind, key, name, path, hospitals in CMS's file], in kind order then by name.
@@ -89,7 +99,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const views = pages.map((p) => p.view);
 
   // The dataset file and its dictionary: files, not pages (no robots: they are not in the sitemap).
-  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master) });
+  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master, dollars.byCcn) });
   const dictionaryFilled = dictionaryText(dictionary, { fy, source });
   ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
   // The pages this site writes, counted as they go (the Methods page, written last, reports the total).
@@ -105,7 +115,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const pd = programData({ hospitals, master, model });
   const places = buildPlaces({ hospitals, master, rows: pd.rows });
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
-  const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places)));
+  const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places, dollars.byCcn)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
   emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
   // The explore asset: what the explorable figures draw in the browser (program-data.js exploreAsset).
@@ -148,15 +158,16 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     });
   }
 
-  // What every hospital page compares a hospital with, computed once.
+  // What every hospital page compares a hospital with, computed once, and any hospital's estimated cut.
   const nat = nationalContext({ hospitals, master, model });
+  const cutOf = (ccn) => cutDollars(dollars.byCcn.get(ccn));
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
     const money = hospitalMoney(dollars.byCcn.get(hospital.ccn), dollars.bands);
     emitPage({
       path: view.path,
       robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range, money }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money }),
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range, money }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money, cutOf }),
     });
   }
 
