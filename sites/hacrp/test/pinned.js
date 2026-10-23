@@ -18,9 +18,9 @@ export const DATA = loadHacrp();
 export const RANGE = scoreRange(DATA.hospitals);
 // What a hospital page compares a hospital with (compare.js), built once from the pinned data, and the model: every
 // hospitalPage call takes both, and a hospital's dollars (these tests' synthetic hospitals have no estimate; a test of the
-// dollars passes the pinned row's).
+// dollars passes the pinned row's), and what a likely range means (the statement's note).
 export const NAT = nationalContext({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model, dollars: DATA.dollars });
-export const PAGE_CTX = { nat: NAT, model: DATA.model, money: NO_ESTIMATE };
+export const PAGE_CTX = { nat: NAT, model: DATA.model, money: NO_ESTIMATE, backtest: DATA.dollars.backtest };
 // What the program page and the place pages draw (program-data.js, places.js), built once from the pinned data.
 export const PD = programData({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model });
 export const PLACES = buildPlaces({ hospitals: DATA.hospitals, master: DATA.master, rows: PD.rows });

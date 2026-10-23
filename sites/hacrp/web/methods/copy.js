@@ -359,8 +359,6 @@ export const COPY = {
   backtestPlaces: { text: "A state's or metro area's range adds up its cut hospitals' ranges, as if every estimate there erred the same way, so it is wider than the nation's.", claim: null },
   backtestMeasures: { text: "The same check for every figure the method makes, over the hospitals each applies to (the HAC cut over the hospitals CMS cut, the rest over all of them):", claim: null },
   backtestLimits: { text: "Its limits: it is one year's check, and hospitals whose fiscal year doesn't start in October go unchecked.", claim: null },
-  btHospital: { text: 'hospital', claim: null },
-  btHospitals: { text: 'hospitals', claim: null },
   btBedsUnder: { text: 'under {n} beds', claim: null },
   btBedsBetween: { text: '{lo} to {hi} beds', claim: null },
   btBedsOver: { text: '{n} beds or more', claim: null },

@@ -30,10 +30,14 @@ const DICTIONARY = readFileSync(join(REPO_ROOT, 'sites/hacrp/DATA-DICTIONARY.md'
 const masters = (...records) => new Map(records.map((r) => [r.ccn, r]));
 const quiet = () => {};
 
+// The pinned file's CSV, built once: without the dollar estimates (text and rows), and with them (rows).
+const PLAIN_CSV = hospitalsCsv(DATA.hospitals, DATA.master);
+const PLAIN_ROWS = parseCsv(PLAIN_CSV);
+const DOLLAR_ROWS = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn));
+
 test('one row per hospital in CMS\'s file; every name and city round-trips through parseCsv', () => {
-  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master));
-  assert.equal(rows.length, DATA.hospitals.length);
-  rows.forEach((row, i) => {
+  assert.equal(PLAIN_ROWS.length, DATA.hospitals.length);
+  PLAIN_ROWS.forEach((row, i) => {
     const h = DATA.hospitals[i];
     const m = DATA.master.get(h.ccn);
     assert.equal(row.ccn, h.ccn);
@@ -47,8 +51,7 @@ test('one row per hospital in CMS\'s file; every name and city round-trips throu
 });
 
 test('the CSV states CMS\'s text verbatim: hyphen-minus, CMS\'s decimals, N/A, footnote codes, period dates', () => {
-  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master));
-  rows.forEach((row, i) => {
+  PLAIN_ROWS.forEach((row, i) => {
     const h = DATA.hospitals[i];
     assert.equal(row.total_hac_score, h.totalText);
     assert.equal(row.total_footnote, h.totalFootnote);
@@ -68,9 +71,9 @@ test('the CSV states CMS\'s text verbatim: hyphen-minus, CMS\'s decimals, N/A, f
       [h.periods.psi90.start, h.periods.psi90.end, h.periods.hai.start, h.periods.hai.end],
     );
   });
-  assert.ok(rows.some((r) => /^-0\.\d+$/.test(r.total_hac_score)), 'the pinned file has a negative score, written with a plain hyphen-minus');
-  assert.ok(rows.some((r) => r.total_hac_score === 'N/A'));
-  assert.ok(!hospitalsCsv(DATA.hospitals, DATA.master).includes('−'), 'no true minus in the data file');
+  assert.ok(PLAIN_ROWS.some((r) => /^-0\.\d+$/.test(r.total_hac_score)), 'the pinned file has a negative score, written with a plain hyphen-minus');
+  assert.ok(PLAIN_ROWS.some((r) => r.total_hac_score === 'N/A'));
+  assert.ok(!PLAIN_CSV.includes('−'), 'no true minus in the data file');
 });
 
 test('a score stays as CMS wrote it: -0.2580 is not guarded or re-rounded', () => {
@@ -170,7 +173,7 @@ test('the build writes the CSV and the dictionary beside it (neither a page nor 
     assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
     assert.equal(dictionaryPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/DATA-DICTIONARY.md`);
     const csv = readFileSync(join(dir, csvPath(DATA.fy)), 'utf8');
-    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
+    assert.equal(csv, hospitalsCsv(slice.hospitals, DATA.master, DATA.dollars.byCcn));
     assert.equal(readFileSync(join(dir, dictionaryPath(DATA.fy)), 'utf8'), dictionaryText(DICTIONARY, { fy: DATA.fy, source: DATA.source }));
     // The program page, the dictionary page, the Methods page, the four hospitals and a page for each place they are in.
     const places = buildPlaces({ hospitals: slice.hospitals, master: DATA.master, rows: programData({ hospitals: slice.hospitals, master: DATA.master, model: DATA.model }).rows });
@@ -311,9 +314,8 @@ test('cite script: when the copy fails (or there is no clipboard), the text is s
 });
 
 test('the dollar columns are this site\'s estimates, from each hospital\'s row, whole dollars that add; blank without one', () => {
-  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
   let estimated = 0;
-  rows.forEach((row, i) => {
+  DOLLAR_ROWS.forEach((row, i) => {
     const d = DATA.dollars.byCcn.get(DATA.hospitals[i].ccn);
     assert.equal(row.dollars_status, d.status);
     const cells = ['inpatient_payment_modeled', 'hrrp_dollars_modeled', 'hvbp_dollars_modeled', 'hac_at_stake_modeled', 'hac_dollars_modeled', 'net_dollars_modeled'].map((k) => row[k]);
@@ -334,9 +336,8 @@ test('the dollar columns are this site\'s estimates, from each hospital\'s row, 
 });
 
 test('the HAC cut\'s likely range: two columns in the cut\'s own sign, low the larger cut; 0 and 0 with no cut; blank without an estimate', () => {
-  const rows = parseCsv(hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn, DATA.dollars.bands));
   let cut = 0;
-  for (const r of rows) {
+  for (const r of DOLLAR_ROWS) {
     const d = DATA.dollars.byCcn.get(r.ccn);
     if (d.status !== 'estimated') {
       assert.deepEqual([r.hac_dollars_low_modeled, r.hac_dollars_high_modeled], ['', ''], r.ccn);
@@ -353,5 +354,4 @@ test('the HAC cut\'s likely range: two columns in the cut\'s own sign, low the l
     assert.ok(low < est && est < high, r.ccn);
   }
   assert.ok(cut > 500);
-  assert.throws(() => hospitalsCsv(DATA.hospitals, DATA.master, DATA.dollars.byCcn), /no hac band/, 'an estimate needs its bands');
 });

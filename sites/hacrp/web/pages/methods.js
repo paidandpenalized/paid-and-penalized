@@ -13,8 +13,9 @@ import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../methods-figures.js';
+import { absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, limitText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
+import { rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { kicker, siteHeader } from './parts.js';
 
@@ -117,13 +118,12 @@ function backtestPart(bands, { fig, names, pins }) {
   const hcris = pins.find((e) => e.id === bands.sources.at(-1));
   if (!hcris) throw new RangeError(`Methods: the back-test's cost-report pin ${bands.sources.at(-1)} is not among the pins`);
   const hacrp = bands.sources[0];
-  const share = pct(bands.highPct - bands.lowPct, 0);
-  const signed = (x) => pct(Math.abs(Math.exp(x) - 1), 1);
+  const share = pct(rangeShare(bands), 0);
   // The group whose own estimates ran furthest from its cost reports, among groups with enough hospitals of their own.
   const own = bands.measures.hac.strata.filter((s) => s.pool === 'stratum');
   const most = own.reduce((a, s) => (Math.abs(s.median) > Math.abs(a.median) ? s : a), own[0]);
   const group = most && bands.strata.find((s) => s.id === most.stratum);
-  const groupWords = group && fill('btGroup', { beds: group.bedsMin === 0 ? fill('btBedsUnder', { n: count(group.bedsMax + 1) }) : group.bedsMax === null ? fill('btBedsOver', { n: count(group.bedsMin) }) : fill('btBedsBetween', { lo: count(group.bedsMin), hi: count(group.bedsMax) }), kind: t(group.schMdh ? 'btKindSchMdh' : 'btKindOther') });
+  const groupWords = group && stratumLabel(group).words;
   const source = fillKeep('btSource', { fy, id: hacrp, date: isoDate(hcris.retrieved) }, ['date']);
   const n = bands.national;
   return html`<h3 class="msec__sub" id="${BACKTEST_ID}">${t('backtestSub')}</h3>
@@ -132,7 +132,7 @@ ${para(t('backtestLines'))}
 ${para(fill('backtestSet', { hospitals: count(c.hospitals), cut: count(c.cut), reports: count(c.reports), list: exclusionsText(bands) }))}
 ${para(fill('backtestFig', { share, min: count(bands.minStratum) }))}
 ${backtestFigure(bands, { n: fig(), source, names })}
-${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { group: groupWords, median: signed(most.median) })}` : ''}`)}
+${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { group: groupWords, median: absLogPct(most.median, 1) })}` : ''}`)}
 ${para(fill('backtestNational', { ratio: pct(n.ratio, 1), low: pct(n.p10, 1), high: pct(n.p90, 1) }))}
 ${para(t('backtestPlaces'))}
 ${para(t('backtestMeasures'))}

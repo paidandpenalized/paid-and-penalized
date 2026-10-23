@@ -74,9 +74,6 @@ export function scoreRange(hospitals) {
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
   const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
-  // Every dollar figure carries its likely range, from the back-test (dollars.json bands). A file without them (missing
-  // or null) cannot be published: a production build stops here.
-  if (env === 'production' && dollars.bands == null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is missing or null); a production build cannot publish them');
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
@@ -94,7 +91,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const views = pages.map((p) => p.view);
 
   // The dataset file and its dictionary: files, not pages (no robots: they are not in the sitemap).
-  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master, dollars.byCcn, dollars.bands) });
+  ctx.emit({ path: csvPath(fy), text: hospitalsCsv(hospitals, master, dollars.byCcn) });
   const dictionaryFilled = dictionaryText(dictionary, { fy, source });
   ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
   // The pages this site writes, counted as they go (the Methods page, written last, reports the total).
@@ -159,14 +156,14 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   const nat = nationalContext({ hospitals, master, model, dollars });
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn), dollars.bands);
+    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn));
     // The what-if's record carries the dollars at stake and their likely range where this site has an estimate: the
     // build and the browser read it alike.
     const record = money.estimated ? { ...hospital, atStake: money.atStake, atStakeRange: money.ranges.hac } : hospital;
     emitPage({
       path: view.path,
       robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital: record, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money }),
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital: record, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money, backtest: dollars.backtest }),
     });
   }
 

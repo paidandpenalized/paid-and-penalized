@@ -5,7 +5,7 @@
 // file's own; what the file doesn't hold (the breakdowns) is summed here, over the rounded figures, so a reader adding a
 // table gets its total. Every dollar is this site's estimate, in whole dollars. Pure: data in, result out.
 import { lineScore } from '../../../web/whatif/marks.js';
-import { cutDollars, nationalRange, rangeOf, sumRanges } from './money.js';
+import { cutDollars, nationalRange, sumRanges } from './money.js';
 import { TYPE_KINDS } from './program-data.js';
 
 export const sum = (rows, key) => rows.reduce((s, r) => s + r[key], 0);
@@ -28,7 +28,7 @@ export function moneyData({ pd, dollars, model }) {
     if (d.status !== 'estimated') return [];
     return [{
       ccn: r.ccn, name: r.name, city: r.city, state: r.state, master: r.master, total: r.total, yes: r.yes,
-      atStake: d.atStake, cut: cutDollars(d), hvbp: d.hvbp, bills: d.bills, range: rangeOf(dollars.bands, 'hac', d.stratum, d.atStake),
+      atStake: d.atStake, cut: cutDollars(d), hvbp: d.hvbp, bills: d.bills, range: d.ranges.hac,
       hrrpFactor: d.hrrpFactor, vbpFactor: d.vbpFactor, hrrpListed: d.hrrpListed, vbpListed: d.vbpListed,
     }];
   });

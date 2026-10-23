@@ -28,7 +28,7 @@ import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } fro
 import { fill as hfill, t as ht } from '../history/copy.js';
 import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
-import { hasMaTeaching } from '../money.js';
+import { maKey } from '../money.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
@@ -218,7 +218,8 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
 // the data list's source of the Type field's facts. master: the hospital's master record (its metro's name). money:
 // this site's dollars for the hospital (money.js hospitalMoney: a hospital with no estimate has a row that says why).
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money }) {
+// backtest: what a likely range means (data.js dollarsData's), which the statement's note says.
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money, backtest }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -233,7 +234,7 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const numbered = (fig) => { if (fig) n++; return fig; };
   const moneySource = moneySourceText({ fy: view.fy, source });
   const cliffFig = money.estimated && view.scored ? numbered(cliffFigure(view, money, nat, { n: n + 1, source: moneySource })) : null;
-  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource })) : null;
+  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource, backtest })) : null;
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
@@ -261,14 +262,14 @@ ${small && html`<p class="note">${small}</p>`}
 ${cliffFig && section({
     id: 'cliff', wide: true,
     text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
-<p>${mfill(hasMaTeaching(money) ? 'cliffIntroMa' : 'cliffIntro', { pct: REDUCTION_TEXT })}</p>
+<p>${mfill(maKey(money, 'cliffIntro'), { pct: REDUCTION_TEXT })}</p>
 <p>${mt('cliffHow')}</p>`,
     figure: cliffFig,
   })}
 ${statement && section({
     id: 'money',
     text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
-<p>${mfill(hasMaTeaching(money) ? 'stmtIntroMa' : 'stmtIntro', { fy })}</p>
+<p>${mfill(maKey(money, 'stmtIntro'), { fy })}</p>
 <p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
 ${moneyWorksheet(money)}`,
     figure: statement,

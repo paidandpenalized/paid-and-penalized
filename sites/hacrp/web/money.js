@@ -51,9 +51,9 @@ export function nationalRange(bands, estimate) {
   return scaled(estimate, bands.national.p10, bands.national.p90);
 }
 
-// What a likely range means, from the bands: the share of the back-test's hospitals whose actual figure fell inside
-// one (the spread between its two percentiles) and the year the back-test was run on.
-export const backtestOf = (bands) => ({ share: bands.highPct - bands.lowPct, fy: bands.fy });
+// What a likely range means: the share of the back-test's hospitals whose actual figure fell inside one (the spread
+// between its two percentiles, bands.lowPct and bands.highPct).
+export const rangeShare = (bands) => bands.highPct - bands.lowPct;
 
 // A place's range: its hospitals' ranges added up, low ends and high ends, from each hospital's [low, high] (null for
 // none). As wide as if every hospital's estimate erred the same way, so wider than a sum's errors usually run (the
@@ -64,19 +64,22 @@ export function sumRanges(ranges) {
   return [some.reduce((a, r) => a + r[0], 0), some.reduce((a, r) => a + r[1], 0)];
 }
 
-// row: the hospital's row of the dollar estimates. status: 'estimated', 'maryland', 'parhm' or 'no-inputs'; cut: CMS's
-// decision is Yes. An estimated hospital is its row (every dollar figure the pages draw, in whole dollars; negative is
-// money Medicare keeps), perStay: the dollars at stake per Medicare stay (bill), ranges: the likely range (rangeOf)
-// of its dollars at stake (hac) and of its net (net, null for a net of $0), and backtest: what a range means (backtest:
-// the share of the back-test's hospitals a range held, and the year it was run on). bands: dollars.json's.
 // Whether the hospital's payment includes teaching payments on Medicare Advantage stays: the words that call the
 // payment "everything traditional Medicare pays it" then say so. m: an estimated hospitalMoney().
 export const hasMaTeaching = (m) => m.parts.imeMa > 0;
 
-export function hospitalMoney(row, bands) {
+// The copy key for a hospital's payment words: `key`, or its twin `keyMa` (the same words, saying the teaching payments
+// on Medicare Advantage stays are in the payment) where it has them.
+export const maKey = (m, key) => (hasMaTeaching(m) ? `${key}Ma` : key);
+
+// row: the hospital's row of the dollar estimates (dollarsData's: an estimated one carries its likely ranges). status:
+// 'estimated', 'maryland', 'parhm' or 'no-inputs'; cut: CMS's decision is Yes. An estimated hospital is its row (every
+// dollar figure the pages draw, in whole dollars; negative is money Medicare keeps; ranges: the likely range (rangeOf)
+// of its dollars at stake (hac) and of its net (net, null for a net of $0)) and perStay: the dollars at stake per
+// Medicare stay (bill).
+export function hospitalMoney(row) {
   if (!row) throw new TypeError('hospitalMoney: a row of the dollar estimates is required');
   if (row.status !== 'estimated') return { status: row.status, cut: row.cut, estimated: false };
   if (!(row.bills > 0)) throw new RangeError(`hospitalMoney: ${row.ccn} has no Medicare bills to divide by`);
-  const ranges = { hac: rangeOf(bands, 'hac', row.stratum, row.atStake), net: rangeOf(bands, 'net', row.stratum, row.net) };
-  return { ...row, estimated: true, perStay: row.atStake / row.bills, ranges, backtest: backtestOf(bands) };
+  return { ...row, estimated: true, perStay: row.atStake / row.bills };
 }

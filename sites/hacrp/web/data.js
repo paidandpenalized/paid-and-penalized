@@ -11,6 +11,7 @@ import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
+import { rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -83,14 +84,22 @@ export function checkDollarsYear(dollars, fy) {
 }
 
 // What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
-// the HACRP file, and the file's aggregates. The browser never gets the file: each page carries the slice it draws.
+// the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
+// `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
+// `backtest` what a range means (`share` of the back-test's hospitals a range held, and the `fy` it was run on). A file
+// without `bands` can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
+// the slice it draws.
 export function dollarsData(dollars, hospitals) {
-  const byCcn = new Map(dollars.hospitals.map((r) => [r.ccn, r]));
-  for (const h of hospitals) if (!byCcn.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
-  // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
-  for (const r of byCcn.values()) if (r.status === 'estimated' && !(r.atStake > 0)) throw new RangeError(`HACRP: ${r.ccn} is estimated but its dollars at stake is ${r.atStake}; the cliff and the what-if need an estimated hospital's dollars at stake above $0`);
   const { fy, national, headline, checks, assumptions, bands } = dollars;
-  return { fy, byCcn, national, headline, checks, assumptions, bands };
+  if (bands == null) throw new RangeError('HACRP: the dollar estimates have no ranges (bands is missing or null); no page can show them');
+  const rows = new Map(dollars.hospitals.map((r) => [r.ccn, r]));
+  for (const h of hospitals) if (!rows.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
+  // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
+  for (const r of rows.values()) if (r.status === 'estimated' && !(r.atStake > 0)) throw new RangeError(`HACRP: ${r.ccn} is estimated but its dollars at stake is ${r.atStake}; the cliff and the what-if need an estimated hospital's dollars at stake above $0`);
+  const ranged = (r) => (r.status === 'estimated'
+    ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: rangeOf(bands, 'net', r.stratum, r.net) } } : r);
+  const byCcn = new Map([...rows].map(([ccn, r]) => [ccn, ranged(r)]));
+  return { fy, byCcn, national, headline, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
 }
 
 export function loadHacrp() {

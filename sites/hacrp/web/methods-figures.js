@@ -13,6 +13,7 @@ import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
+import { rangeShare } from './money.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
 // The pinned-input manifest's fingerprint, by name.
@@ -222,8 +223,10 @@ export function assumptionsTable({ fy, volumeFy, backtestFy }) {
 </table>`);
 }
 
-// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22%.
+// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22% (absLogPct: without the sign,
+// 0.25 and -0.25 both 22%).
 const logPct = (x, dp) => pct(Math.exp(x) - 1, dp, { sign: true });
+export const absLogPct = (x, dp) => pct(Math.abs(Math.exp(x) - 1), dp);
 
 // How a dollar check's value and range read on the tape, by check.
 const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };
@@ -267,16 +270,17 @@ const BACKTEST_SPAN = [0.5, 2];
 const times = (v) => `${String(Number(v.toFixed(2)))}×`;
 const ratioOf = (logRatio) => Math.exp(logRatio);
 
-// A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), its kind, and the
-// two as the group's name ("Under 100 beds, other hospitals").
-function stratumLabel(s) {
+// A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), and the band and
+// its kind as the group's words ("under 100 beds, other hospitals"), its name (capitalized: "Under 100 beds, other
+// hospitals") and its short name (the phone's).
+export function stratumLabel(s) {
   const beds = s.bedsMin === 0 ? fill('btBedsUnder', { n: count(s.bedsMax + 1) })
     : s.bedsMax === null ? fill('btBedsOver', { n: count(s.bedsMin) }) : fill('btBedsBetween', { lo: count(s.bedsMin), hi: count(s.bedsMax) });
-  const kind = t(s.schMdh ? 'btKindSchMdh' : 'btKindOther');
+  const words = fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdh' : 'btKindOther') });
   const short = capitalize(fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdhShort' : 'btKindOtherShort') }));
-  return { beds, kind, name: capitalize(fill('btGroup', { beds, kind })), short };
+  return { beds, words, name: capitalize(words), short };
 }
-const hospitalsText = (n) => noun(n, t('btHospital'), t('btHospitals'));
+const hospitalsText = (n) => noun(n, 'hospital');
 
 // Where a stratum's range comes from, in words: its own hospitals, all of its bed band's, or every hospital's.
 const poolText = (band, label) => (band.pool === 'stratum' ? t('btPoolOwn') : band.pool === 'beds' ? fill('btPoolBeds', { beds: label.beds }) : t('btPoolAll'));
@@ -289,6 +293,7 @@ export function backtestFigure(bands, { n, source, names }) {
   const labels = new Map(bands.strata.map((s) => [s.id, stratumLabel(s)]));
   const rows = hac.strata.map((band) => {
     const label = labels.get(band.stratum);
+    const from = poolText(band, label);
     const dots = bands.points.filter((p) => p.stratum === band.stratum).map((p) => {
       const who = names(p.ccn);
       const values = { model: money(p.model), actual: money(p.actual), ratio: times(p.model / p.actual) };
@@ -296,9 +301,10 @@ export function backtestFigure(bands, { n, source, names }) {
     });
     return {
       label: label.name,
-      note: band.pool === 'stratum' ? fill('btNote', { hospitals: hospitalsText(band.n) }) : fill('btNoteBorrowed', { hospitals: hospitalsText(band.n), pool: poolText(band, label) }),
+      note: band.pool === 'stratum' ? fill('btNote', { hospitals: hospitalsText(band.n) }) : fill('btNoteBorrowed', { hospitals: hospitalsText(band.n), pool: from }),
       short: { label: label.short, note: fill(band.pool === 'stratum' ? 'btNote' : 'btNoteBorrowedShort', { hospitals: hospitalsText(band.n) }) },
       band: [ratioOf(band.p10), ratioOf(band.p90)], borrowed: band.pool !== 'stratum', median: band.median === null ? null : ratioOf(band.median), dots,
+      n: band.n, from, // for the figure's table
     };
   });
   const xs = rows.flatMap((r) => [...r.dots.map((d) => d.x), ...r.band]);
@@ -309,18 +315,14 @@ export function backtestFigure(bands, { n, source, names }) {
   const overall = ratioOf(hac.overall.median);
   const draw = (width) => bandStrips({ rows, domain, ticks, narrowTicks, format: times, overall, labels: { exact: t('btExact'), overall: fill('btOverall', { ratio: times(overall) }), axis: t('btAxis') }, width });
   const median = overall - 1;
-  const takeaway = fill(median >= 0 ? 'btTakeawayHigh' : 'btTakeawayLow', { n: count(hac.overall.n), median: pct(Math.abs(median), 1), share: pct(bands.highPct - bands.lowPct, 0) });
+  const takeaway = fill(median >= 0 ? 'btTakeawayHigh' : 'btTakeawayLow', { n: count(hac.overall.n), median: pct(Math.abs(median), 1), share: pct(rangeShare(bands), 0) });
   return figure({
     n, takeaway, source, claimLevel: 'estimate', csvName: 'hacrp-dollars-backtest', alt: t('btAlt'), note: t('btNote2'),
     ...drawn(draw, METHODS_WIDE),
     table: {
       columns: [{ name: t('btColGroup') }, { name: t('btColHospitals'), numeric: true }, { name: t('btColMedian'), numeric: true }, { name: t('btColLow'), numeric: true }, { name: t('btColHigh'), numeric: true }, { name: t('btColFrom') }],
-      rows: hac.strata.map((band) => {
-        const label = labels.get(band.stratum);
-        const median = band.median === null ? null : ratioOf(band.median);
-        return [label.name, num(count(band.n), band.n), median === null ? num(t('receiptDash'), null) : num(times(median), median.toFixed(4)),
-          num(times(ratioOf(band.p10)), ratioOf(band.p10).toFixed(4)), num(times(ratioOf(band.p90)), ratioOf(band.p90).toFixed(4)), poolText(band, label)];
-      }),
+      rows: rows.map((r) => [r.label, num(count(r.n), r.n), r.median === null ? num(t('receiptDash'), null) : num(times(r.median), r.median.toFixed(4)),
+        num(times(r.band[0]), r.band[0].toFixed(4)), num(times(r.band[1]), r.band[1].toFixed(4)), r.from]),
     },
   });
 }
@@ -333,7 +335,7 @@ const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp'
 export function backtestMeasures(bands) {
   const cell = (x) => times(ratioOf(x));
   return printout(html`<table class="gb bt-measures">
-<thead><tr><th scope="col">${t('btColMeasure')}</th><th scope="col" class="num">${t('btColHospitals')}</th><th scope="col" class="num">${t('btColMedian')}</th><th scope="col" class="num">${fill('btColMiddle', { share: pct(bands.highPct - bands.lowPct, 0) })}</th></tr></thead>
+<thead><tr><th scope="col">${t('btColMeasure')}</th><th scope="col" class="num">${t('btColHospitals')}</th><th scope="col" class="num">${t('btColMedian')}</th><th scope="col" class="num">${fill('btColMiddle', { share: pct(rangeShare(bands), 0) })}</th></tr></thead>
 <tbody>${MEASURE_WORDS.map(([key, words]) => {
     const o = bands.measures[key].overall;
     return html`<tr><th scope="row">${t(words)}</th><td class="num">${count(o.n)}</td><td class="num">${cell(o.median)}</td><td class="num">${fill('btMiddle', { low: cell(o.p10), high: cell(o.p90) })}</td></tr>`;

@@ -11,7 +11,7 @@ import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
-import { BASE_PARTS, OTHER_PARTS, hasMaTeaching } from './money.js';
+import { BASE_PARTS, OTHER_PARTS, hasMaTeaching, maKey } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
@@ -39,12 +39,10 @@ export function rangeLine(range, { estimate = null } = {}) {
   return html`<p class="money__range"><a class="money__range-k" href="${BACKTEST_HREF}">${t('rangeLikely')}</a> <span class="money__range-v">${moneyRange(...range)}</span>${bar}</p>`;
 }
 
-// A range in a sentence: "$1.0–1.4M". On the page, word joiners hold it on one line (a narrow column would break it
-// after the dash); a shared sentence, copied as text, has none.
+// A range in a sentence on the page: "$1.0–1.4M", word joiners holding it on one line (a narrow column would break it
+// after the dash). A sentence copied as text (the share sentence, a figure's table) has the plain moneyRange.
 const JOIN = '\u2060';
 const rangeText = (range) => moneyRange(...range).replace('–', `${JOIN}–${JOIN}`);
-const rangePlain = (range) => moneyRange(...range);
-
 
 // The hospital's distance to CMS's line, as the verdict states it: over the highest score CMS didn't cut (a hospital
 // it cut), under the lowest it cut (one it didn't). null without a score.
@@ -74,14 +72,14 @@ export function moneyVerdict(view, m) {
   if (m.cut) {
     return {
       beside: html`<div class="money money--cut"><p class="money__big">${money(m.atStake)}</p><p class="money__what">${fill('moneyCutWhat', { fy })} ${estTag()}</p></div>`,
-      below: html`<div class="money__below"><p class="money__of">${fill(hasMaTeaching(m) ? 'moneyOfWholeMa' : 'moneyOfWhole', { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
+      below: html`<div class="money__below"><p class="money__of">${fill(maKey(m, 'moneyOfWhole'), { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
 ${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
     };
   }
   const distance = distanceText(view);
   return {
     beside: html`<div class="money money--zero"><p class="money__big">${zero()}</p><p class="money__what">${t('moneyZeroWhat')}</p></div>`,
-    below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill(hasMaTeaching(m) ? 'moneyWouldOfMa' : 'moneyWouldOf', { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
+    below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill(maKey(m, 'moneyWouldOf'), { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
 ${rangeLine(m.ranges.hac, { estimate: m.atStake })}</div>`,
   };
 }
@@ -144,7 +142,8 @@ export function moneyField(m) {
 // the order the law applies them, and the net. Each line: { key, kind, label, sub, amount, bar }, where bar places the
 // line on one scale (the larger of the payment before and after the two adjustments): a part as its stretch of the
 // payment ({ part: [from, to] }), a sum as the whole of it, a program as the stretch it applies to ({ scope }) with
-// its adjustment at the stretch's end ({ cut } or { add }). Zero parts are left out and named once (none).
+// its adjustment at the stretch's end ({ cut } or { add }). Zero parts are left out and named once (none). A sub with a
+// likely range in it also names that range (subRange), which the page sets on one line (statementTable).
 export function statementLines(m) {
   const scale = Math.max(m.total, m.after);
   const at = (x) => x / scale;
@@ -168,10 +167,11 @@ export function statementLines(m) {
   lines.push({ key: 'after', kind: 'sum', label: t('stmtAfter'), sub: null, amount: m.after, bar: { part: [0, at(m.after)] } });
   lines.push({
     key: 'hac', kind: 'program', label: t('stmtHac'),
-    sub: m.cut ? fill('stmtHacAll', { pct: REDUCTION_TEXT, range: rangeText(m.ranges.hac) }) : fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }),
+    sub: m.cut ? fill('stmtHacAll', { pct: REDUCTION_TEXT, range: moneyRange(...m.ranges.hac) }) : fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }),
+    subRange: m.cut ? m.ranges.hac : null,
     amount: m.hac, bar: { scope: [0, at(m.after)], ...(m.cut ? { cut: [at(m.after - m.atStake), at(m.after)] } : {}) },
   });
-  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: m.ranges.net ? fill('stmtLikely', { range: rangeText(m.ranges.net) }) : null, amount: m.net, bar: null });
+  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: m.ranges.net ? fill('stmtLikely', { range: moneyRange(...m.ranges.net) }) : null, subRange: m.ranges.net, amount: m.net, bar: null });
   // Not paid: the parts left out, named once (a hospital with no teaching payments has none on Medicare Advantage
   // stays either, which goes without saying).
   const none = [...BASE_PARTS, ...OTHER_PARTS].filter((key) => !shown.includes(key) && !(key === 'imeMa' && !m.parts.ime)).map((key) => t(`stmtOff_${key}`));
@@ -187,12 +187,15 @@ function barCell(bar) {
 
 const signedAmount = (line) => dollars(line.amount, { sign: line.kind === 'program' || line.kind === 'net' });
 
+// A line's sub as the page sets it: its likely range held on one line by word joiners.
+const subText = (l) => (l.subRange ? l.sub.replace(moneyRange(...l.subRange), () => rangeText(l.subRange)) : l.sub);
+
 // The two groups' heads, before the first line of each.
 const GROUP_BEFORE = { hrrp: 'stmtGroupPrograms' };
 
 function statementTable(view, m, { lines, none }) {
   const row = (l) => html`<tr class="stmt__row stmt__row--${l.kind}${l.amount === 0 ? ' is-zero' : ''}" data-line="${l.key}">
-<th scope="row"><span class="stmt__name">${l.label}</span>${l.sub ? html` <span class="stmt__sub">${l.sub}</span>` : ''}</th>
+<th scope="row"><span class="stmt__name">${l.label}</span>${l.sub ? html` <span class="stmt__sub">${subText(l)}</span>` : ''}</th>
 <td class="stmt__amt">${signedAmount(l)}</td>
 ${barCell(l.bar)}
 </tr>`;
@@ -203,7 +206,7 @@ ${barCell(l.bar)}
 <ul class="stmt__key" role="list" aria-hidden="true"><li><span class="stmt__sw stmt__sw--part"></span>${t('stmtKeyPart')}</li><li><span class="stmt__sw stmt__sw--scope"></span>${t('stmtKeyScope')}</li><li><span class="stmt__sw stmt__sw--cut"></span>${t('stmtKeyCut')}</li></ul>
 <table class="stmt__table">
 <tbody>
-${group(hasMaTeaching(m) ? 'stmtGroupPayMa' : 'stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GROUP_BEFORE[l.key]) : ''}${row(l)}
+${group(maKey(m, 'stmtGroupPay'))}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GROUP_BEFORE[l.key]) : ''}${row(l)}
 `)}</tbody>
 </table>
 ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(none) })}</p>` : ''}
@@ -221,7 +224,7 @@ export function moneyWorksheet(m) {
 }
 
 // The statement as the page's figure n: the takeaway, the statement, and its lines as the figure's table.
-export function statementFigure(view, m, { n, source }) {
+export function statementFigure(view, m, { n, source, backtest }) {
   const s = statementLines(m);
   const takeaway = fill(m.cut ? 'stmtTakeawayYes' : 'stmtTakeawayNo', { pct: REDUCTION_TEXT, amount: money(m.atStake), hrrp: money(m.hrrp), hvbp: money(m.hvbp, { sign: true }) });
   return figure({
@@ -230,10 +233,10 @@ export function statementFigure(view, m, { n, source }) {
     chart: statementTable(view, m, s),
     source,
     claimLevel: 'estimate',
-    note: `${t('stmtWhole')} ${fill('stmtRanges', { share: pct(m.backtest.share, 0), fy: String(m.backtest.fy) })}`,
+    note: `${t('stmtWhole')} ${fill('stmtRanges', { share: pct(backtest.share, 0), fy: String(backtest.fy) })}`,
     table: {
       columns: [{ name: t('stmtColLine') }, { name: t('stmtColAmount'), numeric: true }],
-      rows: s.lines.map((l) => [l.sub ? `${l.label} (${l.sub.replaceAll(JOIN, '')})` : l.label, num(signedAmount(l), String(l.amount))]),
+      rows: s.lines.map((l) => [l.sub ? `${l.label} (${l.sub})` : l.label, num(signedAmount(l), String(l.amount))]),
     },
     csvName: `hacrp-dollars-${view.ccn.toLowerCase()}`,
   });
@@ -253,10 +256,10 @@ export function shareSentence(view, m) {
   if (view.status === 'yes' || view.status === 'yes-no-score') {
     if (!est) return fill('shareYesNoEstimate', { ...values, pct: REDUCTION_TEXT });
     const amount = money(est.atStake);
-    const range = rangePlain(est.ranges.hac);
+    const range = moneyRange(...est.ranges.hac);
     return distance ? fill('shareYes', { ...values, pct: REDUCTION_TEXT, amount, range, site, distance }) : fill('shareYesNoScore', { ...values, pct: REDUCTION_TEXT, amount, range, site });
   }
-  return est && distance ? fill('shareNo', { ...values, distance, amount: money(est.atStake), range: rangePlain(est.ranges.hac), site }) : fill('shareNoPlain', values);
+  return est && distance ? fill('shareNo', { ...values, distance, amount: money(est.atStake), range: moneyRange(...est.ranges.hac), site }) : fill('shareNoPlain', values);
 }
 
 // The share control (components.js shareBlock) under the verdict: this page's link and its sentence.
