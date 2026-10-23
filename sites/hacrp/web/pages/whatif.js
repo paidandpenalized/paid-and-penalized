@@ -8,12 +8,15 @@ import { renderWhatIf } from '../../../../web/whatif/render.js';
 import { solverOf, whatIfRules } from '../whatif-state.js';
 import { whatIfTexts } from '../whatif-text.js';
 
+// atStake: the dollars this site estimates the HAC cut would take (1% of the payment after the readmissions and
+// value-based adjustments), on the record where this site has an estimate (generate.js), so the browser moves the money
+// with the decision; atStakeRange: their likely range [low, high], from the back-test; both null where there is none.
 function browserHospital(h) {
   const measures = Object.fromEntries(MEASURE_IDS.map((id) => {
     const { value, z, zText } = h.measures[id];
     return [id, { value, z, zText }];
   }));
-  return { ccn: h.ccn, measures, total: h.total, totalText: h.totalText, paymentReduction: h.paymentReduction, periods: { hai: h.periods.hai } };
+  return { ccn: h.ccn, measures, total: h.total, totalText: h.totalText, paymentReduction: h.paymentReduction, periods: { hai: h.periods.hai }, atStake: h.atStake ?? null, atStakeRange: h.atStakeRange ?? null };
 }
 
 // Every fitted parameter but the bookkeeping (the id and the count of hospitals it was fit on).
@@ -24,9 +27,9 @@ function browserModel(model) {
 
 const browserEstimate = (estimate) => Object.fromEntries(Object.entries(estimate).map(([id, { tagged }]) => [id, { tagged }]));
 
-// The page data: { hospital, model, estimate, page, range }. whatif: { hospital, model, estimate, range } (range:
-// the ramp's national span of scores). page: { name, fy, path, source, boundaryText, baseline, share }, the fields
-// whatIfTexts takes plus share; source is cut to what the slide text cites.
+// The page data: { hospital, model, estimate, page, range }. whatif: { hospital, model, estimate, range } (hospital: the
+// record, with atStake where there is an estimate; range: the ramp's national span of scores). page: { name, fy, path, source,
+// boundaryText, baseline, share }, the fields whatIfTexts takes plus share; source is cut to what the slide text cites.
 function whatIfData({ hospital, model, estimate, range }, page) {
   const source = { id: page.source.id, pdcReleased: page.source.pdcReleased };
   return {

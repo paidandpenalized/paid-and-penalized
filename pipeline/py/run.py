@@ -1,9 +1,11 @@
 """Python entry point: `python3 -I pipeline/py/run.py <command>`.
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
-here instead, so nothing needs installing. Commands: `test`, `emit`, `extract-pos <raw POS csv>`,
-`extract-hai <zip> <pin id>` (see pp_pipeline/hai_extract.py), and `geocode`, which calls the U.S. Census Bureau
-Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
+here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, then the dollar
+estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
+pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
+pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and `geocode`, which
+calls the U.S. Census Bureau Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
 """
 import sys
 import unittest
@@ -21,19 +23,33 @@ def run_tests():
     return 0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1
 
 
+def emit():
+    """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
+    (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
+    emitter first.)"""
+    from pp_pipeline import emit_dollars, emit_hospital
+    EMITTERS = (emit_hospital, emit_dollars)  # each has a main() that returns its exit code
+    return max([emitter.main() for emitter in EMITTERS])
+
+
 def main(argv):
     command, args = (argv[0], argv[1:]) if argv else (None, [])
     if command == "test" and not args:
         return run_tests()
     if command == "emit" and not args:
-        from pp_pipeline import emit_hospital
-        return emit_hospital.main()
+        return emit()
     if command == "geocode" and not args:
         from pp_pipeline import geocode
         return geocode.main()
     if command == "extract-pos" and len(args) == 1:
         from pp_pipeline import pos_extract
         return pos_extract.main(args[0])
+    if command == "backtest" and not args:
+        from pp_pipeline import backtest_dollars
+        return backtest_dollars.main()
+    if command == "extract-hcris" and len(args) == 1:
+        from pp_pipeline import hcris_extract
+        return hcris_extract.main(args[0])
     if command == "extract-hai" and len(args) == 2:
         from pp_pipeline import hai_extract
         return hai_extract.main(args[0], args[1])

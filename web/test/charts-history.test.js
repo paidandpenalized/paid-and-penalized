@@ -846,7 +846,7 @@ test('usYearMap: the land as a faint path for each state and DC, then one path o
   const groups = [{ cls: 'chart-dots--years-clear', points: [a, b] }, { cls: 'chart-dots--years-scar', points: [] }, { cls: 'chart-dots--pen', points: [b] }];
   const out = usYearMap({ shapes, groups, size: 4.2, width: 960 });
   const s = sound(out, 'us-years');
-  assert.equal(count(/<g class="chart-years__land">[\s\S]*?<\/g>/.exec(s)[0], /<path d="M/g), US_MAP_CODES.length);
+  assert.equal(count(/<g class="chart-land">[\s\S]*?<\/g>/.exec(s)[0], /<path d="M/g), US_MAP_CODES.length);
   const dots = [...s.matchAll(/<path class="chart-dots ([\w-]+)" stroke-width="([\d.]+)" d="([^"]+)"/g)].map((m) => [m[1], m[2], m[3]]);
   assert.deepEqual(dots.map(([cls]) => cls), ['chart-dots--years-clear', 'chart-dots--pen'], 'a class with no hospital draws no path; the last class sits on top');
   assert.deepEqual(dots.map(([, w]) => w), ['4.2', '4.2']);

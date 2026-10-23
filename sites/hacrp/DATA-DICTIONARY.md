@@ -1,14 +1,15 @@
 # Data dictionary: hacrp-hospitals.csv
 
-`hacrp-hospitals.csv` holds what CMS reports for every hospital in its Hospital-Acquired Condition Reduction Program (HACRP) file for fiscal year {fy}: the Total HAC Score, the payment reduction decision, each measure's value and z-score, CMS's footnote codes and the measurement periods. It is a file from Paid & Penalized (paidandpenalized.org). It holds no patient information.
+`hacrp-hospitals.csv` holds what CMS reports for every hospital in its Hospital-Acquired Condition Reduction Program (HACRP) file for fiscal year {fy}: the Total HAC Score, the payment reduction decision, each measure's value and z-score, CMS's footnote codes and the measurement periods. Its last columns, each named `_modeled`, are this site's own estimates of the dollars: what traditional Medicare pays the hospital for inpatient stays (with the teaching payments Medicare makes on its Medicare Advantage patients' stays), what the readmissions, value-based purchasing and HAC programs move, and the HAC cut's likely range. It is a file from Paid & Penalized (paidandpenalized.org). It holds no patient information.
 
-schema_version: 1
+schema_version: 3
 
 ## Source
 
 - CMS Provider Data Catalog, "{source_title}", dataset {source_id}, released {pdc_released}. The site's pages give the same dataset id and release date.
 - CMS's footnote crosswalk, dataset y9us-9xdf, holds the text of each footnote code.
 - Name, city, state and county come from this site's hospital master, built from CMS and U.S. Census Bureau files.
+- The `_modeled` columns are this site's estimates, built from CMS's FY{fy} IPPS final rule files (the impact file, the rate tables and the value-based purchasing factors in Table 16B) and CMS's FY{fy} HRRP supplemental file. They are not CMS's numbers. The site's Methods page gives every assumption.
 
 ## Format
 
@@ -59,6 +60,15 @@ schema_version: 1
 | `psi90_end` | text | Last day of the PSI 90 measurement period. | PSI 90 End Date | As above. |
 | `hai_start` | text | First day of the infection measures' measurement period. | HAI Measures Start Date | As above. |
 | `hai_end` | text | Last day of the infection measures' measurement period. | HAI Measures End Date | As above. |
+| `dollars_status` | text | Whether this site has a dollar estimate for the hospital, and if not, why. | (this site's estimate) | `estimated`; `maryland` (Maryland's hospitals are exempt from the HAC cut, and the dollar columns are blank); `no-inputs` (no usable row in CMS's IPPS impact file: no estimate). |
+| `inpatient_payment_modeled` | number | This site's estimate of what traditional Medicare pays the hospital for a year of inpatient stays, with the teaching payments Medicare makes on its Medicare Advantage patients' stays (which the HAC cut is also taken on), before the three programs, in whole dollars. | (this site's estimate) | Blank without an estimate. Volume is the impact file's (two years before the fiscal year); the rates are the fiscal year's. |
+| `hrrp_dollars_modeled` | number | The readmissions program's adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Zero or negative: negative is money Medicare keeps. Blank without an estimate. |
+| `hvbp_dollars_modeled` | number | The value-based purchasing adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Negative is money Medicare keeps; positive, a bonus. Blank without an estimate. |
+| `hac_at_stake_modeled` | number | 1% of the payment after those two adjustments, in whole dollars: what the HAC cut takes from a hospital CMS cuts. | (this site's estimate) | For every estimated hospital, cut or not. Blank without an estimate. |
+| `hac_dollars_modeled` | number | The HAC cut, in whole dollars. | (this site's estimate) | Minus `hac_at_stake_modeled` where `payment_reduction` is `Yes`, else 0. Blank without an estimate. |
+| `hac_dollars_low_modeled` | number | The low end of the HAC cut's likely range, in whole dollars: the larger cut. | (this site's estimate) | Same sign as `hac_dollars_modeled`. For a hospital CMS cut, minus the high end of the dollars at stake's likely range; 0 where `payment_reduction` is not `Yes`. Blank without an estimate. The range spans the middle 80% of the misses the site's estimate made for hospitals of the same size and kind (or for a wider group, where there were too few) in a one-year check against their FY{backtest_fy} cost reports; it is not a promise of how often a hospital's actual cut lands inside. |
+| `hac_dollars_high_modeled` | number | The high end of the HAC cut's likely range, in whole dollars: the smaller cut. | (this site's estimate) | Same sign as `hac_dollars_modeled`; 0 where `payment_reduction` is not `Yes`. Blank without an estimate. |
+| `net_dollars_modeled` | number | The three programs together, in whole dollars. | (this site's estimate) | `hrrp_dollars_modeled` + `hvbp_dollars_modeled` + `hac_dollars_modeled`; each row adds exactly. Blank without an estimate. |
 
 ## Footnotes
 
@@ -67,7 +77,7 @@ A footnote column holds CMS's footnote code exactly as CMS writes it. When a cel
 ## Reading the file
 
 - The Total HAC Score is not a grade of the quality of care. It compares hospitals with each other on the measures each was scored on.
-- This file reports what CMS published. It holds none of this site's own estimates or what-ifs.
+- The `_modeled` columns are this site's estimates; `dollars_status` is this site's classification; name, city, state and county come from this site's hospital master; the rest report what CMS published. The readmissions, value-based, HAC and net columns are whole dollars that add exactly across a row; the estimate is not that precise. The file holds no what-ifs.
 
 ## License
 

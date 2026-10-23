@@ -86,3 +86,18 @@ test('withState sets or clears only the state= part of the fragment and keeps th
   assert.equal(withState('#hospitals&state=al', null), '#hospitals');
   assert.equal(withState('#state=al&state=ca&figure-2', 'CA'), '#figure-2&state=CA');
 });
+
+test('the estimated cut sorts by value, the reader\'s choice, with no estimate last either way', () => {
+  // [ccn, name, city, state, total, decision, zip, cut]: this site's estimate in whole dollars, null for none.
+  const rows = tableRows([
+    ['990061', 'A', 'X', 'AL', '0.5000', 'Yes', '', 400_000],
+    ['990062', 'B', 'X', 'AL', '0.1000', 'No', '', 0],
+    ['990063', 'C', 'X', 'AL', '0.6000', 'Yes', '', null],
+    ['990064', 'D', 'X', 'AL', '0.7000', 'Yes', '', 2_100_000],
+    ['990065', 'E', 'X', 'AL', '0.2000', 'No', ''],
+  ]);
+  assert.deepEqual(rows.map((r) => r.money), [400_000, 0, NaN, 2_100_000, NaN]);
+  assert.deepEqual(ccns(sortRows(rows, 'money', -1)), ['990064', '990061', '990062', '990063', '990065']);
+  assert.deepEqual(ccns(sortRows(rows, 'money', 1)), ['990062', '990061', '990064', '990063', '990065']);
+  assert.deepEqual(ccns(sortRows(rows, null, 1)), ['990061', '990062', '990063', '990064', '990065'], 'the default order stays by state and name');
+});

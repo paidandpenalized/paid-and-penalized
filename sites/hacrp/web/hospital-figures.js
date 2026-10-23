@@ -12,9 +12,9 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, noun, pct, pctFloor } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
-import { pill, printout } from '../../../web/render/components.js';
+import { pill, printout, wsOp, wsTerm } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
 import { NEAR_MAP_WIDTH, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
@@ -22,10 +22,14 @@ import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
 import { pillOf } from './whatif-text.js';
 import { hospitalHref } from './hospital-table.js';
+import { cutText } from './money.js';
 import { groupLabel } from './groups.js';
 
 const at = (v) => decimal(v, DP);
 const share = (part, whole) => pct(whole ? part / whole : 0, 0);
+// A rank as "higher than", "worse than" or "better than" says it: rounded down, so it never rounds across a step (a
+// hospital just under CMS's line never reads "higher than 75%" when it is 74.97%).
+const beyond = (part, whole) => pctFloor(whole ? part / whole : 0);
 // The line bar's wide drawing, about the verdict column's width.
 const LINE_BAR_WIDE = 440;
 // The ledger's wide rulers, about their column's width on a wide screen.
@@ -51,7 +55,7 @@ export function lineBarBlock(view, nat) {
 ${imageOf(draw(WIDTH), alt, 'narrow')}
 ${imageOf(draw(LINE_BAR_WIDE), alt, 'wide')}
 </div>
-<p class="hosp__rank">${fill('rankHigher', { share: share(rank.below, rank.n - 1), n: count(rank.n - 1) })}</p>`;
+<p class="hosp__rank">${fill('rankHigher', { share: beyond(rank.below, rank.n - 1), n: count(rank.n - 1) })}</p>`;
 }
 
 // ---------- the ledger ----------
@@ -76,8 +80,8 @@ function rulerOf(nat, model, id) {
 function rankWords(nat, id, value, median) {
   const r = nat.measureRank(id, value);
   const others = r.n - 1;
-  if (value > median) return fill('rankWorse', { share: share(r.below, others), n: count(others) });
-  if (value < median) return fill('rankBetter', { share: share(r.above, others), n: count(others) });
+  if (value > median) return fill('rankWorse', { share: beyond(r.below, others), n: count(others) });
+  if (value < median) return fill('rankBetter', { share: beyond(r.above, others), n: count(others) });
   return t('rankMiddle');
 }
 
@@ -150,12 +154,11 @@ export function worksheet(view) {
   const exact = at(recomputed) === view.score.raw;
   const term = (m, i) => {
     const neg = m.zRaw.startsWith('-');
-    const op = neg ? '−' : '+';
     const digits = neg ? m.zRaw.slice(1) : m.zRaw;
-    return html`${i ? html`<span class="ws__op">${op}</span>` : ''}<span class="ws__term${m.id === topId ? ' is-top' : ''}${m.assigned ? ' is-assigned' : ''}"><span class="ws__v">${i === 0 && neg ? '−' : ''}${digits}</span><span class="ws__k">${m.short}</span></span>`;
+    return html`${i ? wsOp(neg ? '−' : '+') : ''}${wsTerm(html`${i === 0 && neg ? '−' : ''}${digits}`, m.short, [m.id === topId && 'is-top', m.assigned && 'is-assigned'].filter(Boolean).join(' '))}`;
   };
   return html`<div class="ws" role="group" aria-label="${t('sumHeading')}">
-<p class="ws__line"><span class="ws__paren">(</span>${terms.map(term)}<span class="ws__paren">)</span><span class="ws__op">÷</span><span class="ws__term ws__term--n"><span class="ws__v">${String(terms.length)}</span><span class="ws__k">${t('wsN')}</span></span><span class="ws__op">=</span><span class="ws__term ws__term--total"><span class="ws__v">${view.score.text}</span><span class="ws__k">${t('wsTotal')}</span></span></p>
+<p class="ws__line"><span class="ws__paren">(</span>${terms.map(term)}<span class="ws__paren">)</span>${wsOp('÷')}${wsTerm(String(terms.length), t('wsN'), 'ws__term--n')}${wsOp('=')}${wsTerm(view.score.text, t('wsTotal'), 'ws__term--total')}</p>
 ${exact ? '' : html`<p class="small muted">${fill('sumRounded', { recomputed: cmsText(at(recomputed)), total: view.score.text })}</p>`}
 </div>`;
 }
@@ -207,7 +210,7 @@ export function peersFigure({ view, nat, master, n, source }) {
   const rows = groups.map((g) => {
     const label = groupLabel(g.kind, g.key, { metro: master?.cbsaName });
     const s = share(g.yes, g.decided);
-    return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: share(g.below, g.scored - 1), others: g.scored - 1 };
+    return { g, label, share: s, sub: fill('groupSub', { n: count(g.decided) }), higher: beyond(g.below, g.scored - 1), others: g.scored - 1 };
   });
   const draw = (width) => ridges({
     edges: nat.edges, band, actual: total, width,
@@ -249,13 +252,21 @@ function glyph(flags) {
   return html`<span class="mg" aria-hidden="true">${flags.map((f) => html`<span class="mg--${f}"></span>`)}</span><span class="vh">${fill('nearbyGlyph', { worse: String(worse), scored: String(scored) })}</span>`;
 }
 
+// A hospital's estimated cut in a table: the dollars, in the penalty ink for a cut; words where there is no estimate.
+const cutCell = (dollars) => html`<td class="num near__cut${dollars > 0 ? ' near__cut--pen' : ''}">${cutText(dollars)}</td>`;
+
+// A distance in the nearest hospitals' table: whole miles, "under 1" for a hospital under a mile away (never "0").
+const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
+// A distance in words, for a tooltip and the takeaway: "less than a mile" under one, "about a mile" for one when
+// rounded, whole miles ("3 miles") otherwise.
+export const milesText = (x) => (x < 1 ? t('milesUnder') : Math.round(x) === 1 ? t('milesAbout') : noun(Math.round(x), 'mile'));
+
+// The table's estimated-cut column reads each nearby hospital's cut from the national context (compare.js).
 export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (!view.point || !shapes) return null;
   const near = nat.nearest(view.ccn, view.point);
   if (near.length < 2) return null;
-  // Whole miles; a hospital under a mile away says so rather than "0".
-  const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
-  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), miles: miles(h.miles) });
+  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), distance: milesText(h.miles) });
   const kind = (h) => (h.decision === 'Yes' ? 'yes' : h.decision === 'No' ? 'no' : 'na');
   const far = near.at(-1).miles;
   const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
@@ -267,12 +278,12 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   const yes = near.filter((h) => h.decision === 'Yes').length;
   const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
   const table = printout(html`<table class="gb gb--near" aria-labelledby="nearby-h">
-<thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
-<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td><td>${glyph(h.flags)}</td></tr>`)}</tbody>
+<thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col" class="num">${t('tableColMoney')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
+<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
-    takeaway: near[0].miles < 1 ? fill('figNearbyTakeawayNear', { yes: String(yes), k: String(near.length) }) : fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), miles: miles(near[0].miles) }),
+    takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), distance: milesText(near[0].miles) }),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
       rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),

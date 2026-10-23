@@ -12,13 +12,13 @@
   body { background: var(--paper); font-size: 10.5pt; line-height: 1.45; }
   .whatif:not([data-changed]) :is(.wi-intro, .wi-result) { display: none !important; }
   .theme-toggle, .skip, .search, .omni, .nav, .wi-actions, [data-wi="controls"], [data-wi="nojs"], .wi-fields, .wi-copy, .wi-slide,
-  .wi-echo, .wi-banner, .wi-solver, .wi-weights, .wi-detail summary, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row {
+  .wi-echo, .wi-banner, .wi-solver, .wi-weights, .wi-detail summary, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row, .share {
     display: none !important;
   }
   .print-only { display: block; overflow-wrap: anywhere; }
-  .pill, .hosp__none, .stamp, .form, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pill, .hosp__none, .stamp, .form, .wi-bar, .wi-scale, .fig__swatch, .gb tbody tr, .wi-ramp, .chart, .wi-cliff, .stmt, .money__range-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .wi-side { position: static; }
-  figure, .hosp__top > *, .wi-result, .wi-bars, tr { break-inside: avoid; }
+  figure, .hosp__top > *, .wi-result, .wi-bars, .ws, tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   thead { display: table-header-group; }
   :is(.source, .links, .data-links) a[href^="http"]::after { content: " (" attr(href) ")"; overflow-wrap: anywhere; }

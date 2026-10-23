@@ -1,17 +1,19 @@
 // The Methods page's figures: the self-check drawn (every recomputed score against CMS's, every decision against the
 // line this site finds), the periods behind each year's cut, and the pipeline from CMS's file to the pages. Every
 // number comes from the checks the build runs (engine/js/hacrp/history.js) and the pinned-input manifest.
+import { bandStrips } from '../../../web/charts/bandStrips.js';
 import { drawn, figure, num } from '../../../web/charts/figure.js';
 import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { cmsText, count, decimal, isoDate, longDate } from '../../../web/render/format.js';
+import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
-import { SHORT_NAMES } from './constants.js';
+import { PARHM_THROUGH_YEAR, REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
+import { cutCounts, rangeOf, rangeShare } from './money.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
 // The pinned-input manifest's fingerprint, by name.
@@ -116,22 +118,25 @@ export function periodsFigure(years, { n, source }) {
   });
 }
 
-// The pipeline: six stations, each with its real number for the newest year, as an ordered list (a phone stacks it).
-export function pipeline({ rows, source, pin, measures, check, pages }) {
-  const stations = [
-    { name: t('pipe1'), value: fill('pipe1Value', { rows: count(rows) }), note: fillKeep('pipe1Note', { id: source.id, date: isoDate(source.pdcReleased) }, ['id', 'date']) },
-    { name: t('pipe2'), value: fill('pipe2Value', { bytes: count(pin.bytes) }), note: fillKeep('pipe2Note', { algo: HASH_NAME, hash: `${pin.sha256.slice(0, 12)}…` }, ['hash']) },
-    { name: t('pipe3'), value: fill('pipe3Value', { measures: String(measures) }), note: t('pipe3Note') },
-    { name: t('pipe4'), value: fill('pipe4Value', { scored: count(check.scored) }), note: t('pipe4Note') },
-    { name: t('pipe5'), value: fill('pipe5Value', { miss: missText(check.maxError) }), note: fill('pipe5Note', { decided: count(check.decided), wrong: count(check.wrongSide.length), limit: limitText }) },
-    { name: t('pipe6'), value: fill('pipe6Value', { pages: count(pages) }), note: t('pipe6Note') },
-  ];
-  return html`<ol class="pipe" role="list">${stations.map((s, i) => html`<li class="pipe__st${i === 4 ? ' pipe__st--check' : ''}">
+// An ordered list of stations, each its number, name, value and note (a phone stacks it); a station with check set (the
+// self-check's, the HAC cut's) is marked. cls: more classes on the list.
+const stationList = (stations, { cls = '' } = {}) => html`<ol class="pipe${cls ? ` ${cls}` : ''}" role="list">${stations.map((s, i) => html`<li class="pipe__st${s.check ? ' pipe__st--check' : ''}">
 <p class="pipe__n">${String(i + 1)}</p>
 <p class="pipe__name">${s.name}</p>
 <p class="pipe__value">${s.value}</p>
 <p class="pipe__note">${s.note}</p>
 </li>`)}</ol>`;
+
+// The pipeline: six stations, each with its real number for the newest year, as an ordered list.
+export function pipeline({ rows, source, pin, measures, check, pages }) {
+  return stationList([
+    { name: t('pipe1'), value: fill('pipe1Value', { rows: count(rows) }), note: fillKeep('pipe1Note', { id: source.id, date: isoDate(source.pdcReleased) }, ['id', 'date']) },
+    { name: t('pipe2'), value: fill('pipe2Value', { bytes: count(pin.bytes) }), note: fillKeep('pipe2Note', { algo: HASH_NAME, hash: `${pin.sha256.slice(0, 12)}…` }, ['hash']) },
+    { name: t('pipe3'), value: fill('pipe3Value', { measures: String(measures) }), note: t('pipe3Note') },
+    { name: t('pipe4'), value: fill('pipe4Value', { scored: count(check.scored) }), note: t('pipe4Note') },
+    { name: t('pipe5'), value: fill('pipe5Value', { miss: missText(check.maxError) }), note: fill('pipe5Note', { decided: count(check.decided), wrong: count(check.wrongSide.length), limit: limitText }), check: true },
+    { name: t('pipe6'), value: fill('pipe6Value', { pages: count(pages) }), note: t('pipe6Note') },
+  ]);
 }
 
 // The receipts: every pinned input this site's HACRP pages read, with its size and fingerprint.
@@ -164,3 +169,212 @@ ${withheld ? html`<div><dt>${t('receiptWithheld')}</dt><dd>${count(withheld)}</d
 </dl>
 </div>`;
 }
+
+// ---------- how this site estimates the dollars ----------
+
+// The payment order, drawn on the year's real proportions: the national payment (the headline set's) as one bar split
+// into the base and everything else, a bracket over the base for the two programs that adjust it, and one under the
+// whole bar for the HAC cut, taken last. As the page's figure n.
+export function dollarsOrderFigure(headline, { n, source, fy }) {
+  const base = headline.base;
+  const rest = headline.total - headline.base;
+  const share = base / headline.total;
+  const chart = html`<div class="order" style="--base: ${share.toFixed(4)}" aria-hidden="true">
+<p class="order__brace order__brace--base"><span>${t('orderTwo')}</span></p>
+<div class="order__bar"><p class="order__base"><span class="order__name">${t('orderBase')}</span> <span class="order__money">${money(base)}</span><span class="order__note">${t('orderBaseNote')}</span></p><p class="order__rest"><span class="order__name">${t('orderRest')}</span> <span class="order__money">${money(rest)}</span><span class="order__note">${t('orderRestNote')}</span></p></div>
+<p class="order__brace order__brace--all"><span>${fill('orderHac', { pct: REDUCTION_TEXT })}</span></p>
+</div>`;
+  return figure({
+    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-payment-order',
+    takeaway: fill('orderTakeaway', { share: pct(share, 0), fy: String(fy) }),
+    table: {
+      columns: [{ name: t('orderColPart') }, { name: t('orderColMoney'), numeric: true }],
+      rows: [[t('orderBase'), num(dollars(base), base)], [t('orderRest'), num(dollars(rest), rest)]],
+    },
+  });
+}
+
+// The formula as the pipeline's stations, with the year's real national numbers (the headline set's), the HAC cut's
+// station set apart.
+export function dollarsPipeline(headline) {
+  const one = decimal(1, 0);
+  return stationList([
+    { name: t('dpipe1'), value: money(headline.base), note: fill('dpipe1Note', { hospitals: count(headline.hospitals) }) },
+    { name: t('dpipe2'), value: money(headline.hrrp), note: fill('dpipe2Note', { one }) },
+    { name: t('dpipe3'), value: money(headline.hvbp), note: fill('dpipe3Note', { one }) },
+    { name: t('dpipe4'), value: money(headline.total - headline.base, { sign: true }), note: t('dpipe4Note') },
+    { name: t('dpipe5'), value: money(headline.after), note: t('dpipe5Note') },
+    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, ...cutCounts(headline) }), check: true },
+  ], { cls: 'pipe--dollars' });
+}
+
+// The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
+// assumptions: the dollar file's (volumeFy, and the end dates of the two provisions, mdhEnd and lowVolumeEnd, as
+// YYYY-MM-DD); backtestFy: the year of the back-test.
+export function assumptionsTable({ fy, assumptions, backtestFy }) {
+  const { volumeFy, mdhEnd, lowVolumeEnd } = assumptions;
+  // The two provisions end after the fiscal year does, which is what lets them count for all of it: a date inside the
+  // year would make the row false, so it stops the build. endsOn: the earlier of the two end dates.
+  const endsOn = mdhEnd < lowVolumeEnd ? mdhEnd : lowVolumeEnd;
+  if (!(endsOn > `${fy}-09-30`)) throw new RangeError(`the Medicare-dependent hospital program and the low-volume adjustment end ${endsOn}, not after FY${fy} ends`);
+  const rows = [
+    ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
+    ['assumeMdh', 'assumeMdhE', { fy: String(fy) }, { ...isoMonth(endsOn), fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeOtherParts', 'assumeOtherPartsE'], ['assumeAddons', 'assumeAddonsE'],
+    ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSlots', 'assumeSlotsE'], ['assumeSch', 'assumeSchE'],
+    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE', { fy: String(fy) }], ['assumeParhm', 'assumeParhmE', { year: String(PARHM_THROUGH_YEAR) }],
+    ['assumeFfs', 'assumeFfsE'],
+  ];
+  return printout(html`<table class="gb assume">
+<thead><tr><th scope="col">${t('assumeColA')}</th><th scope="col">${t('assumeColE')}</th></tr></thead>
+<tbody>${rows.map(([a, e, v, ev]) => html`<tr><th scope="row">${v ? fill(a, v) : t(a)}</th><td>${ev ? fill(e, ev) : t(e)}</td></tr>`)}</tbody>
+</table>`);
+}
+
+// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22% (absLogPct: without the sign,
+// 0.25 and -0.25 both 22%).
+const logPct = (x, dp) => pct(Math.exp(x) - 1, dp, { sign: true });
+export const absLogPct = (x, dp) => pct(Math.abs(Math.exp(x) - 1), dp);
+
+// How a dollar check's value and range read on the tape, by check.
+const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };
+const CHECK_FORMAT = {
+  hrrp_share: SHARE,
+  vbp_net: { value: money, range: (c) => fill('dcheckAtMost', { high: money(c.high) }) },
+  hac_share: SHARE,
+  outlier_share: SHARE,
+  uc_pool: SHARE,
+  hac_count: { value: count, range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
+  yes_unestimated: { value: count, range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
+  // The back-test's median error, log(estimate ÷ cost report), read as how far the middle hospital's estimate ran
+  // above (+) or below (−) its cost report.
+  backtest_hac_median: { value: (v) => logPct(v, 1), range: (c) => fill('dcheckRange', { low: logPct(c.low, 0), high: logPct(c.high, 0) }) },
+  backtest_hospitals: { value: count, range: (c) => fill('dcheckAtLeast', { low: count(c.low) }) },
+  backtest_cut: { value: count, range: (c) => fill('dcheckAtLeast', { low: count(c.low) }) },
+};
+
+// The national checks as an adding-machine tape, in the self-check's style: each check, this build's value, the range
+// it is held to, and pass or fail.
+export function dollarChecks(checks) {
+  return html`<div class="receipt receipt--dollars">
+<p class="receipt__head">${t('dchecksHead')}</p>
+<table class="receipt__t">
+<thead><tr><th scope="col">${t('dcheckColCheck')}</th><th scope="col">${t('dcheckColValue')}</th><th scope="col">${t('dcheckColRange')}</th><th scope="col"><span class="vh">${t('receiptColOk')}</span></th></tr></thead>
+<tbody>${checks.map((c) => {
+    const f = CHECK_FORMAT[c.id];
+    if (!f) throw new RangeError(`dollarChecks: no words for check "${c.id}"`);
+    return html`<tr><th scope="row">${t(`dcheck_${c.id}`)}</th><td>${c.value === null ? t('receiptDash') : f.value(c.value)}</td><td>${f.range(c)}</td><td class="receipt__ok">${t(c.pass ? 'dcheckPass' : 'dcheckFail')}</td></tr>`;
+  })}</tbody>
+</table>
+</div>`;
+}
+
+// ---------- the back-test ----------
+
+// Display constants: the back-test strip's axis ticks (estimate over cost report, on a log scale), those that fall in the
+// drawing's span; the span always reaches the inner four.
+const BACKTEST_TICKS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
+const BACKTEST_TICKS_NARROW = [0.25, 0.5, 1, 2];
+const BACKTEST_SPAN = [0.5, 2];
+// A ratio as the strip writes it: 0.75 reads "0.75×", 2 reads "2×".
+const times = (v) => `${String(Number(v.toFixed(2)))}×`;
+const ratioOf = (logRatio) => Math.exp(logRatio);
+
+// A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), and the band and
+// its kind as the group's words ("under 100 beds, other hospitals"), its name (capitalized: "Under 100 beds, other
+// hospitals"), its short name (the phone's) and the group as a description of hospitals ("under 100 beds that are sole
+// community or Medicare-dependent").
+export function stratumLabel(s) {
+  const beds = s.bedsMin === 0 ? fill('btBedsUnder', { n: count(s.bedsMax + 1) })
+    : s.bedsMax === null ? fill('btBedsOver', { n: count(s.bedsMin) }) : fill('btBedsBetween', { lo: count(s.bedsMin), hi: count(s.bedsMax) });
+  const words = fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdh' : 'btKindOther') });
+  const short = capitalize(fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdhShort' : 'btKindOtherShort') }));
+  // `hospitals`: the group as a description of hospitals, after "Hospitals with".
+  return { beds, hospitals: fill(s.schMdh ? 'btHospitalsSchMdh' : 'btHospitalsOther', { beds }), name: capitalize(words), short };
+}
+const hospitalsText = (n) => noun(n, 'hospital');
+
+// How many of each stratum's own compared cut hospitals the range the stratum uses holds: the cost report's HAC amount
+// within the estimate's likely range, as a page works it out (money.js rangeOf). The ranges were set on these same
+// hospitals, so this is how well they fit, in-sample. Map of stratum id to count.
+export function insideCounts(bands) {
+  const inside = new Map(bands.measures.hac.strata.map((s) => [s.stratum, 0]));
+  for (const p of bands.points) {
+    const [lo, hi] = rangeOf(bands, 'hac', p.stratum, p.model);
+    if (p.actual >= lo && p.actual <= hi) inside.set(p.stratum, inside.get(p.stratum) + 1);
+  }
+  return inside;
+}
+
+// The cut hospitals the HAC cut's statistics leave out, in words: each kind of pair that can't be compared
+// (bands.measures.hac.pairs), with its count, as one list; '' when every cut hospital was compared.
+const NOT_COMPARED = [['signMismatch', 'btNotSign'], ['zeroActual', 'btNotZeroActual'], ['zeroModel', 'btNotZeroModel'], ['bothZero', 'btNotBothZero']];
+export const notComparedText = (pairs) => listText(NOT_COMPARED.filter(([key]) => pairs[key] > 0).map(([key, words]) => fill(words, { n: count(pairs[key]) })));
+
+// Where a stratum's range comes from, in words: its own hospitals, all of its bed band's, or every hospital's.
+const poolText = (band, label) => (band.pool === 'stratum' ? t('btPoolOwn') : band.pool === 'beds' ? fill('btPoolBeds', { beds: label.beds }) : t('btPoolAll'));
+
+// The back-test as the Methods page's figure n: one strip per stratum, every cut hospital in the comparison set a dot
+// at its estimate over its cost report's HAC amount (names only in the tooltips), its stratum's likely range behind,
+// hatched where borrowed. bands: dollars.json's; names(ccn): { name, city, state } or null.
+export function backtestFigure(bands, { n, source, names }) {
+  const hac = bands.measures.hac;
+  const labels = new Map(bands.strata.map((s) => [s.id, stratumLabel(s)]));
+  const inside = insideCounts(bands);
+  const rows = hac.strata.map((band) => {
+    const label = labels.get(band.stratum);
+    const from = poolText(band, label);
+    // The group's hospitals, and how many of them its range holds (none to count in a group with no hospitals)
+    const hospitals = band.n ? fill('btInside', { hospitals: hospitalsText(band.n), inside: count(inside.get(band.stratum)) }) : hospitalsText(0);
+    const dots = bands.points.filter((p) => p.stratum === band.stratum).map((p) => {
+      const who = names(p.ccn);
+      const values = { model: money(p.model), actual: money(p.actual), ratio: times(p.model / p.actual) };
+      return { x: p.model / p.actual, tip: who ? fill('btTip', { ...who, ...values }) : fill('btTipNoName', values) };
+    });
+    return {
+      label: label.name,
+      note: band.pool === 'stratum' ? fill('btNote', { hospitals }) : fill('btNoteBorrowed', { hospitals, pool: from }),
+      short: { label: label.short, note: fill(band.pool === 'stratum' ? 'btNote' : 'btNoteBorrowedShort', { hospitals }) },
+      band: [ratioOf(band.p10), ratioOf(band.p90)], borrowed: band.pool !== 'stratum', median: band.median === null ? null : ratioOf(band.median), dots,
+      n: band.n, inside: inside.get(band.stratum), from, // for the figure's table
+    };
+  });
+  const xs = rows.flatMap((r) => [...r.dots.map((d) => d.x), ...r.band]);
+  const domain = [Math.min(BACKTEST_SPAN[0], ...xs) / 1.06, Math.max(BACKTEST_SPAN[1], ...xs) * 1.06];
+  const inSpan = (v) => v >= domain[0] && v <= domain[1];
+  const ticks = BACKTEST_TICKS.filter(inSpan);
+  const narrowTicks = BACKTEST_TICKS_NARROW.filter(inSpan);
+  const overall = ratioOf(hac.overall.median);
+  const draw = (width) => bandStrips({ rows, domain, ticks, narrowTicks, format: times, overall, labels: { exact: t('btExact'), overall: fill('btOverall', { ratio: times(overall) }), axis: t('btAxis') }, width });
+  const median = overall - 1;
+  const takeaway = fill(median >= 0 ? 'btTakeawayHigh' : 'btTakeawayLow', { n: count(hac.overall.n), median: pct(Math.abs(median), 1), share: pct(rangeShare(bands), 0) });
+  return figure({
+    n, takeaway, source, claimLevel: 'estimate', csvName: 'hacrp-dollars-backtest', alt: t('btAlt'), note: t('btNote2'),
+    ...drawn(draw, METHODS_WIDE),
+    table: {
+      columns: [{ name: t('btColGroup') }, { name: t('btColHospitals'), numeric: true }, { name: t('btColInside'), numeric: true }, { name: t('btColMedian'), numeric: true }, { name: t('btColLow'), numeric: true }, { name: t('btColHigh'), numeric: true }, { name: t('btColFrom') }],
+      rows: rows.map((r) => [r.label, num(count(r.n), r.n), num(count(r.inside), r.inside), r.median === null ? num(t('receiptDash'), null) : num(times(r.median), r.median.toFixed(4)),
+        num(times(r.band[0]), r.band[0].toFixed(4)), num(times(r.band[1]), r.band[1].toFixed(4)), r.from]),
+    },
+  });
+}
+
+// The words for each measure in the back-test's summary table, in the order the table lists them.
+export const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp', 'btMeasureHrrp'], ['hvbp', 'btMeasureHvbp'], ['fed', 'btMeasureFed']];
+
+// Every measure the back-test checks, over all its hospitals: how many it compared, the median estimate over the
+// cost report, and the middle 80% (the 10th and 90th percentiles), as a printable table.
+export function backtestMeasures(bands) {
+  const cell = (x) => times(ratioOf(x));
+  return printout(html`<table class="gb bt-measures">
+<thead><tr><th scope="col">${t('btColMeasure')}</th><th scope="col" class="num">${t('btColHospitals')}</th><th scope="col" class="num">${t('btColMedian')}</th><th scope="col" class="num">${fill('btColMiddle', { share: pct(rangeShare(bands), 0) })}</th></tr></thead>
+<tbody>${MEASURE_WORDS.map(([key, words]) => {
+    const o = bands.measures[key].overall;
+    return html`<tr><th scope="row">${t(words)}</th><td class="num">${count(o.n)}</td><td class="num">${cell(o.median)}</td><td class="num">${fill('btMiddle', { low: cell(o.p10), high: cell(o.p90) })}</td></tr>`;
+  })}</tbody>
+</table>`);
+}
+
+// The comparison set's exclusions in words: each rule that left any report out, with its count, as one list.
+const EXCLUSION_WORDS = [['outsideWindow', 'btExWindow'], ['noPartA', 'btExPartA'], ['maryland', 'btExMaryland'], ['puertoRico', 'btExPuertoRico'], ['parhm', 'btExParhm'], ['notInHacrp', 'btExHacrp'], ['notEstimated', 'btExEstimate'], ['noBeds', 'btExBeds']];
+export const exclusionsText = (bands) => listText(EXCLUSION_WORDS.filter(([key]) => bands.comparison.excluded[key] > 0)
+  .map(([key, words]) => fill(words, { n: count(bands.comparison.excluded[key]), ...(key === 'notInHacrp' ? { fy: String(bands.fy) } : {}) })));

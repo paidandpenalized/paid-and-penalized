@@ -11,6 +11,19 @@ const MARKS = [
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
   '.chart-boundary', '.chart-zone', '.chart-hatch', '.chart-dead__end', '.chart-tile', '.chart-tile-na', '.chart-tile-empty',
   '.chart-tile-zero', '.chart-tile-few', '.chart-geo-state', '.chart-geo-few', '.chart-geo-dot', '.chart-geo-halo', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
+  // the money's charts (treemap, acrossLine, pairBars, geo usBubbles, columns)
+  '.chart-tree__group', '.chart-tree__tile', '.chart-across__dot', '.chart-across__dot--over', '.chart-across__dot--faint', '.chart-pair__a',
+  '.chart-pair__b', '.chart-land', '.chart-bubble', '.chart-col--rew',
+  // the cliff (web/charts/cliff.js; its strip of every score is two paths in .chart-dist and .chart-col--pen)
+  '.chart-cliff__ledge', '.chart-cliff__drop', '.chart-cliff__floor', '.chart-cliff__dot', '.chart-cliff__dot--over', '.chart-cliff__ring',
+  '.chart-dist',
+  // the dollars on the hospital page (sites/hacrp/web/styles.css): the statement's bars and key, the hatched boxes
+  '.stmt__part', '.stmt__scope', '.stmt__cut', '.stmt__add', '.stmt__sw--part', '.stmt__sw--scope', '.stmt__sw--cut',
+  '.money__range-bar',
+  // the back-test's strips (bandStrips.js)
+  '.chart-bt__ruler', '.chart-bt__band', '.chart-bt__band--borrowed', '.chart-bt__dot', '.chart-bt__exact',
+  // the what-if's cliff
+  '.wi-cliff__pit', '.wi-cliff__ledge', '.wi-cliff__drop', '.wi-cliff__floor', '.wi-cliff__dot', '.wi-cliff__dot.is-over', '.wi-cliff__start',
   // the what-if's bars and ramp
   '.wi-bar', '.wi-bars__row--assigned .wi-bar', '.wi-tri--cms', '.wi-tri--hyp', '.wi-ramp__line', '.wi-ramp__zone',
   // hatched page parts

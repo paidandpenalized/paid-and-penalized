@@ -5,7 +5,7 @@ import { hospitalLoader } from './hospitals.js';
 
 const hospitals = hospitalLoader();
 import { mountFromPage } from './whatif.js';
-import { assetLoaders, exploreLoader, mountAgree, mountHalving, mountMeasureToggles, mountRoll, mountRule, mountYearMap, mountSlideRules, mountSwarm, mountUsMap } from './explore.js';
+import { assetLoaders, exploreLoader, mountAgree, mountHalving, mountMeasureToggles, mountRoll, mountRule, mountViewToggle, mountYearMap, mountSlideRules, mountSwarm, mountUsMap } from './explore.js';
 import { mountStatePicker } from './roll-picker.js';
 import { placePath } from '../web/place-paths.js';
 import { startTable } from './table.js';
@@ -30,6 +30,9 @@ for (const fig of figuresWith('.usmap')) mountUsMap(fig, (code) => placePath('st
 const history = assetLoaders();
 for (const fig of figuresWith('.roll')) mountRoll(fig, { hospitals, history, picker: mountStatePicker });
 for (const fig of figuresWith('.ymap')) mountYearMap(fig, history);
+
+// The states' map: its buttons switch which layer of circles shows (the dollars, or the dollars per stay).
+for (const box of document.querySelectorAll('.bubbles')) mountViewToggle(box, '.mtoggle', 'view');
 
 // After the search and the table, so a fault in the sandbox never takes them with it.
 mountFromPage('hacrp-program');

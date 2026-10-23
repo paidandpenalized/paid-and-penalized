@@ -229,3 +229,16 @@ test('near the line, the what-if flag never contradicts CMS\'s own z at the new 
   }
   assert.ok(checked > 1000);
 });
+
+test('dollarsOf: { lo, hi }: the cut for Yes, nothing for No or N/A, both for too close; whole dollars only', () => {
+  const { dollarsOf } = engine;
+  assert.deepEqual(dollarsOf('Yes', 614_565), { lo: -614_565, hi: -614_565 });
+  assert.deepEqual(dollarsOf('No', 614_565), { lo: 0, hi: 0 });
+  assert.ok(Object.is(dollarsOf('No', 614_565).lo, 0) && Object.is(dollarsOf('Yes', 0).lo, 0) && Object.is(dollarsOf('Yes', 0).hi, 0), 'no negative zero');
+  assert.deepEqual(dollarsOf('N/A', 614_565), { lo: 0, hi: 0 });
+  assert.deepEqual(dollarsOf('too-close', 614_565), { lo: -614_565, hi: 0 }, 'both, the cut and nothing');
+  assert.throws(() => dollarsOf('Maybe', 1), RangeError);
+  assert.throws(() => dollarsOf('Yes', 1.5), RangeError);
+  assert.throws(() => dollarsOf('Yes', -1), RangeError);
+  assert.throws(() => dollarsOf('Yes', null), RangeError);
+});

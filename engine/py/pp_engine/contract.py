@@ -59,6 +59,12 @@ def canonical_json(value):
     return compact_json(value, sort_keys=True)
 
 
+def camel(key):
+    """`at_stake` -> `atStake`: the repo's JSON keys are camelCase."""
+    head, *tail = key.split("_")
+    return head + "".join(word.capitalize() for word in tail)
+
+
 def source_manifest_hash(entries):
     """SHA-256 over the id and SHA-256 of each pinned input, in id order. Metadata is left out, so fixing it doesn't
     change emitted data."""

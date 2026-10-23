@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { newestYear, readJson, REPO_ROOT } from '../../../pipeline/files.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
@@ -57,9 +58,9 @@ test('the Methods page is written, indexable, with one h1, its ids once and ever
   assert.ok(levels.every((l, i) => (i === 0 ? l === 1 : l <= levels[i - 1] + 1)), `heading levels ${levels}`);
 });
 
-test('the sections run pipeline, check, decisions, formula, estimate, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
+test('the sections run pipeline, check, decisions, formula, estimate, dollars, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
   const sections = [...PAGE.matchAll(/<section class="msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
-  assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
+  assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'dollars', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
   const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="meth__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
   assert.deepEqual(toc.map(([id]) => id), sections);
   assert.deepEqual(toc.map(([, n]) => n), sections.map((_, i) => i + 1));
@@ -82,7 +83,7 @@ test('the nav marks Methods as current and nothing else; the page loads the figu
   const bar = /<header class="topbar">[\s\S]*?<\/header>/.exec(PAGE)[0];
   const current = [...bar.matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   assert.deepEqual(current, ['methods']);
-  assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'map', 'history', 'methods']);
+  assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);
   for (const key of ['figure', 'topbar', 'hacrp-search']) assert.ok(PAGE.includes(`src="${ASSETS.js[key]}"`), key);
 });
 
@@ -119,7 +120,7 @@ test('the proof and decision figures, numbered 1 and 2, say the same totals as t
   assert.ok(numbers(caption(1)).includes(decimal(Math.max(...HD.checks.map((c) => c.check.maxError)), 5)));
   assert.ok(numbers(caption(2)).includes(count(decided)));
   assert.ok(numbers(caption(2)).includes('0'), 'none out of order');
-  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3], 'the proof strips, the decision rules and the periods');
+  assert.deepEqual([...PAGE.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), [1, 2, 3, 4, 5], 'the proof strips, the decision rules, the payment order, the back-test and the periods');
 });
 
 test('the notes under the check state what the checks found: the rows withheld, CMS\'s rule for the line and where its line sits against it, and the biggest tie at the line', () => {
@@ -178,8 +179,12 @@ test('the count note: CMS\'s fact-sheet count and the updated list\'s for the ye
 test('the estimate section: what is shown, where it comes from and how it is labeled, and the tolerance and largest miss from the estimate', () => {
   const section = /<section class="msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
   const rows = [...section.matchAll(/<tr><th scope="row">[^<]*<\/th><td>[\s\S]*?<\/td><td><span class="takes__tag takes__tag--(\w+)">/g)].map((m) => m[1]);
-  assert.equal(rows.length, 7);
+  assert.equal(rows.length, 8, 'CMS\'s values, its line, the recomputes, the derived constants, the medians, the what-ifs, earlier years and the dollar estimates');
   assert.deepEqual([...new Set(rows)].sort(), ['cms', 'hyp', 'site']);
+  // The dollar estimates are a row of their own, made by this site and labeled as an estimate with a likely range.
+  assert.match(section, /<th scope="row">Dollar estimates<\/th><td>Made by this site from CMS’s payment files<\/td><td><span class="takes__tag takes__tag--site">Estimate, with a likely range</);
+  // The estimate tag is also on every dollar figure: a sentence says so, its section's name linking to that section.
+  assert.match(section, /Every dollar figure carries the tag too: the dollars are this site’s estimate, explained under <a href="#dollars">How this site estimates the dollars<\/a>\./);
   const tagged = MEASURE_IDS.filter((id) => DATA.estimate[id].tagged);
   const body = strip(section);
   assert.ok(body.includes(tagged.map((id) => SHORT_NAMES[id]).join(' and ')), tagged.join());
@@ -205,11 +210,20 @@ test('the changes and the sources: every changelog entry with its date and items
     assert.ok(sources.includes(`<code>${entry.sha256.slice(0, 16)}…</code>`), `${pin}: fingerprint`);
     assert.ok(sources.includes(`<td class="num">${count(entry.bytes)}</td>`), `${pin}: size`);
   }
-  assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, manifest.length);
+  // The table lists the pins the HACRP pages read, not every pin.
+  assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
+  // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
+  // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
+  const used = new Set(DATA.pinsUsed.map((e) => e.id));
+  assert.deepEqual(manifest.filter((e) => !used.has(e.id)).map((e) => e.id), []);
+  // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
+  // was built from and is not held to the pages' list.
+  const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;
+  for (const id of dollarsSources) assert.ok(used.has(id), `${id}: a dollar estimates source the Methods page lists`);
 });
 
 test('the pipeline\'s six stations carry the newest year\'s real numbers', () => {
-  const stations = [...PAGE.matchAll(/<li class="pipe__st( pipe__st--check)?">\n<p class="pipe__n">(\d)<\/p>\n<p class="pipe__name">([^<]*)<\/p>\n<p class="pipe__value">([^<]*)<\/p>/g)];
+  const stations = [.../<ol class="pipe" role="list">[\s\S]*?<\/ol>/.exec(PAGE)[0].matchAll(/<li class="pipe__st( pipe__st--check)?">\n<p class="pipe__n">(\d)<\/p>\n<p class="pipe__name">([^<]*)<\/p>\n<p class="pipe__value">([^<]*)<\/p>/g)];
   assert.deepEqual(stations.map((m) => m[2]), ['1', '2', '3', '4', '5', '6']);
   assert.deepEqual(stations.map((m) => Boolean(m[1])), [false, false, false, false, true, false], 'the check stands out');
   const last = HD.checks.at(-1).check;
@@ -226,7 +240,7 @@ test('the pipeline\'s six stations carry the newest year\'s real numbers', () =>
 });
 
 test('the periods figure: a row a year with the dates behind it, and the lead from the newest year\'s data to its payment year', () => {
-  const fig = /<figure class="fig" id="figure-3" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
+  const fig = /<figure class="fig" id="figure-5" data-figure>[\s\S]*?<\/figure>/.exec(PAGE)[0];
   const rows = [...fig.slice(fig.indexOf('<tbody>')).matchAll(/<tr>(.*?)<\/tr>/gs)].map(([, tr]) => [...tr.matchAll(/<t[dh][^>]*>([^<]*)</g)].map((c) => text(c[1])));
   assert.equal(rows.length, HD.fys.length);
   assert.deepEqual(rows.map((r) => r[0]), HD.fys.map((fy) => `FY${fy}`));
@@ -251,7 +265,7 @@ test('a build without the history still writes the Methods page: the newest year
   assert.equal(page.match(/<h1[\s>]/g).length, 1);
   const card = /<div class="receipt">[\s\S]*?<\/dl>/.exec(page)[0];
   assert.deepEqual([...card.matchAll(/<tr><th scope="row">FY(\d+)<\/th>/g)].map((m) => Number(m[1])), [DATA.fy]);
-  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3]);
+  assert.deepEqual([...page.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((m) => Number(m[1])), [1, 2, 3, 4, 5]);
   assert.match(page, new RegExp(`This site recomputed [\\d,]+ scores for fiscal year ${DATA.fy}`));
   assert.match(page, new RegExp(`Of the [\\d,]+ payment decisions CMS published for fiscal year ${DATA.fy}`));
   // No withheld rows to count, so none are reported; the page names no other year.
@@ -378,6 +392,10 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   assert.ok(page.includes(`<dt>Scores recomputed</dt><dd>${count(total)}</dd>`));
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
   assert.match(page, /<section class="msec" id="estimate"/);
+  // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
+  assert.doesNotMatch(page, /id="dollars"/);
+  assert.doesNotMatch(page, /href="#dollars"/);
+  assert.doesNotMatch(page, /Every dollar figure carries the tag/);
 });
 
 test('the line notes say which side of the percentile CMS\'s line sits: a year with no hospital above the percentile left uncut, or none left uncut at all, sits below it', () => {

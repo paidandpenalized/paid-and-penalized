@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CUT, NONE, NOT_CUT, everCut, longestRun, panel, poissonBinomial, records, repeatsByGap, rollOrder, tallyYears, timesCut, timesCutVsChance, yearly, yearsDecided,
+  CUT, NONE, NOT_CUT, decisionChar, everCut, longestRun, panel, poissonBinomial, records, repeatsByGap, rollOrder, tallyYears, timesCut, timesCutVsChance, yearly, yearsDecided,
 } from '../../hacrp/trends.js';
 
 const close = (a, b, eps = 1e-12) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
@@ -22,6 +22,12 @@ test('records: one character a year for each hospital with a decision in some ye
   assert.ok([...recs.values()].every((r) => r.length === years.length));
   assert.deepEqual([CUT, NOT_CUT, NONE], ['Y', 'N', '.']);
   assert.deepEqual([...records([])], []);
+});
+
+test('decisionChar: a Yes or No is a decision; a score is required for the national counts, not for a hospital\'s own record', () => {
+  const rows = [rec('a', 1, 'Yes'), rec('b', 0.5, 'No'), rec('c', 0.7, 'N/A'), rec('d', 0.2, null), rec('e', null, 'Yes'), rec('f', null, 'No'), rec('g', null, 'N/A')];
+  assert.deepEqual(rows.map((r) => decisionChar(r, { scoreRequired: true })).join(''), 'YN...' + '..');
+  assert.deepEqual(rows.map((r) => decisionChar(r, { scoreRequired: false })).join(''), 'YN..YN.');
 });
 
 test('timesCut and yearsDecided count the characters', () => {

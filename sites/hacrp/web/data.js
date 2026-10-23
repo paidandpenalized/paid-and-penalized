@@ -1,5 +1,6 @@
-// What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, CMS's
-// footnote crosswalk, the dataset's manifest entry and the CSV's data dictionary, plus CMS's text for the line's two scores.
+// What the HACRP pages read at build time: the newest emitted HACRP file, the newest hospital master, the newest dollar
+// estimates, CMS's footnote crosswalk, the dataset's manifest entry and the CSV's data dictionary, plus CMS's text for
+// the line's two scores.
 // File reads live here; views and pages stay pure.
 import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
@@ -7,9 +8,10 @@ import { parseCsv } from '../../../engine/js/csv.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
-import { REPO_ROOT, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
+import { rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -76,6 +78,37 @@ export function checkMasterYear(masterFile, fy) {
   if (year !== fy) throw new RangeError(`HACRP: file is FY${fy} but the hospital master's HACRP year is ${year}`);
 }
 
+// The dollar estimates must be for the year the pages show.
+export function checkDollarsYear(dollars, fy) {
+  if (dollars.fy !== fy) throw new RangeError(`HACRP: the dollar estimates are FY${dollars.fy} but the HACRP file is FY${fy}`);
+}
+
+// The statuses of a dollar row the pages have words for (the file's schema lists a fourth, `parhm`, which no hospital has).
+const SHOWN_STATUSES = ['estimated', 'maryland', 'no-inputs'];
+
+// What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
+// the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
+// `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
+// `backtest` what a range means (the `share` of the back-test's misses a range spans, and the `fy` it was run on). A file
+// without `bands` can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
+// the slice it draws.
+export function dollarsData(dollars, hospitals) {
+  const { fy, national, headline, checks, assumptions, bands } = dollars;
+  if (bands == null) throw new RangeError('HACRP: the dollar estimates have no ranges (bands is missing or null); no page can show them');
+  const rows = new Map(dollars.hospitals.map((r) => [r.ccn, r]));
+  for (const h of hospitals) if (!rows.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
+  // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
+  for (const r of rows.values()) if (r.status === 'estimated' && !(r.atStake > 0)) throw new RangeError(`HACRP: ${r.ccn} is estimated but its dollars at stake is ${r.atStake}; the cliff and the what-if need an estimated hospital's dollars at stake above $0`);
+  // A row with another status stops the build rather than get another reason's words.
+  for (const r of rows.values()) if (!SHOWN_STATUSES.includes(r.status)) throw new RangeError(`HACRP: ${r.ccn} has the dollar status "${r.status}", which no page has words for`);
+  const ranged = (r) => (r.status === 'estimated'
+    ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: rangeOf(bands, 'net', r.stratum, r.net) } } : r);
+  const byCcn = new Map([...rows].map(([ccn, r]) => [ccn, ranged(r)]));
+  // The headline's `yes` (CMS's cut count) also goes by the name every group's rollup gives it (money-data.js), so one
+  // formatter says "n of m" for the nation and for a state alike.
+  return { fy, byCcn, national, headline: { ...headline, cmsCut: headline.yes }, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
+}
+
 export function loadHacrp() {
   const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
@@ -84,6 +117,8 @@ export function loadHacrp() {
   const history = existsSync(REPO_ROOT + 'data/emitted/hacrp-history') ? readJson(REPO_ROOT + historyPath(newestYear('data/emitted/hacrp-history'))) : null;
   checkHistoryYear(history, data.fy);
   checkMasterYear(masterFile, data.fy);
+  const dollarsFile = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
+  checkDollarsYear(dollarsFile, data.fy);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
 
   for (const h of data.hospitals) {
@@ -122,12 +157,14 @@ export function loadHacrp() {
     counties: countyShapes(topo),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     changes: changelogEntries(readFileSync(REPO_ROOT + CHANGELOG_FILE, 'utf8')),
+    // This site's dollar estimates, per hospital and in total (dollarsData).
+    dollars: dollarsData(dollarsFile, data.hospitals),
     // Every program year's file, when the build has them (the history; null without).
     history,
     infections: history ? infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))) : new Map(),
-    // Every pinned input the pages rest on: the HACRP file's, the history's and the hospital master's sources, and the
-    // files the pages read directly.
-    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
+    // Every pinned input the pages rest on: the HACRP file's, the history's, the hospital master's and the dollar
+    // estimates' sources, and the files the pages read directly.
+    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
     manifest,
     // The emitted file keeps every row of CMS's file.
     sourceRows: data.hospitals.length,

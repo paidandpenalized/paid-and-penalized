@@ -60,6 +60,38 @@
 .wi-tri--cms { fill: var(--ink); }
 .wi-tri--hyp { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
 
+/* ---------- the dollars (vm.money): a line in the head, a row in the table, the cliff over the ramp ---------- */
+.wi-head__money { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; max-width: none; margin: 4px 0 0; }
+.wi-money { font: 700 clamp(2rem, 4vw, 2.6rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.wi-money--cut { color: var(--pen-ink); }
+.wi-head__money-words { color: var(--ink-2); font: 600 var(--fs-sm)/1.2 var(--font-body); }
+.wi-money__was { color: var(--ink-2); font: 700 var(--fs-lg)/1 var(--font-type); font-variant-numeric: tabular-nums; }
+/* Under the cliff, the ramp is its axis: the cliff's pit already shades the cut and names it. */
+.wi-ramp--under .wi-ramp__zone, .wi-ramp--under .wi-ramp__zone-label { display: none; }
+.wi-table__money th { white-space: nowrap; }
+.wi-table__money .est-tag { margin-left: 4px; vertical-align: 0.1em; }
+/* The cliff sits on the ramp's own x: the same 5% margins, so its drop stands over the ramp's line and its dot over the
+   hypothetical's mark. Levels at 22px ($0) and 82px (the cut). The dot crosses at once and falls (or climbs) to its
+   level: an accelerating fall, an easing climb; reduced motion, no movement. */
+.wi-cliff { padding: 0 5%; margin: 4px 0 -6px; }
+.wi-cliff__plot { --top: 24px; --drop: 58px; position: relative; height: calc(var(--top) + var(--drop) + 10px); }
+.wi-cliff__pit { position: absolute; top: var(--top); right: 0; left: calc(var(--line) * 100%); height: var(--drop); background: var(--pen-tint); }
+.wi-cliff__ledge { position: absolute; top: calc(var(--top) - 1.5px); left: 0; width: calc(var(--line) * 100%); border-top: 3px solid var(--ink); }
+.wi-cliff__drop { position: absolute; top: var(--top); left: calc(var(--line) * 100%); height: var(--drop); margin-left: -1.5px; border-left: 3px solid var(--pen); }
+.wi-cliff__floor { position: absolute; top: calc(var(--top) + var(--drop) - 1.5px); right: 0; left: calc(var(--line) * 100%); border-top: 3px solid var(--pen); }
+.wi-cliff__level { position: absolute; max-width: none; color: var(--ink-2); font: 600 var(--fs-xs)/1.1 var(--font-body); white-space: nowrap; }
+.wi-cliff__level b { margin-right: 4px; color: var(--ink); font: 700 var(--fs-sm)/1 var(--font-type); }
+.wi-cliff__level--zero { top: 2px; left: 0; }
+.wi-cliff__level--cut { top: calc(var(--top) + var(--drop) - 24px); right: 4px; }
+.wi-cliff__level--cut b { color: var(--pen-ink); }
+.wi-cliff__dot, .wi-cliff__start { position: absolute; left: calc(var(--at) * 100%); top: calc(var(--top) + var(--y) * var(--drop)); border-radius: 50%; }
+.wi-cliff__dot { z-index: 1; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 3px solid var(--ink); background: var(--paper); box-shadow: 0 0 0 2px var(--paper); transition: top 520ms cubic-bezier(0.55, 0, 0.9, 0.45); }
+.wi-cliff__dot[data-motion="rise"] { transition-timing-function: cubic-bezier(0.15, 0.7, 0.3, 1); }
+.wi-cliff__dot.is-over { border-color: var(--paper); background: var(--pen); box-shadow: 0 0 0 2px var(--pen-ink); }
+.wi-cliff__dot.is-close { border-style: dashed; }
+.wi-cliff__start { width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px dotted var(--ink-2); background: var(--paper); }
+@media (prefers-reduced-motion: reduce) { .wi-cliff__dot { transition: none; } }
+
 /* ---------- buttons ---------- */
 .wi-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .wi-actions + p { margin-top: 6px; }
@@ -120,6 +152,11 @@
   .wi-ramp__axis, .wi-ramp__tick { stroke: CanvasText; }
   .wi-ramp__line { stroke: Highlight; }
   .wi-ramp__zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
+  .wi-cliff__pit { outline: 1px dashed GrayText; outline-offset: -1px; }
+  .wi-cliff__ledge, .wi-cliff__drop, .wi-cliff__floor { border-color: CanvasText; }
+  .wi-cliff__dot, .wi-cliff__start { forced-color-adjust: none; border-color: CanvasText; background: Canvas; box-shadow: none; }
+  .wi-cliff__dot.is-over { background: CanvasText; border-color: Canvas; box-shadow: 0 0 0 2px CanvasText; }
+  .wi-money--cut { color: CanvasText; }
 }
 
 /* What a value means and what the track marks, said once over the measures; each measure's facts in one mono line. */

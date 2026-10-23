@@ -12,8 +12,8 @@
 import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
-  afterText, anyChanged, assignedNow, barClass, barSpan, estimateNote, fieldText, fraction, headScore, rampAt, rampDomain, rampEdge, rampLabels,
-  RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks, trackStart,
+  afterText, anyChanged, assignedNow, barClass, barSpan, cliffDotClass, cliffY, estimateNote, fieldText, fraction, headScore, isEither, levelOf, moneyClass, rampAt, rampDomain, rampEdge, sameDollars, sameMoney,
+  rampLabels, RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks, trackStart,
 } from './marks.js';
 
 // A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
@@ -21,6 +21,9 @@ export const SETTLE_MS = 400;
 // The phone layout (the program page's table uses it too).
 export const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+// The head's dollars count to a new value over this long (never under reduced motion), about as long as the cliff's
+// dot takes to fall.
+const COUNT_MS = 650;
 
 // A number field's entry: null when blank, NaN when it isn't a number.
 function entry(el) {
@@ -76,7 +79,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     }];
   }));
   const el = Object.fromEntries(['detail', 'head-label', 'head-score', 'head-pill', 'score', 'flag', 'cut', 'sentence', 'sentence-est', 'estimate', 'hyp', 'hyp-label',
-    'start-label', 'hyp-edge', 'ramp', 'banner', 'copy', 'bars-lead',
+    'start-label', 'hyp-edge', 'ramp', 'banner', 'copy', 'bars-lead', 'head-money', 'head-money-was', 'head-money-words', 'money', 'cliff-dot', 'cliff-start',
     'copy-status', 'slide', 'solve', 'solver', 'fields', 'controls', 'nojs', 'reset', 'median'].map((name) => [name, q(name)]));
 
   const first = rules.viewModel(start);
@@ -90,6 +93,14 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const startCut = texts.cut(first.result.before.flag);
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
+  // The dollars, where the site has them: the start's, as the table writes them; the dollars as last drawn (the head's
+  // figure counts from them, the cliff's dot moves from them; null before the first draw).
+  const money = first.money && texts.money ? texts.money : null;
+  const startMoney = money && money.amount(first.money.before);
+  let shownMoney = null;
+  let counting = null;
+  let onScreen = null;
+  const reducedMotion = env.matchMedia?.(REDUCED_MOTION);
 
   // A link's fragment: what decode() trusts goes through reduce(); the rest stays CMS's.
   const load = (state) => reduce(state, { type: 'load', changes: decode(env.location.hash, { ids: start.ids, params: rules.params }).changes });
@@ -135,6 +146,54 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     text.setAttribute('dx', String(dx));
   }
 
+  // The head's dollars, counted from the figure last drawn (from) to next (each frame's figure in the site's words), or
+  // set at once: under reduced motion, without animation frames, or where either end is too close to call (two numbers).
+  // A count started during another one starts from the figure on screen, not from where that count was heading.
+  function countMoney(from, next) {
+    const node = el['head-money'];
+    if (!node) return;
+    setText(el['head-money-words'], money.head(next));
+    setAttr(node, 'class', `wi-money${moneyClass(next)}`);
+    if (counting !== null) {
+      env.cancelAnimationFrame?.(counting);
+      from = onScreen ?? from;
+    }
+    counting = null;
+    const show = (dollars) => {
+      onScreen = dollars;
+      setText(node, money.amount(dollars));
+    };
+    const still = reducedMotion?.matches || typeof env.requestAnimationFrame !== 'function';
+    if (still || isEither(from) || isEither(next) || sameDollars(from, next)) {
+      show(next);
+      return;
+    }
+    let t0 = null;
+    const step = (now) => {
+      if (t0 === null) t0 = now;
+      const k = Math.min(1, (now - t0) / COUNT_MS);
+      const eased = 1 - (1 - k) ** 3;
+      const cash = Math.round(from.lo + (next.lo - from.lo) * eased);
+      show(k < 1 ? { lo: cash, hi: cash } : next);
+      counting = k < 1 ? env.requestAnimationFrame(step) : null;
+    };
+    counting = env.requestAnimationFrame(step);
+  }
+
+  // The cliff: the dot rides it to the hypothetical score and falls (or climbs) from the level of the dollars last drawn
+  // (from) to its new one when it crosses the line; the ring keeps the starting score once the two differ. The move
+  // across is instant, the fall is CSS's.
+  function drawCliff(vm, t, unchanged, from) {
+    const dot = el['cliff-dot'];
+    if (!dot) return;
+    const [was, now] = [levelOf(from), levelOf(vm.money.after)];
+    if (now !== was) setAttr(dot, 'data-motion', now > was ? 'fall' : 'rise');
+    dot.style.setProperty('--at', fraction(t));
+    dot.style.setProperty('--y', cliffY(vm.money.after));
+    setAttr(dot, 'class', cliffDotClass(vm.money.after));
+    if (el['cliff-start']) el['cliff-start'].hidden = unchanged;
+  }
+
   // A field's error line shows while its entry is refused, and the field names it in aria-describedby.
   function markInvalid({ el: input, error, described }, invalid) {
     error.hidden = !invalid;
@@ -174,7 +233,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const s = texts.scores(vm);
     const changed = anyChanged(r);
     const p = texts.pill(r.after.flag);
-    const echo = changed ? `${headScore(s)} · ${p.label}` : '';
+    // On a phone the edited measure echoes the result, its dollars too where the site has them.
+    const echo = changed ? `${headScore(s)} · ${p.label}${money && vm.money ? ` · ${money.amount(vm.money.after)}` : ''}` : '';
     after(el.score, s.before, s.after);
     after(el.flag, startFlag, texts.flag(r.after.flag));
     after(el.cut, startCut, texts.cut(r.after.flag));
@@ -199,6 +259,18 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const edge = rampEdge(rampSide(r.after.score, domain));
     place(el['hyp-edge'], edge);
     setText(el['hyp-edge'], edge.text);
+    if (money && vm.money) {
+      const was = shownMoney ?? vm.money.after;
+      // The figures are written the first time and then only when the dollars change; the cliff's dot rides the score
+      // either way.
+      if (shownMoney === null || !sameDollars(was, vm.money.after)) {
+        after(el.money, startMoney, money.amount(vm.money.after));
+        if (el['head-money-was']) el['head-money-was'].hidden = sameMoney(vm.money);
+        countMoney(was, vm.money.after);
+      }
+      shownMoney = vm.money.after;
+      drawCliff(vm, t, unchanged, was);
+    }
 
     for (const input of vm.inputs) {
       const row = rows[input.id];
@@ -273,7 +345,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     return true;
   }
 
-  const behavior = () => (env.matchMedia?.(REDUCED_MOTION).matches ? 'auto' : 'smooth');
+  const behavior = () => (reducedMotion?.matches ? 'auto' : 'smooth');
   const reveal = (event) => {
     if (!env.matchMedia?.(NARROW).matches) return;
     event.target.scrollIntoView({ block: 'center', behavior: behavior() });

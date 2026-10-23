@@ -5,7 +5,7 @@
 import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
-import { checkId, frame, hatchDefs, hatchFill, mark, plain, r2, WIDTH } from './svg.js';
+import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 
@@ -126,7 +126,7 @@ function thinned(projection, thin = THIN) {
     },
   };
 }
-const outlinePath = (projection, thin = THIN) => geoPath(thinned(projection, thin)).digits(DIGITS);
+const outlinePath = (projection, thin = THIN, digits = DIGITS) => geoPath(thinned(projection, thin)).digits(digits);
 
 // One state's projection and outline at a width, fitted to its own shape; remembered, since every hospital in a state
 // shares them.
@@ -394,7 +394,39 @@ export function usYearMap({ shapes, groups, size, width }) {
   const { height, paths } = usPaths(shapes, width);
   const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean);
   return frame({
-    kind: 'us-years', width, height, body: html`<g class="chart-years__land">${land.map((d) => html`<path d="${d}"/>`)}</g>
+    kind: 'us-years', width, height, body: html`<g class="chart-land">${land.map((d) => html`<path d="${d}"/>`)}</g>
 <g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, size))}</g>`,
+  });
+}
+
+// Proportional circles on the US map: every state's outline as a faint land, drawn once, and over it one layer of
+// circles per view (a page script or CSS shows one layer at a time: the land is the drawing's weight, so the views
+// share it). In each layer, a circle at each state's center (the projected centroid of its outline; Alaska and Hawaii
+// in their insets), its area the state's value on that layer's own scale; the largest drawn first, so a small state's
+// circle shows on top of a big neighbor's. Each circle is a mark with its tooltip, value and data-state.
+//   layers   [{ id, states: { [code]: { value (> 0), label } } }] (codes from US_MAP_CODES; a state left out gets no
+//            circle, as is a place the map has no room for: hasBubble); rMax: the largest circle's radius in each layer, in viewBox units (default: larger across a page than
+//            on a phone)
+// The land is background, drawn thinner than the choropleth's outlines (BUBBLE_THIN times as thinned) and to whole units.
+const BUBBLE_THIN = 3;
+// Whether the map can hold a circle for a state: it is one the map draws (not Puerto Rico) and the shapes outline it.
+export const hasBubble = (shapes, code) => US_MAP_CODES.includes(code) && Boolean(shapes.get(code));
+export function usBubbles({ shapes, layers, width, rMax = isNarrow(width) ? 22 : 52 }) {
+  const { height, projection } = usPaths(shapes, width);
+  const centroid = geoPath(projection);
+  const coarse = outlinePath(projection, THIN_US * BUBBLE_THIN * Math.max(1, width / US_THIN_WIDTH), 0);
+  const land = US_MAP_CODES.map((code) => (shapes.has(code) ? coarse(shapes.get(code)) : null)).filter(Boolean);
+  const layer = ({ id, states }) => {
+    const entries = Object.entries(states).filter(([code, s]) => hasBubble(shapes, code) && s.value > 0);
+    const max = Math.max(...entries.map(([, s]) => s.value), 1);
+    const circles = entries.map(([code, s]) => {
+      const [cx, cy] = centroid.centroid(shapes.get(code));
+      return { code, s, cx, cy, r: Math.sqrt(s.value / max) * rMax };
+    }).filter((c) => Number.isFinite(c.cx) && Number.isFinite(c.cy)).sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1));
+    return html`<g class="chart-bubbles__layer chart-bubbles__layer--${id}">${circles.map((c) => mark({ tip: `${STATE_NAMES[c.code]}: ${c.s.label}`, value: c.s.value, data: { state: c.code }, hit: null, body: html`<circle class="chart-bubble" cx="${r2(c.cx)}" cy="${r2(c.cy)}" r="${r2(Math.max(0.8, c.r))}"/>` }))}</g>`;
+  };
+  return frame({
+    kind: 'us-bubbles', width, height, body: html`<path class="chart-land" d="${land.join('')}"/>
+${layers.map(layer)}`,
   });
 }

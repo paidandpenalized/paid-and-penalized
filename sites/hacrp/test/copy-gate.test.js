@@ -84,6 +84,15 @@ test('CLAIMS.md: every row is well formed, sourced, quoted in at most 25 words a
   }
 });
 
+// The register's link check: each source URL a row cites is a row of the "Link check" table, with its status.
+test('CLAIMS.md: every source URL a row cites is in the Link check table', () => {
+  const text = readFileSync(new URL('../CLAIMS.md', import.meta.url), 'utf8');
+  const table = text.slice(text.indexOf('## Link check'));
+  assert.ok(table.length < text.length, 'the register has a Link check section');
+  const checked = new Set(table.split('\n').filter((line) => line.startsWith('| https://')).map((line) => line.split('|')[1].trim()));
+  for (const [id, , source] of registerRows()) assert.ok(checked.has(source), `${id}: ${source} is not in the Link check table`);
+});
+
 test('every claim id used in copy or constants resolves to a checked row, and every row is used', async () => {
   const rows = new Map(registerRows().map((row) => [row[0], row]));
   const used = await usedClaims();

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
-import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
-import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
+import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
+import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -75,6 +75,14 @@ test('longDate and isoDate spell the month out and reject non-dates', () => {
   assert.throws(() => longDate('2022-07-01'), RangeError);
   assert.throws(() => isoDate('2026-02-30'), RangeError);
   assert.throws(() => isoDate('August 13, 2026'), RangeError);
+});
+
+test('isoMonth gives the month and the year of a date as separate words, and rejects non-dates', () => {
+  assert.deepEqual(isoMonth('2026-12-31'), { month: 'December', year: '2026' });
+  assert.deepEqual(isoMonth('2027-01-01'), { month: 'January', year: '2027' });
+  assert.deepEqual(isoMonth('2024-02-29'), { month: 'February', year: '2024' });
+  assert.throws(() => isoMonth('2026-02-30'), RangeError);
+  assert.throws(() => isoMonth('December 31, 2026'), RangeError);
 });
 
 test("page: og:type is website on the site's root and each program's hub page, article on every other page", () => {
@@ -223,6 +231,32 @@ test('fillCopyKeep keeps each value, or a run from one value to another, on one 
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 'b' }, ['nope']), /unknown placeholder/);
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 1 }, []), /formatted string/);
   assert.equal(String(fillCopyKeep({ twice: 'FY{next} expected early {next}' }, 'twice', { next: '2027' }, [])), 'FY2027 expected early 2027', 'a placeholder used twice is filled twice');
+});
+
+test('fillAround puts markup where placeholders stand, typesetting and escaping the words round it, and marks the parts in order', () => {
+  const copy = { one: "CMS's {where} line", two: 'Try {state}, {metro} or {state}', plain: 'No {slot}' };
+  const link = (href, label) => html`<a href="${href}">${label}</a>`;
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'one', marks), { where: link('/x', 'top & bottom') })),
+    'CMS’s <a href="/x">top &amp; bottom</a> line');
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'two', marks), { state: link('/s', 'Ohio'), metro: link('/m', '<M>') })),
+    'Try <a href="/s">Ohio</a>, <a href="/m">&lt;M&gt;</a> or <a href="/s">Ohio</a>', 'a placeholder used twice gets its markup twice');
+  // any function that fills a sentence will do; the words it returns are escaped, the markup is not escaped again
+  assert.equal(String(fillAround(({ slot }) => `a<b ${slot} c&d`, { slot: raw('<i>x</i>') })), 'a&lt;b <i>x</i> c&amp;d');
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'plain', marks), { slot: 'text' })), 'No text', 'plain text is escaped');
+  assert.equal(String(fillAround(() => 'a & b', {})), 'a &amp; b', 'no parts: the words, escaped');
+});
+
+test('fillAround keeps every part in its own place whatever the count, and a tab or a newline in the sentence stays what it is', () => {
+  // Twelve parts, past the tenth (the newline's code) and the ninth (the tab's): the words hold both characters.
+  const names = Array.from({ length: 12 }, (_, i) => `p${i}`);
+  const parts = Object.fromEntries(names.map((n, i) => [n, html`<b>${String(i)}</b>`]));
+  const copy = { all: `first\tcolumn\nsecond line: ${names.map((n) => `{${n}}`).join(' ')}\r\u000b\u0001 end` };
+  const got = String(fillAround((marks) => fillCopy(copy, 'all', marks), parts));
+  assert.equal(got, `first\tcolumn\nsecond line: ${names.map((_, i) => `<b>${i}</b>`).join(' ')}\r\u000b\u0001 end`);
+  // In another order than the parts', and one part repeated, each mark still finds its own markup.
+  const copy2 = { back: '{p11}\t{p9}\n{p10} {p0} {p9}' };
+  const some = Object.fromEntries(['p10', 'p0', 'p9', 'p11'].map((n) => [n, parts[n]]));
+  assert.equal(String(fillAround((marks) => fillCopy(copy2, 'back', marks), some)), '<b>11</b>\t<b>9</b>\n<b>10</b> <b>0</b> <b>9</b>');
 });
 
 test('lastCall returns its last result for the same key (by identity) and calls again for a new one', () => {

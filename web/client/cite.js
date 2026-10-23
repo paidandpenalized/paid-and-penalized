@@ -2,26 +2,14 @@
 // status line. If the browser refuses (or has no clipboard), it selects the text for the reader to copy by hand and
 // says that instead. The words are the page's own (data-copied, data-failed). Without JavaScript the button stays
 // hidden and the text stays selectable.
+import { copyOrSelect } from './clipboard.js';
+
 for (const block of document.querySelectorAll('.cite')) {
   const button = block.querySelector('[data-cite-copy]');
   const text = block.querySelector('[data-cite-text]');
   const status = block.querySelector('[data-cite-status]');
   if (!button || !text || !status) continue;
 
-  button.addEventListener('click', async () => {
-    // Cleared first, so a second click is announced again.
-    status.textContent = '';
-    try {
-      await navigator.clipboard.writeText(text.textContent);
-      status.textContent = block.dataset.copied;
-    } catch {
-      const range = document.createRange();
-      range.selectNodeContents(text);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      status.textContent = block.dataset.failed;
-    }
-  });
+  button.addEventListener('click', () => copyOrSelect({ text: text.textContent, node: text, status, copied: block.dataset.copied, failed: block.dataset.failed }));
   button.hidden = false;
 }

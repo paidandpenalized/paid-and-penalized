@@ -119,3 +119,20 @@ export function barSpan(contribution, extent) {
   const width = clamp01(Math.abs(contribution) / extent) / 2;
   return { at: contribution < 0 ? 0.5 - width : 0.5, width };
 }
+
+// A program's dollars ({ lo, hi }, the least and the most it keeps: dollarsOf; lo === hi when certain). isEither: too
+// close to call, both possible.
+export const isEither = ({ lo, hi }) => lo !== hi;
+// The dollars as a level on the cliff (render.js cliff, dom.js): 0 on the ledge ($0), 1 on the floor (the cut), 0.5
+// hanging on the drop when too close to call. cliffY: that level as the cliff's --y.
+export const levelOf = (dollars) => (isEither(dollars) ? 0.5 : dollars.lo < 0 ? 1 : 0);
+export const cliffY = (dollars) => String(levelOf(dollars));
+// The head's dollars: in the penalty ink while there is a cut. The cliff's dot: filled on the floor (a cut), dashed
+// when it hangs on the drop (too close to call).
+const MONEY_CLASS = { 0: '', 0.5: '', 1: ' wi-money--cut' };
+const DOT_CLASS = { 0: '', 0.5: ' is-close', 1: ' is-over' };
+export const moneyClass = (dollars) => MONEY_CLASS[levelOf(dollars)];
+export const cliffDotClass = (dollars) => `wi-cliff__dot${DOT_CLASS[levelOf(dollars)]}`;
+// Two dollar amounts are the same; the hypothetical's dollars are the start's.
+export const sameDollars = (a, b) => a.lo === b.lo && a.hi === b.hi;
+export const sameMoney = ({ before, after }) => sameDollars(before, after);

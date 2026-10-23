@@ -6,11 +6,15 @@ import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
 import { readPinned } from '../../../pipeline/files.js';
+import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
 export const FY = 2026;
+// The dollars of a page with no estimate (the impact file has no usable row for the hospital): what a synthetic
+// hospital's page takes, since no row of the dollar estimates covers it.
+export const NO_ESTIMATE = hospitalMoney({ status: 'no-inputs', cut: false });
 // Asset paths for rendering pages: the CSS, the shared scripts and both HACRP page scripts.
-export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', topbar: '/assets/topbar.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-place': '/assets/hacrp-place.test.js','hacrp-hospital': '/assets/hacrp-hospital.test.js', 'hacrp-search': '/assets/hacrp-search.test.js' } };
+export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', share: '/assets/share.test.js', topbar: '/assets/topbar.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-place': '/assets/hacrp-place.test.js','hacrp-hospital': '/assets/hacrp-hospital.test.js', 'hacrp-search': '/assets/hacrp-search.test.js' } };
 export const PERIODS = SYNTH_PERIODS;
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
 // CMS's text for the two boundary scores, as boundaryText() reads it from the file.
@@ -124,6 +128,11 @@ export function inputs(h, overrides = {}) {
 export const STANDING = "A penalty reflects how CMS’s formula scored relative performance; it is not a verdict on the quality of care.";
 export const WHATIF_STANDING = "A what-if shows the formula’s arithmetic, not what a hospital could realistically change or how. "
   + "CMS’s real result also depends on other hospitals.";
+
+// A page's markup as the words a reader sees. markupText: each tag a space, the word joiners (which keep a range on one
+// line) gone, white space collapsed. strippedText: each tag removed, the escapes of & and ' undone, white space collapsed.
+export const markupText = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\u2060/g, '').replace(/\s+/g, ' ');
+export const strippedText = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 
 // HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.
 export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

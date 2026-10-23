@@ -7,11 +7,12 @@ import { has } from '../../../engine/js/has.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
-import { cmsText, decimal, listText, longDate, pct, signed } from '../../../web/render/format.js';
+import { cmsText, decimal, listText, longDate, money, moneyRange, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { assignedNow } from '../../../web/whatif/marks.js';
+import { assignedNow, isEither, levelOf } from '../../../web/whatif/marks.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, heroLineText, measureLabel, sourcePlain } from './copy.js';
+import { DOLLARS_HREF } from './links.js';
 
 const FLAG_KEYS = { Yes: 'flagYes', No: 'flagNo', 'too-close': 'flagClose', 'N/A': 'flagNA' };
 
@@ -73,12 +74,19 @@ export function pillOf(flag) {
   return PILLS[flag]();
 }
 
-// The cut as a percentage (dollars come later); null for Maryland, which is not subject to it.
+// The cut as a percentage (the dollars have their own row: moneyText); null for Maryland, which is not subject to it.
 export function cutText(flag) {
   if (flag === 'Yes') return REDUCTION_TEXT;
   if (flag === 'No') return pct(0, 0);
   if (flag === 'too-close') return fill('cutEither', { none: pct(0, 0), pct: REDUCTION_TEXT });
   return null;
+}
+
+// This site's estimate of the HAC cut as the what-if writes it, from dollarsOf()'s { lo, hi }: the amount cut ("$615K"),
+// "$0", or, too close to call, both ("$0 or $615K"), never one number.
+export function moneyText(dollars) {
+  if (isEither(dollars)) return fill('whatifMoneyEither', { zero: money(0), amount: money(-dollars.lo) });
+  return money(-dollars.lo);
 }
 
 // The score before (CMS's text) and after (this site's, at CMS's decimals).
@@ -121,17 +129,22 @@ const BOUND_NOTES = {
 };
 const boundNote = (c) => fill(BOUND_NOTES[c.bound][c.moved ? 'moved' : 'still'], { short: c.short, [c.bound]: c.limit });
 
-// What the hypothetical decision would mean, by its flag.
+// What the hypothetical decision would mean, by its flag; with the dollars where this site has an estimate (money:
+// the view model's, or null).
 const AFTER_SENTENCES = {
-  Yes: () => fill('whatifYes', { pct: REDUCTION_TEXT }),
+  Yes: (cash) => (cash ? fill('whatifYesMoney', { pct: REDUCTION_TEXT, amount: moneyText(cash.after) }) : fill('whatifYes', { pct: REDUCTION_TEXT })),
   No: () => fill('whatifNo'),
-  'too-close': () => fill('whatifClose', { cuts: cutText('too-close') }),
+  'too-close': (cash) => (cash
+    ? fill('whatifCloseMoney', { cuts: cutText('too-close'), amounts: moneyText(cash.after) })
+    : fill('whatifClose', { cuts: cutText('too-close') })),
 };
 
-function flagSentences(result, words) {
+function flagSentences(result, words, cash) {
   const { before, after } = result;
   if (before.flag === 'N/A') return [fill('whatifNA', { decision: flagText('N/A') })];
-  const out = [AFTER_SENTENCES[after.flag]()];
+  const out = [AFTER_SENTENCES[after.flag](cash)];
+  // Out from under a cut: what staying under the line keeps.
+  if (cash && before.flag === 'Yes' && after.flag === 'No') out.push(fill('whatifNoKeeps', { amount: money(cash.atStake) }));
   if (after.flag !== before.flag) out.push(fill(words.was, { decision: flagText(before.flag) }));
   return out;
 }
@@ -151,7 +164,7 @@ export function scenarioSentence(vm, hospital, model, baseline) {
   const out = [];
   if (after === before) out.push(fill('whatifStay', { changes: items, score: before }));
   else out.push(fill(r.after.score > r.before.score ? 'whatifRise' : 'whatifFall', { changes: items, before, after }));
-  if (list.some((c) => c.moved)) out.push(...flagSentences(r, words));
+  if (list.some((c) => c.moved)) out.push(...flagSentences(r, words, vm.money ?? null));
   for (const c of list) if (c.bound) out.push(boundNote(c));
   return out.join(' ');
 }
@@ -181,10 +194,12 @@ export function slideText(vm, hospital, model, { name, fy, source, baseline }) {
   const decision = r.before.flag === 'N/A'
     ? fill('slideDecisionOnly', { decision: flagText('N/A') })
     : fill('slideDecision', { before: flagText(r.before.flag), after: flagText(r.after.flag) });
+  const cash = vm.money ? fill('slideMoney', { before: moneyText(vm.money.before), after: moneyText(vm.money.after) }) : null;
   return [
     name,
     fill('slideScore', { before, after }),
     decision,
+    cash,
     scenarioSentence(vm, hospital, model, baseline),
     sourcePlain({ fy, source }),
     fill('whatifStanding'),
@@ -231,10 +246,13 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   const hai = words.counts ? haiPeriod(hospital.periods.hai) : null;
   const slide = { name, fy, source, baseline };
   const printAt = (fragment) => fill('whatifPrint', { url: SITE.origin + path + fragment });
+  // The dollars at stake (this site's estimate), on the record where there is one, and their likely range.
+  const atStake = hospital.atStake ?? null;
+  const atStakeRange = hospital.atStakeRange ?? null;
   return {
     heading: fill('whatifHeading'),
     label: words.label && fill(words.label),
-    intro: fill(words.intro),
+    intro: fill(atStake === null ? words.intro : 'whatifIntroMoney'),
     noScript: fill('whatifNoScript'),
     banner: { text: fill('whatifBanner'), linkText: fill('whatifBannerLink'), href: path },
     resultLabel: fill('whatifResultLabel'),
@@ -267,6 +285,8 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     solver: {
       question: fill(needed ? 'whatifSolveYes' : 'whatifSolveNo'),
       caption: fill(words.solverCaption),
+      // What keeping under the line is worth, in this site's dollars; null without an estimate.
+      worth: atStake === null ? null : fill(needed ? 'whatifWorthYes' : 'whatifWorthNo', { amount: money(atStake) }),
       columns: [fill('solverColMeasure'), fill(needed ? 'solverColNeeded' : 'solverColCushion'), fill('solverColNote')],
       rows: (answers) => solverRows(answers, model),
     },
@@ -307,6 +327,18 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       help: fill('whatifPredictedHelp'),
       invalid: fill('whatifPredictedInvalid', { min: decimal(0, 0) }),
       result: countText,
+    },
+    // The dollars: a row in the result's table, a line in its head and the cliff the hypothetical rides; null without
+    // an estimate (the sandbox, Maryland, a hospital this site can't estimate).
+    money: atStake === null ? null : {
+      row: fill('whatifRowMoney'),
+      tag: { text: fill('estimateTag'), href: DOLLARS_HREF, label: fill('estimateTagLabel') },
+      amount: moneyText,
+      // The words beside the head's figure, by the hypothetical's dollars: a certain cut with its likely range; a score
+      // too close to call keeps its "$0 or $X", never a range around one number.
+      head: (dollars) => (levelOf(dollars) === 1 && atStakeRange ? fill('whatifMoneyCutRange', { range: moneyRange(...atStakeRange) })
+        : fill(levelOf(dollars) > 0 ? 'whatifMoneyCut' : 'whatifMoneyNone')),
+      cliff: { zero: money(0), zeroWords: fill('whatifCliffNone'), cut: money(atStake), cutWords: pillOf('Yes').label },
     },
     held: fill('whatifHeld'),
     // The printed link: the page's, or with a changed what-if's fragment (#whatif&…, as share writes it) after it.

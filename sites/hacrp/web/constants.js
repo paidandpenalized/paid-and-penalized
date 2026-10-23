@@ -22,10 +22,27 @@ export const SIR_BASE_YEAR = 2015;
 export const SIR_NEXT_BASE_YEAR = 2022;
 export const SIR_NEXT_FY = 2028;
 
+// CMS extended Pennsylvania's Rural Health Model through this calendar year (change request 13595: the termination date
+// became December 31 of it). Methods' Assumptions row on the model says so.
+export const PARHM_THROUGH_YEAR = 2026;
+
 // CMS's count of the hospitals cut in a fiscal year, from its results fact sheet, for a year whose cut list CMS
 // updated after the fact sheet: the pages count the updated list, and Methods says so.
 export const FACT_SHEET_CUT = Object.freeze({ fy: 2016, cut: 758 });
 
+// This site's own grouping of teaching hospitals (the hospital master, engine/py/pp_engine/master.py MAJOR_TEACHING): a
+// hospital with a resident-to-bed ratio in CMS's impact file at or above this is major, above zero minor, zero none. A test
+// fails if the two differ.
+export const MAJOR_TEACHING_RATIO = 0.25;
+
+// Display constant: Methods names the group of hospitals whose estimates ran furthest from their cost reports, and only
+// a group with at least this many hospitals of its own in the back-test can be named. A handful's median is no finding
+// about a kind of hospital. It sits below the back-test's MIN_STRATUM (pp_engine/bands.py, 30: the fewest a group's own
+// percentiles rest on; the data carries it as bands.minStratum) because a group is only named here, not given a range.
+export const HEADLINE_MIN = 10;
+
+// Display constant: the cliff's note counts the hospitals scored within this distance of CMS's line, either side.
+export const CLIFF_NEAR = 0.1;
 // Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.
 export const RAMP_LOW_PCT = 5;
 export const RAMP_HIGH_PCT = 95;
@@ -50,6 +67,8 @@ export const BED_BANDS = Object.freeze([100, 300, 500]);
 export const FEW_IN_GROUP = 5;
 export const NEAREST = 8;
 export const RIDGE_BINS = 36;
+// The columns of the cliff's strip of every published score, which show the crowd at CMS's line.
+export const STRIP_BINS = 120;
 export const RULER_BINS = 28;
 // The nearest-hospitals map's distance rings, in miles: those inside the farthest hospital shown, at most RINGS_MAX.
 export const RING_MILES = Object.freeze([5, 10, 25, 50, 100, 250]);
@@ -70,6 +89,7 @@ export const CLAIMS = {
   SIR_NEXT_BASE_YEAR: 'HACRP-21',
   SIR_NEXT_FY: 'HACRP-21',
   FACT_SHEET_CUT: 'HACRP-71',
+  PARHM_THROUGH_YEAR: 'HACRP-93',
 };
 
 // CMS's short names for the measures, read from its column names ("PSI 90 W Z Score" -> "PSI 90"). PSI 90 has a

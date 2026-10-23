@@ -2,12 +2,13 @@
 // place, type, CMS's score and decision, Care Compare's stars; the state's outline a watermark behind it) beside the
 // verdict (a stamp, the summary, CMS's line in plain words and the line bar), the two the same height over a bold
 // rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
-// hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the what-if, the groups the
+// hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the money (the cliff, then the
+// statement line by line) for an estimated hospital, the what-if, the groups the
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
 // show CMS's values and add no inference.
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
-import { footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
+import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -26,6 +27,9 @@ import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
 import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
 import { fill as hfill, t as ht } from '../history/copy.js';
+import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, statementFigure } from '../money-figures.js';
+import { fill as mfill, t as mt } from '../money/copy.js';
+import { maKey } from '../money.js';
 
 // The fonts a hospital page preloads: the default set with the mono's 700 (the hero number) in place of its 400.
 const HERO_FONTS = ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-700'];
@@ -85,12 +89,10 @@ function starsSpec(view, careSource) {
 
 // The Location field's words, the state a link to the program page's map and table for that state (#state=XX, which
 // the table filters on and the map marks), as Thirty Day Readmissions links a hospital's metro area.
-const STATE_AT = '\u0001';
 function locationText(view) {
-  const values = { city: view.city, state: STATE_AT };
-  const [before, after] = (view.zip ? fill('location', { ...values, zip: view.zip }) : fill('locationNoZip', values)).split(STATE_AT);
   const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
-  return html`${before}<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>${after}`;
+  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
+  return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 
 // The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red);
@@ -103,8 +105,9 @@ function locatorMap(view, shapes) {
 }
 
 // The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
-// outline (map: its markup, or null).
-function recordCard(view, { careSource, map }) {
+// outline (map: its markup, or null): the hospital, then where and what it is, then CMS's score and decision beside
+// this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars.
+function recordCard(view, { careSource, map, money }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
   // Each field's formField options, numbered in order once the fields with nothing to show are left out.
@@ -112,11 +115,12 @@ function recordCard(view, { careSource, map }) {
     { label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true },
     { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' },
     type && { label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' },
+    starsSpec(view, careSource),
     view.scored
       ? { label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote'), fieldCls: 'f-score' }
       : { label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div', fieldCls: 'f-score' },
     { label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }), fieldCls: 'f-pay' },
-    starsSpec(view, careSource),
+    moneyField(money),
   ].filter(Boolean);
   const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
@@ -144,18 +148,22 @@ function stampOf(view) {
 // The verdict beside the record: the stamp, what CMS reports (its decision set apart, in the penalty ink for a cut),
 // why, with what the score is in one sentence, then CMS's line in plain words and how CMS sets it, the line bar and
 // the hospital's rank.
-const DECISION_AT = '\u0001';
 function leadMarkup(view) {
-  const [before, after] = leadSentence(view, DECISION_AT).split(DECISION_AT);
   const pen = view.status === 'yes' || view.status === 'yes-no-score';
-  return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
+  const decision = html`<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>`;
+  return fillAround(({ decision: at }) => leadSentence(view, at), { decision });
 }
 
-function verdict(view, nat, history) {
+function verdict(view, nat, history, money) {
   const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
+  const { beside, below } = moneyVerdict(view, money);
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
+<div class="hosp__stampline">
 ${stampOf(view)}
+${beside}
+</div>
 <p class="hosp__summary">${leadMarkup(view)}</p>
+${below}
 ${words && html`<p class="hosp__why">${words}</p>`}
 ${view.scored && html`<div class="hosp__lineblock">
 <p class="hosp__line">${fillKeep('lineCut', { lowestYes: view.boundaryText.lowestYes }, ['lowestYes'])}</p>
@@ -163,6 +171,7 @@ ${view.scored && html`<div class="hosp__lineblock">
 ${lineBarBlock(view, nat)}
 </div>`}
 ${history?.rec ? recordStrip(history.rec, history.hd.fys) : ''}
+${shareBlock(view, money)}
 </section>`;
 }
 
@@ -205,8 +214,10 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // scoreRange() in generate.js); a hospital with no score never gets one. searchUrl: the hospitals asset the top
 // bar's search reads (null: no search box). shapes: stateShapes(topology) for the maps (null: none). careSource:
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
-// the data list's source of the Type field's facts. master: the hospital's master record (its metro's name).
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null }) {
+// the data list's source of the Type field's facts. master: the hospital's master record (its metro's name). money:
+// this site's dollars for the hospital (money.js hospitalMoney: a hospital with no estimate has a row that says why).
+// backtest: what a likely range means (data.js dollarsData's), which the statement's note says.
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money, backtest }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -219,14 +230,17 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   // Figures are numbered in page order, each taking the next number only if it is drawn.
   let n = 0;
   const numbered = (fig) => { if (fig) n++; return fig; };
+  const moneySource = moneySourceText({ fy: view.fy, source });
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
   const sum = view.scored ? numbered(sumFigure({ view, n: n + 1, source: line })) : null;
+  const cliffFig = money.estimated && view.scored ? numbered(cliffFigure(view, money, nat, { n: n + 1, source: moneySource })) : null;
+  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource, backtest })) : null;
   const what = view.scored && whatif ? numbered(whatIfBlock(view, whatif, source, assets, n + 1)) : null;
-  // Its years: where its score fell each year CMS published one, when the build holds the history and the hospital
-  // had a decision in more than one year.
-  const years = history?.rec && history.rec.decided > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
+  // Its years: where its score fell each year CMS published one, when the build holds the history and CMS published
+  // its score in more than one year.
+  const years = history?.rec?.hasScoreYears ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
   const infections = history ? numbered(hospitalInfectionsFigure(history.sir, history.hd, { n: n + 1, source: hfill('hinfSource', { first: String(history.hd.infections[0]?.cy ?? ''), last: String(history.hd.infections.at(-1)?.cy ?? '') }) })) : null;
   const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
   const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
@@ -236,8 +250,8 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
 
   const body = html`<article class="wrap page page--hosp hosp">
 <div class="hosp__top">
-${recordCard(view, { careSource, map })}
-${verdict(view, nat, history)}
+${recordCard(view, { careSource, map, money })}
+${verdict(view, nat, history, money)}
 </div>
 ${notes.length || small ? html`<div class="hosp__notes">
 ${notes.map((s) => html`<p>${s}</p>`)}
@@ -257,6 +271,21 @@ ${sum && section({
 ${worksheet(view)}
 ${view.distance && html`<p class="hsec__stat">${distanceSentence(view)}</p>`}`,
     figure: sum,
+  })}
+${cliffFig && section({
+    id: 'cliff', wide: true,
+    text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
+<p>${mfill(maKey(money, 'cliffIntro'), { pct: REDUCTION_TEXT })}</p>
+<p>${mt('cliffHow')}</p>`,
+    figure: cliffFig,
+  })}
+${statement && section({
+    id: 'money',
+    text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
+<p>${mfill(maKey(money, 'stmtIntro'), { fy })}</p>
+<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
+${moneyWorksheet(money)}`,
+    figure: statement,
   })}
 ${what?.body}
 ${years && section({
@@ -302,11 +331,13 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
 
   return page({
     title,
-    description: fill('hospitalDescription', where),
+    // A neutral sentence: no payment decision and no dollar figure, so a link's preview (Open Graph, ARCH-23) names neither.
+    // The Share control's sentence (shareSentence) is what a reader chooses to copy.
+    description: fill(money.estimated ? 'hospitalDescription' : 'hospitalDescriptionNone', where),
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.share, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
     topbar: siteHeader({ fy: view.fy, current: 'map', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

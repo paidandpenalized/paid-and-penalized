@@ -205,6 +205,9 @@ test('nameInText: Census regions and divisions take "the" in a sentence (capital
   assert.equal(nameInText({ kind: 'division', name: 'Middle Atlantic' }), 'the Middle Atlantic');
   assert.equal(nameInText({ kind: 'region', name: 'South' }, { start: true }), 'The South');
   assert.equal(nameInText({ kind: 'division', name: 'Middle Atlantic' }, { start: true }), 'The Middle Atlantic');
+  // New England stands alone: "New England's", not "the New England's".
+  assert.equal(nameInText({ kind: 'division', name: 'New England' }), 'New England');
+  assert.equal(nameInText({ kind: 'division', name: 'New England' }, { start: true }), 'New England');
   for (const kind of ['state', 'metro']) {
     assert.equal(nameInText({ kind, name: 'Example Name' }), 'Example Name', kind);
     assert.equal(nameInText({ kind, name: 'Example Name' }, { start: true }), 'Example Name', `${kind}: the name is the same at the start`);
@@ -212,7 +215,8 @@ test('nameInText: Census regions and divisions take "the" in a sentence (capital
   // Every place the pinned data holds: only the two Census kinds are changed, and the name is never altered.
   for (const p of PLACES.list) {
     const said = nameInText(p);
-    if (p.kind === 'region' || p.kind === 'division') assert.equal(said, `the ${p.name}`, p.id);
+    if (p.name === 'New England') assert.equal(said, p.name, p.id);
+    else if (p.kind === 'region' || p.kind === 'division') assert.equal(said, `the ${p.name}`, p.id);
     else assert.equal(said, p.name, p.id);
   }
 });

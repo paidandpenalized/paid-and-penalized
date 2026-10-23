@@ -215,3 +215,18 @@ test('a place page with more hospitals than the first screenful shows the first 
   assert.deepEqual(rowCcns(s.parts.tbody), rows.map((r) => r[0]), 'all of them, none of the asset\'s others');
   assert.equal(s.parts['#ht-all'].hidden, true);
 });
+
+test('the estimated cut: this site\'s dollars, in the penalty ink for a cut, words where there is no estimate', async (t) => {
+  const asset = {
+    hospitalPath: '/hacrp/hospital/',
+    rows: [
+      ['990071', 'Example General Hospital', 'Exampleton', 'AL', '0.5000', 'Yes', '', 614_565],
+      ['990072', 'Sample Medical Center', 'Sampleville', 'AL', '0.1000', 'No', '', 0],
+      ['990073', 'Test Community Hospital', 'Testburg', 'AL', '0.6000', 'Yes', '', null],
+    ],
+  };
+  const s = await run(t, { results: [true], asset });
+  const money = s.parts.tbody.children.map((tr) => tr.children.at(-1));
+  assert.deepEqual(money.map((td) => td.children[0] ?? td.textContent), ['$615K', '$0', 'no estimate']);
+  assert.deepEqual(money.map((td) => td.className), ['ht-money num ht-money--cut', 'ht-money num', 'ht-money num']);
+});

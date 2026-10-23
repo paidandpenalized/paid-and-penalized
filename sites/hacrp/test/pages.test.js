@@ -13,6 +13,7 @@ import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/buil
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
+import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -78,41 +79,63 @@ test('production, released: every hospital page and every place page plus /hacrp
       assert.deepEqual(readdirSync(join(dir, 'hacrp', kind)).sort(), PLACES.list.filter((p) => p.kind === kind).map((p) => p.path.split('/')[3]).sort(), kind);
     }
 
-    const pages = new Map([
-      ['/hacrp/', read(dir, '/hacrp/')],
-      ...PLACES.list.map((p) => [p.path, read(dir, p.path)]),
-      ...DATA.hospitals.map((h) => [hospitalPath(h), read(dir, hospitalPath(h))]),
-    ]);
-    const page = (h) => pages.get(hospitalPath(h));
-    const placePaths = new Set(PLACES.list.map((p) => p.path));
+    // Each page is checked as it is read and dropped: the pages together are hundreds of megabytes of text, so only the few that
+    // later assertions read (the program page, and one hospital of each kind) are kept.
+    const marylandRow = pick((h) => h.paymentReduction === 'N/A' && h.paymentReductionFootnote === 'a', 'Maryland');
+    const yesNoScoreRow = pick((h) => h.total === null && h.paymentReduction === 'Yes', 'Yes with no score');
+    const yesRow = pick((h) => h.total !== null && h.paymentReduction === 'Yes', 'scored Yes');
+    const noRow = pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No');
+    const kept = new Map();
+    const keep = new Set(['/hacrp/', ...[marylandRow, yesNoScoreRow, yesRow, noRow].map(hospitalPath)]);
+    const placeAt = new Map(PLACES.list.map((p) => [p.path, p]));
+    const hospitalAt = new Map(DATA.hospitals.map((h) => [hospitalPath(h), h]));
+    const hospitalBytes = [];
     const cmsCell = /class="[^"]*\bcms\b[^"]*"[^>]*>([^<]*)</g;
-    for (const [path, text] of pages) {
+    for (const path of ['/hacrp/', ...placeAt.keys(), ...hospitalAt.keys()]) {
+      const text = read(dir, path);
+      if (keep.has(path)) kept.set(path, text);
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, `${path}: one h1`);
       const cells = [...text.matchAll(cmsCell)];
       // A hospital page: twelve measure cells, and the score in the record card when CMS published one.
-      if (path.startsWith('/hacrp/hospital/')) assert.ok(cells.length >= (text.includes(' hosp__score"') ? 13 : 12), `${path}: CMS cells found`);
+      if (hospitalAt.has(path)) assert.ok(cells.length >= (text.includes(' hosp__score"') ? 13 : 12), `${path}: CMS cells found`);
       for (const [, cell] of cells) assert.doesNotMatch(cell, /-[\d.]/, `${path}: hyphen-minus in "${cell}"`);
       assert.deepEqual(brokenIds(text), { repeated: [], missing: [] }, `${path}: ids`);
       // The program page and the hospital pages step down one heading level at a time (the place pages are not checked here).
-      if (!placePaths.has(path)) assert.ok(levels(text).every((level, i, all) => (i === 0 ? level === 1 : level <= all[i - 1] + 1)), `${path}: heading levels ${levels(text)}`);
+      if (!placeAt.has(path)) assert.ok(levels(text).every((level, i, all) => (i === 0 ? level === 1 : level <= all[i - 1] + 1)), `${path}: heading levels ${levels(text)}`);
       // A page loads the figure script exactly when it has a figure, and the cite script when it has the citation.
       assert.equal(text.includes(`src="${ASSETS.js.figure}"`), text.includes(' data-figure>'), `${path}: figure script`);
       assert.equal(text.includes(`src="${ASSETS.js.cite}"`), text.includes(' data-cite-copy '), `${path}: cite script`);
+      // A place page loads its own script (the table, the rule and the map), and the program page its own. It names its
+      // place in its one h1, its canonical address and its breadcrumb's last item, and its hospital table lists exactly the
+      // place's hospitals (data-area). A place page is indexed as the program is: on a released production site, all of them.
+      const place = placeAt.get(path);
+      if (place) {
+        assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hacrp-place']}"></script>`), `${path}: the place script`);
+        assert.ok(!text.includes(`src="${ASSETS.js['hacrp-program']}"`), `${path}: and not the program page's`);
+        assert.ok(text.includes(`<h1 class="place__title">${esc(place.name)}</h1>`), `${path}: h1`);
+        assert.ok(text.includes(`<link rel="canonical" href="https://paidandpenalized.org${path}">`), `${path}: canonical`);
+        assert.ok(text.includes(`<li aria-current="page">${esc(place.name)}</li>`), `${path}: breadcrumb`);
+        const area = /<div class="ht" data-src="[^"]+" data-area="([^"]*)" hidden>/.exec(text)[1].split(' ');
+        assert.deepEqual([...area].sort(), [...place.ccns].sort(), `${path}: the table's hospitals are the place's`);
+        assert.ok(!text.includes(NOINDEX), path);
+      }
+      // Scored pages may be indexed; a page with no score never is, even in production on a released site. Only a
+      // scored page has the what-if.
+      const h = hospitalAt.get(path);
+      if (h) {
+        assert.equal(text.includes(NOINDEX), h.total === null, path);
+        assert.equal(text.includes('<section class="block whatif" id="whatif"'), h.total !== null, `${path}: what-if`);
+        hospitalBytes.push(Buffer.byteLength(text));
+      }
     }
-    // A place page loads its own script (the table, the rule and the map), and the program page its own. It names its
-    // place in its one h1, its canonical address and its breadcrumb's last item, and its hospital table lists exactly the
-    // place's hospitals (data-area).
-    for (const place of PLACES.list) {
-      const text = pages.get(place.path);
-      assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hacrp-place']}"></script>`), `${place.path}: the place script`);
-      assert.ok(!text.includes(`src="${ASSETS.js['hacrp-program']}"`), `${place.path}: and not the program page's`);
-      assert.ok(text.includes(`<h1 class="place__title">${esc(place.name)}</h1>`), `${place.path}: h1`);
-      assert.ok(text.includes(`<link rel="canonical" href="https://paidandpenalized.org${place.path}">`), `${place.path}: canonical`);
-      assert.ok(text.includes(`<li aria-current="page">${esc(place.name)}</li>`), `${place.path}: breadcrumb`);
-      const area = /<div class="ht" data-src="[^"]+" data-area="([^"]*)" hidden>/.exec(text)[1].split(' ');
-      assert.deepEqual([...area].sort(), [...place.ccns].sort(), `${place.path}: the table's hospitals are the place's`);
-    }
-    assert.ok(pages.get('/hacrp/').includes(`<script type="module" src="${ASSETS.js['hacrp-program']}"></script>`));
+    assert.ok(kept.get('/hacrp/').includes(`<script type="module" src="${ASSETS.js['hacrp-program']}"></script>`));
+    // The weight of a hospital page, the middle one and the largest (Alaska's hospitals', whose state outline is the
+    // heaviest drawing): measured at 212,472 and 311,520 bytes, each limit about 5 to 8% above. A change that adds to
+    // every page raises them on purpose, with a reason.
+    hospitalBytes.sort((a, b) => a - b);
+    const median = hospitalBytes[Math.floor(hospitalBytes.length / 2)];
+    assert.ok(median <= 228_000, `the middle hospital page stays small (${median} bytes)`);
+    assert.ok(hospitalBytes.at(-1) <= 330_000, `the largest hospital page stays small (${hospitalBytes.at(-1)} bytes)`);
 
     // The Methods page: one h1, its ids once, its headings a step down at a time, the figure script because it has figures.
     const methods = read(dir, METHODS_PATH);
@@ -122,27 +145,18 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.ok(methods.includes(' data-figure>') && methods.includes(`src="${ASSETS.js.figure}"`), 'Methods: figures, and the script that serves them');
     assert.ok(!methods.includes(NOINDEX), 'Methods is indexed as the program page is');
 
-    // Scored pages may be indexed; a page with no score never is, even in production on a released site. Only a
-    // scored page has the what-if.
-    for (const h of DATA.hospitals) {
-      assert.equal(page(h).includes(NOINDEX), h.total === null, hospitalPath(h));
-      assert.equal(page(h).includes('<section class="block whatif" id="whatif"'), h.total !== null, `${hospitalPath(h)}: what-if`);
-    }
-    // The program page and every place page are indexed as the program is: on a released production site, all of them.
-    for (const place of PLACES.list) assert.ok(!pages.get(place.path).includes(NOINDEX), place.path);
     const scored = DATA.hospitals.filter((h) => h.total !== null).map(hospitalPath);
     assert.deepEqual(ctx.indexable, ['/hacrp/data/', '/hacrp/', ...PLACES.list.map((p) => p.path), ...scored, METHODS_PATH]);
-    assert.ok(!pages.get('/hacrp/').includes(NOINDEX));
+    assert.ok(!kept.get('/hacrp/').includes(NOINDEX));
 
-    const maryland = page(pick((h) => h.paymentReduction === 'N/A' && h.paymentReductionFootnote === 'a', 'Maryland'));
+    const maryland = kept.get(hospitalPath(marylandRow));
     assert.ok(maryland.includes(esc(FN('a'))), 'footnote a text');
     assert.ok(maryland.includes('pill--na'));
     assert.doesNotMatch(maryland, /distance to CMS/);
     assert.doesNotMatch(maryland, /CMS’s value:/, 'the pill already reads CMS’s value');
     assert.match(maryland, /pill--na">N\/A</);
 
-    const yesNoScoreRow = pick((h) => h.total === null && h.paymentReduction === 'Yes', 'Yes with no score');
-    const yesNoScore = page(yesNoScoreRow);
+    const yesNoScore = kept.get(hospitalPath(yesNoScoreRow));
     assert.doesNotMatch(yesNoScore, /CMS’s value:/, 'the pill already reads CMS’s value');
     assert.match(yesNoScore, /pill--pen">Yes</);
     assert.doesNotMatch(yesNoScore, /hosp__score/);
@@ -158,7 +172,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.doesNotMatch(yesNoScore, /distance to CMS/);
     assert.ok(yesNoScore.includes(NOINDEX));
 
-    const yes = page(pick((h) => h.total !== null && h.paymentReduction === 'Yes', 'scored Yes'));
+    const yes = kept.get(hospitalPath(yesRow));
     assert.match(yes, /pill--pen">1% cut</);
     assert.ok(yes.includes(esc("CMS’s value: Yes")));
     assert.doesNotMatch(yes, /No score published|hosp__none/);
@@ -166,7 +180,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.match(yes, /class="field__value field__value--big cms hosp__score">\S+</);
     assert.match(yes, /<p class="stamp">Cut 1%<\/p>/);
     assert.match(yes, /"isBasedOn":"https:\/\/data\.cms\.gov\/provider-data\/dataset\/yq43-i98g"/);
-    const no = page(pick((h) => h.total !== null && h.paymentReduction === 'No', 'scored No'));
+    const no = kept.get(hospitalPath(noRow));
     assert.match(no, /class="pill">No cut</);
     assert.ok(no.includes(esc("CMS’s value: No")));
     assert.match(no, /<p class="stamp stamp--ink">No cut<\/p>/);
@@ -181,7 +195,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     const decided = decidedHospitals(DATA.hospitals);
     const cut = decided.filter((h) => h.paymentReduction === 'Yes').length;
     // The line is stated for Yes/No decisions only: Maryland hospitals score above it and were not cut.
-    const program = pages.get('/hacrp/');
+    const program = kept.get('/hacrp/');
     assert.ok(DATA.hospitals.some((h) => h.paymentReduction === 'N/A' && h.total >= DATA.model.boundary.lowestYes), 'the scope matters in the pinned data');
     assert.match(program, new RegExp(`<p class="field__value">${bt.lowestYes} and up</p>\\n<div class="field__note">The lowest score CMS cut\\. The highest it did not: ${bt.highestNo}\\.</div>`), 'the summary form names the line by both of CMS\'s scores');
     const notSubject = DATA.hospitals.filter((h) => h.total !== null && h.paymentReduction === 'N/A');
@@ -338,7 +352,7 @@ test('a hospital with no score shows a hatched "No score published" block, not a
   }
   const scored = render(CASES.yes);
   assert.match(scored, /class="field__value field__value--big cms hosp__score">0<span class="dp">\.<\/span>3000</, "CMS’s text, its point in a span");
-  assert.doesNotMatch(scored, /hosp__none|No score published/);
+  assert.doesNotMatch(scored, /No score published/);
 });
 
 test('the decision pill and the "CMS\'s value" line: shown under a cut or no-cut pill, skipped when the pill is CMS\'s own text', () => {
@@ -353,7 +367,14 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   const text = render(CASES.yes);
   const name = 'Example General Hospital';
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
-  assert.equal(meta(text, 'description'), esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`));
+  // A neutral sentence, the same for every verdict (ARCH-23): it names the hospital, the year and the kinds of facts the
+  // page holds, and no decision, no score and no dollar figure. The Share control's sentence is the reader's to copy.
+  // These pages render with no estimate (PAGE_CTX), so the sentence doesn't mention dollars; money.test.js checks both.
+  const description = esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`);
+  assert.equal(meta(text, 'description'), description);
+  assert.equal(text.match(/<meta property="og:description" /g).length, 1, 'one og:description');
+  assert.ok(text.includes(`<meta property="og:description" content="${description}">`), 'the same sentence');
+  for (const h of [CASES.yes, CASES.no, CASES.maryland, CASES.yesNoScore]) assert.doesNotMatch(meta(render(h), 'description'), /\$|\bcut\b|\bYes\b|\bNo\b|\d%/, `${h.ccn}: no decision value and no dollar figure`);
   const program = programPage(PROGRAM_ARGS);
   assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
@@ -465,7 +486,7 @@ test('the top: the record card (title bar, numbered fields from the name) beside
     assert.deepEqual(numbers.map(([n]) => n), numbers.map((_, i) => i + 1), `${h.ccn}: numbered in order`);
     assert.deepEqual(numbers.slice(0, 2).map(([, label]) => label), ['Hospital', 'Location']);
     assert.ok(numbers.some(([, l]) => l === 'Total HAC Score') && numbers.some(([, l]) => l === 'Payment reduction'), h.ccn);
-    assert.match(text, /<section class="hosp__verdict" aria-label="Score and payment decision">\n<p class="stamp[^"]*">/, `${h.ccn}: the verdict keeps the hero's name`);
+    assert.match(text, /<section class="hosp__verdict" aria-label="Score and payment decision">\n<div class="hosp__stampline">\n<p class="stamp[^"]*">/, `${h.ccn}: the verdict keeps the hero's name`);
     assert.ok(text.indexOf('For fiscal year') > text.indexOf('class="hosp__verdict"') && text.indexOf('For fiscal year') < text.indexOf('id="measures"'), `${h.ccn}: the summary in the verdict`);
   }
 });
@@ -548,12 +569,12 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
   assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
-  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'map', 'history', 'methods']);
-  for (const [id, href] of targets.slice(0, 4)) {
+  assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'money', 'map', 'history', 'methods']);
+  for (const [id, href] of targets.slice(0, 5)) {
     assert.equal(href, `/hacrp/#${id}`);
     assert.match(program, new RegExp(`<[a-z]+ [^>]*id="${id}"`), `the program page holds #${id}`);
   }
-  assert.equal(targets[4][1], METHODS_PATH, 'Methods is its own page under the program');
+  assert.equal(targets[5][1], METHODS_PATH, 'Methods is its own page under the program');
   assert.ok(header.includes(`href="${METHODS_PATH}" data-nav="methods"`));
   assert.match(header, /data-nav="how" aria-current="true"/);
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
@@ -566,7 +587,7 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   assert.deepEqual(currentOf(hosp), ['map']);
   assert.deepEqual(currentOf(renderPlace(PLACES.list[0], HISTORY_ARGS)), ['map']);
   assert.deepEqual(currentOf(program), ['how']);
-  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">3<\/span>Every hospital</);
+  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">4<\/span>Every hospital</);
 });
 
 test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {
@@ -636,9 +657,14 @@ test('a section whose words explain a figure splits: each hospital section besid
   for (const [id, n, wide] of sections) {
     assert.match(program, new RegExp(`<section class="psec${wide}" id="${id}" aria-labelledby="${id}-h">\\n<div class="psec__text">\\n<h3 class="psec__title" id="${id}-h">[\\s\\S]*?</div>\\n<div class="psec__fig">\\n<figure class="fig" id="figure-${n}" data-figure>`), id);
   }
-  assert.deepEqual([...program.matchAll(/<section class="psec[ \w-]*" id="(\w+)"/g)].map((m) => m[1]), sections.map(([id]) => id));
-  // Part 3: the map's figure, then the table of every hospital beside the way down by place.
-  assert.match(program, /<section class="part" id="map" aria-labelledby="map-h">[\s\S]*?<figure class="fig" id="figure-13" data-figure>[\s\S]*?<div class="prog__browse">\n<section class="block hospitals"[\s\S]*?<nav class="block browse"/);
+  // The money's sections, each beside (or over) its figure.
+  const money = [['bill', 13, ' psec--wide'], ['across', 14, ' psec--wide'], ['shares', 15, ''], ['states', 16, ' psec--wide'], ['three', 17, ' psec--wide']];
+  for (const [id, n, wide] of money) {
+    assert.match(program, new RegExp(`<section class="psec${wide}" id="${id}" aria-labelledby="${id}-h">\\n<div class="psec__text">\\n<h3 class="psec__title" id="${id}-h">[\\s\\S]*?</div>\\n<div class="psec__fig">\\n<figure class="fig" id="figure-${n}" data-figure>`), id);
+  }
+  assert.deepEqual([...program.matchAll(/<section class="psec[ \w-]*" id="(\w+)"/g)].map((m) => m[1]), [...sections, ...money].map(([id]) => id));
+  // Part 4: the map's figure, then the table of every hospital beside the way down by place.
+  assert.match(program, /<section class="part" id="map" aria-labelledby="map-h">[\s\S]*?<figure class="fig" id="figure-18" data-figure>[\s\S]*?<div class="prog__browse">\n<section class="block hospitals"[\s\S]*?<nav class="block browse"/);
 });
 test("the program page's top: the name with its last word in the penalty ink, the lede, the search, and a summary form of this year's counts, the cut and CMS's line, under the stamp", () => {
   const counts = { decided: 1240, yes: 310, scored: 1305 };

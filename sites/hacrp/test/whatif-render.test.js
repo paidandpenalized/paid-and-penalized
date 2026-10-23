@@ -255,7 +255,9 @@ test('a scored page carries the what-if, both standing lines, its own record as 
 test('the page data hold the record and the model only as far as the browser reads them, and compute the same', () => {
   const h = pick((x) => x.total !== null && scoredMeasures(x).length === 6 && x.paymentReduction === 'No', 'scored No, six measures');
   const data = JSON.parse(/<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(pageFor(h))[1]);
-  assert.deepEqual(Object.keys(data.hospital).sort(), ['ccn', 'measures', 'paymentReduction', 'periods', 'total', 'totalText']);
+  assert.deepEqual(Object.keys(data.hospital).sort(), ['atStake', 'atStakeRange', 'ccn', 'measures', 'paymentReduction', 'periods', 'total', 'totalText']);
+  assert.equal(data.hospital.atStake, null, 'no estimate passed: no dollars at stake');
+  assert.equal(data.hospital.atStakeRange, null, 'and no range');
   assert.deepEqual(Object.keys(data.hospital.measures.CLABSI).sort(), ['value', 'z', 'zText']);
   assert.deepEqual(data.hospital.periods, { hai: h.periods.hai });
   assert.ok(!('id' in data.model.params.CLABSI) && !('n' in data.model.params.CLABSI));

@@ -1,0 +1,27 @@
+{
+  "schema": "dollars.schema.json",
+  "def": "isoDate",
+  "description": "A calendar date that exists: the month's own days, February 29 only in a leap year (divisible by 4, not by 100 unless by 400).",
+  "cases": [
+    { "name": "the last day of a 31-day month", "valid": true, "data": "2026-12-31" },
+    { "name": "the first day of the year", "valid": true, "data": "2026-01-01" },
+    { "name": "the last day of a 30-day month", "valid": true, "data": "2026-09-30" },
+    { "name": "February 28 in a common year", "valid": true, "data": "2026-02-28" },
+    { "name": "February 29 in a leap year", "valid": true, "data": "2024-02-29" },
+    { "name": "February 29 in a century year divisible by 400", "valid": true, "data": "2000-02-29" },
+    { "name": "month 13", "valid": false, "data": "2026-13-01" },
+    { "name": "month 00", "valid": false, "data": "2026-00-10" },
+    { "name": "day 00", "valid": false, "data": "2026-05-00" },
+    { "name": "day 32", "valid": false, "data": "2026-12-32" },
+    { "name": "the 31st of a 30-day month", "valid": false, "data": "2026-04-31" },
+    { "name": "February 30", "valid": false, "data": "2024-02-30" },
+    { "name": "February 29 in a common year", "valid": false, "data": "2025-02-29" },
+    { "name": "February 29 in a century year not divisible by 400", "valid": false, "data": "1900-02-29" },
+    { "name": "a one-digit month", "valid": false, "data": "2026-1-01" },
+    { "name": "a two-digit year", "valid": false, "data": "26-12-31" },
+    { "name": "a time after the date", "valid": false, "data": "2026-12-31T00:00:00Z" },
+    { "name": "a trailing newline", "valid": false, "data": "2026-12-31\n" },
+    { "name": "a number, not text", "valid": false, "data": 20261231 },
+    { "name": "null", "valid": false, "data": null }
+  ]
+}

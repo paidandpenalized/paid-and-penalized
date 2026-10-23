@@ -1,6 +1,8 @@
 // The dataset CSV: one row per hospital in CMS's HACRP file, with CMS's text as CMS wrote it (hyphen-minus, CMS's
-// decimals, "N/A", footnote codes), the hospital's name and place from the hospital master. Written by the
-// shared toCsv (engine/js/csv.js), so a text cell that could read as a spreadsheet formula gets a leading '.
+// decimals, "N/A", footnote codes), the hospital's name and place from the hospital master, then this site's dollar
+// estimates in columns named "_modeled" (whole dollars; blank where there is no estimate), the HAC cut's with its likely
+// range (the dollar row's `ranges`, from the back-test). Written by the shared toCsv
+// (engine/js/csv.js), so a text cell that could read as a spreadsheet formula gets a leading '.
 // sites/hacrp/DATA-DICTIONARY.md documents every column; a test keeps the two in step.
 import { toCsv } from '../../../engine/js/csv.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
@@ -8,12 +10,26 @@ import { fillCopy } from '../../../web/render/components.js';
 import { isoDate } from '../../../web/render/format.js';
 
 // Bump when a column is added, removed, renamed or changes meaning (the dictionary states it).
-export const CSV_SCHEMA_VERSION = 1;
+export const CSV_SCHEMA_VERSION = 3;
 
 const text = (name, get) => ({ name, numeric: false, get });
 const number = (name, get) => ({ name, numeric: true, get });
 
-// The columns, in file order. get(hospital, masterRecord) returns the cell.
+// A dollar column: the estimated row's whole dollars as JavaScript writes them, blank without an estimate.
+const modeled = (name, key) => number(name, (h, m, d) => (d?.status === 'estimated' ? String(d[key]) : ''));
+
+// The HAC cut's likely range in the HAC cut column's own sign, [low, high] (low the larger cut): the range of the
+// dollars at stake, negated, for a hospital CMS cut; [0, 0] for one it didn't (CMS's decision, not an estimate). d: the
+// dollar row.
+function cutRange(d) {
+  if (!d.cut) return [0, 0];
+  const [lo, hi] = d.ranges.hac;
+  return [-hi, -lo];
+}
+const cutRangeEnd = (name, end) => number(name, (h, m, d) => (d?.status === 'estimated' ? String(cutRange(d)[end]) : ''));
+
+// The columns, in file order. get(hospital, masterRecord, dollarRow) returns the cell (dollarRow: the hospital's row of
+// the dollar estimates, or null).
 export const COLUMNS = [
   text('ccn', (h) => h.ccn),
   text('fiscal_year', (h) => h.fiscalYear),
@@ -38,24 +54,38 @@ export const COLUMNS = [
   text('psi90_end', (h) => h.periods.psi90.end),
   text('hai_start', (h) => h.periods.hai.start),
   text('hai_end', (h) => h.periods.hai.end),
+  text('dollars_status', (h, m, d) => d?.status ?? ''),
+  modeled('inpatient_payment_modeled', 'total'),
+  modeled('hrrp_dollars_modeled', 'hrrp'),
+  modeled('hvbp_dollars_modeled', 'hvbp'),
+  modeled('hac_at_stake_modeled', 'atStake'),
+  modeled('hac_dollars_modeled', 'hac'),
+  cutRangeEnd('hac_dollars_low_modeled', 0),
+  cutRangeEnd('hac_dollars_high_modeled', 1),
+  modeled('net_dollars_modeled', 'net'),
 ];
 
-// hospitals: the emitted file's hospitals, in its order. master: Map of CCN -> hospital master record.
-export function hospitalsCsv(hospitals, master) {
+// hospitals: the emitted file's hospitals, in its order. master: Map of CCN -> hospital master record. dollars: Map of
+// CCN -> row of the dollar estimates (the build's has every hospital, with its ranges; a hospital without one gets blank
+// dollar cells).
+export function hospitalsCsv(hospitals, master, dollars = new Map()) {
   const rows = hospitals.map((h) => {
     const record = master.get(h.ccn);
     if (!record) throw new RangeError(`CSV: CCN ${h.ccn} has no hospital master record`);
-    return COLUMNS.map((c) => c.get(h, record));
+    const d = dollars.get(h.ccn) ?? null;
+    return COLUMNS.map((c) => c.get(h, record, d));
   });
   return toCsv(COLUMNS, rows);
 }
 
-// The dictionary file with its fiscal year, CMS's dataset id and title (from the pinned manifest) and the release
+// The dictionary file with its fiscal year, the fiscal year of the cost reports the likely ranges were checked against
+// (backtestFy: the dollars file's `bands.fy`), CMS's dataset id and title (from the pinned manifest) and the release
 // date (worded as the pages' source line words it) filled in, so none of them is typed twice. fillCopy's rules hold:
 // an unknown placeholder, a missing value, or a value the file doesn't use throws.
-export function dictionaryText(raw, { fy, source }) {
+export function dictionaryText(raw, { fy, backtestFy, source }) {
   const { id, title, pdcReleased } = source;
   return fillCopy({ dictionary: raw }, 'dictionary', {
-    fy: String(fy), source_id: id, source_title: title, pdc_released: pdcReleased && isoDate(pdcReleased),
+    fy: String(fy), backtest_fy: String(backtestFy), source_id: id, source_title: title,
+    pdc_released: pdcReleased && isoDate(pdcReleased),
   }, { plain: true });
 }

@@ -343,14 +343,13 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-roll__note { fill: var(--ink-2); font: 400 10px var(--font-type); }
 .chart-roll__blank { fill: var(--ink-3); font: 600 10px var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The year map (geo.js usYearMap). */
-.chart-years__land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 .chart-dots--years-clear { stroke: var(--ink-3); stroke-opacity: 0.55; }
 .chart-dots--years-scar { stroke: var(--pen-scar); }
 /* One drawing at every width (viewBox 960): its dots are the phone's 2.4 of 300 units across, scaled up, and 4.2
    units from 560px. */
 .chart-years__dots path { stroke-width: 7.68px; }
 @media (min-width: 560px) { .chart-years__dots path { stroke-width: 4.2px; } }
-@media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } .chart-years__land path { stroke: CanvasText; } }
+@media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } }
 /* Small lines (smallLines.js). A dot's wide transparent stroke is its own hit area. */
 .chart-lines__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .chart-lines__dot { fill: var(--ink); stroke: transparent; stroke-width: 16px; vector-effect: non-scaling-stroke; }
@@ -362,3 +361,69 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-lines__under--solid { stroke-dasharray: none; stroke-width: 2px; stroke-opacity: 0.6; }
 .chart-tile-ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 @media (forced-colors: active) { .chart-tile-ring { stroke: CanvasText; } }
+
+/* The cliff (cliff.js): the money a flat cut takes at any score. The ledge at $0 in ink; the drop at CMS's line and the
+   floor of the whole cut in the penalty ink; this hospital a dot riding it (filled on the floor), the highest score a
+   ring; every score a faint column under the axis. Each level is also labeled in words. */
+.chart-cliff__ledge { stroke: var(--ink); stroke-width: 3px; stroke-linecap: round; }
+.chart-cliff__drop { stroke: var(--pen); stroke-width: 3px; }
+.chart-cliff__floor { stroke: var(--pen); stroke-width: 3px; stroke-linecap: round; }
+.chart-cliff__dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2.5px; }
+.chart-cliff__dot--over { fill: var(--pen); stroke: var(--paper); stroke-width: 2px; }
+.chart-cliff__ring { fill: var(--paper); stroke: var(--pen); stroke-width: 1.5px; stroke-dasharray: 2 2; }
+@media (forced-colors: active) {
+  .chart-cliff__ledge, .chart-cliff__drop, .chart-cliff__floor { stroke: CanvasText; }
+  .chart-cliff__dot, .chart-cliff__ring { fill: Canvas; stroke: CanvasText; }
+  .chart-cliff__dot--over { fill: CanvasText; stroke: Canvas; }
+}
+.chart-cliff__amount { fill: var(--ink); font-family: var(--font-type); font-weight: 700; letter-spacing: -0.02em; }
+.chart-cliff__amount--pen { fill: var(--pen-ink); }
+
+/* The treemap (treemap.js): tiles in the penalty ink on the paper's hairlines, each group boxed under its name. */
+.chart-tree__group { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-tree__tile, .chart-tree__tiles rect { fill: var(--pen); stroke: var(--paper); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.chart-tree__tiles rect[data-mark]:hover, .chart-tree__tiles rect[data-mark].is-active { fill: var(--pen-seq-5); }
+.chart-tree__label { fill: var(--ink); font-weight: 700; font-size: 12px; }
+.chart-tree__sub { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; }
+/* Across the line (acrossLine.js): a cut is a filled dot, the cut not taken a ring; a place's own in full ink. */
+/* The back-test's strips (bandStrips.js): each group's likely range a pale band (hatched, dashed, where borrowed from
+   a wider group), every hospital a penalty dot ringed in the paper, exact a dotted hairline. */
+.chart-bt__ruler { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__band { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__band:not(.chart-bt__band--borrowed) { fill: var(--paper-2); }
+.chart-bt__band--borrowed { stroke-dasharray: 3 2; }
+.chart-bt__dot { fill: var(--pen); fill-opacity: 0.85; stroke: var(--paper); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-bt__exact { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 1 3; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) {
+  .chart-bt__ruler, .chart-bt__band, .chart-bt__exact { stroke: CanvasText; }
+  .chart-bt__band:not(.chart-bt__band--borrowed) { fill: Canvas; }
+  .chart-bt__dot { fill: CanvasText; fill-opacity: 1; stroke: Canvas; }
+}
+.chart-across__dot { fill: var(--paper); fill-opacity: 0.6; stroke: var(--ink); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.chart-across__dot--over { fill: var(--pen); fill-opacity: 0.85; stroke: var(--paper); }
+.chart-across__dot--faint { opacity: 0.22; }
+.chart-across__sub { font-weight: 400; fill: var(--ink-2); }
+/* Paired shares (pairBars.js): the count's share in ink, the money's in the penalty ink. */
+.chart-pair__a { fill: var(--ink-3); }
+.chart-pair__b { fill: var(--pen); }
+.chart-pair__v { font-size: 11px; fill: var(--ink-2); }
+.chart-pair__v--b { fill: var(--pen-ink); font-weight: 700; }
+/* Proportional circles on the US map (geo.js usBubbles). */
+/* A map's land, faint behind its marks (the year map's states, the bubbles map's outline). */
+.chart-land, .chart-land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.chart-bubble { fill: var(--pen); fill-opacity: 0.55; stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-mark:hover .chart-bubble, .chart-mark.is-active .chart-bubble { fill-opacity: 0.85; }
+/* A column chart's bonus columns (columns.js): money paid to a hospital. */
+.chart-col--rew { fill: var(--rew); }
+@media (forced-colors: active) {
+  .chart-tree__group { fill: Canvas; stroke: CanvasText; }
+  .chart-tree__tile, .chart-tree__tiles rect { fill: CanvasText; stroke: Canvas; }
+  .chart-across__dot { fill: Canvas; stroke: CanvasText; }
+  .chart-across__dot--over { fill: CanvasText; stroke: Canvas; }
+  .chart-across__dot--faint { opacity: 0.4; }
+  .chart-pair__a { fill: GrayText; }
+  .chart-pair__b { fill: CanvasText; }
+  .chart-land, .chart-land path { fill: Canvas; stroke: GrayText; }
+  .chart-bubble { fill: CanvasText; fill-opacity: 0.5; stroke: CanvasText; }
+  .chart-col--rew { fill: Highlight; }
+}

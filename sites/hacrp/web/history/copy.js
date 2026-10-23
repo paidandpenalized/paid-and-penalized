@@ -160,6 +160,9 @@ export const COPY = {
   recordTipCut: { text: 'cut', claim: null },
   recordTipNo: { text: 'not cut', claim: null },
   recordTipNone: { text: 'no decision', claim: null },
+  // A decision CMS gave in a year it published no Total HAC Score for the hospital.
+  recordTipNoScore: { text: '{what}, with no score published', claim: null },
+  recordNoScoreNote: { text: 'In {years}, CMS reports a payment reduction decision for this hospital but no Total HAC Score.', claim: null },
   yearsHeading: { text: 'Year by year', claim: null },
   yearsIntro: { text: 'Where this hospital’s score fell among every hospital’s, each year CMS published one. A score near the top is among the highest; the shaded band is where CMS cut. Places compare across years even where CMS changed how it builds the score.', claim: null },
   yearsTakeaway: { text: 'CMS cut this hospital in {cut} of the {decided} years it made a decision.', claim: null },

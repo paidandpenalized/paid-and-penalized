@@ -10,6 +10,10 @@ import re
 
 MISSING = {"", ".", "n/a", "na", "too few to report", "not available", "--"}
 
+# The state whose hospitals Medicare pays under the state's own all-payer model: no HRRP, HVBP or HAC adjustment. The
+# hospital master, the HACRP reader and the dollar estimate all key on it.
+MARYLAND = "MD"
+
 # Provider of Services termination codes (PGM_TRMNTN_CD) with plain-words reasons for the codes that end Medicare
 # participation (01-07); None for the ones that don't. Meanings from CMS's POS record layout for this dataset.
 POS_TERMINATION = {

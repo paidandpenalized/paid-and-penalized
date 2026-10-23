@@ -8,7 +8,7 @@ import { isAssigned, scoredMeasures } from '../../../engine/js/hacrp/hospital.js
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { solveMeasure } from '../../../engine/js/hacrp/solver.js';
-import { whatIf } from '../../../engine/js/hacrp/whatif.js';
+import { dollarsOf, whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { decimal } from '../../../web/render/format.js';
 import { limitOf } from '../../../web/whatif/fragment.js';
@@ -109,10 +109,18 @@ function barExtent(result, model) {
   return extent / result.n || 1;
 }
 
+// The dollars the HAC Reduction Program takes at the start and in the hypothetical, from the dollars at stake (this
+// site's estimate, on the hospital's record as atStake; absent or null where there is none: the sandbox, Maryland, a
+// hospital without an estimate): { atStake, before, after }, each dollarsOf()'s { lo, hi }, or null.
+function moneyOf(result, atStake) {
+  if (atStake === undefined || atStake === null) return null;
+  return { atStake, before: dollarsOf(result.before.flag, atStake), after: dollarsOf(result.after.flag, atStake) };
+}
+
 // The view model (its shape is listed in web/whatif/render.js). estimate: the emitted per-measure { tagged } map.
 export function viewModel(state, hospital, model, estimate) {
   const result = whatIf(hospital, model, changesOf(state));
-  if (!result.available) return { result, ramp: null, inputs: [], counts: {} };
+  if (!result.available) return { result, money: null, ramp: null, inputs: [], counts: {} };
 
   const inputs = state.ids.map((id) => {
     const p = model.params[id];
@@ -145,6 +153,7 @@ export function viewModel(state, hospital, model, estimate) {
 
   return {
     result,
+    money: moneyOf(result, hospital.atStake),
     ramp: {
       actual: result.before.score,
       hypothetical: result.after.score,

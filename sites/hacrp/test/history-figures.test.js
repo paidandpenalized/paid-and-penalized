@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, decimal, pct } from '../../../web/render/format.js';
+import { count, decimal, pct, pctFloor } from '../../../web/render/format.js';
 import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
@@ -508,7 +508,7 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   const rows = rowsOf(fig);
   assert.equal(rows.length, S.fys.length);
   assert.deepEqual(rows[0].slice(0, 2), ['FY2021', '1.0100']);
-  assert.equal(rows[0][2], pct1(16 / 21));
+  assert.equal(rows[0][2], pctFloor(16 / 21, 1), 'a place in line is floored, never rounded across a step');
   assert.deepEqual(rows[S.fys.indexOf(2023)].slice(1, 3), ['', ''], 'FY2023: no score, no place');
   same(numbers(takeaway(fig)), ['4', '4']);
   // A key under the chart names the red dot and the hollow one.
@@ -521,6 +521,16 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   const realFig = yearsFigure(real, HD, { n: 2, source: SRC });
   same(numbers(takeaway(realFig)), [String(real.cut), String(real.decided)]);
   assert.equal(rowsOf(realFig).length, HD.fys.length);
+});
+
+test('yearsFigure: a place in line is never rounded up across a whole percent (74.96% is not "higher than 75%")', () => {
+  const rec = S.recordOf('990101');
+  const near = { ...rec, years: rec.years.map((y, i) => (i === 0 ? { ...y, share: 0.7496 } : y)) };
+  const fig = yearsFigure(near, S, { n: 5, source: SRC });
+  const tip = text(/<title>(FY2021: score[^<]*)<\/title>/.exec(String(fig))[1]);
+  assert.match(tip, /higher than 74% of scores/);
+  assert.doesNotMatch(tip, /75%/);
+  assert.equal(rowsOf(fig)[0][2], '74.9%', 'the table floors too');
 });
 
 // ---------- a place's years ----------
@@ -674,13 +684,13 @@ test('part4 on the committed history: every part draws, and its figures\' number
   assert.equal(attr(markup, 'data-roll'), HISTORY_URL);
 });
 
-test('the program page with the history: Part 4 is #history, the figures run 1 to 22 once each, and the nav, the ids and the headings hold', () => {
+test('the program page with the history: Part 5 is #history, the figures run 1 to 27 once each, and the nav, the ids and the headings hold', () => {
   const page = renderProgram(HISTORY_ARGS);
   assert.match(page, /<section class="part" id="history" aria-labelledby="history-h">/);
   const nums = figureNumbers(page);
-  assert.deepEqual([...nums].sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i + 1));
+  assert.deepEqual([...nums].sort((a, b) => a - b), Array.from({ length: 27 }, (_, i) => i + 1));
   assert.equal(new Set(nums).size, nums.length);
-  // Part 4 comes after the map and the hospital table, and holds the nine figures.
+  // Part 5 comes after the map and the hospital table, and holds the nine figures.
   const part = page.slice(page.indexOf('id="history"'), page.indexOf('class="prog__foot"'));
   assert.equal(figureNumbers(part).length, 9);
   assert.ok(page.indexOf('id="map"') < page.indexOf('id="history"'));
@@ -688,10 +698,10 @@ test('the program page with the history: Part 4 is #history, the figures run 1 t
   // The heading says how many years and rounds of cuts, from the history.
   const heading = text(/<h2[^>]*id="history-h"[^>]*>([\s\S]*?)<\/h2>/.exec(page)[1].replace(/<[^>]+>/g, ''));
   same(numbers(heading), [String(HD.fys.length), String(HD.cutYears)]);
-  // Without the history the page has no Part 4, and its figures are the first thirteen.
+  // Without the history the page has no history Part, and its figures are the first eighteen.
   const without = renderProgram();
   assert.doesNotMatch(without, /id="history"/);
-  assert.equal(figureNumbers(without).length, 13);
+  assert.equal(figureNumbers(without).length, 18);
 });
 
 // ---------- place and hospital pages ----------
@@ -734,4 +744,26 @@ test('a hospital page with the history: the record strip in the verdict, the yea
     assert.match(p1, /hrec__y/);
     assert.doesNotMatch(p1, /id="years"/);
   }
+});
+
+test('a hospital\'s own record counts a decision CMS gave without a score, marks it and says so; the national counts don\'t', () => {
+  const yes = DATA.hospitals.find((h) => h.total === null && h.paymentReduction === 'Yes');
+  assert.ok(yes, 'the pinned file has a Yes with no score');
+  const rec = HD.recordOf(yes.ccn);
+  const last = rec.years.at(-1);
+  assert.equal(last.fy, DATA.fy);
+  assert.equal(last.c, 'Y', 'the newest year counts as cut');
+  assert.equal(last.noScore, true);
+  assert.ok(rec.cut >= 1, 'never "Never cut"');
+  assert.ok(rec.noScore.includes(DATA.fy));
+  const strip = String(recordStrip(rec, HD.fys));
+  assert.doesNotMatch(strip, /Never cut/);
+  assert.match(strip, new RegExp(`Cut in ${rec.cut} of ${rec.decided} years`));
+  assert.match(strip, /hrec__y--cut hrec__y--noscore/);
+  assert.match(text(strip), new RegExp(`In [^<]*FY${DATA.fy}, CMS reports a payment reduction decision for this hospital but no Total HAC Score\\.`));
+  assert.match(strip, new RegExp(`title="Fiscal year ${DATA.fy}: cut, with no score published"`));
+  // The national record (records(): scored decisions only) is unchanged.
+  assert.equal(HD.recs.get(yes.ccn)?.at(-1) ?? '.', '.');
+  // A hospital with no decision in any year has no record; one with only unscored decisions has one.
+  assert.equal(HD.recordOf('999999'), null);
 });

@@ -10,6 +10,7 @@ import { SHORT_NAMES } from '../constants.js';
 import { fill, fillKeep, sourcePlain, t } from '../copy.js';
 import { fill as pfill } from '../program/copy.js';
 import { DICTIONARY_PAGE, csvPath } from '../links.js';
+import { NUMERIC, SHOWN } from '../hospital-table.js';
 import { pillOf } from '../whatif-text.js';
 
 // The word carries the decision; the ink repeats it. N/A is hatched. The row CMS marked Yes with no score shows
@@ -45,7 +46,7 @@ export const asofBar = lastCall(({ fy, periods, source, typeFy = null, geocoded 
 });
 
 // The program page's sections the top bar's nav links to, by id (program.js gives each section its id), then Methods.
-export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'history']);
+export const SECTIONS = Object.freeze(['how', 'fy', 'money', 'map', 'history']);
 
 // The HACRP top bar (layout.js programHeader): the program's name and edition tag, the search (markup, or '') and
 // the numbered nav to the program page's sections and Methods. current: the nav item to mark (an id), or null.
@@ -53,7 +54,7 @@ export const SECTIONS = Object.freeze(['how', 'fy', 'map', 'history']);
 export const siteHeader = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current = null, searchUrl = null }) => {
   const { path, title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
-  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), map: t('navHospitals'), history: t('navHistory') };
+  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
   return programHeader({
     name: title,
     href: path,
@@ -106,7 +107,6 @@ export const dataLinks = lastCall((fy, source) => [fy, source], (fy, source) => 
 // (data-src) and shows it;
 // without JavaScript, a sentence and the CSV link. On a phone the column heads are hidden and a Sort by menu (the same
 // keys, each way) stands in for them.
-const COLUMNS = [['name', 'tableColName'], ['city', 'tableColCity'], ['state', 'tableColState'], ['score', 'tableColScore'], ['decision', 'tableColDecision']];
 export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading'), intro = t('tableIntro'), caption = t('tableCaption'), noScript = t('tableNoScript'), area = null }) => html`<section class="block hospitals" aria-labelledby="hospitals-h" id="hospitals">
 <h2 id="hospitals-h">${heading}</h2>
 <p class="ht-nojs">${noScript}</p>
@@ -116,12 +116,12 @@ export const hospitalTable = ({ fy, searchUrl, source, heading = t('tableHeading
 <div class="ht__controls">
 ${area ? '' : html`<p class="ht__field"><label for="ht-state">${t('tableState')}</label> <select id="ht-state"><option value="">${t('tableAllStates')}</option></select></p>
 `}<p class="ht__field"><label for="ht-name">${t('tableName')}</label> <input id="ht-name" type="search" autocomplete="off"></p>
-<p class="ht__field ht__sort"><label for="ht-sort">${t('tableSortBy')}</label> <select id="ht-sort">${COLUMNS.flatMap(([key, label]) => [1, -1].map((dir) => html`<option value="${key}:${dir}"${key === 'state' && dir === 1 ? html` selected` : ''}>${fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: t(label) })}</option>`))}</select></p>
+<p class="ht__field ht__sort"><label for="ht-sort">${t('tableSortBy')}</label> <select id="ht-sort">${SHOWN.flatMap(({ key, label }) => [1, -1].map((dir) => html`<option value="${key}:${dir}"${key === 'state' && dir === 1 ? html` selected` : ''}>${fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: t(label) })}</option>`))}</select></p>
 </div>
 <p class="small" id="ht-count" aria-live="polite"></p>
 ${printout(html`<table class="gb gb--hospitals">
 <caption class="vh" id="hospitals-cap">${caption}</caption>
-<thead><tr>${COLUMNS.map(([key, label]) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${key === 'score' ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
+<thead><tr>${SHOWN.map(({ key, label }) => html`<th scope="col" data-key="${key}"${key === 'state' ? html` aria-sort="ascending"` : ''}${NUMERIC.has(key) ? html` class="num"` : ''}><button type="button" class="fig__sort">${t(label)}</button></th>`)}</tr></thead>
 <tbody></tbody>
 </table>`)}
 <p class="fig__actions"><button type="button" class="fig__btn" id="ht-all" hidden></button></p>

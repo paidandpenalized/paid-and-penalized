@@ -16,7 +16,7 @@ export const COPY = {
   },
   noteScore: { text: "CMS's note on the score: {notes}", claim: null },
   noteDecision: { text: "CMS's note on the payment reduction: {notes}", claim: null },
-  whyYes: { text: "Its score was above CMS's line, so CMS cut its traditional Medicare inpatient payments by {pct} for the year.", claim: ['HACRP-02', 'HACRP-01', 'HACRP-24'] },
+  whyYes: { text: "Its score was above CMS's line, so CMS cut its Medicare inpatient payments by {pct} for the year.", claim: ['HACRP-02', 'HACRP-01', 'HACRP-24', 'HACRP-79'] },
   whyNo: {
     text: "Its score was at or below CMS's line, so this program did not cut its Medicare payments for the year.",
     claim: 'HACRP-01',
@@ -68,6 +68,22 @@ export const COPY = {
     text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}.",
     claim: 'HACRP-01',
   },
+  // The what-if's dollars: this site's estimate of the HAC cut, moved with the decision (never CMS's).
+  whatifYesMoney: { text: "That would be above CMS's line, so the payment reduction decision would be Yes: a {pct} cut, about {amount} by this site's estimate.", claim: ['HACRP-02', 'HACRP-01'] },
+  whatifNoKeeps: { text: "Under the line, the hospital would keep the whole cut, about {amount} by this site's estimate; how far under doesn't change it.", claim: 'HACRP-01' },
+  whatifCloseMoney: {
+    text: "That would be too close to call: this site's recompute cannot place it on either side of CMS's line, so the cut would be {cuts}: {amounts} by this site's estimate.",
+    claim: 'HACRP-01',
+  },
+  whatifRowMoney: { text: 'Estimated HAC cut', claim: null },
+  whatifMoneyEither: { text: '{zero} or {amount}', claim: 'HACRP-01' },
+  whatifMoneyCut: { text: 'estimated cut', claim: null },
+  whatifMoneyCutRange: { text: 'estimated cut, likely {range}', claim: null },
+  whatifMoneyNone: { text: 'no cut', claim: null },
+  whatifCliffNone: { text: 'no cut', claim: null },
+  whatifWorthYes: { text: "Getting under CMS's line would keep about {amount}, this site estimates: the whole cut, however far under the score lands.", claim: 'HACRP-01' },
+  whatifWorthNo: { text: "Staying at or under CMS's line keeps about {amount} out of this program's cut, this site estimates: a score a hair over would cost all of it.", claim: 'HACRP-01' },
+  slideMoney: { text: "Estimated HAC cut: {before} → {after} (Hypothetical; this site's estimate)", claim: null },
   whatifCmsWas: { text: 'CMS reports a payment reduction decision of {decision}.', claim: null },
   whatifMedianWas: { text: 'Before these changes, this site recomputes its decision as {decision}.', claim: null },
   whatifNA: { text: 'The payment reduction decision would stay {decision}.', claim: 'HACRP-13' },
@@ -99,6 +115,10 @@ export const COPY = {
   whatifIntro: {
     text: "Change a measure's value to see how this site recomputes the Total HAC Score and the payment reduction decision, starting from CMS's values.",
     claim: null,
+  },
+  whatifIntroMoney: {
+    text: "Change a measure's value to see how this site recomputes the Total HAC Score, the payment reduction decision and, by its estimate, the money, starting from CMS's values. The money doesn't slide with the score: it drops off a cliff at CMS's line.",
+    claim: 'HACRP-01',
   },
   whatifIntroMedian: {
     text: "Change a measure's value to see how this site recomputes the score of its hypothetical hospital at the national median on every measure.",
@@ -199,6 +219,7 @@ export const COPY = {
   navFy: { text: 'FY{fy}', claim: null },
   fyShort: { text: 'FY{fy}', claim: null },
   navHistory: { text: 'History', claim: null },
+  navMoney: { text: 'The money', claim: null },
   navHospitals: { text: 'Every hospital', claim: null },
 
   // Hospital page, the record card (pages/hospital.js recordCard): its title bar, then one numbered field each.
@@ -240,6 +261,11 @@ export const COPY = {
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
   hospitalDescription: {
+    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, and this site's estimate of the dollars, from public CMS data.",
+    claim: null,
+  },
+  // The same, for a hospital this site has no estimate for (Maryland's, or one with no usable payment inputs).
+  hospitalDescriptionNone: {
     text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, from public CMS data.",
     claim: null,
   },
@@ -261,6 +287,7 @@ export const COPY = {
   noValue: { text: 'no value published', claim: null },
   footnoteLead: { text: 'CMS footnote {code}:', claim: null },
   estimateTag: { text: 'estimate', claim: null },
+  estimateTagLabel: { text: 'Estimate: how this site estimates the dollars', claim: null },
   estimateNote: {
     text: "This site recomputes this measure's z-score from CMS's published value. The recompute can differ from CMS's z-score by up to {maxError}.",
     claim: null,
@@ -314,7 +341,7 @@ export const COPY = {
   summaryCut: { text: 'Hospitals cut', claim: null },
   summaryCutNote: { text: "Of {decided} scored hospitals with a Yes or No", claim: null },
   summaryPct: { text: 'The cut', claim: 'HACRP-01' },
-  summaryPctNote: { text: "Of each traditional Medicare inpatient payment, for the fiscal year", claim: ['HACRP-01', 'HACRP-24'] },
+  summaryPctNote: { text: "Of a hospital's Medicare inpatient payments, for the fiscal year", claim: ['HACRP-01', 'HACRP-24', 'HACRP-79'] },
   summaryScored: { text: 'Scored', claim: null },
   summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
   // CMS's line, as a summary field and in a sentence.
@@ -539,12 +566,14 @@ export const COPY = {
   nearbyColDecision: { text: 'Decision', claim: null },
   nearbyColMeasures: { text: 'Measures', claim: null },
   nearbyGlyph: { text: 'Above the national median on {worse} of {scored} measures', claim: null },
-  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {miles} miles', claim: null },
+  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {distance}', claim: null },
   nearbyThis: { text: 'This hospital', claim: null },
   nearbyRing: { text: '{miles} mi', claim: null },
-  figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {miles} miles away.', claim: null },
-  figNearbyTakeawayNear: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is less than a mile away.', claim: null },
-  // A distance under a mile, in the table.
+  figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
+  // A distance in words (hospital-figures.js milesText): under a mile, a mile when rounded, else whole miles (a count and
+  // its noun); in the table, under a mile in its column of miles.
+  milesUnder: { text: 'less than a mile', claim: null },
+  milesAbout: { text: 'about a mile', claim: null },
   nearbyUnderMile: { text: 'under {one}', claim: null },
   figPeersSame: { text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut is {share} in every group.', claim: null },
   figNearbyAlt: { text: 'Map of the area around this hospital, with its nearest scored hospitals numbered as in the table.', claim: null },
@@ -562,7 +591,7 @@ export const COPY = {
     text: 'The sortable table of every hospital needs JavaScript; the CSV file holds the same values.',
     claim: null,
   },
-  tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them", claim: null },
+  tableCaption: { text: "Every hospital in CMS's file, with its Total HAC Score and payment reduction decision as CMS reports them, and this site's estimate of the cut in dollars", claim: null },
   tableState: { text: 'State', claim: null },
   tableAllStates: { text: 'All states', claim: null },
   tableName: { text: 'Name, city or CCN contains', claim: null },
@@ -575,6 +604,9 @@ export const COPY = {
   tableColState: { text: 'State', claim: null },
   tableColScore: { text: 'Total HAC Score', claim: null },
   tableColDecision: { text: 'Payment reduction', claim: null },
+  // This site's estimate of the HAC cut, in dollars ("modeled": not CMS's number).
+  tableColMoney: { text: 'Est. cut ($, modeled)', claim: null },
+  tableMoneyNone: { text: 'no estimate', claim: null },
   tableCount: { text: '{n} hospitals shown.', claim: null },
   tableCountOne: { text: 'One hospital shown.', claim: null },
   tableCountNone: { text: 'No hospital matches.', claim: null },
