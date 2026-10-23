@@ -23,7 +23,8 @@ def run_tests():
 
 def emit():
     """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
-    (The dollars read the HACRP file, not the master.)"""
+    (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
+    emitter first.)"""
     from pp_pipeline import emit_dollars, emit_hospital
     EMITTERS = (emit_hospital, emit_dollars)  # each has a main() that returns its exit code
     return max([emitter.main() for emitter in EMITTERS])

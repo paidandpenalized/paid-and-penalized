@@ -1,7 +1,8 @@
 """Build the dollars dataset from the pinned inputs and write data/emitted/dollars/fy<YYYY>/dollars.json.
 
 `python3 -I pipeline/py/run.py emit` (or `make emit`) runs this after the hospital master. A rebuild that changes
-nothing keeps the committed built_at, so git stays clean.
+nothing keeps the committed built_at, so git stays clean. The `hac_count` check reads the Yes count in the HACRP site's
+emitted file, so `make emit`, which runs that site's emitter first, is the way to rebuild after a re-pin.
 
 The file holds, for every hospital in the HACRP file, the estimate pp_engine.dollars makes of what Medicare pays it for
 the year and how much HRRP, HVBP and the HAC Reduction Program move that (a model, not a bill: see the engine's
@@ -14,7 +15,7 @@ from datetime import datetime, timezone
 from pp_engine import dollars
 from pp_engine.contract import envelope
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
-from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_manifest, write_emitted
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
 
 SCHEMA_VERSION, METHODS_VERSION = 1, 1
@@ -93,6 +94,15 @@ def totals_json(nat):
     return {**{camel(k): v for k, v in nat.items()}, "parts": {camel(k): v for k, v in nat["parts"].items()}}
 
 
+def site_yes_count(fy):
+    """The number of hospitals the HACRP site's emitted file (built from the same pin by the site's own reader) marks
+    Yes. The `hac_count` check holds the rows here against it, so the rows are not checked against themselves."""
+    path = EMITTED_DIR / "hacrp" / f"fy{fy}" / "hacrp.json"
+    if not path.exists():
+        raise ValueError(f"{path.relative_to(REPO_ROOT)} is missing: emit the HACRP site first (`make emit` does)")
+    return sum(h["paymentReduction"] == "Yes" for h in read_json(path)["hospitals"])
+
+
 def build_from_pins(built_at):
     hacrp = read_hacrp()
     fy, records = hacrp["fy"], hacrp["records"]
@@ -104,7 +114,7 @@ def build_from_pins(built_at):
     enforce_caps(built)
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]
     national = dollars.national(built)
-    checks = dollars.checks(national, hacrp_yes=sum(r["cut"] for r in records))
+    checks = dollars.checks(national, hacrp_yes=site_yes_count(fy))
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
         "assumptions": {"ratesFy": FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,

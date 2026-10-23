@@ -319,7 +319,8 @@ def checks(nat, *, hacrp_yes):
       hrrp_share       HRRP dollars lost over B of the penalized hospitals, in HRRP_SHARE
       vbp_net          |HVBP dollars| (the net of winners and losers), at most VBP_NET_OF_POOL of the 2% pool
       hac_share        HAC dollars lost over everyone's T, in HAC_SHARE
-      hac_count        hospitals marked cut, any status, equal to `hacrp_yes`: the HACRP file's Yes count
+      hac_count        hospitals marked cut, any status, equal to `hacrp_yes`: the Yes count the caller reads from
+                       the HACRP site's emitted file, not from the rows being checked
       yes_unestimated  cut hospitals with no estimate, at most YES_UNESTIMATED_MAX
     A share with nothing to divide by has value None and fails."""
     return [
