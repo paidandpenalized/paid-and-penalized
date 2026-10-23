@@ -11,6 +11,7 @@
 import { scaleLog } from 'd3-scale';
 import { html } from '../render/html.js';
 import { dodge } from './acrossLine.js';
+import { axis } from './axis.js';
 import { frame, hatchDefs, hatchFill, isNarrow, mark, r2, text } from './svg.js';
 
 const PAD = 8;
@@ -68,7 +69,7 @@ ${median}
 ${text({ x: xe, y: TOP - 22, anchor: xo < xe ? 'start' : 'end', dx: xo < xe ? 3 : -3, cls: 'chart-cap', body: labels.exact })}
 ${text({ x: xo, y: TOP - 10, anchor: xo < xe ? 'end' : 'start', dx: xo < xe ? -3 : 3, cls: 'chart-cap', body: labels.overall })}
 ${placed.map(strip)}
-<g transform="translate(0 ${r2(axisY)})"><g class="chart-axis"><line class="chart-axis__line" x1="${PAD}" x2="${r2(width - PAD)}" y1="0" y2="0"/>${marks.map((v) => html`<line class="chart-axis__tick" x1="${r2(x(v))}" x2="${r2(x(v))}" y1="0" y2="4"/><text class="chart-axis__label" x="${r2(x(v))}" y="16" text-anchor="middle">${format(v)}</text>`)}</g></g>
+<g transform="translate(0 ${r2(axisY)})">${axis({ scale: x, ticks: marks, format })}</g>
 ${text({ x: width - PAD, y: height - 2, anchor: 'end', cls: 'chart-cap', body: labels.axis })}`,
   });
 }
