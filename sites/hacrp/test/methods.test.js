@@ -205,8 +205,15 @@ test('the changes and the sources: every changelog entry with its date and items
     assert.ok(sources.includes(`<code>${entry.sha256.slice(0, 16)}…</code>`), `${pin}: fingerprint`);
     assert.ok(sources.includes(`<td class="num">${count(entry.bytes)}</td>`), `${pin}: size`);
   }
-  // The table lists the pins the HACRP pages read, not every pin: an input pinned before any page reads it sits in the manifest unlisted.
+  // The table lists the pins the HACRP pages read, not every pin.
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
+  // The pins no page reads yet: each id comes off this list when a page reads it (and then joins pinsUsed). A pin
+  // read but missing from pinsUsed, or one pinned and read by nothing, fails here.
+  const used = new Set(DATA.pinsUsed.map((e) => e.id));
+  assert.deepEqual(
+    manifest.filter((e) => !used.has(e.id)).map((e) => e.id),
+    ['ipps-impact-fy2026', 'ipps-rates-fy2026', 'hrrp-supplemental-fy2026', 'hvbp-table16b-fy2026'],
+  );
 });
 
 test('the pipeline\'s six stations carry the newest year\'s real numbers', () => {
