@@ -17,9 +17,10 @@ import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
 import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
-import { nationalRange, sumRanges } from '../web/money.js';
+import { nationalRange, rangeOf, sumRanges } from '../web/money.js';
 import { REDUCTION_PCT } from '../web/constants.js';
-import { methodsPage } from '../web/pages/methods.js';
+import { furthestGroup, methodsPage } from '../web/pages/methods.js';
+import { absLogPct, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PLACES, renderPlace, renderProgram } from './pinned.js';
 import { ASSETS } from './fixtures.js';
 
@@ -363,6 +364,35 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   assert.equal([...table.matchAll(/<tr><th scope="row"/g)].length, b.measures.hac.strata.length);
   // Every figure the back-test checks, in the summary table.
   assert.equal([...sec.matchAll(/<table class="gb bt-measures">[\s\S]*?<\/table>/g)].length, 1);
+  // The group named as running highest (or lowest) is the one with the largest own median miss among every group with
+  // hospitals of its own, whatever range it uses: on these pins, the largest own median, a positive one.
+  const hac = b.measures.hac;
+  const withOwn = hac.strata.filter((s) => s.n > 0);
+  const largest = withOwn.reduce((a, s) => (s.median > a.median ? s : a));
+  assert.equal(furthestGroup(hac.strata), largest);
+  assert.ok(largest.median > 0 && withOwn.every((s) => Math.abs(s.median) <= largest.median));
+  assert.ok(largest.pool !== 'stratum', 'on these pins the group runs on a borrowed range, which the old rule skipped');
+  const words = stratumLabel(b.strata.find((s) => s.id === largest.stratum)).words;
+  assert.ok(text.includes(`The estimates of ${words} ran highest, by ${absLogPct(largest.median, 1)} at the median across its ${count(largest.n)} hospitals.`));
+  // Coverage, from the data: each group's own hospitals inside the range it uses, in the notes and the table, and
+  // the spread across the groups in words; never a promise.
+  const inside = insideCounts(b);
+  for (const s of withOwn) {
+    const k = inside.get(s.stratum);
+    const lo = b.points.filter((p) => p.stratum === s.stratum && p.actual >= rangeOf(b, 'hac', s.stratum, p.model)[0] && p.actual <= rangeOf(b, 'hac', s.stratum, p.model)[1]).length;
+    assert.equal(k, lo, s.stratum);
+    assert.ok(strip(wide).includes(`${count(s.n)} hospitals, ${count(k)} inside`), s.stratum);
+  }
+  assert.ok(table.includes('Inside its range'));
+  const held = withOwn.map((s) => inside.get(s.stratum) / s.n);
+  assert.ok(text.includes(`from ${pct(Math.min(...held), 0)} to ${pct(Math.max(...held), 0)} of them`));
+  assert.doesNotMatch(text, /8 in 10|eight in ten/i);
+  // The cut hospitals the HAC statistics leave out, counted from the data and said to sit outside them.
+  const left = b.comparison.cut - hac.pairs.compared;
+  assert.equal(left, hac.pairs.signMismatch + hac.pairs.zeroActual + hac.pairs.zeroModel + hac.pairs.bothZero);
+  assert.ok(left > 0 && text.includes(`Of the ${count(b.comparison.cut)} cut hospitals, ${count(left)} can’t be compared, and sit outside every statistic of the HAC cut below`));
+  // The Medicare Advantage teaching change came after the first check, on the same hospitals: said once, in the limits.
+  assert.match(text, /not an independent test of the teaching payments on Medicare Advantage stays/);
 });
 
 // Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element

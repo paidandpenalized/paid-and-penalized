@@ -86,7 +86,7 @@ export function checkDollarsYear(dollars, fy) {
 // What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
 // the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
 // `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
-// `backtest` what a range means (`share` of the back-test's hospitals a range held, and the `fy` it was run on). A file
+// `backtest` what a range means (the `share` of the back-test's misses a range spans, and the `fy` it was run on). A file
 // without `bands` can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
 // the slice it draws.
 export function dollarsData(dollars, hospitals) {

@@ -5,9 +5,11 @@ For one measure (the HAC cut, the HRRP and HVBP adjustments, the net of the thre
 back-test gives, per hospital, the model's figure and the cost report's. Where both are nonzero and of one sign, the
 error is log(model / actual). Each stratum of hospitals (by beds, and whether a sole community or Medicare-dependent
 hospital) gets the 10th and 90th percentiles of its errors, p10 and p90. A hospital's range for the measure is then
-estimate / exp(p90) to estimate / exp(p10): in the back-test, a hospital's actual figure lay in such a range for 8 in
-10 of its stratum. The ranges are not centred on the estimate: a stratum whose median error is above zero (the model
-runs high) gets a range that sits below its estimates. The point estimates themselves are not corrected.
+estimate / exp(p90) to estimate / exp(p10): as wide as the middle 80% of its stratum's errors (or a wider group's,
+below) in one year's back-test. The ranges are fitted on the hospitals they are checked on, so how many of a stratum's
+own hospitals a range holds is a measure of fit, not a promise of how often a later actual figure lands inside. The
+ranges are not centred on the estimate: a stratum whose median error is above zero (the model runs high) gets a range
+that sits below its estimates. The point estimates themselves are not corrected.
 
 A stratum with fewer than MIN_STRATUM hospitals for a measure borrows the percentiles of its bed band (both kinds
 pooled), and a bed band with too few borrows the whole set's; every borrowing is recorded. A hospital the impact file

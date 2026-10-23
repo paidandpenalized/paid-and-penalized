@@ -185,10 +185,12 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `pool` records which, `poolN` how many.
 - Bands: per stratum and measure, the 10th and 90th percentiles of the errors (linear interpolation between order
   statistics, as Excel's PERCENTILE.INC), rounded to 4 places, and the multipliers exp(-p90) and exp(-p10), also to 4
-  places. A hospital's range is its estimate times the two: in the back-test, 8 in 10 hospitals' actual figures fell
-  in such a range around the model's. Each stratum's own median error (its bias) and the overall median are reported
-  beside the bands; the point estimates are not corrected for them. The net's band is back-tested directly, not
-  built from the others.
+  places. A hospital's range is its estimate times the two: as wide as the middle 80% of its stratum's errors (or its
+  pool's) in the back-test. The ranges are fitted on the same hospitals, so how many of a stratum's own a range holds
+  measures the fit, not how often a later actual lands inside; the Methods page gives each stratum's count (the
+  points' cost-report figures inside their ranges, as the pages work them out). Each stratum's own median error (its
+  bias) and the overall median are reported beside the bands; the point estimates are not corrected for them. The
+  net's band is back-tested directly, not built from the others.
 - The national range: the sum of the cut hospitals' estimates times the 10th and 90th percentiles of sum(actual) /
   sum(model) over the 131 compared cut hospitals, resampled with replacement 10,000 times (a bootstrap of hospitals;
   Python's Mersenne Twister, seed 20261023). It reflects one year's back-test, not how the next year's will move.

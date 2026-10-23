@@ -13,7 +13,7 @@ import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
-import { rangeShare } from './money.js';
+import { rangeOf, rangeShare } from './money.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
 // The pinned-input manifest's fingerprint, by name.
@@ -282,6 +282,23 @@ export function stratumLabel(s) {
 }
 const hospitalsText = (n) => noun(n, 'hospital');
 
+// How many of each stratum's own compared cut hospitals the range the stratum uses holds: the cost report's HAC amount
+// within the estimate's likely range, as a page works it out (money.js rangeOf). The ranges were set on these same
+// hospitals, so this is how well they fit, in-sample. Map of stratum id to count.
+export function insideCounts(bands) {
+  const inside = new Map(bands.measures.hac.strata.map((s) => [s.stratum, 0]));
+  for (const p of bands.points) {
+    const [lo, hi] = rangeOf(bands, 'hac', p.stratum, p.model);
+    if (p.actual >= lo && p.actual <= hi) inside.set(p.stratum, inside.get(p.stratum) + 1);
+  }
+  return inside;
+}
+
+// The cut hospitals the HAC cut's statistics leave out, in words: each kind of pair that can't be compared
+// (bands.measures.hac.pairs), with its count, as one list; '' when every cut hospital was compared.
+const NOT_COMPARED = [['signMismatch', 'btNotSign'], ['zeroActual', 'btNotZeroActual'], ['zeroModel', 'btNotZeroModel'], ['bothZero', 'btNotBothZero']];
+export const notComparedText = (pairs) => listText(NOT_COMPARED.filter(([key]) => pairs[key] > 0).map(([key, words]) => fill(words, { n: count(pairs[key]) })));
+
 // Where a stratum's range comes from, in words: its own hospitals, all of its bed band's, or every hospital's.
 const poolText = (band, label) => (band.pool === 'stratum' ? t('btPoolOwn') : band.pool === 'beds' ? fill('btPoolBeds', { beds: label.beds }) : t('btPoolAll'));
 
@@ -291,9 +308,12 @@ const poolText = (band, label) => (band.pool === 'stratum' ? t('btPoolOwn') : ba
 export function backtestFigure(bands, { n, source, names }) {
   const hac = bands.measures.hac;
   const labels = new Map(bands.strata.map((s) => [s.id, stratumLabel(s)]));
+  const inside = insideCounts(bands);
   const rows = hac.strata.map((band) => {
     const label = labels.get(band.stratum);
     const from = poolText(band, label);
+    // The group's hospitals, and how many of them its range holds (none to count in a group with no hospitals)
+    const hospitals = band.n ? fill('btInside', { hospitals: hospitalsText(band.n), inside: count(inside.get(band.stratum)) }) : hospitalsText(0);
     const dots = bands.points.filter((p) => p.stratum === band.stratum).map((p) => {
       const who = names(p.ccn);
       const values = { model: money(p.model), actual: money(p.actual), ratio: times(p.model / p.actual) };
@@ -301,10 +321,10 @@ export function backtestFigure(bands, { n, source, names }) {
     });
     return {
       label: label.name,
-      note: band.pool === 'stratum' ? fill('btNote', { hospitals: hospitalsText(band.n) }) : fill('btNoteBorrowed', { hospitals: hospitalsText(band.n), pool: from }),
-      short: { label: label.short, note: fill(band.pool === 'stratum' ? 'btNote' : 'btNoteBorrowedShort', { hospitals: hospitalsText(band.n) }) },
+      note: band.pool === 'stratum' ? fill('btNote', { hospitals }) : fill('btNoteBorrowed', { hospitals, pool: from }),
+      short: { label: label.short, note: fill(band.pool === 'stratum' ? 'btNote' : 'btNoteBorrowedShort', { hospitals }) },
       band: [ratioOf(band.p10), ratioOf(band.p90)], borrowed: band.pool !== 'stratum', median: band.median === null ? null : ratioOf(band.median), dots,
-      n: band.n, from, // for the figure's table
+      n: band.n, inside: inside.get(band.stratum), from, // for the figure's table
     };
   });
   const xs = rows.flatMap((r) => [...r.dots.map((d) => d.x), ...r.band]);
@@ -320,8 +340,8 @@ export function backtestFigure(bands, { n, source, names }) {
     n, takeaway, source, claimLevel: 'estimate', csvName: 'hacrp-dollars-backtest', alt: t('btAlt'), note: t('btNote2'),
     ...drawn(draw, METHODS_WIDE),
     table: {
-      columns: [{ name: t('btColGroup') }, { name: t('btColHospitals'), numeric: true }, { name: t('btColMedian'), numeric: true }, { name: t('btColLow'), numeric: true }, { name: t('btColHigh'), numeric: true }, { name: t('btColFrom') }],
-      rows: rows.map((r) => [r.label, num(count(r.n), r.n), r.median === null ? num(t('receiptDash'), null) : num(times(r.median), r.median.toFixed(4)),
+      columns: [{ name: t('btColGroup') }, { name: t('btColHospitals'), numeric: true }, { name: t('btColInside'), numeric: true }, { name: t('btColMedian'), numeric: true }, { name: t('btColLow'), numeric: true }, { name: t('btColHigh'), numeric: true }, { name: t('btColFrom') }],
+      rows: rows.map((r) => [r.label, num(count(r.n), r.n), num(count(r.inside), r.inside), r.median === null ? num(t('receiptDash'), null) : num(times(r.median), r.median.toFixed(4)),
         num(times(r.band[0]), r.band[0].toFixed(4)), num(times(r.band[1]), r.band[1].toFixed(4)), r.from]),
     },
   });

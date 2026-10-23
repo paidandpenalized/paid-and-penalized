@@ -57,8 +57,8 @@ export function nationalRange(bands, estimate) {
   return scaled(estimate, bands.national.p10, bands.national.p90);
 }
 
-// What a likely range means: the share of the back-test's hospitals whose actual figure fell inside one (the spread
-// between its two percentiles, bands.lowPct and bands.highPct).
+// How much of the back-test's misses a likely range spans: the share between its two percentiles (bands.lowPct and
+// bands.highPct), the middle 80%.
 export const rangeShare = (bands) => bands.highPct - bands.lowPct;
 
 // A place's range: its hospitals' ranges added up, low ends and high ends, from each hospital's [low, high] (null for

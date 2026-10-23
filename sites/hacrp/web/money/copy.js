@@ -124,7 +124,7 @@ export const COPY = {
   stmtLikely: { text: 'likely {range}', claim: null },
   stmtNone: { text: 'Not paid to this hospital: {list}.', claim: null },
   stmtWhole: { text: 'Whole dollars, so every line adds up; the estimate is not that precise.', claim: null },
-  stmtRanges: { text: 'Each likely range is as wide as the one that held {share} of hospitals like this one when this site checked its method against their FY{fy} cost reports.', claim: null },
+  stmtRanges: { text: "Each likely range spans the middle {share} of the misses this site's estimate made for similar hospitals (or for a wider group, where there were too few) when it was checked against their FY{fy} cost reports: one year's check, not a promise of how often a hospital's actual figure lands inside.", claim: null },
   stmtKeyPart: { text: 'Part of the payment', claim: null },
   stmtKeyScope: { text: 'What a program applies to', claim: null },
   stmtKeyCut: { text: 'The adjustment', claim: null },

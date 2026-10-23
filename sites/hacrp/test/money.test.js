@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
-import { cmsText, count, decimal, dollars, money, moneyRange } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
@@ -252,6 +252,11 @@ test('dollars without their ranges are refused, in every build; the data carries
   assert.deepEqual(DATA.dollars.backtest, { share: file.bands.highPct - file.bands.lowPct, fy: file.bands.fy });
   assert.equal(rangeShare(BANDS), DATA.dollars.backtest.share);
   for (const row of rows) assert.equal('ranges' in row, row.status === 'estimated', row.ccn);
+  // What the statement says a range is: the middle of the misses, from a one-year check; not a promise of coverage.
+  const note = text(pageOf(CUT));
+  assert.ok(note.includes(`Each likely range spans the middle ${pct(DATA.dollars.backtest.share, 0)} of the misses this site’s estimate made for similar hospitals`));
+  assert.ok(note.includes('not a promise of how often a hospital’s actual figure lands inside'));
+  assert.doesNotMatch(note, /8 in 10|held \d+%/);
 });
 
 test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmissions ± value-based) × 1% = the cut; ÷ stays = per stay', () => {
