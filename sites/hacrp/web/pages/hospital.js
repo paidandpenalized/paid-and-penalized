@@ -2,7 +2,8 @@
 // place, type, CMS's score and decision, Care Compare's stars; the state's outline a watermark behind it) beside the
 // verdict (a stamp, the summary, CMS's line in plain words and the line bar), the two the same height over a bold
 // rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
-// hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the what-if, the groups the
+// hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the money (the cliff, then the
+// statement line by line) for an estimated hospital, the what-if, the groups the
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
 // show CMS's values and add no inference.
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
@@ -230,12 +231,12 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   let n = 0;
   const numbered = (fig) => { if (fig) n++; return fig; };
   const moneySource = moneySourceText({ fy: view.fy, source });
-  const cliffFig = money.estimated && view.scored ? numbered(cliffFigure(view, money, nat, { n: n + 1, source: moneySource })) : null;
-  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource, backtest })) : null;
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
   const sum = view.scored ? numbered(sumFigure({ view, n: n + 1, source: line })) : null;
+  const cliffFig = money.estimated && view.scored ? numbered(cliffFigure(view, money, nat, { n: n + 1, source: moneySource })) : null;
+  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource, backtest })) : null;
   const what = view.scored && whatif ? numbered(whatIfBlock(view, whatif, source, assets, n + 1)) : null;
   // Its years: where its score fell each year CMS published one, when the build holds the history and CMS published
   // its score in more than one year.
@@ -256,21 +257,6 @@ ${notes.length || small ? html`<div class="hosp__notes">
 ${notes.map((s) => html`<p>${s}</p>`)}
 ${small && html`<p class="note">${small}</p>`}
 </div>` : ''}
-${cliffFig && section({
-    id: 'cliff', wide: true,
-    text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
-<p>${mfill(maKey(money, 'cliffIntro'), { pct: REDUCTION_TEXT })}</p>
-<p>${mt('cliffHow')}</p>`,
-    figure: cliffFig,
-  })}
-${statement && section({
-    id: 'money',
-    text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
-<p>${mfill(maKey(money, 'stmtIntro'), { fy })}</p>
-<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
-${moneyWorksheet(money)}`,
-    figure: statement,
-  })}
 ${section({
     id: 'measures', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
@@ -285,6 +271,21 @@ ${sum && section({
 ${worksheet(view)}
 ${view.distance && html`<p class="hsec__stat">${distanceSentence(view)}</p>`}`,
     figure: sum,
+  })}
+${cliffFig && section({
+    id: 'cliff', wide: true,
+    text: html`<h2 id="cliff-h">${mt('cliffHeading')}</h2>
+<p>${mfill(maKey(money, 'cliffIntro'), { pct: REDUCTION_TEXT })}</p>
+<p>${mt('cliffHow')}</p>`,
+    figure: cliffFig,
+  })}
+${statement && section({
+    id: 'money',
+    text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
+<p>${mfill(maKey(money, 'stmtIntro'), { fy })}</p>
+<p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
+${moneyWorksheet(money)}`,
+    figure: statement,
   })}
 ${what?.body}
 ${years && section({

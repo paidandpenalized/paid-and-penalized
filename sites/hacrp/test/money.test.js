@@ -260,10 +260,11 @@ test('the share sentence names CMS\'s decision and the dollars as this site\'s e
   }
 });
 
-test('a hospital page: the cliff, then the statement, before the measures; the record\'s dollars field; the what-if\'s dollars at stake', () => {
+test('a hospital page: the measures and the sum, then the cliff and the statement, then the what-if; the record\'s dollars field; the what-if\'s dollars at stake', () => {
   const page = pageOf(CUT);
   const at = (id) => page.indexOf(`id="${id}"`);
-  assert.ok(at('cliff') > 0 && at('cliff') < at('money') && at('money') < at('measures'), 'order');
+  const order = ['measures', 'sum', 'cliff', 'money', 'whatif'].map(at);
+  assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `order ${order}`);
   assert.match(page, /<div class="field f-money">/);
   const data = JSON.parse(/<script type="application\/json" id="hacrp-hospital">(.*?)<\/script>/s.exec(page)[1]);
   assert.equal(data.hospital.atStake, CUT.atStake);
