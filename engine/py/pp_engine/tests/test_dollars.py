@@ -1,6 +1,7 @@
 """The per-hospital dollar estimate, on synthetic hospitals with small round numbers. Every expected value is worked by
 hand in the test that checks it (the arithmetic is in a comment beside the number)."""
 import math
+import random
 import unittest
 
 from pp_engine.dollars import (HAC_RATE, HAC_SHARE, HRRP_SHARE, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
@@ -334,6 +335,21 @@ def money(base, hrrp=0, hvbp=0, hac=0, total=None):
             "net": hrrp + hvbp + hac}
 
 
+PARTS = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")
+
+
+def assert_adds_up(case, r):
+    """Every sum in a whole-dollar row is exactly the sum of what is shown beside it."""
+    case.assertTrue(all(type(r[k]) is int for k in PARTS + ("base", "total", "hrrp", "hvbp", "after", "at_stake",
+                                                             "hac", "net")), r)
+    case.assertEqual(r["base"], r["fed"] + r["mdh_addon"])
+    case.assertEqual(r["total"], r["base"] + sum(r[k] for k in PARTS[2:]))
+    case.assertEqual(r["after"], r["total"] + r["hrrp"] + r["hvbp"])
+    case.assertEqual(r["at_stake"], round(0.01 * r["after"]))
+    case.assertEqual(r["hac"], -r["at_stake"] if r["cut"] else 0)
+    case.assertEqual(r["net"], r["hrrp"] + r["hvbp"] + r["hac"])
+
+
 NAT = {"hospitals": 4, "base": 480000, "total": 480000, "hrrp": -2112, "hvbp": 0, "after": 477888, "hac": -1195,
        "net": -3307, "cut": 1, "hrrp_base": 480000, "vbp_base": 240000, "yes": 1, "yes_unestimated": 0,
        "by_status": {"estimated": 4, "maryland": 0, "parhm": 0, "no-inputs": 0}}
@@ -373,22 +389,53 @@ class Status(unittest.TestCase):
 class RoundDollars(unittest.TestCase):
     def test_every_dollar_field_becomes_a_whole_number_of_dollars(self):
         rounded = round_dollars(est(ime_op=0.1, hrrp=0.9956, vbp=1.0, cut=True))
-        # B = T = 120,000 + IME 12,000; HRRP 120,000 x -0.0044 = -528; after = 131,472; at stake 1,314.72
+        # B = 120,000; T = 120,000 + IME 12,000 = 132,000; HRRP 120,000 x -0.0044 = -528; after = 131,472;
+        # at stake 0.01 x 131,472 = 1,314.72 -> 1,315; HAC -1,315; net = -528 - 1,315
         self.assertEqual(rounded["base"], 120000)
         self.assertEqual(rounded["total"], 132000)
         self.assertEqual(rounded["hrrp"], -528)
         self.assertEqual(rounded["after"], 131472)
         self.assertEqual(rounded["at_stake"], 1315)
         self.assertEqual(rounded["hac"], -1315)
-        self.assertEqual(rounded["net"], -1843)  # -528 - 1,314.72 = -1,842.72
+        self.assertEqual(rounded["net"], -1843)
         self.assertEqual(rounded["ime"], 12000)
         self.assertTrue(all(type(v) is int for v in rounded.values()), rounded)
         self.assertEqual(list(rounded), list(est()))  # same keys, same order
 
-    def test_it_is_pythons_round(self):
-        for value, want in ((0.4, 0), (0.6, 1), (-4140.4, -4140), (-4140.6, -4141), (2.5, 2), (3.5, 4), (-0.4, 0)):
-            self.assertEqual(round_dollars({"base": value})["base"], want, value)
-        self.assertEqual(str(round_dollars({"hac": -0.0})["hac"]), "0")
+    def test_each_part_is_pythons_round(self):
+        # fed 100.4 -> 100; a half goes to the even dollar (2.5 -> 2, 3.5 -> 4); a negative rounds toward the nearer
+        for part, value, want in (("fed", 100.4, 100), ("ime", 100.6, 101), ("dsh", 2.5, 2), ("capital", 3.5, 4),
+                                  ("uc", 0.4, 0), ("sch_diff", 0.0, 0), ("hrrp", -4140.4, -4140),
+                                  ("hrrp", -4140.6, -4141), ("hvbp", -0.4, 0)):
+            self.assertEqual(round_dollars(dict(est(), **{part: value}))[part], want, (part, value))
+        self.assertEqual(str(round_dollars(dict(est(), hvbp=-0.0))["hvbp"]), "0")  # an int zero, never -0.0
+
+    def test_the_sums_come_from_the_rounded_parts(self):
+        # Hand-worked, B = 4,900.39 (wage index 0.80013, Table 1B: 3000 x 0.80013 + 2500):
+        #   IME 0.1 x B = 490.039; DSH 0.05 x B = 245.0195; outliers 0.02 x (B + IME + DSH) = 112.70897;
+        #   low volume 0.1 x (B + IME + DSH + outliers) = 574.815747; capital 500 x 1.2 x 1 = 600; UC 0.37 x 12 = 4.44
+        #   rounded: 4,900 + 490 + 245 + 113 + 0 + 575 + 600 + 4
+        # base 4,900; total 4,900 + 490 + 245 + 113 + 575 + 600 + 4 = 6,927
+        # HRRP 0.97: B x -0.03 = -147.0117 -> -147; HVBP 1.01: +49.0039 -> 49; after 6,927 - 147 + 49 = 6,829
+        # at stake round(68.29) = 68; HAC -68; net -147 + 49 - 68 = -166
+        r = round_dollars(est(cases=1.0, cmi=1.0, wi=0.80013, ime_op=0.1, dsh_op=0.05, outlier_op=0.02,
+                              low_volume=1.1, gaf=1.2, ucp_per_claim=0.37, hrrp=0.97, vbp=1.01, cut=True))
+        self.assertEqual({k: r[k] for k in ("fed", "ime", "dsh", "outlier_op", "low_volume", "capital", "uc")},
+                         {"fed": 4900, "ime": 490, "dsh": 245, "outlier_op": 113, "low_volume": 575, "capital": 600,
+                          "uc": 4})
+        self.assertEqual((r["base"], r["total"], r["hrrp"], r["hvbp"], r["after"], r["at_stake"], r["hac"], r["net"]),
+                         (4900, 6927, -147, 49, 6829, 68, -68, -166))
+
+    def test_a_sum_can_sit_a_dollar_from_the_rounded_unrounded_figure(self):
+        # B = 100.4 + 100.4 (MDH add-on) -> parts 100 + 100 = base 200, though round(200.8) = 201: the rounded sum wins
+        r = round_dollars(dict(est(), fed=100.4, mdh_addon=100.4))
+        self.assertEqual(r["base"], 200)
+
+    def test_a_hospital_that_is_not_cut_has_no_hac_and_a_cut_one_loses_its_at_stake(self):
+        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False))["hac"], 0)
+        r = round_dollars(est(hrrp=0.97, cut=True))
+        self.assertEqual((r["at_stake"], r["hac"], r["net"]), (1164, -1164, -3600 - 1164))  # 0.01 x 116,400
+        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False))["at_stake"], 1164)  # the same whether or not it is cut
 
     def test_factors_cases_and_other_keys_are_left_alone(self):
         e = dict(est(), hrrp_factor=0.9956, vbp_factor=1.0123, cases=10.4)
@@ -400,6 +447,46 @@ class RoundDollars(unittest.TestCase):
         before = dict(e)
         round_dollars(e)
         self.assertEqual(e, before)
+
+
+class RowsAddUp(unittest.TestCase):
+    """Every figure a reader can add up is exact: in a row, and down a column."""
+
+    @staticmethod
+    def random_rows(n=300, seed=20261022):
+        rng = random.Random(seed)
+        out = []
+        for i in range(n):
+            kind = rng.choice(("plain", "mdh", "sch"))
+            h = hospital(cases=rng.uniform(1, 5000), cmi=rng.uniform(0.8, 2.2), cmi_hsp=rng.uniform(0.8, 2.2),
+                         wi=rng.uniform(0.7, 1.6), quality=rng.choice((0, 1)), ehr=rng.choice((0, 1)),
+                         ime_op=rng.uniform(0, 0.3), ime_cap=rng.uniform(0, 0.1), dsh_op=rng.uniform(0, 0.15),
+                         dsh_cap=rng.uniform(0, 0.05), outlier_op=rng.uniform(0, 0.05),
+                         outlier_cap=rng.uniform(0, 0.05), gaf=rng.uniform(0.9, 1.3), low_volume=rng.uniform(1, 1.25),
+                         ucp_per_claim=rng.uniform(0, 3000), bills=rng.randint(1, 9000),
+                         mdh=kind == "mdh", sch=kind == "sch", hsp_mdh=rng.uniform(2000, 12000),
+                         hsp=rng.uniform(2000, 12000))
+            out.append((h, hospital_row(f"99{i:04d}", "VA", h, RATES, hrrp=rng.uniform(0.97, 1.0),
+                                        vbp=rng.choice((None, rng.uniform(0.98, 1.02))), cut=rng.random() < 0.3,
+                                        parhm=NO_PARHM)))
+        return out
+
+    def test_every_row_adds_up_exactly(self):
+        pairs = self.random_rows()
+        for _, r in pairs:
+            assert_adds_up(self, r)
+        # the test has teeth: rounding the sums themselves would often miss by a dollar
+        self.assertGreater(sum(round(estimate(h, RATES, hrrp=1.0, vbp=1.0, cut=False)["total"]) != r["total"]
+                               for h, r in pairs), 5)
+
+    def test_every_column_total_adds_up_exactly(self):
+        rows = [r for _, r in self.random_rows()]
+        nat = national(rows)
+        for key in ("base", "total", "hrrp", "hvbp", "after", "hac", "net"):
+            self.assertEqual(nat[key], sum(r[key] for r in rows), key)
+        self.assertEqual(nat["after"], nat["total"] + nat["hrrp"] + nat["hvbp"])
+        self.assertEqual(nat["net"], nat["hrrp"] + nat["hvbp"] + nat["hac"])
+        self.assertEqual(nat["hac"], -sum(r["at_stake"] for r in rows if r["cut"]))
 
 
 class HospitalRow(unittest.TestCase):
@@ -507,15 +594,24 @@ class National(unittest.TestCase):
         self.assertNotEqual(nat["base"], round(3 * base_payment(h, RATES)))
 
     def test_the_bases_the_checks_need(self):
-        rows = [bare("990001", "estimated", **money(1000)),
+        rows = [bare("990001", "estimated", **money(1000, hrrp=-10)),
                 bare("990002", "estimated", hrrp_listed=False, **money(2000)),
-                bare("990003", "estimated", vbp_listed=False, **money(4000)),
+                bare("990003", "estimated", vbp_listed=False, **money(4000, hrrp=-40)),
                 bare("990004", "estimated", hrrp_listed=False, vbp_listed=False, **money(8000)),
-                bare("990005", "maryland", hrrp_listed=True, vbp_listed=True)]
+                bare("990005", "estimated", **money(16000)),  # listed in both, factor 1: not penalized
+                bare("990006", "maryland", hrrp_listed=True, vbp_listed=True)]
         nat = national(rows)
-        self.assertEqual(nat["base"], 15000)
-        self.assertEqual(nat["hrrp_base"], 1000 + 4000)  # rows with an HRRP row
-        self.assertEqual(nat["vbp_base"], 1000 + 2000)   # rows in Table 16B
+        self.assertEqual(nat["base"], 31000)
+        self.assertEqual(nat["hrrp_base"], 1000 + 4000)         # the penalized hospitals' base (HRRP dollars below zero)
+        self.assertEqual(nat["vbp_base"], 1000 + 2000 + 16000)  # rows in Table 16B
+
+    def test_hrrp_base_is_the_penalized_hospitals_not_every_listed_one(self):
+        rows = [row("990001", hrrp=0.97), row("990002", hrrp=1.0), row("990003", hrrp=None), row("990004", hrrp=0.99)]
+        nat = national(rows)
+        self.assertEqual(nat["hrrp_base"], 240000)  # two penalized hospitals at B = 120,000
+        self.assertEqual(nat["hrrp"], -3600 - 1200)
+        # CMS's share is over the penalized hospitals: 4,800 / 240,000 = 2%, not 4,800 / 360,000 (listed) = 1.33%
+        self.assertAlmostEqual(-nat["hrrp"] / nat["hrrp_base"], 0.02)
 
     def test_counts(self):
         rows = [bare("990001", "estimated", cut=True, **money(1000)),
@@ -564,7 +660,7 @@ class Checks(unittest.TestCase):
         self.assertEqual(HAC_SHARE, (0.002, 0.003))
         self.assertEqual(VBP_NET_OF_POOL, 0.10)
         self.assertEqual(VBP_WITHHOLD, 0.02)
-        self.assertEqual(YES_UNESTIMATED_MAX, 0)
+        self.assertEqual(YES_UNESTIMATED_MAX, 9)
 
     def test_the_shape_and_order(self):
         got = checks(NAT, hacrp_yes=1)
@@ -584,13 +680,13 @@ class Checks(unittest.TestCase):
         self.assertEqual((c["hac_share"]["low"], c["hac_share"]["high"]), HAC_SHARE)
         self.assertEqual((c["hac_count"]["value"], c["hac_count"]["low"], c["hac_count"]["high"]), (1, 1, 1))
         self.assertEqual((c["yes_unestimated"]["value"], c["yes_unestimated"]["low"], c["yes_unestimated"]["high"]),
-                         (0, 0, 0))
+                         (0, 0, YES_UNESTIMATED_MAX))
 
     def test_checks_flag_a_share_outside_its_range(self):
-        # HRRP: the dollars over the base of hospitals with an HRRP row; 0.40% to 0.48% passes, either side fails
+        # HRRP: the dollars over the base of the penalized hospitals; 0.40% to 0.48% passes, either side fails
         for hrrp, ok in ((-1919, False), (-1920, True), (-2304, True), (-2305, False)):  # 480,000 x 0.004 / 0.0048
             self.assertIs(self.check(hrrp=hrrp)["hrrp_share"]["pass"], ok, hrrp)
-        # the denominator is the base of rows with an HRRP row, not every base
+        # the denominator is the penalized hospitals' base, not every base
         self.assertIs(self.check(hrrp=-2112, hrrp_base=900000)["hrrp_share"]["pass"], False)
         # HAC: the cut over all T; 0.2% to 0.3%
         for hac, ok in ((-959, False), (-960, True), (-1440, True), (-1441, False)):
@@ -619,18 +715,20 @@ class Checks(unittest.TestCase):
         c = self.check(nat, hacrp_yes=file_yes)
         self.assertEqual((c["hac_count"]["value"], c["hac_count"]["low"], c["hac_count"]["high"]), (3, 3, 3))
         self.assertIs(c["hac_count"]["pass"], True)
-        # the exclusions are not silent: two Yes hospitals have no estimate
-        self.assertIs(c["yes_unestimated"]["pass"], False)
+        # the exclusions are not silent: two Yes hospitals have no estimate, and they are shown (within the allowance)
         self.assertEqual(c["yes_unestimated"]["value"], 2)
+        self.assertIs(c["yes_unestimated"]["pass"], 2 <= YES_UNESTIMATED_MAX)
         # a Yes hospital left out of the rows, or one the rows invented, fails the count
         self.assertIs(self.check(nat, hacrp_yes=4)["hac_count"]["pass"], False)
         self.assertIs(self.check(nat, hacrp_yes=2)["hac_count"]["pass"], False)
         self.assertEqual(self.check(nat, hacrp_yes=4)["hac_count"]["low"], 4)
 
-    def test_a_yes_hospital_with_no_estimate_fails_unless_the_allowance_says_otherwise(self):
-        self.assertIs(self.check(yes_unestimated=0)["yes_unestimated"]["pass"], True)
-        for n in (1, 5):
-            self.assertIs(self.check(yes_unestimated=n)["yes_unestimated"]["pass"], n <= YES_UNESTIMATED_MAX)
+    def test_more_yes_hospitals_without_an_estimate_than_the_allowance_fails(self):
+        # the allowance is the count on the FY2026 pins (2026-10-22): nine; a tenth fails
+        for n, ok in ((0, True), (9, True), (10, False), (50, False)):
+            c = self.check(yes_unestimated=n)["yes_unestimated"]
+            self.assertIs(c["pass"], ok, n)
+            self.assertEqual((c["value"], c["low"], c["high"]), (n, 0, 9))
 
     def test_a_check_that_cannot_be_computed_fails_rather_than_dividing_by_zero(self):
         c = self.check(national([]), hacrp_yes=0)

@@ -22,8 +22,9 @@ so T, the HRRP and HVBP dollars and the at-stake figure, run slightly low for a 
 
 Below the estimate: a status for every hospital in the HACRP file (`status`), the row the emitter keeps for it
 (`hospital_row`, whole dollars), the national sums of those rows (`national`), and the checks that hold the sums against
-what CMS publishes about the programs (`checks`). A sum is always the sum of the rounded rows, so a reader adding up a
-table gets the headline.
+what CMS publishes about the programs (`checks`). A row's figures are whole dollars that add exactly (its sums are built
+from its rounded parts), and a national sum is the sum of the rounded rows, so a reader adding up a table gets the
+headline.
 
 Pure: no file, network or clock.
 """
@@ -37,11 +38,14 @@ MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of i
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass.
 #
-# HRRP: CMS's own figure for the program's cut, 0.44% (FY2026 IPPS final rule, Table I.G.7.-01), with a band of 0.04
-# percentage points each way. The ratio checked is the HRRP dollars lost over the base operating payments (B) of the
-# hospitals that have an HRRP row. (ASSUMPTION: that is the denominator CMS's 0.44% is a share of. On the pinned FY2026
-# files the mean penalty among the penalized hospitals alone is 0.440% while this ratio is 0.387%, so CMS's figure may
-# be per penalized hospital; settle it against the final rule's table in the accuracy pass.)
+# HRRP: CMS's published "penalty as a share of payments", 0.44% in the All Hospitals row of the HRRP impact table of the
+# FY2026 IPPS/LTCH PPS final rule (90 FR 36536; the rule numbers both its HRRP and HACRP impact tables I.G.7.-01, so
+# the row and program name the table), with a band of 0.04 percentage points each way. CMS defines the share as the sum
+# of the penalties over the sum of base operating DRG payments (FY2024) of the hospitals with the characteristic; the
+# All Hospitals row counts 2,797 eligible hospitals, 2,304 of them penalized. The ratio checked is the HRRP dollars lost
+# over the base operating payments (B) of the penalized hospitals (`hrrp_base`). On the pinned FY2026 files that is
+# 0.443%; over every hospital with an HRRP row it would be 0.387%, so the published 0.44% matches the penalized-only
+# ratio. Flagged for the accuracy pass, which confirms the denominator against the rule's text.
 HRRP_SHARE = (0.0040, 0.0048)
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
@@ -57,9 +61,11 @@ VBP_NET_OF_POOL = 0.10
 # The pool's rate, the "applicable percent": 42 CFR 412.160 defines it, "(5) For FY 2017 and subsequent fiscal years,
 # 2.0 percent", of the "base operating DRG payment amount" (eCFR, read 2026-10-22).
 VBP_WITHHOLD = 0.02
-# A hospital CMS cuts that this module has no estimate for (a program participant, a missing input) must be looked at,
-# not silently dropped from the money: none is allowed for now.
-YES_UNESTIMATED_MAX = 0
+# Hospitals CMS cuts that this module has no estimate for (a program participant, or no volume in the FY2026 impact
+# file) are counted, not silently dropped from the money. On the pinned files there are 9 (2026-10-22), none of them in
+# the impact file at all. Their pages say there is no estimate, and the national dollars cover estimated hospitals only.
+# A later file with more fails the check, so the new ones are looked at.
+YES_UNESTIMATED_MAX = 9
 
 MARYLAND = "MD"  # the state whose hospitals are paid under the state's own model: no HRRP, HVBP or HAC adjustment
 STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
@@ -213,8 +219,7 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
 
 # --- the row, statuses and the national sums -------------------------------------------------------------------------
 
-# Every field of `estimate` that is dollars (the rest of a row is a flag, a count or a factor).
-DOLLAR_FIELDS = ("base", "total", "hrrp", "hvbp", "after", "at_stake", "hac", "net", "fed", "mdh_addon") + _ADD_ONS
+_PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T
 _SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # what `national` adds up
 
 
@@ -246,10 +251,24 @@ def status(ccn, state, inp, parhm):
 
 
 def round_dollars(est):
-    """`est` with every dollar field (`DOLLAR_FIELDS`) rounded to a whole dollar: Python `round` (halves to the even
-    dollar), then `int`. Anything else in it (factors, `cases`) is left as it is. Each field is rounded on its own, so
-    a row's `net` can differ from its rounded `hrrp + hvbp + hac` by a dollar or two."""
-    return {k: int(round(v)) if k in DOLLAR_FIELDS else v for k, v in est.items()}
+    """`est` in whole dollars, built so that every sum a reader can add up is exact. Python `round` (halves to the even
+    dollar), then `int`, is applied to each part (fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital,
+    uc) and to `hrrp` and `hvbp` (from the unrounded B x (factor - 1)). The sums follow from those integers:
+      base = fed + mdh_addon;  total = base + the other parts;  after = total + hrrp + hvbp;
+      at_stake = round(0.01 x after);  hac = -at_stake when the hospital is cut, else 0;  net = hrrp + hvbp + hac.
+    So a figure can sit a dollar from its own unrounded value (a hospital's `total` is not always `round(T)`); the sums
+    are never a dollar from their parts. `est` is `estimate`'s dict; anything else in it (factors, `cases`) is left as
+    it is, and the keys keep their order."""
+    out = dict(est)
+    out.update({k: int(round(est[k])) for k in _PARTS})
+    out["base"] = out["fed"] + out["mdh_addon"]
+    out["total"] = out["base"] + sum(out[k] for k in _ADD_ONS)
+    out["hrrp"], out["hvbp"] = int(round(est["hrrp"])), int(round(est["hvbp"]))
+    out["after"] = out["total"] + out["hrrp"] + out["hvbp"]
+    out["at_stake"] = int(round(HAC_RATE * out["after"]))
+    out["hac"] = -out["at_stake"] if est["hac"] else 0  # `estimate` leaves hac at zero for a hospital that is not cut
+    out["net"] = out["hrrp"] + out["hvbp"] + out["hac"]
+    return out
 
 
 def hospital_row(ccn, state, inp, rates, *, hrrp, vbp, cut, parhm):
@@ -268,9 +287,10 @@ def hospital_row(ccn, state, inp, rates, *, hrrp, vbp, cut, parhm):
 
 def national(rows):
     """The sums over a set of `hospital_row`s. Over the rows with status "estimated": `hospitals` (how many), the sums
-    of the rounded `base, total, hrrp, hvbp, after, hac, net`, `cut` (how many are cut), `hrrp_base` and `vbp_base` (the
-    sum of B over those with an HRRP row, and those in Table 16B: the bases the checks divide by). Over every row, any
-    status: `yes` (how many are cut), `yes_unestimated` (cut, but not estimated) and `by_status`."""
+    of the rounded `base, total, hrrp, hvbp, after, hac, net`, `cut` (how many are cut), `hrrp_base` (the sum of B over
+    the penalized hospitals: those whose HRRP dollars are negative) and `vbp_base` (the sum of B over those in Table
+    16B): the bases the checks divide by. Over every row, any status: `yes` (how many are cut), `yes_unestimated` (cut,
+    but not estimated) and `by_status`."""
     nat = {"hospitals": 0, **dict.fromkeys(_SUMMED, 0), "cut": 0, "hrrp_base": 0, "vbp_base": 0, "yes": 0,
            "yes_unestimated": 0, "by_status": dict.fromkeys(STATUSES, 0)}
     for r in rows:
@@ -286,7 +306,7 @@ def national(rows):
         nat["cut"] += cut
         for k in _SUMMED:
             nat[k] += r[k]
-        nat["hrrp_base"] += r["base"] if r["hrrp_listed"] else 0
+        nat["hrrp_base"] += r["base"] if r["hrrp"] < 0 else 0
         nat["vbp_base"] += r["base"] if r["vbp_listed"] else 0
     return nat
 
@@ -302,7 +322,7 @@ def _result(id_, value, low, high):
 
 def checks(nat, *, hacrp_yes):
     """Hold `national`'s sums against what CMS publishes about the programs. A list of `{id, value, low, high, pass}`:
-      hrrp_share       HRRP dollars lost over B of the hospitals with an HRRP row, in HRRP_SHARE
+      hrrp_share       HRRP dollars lost over B of the penalized hospitals, in HRRP_SHARE
       vbp_net          |HVBP dollars| (the net of winners and losers), at most VBP_NET_OF_POOL of the 2% pool
       hac_share        HAC dollars lost over everyone's T, in HAC_SHARE
       hac_count        hospitals marked cut, any status, equal to `hacrp_yes`: the HACRP file's Yes count
