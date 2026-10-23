@@ -5,7 +5,8 @@
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { PAGE, drawn, figure, num } from '../../../web/charts/figure.js';
-import { cmsText, count, decimal, dollars, isoDate, listText, money } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, isoDate, listText, money, roundedDollars } from '../../../web/render/format.js';
+import { estTag as estTagShell, shareBlock as shareShell, wsOp, wsTerm } from '../../../web/render/components.js';
 import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
@@ -22,7 +23,7 @@ const zero = () => money(0);
 
 // The estimate tag every dollar figure carries (Thirty Day Readmissions' outlined tag), linking to how this site
 // makes the estimate.
-export const estTag = () => html`<a class="est-tag" href="${DOLLARS_HREF}" aria-label="${t('estTagLabel')}">${t('estTag')}</a>`;
+export const estTag = () => estTagShell({ href: DOLLARS_HREF, label: t('estimateTagLabel'), text: t('estimateTag') });
 
 // The range line under a dollar figure: until the back-test's likely range arrives, a placeholder made to be seen in
 // review (a production build refuses it: generate.js).
@@ -48,7 +49,7 @@ export function moneyVerdict(view, m) {
   }
   if (!m.estimated) {
     return {
-      beside: html`<div class="money money--none"><p class="money__none"><span>${t('moneyNone')}</span></p></div>`,
+      beside: html`<div class="money money--none"><p class="hosp__none"><span>${t('moneyNone')}</span></p></div>`,
       below: html`<p class="money__of">${m.status === 'parhm' ? t('moneyParhm') : fill('moneyNoInputs', { fy })}</p>`,
     };
   }
@@ -194,20 +195,16 @@ ${rangeLine()}
 // on the base, times the cut's percentage, equals the cut (or, for a hospital CMS didn't cut, what was at stake); then
 // that over the hospital's Medicare stays.
 export function moneyWorksheet(m) {
-  const term = (value, key, cls = '') => html`<span class="ws__term${cls}"><span class="ws__v">${value}</span><span class="ws__k">${t(key)}</span></span>`;
-  const op = (x) => html`<span class="ws__op">${x}</span>`;
   return html`<div class="ws ws--money${m.cut ? ' ws--cut' : ''}" role="group" aria-label="${t('wsMoneyLabel')}">
-<p class="ws__line"><span class="ws__paren">(</span>${term(dollars(m.total), 'wsPayment')}${op(m.hrrp < 0 ? '−' : '+')}${term(dollars(Math.abs(m.hrrp)), 'wsHrrp')}${op(m.hvbp < 0 ? '−' : '+')}${term(dollars(Math.abs(m.hvbp)), 'wsHvbp')}<span class="ws__paren">)</span><span class="ws__tail">${op('×')}${term(REDUCTION_TEXT, 'wsPct')}${op('=')}${term(dollars(m.atStake), m.cut ? 'wsCut' : 'wsStake', ' ws__term--total')}</span></p>
-<p class="ws__line">${term(dollars(m.atStake), m.cut ? 'wsCut' : 'wsStake')}${op('÷')}${term(count(m.bills), 'wsStays')}${op('=')}${term(dollars(Math.round(m.perStay)), 'wsPerStay', ' ws__term--total')}</p>
+<p class="ws__line"><span class="ws__paren">(</span>${wsTerm(dollars(m.total), t('wsPayment'))}${wsOp(m.hrrp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hrrp)), t('wsHrrp'))}${wsOp(m.hvbp < 0 ? '−' : '+')}${wsTerm(dollars(Math.abs(m.hvbp)), t('wsHvbp'))}<span class="ws__paren">)</span><span class="ws__tail">${wsOp('×')}${wsTerm(REDUCTION_TEXT, t('wsPct'))}${wsOp('=')}${wsTerm(dollars(m.atStake), t(m.cut ? 'wsCut' : 'wsStake'), 'ws__term--total')}</span></p>
+<p class="ws__line">${wsTerm(dollars(m.atStake), t(m.cut ? 'wsCut' : 'wsStake'))}${wsOp('÷')}${wsTerm(count(m.bills), t('wsStays'))}${wsOp('=')}${wsTerm(roundedDollars(m.perStay), t('wsPerStay'), 'ws__term--total')}</p>
 </div>`;
 }
 
 // The statement as the page's figure n: the takeaway, the statement, and its lines as the figure's table.
 export function statementFigure(view, m, { n, source }) {
   const s = statementLines(m);
-  const values = { pct: REDUCTION_TEXT, amount: money(m.atStake), hrrp: money(m.hrrp), hvbp: money(m.hvbp) };
-  if (values.hvbp !== '$0' && m.hvbp > 0) values.hvbp = `+${values.hvbp}`;
-  const takeaway = fill(m.cut ? 'stmtTakeawayYes' : 'stmtTakeawayNo', values);
+  const takeaway = fill(m.cut ? 'stmtTakeawayYes' : 'stmtTakeawayNo', { pct: REDUCTION_TEXT, amount: money(m.atStake), hrrp: money(m.hrrp), hvbp: money(m.hvbp, { sign: true }) });
   return figure({
     n,
     takeaway,
@@ -242,17 +239,8 @@ export function shareSentence(view, m) {
   return est && distance ? fill('shareNo', { ...values, distance, amount: money(est.atStake), site }) : fill('shareNoPlain', values);
 }
 
-// The share control: the link and the sentence, readable and selectable without JavaScript (a disclosure);
-// client/share.js adds the copy buttons and, where the device has one, its own share sheet. No third-party script.
-export function shareBlock(view, m) {
-  const url = SITE.origin + view.path;
-  const sentence = shareSentence(view, m);
-  return html`<details class="share" data-share data-copied="${t('shareCopied')}" data-failed="${t('shareFailed')}">
-<summary class="share__summary">${t('shareHeading')}</summary>
-<div class="share__body">
-<p class="share__text" data-share-text>${sentence} <span class="share__url" data-share-url>${url}</span></p>
-<p class="share__row"><button type="button" class="fig__btn" data-share-copy="link" hidden>${t('shareCopyLink')}</button> <button type="button" class="fig__btn" data-share-copy="text" hidden>${t('shareCopyText')}</button> <button type="button" class="fig__btn" data-share-native hidden>${t('shareNative')}</button> <span class="small" data-share-status role="status"></span></p>
-<p class="small muted">${t('shareNote')}</p>
-</div>
-</details>`;
-}
+// The share control (components.js shareBlock) under the verdict: this page's link and its sentence.
+export const shareBlock = (view, m) => shareShell({
+  heading: t('shareHeading'), sentence: shareSentence(view, m), url: SITE.origin + view.path,
+  copyLink: t('shareCopyLink'), copyText: t('shareCopyText'), native: t('shareNative'), note: t('shareNote'), copied: t('shareCopied'), failed: t('shareFailed'),
+});

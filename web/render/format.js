@@ -34,9 +34,10 @@ function fixed(x, dp, style) {
   return FIXED.get(key).format(x);
 }
 
-// x is a fraction: 0.123 with dp 1 reads 12.3%.
-export function pct(x, dp = 1) {
-  return fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
+// x is a fraction: 0.123 with dp 1 reads 12.3%. sign: + before a positive share (never before one that reads 0%).
+export function pct(x, dp = 1, { sign = false } = {}) {
+  const text = fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
+  return sign && x > 0 && /[1-9]/.test(text) ? `+${text}` : text;
 }
 
 // A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%
@@ -77,10 +78,11 @@ const MONEY_STEPS = [
   [0, (a) => String(Math.round(a))],
 ];
 const moneyBody = (a) => MONEY_STEPS.find(([from]) => a >= from)[1](a);
-export function money(x) {
+// sign: + before a positive amount (never before one that reads $0), as dollars() does.
+export function money(x, { sign = false } = {}) {
   if (!Number.isFinite(x)) throw new RangeError(`money: not a number: ${x}`);
   const body = moneyBody(Math.abs(x));
-  return `${x < 0 && body !== '0' ? MINUS : ''}$${body}`;
+  return `${body === '0' ? '' : x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${body}`;
 }
 
 // Whole dollars with thousands separators, for a statement whose lines add exactly: "$48,691,794", "−$58,430".
@@ -89,6 +91,9 @@ export function dollars(x, { sign = false } = {}) {
   if (!Number.isInteger(x)) throw new RangeError(`dollars: not whole dollars: ${x}`);
   return `${x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${NUMBER.format(Math.abs(x))}`;
 }
+
+// dollars() of the nearest whole dollar, for an average or a share of a total ("$1,234").
+export const roundedDollars = (x, options) => dollars(Math.round(x), options);
 
 function longForm(year, month, day, source) {
   const d = new Date(Date.UTC(year, month - 1, day));

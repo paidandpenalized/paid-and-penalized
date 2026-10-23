@@ -24,9 +24,6 @@ export const COPY = {
   // Until the back-test's ranges arrive, the range's place on every dollar figure (a page in review only: a production
   // build refuses it).
   rangePending: { text: 'Likely range: pending', claim: null },
-  // The estimate tag on every dollar figure, linking to how this site makes the estimate.
-  estTag: { text: 'estimate', claim: null },
-  estTagLabel: { text: 'Estimate: how this site estimates the dollars', claim: null },
 
   // ---------- the cliff: the cut at any score, for this hospital ----------
   cliffHeading: { text: 'The money is a cliff', claim: null },
@@ -187,11 +184,11 @@ export const COPY = {
   billNoteUnknown: { text: "Teaching status from CMS's impact file; the hospital master has none for {n} of the cut hospitals ({money}), the group too small to label.", claim: null },
   billNoteUnknownOne: { text: "Teaching status from CMS's impact file; the hospital master has none for one of the cut hospitals ({money}), the group too small to label.", claim: null },
   billUnknown: { text: 'Teaching status unknown', claim: null },
-  billColGroup: { text: 'Group', claim: null },
-  billColHospitals: { text: 'Hospitals cut', claim: null },
-  billColMoney: { text: 'Estimated cut (whole dollars)', claim: null },
-  billColShareHospitals: { text: 'Share of the hospitals', claim: null },
-  billColShareMoney: { text: 'Share of the money', claim: null },
+  groupColGroup: { text: 'Group', claim: null },
+  groupColHospitals: { text: 'Hospitals cut', claim: null },
+  groupColMoney: { text: 'Estimated cut (whole dollars)', claim: null },
+  groupColShareHospitals: { text: 'Share of the hospitals', claim: null },
+  groupColShareMoney: { text: 'Share of the money', claim: null },
   // Across the line.
   acrossHeading: { text: 'Across the line', claim: null },
   acrossText: { text: "Every hospital that scored within {window} of CMS's line, each dot as large as the cut it took, or would have taken, by this site's estimate. Point at or tap a dot for the hospital.", claim: null },
@@ -269,7 +266,6 @@ export const COPY = {
   placePerStayNote: { text: 'The nation: {nation}', claim: null },
   placeAcrossHeading: { text: '{name} across the line', claim: null },
   placeAcrossText: { text: "The nation's hospitals within {window} of CMS's line, {name}'s in full ink: scores a hair apart, money all or nothing.", claim: 'HACRP-01' },
-  placeChildMoney: { text: 'Est. cut ($, modeled)', claim: null },
   placeAcrossTakeaway: {
     text: "{k} of the nation's {n} hospitals within {window} of CMS's line are {name}'s: {over} cut, about {overMoney} by this site's estimate, and {under} not cut, where a cut would have been about {underMoney}.",
     claim: null,

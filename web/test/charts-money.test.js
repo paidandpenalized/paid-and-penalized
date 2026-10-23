@@ -52,7 +52,7 @@ test('usBubbles: the decorative land is drawn to whole units, so the one map tha
   const shapes = stateShapes(JSON.parse(readPinned('us-atlas-counties-3.0.1')));
   const states = { AL: { value: 10, label: 'ten' }, TX: { value: 40, label: 'forty' } };
   const svg = String(usBubbles({ shapes, layers: [{ id: 'total', states }], width: WIDTH }));
-  const land = /<path class="chart-bubbles__land" d="([^"]*)"/.exec(svg)[1];
+  const land = /<path class="chart-land" d="([^"]*)"/.exec(svg)[1];
   assert.ok(land.length > 100 && !land.includes('.'), 'whole units');
   const radius = (w) => Number(/<circle class="chart-bubble"[^>]* r="([\d.]+)"/.exec(String(usBubbles({ shapes, layers: [{ id: 'total', states }], width: w })))[1]);
   assert.ok(radius(WIDTH) < radius(PAGE), 'larger circles across a page');

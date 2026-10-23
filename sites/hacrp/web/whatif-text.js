@@ -331,7 +331,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     // an estimate (the sandbox, Maryland, a hospital this site can't estimate).
     money: atStake === null ? null : {
       row: fill('whatifRowMoney'),
-      tag: { text: fill('estimateTag'), href: DOLLARS_HREF, label: fill('whatifMoneyTagLabel') },
+      tag: { text: fill('estimateTag'), href: DOLLARS_HREF, label: fill('estimateTagLabel') },
       amount: moneyText,
       // The words beside the head's figure, by the hypothetical's dollars.
       head: (dollars) => fill(levelOf(dollars) > 0 ? 'whatifMoneyCut' : 'whatifMoneyNone'),

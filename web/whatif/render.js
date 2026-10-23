@@ -47,7 +47,7 @@
 //   solver.worth                           a line over the solver's table: what keeping under the line is worth, or null
 import { scaleLinear } from 'd3-scale';
 import { COPY } from '../copy.js';
-import { pillClass, printout } from '../render/components.js';
+import { estTag, pillClass, printout } from '../render/components.js';
 import { html } from '../render/html.js';
 import {
   afterText, anyChanged, assignedNow, barClass, barSpan, cliffDotClass, cliffY, estimateNote, moneyClass, sameMoney, fieldText, fraction, headScore, labelAt, lineScore, rampAt, rampDomain,
@@ -152,7 +152,7 @@ ${head(vm, texts)}
 <tr><th scope="row">${texts.rows.score}</th><td class="cms">${s.before}</td>${afterCell('score', s.before, s.after, texts.same)}</tr>
 <tr class="wi-table__words"><th scope="row">${texts.rows.decision}</th><td>${texts.flag(r.before.flag)}</td>${afterCell('flag', texts.flag(r.before.flag), texts.flag(r.after.flag), texts.same)}</tr>
 ${cutBefore !== null && html`<tr><th scope="row">${texts.rows.cut}</th><td>${cutBefore}</td>${afterCell('cut', cutBefore, texts.cut(r.after.flag), texts.same)}</tr>`}
-${money && html`<tr class="wi-table__money"><th scope="row">${money.row} <a class="est-tag" href="${money.tag.href}" aria-label="${money.tag.label}">${money.tag.text}</a></th><td>${money.amount(vm.money.before)}</td>${afterCell('money', money.amount(vm.money.before), money.amount(vm.money.after), texts.same)}</tr>`}
+${money && html`<tr class="wi-table__money"><th scope="row">${money.row} ${estTag(money.tag)}</th><td>${money.amount(vm.money.before)}</td>${afterCell('money', money.amount(vm.money.before), money.amount(vm.money.after), texts.same)}</tr>`}
 </tbody>
 </table>
 </details>

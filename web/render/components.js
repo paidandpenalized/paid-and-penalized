@@ -137,6 +137,31 @@ export const citation = ({ heading, text, button, copied, failed }) => html`<sec
 <p class="cite__row"><button type="button" class="fig__btn" data-cite-copy hidden>${button}</button> <span class="small" data-cite-status aria-live="polite"></span></p>
 </section>`;
 
+// The share control: the link and a sentence to share with it, readable and selectable without JavaScript (a disclosure);
+// web/client/share.js adds the copy buttons and, where the device has one, its own share sheet. No third-party script.
+// The words are the site's (heading, the three buttons, note, and the two status messages the script reads from data-copied
+// and data-failed). A page holding it lists the script (assets.js.share) in its scripts.
+export const shareBlock = ({ heading, sentence, url, copyLink, copyText, native, note, copied, failed }) => html`<details class="share" data-share data-copied="${copied}" data-failed="${failed}">
+<summary class="share__summary">${heading}</summary>
+<div class="share__body">
+<p class="share__text" data-share-text>${sentence} <span class="share__url" data-share-url>${url}</span></p>
+<p class="share__row"><button type="button" class="fig__btn" data-share-copy="link" hidden>${copyLink}</button> <button type="button" class="fig__btn" data-share-copy="text" hidden>${copyText}</button> <button type="button" class="fig__btn" data-share-native hidden>${native}</button> <span class="small" data-share-status role="status"></span></p>
+<p class="small muted">${note}</p>
+</div>
+</details>`;
+
+// The estimate tag every modeled dollar figure carries (an outlined tag), linking (href) to how the estimate is made;
+// label: its accessible name, text: its word.
+export const estTag = ({ href, label, text }) => html`<a class="est-tag" href="${href}" aria-label="${label}">${text}</a>`;
+
+// One term of a worksheet's sum (value over its label, in a .ws line) and the operator between terms. cls: more classes
+// on the term.
+export const wsTerm = (value, label, cls = '') => html`<span class="ws__term${cls ? ` ${cls}` : ''}"><span class="ws__v">${value}</span><span class="ws__k">${label}</span></span>`;
+export const wsOp = (x) => html`<span class="ws__op">${x}</span>`;
+
+// A paragraph of the site's words: the copy key, filled with values where it has placeholders (fill, t: a copy table's).
+export const paraOf = (fill, t) => (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
+
 // A table in the printout frame, which scrolls sideways inside its box on a narrow screen (components.css). fit: the
 // frame (its rules) ends with a table narrower than the page, not at the page's edge.
 export const printout = (table, { fit = false } = {}) => html`<div class="${fit ? 'printout printout--fit' : 'printout'}"><div class="printout__scroll">${table}</div></div>`;

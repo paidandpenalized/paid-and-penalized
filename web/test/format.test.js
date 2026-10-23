@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, money, noun, ordinal, pct, pctFloor, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, money, noun, ordinal, pct, pctFloor, roundedDollars, signed } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -20,6 +20,25 @@ test('noun puts a count before its noun, singular for exactly one', () => {
   assert.equal(noun(2, 'mile'), '2 miles');
   assert.equal(noun(1, 'child', 'children'), '1 child');
   assert.equal(noun(3, 'child', 'children'), '3 children');
+});
+
+test('money and pct take a sign on request: + before a positive amount, never before one that reads as zero', () => {
+  assert.equal(money(1_234_567, { sign: true }), '+$1.2M');
+  assert.equal(money(-614_565, { sign: true }), '−$615K');
+  assert.equal(money(0.4, { sign: true }), '$0');
+  assert.equal(money(0, { sign: true }), '$0');
+  assert.equal(money(640), '$640', 'no sign unless asked');
+  assert.equal(pct(0.0301, 1, { sign: true }), '+3.0%');
+  assert.equal(pct(-0.0155, 1, { sign: true }), '−1.6%');
+  assert.equal(pct(0.0001, 1, { sign: true }), '0.0%');
+  assert.equal(pct(0.5, 0), '50%');
+});
+
+test('roundedDollars writes the nearest whole dollar', () => {
+  assert.equal(roundedDollars(1234.5), '$1,235');
+  assert.equal(roundedDollars(1234.49), '$1,234');
+  assert.equal(roundedDollars(-0.4), '$0');
+  assert.equal(roundedDollars(615.6, { sign: true }), '+$616');
 });
 
 test('dollars writes whole dollars with separators; a sign on request', () => {

@@ -394,7 +394,7 @@ export function usYearMap({ shapes, groups, size, width }) {
   const { height, paths } = usPaths(shapes, width);
   const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean);
   return frame({
-    kind: 'us-years', width, height, body: html`<g class="chart-years__land">${land.map((d) => html`<path d="${d}"/>`)}</g>
+    kind: 'us-years', width, height, body: html`<g class="chart-land">${land.map((d) => html`<path d="${d}"/>`)}</g>
 <g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, size))}</g>`,
   });
 }
@@ -424,7 +424,7 @@ export function usBubbles({ shapes, layers, width, rMax = isNarrow(width) ? 22 :
     return html`<g class="chart-bubbles__layer chart-bubbles__layer--${id}">${circles.map((c) => mark({ tip: `${STATE_NAMES[c.code]}: ${c.s.label}`, value: c.s.value, data: { state: c.code }, hit: null, body: html`<circle class="chart-bubble" cx="${r2(c.cx)}" cy="${r2(c.cy)}" r="${r2(Math.max(0.8, c.r))}"/>` }))}</g>`;
   };
   return frame({
-    kind: 'us-bubbles', width, height, body: html`<path class="chart-bubbles__land" d="${land.join('')}"/>
+    kind: 'us-bubbles', width, height, body: html`<path class="chart-land" d="${land.join('')}"/>
 ${layers.map(layer)}`,
   });
 }

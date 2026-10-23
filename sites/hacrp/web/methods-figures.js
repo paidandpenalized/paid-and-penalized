@@ -116,22 +116,25 @@ export function periodsFigure(years, { n, source }) {
   });
 }
 
-// The pipeline: six stations, each with its real number for the newest year, as an ordered list (a phone stacks it).
-export function pipeline({ rows, source, pin, measures, check, pages }) {
-  const stations = [
-    { name: t('pipe1'), value: fill('pipe1Value', { rows: count(rows) }), note: fillKeep('pipe1Note', { id: source.id, date: isoDate(source.pdcReleased) }, ['id', 'date']) },
-    { name: t('pipe2'), value: fill('pipe2Value', { bytes: count(pin.bytes) }), note: fillKeep('pipe2Note', { algo: HASH_NAME, hash: `${pin.sha256.slice(0, 12)}…` }, ['hash']) },
-    { name: t('pipe3'), value: fill('pipe3Value', { measures: String(measures) }), note: t('pipe3Note') },
-    { name: t('pipe4'), value: fill('pipe4Value', { scored: count(check.scored) }), note: t('pipe4Note') },
-    { name: t('pipe5'), value: fill('pipe5Value', { miss: missText(check.maxError) }), note: fill('pipe5Note', { decided: count(check.decided), wrong: count(check.wrongSide.length), limit: limitText }) },
-    { name: t('pipe6'), value: fill('pipe6Value', { pages: count(pages) }), note: t('pipe6Note') },
-  ];
-  return html`<ol class="pipe" role="list">${stations.map((s, i) => html`<li class="pipe__st${i === 4 ? ' pipe__st--check' : ''}">
+// An ordered list of stations, each its number, name, value and note (a phone stacks it); a station with check set (the
+// self-check's, the HAC cut's) is marked. cls: more classes on the list.
+const stationList = (stations, { cls = '' } = {}) => html`<ol class="pipe${cls ? ` ${cls}` : ''}" role="list">${stations.map((s, i) => html`<li class="pipe__st${s.check ? ' pipe__st--check' : ''}">
 <p class="pipe__n">${String(i + 1)}</p>
 <p class="pipe__name">${s.name}</p>
 <p class="pipe__value">${s.value}</p>
 <p class="pipe__note">${s.note}</p>
 </li>`)}</ol>`;
+
+// The pipeline: six stations, each with its real number for the newest year, as an ordered list.
+export function pipeline({ rows, source, pin, measures, check, pages }) {
+  return stationList([
+    { name: t('pipe1'), value: fill('pipe1Value', { rows: count(rows) }), note: fillKeep('pipe1Note', { id: source.id, date: isoDate(source.pdcReleased) }, ['id', 'date']) },
+    { name: t('pipe2'), value: fill('pipe2Value', { bytes: count(pin.bytes) }), note: fillKeep('pipe2Note', { algo: HASH_NAME, hash: `${pin.sha256.slice(0, 12)}…` }, ['hash']) },
+    { name: t('pipe3'), value: fill('pipe3Value', { measures: String(measures) }), note: t('pipe3Note') },
+    { name: t('pipe4'), value: fill('pipe4Value', { scored: count(check.scored) }), note: t('pipe4Note') },
+    { name: t('pipe5'), value: fill('pipe5Value', { miss: missText(check.maxError) }), note: fill('pipe5Note', { decided: count(check.decided), wrong: count(check.wrongSide.length), limit: limitText }), check: true },
+    { name: t('pipe6'), value: fill('pipe6Value', { pages: count(pages) }), note: t('pipe6Note') },
+  ]);
 }
 
 // The receipts: every pinned input this site's HACRP pages read, with its size and fingerprint.
@@ -193,20 +196,14 @@ export function dollarsOrderFigure(headline, { n, source, fy }) {
 // station set apart.
 export function dollarsPipeline(headline) {
   const one = decimal(1, 0);
-  const stations = [
+  return stationList([
     { name: t('dpipe1'), value: money(headline.base), note: fill('dpipe1Note', { hospitals: count(headline.hospitals) }) },
     { name: t('dpipe2'), value: money(headline.hrrp), note: fill('dpipe2Note', { one }) },
     { name: t('dpipe3'), value: money(headline.hvbp), note: fill('dpipe3Note', { one }) },
-    { name: t('dpipe4'), value: `+${money(headline.total - headline.base)}`, note: t('dpipe4Note') },
+    { name: t('dpipe4'), value: money(headline.total - headline.base, { sign: true }), note: t('dpipe4Note') },
     { name: t('dpipe5'), value: money(headline.after), note: t('dpipe5Note') },
-    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, cut: count(headline.cut), yes: count(headline.yes) }) },
-  ];
-  return html`<ol class="pipe pipe--dollars" role="list">${stations.map((s, i) => html`<li class="pipe__st${i === 5 ? ' pipe__st--check' : ''}">
-<p class="pipe__n">${String(i + 1)}</p>
-<p class="pipe__name">${s.name}</p>
-<p class="pipe__value">${s.value}</p>
-<p class="pipe__note">${s.note}</p>
-</li>`)}</ol>`;
+    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, cut: count(headline.cut), yes: count(headline.yes) }), check: true },
+  ], { cls: 'pipe--dollars' });
 }
 
 // The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
@@ -224,12 +221,13 @@ export function assumptionsTable({ fy, volumeFy }) {
 }
 
 // How a dollar check's value and range read on the tape, by check.
+const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };
 const CHECK_FORMAT = {
-  hrrp_share: { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) },
-  vbp_net: { value: (v) => money(v), range: (c) => fill('dcheckAtMost', { high: money(c.high) }) },
-  hac_share: { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) },
-  hac_count: { value: (v) => count(v), range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
-  yes_unestimated: { value: (v) => count(v), range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
+  hrrp_share: SHARE,
+  vbp_net: { value: money, range: (c) => fill('dcheckAtMost', { high: money(c.high) }) },
+  hac_share: SHARE,
+  hac_count: { value: count, range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
+  yes_unestimated: { value: count, range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
 };
 
 // The national checks as an adding-machine tape, in the self-check's style: each check, this build's value, the range

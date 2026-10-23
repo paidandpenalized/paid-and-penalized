@@ -14,7 +14,7 @@ import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
 import { cmsText, count, decimal, noun, pct, pctFloor } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
-import { pill, printout } from '../../../web/render/components.js';
+import { pill, printout, wsOp, wsTerm } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
 import { NEAR_MAP_WIDTH, REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
@@ -154,12 +154,11 @@ export function worksheet(view) {
   const exact = at(recomputed) === view.score.raw;
   const term = (m, i) => {
     const neg = m.zRaw.startsWith('-');
-    const op = neg ? '−' : '+';
     const digits = neg ? m.zRaw.slice(1) : m.zRaw;
-    return html`${i ? html`<span class="ws__op">${op}</span>` : ''}<span class="ws__term${m.id === topId ? ' is-top' : ''}${m.assigned ? ' is-assigned' : ''}"><span class="ws__v">${i === 0 && neg ? '−' : ''}${digits}</span><span class="ws__k">${m.short}</span></span>`;
+    return html`${i ? wsOp(neg ? '−' : '+') : ''}${wsTerm(html`${i === 0 && neg ? '−' : ''}${digits}`, m.short, [m.id === topId && 'is-top', m.assigned && 'is-assigned'].filter(Boolean).join(' '))}`;
   };
   return html`<div class="ws" role="group" aria-label="${t('sumHeading')}">
-<p class="ws__line"><span class="ws__paren">(</span>${terms.map(term)}<span class="ws__paren">)</span><span class="ws__op">÷</span><span class="ws__term ws__term--n"><span class="ws__v">${String(terms.length)}</span><span class="ws__k">${t('wsN')}</span></span><span class="ws__op">=</span><span class="ws__term ws__term--total"><span class="ws__v">${view.score.text}</span><span class="ws__k">${t('wsTotal')}</span></span></p>
+<p class="ws__line"><span class="ws__paren">(</span>${terms.map(term)}<span class="ws__paren">)</span>${wsOp('÷')}${wsTerm(String(terms.length), t('wsN'), 'ws__term--n')}${wsOp('=')}${wsTerm(view.score.text, t('wsTotal'), 'ws__term--total')}</p>
 ${exact ? '' : html`<p class="small muted">${fill('sumRounded', { recomputed: cmsText(at(recomputed)), total: view.score.text })}</p>`}
 </div>`;
 }

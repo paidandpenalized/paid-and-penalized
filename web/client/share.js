@@ -3,6 +3,8 @@
 // refuses the clipboard, it selects the text for the reader to copy by hand and says so. Nothing is sent anywhere and
 // no third-party script runs. The words are the page's own (data-copied, data-failed). Without JavaScript the buttons
 // stay hidden and the sentence and link stay selectable.
+import { copyOrSelect } from './clipboard.js';
+
 for (const block of document.querySelectorAll('[data-share]')) {
   const text = block.querySelector('[data-share-text]');
   const url = block.querySelector('[data-share-url]');
@@ -11,27 +13,9 @@ for (const block of document.querySelectorAll('[data-share]')) {
   const link = url.textContent.trim();
   const sentence = text.textContent.replace(/\s+/g, ' ').trim();
 
-  const select = (node) => {
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  };
-
   for (const button of block.querySelectorAll('[data-share-copy]')) {
-    const what = button.dataset.shareCopy;
-    button.addEventListener('click', async () => {
-      // Cleared first, so a second click is announced again.
-      status.textContent = '';
-      try {
-        await navigator.clipboard.writeText(what === 'link' ? link : sentence);
-        status.textContent = block.dataset.copied;
-      } catch {
-        select(what === 'link' ? url : text);
-        status.textContent = block.dataset.failed;
-      }
-    });
+    const [node, value] = button.dataset.shareCopy === 'link' ? [url, link] : [text, sentence];
+    button.addEventListener('click', () => copyOrSelect({ text: value, node, status, copied: block.dataset.copied, failed: block.dataset.failed }));
     button.hidden = false;
   }
 

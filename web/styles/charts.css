@@ -343,14 +343,13 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-roll__note { fill: var(--ink-2); font: 400 10px var(--font-type); }
 .chart-roll__blank { fill: var(--ink-3); font: 600 10px var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 /* The year map (geo.js usYearMap). */
-.chart-years__land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 .chart-dots--years-clear { stroke: var(--ink-3); stroke-opacity: 0.55; }
 .chart-dots--years-scar { stroke: var(--pen-scar); }
 /* One drawing at every width (viewBox 960): its dots are the phone's 2.4 of 300 units across, scaled up, and 4.2
    units from 560px. */
 .chart-years__dots path { stroke-width: 7.68px; }
 @media (min-width: 560px) { .chart-years__dots path { stroke-width: 4.2px; } }
-@media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } .chart-years__land path { stroke: CanvasText; } }
+@media (forced-colors: active) { .chart-dots--years-clear, .chart-dots--years-scar { stroke: GrayText; } }
 /* Small lines (smallLines.js). A dot's wide transparent stroke is its own hit area. */
 .chart-lines__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .chart-lines__dot { fill: var(--ink); stroke: transparent; stroke-width: 16px; vector-effect: non-scaling-stroke; }
@@ -397,7 +396,8 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-pair__v { font-size: 11px; fill: var(--ink-2); }
 .chart-pair__v--b { fill: var(--pen-ink); font-weight: 700; }
 /* Proportional circles on the US map (geo.js usBubbles). */
-.chart-bubbles__land { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+/* A map's land, faint behind its marks (the year map's states, the bubbles map's outline). */
+.chart-land, .chart-land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 .chart-bubble { fill: var(--pen); fill-opacity: 0.55; stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-mark:hover .chart-bubble, .chart-mark.is-active .chart-bubble { fill-opacity: 0.85; }
 /* A column chart's bonus columns (columns.js): money paid to a hospital. */
@@ -410,7 +410,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-across__dot--faint { opacity: 0.4; }
   .chart-pair__a { fill: GrayText; }
   .chart-pair__b { fill: CanvasText; }
-  .chart-bubbles__land { fill: Canvas; stroke: GrayText; }
+  .chart-land, .chart-land path { fill: Canvas; stroke: GrayText; }
   .chart-bubble { fill: CanvasText; fill-opacity: 0.5; stroke: CanvasText; }
   .chart-col--rew { fill: Highlight; }
 }

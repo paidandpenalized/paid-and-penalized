@@ -86,8 +86,6 @@
 .money--zero .money__big { color: var(--ink); }
 .money__what { color: var(--ink-2); font: 600 var(--fs-sm)/1.35 var(--font-body); }
 .money__of, .money__would { font-size: var(--fs-sm); line-height: 1.5; }
-.money__none { display: grid; justify-items: start; padding: 8px; border: 1px solid var(--line); background: var(--hatch-fill); }
-.money__none span { padding: 3px 8px; background: var(--paper); font: 600 var(--fs-base)/1.3 var(--font-body); }
 /* Until the back-test's ranges arrive: a placeholder made to be seen (hatched, dashed, in caps); a production build
    refuses a page that holds it. */
 .money__range--pending { justify-self: start; max-width: none; margin-top: 4px; padding: 2px 8px; border: 1.5px dashed var(--ink-2); background: var(--hatch-fill); font: 700 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
@@ -146,18 +144,6 @@
   .stmt__row--sum > *, .stmt__row--net > * { border-top: 0; }
 }
 
-/* The share control: a disclosure under the verdict, the sentence and link selectable inside it. */
-.share { padding-top: 10px; border-top: 1px solid var(--line); }
-.share__summary { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-h); padding: 6px 14px; border: var(--rule) solid var(--ink); background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; list-style: none; }
-.share__summary::-webkit-details-marker { display: none; }
-.share__summary::after { content: "+" / ""; font: 700 var(--fs-base)/1 var(--font-type); }
-.share[open] .share__summary { background: var(--ink); color: var(--paper); }
-.share[open] .share__summary::after { content: "\2212" / ""; }
-.share__body { display: grid; gap: 8px; margin-top: 10px; padding: 12px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); }
-.share__text { max-width: none; font-size: var(--fs-sm); line-height: 1.5; }
-.share__url { font-family: var(--font-type); color: var(--ink-2); overflow-wrap: anywhere; }
-.share__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-
 /* A numbered section: words left, the figure right from 980px (in hsec--full, the words across the top and the figure under them); stacked under that.
    Each section opens on a hairline. */
 .hsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 56px; padding-top: 28px; border-top: 1px solid var(--line); align-items: start; }
@@ -171,7 +157,6 @@
   .hsec--full > .hsec__text > h2 { grid-column: 1 / -1; }
   .hsec--full > .hsec__text > .hsec__lever { grid-column: 2; grid-row: 2 / span 2; }
 }
-.hsec__lever { padding: 10px 12px; border-left: 4px solid var(--pen); background: var(--pen-tint); font-weight: 600; }
 .hsec__try { display: inline-block; margin-top: 8px; padding: 5px 10px; border: var(--rule) solid currentColor; background: var(--paper); color: var(--ink); font: 600 var(--fs-sm)/1.2 var(--font-body); text-decoration: none; white-space: nowrap; }
 .hsec__try:hover { background: var(--ink); color: var(--paper); }
 .hsec__try::after { content: " \2192" / ""; }
@@ -281,12 +266,11 @@
 
 /* Forced colors: the no-score box's hatch is redrawn by the shared hatch rule (components.css); its words sit on Canvas. */
 @media (forced-colors: active) {
-  .hosp__none span, .money__none span { background: Canvas; color: CanvasText; }
-  html :is(.money__none, .money__range--pending, .stmt__scope, .stmt__sw--scope) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; outline-color: CanvasText; background-color: Canvas; color: CanvasText; }
+  .hosp__none span { background: Canvas; color: CanvasText; }
+  html :is(.money__range--pending, .stmt__scope, .stmt__sw--scope) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; outline-color: CanvasText; background-color: Canvas; color: CanvasText; }
   .stmt__part, .stmt__sw--part { forced-color-adjust: none; background: GrayText; }
   .stmt__row--sum .stmt__part { background: CanvasText; }
   .stmt__cut, .stmt__add, .stmt__sw--cut { forced-color-adjust: none; background: Highlight; }
-  .share[open] .share__summary { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .geo .chart-geo-dot { fill: CanvasText; }
   .geo .chart-geo-halo { fill: none; }
   .stars__off { color: GrayText; }
@@ -450,9 +434,9 @@
 /* A figure's measure buttons: one row of mono labels in boxes, the picked one inked. */
 .mtoggle { display: flex; flex-wrap: wrap; gap: 0; }
 @media (max-width: 560px) {
-  .mtoggle:not(.usmap__modes) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .mtoggle:not(.usmap__modes) .mtoggle__b + .mtoggle__b { margin-left: 0; }
-  .mtoggle:not(.usmap__modes) .mtoggle__b { margin: 0 -1.5px -1.5px 0; }
+  .mtoggle:not(.usmap__modes, .bubbles__pick) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mtoggle:not(.usmap__modes, .bubbles__pick) .mtoggle__b + .mtoggle__b { margin-left: 0; }
+  .mtoggle:not(.usmap__modes, .bubbles__pick) .mtoggle__b { margin: 0 -1.5px -1.5px 0; }
 }
 .mtoggle[hidden] { display: none; }
 .mtoggle__b { min-height: var(--target-min); padding: 6px 12px; border: 1.5px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 var(--fs-sm)/1.2 var(--font-type); letter-spacing: 0.04em; cursor: pointer; }
@@ -756,8 +740,6 @@
 .prog__summary .f-money .field__note { display: grid; gap: 6px; justify-items: start; }
 /* The states' map: one drawing, two layers of circles; the figure's data-view says which shows. */
 .bubbles { display: grid; gap: 8px; }
-.bubbles__pick { display: flex; }
-.bubbles__pick[hidden] { display: none; }
 .bubbles[data-view="total"] .chart-bubbles__layer--stay, .bubbles[data-view="stay"] .chart-bubbles__layer--total { display: none; }
 /* Three programs, three shapes: side by side from 900px, stacked under. */
 .three { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }

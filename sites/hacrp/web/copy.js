@@ -77,7 +77,6 @@ export const COPY = {
   },
   whatifRowMoney: { text: 'Estimated HAC cut', claim: null },
   whatifMoneyEither: { text: '{zero} or {amount}', claim: 'HACRP-01' },
-  whatifMoneyTagLabel: { text: 'Estimate: how this site estimates the dollars', claim: null },
   whatifMoneyCut: { text: 'estimated cut', claim: null },
   whatifMoneyNone: { text: 'no cut', claim: null },
   whatifCliffNone: { text: 'no cut', claim: null },
@@ -278,6 +277,7 @@ export const COPY = {
   noValue: { text: 'no value published', claim: null },
   footnoteLead: { text: 'CMS footnote {code}:', claim: null },
   estimateTag: { text: 'estimate', claim: null },
+  estimateTagLabel: { text: 'Estimate: how this site estimates the dollars', claim: null },
   estimateNote: {
     text: "This site recomputes this measure's z-score from CMS's published value. The recompute can differ from CMS's z-score by up to {maxError}.",
     claim: null,

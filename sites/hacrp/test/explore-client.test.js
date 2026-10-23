@@ -3,7 +3,7 @@
 // a state picked on it, a place map's dots, and the score rule's order, which must be the order the build draws.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exploreLoader, mountHalving, mountMeasureToggles, mountPlaceMaps, mountUsMap, ruleOrder } from '../client/explore.js';
+import { exploreLoader, mountHalving, mountMeasureToggles, mountPlaceMaps, mountUsMap, mountViewToggle, ruleOrder } from '../client/explore.js';
 import { hospitalRows } from '../web/generate.js';
 import { PD, VIEWS } from './pinned.js';
 
@@ -126,6 +126,22 @@ test('the US map: the two modes switch what the map shows; a click on a state, o
     if (original === undefined) delete globalThis.window;
     else globalThis.window = original;
   }
+});
+
+test('a view toggle shows its group and a click on a button presses it alone and sets the view where the figure\'s CSS reads it', () => {
+  const total = el({ dataset: { view: 'total' } });
+  const stay = el({ dataset: { view: 'stay' } });
+  const group = el({ hidden: true, querySelectorAll: () => [total, stay] });
+  const box = el({ dataset: { view: 'total' }, querySelector: (s) => (s === '.mtoggle' ? group : null) });
+  mountViewToggle(box, '.mtoggle', 'view');
+  assert.equal(group.hidden, false);
+  group.handlers.click({ target: { closest: () => stay } });
+  assert.equal(box.dataset.view, 'stay');
+  assert.deepEqual([total.attrs['aria-pressed'], stay.attrs['aria-pressed']], ['false', 'true']);
+  group.handlers.click({ target: { closest: () => null } });
+  assert.equal(box.dataset.view, 'stay', 'a click off the buttons changes nothing');
+  // No group, nothing to mount.
+  mountViewToggle(el({ querySelector: () => null }), '.mtoggle', 'view');
 });
 
 test('a place map\'s dots open their hospitals\' pages: a click on a dot, or Enter on the active one', () => {

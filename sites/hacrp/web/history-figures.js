@@ -13,7 +13,7 @@ import { smallLines } from '../../../web/charts/smallLines.js';
 import { miniTiles } from '../../../web/charts/tileMap.js';
 import { STATE_NAMES, usProjected, usYearMap } from '../../../web/charts/geo.js';
 import { TILES } from '../../../web/charts/states.js';
-import { lastCall } from '../../../web/render/components.js';
+import { lastCall, paraOf } from '../../../web/render/components.js';
 import { cmsText, count, listText, pct, pctFloor, shownAbove } from '../../../web/render/format.js';
 import { html, jsonScript } from '../../../web/render/html.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
@@ -368,7 +368,7 @@ export function yearsFigure(rec, hd, { n, source }) {
 
 // ---------- Part 4 ----------
 
-const para = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
+const para = paraOf(fill, t);
 // The roll call's link to Methods' note on the year whose count differs from CMS's fact sheet, when it does.
 const countLink = (hd) => {
   const c = hd.counts[hd.fys.indexOf(FACT_SHEET_CUT.fy)];

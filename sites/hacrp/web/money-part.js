@@ -10,6 +10,7 @@ import { STATE_NAMES, usBubbles } from '../../../web/charts/geo.js';
 import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
+import { paraOf } from '../../../web/render/components.js';
 import { cmsText, count, decimal, dollars, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { REDUCTION_TEXT } from './constants.js';
@@ -24,8 +25,19 @@ import { psec } from './program-figures.js';
 export const ACROSS_WINDOW = 0.05;
 
 const pct0 = (x) => pct(x, 0);
-const p = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
-const tipOf = (r, extra) => fill('billTip', { name: r.name, city: r.city, state: r.state, money: money(r.cut), ...extra });
+const p = paraOf(fill, t);
+const tipOf = (r) => fill('billTip', { name: r.name, city: r.city, state: r.state, money: money(r.cut) });
+
+// A figure's table cells: the text shown and the raw value kept (a count, whole dollars, a share to a tenth of a percent).
+const cnt = (n) => num(count(n), n);
+const usd = (x) => num(dollars(x), x);
+const share = (x) => num(pct(x, 1), x);
+// The columns and a row of the two tables that list groups of cut hospitals (the teaching groups, each kind of hospital).
+const GROUP_COLUMNS = [{ name: t('groupColGroup') }, { name: t('groupColHospitals'), numeric: true }, { name: t('groupColMoney'), numeric: true }, { name: t('groupColShareHospitals'), numeric: true }, { name: t('groupColShareMoney'), numeric: true }];
+const groupRow = (label, hospitals, cut, shareHospitals, shareMoney) => [label, cnt(hospitals), usd(cut), share(shareHospitals), share(shareMoney)];
+// The item of a list whose number is least, or greatest (the first of equals).
+const least = (list, by) => list.reduce((a, b) => (by(b) < by(a) ? b : a));
+const greatest = (list, by) => list.reduce((a, b) => (by(b) > by(a) ? b : a));
 
 // ---------- the bill ----------
 
@@ -50,8 +62,8 @@ export function billFigure(md, { n, source }) {
     ...drawn(draw, PAGE),
     takeaway: fill('billTakeaway', { hospitals: noun(md.tenth.n, 'hospital'), share: pct0(md.tenth.money / total), money: money(total) }),
     table: {
-      columns: [{ name: t('billColGroup') }, { name: t('billColHospitals'), numeric: true }, { name: t('billColMoney'), numeric: true }, { name: t('billColShareHospitals'), numeric: true }, { name: t('billColShareMoney'), numeric: true }],
-      rows: groups.map((g) => [g.label, num(count(g.rows.length), g.rows.length), num(dollars(g.value), g.value), num(pct(g.rows.length / md.cutRows.length, 1), g.rows.length / md.cutRows.length), num(pct(g.value / total, 1), g.value / total)]),
+      columns: GROUP_COLUMNS,
+      rows: groups.map((g) => groupRow(g.label, g.rows.length, g.value, g.rows.length / md.cutRows.length, g.value / total)),
     },
   });
 }
@@ -80,7 +92,7 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
     takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
     table: {
       columns: [{ name: t('acrossColSide') }, { name: t('acrossColHospitals'), numeric: true }, { name: t('acrossColMoney'), numeric: true }],
-      rows: [[t('acrossSideUnder'), num(count(under.length), under.length), num(dollars(underMoney), underMoney)], [t('acrossSideOver'), num(count(over.length), over.length), num(dollars(overMoney), overMoney)]],
+      rows: [[t('acrossSideUnder'), cnt(under.length), usd(underMoney)], [t('acrossSideOver'), cnt(over.length), usd(overMoney)]],
     },
   });
 }
@@ -110,14 +122,14 @@ export function sharesFigure(md, { n, source }) {
   }));
   // The takeaway: the group whose share of the money most outruns its share of the hospitals.
   const all = kinds.flatMap((k) => k.groups.map((g) => ({ kind: k.kind, ...g })));
-  const top = all.reduce((a, b) => (b.shareMoney / b.shareHospitals > a.shareMoney / a.shareHospitals ? b : a));
+  const top = greatest(all, (g) => g.shareMoney / g.shareHospitals);
   const labels = { a: t('sharesKeyHospitals'), b: t('sharesKeyMoney') };
   return figure({
     n, source, claimLevel: 'estimate', alt: t('sharesAlt'), csvName: 'hacrp-dollars-share-by-kind', ...drawn((width) => pairBars({ sections, labels, width })),
     takeaway: fill('sharesTakeaway', { group: fill(`sharesNoun_${top.kind}`, { group: groupLabel(top.kind, top.key) }), shareHospitals: pct0(top.shareHospitals), shareMoney: pct0(top.shareMoney) }),
     table: {
-      columns: [{ name: t('billColGroup') }, { name: t('billColHospitals'), numeric: true }, { name: t('billColMoney'), numeric: true }, { name: t('billColShareHospitals'), numeric: true }, { name: t('billColShareMoney'), numeric: true }],
-      rows: all.map((g) => [`${kindLabel(g.kind)}: ${groupLabel(g.kind, g.key)}`, num(count(g.n), g.n), num(dollars(g.money), g.money), num(pct(g.shareHospitals, 1), g.shareHospitals), num(pct(g.shareMoney, 1), g.shareMoney)]),
+      columns: GROUP_COLUMNS,
+      rows: all.map((g) => groupRow(`${kindLabel(g.kind)}: ${groupLabel(g.kind, g.key)}`, g.n, g.money, g.shareHospitals, g.shareMoney)),
     },
   });
 }
@@ -125,26 +137,25 @@ export function sharesFigure(md, { n, source }) {
 // ---------- by state ----------
 
 export function statesFigure(md, { n, source, shapes }) {
-  const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1));
+  // Each state's cut per Medicare stay, to the whole dollar, once (the drawing's tooltips, the takeaway and the table say it).
+  const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1)).map((s) => ({ ...s, stay: Math.round(s.perStay) }));
   const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }) }]));
-  const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(Math.round(s.perStay)) }) }]));
+  const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(s.stay) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
   const art = drawn((width) => usBubbles({ shapes, layers, width }), PAGE);
   // One drawing, two layers of circles: the buttons (shown by the page script) say which one shows; without the script,
   // the dollars.
   const chart = html`<div class="bubbles" data-view="total">
-<p class="bubbles__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view-pick="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view-pick="stay" aria-pressed="false">${t('statesPerStay')}</button></p>
+<div class="mtoggle bubbles__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view="stay" aria-pressed="false">${t('statesPerStay')}</button></div>
 ${imagePair(art, t('statesAlt'))}</div>`;
-  const lo = states.reduce((a, b) => (b.money < a.money ? b : a));
-  const hi = states.reduce((a, b) => (b.money > a.money ? b : a));
-  const loS = states.reduce((a, b) => (b.perStay < a.perStay ? b : a));
-  const hiS = states.reduce((a, b) => (b.perStay > a.perStay ? b : a));
+  const [lo, hi] = [least(states, (s) => s.money), greatest(states, (s) => s.money)];
+  const [loS, hiS] = [least(states, (s) => s.perStay), greatest(states, (s) => s.perStay)];
   return figure({
     n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-by-state', note: t('statesNone'),
-    takeaway: fill('statesTakeaway', { low: money(lo.money), high: money(hi.money), lowStay: dollars(Math.round(loS.perStay)), highStay: dollars(Math.round(hiS.perStay)) }),
+    takeaway: fill('statesTakeaway', { low: money(lo.money), high: money(hi.money), lowStay: dollars(loS.stay), highStay: dollars(hiS.stay) }),
     table: {
       columns: [{ name: t('statesColState') }, { name: t('statesColCut'), numeric: true }, { name: t('statesColMoney'), numeric: true }, { name: t('statesColStays'), numeric: true }, { name: t('statesColPerStay'), numeric: true }],
-      rows: states.map((s) => [STATE_NAMES[s.state] ?? s.state, num(count(s.cut), s.cut), num(dollars(s.money), s.money), num(count(s.stays), s.stays), num(dollars(Math.round(s.perStay)), Math.round(s.perStay))]),
+      rows: states.map((s) => [STATE_NAMES[s.state] ?? s.state, cnt(s.cut), usd(s.money), cnt(s.stays), usd(s.stay)]),
     },
   });
 }
@@ -203,13 +214,13 @@ ${panel({ key: 'threeHac', total: -hh.money, shape: 'threeHacShape', bins: hacBi
 </div>`;
   return figure({
     n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-three-programs', note: t('threeNote'),
-    takeaway: fill('threeTakeaway', { hrrpLow: pct(0, 0), hrrpHigh: pctText(hrrpHigh), hrrp: money(-hh.hrrp), vbpLow: pctText(vbpLow), vbpHigh: `+${pctText(vbpHigh)}`, hvbp: money(hh.hvbp), zero: pct(0, 0), pct: REDUCTION_TEXT, hac: money(hh.money) }),
+    takeaway: fill('threeTakeaway', { hrrpLow: pct(0, 0), hrrpHigh: pctText(hrrpHigh), hrrp: money(-hh.hrrp), vbpLow: pctText(vbpLow), vbpHigh: pct(vbpHigh, 1, { sign: true }), hvbp: money(hh.hvbp), zero: pct(0, 0), pct: REDUCTION_TEXT, hac: money(hh.money) }),
     table: {
       columns: [{ name: t('threeColProgram') }, { name: t('threeColHospitals'), numeric: true }, { name: t('threeColMoney'), numeric: true }],
       rows: [
-        [t('threeHrrp'), num(count(hrrpN), hrrpN), num(dollars(hh.hrrp), hh.hrrp)],
-        [t('threeHvbp'), num(count(vbpN), vbpN), num(dollars(hh.hvbp), hh.hvbp)],
-        [t('threeHac'), num(count(cut), cut), num(dollars(-hh.money), -hh.money)],
+        [t('threeHrrp'), cnt(hrrpN), usd(hh.hrrp)],
+        [t('threeHvbp'), cnt(vbpN), usd(hh.hvbp)],
+        [t('threeHac'), cnt(cut), usd(-hh.money)],
       ],
     },
   });

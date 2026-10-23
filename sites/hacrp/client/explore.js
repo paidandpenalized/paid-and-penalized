@@ -266,7 +266,7 @@ export function mountSwarm(fig, { explore, hospitals, src }) {
     const b = e.target.closest('button[data-group]');
     if (!b) return;
     const s = await ready();
-    for (const x of picker.querySelectorAll('button[data-group]')) x.setAttribute('aria-pressed', String(x === b));
+    setPressed(picker.querySelectorAll('button[data-group]'), b);
     const [kind, key] = b.dataset.group ? b.dataset.group.split(':') : [null, null];
     s.group = kind ? { kind, key } : null;
     draw(s);
@@ -342,21 +342,34 @@ export function mountAgree(fig, explore) {
   grid.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(grid.querySelector('.chart-mark.is-active[data-pair]')); });
 }
 
+// ---------- the map toggles ----------
+
+// Presses one button of a toggle's buttons and leaves the rest unpressed.
+export const setPressed = (buttons, pressed) => {
+  for (const b of buttons) b.setAttribute('aria-pressed', String(b === pressed));
+};
+
+// A map's view toggle (the .mtoggle group in root that groupSel finds, its buttons data-<attr>="view"): shown, and a click
+// on one of its buttons presses it alone and sets data-<attr> on target (default: root), which the figure's CSS reads to
+// show that view.
+export function mountViewToggle(root, groupSel, attr, target = root) {
+  const group = root.querySelector(groupSel);
+  if (!group) return;
+  group.hidden = false;
+  group.addEventListener('click', (e) => {
+    const b = e.target.closest(`button[data-${attr}]`);
+    if (!b) return;
+    setPressed(group.querySelectorAll('button'), b);
+    target.dataset[attr] = b.dataset[attr];
+  });
+}
+
 // ---------- the US map ----------
 
 // The map's two modes (shares, every hospital), and a state picked on it (a click, or Enter on the state the keyboard
 // is on: web/client/figure.js marks it is-active) opens that state's page (statePath(code)).
 export function mountUsMap(fig, statePath) {
-  const modes = fig.querySelector('.usmap__modes');
-  if (modes) {
-    modes.hidden = false;
-    modes.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-mode]');
-      if (!b) return;
-      for (const x of modes.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
-      fig.querySelector('.usmap').dataset.mode = b.dataset.mode;
-    });
-  }
+  mountViewToggle(fig, '.usmap__modes', 'mode', fig.querySelector('.usmap'));
   const open = (mark) => { if (mark?.dataset.state) window.location.assign(statePath(mark.dataset.state)); };
   for (const svg of fig.querySelectorAll('svg.chart--us-map')) {
     svg.addEventListener('click', (e) => open(e.target.closest?.('[data-state]')));

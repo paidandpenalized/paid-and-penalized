@@ -6,7 +6,7 @@ import { ruleCompare, scoreRule } from '../../../web/charts/scoreRule.js';
 import { figure, imageOf, imagePair, keysHint, num } from '../../../web/charts/figure.js';
 import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../web/charts/geo.js';
 import { compareHist } from '../../../web/charts/compareHist.js';
-import { printout } from '../../../web/render/components.js';
+import { paraOf, printout, wsOp, wsTerm } from '../../../web/render/components.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { nameInText, placeCounts } from './places.js';
 import { toUnit } from '../../../engine/js/stats.js';
@@ -164,7 +164,7 @@ function medianSum(median) {
   const terms = MEASURE_IDS.map((id) => ({ short: SHORT_NAMES[id], z: median.measures[id].z }));
   return html`<div class="ws ws--prog" role="group" aria-label="${t('fig4Sum')}">
 <p class="ws__head">${t('fig4Sum')}</p>
-<p class="ws__line"><span class="ws__paren" aria-hidden="true">(</span>${terms.map((term, i) => html`${i ? html`<span class="ws__op">${term.z < 0 ? '−' : '+'}</span>` : ''}<span class="ws__term"><span class="ws__v">${i ? decimal(Math.abs(term.z), DP) : cmsText(decimal(term.z, DP))}</span><span class="ws__k">${term.short}</span></span>`)}<span class="ws__paren" aria-hidden="true">)</span><span class="ws__op">÷</span><span class="ws__term"><span class="ws__v">${String(terms.length)}</span><span class="ws__k">${t('wsN')}</span></span><span class="ws__op">=</span><span class="ws__term ws__term--total"><span class="ws__v">${cmsText(median.totalText)}</span><span class="ws__k">${t('wsTotal')}</span></span></p>
+<p class="ws__line"><span class="ws__paren" aria-hidden="true">(</span>${terms.map((term, i) => html`${i ? wsOp(term.z < 0 ? '−' : '+') : ''}${wsTerm(i ? decimal(Math.abs(term.z), DP) : cmsText(decimal(term.z, DP)), term.short)}`)}<span class="ws__paren" aria-hidden="true">)</span>${wsOp('÷')}${wsTerm(String(terms.length), t('wsN'))}${wsOp('=')}${wsTerm(cmsText(median.totalText), t('wsTotal'), 'ws__term--total')}</p>
 </div>`;
 }
 
@@ -237,7 +237,7 @@ ${each(t('step5Heading'), html`${para('step5a', { percentile: ordinal(CUTOFF_PER
 }
 
 // A paragraph of the page's words: a key, filled with values when it has placeholders.
-const para = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
+const para = paraOf(fill, t);
 
 // Step 2's first paragraph, its term a box that opens on a click or tap (no script) with the SIR's arithmetic and
 // baseline year. A <details> can't sit inside a <p>, so the paragraph is a div that reads as one.

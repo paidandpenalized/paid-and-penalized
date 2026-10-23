@@ -187,7 +187,6 @@
 .wi-bars__lead { color: var(--ink-2); }
 
 .wi-solver { display: grid; gap: 8px; }
-.wi-solver__worth { padding: 8px 12px; border-left: 4px solid var(--pen); background: var(--pen-tint); font-weight: 600; }
 /* The bars as the page's figure, right after the inputs. */
 .wi-inputs > .fig { margin-top: 16px; }
 
