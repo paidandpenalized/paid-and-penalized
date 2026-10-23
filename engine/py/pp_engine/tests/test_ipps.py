@@ -93,20 +93,36 @@ class Rates(unittest.TestCase):
         self.assertEqual(got["operating"]["1A"]["qe"], (660.00, 340.00))
         self.assertEqual(got["operating"]["1B"]["nn"], (589.00, 361.00))
         self.assertEqual(got["capital"], CAPITAL)
-        self.assertEqual(set(got), {"operating", "capital", "update", "mdh_update"})
+        self.assertEqual(set(got), {"operating", "capital", "update", "mdh_factor", "uc_pool"})
 
     def test_the_update_of_each_scenario_is_read_from_its_heading_as_a_percent(self):
         # "(Update = 2.6 Percent)" -> 2.6; the fourth heading wraps a line and the update is negative
         self.assertEqual(read_rates(rates_text())["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
 
-    def test_the_mdh_update_is_the_scenarios_update_when_the_files_rate_is_the_year_before_s_else_zero(self):
+    def test_the_mdh_factor_is_the_update_and_budget_neutrality_where_the_files_rate_is_the_year_before_s(self):
         updates = {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7}
+        # FY2026's MDH column is the FY2025 rate: it takes the update and, as the rule adjusts every hospital-specific
+        # rate, the MS-DRG reclassification and recalibration factor 0.998580 and the 10% cap factor 0.999897
         self.assertTrue(IMPACT_YEARS[2026].mdh_rate_prior_year)
-        self.assertEqual(read_rates(rates_text())["mdh_update"], updates)  # FY2026's MDH column is the FY2025 rate
-        self.assertEqual(read_rates(rates_text(), fy=2024)["mdh_update"], dict.fromkeys(updates, 0.0))
+        self.assertEqual(IMPACT_YEARS[2026].hsp_budget_neutrality, (0.998580, 0.999897))
+        got = read_rates(rates_text())["mdh_factor"]
+        self.assertEqual(sorted(got), sorted(updates))
+        for key, percent in updates.items():
+            self.assertAlmostEqual(got[key], (1 + percent / 100) * 0.998580 * 0.999897, places=12, msg=key)
+        self.assertAlmostEqual(got["qe"], 1.0244376, places=7)  # what CMS's FY2027 file implies (ipps.ImpactYear)
+        # FY2024's file gives the rate already updated: nothing more
+        self.assertEqual(read_rates(rates_text(), fy=2024)["mdh_factor"], dict.fromkeys(updates, 1.0))
         self.assertEqual(read_rates(rates_text(), fy=2024)["update"], updates)  # the headings' own updates are read alike
         with self.assertRaisesRegex(SchemaError, "FY2025"):
             read_rates(rates_text(), fy=2025)
+
+    def test_the_uncompensated_care_pool_is_the_years_factor_1_times_factor_2(self):
+        # FY2026: "$12,412,500,000 * 0.6214 = $ 7,713,127,500";
+        # FY2024: "$10,015,191,021.88 * 0.5929 = $5,938,006,756.87"
+        self.assertEqual(read_rates(rates_text())["uc_pool"], 7_713_127_500.0)
+        self.assertEqual(read_rates(rates_text(), fy=2024)["uc_pool"], 5_938_006_756.87)
+        self.assertAlmostEqual(12_412_500_000 * 0.6214, IMPACT_YEARS[2026].uc_pool, places=2)
+        self.assertAlmostEqual(10_015_191_021.88 * 0.5929, IMPACT_YEARS[2024].uc_pool, delta=0.01)
 
     def test_the_updates_follow_the_scenario_labels_not_their_position(self):
         shuffled = read_rates(rates_text(order_a=("nn", "ne", "qn", "qe"), order_b=("ne", "qe", "nn", "qn")))
@@ -177,14 +193,16 @@ class Rates(unittest.TestCase):
 # A header in the real file's shape: the columns the reader needs, among others it ignores and the FY2026-named
 # low-volume column it must not read.
 IMPACT_HEADER = ["Provider Number", "Name", "FY 2026 Wage Index", "Cost of Living Adjustment", "TCHOP", "TCHCP",
-                 "DSHOPP", "DSHCPP", "UCP Per Claim Amount", "Provider Type", "HSP Rate", "Bills", "CASETA43",
+                 "DSHOPP", "DSHCPP", "UCP_ADJ", "UCP Per Claim Amount", "Provider Type", "HSP Rate", "Bills",
+                 "CASETA43",
                  "CMIV43", "TACMIV43", "GAF", "OUTFACT_F", "COUTFACT_F", "Proxy Readmission Adjustment Factor",
                  "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag, CAA 2024",
                  "HSP Rate for MDHs, FY 2025 extension", "Low Volume Hospital Adjustment",
                  "Low-Volume Hospital Payment Adjustment, FY 2025 extension", "Beds", "IME_CASETA43", "IME_TACMIV43"]
 GOOD = {"Provider Number": "990001", "Name": "INVENTED A", "FY 2026 Wage Index": "1.0512",
         "Cost of Living Adjustment": "1", "TCHOP": "0.0655", "TCHCP": "0.05496", "DSHOPP": "0.0298",
-        "DSHCPP": "0.05731", "UCP Per Claim Amount": "1400.27", "Provider Type": "0", "HSP Rate": "", "Bills": "3952",
+        "DSHCPP": "0.05731", "UCP_ADJ": "0.000788", "UCP Per Claim Amount": "1400.27", "Provider Type": "0",
+        "HSP Rate": "", "Bills": "3952",
         "CASETA43": "3878.43", "CMIV43": "1.9834", "TACMIV43": "1.9757", "GAF": "0.933856364", "OUTFACT_F": "0.01633",
         "COUTFACT_F": "0.01269", "Proxy Readmission Adjustment Factor": "0.9975", "Proxy Quality Reduction": "0",
         "Proxy EHR Reduction": "0", "MDH Flag, CAA 2024": "", "HSP Rate for MDHs, FY 2025 extension": "",
@@ -208,15 +226,18 @@ class PaymentInputs(unittest.TestCase):
             "cases": 3878.43, "cmi": 1.9757, "bills": 3952, "cmi_hsp": 1.9834, "wi": 1.0512, "cola": 1.0,
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
             "ime_op": 0.0655, "ime_cap": 0.05496, "dsh_op": 0.0298, "dsh_cap": 0.05731, "ucp_per_claim": 1400.27,
+            "ucp_factor": 0.000788,
             "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0,
             "beds": 212, "ime_cases": 1210.5, "ime_cmi": 1.8812})
         self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch"}))
 
     def test_payment_inputs_blank_is_none(self):
         blanks = {k: "" for k in ("CASETA43", "TACMIV43", "OUTFACT_F", "COUTFACT_F", "HSP Rate", "UCP Per Claim Amount",
+                                  "UCP_ADJ",
                                   "Proxy Quality Reduction", "Provider Type")}
         got = read_payment_inputs(impact_text(hospital(**blanks)))["990001"]
-        for key in ("cases", "cmi", "outlier_op", "outlier_cap", "hsp", "ucp_per_claim", "quality", "ptype"):
+        for key in ("cases", "cmi", "outlier_op", "outlier_cap", "hsp", "ucp_per_claim", "ucp_factor", "quality",
+                    "ptype"):
             self.assertIsNone(got[key], key)
         self.assertFalse(got["sch"])  # no provider type: not an SCH
         self.assertEqual(got["wi"], 1.0512)  # the rest still reads
@@ -301,7 +322,8 @@ class PaymentInputs(unittest.TestCase):
 # FY2024's impact file: other year stamps, no MDH or extension columns (MDH status is the provider type, its rate the
 # `HSP Rate`), and `Low Volume Hospital Adjustment` is the year's low-volume multiplier.
 IMPACT_HEADER_2024 = ["Provider Number", "Name", "FY 2024 Wage Index", "Cost of Living Adjustment", "Beds", "TCHOP",
-                      "TCHCP", "DSHOPP", "DSHCPP", "UCP Per Claim Amount", "Provider Type", "HSP Rate", "Bills",
+                      "TCHCP", "DSHOPP", "DSHCPP", "UCP_ADJ", "UCP Per Claim Amount", "Provider Type", "HSP Rate",
+                      "Bills",
                       "CASETA40", "CMIV40", "TACMIV40", "CASETA41", "CMIV41", "TACMIV41", "GAF", "OUTFACT_F",
                       "COUTFACT_F", "Low Volume Hospital Adjustment", "Proxy Quality Reduction", "Proxy EHR Reduction",
                       "IME_CASETA40", "IME_TACMIV40", "IME_CASETA41", "IME_TACMIV41"]

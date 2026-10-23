@@ -12,13 +12,15 @@ class RatesOnThePin(RatesCases, unittest.TestCase):
     FY = FY
     UPDATE = {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7}
     LABOR = {"1A": 0.66, "1B": 0.62}
-    MDH_UPDATE_MULTIPLIER = 1  # "HSP Rate updated to FY 2025 for MDH providers": the file's rate takes the update
+    MDH_BUDGET_NEUTRALITY = (0.998580, 0.999897)  # "HSP Rate updated to FY 2025 for MDH providers": update and factors
+    UC_POOL = 7_713_127_500.0  # "$12,412,500,000 * 0.6214 = $ 7,713,127,500" (90 FR 36889)
 
 
 class PaymentInputsOnThePin(PaymentInputsCases, unittest.TestCase):
     FY = FY
     COUNTS = {"hospitals": 3103, "mdh": 162, "sch": 426, "pr": 52, "quality": 99, "ehr": 106, "low_volume": 572}
-    BLANKS = {"hsp": 2677, "hsp_mdh": 2941, "outlier_op": 70, "outlier_cap": 70, "ime_cases": 1842, "ime_cmi": 1842}
+    BLANKS = {"hsp": 2677, "hsp_mdh": 2941, "outlier_op": 70, "outlier_cap": 70, "ime_cases": 1842, "ime_cmi": 1842,
+              "ucp_factor": 739}
 
     def test_sch_rows_are_the_ones_with_a_hospital_specific_rate(self):
         # Includes the EACH/RRC rows (type 22): the file gives them an SCH rate, which supports paying EACHs as SCHs.

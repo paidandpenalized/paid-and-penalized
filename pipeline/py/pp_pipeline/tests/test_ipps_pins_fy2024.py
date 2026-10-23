@@ -15,13 +15,15 @@ class RatesOnThePin(RatesCases, unittest.TestCase):
     UPDATE = {"qe": 3.1, "qn": 0.625, "ne": 2.275, "nn": -0.2}  # Table 1C's "(Update = 3.1)" reads as 1A's 3.1 percent
     # FY2024's labor shares: Table 1A "67.6 PERCENT LABOR SHARE/32.4 PERCENT NONLABOR SHARE", Table 1B 62/38.
     LABOR = {"1A": 0.676, "1B": 0.62}
-    MDH_UPDATE_MULTIPLIER = 0  # "updated to FY 2024 for SCH & MDH providers": the file's rate is the year's already
+    MDH_BUDGET_NEUTRALITY = None  # "updated to FY 2024 for SCH & MDH providers": the file's rate is the year's already
+    UC_POOL = 5_938_006_756.87  # "$10,015,191,021.88 * 0.5929 = $5,938,006,756.87" (88 FR 59001)
 
 
 class PaymentInputsOnThePin(PaymentInputsCases, unittest.TestCase):
     FY = FY
     COUNTS = {"hospitals": 3199, "mdh": 177, "sch": 468, "pr": 51, "quality": 101, "ehr": 150, "low_volume": 625}
-    BLANKS = {"hsp": 2554, "hsp_mdh": 3022, "outlier_op": 68, "outlier_cap": 68, "ime_cases": 1980, "ime_cmi": 1966}
+    BLANKS = {"hsp": 2554, "hsp_mdh": 3022, "outlier_op": 68, "outlier_cap": 68, "ime_cases": 1980, "ime_cmi": 1966,
+              "ucp_factor": 815}
 
     def test_the_hsp_rate_belongs_to_the_sch_and_mdh_rows_and_mdh_comes_from_the_provider_type(self):
         self.assertEqual({c for c, h in self.inp.items() if h["hsp"] is not None},

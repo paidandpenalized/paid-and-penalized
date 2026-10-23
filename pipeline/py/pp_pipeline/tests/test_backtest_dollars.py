@@ -210,8 +210,8 @@ class OnThePins(unittest.TestCase):
         # report's base; less the DRG payments' error, those with line 29.01 still run low, the model's Medicare
         # Advantage teaching payments being short
         av = self.diagnostics["after_volume"]
-        self.assertEqual(av, {"with_ma_ime": {"n": 42, "vs_total": -0.0006, "vs_drg": -0.0389},
-                              "without": {"n": 56, "vs_total": -0.0002, "vs_drg": -0.0091}})
+        self.assertEqual(av, {"with_ma_ime": {"n": 42, "vs_total": -0.0006, "vs_drg": -0.0388},
+                              "without": {"n": 56, "vs_total": -0.0001, "vs_drg": -0.0038}})
         self.assertLess(av["with_ma_ime"]["vs_drg"], av["without"]["vs_drg"])
         self.assertLess(self.diagnostics["ntap"], 0.001)  # new-technology payments: under 0.1% of DRG payments
 

@@ -276,6 +276,8 @@
             "hrrp_share",
             "vbp_net",
             "hac_share",
+            "outlier_share",
+            "uc_pool",
             "hac_count",
             "yes_unestimated",
             "backtest_hac_median",

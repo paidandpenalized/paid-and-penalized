@@ -132,16 +132,19 @@ def _capital(section):
 def read_rates(text, fy=2026):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
     `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate, "update": {key: percent},
-    "mdh_update": {key: percent}}`.
+    "mdh_factor": {key: multiplier}, "uc_pool": dollars}`.
     1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%), 1C is Puerto Rico's (read so that a
     change in the file's layout is caught; no hospital is priced on it, since no program applies in Puerto Rico). The keys
     (`RATE_KEYS`, chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table
     still prices right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
     'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's update for the year in
     percent ('Update = 2.6 Percent' -> 2.6), which the headings of Tables 1A and 1B state alike (and 1C's two, for the
-    scenarios it lists): a table that states another update for the same scenario raises. `mdh_update` is the update that
-    brings a Medicare-dependent hospital's hospital-specific rate, as the year's impact file gives it (`fy`), to the
-    rule's year: each scenario's `update` where the file's rate is the year before's (`mdh_rate_prior_year`), else 0.
+    scenarios it lists): a table that states another update for the same scenario raises. `mdh_factor` is the
+    multiplier that brings a Medicare-dependent hospital's hospital-specific rate, as the year's impact file gives it
+    (`fy`), to the rule's year: where the file's rate is the year before's (`mdh_rate_prior_year`), 1 + the scenario's
+    `update` times the rule's budget-neutrality factors for hospital-specific rates (`hsp_budget_neutrality`), else 1.
+    `uc_pool` is the year's uncompensated care pool (`ImpactYear.uc_pool`), which the impact file's `UCP_ADJ` shares
+    out; it and the budget-neutrality factors are stated in the rule's text, not in these tables.
     The layout is the same in FY2024's and FY2026's files; the labor shares are not (FY2024's Table 1A is 67.6% labor),
     and are not read."""
     sections = _sections(rows(text, "\t"))
@@ -163,8 +166,11 @@ def read_rates(text, fy=2026):
             if percent != updates_a[key]:
                 raise SchemaError(f"Tables 1A-1E, Table {name}: update {percent} for scenario {key!r}, "
                                   f"Table 1A states {updates_a[key]}")
-    mdh_update = updates_a if _year(fy).mdh_rate_prior_year else dict.fromkeys(updates_a, 0.0)
-    return {"operating": operating, "capital": _capital(sections["1D"]), "update": updates_a, "mdh_update": mdh_update}
+    year = _year(fy)
+    mdh_factor = {key: ((1.0 + percent / 100.0) * math.prod(year.hsp_budget_neutrality)
+                        if year.mdh_rate_prior_year else 1.0) for key, percent in updates_a.items()}
+    return {"operating": operating, "capital": _capital(sections["1D"]), "update": updates_a, "mdh_factor": mdh_factor,
+            "uc_pool": year.uc_pool}
 
 
 # --- the impact file -------------------------------------------------------------------------------------------------
@@ -181,17 +187,36 @@ PUERTO_RICO = "40"  # state code, the CCN's first two digits (dollars.refuse_pue
 # modeled the status expiring, and the law reinstated it after.
 MDH_TYPES = frozenset({14, 15})
 
-# How each final rule's impact file is read. Both files share most column names; the year-stamped ones and the MDH and
-# low-volume columns differ.
+# How each final rule's impact file is read, and the two figures its columns need that the rule states in its text.
+# Both files share most column names; the year-stamped ones and the MDH and low-volume columns differ.
 class ImpactYear(NamedTuple):
     columns: dict  # the keys of a hospital's inputs -> the file's own header texts
     # Whether the file flags Medicare-dependent hospitals in a column of its own (else they are the Provider Types of
     # MDH_TYPES, and `HSP Rate` is theirs).
     mdh_flag: bool
-    # Whether the file's MDH hospital-specific rate is the year before the rule's and takes the year's update: FY2026's
-    # column is the FY2025 rate ("HSP Rate updated to FY 2025 for MDH providers"); FY2024's README says its `HSP Rate`
-    # is "updated to FY 2024 for SCH & MDH providers".
+    # Whether the file's MDH hospital-specific rate is the year before the rule's, and so takes the year's update and
+    # `hsp_budget_neutrality`: FY2026's column is the FY2025 rate ("HSP Rate updated to FY 2025 for MDH providers");
+    # FY2024's README says its `HSP Rate` is "updated to FY 2024 for SCH & MDH providers", so it takes neither.
     mdh_rate_prior_year: bool
+    # The factors the rule applies to a hospital-specific rate besides the update, where the file's MDH rate is the year
+    # before's (else unused). FY2026 (90 FR 37232, Addendum II.D.3.b): "the hospital specific-rate for an SCH or MDH is
+    # adjusted by the MS-DRG reclassification and recalibration budget neutrality factor", 0.998580, and an SCH's "by
+    # the MS-DRG 10-percent cap budget neutrality factor", 0.999897 (both from the rule's "Summary of FY 2026 Budget
+    # Neutrality Factors", 90 FR 37218); and (90 FR 37231) "if the MDH program were to be extended by law beyond
+    # September 30, 2025, into FY 2026, the updates to the hospital-specific rates for SCHs as described in this section
+    # would also apply to the hospital-specific rates for MDHs for FY 2026". The law extended it. CMS's own numbers
+    # agree. Over the hospitals with the full update in both years, the median ratio of the pinned FY2027 impact file's
+    # rates to this file's is 1.046405 for the MDHs (two years of updates, from FY2025) and 1.021444 for the SCHs (one);
+    # their quotient, 1.0244375, is the FY2026 factor, and 1.026 x 0.998580 x 0.999897 = 1.0244376. No wage-index
+    # factor: hospital-specific rates are not wage-adjusted.
+    hsp_budget_neutrality: tuple
+    # The year's uncompensated care pool in dollars, Factor 1 x Factor 2, which each hospital's Factor 3 (`UCP_ADJ`)
+    # shares out: "Factor 3 is applied to the product of Factor 1 and Factor 2 to determine the amount of the
+    # uncompensated care payment that each eligible hospital will receive" (FY2026 rule, 90 FR 36889-36890). FY2026:
+    # "The final FY 2026 uncompensated care amount is $12,412,500,000 * 0.6214 = $ 7,713,127,500." (90 FR 36889).
+    # FY2024: "$10,015,191,021.88 * 0.5929 = $5,938,006,756.87" (FY2024 rule, 88 FR 59001). In each pinned file the
+    # factors add up to 1.
+    uc_pool: float
 
 
 _SHARED_COLUMNS = {
@@ -207,6 +232,7 @@ _SHARED_COLUMNS = {
     "dsh_op": "DSHOPP",
     "dsh_cap": "DSHCPP",
     "ucp_per_claim": "UCP Per Claim Amount",  # $/claim (README: and the IHS/PR supplemental amount)
+    "ucp_factor": "UCP_ADJ",  # Factor 3: the hospital's share of `uc_pool`; blank for a hospital that has none
     "outlier_op": "OUTFACT_F",  # fractions of federal payments
     "outlier_cap": "COUTFACT_F",
     "gaf": "GAF",
@@ -224,7 +250,7 @@ IMPACT_YEARS = {
         "mdh": "MDH Flag, CAA 2024",  # Y or blank
         "hsp_mdh": "HSP Rate for MDHs, FY 2025 extension",  # $/case
         "low_volume": "Low-Volume Hospital Payment Adjustment, FY 2025 extension",  # multiplier; 1 = none
-    }, mdh_flag=True, mdh_rate_prior_year=True),
+    }, mdh_flag=True, mdh_rate_prior_year=True, hsp_budget_neutrality=(0.998580, 0.999897), uc_pool=7_713_127_500.0),
     2024: ImpactYear({
         **_SHARED_COLUMNS,
         "cases": "CASETA41",  # README: "Transfer Adjusted Cases under Grouper V41 and FY 2024 Post-Acute Transfer Policy"
@@ -234,7 +260,7 @@ IMPACT_YEARS = {
         "ime_cmi": "IME_TACMIV41",
         "wi": "FY 2024 Wage Index",
         "low_volume": "Low Volume Hospital Adjustment",  # multiplier; 1 = none (the expanded tiers ran all of FY2024)
-    }, mdh_flag=False, mdh_rate_prior_year=False),
+    }, mdh_flag=False, mdh_rate_prior_year=False, hsp_budget_neutrality=(), uc_pool=5_938_006_756.87),
 }
 _NOT_FLOAT = ("ccn", "bills", "quality", "ehr", "ptype", "mdh", "beds")
 

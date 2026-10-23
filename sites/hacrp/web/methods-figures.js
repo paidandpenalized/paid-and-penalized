@@ -214,7 +214,7 @@ export function assumptionsTable({ fy, volumeFy, backtestFy }) {
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
     ['assumeMdh', 'assumeMdhE', { fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeAddons', 'assumeAddonsE'],
     ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSch', 'assumeSchE'],
-    ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
+    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE'], ['assumeParhm', 'assumeParhmE'],
     ['assumeFfs', 'assumeFfsE'],
   ];
   return printout(html`<table class="gb assume">
@@ -234,6 +234,8 @@ const CHECK_FORMAT = {
   hrrp_share: SHARE,
   vbp_net: { value: money, range: (c) => fill('dcheckAtMost', { high: money(c.high) }) },
   hac_share: SHARE,
+  outlier_share: SHARE,
+  uc_pool: SHARE,
   hac_count: { value: count, range: (c) => fill('dcheckEqual', { high: count(c.high) }) },
   yes_unestimated: { value: count, range: (c) => fill('dcheckAtMost', { high: count(c.high) }) },
   // The back-test's median error, log(estimate ÷ cost report), read as how far the middle hospital's estimate ran

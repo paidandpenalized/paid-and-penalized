@@ -92,7 +92,7 @@ class Committed(unittest.TestCase):
         fy = self.committed["fy"]
         self.assertEqual(self.path, EMITTED_DIR / "dollars" / f"fy{fy}" / "dollars.json")
         self.assertEqual({r["Fiscal Year"] for r in hacrp_file()}, {str(fy)})
-        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (3, 3))
+        self.assertEqual((self.committed["schema_version"], self.committed["methods_version"]), (3, 4))
         self.assertEqual(self.committed["assumptions"], {"ratesFy": 2026, "volumeFy": 2024, "mdhEnd": "2026-12-31",
                                                          "lowVolumeEnd": "2026-12-31", "ntap": "excluded"})
         self.assertEqual(self.committed["bands"]["fy"], 2024)  # the back-test's year, two before the estimate's
@@ -109,8 +109,8 @@ class Committed(unittest.TestCase):
             self.assertTrue(c["pass"], c)
             self.assertTrue(c["low"] <= c["value"] <= c["high"], c)
         self.assertEqual([c["id"] for c in self.committed["checks"]],
-                         ["hrrp_share", "vbp_net", "hac_share", "hac_count", "yes_unestimated", "backtest_hac_median",
-                          "backtest_hospitals", "backtest_cut"])
+                         ["hrrp_share", "vbp_net", "hac_share", "outlier_share", "uc_pool", "hac_count",
+                          "yes_unestimated", "backtest_hac_median", "backtest_hospitals", "backtest_cut"])
         # The vbp_net check passes on an empty Table 16B join; and a share over a zero base has no value.
         self.assertGreater(nat["vbpBase"], 0)
         self.assertGreater(nat["hrrpBase"], 0)

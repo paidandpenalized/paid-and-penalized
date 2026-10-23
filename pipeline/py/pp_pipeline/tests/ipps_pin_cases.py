@@ -10,8 +10,9 @@ from pp_pipeline.ipps_pins import hrrp_factors, payment_inputs, rates, vbp_facto
 class RatesCases:
     """Attributes: FY; UPDATE (each key's update, as the "Update = X Percent" in the tables' own scenario headings:
     an independent statement of what the key means, to check the reader's column choice against); LABOR (the labor
-    share of Tables 1A and 1B); MDH_UPDATE_MULTIPLIER (1 where the impact file's MDH rate is the year before's, so
-    takes the year's update, 0 where it is already the year's)."""
+    share of Tables 1A and 1B); MDH_BUDGET_NEUTRALITY (the rule's factors for hospital-specific rates where the impact
+    file's MDH rate is the year before's, so takes the year's update and them; None where it is already the year's);
+    UC_POOL (the rule's uncompensated care amount, Factor 1 x Factor 2, as the rule prints it)."""
 
     @classmethod
     def setUpClass(cls):
@@ -28,7 +29,11 @@ class RatesCases:
                 self.assertGreater(min(labor, nonlabor), 0)
         self.assertGreater(self.rates["capital"], 0)
         self.assertEqual(self.rates["update"], self.UPDATE)
-        self.assertEqual(self.rates["mdh_update"], {k: v * self.MDH_UPDATE_MULTIPLIER for k, v in self.UPDATE.items()})
+        bn = self.MDH_BUDGET_NEUTRALITY
+        for key, update in self.UPDATE.items():
+            want = 1.0 if bn is None else (1 + update / 100) * bn[0] * bn[1]
+            self.assertAlmostEqual(self.rates["mdh_factor"][key], want, places=12, msg=key)
+        self.assertEqual(self.rates["uc_pool"], self.UC_POOL)
 
     def test_both_tables_split_one_standardized_amount_by_the_years_labor_share(self):
         for key in RATE_KEYS:
@@ -71,6 +76,12 @@ class PaymentInputsCases:
     def test_a_hospital_is_not_both_sole_community_and_medicare_dependent(self):
         self.assertFalse(any(h["mdh"] and h["sch"] for h in self.inp.values()))
         self.assertTrue(SCH_TYPES >= {h["ptype"] for h in self.inp.values() if h["sch"]})
+
+    def test_the_uncompensated_care_factors_share_out_the_whole_pool(self):
+        # Factor 3 is each hospital's share of the pool: over the whole file the shares add to 1 (to the file's six
+        # decimal places), so the factors times the pool are the pool
+        self.assertAlmostEqual(sum(h["ucp_factor"] or 0 for h in self.inp.values()), 1.0, delta=1e-5)
+        self.assertTrue(all(h["ucp_factor"] is None or 0 <= h["ucp_factor"] < 0.05 for h in self.inp.values()))
 
     def test_blank_only_where_the_file_leaves_it_blank(self):
         blanks = {k: self.count(lambda h: h[k] is None) for k in next(iter(self.inp.values()))

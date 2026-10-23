@@ -257,3 +257,85 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - The pages: a hospital page says "plus the teaching payments Medicare makes on its Medicare Advantage patients' stays"
   wherever the hospital's payment includes them, and its statement and worksheet show them as a line of their own. The
   CSV gains the HAC cut's likely range (`hac_dollars_low_modeled`, `hac_dollars_high_modeled`; CSV schema_version 3).
+
+## dollars methods_version 4 (2026-10-23)
+- An accuracy pass held each term of the estimate against primary sources: the FY2026 IPPS/LTCH PPS final rule (90 FR
+  36536), the Provider Reimbursement Manual, Part 2, chapter 40 (Form CMS-2552-10, section 4030.1, Transmittal 25) and
+  42 CFR part 412. Five corrections move the figures and two changes do not. None is a correction toward the back-test:
+  point estimates are still never scaled to it. Each effect below is over the 2,971 estimated hospitals, applied in this
+  order, each against the step before. The readmissions and value-based dollars move only through the
+  Medicare-dependent hospital add-on, the one part of the base these corrections touch.
+  1. **Operating outliers are a share of the federal DRG payment alone.** Methods_versions 1 to 3 applied the impact
+     file's `OUTFACT_F` to the DRG payment plus IME and DSH. The rule sets outliers at 5.1 percent of "total “operating
+     DRG payments,” which does not include IME and DSH payments" (90 FR 37214) and divides "total outlier payments by
+     total operating Federal payments plus total outlier payments" (90 FR 37227); on the wider base the file's factors
+     came to 6.05%, past the statute's 6% ceiling. Effect: outliers -$995.3 million, the sole community difference
+     +$20.2 million (a smaller federal side), total -$974.9 million; the HAC cut $2.79 million smaller; readmissions
+     -$1,837, value-based +$414; net +$2.78 million.
+  2. **Capital outliers are a share of the capital federal payment alone**, beside capital IME and DSH rather than on top
+     of them: the rule's capital outlier share is 3.84 percent "of capital payments based on the Federal rate" (90 FR
+     37228). Effect: capital -$53.5 million, total the same; the HAC cut $148,722 smaller; net +$148,722.
+  3. **A Medicare-dependent hospital's rate takes the rule's budget-neutrality factors as well as the update.** The
+     FY2026 impact file gives the FY2025 rate. The rule adjusts a hospital-specific rate "by the MS-DRG reclassification
+     and recalibration budget neutrality factor" (0.998580) and, for an SCH, by the 10-percent cap factor (0.999897)
+     (90 FR 37218, 37232), and applies the same updates to MDHs if the law extended the program (90 FR 37231), which it
+     did. CMS's FY2027 impact file implies 1.0244375 for the full-update scenario against 1.026 x 0.998580 x 0.999897 =
+     1.0244376. Effect: the MDH add-on -$1.01 million, total -$1.03 million; the HAC cut $3,040 smaller; readmissions
+     +$3,871, value-based -$2,956; net +$3,955. FY2024's file gives the MDH rate "updated to FY 2024 for SCH & MDH
+     providers", so the back-test takes no factor, as before.
+  4. **The low-volume adjustment is a percentage of every other part of the payment.** The cost report's low-volume
+     worksheet (Exhibit 4) multiplies the federal and hospital-specific payments, outliers, IME, "Operating IME payments
+     for Medicare Advantage patients", DSH, "Uncompensated care payments", ESRD, capital and new-technology payments by
+     the percentage. Methods_version 1 left uncompensated care out of the base, and methods_version 3 the IME on
+     Medicare Advantage stays ("not the low-volume adjustment's base"); both are in it now. Effect: low volume +$36.9
+     million, total the same; the HAC cut $85,915 larger; net -$85,915.
+  5. **Uncompensated care is each hospital's full-year payment as CMS sets it**: its Factor 3 (the impact file's
+     `UCP_ADJ`) times the year's pool, Factor 1 x Factor 2, "$12,412,500,000 * 0.6214 = $ 7,713,127,500" (90 FR 36889).
+     "Factor 3 is applied to the product of Factor 1 and Factor 2 to determine the amount of the uncompensated care
+     payment that each eligible hospital will receive" (90 FR 36889-36890), and the cost report carries that amount
+     (Worksheet E, Part A, line 35.02, "multiplying line 35 by line 35.01"). Methods_version 1 multiplied the per-claim
+     amount by the file's FY2024 Medicare cases, but CMS divided that amount by a three-year claims average the file
+     does not carry, and claims are falling. A hospital with no Factor 3 whose per-claim amount is not zero is paid the
+     IHS or Tribal supplemental payment alone; it keeps the per-claim reading (26 estimated hospitals, $15.0 million).
+     FY2024's pool for the back-test is "$10,015,191,021.88 * 0.5929 = $5,938,006,756.87" (88 FR 59001). Effect:
+     uncompensated care +$328.1 million ($7.394 billion to $7.722 billion), total +$328.7 million; the HAC cut $727,285
+     larger; readmissions +$9,142, value-based -$3,447; net -$721,590.
+  6. **No program applies in Puerto Rico, and a program file that lists a Puerto Rico hospital stops the build**: each
+     program is for "subsection (d) hospitals", which SSA 1886(d)(1)(B) limits to the fifty states and the District of
+     Columbia. Neither year's HACRP file, HRRP supplemental file or Table 16B lists one, so the engine's Table 1C branch
+     was dead and is gone (Table 1C's rates equal Table 1B's for the scenarios it lists). No figure moves.
+  7. **Labels and citations.** HRRP and HVBP adjusting the base, each on its own, is the regulation (42 CFR
+     412.154(b)(1), 412.162(b)(2)), not an assumption; only what the base leaves out (new-technology payments) is. The
+     readmissions check cites Table I.G.7.-01 at 90 FR 37265-37266; CMS's footnote describes its denominator as all the
+     eligible hospitals' payments, while its rows reproduce on the penalized hospitals' payments, which the check keeps.
+     The section 422 IME add-on is in no figure: `TCHOP` equals the base formula, 1.35 x ((1 + resident-to-bed
+     ratio)^0.405 - 1), on every teaching row of both impact files, so methods_version 3's "Assumed: the section 422 IME
+     add-on for these stays (line 28.01) is in `TCHOP`" does not hold, for Medicare Advantage stays or a hospital's own.
+     No figure moves.
+- Together, nationally: total payment $129,772,818,726 to $129,108,924,630 (-0.51%); the HAC cut -$308,317,722 to
+  -$306,193,136; readmissions -$336,618,373 to -$336,607,197; value-based -$3,141,656 to -$3,147,645; net
+  -$648,077,751 to -$645,947,978. The headline (the hospitals CMS scored and marked Yes or No): the HAC cut
+  -$308,230,282 to -$306,105,696, net -$647,860,213 to -$645,730,440, total $129,650,847,418 to $128,982,544,363.
+- Two checks join `checks` (their ranges set before either was computed on the new base): `outlier_share`, operating
+  outliers over the federal DRG payment plus operating outliers, within 4.6% to 5.6% (the rule's 5.1%, half a point
+  either way, short of the 6% ceiling), 5.03% on these pins; and `uc_pool`, uncompensated care over the rule's pool,
+  within 95% to 102% (short only by the hospitals outside the estimate, over only by the per-claim supplemental
+  payments), 100.12%. `schema_version` stays 3: the file's shape is unchanged, and the schema's list of check ids gains
+  the two.
+- The back-test, re-run with the same rules, checks and thresholds: the HAC cut's median error is 0.0509 (p10 -0.1226,
+  p90 0.2949) over the same 131 cut hospitals, from 0.0384; the national ratio of the cut hospitals' cost reports to
+  the estimate is 0.9988, resampled 0.9779 to 1.0192 (from 0.9981), so the national range still holds the estimate.
+  By item, the median moved -0.0020 (outliers), -0.0004 (capital), 0 (the MDH rate), +0.0085 (low volume, all of it in
+  the under-100-bed sole community and Medicare-dependent group, 0.119 to 0.138) and +0.0064 (uncompensated care,
+  FY2024's $5.55 billion by the old reading against $5.93 billion as CMS sets it). The cost reports carry the full
+  Factor 3 amount, so the model's uncompensated care now matches what they record, and the estimate's remaining run
+  above them is the volume of claims two years older than the payment year (the DRG payments alone run 7.6% above
+  lines 1.01 and 1.02 at the median), which the old reading had partly offset. The ranges carry it; the estimates are
+  not corrected for it. For the compared cut hospitals neither SCH nor MDH, the HAC error less the total payment's
+  error is -0.0006 with line 29.01 and -0.0001 without, and less the DRG payments' error -0.0388 and -0.0038.
+- Not changed: new-technology add-on payments, ESRD payments and credits for replaced devices stay unpriced (no file
+  gives them by hospital). The federal DRG payment summed over the impact file's hospitals outside Maryland,
+  $87.24 billion, is 6.1% above the "total operating Federal payments" in the rule's outlier simulation
+  ($82,262,071,135, 90 FR 37227); FY2024's is 6.8% above (FY2024 rule, $79,484,223,474, 88 FR 59353). The cause is
+  not established, so nothing is changed for it; the readmissions share and the value-based pool checks, which test
+  the base's relative sizes, pass.
