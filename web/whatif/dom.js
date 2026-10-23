@@ -227,7 +227,8 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     const s = texts.scores(vm);
     const changed = anyChanged(r);
     const p = texts.pill(r.after.flag);
-    const echo = changed ? `${headScore(s)} · ${p.label}` : '';
+    // On a phone the edited measure echoes the result, its dollars too where the site has them.
+    const echo = changed ? `${headScore(s)} · ${p.label}${money && vm.money ? ` · ${money.amount(vm.money.after)}` : ''}` : '';
     after(el.score, s.before, s.after);
     after(el.flag, startFlag, texts.flag(r.after.flag));
     after(el.cut, startCut, texts.cut(r.after.flag));

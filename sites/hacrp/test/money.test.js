@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
 import { cmsText, count, decimal, dollars, money } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { REDUCTION_TEXT } from '../web/constants.js';
+import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { refusePendingRanges } from '../web/generate.js';
 import { BASE_PARTS, OTHER_PARTS, hospitalMoney, rangeOf } from '../web/money.js';
@@ -136,6 +136,9 @@ test('the cliff: the hospital\'s cut at any score, its numbers the hospital\'s',
   for (const part of [money(CUT.atStake), cmsText(view.distance.text), highest, view.boundaryText.highestNo, view.boundaryText.lowestYes]) assert.ok(fig.includes(part), part);
   assert.ok(fig.includes(`data-value="${-CUT.atStake}"`), 'the floor plots the cut');
   assert.ok(fig.includes(dollars(-CUT.atStake)));
+  const line = (model.boundary.highestNo + model.boundary.lowestYes) / 2;
+  const near = NAT.scores.filter((x) => Math.abs(x - line) <= CLIFF_NEAR).length;
+  assert.ok(fig.includes(`${count(near)} of the ${count(NAT.scores.length)} scored within ${decimal(CLIFF_NEAR, 1)} of CMS`), 'the strip\'s note counts from the data');
   const nfig = String(cliffFigure(viewOf(NEAR.ccn), moneyOf(NEAR), NAT, { n: 1, source: 'Source.' }));
   assert.match(nfig, /chart-cliff__dot"/, 'not cut: the dot on the ledge');
   assert.match(fig, /chart-cliff__dot chart-cliff__dot--over"/, 'cut: the dot on the floor');

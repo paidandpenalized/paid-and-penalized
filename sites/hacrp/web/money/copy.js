@@ -51,7 +51,7 @@ export const COPY = {
     claim: 'HACRP-01',
   },
   cliffAlt: { text: "Step chart of this hospital's estimated HAC cut at any Total HAC Score: flat at {zero} up to CMS's line, then a drop to {amount}, flat out to the highest score.", claim: null },
-  cliffStrip: { text: 'Under the axis, every Total HAC Score CMS published: many hospitals sit within a hair of the line.', claim: null },
+  cliffStrip: { text: "Under the axis, every Total HAC Score CMS published: {n} of the {all} scored within {near} of CMS's line, on one side or the other.", claim: null },
   cliffColPoint: { text: 'Score', claim: null },
   cliffColScore: { text: 'Total HAC Score', claim: null },
   cliffColCut: { text: 'Estimated HAC cut (whole dollars)', claim: null },

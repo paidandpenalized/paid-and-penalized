@@ -251,7 +251,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
   return {
     heading: fill('whatifHeading'),
     label: words.label && fill(words.label),
-    intro: fill(words.intro),
+    intro: fill(atStake === null ? words.intro : 'whatifIntroMoney'),
     noScript: fill('whatifNoScript'),
     banner: { text: fill('whatifBanner'), linkText: fill('whatifBannerLink'), href: path },
     resultLabel: fill('whatifResultLabel'),

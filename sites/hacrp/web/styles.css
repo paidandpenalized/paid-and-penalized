@@ -128,6 +128,7 @@
 .stmt__row[data-line="hac"] > * { padding-block: 10px; }
 .stmt__row[data-line="hac"] .stmt__name { font-weight: 700; }
 .stmt__row[data-line="hac"] .stmt__amt { color: var(--pen-ink); font-weight: 700; font-size: var(--fs-base); }
+.stmt__row.is-zero .stmt__amt { color: var(--ink-2); }
 .stmt__row--net > * { border-top: 4px double var(--ink); font-size: var(--fs-base); }
 .stmt__row--net th, .stmt__row--net .stmt__amt { font-weight: 700; }
 .stmt__none { color: var(--ink-2); font-size: var(--fs-xs); }
@@ -238,6 +239,7 @@
 
 /* The nearest hospitals' table: the number in a dot like the map's, the measure glyph, the estimated cut. */
 .near__cut { white-space: nowrap; }
+.gb--near thead th.num { white-space: normal; }
 .near__cut--pen { color: var(--pen-ink); font-weight: 700; }
 .gb--near tbody th { font-weight: 600; }
 .gb--near tbody th a { display: block; }

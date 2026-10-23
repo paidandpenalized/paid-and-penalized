@@ -7,8 +7,9 @@ import { cliff } from '../../../web/charts/cliff.js';
 import { drawn, figure, num } from '../../../web/charts/figure.js';
 import { cmsText, count, decimal, dollars, listText, money } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
+import { lineScore } from '../../../web/whatif/marks.js';
 import { SITE } from '../../../web/site.js';
-import { REDUCTION_TEXT } from './constants.js';
+import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { DOLLARS_HREF } from './links.js';
 import { countBins, edgesAround } from './compare.js';
 import { BASE_PARTS, OTHER_PARTS } from './money.js';
@@ -75,10 +76,12 @@ ${rangeLine(m)}</div>`,
 const STRIP_BINS = 120;
 const CLIFF_DRAWN = 1040;
 const STRIPS = new WeakMap();
-function stripOf(nat, lowestYes) {
+// near: how many scored within CLIFF_NEAR of CMS's line, either side (the strip's note).
+function stripOf(nat, boundary) {
   if (!STRIPS.has(nat)) {
-    const edges = edgesAround(nat.domain[0], nat.domain[1], lowestYes, STRIP_BINS);
-    STRIPS.set(nat, { edges, counts: countBins(nat.scores, edges) });
+    const edges = edgesAround(nat.domain[0], nat.domain[1], boundary.lowestYes, STRIP_BINS);
+    const line = lineScore(boundary);
+    STRIPS.set(nat, { edges, counts: countBins(nat.scores, edges), near: nat.scores.filter((x) => Math.abs(x - line) <= CLIFF_NEAR).length });
   }
   return STRIPS.get(nat);
 }
@@ -95,7 +98,8 @@ export function cliffFigure(view, m, nat, { n, source }) {
     actual: t('barThis'), actualValue: view.score.text, highest: t('cliffHighest'), highestValue: highest,
   };
   const values = { zero: 0, cut: -m.atStake };
-  const draw = (width) => cliff({ domain: nat.domain, band: [view.boundary.highestNo, view.boundary.lowestYes], actual: view.total, strip: stripOf(nat, view.boundary.lowestYes), labels, values, width });
+  const strip = stripOf(nat, view.boundary);
+  const draw = (width) => cliff({ domain: nat.domain, band: [view.boundary.highestNo, view.boundary.lowestYes], actual: view.total, strip, labels, values, width });
   const distance = distanceText(view);
   const takeaway = m.cut ? fill('cliffTakeawayYes', { distance, amount, highest }) : fill('cliffTakeawayNo', { distance, amount, highest });
   const cut = dollars(-m.atStake);
@@ -103,7 +107,7 @@ export function cliffFigure(view, m, nat, { n, source }) {
   return figure({
     n, takeaway, ...drawn(draw, CLIFF_DRAWN), source, claimLevel: 'estimate',
     alt: fill('cliffAlt', { zero: zero(), amount }),
-    note: t('cliffStrip'),
+    note: fill('cliffStrip', { n: count(strip.near), all: count(nat.scores.length), near: decimal(CLIFF_NEAR, 1) }),
     table: {
       columns: [{ name: t('cliffColPoint') }, { name: t('cliffColScore'), numeric: true }, { name: t('cliffColCut'), numeric: true }],
       rows: [
@@ -183,7 +187,7 @@ const signedAmount = (line) => dollars(line.amount, { sign: line.kind === 'progr
 const GROUP_BEFORE = { hrrp: 'stmtGroupPrograms' };
 
 function statementTable(view, m, { lines, none }) {
-  const row = (l) => html`<tr class="stmt__row stmt__row--${l.kind}" data-line="${l.key}">
+  const row = (l) => html`<tr class="stmt__row stmt__row--${l.kind}${l.amount === 0 ? ' is-zero' : ''}" data-line="${l.key}">
 <th scope="row"><span class="stmt__name">${l.label}</span>${l.sub ? html` <span class="stmt__sub">${l.sub}</span>` : ''}</th>
 <td class="stmt__amt">${signedAmount(l)}</td>
 ${barCell(l.bar)}

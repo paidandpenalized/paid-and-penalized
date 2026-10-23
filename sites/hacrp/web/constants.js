@@ -26,6 +26,8 @@ export const SIR_NEXT_FY = 2028;
 // updated after the fact sheet: the pages count the updated list, and Methods says so.
 export const FACT_SHEET_CUT = Object.freeze({ fy: 2016, cut: 758 });
 
+// Display constant: the cliff's note counts the hospitals scored within this distance of CMS's line, either side.
+export const CLIFF_NEAR = 0.1;
 // Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.
 export const RAMP_LOW_PCT = 5;
 export const RAMP_HIGH_PCT = 95;

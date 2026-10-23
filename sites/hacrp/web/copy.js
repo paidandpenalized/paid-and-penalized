@@ -116,6 +116,10 @@ export const COPY = {
     text: "Change a measure's value to see how this site recomputes the Total HAC Score and the payment reduction decision, starting from CMS's values.",
     claim: null,
   },
+  whatifIntroMoney: {
+    text: "Change a measure's value to see how this site recomputes the Total HAC Score, the payment reduction decision and, by its estimate, the money, starting from CMS's values. The money doesn't slide with the score: it drops off a cliff at CMS's line.",
+    claim: 'HACRP-01',
+  },
   whatifIntroMedian: {
     text: "Change a measure's value to see how this site recomputes the score of its hypothetical hospital at the national median on every measure.",
     claim: null,
