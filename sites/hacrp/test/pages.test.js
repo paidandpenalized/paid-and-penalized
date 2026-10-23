@@ -354,8 +354,13 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   const text = render(CASES.yes);
   const name = 'Example General Hospital';
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
-  // The sentence a shared link carries (money-figures.js shareSentence); a page with no dollar estimate says CMS's decision alone.
-  assert.equal(meta(text, 'description'), esc(`In FY${DATA.fy}, Medicare cut ${name}’s inpatient payments ${REDUCTION_TEXT} under the HAC Reduction Program.`));
+  // A neutral sentence, the same for every verdict (ARCH-23): it names the hospital, the year and the kinds of facts the
+  // page holds, and no decision, no score and no dollar figure. The Share control's sentence is the reader's to copy.
+  const description = esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, and this site’s estimate of the dollars, from public CMS data.`);
+  assert.equal(meta(text, 'description'), description);
+  assert.equal(text.match(/<meta property="og:description" /g).length, 1, 'one og:description');
+  assert.ok(text.includes(`<meta property="og:description" content="${description}">`), 'the same sentence');
+  for (const h of [CASES.yes, CASES.no, CASES.maryland, CASES.yesNoScore]) assert.doesNotMatch(meta(render(h), 'description'), /\$|\bcut\b|\bYes\b|\bNo\b|\d%/, `${h.ccn}: no decision value and no dollar figure`);
   const program = programPage(PROGRAM_ARGS);
   assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });

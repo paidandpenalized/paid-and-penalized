@@ -1,9 +1,12 @@
 // A treemap of groups of tiles, each tile's area its value: the groups laid out first (squarified), each under a
 // header naming it, then each group's tiles inside it. For "every cut hospital, sized by its dollars": the eye sees how
 // few large tiles carry most of the area without a name printed (each tile names itself only in its tooltip).
-//   groups   [{ label, sub, value, tiles: [{ value, tip }] }]: label and sub print in the header; value is the group's
+//   groups   [{ label, sub, value, tiles: [{ value, tip, order }] }]: label and sub print in the header; value is the group's
 //            total (plotted on the header's mark, for the figure's table); a tile with no tip is plain. A phone's drawing
-//            (isNarrow) draws every tile plain, with no tooltips, for a lighter page.
+//            (isNarrow) draws every tile plain, with no tooltips, for a lighter page. A group whose box is too short for
+//            its header (a sliver) has none: its tiles fill the box, and its label goes unprinted. The tiles are laid out
+//            by value (equal values in the order given); order (text, optional) is the order they are written into
+//            the page, so a page's source need not list tiles by size. A tile's place does not depend on it.
 //   width    the viewBox's width; height: its height (default: taller across a page than on a phone)
 import { html } from '../render/html.js';
 import { frame, isNarrow, mark, r2, text } from './svg.js';
@@ -60,20 +63,27 @@ export function treemap({ groups, width, height = isNarrow(width) ? 420 : 520 })
   const body = groups.map((g, gi) => {
     const b = boxes[gi];
     if (b.w < 1 || b.h < 1) return '';
-    const inner = { x: b.x + GAP / 2, y: b.y + HEAD, w: Math.max(0, b.w - GAP), h: Math.max(0, b.h - HEAD - GAP / 2) };
+    // A box no taller than a header and a gap has room for no tile under one (a sliver of a group): it gets no header,
+    // and its tiles take the whole box.
+    const sliver = b.h <= HEAD + GAP;
+    const box = { x: b.x + GAP / 2, y: b.y + (sliver ? 0 : GAP / 2), w: Math.max(0, b.w - GAP), h: Math.max(0, b.h - (sliver ? 0 : GAP)) };
+    const inner = sliver ? box : { x: box.x, y: b.y + HEAD, w: box.w, h: Math.max(0, b.h - HEAD - GAP / 2) };
     const tiles = squarify(g.tiles.map((t) => t.value), inner);
+    // The tiles written in the order the caller gives (by `order`), not the order they were laid out in.
+    const written = g.tiles.map((_, i) => i);
+    if (g.tiles.some((t) => t.order !== undefined)) written.sort((i, j) => (g.tiles[i].order < g.tiles[j].order ? -1 : g.tiles[i].order > g.tiles[j].order ? 1 : i - j));
     // A narrow header holds the label alone; the sub line only where it fits; a sliver of a group neither (its header
     // mark's tooltip still names it).
     const wide = b.w > 210;
     const labelled = b.w > 70 && b.h > HEAD + 8;
     const head = mark({
       tip: `${g.label}: ${g.sub}`, value: g.value, hit: null,
-      body: html`<rect class="chart-tree__group" x="${r2(b.x + GAP / 2)}" y="${r2(b.y + GAP / 2)}" width="${r2(Math.max(0, b.w - GAP))}" height="${r2(Math.max(0, b.h - GAP))}"/>`,
+      body: html`<rect class="chart-tree__group" x="${r2(box.x)}" y="${r2(box.y)}" width="${r2(box.w)}" height="${r2(box.h)}"/>`,
     });
     const plain = isNarrow(width) || g.tiles.every((t) => !t.tip);
     const drawn = plain
       ? html`<path class="chart-tree__tile" d="${tiles.map((t) => (t.w > 0 && t.h > 0 ? `M${r1(t.x)} ${r1(t.y)}h${r1(t.w)}v${r1(t.h)}h${r1(-t.w)}z` : '')).join('')}"/>`
-      : html`<g class="chart-tree__tiles">${tiles.map((t, i) => (t.w > 0 && t.h > 0 ? html`<rect data-mark x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(t.w)}" height="${r1(t.h)}"><title>${g.tiles[i].tip}</title></rect>` : ''))}</g>`;
+      : html`<g class="chart-tree__tiles">${written.map((i) => { const t = tiles[i]; return t.w > 0 && t.h > 0 ? html`<rect data-mark x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(t.w)}" height="${r1(t.h)}"><title>${g.tiles[i].tip}</title></rect>` : ''; })}</g>`;
     return html`<g class="chart-tree__g">${head}${drawn}
 ${labelled ? text({ x: b.x + 6, y: b.y + 15, anchor: 'start', cls: 'chart-tree__label', body: g.label }) : ''}${labelled && wide ? text({ x: b.x + b.w - 6, y: b.y + 15, anchor: 'end', cls: 'chart-tree__sub', body: g.sub }) : ''}</g>`;
   });

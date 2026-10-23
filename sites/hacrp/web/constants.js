@@ -26,6 +26,11 @@ export const SIR_NEXT_FY = 2028;
 // updated after the fact sheet: the pages count the updated list, and Methods says so.
 export const FACT_SHEET_CUT = Object.freeze({ fy: 2016, cut: 758 });
 
+// This site's own grouping of teaching hospitals (the hospital master, engine/py/pp_engine/master.py MAJOR_TEACHING): a
+// hospital with a resident-to-bed ratio in CMS's impact file at or above this is major, above zero minor, zero none. A test
+// fails if the two differ.
+export const MAJOR_TEACHING_RATIO = 0.25;
+
 // Display constant: the cliff's note counts the hospitals scored within this distance of CMS's line, either side.
 export const CLIFF_NEAR = 0.1;
 // Display constants, not CMS's method. The what-if's ramp spans these percentiles of published Total HAC Scores.

@@ -29,6 +29,37 @@ test('the treemap: a phone\'s drawing is plain and shorter; a page-wide one give
   assert.ok(tiles.every((m) => m.slice(1, 5).every((v) => !/\.\d\d/.test(v))));
 });
 
+test('the treemap: tiles are written in their own order (not by size) without moving; a sliver of a group has no header and its tiles fill its box', () => {
+  const tiles = [{ value: 50, tip: 'Big', order: 'b' }, { value: 30, tip: 'Mid', order: 'a' }, { value: 20, tip: 'Small', order: 'c' }];
+  const place = (svg) => new Map([...svg.matchAll(/<rect data-mark x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"><title>([^<]*)<\/title>/g)].map((m) => [m[5], m.slice(1, 5).join(' ')]));
+  const sized = String(treemap({ groups: [{ label: 'A', sub: 'a', value: 100, tiles: tiles.map(({ order, ...t }) => t) }], width: PAGE }));
+  const ordered = String(treemap({ groups: [{ label: 'A', sub: 'a', value: 100, tiles }], width: PAGE }));
+  assert.deepEqual([...place(sized).keys()], ['Big', 'Mid', 'Small'], 'without an order, in the order given');
+  assert.deepEqual([...place(ordered).keys()], ['Mid', 'Big', 'Small'], 'by order');
+  assert.deepEqual([...place(ordered)].sort(), [...place(sized)].sort(), 'every tile in the same place either way');
+  // A group too small to carry a header: here about 0.2% of the area, a box a few units tall under the third column.
+  // It is drawn without a label, its tiles fill its box, and they are told apart by their tooltips.
+  const groups = [
+    { label: 'First', sub: 'f', value: 1470, tiles: [{ value: 1470, tip: 'First tile' }] },
+    { label: 'Second', sub: 's', value: 913, tiles: [{ value: 913, tip: 'Second tile' }] },
+    { label: 'Third', sub: 't', value: 676, tiles: [{ value: 676, tip: 'Third tile' }] },
+    { label: 'Sliver', sub: 'z', value: 5, tiles: [{ value: 3, tip: 'Sliver one' }, { value: 2, tip: 'Sliver two' }] },
+  ];
+  const svg = String(treemap({ groups, width: PAGE }));
+  const boxes = [...svg.matchAll(/<rect class="chart-tree__group" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map((m) => m.slice(1, 5).map(Number));
+  assert.equal(boxes.length, 4);
+  const box = boxes[3];
+  assert.ok(box[3] > 0 && box[3] < 30 && box[2] > 30, `a box wide and shorter than a header: ${box}`);
+  assert.ok(!svg.includes('>Sliver<'), 'no label for it');
+  const drawn = place(svg);
+  assert.deepEqual([...drawn.keys()].sort(), ['First tile', 'Second tile', 'Sliver one', 'Sliver two', 'Third tile']);
+  for (const key of ['Sliver one', 'Sliver two']) {
+    const [x, y, w, h] = drawn.get(key).split(' ').map(Number);
+    assert.ok(w > 0 && h > 0, `${key} has a size`);
+    assert.ok(x >= box[0] - 0.1 && x + w <= box[0] + box[2] + 0.1 && y >= box[1] - 0.1 && y + h <= box[1] + box[3] + 0.1, `${key} inside its box`);
+  }
+});
+
 test('acrossLine: a phone\'s drawing has smaller, plain dots; a wide one names each dot with a tip, and a dot with no tip stays plain', () => {
   const dots = [
     { x: 0.1, value: 100, over: false, mine: true, tip: 'Mine' },

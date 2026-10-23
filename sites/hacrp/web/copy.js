@@ -16,7 +16,7 @@ export const COPY = {
   },
   noteScore: { text: "CMS's note on the score: {notes}", claim: null },
   noteDecision: { text: "CMS's note on the payment reduction: {notes}", claim: null },
-  whyYes: { text: "Its score was above CMS's line, so CMS cut its traditional Medicare inpatient payments by {pct} for the year.", claim: ['HACRP-02', 'HACRP-01', 'HACRP-24'] },
+  whyYes: { text: "Its score was above CMS's line, so CMS cut its Medicare inpatient payments by {pct} for the year.", claim: ['HACRP-02', 'HACRP-01', 'HACRP-24', 'HACRP-79'] },
   whyNo: {
     text: "Its score was at or below CMS's line, so this program did not cut its Medicare payments for the year.",
     claim: 'HACRP-01',
@@ -260,6 +260,10 @@ export const COPY = {
 
   // Hospital page.
   hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
+  hospitalDescription: {
+    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, and this site's estimate of the dollars, from public CMS data.",
+    claim: null,
+  },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
   heroLabel: { text: 'Score and payment decision', claim: null },
   // Under a scored hospital's number (not Maryland's): CMS's line as the gap in its decisions, CMS's text of the scores.
@@ -332,7 +336,7 @@ export const COPY = {
   summaryCut: { text: 'Hospitals cut', claim: null },
   summaryCutNote: { text: "Of {decided} scored hospitals with a Yes or No", claim: null },
   summaryPct: { text: 'The cut', claim: 'HACRP-01' },
-  summaryPctNote: { text: "Of each traditional Medicare inpatient payment, for the fiscal year", claim: ['HACRP-01', 'HACRP-24'] },
+  summaryPctNote: { text: "Of a hospital's Medicare inpatient payments, for the fiscal year", claim: ['HACRP-01', 'HACRP-24', 'HACRP-79'] },
   summaryScored: { text: 'Scored', claim: null },
   summaryScoredNote: { text: 'Hospitals with a Total HAC Score', claim: null },
   // CMS's line, as a summary field and in a sentence.

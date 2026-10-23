@@ -26,7 +26,7 @@ import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
 import { encode } from '../../../../web/whatif/fragment.js';
 import { historySource, hospitalInfectionsFigure, recordStrip, yearsFigure } from '../history-figures.js';
 import { fill as hfill, t as ht } from '../history/copy.js';
-import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, shareSentence, statementFigure } from '../money-figures.js';
+import { cliffFigure, moneyField, moneySourceText, moneyVerdict, moneyWorksheet, shareBlock, statementFigure } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
 import { maKey } from '../money.js';
 
@@ -333,8 +333,9 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
 
   return page({
     title,
-    // The sentence a shared link carries, so a pasted link previews with the money.
-    description: shareSentence(view, money),
+    // A neutral sentence: no payment decision and no dollar figure, so a link's preview (Open Graph, ARCH-23) names neither.
+    // The Share control's sentence (shareSentence) is what a reader chooses to copy.
+    description: fill('hospitalDescription', where),
     path: view.path,
     robots,
     body,

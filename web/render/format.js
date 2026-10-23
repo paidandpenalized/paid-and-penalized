@@ -17,6 +17,10 @@ export const noun = (n, singular, plural = `${singular}s`) => `${count(n)} ${n =
 // Words joined as a list: "A", "A and B", "A, B, and C".
 export const listText = (xs) => LIST.format(xs);
 
+// A small count in words ("five"), for a sentence that reads better without the digit; the digits from eleven up.
+const NUMBER_WORDS = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+export const numberWord = (n) => NUMBER_WORDS[n] ?? count(n);
+
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 

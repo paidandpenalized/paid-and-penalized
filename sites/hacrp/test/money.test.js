@@ -9,7 +9,8 @@ import { join } from 'node:path';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
 import { cmsText, count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
+import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_TEXT } from '../web/constants.js';
+import { fill as siteFill } from '../web/copy.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { ALL_STRATUM, BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
@@ -205,7 +206,14 @@ test('the cliff: the hospital\'s cut at any score, its numbers the hospital\'s',
   assert.ok(fig.includes(`${count(near)} of the ${count(NAT.scores.length)} scored within ${decimal(CLIFF_NEAR, 1)} of CMS`), 'the strip\'s note counts from the data');
 });
 
-test('the share sentence names CMS\'s decision and the dollars as this site\'s estimate, and is the page\'s description', () => {
+test('the major-teaching cutoff the pages state is the one the hospital master applies', () => {
+  const master = readFileSync(join(REPO_ROOT, 'engine/py/pp_engine/master.py'), 'utf8');
+  const cutoff = /^MAJOR_TEACHING = ([\d.]+)\b/m.exec(master);
+  assert.ok(cutoff, 'master.py names the cutoff');
+  assert.equal(MAJOR_TEACHING_RATIO, Number(cutoff[1]));
+});
+
+test('the share sentence names CMS\'s decision and the dollars as this site\'s estimate; the page\'s description is a neutral sentence instead', () => {
   const cases = [
     [CUT, [money(CUT.atStake), SITE.name, REDUCTION_TEXT, cmsText(viewOf(CUT.ccn).distance.text)]],
     [NEAR, [money(NEAR.atStake), SITE.name, cmsText(viewOf(NEAR.ccn).distance.text)]],
@@ -219,8 +227,11 @@ test('the share sentence names CMS\'s decision and the dollars as this site\'s e
     for (const part of parts) assert.ok(sentence.includes(part), `${row.status}: ${part}`);
     if (!hospitalMoney(row).estimated) assert.ok(!sentence.includes('$'), `${row.status}: no dollars without an estimate`);
     const page = pageOf(row);
-    assert.ok(page.includes(`<meta name="description" content="${esc(sentence)}">`), `${row.status}: description`);
+    // The description (and og:description) is the same neutral sentence whatever the verdict: no decision, no dollars.
+    assert.ok(!page.includes(`<meta name="description" content="${esc(sentence)}">`), `${row.status}: the share sentence is not the description`);
+    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill('hospitalDescription', { name: view.name, city: view.city, state: view.state, fy: String(view.fy) }))}">`), `${row.status}: description`);
     assert.ok(page.includes(esc(SITE.origin + view.path)), `${row.status}: the link to share`);
+    assert.ok(page.includes(esc(sentence)), `${row.status}: the sentence to share`);
     assert.match(page, /<details class="share" data-share/);
   }
 });
