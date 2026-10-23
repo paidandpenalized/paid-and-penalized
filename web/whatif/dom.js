@@ -99,6 +99,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const startMoney = money && money.amount(first.money.before);
   let shownMoney = null;
   let counting = null;
+  let onScreen = null;
   const reducedMotion = env.matchMedia?.(REDUCED_MOTION);
 
   // A link's fragment: what decode() trusts goes through reduce(); the rest stays CMS's.
@@ -147,16 +148,24 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
 
   // The head's dollars, counted from the figure last drawn (from) to next (each frame's figure in the site's words), or
   // set at once: under reduced motion, without animation frames, or where either end is too close to call (two numbers).
+  // A count started during another one starts from the figure on screen, not from where that count was heading.
   function countMoney(from, next) {
     const node = el['head-money'];
     if (!node) return;
     setText(el['head-money-words'], money.head(next));
     setAttr(node, 'class', `wi-money${moneyClass(next)}`);
-    if (counting !== null) env.cancelAnimationFrame?.(counting);
+    if (counting !== null) {
+      env.cancelAnimationFrame?.(counting);
+      from = onScreen ?? from;
+    }
     counting = null;
+    const show = (dollars) => {
+      onScreen = dollars;
+      setText(node, money.amount(dollars));
+    };
     const still = reducedMotion?.matches || typeof env.requestAnimationFrame !== 'function';
     if (still || isEither(from) || isEither(next) || sameDollars(from, next)) {
-      setText(node, money.amount(next));
+      show(next);
       return;
     }
     let t0 = null;
@@ -165,7 +174,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       const k = Math.min(1, (now - t0) / COUNT_MS);
       const eased = 1 - (1 - k) ** 3;
       const cash = Math.round(from.lo + (next.lo - from.lo) * eased);
-      setText(node, money.amount(k < 1 ? { lo: cash, hi: cash } : next));
+      show(k < 1 ? { lo: cash, hi: cash } : next);
       counting = k < 1 ? env.requestAnimationFrame(step) : null;
     };
     counting = env.requestAnimationFrame(step);

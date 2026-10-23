@@ -663,6 +663,40 @@ test('the dollars: a crossing drops the cliff\'s dot to the cut and the head cou
   assert.ok(seen.slice(1, -1).some((s) => s !== '$0' && s !== '$654K'), 'it passes through amounts on the way');
 });
 
+test('a count started mid-count starts from the figure on screen, not from where the last count was heading', () => {
+  const yes = valueFor(RICH, 'MRSA', 'Yes');
+  const pending = new Map();
+  let ids = 0;
+  const moving = windowStub();
+  moving.env.requestAnimationFrame = (fn) => { pending.set(++ids, fn); return ids; };
+  moving.env.cancelAnimationFrame = (id) => pending.delete(id);
+  const frame = (now) => {
+    assert.equal(pending.size, 1, 'one count at a time');
+    const [[id, fn]] = pending;
+    pending.delete(id);
+    fn(now);
+  };
+  const root = mountRich(moving);
+  const head = q(root, 'head-money');
+  type(field(root, 'MRSA', 'number'), String(yes));
+  frame(0);
+  frame(300);
+  const mid = head.textContent;
+  assert.ok(mid !== '$0' && mid !== '$654K', `part-way: ${mid}`);
+  // Back to the start while the count is still going: it comes back from where it is, not from $654K.
+  q(root, 'reset').fire('click');
+  frame(1000);
+  assert.equal(head.textContent, mid, 'the first frame of the second count is the figure that was showing');
+  frame(1300);
+  assert.notEqual(head.textContent, '$654K');
+  frame(3000);
+  assert.equal(head.textContent, '$0', 'and it lands on the start');
+  // A count that has landed starts the next from its target.
+  type(field(root, 'MRSA', 'number'), String(yes));
+  frame(4000);
+  assert.equal(head.textContent, '$0', 'the first frame shows the figure last landed on');
+});
+
 test('the dollars are redrawn only when they change: the reduced-motion query is read once at mount, and a score that moves within one decision leaves the figures alone while the cliff\'s dot rides the score', () => {
   const stub = windowStub();
   const asked = [];
