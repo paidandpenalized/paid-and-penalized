@@ -18,10 +18,10 @@ import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { nationalRange, rangeOf, sumRanges } from '../web/money.js';
-import { REDUCTION_PCT } from '../web/constants.js';
+import { MAJOR_TEACHING_RATIO, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, insideCounts, stratumLabel } from '../web/methods-figures.js';
-import { DATA, HD, MD, PLACES, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
 import { ASSETS } from './fixtures.js';
 
 const PROGRAM = renderProgram();
@@ -98,12 +98,12 @@ test('the Part on the money: at least five figures, each beside its words, each 
   assert.ok(figs.length >= 5, `${figs.length} figures`);
   assert.equal(captionOf(part, 'bill').replace(/^Figure \d+\. /, ''), `The largest tenth of the cuts, ${count(MD.tenth.n)} hospitals, are ${pct(MD.tenth.money / MD.headline.money, 0)} of the ${money(MD.headline.money)} this site estimates the program took.`);
   const { over, under, overMoney, underMoney } = nearLine(MD, ACROSS_WINDOW);
-  assert.equal(captionOf(part, 'across').replace(/^Figure \d+\. /, ''), `Within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line, CMS cut ${count(over.length)} hospitals, about ${money(overMoney)} by this site’s estimate; the ${count(under.length)} just under it kept about ${money(underMoney)}.`);
+  assert.equal(captionOf(part, 'across').replace(/^Figure \d+\. /, ''), `Of the hospitals this site estimates within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line, CMS cut ${count(over.length)} hospitals, about ${money(overMoney)}; the ${count(under.length)} just under it had about ${money(underMoney)} at stake.`);
   // Shares: the group whose money most outruns its count, from the data.
   const all = MD.byKind.filter((k) => ['teach', 'beds', 'own', 'urban'].includes(k.kind)).flatMap((k) => k.groups);
   const top = all.reduce((a, b) => (b.shareMoney / b.shareHospitals > a.shareMoney / a.shareHospitals ? b : a));
   const shares = captionOf(part, 'shares');
-  assert.ok(shares.includes(`are ${pct(top.shareHospitals, 0)} of the hospitals CMS cut and ${pct(top.shareMoney, 0)} of the money`), shares);
+  assert.ok(shares.includes(`are ${pct(top.shareHospitals, 0)} of the hospitals CMS cut and ${pct(top.shareMoney, 0)} of the money by this site’s estimate`), shares);
   // States: the range of the states' dollars.
   const states = [...MD.byState.values()].filter((s) => s.money > 0);
   const st = captionOf(part, 'states');
@@ -145,7 +145,10 @@ test('the treemap\'s groups add to the headline: every cut hospital this site es
     const note = strip(/<p class="small muted fig__note">([^<]*)<\/p>/.exec(bill)[1]);
     assert.ok(note.includes(unknown.length === 1 ? 'one of the cut hospitals' : `${count(unknown.length)} of the cut hospitals`), note);
     assert.ok(note.includes(money(unknown.reduce((s, r) => s + r.cut, 0))), note);
+    assert.ok(note.includes('too small to label'), note);
   }
+  // What the groups are: this site's grouping of CMS's resident-to-bed ratio, its major cutoff from the constant.
+  assert.ok(strip(/<p class="small muted fig__note">([^<]*)<\/p>/.exec(bill)[1]).startsWith(`Teaching status: this site’s grouping of the resident-to-bed ratio in CMS’s impact file: major at ${decimal(MAJOR_TEACHING_RATIO, 2)} or more, minor above zero, none at zero.`));
 });
 
 test('a place page: its estimate against the nation\'s, its children\'s dollars, its hospitals across the line', () => {
@@ -211,12 +214,12 @@ test('the shares and states figures, with nothing to draw (no group, no state wi
   const same = { n: 2, cut: 1, money: 500, stays: 10, perStay: 50 };
   const md = { byState: new Map([['TX', { state: 'TX', ...same }], ['OH', { state: 'OH', ...same, perStay: 40 }]]) };
   const caption = captionText(String(statesFigure(md, { n: 1, source: 'S', shapes: DATA.shapes })));
-  assert.ok(caption.includes(`from ${money(500)} to ${money(500)}; per Medicare stay, from ${dollars(40)} to ${dollars(50)}`), caption);
+  assert.ok(caption.includes(`from ${money(500)} to ${money(500)}; per traditional Medicare stay, from ${dollars(40)} to ${dollars(50)}`), caption);
 });
 
 test('counts of one read in the singular: a state of one cut hospital, a bin of one hospital, a place with one hospital near the line', () => {
-  const one = [...MD.byState.values()].find((s) => s.cut === 1);
-  assert.ok(one, 'some state has exactly one cut hospital');
+  const one = [...MD.byState.values()].find((s) => s.cut === 1 && s.cmsCut === 1);
+  assert.ok(one, 'some state has exactly one cut hospital, which CMS also cut');
   assert.ok(part.includes(`${money(one.money)} from 1 cut hospital</title>`), 'the states map\'s tooltip');
   assert.match(part, /<title>1 hospital at /, 'the three programs\' columns');
   assert.doesNotMatch(part, /\b1 (cut )?hospitals\b/);
@@ -225,11 +228,11 @@ test('counts of one read in the singular: a state of one cut hospital, a bin of 
   const nearCcns = new Set(near.rows.map((r) => r.ccn));
   const place = PLACES.list.find((p) => p.kind === 'state' && p.ccns.filter((c) => nearCcns.has(c)).length === 1);
   assert.ok(place, 'some state has exactly one hospital near the line');
-  assert.match(captionOf(renderPlace(place), 'across'), /^Figure \d+\. Of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line, [^,]+ has 1 (cut hospital|hospital not cut), /);
+  assert.match(captionOf(renderPlace(place), 'across'), /^Figure \d+\. Of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line that this site estimates, [^,]+ has 1 (cut hospital|hospital not cut), /);
   // Hospitals on both sides: "are", and both sides said.
   const sidesOf = (p) => new Set(near.rows.filter((r) => p.ccns.includes(r.ccn)).map((r) => r.yes));
   const many = PLACES.list.find((p) => p.kind === 'state' && sidesOf(p).size === 2);
-  assert.match(captionOf(renderPlace(many), 'across'), /^Figure \d+\. \d+ of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line are .*\d+ cut, about .* \d+ not cut, where a cut would have been about /);
+  assert.match(captionOf(renderPlace(many), 'across'), /^Figure \d+\. \d+ of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line that this site estimates are .*\d+ cut, about .* \d+ not cut, where a cut would have been about /);
 });
 
 // The three programs' panels: each column of a panel, as { n, tip, cls }, and the table's hospital counts.
@@ -297,7 +300,7 @@ test('the HAC panel stands on the reduction: its cut column, its tick and the ro
 test('a place whose hospitals near the line are all on one side says only that side, in the singular for one', () => {
   const near = nearLine(MD, ACROSS_WINDOW);
   const say = (rows) => captionText(String(acrossFigure(MD, { n: 1, source: 'S', mine: new Set(rows.map((r) => r.ccn)), name: 'the Test' }))).replace(/^Figure 1\. /, '');
-  const lead = `Of the nation’s ${count(near.rows.length)} hospitals within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line, the Test has`;
+  const lead = `Of the nation’s ${count(near.rows.length)} hospitals within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line that this site estimates, the Test has`;
   const [few, one] = [near.over.slice(0, 3), near.over.slice(0, 1)];
   assert.equal(few.length, 3);
   assert.equal(say(few), `${lead} 3 cut hospitals, about ${money(sum(few, 'atStake'))} by this site’s estimate.`);
@@ -307,7 +310,7 @@ test('a place whose hospitals near the line are all on one side says only that s
   assert.equal(say(oneU), `${lead} 1 hospital not cut, where a cut would have been about ${money(oneU[0].atStake)}.`);
   // Both sides: both are said (the words the page had).
   const both = [near.over[0], near.under[0]];
-  assert.equal(say(both), `2 of the nation’s ${count(near.rows.length)} hospitals within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line are the Test’s: 1 cut, about ${money(both[0].atStake)} by this site’s estimate, and 1 not cut, where a cut would have been about ${money(both[1].atStake)}.`);
+  assert.equal(say(both), `2 of the nation’s ${count(near.rows.length)} hospitals within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line that this site estimates are the Test’s: 1 cut, about ${money(both[0].atStake)} by this site’s estimate, and 1 not cut, where a cut would have been about ${money(both[1].atStake)}.`);
   assert.doesNotMatch(say(few), /\b0 not cut|about \$0/);
 });
 
@@ -393,6 +396,72 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   assert.ok(left > 0 && text.includes(`Of the ${count(b.comparison.cut)} cut hospitals, ${count(left)} can’t be compared, and sit outside every statistic of the HAC cut below`));
   // The Medicare Advantage teaching change came after the first check, on the same hospitals: said once, in the limits.
   assert.match(text, /not an independent test of the teaching payments on Medicare Advantage stays/);
+});
+
+test('the across-the-line note says which hospitals within the window the figure leaves out: no estimate, Maryland\'s (exempt), each only when there are some', () => {
+  // From the pinned data: the scored hospitals the money leaves out, within the window, counted straight from the file.
+  const near = nearLine(MD, ACROSS_WINDOW);
+  const left = PD.rows.filter((r) => Math.abs(r.total - MD.line) <= ACROSS_WINDOW && !MD.rows.some((m) => m.ccn === r.ccn));
+  const status = (r) => DATA.dollars.byCcn.get(r.ccn).status;
+  assert.equal(near.noEstimate, left.filter((r) => ['no-inputs', 'parhm'].includes(status(r))).length);
+  assert.equal(near.exempt, left.filter((r) => status(r) === 'maryland').length);
+  assert.equal(near.noEstimate + near.exempt, left.length, 'every hospital left out is one or the other');
+  assert.ok(near.noEstimate > 0 && near.exempt > 0, 'on these pins both kinds sit near the line');
+  const w = decimal(ACROSS_WINDOW, 2);
+  const note = (md) => strip(/<p class="small muted fig__note">([^<]*)<\/p>/.exec(String(acrossFigure(md, { n: 1, source: 'S' })))?.[1] ?? '');
+  assert.equal(note(MD), `${count(near.noEstimate)} more within ${w} have no estimate, and Maryland’s ${count(near.exempt)} are exempt.`);
+  // Either clause goes when its count is zero; with neither, there is no note.
+  const withLeft = (noEstimate, exempt) => {
+    const synthetic = { ...MD, noEstimate: Array(noEstimate).fill(MD.line), exempt: Array(exempt).fill(MD.line) };
+    return note(synthetic);
+  };
+  assert.equal(withLeft(3, 0), `3 more within ${w} have no estimate.`);
+  assert.equal(withLeft(0, 2), `Maryland’s 2 within ${w} are exempt.`);
+  assert.equal(withLeft(0, 0), '');
+});
+
+test('a state\'s tooltip on the states map says how many of the hospitals CMS cut its dollars come from, when some have no estimate', () => {
+  for (const s of MD.byState.values()) {
+    const cms = DATA.hospitals.filter((h) => h.state === s.state && h.paymentReduction === 'Yes' && h.total !== null).length;
+    assert.equal(s.cmsCut, cms, `${s.state}: CMS's cut hospitals`);
+  }
+  const short = [...MD.byState.values()].find((s) => s.money > 0 && s.cut < s.cmsCut);
+  assert.ok(short, 'on these pins some state has a cut hospital with no estimate');
+  assert.ok(part.includes(`${money(short.money)} from ${short.cut} of its ${short.cmsCut} cut hospitals</title>`), 'n of m');
+  // All of them estimated: the plain count (one in the singular).
+  const same = [...MD.byState.values()].find((s) => s.money > 0 && s.cut === s.cmsCut && s.cut > 1);
+  assert.ok(part.includes(`${money(same.money)} from ${same.cut} cut hospitals</title>`), 'n');
+});
+
+test('the treemap writes its tiles by hospital name, then CCN, not by size, and draws every group\'s tiles, the group too small to label included', () => {
+  const bill = /<section class="psec[^"]*" id="bill"[\s\S]*?<\/section>/.exec(part)[0];
+  const wide = /<svg[^>]*data-fit="wide"[\s\S]*?<\/svg>/.exec(bill)[0];
+  const groups = wide.split('<g class="chart-tree__g">').slice(1);
+  assert.ok(groups.length >= 3);
+  let drawn = 0;
+  for (const g of groups) {
+    const tips = [...g.matchAll(/<title>([^<]*)<\/title><\/rect>/g)].map((m) => m[1].replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
+    drawn += tips.length;
+    const names = tips.map((t) => t.split(', ')[0].toLowerCase());
+    assert.deepEqual(names, [...names].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)), 'alphabetical within the group');
+  }
+  assert.equal(drawn, MD.cutRows.length, 'a tile for every cut hospital this site estimates');
+  // A tile's place is its size's, whatever order it is written in: the area of each tile is its dollars' share of its group's box.
+  const areas = [...wide.matchAll(/<rect data-mark x="[\d.]+" y="[\d.]+" width="([\d.]+)" height="([\d.]+)"><title>[^<]*: (\$[\d.,]+[KM]?)<\/title><\/rect>/g)];
+  assert.equal(areas.length, MD.cutRows.length);
+  assert.ok(areas.every((m) => Number(m[1]) > 0 && Number(m[2]) > 0), 'every tile has a size');
+});
+
+test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS\'s decision; a place with a cut shows the tag', () => {
+  const card = (place) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place))[0];
+  const field = (html) => /<div class="field f-money">[\s\S]*?<\/div>\n/.exec(html)[0];
+  const none = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes === 0 && placeMoney(MD, p.ccns).rows.length > 0);
+  assert.ok(none, 'some state has estimated hospitals and none cut');
+  assert.equal(placeMoney(MD, none.ccns).money, 0);
+  assert.doesNotMatch(field(card(none)), /est-tag/, `${none.name}: no tag on a $0 that is CMS's decision`);
+  assert.match(field(card(none)), />\$0</);
+  const some = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 0 && placeMoney(MD, p.ccns).money > 0);
+  assert.match(field(card(some)), /class="est-tag"/);
 });
 
 // Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element

@@ -21,7 +21,7 @@ export const COPY = {
   summaryDataHai: { text: 'Infections: {start} to {end}', claim: null },
   summaryPayYear: { text: 'Payment year', claim: null },
   summaryPayYearValue: { text: '{start} to {end}', claim: null },
-  summaryPayYearNote: { text: "Fiscal year {fy}: every traditional Medicare inpatient stay", claim: 'HACRP-24' },
+  summaryPayYearNote: { text: "Fiscal year {fy}: the stays whose Medicare payments CMS cuts", claim: ['HACRP-24', 'HACRP-79'] },
   summaryLineValue: { text: '{lowestYes} and up', claim: null },
   summaryLineNote: { text: 'The lowest score CMS cut. The highest it did not: {highestNo}.', claim: null },
   stampReleased: { text: 'Final · released {date}', claim: null },
@@ -102,7 +102,7 @@ export const COPY = {
   fig4Sum: { text: 'The hypothetical hospital at the national median', claim: null },
 
   step5Heading: { text: "CMS cuts payments to hospitals above its line", claim: 'HACRP-02' },
-  step5a: { text: "CMS cuts payments to hospitals whose Total HAC Score is above the {percentile} percentile of the scores of hospitals outside Maryland. A hospital it cuts is paid {pct} less for every traditional Medicare inpatient stay that fiscal year.", claim: ['HACRP-23', 'HACRP-01', 'HACRP-24'] },
+  step5a: { text: "CMS cuts payments to hospitals whose Total HAC Score is above the {percentile} percentile of the scores of hospitals outside Maryland. A hospital it cuts is paid {pct} less by Medicare for its inpatient stays that fiscal year.", claim: ['HACRP-23', 'HACRP-01', 'HACRP-24', 'HACRP-79'] },
   step5b: { text: "The line comes from every hospital's score, not a fixed bar. If every hospital had half as many infections, every SIR would halve, but every z-score would stay where it is, and so would the line: CMS would cut the same hospitals. Try it.", claim: null },
   step5c: { text: "Maryland's hospitals are scored but not cut.", claim: 'HACRP-13' },
   step5d: { text: "Maryland has its own arrangement with Medicare: the state sets what its hospitals are paid, by Medicare as well as other payers, and it is held to a target for the growth of traditional Medicare spending in the state.", claim: ['HACRP-22', 'HACRP-27'] },

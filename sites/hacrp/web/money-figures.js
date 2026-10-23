@@ -1,7 +1,8 @@
 // The hospital page's dollars (this site's estimate, money.js): the verdict's figure, the record card's field, the
-// statement of the payment line by line, and the share control with its sentence (also the page's description).
-// Every dollar figure carries the estimate tag and its likely range, from the back-test. The money is a cliff: a
-// hospital over CMS's line loses 1% of everything Medicare pays it for inpatient care; one under it loses nothing.
+// statement of the payment line by line, and the share control with its sentence (the page's description is a neutral
+// one, copy.js hospitalDescription: a link's preview names neither the decision nor the dollars).
+// Every dollar figure carries the estimate tag and its likely range, from the back-test. The money is a cliff: over
+// CMS's line, CMS cuts 1% of what Medicare pays a hospital for inpatient stays; under it, this program cuts nothing.
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { PAGE, drawn, figure, num } from '../../../web/charts/figure.js';
@@ -139,9 +140,9 @@ export function moneyField(m) {
 
 // ---------- the statement ----------
 
-// The statement's lines, in the payment's order: what the payment is made of, the total, then the three programs in
-// the order the law applies them, and the net. Each line: { key, kind, label, sub, amount, bar }, where bar places the
-// line on one scale (the larger of the payment before and after the two adjustments): a part as its stretch of the
+// The statement's lines, in the payment's order: what the payment is made of, the total, then the three programs (the
+// readmissions and value-based adjustments to the base, the HAC cut last, as the law sets), and the net. Each line:
+// { key, kind, label, sub, amount, bar }, where bar places the line on one scale (the larger of the payment before and after the two adjustments): a part as its stretch of the
 // payment ({ part: [from, to] }), a sum as the whole of it, a program as the stretch it applies to ({ scope }) with
 // its adjustment at the stretch's end ({ cut } or { add }). Zero parts are left out and named once (none). A sub with a
 // likely range in it comes twice (rangedSub): `sub` plain, for the figure's table, and `held`, the same words with the

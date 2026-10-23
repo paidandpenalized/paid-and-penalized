@@ -34,6 +34,12 @@ export function moneyData({ pd, dollars, model }) {
   });
   const cutRows = rows.filter((r) => r.yes);
   const all = rollup(rows);
+  // The scored hospitals the money leaves out, by where each stands (its total) and why: no estimate (no usable
+  // impact-file row, or in the Rural Health Model), or Maryland's, which are exempt. For the notes that say which
+  // hospitals near CMS's line the figures leave out.
+  const drawn = new Set(rows.map((r) => r.ccn));
+  const left = pd.rows.filter((r) => !drawn.has(r.ccn)).map((r) => ({ total: r.total, status: dollars.byCcn.get(r.ccn).status }));
+  const leftOf = (test) => left.filter((r) => test(r.status)).map((r) => r.total);
 
   // The largest tenth of the cuts (rounded up) and their share of the money.
   const sorted = cutRows.map((r) => r.cut).sort((a, b) => b - a);
@@ -48,9 +54,10 @@ export function moneyData({ pd, dollars, model }) {
     }).filter((g) => g.n > 0),
   }));
 
-  // By state: the cut hospitals and their dollars, and the cut per Medicare stay over the stays of every estimated
-  // hospital with a decision there.
-  const byState = new Map([...Map.groupBy(rows, (r) => r.state)].map(([state, g]) => [state, { state, ...rollup(g) }]));
+  // By state: the cut hospitals this site estimates and their dollars, the hospitals CMS cut there (cmsCut, estimated
+  // or not), and the cut per Medicare stay over the stays of every estimated hospital with a decision there.
+  const cmsCut = new Map([...Map.groupBy(pd.decidedRows.filter((r) => r.yes), (r) => r.state)].map(([state, g]) => [state, g.length]));
+  const byState = new Map([...Map.groupBy(rows, (r) => r.state)].map(([state, g]) => [state, { state, ...rollup(g), cmsCut: cmsCut.get(state) ?? 0 }]));
 
   return {
     rows,
@@ -62,6 +69,8 @@ export function moneyData({ pd, dollars, model }) {
     tenth: { n: tenth, money: sorted.slice(0, tenth).reduce((a, b) => a + b, 0) },
     byKind,
     byState,
+    noEstimate: leftOf((status) => status === 'no-inputs' || status === 'parhm'),
+    exempt: leftOf((status) => status === 'maryland'),
     perStay: all.perStay,
     line: lineScore(model.boundary),
   };
@@ -85,15 +94,17 @@ export function sides(rows) {
 }
 
 // The hospitals within `window` of CMS's line, on either side, for the across-the-line figure: each with its score,
-// whether CMS cut it, and its dollars at stake; { rows, ...sides(rows) }, lowest score first. Worked out once per md and
-// window (the program page and every place page draw the same ones); read, never changed.
+// whether CMS cut it, and its dollars at stake; { rows, ...sides(rows) }, lowest score first. Also how many scored
+// hospitals within the window the figure leaves out: those with no estimate (noEstimate) and Maryland's (exempt).
+// Worked out once per md and window (the program page and every place page draw the same ones); read, never changed.
 const NEAR = new WeakMap();
 export function nearLine(md, window) {
   if (!NEAR.has(md)) NEAR.set(md, new Map());
   const made = NEAR.get(md);
   if (!made.has(window)) {
     const rows = md.rows.filter((r) => Math.abs(r.total - md.line) <= window).sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
-    made.set(window, { rows, ...sides(rows) });
+    const within = (totals) => totals.filter((total) => Math.abs(total - md.line) <= window).length;
+    made.set(window, { rows, ...sides(rows), noEstimate: within(md.noEstimate), exempt: within(md.exempt) });
   }
   return made.get(window);
 }

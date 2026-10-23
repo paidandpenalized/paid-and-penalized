@@ -57,7 +57,8 @@ const points = (diff) => `${diff >= 0 ? '+' : '−'}${decimal(Math.abs(diff) * 1
 function moneyFields(place, md) {
   const pm = placeMoney(md, place.ccns);
   if (!pm.rows.length) return [];
-  const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span> ${estTag()}`;
+  // A place where CMS cut no hospital has $0: CMS's decision, not an estimate, so no tag.
+  const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span>${pm.money === 0 && !place.counts.yes ? '' : html` ${estTag()}`}`;
   return [
     { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine(pm.range, { estimate: pm.money })}` },
     pm.perStay !== null && { label: mt('placePerStay'), value: roundedDollars(pm.perStay), note: mfill('placePerStayNote', { nation: roundedDollars(md.perStay) }) },

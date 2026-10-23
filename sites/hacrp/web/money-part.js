@@ -15,7 +15,7 @@ import { treemap } from '../../../web/charts/treemap.js';
 import { paraOf } from '../../../web/render/components.js';
 import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
-import { REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
+import { MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
 import { estTag, rangeLine } from './money-figures.js';
 import { countBins } from './compare.js';
@@ -48,14 +48,18 @@ export function billFigure(md, { n, source }) {
     const value = sum(rows, 'cut');
     return { key, rows, value, label: key === 'unknown' ? t('billUnknown') : groupLabel('teach', key) };
   }).filter((g) => g.rows.length);
-  const tree = groups.map((g) => ({ label: g.label, sub: fill('billGroupSub', { n: count(g.rows.length), money: money(g.value) }), value: g.value, tiles: g.rows.map((r) => ({ value: r.cut, tip: tipOf(r) })) }));
+  // The tiles are laid out largest first (the rows' order), but emitted by hospital name, then CCN, so the page's source
+  // holds no ranking of the names (DES-25).
+  const tree = groups.map((g) => ({ label: g.label, sub: fill('billGroupSub', { n: count(g.rows.length), money: money(g.value) }), value: g.value, tiles: g.rows.map((r) => ({ value: r.cut, tip: tipOf(r), order: `${r.name.toLowerCase()}\u0000${r.ccn}` })) }));
   const draw = (width) => treemap({ width, groups: tree });
   const total = md.headline.money;
-  // The group of hospitals with no teaching status is a sliver too small to label: the note names it.
+  // The group of hospitals with no teaching status is a sliver too small to label: the note names it. The note also says
+  // what the teaching groups are, this site's grouping of CMS's resident-to-bed ratio.
+  const ratio = decimal(MAJOR_TEACHING_RATIO, 2);
   const unknown = groups.find((g) => g.key === 'unknown');
-  const note = !unknown ? t('billNote')
-    : unknown.rows.length === 1 ? fill('billNoteUnknownOne', { money: money(unknown.value) })
-      : fill('billNoteUnknown', { n: count(unknown.rows.length), money: money(unknown.value) });
+  const note = !unknown ? fill('billNote', { r: ratio })
+    : unknown.rows.length === 1 ? fill('billNoteUnknownOne', { r: ratio, money: money(unknown.value) })
+      : fill('billNoteUnknown', { r: ratio, n: count(unknown.rows.length), money: money(unknown.value) });
   return figure({
     n, source, claimLevel: 'estimate', alt: t('billAlt'), csvName: 'hacrp-dollars-by-teaching', note,
     ...drawn(draw, PAGE),
@@ -87,13 +91,21 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   };
   const draw = (width) => acrossLine({ dots, domain: [md.line - ACROSS_WINDOW, md.line + ACROSS_WINDOW], line: md.line, labels, values: { under: underMoney, over: overMoney }, width });
   return figure({
-    n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName: 'hacrp-dollars-across-the-line', ...drawn(draw, PAGE),
+    n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName: 'hacrp-dollars-across-the-line', note: acrossNote(near, window), ...drawn(draw, PAGE),
     takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
     table: {
       columns: [{ name: t('acrossColSide') }, { name: t('acrossColHospitals'), numeric: true }, { name: t('acrossColMoney'), numeric: true }],
       rows: [[t('acrossSideUnder'), cnt(under.length), usd(underMoney)], [t('acrossSideOver'), cnt(over.length), usd(overMoney)]],
     },
   });
+}
+
+// The hospitals within the window the figure leaves out: those with no estimate and Maryland's, which are exempt, each
+// said only when there are any. null when none.
+function acrossNote({ noEstimate, exempt }, window) {
+  if (noEstimate && exempt) return fill('acrossNote', { n: count(noEstimate), m: count(exempt), window });
+  if (noEstimate) return fill('acrossNoteEstimate', { n: count(noEstimate), window });
+  return exempt ? fill('acrossNoteMaryland', { m: count(exempt), window }) : null;
 }
 
 // A place's own hospitals within the window: how many on each side and their dollars. All on one side, only that side.
@@ -142,7 +154,9 @@ export function sharesFigure(md, { n, source }) {
 export function statesFigure(md, { n, source, shapes }) {
   // Each state's cut per Medicare stay, to the whole dollar, once (the drawing's tooltips, the takeaway and the table say it).
   const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1)).map((s) => ({ ...s, stay: Math.round(s.perStay) }));
-  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }) }]));
+  // A state's tooltip says how many of the hospitals CMS cut there the dollars come from when some have no estimate.
+  const tipTotal = (s) => (s.cut < s.cmsCut ? fill('statesTipTotal', { money: money(s.money), n: count(s.cut), m: count(s.cmsCut) }) : fill('statesTipTotalAll', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }));
+  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: tipTotal(s) }]));
   const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(s.stay) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
   const art = drawn((width) => usBubbles({ shapes, layers, width }), PAGE);

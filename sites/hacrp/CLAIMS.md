@@ -92,6 +92,8 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-83 | Each hospital's uncompensated care payment is its share (Factor 3) of a national amount CMS sets for the year (Factor 1 times Factor 2). | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Factor 3 is applied to the product of Factor 1 and Factor 2 to determine the amount of the uncompensated care payment" | 2026-10-23 |
 | HACRP-84 | The base the readmissions and value-based programs adjust includes new-technology add-on payments. | https://www.law.cornell.edu/cfr/text/42/412.152 | "Base operating DRG payment amount is the wage-adjusted DRG operating payment plus any applicable new technology add-on payments under subpart F of this part" | 2026-10-23 |
 | HACRP-85 | In Pennsylvania's Rural Health Model, hospitals are paid global budgets, which are adjusted for their results in the value-based purchasing, readmissions and HAC programs (the model's evaluation for CMS). | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | "Global budgets continue to be adjusted based on each hospital’s performance under applicable Medicare quality programs (i.e., … Hospital-Acquired Condition Reduction Program" | 2026-10-23 |
+| HACRP-86 | The readmissions program's payment adjustment factor is 1 minus a share of the hospital's payments, so it never exceeds 1: the program only reduces payments. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.154 | "The ratio is equal to 1 minus the ratio of the aggregate payments for excess readmissions … and the aggregate payments for all discharges" | 2026-10-23 |
+| HACRP-87 | A hospital's value-based purchasing adjustment factor is 1 plus the difference between its incentive payment percentage and the percent held back from every hospital, so it is above 1 for a hospital that earns more than was held back and below 1 for one that earns less. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.162 | "determined by subtracting the applicable percent … from the value-based incentive payment percentage and then adding that difference to one" | 2026-10-23 |
 
 ## Notes on the sources
 
@@ -251,8 +253,14 @@ A claim marked `unverified` may not be used in copy.
   defines the value-based program's base in the same words. HACRP-85 is the model's second annual evaluation report,
   written for CMS by NORC at the University of Chicago (June 2022), which says its contents are the authors'
   responsibility, so the claim is worded as the evaluation's, not as a CMS rule.
+- **HACRP-86 and HACRP-87** back the dollar pages' wording (the M4 accuracy pass). They are 42 CFR 412.154(c) and 412.162(c), read on the eCFR (version dated 2026-10-20).
+    412.154(c) makes the readmissions factor "the higher of the ratio … or the floor adjustment factor", the floor being
+    0.97 from FY 2015; the ratio is 1 minus a share, so the factor is at most 1. 412.162(b)(1) says the total available
+    for value-based incentive payments "is equal to the total amount of base-operating DRG payment reductions for that
+    fiscal year, as estimated by the Secretary", and 412.162(a) that CMS "will make value-based incentive payments" to a
+    hospital that meets or exceeds the performance standards: bonuses are paid for by other hospitals' cuts.
 
-## Link check (2026-10-22)
+## Link check (2026-10-22; extended 2026-10-23)
 
 Each URL the HACRP site links to (`sites/hacrp/web/links.js`), each dataset landing page in
 `data/pinned/manifest.json` and each source above, fetched with redirects followed. The Federal Register addresses redirect to the same document's
@@ -295,3 +303,9 @@ browser.
 | https://www.law.cornell.edu/cfr/text/42/412.172 | 200 | direct |
 | https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/Downloads/R3138CP.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.qualityreportingcenter.com/globalassets/2020/12/pch/hospital-compare_care-compare-refresh-and-overall-hospital-quality-star-rating-2021-updates.pdf | 200 | direct |
+| https://www.cms.gov/files/document/r25p240i.pdf | 200 (a PDF; read from the downloaded file) | direct |
+| https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | 200 (a PDF; read from the downloaded file) | direct |
+| https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |
+| https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.154 | 200 | direct (one redirect) |
+| https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.162 | 200 | direct (one redirect) |

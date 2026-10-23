@@ -70,8 +70,8 @@ export function sumRanges(ranges) {
   return [some.reduce((a, r) => a + r[0], 0), some.reduce((a, r) => a + r[1], 0)];
 }
 
-// Whether the hospital's payment includes teaching payments on Medicare Advantage stays: the words that call the
-// payment "everything traditional Medicare pays it" then say so. m: an estimated hospitalMoney().
+// Whether the hospital's payment includes teaching payments on Medicare Advantage stays: the words that name the payment
+// as what traditional Medicare pays it then say so. m: an estimated hospitalMoney().
 export const hasMaTeaching = (m) => m.parts.imeMa > 0;
 
 // The copy key for a hospital's payment words: `key`, or its twin `keyMa` (the same words, saying the teaching payments
