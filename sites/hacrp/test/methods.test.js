@@ -3,11 +3,11 @@
 // pipeline and the sources. Every total on the page is read back against the self-checks it summarizes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
-import { REPO_ROOT } from '../../../pipeline/files.js';
+import { newestYear, readJson, REPO_ROOT } from '../../../pipeline/files.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
@@ -213,8 +213,7 @@ test('the changes and the sources: every changelog entry with its date and items
   // empties itself when a page loads the dollars (their `sources` then join pinsUsed). This does not catch a page that
   // reads such a pin without declaring it.
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
-  const dollarsDir = `${REPO_ROOT}data/emitted/dollars/`;
-  const dollarsSources = readdirSync(dollarsDir).flatMap((fy) => JSON.parse(readFileSync(`${dollarsDir}${fy}/dollars.json`, 'utf8')).sources);
+  const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;
   assert.deepEqual(
     manifest.filter((e) => !used.has(e.id)).map((e) => e.id).sort(),
     [...new Set(dollarsSources)].filter((id) => !used.has(id)).sort(),

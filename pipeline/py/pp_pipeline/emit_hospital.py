@@ -9,10 +9,9 @@ import re
 from datetime import datetime, timezone
 
 from pp_engine import geo, location
-from pp_engine.dollars import MARYLAND
 from pp_engine.master import Place, build_master
-from pp_engine.parse import (SchemaError, impact_fy, index_by_ccn, read_cbsa_names, read_hgi, read_impact, read_points,
-                             read_pos, read_zcta, rows, table)
+from pp_engine.parse import (MARYLAND, SchemaError, impact_fy, index_by_ccn, read_cbsa_names, read_hgi, read_impact,
+                             read_points, read_pos, read_zcta, rows, table)
 from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, read_manifest, read_pinned_bytes, read_zip_member,
                                read_zip_text_cp1252, write_emitted)
 

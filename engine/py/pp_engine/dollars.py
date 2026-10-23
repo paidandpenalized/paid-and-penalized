@@ -34,6 +34,7 @@ Pure: no file, network or clock.
 import math
 
 from pp_engine.ipps import rate_key
+from pp_engine.parse import MARYLAND
 
 HAC_RATE = 0.01  # the HAC Reduction Program's payment reduction: 1% of the hospital's payments (SSA 1886(p))
 MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of its hospital-specific rate (42 CFR 412.108)
@@ -75,7 +76,6 @@ VBP_WITHHOLD = 0.02
 # A later file with more fails the check, so the new ones are looked at.
 YES_UNESTIMATED_MAX = 9
 
-MARYLAND = "MD"  # the state whose hospitals are paid under the state's own model: no HRRP, HVBP or HAC adjustment
 STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 
 # Keys every hospital must carry as numbers (or, for the flags, bools). The ones the file may leave blank (`hsp`,

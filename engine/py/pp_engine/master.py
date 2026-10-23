@@ -9,7 +9,7 @@ from collections import namedtuple
 
 from pp_engine import geo, location, names
 from pp_engine.contract import envelope
-from pp_engine.parse import POS_TERMINATION, SchemaError
+from pp_engine.parse import MARYLAND, POS_TERMINATION, SchemaError
 
 SCHEMA_VERSION = 2
 METHODS_VERSION = 2
@@ -77,7 +77,7 @@ def reason_for(subject, kind, state, inactive):
         return None
     if kind in NOT_IPPS:
         return NOT_IPPS[kind]
-    if state == "MD":
+    if state == MARYLAND:
         return "maryland"
     return "inactive" if inactive else "not_listed"
 
