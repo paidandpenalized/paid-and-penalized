@@ -27,8 +27,6 @@ import { whatIfSection } from './whatif.js';
 
 export const PATH = SITE.sites.hacrp.path;
 
-
-
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
 // The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share (its page
@@ -87,9 +85,9 @@ ${stamp({ label: fill('stampReleased', { date: shortIsoDate(source.pdcReleased) 
 // for the score rule and the parts; places: buildPlaces() (places.js) and shapes: stateShapes(topology), for the map,
 // the browse list and the hero's suggestions (tryPlaces); exploreUrl: the explore asset the page's scripts read. Each
 // part is left out without its data. Figures and Part 1's steps are numbered in page order.
-// md: moneyData() (money-data.js), for the summary form's estimate, the score rule's dollars view and the Part on the
-// money; null for none.
-export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, pd = null, exploreUrl = null, tryPlaces = null, places = null, shapes = null, hd = null, rollUrl = null, master = null, md = null }) {
+// md: moneyData() (money-data.js), for the summary form's estimate and the Part on the money; null for none, and left out
+// when no cut hospital has an estimate (a test's slice of the file).
+export function programPage({ fy, counts, boundaryText, periods, searchUrl, source, robots, assets, whatif = null, pd = null, exploreUrl = null, tryPlaces = null, places = null, shapes = null, hd = null, rollUrl = null, master = null, md: estimates = null }) {
   const { title, subtitle } = SITE.sites.hacrp;
   const fyText = String(fy);
   const heading = fill('programTitle', { fy: fyText });
@@ -99,14 +97,14 @@ export function programPage({ fy, counts, boundaryText, periods, searchUrl, sour
   const stepNo = counter();
   const line = sourceText({ fy, source });
   const parts = pd && whatif ? { one: part1({ pd, model: whatif.model, periods, median: whatif.hospital, source: line, figure: figureNo, step: stepNo }), two: part2({ pd, model: whatif.model, source: line, figure: figureNo }) } : null;
-  const money = md ? moneyPart({ md, fy, source: moneySourceText({ fy, source }), shapes, figure: figureNo }) : null;
-  const moneyTop = md?.cutRows.length ? md : null;
+  const md = estimates?.cutRows.length ? estimates : null;
+  const money = md ? moneyPart({ md, source: moneySourceText({ fy, source }), shapes, figure: figureNo }) : null;
   const map = pd && places && shapes ? mapFigure({ pd, places, shapes, n: figureNo(), source: line }) : '';
   const sandboxNo = what ? stepNo() : null;
   const partNo = counter();
 
   const body = html`<article class="wrap page page--prog prog"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
-${programTop({ title, subtitle, fy, counts, boundaryText, periods, source, searchUrl, tryPlaces, md: moneyTop })}
+${programTop({ title, subtitle, fy, counts, boundaryText, periods, source, searchUrl, tryPlaces, md })}
 ${pd && ruleFigure(pd, { searchUrl })}
 <section class="part" id="how" aria-labelledby="how-h">
 ${partHead({ n: partNo(), id: 'how', heading: t('part1Heading'), intro: fill('part1Intro', { fy: fyText }) })}

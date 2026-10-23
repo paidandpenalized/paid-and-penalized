@@ -20,7 +20,7 @@ import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
 import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
 import { ASSETS } from './fixtures.js';
-import { DATA, HD } from './pinned.js';
+import { DATA, HD, RANGED } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
 const quiet = () => {};
@@ -31,7 +31,7 @@ const strip = (markup) => text(markup.replace(/<[^>]+>/g, ''));
 const numbers = (s) => Object.values(SHORT_NAMES).reduce((x, name) => x.replaceAll(name, ''), s).match(/[−+]?\d+(,\d{3})*(\.\d+)?%?/g) ?? [];
 
 // A few pinned hospitals are enough for the page build: the history and the Methods page do not depend on them.
-const SLICE = { ...DATA, hospitals: DATA.hospitals.slice(0, 40) };
+const SLICE = { ...DATA, dollars: RANGED, hospitals: DATA.hospitals.slice(0, 40) };
 const build = (data) => withTemp('pp-methods-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
   await generateHacrp(ctx, { released: true, data, log: quiet });

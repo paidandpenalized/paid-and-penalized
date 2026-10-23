@@ -9,7 +9,8 @@ import { solverOf, whatIfRules } from '../whatif-state.js';
 import { whatIfTexts } from '../whatif-text.js';
 
 // atStake: the dollars this site estimates the HAC cut would take (1% of the payment after the readmissions and
-// value-based adjustments), so the browser moves the money with the decision; null where there is no estimate.
+// value-based adjustments), on the record where this site has an estimate (generate.js), so the browser moves the money
+// with the decision; null where there is none.
 function browserHospital(h) {
   const measures = Object.fromEntries(MEASURE_IDS.map((id) => {
     const { value, z, zText } = h.measures[id];
@@ -26,8 +27,8 @@ function browserModel(model) {
 
 const browserEstimate = (estimate) => Object.fromEntries(Object.entries(estimate).map(([id, { tagged }]) => [id, { tagged }]));
 
-// The page data: { hospital, model, estimate, page, range }. whatif: { hospital, model, estimate, range, money }
-// (range: the ramp's national span of scores; money: hospitalMoney(), or absent). page: { name, fy, path, source,
+// The page data: { hospital, model, estimate, page, range }. whatif: { hospital, model, estimate, range } (hospital: the
+// record, with atStake where there is an estimate; range: the ramp's national span of scores). page: { name, fy, path, source,
 // boundaryText, baseline, share }, the fields whatIfTexts takes plus share; source is cut to what the slide text cites.
 function whatIfData({ hospital, model, estimate, range }, page) {
   const source = { id: page.source.id, pdcReleased: page.source.pdcReleased };
@@ -43,10 +44,8 @@ function whatIfData({ hospital, model, estimate, range }, page) {
 // The section's HTML and its page data, under the script id dataId. wrapBars: optional frame for the bars
 // (renderWhatIf).
 export function whatIfSection(whatif, page, dataId, wrapBars = null) {
-  const { model, estimate, range, money = null } = whatif;
-  // The record with the dollars at stake on it, where this site has an estimate: the build and the browser read it alike.
-  const hospital = money?.estimated ? { ...whatif.hospital, atStake: money.atStake } : whatif.hospital;
-  const data = whatIfData({ ...whatif, hospital }, page);
+  const { hospital, model, estimate, range } = whatif;
+  const data = whatIfData(whatif, page);
   const rules = whatIfRules(hospital, model, estimate);
   const vm = rules.viewModel(rules.start);
   const texts = whatIfTexts({ hospital, model, ...data.page });

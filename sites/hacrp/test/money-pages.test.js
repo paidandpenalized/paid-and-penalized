@@ -14,6 +14,7 @@ import { HUB } from '../../../hub/pages.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW } from '../web/money-part.js';
 import { moneyData, nearLine, placeMoney } from '../web/money-data.js';
+import { programData } from '../web/program-data.js';
 import { DOLLARS_HREF } from '../web/links.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { DATA, HD, MD, PLACES, renderPlace, renderProgram } from './pinned.js';
@@ -26,25 +27,24 @@ const captionOf = (html, id) => strip(/<figcaption class="fig__cap"[^>]*>([\s\S]
 
 test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s cut count, the hospitals estimated, the dollars', () => {
   const h = DATA.dollars.headline;
-  assert.equal(MD.headline.yes, h.yes);
-  assert.equal(MD.headline.cut, h.cut);
-  assert.equal(MD.headline.yesUnestimated, h.yesUnestimated);
-  assert.equal(MD.headline.money, -h.hac);
-  assert.equal(MD.headline.hrrp, h.hrrp);
-  assert.equal(MD.headline.hvbp, h.hvbp);
-  assert.equal(MD.headline.hospitals, h.hospitals);
+  // The rows the breakdowns sum over are the file's own: its counts and its dollars.
+  assert.equal(MD.rows.length, h.hospitals);
+  assert.equal(MD.cutRows.length, h.cut);
+  assert.equal(h.yes - MD.cutRows.length, h.yesUnestimated);
+  assert.equal(MD.cutRows.reduce((s, r) => s + r.cut, 0), -h.hac);
+  for (const key of ['hrrp', 'hvbp']) assert.equal(MD.rows.reduce((s, r) => s + DATA.dollars.byCcn.get(r.ccn)[key], 0), h[key], key);
   // Each breakdown adds back to the whole.
   for (const k of MD.byKind) assert.ok(k.groups.reduce((s, g) => s + g.money, 0) <= MD.headline.money, k.kind);
   const teach = MD.byKind.find((k) => k.kind === 'teach');
   assert.ok(teach.groups.every((g) => g.n > 0));
   assert.equal([...MD.byState.values()].reduce((s, st) => s + st.money, 0), MD.headline.money, 'the states add to the nation');
-  assert.equal([...MD.byState.values()].reduce((s, st) => s + st.cutHospitals, 0), MD.headline.cut);
+  assert.equal([...MD.byState.values()].reduce((s, st) => s + st.cut, 0), MD.headline.cut);
   const sorted = MD.cutRows.map((r) => r.cut).sort((a, b) => b - a);
   assert.equal(MD.tenth.n, Math.ceil(sorted.length / 10));
   assert.equal(MD.tenth.money, sorted.slice(0, MD.tenth.n).reduce((a, b) => a + b, 0));
   // A slice of the hospitals sums over itself (the build's tests pass slices).
-  const slice = moneyData({ hospitals: DATA.hospitals.slice(0, 50), master: DATA.master, dollars: DATA.dollars, model: DATA.model });
-  assert.ok(slice.headline.cut <= slice.headline.yes);
+  const slice = moneyData({ pd: programData({ hospitals: DATA.hospitals.slice(0, 50), master: DATA.master, model: DATA.model }), dollars: DATA.dollars, model: DATA.model });
+  assert.ok(slice.cutRows.length <= h.yes);
   // A place's money: its share of the nation's, and per stay over its hospitals' stays.
   const state = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes > 5);
   const pm = placeMoney(MD, state.ccns);
@@ -52,15 +52,16 @@ test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s
   assert.equal(pm.share, pm.money / MD.headline.money);
 });
 
-test('the program page\'s summary and the Part on the money say how many of CMS\'s cut hospitals the national total covers', () => {
-  const words = `${count(MD.headline.cut)} of the ${count(MD.headline.yes)} hospitals CMS cut`;
+test('the program page\'s summary and the Part on the money say how many of CMS\'s cut hospitals the national total covers, the file\'s own headline', () => {
+  const h = DATA.dollars.headline;
+  const words = `${count(h.cut)} of the ${count(h.yes)} hospitals CMS cut`;
   const summary = /<div class="form prog__summary">[\s\S]*?<p class="stamp">/.exec(PROGRAM)[0];
-  assert.ok(strip(summary).includes(money(MD.headline.money)));
+  assert.ok(strip(summary).includes(money(-h.hac)));
   assert.ok(strip(summary).includes(words), 'the summary field');
   const intro = strip(/<header class="part__head">[\s\S]*?<\/header>/.exec(part)[0]);
-  assert.ok(intro.includes(money(MD.headline.money)));
-  assert.ok(intro.includes(`${count(MD.headline.cut)} of the ${count(MD.headline.yes)} hospitals CMS cut`));
-  assert.ok(intro.includes(`no usable row for the other ${count(MD.headline.yesUnestimated)}`));
+  assert.ok(intro.includes(money(-h.hac)));
+  assert.ok(intro.includes(words));
+  assert.ok(intro.includes(`no usable row for the other ${count(h.yesUnestimated)}`));
   // Every dollar figure says it is an estimate, and the summary's range is pending (a production build refuses it).
   assert.match(summary, /class="est-tag" href="\/hacrp\/methods\/#dollars"/);
   assert.match(summary, /money__range--pending/);
@@ -70,11 +71,8 @@ test('the Part on the money: at least five figures, each beside its words, each 
   const figs = [...part.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)];
   assert.ok(figs.length >= 5, `${figs.length} figures`);
   assert.equal(captionOf(part, 'bill').replace(/^Figure \d+\. /, ''), `The largest tenth of the cuts, ${count(MD.tenth.n)} hospitals, are ${pct(MD.tenth.money / MD.headline.money, 0)} of the ${money(MD.headline.money)} this site estimates the program took.`);
-  const near = nearLine(MD, ACROSS_WINDOW);
-  const over = near.filter((r) => r.yes);
-  const under = near.filter((r) => !r.yes);
-  const sum = (rows) => rows.reduce((s, r) => s + r.atStake, 0);
-  assert.equal(captionOf(part, 'across').replace(/^Figure \d+\. /, ''), `Within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line, CMS cut ${count(over.length)} hospitals, about ${money(sum(over))} by this site’s estimate; the ${count(under.length)} just under it kept about ${money(sum(under))}.`);
+  const { over, under, overMoney, underMoney } = nearLine(MD, ACROSS_WINDOW);
+  assert.equal(captionOf(part, 'across').replace(/^Figure \d+\. /, ''), `Within ${decimal(ACROSS_WINDOW, 2)} of CMS’s line, CMS cut ${count(over.length)} hospitals, about ${money(overMoney)} by this site’s estimate; the ${count(under.length)} just under it kept about ${money(underMoney)}.`);
   // Shares: the group whose money most outruns its count, from the data.
   const all = MD.byKind.filter((k) => ['teach', 'beds', 'own', 'urban'].includes(k.kind)).flatMap((k) => k.groups);
   const top = all.reduce((a, b) => (b.shareMoney / b.shareHospitals > a.shareMoney / a.shareHospitals ? b : a));
@@ -125,7 +123,7 @@ test('the treemap\'s groups add to the headline: every cut hospital this site es
 });
 
 test('a place page: its estimate against the nation\'s, its children\'s dollars, its hospitals across the line', () => {
-  const state = PLACES.list.find((p) => p.kind === 'state' && p.children.length > 1 && nearLine(MD, ACROSS_WINDOW).some((r) => p.ccns.includes(r.ccn)));
+  const state = PLACES.list.find((p) => p.kind === 'state' && p.children.length > 1 && nearLine(MD, ACROSS_WINDOW).rows.some((r) => p.ccns.includes(r.ccn)));
   const page = renderPlace(state);
   const pm = placeMoney(MD, state.ccns);
   const card = strip(/<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);

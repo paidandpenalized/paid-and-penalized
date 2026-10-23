@@ -8,7 +8,7 @@ import { historySource, placeYearsFigure } from '../history-figures.js';
 import { nameInText } from '../places.js';
 import { fill as hfill } from '../history/copy.js';
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, ordinal, pct, shownAbove } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money as moneyText, ordinal, pct, shownAbove } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -25,7 +25,6 @@ import { acrossFigure, ACROSS_WINDOW } from '../money-part.js';
 import { nearLine, placeMoney } from '../money-data.js';
 import { estTag, moneySourceText, rangeLine } from '../money-figures.js';
 import { fill as mfill, t as mt } from '../money/copy.js';
-import { money as moneyText } from '../../../../web/render/format.js';
 
 const KIND = { region: 'placeKindRegion', division: 'placeKindDivision', state: 'placeKindState', metro: 'placeKindMetro' };
 const KINDS_WORDS = { region: 'kpiKindsRegion', division: 'kpiKindsDivision', state: 'kpiKindsState' };
@@ -59,7 +58,7 @@ function moneyFields(place, md) {
   if (!pm.rows.length) return [];
   const value = html`<span class="money__field${pm.money ? ' money__field--cut' : ''}">${moneyText(pm.money)}</span> ${estTag()}`;
   return [
-    { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine({ range: null })}` },
+    { label: mt('placeMoney'), value, as: 'div', size: 'big', fieldCls: 'f-money', note: html`${mfill('placeMoneyNote', { share: pct(pm.share, 1), money: moneyText(md.headline.money) })}${rangeLine()}` },
     pm.perStay !== null && { label: mt('placePerStay'), value: dollars(Math.round(pm.perStay)), note: mfill('placePerStayNote', { nation: dollars(Math.round(md.perStay)) }) },
   ].filter(Boolean);
 }
@@ -116,7 +115,7 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const measures = placeMeasuresFigure({ place, model, next: figureNo, source: line });
   const ccns = new Set(place.ccns);
   // Its hospitals across the line, when any sits within the figure's window of it.
-  const across = md && nearLine(md, ACROSS_WINDOW).some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
+  const across = md && nearLine(md, ACROSS_WINDOW).rows.some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
   const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
   const kidMoney = md && { head: mt('placeChildMoney'), cell: (list) => moneyText(placeMoney(md, list ?? []).money) };
   const kids = place.kind === 'metro' ? null : childrenTable({ place, places, nation, money: kidMoney });

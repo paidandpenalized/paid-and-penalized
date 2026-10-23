@@ -6,9 +6,13 @@ import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
 import { readPinned } from '../../../pipeline/files.js';
+import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
 export const FY = 2026;
+// The dollars of a page with no estimate (the impact file has no usable row for the hospital): what a synthetic
+// hospital's page takes, since no row of the dollar estimates covers it.
+export const NO_ESTIMATE = hospitalMoney({ status: 'no-inputs', cut: false });
 // Asset paths for rendering pages: the CSS, the shared scripts and both HACRP page scripts.
 export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', share: '/assets/share.test.js', topbar: '/assets/topbar.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-place': '/assets/hacrp-place.test.js','hacrp-hospital': '/assets/hacrp-hospital.test.js', 'hacrp-search': '/assets/hacrp-search.test.js' } };
 export const PERIODS = SYNTH_PERIODS;

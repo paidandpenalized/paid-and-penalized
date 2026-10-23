@@ -132,7 +132,7 @@ test('a place with no hospital with a payment decision has no share, rank, stamp
 
 test('the figures: the map, the scores against the nation\'s, the measures and its hospitals across the line, numbered from 1 with the rule above them', () => {
   const text = renderPlace(STATE);
-  const across = nearLine(MD, ACROSS_WINDOW).some((r) => STATE.ccns.includes(r.ccn));
+  const across = nearLine(MD, ACROSS_WINDOW).rows.some((r) => STATE.ccns.includes(r.ccn));
   assert.deepEqual([...text.matchAll(/<figure class="fig" id="figure-(\d+)" data-figure>/g)].map((m) => Number(m[1])), across ? [1, 2, 3, 4] : [1, 2, 3]);
   assert.deepEqual([...text.matchAll(/<section class="psec(?: psec--wide)?" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures', ...(across ? ['across'] : [])]);
   // The rule is every hospital with a decision, with the place's ticked: it reads the hospitals asset for names.

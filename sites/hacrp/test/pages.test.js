@@ -13,6 +13,7 @@ import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/buil
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
+import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -22,7 +23,7 @@ import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
-import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, RANGED, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -41,6 +42,7 @@ const generate = (dir, env, options) => {
 // that only check indexing; the production test keeps every hospital.
 const SLICE = {
   ...DATA,
+  dollars: RANGED,
   hospitals: [
     (h) => h.total !== null && h.paymentReduction === 'Yes',
     (h) => h.total !== null && h.paymentReduction === 'No',
@@ -69,7 +71,7 @@ const levels = (text) => [...text.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number
 
 test('production, released: every hospital page and every place page plus /hacrp/, one <h1> each; odd rows as CMS published them', () =>
   temp(async (dir) => {
-    const ctx = await generate(dir, 'production', { released: true, data: DATA });
+    const ctx = await generate(dir, 'production', { released: true, data: { ...DATA, dollars: RANGED } });
     assert.equal(DATA.hospitals.length, 3055);
     assert.equal(ctx.pages, DATA.hospitals.length + PLACES.list.length + 3, 'the hospitals, the places, /hacrp/, the data dictionary page and Methods');
     assert.equal(readdirSync(join(dir, 'hacrp', 'hospital')).length, DATA.hospitals.length);
@@ -227,7 +229,7 @@ test('A1 failing stops the build and names the mismatched CCN', async () => {
   const moved = DATA.hospitals.map((h) => ({ ...h }));
   const i = moved.findIndex((h) => h.total !== null && h.paymentReduction === 'No');
   moved[i] = { ...moved[i], ccn: '990001', paymentReduction: 'Yes' };
-  await temp((dir) => assert.rejects(generate(dir, 'production', { data: { ...DATA, hospitals: moved } }), /A1 failed.*990001/));
+  await temp((dir) => assert.rejects(generate(dir, 'production', { data: { ...DATA, dollars: RANGED, hospitals: moved } }), /A1 failed.*990001/));
 });
 
 test('hostile text in a hospital name renders as text in the page, the title and the JSON-LD', () => {
@@ -338,7 +340,7 @@ test('a hospital with no score shows a hatched "No score published" block, not a
   }
   const scored = render(CASES.yes);
   assert.match(scored, /class="field__value field__value--big cms hosp__score">0<span class="dp">\.<\/span>3000</, "CMS’s text, its point in a span");
-  assert.doesNotMatch(scored, /hosp__none|No score published/);
+  assert.doesNotMatch(scored, /No score published/);
 });
 
 test('the decision pill and the "CMS\'s value" line: shown under a cut or no-cut pill, skipped when the pill is CMS\'s own text', () => {
@@ -353,7 +355,8 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   const text = render(CASES.yes);
   const name = 'Example General Hospital';
   assert.match(text, new RegExp(`<title>${name}, Exampleton, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`));
-  assert.equal(meta(text, 'description'), esc(`${name} (Exampleton, AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`));
+  // The sentence a shared link carries (money-figures.js shareSentence); a page with no dollar estimate says CMS's decision alone.
+  assert.equal(meta(text, 'description'), esc(`In FY${DATA.fy}, Medicare cut ${name}’s inpatient payments ${REDUCTION_TEXT} under the HAC Reduction Program.`));
   const program = programPage(PROGRAM_ARGS);
   assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
@@ -465,7 +468,7 @@ test('the top: the record card (title bar, numbered fields from the name) beside
     assert.deepEqual(numbers.map(([n]) => n), numbers.map((_, i) => i + 1), `${h.ccn}: numbered in order`);
     assert.deepEqual(numbers.slice(0, 2).map(([, label]) => label), ['Hospital', 'Location']);
     assert.ok(numbers.some(([, l]) => l === 'Total HAC Score') && numbers.some(([, l]) => l === 'Payment reduction'), h.ccn);
-    assert.match(text, /<section class="hosp__verdict" aria-label="Score and payment decision">\n<p class="stamp[^"]*">/, `${h.ccn}: the verdict keeps the hero's name`);
+    assert.match(text, /<section class="hosp__verdict" aria-label="Score and payment decision">\n<div class="hosp__stampline">\n<p class="stamp[^"]*">/, `${h.ccn}: the verdict keeps the hero's name`);
     assert.ok(text.indexOf('For fiscal year') > text.indexOf('class="hosp__verdict"') && text.indexOf('For fiscal year') < text.indexOf('id="measures"'), `${h.ccn}: the summary in the verdict`);
   }
 });

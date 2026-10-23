@@ -21,7 +21,7 @@ import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
-import { DATA, PROGRAM_ARGS, PAGE_CTX } from './pinned.js';
+import { DATA, PROGRAM_ARGS, PAGE_CTX, RANGED } from './pinned.js';
 import { hospitalView } from '../web/view.js';
 
 const DICTIONARY = readFileSync(join(REPO_ROOT, 'sites/hacrp/DATA-DICTIONARY.md'), 'utf8');
@@ -164,7 +164,7 @@ test('dictionaryText fills the fiscal year, dataset id and release date, and ref
 test('the build writes the CSV and the dictionary beside it (neither a page nor in the sitemap), and the dictionary as a page', () =>
   withTemp('pp-csv-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-    const slice = { ...DATA, hospitals: DATA.hospitals.slice(0, 4) };
+    const slice = { ...DATA, dollars: RANGED, hospitals: DATA.hospitals.slice(0, 4) };
     await generateHacrp(ctx, { released: true, data: slice, log: quiet });
     assert.equal(csvPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/hacrp-hospitals.csv`);
     assert.equal(dictionaryPath(DATA.fy), `/data/hacrp/fy${DATA.fy}/DATA-DICTIONARY.md`);

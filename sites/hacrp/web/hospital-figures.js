@@ -12,7 +12,7 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, money, pct, pctFloor } from '../../../web/render/format.js';
+import { cmsText, count, decimal, pct, pctFloor } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { pill, printout } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
@@ -22,6 +22,7 @@ import { fill, t } from './copy.js';
 import { HOSPITALS_PATH } from './view.js';
 import { pillOf } from './whatif-text.js';
 import { hospitalHref } from './hospital-table.js';
+import { cutText } from './money.js';
 import { groupLabel } from './groups.js';
 
 const at = (v) => decimal(v, DP);
@@ -253,9 +254,7 @@ function glyph(flags) {
 }
 
 // A hospital's estimated cut in a table: the dollars, in the penalty ink for a cut; words where there is no estimate.
-const cutCell = (dollars) => (Number.isFinite(dollars)
-  ? html`<td class="num near__cut${dollars > 0 ? ' near__cut--pen' : ''}">${money(dollars)}</td>`
-  : html`<td class="num near__cut">${t('tableMoneyNone')}</td>`);
+const cutCell = (dollars) => html`<td class="num near__cut${dollars > 0 ? ' near__cut--pen' : ''}">${cutText(dollars)}</td>`;
 
 // The nearest hospitals' takeaway: the closest one's distance in whole miles, "less than a mile" under one, and one
 // mile in the singular.
@@ -265,9 +264,8 @@ export function nearTakeaway(closest, values, miles) {
   return fill('figNearbyTakeaway', { ...values, miles: miles(closest) });
 }
 
-// cutOf: ccn -> this site's estimate of a hospital's HAC cut in whole dollars (generate.js cutDollars; null for none),
-// which adds the table's estimated-cut column; null for no such column.
-export function nearbyBlock({ view, nat, shapes, counties = [], n, source, cutOf = null }) {
+// The table's estimated-cut column reads each nearby hospital's cut from the national context (compare.js).
+export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (!view.point || !shapes) return null;
   const near = nat.nearest(view.ccn, view.point);
   if (near.length < 2) return null;
@@ -285,8 +283,8 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source, cutOf
   const yes = near.filter((h) => h.decision === 'Yes').length;
   const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
   const table = printout(html`<table class="gb gb--near" aria-labelledby="nearby-h">
-<thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th>${cutOf ? html`<th scope="col" class="num">${t('tableColMoney')}</th>` : ''}<th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
-<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutOf ? cutCell(cutOf(h.ccn)) : ''}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
+<thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col" class="num">${t('tableColMoney')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
+<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,

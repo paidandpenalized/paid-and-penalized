@@ -12,19 +12,23 @@ import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { historyData } from '../web/history-data.js';
 import { moneyData } from '../web/money-data.js';
-import { ASSETS, BOUNDARY_TEXT } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT, NO_ESTIMATE } from './fixtures.js';
 
 export const DATA = loadHacrp();
 export const RANGE = scoreRange(DATA.hospitals);
+// The dollar estimates as a production build needs them: with the back-test's ranges in the file (a production build
+// refuses the dollars while they are pending). Nothing reads the ranges yet; only that check does.
+export const RANGED = { ...DATA.dollars, bands: {} };
 // What a hospital page compares a hospital with (compare.js), built once from the pinned data, and the model: every
-// hospitalPage call takes both.
-export const NAT = nationalContext({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model });
-export const PAGE_CTX = { nat: NAT, model: DATA.model };
+// hospitalPage call takes both, and a hospital's dollars (these tests' synthetic hospitals have no estimate; a test of the
+// dollars passes the pinned row's).
+export const NAT = nationalContext({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model, dollars: DATA.dollars });
+export const PAGE_CTX = { nat: NAT, model: DATA.model, money: NO_ESTIMATE };
 // What the program page and the place pages draw (program-data.js, places.js), built once from the pinned data.
 export const PD = programData({ hospitals: DATA.hospitals, master: DATA.master, model: DATA.model });
 export const PLACES = buildPlaces({ hospitals: DATA.hospitals, master: DATA.master, rows: PD.rows });
 // What the money's figures draw (money-data.js), built once from the pinned data.
-export const MD = moneyData({ hospitals: DATA.hospitals, master: DATA.master, dollars: DATA.dollars, model: DATA.model });
+export const MD = moneyData({ pd: PD, dollars: DATA.dollars, model: DATA.model });
 
 // Every pinned hospital's page view, and the rows a place page's map reads from them (generate.js builds the same).
 export const VIEWS = DATA.hospitals.map((h) => hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }));

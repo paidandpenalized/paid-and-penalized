@@ -15,7 +15,7 @@ import { html } from '../../../web/render/html.js';
 import { REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
 import { estTag, rangeLine } from './money-figures.js';
-import { nearLine } from './money-data.js';
+import { nearLine, sides, sum } from './money-data.js';
 import { fill, t } from './money/copy.js';
 import { psec } from './program-figures.js';
 
@@ -37,7 +37,7 @@ export function billFigure(md, { n, source }) {
   const groupOf = (r) => (TEACH.includes(r.master.teach) ? r.master.teach : 'unknown');
   const groups = [...TEACH, 'unknown'].map((key) => {
     const rows = md.cutRows.filter((r) => groupOf(r) === key).sort((a, b) => b.cut - a.cut || (a.ccn < b.ccn ? -1 : 1));
-    const value = rows.reduce((s, r) => s + r.cut, 0);
+    const value = sum(rows, 'cut');
     return { key, rows, value, label: key === 'unknown' ? t('billUnknown') : groupLabel('teach', key) };
   }).filter((g) => g.rows.length);
   const draw = (width, height, tips) => treemap({
@@ -66,12 +66,9 @@ export function billFigure(md, { n, source }) {
 // mine: a place's hospitals (a Set of CCNs), drawn in full ink with the rest faint; null on the program page.
 export function acrossFigure(md, { n, source, mine = null, name = null }) {
   const near = nearLine(md, ACROSS_WINDOW);
-  const over = near.filter((r) => r.yes);
-  const under = near.filter((r) => !r.yes);
-  const sum = (rows) => rows.reduce((s, r) => s + r.atStake, 0);
-  const [overMoney, underMoney] = [sum(over), sum(under)];
+  const { over, under, overMoney, underMoney } = near;
   const window = decimal(ACROSS_WINDOW, 2);
-  const dots = near.map((r) => ({
+  const dots = near.rows.map((r) => ({
     x: r.total, value: r.atStake, over: r.yes, mine: mine ? mine.has(r.ccn) : false,
     tip: fill('acrossTip', { name: r.name, city: r.city, state: r.state, score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
   }));
@@ -94,11 +91,9 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
 
 // A place's own hospitals within the window: how many on each side and their dollars.
 function placeAcrossTakeaway(near, mine, { window, name }) {
-  const own = near.filter((r) => mine.has(r.ccn));
-  const over = own.filter((r) => r.yes);
-  const under = own.filter((r) => !r.yes);
-  const sum = (rows) => rows.reduce((s, r) => s + r.atStake, 0);
-  return fill('placeAcrossTakeaway', { k: count(own.length), n: count(near.length), window, name, over: count(over.length), overMoney: money(sum(over)), under: count(under.length), underMoney: money(sum(under)) });
+  const own = near.rows.filter((r) => mine.has(r.ccn));
+  const { over, under, overMoney, underMoney } = sides(own);
+  return fill('placeAcrossTakeaway', { k: count(own.length), n: count(near.rows.length), window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });
 }
 
 // ---------- shares ----------
@@ -135,9 +130,8 @@ export function sharesFigure(md, { n, source }) {
 
 export function statesFigure(md, { n, source, shapes }) {
   const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1));
-  const perStay = (s) => s.money / s.stays;
-  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), n: count(s.cutHospitals) }) }]));
-  const byStay = Object.fromEntries(states.map((s) => [s.state, { value: perStay(s), label: fill('statesTipStay', { perStay: dollars(Math.round(perStay(s))) }) }]));
+  const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), n: count(s.cut) }) }]));
+  const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(Math.round(s.perStay)) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
   const art = { svg: usBubbles({ shapes, layers, width: WIDTH, rMax: 22 }), svgWide: usBubbles({ shapes, layers, width: PAGE, rMax: 52 }) };
   // One drawing, two layers of circles: the buttons (shown by the page script) say which one shows; without the script,
@@ -147,14 +141,14 @@ export function statesFigure(md, { n, source, shapes }) {
 ${imagePair(art, t('statesAlt'))}</div>`;
   const lo = states.reduce((a, b) => (b.money < a.money ? b : a));
   const hi = states.reduce((a, b) => (b.money > a.money ? b : a));
-  const loS = states.reduce((a, b) => (perStay(b) < perStay(a) ? b : a));
-  const hiS = states.reduce((a, b) => (perStay(b) > perStay(a) ? b : a));
+  const loS = states.reduce((a, b) => (b.perStay < a.perStay ? b : a));
+  const hiS = states.reduce((a, b) => (b.perStay > a.perStay ? b : a));
   return figure({
     n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-by-state', note: t('statesNone'),
-    takeaway: fill('statesTakeaway', { low: money(lo.money), high: money(hi.money), lowStay: dollars(Math.round(perStay(loS))), highStay: dollars(Math.round(perStay(hiS))) }),
+    takeaway: fill('statesTakeaway', { low: money(lo.money), high: money(hi.money), lowStay: dollars(Math.round(loS.perStay)), highStay: dollars(Math.round(hiS.perStay)) }),
     table: {
       columns: [{ name: t('statesColState') }, { name: t('statesColCut'), numeric: true }, { name: t('statesColMoney'), numeric: true }, { name: t('statesColStays'), numeric: true }, { name: t('statesColPerStay'), numeric: true }],
-      rows: states.map((s) => [STATE_NAMES[s.state] ?? s.state, num(count(s.cutHospitals), s.cutHospitals), num(dollars(s.money), s.money), num(count(s.stays), s.stays), num(dollars(Math.round(perStay(s))), Math.round(perStay(s)))]),
+      rows: states.map((s) => [STATE_NAMES[s.state] ?? s.state, num(count(s.cut), s.cut), num(dollars(s.money), s.money), num(count(s.stays), s.stays), num(dollars(Math.round(s.perStay)), Math.round(s.perStay))]),
     },
   });
 }
@@ -223,14 +217,13 @@ ${panel('threeHac', -hh.money, 'threeHacShape', null, hacBins, [-0.002, 0.012], 
 
 // ---------- the Part ----------
 
-// The Part's sections, each beside (or over) its figure; null when the data hold no cut hospital with an estimate (a
-// test's slice of the file), as nothing would be drawn.
-export function moneyPart({ md, fy, source, shapes, figure: fig }) {
-  if (!md.cutRows.length) return null;
+// The Part's sections, each beside (or over) its figure. md: moneyData() with at least one cut hospital estimated
+// (programPage leaves the Part out without one; a test's slice of the file may have none).
+export function moneyPart({ md, source, shapes, figure: fig }) {
   const window = decimal(ACROSS_WINDOW, 2);
   const near = nearLine(md, ACROSS_WINDOW);
   const bill = billFigure(md, { n: fig(), source });
-  const across = near.some((r) => r.yes) && near.some((r) => !r.yes) ? acrossFigure(md, { n: fig(), source }) : null;
+  const across = near.over.length && near.under.length ? acrossFigure(md, { n: fig(), source }) : null;
   const shares = sharesFigure(md, { n: fig(), source });
   const states = shapes ? statesFigure(md, { n: fig(), source, shapes }) : null;
   const three = programsFigure(md, { n: fig(), source });
@@ -249,5 +242,5 @@ export const summaryMoneyField = (md) => ({
   label: t('summaryMoney'),
   value: html`<span class="money__field money__field--cut">${money(md.headline.money)}</span> ${estTag()}`,
   as: 'div', size: 'big', fieldCls: 'f-money',
-  note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine({ range: null })}`,
+  note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine()}`,
 });

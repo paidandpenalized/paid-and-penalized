@@ -106,8 +106,8 @@ function locatorMap(view, shapes) {
 
 // The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
 // outline (map: its markup, or null): the hospital, then where and what it is, then CMS's score and decision beside
-// this site's estimate of the money (m: hospitalMoney()), a row that reads score, decision, dollars.
-function recordCard(view, { careSource, map, m }) {
+// this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars.
+function recordCard(view, { careSource, map, money }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
   // Each field's formField options, numbered in order once the fields with nothing to show are left out.
@@ -120,7 +120,7 @@ function recordCard(view, { careSource, map, m }) {
       ? { label: t('fieldScore'), value: heroNumber(view.score.text), size: 'big', cls: 'cms hosp__score', note: t('scoreNote'), fieldCls: 'f-score' }
       : { label: t('fieldScore'), value: html`<span class="hosp__none"><span>${t('noScore')}</span></span>`, as: 'div', fieldCls: 'f-score' },
     { label: t('heroDecision'), value: decisionPill(view.status, view.decision.text), as: 'div', cls: 'hero__pill', note: !pillShowsCmsValue(view.status) && fill('decisionCms', { decision: view.decision.text }), fieldCls: 'f-pay' },
-    m && moneyField(m),
+    moneyField(money),
   ].filter(Boolean);
   const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
@@ -155,16 +155,16 @@ function leadMarkup(view) {
   return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
 }
 
-function verdict(view, nat, history, m) {
+function verdict(view, nat, history, money) {
   const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
-  const money = m && moneyVerdict(view, m);
+  const { beside, below } = moneyVerdict(view, money);
   return html`<section class="hosp__verdict" aria-label="${t('heroLabel')}">
-${money ? html`<div class="hosp__stampline">
+<div class="hosp__stampline">
 ${stampOf(view)}
-${money.beside}
-</div>` : stampOf(view)}
+${beside}
+</div>
 <p class="hosp__summary">${leadMarkup(view)}</p>
-${money?.below}
+${below}
 ${words && html`<p class="hosp__why">${words}</p>`}
 ${view.scored && html`<div class="hosp__lineblock">
 <p class="hosp__line">${fillKeep('lineCut', { lowestYes: view.boundaryText.lowestYes }, ['lowestYes'])}</p>
@@ -172,7 +172,7 @@ ${view.scored && html`<div class="hosp__lineblock">
 ${lineBarBlock(view, nat)}
 </div>`}
 ${history?.rec ? recordStrip(history.rec, history.hd.fys) : ''}
-${shareBlock(view, m)}
+${shareBlock(view, money)}
 </section>`;
 }
 
@@ -216,10 +216,8 @@ function whatIfBlock(view, whatif, source, assets, n) {
 // bar's search reads (null: no search box). shapes: stateShapes(topology) for the maps (null: none). careSource:
 // Care Compare's manifest facts ({ modified }) for the stars' note. masterFy: the hospital master's fiscal year, for
 // the data list's source of the Type field's facts. master: the hospital's master record (its metro's name). money:
-// this site's dollar estimate for the hospital (money.js hospitalMoney; the build always passes it; without it, a
-// test's synthetic hospital, the page shows no dollars). cutOf: ccn -> any hospital's estimated cut (generate.js
-// cutDollars), for the nearest hospitals' table; null for none.
-export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money = null, cutOf = null }) {
+// this site's dollars for the hospital (money.js hospitalMoney: a hospital with no estimate has a row that says why).
+export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
   const where = { name: view.name, city: view.city, state: view.state, fy };
@@ -232,10 +230,9 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   // Figures are numbered in page order, each taking the next number only if it is drawn.
   let n = 0;
   const numbered = (fig) => { if (fig) n++; return fig; };
-  const m = money;
   const moneySource = moneySourceText({ fy: view.fy, source });
-  const cliffFig = m?.estimated && view.scored ? numbered(cliffFigure(view, m, nat, { n: n + 1, source: moneySource })) : null;
-  const statement = m?.estimated ? numbered(statementFigure(view, m, { n: n + 1, source: moneySource })) : null;
+  const cliffFig = money.estimated && view.scored ? numbered(cliffFigure(view, money, nat, { n: n + 1, source: moneySource })) : null;
+  const statement = money.estimated ? numbered(statementFigure(view, money, { n: n + 1, source: moneySource })) : null;
   const ledger = numbered(ledgerFigure({ view, nat, model, n: n + 1, source: line, notes: measureNotes }));
   const row = hospital ?? whatif?.hospital;
   const lever = view.scored && row ? leverText(view, row, model) : null;
@@ -246,15 +243,15 @@ export function hospitalPage({ view, hospital = null, model, nat, master, source
   const years = history?.rec && history.rec.years.filter((y) => y.share !== null).length > 1 ? numbered(yearsFigure(history.rec, history.hd, { n: n + 1, source: historySource(history.hd) })) : null;
   const infections = history ? numbered(hospitalInfectionsFigure(history.sir, history.hd, { n: n + 1, source: hfill('hinfSource', { first: String(history.hd.infections[0]?.cy ?? ''), last: String(history.hd.infections.at(-1)?.cy ?? '') }) })) : null;
   const peers = numbered(peersFigure({ view, nat, master, n: n + 1, source: line }));
-  const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line, cutOf }) : null;
+  const nearby = view.scored ? nearbyBlock({ view, nat, shapes, counties, n: n + 1, source: line }) : null;
   numbered(nearby?.fig);
   const nearRank = peers?.rows.filter((r) => r.g.kind === 'state' || r.g.kind === 'metro') ?? [];
   const notes = noteSentences(view);
 
   const body = html`<article class="wrap page page--hosp hosp">
 <div class="hosp__top">
-${recordCard(view, { careSource, map, m })}
-${verdict(view, nat, history, m)}
+${recordCard(view, { careSource, map, money })}
+${verdict(view, nat, history, money)}
 </div>
 ${notes.length || small ? html`<div class="hosp__notes">
 ${notes.map((s) => html`<p>${s}</p>`)}
@@ -272,7 +269,7 @@ ${statement && section({
     text: html`<h2 id="money-h">${mt('stmtHeading')}</h2>
 <p>${mfill('stmtIntro', { fy })}</p>
 <p>${mfill('stmtOrder', { pct: REDUCTION_TEXT })}</p>
-${moneyWorksheet(m)}`,
+${moneyWorksheet(money)}`,
     figure: statement,
   })}
 ${section({
@@ -335,7 +332,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
   return page({
     title,
     // The sentence a shared link carries, so a pasted link previews with the money.
-    description: m ? shareSentence(view, m) : fill('hospitalDescription', where),
+    description: shareSentence(view, money),
     path: view.path,
     robots,
     body,

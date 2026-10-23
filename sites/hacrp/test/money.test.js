@@ -9,9 +9,8 @@ import { cmsText, count, decimal, dollars, money } from '../../../web/render/for
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
-import { refusePendingRanges } from '../web/generate.js';
-import { BASE_PARTS, OTHER_PARTS, hospitalMoney, rangeOf } from '../web/money.js';
-import { cutDollars } from '../web/generate.js';
+import { generateHacrp } from '../web/generate.js';
+import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hospitalMoney } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
 import { t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -20,7 +19,6 @@ import { ASSETS, esc } from './fixtures.js';
 import { DATA, NAT, PAGE_CTX, RANGE } from './pinned.js';
 
 const { model, estimate } = DATA;
-const BANDS = DATA.dollars.bands;
 const rows = [...DATA.dollars.byCcn.values()];
 const cms = new Map(DATA.hospitals.map((h) => [h.ccn, h]));
 const pick = (pred, what) => {
@@ -29,11 +27,11 @@ const pick = (pred, what) => {
   return row;
 };
 const viewOf = (ccn) => hospitalView({ hospital: cms.get(ccn), model, estimate, footnotes: DATA.footnotes, master: DATA.master.get(ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText });
-const moneyOf = (row) => hospitalMoney(row, BANDS);
+const moneyOf = hospitalMoney;
 const pageOf = (row) => {
   const h = cms.get(row.ccn);
   const m = moneyOf(row);
-  return hospitalPage({ ...PAGE_CTX, view: viewOf(row.ccn), hospital: h, master: DATA.master.get(row.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE, money: m }, money: m });
+  return hospitalPage({ ...PAGE_CTX, view: viewOf(row.ccn), hospital: h, master: DATA.master.get(row.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: m.estimated ? { ...h, atStake: m.atStake } : h, model, estimate, range: RANGE }, money: m });
 };
 const text = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
@@ -65,11 +63,8 @@ test('hospitalMoney: an estimated row carries its dollars and the dollars at sta
     }
     assert.equal(m.perStay, row.atStake / row.bills, row.ccn);
     assert.equal(m.hac, row.cut ? -row.atStake : 0, row.ccn);
-    assert.equal(m.range, null, 'ranges pending');
   }
-  assert.equal(rangeOf(null), null);
-  assert.throws(() => rangeOf({}), RangeError);
-  assert.throws(() => hospitalMoney(undefined, null), TypeError);
+  assert.throws(() => hospitalMoney(undefined), TypeError);
 });
 
 test('the statement adds up, in the payment\'s order: the parts make the total, the two programs adjust the base, the HAC cut takes 1% of everything after them', () => {
@@ -181,10 +176,9 @@ test('a hospital page: the cliff, then the statement, before the measures; the r
   assert.equal(none.indexOf('id="money"'), -1);
 });
 
-test('a production build refuses dollars whose ranges are still pending; any other build goes on', () => {
-  assert.throws(() => refusePendingRanges('production', { bands: null }), /no ranges yet/);
-  assert.doesNotThrow(() => refusePendingRanges(undefined, { bands: null }));
-  assert.doesNotThrow(() => refusePendingRanges('production', { bands: {} }));
+test('a production build refuses dollars whose ranges are still pending (any other build goes on: the page tests build both ways)', async () => {
+  assert.equal(DATA.dollars.bands, null, 'the pinned file\'s ranges are pending');
+  await assert.rejects(generateHacrp({ env: 'production' }, { data: DATA, log: () => {} }), /no ranges yet/);
 });
 
 test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmissions ± value-based) × 1% = the cut; ÷ stays = per stay', () => {
@@ -202,13 +196,17 @@ test('the cut\'s worksheet in the hospital\'s own numbers: (payment − readmiss
 test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut and for Maryland, null with no estimate; the nearest hospitals carry it', () => {
   assert.equal(cutDollars(CUT), CUT.atStake);
   assert.equal(cutDollars(NEAR), 0);
+  assert.ok(Object.is(cutDollars(NEAR), 0), 'never -0');
   assert.equal(cutDollars(MARYLAND), 0);
   assert.equal(cutDollars(NO_INPUTS), null);
   assert.throws(() => cutDollars(undefined), RangeError);
+  assert.equal(cutText(CUT.atStake), money(CUT.atStake));
+  assert.equal(cutText(null), 'no estimate');
   const h = cms.get(CUT.ccn);
-  const m = moneyOf(CUT);
-  const page = hospitalPage({ ...PAGE_CTX, view: viewOf(CUT.ccn), hospital: h, master: DATA.master.get(CUT.ccn), source: DATA.source, robots: null, assets: ASSETS, shapes: DATA.shapes, money: m, cutOf: (ccn) => cutDollars(DATA.dollars.byCcn.get(ccn)) });
+  const page = hospitalPage({ ...PAGE_CTX, view: viewOf(CUT.ccn), hospital: h, master: DATA.master.get(CUT.ccn), source: DATA.source, robots: null, assets: ASSETS, shapes: DATA.shapes, money: moneyOf(CUT) });
   const near = /<table class="gb gb--near"[\s\S]*?<\/table>/.exec(page)[0];
   assert.match(near, /<th scope="col" class="num">Est\. cut \(\$, modeled\)<\/th>/);
-  assert.equal((near.match(/class="num near__cut/g) ?? []).length, (near.match(/<tr class="near--/g) ?? []).length, 'a cut cell on every row');
+  const rowsOf = [...near.matchAll(/<tr class="near--[^"]*"><td class="num"><span class="near__n">\d+<\/span><\/td><th scope="row"><a href="[^"]*\/([0-9a-z]{6})\/">.*?<td class="num near__cut[^"]*">([^<]*)<\/td>/g)];
+  assert.equal(rowsOf.length, (near.match(/<tr class="near--/g) ?? []).length, 'a cut cell on every row');
+  for (const [, ccn, cell] of rowsOf) assert.equal(cell, cutText(cutDollars(DATA.dollars.byCcn.get(ccn.toUpperCase()))), ccn);
 });

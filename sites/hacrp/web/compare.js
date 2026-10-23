@@ -11,6 +11,7 @@ import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { median } from '../../../engine/js/stats.js';
 import { miles } from '../../../web/charts/geo.js';
 import { BED_BANDS, FEW_IN_GROUP, NEAREST, RIDGE_BINS } from './constants.js';
+import { cutDollars } from './money.js';
 
 // How many of a sorted list are below x, and how many above it.
 const below = (sorted, x) => bisectLeft(sorted, x);
@@ -63,8 +64,9 @@ function measureFlag(m, p) {
   return m.value > medianAt(p) ? 'worse' : 'better';
 }
 
-// hospitals: CMS's rows; master: Map ccn -> master record; model: { params, boundary }.
-export function nationalContext({ hospitals, master, model }) {
+// hospitals: CMS's rows; master: Map ccn -> master record; model: { params, boundary }; dollars: dollarsData() (each
+// hospital's estimated HAC cut, cut, on its row: money.js cutDollars).
+export function nationalContext({ hospitals, master, model, dollars }) {
   const { lowestYes } = model.boundary;
   const scored = scoredHospitals(hospitals);
   const scores = scored.map((h) => h.total).sort((a, b) => a - b);
@@ -81,6 +83,7 @@ export function nationalContext({ hospitals, master, model }) {
       totalText: h.totalText,
       decision: h.paymentReduction,
       decided: decided.has(h),
+      cut: cutDollars(dollars.byCcn.get(h.ccn)),
       keys: Object.fromEntries(KINDS.map(([kind, of]) => [kind, of(r)])),
       point: Number.isFinite(r.lat) && Number.isFinite(r.lon) ? [r.lon, r.lat] : null,
       name: r.name,

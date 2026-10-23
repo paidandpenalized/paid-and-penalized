@@ -29,7 +29,7 @@ import { methodsPage, METHODS_PATH } from './pages/methods.js';
 import { placePage } from './pages/place.js';
 import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
 import { exploreAsset, programData } from './program-data.js';
-import { hospitalMoney } from './money.js';
+import { cutDollars, hospitalMoney } from './money.js';
 import { moneyData } from './money-data.js';
 import { KINDS, buildPlaces } from './places.js';
 import { HOSPITALS_PATH, hospitalView } from './view.js';
@@ -50,20 +50,11 @@ function a1Summary({ ok, a, b, info }) {
 // hospitalPath + the CCN in lowercase + "/"), names, places and ZIP codes from the hospital master, CMS's Total HAC
 // Score text as published (hyphen-minus, so the table sorts on CMS's own number; "N/A" when none), CMS's payment
 // reduction text and, with dollars (Map of CCN -> row of the dollar estimates), this site's estimate of the HAC cut in
-// whole dollars (cutDollars). Rows are in the hospital table's default order (state, then name; hospital-table.js); the
-// search ranks its own matches.
+// whole dollars (money.js cutDollars). Rows are in the hospital table's default order (state, then name;
+// hospital-table.js); the search ranks its own matches.
 export function hospitalRows(views, places = null, dollars = null) {
   const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip, ...(dollars ? [cutDollars(dollars.get(v.ccn))] : [])]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows, ...(places ? { places: placeEntries(places) } : {}) };
-}
-
-// A hospital's HAC cut as the tables show it, this site's estimate in whole dollars: the dollars at stake for a
-// hospital CMS cut, 0 for one it didn't or for Maryland's (exempt), null with no estimate.
-export function cutDollars(row) {
-  if (!row) throw new RangeError('cutDollars: a row of the dollar estimates is required');
-  if (row.status === 'maryland') return 0;
-  if (row.status !== 'estimated') return null;
-  return row.cut ? row.atStake : 0;
 }
 
 // The places the search finds, [kind, key, name, path, hospitals in CMS's file], in kind order then by name.
@@ -83,6 +74,9 @@ export function scoreRange(hospitals) {
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
   const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
+  // Every dollar figure carries its likely range. Until the back-test's ranges exist the pages say they are pending
+  // (money-figures.js rangeLine), which is for review only: a production build stops here.
+  if (env === 'production' && dollars.bands === null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is null); a production build cannot publish them');
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
@@ -115,7 +109,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // What the program page and the place pages draw, computed once.
   const pd = programData({ hospitals, master, model });
   const places = buildPlaces({ hospitals, master, rows: pd.rows });
-  const md = moneyData({ hospitals, master, dollars, model });
+  const md = moneyData({ pd, dollars, model });
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
   const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places, dollars.byCcn)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
@@ -161,16 +155,17 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     });
   }
 
-  // What every hospital page compares a hospital with, computed once, and any hospital's estimated cut.
-  const nat = nationalContext({ hospitals, master, model });
-  const cutOf = (ccn) => cutDollars(dollars.byCcn.get(ccn));
+  // What every hospital page compares a hospital with, computed once (with each hospital's estimated cut).
+  const nat = nationalContext({ hospitals, master, model, dollars });
   for (const { hospital, view } of pages) {
     const robots = robotsFor({ env, released, eligible: view.scored });
-    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn), dollars.bands);
+    const money = hospitalMoney(dollars.byCcn.get(hospital.ccn));
+    // The what-if's record carries the dollars at stake where this site has an estimate: the build and the browser read it alike.
+    const record = money.estimated ? { ...hospital, atStake: money.atStake } : hospital;
     emitPage({
       path: view.path,
       robots,
-      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital, model, estimate, range, money }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money, cutOf }),
+      text: hospitalPage({ view, hospital, model, nat, master: master.get(hospital.ccn), source, robots, assets, searchUrl, shapes, counties, careSource: careCompareSource, masterFy, whatif: { hospital: record, model, estimate, range }, history: hd ? { rec: hd.recordOf(hospital.ccn), hd, sir: infections.get(hospital.ccn) ?? null } : null, money }),
     });
   }
 
@@ -216,20 +211,10 @@ function newestOnly(hospitals, fy) {
   return check;
 }
 
-// Every dollar figure carries its likely range. Until the back-test's ranges exist the pages say they are pending,
-// which is for review only: a production build of the site stops here.
-export function refusePendingRanges(env, dollars) {
-  if (env === 'production' && dollars.bands === null) throw new Error('HACRP: the dollar estimates have no ranges yet (bands is null); a production build cannot publish them');
-}
-
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
   entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
   styles: ['sites/hacrp/web/styles.css'],
-  generate: (ctx) => {
-    const data = loadHacrp();
-    refusePendingRanges(ctx.env, data.dollars);
-    return generateHacrp(ctx, { data });
-  },
+  generate: (ctx) => generateHacrp(ctx),
 };

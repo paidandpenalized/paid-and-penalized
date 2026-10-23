@@ -26,12 +26,9 @@ const zero = () => money(0);
 // makes the estimate.
 export const estTag = () => html`<a class="est-tag" href="${DOLLARS_HREF}" aria-label="${t('estTagLabel')}">${t('estTag')}</a>`;
 
-// The range line under a dollar figure: the back-test's likely range, or, until it arrives, a placeholder made to be
-// seen in review (a production build refuses it: generate.js).
-export function rangeLine(m) {
-  if (m.range !== null) throw new RangeError('rangeLine: ranges are not drawn yet');
-  return html`<p class="money__range money__range--pending">${t('rangePending')}</p>`;
-}
+// The range line under a dollar figure: until the back-test's likely range arrives, a placeholder made to be seen in
+// review (a production build refuses it: generate.js).
+export const rangeLine = () => html`<p class="money__range money__range--pending">${t('rangePending')}</p>`;
 
 // The hospital's distance to CMS's line, as the verdict states it: over the highest score CMS didn't cut (a hospital
 // it cut), under the lowest it cut (one it didn't). null without a score.
@@ -62,14 +59,14 @@ export function moneyVerdict(view, m) {
     return {
       beside: html`<div class="money money--cut"><p class="money__big">${money(m.atStake)}</p><p class="money__what">${fill('moneyCutWhat', { fy })} ${estTag()}</p></div>`,
       below: html`<div class="money__below"><p class="money__of">${fill('moneyOfWhole', { pct: REDUCTION_TEXT, after, perStay: money(m.perStay) })}</p>
-${rangeLine(m)}</div>`,
+${rangeLine()}</div>`,
     };
   }
   const distance = distanceText(view);
   return {
     beside: html`<div class="money money--zero"><p class="money__big">${zero()}</p><p class="money__what">${t('moneyZeroWhat')}</p></div>`,
     below: html`<div class="money__below"><p class="money__would"><strong>${fill('moneyWouldHave', { amount: money(m.atStake) })}</strong> ${estTag()} ${fill('moneyWouldOf', { pct: REDUCTION_TEXT, after })}${distance ? html` ${fill('moneyCliffNo', { distance, lowestYes: view.boundaryText.lowestYes })}` : ''}</p>
-${rangeLine(m)}</div>`,
+${rangeLine()}</div>`,
   };
 }
 
@@ -207,7 +204,7 @@ ${group('stmtGroupPay')}${lines.map((l) => html`${GROUP_BEFORE[l.key] ? group(GR
 `)}</tbody>
 </table>
 ${none.length ? html`<p class="stmt__none">${fill('stmtNone', { list: listText(none) })}</p>` : ''}
-${rangeLine(m)}
+${rangeLine()}
 </div>`;
 }
 
@@ -247,12 +244,12 @@ export function statementFigure(view, m, { n, source }) {
 // ---------- sharing ----------
 
 // The sentence a shared link carries, and the page's description: CMS's decision (the view's), the dollars where this
-// site has an estimate (m: hospitalMoney(), or null for none; named as the site's estimate, by the site's name, since
+// site has an estimate (m: hospitalMoney(); named as the site's estimate, by the site's name, since
 // the sentence travels without the page) and the distance to CMS's line.
 export function shareSentence(view, m) {
   const values = { fy: String(view.fy), name: view.name };
   if (view.status === 'maryland') return fill('shareMaryland', { name: view.name });
-  const est = m?.estimated ? m : null;
+  const est = m.estimated ? m : null;
   const site = SITE.name;
   const distance = distanceText(view);
   if (view.status === 'yes' || view.status === 'yes-no-score') {
