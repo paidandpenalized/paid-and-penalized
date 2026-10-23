@@ -21,13 +21,20 @@ def run_tests():
     return 0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1
 
 
+def emit():
+    """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
+    (The dollars read the HACRP file, not the master.)"""
+    from pp_pipeline import emit_dollars, emit_hospital
+    EMITTERS = (emit_hospital, emit_dollars)  # each has a main() that returns its exit code
+    return max([emitter.main() for emitter in EMITTERS])
+
+
 def main(argv):
     command, args = (argv[0], argv[1:]) if argv else (None, [])
     if command == "test" and not args:
         return run_tests()
     if command == "emit" and not args:
-        from pp_pipeline import emit_dollars, emit_hospital
-        return emit_hospital.main() or emit_dollars.main()  # the dollars read the HACRP file, not the master
+        return emit()
     if command == "geocode" and not args:
         from pp_pipeline import geocode
         return geocode.main()

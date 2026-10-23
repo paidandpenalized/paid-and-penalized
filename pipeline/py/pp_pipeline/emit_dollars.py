@@ -9,24 +9,21 @@ docstring and docs/METHODS-LOG.md, `dollars`), then the national sums, the sums 
 counts in its headline, the checks that hold the sums against what CMS publishes, and `bands` (null until the
 back-test, milestone 3). It lives at the family level because more than one site reads it.
 """
-import re
 from datetime import datetime, timezone
 
 from pp_engine import dollars
-from pp_engine.contract import envelope, format_emitted, keep_built_at
-from pp_engine.parse import SchemaError, index_by_ccn, rows, table
-from pp_engine.schema import validate
-from pp_pipeline.emit_hospital import ADJUSTED, EXEMPT, HACRP
-from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, load_schemas, read_json, read_manifest, read_pinned_bytes
-from pp_pipeline.ipps_pins import HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
+from pp_engine.contract import envelope
+from pp_pipeline.emit_hospital import HACRP, read_hacrp
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_manifest, write_emitted
+from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
 
 SCHEMA_VERSION, METHODS_VERSION = 1, 1
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP)
 SCHEMA = "dollars.schema.json"
 
-# The years the estimate is built on. The rates (Tables 1A-1E) and the impact file are the FY2026 final rule's, and the
-# program year of the HACRP file must equal it; the impact file's cases and case-mix are FY2024 MedPAR claims.
-RATES_FY = 2026
+# The years the estimate is built on. The rates (Tables 1A-1E) and the impact file are the final rule's (`FY`, in
+# ipps_pins), and the program year of the HACRP file must equal it; the impact file's cases and case-mix are FY2024
+# MedPAR claims.
 VOLUME_FY = 2024
 # The last day of the extension of Medicare-dependent hospital status and of the expanded low-volume-hospital tiers
 # (Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's FY2025-extension columns,
@@ -47,37 +44,12 @@ HRRP_UNLISTED_MAX = 43
 VBP_UNLISTED_MAX = 524
 
 PARTS = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the JSON's `parts`
-_SCORE = re.compile(r"^-?\d+(\.\d+)?$")  # a Total HAC Score CMS published, as the HACRP site reads it
 
 
 def camel(key):
     """`at_stake` -> `atStake`: the repo's JSON keys are camelCase."""
     head, *tail = key.split("_")
     return head + "".join(word.capitalize() for word in tail)
-
-
-def read_hacrp(text=None):
-    """(fiscal year, [{ccn, state, cut, scored, decided}]) from the HACRP file (the pinned one unless `text` is given),
-    in the file's order. `cut`: Payment Reduction is Yes. `decided`: it is Yes or No. `scored`: Total HAC Score is a
-    number (N/A or blank is not). The headline counts the hospitals that are scored and decided. A Payment Reduction
-    that is neither Yes, No nor Maryland's N/A raises, as does a score that is neither a number nor N/A or blank."""
-    label = "HACRP file"
-    records = table(rows(text if text is not None else read_pinned_bytes(HACRP).decode("utf-8"), ","), "Facility Name",
-                    {"ccn": "Facility ID", "state": "State", "fy": "Fiscal Year", "pay": "Payment Reduction",
-                     "score": "Total HAC Score"}, label)
-    by_ccn = index_by_ccn(records, lambda r: r, label)
-    years = {r["fy"] for r in by_ccn.values()}
-    if len(years) != 1:
-        raise SchemaError(f"{label}: expected one fiscal year, found {sorted(years)}")
-    odd = sorted(c for c, r in by_ccn.items() if r["pay"] not in ADJUSTED and (r["pay"], r["state"]) != (EXEMPT, "MD"))
-    if odd:
-        raise SchemaError(f"{label}: Payment Reduction neither Yes/No nor Maryland's N/A for {odd[:5]}")
-    unreadable = sorted(c for c, r in by_ccn.items() if r["score"] not in ("", "N/A") and not _SCORE.match(r["score"]))
-    if unreadable:
-        raise SchemaError(f"{label}: Total HAC Score is not a number for {unreadable[:5]}")
-    return int(years.pop()), [{"ccn": c, "state": r["state"], "cut": r["pay"] == "Yes",
-                               "scored": bool(_SCORE.match(r["score"])), "decided": r["pay"] in ADJUSTED}
-                              for c, r in by_ccn.items()]
 
 
 def unlisted_counts(hospital_rows):
@@ -118,9 +90,10 @@ def totals_json(hospital_rows):
 
 
 def build_from_pins(built_at):
-    fy, records = read_hacrp()
-    if fy != RATES_FY:
-        raise ValueError(f"the HACRP file is for FY{fy}, the rates and impact file for FY{RATES_FY}")
+    hacrp = read_hacrp()
+    fy, records = hacrp["fy"], hacrp["records"]
+    if fy != FY:
+        raise ValueError(f"the HACRP file is for FY{fy}, the rates and impact file for FY{FY}")
     inputs, table_, hrrp, vbp = payment_inputs(), rates(), hrrp_factors(), vbp_factors()
     built = [dollars.hospital_row(r["ccn"], r["state"], inputs.get(r["ccn"]), table_, hrrp=hrrp.get(r["ccn"]),
                                   vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM) for r in records]
@@ -129,7 +102,7 @@ def build_from_pins(built_at):
     checks = dollars.checks(dollars.national(built), hacrp_yes=sum(r["cut"] for r in records))
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
-        "assumptions": {"ratesFy": RATES_FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
+        "assumptions": {"ratesFy": FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
                         "ntap": NTAP},
         "national": totals_json(built),
         "headline": totals_json(headline),
@@ -146,20 +119,14 @@ def emitted_path(fy):
 
 def committed_path():
     """Where the dollars for the HACRP file's year live."""
-    return emitted_path(read_hacrp()[0])
+    return emitted_path(read_hacrp()["fy"])
 
 
 def main():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     fresh = build_from_pins(now)
     path = emitted_path(fresh["fy"])
-    out = keep_built_at(read_json(path) if path.exists() else None, fresh)
-    schemas = load_schemas()
-    errors = validate(schemas[SCHEMA], out, schemas)
-    if errors:
-        raise ValueError(f"{path.name} fails {SCHEMA}:\n" + "\n".join(errors[:20]))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(format_emitted(out), encoding="utf-8")
+    out = write_emitted(path, fresh, SCHEMA)
     failed = [c["id"] for c in out["checks"] if not c["pass"]]
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, built_at {out['built_at']}; "
           f"checks failing: {failed or 'none'}")

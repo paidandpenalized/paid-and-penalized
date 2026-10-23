@@ -5,17 +5,17 @@ CMS writes all four members in Windows-1252. Results are cached and shared: call
 import functools
 
 from pp_engine import ipps
-from pp_pipeline.emit_hospital import cp1252
-from pp_pipeline.files import read_zip_member
+from pp_pipeline.files import read_zip_text_cp1252
 
-IMPACT, RATES, HRRP, VBP = "ipps-impact-fy2026", "ipps-rates-fy2026", "hrrp-supplemental-fy2026", "hvbp-table16b-fy2026"
-MEMBERS = {IMPACT: "FY 2026 IPPS Final Rule Impact File.txt", RATES: "CMS-1833-F Tables 1A - 1E.txt",
-           HRRP: "FR FY 2026.txt", VBP: "FY2026-Table-16B.txt"}
+FY = 2026  # the final rule's year: in the pin ids and member names below, and the year the dollar emitter checks
+IMPACT, RATES = f"ipps-impact-fy{FY}", f"ipps-rates-fy{FY}"
+HRRP, VBP = f"hrrp-supplemental-fy{FY}", f"hvbp-table16b-fy{FY}"
+MEMBERS = {IMPACT: f"FY {FY} IPPS Final Rule Impact File.txt", RATES: "CMS-1833-F Tables 1A - 1E.txt",
+           HRRP: f"FR FY {FY}.txt", VBP: f"FY{FY}-Table-16B.txt"}
 
 
-@functools.lru_cache(maxsize=None)
 def pinned_text(pin_id):
-    return cp1252(read_zip_member(pin_id, MEMBERS[pin_id]), MEMBERS[pin_id])
+    return read_zip_text_cp1252(pin_id, MEMBERS[pin_id])
 
 
 @functools.lru_cache(maxsize=None)

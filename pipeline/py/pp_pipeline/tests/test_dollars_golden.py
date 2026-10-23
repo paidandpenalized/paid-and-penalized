@@ -7,7 +7,6 @@ import unittest
 
 from pp_engine.contract import format_emitted, keep_built_at
 from pp_engine.schema import validate
-from pp_pipeline import emit_dollars
 from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, committed_path,
                                       enforce_caps, unlisted_counts)
 from pp_pipeline.emit_hospital import HACRP
@@ -168,29 +167,6 @@ class Caps(unittest.TestCase):
             enforce_caps(self.rows(HRRP_UNLISTED_MAX + 1, 0))
         with self.assertRaisesRegex(ValueError, "Table 16B"):
             enforce_caps(self.rows(0, VBP_UNLISTED_MAX + 1))
-
-
-class Reader(unittest.TestCase):
-    HEADER = '"Facility Name","Facility ID","State","Fiscal Year","Total HAC Score","Payment Reduction"\n'
-
-    def test_scored_and_decided_are_read_from_the_score_and_the_decision(self):
-        text = self.HEADER + ('"INVENTED A","990001","ZZ","2026","0.5","Yes"\n"INVENTED B","990002","ZZ","2026","N/A","Yes"\n'
-                              '"INVENTED C","990003","ZZ","2026","-1.25","No"\n"INVENTED D","990004","MD","2026","0.1","N/A"\n')
-        fy, records = emit_dollars.read_hacrp(text)
-        self.assertEqual(fy, 2026)
-        self.assertEqual([(r["ccn"], r["cut"], r["scored"], r["decided"]) for r in records],
-                         [("990001", True, True, True), ("990002", True, False, True),
-                          ("990003", False, True, True), ("990004", False, True, False)])
-
-    def test_a_decision_that_is_neither_yes_no_nor_marylands_na_raises(self):
-        for bad in ('"INVENTED E","990005","ZZ","2026","0.1","N/A"\n', '"INVENTED F","990006","ZZ","2026","0.1","Maybe"\n'):
-            with self.assertRaisesRegex(Exception, "Payment Reduction"):
-                emit_dollars.read_hacrp(self.HEADER + bad)
-
-    def test_two_fiscal_years_raise(self):
-        text = self.HEADER + '"INVENTED G","990007","ZZ","2026","0.1","No"\n"INVENTED H","990008","ZZ","2025","0.1","No"\n'
-        with self.assertRaisesRegex(Exception, "fiscal year"):
-            emit_dollars.read_hacrp(text)
 
 
 if __name__ == "__main__":
