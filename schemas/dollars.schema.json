@@ -69,6 +69,15 @@
     }
   },
   "$defs": {
+    "count": {
+      "description": "A whole number that is never negative: a number of hospitals or bills, or a payment in whole dollars.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "wholeDollars": {
+      "description": "An amount in whole dollars, negative for money lost.",
+      "type": "integer"
+    },
     "isoDate": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -124,61 +133,52 @@
       "properties": {
         "hospitals": {
           "description": "Estimated hospitals: the sums below cover these only.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "base": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "total": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "hrrp": {
           "description": "Sum of HRRP dollars (a loss: not above zero).",
-          "type": "integer",
+          "$ref": "#/$defs/wholeDollars",
           "maximum": 0
         },
         "hvbp": {
-          "type": "integer"
+          "$ref": "#/$defs/wholeDollars"
         },
         "after": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "hac": {
           "description": "Sum of HAC dollars (a loss: not above zero).",
-          "type": "integer",
+          "$ref": "#/$defs/wholeDollars",
           "maximum": 0
         },
         "net": {
-          "type": "integer"
+          "$ref": "#/$defs/wholeDollars"
         },
         "cut": {
           "description": "Estimated hospitals the HAC Reduction Program cuts.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "hrrpBase": {
           "description": "Sum of the base payment over the penalized hospitals: the base the HRRP share check divides by.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "vbpBase": {
           "description": "Sum of the base payment over the hospitals in Table 16B: the base the HVBP check uses.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "yes": {
           "description": "Hospitals the HAC Reduction Program cuts, whether or not estimated.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "yesUnestimated": {
           "description": "Cut hospitals with no estimate.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "byStatus": {
           "type": "object",
@@ -191,20 +191,16 @@
           ],
           "properties": {
             "estimated": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/$defs/count"
             },
             "maryland": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/$defs/count"
             },
             "parhm": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/$defs/count"
             },
             "no-inputs": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/$defs/count"
             }
           }
         },
@@ -231,40 +227,31 @@
       "additionalProperties": false,
       "properties": {
         "fed": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "mdhAddon": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "ime": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "dsh": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "outlierOp": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "schDiff": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "lowVolume": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "capital": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "uc": {
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         }
       }
     },
@@ -341,18 +328,15 @@
         },
         "bills": {
           "description": "Medicare bills in the impact file.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "base": {
           "description": "B: the federal DRG payment plus the Medicare-dependent hospital add-on.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "total": {
           "description": "T: B plus the other parts.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "hrrpFactor": {
           "description": "The HRRP payment adjustment factor (1 where the hospital is not in the HRRP file).",
@@ -373,31 +357,29 @@
         },
         "hrrp": {
           "description": "B x (hrrpFactor - 1): a loss, not above zero.",
-          "type": "integer",
+          "$ref": "#/$defs/wholeDollars",
           "maximum": 0
         },
         "hvbp": {
           "description": "B x (vbpFactor - 1): negative for a penalty, positive for a bonus.",
-          "type": "integer"
+          "$ref": "#/$defs/wholeDollars"
         },
         "after": {
           "description": "T after the HRRP and HVBP dollars.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "atStake": {
           "description": "1% of `after`, for every hospital: the dollars at risk in the HAC Reduction Program.",
-          "type": "integer",
-          "minimum": 0
+          "$ref": "#/$defs/count"
         },
         "hac": {
           "description": "-atStake when the hospital is cut, else 0.",
-          "type": "integer",
+          "$ref": "#/$defs/wholeDollars",
           "maximum": 0
         },
         "net": {
           "description": "hrrp + hvbp + hac.",
-          "type": "integer"
+          "$ref": "#/$defs/wholeDollars"
         },
         "parts": {
           "$ref": "#/$defs/parts"
