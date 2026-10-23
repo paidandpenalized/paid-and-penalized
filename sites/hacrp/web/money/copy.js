@@ -131,11 +131,11 @@ export const COPY = {
   stmtKeyCut: { text: 'The adjustment', claim: null },
   stmtTakeawayYes: {
     text: "This site estimates the HAC cut at {amount}: {pct} of the hospital's whole inpatient payment, taken last. The readmissions and value-based adjustments, on the base alone, came to {hrrp} and {hvbp}.",
-    claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-75'],
+    claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-74', 'HACRP-75', 'HACRP-79'],
   },
   stmtTakeawayNo: {
     text: "No HAC cut this year; {pct} of the hospital's whole inpatient payment would have been about {amount} by this site's estimate. The readmissions and value-based adjustments, on the base alone, came to {hrrp} and {hvbp}.",
-    claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-75'],
+    claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-75', 'HACRP-79'],
   },
   stmtSource: {
     text: "Source: this site's arithmetic on CMS's FY{fy} IPPS final rule files (the impact file, the rate tables and the value-based factors), its FY{fy} HRRP supplemental file and HACRP FY{fy} ({id}), released {date}.",
@@ -271,7 +271,7 @@ export const COPY = {
   statesColPerStay: { text: 'Per traditional Medicare stay', claim: null },
   // Three programs.
   threeHeading: { text: 'Three programs, three shapes', claim: null },
-  threeText: { text: "Medicare's three hospital quality programs move money in three ways. The readmissions program cuts each hospital by its own factor; the value-based program pays some hospitals a bonus and cuts others; this program is a cliff.", claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-86', 'HACRP-87'] },
+  threeText: { text: "Medicare's three hospital quality programs move money in three ways. The readmissions program cuts hospitals by factors of their own and never adds to a payment; the value-based program pays some hospitals a bonus and cuts others; this program is a cliff.", claim: ['HACRP-01', 'HACRP-72', 'HACRP-73', 'HACRP-86', 'HACRP-87'] },
   threeTakeaway: { text: "Readmissions cuts spread from {hrrpLow} to {hrrpHigh} of the base payment and total about {hrrp} by this site's estimate; value-based adjustments run from {vbpLow} to {vbpHigh} and net {hvbp}; the HAC cut is {zero} or {pct}, about {hac} in all.", claim: null },
   threeHrrp: { text: 'Readmissions', claim: null },
   threeHvbp: { text: 'Value-based purchasing', claim: null },
@@ -287,7 +287,7 @@ export const COPY = {
   threeRangeOverZero: { text: 'over {lo} to {hi}', claim: null },
   threeRangeUnderZero: { text: '{lo} to under {hi}', claim: null },
   threeAlt: { text: 'Three column charts: how many hospitals each program moves by how much.', claim: null },
-  threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75'] },
+  threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75', 'HACRP-79'] },
   threeColProgram: { text: 'Program', claim: null },
   threeColHospitals: { text: 'Hospitals adjusted', claim: null },
   threeColMoney: { text: 'Net estimated dollars (whole dollars)', claim: null },

@@ -11,7 +11,7 @@ import { capitalize, cmsText, count, decimal, dollars, isoDate, listText, longDa
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
-import { REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
+import { PARHM_THROUGH_YEAR, REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
 import { rangeOf, rangeShare } from './money.js';
 import { fill, fillKeep, t } from './methods/copy.js';
@@ -217,7 +217,7 @@ export function assumptionsTable({ fy, volumeFy, backtestFy, endsOn }) {
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],
     ['assumeMdh', 'assumeMdhE', { fy: String(fy) }, { month: isoDate(endsOn).split(' ')[0], fy: String(fy) }], ['assumeNtap', 'assumeNtapE'], ['assumeOtherParts', 'assumeOtherPartsE'], ['assumeAddons', 'assumeAddonsE'],
     ['assumeMaIme', 'assumeMaImeE', null, { fy: String(backtestFy) }], ['assumeSlots', 'assumeSlotsE'], ['assumeSch', 'assumeSchE'],
-    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE', { fy: String(fy) }], ['assumeParhm', 'assumeParhmE'],
+    ['assumeHsp', 'assumeHspE', { fy: String(fy) }], ['assumeLowVol', 'assumeLowVolE'], ['assumeUc', 'assumeUcE'], ['assumeUnlisted', 'assumeUnlistedE'], ['assumeMaryland', 'assumeMarylandE', { fy: String(fy) }], ['assumeParhm', 'assumeParhmE', { year: String(PARHM_THROUGH_YEAR) }],
     ['assumeFfs', 'assumeFfsE'],
   ];
   return printout(html`<table class="gb assume">

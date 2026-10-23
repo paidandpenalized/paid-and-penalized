@@ -86,18 +86,23 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-77 | A hospital's Medicare cost report records the readmissions program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the adjustment amount resulting from the HRR program in accordance with ACA 2010, §3025" | 2026-10-23 |
 | HACRP-78 | A hospital's Medicare cost report records the value-based purchasing program's adjustment on a line of its own. | https://www.cms.gov/files/document/r25p240i.pdf | "Enter the payment adjustment amount for the HVBP program in accordance with ACA 2010, §3001" | 2026-10-23 |
 | HACRP-79 | The HAC cut is also taken on the teaching (IME) payments Medicare makes on a hospital's Medicare Advantage patients' stays. | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are required to calculate the HAC reduction adjustment by FFY: … Operating IME payments for Medicare Advantage patients" | 2026-10-23 |
-| HACRP-80 | CMS sets operating outlier payments as a share of the DRG payments alone: the share leaves out the teaching (IME) and low-income-patient (DSH) add-ons. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "not less than 5 percent nor more than 6 percent of total “operating DRG payments,” which does not include IME and DSH payments" | 2026-10-23 |
+| HACRP-80 | CMS sets its outlier threshold so projected operating outlier payments are 5 to 6 percent (5.1 percent for FY2026) of operating DRG payments plus outlier payments, a total that leaves out teaching and low-income-patient payments. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "5 percent nor more than 6 percent of total operating DRG payments (which does not include IME and DSH payments) plus outlier payments" | 2026-10-23 |
 | HACRP-81 | The low-volume adjustment is a percentage of every part of the hospital's inpatient payment, uncompensated care and teaching payments on Medicare Advantage stays included. | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are multiplied by the low-volume payment adjustment percentage … Operating IME payments for Medicare Advantage patients; … Uncompensated care payments" | 2026-10-23 |
-| HACRP-82 | CMS brings a sole community or Medicare-dependent hospital's own (hospital-specific) rate to the new year with the year's update and a budget-neutrality factor for the year's changes to the DRGs. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "the hospital specific-rate for an SCH or MDH is adjusted by the MS-DRG reclassification and recalibration budget neutrality factor" | 2026-10-23 |
+| HACRP-82 | CMS brings a sole community or Medicare-dependent hospital's own (hospital-specific) rate to the new year with the year's update and the budget-neutrality factors for its DRG changes (the reclassification and recalibration factor and the 10-percent cap factor). | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "the hospital specific-rate for an SCH or MDH is adjusted by the MS-DRG reclassification and recalibration budget neutrality factor" | 2026-10-23 |
 | HACRP-83 | Each hospital's uncompensated care payment is its share (Factor 3) of a national amount CMS sets for the year (Factor 1 times Factor 2). | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Factor 3 is applied to the product of Factor 1 and Factor 2 to determine the amount of the uncompensated care payment" | 2026-10-23 |
 | HACRP-84 | The base the readmissions and value-based programs adjust includes new-technology add-on payments. | https://www.law.cornell.edu/cfr/text/42/412.152 | "Base operating DRG payment amount is the wage-adjusted DRG operating payment plus any applicable new technology add-on payments under subpart F of this part" | 2026-10-23 |
-| HACRP-85 | In Pennsylvania's Rural Health Model, hospitals are paid global budgets, which are adjusted for their results in the value-based purchasing, readmissions and HAC programs (the model's evaluation for CMS). | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | "Global budgets continue to be adjusted based on each hospital’s performance under applicable Medicare quality programs (i.e., … Hospital-Acquired Condition Reduction Program" | 2026-10-23 |
+| HACRP-85 | In Pennsylvania's Rural Health Model, hospitals were paid global budgets, which the model's evaluator reported (in 2022) were adjusted for their results in the value-based purchasing, readmissions and HAC programs. | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | "Global budgets continue to be adjusted based on each hospital’s performance under applicable Medicare quality programs (i.e., … Hospital-Acquired Condition Reduction Program" | 2026-10-23 |
 | HACRP-86 | The readmissions program's payment adjustment factor is 1 minus a share of the hospital's payments, so it never exceeds 1: the program only reduces payments. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.154 | "The ratio is equal to 1 minus the ratio of the aggregate payments for excess readmissions … and the aggregate payments for all discharges" | 2026-10-23 |
 | HACRP-87 | A hospital's value-based purchasing adjustment factor is 1 plus the difference between its incentive payment percentage and the percent held back from every hospital, so it is above 1 for a hospital that earns more than was held back and below 1 for one that earns less. | https://www.ecfr.gov/current/title-42/part-412/subpart-I/section-412.162 | "determined by subtracting the applicable percent … from the value-based incentive payment percentage and then adding that difference to one" | 2026-10-23 |
 | HACRP-88 | Congress extended the Medicare-dependent hospital program and the enhanced low-volume hospital adjustment through December 31, 2026, after FY2026 ends. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" … "extended through December 31, 2026" | 2026-10-23 |
-| HACRP-89 | The HAC cut is also taken on dialysis (ESRD) adjustment payments and on credits for replaced devices. | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are required to calculate the HAC reduction adjustment by FFY: … ESRD adjustment payments; … Credits for replaced devices" | 2026-10-23 |
-| HACRP-90 | A teaching hospital that counts added residents from an increase in its resident cap is paid teaching (indirect medical education) payments on the sum of two adjustment factors, its usual one and a second for the added residents. | https://www.ecfr.gov/current/title-42/section-412.105 | "an increase in its FTE resident cap … the sum of the following two indirect medical education adjustment factors" | 2026-10-23 |
-| HACRP-91 | Maryland's hospitals are not eligible for a penalty under the readmissions program, which CMS leaves them out of. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "this table does not include results for Maryland hospitals … because these hospitals are not eligible for a penalty under the program" | 2026-10-23 |
+| HACRP-89 | The HAC cut's calculation also counts ESRD adjustment payments and credits for replaced devices (which reduce the payment). | https://www.cms.gov/files/document/r25p240i.pdf | "The following payment amounts are required to calculate the HAC reduction adjustment by FFY: … ESRD adjustment payments; … Credits for replaced devices" | 2026-10-23 |
+| HACRP-90 | A teaching hospital that counts residents from certain increases in its resident cap (the slots CMS awards under 42 CFR 413.79(c)(4), (n), (p) and (q)) is paid teaching (indirect medical education) payments on the sum of two adjustment factors, its usual one and a second for the added residents. | https://www.ecfr.gov/current/title-42/section-412.105 | "an increase in its FTE resident cap under paragraph (f)(1)(iv)(C) of this section … the sum of the following two indirect medical education adjustment factors" | 2026-10-23 |
+| HACRP-91 | Maryland's hospitals are not eligible for a penalty under the readmissions program; CMS uses their data in its calculations but leaves them out of the penalty. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "data from all subsection (d) and Maryland hospitals are used in calculations" … "Maryland hospitals … because these hospitals are not eligible for a penalty" | 2026-10-23 |
+| HACRP-92 | A sole community hospital is paid whichever of its rates (the federal rate or a hospital-specific one) yields the greatest aggregate payment; a Medicare-dependent hospital is paid the federal rate plus 75 percent of the amount by which its hospital-specific rate exceeds it. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "SCHs are paid based on whichever of the following rates yields the greatest aggregate payment" … "Federal national rate plus 75 percent of the difference" | 2026-10-23 |
+| HACRP-93 | CMS extended the Pennsylvania Rural Health Model's termination date to December 31, 2026. | https://www.cms.gov/files/document/r12622demo.pdf | "extend the existing termination date of the Pennsylvania Rural Health Model to 12/31/2026" | 2026-10-23 |
+| HACRP-94 | In the base the readmissions and value-based programs adjust, a Medicare-dependent hospital's gain from its hospital-specific rate (the difference from the federal rate) is included and a sole community hospital's is left out. | https://www.law.cornell.edu/cfr/text/42/412.152 | "sole community hospital … this amount also does not include the difference" … "Medicare-dependent, small rural hospital … this amount includes the difference" | 2026-10-23 |
+| HACRP-95 | CMS adds an eligible Indian Health Service or Tribal hospital's supplemental payment to each claim's payment, along with the uncompensated care payment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "we add the uncompensated care payment and supplemental payment for eligible IHS/Tribal hospitals and Puerto Rico hospitals to the total claim payment amount" | 2026-10-23 |
+| HACRP-96 | CMS figures the teaching (IME) and low-income-patient (DSH) payments as percentage add-ons to the federal DRG payment: a claim's operating payment is the DRG payment times one plus the IME adjustment plus a quarter of the DSH adjustment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Federal Payment Rate for Operating Costs = MS-DRG Relative Weight x [ … ] x (1 + IME + (DSH * 0.25))" | 2026-10-23 |
 
 ## Notes on the sources
 
@@ -251,21 +256,33 @@ A claim marked `unverified` may not be used in copy.
   Part A, line 22.01 computes the managed care IME as the IME adjustment factor "times line 3", the managed care
   simulated payments.
 - **HACRP-80 to HACRP-85** back the dollar estimates' methods_version 4 (`docs/METHODS-LOG.md`). HACRP-80 is the
-  FY2026 IPPS/LTCH PPS final rule at 90 FR 37214; the threshold's own calculation (90 FR 37227) divides "total outlier
-  payments by total operating Federal payments plus total outlier payments". HACRP-81 cites the same chapter as
+  FY2026 IPPS/LTCH PPS final rule at 90 FR 37219 ("outlier payments for any year are projected to be not less than 5
+  percent nor more than 6 percent of total operating DRG payments (which does not include IME and DSH payments) plus
+  outlier payments"; 90 FR 37214 says the same of the statute). The threshold's own calculation (90 FR 37227) divides
+  "total outlier payments by total operating Federal payments plus total outlier payments", and the FY2026 target there
+  is "targeting an outlier threshold at 5.14 percent [5.1 percent-(-.04 percent)]": the 5.1 percent target, moved by an
+  estimate of outlier reconciliation. HACRP-81 cites the same chapter as
   HACRP-76 to HACRP-79, the instructions for Exhibit 4, the low-volume adjustment calculation schedule; its list also
   names the operating federal and hospital-specific payments, outliers, IME, DSH, ESRD payments, capital, new-technology
   payments and credits for replaced devices. HACRP-82 is the rule's Addendum II.D.3.b (90 FR 37232), which also applies
-  the 10-percent cap budget neutrality factor to SCHs' rates; 90 FR 37231 applies the same updates to MDHs' rates if the
+  the 10-percent cap budget neutrality factor to SCHs' rates ("the hospital specific-rate for an SCH would be adjusted
+  by the MS-DRG 10-percent cap budget neutrality factor"); 90 FR 37231 applies the same updates to MDHs' rates if the
   law extended the program into FY 2026, which it did. HACRP-83 is 90 FR 36889-36890; the year's amount is
   "$12,412,500,000 * 0.6214 = $ 7,713,127,500" (90 FR 36889). HACRP-84 is 42 CFR 412.152 (read on the eCFR); 412.160
   defines the value-based program's base in the same words. HACRP-85 is the model's second annual evaluation report,
   written for CMS by NORC at the University of Chicago (June 2022), which says its contents are the authors'
-  responsibility, so the claim is worded as the evaluation's, not as a CMS rule.
+  responsibility, so the claim is worded as the evaluation's, not as a CMS rule, and in the past tense: CMS's model page
+  gives the performance period's end as December 31, 2024, while change request 13595 (HACRP-93) moved the termination
+  date to December 31, 2026, and the evaluation (June 2022) predates both. This site's participant list is empty
+  (CMS publishes none with CCNs), so Methods estimates the model's hospitals like any other.
 - **HACRP-86 to HACRP-91** back the dollar pages' wording (the M4 accuracy pass).
   - **HACRP-86 and HACRP-87** are 42 CFR 412.154(c) and 412.162(c), read on the eCFR (version dated 2026-10-20).
     412.154(c) makes the readmissions factor "the higher of the ratio … or the floor adjustment factor", the floor being
-    0.97 from FY 2015; the ratio is 1 minus a share, so the factor is at most 1. 412.162(b)(1) says the total available
+    0.97 from FY 2015; the ratio is 1 minus a share, so the factor is at most 1. The floor on the
+    share is the statute's: 42 U.S.C. 1395ww(q)(4)(C)(i) (HACRP-01's source) defines the excess readmissions ratio as "the
+    ratio (but not less than 1.0)" of risk-adjusted actual to expected readmissions, so a hospital's payments for excess
+    readmissions are never negative and the program never adds to a payment. (412.152's stratified definition, the ratio
+    "minus the peer-group median excess readmission ratio (ERR)", does not repeat the floor in its text.) 412.162(b)(1) says the total available
     for value-based incentive payments "is equal to the total amount of base-operating DRG payment reductions for that
     fiscal year, as estimated by the Secretary", and 412.162(a) that CMS "will make value-based incentive payments" to a
     hospital that meets or exceeds the performance standards: bonuses are paid for by other hospitals' cuts.
@@ -282,9 +299,12 @@ A claim marked `unverified` may not be used in copy.
   - **HACRP-89** is the same PRM section as HACRP-79 (4030.1, Exhibit 5): its list of the payment amounts "required to
     calculate the HAC reduction adjustment" also names the low-volume adjustment, capital outlier reconciliation
     amounts and new-technology payments. The estimate prices none of the ESRD payments and replaced-device credits;
-    its Methods table says so.
-  - **HACRP-90** is 42 CFR 412.105(e)(2), read on the eCFR (2026-10-20). 412.105(f)(1)(iv)(C) lists the increases in a
-    hospital's resident cap (the extra slots CMS awards under 42 CFR 413.79(c)(4), (n), (p) and (q)), and
+    its Methods table says so. A credit reduces the payment: Worksheet E, Part A, line 68 is "the partial or full credits
+    received from manufacturers for replaced" devices, and line 71 subtracts it (the quotation at HACRP-76 to HACRP-78),
+    so leaving credits out lifts the estimated HAC cut a hair, and leaving the ESRD add-on out lowers it.
+  - **HACRP-90** is 42 CFR 412.105(e)(2), read on the eCFR (2026-10-20). The second factor applies only to
+    increases "under paragraph (f)(1)(iv)(C)", which lists the extra slots CMS awards under 42 CFR 413.79(c)(4), (n), (p)
+    and (q) (other cap changes, such as a new program's, get no second factor), and
     412.105(d)(4) multiplies the second factor, the one for the added residents, by 0.66. CMS's impact-file teaching
     factor (TCHOP) equals the first factor alone on every teaching row of both years' files, so the estimate leaves
     the second out. That check is this site's own.
@@ -292,7 +312,43 @@ A claim marked `unverified` may not be used in copy.
     document as HACRP-80, HACRP-82 and HACRP-83. CMS's MLN Matters article MM14203 says the same of the Pricer: "Hospitals
     not subject to a reduction under the HRRP in FY 2026 (such as Maryland hospitals and non-subsection (d) hospitals)
     have an HRRP payment adjustment factor of 1." No CMS FY2026 text found names Maryland and the value-based program;
-    the pinned Table 16B lists no Maryland hospital, which the Methods table gives as this site's own reading.
+    the pinned Table 16B lists no Maryland hospital, which the Methods table gives as this site's own reading. The
+    note's first sentence says the table is built on "the data used to calculate the FY 2026 payment adjustment factors of
+    open, non-Maryland, subsection (d) hospitals only", and the quotation in the row says Maryland's data still go into
+    each hospital's excess readmissions ratio.
+
+- **HACRP-92 to HACRP-96** back the Assumptions rows revised after the independent fact-check of HACRP-72 to HACRP-91
+  (the same accuracy pass).
+  - **HACRP-92** is the FY2026 final rule's Addendum (90 FR 37231). Its sole-community-hospital sentence is 42 CFR
+    412.92(d)(1) ("a sole community hospital is paid based on whichever of the following amounts yields the greatest
+    aggregate payment for the cost reporting period"). The Medicare-dependent sentence in full reads "currently MDHs are
+    paid based on the Federal national rate or, if higher, the Federal national rate plus 75 percent of the difference
+    between the Federal national rate and the greater of the updated hospital-specific rates"; 42 CFR 412.108(c)(2)(iii)
+    says "75 percent of the amount that the Federal rate … is exceeded by the highest of the following" for cost reporting
+    periods before January 1, 2027 (eCFR, 2026-10-01). The rule's text was written before the extensions (HACRP-88). CMS
+    compares the year's totals: PRM 4030.1, Exhibit 5, line 15 reads "if line 13, column 1 is greater than line 14,
+    column 1" for an SCH (line 13 the federal payment, line 14 the hospital-specific payment), and CR 8900 (HACRP-75's
+    source) says the HAC adjustment applies "to either the Federal rate payment amount or the hospital-specific rate
+    payment amount, whichever results in a greater operating IPPS payment".
+  - **HACRP-93** is Pub. 100-19, Transmittal 12622 (change request 13595, May 2, 2024; effective October 1, 2024):
+    "The purpose of this Change Request (CR) is to extend the existing termination date of the Pennsylvania Rural Health
+    Model to 12/31/2026." CMS's model page still gives December 31, 2024 as the performance period's end (HACRP-85).
+  - **HACRP-94** is the same definition as HACRP-72's notes, read on Cornell's copy and the eCFR (identical): "With respect
+    to a sole community hospital that receives payments under § 412.92(d) this amount also does not include the
+    difference between the hospital-specific payment rate and the Federal payment rate determined under subpart D of this
+    part. With respect to a Medicare-dependent, small rural hospital that receives payments under § 412.108(c), this
+    amount includes the difference between the hospital-specific payment rate and the Federal payment rate determined
+    under subpart D of this part." 412.160's definition of the base excludes the difference for a Medicare-dependent
+    hospital only "for discharges occurring in FY 2013", so the value-based base's inclusion of the add-on in later years
+    is read from that date.
+  - **HACRP-95** is the payment-formula steps of the same Addendum (90 FR 37231). The rule's outlier threshold also takes
+    "the estimated per-discharge supplemental payments to hospitals eligible for the supplemental payment" (90 FR 37227).
+    42 CFR 412.106(h) sets the amount for a fiscal year as the difference between a base-year amount and the year's
+    uncompensated care payment; the impact file's per-claim uncompensated care amount includes it.
+  - **HACRP-96** is Step 3 of the payment-formula steps in the same Addendum (90 FR 37231). The Provider Reimbursement
+    Manual's Exhibit 5 (4030.1) builds the same way: its line 6 (the IME payment) multiplies the adjustment factor by "the
+    sum of lines 1.01, 1.02, 1.03, 1.04 and line 4", the DRG payment lines, and its line 11 (the DSH payment) is
+    "(line 10 times the sum of lines 1.01, 1.02 1.03, and 1.04) times 25 percent".
 
 ## Link check (2026-10-22; extended 2026-10-23)
 
@@ -339,6 +395,7 @@ browser.
 | https://www.qualityreportingcenter.com/globalassets/2020/12/pch/hospital-compare_care-compare-refresh-and-overall-hospital-quality-star-rating-2021-updates.pdf | 200 | direct |
 | https://www.cms.gov/files/document/r25p240i.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | 200 (a PDF; read from the downloaded file) | direct |
+| https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/priorities/innovation/data-and-reports/2022/parhm-ar2 | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |

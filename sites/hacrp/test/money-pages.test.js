@@ -18,7 +18,7 @@ import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
-import { MAJOR_TEACHING_RATIO, REDUCTION_PCT } from '../web/constants.js';
+import { MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
@@ -480,16 +480,23 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   const month = isoDate(a.mdhEnd).split(' ')[0];
   assert.equal(row('The Medicare-dependent hospital add-on')[1], `Both run through ${month}, after FY${DATA.fy} ends, so they count for the whole year.`);
   assert.ok(a.mdhEnd > `${DATA.fy}-09-30` && a.lowVolumeEnd > `${DATA.fy}-09-30`, 'both end after the fiscal year');
-  assert.equal(row('Payments for dialysis')[1], 'Both are small, so the HAC cut runs a hair low.');
+  assert.equal(row('The add-on for hospitals with many dialysis patients')[0], 'The add-on for hospitals with many dialysis patients (the ESRD adjustment) and credits for replaced devices, which reduce a payment, are left out, though the HAC cut counts both.');
+  assert.equal(row('The add-on for hospitals with many dialysis patients')[1], 'Both are small: leaving out the add-on makes the cut a hair low, leaving out the credits a hair high.');
+  assert.equal(row('Teaching payments leave out')[0], 'Teaching payments leave out the second teaching factor for resident-cap slots CMS awards under its redistribution programs, which CMS’s impact file doesn’t carry.');
   assert.equal(row('Teaching payments leave out')[1], 'Hospitals that received those slots run a little low.');
-  assert.equal(row('Maryland’s hospitals')[0], `Maryland’s hospitals: no dollars from the HAC or readmissions programs, which exempt them, and none from the value-based program, whose FY${DATA.fy} factors list no Maryland hospital.`);
-  assert.equal(row('Hospitals in Pennsylvania’s Rural Health Model')[0], 'Hospitals in Pennsylvania’s Rural Health Model are estimated like any other hospital. CMS pays them global budgets, which, its evaluator reports, are adjusted for their results in the three programs.');
+  assert.equal(row('Maryland’s hospitals')[0], `Maryland’s hospitals: no dollars from the HAC program, which exempts them, or the readmissions program, under which they aren’t eligible for a penalty, and none from the value-based program, whose FY${DATA.fy} factors list no Maryland hospital.`);
+  assert.equal(row('Hospitals in Pennsylvania’s Rural Health Model')[0], `Hospitals in Pennsylvania’s Rural Health Model, which CMS extended through ${PARHM_THROUGH_YEAR}, are estimated like any other hospital. Under the model, CMS paid them global budgets, which its evaluator reported were adjusted for their results in the three programs.`);
+  // The rows the fact-check changed: the SCH and MDH comparison is on the year's totals, as the rule does; the add-ons are figured on the federal DRG payment.
+  assert.equal(row('A sole community or Medicare-dependent hospital is paid')[0], 'A sole community or Medicare-dependent hospital is paid on its own rate or the federal one, whichever gives the greater total for the year; this site compares the year’s totals, as the rule does.');
+  assert.equal(row('A sole community or Medicare-dependent hospital is paid')[1], 'None beyond the volume and case mix those totals rest on.');
+  assert.equal(row('Teaching and low-income-patient payments')[0], 'Teaching and low-income-patient payments are figured on the federal DRG payment. Outlier payments are taken as a share of that payment alone, the base CMS’s national outlier target uses.');
+  assert.match(row('A Medicare-dependent hospital’s own rate')[0], /with the year’s update and the rule’s budget-neutrality factors for its DRG changes\.$/);
   assert.equal(row('Traditional Medicare stays')[0], 'Traditional Medicare stays, plus the teaching payments Medicare makes on Medicare Advantage stays.');
   assert.equal(row('Traditional Medicare stays')[1], 'What Medicare Advantage plans pay hospitals isn’t in any figure.');
   assert.match(row('Teaching payments on a hospital’s Medicare Advantage stays')[1], new RegExp(`^That volume is two years old, and in this site’s check against FY${DATA.dollars.bands.fy} cost reports these payments came out lower than hospitals recorded, for reasons the check can’t separate\\. So a large teaching hospital’s estimate can run a little low\\.$`));
   // Where they stand: the dialysis row after the new-technology row, the slots row after the Medicare Advantage teaching row.
   const names = rows.map(([x]) => x);
-  assert.equal(names.findIndex((x) => x.startsWith('Payments for dialysis')), names.findIndex((x) => x.startsWith('New-technology')) + 1);
+  assert.equal(names.findIndex((x) => x.startsWith('The add-on for hospitals with many dialysis')), names.findIndex((x) => x.startsWith('New-technology')) + 1);
   assert.equal(names.findIndex((x) => x.startsWith('Teaching payments leave out')), names.findIndex((x) => x.startsWith('Teaching payments on a hospital')) + 1);
   // The national ratio's range is the middle share of the resampled ratios; the table covers the figures the page counts.
   const b = DATA.dollars.bands;

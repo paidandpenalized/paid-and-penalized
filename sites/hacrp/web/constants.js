@@ -22,6 +22,10 @@ export const SIR_BASE_YEAR = 2015;
 export const SIR_NEXT_BASE_YEAR = 2022;
 export const SIR_NEXT_FY = 2028;
 
+// CMS extended Pennsylvania's Rural Health Model through this calendar year (change request 13595: the termination date
+// became December 31 of it). Methods' Assumptions row on the model says so.
+export const PARHM_THROUGH_YEAR = 2026;
+
 // CMS's count of the hospitals cut in a fiscal year, from its results fact sheet, for a year whose cut list CMS
 // updated after the fact sheet: the pages count the updated list, and Methods says so.
 export const FACT_SHEET_CUT = Object.freeze({ fy: 2016, cut: 758 });
@@ -79,6 +83,7 @@ export const CLAIMS = {
   SIR_NEXT_BASE_YEAR: 'HACRP-21',
   SIR_NEXT_FY: 'HACRP-21',
   FACT_SHEET_CUT: 'HACRP-71',
+  PARHM_THROUGH_YEAR: 'HACRP-93',
 };
 
 // CMS's short names for the measures, read from its column names ("PSI 90 W Z Score" -> "PSI 90"). PSI 90 has a
