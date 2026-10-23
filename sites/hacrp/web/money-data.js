@@ -84,8 +84,15 @@ export function sides(rows) {
 }
 
 // The hospitals within `window` of CMS's line, on either side, for the across-the-line figure: each with its score,
-// whether CMS cut it, and its dollars at stake; { rows, ...sides(rows) }, lowest score first.
+// whether CMS cut it, and its dollars at stake; { rows, ...sides(rows) }, lowest score first. Worked out once per md and
+// window (the program page and every place page draw the same ones); read, never changed.
+const NEAR = new WeakMap();
 export function nearLine(md, window) {
-  const rows = md.rows.filter((r) => Math.abs(r.total - md.line) <= window).sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
-  return { rows, ...sides(rows) };
+  if (!NEAR.has(md)) NEAR.set(md, new Map());
+  const made = NEAR.get(md);
+  if (!made.has(window)) {
+    const rows = md.rows.filter((r) => Math.abs(r.total - md.line) <= window).sort((a, b) => a.total - b.total || (a.ccn < b.ccn ? -1 : 1));
+    made.set(window, { rows, ...sides(rows) });
+  }
+  return made.get(window);
 }

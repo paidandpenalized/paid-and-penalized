@@ -172,6 +172,18 @@ test('counts of one read in the singular: a state of one cut hospital, a bin of 
   assert.match(captionOf(renderPlace(many), 'across'), /^Figure \d+\. \d+ of the nation’s [\d,]+ hospitals within 0\.05 of CMS’s line are /);
 });
 
+test('the hospitals near the line: both sides, lowest score first, worked out once per estimate and window', () => {
+  const near = nearLine(MD, ACROSS_WINDOW);
+  assert.equal(nearLine(MD, ACROSS_WINDOW), near, 'remembered');
+  assert.notEqual(nearLine(MD, ACROSS_WINDOW * 2), near);
+  assert.ok(near.rows.every((r) => Math.abs(r.total - MD.line) <= ACROSS_WINDOW));
+  assert.deepEqual(near.rows.map((r) => r.total), near.rows.map((r) => r.total).sort((a, b) => a - b));
+  assert.equal(near.over.length + near.under.length, near.rows.length);
+  assert.ok(near.over.every((r) => r.yes) && near.under.every((r) => !r.yes));
+  assert.equal(near.overMoney + near.underMoney, sum(near.rows, 'atStake'));
+  assert.ok(MD.rows.every((r) => Math.abs(r.total - MD.line) > ACROSS_WINDOW || near.rows.includes(r)), 'every hospital within the window is listed');
+});
+
 test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to', () => {
   const page = methodsPage({
     fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
