@@ -12,7 +12,7 @@
 import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
-  afterText, anyChanged, assignedNow, barClass, barSpan, cliffDotClass, cliffY, estimateNote, fieldText, fraction, headScore, moneyClass, rampAt, rampDomain, rampEdge, sameMoney,
+  afterText, anyChanged, assignedNow, barClass, barSpan, cliffDotClass, cliffY, estimateNote, fieldText, fraction, headScore, isEither, levelOf, moneyClass, rampAt, rampDomain, rampEdge, sameDollars, sameMoney,
   rampLabels, RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks, trackStart,
 } from './marks.js';
 
@@ -23,7 +23,7 @@ export const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 // The head's dollars count to a new value over this long (never under reduced motion), about as long as the cliff's
 // dot takes to fall.
-export const COUNT_MS = 650;
+const COUNT_MS = 650;
 
 // A number field's entry: null when blank, NaN when it isn't a number.
 function entry(el) {
@@ -93,12 +93,11 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const startCut = texts.cut(first.result.before.flag);
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
-  // The dollars, where the site has them: the start's, as the table writes them; the head's figure as last drawn (it
-  // counts from there); the cliff dot's level.
+  // The dollars, where the site has them: the start's, as the table writes them; the head's figure and the cliff dot's
+  // level as last drawn (the figure counts from there, the dot moves from there).
   const money = first.money && texts.money ? texts.money : null;
   const startMoney = money && money.amount(first.money.before);
   let shownMoney = first.money?.after ?? null;
-  let dotY = first.money ? cliffY(first.money.after) : null;
   let counting = null;
 
   // A link's fragment: what decode() trusts goes through reduce(); the rest stays CMS's.
@@ -145,19 +144,17 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     text.setAttribute('dx', String(dx));
   }
 
-  // The head's dollars, counted from the last figure drawn to next (each frame's figure in the site's words), or set at
-  // once: under reduced motion, without animation frames, or where either end is too close to call (two numbers).
-  function countMoney(next) {
+  // The head's dollars, counted from the figure last drawn (from) to next (each frame's figure in the site's words), or
+  // set at once: under reduced motion, without animation frames, or where either end is too close to call (two numbers).
+  function countMoney(from, next) {
     const node = el['head-money'];
     if (!node) return;
     setText(el['head-money-words'], money.head(next));
     setAttr(node, 'class', `wi-money${moneyClass(next)}`);
-    const from = shownMoney;
-    shownMoney = next;
     if (counting !== null) env.cancelAnimationFrame?.(counting);
     counting = null;
     const still = env.matchMedia?.(REDUCED_MOTION).matches || typeof env.requestAnimationFrame !== 'function';
-    if (still || Array.isArray(from) || Array.isArray(next) || from === next) {
+    if (still || isEither(from) || isEither(next) || sameDollars(from, next)) {
       setText(node, money.amount(next));
       return;
     }
@@ -166,24 +163,23 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
       if (t0 === null) t0 = now;
       const k = Math.min(1, (now - t0) / COUNT_MS);
       const eased = 1 - (1 - k) ** 3;
-      setText(node, money.amount(k < 1 ? Math.round(from + (next - from) * eased) : next));
+      const cash = Math.round(from.lo + (next.lo - from.lo) * eased);
+      setText(node, money.amount(k < 1 ? { lo: cash, hi: cash } : next));
       counting = k < 1 ? env.requestAnimationFrame(step) : null;
     };
     counting = env.requestAnimationFrame(step);
   }
 
-  // The cliff: the dot rides it to the hypothetical score and falls (or climbs) to its level when it crosses the line;
-  // the ring keeps the starting score once the two differ. The move across is instant, the fall is CSS's.
-  function drawCliff(vm, t, unchanged) {
+  // The cliff: the dot rides it to the hypothetical score and falls (or climbs) from the level of the dollars last drawn
+  // (from) to its new one when it crosses the line; the ring keeps the starting score once the two differ. The move
+  // across is instant, the fall is CSS's.
+  function drawCliff(vm, t, unchanged, from) {
     const dot = el['cliff-dot'];
     if (!dot) return;
-    const y = cliffY(vm.money.after);
-    if (y !== dotY) {
-      setAttr(dot, 'data-motion', Number(y) > Number(dotY) ? 'fall' : 'rise');
-      dotY = y;
-    }
+    const [was, now] = [levelOf(from), levelOf(vm.money.after)];
+    if (now !== was) setAttr(dot, 'data-motion', now > was ? 'fall' : 'rise');
     dot.style.setProperty('--at', fraction(t));
-    dot.style.setProperty('--y', y);
+    dot.style.setProperty('--y', cliffY(vm.money.after));
     setAttr(dot, 'class', cliffDotClass(vm.money.after));
     if (el['cliff-start']) el['cliff-start'].hidden = unchanged;
   }
@@ -254,10 +250,12 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     place(el['hyp-edge'], edge);
     setText(el['hyp-edge'], edge.text);
     if (money && vm.money) {
+      const was = shownMoney;
+      shownMoney = vm.money.after;
       after(el.money, startMoney, money.amount(vm.money.after));
       if (el['head-money-was']) el['head-money-was'].hidden = sameMoney(vm.money);
-      countMoney(vm.money.after);
-      drawCliff(vm, t, unchanged);
+      countMoney(was, vm.money.after);
+      drawCliff(vm, t, unchanged, was);
     }
 
     for (const input of vm.inputs) {

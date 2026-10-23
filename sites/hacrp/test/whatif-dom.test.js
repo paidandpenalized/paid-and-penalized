@@ -670,7 +670,7 @@ test('the dollars near the line: too close to call shows both, "$0 or $X", never
   let s = initialState(RICH, model);
   s = { ...s, values: { ...s.values, [id]: v } };
   const vm = viewModel(s, RICH, model, estimate);
-  assert.deepEqual(vm.money.after, [0, -AT_STAKE]);
+  assert.deepEqual(vm.money.after, { lo: -AT_STAKE, hi: 0 });
   const both = '$0 or $654K';
   assert.equal(t.money.amount(vm.money.after), both);
   assert.ok(t.sentence(vm).includes(both), t.sentence(vm));
@@ -700,7 +700,7 @@ test('the dollars out from under a cut: the sentence says what staying under the
   s = { ...s, values: Object.fromEntries(Object.entries(s.values).map(([id, v]) => [id, Math.min(v, s.medians[id])])) };
   const vm = viewModel(s, cut, model, estimate);
   assert.equal(vm.result.after.flag, 'No');
-  assert.deepEqual([vm.money.before, vm.money.after], [-AT_STAKE, 0]);
+  assert.deepEqual([vm.money.before, vm.money.after], [{ lo: -AT_STAKE, hi: -AT_STAKE }, { lo: 0, hi: 0 }]);
   assert.ok(t.sentence(vm).includes('keep the whole cut, about $654K'), t.sentence(vm));
   assert.ok(t.slide(vm).includes('Estimated HAC cut: $654K → $0'), t.slide(vm));
   assert.equal(t.solver.worth, 'Getting under CMS’s line would keep about $654K, this site estimates: the whole cut, however far under the score lands.');

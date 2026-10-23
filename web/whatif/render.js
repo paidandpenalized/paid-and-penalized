@@ -5,8 +5,8 @@
 //
 // vm:
 //   result { available, n, before { score, flag }, after { score, flag }, measures { [id]: { changed, contribution } } }
-//   money { atStake, before, after } | null              a program's dollars at the start and in the hypothetical
-//                                                         (0, a negative amount, or [0, negative] too close to call)
+//   money { atStake, before, after } | null              a program's dollars at the start and in the hypothetical,
+//                                                         each { lo, hi } (dollarsOf: the least and most Medicare keeps)
 //   ramp { actual, hypothetical, highestNo, lowestYes }   the scores the ramp marks
 //   inputs [{ id, value (null: none), max, step, decimals, median, floor, cap, limit, valuetext, assigned, tagged }]
 //   counts { [id]: { delta } }                            NHSN count deltas (dom.js)
@@ -65,7 +65,8 @@ const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
 // solid mark for the starting score and a hollow one for the hypothetical (at an edge, with an arrow, when it runs
 // past the range; hidden, with its label, while it equals the start), each label under its mark (stacked when they
 // would touch). Decorative: the table and the sentence say the same.
-function ramp(vm, range, texts, underCliff = false) {
+function ramp(vm, range, texts) {
+  const underCliff = Boolean(vm.money && texts.money);
   const domain = rampDomain(range, vm.ramp);
   const at = (score) => rampAt(score, domain);
   // The scale's own tick format (d3-format): the decimals that tell ticks a step apart, with a true minus.
@@ -136,7 +137,6 @@ ${vm.money && texts.money && html`<p class="wi-head__money"><span class="wi-mone
 </div>`;
 }
 
-
 function result(vm, range, texts) {
   const r = vm.result;
   const s = texts.scores(vm);
@@ -157,7 +157,7 @@ ${money && html`<tr class="wi-table__money"><th scope="row">${money.row} <a clas
 </table>
 </details>
 ${money && cliff(vm, range, texts)}
-${ramp(vm, range, texts, Boolean(money))}
+${ramp(vm, range, texts)}
 ${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
 <p class="wi-sentence" data-wi="live" aria-live="polite"><span data-wi="sentence">${texts.sentence(vm)}</span><span class="vh" data-wi="sentence-est">${estimateNote(vm, texts)}</span></p>
 <p class="small wi-est" data-wi="estimate"${hiddenIf(!vm.estimated)}>${texts.estimate.text} <a href="${texts.estimate.href}">${texts.estimate.linkText}</a></p>

@@ -9,7 +9,7 @@ import { decimalsOf } from '../../../engine/js/hacrp/params.js';
 import { SCORE_DECIMALS as PART_DP } from '../../../engine/js/hacrp/score.js';
 import { cmsText, decimal, listText, longDate, money, pct, signed } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { assignedNow } from '../../../web/whatif/marks.js';
+import { assignedNow, isEither, levelOf } from '../../../web/whatif/marks.js';
 import { LEVERAGE_STEP, REDUCTION_TEXT, SHORT_NAMES, SIR_EXPECTED_TEXT } from './constants.js';
 import { fill, heroLineText, measureLabel, sourcePlain } from './copy.js';
 import { DOLLARS_HREF } from './links.js';
@@ -82,11 +82,11 @@ export function cutText(flag) {
   return null;
 }
 
-// This site's estimate of the HAC cut as the what-if writes it, from dollarsOf()'s value: the amount cut ("$615K"),
+// This site's estimate of the HAC cut as the what-if writes it, from dollarsOf()'s { lo, hi }: the amount cut ("$615K"),
 // "$0", or, too close to call, both ("$0 or $615K"), never one number.
 export function moneyText(dollars) {
-  if (Array.isArray(dollars)) return fill('whatifMoneyEither', { zero: money(0), amount: money(-dollars[1]) });
-  return money(-dollars);
+  if (isEither(dollars)) return fill('whatifMoneyEither', { zero: money(0), amount: money(-dollars.lo) });
+  return money(-dollars.lo);
 }
 
 // The score before (CMS's text) and after (this site's, at CMS's decimals).
@@ -334,7 +334,7 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
       tag: { text: fill('estimateTag'), href: DOLLARS_HREF, label: fill('whatifMoneyTagLabel') },
       amount: moneyText,
       // The words beside the head's figure, by the hypothetical's dollars.
-      head: (dollars) => fill(Array.isArray(dollars) || dollars < 0 ? 'whatifMoneyCut' : 'whatifMoneyNone'),
+      head: (dollars) => fill(levelOf(dollars) > 0 ? 'whatifMoneyCut' : 'whatifMoneyNone'),
       cliff: { zero: money(0), zeroWords: fill('whatifCliffNone'), cut: money(atStake), cutWords: pillOf('Yes').label },
     },
     held: fill('whatifHeld'),

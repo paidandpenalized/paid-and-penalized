@@ -99,15 +99,16 @@ export function whatIf(hospital, model, changes = {}) {
 
 // The HAC Reduction Program's dollars for a decision, given the dollars at stake (1% of the hospital's inpatient
 // payment after the readmissions and value-based adjustments: this site's estimate, never CMS's). Negative is money
-// Medicare keeps. Yes: -atStake. No, and N/A (Maryland's hospitals are exempt): 0. Too close to call: both, as
-// [0, -atStake], never one number. The cut is a cliff: it doesn't grow with the score.
+// Medicare keeps. Always { lo, hi }, the least and the most it keeps (lo === hi when the decision is certain). Yes:
+// -atStake both. No, and N/A (Maryland's hospitals are exempt): 0 both. Too close to call: lo -atStake, hi 0, both
+// possible, never one number. The cut is a cliff: it doesn't grow with the score.
 export function dollarsOf(flag, atStake) {
   if (!Number.isInteger(atStake) || atStake < 0) throw new RangeError(`HACRP dollars: atStake must be whole dollars >= 0, got ${atStake}`);
   switch (flag) {
-    case 'Yes': return 0 - atStake;
+    case 'Yes': return { lo: 0 - atStake, hi: 0 - atStake };
     case 'No':
-    case 'N/A': return 0;
-    case 'too-close': return [0, 0 - atStake];
+    case 'N/A': return { lo: 0, hi: 0 };
+    case 'too-close': return { lo: 0 - atStake, hi: 0 };
     default: throw new RangeError(`HACRP dollars: no decision "${flag}"`);
   }
 }
