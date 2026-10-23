@@ -662,6 +662,27 @@ test('the dollars: a crossing drops the cliff\'s dot to the cut and the head cou
   assert.ok(seen.slice(1, -1).some((s) => s !== '$0' && s !== '$654K'), 'it passes through amounts on the way');
 });
 
+test('the dollars are redrawn only when they change: the reduced-motion query is read once at mount, and a score that moves within one decision leaves the figures alone while the cliff\'s dot rides the score', () => {
+  const stub = windowStub();
+  const asked = [];
+  stub.env.matchMedia = (query) => { asked.push(query); return { matches: false }; };
+  const root = mountRich(stub);
+  const reduced = () => asked.filter((query) => query.includes('reduced-motion')).length;
+  assert.equal(reduced(), 1, 'hoisted to the mount');
+  const dot = q(root, 'cliff-dot');
+  const head = q(root, 'head-money');
+  const before = head.textContent;
+  // A small change in one measure that stays under the line: the score moves, the dollars do not.
+  const start = dot.style.props.get('--at');
+  type(field(root, 'MRSA', 'number'), String(Number(field(root, 'MRSA', 'number').value) + 0.001));
+  type(field(root, 'MRSA', 'number'), String(Number(field(root, 'MRSA', 'number').value) + 0.001));
+  assert.equal(reduced(), 1, 'never asked again while the reader edits');
+  assert.equal(head.textContent, before);
+  assert.equal(q(root, 'head-money-was').hidden, true, 'no before → after while the dollars are the start\'s');
+  assert.equal(q(root, 'money').textContent, 'same');
+  assert.notEqual(dot.style.props.get('--at'), start, 'the dot still rides the score');
+});
+
 test('the dollars near the line: too close to call shows both, "$0 or $X", never one number (head, table, sentence, slide)', () => {
   const close = ['PSI90', 'CLABSI', 'CAUTI', 'SSI', 'CDI', 'MRSA'].map((id) => [id, valueFor(RICH, id, 'too-close')]).find(([, v]) => v !== null);
   assert.ok(close, 'some measure lands too close to call');

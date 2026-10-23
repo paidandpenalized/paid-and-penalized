@@ -52,6 +52,8 @@ export const BED_BANDS = Object.freeze([100, 300, 500]);
 export const FEW_IN_GROUP = 5;
 export const NEAREST = 8;
 export const RIDGE_BINS = 36;
+// The columns of the cliff's strip of every published score, which show the crowd at CMS's line.
+export const STRIP_BINS = 120;
 export const RULER_BINS = 28;
 // The nearest-hospitals map's distance rings, in miles: those inside the farthest hospital shown, at most RINGS_MAX.
 export const RING_MILES = Object.freeze([5, 10, 25, 50, 100, 250]);

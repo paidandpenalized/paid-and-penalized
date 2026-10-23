@@ -10,7 +10,8 @@ import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { median } from '../../../engine/js/stats.js';
 import { miles } from '../../../web/charts/geo.js';
-import { BED_BANDS, FEW_IN_GROUP, NEAREST, RIDGE_BINS } from './constants.js';
+import { lineScore } from '../../../web/whatif/marks.js';
+import { BED_BANDS, CLIFF_NEAR, FEW_IN_GROUP, NEAREST, RIDGE_BINS, STRIP_BINS } from './constants.js';
 import { cutDollars } from './money.js';
 
 // How many of a sorted list are below x, and how many above it.
@@ -73,6 +74,11 @@ export function nationalContext({ hospitals, master, model, dollars }) {
   const decided = new Set(decidedHospitals(hospitals));
   const domain = [scores[0], scores[scores.length - 1]];
   const edges = edgesAround(domain[0], domain[1], lowestYes, RIDGE_BINS);
+  // Every published score, binned finely around CMS's line for the cliff's strip, and how many scored within CLIFF_NEAR of
+  // the line on either side (the strip's note).
+  const stripEdges = edgesAround(domain[0], domain[1], lowestYes, STRIP_BINS);
+  const line = lineScore(model.boundary);
+  const strip = { edges: stripEdges, counts: countBins(scores, stripEdges), near: scores.filter((x) => Math.abs(x - line) <= CLIFF_NEAR).length };
 
   // Each hospital with a score, as the comparisons read it.
   const rows = scored.map((h) => {
@@ -126,6 +132,7 @@ export function nationalContext({ hospitals, master, model, dollars }) {
     scores,
     domain,
     edges,
+    strip,
     medianScore: median(scores),
     measures,
     // Where x sits among every scored hospital's score: how many are below it and above it, of n.

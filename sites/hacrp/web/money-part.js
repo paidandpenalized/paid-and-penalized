@@ -5,7 +5,7 @@
 // ranking. Every takeaway is filled from the data the figure draws (money-data.js).
 import { acrossLine } from '../../../web/charts/acrossLine.js';
 import { columns } from '../../../web/charts/columns.js';
-import { drawn, figure, imageOf, imagePair, num } from '../../../web/charts/figure.js';
+import { PAGE, drawn, figure, imageOf, imagePair, num } from '../../../web/charts/figure.js';
 import { STATE_NAMES, usBubbles } from '../../../web/charts/geo.js';
 import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
@@ -15,16 +15,13 @@ import { html } from '../../../web/render/html.js';
 import { REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
 import { estTag, rangeLine } from './money-figures.js';
+import { countBins } from './compare.js';
 import { nearLine, sides, sum } from './money-data.js';
 import { fill, t } from './money/copy.js';
 import { psec } from './program-figures.js';
 
-// Display constants: the across-the-line figure's window either side of CMS's line, and its largest dot.
+// Display constant: the across-the-line figure's window either side of CMS's line.
 export const ACROSS_WINDOW = 0.05;
-const ACROSS_R = { narrow: 11, wide: 18 };
-// The bill's drawing on a phone and across the page.
-const BILL = { narrow: [WIDTH, 420], wide: [1040, 520] };
-const PAGE = 1040;
 
 const pct0 = (x) => pct(x, 0);
 const p = (key, values) => html`<p>${values ? fill(key, values) : t(key)}</p>`;
@@ -40,10 +37,8 @@ export function billFigure(md, { n, source }) {
     const value = sum(rows, 'cut');
     return { key, rows, value, label: key === 'unknown' ? t('billUnknown') : groupLabel('teach', key) };
   }).filter((g) => g.rows.length);
-  const draw = (width, height, tips) => treemap({
-    width, height,
-    groups: groups.map((g) => ({ label: g.label, sub: fill('billGroupSub', { n: count(g.rows.length), money: money(g.value) }), value: g.value, tiles: g.rows.map((r) => ({ value: r.cut, tip: tips ? tipOf(r) : null })) })),
-  });
+  const tree = groups.map((g) => ({ label: g.label, sub: fill('billGroupSub', { n: count(g.rows.length), money: money(g.value) }), value: g.value, tiles: g.rows.map((r) => ({ value: r.cut, tip: tipOf(r) })) }));
+  const draw = (width) => treemap({ width, groups: tree });
   const total = md.headline.money;
   // The group of hospitals with no teaching status is a sliver too small to label: the note names it.
   const unknown = groups.find((g) => g.key === 'unknown');
@@ -52,7 +47,7 @@ export function billFigure(md, { n, source }) {
       : fill('billNoteUnknown', { n: count(unknown.rows.length), money: money(unknown.value) });
   return figure({
     n, source, claimLevel: 'estimate', alt: t('billAlt'), csvName: 'hacrp-dollars-by-teaching', note,
-    svg: draw(...BILL.narrow, false), svgWide: draw(...BILL.wide, true),
+    ...drawn(draw, PAGE),
     takeaway: fill('billTakeaway', { hospitals: noun(md.tenth.n, 'hospital'), share: pct0(md.tenth.money / total), money: money(total) }),
     table: {
       columns: [{ name: t('billColGroup') }, { name: t('billColHospitals'), numeric: true }, { name: t('billColMoney'), numeric: true }, { name: t('billColShareHospitals'), numeric: true }, { name: t('billColShareMoney'), numeric: true }],
@@ -68,17 +63,18 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   const near = nearLine(md, ACROSS_WINDOW);
   const { over, under, overMoney, underMoney } = near;
   const window = decimal(ACROSS_WINDOW, 2);
+  // On a place's page only its own hospitals name themselves (a tooltip and a keyboard stop each); the nation's others are
+  // faint dots. A phone's drawing names none (acrossLine).
   const dots = near.rows.map((r) => ({
     x: r.total, value: r.atStake, over: r.yes, mine: mine ? mine.has(r.ccn) : false,
-    tip: fill('acrossTip', { name: r.name, city: r.city, state: r.state, score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
+    tip: mine && !mine.has(r.ccn) ? null : fill('acrossTip', { name: r.name, city: r.city, state: r.state, score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
   }));
   const labels = {
     under: [fill('acrossUnder1', { n: count(under.length) }), fill('acrossUnder2', { money: money(underMoney) })],
     over: [fill('acrossOver1', { n: count(over.length) }), fill('acrossOver2', { money: money(overMoney) })],
     line: t('acrossLine'), axis: t('acrossAxis'),
   };
-  // The phone's drawing has no tooltips: its dots are too small to point at one, and the page stays light.
-  const draw = (width) => acrossLine({ dots: width < 400 ? dots.map((d) => ({ ...d, tip: null })) : dots, domain: [md.line - ACROSS_WINDOW, md.line + ACROSS_WINDOW], line: md.line, labels, values: { under: underMoney, over: overMoney }, width, rMax: width < 400 ? ACROSS_R.narrow : ACROSS_R.wide });
+  const draw = (width) => acrossLine({ dots, domain: [md.line - ACROSS_WINDOW, md.line + ACROSS_WINDOW], line: md.line, labels, values: { under: underMoney, over: overMoney }, width });
   return figure({
     n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName: 'hacrp-dollars-across-the-line', ...drawn(draw, PAGE),
     takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
@@ -133,7 +129,7 @@ export function statesFigure(md, { n, source, shapes }) {
   const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: fill('statesTipTotal', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }) }]));
   const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(Math.round(s.perStay)) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
-  const art = { svg: usBubbles({ shapes, layers, width: WIDTH, rMax: 22 }), svgWide: usBubbles({ shapes, layers, width: PAGE, rMax: 52 }) };
+  const art = drawn((width) => usBubbles({ shapes, layers, width }), PAGE);
   // One drawing, two layers of circles: the buttons (shown by the page script) say which one shows; without the script,
   // the dollars.
   const chart = html`<div class="bubbles" data-view="total">
@@ -155,16 +151,20 @@ ${imagePair(art, t('statesAlt'))}</div>`;
 
 // ---------- three programs ----------
 
-// Bins of a share of the base payment, BIN wide, from lo to hi (fractions); each hospital in the bin its adjustment
-// falls in. sign: -1 for a cut (its bins in the penalty ink), +1 for a bonus.
+// Bins of a share of the base payment, BIN wide, from lo to hi (fractions); each hospital in the bin its adjustment falls in
+// (a value a hair under an edge by float error, such as 1.003 − 1, counts in the bin above it). cls: a bin's class.
 const BIN = 0.001;
-const binned = (values, lo, hi, cls, words) => {
-  const k = Math.round((hi - lo) / BIN);
-  const bins = Array.from({ length: k }, (_, i) => ({ x0: lo + i * BIN, x1: lo + (i + 1) * BIN, n: 0 }));
-  for (const v of values) bins[Math.min(k - 1, Math.max(0, Math.floor((v - lo) / BIN + 1e-9)))].n++;
-  return bins.map((b) => ({ ...b, cls: cls(b), tip: fill('threeTip', { hospitals: noun(b.n, 'hospital'), range: words(b) }) }));
-};
+const EDGE_SLACK = 1e-12;
 const pctText = (x) => pct(x, 1);
+function binned(values, lo, hi, cls) {
+  const edges = Array.from({ length: Math.round((hi - lo) / BIN) + 1 }, (_, i) => lo + i * BIN);
+  const counts = countBins(values, edges.map((e) => e - EDGE_SLACK));
+  const bins = counts.map((n, i) => {
+    const bin = { x0: edges[i], x1: edges[i + 1], n };
+    return { ...bin, cls: cls(bin), tip: fill('threeTip', { hospitals: noun(n, 'hospital'), range: `${pctText(bin.x0)}–${pctText(bin.x1)}` }) };
+  });
+  return { bins, domain: [lo, hi] };
+}
 
 export function programsFigure(md, { n, source }) {
   const rows = md.rows;
@@ -172,11 +172,11 @@ export function programsFigure(md, { n, source }) {
   const vbp = rows.filter((r) => r.vbpListed).map((r) => r.vbpFactor - 1);
   const hrrpHigh = Math.max(...hrrpCuts);
   const [vbpLow, vbpHigh] = [Math.min(...vbp), Math.max(...vbp)];
+  const [hrrpN, vbpN] = [hrrpCuts.filter((x) => x > 0).length, vbp.filter((x) => x !== 0).length];
   const bonus = rows.reduce((s, r) => s + Math.max(0, r.hvbp), 0);
   const penalty = rows.reduce((s, r) => s + Math.min(0, r.hvbp), 0);
-  const hrrpBins = binned(hrrpCuts, 0, Math.ceil(hrrpHigh / BIN) * BIN + BIN, (b) => (b.x0 === 0 ? 'chart-col' : 'chart-col chart-col--pen'), (b) => `${pctText(b.x0)}–${pctText(b.x1)}`);
-  const vbpLo = Math.floor(vbpLow / BIN) * BIN;
-  const vbpBins = binned(vbp, vbpLo, Math.ceil(vbpHigh / BIN) * BIN + BIN, (b) => (b.x0 >= 0 ? 'chart-col chart-col--rew' : 'chart-col chart-col--pen'), (b) => `${pctText(b.x0)}–${pctText(b.x1)}`);
+  const hrrp = binned(hrrpCuts, 0, Math.ceil(hrrpHigh / BIN) * BIN + BIN, (b) => (b.x0 === 0 ? 'chart-col' : 'chart-col chart-col--pen'));
+  const vbpBins = binned(vbp, Math.floor(vbpLow / BIN) * BIN, Math.ceil(vbpHigh / BIN) * BIN + BIN, (b) => (b.x0 >= 0 ? 'chart-col chart-col--rew' : 'chart-col chart-col--pen'));
   const cut = md.cutRows.length;
   const hacBins = [
     { x0: -0.0015, x1: 0.0015, n: rows.length - cut, cls: 'chart-col', tip: fill('threeTip', { hospitals: noun(rows.length - cut, 'hospital'), range: pct(0, 0) }) },
@@ -185,7 +185,7 @@ export function programsFigure(md, { n, source }) {
   // A tick: whole percents as whole (1%), the rest to a tenth (1.5%).
   const fmt = (x) => pct(x, Math.abs(Math.round(x * 1000)) % 10 ? 1 : 0);
   const hrrpDomain = [0, Math.ceil(hrrpHigh * 100 - 1e-9) / 100];
-  const panel = (key, total, shape, sub, bins, domain, axisKey, ticks) => {
+  const panel = ({ key, total, shape, sub = null, bins, domain, axisKey, ticks }) => {
     const draw = (width) => columns({ bins, domain, ticks, format: fmt, width, height: 150 });
     return html`<div class="three__p">
 <p class="three__name">${t(key)}</p>
@@ -197,9 +197,9 @@ ${imageOf(draw(WIDTH), null, null)}
   };
   const hh = md.headline;
   const chart = html`<div class="three">
-${panel('threeHrrp', hh.hrrp, 'threeHrrpShape', null, hrrpBins, [0, Math.max(hrrpDomain[1], hrrpBins.at(-1).x1)], 'threeHrrpAxis', 4)}
-${panel('threeHvbp', hh.hvbp, 'threeHvbpShape', fill('threeHvbpSplit', { bonus: money(bonus), penalty: money(-penalty) }), vbpBins, [vbpLo, Math.ceil(vbpHigh / BIN) * BIN + BIN], 'threeHvbpAxis', 4)}
-${panel('threeHac', -hh.money, 'threeHacShape', null, hacBins, [-0.002, 0.012], 'threeHacAxis', [0, 0.01])}
+${panel({ key: 'threeHrrp', total: hh.hrrp, shape: 'threeHrrpShape', bins: hrrp.bins, domain: [0, Math.max(hrrpDomain[1], hrrp.bins.at(-1).x1)], axisKey: 'threeHrrpAxis', ticks: 4 })}
+${panel({ key: 'threeHvbp', total: hh.hvbp, shape: 'threeHvbpShape', sub: fill('threeHvbpSplit', { bonus: money(bonus), penalty: money(-penalty) }), bins: vbpBins.bins, domain: vbpBins.domain, axisKey: 'threeHvbpAxis', ticks: 4 })}
+${panel({ key: 'threeHac', total: -hh.money, shape: 'threeHacShape', bins: hacBins, domain: [-0.002, 0.012], axisKey: 'threeHacAxis', ticks: [0, 0.01] })}
 </div>`;
   return figure({
     n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-three-programs', note: t('threeNote'),
@@ -207,8 +207,8 @@ ${panel('threeHac', -hh.money, 'threeHacShape', null, hacBins, [-0.002, 0.012], 
     table: {
       columns: [{ name: t('threeColProgram') }, { name: t('threeColHospitals'), numeric: true }, { name: t('threeColMoney'), numeric: true }],
       rows: [
-        [t('threeHrrp'), num(count(hrrpCuts.filter((x) => x > 0).length), hrrpCuts.filter((x) => x > 0).length), num(dollars(hh.hrrp), hh.hrrp)],
-        [t('threeHvbp'), num(count(vbp.filter((x) => x !== 0).length), vbp.filter((x) => x !== 0).length), num(dollars(hh.hvbp), hh.hvbp)],
+        [t('threeHrrp'), num(count(hrrpN), hrrpN), num(dollars(hh.hrrp), hh.hrrp)],
+        [t('threeHvbp'), num(count(vbpN), vbpN), num(dollars(hh.hvbp), hh.hvbp)],
         [t('threeHac'), num(count(cut), cut), num(dollars(-hh.money), -hh.money)],
       ],
     },

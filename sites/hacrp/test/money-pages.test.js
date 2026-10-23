@@ -133,6 +133,11 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   assert.match(page, /<th scope="col" class="num">Est\. cut \(\$, modeled\)<\/th>/);
   assert.match(page, /<section class="psec psec--wide" id="across"/);
   assert.match(page, /chart-across__dot--faint/, 'the nation\'s other hospitals faint');
+  // Only the place's own hospitals name themselves (a tooltip each, and a keyboard stop): the two side labels, then them.
+  const wide = /<svg[^>]*data-fit="wide"[^>]*>[\s\S]*?<\/svg>/.exec(/<section class="psec psec--wide" id="across"[\s\S]*?<\/section>/.exec(page)[0])[0];
+  const own = nearLine(MD, ACROSS_WINDOW).rows.filter((r) => state.ccns.includes(r.ccn)).length;
+  assert.equal([...wide.matchAll(/<g class="chart-mark" data-mark/g)].length, 2 + own);
+  assert.equal([...wide.matchAll(/<circle class="chart-across__dot/g)].length, nearLine(MD, ACROSS_WINDOW).rows.length, 'every near-line hospital still has its dot');
 });
 
 test('counts of one read in the singular: a state of one cut hospital, a bin of one hospital, a place with one hospital near the line', () => {

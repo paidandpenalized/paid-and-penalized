@@ -2,10 +2,11 @@
 // header naming it, then each group's tiles inside it. For "every cut hospital, sized by its dollars": the eye sees how
 // few large tiles carry most of the area without a name printed (each tile names itself only in its tooltip).
 //   groups   [{ label, sub, value, tiles: [{ value, tip }] }]: label and sub print in the header; value is the group's
-//            total (plotted on the header's mark, for the figure's table); tips, null to draw the tiles plain (a
-//            phone's drawing: no tooltips, a lighter page)
+//            total (plotted on the header's mark, for the figure's table); a tile with no tip is plain. A phone's drawing
+//            (isNarrow) draws every tile plain, with no tooltips, for a lighter page.
+//   width    the viewBox's width; height: its height (default: taller across a page than on a phone)
 import { html } from '../render/html.js';
-import { frame, mark, r2, text } from './svg.js';
+import { frame, isNarrow, mark, r2, text } from './svg.js';
 
 const HEAD = 30;
 // Tile coordinates to a tenth of a unit: hundreds of tiles, each a hair at most off.
@@ -53,7 +54,7 @@ export function squarify(values, rect) {
   return out;
 }
 
-export function treemap({ groups, width, height }) {
+export function treemap({ groups, width, height = isNarrow(width) ? 420 : 520 }) {
   if (!groups.length) throw new RangeError('treemap: no groups');
   const boxes = squarify(groups.map((g) => g.value), { x: 0, y: 0, w: width, h: height });
   const body = groups.map((g, gi) => {
@@ -69,10 +70,10 @@ export function treemap({ groups, width, height }) {
       tip: `${g.label}: ${g.sub}`, value: g.value, hit: null,
       body: html`<rect class="chart-tree__group" x="${r2(b.x + GAP / 2)}" y="${r2(b.y + GAP / 2)}" width="${r2(Math.max(0, b.w - GAP))}" height="${r2(Math.max(0, b.h - GAP))}"/>`,
     });
-    const plain = g.tiles.every((t) => !t.tip);
+    const plain = isNarrow(width) || g.tiles.every((t) => !t.tip);
     const drawn = plain
-      ? html`<path class="chart-tree__tile" d="${tiles.map((t) => (t.w > 0 && t.h > 0 ? `M${r2(t.x)} ${r2(t.y)}h${r2(t.w)}v${r2(t.h)}h${r2(-t.w)}z` : '')).join('')}"/>`
-      : html`<g class="chart-tree__tiles">${tiles.map((t, i) => (t.w > 0 && t.h > 0 ? mark({ tip: g.tiles[i].tip, hit: null, body: html`<rect x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(t.w)}" height="${r1(t.h)}"/>` }) : ''))}</g>`;
+      ? html`<path class="chart-tree__tile" d="${tiles.map((t) => (t.w > 0 && t.h > 0 ? `M${r1(t.x)} ${r1(t.y)}h${r1(t.w)}v${r1(t.h)}h${r1(-t.w)}z` : '')).join('')}"/>`
+      : html`<g class="chart-tree__tiles">${tiles.map((t, i) => (t.w > 0 && t.h > 0 ? html`<rect data-mark x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(t.w)}" height="${r1(t.h)}"><title>${g.tiles[i].tip}</title></rect>` : ''))}</g>`;
     return html`<g class="chart-tree__g">${head}${drawn}
 ${labelled ? text({ x: b.x + 6, y: b.y + 15, anchor: 'start', cls: 'chart-tree__label', body: g.label }) : ''}${labelled && wide ? text({ x: b.x + b.w - 6, y: b.y + 15, anchor: 'end', cls: 'chart-tree__sub', body: g.sub }) : ''}</g>`;
   });

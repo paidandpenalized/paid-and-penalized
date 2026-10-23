@@ -93,12 +93,13 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
   const startCut = texts.cut(first.result.before.flag);
   const domain = rampDomain(range, first.ramp);
   const startAt = rampAt(first.ramp.actual, domain);
-  // The dollars, where the site has them: the start's, as the table writes them; the head's figure and the cliff dot's
-  // level as last drawn (the figure counts from there, the dot moves from there).
+  // The dollars, where the site has them: the start's, as the table writes them; the dollars as last drawn (the head's
+  // figure counts from them, the cliff's dot moves from them; null before the first draw).
   const money = first.money && texts.money ? texts.money : null;
   const startMoney = money && money.amount(first.money.before);
-  let shownMoney = first.money?.after ?? null;
+  let shownMoney = null;
   let counting = null;
+  const reducedMotion = env.matchMedia?.(REDUCED_MOTION);
 
   // A link's fragment: what decode() trusts goes through reduce(); the rest stays CMS's.
   const load = (state) => reduce(state, { type: 'load', changes: decode(env.location.hash, { ids: start.ids, params: rules.params }).changes });
@@ -153,7 +154,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     setAttr(node, 'class', `wi-money${moneyClass(next)}`);
     if (counting !== null) env.cancelAnimationFrame?.(counting);
     counting = null;
-    const still = env.matchMedia?.(REDUCED_MOTION).matches || typeof env.requestAnimationFrame !== 'function';
+    const still = reducedMotion?.matches || typeof env.requestAnimationFrame !== 'function';
     if (still || isEither(from) || isEither(next) || sameDollars(from, next)) {
       setText(node, money.amount(next));
       return;
@@ -250,11 +251,15 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     place(el['hyp-edge'], edge);
     setText(el['hyp-edge'], edge.text);
     if (money && vm.money) {
-      const was = shownMoney;
+      const was = shownMoney ?? vm.money.after;
+      // The figures are written the first time and then only when the dollars change; the cliff's dot rides the score
+      // either way.
+      if (shownMoney === null || !sameDollars(was, vm.money.after)) {
+        after(el.money, startMoney, money.amount(vm.money.after));
+        if (el['head-money-was']) el['head-money-was'].hidden = sameMoney(vm.money);
+        countMoney(was, vm.money.after);
+      }
       shownMoney = vm.money.after;
-      after(el.money, startMoney, money.amount(vm.money.after));
-      if (el['head-money-was']) el['head-money-was'].hidden = sameMoney(vm.money);
-      countMoney(was, vm.money.after);
       drawCliff(vm, t, unchanged, was);
     }
 
@@ -331,7 +336,7 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     return true;
   }
 
-  const behavior = () => (env.matchMedia?.(REDUCED_MOTION).matches ? 'auto' : 'smooth');
+  const behavior = () => (reducedMotion?.matches ? 'auto' : 'smooth');
   const reveal = (event) => {
     if (!env.matchMedia?.(NARROW).matches) return;
     event.target.scrollIntoView({ block: 'center', behavior: behavior() });

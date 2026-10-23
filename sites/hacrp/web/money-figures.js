@@ -4,14 +4,12 @@
 // hospital over CMS's line loses 1% of everything Medicare pays it for inpatient care; one under it loses nothing.
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
-import { drawn, figure, num } from '../../../web/charts/figure.js';
+import { PAGE, drawn, figure, num } from '../../../web/charts/figure.js';
 import { cmsText, count, decimal, dollars, isoDate, listText, money } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
-import { lineScore } from '../../../web/whatif/marks.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { DOLLARS_HREF } from './links.js';
-import { countBins, edgesAround } from './compare.js';
 import { BASE_PARTS, OTHER_PARTS } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
@@ -72,21 +70,6 @@ ${rangeLine()}</div>`,
 
 // ---------- the cliff ----------
 
-// Every published score, binned finely for the cliff's strip, once per build; the cliff's wide drawing, about the
-// page's width.
-const STRIP_BINS = 120;
-const CLIFF_DRAWN = 1040;
-const STRIPS = new WeakMap();
-// near: how many scored within CLIFF_NEAR of CMS's line, either side (the strip's note).
-function stripOf(nat, boundary) {
-  if (!STRIPS.has(nat)) {
-    const edges = edgesAround(nat.domain[0], nat.domain[1], boundary.lowestYes, STRIP_BINS);
-    const line = lineScore(boundary);
-    STRIPS.set(nat, { edges, counts: countBins(nat.scores, edges), near: nat.scores.filter((x) => Math.abs(x - line) <= CLIFF_NEAR).length });
-  }
-  return STRIPS.get(nat);
-}
-
 // The cliff for this hospital as figure n: the HAC cut its estimate would be at any score, $0 to the line and the
 // whole cut past it, the hospital a dot on it. A scored, estimated hospital only.
 export function cliffFigure(view, m, nat, { n, source }) {
@@ -98,15 +81,14 @@ export function cliffFigure(view, m, nat, { n, source }) {
     zero: zero(), zeroWords: fill('cliffZero', { highestNo }), cut: amount, cutWords: fill('cliffCut', { lowestYes }), line: t('barLine'),
     actual: t('barThis'), actualValue: view.score.text, highest: t('cliffHighest'), highestValue: highest,
   };
-  const values = { zero: 0, cut: -m.atStake };
-  const strip = stripOf(nat, view.boundary);
-  const draw = (width) => cliff({ domain: nat.domain, band: [view.boundary.highestNo, view.boundary.lowestYes], actual: view.total, strip, labels, values, width });
+  const { strip } = nat;
+  const draw = (width) => cliff({ domain: nat.domain, band: [view.boundary.highestNo, view.boundary.lowestYes], actual: view.total, strip, labels, cut: -m.atStake, width });
   const distance = distanceText(view);
   const takeaway = m.cut ? fill('cliffTakeawayYes', { distance, amount, highest }) : fill('cliffTakeawayNo', { distance, amount, highest });
   const cut = dollars(-m.atStake);
   const mine = m.cut ? cut : dollars(0);
   return figure({
-    n, takeaway, ...drawn(draw, CLIFF_DRAWN), source, claimLevel: 'estimate',
+    n, takeaway, ...drawn(draw, PAGE), source, claimLevel: 'estimate',
     alt: fill('cliffAlt', { zero: zero(), amount }),
     note: fill('cliffStrip', { n: count(strip.near), all: count(nat.scores.length), near: decimal(CLIFF_NEAR, 1) }),
     table: {

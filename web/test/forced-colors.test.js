@@ -14,9 +14,9 @@ const MARKS = [
   // the money's charts (treemap, acrossLine, pairBars, geo usBubbles, columns)
   '.chart-tree__group', '.chart-tree__tile', '.chart-across__dot', '.chart-across__dot--over', '.chart-across__dot--faint', '.chart-pair__a',
   '.chart-pair__b', '.chart-bubbles__land', '.chart-bubble', '.chart-col--rew',
-  // the cliff (web/charts/cliff.js)
+  // the cliff (web/charts/cliff.js; its strip of every score is two paths in .chart-dist and .chart-col--pen)
   '.chart-cliff__ledge', '.chart-cliff__drop', '.chart-cliff__floor', '.chart-cliff__dot', '.chart-cliff__dot--over', '.chart-cliff__ring',
-  '.chart-cliff__bin', '.chart-cliff__bin--over',
+  '.chart-dist',
   // the dollars on the hospital page (sites/hacrp/web/styles.css): the statement's bars and key, the hatched boxes
   '.stmt__part', '.stmt__scope', '.stmt__cut', '.stmt__add', '.stmt__sw--part', '.stmt__sw--scope', '.stmt__sw--cut', '.money__none',
   '.money__range--pending',

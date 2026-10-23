@@ -5,7 +5,7 @@
 import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
-import { checkId, frame, hatchDefs, hatchFill, mark, plain, r2, WIDTH } from './svg.js';
+import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 
@@ -126,7 +126,7 @@ function thinned(projection, thin = THIN) {
     },
   };
 }
-const outlinePath = (projection, thin = THIN) => geoPath(thinned(projection, thin)).digits(DIGITS);
+const outlinePath = (projection, thin = THIN, digits = DIGITS) => geoPath(thinned(projection, thin)).digits(digits);
 
 // One state's projection and outline at a width, fitted to its own shape; remembered, since every hospital in a state
 // shares them.
@@ -405,13 +405,14 @@ export function usYearMap({ shapes, groups, size, width }) {
 // in their insets), its area the state's value on that layer's own scale; the largest drawn first, so a small state's
 // circle shows on top of a big neighbor's. Each circle is a mark with its tooltip, value and data-state.
 //   layers   [{ id, states: { [code]: { value (> 0), label } } }] (codes from US_MAP_CODES; a state left out gets no
-//            circle); rMax: the largest circle's radius in each layer, in viewBox units
-// The land is background, drawn thinner than the choropleth's outlines (BUBBLE_THIN times as thinned).
+//            circle); rMax: the largest circle's radius in each layer, in viewBox units (default: larger across a page than
+//            on a phone)
+// The land is background, drawn thinner than the choropleth's outlines (BUBBLE_THIN times as thinned) and to whole units.
 const BUBBLE_THIN = 3;
-export function usBubbles({ shapes, layers, width, rMax }) {
+export function usBubbles({ shapes, layers, width, rMax = isNarrow(width) ? 22 : 52 }) {
   const { height, projection } = usPaths(shapes, width);
   const centroid = geoPath(projection);
-  const coarse = outlinePath(projection, THIN_US * BUBBLE_THIN * Math.max(1, width / US_THIN_WIDTH));
+  const coarse = outlinePath(projection, THIN_US * BUBBLE_THIN * Math.max(1, width / US_THIN_WIDTH), 0);
   const land = US_MAP_CODES.map((code) => (shapes.has(code) ? coarse(shapes.get(code)) : null)).filter(Boolean);
   const layer = ({ id, states }) => {
     const entries = Object.entries(states).filter(([code, s]) => US_MAP_CODES.includes(code) && s.value > 0 && shapes.get(code));

@@ -94,8 +94,10 @@ export const counter = (from = 1) => {
 
 // A table cell that shows text and keeps a raw value (for sorting, the CSV and the plotted-value check).
 export const num = (text, value) => ({ text, value });
-// The wide variant's default viewBox width, for screens 560px and up.
+// The wide variant's default viewBox width, for screens 560px and up; PAGE: the width of a figure the page sets across
+// its whole width (a chart of the money, drawn larger).
 export const WIDE = 560;
+export const PAGE = 1040;
 // A chart drawn twice, on the kit's narrow viewBox and a wide one, as figure() takes them: { svg, svgWide }.
 export const drawn = (draw, wide = WIDE) => ({ svg: draw(WIDTH), svgWide: draw(wide) });
 
