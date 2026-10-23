@@ -6,7 +6,8 @@ import { SITE } from '../site.js';
 import { fillCopy } from './components.js';
 import { html, jsonText, raw } from './html.js';
 
-const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
+// The byline's profile (the About page links it too).
+export const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
 const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
 // The fonts a page preloads (files in web/fonts), by default: the headline face, the body face and IBM Plex Mono 400
 // (tables, facts and place lines). A page whose first screen shows another face passes its own list (preloadFonts):
@@ -14,7 +15,8 @@ const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
 export const PRELOAD_FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
 const FONT_NAME = /^[a-z0-9-]+$/;
 
-const newTab = html`<span class="vh">${COPY.newTab}</span>`;
+// The hidden words a link that opens a new tab carries, for a screen reader.
+export const newTab = html`<span class="vh">${COPY.newTab}</span>`;
 
 const byline = html`<p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener"><span class="nw">${COPY.bylineName}</span>${newTab}</a></p>`;
 const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${COPY.themeToggle}</button>`;

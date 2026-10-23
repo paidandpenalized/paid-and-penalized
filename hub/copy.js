@@ -16,8 +16,6 @@ export const COPY = typesetCopy({
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
   estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
-  aiHeading: 'How AI tools are used',
-  aiUse: "AI tools help write this site's code and draft its text. Every number comes from deterministic code run on public data, CMS's above all, and is checked against CMS's published values wherever CMS publishes them. A person reviews what is published.",
 
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
   // Each page: a title, a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading

@@ -1,12 +1,16 @@
-// The hub: the family's front page (a stub until the hub is built), the methods stub, the not-found page, and the
-// two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
-// sites before it emitted. The hub's own pages stay noindex until the hub is built.
+// The hub: the family's front page (a stub until the hub is built), the methods stub, the policy pages (Terms, privacy,
+// About, accessibility), the not-found page, and the two files crawlers read: robots.txt and sitemap.xml. It runs last,
+// so the sitemap lists every indexable page the sites before it emitted. The hub's own pages stay noindex until the
+// hub is built.
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
+import { fillAround, fillCopy } from '../web/render/components.js';
 import { escapeHtml, html } from '../web/render/html.js';
-import { page } from '../web/render/layout.js';
+import { LINKEDIN, feedbackHref, newTab, page } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
+import { CLOUDFLARE_PRIVACY_URL, CODE_LICENSE, CONTENT_LICENSE, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
+import { policyPage } from './policy.js';
 
 // The hub is not released: its pages are noindex in every build until it is built.
 const RELEASED = false;
@@ -45,13 +49,86 @@ function methods(assets, robots) {
 <p>${COPY.estimateHow}</p>
 <p>${COPY.estimateNot}</p>
 </section>
-<section class="block" id="ai" aria-labelledby="ai-h">
-<h2 id="ai-h">${COPY.aiHeading}</h2>
-<p>${COPY.aiUse}</p>
-</section>
+<p>${fillAround((marks) => fillCopy(COPY, 'methodsAiPointer', marks), { about: html`<a href="/about/#ai">${COPY.aboutLink}</a>` })}</p>
 </article>`;
   return page({ title: `${COPY.methodsTitle} · ${SITE.name}`, description: COPY.methodsDescription, path: '/methods/', robots, body, assets, site: 'hub' });
 }
+
+// ---------- the policy pages: their words (copy.js) and the links they fill in; the layout is policy.js's ----------
+// A link to another site that opens in a new tab, with the hidden words saying so.
+const outside = (href, text) => html`<a href="${href}" target="_blank" rel="noopener">${text}${newTab}</a>`;
+const feedbackLink = (path) => outside(feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path }), COPY.feedbackForm);
+const LINKS = {
+  corrections: html`<a href="/corrections/">${COPY.correctionsLink}</a>`,
+  estimate: html`<a href="/methods/#estimate">${COPY.estimateLink}</a>`,
+};
+
+// A paragraph of copy: parts maps a placeholder to the markup (a link) that stands there, values fills the plain ones.
+const para = (key, parts = {}, values = {}) => html`<p>${fillAround((marks) => fillCopy(COPY, key, { ...values, ...marks }), parts)}</p>
+`;
+// A section from a heading's copy key and its paragraphs.
+const section = (id, headingKey, ...paragraphs) => ({ id, heading: COPY[headingKey], body: html`${paragraphs}` });
+
+// Each page's content, given its feedback link: the title, description, brief lines and sections policyPage lays out.
+const terms = (feedback) => ({
+  title: COPY.termsTitle,
+  description: COPY.termsDescription,
+  brief: [COPY.termsBrief1, COPY.termsBrief2, COPY.termsBrief3, COPY.termsBrief4],
+  sections: [
+    section('what', 'termsWhatHeading', para('termsWhat')),
+    section('independent', 'termsAffiliationHeading', para('termsAffiliation')),
+    section('numbers', 'termsNumbersHeading', para('termsNumbers'), para('termsEstimate', { estimate: LINKS.estimate })),
+    section('advice', 'termsAdviceHeading', para('termsAdvice')),
+    section('current', 'termsAsOfHeading', para('termsAsOf')),
+    section('reuse', 'termsReuseHeading', para('termsReuse', {}, { contentLicense: CONTENT_LICENSE, codeLicense: CODE_LICENSE })),
+    section('warranty', 'termsWarrantyHeading', para('termsWarranty')),
+    section('questions', 'termsContactHeading', para('termsContact', { feedback, corrections: LINKS.corrections })),
+  ],
+});
+
+const privacy = () => ({
+  title: COPY.privacyTitle,
+  description: COPY.privacyDescription,
+  brief: [COPY.privacyBrief1, COPY.privacyBrief2, COPY.privacyBrief3, COPY.privacyBrief4, COPY.privacyBrief5],
+  sections: [
+    section('reading', 'privacyReadingHeading', para('privacyReading', { cloudflarePolicy: outside(CLOUDFLARE_PRIVACY_URL, COPY.cloudflarePolicy) })),
+    section('counting', 'privacyCountingHeading', para('privacyCounting')),
+    section('search', 'privacySearchHeading', para('privacySearch')),
+    section('feedback', 'privacyFeedbackHeading', para('privacyFeedback', { googlePolicy: outside(GOOGLE_PRIVACY_URL, COPY.googlePolicy) }), para('privacyFeedback2')),
+    section('patient-info', 'privacyPhiHeading', para('privacyPhi')),
+    section('other-sites', 'privacyLinksHeading', para('privacyLinks')),
+  ],
+});
+
+const about = (feedback) => ({
+  title: COPY.aboutTitle,
+  description: COPY.aboutDescription,
+  brief: [COPY.aboutBrief1, COPY.aboutBrief2, COPY.aboutBrief3, COPY.aboutBrief4],
+  sections: [
+    section('what', 'aboutWhatHeading', para('aboutWhat')),
+    section('who', 'aboutWhoHeading', para('aboutWho', { linkedin: outside(LINKEDIN, COPY.linkedinLink) })),
+    section('coi', 'aboutCoiHeading', para('aboutCoi')),
+    section('ai', 'aboutAiHeading', para('aboutAi')),
+    section('contact', 'aboutContactHeading', para('aboutContact', { feedback })),
+  ],
+});
+
+const accessibility = (feedback) => ({
+  title: COPY.a11yTitle,
+  description: COPY.a11yDescription,
+  brief: [fillCopy(COPY, 'a11yBrief1', { version: WCAG_VERSION }), COPY.a11yBrief2, COPY.a11yBrief3, COPY.a11yBrief4],
+  sections: [
+    section('standard', 'a11yTargetHeading', para('a11yTarget', {}, { version: WCAG_VERSION })),
+    section('built-in', 'a11yBuiltHeading', para('a11yBuilt')),
+    section('testing', 'a11yTestedHeading', para('a11yTested')),
+    section('gaps', 'a11yGapsHeading', html`<ul class="pol__list"><li>${COPY.a11yGap1}</li></ul>
+`),
+    section('browsers', 'a11yBrowsersHeading', para('a11yBrowsers')),
+    section('report', 'a11yReportHeading', para('a11yReport', { feedback })),
+  ],
+});
+
+const POLICY_PAGES = { '/terms/': terms, '/privacy/': privacy, '/about/': about, '/accessibility/': accessibility };
 
 function notFound(assets, robots) {
   const body = html`<article class="wrap page">
@@ -81,6 +158,9 @@ export async function generateHub(ctx) {
   const robots = robotsFor({ env: ctx.env, released: RELEASED });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
   ctx.emit({ path: '/methods/', robots, text: methods(assets, robots) });
+  for (const [path, content] of Object.entries(POLICY_PAGES)) {
+    ctx.emit({ path, robots, text: policyPage({ path, ...content(feedbackLink(path)), assets, robots }) });
+  }
   // The not-found page is never indexed, released or not.
   const notFoundRobots = robotsFor({ env: ctx.env, released: RELEASED, eligible: false });
   ctx.emit({ path: '/404.html', robots: notFoundRobots, text: notFound(assets, notFoundRobots) });
