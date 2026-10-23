@@ -374,6 +374,9 @@ def status(ccn, state, inp, parhm):
     the same as not knowing), else "estimated". The first that applies wins. `parhm` is the set of participant CCNs."""
     if state == MARYLAND:
         return "maryland"
+    # Unused today: the participant set is empty (`ipps_pins.PARHM`), because Methods estimates a participant like any
+    # other hospital. A published list of CCNs would bring this status, and the pages' "parhm" wording, back; that
+    # wording would then need to agree with Methods again.
     if ccn in parhm:
         return "parhm"
     if inp is None or _missing(inp.get("cases")) or _missing(inp.get("cmi")):
@@ -452,7 +455,8 @@ def checks(nat, *, hacrp_yes, uc_pool):
     """Hold `national`'s sums against what CMS publishes about the programs and the payment. A list of
     `{id, value, low, high, pass}`:
       hrrp_share       HRRP dollars lost over B of the penalized hospitals, in HRRP_SHARE
-      vbp_net          |HVBP dollars| (the net of winners and losers), at most VBP_NET_OF_POOL of the 2% pool
+      vbp_net          |HVBP dollars| (the net of winners and losers), at most VBP_NET_OF_POOL of the 2% pool; with
+                       no value-based base there is no pool to hold it to, so it has value None and fails
       hac_share        HAC dollars lost over everyone's T, in HAC_SHARE
       outlier_share    operating outliers over the federal DRG payment plus operating outliers, in OUTLIER_SHARE
       uc_pool          uncompensated care over `uc_pool`, the final rule's pool (`rates["uc_pool"]`), in UC_POOL_SHARE
@@ -461,9 +465,11 @@ def checks(nat, *, hacrp_yes, uc_pool):
       yes_unestimated  cut hospitals with no estimate, at most YES_UNESTIMATED_MAX
     A share with nothing to divide by has value None and fails."""
     parts = nat["parts"]
+    # On an empty value-based base the band is [0, 0], which a net of zero meets: that is no test, so it has no value.
+    vbp_net = abs(nat["hvbp"]) if nat["vbp_base"] else None
     return [
         result("hrrp_share", _ratio(-nat["hrrp"], nat["hrrp_base"]), *HRRP_SHARE),
-        result("vbp_net", abs(nat["hvbp"]), 0, VBP_NET_OF_POOL * VBP_WITHHOLD * nat["vbp_base"]),
+        result("vbp_net", vbp_net, 0, VBP_NET_OF_POOL * VBP_WITHHOLD * nat["vbp_base"]),
         result("hac_share", _ratio(-nat["hac"], nat["total"]), *HAC_SHARE),
         result("outlier_share", _ratio(parts["outlier_op"], parts["fed"] + parts["outlier_op"]), *OUTLIER_SHARE),
         result("uc_pool", _ratio(parts["uc"], uc_pool), *UC_POOL_SHARE),

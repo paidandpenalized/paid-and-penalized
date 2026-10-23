@@ -906,7 +906,7 @@ class Checks(unittest.TestCase):
         self.assertIs(self.check(uc_pool=24000.0)["uc_pool"]["pass"], False)  # half the pool: a join dropped hospitals
 
     def test_the_vbp_net_is_held_to_a_tenth_of_the_pool_either_way(self):
-        # With no Table 16B base the pool is zero and any net of zero passes: the check means nothing there, so these
+        # With no Table 16B base the pool is zero and the check means nothing (it fails: see the next test), so these
         # cases are worked on a base that is not zero.
         self.assertGreater(NAT["vbp_base"], 0)
         pool = 0.02 * 240000  # 4,800: the 2% withheld from the Table 16B hospitals' base payments
@@ -917,6 +917,14 @@ class Checks(unittest.TestCase):
             self.assertEqual(c["value"], abs(hvbp))
         # it scales with the base of the hospitals in Table 16B, not with all of them
         self.assertIs(self.check(hvbp=480, vbp_base=100000)["vbp_net"]["pass"], False)
+
+    def test_the_vbp_net_fails_on_an_empty_value_based_base(self):
+        # The band is [0, 0] on no base, which a net of zero meets: the check must fail itself, not pass as no test.
+        for hvbp in (0, 480):
+            c = self.check(hvbp=hvbp, vbp_base=0)["vbp_net"]
+            self.assertEqual((c["value"], c["low"], c["high"], c["pass"]), (None, 0, 0, False), hvbp)
+        # a base that is not zero holds the check again
+        self.assertIs(self.check(hvbp=0, vbp_base=1)["vbp_net"]["pass"], True)
 
     def test_hac_count_check_equals_the_files_yes_count_whatever_the_status(self):
         # Every hospital CMS cut must be a row, whatever its status: the ones left without an estimate (a participant,
@@ -946,7 +954,7 @@ class Checks(unittest.TestCase):
 
     def test_a_check_that_cannot_be_computed_fails_rather_than_dividing_by_zero(self):
         c = self.check(national([]), hacrp_yes=0, uc_pool=0.0)
-        for key in ("hrrp_share", "hac_share", "outlier_share", "uc_pool"):
+        for key in ("hrrp_share", "vbp_net", "hac_share", "outlier_share", "uc_pool"):
             self.assertEqual((c[key]["value"], c[key]["pass"]), (None, False), key)
         self.assertEqual(self.check(national([]), hacrp_yes=0)["uc_pool"]["pass"], False)  # nothing of a real pool
 
