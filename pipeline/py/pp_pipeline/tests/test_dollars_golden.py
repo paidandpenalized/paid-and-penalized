@@ -1,16 +1,19 @@
 """The dollars dataset (data/emitted/dollars/fy2026/dollars.json): the committed file equals a fresh build from the
 pins, covers every hospital in the HACRP file once, passes its checks, and its headline counts agree with the HACRP
 site's own. Counts asserted here are facts of the pinned bytes (a re-pin moves them on purpose); no hospital is named."""
+import contextlib
 import csv
 import io
 import unittest
+from unittest import mock
 
 from pp_engine import dollars
-from pp_engine.contract import format_emitted
+from pp_engine.contract import format_emitted, source_manifest_hash
 from pp_engine.schema import validate
 from pp_engine.tests.fixtures import assert_adds_up
+from pp_pipeline import emit_dollars
 from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, camel,
-                                      committed_path, enforce_caps, unlisted_counts)
+                                      committed_path, enforce_caps, site_yes_count, unlisted_counts, yes_count)
 from pp_pipeline.emit_hospital import HACRP
 from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
 
@@ -168,6 +171,71 @@ class Caps(unittest.TestCase):
             enforce_caps(self.rows(HRRP_UNLISTED_MAX + 1, 0))
         with self.assertRaisesRegex(ValueError, "Table 16B"):
             enforce_caps(self.rows(0, VBP_UNLISTED_MAX + 1))
+
+
+class SiteYesCount(unittest.TestCase):
+    """The Yes count the `hac_count` check reads from the HACRP site's emitted file: refused when that file was built
+    from an older HACRP pin than the current one (the rows here come from the current pin, so a stale count would
+    compare two different files and pass or fail for the wrong reason). Synthetic files; the pin ids are the real ones."""
+
+    @staticmethod
+    def site(sha, sources=(HACRP,), yes=2):
+        entries = [{"id": i, "sha256": sha, "bytes": 1} for i in sources]
+        return {"sources": list(sources), "source_manifest": source_manifest_hash(entries),
+                "hospitals": [{"paymentReduction": "Yes"}] * yes + [{"paymentReduction": "No"}]}
+
+    @staticmethod
+    def manifest(sha, pin=HACRP):
+        return [{"id": pin, "sha256": sha, "bytes": 1}, {"id": "other-pin", "sha256": "ee" * 32, "bytes": 1}]
+
+    def test_a_file_built_from_the_current_pin_gives_its_yes_count(self):
+        self.assertEqual(yes_count(self.site("aa" * 32), self.manifest("aa" * 32)), 2)
+
+    def test_a_file_built_from_another_version_of_the_pin_raises_and_says_how_to_fix_it(self):
+        with self.assertRaisesRegex(ValueError, r"emit the HACRP site first \(`make emit`"):
+            yes_count(self.site("aa" * 32), self.manifest("bb" * 32))
+
+    def test_a_file_that_does_not_name_the_hacrp_pin_raises(self):
+        site = self.site("aa" * 32, sources=("other-pin",))
+        with self.assertRaisesRegex(ValueError, "emit the HACRP site first"):
+            yes_count(site, self.manifest("aa" * 32))
+
+    def test_the_committed_site_file_is_fresh_and_its_count_is_the_csv_s(self):
+        fy = read_json(committed_path())["fy"]
+        self.assertEqual(site_yes_count(fy), sum(r["Payment Reduction"] == "Yes" for r in hacrp_file()))
+
+
+class MainWritesNothingWhenACheckFails(unittest.TestCase):
+    """A failing check leaves the committed file as it was: nothing written, exit 1, the failures listed."""
+
+    @staticmethod
+    def fresh(*failing):
+        checks = [{"id": i, "value": 0.5, "low": 0.1, "high": 0.2, "pass": i not in failing} for i in ("a", "b", "c")]
+        return {"fy": 2099, "checks": checks, "hospitals": []}
+
+    def run_main(self, fresh):
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(emit_dollars, "build_from_pins", return_value=fresh), \
+                mock.patch.object(emit_dollars, "write_emitted", return_value={**fresh, "built_at": "t"}) as write, \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = emit_dollars.main()
+        return code, write, out.getvalue() + err.getvalue()
+
+    def test_a_failing_check_writes_nothing_and_exits_1_naming_the_failures(self):
+        code, write, said = self.run_main(self.fresh("a", "c"))
+        self.assertEqual(code, 1)
+        write.assert_not_called()
+        listed = said.split("checks failing:")[-1]
+        self.assertRegex(listed, r"\ba 0\.5 outside 0\.1 to 0\.2")
+        self.assertRegex(listed, r"\bc 0\.5 outside 0\.1 to 0\.2")
+        self.assertNotRegex(listed, r"\bb\b")  # b passed: not listed
+
+    def test_all_checks_passing_writes_the_file_and_exits_0(self):
+        fresh = self.fresh()
+        code, write, said = self.run_main(fresh)
+        self.assertEqual(code, 0)
+        write.assert_called_once_with(emit_dollars.emitted_path(2099), fresh, SCHEMA)
+        self.assertIn("none", said)
 
 
 if __name__ == "__main__":

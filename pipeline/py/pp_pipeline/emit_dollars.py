@@ -2,7 +2,8 @@
 
 `python3 -I pipeline/py/run.py emit` (or `make emit`) runs this after the hospital master. A rebuild that changes
 nothing keeps the committed built_at, so git stays clean. The `hac_count` check reads the Yes count in the HACRP site's
-emitted file, so `make emit`, which runs that site's emitter first, is the way to rebuild after a re-pin.
+emitted file, so `make emit`, which runs that site's emitter first, is the way to rebuild after a re-pin (a site
+file built from an older pin is refused). A failing check writes nothing and exits 1.
 
 The file holds, for every hospital in the HACRP file, the estimate pp_engine.dollars makes of what Medicare pays it for
 the year and how much HRRP, HVBP and the HAC Reduction Program move that (a model, not a bill: see the engine's
@@ -10,12 +11,13 @@ docstring and docs/METHODS-LOG.md, `dollars`), then the national sums, the sums 
 counts in its headline, the checks that hold the sums against what CMS publishes, and `bands` (null until the
 back-test, milestone 3). It lives at the family level because more than one site reads it.
 """
+import sys
 from datetime import datetime, timezone
 
 from pp_engine import dollars
-from pp_engine.contract import envelope
+from pp_engine.contract import envelope, source_manifest_hash
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
-from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, write_emitted
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, hrrp_factors, payment_inputs, rates, vbp_factors
 
 SCHEMA_VERSION, METHODS_VERSION = 1, 1
@@ -94,13 +96,26 @@ def totals_json(nat):
     return {**{camel(k): v for k, v in nat.items()}, "parts": {camel(k): v for k, v in nat["parts"].items()}}
 
 
+def yes_count(site, manifest):
+    """The number of hospitals the HACRP site's emitted file `site` marks Yes, refused unless the file was built from
+    the HACRP pin as `manifest` now has it: its `source_manifest` must equal the hash of the current entries for the
+    sources it names, and one of them must be the HACRP pin. Otherwise the count is of an older file than the rows it
+    is held against."""
+    stale = HACRP not in site["sources"] or site["source_manifest"] != source_manifest_hash(
+        [manifest_entry(pin, manifest) for pin in site["sources"]])
+    if stale:
+        raise ValueError("the HACRP site's emitted file was not built from the current HACRP pin: "
+                         "emit the HACRP site first (`make emit` does)")
+    return sum(h["paymentReduction"] == "Yes" for h in site["hospitals"])
+
+
 def site_yes_count(fy):
     """The number of hospitals the HACRP site's emitted file (built from the same pin by the site's own reader) marks
     Yes. The `hac_count` check holds the rows here against it, so the rows are not checked against themselves."""
     path = EMITTED_DIR / "hacrp" / f"fy{fy}" / "hacrp.json"
     if not path.exists():
         raise ValueError(f"{path.relative_to(REPO_ROOT)} is missing: emit the HACRP site first (`make emit` does)")
-    return sum(h["paymentReduction"] == "Yes" for h in read_json(path)["hospitals"])
+    return yes_count(read_json(path), read_manifest())
 
 
 def build_from_pins(built_at):
@@ -137,11 +152,18 @@ def committed_path():
 
 
 def main():
+    """Build, hold the national sums against the checks, and only then write. A failing check writes nothing (the
+    committed file stays as it was), lists the failures and returns 1: a file that fails its own checks is not
+    published, and nothing downstream reads it half-trusted."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     fresh = build_from_pins(now)
     path = emitted_path(fresh["fy"])
+    failed = [c for c in fresh["checks"] if not c["pass"]]
+    if failed:
+        print(f"not written ({path.relative_to(REPO_ROOT)} left as it was); checks failing: "
+              + "; ".join(f"{c['id']} {c['value']} outside {c['low']} to {c['high']}" for c in failed), file=sys.stderr)
+        return 1
     out = write_emitted(path, fresh, SCHEMA)
-    failed = [c["id"] for c in out["checks"] if not c["pass"]]
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, built_at {out['built_at']}; "
-          f"checks failing: {failed or 'none'}")
-    return 1 if failed else 0
+          "checks failing: none")
+    return 0
