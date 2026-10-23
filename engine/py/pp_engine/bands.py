@@ -136,8 +136,10 @@ def stratum_bands(errors_by_stratum):
 def bootstrap_ratio(pairs, draws=BOOTSTRAP_DRAWS, seed=BOOTSTRAP_SEED):
     """{n, ratio, p10, p90, draws, seed}: sum(actual) / sum(model) over `pairs` [(model, actual), ...], and the 10th and
     90th percentiles of that ratio over `draws` resamples of the pairs with replacement (each resample as many pairs
-    as there are), rounded to DECIMALS. The draws come from Python's Mersenne Twister seeded with `seed`, reading
-    `random()` only, whose sequence for an integer seed is fixed across Python 3 versions."""
+    as there are), rounded to DECIMALS. The draws come from Python's Mersenne Twister seeded with `seed`, whose
+    `random()` sequence for an integer seed is fixed across Python 3 versions; `choices` without weights takes each pick
+    as pairs[floor(random() x n)], one `random()` per pick, as it has since Python 3.6. The sums add up in the
+    resample's order, in floats, as they always have, so a rebuild gives the same bytes."""
     if len(pairs) < MIN_STRATUM:
         raise ValueError(f"{len(pairs)} hospitals: too few to resample (at least {MIN_STRATUM})")
     if any(not m > 0 or not a > 0 for m, a in pairs):
@@ -147,8 +149,7 @@ def bootstrap_ratio(pairs, draws=BOOTSTRAP_DRAWS, seed=BOOTSTRAP_SEED):
     ratios = []
     for _ in range(draws):
         sm = sa = 0.0
-        for _ in range(n):
-            m, a = pairs[int(rng.random() * n)]
+        for m, a in rng.choices(pairs, k=n):
             sm += m
             sa += a
         ratios.append(sa / sm)
