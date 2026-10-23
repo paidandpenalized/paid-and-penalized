@@ -207,8 +207,10 @@ test('the changes and the sources: every changelog entry with its date and items
   }
   // The table lists the pins the HACRP pages read, not every pin.
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
-  // The pins no page reads yet: each id comes off this list when a page reads it (and then joins pinsUsed). A pin
-  // read but missing from pinsUsed, or one pinned and read by nothing, fails here.
+  // A pin that no page declares (in a `sources` list that feeds pinsUsed) fails here unless it is on this list. The four
+  // FY2026 IPPS pins are listed until the pages load the dollar estimates, whose `sources` then join pinsUsed; removing
+  // them from this list belongs in that same change. This does not catch a page that reads a listed pin without
+  // declaring it.
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   assert.deepEqual(
     manifest.filter((e) => !used.has(e.id)).map((e) => e.id),
