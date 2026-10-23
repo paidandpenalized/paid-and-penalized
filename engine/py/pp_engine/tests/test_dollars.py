@@ -4,9 +4,8 @@ import math
 import random
 import unittest
 
-from pp_engine.dollars import (HAC_RATE, HAC_SHARE, HRRP_SHARE, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
-                               YES_UNESTIMATED_MAX, base_payment, checks, estimate, hospital_row, national,
-                               round_dollars, status, total_payment)
+from pp_engine.dollars import (HAC_RATE, HAC_SHARE, HRRP_SHARE, PARTS, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
+                               YES_UNESTIMATED_MAX, checks, estimate, hospital_row, national, round_dollars, status)
 from pp_engine.parse import SchemaError
 
 # Invented standardized amounts (labor, nonlabor), all different so a mix-up of table, key or column shows.
@@ -40,8 +39,7 @@ def est(h=None, hrrp=1.0, vbp=1.0, cut=False, **changes):
 
 def nonzero(e):
     """The estimate's dollar components that are not zero."""
-    parts = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")
-    return {k: e[k] for k in parts if e[k] != 0}
+    return {k: e[k] for k in PARTS if e[k] != 0}
 
 
 class Close(unittest.TestCase):
@@ -57,23 +55,23 @@ class Close(unittest.TestCase):
 class Base(Close):
     def test_base_uses_1a_above_one_and_1b_at_or_below(self):
         # wage index 1.5 > 1, Table 1A: 15 x (4000 x 1.5 + 2000 x 1) = 15 x 8000 = 120,000
-        self.assertDollars(base_payment(hospital(), RATES), 120000.0)
+        self.assertDollars(est()["base"], 120000.0)
         # wage index 1.0 is "at or below": Table 1B: 15 x (3000 x 1 + 2500 x 1) = 15 x 5500 = 82,500
-        self.assertDollars(base_payment(hospital(wi=1.0), RATES), 82500.0)
+        self.assertDollars(est(wi=1.0)["base"], 82500.0)
         # wage index 0.8, Table 1B: 15 x (3000 x 0.8 + 2500 x 1) = 15 x 4900 = 73,500
-        self.assertDollars(base_payment(hospital(wi=0.8), RATES), 73500.0)
+        self.assertDollars(est(wi=0.8)["base"], 73500.0)
         # just above 1 flips to Table 1A: 15 x (4000 x 1.0001 + 2000) = 15 x 6000.4 = 90,006
-        self.assertDollars(base_payment(hospital(wi=1.0001), RATES), 90006.0)
+        self.assertDollars(est(wi=1.0001)["base"], 90006.0)
 
     def test_cola_scales_nonlabor_only(self):
         # Table 1A, cola 1.2: 15 x (4000 x 1.5 + 2000 x 1.2) = 15 x 8400 = 126,000
-        self.assertDollars(base_payment(hospital(cola=1.2), RATES), 126000.0)
+        self.assertDollars(est(cola=1.2)["base"], 126000.0)
         # Table 1B, cola 1.2: 15 x (3000 x 0.8 + 2500 x 1.2) = 15 x 5400 = 81,000
-        self.assertDollars(base_payment(hospital(wi=0.8, cola=1.2), RATES), 81000.0)
+        self.assertDollars(est(wi=0.8, cola=1.2)["base"], 81000.0)
 
     def test_cases_and_cmi_scale_the_whole_payment(self):
         # 20 cases at 1.0: 20 x 8000 = 160,000
-        self.assertDollars(base_payment(hospital(cases=20.0, cmi=1.0), RATES), 160000.0)
+        self.assertDollars(est(cases=20.0, cmi=1.0)["base"], 160000.0)
 
     def test_the_four_quality_and_ehr_flags_each_pick_their_pair(self):
         one = dict(cases=1.0, cmi=1.0)  # one case-mix-weighted case: B is the rate itself, Table 1A, wage index 1.5
@@ -81,47 +79,47 @@ class Base(Close):
                                    (0, 1, 3900 * 1.5 + 1900.0),   # qn 7750
                                    (1, 0, 3800 * 1.5 + 1800.0),   # ne 7500
                                    (1, 1, 3700 * 1.5 + 1700.0)):  # nn 7250
-            self.assertDollars(base_payment(hospital(quality=quality, ehr=ehr, **one), RATES), want, (quality, ehr))
+            self.assertDollars(est(quality=quality, ehr=ehr, **one)["base"], want, (quality, ehr))
         # and Table 1B's, wage index 1: 2900 + 2400 (qn)
-        self.assertDollars(base_payment(hospital(wi=1.0, ehr=1, **one), RATES), 5300.0)
+        self.assertDollars(est(wi=1.0, ehr=1, **one)["base"], 5300.0)
 
     def test_puerto_rico_uses_table_1c_whatever_the_wage_index(self):
         one = dict(cases=1.0, cmi=1.0, pr=True)
         # 1C qe: 3100 x 0.8 + 2600 = 5080; 1C qn (EHR reduction): 3000 x 0.8 + 2500 = 4900
-        self.assertDollars(base_payment(hospital(wi=0.8, **one), RATES), 5080.0)
-        self.assertDollars(base_payment(hospital(wi=0.8, ehr=1, **one), RATES), 4900.0)
+        self.assertDollars(est(wi=0.8, **one)["base"], 5080.0)
+        self.assertDollars(est(wi=0.8, ehr=1, **one)["base"], 4900.0)
         # a wage index above 1 still reads 1C (the file has no such Puerto Rico hospital; the rule is the table's)
-        self.assertDollars(base_payment(hospital(wi=1.5, **one), RATES), 3100 * 1.5 + 2600.0)
+        self.assertDollars(est(wi=1.5, **one)["base"], 3100 * 1.5 + 2600.0)
 
     def test_a_puerto_rico_hospital_whose_key_is_not_in_1c_raises(self):
         with self.assertRaises(ValueError):
-            base_payment(hospital(pr=True, wi=0.8, quality=1), RATES)  # 1C has qe and qn only
+            est(pr=True, wi=0.8, quality=1)["base"]  # 1C has qe and qn only
 
     def test_mdh_addon_is_three_quarters_of_the_shortfall_and_never_negative(self):
         # HSP side: 9000 x 1.6 (cmi_hsp) x 10 cases = 144,000; shortfall 144,000 - 120,000 = 24,000; 75% = 18,000
         h = hospital(mdh=True, hsp_mdh=9000.0)
-        self.assertDollars(base_payment(h, RATES), 138000.0)
+        self.assertDollars(est(h)["base"], 138000.0)
         e = est(h)
         self.assertParts(nonzero(e), {"fed": 120000.0, "mdh_addon": 18000.0})
         # HSP side below the federal payment: 7000 x 16 = 112,000 < 120,000: no add-on, never negative
         low = hospital(mdh=True, hsp_mdh=7000.0)
-        self.assertDollars(base_payment(low, RATES), 120000.0)
+        self.assertDollars(est(low)["base"], 120000.0)
         self.assertEqual(est(low)["mdh_addon"], 0)
 
     def test_mdh_addon_needs_the_flag_and_a_usable_hsp_rate(self):
         for h in (hospital(mdh=False, hsp_mdh=9000.0),  # the rate is there, the status is not
                   hospital(mdh=True, hsp_mdh=None),     # the status, no rate (blank)
                   hospital(mdh=True, hsp_mdh=0.0)):     # a zero rate is "no usable rate"
-            self.assertDollars(base_payment(h, RATES), FED)
+            self.assertDollars(est(h)["base"], FED)
 
     def test_the_mdh_comparison_uses_the_hsp_case_mix_not_the_transfer_adjusted_one(self):
         # cmi_hsp 1.0 instead of 1.6: HSP side 9000 x 1.0 x 10 = 90,000 < 120,000: no add-on
-        self.assertDollars(base_payment(hospital(mdh=True, hsp_mdh=9000.0, cmi_hsp=1.0), RATES), FED)
+        self.assertDollars(est(mdh=True, hsp_mdh=9000.0, cmi_hsp=1.0)["base"], FED)
 
     def test_sch_base_is_federal(self):
         # The SCH rate is higher (9000 x 1.6 x 10 = 144,000) yet B stays the federal 120,000; the 24,000 is in T.
         h = hospital(sch=True, ptype=16, hsp=9000.0)
-        self.assertDollars(base_payment(h, RATES), FED)
+        self.assertDollars(est(h)["base"], FED)
         self.assertDollars(est(h)["sch_diff"], 24000.0)
 
 
@@ -154,7 +152,6 @@ class Total(Close):
             self.assertParts(nonzero(e), parts)
             want_total = sum(parts.values())
             self.assertDollars(e["total"], want_total, changes)
-            self.assertDollars(total_payment(h, RATES, base_payment(h, RATES)), want_total, changes)
 
     def test_outliers_are_a_fraction_of_the_federal_payment_with_ime_and_dsh(self):
         # 0.02 x (120,000 + 12,000 IME + 6,000 DSH) = 0.02 x 138,000 = 2,760
@@ -306,8 +303,7 @@ class AllTerms(Close):
     def test_the_components_add_up_to_the_total(self):
         e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
                 ucp_per_claim=50.0)
-        parts = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")
-        self.assertDollars(sum(e[k] for k in parts), e["total"])
+        self.assertDollars(sum(e[k] for k in PARTS), e["total"])
         self.assertDollars(e["base"], e["fed"] + e["mdh_addon"])
 
 
@@ -331,11 +327,9 @@ def bare(ccn, status_, cut=False, hrrp_listed=True, vbp_listed=True, **dollars):
 
 def money(base, hrrp=0, hvbp=0, hac=0, total=None):
     total = base if total is None else total
+    parts = {**dict.fromkeys(PARTS, 0), "fed": base, "uc": total - base}  # B is all federal payment; the rest, uc
     return {"base": base, "total": total, "hrrp": hrrp, "hvbp": hvbp, "after": total + hrrp + hvbp, "hac": hac,
-            "net": hrrp + hvbp + hac}
-
-
-PARTS = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")
+            "net": hrrp + hvbp + hac, **parts}
 
 
 def assert_adds_up(case, r):
@@ -352,7 +346,8 @@ def assert_adds_up(case, r):
 
 NAT = {"hospitals": 4, "base": 480000, "total": 480000, "hrrp": -2112, "hvbp": 0, "after": 477888, "hac": -1195,
        "net": -3307, "cut": 1, "hrrp_base": 480000, "vbp_base": 240000, "yes": 1, "yes_unestimated": 0,
-       "by_status": {"estimated": 4, "maryland": 0, "parhm": 0, "no-inputs": 0}}
+       "by_status": {"estimated": 4, "maryland": 0, "parhm": 0, "no-inputs": 0},
+       "parts": {**dict.fromkeys(PARTS, 0), "fed": 480000}}
 
 
 class Status(unittest.TestCase):
@@ -388,7 +383,7 @@ class Status(unittest.TestCase):
 
 class RoundDollars(unittest.TestCase):
     def test_every_dollar_field_becomes_a_whole_number_of_dollars(self):
-        rounded = round_dollars(est(ime_op=0.1, hrrp=0.9956, vbp=1.0, cut=True))
+        rounded = round_dollars(est(ime_op=0.1, hrrp=0.9956, vbp=1.0, cut=True), cut=True)
         # B = 120,000; T = 120,000 + IME 12,000 = 132,000; HRRP 120,000 x -0.0044 = -528; after = 131,472;
         # at stake 0.01 x 131,472 = 1,314.72 -> 1,315; HAC -1,315; net = -528 - 1,315
         self.assertEqual(rounded["base"], 120000)
@@ -407,8 +402,8 @@ class RoundDollars(unittest.TestCase):
         for part, value, want in (("fed", 100.4, 100), ("ime", 100.6, 101), ("dsh", 2.5, 2), ("capital", 3.5, 4),
                                   ("uc", 0.4, 0), ("sch_diff", 0.0, 0), ("hrrp", -4140.4, -4140),
                                   ("hrrp", -4140.6, -4141), ("hvbp", -0.4, 0)):
-            self.assertEqual(round_dollars(dict(est(), **{part: value}))[part], want, (part, value))
-        self.assertEqual(str(round_dollars(dict(est(), hvbp=-0.0))["hvbp"]), "0")  # an int zero, never -0.0
+            self.assertEqual(round_dollars(dict(est(), **{part: value}), cut=False)[part], want, (part, value))
+        self.assertEqual(str(round_dollars(dict(est(), hvbp=-0.0), cut=False)["hvbp"]), "0")  # an int zero, never -0.0
 
     def test_the_sums_come_from_the_rounded_parts(self):
         # Hand-worked, B = 4,900.39 (wage index 0.80013, Table 1B: 3000 x 0.80013 + 2500):
@@ -419,7 +414,7 @@ class RoundDollars(unittest.TestCase):
         # HRRP 0.97: B x -0.03 = -147.0117 -> -147; HVBP 1.01: +49.0039 -> 49; after 6,927 - 147 + 49 = 6,829
         # at stake round(68.29) = 68; HAC -68; net -147 + 49 - 68 = -166
         r = round_dollars(est(cases=1.0, cmi=1.0, wi=0.80013, ime_op=0.1, dsh_op=0.05, outlier_op=0.02,
-                              low_volume=1.1, gaf=1.2, ucp_per_claim=0.37, hrrp=0.97, vbp=1.01, cut=True))
+                              low_volume=1.1, gaf=1.2, ucp_per_claim=0.37, hrrp=0.97, vbp=1.01, cut=True), cut=True)
         self.assertEqual({k: r[k] for k in ("fed", "ime", "dsh", "outlier_op", "low_volume", "capital", "uc")},
                          {"fed": 4900, "ime": 490, "dsh": 245, "outlier_op": 113, "low_volume": 575, "capital": 600,
                           "uc": 4})
@@ -428,24 +423,24 @@ class RoundDollars(unittest.TestCase):
 
     def test_a_sum_can_sit_a_dollar_from_the_rounded_unrounded_figure(self):
         # B = 100.4 + 100.4 (MDH add-on) -> parts 100 + 100 = base 200, though round(200.8) = 201: the rounded sum wins
-        r = round_dollars(dict(est(), fed=100.4, mdh_addon=100.4))
+        r = round_dollars(dict(est(), fed=100.4, mdh_addon=100.4), cut=False)
         self.assertEqual(r["base"], 200)
 
     def test_a_hospital_that_is_not_cut_has_no_hac_and_a_cut_one_loses_its_at_stake(self):
-        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False))["hac"], 0)
-        r = round_dollars(est(hrrp=0.97, cut=True))
+        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False), cut=False)["hac"], 0)
+        r = round_dollars(est(hrrp=0.97, cut=True), cut=True)
         self.assertEqual((r["at_stake"], r["hac"], r["net"]), (1164, -1164, -3600 - 1164))  # 0.01 x 116,400
-        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False))["at_stake"], 1164)  # the same whether or not it is cut
+        self.assertEqual(round_dollars(est(hrrp=0.97, cut=False), cut=False)["at_stake"], 1164)  # the same whether or not it is cut
 
     def test_factors_cases_and_other_keys_are_left_alone(self):
         e = dict(est(), hrrp_factor=0.9956, vbp_factor=1.0123, cases=10.4)
-        rounded = round_dollars(e)
+        rounded = round_dollars(e, cut=False)
         self.assertEqual((rounded["hrrp_factor"], rounded["vbp_factor"], rounded["cases"]), (0.9956, 1.0123, 10.4))
 
     def test_it_returns_a_new_dict(self):
         e = est()
         before = dict(e)
-        round_dollars(e)
+        round_dollars(e, cut=False)
         self.assertEqual(e, before)
 
 
@@ -487,6 +482,7 @@ class RowsAddUp(unittest.TestCase):
         self.assertEqual(nat["after"], nat["total"] + nat["hrrp"] + nat["hvbp"])
         self.assertEqual(nat["net"], nat["hrrp"] + nat["hvbp"] + nat["hac"])
         self.assertEqual(nat["hac"], -sum(r["at_stake"] for r in rows if r["cut"]))
+        self.assertEqual(nat["parts"], {k: sum(r[k] for r in rows) for k in PARTS})
 
 
 class HospitalRow(unittest.TestCase):
@@ -496,7 +492,9 @@ class HospitalRow(unittest.TestCase):
         self.assertEqual((r["ccn"], r["status"], r["cut"], r["hrrp_listed"], r["vbp_listed"]),
                          ("990001", "estimated", True, True, True))
         self.assertEqual(r, {**{"ccn": "990001", "status": "estimated", "cut": True, "hrrp_listed": True,
-                                "vbp_listed": True}, **round_dollars(est(hrrp=0.9956, vbp=1.0, cut=True))})
+                                "vbp_listed": True},
+                             "hrrp_factor": 0.9956, "vbp_factor": 1.0, "cases": 10.0, "bills": 12,  # the synthetic hospital's
+                             **round_dollars(est(hrrp=0.9956, vbp=1.0, cut=True), cut=True)})
         # B = T = 120,000; HRRP -528; after 119,472; HAC -1,194.72 -> -1,195
         self.assertEqual((r["base"], r["total"], r["hrrp"], r["hvbp"], r["after"], r["hac"]),
                          (120000, 120000, -528, 0, 119472, -1195))
@@ -505,8 +503,10 @@ class HospitalRow(unittest.TestCase):
         r = row(hrrp=None, vbp=1.01)
         self.assertEqual((r["hrrp_listed"], r["vbp_listed"]), (False, True))
         self.assertEqual((r["hrrp"], r["hvbp"]), (0, 1200))  # no HRRP row: factor 1; VBP 1.01: 120,000 x 0.01
+        self.assertEqual((r["hrrp_factor"], r["vbp_factor"]), (1.0, 1.01))
         r = row(hrrp=0.97, vbp=None)
         self.assertEqual((r["hrrp_listed"], r["vbp_listed"], r["hrrp"], r["hvbp"]), (True, False, -3600, 0))
+        self.assertEqual((r["hrrp_factor"], r["vbp_factor"]), (0.97, 1.0))
 
     def test_a_listed_factor_of_one_is_still_listed(self):
         r = row(hrrp=1.0, vbp=1.0)
@@ -590,8 +590,17 @@ class National(unittest.TestCase):
         for key in ("base", "total", "hrrp", "hvbp", "after", "hac", "net"):
             self.assertEqual(nat[key], sum(r[key] for r in rows), key)
         self.assertTrue(all(type(nat[k]) is int for k in ("base", "total", "hrrp", "hvbp", "after", "hac", "net")))
+        self.assertEqual(nat["parts"]["fed"], 14700)  # three federal payments of 4,900
         # and it is not the rounded sum of the unrounded figures
-        self.assertNotEqual(nat["base"], round(3 * base_payment(h, RATES)))
+        self.assertNotEqual(nat["base"], round(3 * est(h)["base"]))
+
+    def test_parts_are_summed_over_estimated_rows_only(self):
+        # Two hospitals at fed 120,000 and IME 0.1 x 120,000 = 12,000; a Maryland row adds nothing.
+        ime = hospital(ime_op=0.1)
+        rows = [row("990001", inp=ime), row("990002", inp=ime, cut=True), row("990003", "MD", inp=ime)]
+        parts = national(rows)["parts"]
+        self.assertEqual(list(parts), list(PARTS))
+        self.assertEqual({k: v for k, v in parts.items() if v}, {"fed": 240000, "ime": 24000})
 
     def test_the_bases_the_checks_need(self):
         rows = [bare("990001", "estimated", **money(1000, hrrp=-10)),
@@ -630,8 +639,9 @@ class National(unittest.TestCase):
     def test_an_empty_set_is_all_zeros(self):
         nat = national([])
         self.assertEqual(nat["hospitals"], 0)
-        self.assertEqual(sum(v for k, v in nat.items() if k != "by_status"), 0)
+        self.assertEqual(sum(v for k, v in nat.items() if k not in ("by_status", "parts")), 0)
         self.assertEqual(sum(nat["by_status"].values()), 0)
+        self.assertEqual(nat["parts"], dict.fromkeys(PARTS, 0))
         self.assertEqual(list(nat["by_status"]), list(STATUSES))
 
     def test_the_keys(self):

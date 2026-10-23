@@ -79,6 +79,13 @@ _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", 
             "ucp_per_claim", "gaf", "low_volume")
 _FLAGS = ("sch", "mdh", "pr")
 _ADD_ONS = ("ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
+PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
+SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # a row's dollar sums, which `national` adds up
+
+
+def _missing(value):
+    """True when a count or case-mix is absent or not above zero (also NaN)."""
+    return value is None or not value > 0
 
 
 def _check(inp):
@@ -110,7 +117,7 @@ def _hsp_payment(rate, inp):
     ASSUMPTION: a blank or zero rate is "no usable rate" (the file has zero in three rows). The comparison uses CMIV43
     (`cmi_hsp`), which the impact file's README says applies to hospitals paid on their hospital-specific rate, and the
     same transfer-adjusted `cases` as the federal side."""
-    if rate is None or not rate > 0:
+    if _missing(rate):
         return None
     return rate * inp["cmi_hsp"] * inp["cases"]
 
@@ -173,25 +180,30 @@ def _parts(inp, rates):
             "capital": float(capital), "uc": float(uc)}
 
 
-def _total(parts, base):
-    return base + sum(parts[k] for k in _ADD_ONS)
-
-
-def base_payment(inp, rates):
-    """B: the federal DRG payment plus the MDH add-on, in dollars for the year. The base HRRP and HVBP adjust."""
-    parts = _parts(inp, rates)
-    return parts["fed"] + parts["mdh_addon"]
-
-
-def total_payment(inp, rates, base):
-    """T: `base` (B) plus IME, DSH, operating outliers, the SCH difference, low volume, capital and uncompensated care."""
-    return _total(_parts(inp, rates), base)
-
-
 def _factor(value, name):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not value > 0:
         raise ValueError(f"{name} must be a positive adjustment factor (1 = none), not {value!r}")
     return float(value)
+
+
+def _base(parts):
+    """B: the federal DRG payment plus the MDH add-on, the base operating payment HRRP and HVBP adjust."""
+    return parts["fed"] + parts["mdh_addon"]
+
+
+def _chain(parts, hrrp, hvbp, cut, rnd):
+    """From a hospital's `parts` and the HRRP and HVBP dollars to the net: B, T, T', the at-stake figure, HAC, net, as a
+    dict with the keys of `estimate`'s first eight. Both the estimate (floats) and the whole-dollar row run this, so the
+    arithmetic is written once; `rnd` turns the 1% into the number type of its inputs (`float`, or `round` for a row
+    whose figures are integers, so every sum is of the figures beside it). `cut` is whether the HAC Reduction Program
+    cuts the hospital."""
+    base = _base(parts)
+    total = base + sum(parts[k] for k in _ADD_ONS)
+    after = total + hrrp + hvbp
+    at_stake = rnd(HAC_RATE * after)
+    hac = -at_stake if cut and at_stake else rnd(0)  # a plain zero, never -0.0
+    return {"base": base, "total": total, "hrrp": hrrp, "hvbp": hvbp, "after": after, "at_stake": at_stake, "hac": hac,
+            "net": hrrp + hvbp + hac}
 
 
 def estimate(inp, rates, *, hrrp, vbp, cut):
@@ -203,28 +215,16 @@ def estimate(inp, rates, *, hrrp, vbp, cut):
       at_stake           0.01 x T' for every hospital
       hac                -at_stake if cut, else 0
       net                hrrp + hvbp + hac
-    then the parts of T: fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital, uc."""
+    then the parts of T (`PARTS`): fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital, uc."""
     hrrp_factor, vbp_factor = _factor(hrrp, "hrrp"), _factor(vbp, "vbp")
     parts = _parts(inp, rates)
-    base = parts["fed"] + parts["mdh_addon"]
-    total = _total(parts, base)
+    base = _base(parts)
     # ASSUMPTION: HRRP and HVBP each adjust the base operating payment B (not IME, DSH, capital or the rest); the HAC
     # cut is then 1% of everything the hospital is paid after both.
-    hrrp_dollars = base * (hrrp_factor - 1.0)
-    hvbp_dollars = base * (vbp_factor - 1.0)
-    after = total + hrrp_dollars + hvbp_dollars
-    at_stake = HAC_RATE * after
-    hac = -at_stake if cut and at_stake else 0.0
-    return {"base": float(base), "total": float(total), "hrrp": float(hrrp_dollars), "hvbp": float(hvbp_dollars),
-            "after": float(after), "at_stake": float(at_stake), "hac": float(hac),
-            "net": float(hrrp_dollars + hvbp_dollars + hac), **parts}
+    return {**_chain(parts, base * (hrrp_factor - 1.0), base * (vbp_factor - 1.0), cut, float), **parts}
 
 
 # --- the row, statuses and the national sums -------------------------------------------------------------------------
-
-_PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T
-_SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # what `national` adds up
-
 
 def _require_bool(cut):
     """`cut` as the real bool it must be: CMS's Payment Reduction column says "Yes" or "No", and the string "No" is
@@ -232,11 +232,6 @@ def _require_bool(cut):
     if not isinstance(cut, bool):
         raise ValueError(f"cut must be True or False, not {cut!r}")
     return cut
-
-
-def _missing(value):
-    """True when a count or case-mix is absent or not above zero (also NaN)."""
-    return value is None or not value > 0
 
 
 def status(ccn, state, inp, parhm):
@@ -253,49 +248,43 @@ def status(ccn, state, inp, parhm):
     return "estimated"
 
 
-def round_dollars(est):
+def round_dollars(est, *, cut):
     """`est` in whole dollars, built so that every sum a reader can add up is exact. Python `round` (halves to the even
-    dollar), then `int`, is applied to each part (fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital,
-    uc) and to `hrrp` and `hvbp` (from the unrounded B x (factor - 1)). The sums follow from those integers:
+    dollar) is applied to each part (`PARTS`) and to `hrrp` and `hvbp` (from the unrounded B x (factor - 1)). The sums
+    follow from those integers:
       base = fed + mdh_addon;  total = base + the other parts;  after = total + hrrp + hvbp;
-      at_stake = round(0.01 x after);  hac = -at_stake when the hospital is cut, else 0;  net = hrrp + hvbp + hac.
+      at_stake = round(0.01 x after);  hac = -at_stake when the hospital is `cut`, else 0;  net = hrrp + hvbp + hac.
     So a figure can sit a dollar from its own unrounded value (a hospital's `total` is not always `round(T)`); the sums
     are never a dollar from their parts. `est` is `estimate`'s dict; anything else in it (factors, `cases`) is left as
     it is, and the keys keep their order."""
-    out = dict(est)
-    out.update({k: int(round(est[k])) for k in _PARTS})
-    out["base"] = out["fed"] + out["mdh_addon"]
-    out["total"] = out["base"] + sum(out[k] for k in _ADD_ONS)
-    out["hrrp"], out["hvbp"] = int(round(est["hrrp"])), int(round(est["hvbp"]))
-    out["after"] = out["total"] + out["hrrp"] + out["hvbp"]
-    out["at_stake"] = int(round(HAC_RATE * out["after"]))
-    out["hac"] = -out["at_stake"] if est["hac"] else 0  # `estimate` leaves hac at zero for a hospital that is not cut
-    out["net"] = out["hrrp"] + out["hvbp"] + out["hac"]
-    return out
+    parts = {k: round(est[k]) for k in PARTS}
+    return {**est, **_chain(parts, round(est["hrrp"]), round(est["hvbp"]), cut, round), **parts}
 
 
 def hospital_row(ccn, state, inp, rates, *, hrrp, vbp, cut, parhm):
     """One HACRP-file hospital's row: `{ccn, status, cut, hrrp_listed, vbp_listed}`, then (only when the status is
-    "estimated") the whole-dollar estimate. `hrrp` and `vbp` are the hospital's factors from the HRRP file and Table
-    16B, or None when it has no row there (it then takes factor 1, and `*_listed` is False). `cut` is a bool.
-    `inp` is its impact-file inputs or None; `parhm` the participant CCNs. A hospital that cannot be priced raises
+    "estimated") the factors it took (`hrrp_factor`, `vbp_factor`), its `cases` and Medicare `bills`, and the
+    whole-dollar estimate (`round_dollars`). `hrrp` and `vbp` are the hospital's factors from the HRRP file and Table
+    16B, or None when it has no row there (it then takes factor 1, and `*_listed` is False). `cut` is a bool. `inp` is
+    its impact-file inputs or None; `parhm` the participant CCNs. A hospital that cannot be priced raises
     (`ValueError`, or `SchemaError` from `rate_key`), so the build fails instead of the hospital vanishing."""
     row = {"ccn": ccn, "status": status(ccn, state, inp, parhm), "cut": _require_bool(cut),
            "hrrp_listed": hrrp is not None, "vbp_listed": vbp is not None}
     if row["status"] == "estimated":
-        row.update(round_dollars(estimate(inp, rates, hrrp=1.0 if hrrp is None else hrrp,
-                                          vbp=1.0 if vbp is None else vbp, cut=cut)))
+        hrrp_factor, vbp_factor = 1.0 if hrrp is None else hrrp, 1.0 if vbp is None else vbp
+        row.update(hrrp_factor=hrrp_factor, vbp_factor=vbp_factor, cases=inp["cases"], bills=inp["bills"])
+        row.update(round_dollars(estimate(inp, rates, hrrp=hrrp_factor, vbp=vbp_factor, cut=cut), cut=cut))
     return row
 
 
 def national(rows):
     """The sums over a set of `hospital_row`s. Over the rows with status "estimated": `hospitals` (how many), the sums
-    of the rounded `base, total, hrrp, hvbp, after, hac, net`, `cut` (how many are cut), `hrrp_base` (the sum of B over
-    the penalized hospitals: those whose HRRP dollars are negative) and `vbp_base` (the sum of B over those in Table
-    16B): the bases the checks divide by. Over every row, any status: `yes` (how many are cut), `yes_unestimated` (cut,
-    but not estimated) and `by_status`."""
-    nat = {"hospitals": 0, **dict.fromkeys(_SUMMED, 0), "cut": 0, "hrrp_base": 0, "vbp_base": 0, "yes": 0,
-           "yes_unestimated": 0, "by_status": dict.fromkeys(STATUSES, 0)}
+    of the rounded `SUMMED` (`base, total, hrrp, hvbp, after, hac, net`), `cut` (how many are cut), `hrrp_base` (the sum
+    of B over the penalized hospitals: those whose HRRP dollars are negative) and `vbp_base` (the sum of B over those in
+    Table 16B): the bases the checks divide by. Over every row, any status: `yes` (how many are cut), `yes_unestimated`
+    (cut, but not estimated) and `by_status`. And `parts`: the sum of each of `PARTS` over the estimated rows."""
+    nat = {"hospitals": 0, **dict.fromkeys(SUMMED, 0), "cut": 0, "hrrp_base": 0, "vbp_base": 0, "yes": 0,
+           "yes_unestimated": 0, "by_status": dict.fromkeys(STATUSES, 0), "parts": dict.fromkeys(PARTS, 0)}
     for r in rows:
         if r["status"] not in nat["by_status"]:
             raise ValueError(f"unknown status {r['status']!r} for {r['ccn']}")
@@ -307,8 +296,10 @@ def national(rows):
             continue
         nat["hospitals"] += 1
         nat["cut"] += cut
-        for k in _SUMMED:
+        for k in SUMMED:
             nat[k] += r[k]
+        for k in PARTS:
+            nat["parts"][k] += r[k]
         nat["hrrp_base"] += r["base"] if r["hrrp"] < 0 else 0
         nat["vbp_base"] += r["base"] if r["vbp_listed"] else 0
     return nat

@@ -43,13 +43,23 @@ PARHM = frozenset()
 HRRP_UNLISTED_MAX = 43
 VBP_UNLISTED_MAX = 524
 
-PARTS = ("fed", "mdh_addon", "ime", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the JSON's `parts`
-
 
 def camel(key):
     """`at_stake` -> `atStake`: the repo's JSON keys are camelCase."""
     head, *tail = key.split("_")
     return head + "".join(word.capitalize() for word in tail)
+
+
+def _names(keys):
+    """((row key, JSON key), ...): the camelCase names, worked out once rather than for every row."""
+    return tuple((key, camel(key)) for key in keys)
+
+
+# A row's fields in the JSON, in the order the file lists them; an estimated row also has `parts`.
+BARE_FIELDS = _names(("ccn", "status", "cut", "hrrp_listed", "vbp_listed"))
+ESTIMATED_FIELDS = _names(("ccn", "status", "cut", "cases", "bills", "base", "total", "hrrp_factor", "vbp_factor",
+                           "hrrp_listed", "vbp_listed", "hrrp", "hvbp", "after", "at_stake", "hac", "net"))
+PART_FIELDS = _names(dollars.PARTS)
 
 
 def unlisted_counts(hospital_rows):
@@ -68,25 +78,19 @@ def enforce_caps(hospital_rows):
                              "look at the new ones before raising the cap")
 
 
-def hospital_json(row, inp, hrrp, vbp):
-    """One hospital's JSON: `{ccn, status, cut, hrrpListed, vbpListed}`, and for an "estimated" row also its cases,
-    Medicare bills, the two factors it took (1 where the program file does not list it), the whole-dollar figures and
-    `parts`, in that order. `row` is a `hospital_row`; `inp`, `hrrp` and `vbp` are what it was built from."""
+def hospital_json(row):
+    """One hospital's JSON, a camelCase projection of its `hospital_row`: `{ccn, status, cut, hrrpListed, vbpListed}`,
+    and for an "estimated" row also its cases, Medicare bills, the two factors it took (1 where the program file does
+    not list it), the whole-dollar figures and `parts`."""
     if row["status"] != "estimated":
-        return {"ccn": row["ccn"], "status": row["status"], "cut": row["cut"], "hrrpListed": row["hrrp_listed"],
-                "vbpListed": row["vbp_listed"]}
-    return {"ccn": row["ccn"], "status": row["status"], "cut": row["cut"], "cases": inp["cases"], "bills": inp["bills"],
-            "base": row["base"], "total": row["total"], "hrrpFactor": 1.0 if hrrp is None else hrrp,
-            "vbpFactor": 1.0 if vbp is None else vbp, "hrrpListed": row["hrrp_listed"], "vbpListed": row["vbp_listed"],
-            "hrrp": row["hrrp"], "hvbp": row["hvbp"], "after": row["after"], "atStake": row["at_stake"],
-            "hac": row["hac"], "net": row["net"], "parts": {camel(k): row[k] for k in PARTS}}
+        return {name: row[key] for key, name in BARE_FIELDS}
+    return {**{name: row[key] for key, name in ESTIMATED_FIELDS},
+            "parts": {name: row[key] for key, name in PART_FIELDS}}
 
 
-def totals_json(hospital_rows):
-    """`dollars.national` over the rows, camelCase, plus `parts`: the sum of each part over the estimated rows."""
-    nat = {camel(k): v for k, v in dollars.national(hospital_rows).items()}
-    nat["parts"] = {camel(k): sum(r[k] for r in hospital_rows if r["status"] == "estimated") for k in PARTS}
-    return nat
+def totals_json(nat):
+    """A `dollars.national` dict, camelCase (its `parts` too)."""
+    return {**{camel(k): v for k, v in nat.items()}, "parts": {camel(k): v for k, v in nat["parts"].items()}}
 
 
 def build_from_pins(built_at):
@@ -99,16 +103,16 @@ def build_from_pins(built_at):
                                   vbp=vbp.get(r["ccn"]), cut=r["cut"], parhm=PARHM) for r in records]
     enforce_caps(built)
     headline = [row for row, r in zip(built, records) if r["scored"] and r["decided"]]
-    checks = dollars.checks(dollars.national(built), hacrp_yes=sum(r["cut"] for r in records))
+    national = dollars.national(built)
+    checks = dollars.checks(national, hacrp_yes=sum(r["cut"] for r in records))
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
         "assumptions": {"ratesFy": FY, "volumeFy": VOLUME_FY, "mdhEnd": MDH_END, "lowVolumeEnd": LOW_VOLUME_END,
                         "ntap": NTAP},
-        "national": totals_json(built),
-        "headline": totals_json(headline),
+        "national": totals_json(national),
+        "headline": totals_json(dollars.national(headline)),
         "checks": checks,
-        "hospitals": [hospital_json(row, inputs.get(row["ccn"]), hrrp.get(row["ccn"]), vbp.get(row["ccn"]))
-                      for row in built],
+        "hospitals": [hospital_json(row) for row in built],
         "bands": None,
     }
 
