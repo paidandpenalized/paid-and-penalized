@@ -3,10 +3,11 @@
 // pipeline and the sources. Every total on the page is read back against the self-checks it summarizes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
+import { REPO_ROOT } from '../../../pipeline/files.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { typeset } from '../../../web/render/components.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
@@ -207,14 +208,16 @@ test('the changes and the sources: every changelog entry with its date and items
   }
   // The table lists the pins the HACRP pages read, not every pin.
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
-  // A pin that no page declares (in a `sources` list that feeds pinsUsed) fails here unless it is on this list. The four
-  // FY2026 IPPS pins are listed until the pages load the dollar estimates, whose `sources` then join pinsUsed; removing
-  // them from this list belongs in that same change. This does not catch a page that reads a listed pin without
-  // declaring it.
+  // A pin that no page declares (in a `sources` list that feeds pinsUsed) fails here, unless an emitted dollars file
+  // declares it: the FY2026 IPPS pins are read only by the dollar estimates, which no page loads yet. So the allowance
+  // empties itself when a page loads the dollars (their `sources` then join pinsUsed). This does not catch a page that
+  // reads such a pin without declaring it.
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
+  const dollarsDir = `${REPO_ROOT}data/emitted/dollars/`;
+  const dollarsSources = readdirSync(dollarsDir).flatMap((fy) => JSON.parse(readFileSync(`${dollarsDir}${fy}/dollars.json`, 'utf8')).sources);
   assert.deepEqual(
-    manifest.filter((e) => !used.has(e.id)).map((e) => e.id),
-    ['ipps-impact-fy2026', 'ipps-rates-fy2026', 'hrrp-supplemental-fy2026', 'hvbp-table16b-fy2026'],
+    manifest.filter((e) => !used.has(e.id)).map((e) => e.id).sort(),
+    [...new Set(dollarsSources)].filter((id) => !used.has(id)).sort(),
   );
 });
 
