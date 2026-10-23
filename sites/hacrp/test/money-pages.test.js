@@ -403,7 +403,7 @@ test('the across-the-line note says which hospitals within the window the figure
   const near = nearLine(MD, ACROSS_WINDOW);
   const left = PD.rows.filter((r) => Math.abs(r.total - MD.line) <= ACROSS_WINDOW && !MD.rows.some((m) => m.ccn === r.ccn));
   const status = (r) => DATA.dollars.byCcn.get(r.ccn).status;
-  assert.equal(near.noEstimate, left.filter((r) => ['no-inputs', 'parhm'].includes(status(r))).length);
+  assert.equal(near.noEstimate, left.filter((r) => status(r) === 'no-inputs').length);
   assert.equal(near.exempt, left.filter((r) => status(r) === 'maryland').length);
   assert.equal(near.noEstimate + near.exempt, left.length, 'every hospital left out is one or the other');
   assert.ok(near.noEstimate > 0 && near.exempt > 0, 'on these pins both kinds sit near the line');

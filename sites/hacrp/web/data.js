@@ -83,6 +83,9 @@ export function checkDollarsYear(dollars, fy) {
   if (dollars.fy !== fy) throw new RangeError(`HACRP: the dollar estimates are FY${dollars.fy} but the HACRP file is FY${fy}`);
 }
 
+// The statuses of a dollar row the pages have words for (the file's schema lists a fourth, `parhm`, which no hospital has).
+const SHOWN_STATUSES = ['estimated', 'maryland', 'no-inputs'];
+
 // What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
 // the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
 // `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
@@ -96,6 +99,8 @@ export function dollarsData(dollars, hospitals) {
   for (const h of hospitals) if (!rows.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
   // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
   for (const r of rows.values()) if (r.status === 'estimated' && !(r.atStake > 0)) throw new RangeError(`HACRP: ${r.ccn} is estimated but its dollars at stake is ${r.atStake}; the cliff and the what-if need an estimated hospital's dollars at stake above $0`);
+  // A row with another status stops the build rather than get another reason's words.
+  for (const r of rows.values()) if (!SHOWN_STATUSES.includes(r.status)) throw new RangeError(`HACRP: ${r.ccn} has the dollar status "${r.status}", which no page has words for`);
   const ranged = (r) => (r.status === 'estimated'
     ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: rangeOf(bands, 'net', r.stratum, r.net) } } : r);
   const byCcn = new Map([...rows].map(([ccn, r]) => [ccn, ranged(r)]));

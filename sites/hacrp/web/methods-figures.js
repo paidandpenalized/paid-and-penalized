@@ -285,7 +285,7 @@ export function stratumLabel(s) {
   const words = fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdh' : 'btKindOther') });
   const short = capitalize(fill('btGroup', { beds, kind: t(s.schMdh ? 'btKindSchMdhShort' : 'btKindOtherShort') }));
   // `hospitals`: the group as a description of hospitals, after "Hospitals with".
-  return { beds, words, hospitals: fill(s.schMdh ? 'btHospitalsSchMdh' : 'btHospitalsOther', { beds }), name: capitalize(words), short };
+  return { beds, hospitals: fill(s.schMdh ? 'btHospitalsSchMdh' : 'btHospitalsOther', { beds }), name: capitalize(words), short };
 }
 const hospitalsText = (n) => noun(n, 'hospital');
 

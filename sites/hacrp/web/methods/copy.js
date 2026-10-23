@@ -282,7 +282,6 @@ export const COPY = {
   orderTwo: { text: 'Readmissions and value-based: each adjusts the base alone', claim: ['HACRP-72', 'HACRP-73'] },
   orderHac: { text: 'Then the HAC cut: {pct} of all of it, last', claim: ['HACRP-01', 'HACRP-74', 'HACRP-75', 'HACRP-79'] },
   orderTakeaway: { text: "The base is {share} of the payment this site estimates for FY{fy}: two programs reach that part; the HAC cut reaches all of it.", claim: ['HACRP-72', 'HACRP-73', 'HACRP-75', 'HACRP-79'] },
-  orderAlt: { text: 'A bar of the national payment split into the base and everything else, with brackets showing which part each program adjusts.', claim: null },
   orderColPart: { text: 'Part of the payment', claim: null },
   orderColMoney: { text: 'This site\'s estimate (whole dollars)', claim: null },
   // The formula, with the real national numbers, as the pipeline.

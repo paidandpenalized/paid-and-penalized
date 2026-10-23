@@ -1,6 +1,6 @@
 // A hospital's dollars as the pages show them: this site's estimate (data/emitted/dollars, loaded by data.js), never
 // CMS's. Plain numbers and the few facts the words need; the pages format them. A hospital without an estimate
-// (Maryland's, the Pennsylvania Rural Health Model's, or one with no usable impact-file row) carries only its status.
+// (Maryland's, or one with no usable impact-file row) carries only its status.
 
 import { money } from '../../../web/render/format.js';
 import { fill } from './copy.js';
@@ -79,7 +79,7 @@ export const hasMaTeaching = (m) => m.parts.imeMa > 0;
 export const maKey = (m, key) => (hasMaTeaching(m) ? `${key}Ma` : key);
 
 // row: the hospital's row of the dollar estimates (dollarsData's: an estimated one carries its likely ranges). status:
-// 'estimated', 'maryland', 'parhm' or 'no-inputs'; cut: CMS's decision is Yes. An estimated hospital is its row (every
+// 'estimated', 'maryland' or 'no-inputs' (the statuses the pages have words for: data.js dollarsData); cut: CMS's decision is Yes. An estimated hospital is its row (every
 // dollar figure the pages draw, in whole dollars; negative is money Medicare keeps; ranges: the likely range (rangeOf)
 // of its dollars at stake (hac) and of its net (net, null for a net of $0)) and perStay: the dollars at stake per
 // Medicare stay (bill).

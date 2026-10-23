@@ -67,7 +67,7 @@ export function moneyVerdict(view, m) {
   if (!m.estimated) {
     return {
       beside: html`<div class="money money--none"><p class="hosp__none"><span>${t('moneyNone')}</span></p></div>`,
-      below: html`<p class="money__of">${m.status === 'parhm' ? t('moneyParhm') : fill('moneyNoInputs', { fy })}</p>`,
+      below: html`<p class="money__of">${fill('moneyNoInputs', { fy })}</p>`,
     };
   }
   const after = money(m.after);
@@ -129,7 +129,7 @@ export function moneyField(m) {
   const label = t('fieldMoney');
   if (m.status === 'maryland') return { label, value: zero(), size: 'big', note: t('fieldMoneyExempt'), fieldCls: 'f-money' };
   if (!m.estimated) {
-    return { label, value: html`<span class="hosp__none"><span>${t('moneyNone')}</span></span>`, as: 'div', note: m.status === 'parhm' ? null : t('fieldMoneyNoRow'), fieldCls: 'f-money' };
+    return { label, value: html`<span class="hosp__none"><span>${t('moneyNone')}</span></span>`, as: 'div', note: t('fieldMoneyNoRow'), fieldCls: 'f-money' };
   }
   // The $0 of a hospital CMS didn't cut is no estimate; what a cut would have been is.
   const value = m.cut ? html`<span class="money__field money__field--cut">${money(m.atStake)}</span> ${estTag()}` : html`<span class="money__field">${zero()}</span>`;
@@ -245,9 +245,9 @@ export function statementFigure(view, m, { n, source, backtest }) {
 
 // ---------- sharing ----------
 
-// The sentence a shared link carries, and the page's description: CMS's decision (the view's), the dollars where this
-// site has an estimate (m: hospitalMoney(); named as the site's estimate, by the site's name, since
-// the sentence travels without the page) and the distance to CMS's line.
+// The sentence a shared link carries (the page's description is a neutral one, copy.js hospitalDescription): CMS's
+// decision (the view's), the dollars where this site has an estimate (m: hospitalMoney(); named as the site's estimate,
+// by the site's name, since the sentence travels without the page) and the distance to CMS's line.
 export function shareSentence(view, m) {
   const values = { fy: String(view.fy), name: view.name };
   if (view.status === 'maryland') return fill('shareMaryland', { name: view.name });

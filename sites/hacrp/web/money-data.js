@@ -1,7 +1,7 @@
 // What the program page's money and the place pages' money draw, computed once per build from CMS's file (programData's
 // rows), the hospital master and this site's dollar estimates (data.js dollarsData). The population is the site's
 // headline set: hospitals CMS scored and marked Yes or No, those with an estimate; the cut ones among them are the
-// dollars' "709 of the 718" (CMS's other cut hospitals have no usable impact-file row). The headline is the emitted
+// dollars' "n of m" (CMS's other cut hospitals have no usable impact-file row). The headline is the emitted
 // file's own; what the file doesn't hold (the breakdowns) is summed here, over the rounded figures, so a reader adding a
 // table gets its total. Every dollar is this site's estimate, in whole dollars. Pure: data in, result out.
 import { lineScore } from '../../../web/whatif/marks.js';
@@ -35,7 +35,7 @@ export function moneyData({ pd, dollars, model }) {
   const cutRows = rows.filter((r) => r.yes);
   const all = rollup(rows);
   // The scored hospitals the money leaves out, by where each stands (its total) and why: no estimate (no usable
-  // impact-file row, or in the Rural Health Model), or Maryland's, which are exempt. For the notes that say which
+  // impact-file row), or Maryland's, which are exempt. For the notes that say which
   // hospitals near CMS's line the figures leave out.
   const drawn = new Set(rows.map((r) => r.ccn));
   const left = pd.rows.filter((r) => !drawn.has(r.ccn)).map((r) => ({ total: r.total, status: dollars.byCcn.get(r.ccn).status }));
@@ -69,7 +69,7 @@ export function moneyData({ pd, dollars, model }) {
     tenth: { n: tenth, money: sorted.slice(0, tenth).reduce((a, b) => a + b, 0) },
     byKind,
     byState,
-    noEstimate: leftOf((status) => status === 'no-inputs' || status === 'parhm'),
+    noEstimate: leftOf((status) => status === 'no-inputs'),
     exempt: leftOf((status) => status === 'maryland'),
     perStay: all.perStay,
     line: lineScore(model.boundary),

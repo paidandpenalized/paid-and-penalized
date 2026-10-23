@@ -76,6 +76,13 @@ test('the contract: an estimated hospital has dollars at stake above $0, since t
   assert.doesNotThrow(() => dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === other ? { ...r, atStake: 0 } : r)) }, DATA.hospitals));
 });
 
+test('a row with a dollar status the pages have no words for stops the build, naming the row (the schema lists "parhm", which no hospital has)', () => {
+  const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
+  const [first] = file.hospitals;
+  const broken = { ...file, hospitals: file.hospitals.map((r) => (r === first ? { ...r, status: 'parhm' } : r)) };
+  assert.throws(() => dollarsData(broken, DATA.hospitals), new RegExp(`${first.ccn} has the dollar status "parhm"`));
+});
+
 test('a hospital the impact file gives no bed count (stratum "all") takes every hospital\'s band, and its page shows its ranges', () => {
   // Synthetic: a pinned cut row (picked by property) with its stratum set to ALL_STRATUM, as the emitter writes one.
   const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));

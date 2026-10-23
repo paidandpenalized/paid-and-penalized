@@ -25,7 +25,6 @@ export const COPY = {
   moneyMaryland: { text: "Maryland's hospitals are exempt from this program's cut.", claim: 'HACRP-26' },
   moneyNone: { text: 'No dollar estimate', claim: null },
   moneyNoInputs: { text: "CMS's FY{fy} impact file, which this site's estimate is built from, has no usable row for this hospital.", claim: null },
-  moneyParhm: { text: "This site makes no estimate for hospitals in Pennsylvania's Rural Health Model.", claim: null },
   // The likely range under a dollar figure (its words link to the back-test that made it).
   rangeLikely: { text: 'Likely range', claim: null },
 
@@ -286,7 +285,6 @@ export const COPY = {
   threeTip: { text: '{hospitals} at {range}', claim: null },
   threeRangeOverZero: { text: 'over {lo} to {hi}', claim: null },
   threeRangeUnderZero: { text: '{lo} to under {hi}', claim: null },
-  threeAlt: { text: 'Three column charts: how many hospitals each program moves by how much.', claim: null },
   threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75', 'HACRP-79'] },
   threeColProgram: { text: 'Program', claim: null },
   threeColHospitals: { text: 'Hospitals adjusted', claim: null },

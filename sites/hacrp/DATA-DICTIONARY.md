@@ -10,7 +10,6 @@ schema_version: 3
 - CMS's footnote crosswalk, dataset y9us-9xdf, holds the text of each footnote code.
 - Name, city, state and county come from this site's hospital master, built from CMS and U.S. Census Bureau files.
 - The `_modeled` columns are this site's estimates, built from CMS's FY{fy} IPPS final rule files (the impact file, the rate tables and the value-based purchasing factors in Table 16B) and CMS's FY{fy} HRRP supplemental file. They are not CMS's numbers. The site's Methods page gives every assumption.
-- Facts about the programs here: CLAIMS.md HACRP-26, HACRP-79 and HACRP-87.
 
 ## Format
 
@@ -61,7 +60,7 @@ schema_version: 3
 | `psi90_end` | text | Last day of the PSI 90 measurement period. | PSI 90 End Date | As above. |
 | `hai_start` | text | First day of the infection measures' measurement period. | HAI Measures Start Date | As above. |
 | `hai_end` | text | Last day of the infection measures' measurement period. | HAI Measures End Date | As above. |
-| `dollars_status` | text | Whether this site has a dollar estimate for the hospital, and if not, why. | (this site's estimate) | `estimated`; `maryland` (Maryland's hospitals are exempt from the HAC cut, and the dollar columns are blank); `parhm` (a hospital in Pennsylvania's Rural Health Model: no estimate); `no-inputs` (no usable row in CMS's IPPS impact file: no estimate). |
+| `dollars_status` | text | Whether this site has a dollar estimate for the hospital, and if not, why. | (this site's estimate) | `estimated`; `maryland` (Maryland's hospitals are exempt from the HAC cut, and the dollar columns are blank); `no-inputs` (no usable row in CMS's IPPS impact file: no estimate). |
 | `inpatient_payment_modeled` | number | This site's estimate of what traditional Medicare pays the hospital for a year of inpatient stays, with the teaching payments Medicare makes on its Medicare Advantage patients' stays (which the HAC cut is also taken on), before the three programs, in whole dollars. | (this site's estimate) | Blank without an estimate. Volume is the impact file's (two years before the fiscal year); the rates are the fiscal year's. |
 | `hrrp_dollars_modeled` | number | The readmissions program's adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Zero or negative: negative is money Medicare keeps. Blank without an estimate. |
 | `hvbp_dollars_modeled` | number | The value-based purchasing adjustment: the base payment times its factor minus 1, in whole dollars. | (this site's estimate) | Negative is money Medicare keeps; positive, a bonus. Blank without an estimate. |
