@@ -17,7 +17,9 @@ class Strata(unittest.TestCase):
                          ["under-100", "under-100", "100-299", "100-299", "300-plus", "300-plus"])
         for missing in (None, 0, -3):
             self.assertIsNone(bands.bed_band(missing))
-            self.assertIsNone(bands.stratum_of({"beds": missing, "sch": True, "mdh": False}))
+            # no bed count: no stratum of its own, the whole set's band
+            self.assertEqual(bands.stratum_of({"beds": missing, "sch": True, "mdh": False}), bands.ALL)
+        self.assertNotIn(bands.ALL, bands.STRATA)
         self.assertEqual(bands.stratum_of({"beds": 45, "sch": True, "mdh": False}), "under-100/sch-mdh")
         self.assertEqual(bands.stratum_of({"beds": 45, "sch": False, "mdh": True}), "under-100/sch-mdh")
         self.assertEqual(bands.stratum_of({"beds": 150, "sch": False, "mdh": False}), "100-299/other")
@@ -89,6 +91,11 @@ class StratumBands(unittest.TestCase):
         empty = by["300-plus/sch-mdh"]
         self.assertEqual((empty["pool"], empty["n"], empty["poolN"], empty["median"]), ("beds", 0, 31, None))
         self.assertEqual(overall["n"], 105)
+        # the overall band carries its multipliers: a hospital with no stratum (ALL) takes them
+        self.assertEqual(overall, {**bands.summary([e for v in errors.values() for e in v]),
+                                   "low": bands.multipliers(overall["p10"], overall["p90"])[0],
+                                   "high": bands.multipliers(overall["p10"], overall["p90"])[1]})
+        self.assertEqual((by["100-299/other"]["low"], by["100-299/other"]["high"]), (overall["low"], overall["high"]))
 
     def test_too_few_hospitals_in_all_raises(self):
         with self.assertRaisesRegex(ValueError, "too few"):

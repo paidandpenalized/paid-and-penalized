@@ -344,6 +344,6 @@ export function backtestMeasures(bands) {
 }
 
 // The comparison set's exclusions in words: each rule that left any report out, with its count, as one list.
-const EXCLUSION_WORDS = [['outsideWindow', 'btExWindow'], ['noPartA', 'btExPartA'], ['maryland', 'btExMaryland'], ['puertoRico', 'btExPuertoRico'], ['parhm', 'btExParhm'], ['notInHacrp', 'btExHacrp'], ['notEstimated', 'btExEstimate']];
+const EXCLUSION_WORDS = [['outsideWindow', 'btExWindow'], ['noPartA', 'btExPartA'], ['maryland', 'btExMaryland'], ['puertoRico', 'btExPuertoRico'], ['parhm', 'btExParhm'], ['notInHacrp', 'btExHacrp'], ['notEstimated', 'btExEstimate'], ['noBeds', 'btExBeds']];
 export const exclusionsText = (bands) => listText(EXCLUSION_WORDS.filter(([key]) => bands.comparison.excluded[key] > 0)
   .map(([key, words]) => fill(words, { n: count(bands.comparison.excluded[key]), ...(key === 'notInHacrp' ? { fy: String(bands.fy) } : {}) })));

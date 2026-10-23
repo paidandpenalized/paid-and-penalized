@@ -9,8 +9,10 @@ dollars.json as `bands`.
 The comparison set: the HCRIS FY2024 file's cost reports for exactly the federal fiscal year (2023-10-01 to
 2024-09-30), so the program lines hold FY2024's factors only; with a Worksheet E Part A; not Maryland's (paid under
 the state's own model) or Puerto Rico's; without the Pennsylvania Rural Health Model's worksheet; and for a hospital in
-the FY2024 HACRP file that the estimate prices (status estimated). The file holds one report per hospital and period,
-the most advanced CMS has (as filed, amended, settled); a hospital with two reports in the window stops the build.
+the FY2024 HACRP file that the estimate prices (status estimated), with a bed count in the impact file (a hospital
+without one has no stratum to test; on the pages its ranges take the whole set's). The file holds one report per
+hospital and period, the most advanced CMS has (as filed, amended, settled); a hospital with two reports in the window
+stops the build.
 Every report left out is counted by the first rule it fails (`EXCLUSIONS`).
 
 What the cost report says (Worksheet E Part A, PRM-II ch. 40, 4030.1; pp_pipeline.hcris_extract quotes each line):
@@ -52,7 +54,8 @@ MARYLAND_CODE = "21"  # Maryland's CCNs begin with 21, Puerto Rico's (ipps.PUERT
 # The HCRIS report status codes (RPT_STUS_CD) the file uses: 1 as submitted, 2 settled without audit, 3 settled with
 # audit, 4 reopened, 5 amended.
 STATUS_CODES = ("1", "2", "3", "4", "5")
-EXCLUSIONS = ("outside_window", "no_part_a", "maryland", "puerto_rico", "parhm", "not_in_hacrp", "not_estimated")
+EXCLUSIONS = ("outside_window", "no_part_a", "maryland", "puerto_rico", "parhm", "not_in_hacrp", "not_estimated",
+              "no_beds")
 MEASURES = ("hac", "net", "hrrp", "hvbp", "fed")
 
 # The checks the back-test must pass before dollars.json is written. Both were set before any error was computed.
@@ -106,7 +109,8 @@ def comparison_set(reports, priced):
                   "puerto_rico" if ccn[:2] == ipps.PUERTO_RICO else
                   "parhm" if rep["parhm"] == "Y" else
                   "not_in_hacrp" if ccn not in priced else
-                  "not_estimated" if priced[ccn]["status"] != "estimated" else None)
+                  "not_estimated" if priced[ccn]["status"] != "estimated" else
+                  "no_beds" if priced[ccn]["stratum"] == bands.ALL else None)
         if reason:
             excluded[reason] += 1
             continue

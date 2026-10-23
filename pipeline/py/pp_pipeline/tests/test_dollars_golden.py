@@ -16,6 +16,7 @@ from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MA
                                       enforce_caps, site_yes_count, unlisted_counts, yes_count)
 from pp_pipeline.emit_hospital import HACRP
 from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
+from pp_pipeline import ipps_pins
 from pp_pipeline.ipps_pins import payment_inputs
 
 PARTS = tuple(camel(k) for k in dollars.PARTS)  # the JSON's names; the schema states them independently
@@ -78,6 +79,8 @@ class Committed(unittest.TestCase):
             {**b, "measures": {**b["measures"], "hac": {**hac, "strata": [{**hac["strata"][0], "pool": "nearby"}]}}},
             {**b, "points": [{**b["points"][0], "stratum": "tiny/other"}]},
             {**b, "comparison": {**b["comparison"], "excluded": {**b["comparison"]["excluded"], "other": 1}}},
+            {**b, "measures": {**b["measures"], "hac": {**hac, "overall": {k: v for k, v in hac["overall"].items()
+                                                                           if k != "low"}}}},
         )
         for bad in broken:
             with self.subTest(bad=None if bad is None else sorted(bad)):
@@ -192,11 +195,39 @@ class Strata(unittest.TestCase):
         self.assertEqual(len(estimated), self.committed["national"]["hospitals"])
         for h in estimated:
             inp = inputs[h["ccn"]]
+            if h["stratum"] == bands.ALL:  # no bed count (none on these pins)
+                self.assertIsNone(bands.bed_band(inp["beds"]), h["ccn"][:2])
+                continue
             band = next(b for b in self.committed["bands"]["strata"] if b["id"] == h["stratum"])
             self.assertGreaterEqual(inp["beds"], band["bedsMin"], h["ccn"][:2])
             self.assertTrue(band["bedsMax"] is None or inp["beds"] <= band["bedsMax"], h["ccn"][:2])
             self.assertEqual(band["schMdh"], inp["sch"] or inp["mdh"], h["ccn"][:2])
         self.assertFalse(any("stratum" in h for h in self.committed["hospitals"] if h["status"] != "estimated"))
+
+    def test_a_hospital_with_no_bed_count_is_priced_and_takes_the_whole_sets_band(self):
+        # Synthetic: an impact-file row (picked by property: the first estimated, neither SCH nor MDH) under an invented
+        # CCN, with its bed count blank and zero. Each is priced as with its beds, with the stratum ALL, and the schema
+        # takes it.
+        inputs = payment_inputs()
+        base = next(inputs[h["ccn"]] for h in self.committed["hospitals"]
+                    if h["status"] == "estimated" and not (inputs[h["ccn"]]["sch"] or inputs[h["ccn"]]["mdh"]))
+        synthetic = {"990001": {**base, "beds": None}, "990002": {**base, "beds": 0}, "990003": base}
+        records = [{"ccn": ccn, "state": "ZZ", "cut": True} for ccn in synthetic]
+        with mock.patch.object(ipps_pins, "payment_inputs", return_value=synthetic):
+            rows = ipps_pins.priced_rows(records)
+        self.assertEqual([r["status"] for r in rows], ["estimated"] * 3)
+        self.assertEqual([r["stratum"] for r in rows[:2]], [bands.ALL, bands.ALL])
+        self.assertNotEqual(rows[2]["stratum"], bands.ALL)
+        strip = lambda r: {k: v for k, v in r.items() if k not in ("ccn", "stratum")}  # noqa: E731
+        self.assertEqual(strip(rows[0]), strip(rows[2]))  # the bed count moves no dollar
+        schemas = load_schemas()
+        row = next(h for h in self.committed["hospitals"] if h["status"] == "estimated")
+        few = {**self.committed, "hospitals": [{**row, "stratum": bands.ALL}]}
+        self.assertEqual(validate(schemas[SCHEMA], few, schemas), [])
+        # its band: every hospital's, with multipliers
+        for measure in ("hac", "net"):
+            overall = self.committed["bands"]["measures"][measure]["overall"]
+            self.assertEqual((overall["low"], overall["high"]), bands.multipliers(overall["p10"], overall["p90"]))
 
     def test_the_estimates_do_not_depend_on_the_back_test(self):
         # With the back-test replaced by nothing, the hospitals' figures and the sums are the committed ones: the ranges

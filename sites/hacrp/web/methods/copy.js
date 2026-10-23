@@ -403,6 +403,7 @@ export const COPY = {
   btExParhm: { text: "{n} from Pennsylvania's Rural Health Model", claim: null },
   btExHacrp: { text: "{n} for hospitals outside CMS's FY{fy} HACRP file", claim: null },
   btExEstimate: { text: "{n} for hospitals the method can't price", claim: null },
+  btExBeds: { text: "{n} for hospitals with no bed count in CMS's impact file", claim: null },
   btSource: { text: "Source: this site's check of its estimate, from CMS's FY{fy} IPPS final rule files and HACRP FY{fy} ({id}), against hospitals' Medicare cost reports in CMS's HCRIS file for FY{fy}, retrieved {date}.", claim: null },
   accessHeading: { text: 'Accessibility', claim: null },
   accessText: { text: "Every chart has a text description, and nearly every one has a table of its numbers behind “Show table.” The what-if and the sortable tables need JavaScript; without it, the values and the CSV stay available. Pages respect reduced-motion and forced-colors (high-contrast) settings.", claim: null },

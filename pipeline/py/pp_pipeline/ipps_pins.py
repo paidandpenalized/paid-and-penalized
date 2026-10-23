@@ -76,8 +76,8 @@ def priced_rows(records, fy=FY):
     """`dollars.hospital_row` for each of the HACRP file's `records` (`emit_hospital.read_hacrp`'s), in the file's order,
     priced on the final rule of year `fy`. An estimated row also carries its `stratum` (`bands.stratum_of`: the impact
     file's bed count, and whether the hospital is a sole community or Medicare-dependent one), the row of `bands` its
-    likely ranges come from; a hospital that would have an estimate but no bed count raises. The emitter and the
-    back-test both price through here, so the back-test prices a hospital as the pages do."""
+    likely ranges come from; a hospital the impact file gives no bed count is `bands.ALL` and takes the whole set's
+    band. The emitter and the back-test both price through here, so the back-test prices a hospital as the pages do."""
     inputs, table, hrrp, vbp = payment_inputs(fy), rates(fy), hrrp_factors(fy), vbp_factors(fy)
     out = []
     for r in records:
@@ -85,9 +85,6 @@ def priced_rows(records, fy=FY):
         row = dollars.hospital_row(r["ccn"], r["state"], inp, table, hrrp=hrrp.get(r["ccn"]), vbp=vbp.get(r["ccn"]),
                                    cut=r["cut"], parhm=PARHM)
         if row["status"] == "estimated":
-            stratum = bands.stratum_of(inp)
-            if stratum is None:
-                raise ValueError(f"an estimated hospital ({r['ccn'][:2]}xxxx) has no bed count in the impact file")
-            row = {**row, "stratum": stratum}
+            row = {**row, "stratum": bands.stratum_of(inp)}
         out.append(row)
     return out

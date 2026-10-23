@@ -34,12 +34,18 @@ function scaled(estimate, a, b) {
   return x <= y ? [x, y] : [y, x];
 }
 
+// The stratum of a hospital the impact file gives no bed count (pp_engine.bands.ALL): its ranges take the whole
+// back-test's band, each measure's `overall`.
+export const ALL_STRATUM = 'all';
+
 // A hospital's likely range for one measure ('hac' for its dollars at stake, 'net' for the net of the three programs):
 // its estimate times its stratum's two multipliers for that measure, from the back-test (each stratum's `low` and
-// `high`: in the back-test, the actual figure of 8 in 10 hospitals of the stratum fell in such a range around the
-// model's). bands: dollars.json's; stratum: the hospital's row's.
+// `high`, exp(-p90) and exp(-p10): the range spans the middle of the misses its group's estimates made against their
+// cost reports, the group's own or a wider group's where it had too few; ALL_STRATUM takes every hospital's). bands:
+// dollars.json's; stratum: the hospital's row's.
 export function rangeOf(bands, measure, stratum, estimate) {
-  const band = bands?.measures?.[measure]?.strata.find((s) => s.stratum === stratum);
+  const m = bands?.measures?.[measure];
+  const band = stratum === ALL_STRATUM ? m?.overall : m?.strata.find((s) => s.stratum === stratum);
   if (!band) throw new RangeError(`rangeOf: no ${measure} band for stratum ${stratum}`);
   return scaled(estimate, band.low, band.high);
 }

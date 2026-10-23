@@ -11,7 +11,7 @@ import { cmsText, count, decimal, dollars, money, moneyRange } from '../../../we
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from '../web/constants.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
-import { BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
+import { ALL_STRATUM, BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
 import { COPY as MONEY_COPY, fill as mfill, t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -70,6 +70,20 @@ test('the contract: an estimated hospital has dollars at stake above $0, since t
   assert.doesNotThrow(() => dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === other ? { ...r, atStake: 0 } : r)) }, DATA.hospitals));
 });
 
+test('a hospital the impact file gives no bed count (stratum "all") takes every hospital\'s band, and its page shows its ranges', () => {
+  // Synthetic: a pinned cut row (picked by property) with its stratum set to ALL_STRATUM, as the emitter writes one.
+  const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
+  const raw = file.hospitals.find((r) => r.ccn === CUT.ccn);
+  const data = dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === raw ? { ...r, stratum: ALL_STRATUM } : r)) }, DATA.hospitals);
+  const row = data.byCcn.get(CUT.ccn);
+  const { hac, net } = file.bands.measures;
+  assert.deepEqual(row.ranges.hac, [Math.round(row.atStake * hac.overall.low), Math.round(row.atStake * hac.overall.high)]);
+  assert.deepEqual(row.ranges.net, [Math.round(row.net * net.overall.high), Math.round(row.net * net.overall.low)]);
+  const page = text(pageOf(row));
+  assert.ok(page.includes(moneyRange(...row.ranges.hac)), 'the cut\'s range on the page');
+  assert.ok(page.includes(moneyRange(...row.ranges.net)), 'the net\'s range on the page');
+});
+
 test('hospitalMoney: an estimated row carries its dollars, the dollars at stake per Medicare stay and its likely ranges; any other only its status', () => {
   for (const row of rows) {
     const m = hospitalMoney(row);
@@ -97,6 +111,12 @@ test('the likely ranges: by stratum and measure, low first whatever the sign; no
   assert.deepEqual(rangeOf(BANDS, 'net', band.stratum, 1000), [Math.round(1000 * band.low), Math.round(1000 * band.high)]);
   assert.equal(rangeOf(BANDS, 'net', band.stratum, 0), null);
   assert.throws(() => rangeOf(BANDS, 'hac', 'tiny/other', 1000), /no hac band/);
+  // A hospital with no bed count (stratum ALL_STRATUM) takes every hospital's band, the measure's overall multipliers.
+  for (const measure of ['hac', 'net']) {
+    const { low, high } = BANDS.measures[measure].overall;
+    assert.ok(low < 1 && high > 1, measure);
+    assert.deepEqual(rangeOf(BANDS, measure, ALL_STRATUM, 1000), [Math.round(1000 * low), Math.round(1000 * high)], measure);
+  }
   assert.throws(() => rangeOf(null, 'hac', band.stratum, 1000), /no hac band/);
   assert.throws(() => rangeOf(BANDS, 'hac', band.stratum, NaN), RangeError);
   assert.deepEqual(nationalRange(BANDS, 1_000_000), [Math.round(1_000_000 * BANDS.national.p10), Math.round(1_000_000 * BANDS.national.p90)]);

@@ -393,8 +393,8 @@
           "$ref": "#/$defs/parts"
         },
         "stratum": {
-          "description": "The back-test stratum whose ranges this hospital's estimates take: its bed band (the impact file's beds) and whether it is a sole community or Medicare-dependent hospital.",
-          "$ref": "#/$defs/stratumId"
+          "description": "The back-test stratum whose ranges this hospital's estimates take: its bed band (the impact file's beds) and whether it is a sole community or Medicare-dependent hospital; \"all\" for a hospital the impact file gives no bed count, whose ranges take every hospital's band (each measure's `overall`).",
+          "$ref": "#/$defs/rowStratum"
         }
       }
     },
@@ -408,37 +408,51 @@
         "300-plus/other"
       ]
     },
-    "errorSummary": {
-      "description": "The 10th and 90th percentiles and the median of log(model / actual) over n hospitals, 4 decimals; null with none.",
+    "rowStratum": {
+      "enum": [
+        "under-100/sch-mdh",
+        "under-100/other",
+        "100-299/sch-mdh",
+        "100-299/other",
+        "300-plus/sch-mdh",
+        "300-plus/other",
+        "all"
+      ]
+    },
+    "overallBand": {
+      "description": "The 10th and 90th percentiles and the median of log(model / actual) over every hospital the measure compared, n, 4 decimals, and the multipliers of its percentiles: the band of a hospital with no stratum (\"all\").",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "n",
         "p10",
         "p90",
-        "median"
+        "median",
+        "low",
+        "high"
       ],
       "properties": {
         "n": {
           "$ref": "#/$defs/count"
         },
         "p10": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
         },
         "p90": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
         },
         "median": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
+        },
+        "low": {
+          "description": "exp(-p90).",
+          "type": "number",
+          "minimum": 0
+        },
+        "high": {
+          "description": "exp(-p10).",
+          "type": "number",
+          "minimum": 0
         }
       }
     },
@@ -543,7 +557,7 @@
           "$ref": "#/$defs/pairs"
         },
         "overall": {
-          "$ref": "#/$defs/errorSummary"
+          "$ref": "#/$defs/overallBand"
         },
         "strata": {
           "type": "array",
@@ -665,7 +679,8 @@
                 "puertoRico",
                 "parhm",
                 "notInHacrp",
-                "notEstimated"
+                "notEstimated",
+                "noBeds"
               ],
               "properties": {
                 "outsideWindow": {
@@ -687,6 +702,10 @@
                   "$ref": "#/$defs/count"
                 },
                 "notEstimated": {
+                  "$ref": "#/$defs/count"
+                },
+                "noBeds": {
+                  "description": "An estimated hospital the impact file gives no bed count, so no stratum.",
                   "$ref": "#/$defs/count"
                 }
               }

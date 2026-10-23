@@ -248,6 +248,10 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   errors that include this gap. `run.py backtest` prints each of these figures; `test_backtest_dollars` pins them.
 - The HCRIS extract (`hcris-fy2024-wse`) now also holds lines 28.01 and 29.01, read only for those figures; it was
   re-derived from the same zip and re-pinned (576,678 bytes), and nothing the back-test computes changed.
+- A hospital the impact file gives no bed count (blank or 0) is still estimated: its stratum is `all`, and its ranges
+  take each measure's `overall` band, which now carries its multipliers (`low`, `high`) beside its percentiles. The
+  back-test's comparison set still needs a bed count; a report for such a hospital is left out and counted
+  (`comparison.excluded.noBeds`). Neither pinned impact file has such a row, so no figure changed.
 - The pages: a hospital page says "plus the teaching payments Medicare makes on its Medicare Advantage patients' stays"
   wherever the hospital's payment includes them, and its statement and worksheet show them as a line of their own. The
   CSV gains the HAC cut's likely range (`hac_dollars_low_modeled`, `hac_dollars_high_modeled`; CSV schema_version 3).

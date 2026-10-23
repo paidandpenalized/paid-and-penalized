@@ -51,7 +51,7 @@ class CostReportArithmetic(unittest.TestCase):
 class ComparisonSet(unittest.TestCase):
     def setUp(self):
         self.rows = {"990001": model_row(), "990002": model_row(cut=True), "990003": model_row(status="no-inputs"),
-                     "990004": model_row()}
+                     "990004": model_row(), "990005": model_row(stratum=bands.ALL)}
 
     def run_set(self, reports):
         return bt.comparison_set(reports, self.rows)
@@ -63,11 +63,12 @@ class ComparisonSet(unittest.TestCase):
             report("21Z999"), report("40Z999", parhm="Y"), report("99Z998", parhm="Y"),
             report("990009"),  # not in the HACRP file
             report("990003"),  # in it, with no estimate
+            report("990005"),  # an estimate, but no bed count, so no stratum to test
             report("990001", l07099=0), report("990002", status="5", l07099=61),
         ]
         members, excluded = self.run_set(reports)
         self.assertEqual(excluded, {"outside_window": 1, "no_part_a": 1, "maryland": 1, "puerto_rico": 1, "parhm": 1,
-                                    "not_in_hacrp": 1, "not_estimated": 1})
+                                    "not_in_hacrp": 1, "not_estimated": 1, "no_beds": 1})
         self.assertEqual([(m["ccn"], m["status"], m["cut"], m["stratum"]) for m in members],
                          [("990001", "1", False, "100-299/other"), ("990002", "5", True, "100-299/other")])
         self.assertEqual(members[1]["actual"]["hac"], 61)
@@ -171,7 +172,7 @@ class OnThePins(unittest.TestCase):
         self.assertEqual(c["reports"], len(self.reports))
         self.assertEqual(c["reports"], 6113)
         self.assertEqual(c["excluded"], {"outsideWindow": 5249, "noPartA": 358, "maryland": 0, "puertoRico": 2,
-                                         "parhm": 0, "notInHacrp": 3, "notEstimated": 3})
+                                         "parhm": 0, "notInHacrp": 3, "notEstimated": 3, "noBeds": 0})
         self.assertEqual(c["reports"] - sum(c["excluded"].values()), c["hospitals"])
         self.assertEqual((c["hospitals"], c["cut"]), (498, 134))
         self.assertEqual(sum(c["statusCodes"].values()), c["hospitals"])

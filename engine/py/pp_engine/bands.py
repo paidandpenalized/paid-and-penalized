@@ -10,7 +10,8 @@ estimate / exp(p90) to estimate / exp(p10): in the back-test, a hospital's actua
 runs high) gets a range that sits below its estimates. The point estimates themselves are not corrected.
 
 A stratum with fewer than MIN_STRATUM hospitals for a measure borrows the percentiles of its bed band (both kinds
-pooled), and a bed band with too few borrows the whole set's; every borrowing is recorded.
+pooled), and a bed band with too few borrows the whole set's; every borrowing is recorded. A hospital the impact file
+gives no bed count has no stratum: its stratum is ALL, and its ranges take the whole set's percentiles (`overall`).
 
 The national range: the sum of the cut hospitals' estimates, times the 10th and 90th percentiles of
 sum(actual) / sum(model) over the back-test's cut hospitals, resampled with replacement (a bootstrap of hospitals).
@@ -34,6 +35,7 @@ def stratum_id(band, kind):
 
 
 STRATA = tuple(stratum_id(band, kind) for band, _, _ in BED_BANDS for kind in KINDS)
+ALL = "all"  # the stratum of a hospital with no bed count: the whole set's band, a measure's `overall`
 MIN_STRATUM = 30  # the fewest hospitals a stratum's own percentiles rest on; fewer borrow the bed band's
 LOW_PCT, HIGH_PCT = 0.10, 0.90  # the range brackets the middle 80% of the back-test's errors
 DECIMALS = 4  # log ratios and multipliers are written to 4 places
@@ -55,11 +57,11 @@ def bed_band(beds):
 
 
 def stratum_of(inp):
-    """A hospital's stratum (one of STRATA) from its impact-file inputs (`beds`, `sch`, `mdh`), or None when the bed
-    count is missing."""
+    """A hospital's stratum (one of STRATA) from its impact-file inputs (`beds`, `sch`, `mdh`), or ALL when the bed
+    count is missing or not above zero."""
     band = bed_band(inp["beds"])
     if band is None:
-        return None
+        return ALL
     return stratum_id(band, SCH_MDH if inp["sch"] or inp["mdh"] else OTHER)
 
 
@@ -113,7 +115,8 @@ def stratum_bands(errors_by_stratum):
     Returns (`strata`, `overall`): `strata` a list, in STRATA's order, of {stratum, n, median, pool, poolN, p10, p90,
     low, high}, where n and median are the stratum's own (median None with no hospitals), and pool says whose
     percentiles it takes: "stratum" (its own, n >= MIN_STRATUM), "beds" (its bed band's, both kinds pooled) or "all"
-    (every hospital's); `overall` the summary over every hospital."""
+    (every hospital's); `overall` the summary over every hospital with its multipliers, `low` and `high` (the band of
+    a hospital with no stratum, ALL)."""
     everyone = [e for s in STRATA for e in errors_by_stratum.get(s, [])]
     if len(everyone) < MIN_STRATUM:
         raise ValueError(f"{len(everyone)} hospitals: too few for any band (at least {MIN_STRATUM})")
@@ -130,7 +133,9 @@ def stratum_bands(errors_by_stratum):
             low, high = multipliers(stats["p10"], stats["p90"])
             out.append({"stratum": s, "n": len(own), "median": summary(own)["median"], "pool": pool,
                         "poolN": len(pooled), "p10": stats["p10"], "p90": stats["p90"], "low": low, "high": high})
-    return out, summary(everyone)
+    overall = summary(everyone)
+    low, high = multipliers(overall["p10"], overall["p90"])
+    return out, {**overall, "low": low, "high": high}
 
 
 def bootstrap_ratio(pairs, draws=BOOTSTRAP_DRAWS, seed=BOOTSTRAP_SEED):

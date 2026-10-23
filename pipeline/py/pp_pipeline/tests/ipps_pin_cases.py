@@ -91,7 +91,7 @@ class PaymentInputsCases:
         self.assertLess(span("cola")[1], 1.3)
         self.assertGreater(span("gaf")[0], 0.5)
         self.assertLess(span("gaf")[1], 2.0)
-        self.assertGreater(span("beds")[0], 0)  # every row has a bed count: the back-test's strata need it
+        self.assertGreater(span("beds")[0], 0)  # every row has a bed count (one without would take the whole set's band)
         for key in ("ime_op", "ime_cap", "dsh_op", "dsh_cap"):
             self.assertGreaterEqual(span(key)[0], 0, key)
             self.assertLess(span(key)[1], 1, key)  # fractions of the federal payment
