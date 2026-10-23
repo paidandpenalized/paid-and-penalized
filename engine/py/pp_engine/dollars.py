@@ -10,6 +10,9 @@ Why T is built term by term: the HAC cut is 1% of the hospital's whole IPPS paym
 adjustments (T', below), and that payment is the sum of a dozen pieces, only one of which the other two programs touch.
 
     fed        = cases x cmi x (labor x wage index + nonlabor x cola)        the federal DRG payment
+    F          = fed + IME + DSH + outliers + uncompensated care             the federal operating payment: what an
+                                                                             SCH's or MDH's hospital-specific payment
+                                                                             is compared with
     B          = fed + mdh_addon                                             base operating payment (HRRP, HVBP base)
     T          = B + IME + DSH + outliers + SCH difference + low volume + capital + uncompensated care
     T'         = T + B x (hrrp - 1) + B x (vbp - 1)
@@ -48,7 +51,9 @@ MDH_SHARE = 0.75  # a Medicare-dependent hospital is paid 75% of the excess of i
 # the ratio of this module's HRRP dollars to B over every hospital with an HRRP row is 0.387%, and over the penalized
 # hospitals alone 0.443%. The check uses the penalized hospitals (`hrrp_base`) because that is the ratio that reproduces
 # CMS's published figure. The denominator is unconfirmed (CMS's text and the pins disagree on which hospitals it
-# covers) and is flagged for the accuracy pass. The band is 0.04 percentage points each way.
+# covers) and is flagged for the accuracy pass. The band is 0.04 percentage points each way. This check is fitted to
+# CMS's published figure, so passing it proves little: it only rules out a gross error in B or in the factor join. The
+# real test of the HRRP dollars is the milestone-3 back-test against cost-report HRRP dollars.
 HRRP_SHARE = (0.0040, 0.0048)
 # HAC: the program cuts the worst-scoring quartile of hospitals (SSA 1886(p)) by 1% of their payments, so the cut is
 # about a quarter of 1% of all hospitals' payments: 0.25%. The ratio is the HAC dollars over everyone's T; the band is
@@ -122,6 +127,19 @@ def _hsp_payment(rate, inp):
     return rate * inp["cmi_hsp"] * inp["cases"]
 
 
+def _mdh_update(inp, rates):
+    """The multiplier that brings an MDH's hospital-specific rate to FY2026: 1 + the update (percent) the Table 1A/1B
+    heading states for the hospital's quality/EHR scenario. ASSUMPTION (verify in the accuracy pass): hospital-specific
+    rates are updated by the applicable percentage increase, the update those headings state. The impact file's MDH
+    column is the FY2025 rate ("HSP Rate updated to FY 2025 for MDH providers"; the FY2026 rule modeled the MDH
+    status expiring), while its SCH column is already "updated to FY 2026", so only the MDH rate takes this."""
+    key = rate_key(inp["quality"], inp["ehr"])
+    try:
+        return 1.0 + rates["update"][key] / 100.0
+    except KeyError:
+        raise ValueError(f"the rates have no FY2026 update for scenario {key!r}") from None
+
+
 def _parts(inp, rates):
     """Every dollar component for one hospital, as floats, before any program adjustment."""
     _check(inp)
@@ -134,13 +152,6 @@ def _parts(inp, rates):
     # figure therefore run slightly low for a hospital that receives them; the direction is the same for every
     # hospital, the size is not known.
 
-    # Medicare-dependent hospital: the federal payment plus 75% of the amount by which its hospital-specific payment
-    # exceeds it, never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns).
-    mdh_addon = 0.0
-    hsp_mdh = _hsp_payment(inp["hsp_mdh"], inp) if inp["mdh"] else None
-    if hsp_mdh is not None:
-        mdh_addon = MDH_SHARE * max(0.0, hsp_mdh - fed)
-
     # ASSUMPTION: the IME and DSH add-on factors apply to the federal DRG payment (not to the MDH add-on or the SCH
     # difference); `TCHOP` and `DSHOPP` are fractions of it, DSH after the 75% section 1886(r) reduction.
     ime = inp["ime_op"] * fed
@@ -152,28 +163,51 @@ def _parts(inp, rates):
     # uncompensated care stay out of the base. A blank factor (70 hospitals) is no outlier payments.
     outlier_op = (inp["outlier_op"] or 0.0) * (fed + ime + dsh)
 
-    # ASSUMPTION: a sole community hospital is paid the higher of the federal payment and its hospital-specific rate, and
-    # the difference is not part of B (HRRP and HVBP adjust the federal base). The real comparison is made payment by
-    # payment (the README says the per-claim uncompensated care amount feeds it); here it is made once, on the year's
-    # totals, which can only understate the difference for a hospital that wins on some claims and loses on others.
+    # ASSUMPTION: interim uncompensated care is paid per claim, so the per-claim amount times the file's Medicare cases.
+    # The amount's own denominator is a three-year average of claims the file does not carry; Bills (FY2024) is its
+    # nearest, and the national total is checked against the final rule's pool separately.
+    uc = inp["ucp_per_claim"] * inp["bills"]
+
+    # F, the federal operating payment, is what the hospital-specific payment is compared with. The FY2026 final rule
+    # (90 FR 36536; FR-2025-08-04): a sole community hospital is paid "the higher of the applicable Federal rate, or the
+    # hospital-specific rate"; a Medicare-dependent hospital "the higher of the Federal rate, or the Federal rate plus 75
+    # percent of the difference between the Federal rate and the hospital-specific rate"; and a hospital paid its
+    # hospital-specific rate gets no DSH ("the eligibility of SCHs paid under hospital-specific rate and MDHs to receive
+    # DSH payments" was a commenters' question). So the comparison is against everything the federal side pays the
+    # hospital, not the bare DRG payment. ASSUMPTION (verify in the accuracy pass): IME, operating outliers and
+    # uncompensated care sit inside F on both comparisons; the rule's text confirms DSH only. An SCH paid its
+    # hospital-specific rate is paid H = F + `sch_diff` in all, with nothing on top of it.
+    federal_operating = fed + ime + dsh + outlier_op + uc
+
+    # Medicare-dependent hospital: F plus 75% of the amount by which its (FY2026-updated) hospital-specific payment
+    # exceeds F, never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns).
+    mdh_addon = 0.0
+    hsp_mdh = _hsp_payment(inp["hsp_mdh"], inp) if inp["mdh"] else None
+    if hsp_mdh is not None:
+        mdh_addon = MDH_SHARE * max(0.0, hsp_mdh * _mdh_update(inp, rates) - federal_operating)
+
+    # A sole community hospital is paid the higher of F and its hospital-specific rate. The difference is not part of B:
+    # 42 CFR 412.152 defines the SCH base operating DRG payment amount to exclude it (an MDH's includes its add-on), so
+    # HRRP and HVBP adjust the federal base only. The real comparison is made payment by payment (the README says the
+    # per-claim uncompensated care amount feeds it); here it is made once, on the year's totals, which can only
+    # understate the difference for a hospital that wins on some claims and loses on others.
     sch_diff = 0.0
     hsp_sch = _hsp_payment(inp["hsp"], inp) if inp["sch"] else None
     if hsp_sch is not None:
-        sch_diff = max(0.0, hsp_sch - fed)
-
-    # ASSUMPTION (verify against 42 CFR 412.101 in the accuracy pass): the low-volume adjustment is a percentage add-on to
-    # the operating payment (federal, MDH add-on, IME, DSH and operating outliers), not to capital or uncompensated care.
-    low_volume = (inp["low_volume"] - 1.0) * (fed + mdh_addon + ime + dsh + outlier_op)
+        sch_diff = max(0.0, hsp_sch - federal_operating)
 
     # Capital: the single federal rate (Table 1D, for Puerto Rico too) x case-mix x the capital geographic adjustment
     # factor (which already includes the Alaska and Hawaii capital COLA) x (1 + IME + DSH) x cases, plus outliers.
     capital = (rates["capital"] * inp["cmi"] * inp["gaf"] * (1.0 + inp["ime_cap"] + inp["dsh_cap"]) * inp["cases"]
                * (1.0 + (inp["outlier_cap"] or 0.0)))
 
-    # ASSUMPTION: interim uncompensated care is paid per claim, so the per-claim amount times the file's Medicare cases.
-    # The amount's own denominator is a three-year average of claims the file does not carry; Bills (FY2024) is its
-    # nearest, and the national total is checked against the final rule's pool separately.
-    uc = inp["ucp_per_claim"] * inp["bills"]
+    # The low-volume adjustment (42 CFR 412.101), FY2026 final rule: it "is based on total per discharge payments made
+    # under section 1886 of the Act, including capital, DSH, IME, and outlier payments. For SCHs and MDHs, the
+    # low-volume hospital payment adjustment is based in part on either the Federal rate or the hospital-specific rate,
+    # whichever results in a greater operating IPPS payment." So its base is the federal payment, the MDH add-on, IME,
+    # DSH, operating outliers, the SCH difference and capital. ASSUMPTION (verify in the accuracy pass): uncompensated
+    # care stays out, since the rule's list does not name it.
+    low_volume = (inp["low_volume"] - 1.0) * (fed + mdh_addon + ime + dsh + outlier_op + sch_diff + capital)
 
     return {"fed": float(fed), "mdh_addon": float(mdh_addon), "ime": float(ime), "dsh": float(dsh),
             "outlier_op": float(outlier_op), "sch_diff": float(sch_diff), "low_volume": float(low_volume),
@@ -187,7 +221,9 @@ def _factor(value, name):
 
 
 def _base(parts):
-    """B: the federal DRG payment plus the MDH add-on, the base operating payment HRRP and HVBP adjust."""
+    """B: the federal DRG payment plus the MDH add-on, the base operating payment HRRP and HVBP adjust. An SCH's
+    hospital-specific difference is not in it: 42 CFR 412.152 defines the SCH base operating DRG payment amount to
+    exclude that difference, while an MDH's includes its add-on."""
     return parts["fed"] + parts["mdh_addon"]
 
 

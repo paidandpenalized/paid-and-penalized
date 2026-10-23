@@ -90,7 +90,29 @@ class Rates(unittest.TestCase):
         self.assertEqual(got["operating"]["1A"]["qe"], (660.00, 340.00))
         self.assertEqual(got["operating"]["1B"]["nn"], (589.00, 361.00))
         self.assertEqual(got["capital"], CAPITAL)
-        self.assertEqual(set(got), {"operating", "capital"})
+        self.assertEqual(set(got), {"operating", "capital", "update"})
+
+    def test_the_update_of_each_scenario_is_read_from_its_heading_as_a_percent(self):
+        # "(Update = 2.6 Percent)" -> 2.6; the fourth heading wraps a line and the update is negative
+        self.assertEqual(read_rates(rates_text())["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
+
+    def test_the_updates_follow_the_scenario_labels_not_their_position(self):
+        shuffled = read_rates(rates_text(order_a=("nn", "ne", "qn", "qe"), order_b=("ne", "qe", "nn", "qn")))
+        self.assertEqual(shuffled["update"], {"qe": 2.6, "qn": 0.125, "ne": 1.775, "nn": -0.7})
+
+    def test_a_scenario_with_no_update_or_a_table_that_disagrees_raises(self):
+        # a heading with no "(Update = ... Percent)"
+        with self.assertRaisesRegex(SchemaError, "update"):
+            read_rates(rates_text().replace(" (Update = 2.6 Percent)", "", 1))
+        # Table 1B states a different update for a scenario than Table 1A: the MDH rate could not be updated one way
+        text = rates_text()
+        first = text.index("(Update = 1.775 Percent)")
+        second = text.index("(Update = 1.775 Percent)", first + 1)
+        with self.assertRaisesRegex(SchemaError, "update"):
+            read_rates(text[:second] + "(Update = 1.8 Percent)" + text[second + len("(Update = 1.775 Percent)"):])
+        # Table 1C states a different update from the same scenario's in Table 1A
+        with self.assertRaisesRegex(SchemaError, "update"):
+            read_rates(rates_text().replace("Equal to 1 (Update = 0.125 Percent)", "Equal to 1 (Update = 0.2 Percent)", 1))
 
     def test_puerto_rico_table_has_the_ehr_split_only(self):
         got = read_rates(rates_text())["operating"]["1C"]

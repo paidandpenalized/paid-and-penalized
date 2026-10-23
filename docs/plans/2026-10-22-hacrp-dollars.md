@@ -25,12 +25,16 @@ copy their notes into this repo.
 - The formula, per hospital: HRRP $ = B(h − 1); HVBP $ = B(f − 1); T′ = T + HRRP $ + HVBP $; HACRP $ = −0.01 × T′
   when CMS's Payment Reduction is Yes, else 0; net = HRRP $ + HVBP $ + HACRP $. Negative is money Medicare keeps.
 - B = the base operating DRG payment: cases × CMI × (labor rate × wage index + nonlabor rate × COLA), the rate pair
-  from Table 1A (wage index > 1) or 1B (≤ 1) by the hospital's quality and EHR status, plus the MDH add-on
-  0.75 × max(0, HSP rate × CMI × cases − federal amount). SCH: federal rate in B. NTAP isn't published per hospital:
-  left out of B and stated as an assumption.
-- T = all IPPS payment before the three adjustments, cost sharing included: B × (1 + operating IME + operating DSH)
-  + outliers + capital (capital federal rate × CMI × GAF × (1 + capital IME + capital DSH) × cases) + interim
-  uncompensated care + low-volume + the SCH hospital-specific difference.
+  from Table 1A (wage index > 1) or 1B (≤ 1) by the hospital's quality and EHR status (the federal payment, `fed`),
+  plus the MDH add-on 0.75 × max(0, H − F), where H = the MDH hospital-specific rate (the file's FY2025 rate × the
+  scenario's FY2026 update) × CMI(HSP) × cases and F = the federal operating payment = `fed` + IME + DSH + operating
+  outliers + uncompensated care. SCH: federal payment only in B; its hospital-specific difference max(0, H − F), with H
+  the SCH rate × CMI(HSP) × cases, is a separate part of T. NTAP isn't published per hospital: left out of B and
+  stated as an assumption.
+- T = all IPPS payment before the three adjustments, cost sharing included: B + operating IME (× `fed`) + operating
+  DSH (× `fed`) + outliers (× `fed` + IME + DSH) + the SCH hospital-specific difference + low-volume (the adjustment
+  × `fed` + MDH add-on + IME + DSH + outliers + SCH difference + capital, not uncompensated care) + capital (capital
+  federal rate × CMI × GAF × (1 + capital IME + capital DSH) × cases, with outliers) + interim uncompensated care.
 - Maryland: $0 in all three programs, out of every total. Pennsylvania Rural Health Model participants: no estimate,
   and the pages say why. MDH and expanded low-volume tiers: in force for all of FY2026 (reinstated through
   2026-12-31).
@@ -94,8 +98,9 @@ copy their notes into this repo.
 **Interfaces:**
 - Consumes: `parse.rows`, `parse.table`, `parse.index_by_ccn`, `parse.num`, `parse.SchemaError`.
 - Produces:
-  - `read_rates(text) -> dict`: `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}}, "capital": float}`,
-    keys `qe`, `qn`, `ne`, `nn` (quality data submitted or not × meaningful EHR user or not).
+  - `read_rates(text) -> dict`: `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}}, "capital": float,
+    "update": {key: percent}}`, keys `qe`, `qn`, `ne`, `nn` (quality data submitted or not × meaningful EHR user or
+    not); `update` is each scenario's FY2026 update as its Table 1A/1B heading states it.
   - `read_payment_inputs(text) -> {ccn: dict}` with keys `cases, cmi, wi, cola, quality, ehr, ptype, mdh, sch, hsp,
     ime_op, dsh_op, ime_cap, dsh_cap, gaf, ucp, outlier, low_volume` (numbers; `None` where blank).
   - `read_hrrp_factors(text) -> {ccn: float}`; `read_vbp_factors(text) -> {ccn: float}`.
@@ -120,11 +125,10 @@ copy their notes into this repo.
 **Interfaces:**
 - Consumes: Task 2's dicts.
 - Produces:
-  - `base_payment(inp, rates) -> float` (B, per Global Constraints).
-  - `total_payment(inp, rates, base) -> float` (T).
   - `estimate(inp, rates, *, hrrp, vbp, cut) -> dict` with keys `base, total, hrrp, hvbp, after, at_stake, hac, net`
-    (floats; `after` = T′; `at_stake` = 0.01 × T′ for every hospital; `hac` = −`at_stake` when `cut` is true, else
-    0).
+    (floats; `base` = B and `total` = T per Global Constraints, both built from the dollar parts the dict also lists:
+    `fed, mdh_addon, ime, dsh, outlier_op, sch_diff, low_volume, capital, uc`; `after` = T′; `at_stake` = 0.01 × T′ for
+    every hospital; `hac` = −`at_stake` when `cut` is true, else 0).
 
 - [ ] **Step 1: Write the failing tests** with synthetic hospitals whose answers are worked by hand in the test:
   `test_base_uses_1a_above_one_and_1b_at_or_below`; `test_cola_scales_nonlabor_only`;

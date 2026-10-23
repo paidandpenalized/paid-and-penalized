@@ -117,12 +117,26 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
     community difference; DSH is after the 75% reduction in section 1886(r).
   - The operating outlier factor applies to the federal payment plus IME plus DSH (the file does not say whether the DRG
     payment alone); a blank factor is no outliers.
-  - A sole community hospital is paid the higher of the federal payment and its hospital-specific rate, and the
-    difference is not part of the base HRRP and HVBP adjust. The comparison is made once, on the year's totals, not claim
-    by claim, which can only understate the difference. A blank or zero hospital-specific rate is no usable rate; the
-    comparison uses the case-mix the file gives for hospital-specific-rate hospitals and the same transfer-adjusted cases.
-  - The low-volume adjustment is a percentage add-on to the operating payment (federal, Medicare-dependent add-on, IME,
-    DSH and operating outliers), not to capital or uncompensated care (to verify against 42 CFR 412.101).
+  - A sole community hospital is paid the higher of its federal operating payment and its hospital-specific rate (FY2026
+    final rule: "the higher of the applicable Federal rate, or the hospital-specific rate"). The federal operating
+    payment is the federal DRG payment plus IME, DSH, operating outliers and uncompensated care, so the comparison is
+    not against the bare DRG payment, and a hospital paid its hospital-specific rate is paid that amount in all, with
+    nothing on top. The rule's text confirms DSH sits on the federal side; that IME, outliers and uncompensated care do is
+    an assumption to verify. The difference is `schDiff`, not part of the base HRRP and HVBP adjust (42 CFR 412.152
+    excludes it from the SCH base operating DRG payment amount; a Medicare-dependent hospital's includes its add-on).
+    The comparison is made once, on the year's totals, not claim by claim, which can only understate the difference. A
+    blank or zero hospital-specific rate is no usable rate; the comparison uses the case-mix the file gives for
+    hospital-specific-rate hospitals and the same transfer-adjusted cases.
+  - A Medicare-dependent hospital is paid its federal operating payment (the same terms) plus 75% of the amount by which
+    its hospital-specific payment exceeds it ("the higher of the Federal rate, or the Federal rate plus 75 percent of the
+    difference"). The impact file's rate for these hospitals is the FY2025 one (the FY2026 rule modeled the status
+    expiring), so it is multiplied by 1 plus the FY2026 update for the hospital's quality and EHR scenario, the update
+    Tables 1A and 1B state in their headings (2.6, 0.125, 1.775 or -0.7 percent). That hospital-specific rates are updated
+    by that percentage is an assumption to verify. The file's sole community rates are already updated to FY2026.
+  - The low-volume adjustment is a percentage add-on to total per-discharge payments, "including capital, DSH, IME, and
+    outlier payments": the federal payment, the Medicare-dependent add-on, IME, DSH, operating outliers, the sole
+    community difference and capital, not uncompensated care (the rule's list does not name it; to verify against 42 CFR
+    412.101).
   - Uncompensated care is the per-claim amount times the file's Medicare bills (FY2024); the amount's own denominator is
     a three-year average of claims the file does not carry.
   - HRRP and HVBP each adjust the base operating payment only (not IME, DSH, capital or the rest); the HAC cut is 1% of

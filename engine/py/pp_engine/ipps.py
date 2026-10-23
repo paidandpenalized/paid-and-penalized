@@ -19,6 +19,7 @@ from pp_engine.parse import SchemaError, index_by_ccn, num, rows, squash, table,
 # table heading; these two functions are the only places the mapping is written.
 RATE_KEYS = ("qe", "qn", "ne", "nn")  # q/n = quality data submitted / not; e/n = EHR user / not
 TABLE_TITLE = re.compile(r"table (1[a-e])\b", re.I)
+UPDATE = re.compile(r"\(update\s*=\s*(-?\d+(?:\.\d+)?)\s*percent\)")  # a scenario heading's "(Update = 2.6 Percent)"
 
 
 def rate_key(quality, ehr):
@@ -51,6 +52,15 @@ def _scenario_key(text, label, quality_default):
     return quality + ehr
 
 
+def _scenario_update(text, label):
+    """The FY2026 update, in percent, a scenario heading states: 'Update = 2.6 Percent' -> 2.6, '(Update = -0.7 Percent)'
+    -> -0.7. The heading is the rate's own source for it, the one number the rule applies to a hospital-specific rate."""
+    m = UPDATE.search(squash(text).lower())
+    if not m:
+        raise SchemaError(f"{label}: no update stated in the scenario heading {squash(text)!r}")
+    return float(m.group(1))
+
+
 def _is(cell, *words):
     return squash(cell).lower() in words
 
@@ -78,14 +88,15 @@ def _sections(grid):
 
 
 def _operating(section, name, quality_default):
-    """{key: (labor, nonlabor)} from a Table 1A, 1B or 1C section: the row of labor/nonlabor headings, the scenario
-    names on the row above it, the rates on the row below. A pair whose cells both say 'Not Applicable' is skipped."""
+    """(`{key: (labor, nonlabor)}`, `{key: update percent}`) from a Table 1A, 1B or 1C section: the row of labor/nonlabor
+    headings, the scenario names (with their updates) on the row above it, the rates on the row below. A pair whose
+    cells both say 'Not Applicable' is skipped."""
     label = f"Tables 1A-1E, Table {name}"
     heads = [i for i, row in enumerate(section) if any(_is(c, "labor-related", "labor") for c in row)]
     if len(heads) != 1 or heads[0] < 1 or heads[0] + 1 >= len(section):
         raise SchemaError(f"{label}: expected one row of labor/nonlabor headings with scenarios above and rates below")
     names, heads_row, values = section[heads[0] - 1], section[heads[0]], section[heads[0] + 1]
-    out = {}
+    out, updates = {}, {}
     for j, cell in enumerate(heads_row):
         if not _is(cell, "labor-related", "labor"):
             continue
@@ -94,11 +105,13 @@ def _operating(section, name, quality_default):
         cells = [(values[k] if k < len(values) else "") for k in (j, j + 1)]
         if all(_is(c, "not applicable") for c in cells):
             continue
-        key = _scenario_key(names[j] if j < len(names) else "", label, quality_default)
+        heading = names[j] if j < len(names) else ""
+        key = _scenario_key(heading, label, quality_default)
         if key in out:
             raise SchemaError(f"{label}: scenario {key!r} appears twice")
         out[key] = (_rate(cells[0], label), _rate(cells[1], label))
-    return out
+        updates[key] = _scenario_update(heading, label)
+    return out, updates
 
 
 def _capital(section):
@@ -113,24 +126,33 @@ def _capital(section):
 
 def read_rates(text):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
-    `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate}`.
+    `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate, "update": {key: percent}}`.
     1A is for a wage index above 1 (66% labor), 1B for 1 or below (62%), 1C is Puerto Rico's. The keys (`RATE_KEYS`,
     chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table still prices
     right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
-    'Not Applicable'). Capital is Table 1D's single federal rate."""
+    'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's FY2026 update in percent
+    ('Update = 2.6 Percent' -> 2.6), which the headings of Tables 1A and 1B state alike (and 1C's two, for the scenarios
+    it lists): a table that states another update for the same scenario raises."""
     sections = _sections(rows(text, "\t"))
     for name in ("1A", "1B", "1C", "1D"):
         if name not in sections:
             raise SchemaError(f"Tables 1A-1E: Table {name} not found")
-    operating = {"1A": _operating(sections["1A"], "1A", None), "1B": _operating(sections["1B"], "1B", None),
-                 "1C": _operating(sections["1C"], "1C", "q")}
+    (rates_a, updates_a), (rates_b, updates_b), (rates_c, updates_c) = (
+        _operating(sections["1A"], "1A", None), _operating(sections["1B"], "1B", None),
+        _operating(sections["1C"], "1C", "q"))
+    operating = {"1A": rates_a, "1B": rates_b, "1C": rates_c}
     for name in ("1A", "1B"):
         if sorted(operating[name]) != sorted(RATE_KEYS):
             raise SchemaError(f"Tables 1A-1E, Table {name}: expected the four scenarios, found {sorted(operating[name])}")
     if sorted(operating["1C"]) != ["qe", "qn"]:
         raise SchemaError(f"Tables 1A-1E, Table 1C: expected the EHR user and non-user scenarios, "
                           f"found {sorted(operating['1C'])}")
-    return {"operating": operating, "capital": _capital(sections["1D"])}
+    for name, updates in (("1B", updates_b), ("1C", updates_c)):
+        for key, percent in updates.items():
+            if percent != updates_a[key]:
+                raise SchemaError(f"Tables 1A-1E, Table {name}: update {percent} for scenario {key!r}, "
+                                  f"Table 1A states {updates_a[key]}")
+    return {"operating": operating, "capital": _capital(sections["1D"]), "update": updates_a}
 
 
 # --- the impact file -------------------------------------------------------------------------------------------------

@@ -17,6 +17,9 @@ RATES = {
         "1C": {"qe": (3100.0, 2600.0), "qn": (3000.0, 2500.0)},
     },
     "capital": 500.0,
+    # The FY2026 update (percent) each scenario's heading states in Tables 1A/1B, invented and all different: the
+    # hospital-specific rate of a Medicare-dependent hospital is multiplied by (1 + update / 100).
+    "update": {"qe": 10.0, "qn": 5.0, "ne": 2.5, "nn": -5.0},
 }
 
 # The synthetic hospital: 10 cases at a case-mix of 1.5 and a wage index of 1.5 (Table 1A, quality + EHR scenario), so
@@ -97,15 +100,58 @@ class Base(Close):
             est(pr=True, wi=0.8, quality=1)["base"]  # 1C has qe and qn only
 
     def test_mdh_addon_is_three_quarters_of_the_shortfall_and_never_negative(self):
-        # HSP side: 9000 x 1.6 (cmi_hsp) x 10 cases = 144,000; shortfall 144,000 - 120,000 = 24,000; 75% = 18,000
+        # HSP side: 9000 x 1.10 (the qe update, 10%) x 1.6 (cmi_hsp) x 10 cases = 9,900 x 16 = 158,400;
+        # shortfall against the federal payment 158,400 - 120,000 = 38,400; 75% = 28,800
         h = hospital(mdh=True, hsp_mdh=9000.0)
-        self.assertDollars(est(h)["base"], 138000.0)
+        self.assertDollars(est(h)["base"], 148800.0)
         e = est(h)
-        self.assertParts(nonzero(e), {"fed": 120000.0, "mdh_addon": 18000.0})
-        # HSP side below the federal payment: 7000 x 16 = 112,000 < 120,000: no add-on, never negative
-        low = hospital(mdh=True, hsp_mdh=7000.0)
+        self.assertParts(nonzero(e), {"fed": 120000.0, "mdh_addon": 28800.0})
+        # HSP side below the federal payment: 6500 x 1.10 x 16 = 114,400 < 120,000: no add-on, never negative
+        low = hospital(mdh=True, hsp_mdh=6500.0)
         self.assertDollars(est(low)["base"], 120000.0)
         self.assertEqual(est(low)["mdh_addon"], 0)
+
+    def test_the_mdh_rate_is_updated_to_fy2026_by_the_hospitals_scenario(self):
+        # The impact file's MDH rate is the FY2025 one; the FY2026 rate is it x (1 + the scenario's update). 8000 stands
+        # for the file's rate, cmi_hsp 1.6, 10 cases: 128,000 before the update, so the update is what moves the add-on.
+        # qe (+10%): 8000 x 1.10 x 16 = 140,800 vs fed 120,000: shortfall 20,800; 75% = 15,600 (not 0.75 x 8,000 = 6,000)
+        self.assertDollars(est(mdh=True, hsp_mdh=8000.0)["mdh_addon"], 15600.0)
+        # qn (quality ok, EHR reduced: +5%): fed 15 x (3900 x 1.5 + 1900) = 116,250; 8000 x 1.05 x 16 = 134,400;
+        # shortfall 18,150; 75% = 13,612.50
+        e = est(mdh=True, hsp_mdh=8000.0, ehr=1)
+        self.assertDollars(e["fed"], 116250.0)
+        self.assertDollars(e["mdh_addon"], 13612.5)
+        # ne (quality failed, EHR ok: +2.5%): fed 15 x (3800 x 1.5 + 1800) = 112,500; 8000 x 1.025 x 16 = 131,200;
+        # shortfall 18,700; 75% = 14,025
+        self.assertDollars(est(mdh=True, hsp_mdh=8000.0, quality=1)["mdh_addon"], 14025.0)
+        # nn (both reduced: -5%): fed 15 x (3700 x 1.5 + 1700) = 108,750; 8000 x 0.95 x 16 = 121,600; shortfall 12,850;
+        # 75% = 9,637.50 (a negative update lowers the rate)
+        self.assertDollars(est(mdh=True, hsp_mdh=8000.0, quality=1, ehr=1)["mdh_addon"], 9637.5)
+
+    def test_a_puerto_rico_mdh_takes_the_update_of_its_ehr_scenario(self):
+        # Table 1C qn (EHR reduced: +5%), wage index 0.8: fed 15 x (3000 x 0.8 + 2500) = 73,500; 8000 x 1.05 x 16 =
+        # 134,400; shortfall 60,900; 75% = 45,675
+        e = est(mdh=True, hsp_mdh=8000.0, pr=True, wi=0.8, ehr=1)
+        self.assertDollars(e["fed"], 73500.0)
+        self.assertDollars(e["mdh_addon"], 45675.0)
+
+    def test_a_rates_table_without_the_update_raises_for_an_mdh_that_needs_it(self):
+        no_update = {k: v for k, v in RATES.items() if k != "update"}
+        with self.assertRaises(ValueError):
+            estimate(hospital(mdh=True, hsp_mdh=8000.0), no_update, hrrp=1.0, vbp=1.0, cut=False)
+        # a hospital that has no MDH rate to update does not need it
+        estimate(hospital(), no_update, hrrp=1.0, vbp=1.0, cut=False)
+
+    def test_the_mdh_comparison_is_against_the_federal_side_with_its_add_ons(self):
+        # FY2026 final rule: an MDH is paid "the higher of the Federal rate, or the Federal rate plus 75 percent of the
+        # difference between the Federal rate and the hospital-specific rate". The Federal rate is the whole federal
+        # operating payment: F = fed 120,000 + IME 12,000 + DSH 6,000 + outliers 0.02 x 138,000 = 2,760 + UC 50 x 12 = 600
+        # = 141,360. H = 158,400 (as above). Add-on 0.75 x (158,400 - 141,360) = 0.75 x 17,040 = 12,780
+        # (against fed alone it would be 28,800).
+        e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, ucp_per_claim=50.0)
+        self.assertDollars(e["mdh_addon"], 12780.0)
+        # F above H: nothing. IME 0.4 x 120,000 = 48,000 puts F at 168,000, past H = 158,400
+        self.assertEqual(est(mdh=True, hsp_mdh=9000.0, ime_op=0.4)["mdh_addon"], 0)
 
     def test_mdh_addon_needs_the_flag_and_a_usable_hsp_rate(self):
         for h in (hospital(mdh=False, hsp_mdh=9000.0),  # the rate is there, the status is not
@@ -122,6 +168,30 @@ class Base(Close):
         h = hospital(sch=True, ptype=16, hsp=9000.0)
         self.assertDollars(est(h)["base"], FED)
         self.assertDollars(est(h)["sch_diff"], 24000.0)
+
+    def test_the_sch_comparison_is_against_the_federal_side_with_its_add_ons(self):
+        # FY2026 final rule: an SCH is paid "the higher of the applicable Federal rate, or the hospital-specific rate".
+        # F = fed 120,000 + IME 12,000 + DSH 6,000 + outliers 0.02 x 138,000 = 2,760 + UC 50 x 12 = 600 = 141,360.
+        # H = 9000 x 1.6 x 10 = 144,000 (the SCH file's rate is already the FY2026 one: no update). Difference
+        # 144,000 - 141,360 = 2,640 (against fed alone it would be 24,000).
+        e = est(sch=True, ptype=16, hsp=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, ucp_per_claim=50.0)
+        self.assertDollars(e["sch_diff"], 2640.0)
+        # a hospital paid its hospital-specific rate is paid H in all: nothing lies on top of it
+        self.assertDollars(e["fed"] + e["ime"] + e["dsh"] + e["outlier_op"] + e["uc"] + e["sch_diff"], 144000.0)
+
+    def test_an_sch_whose_federal_side_with_add_ons_passes_its_hsp_payment_has_no_difference(self):
+        # H = 144,000 beats fed 120,000, but IME 0.25 x 120,000 = 30,000 lifts F to 150,000: paid the federal rate
+        e = est(sch=True, ptype=16, hsp=9000.0, ime_op=0.25)
+        self.assertDollars(e["fed"] + e["ime"], 150000.0)
+        self.assertEqual(e["sch_diff"], 0)
+        # exactly equal: no difference either (F = 144,000 with IME 0.2)
+        self.assertEqual(est(sch=True, ptype=16, hsp=9000.0, ime_op=0.2)["sch_diff"], 0)
+
+    def test_the_sch_rate_is_not_updated(self):
+        # the SCH column is already "updated to FY 2026" (the impact file's README); the scenario's update is not applied
+        for changes in ({}, {"ehr": 1}, {"quality": 1, "ehr": 1}):
+            e = est(sch=True, ptype=16, hsp=9000.0, **changes)
+            self.assertDollars(e["sch_diff"], 144000.0 - e["fed"], changes)
 
 
 class Total(Close):
@@ -146,8 +216,8 @@ class Total(Close):
                  {"fed": 120000.0, "capital": 10764.0}),
                 # uncompensated care: 50 per claim x 12 bills = 600 (bills, not the 10 transfer-adjusted cases)
                 ({"ucp_per_claim": 50.0}, {"fed": 120000.0, "uc": 600.0}),
-                # MDH add-on: 18,000 (worked above)
-                ({"mdh": True, "hsp_mdh": 9000.0}, {"fed": 120000.0, "mdh_addon": 18000.0})):
+                # MDH add-on: 28,800 (worked above)
+                ({"mdh": True, "hsp_mdh": 9000.0}, {"fed": 120000.0, "mdh_addon": 28800.0})):
             h = hospital(**changes)
             e = est(h)
             self.assertParts(nonzero(e), parts)
@@ -161,17 +231,37 @@ class Total(Close):
         self.assertDollars(e["total"], 120000 + 12000 + 6000 + 2760)
 
     def test_ime_dsh_and_outliers_follow_the_federal_payment_not_the_mdh_addon(self):
-        # MDH add-on 18,000 is in B but is not a base for IME (0.1 x 120,000, not x 138,000), DSH or outliers
+        # The MDH add-on is in B but is not a base for IME (0.1 x 120,000, not x B), DSH or outliers.
+        # F = 120,000 + 12,000 + 6,000 + 2,760 = 140,760; add-on 0.75 x (158,400 - 140,760) = 0.75 x 17,640 = 13,230
         e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02)
-        self.assertParts(nonzero(e), {"fed": 120000.0, "mdh_addon": 18000.0, "ime": 12000.0, "dsh": 6000.0,
+        self.assertParts(nonzero(e), {"fed": 120000.0, "mdh_addon": 13230.0, "ime": 12000.0, "dsh": 6000.0,
                                       "outlier_op": 2760.0})
 
-    def test_low_volume_applies_to_the_operating_payment_only(self):
-        # 0.1 x (120,000 + 18,000 MDH + 12,000 IME + 6,000 DSH + 2,760 outliers) = 0.1 x 158,760 = 15,876
-        # (not capital, not uncompensated care: those are nonzero here and left out of the base)
+    def test_low_volume_is_on_total_per_discharge_payments_but_not_uncompensated_care(self):
+        # FY2026 final rule: the adjustment "is based on total per discharge payments made under section 1886 of the
+        # Act, including capital, DSH, IME, and outlier payments". Base = fed 120,000 + MDH add-on + IME 12,000 +
+        # DSH 6,000 + outliers 2,760 + SCH difference (none) + capital 10,764. The MDH add-on (F = 141,360 with the
+        # 600 of UC; H = 158,400) is 0.75 x 17,040 = 12,780. Base 164,304; x 0.1 = 16,430.4. Uncompensated care (600)
+        # is nonzero here and not in the base.
         e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
-                ucp_per_claim=50.0)
-        self.assertDollars(e["low_volume"], 15876.0)
+                ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0)
+        self.assertDollars(e["capital"], 10764.0)
+        self.assertDollars(e["uc"], 600.0)
+        self.assertDollars(e["mdh_addon"], 12780.0)
+        self.assertDollars(e["low_volume"], 16430.4)
+
+    def test_low_volume_for_an_sch_includes_the_hsp_difference(self):
+        # "For SCHs and MDHs, the low-volume hospital payment adjustment is based in part on either the Federal rate or
+        # the hospital-specific rate, whichever results in a greater operating IPPS payment." SCH, H = 144,000;
+        # IME 12,000 -> F = 132,000, difference 12,000; capital 500 x 1.5 x 1.2 x 10 = 9,000.
+        # Base 120,000 + 12,000 + 12,000 + 9,000 = 153,000; x 0.1 = 15,300
+        e = est(sch=True, ptype=16, hsp=9000.0, ime_op=0.1, low_volume=1.1, gaf=1.2)
+        self.assertDollars(e["sch_diff"], 12000.0)
+        self.assertDollars(e["low_volume"], 15300.0)
+
+    def test_low_volume_with_nothing_else_is_on_the_federal_payment_and_capital(self):
+        # 0.1 x (120,000 + 9,000 capital) = 12,900
+        self.assertDollars(est(low_volume=1.1, gaf=1.2)["low_volume"], 12900.0)
 
     def test_a_blank_optional_input_contributes_zero(self):
         # Outliers, hospital-specific rates: None means the file left them blank. No None arithmetic, no error.
@@ -213,14 +303,15 @@ class Total(Close):
 
 class Adjustments(Close):
     def test_hrrp_and_hvbp_are_taken_on_the_base_payment(self):
-        # B = 138,000 (MDH). HRRP factor 0.97: 138,000 x -0.03 = -4,140. VBP factor 1.01: 138,000 x 0.01 = +1,380.
+        # MDH: F = 120,000 + IME 12,000 = 132,000; add-on 0.75 x (158,400 - 132,000) = 19,800; B = 139,800.
+        # HRRP factor 0.97: 139,800 x -0.03 = -4,194. VBP factor 1.01: 139,800 x 0.01 = +1,398.
         # IME, DSH etc. are not in the base the two programs adjust.
         e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, hrrp=0.97, vbp=1.01)
-        self.assertDollars(e["base"], 138000.0)
-        self.assertDollars(e["hrrp"], -4140.0)
-        self.assertDollars(e["hvbp"], 1380.0)
-        self.assertDollars(e["total"], 138000.0 + 12000.0)
-        self.assertDollars(e["after"], 150000.0 - 4140.0 + 1380.0)
+        self.assertDollars(e["base"], 139800.0)
+        self.assertDollars(e["hrrp"], -4194.0)
+        self.assertDollars(e["hvbp"], 1398.0)
+        self.assertDollars(e["total"], 139800.0 + 12000.0)
+        self.assertDollars(e["after"], 151800.0 - 4194.0 + 1398.0)
 
     def test_a_factor_of_one_is_no_adjustment(self):
         e = est()
@@ -272,31 +363,31 @@ class Adjustments(Close):
 
 class AllTerms(Close):
     def test_a_medicare_dependent_hospital_with_every_term(self):
-        # fed 120,000; MDH add-on 0.75 x (9000 x 1.6 x 10 - 120,000) = 18,000 -> B = 138,000
-        # IME 12,000; DSH 6,000; outliers 0.02 x (120,000 + 12,000 + 6,000) = 2,760; no SCH difference
-        # low volume 0.1 x (120,000 + 18,000 + 12,000 + 6,000 + 2,760) = 15,876
-        # capital 500 x 1.5 x 1.2 x (1 + 0.1 + 0.05) x 10 x (1 + 0.04) = 10,764; UC 50 x 12 = 600
-        # T = 138,000 + 12,000 + 6,000 + 2,760 + 15,876 + 10,764 + 600 = 186,000
-        # HRRP 0.97: 138,000 x -0.03 = -4,140; VBP 1.01: +1,380; after = 183,240; HAC = -1,832.40
+        # fed 120,000; IME 12,000; DSH 6,000; outliers 0.02 x (120,000 + 12,000 + 6,000) = 2,760; UC 50 x 12 = 600
+        # F = 141,360; MDH add-on 0.75 x (9000 x 1.10 x 1.6 x 10 - 141,360) = 0.75 x 17,040 = 12,780 -> B = 132,780
+        # capital 500 x 1.5 x 1.2 x (1 + 0.1 + 0.05) x 10 x (1 + 0.04) = 10,764; no SCH difference
+        # low volume 0.1 x (120,000 + 12,780 + 12,000 + 6,000 + 2,760 + 10,764) = 0.1 x 164,304 = 16,430.4
+        # T = 132,780 + 12,000 + 6,000 + 2,760 + 16,430.4 + 10,764 + 600 = 181,334.4
+        # HRRP 0.97: 132,780 x -0.03 = -3,983.4; VBP 1.01: +1,327.8; after = 178,678.8; HAC = -1,786.788
         e = est(mdh=True, hsp_mdh=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
                 ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0, hrrp=0.97, vbp=1.01, cut=True)
-        want = {"base": 138000.0, "total": 186000.0, "hrrp": -4140.0, "hvbp": 1380.0, "after": 183240.0,
-                "at_stake": 1832.4, "hac": -1832.4, "net": -4140.0 + 1380.0 - 1832.4, "fed": 120000.0,
-                "mdh_addon": 18000.0, "ime": 12000.0, "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 0.0,
-                "low_volume": 15876.0, "capital": 10764.0, "uc": 600.0}
+        want = {"base": 132780.0, "total": 181334.4, "hrrp": -3983.4, "hvbp": 1327.8, "after": 178678.8,
+                "at_stake": 1786.788, "hac": -1786.788, "net": -3983.4 + 1327.8 - 1786.788, "fed": 120000.0,
+                "mdh_addon": 12780.0, "ime": 12000.0, "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 0.0,
+                "low_volume": 16430.4, "capital": 10764.0, "uc": 600.0}
         self.assertParts(e, want)
 
     def test_a_sole_community_hospital_with_every_term(self):
-        # fed 120,000 = B; SCH difference 9000 x 1.6 x 10 - 120,000 = 24,000 (in T, not in B)
-        # IME 12,000; DSH 6,000; outliers 2,760; low volume 0.1 x (120,000 + 12,000 + 6,000 + 2,760) = 14,076
-        # capital 10,764; UC 600
-        # T = 120,000 + 12,000 + 6,000 + 2,760 + 24,000 + 14,076 + 10,764 + 600 = 190,200
-        # HRRP 0.97: 120,000 x -0.03 = -3,600; VBP 1.01: +1,200; after = 187,800; at stake 1,878; not cut
+        # fed 120,000 = B; IME 12,000; DSH 6,000; outliers 2,760; UC 600; F = 141,360
+        # SCH difference 9000 x 1.6 x 10 - 141,360 = 2,640 (in T, not in B); capital 10,764
+        # low volume 0.1 x (120,000 + 12,000 + 6,000 + 2,760 + 2,640 + 10,764) = 0.1 x 154,164 = 15,416.4
+        # T = 120,000 + 12,000 + 6,000 + 2,760 + 2,640 + 15,416.4 + 10,764 + 600 = 170,180.4
+        # HRRP 0.97: 120,000 x -0.03 = -3,600; VBP 1.01: +1,200; after = 167,780.4; at stake 1,677.804; not cut
         e = est(sch=True, ptype=16, hsp=9000.0, ime_op=0.1, dsh_op=0.05, outlier_op=0.02, low_volume=1.1, gaf=1.2,
                 ime_cap=0.1, dsh_cap=0.05, outlier_cap=0.04, ucp_per_claim=50.0, hrrp=0.97, vbp=1.01, cut=False)
-        want = {"base": 120000.0, "total": 190200.0, "hrrp": -3600.0, "hvbp": 1200.0, "after": 187800.0,
-                "at_stake": 1878.0, "hac": 0.0, "net": -2400.0, "fed": 120000.0, "mdh_addon": 0.0, "ime": 12000.0,
-                "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 24000.0, "low_volume": 14076.0, "capital": 10764.0,
+        want = {"base": 120000.0, "total": 170180.4, "hrrp": -3600.0, "hvbp": 1200.0, "after": 167780.4,
+                "at_stake": 1677.804, "hac": 0.0, "net": -2400.0, "fed": 120000.0, "mdh_addon": 0.0, "ime": 12000.0,
+                "dsh": 6000.0, "outlier_op": 2760.0, "sch_diff": 2640.0, "low_volume": 15416.4, "capital": 10764.0,
                 "uc": 600.0}
         self.assertParts(e, want)
 
@@ -396,18 +487,19 @@ class RoundDollars(unittest.TestCase):
     def test_the_sums_come_from_the_rounded_parts(self):
         # Hand-worked, B = 4,900.39 (wage index 0.80013, Table 1B: 3000 x 0.80013 + 2500):
         #   IME 0.1 x B = 490.039; DSH 0.05 x B = 245.0195; outliers 0.02 x (B + IME + DSH) = 112.70897;
-        #   low volume 0.1 x (B + IME + DSH + outliers) = 574.815747; capital 500 x 1.2 x 1 = 600; UC 0.37 x 12 = 4.44
-        #   rounded: 4,900 + 490 + 245 + 113 + 0 + 575 + 600 + 4
-        # base 4,900; total 4,900 + 490 + 245 + 113 + 575 + 600 + 4 = 6,927
-        # HRRP 0.97: B x -0.03 = -147.0117 -> -147; HVBP 1.01: +49.0039 -> 49; after 6,927 - 147 + 49 = 6,829
-        # at stake round(68.29) = 68; HAC -68; net -147 + 49 - 68 = -166
+        #   capital 500 x 1.2 x 1 = 600; UC 0.37 x 12 = 4.44
+        #   low volume 0.1 x (B + IME + DSH + outliers + capital) = 0.1 x 6,348.15747 = 634.815747
+        #   rounded: 4,900 + 490 + 245 + 113 + 0 + 635 + 600 + 4
+        # base 4,900; total 4,900 + 490 + 245 + 113 + 635 + 600 + 4 = 6,987
+        # HRRP 0.97: B x -0.03 = -147.0117 -> -147; HVBP 1.01: +49.0039 -> 49; after 6,987 - 147 + 49 = 6,889
+        # at stake round(68.89) = 69; HAC -69; net -147 + 49 - 69 = -167
         r = round_dollars(est(cases=1.0, cmi=1.0, wi=0.80013, ime_op=0.1, dsh_op=0.05, outlier_op=0.02,
                               low_volume=1.1, gaf=1.2, ucp_per_claim=0.37, hrrp=0.97, vbp=1.01, cut=True), cut=True)
         self.assertEqual({k: r[k] for k in ("fed", "ime", "dsh", "outlier_op", "low_volume", "capital", "uc")},
-                         {"fed": 4900, "ime": 490, "dsh": 245, "outlier_op": 113, "low_volume": 575, "capital": 600,
+                         {"fed": 4900, "ime": 490, "dsh": 245, "outlier_op": 113, "low_volume": 635, "capital": 600,
                           "uc": 4})
         self.assertEqual((r["base"], r["total"], r["hrrp"], r["hvbp"], r["after"], r["at_stake"], r["hac"], r["net"]),
-                         (4900, 6927, -147, 49, 6829, 68, -68, -166))
+                         (4900, 6987, -147, 49, 6889, 69, -69, -167))
 
     def test_a_sum_can_sit_a_dollar_from_the_rounded_unrounded_figure(self):
         # B = 100.4 + 100.4 (MDH add-on) -> parts 100 + 100 = base 200, though round(200.8) = 201: the rounded sum wins
