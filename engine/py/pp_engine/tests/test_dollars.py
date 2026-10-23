@@ -5,7 +5,8 @@ import random
 import unittest
 
 from pp_engine.dollars import (HAC_SHARE, HRRP_SHARE, PARTS, STATUSES, VBP_NET_OF_POOL, VBP_WITHHOLD,
-                               YES_UNESTIMATED_MAX, checks, estimate, hospital_row, national, round_dollars, status)
+                               YES_UNESTIMATED_MAX, checks, estimate, hospital_row, national, refuse_puerto_rico,
+                               round_dollars, status)
 from pp_engine.parse import SchemaError
 from pp_engine.tests.fixtures import assert_adds_up
 
@@ -36,7 +37,7 @@ def hospital(**changes):
     h = {"cases": 10.0, "cmi": 1.5, "bills": 12, "cmi_hsp": 1.6, "wi": 1.5, "cola": 1.0, "quality": 0, "ehr": 0,
          "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None, "ime_op": 0.0, "ime_cap": 0.0,
          "dsh_op": 0.0, "dsh_cap": 0.0, "ucp_per_claim": 0.0, "outlier_op": 0.0, "outlier_cap": 0.0, "gaf": 0.0,
-         "low_volume": 1.0, "pr": False, "ime_cases": None, "ime_cmi": None}
+         "low_volume": 1.0, "ime_cases": None, "ime_cmi": None}
     h.update(changes)
     return h
 
@@ -91,17 +92,14 @@ class Base(Close):
         # and Table 1B's, wage index 1: 2900 + 2400 (qn)
         self.assertDollars(est(wi=1.0, ehr=1, **one)["base"], 5300.0)
 
-    def test_puerto_rico_uses_table_1c_whatever_the_wage_index(self):
-        one = dict(cases=1.0, cmi=1.0, pr=True)
-        # 1C qe: 3100 x 0.8 + 2600 = 5080; 1C qn (EHR reduction): 3000 x 0.8 + 2500 = 4900
-        self.assertDollars(est(wi=0.8, **one)["base"], 5080.0)
-        self.assertDollars(est(wi=0.8, ehr=1, **one)["base"], 4900.0)
-        # a wage index above 1 still reads 1C (the file has no such Puerto Rico hospital; the rule is the table's)
-        self.assertDollars(est(wi=1.5, **one)["base"], 3100 * 1.5 + 2600.0)
-
-    def test_a_puerto_rico_hospital_whose_key_is_not_in_1c_raises(self):
-        with self.assertRaises(ValueError):
-            est(pr=True, wi=0.8, quality=1)["base"]  # 1C has qe and qn only
+    def test_table_1c_is_never_read(self):
+        # No program applies in Puerto Rico, so no hospital is priced on Puerto Rico's table: with 1C gone from the
+        # rates, every scenario still prices (1B at a wage index of 0.8: 15 x (3000 x 0.8 + 2500) = 73,500)
+        no_1c = {**RATES, "operating": {k: v for k, v in RATES["operating"].items() if k != "1C"}}
+        for quality in (0, 1):
+            for ehr in (0, 1):
+                estimate(hospital(wi=0.8, quality=quality, ehr=ehr), no_1c, hrrp=1.0, vbp=1.0, cut=False)
+        self.assertDollars(estimate(hospital(wi=0.8), no_1c, hrrp=1.0, vbp=1.0, cut=False)["base"], 73500.0)
 
     def test_mdh_addon_is_three_quarters_of_the_shortfall_and_never_negative(self):
         # HSP side: 9000 x 1.10 (the qe update, 10%) x 1.6 (cmi_hsp) x 10 cases = 9,900 x 16 = 158,400;
@@ -137,13 +135,6 @@ class Base(Close):
         # used as it is. 8000 x 1.6 x 10 = 128,000 vs fed 120,000: shortfall 8,000; 75% = 6,000 (not 15,600)
         e = estimate(hospital(mdh=True, hsp_mdh=8000.0), RATES_UPDATED, hrrp=1.0, vbp=1.0, cut=False)
         self.assertDollars(e["mdh_addon"], 6000.0)
-
-    def test_a_puerto_rico_mdh_takes_the_update_of_its_ehr_scenario(self):
-        # Table 1C qn (EHR reduced: +5%), wage index 0.8: fed 15 x (3000 x 0.8 + 2500) = 73,500; 8000 x 1.05 x 16 =
-        # 134,400; shortfall 60,900; 75% = 45,675
-        e = est(mdh=True, hsp_mdh=8000.0, pr=True, wi=0.8, ehr=1)
-        self.assertDollars(e["fed"], 73500.0)
-        self.assertDollars(e["mdh_addon"], 45675.0)
 
     def test_a_rates_table_without_the_update_raises_for_an_mdh_that_needs_it(self):
         no_update = {k: v for k, v in RATES.items() if k != "mdh_update"}
@@ -491,6 +482,16 @@ class Status(unittest.TestCase):
         # a row with no cases key at all is a hospital the file did not price
         self.assertEqual(status("990001", "VA", {"cmi": 1.5}, NO_PARHM), "no-inputs")
         self.assertEqual(status("990001", "VA", {}, NO_PARHM), "no-inputs")
+
+    def test_a_puerto_rico_hospital_in_a_program_file_stops_the_build(self):
+        # No program applies in Puerto Rico (CCNs beginning 40): a file that lists one has changed, and the build stops
+        refuse_puerto_rico(["990001", "210001", "990040"], "a file")  # none in Puerto Rico (a 40 elsewhere is no matter)
+        refuse_puerto_rico([], "a file")
+        refuse_puerto_rico(iter(["990001"]), "a file")  # any iterable of CCNs (a generator, a dict's keys)
+        with self.assertRaisesRegex(ValueError, r"Table 16B lists 2 Puerto Rico hospital\(s\) \(40xxxx\)"):
+            refuse_puerto_rico(["990001", "40Z002", "40Z001"], "Table 16B")
+        with self.assertRaisesRegex(ValueError, "no program applies"):
+            refuse_puerto_rico({"40Z001": 0.99}, "the HRRP file")
 
     def test_state_is_matched_exactly(self):
         for state in ("VA", "", "MA", "mD"):

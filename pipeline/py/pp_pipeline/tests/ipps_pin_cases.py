@@ -3,7 +3,7 @@ for FY2024), written once. A test module combines each mixin with `unittest.Test
 attributes: the year, and the counts and ranges that are facts of its pinned bytes (a different file is a re-pin, and
 the numbers move with it on purpose). They hold no hospital names. What differs between the rules in kind, not in
 number (how a hospital-specific rate is found), is tested in the year's own module."""
-from pp_engine.ipps import RATE_KEYS, SCH_TYPES, rate_key
+from pp_engine.ipps import PUERTO_RICO, RATE_KEYS, SCH_TYPES, rate_key
 from pp_pipeline.ipps_pins import hrrp_factors, payment_inputs, rates, vbp_factors
 
 
@@ -50,9 +50,9 @@ class RatesCases:
 
 
 class PaymentInputsCases:
-    """Attributes: FY; COUNTS (the impact file's hospitals, and how many are `mdh`, `sch`, `pr`, reduced for quality
-    (`quality` = 1) or the EHR (`ehr` = 1), and in the low-volume tiers (`low_volume` above 1)); BLANKS (the keys the
-    file leaves blank, with how many hospitals each)."""
+    """Attributes: FY; COUNTS (the impact file's hospitals, and how many are `mdh`, `sch`, in Puerto Rico (`pr`, by
+    the CCN's state code), reduced for quality (`quality` = 1) or the EHR (`ehr` = 1), and in the low-volume tiers
+    (`low_volume` above 1)); BLANKS (the keys the file leaves blank, with how many hospitals each)."""
 
     @classmethod
     def setUpClass(cls):
@@ -64,7 +64,7 @@ class PaymentInputsCases:
 
     def test_the_impact_file_counts(self):
         self.assertEqual({"hospitals": len(self.inp), "mdh": self.count(lambda h: h["mdh"]),
-                          "sch": self.count(lambda h: h["sch"]), "pr": self.count(lambda h: h["pr"]),
+                          "sch": self.count(lambda h: h["sch"]), "pr": sum(c[:2] == PUERTO_RICO for c in self.inp),
                           "quality": self.count(lambda h: h["quality"] == 1), "ehr": self.count(lambda h: h["ehr"] == 1),
                           "low_volume": self.count(lambda h: h["low_volume"] > 1)}, self.COUNTS)
 
@@ -74,7 +74,7 @@ class PaymentInputsCases:
 
     def test_blank_only_where_the_file_leaves_it_blank(self):
         blanks = {k: self.count(lambda h: h[k] is None) for k in next(iter(self.inp.values()))
-                  if k not in ("sch", "mdh", "pr")}
+                  if k not in ("sch", "mdh")}
         self.assertEqual({k: n for k, n in blanks.items() if n}, self.BLANKS)
         self.assertFalse(any(h["ime_cases"] and not h["ime_op"] for h in self.inp.values()))  # teaching hospitals only
 
@@ -101,14 +101,11 @@ class PaymentInputsCases:
         self.assertLessEqual(span("low_volume")[1], 1.25)
         self.assertEqual({h["quality"] for h in self.inp.values()} | {h["ehr"] for h in self.inp.values()}, {0, 1})
 
-    def test_every_hospital_has_a_rate_and_puerto_rico_has_its_own(self):
-        pr_rates = self.rates["operating"]["1C"]
-        for ccn, h in self.inp.items():
+    def test_every_hospital_has_a_rate(self):
+        for h in self.inp.values():
             key = rate_key(h["quality"], h["ehr"])
             self.assertIn(key, self.rates["operating"]["1A"])
-            if h["pr"]:
-                self.assertIn(key, pr_rates, ccn[:2])  # no Puerto Rico hospital failed quality reporting
-                self.assertLessEqual(h["wi"], 1)  # so the table's wage-index-above-one columns are never needed
+            self.assertIn(key, self.rates["operating"]["1B"])
 
 
 class FactorsCases:

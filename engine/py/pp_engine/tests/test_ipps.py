@@ -208,9 +208,9 @@ class PaymentInputs(unittest.TestCase):
             "cases": 3878.43, "cmi": 1.9757, "bills": 3952, "cmi_hsp": 1.9834, "wi": 1.0512, "cola": 1.0,
             "quality": 0, "ehr": 0, "ptype": 0, "sch": False, "mdh": False, "hsp": None, "hsp_mdh": None,
             "ime_op": 0.0655, "ime_cap": 0.05496, "dsh_op": 0.0298, "dsh_cap": 0.05731, "ucp_per_claim": 1400.27,
-            "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0, "pr": False,
+            "outlier_op": 0.01633, "outlier_cap": 0.01269, "gaf": 0.933856364, "low_volume": 1.0,
             "beds": 212, "ime_cases": 1210.5, "ime_cmi": 1.8812})
-        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr"}))
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch"}))
 
     def test_payment_inputs_blank_is_none(self):
         blanks = {k: "" for k in ("CASETA43", "TACMIV43", "OUTFACT_F", "COUTFACT_F", "HSP Rate", "UCP Per Claim Amount",
@@ -232,13 +232,14 @@ class PaymentInputs(unittest.TestCase):
         self.assertEqual([got[f"99{i:04d}"]["sch"] for i in range(len(types))], list(types.values()))
         self.assertEqual(SCH_TYPES, {16, 17, 21, 22})
 
-    def test_mdh_is_y_and_pr_is_the_state_code(self):
+    def test_mdh_is_y_and_a_puerto_rico_row_reads_like_the_rest(self):
         recs = [hospital(**{"Provider Number": "990002", "MDH Flag, CAA 2024": "Y",
                             "HSP Rate for MDHs, FY 2025 extension": "6500.5"}),
-                hospital(**{"Provider Number": "40Z999"})]
+                hospital(**{"Provider Number": "40Z999"}), hospital()]
         got = read_payment_inputs(impact_text(*recs))
-        self.assertEqual((got["990002"]["mdh"], got["990002"]["hsp_mdh"], got["990002"]["pr"]), (True, 6500.5, False))
-        self.assertEqual((got["40Z999"]["mdh"], got["40Z999"]["pr"]), (False, True))
+        self.assertEqual((got["990002"]["mdh"], got["990002"]["hsp_mdh"]), (True, 6500.5))
+        # no flag of its own: the program files decide whether a hospital is priced, and none lists Puerto Rico's
+        self.assertEqual(got["40Z999"], got["990001"])
 
     def test_the_low_volume_column_is_the_fy2025_extension_one(self):
         got = read_payment_inputs(impact_text(hospital(**{
@@ -322,7 +323,7 @@ class PaymentInputs2024(unittest.TestCase):
                          (2100.5, 1.5401, 1.5512, 0.9512, 1.1, 0))  # V41, not V40; a zero bed count stays 0
         self.assertEqual((got["mdh"], got["hsp_mdh"], got["sch"]), (False, None, False))
         self.assertEqual((got["ime_cases"], got["ime_cmi"]), (None, None))  # V41's blank, not V40's 1.0
-        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch", "pr"}))
+        self.assertEqual(sorted(got), sorted(set(PAYMENT_COLUMNS) - {"ccn"} | {"sch"}))
 
     def test_mdh_is_the_provider_type_and_its_rate_is_the_hsp_rate(self):
         recs = [dict(GOOD_2024, **{"Provider Number": f"99{i:04d}", "Provider Type": t, "HSP Rate": "7100.25"})

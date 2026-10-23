@@ -133,7 +133,8 @@ def read_rates(text, fy=2026):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
     `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}, "1C": {...}}, "capital": rate, "update": {key: percent},
     "mdh_update": {key: percent}}`.
-    1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%), 1C is Puerto Rico's. The keys
+    1A is for a wage index above 1 (66% labor in FY2026), 1B for 1 or below (62%), 1C is Puerto Rico's (read so that a
+    change in the file's layout is caught; no hospital is priced on it, since no program applies in Puerto Rico). The keys
     (`RATE_KEYS`, chosen with `rate_key`) come from each scenario's heading text, not its position, so a reordered table
     still prices right. 1C has `qe` and `qn` only: the table lists the EHR split alone (and its wage-index-above-one columns say
     'Not Applicable'). Capital is Table 1D's single federal rate. `update` is each scenario's update for the year in
@@ -173,7 +174,7 @@ def read_rates(text, fy=2026):
 # hospital any hospital that is located in a rural area" and was designated an EACH; the impact file agrees (every
 # row of type 22 carries an SCH hospital-specific rate, `HSP Rate`, which only SCHs have).
 SCH_TYPES = frozenset({16, 17, 21, 22})
-PUERTO_RICO = "40"  # state code, the CCN's first two digits
+PUERTO_RICO = "40"  # state code, the CCN's first two digits (dollars.refuse_puerto_rico; the back-test's exclusions)
 
 # Provider Type codes of Medicare-dependent hospitals in FY2024's file (its README: "14= Medicare Dependent Hospital
 # (MDH); 15=MDH/RRC"). FY2026's file marks them in a column of its own instead (`MDH Flag, CAA 2024`): the FY2026 rule
@@ -262,10 +263,11 @@ def _year(fy):
 
 def read_payment_inputs(text, fy=2026):
     """A final-rule IPPS impact file (tab-delimited) -> {ccn: inputs}, one dict per hospital with the keys of
-    the year's `IMPACT_YEARS` columns (less `ccn`) plus the derived `sch` and `pr`. `fy` is the rule's year and picks
-    the column names. Numbers are floats (`bills`, `ptype`, `quality`, `ehr` and `beds` ints); a blank cell is
-    None, a zero stays 0. `quality` and `ehr` are the file's proxy flags, 1 = reduced update (`rate_key` turns them into
-    a rate key). `sch` is `ptype in SCH_TYPES`, `pr` the CCN's state code being Puerto Rico's.
+    the year's `IMPACT_YEARS` columns (less `ccn`) plus the derived `sch`. `fy` is the rule's year and picks the column
+    names. Numbers are floats (`bills`, `ptype`, `quality`, `ehr` and `beds` ints); a blank cell is None, a zero stays
+    0. `quality` and `ehr` are the file's proxy flags, 1 = reduced update (`rate_key` turns them into a rate key).
+    `sch` is `ptype in SCH_TYPES`. The file's Puerto Rico rows are read like the rest; no program applies to them
+    (`dollars.refuse_puerto_rico`).
 
     FY2026: `mdh` is the 'MDH Flag, CAA 2024' column being 'Y'. The law reinstated MDH status and the expanded
     low-volume tiers for all of FY2026, so `mdh`, `hsp_mdh` and `low_volume` read the columns the file stamps 'CAA 2024'
@@ -296,7 +298,6 @@ def read_payment_inputs(text, fy=2026):
         else:
             out["mdh"] = out["ptype"] in MDH_TYPES
             out["hsp_mdh"] = out["hsp"] if out["mdh"] else None
-        out["pr"] = r["ccn"][:2] == PUERTO_RICO
         return out
     return index_by_ccn(table(rows(text, "\t"), columns["ccn"], columns, label), build, label)
 

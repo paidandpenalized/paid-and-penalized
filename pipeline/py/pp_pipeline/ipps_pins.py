@@ -77,8 +77,12 @@ def priced_rows(records, fy=FY):
     priced on the final rule of year `fy`. An estimated row also carries its `stratum` (`bands.stratum_of`: the impact
     file's bed count, and whether the hospital is a sole community or Medicare-dependent one), the row of `bands` its
     likely ranges come from; a hospital the impact file gives no bed count is `bands.ALL` and takes the whole set's
-    band. The emitter and the back-test both price through here, so the back-test prices a hospital as the pages do."""
+    band. The emitter and the back-test both price through here, so the back-test prices a hospital as the pages do.
+    A Puerto Rico hospital in any of the three program files stops the build (`dollars.refuse_puerto_rico`)."""
     inputs, table, hrrp, vbp = payment_inputs(fy), rates(fy), hrrp_factors(fy), vbp_factors(fy)
+    for ccns, where in (((r["ccn"] for r in records), f"The FY{fy} HACRP file"),
+                        (hrrp, f"The FY{fy} HRRP supplemental file"), (vbp, f"FY{fy} Table 16B")):
+        dollars.refuse_puerto_rico(ccns, where)
     out = []
     for r in records:
         inp = inputs.get(r["ccn"])

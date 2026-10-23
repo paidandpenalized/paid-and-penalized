@@ -37,7 +37,7 @@ Pure: no file, network or clock.
 """
 import math
 
-from pp_engine.ipps import rate_key
+from pp_engine.ipps import PUERTO_RICO, rate_key
 from pp_engine.parse import MARYLAND
 
 HAC_RATE = 0.01  # the HAC Reduction Program's payment reduction: 1% of the hospital's payments (SSA 1886(p))
@@ -86,7 +86,7 @@ STATUSES = ("estimated", "maryland", "parhm", "no-inputs")
 # `hsp_mdh`, `outlier_op`, `outlier_cap`, `ime_cases`, `ime_cmi`) are handled where they are used and are not listed.
 _NUMBERS = ("cases", "cmi", "bills", "cmi_hsp", "wi", "cola", "quality", "ehr", "ime_op", "ime_cap", "dsh_op", "dsh_cap",
             "ucp_per_claim", "gaf", "low_volume")
-_FLAGS = ("sch", "mdh", "pr")
+_FLAGS = ("sch", "mdh")
 _ADD_ONS = ("ime", "ime_ma", "dsh", "outlier_op", "sch_diff", "low_volume", "capital", "uc")  # the parts of T beyond B
 PARTS = ("fed", "mdh_addon") + _ADD_ONS  # the dollar components of B and T, in the order `estimate` lists them
 SUMMED = ("base", "total", "hrrp", "hvbp", "after", "hac", "net")  # a row's dollar sums, which `national` adds up
@@ -108,17 +108,10 @@ def _check(inp):
 
 
 def _rate_pair(inp, rates):
-    """(labor, nonlabor) dollars per case-mix-weighted case: Table 1C for Puerto Rico; otherwise Table 1A when the wage
-    index is above 1 (66% labor) and 1B at or below (62%); the scenario from the two reduced-update flags."""
-    key = rate_key(inp["quality"], inp["ehr"])
-    operating = rates["operating"]
-    table = "1C" if inp["pr"] else ("1A" if inp["wi"] > 1 else "1B")
-    try:
-        return operating[table][key]
-    except KeyError:
-        # Table 1C lists the EHR split only (no quality-reporting split); no Puerto Rico hospital in the file needs the
-        # missing scenarios, so a miss means the input or the table changed. Better to stop than to price from 1B.
-        raise ValueError(f"Table {table} has no rate for scenario {key!r}") from None
+    """(labor, nonlabor) dollars per case-mix-weighted case: Table 1A when the wage index is above 1 (66% labor in
+    FY2026) and 1B at or below (62%); the scenario from the two reduced-update flags. Puerto Rico's Table 1C is not
+    used: no program applies to a Puerto Rico hospital, so none is priced (`refuse_puerto_rico`)."""
+    return rates["operating"]["1A" if inp["wi"] > 1 else "1B"][rate_key(inp["quality"], inp["ehr"])]
 
 
 def _hsp_payment(rate, inp):
@@ -289,6 +282,19 @@ def _require_bool(cut):
     if not isinstance(cut, bool):
         raise ValueError(f"cut must be True or False, not {cut!r}")
     return cut
+
+
+def refuse_puerto_rico(ccns, where):
+    """Raise if any of `ccns`, the hospitals a program file (`where`) lists, is in Puerto Rico. None of the three
+    programs applies there: each is for "subsection (d) hospitals", and SSA 1886(d)(1)(B) defines those as hospitals
+    "located in one of the fifty States or the District of Columbia"; Puerto Rico's are "subsection (d) Puerto Rico
+    hospitals" (1886(d)(9)(A)). CMS's FY2026 and FY2024 program files list none. A file that lists one has changed in a
+    way this module does not price, so the build stops rather than price the hospital as an ordinary one."""
+    found = sorted(ccn for ccn in ccns if ccn[:2] == PUERTO_RICO)
+    if found:
+        raise ValueError(f"{where} lists {len(found)} Puerto Rico hospital(s) ({found[0][:2]}xxxx): no program "
+                         "applies to Puerto Rico's hospitals, so the file or its reading has changed; look before "
+                         "pricing them")
 
 
 def status(ccn, state, inp, parhm):

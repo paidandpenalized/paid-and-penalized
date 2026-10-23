@@ -240,6 +240,22 @@ class Strata(unittest.TestCase):
         self.assertEqual(bare["checks"], self.committed["checks"][:len(bare["checks"])])
 
 
+class PuertoRico(unittest.TestCase):
+    """No program applies in Puerto Rico: a Puerto Rico hospital in any of the three program files stops the pricing,
+    for the estimate and the back-test alike (synthetic records and factor files; the pinned files list none, which the
+    emitted file and the back-test, built through the same function, show)."""
+
+    def test_a_puerto_rico_hospital_in_any_program_file_stops_the_pricing_naming_the_file(self):
+        records = [{"ccn": "990001", "state": "ZZ", "cut": False}]
+        with self.assertRaisesRegex(ValueError, "HACRP file lists 1 Puerto Rico"):
+            ipps_pins.priced_rows(records + [{"ccn": "40Z001", "state": "PR", "cut": False}])
+        for reader, where in (("hrrp_factors", "HRRP supplemental file"), ("vbp_factors", "Table 16B")):
+            with mock.patch.object(ipps_pins, reader, return_value={"990001": 0.99, "40Z001": 0.99}), \
+                    self.assertRaisesRegex(ValueError, f"{where} lists 1 Puerto Rico"):
+                ipps_pins.priced_rows(records)
+        self.assertEqual(ipps_pins.priced_rows(records)[0]["status"], "no-inputs")  # the same rows without one price
+
+
 class Caps(unittest.TestCase):
     """Review Focus 3, on synthetic rows: only estimated rows count; one past a cap fails, naming the program."""
 
