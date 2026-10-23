@@ -27,9 +27,10 @@ export const estTag = () => estTagShell({ href: DOLLARS_HREF, label: t('estimate
 
 // The range line under a dollar figure: the back-test's likely range ("Likely range $1.0–1.4M"), its words linking to
 // where the range comes from. With `estimate`, a small drawing beside it: the range as a box and the estimate as a tick,
-// on one scale that spans both, since a range is not centred on its estimate (each kind of hospital's estimates ran
-// high or low by their own amount, and the nation's sum ran low enough that its range sits above it). '' with no range:
-// an estimate of $0 has none.
+// on one scale from the lower of the range's low end and the estimate to the higher of its high end and the estimate.
+// A range need not be centred on its estimate, nor hold it (its multipliers carry its group's median miss, and the
+// national range is the estimate times the resampled ratio's percentiles), so the tick may sit anywhere on that scale.
+// '' with no range: an estimate of $0 has none.
 export function rangeLine(range, { estimate = null } = {}) {
   if (!range) return '';
   const [from, to] = estimate === null ? range : [Math.min(range[0], estimate), Math.max(range[1], estimate)];
@@ -143,8 +144,11 @@ export function moneyField(m) {
 // line on one scale (the larger of the payment before and after the two adjustments): a part as its stretch of the
 // payment ({ part: [from, to] }), a sum as the whole of it, a program as the stretch it applies to ({ scope }) with
 // its adjustment at the stretch's end ({ cut } or { add }). Zero parts are left out and named once (none). A sub with a
-// likely range in it also names that range (subRange), which the page sets on one line (statementTable).
+// likely range in it comes twice (rangedSub): `sub` plain, for the figure's table, and `held`, the same words with the
+// range kept on one line, for the page (statementTable).
 export function statementLines(m) {
+  // A sub naming a likely range: the copy filled once with the plain range and once with the held one.
+  const rangedSub = (key, values, range) => ({ sub: fill(key, { ...values, range: moneyRange(...range) }), held: fill(key, { ...values, range: rangeText(range) }) });
   const scale = Math.max(m.total, m.after);
   const at = (x) => x / scale;
   const lines = [];
@@ -167,11 +171,10 @@ export function statementLines(m) {
   lines.push({ key: 'after', kind: 'sum', label: t('stmtAfter'), sub: null, amount: m.after, bar: { part: [0, at(m.after)] } });
   lines.push({
     key: 'hac', kind: 'program', label: t('stmtHac'),
-    sub: m.cut ? fill('stmtHacAll', { pct: REDUCTION_TEXT, range: moneyRange(...m.ranges.hac) }) : fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }),
-    subRange: m.cut ? m.ranges.hac : null,
+    ...(m.cut ? rangedSub('stmtHacAll', { pct: REDUCTION_TEXT }, m.ranges.hac) : { sub: fill('stmtHacNone', { pct: REDUCTION_TEXT, amount: dollars(m.atStake) }) }),
     amount: m.hac, bar: { scope: [0, at(m.after)], ...(m.cut ? { cut: [at(m.after - m.atStake), at(m.after)] } : {}) },
   });
-  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), sub: m.ranges.net ? fill('stmtLikely', { range: moneyRange(...m.ranges.net) }) : null, subRange: m.ranges.net, amount: m.net, bar: null });
+  lines.push({ key: 'net', kind: 'net', label: t('stmtNet'), ...(m.ranges.net ? rangedSub('stmtLikely', {}, m.ranges.net) : { sub: null }), amount: m.net, bar: null });
   // Not paid: the parts left out, named once (a hospital with no teaching payments has none on Medicare Advantage
   // stays either, which goes without saying).
   const none = [...BASE_PARTS, ...OTHER_PARTS].filter((key) => !shown.includes(key) && !(key === 'imeMa' && !m.parts.ime)).map((key) => t(`stmtOff_${key}`));
@@ -187,15 +190,12 @@ function barCell(bar) {
 
 const signedAmount = (line) => dollars(line.amount, { sign: line.kind === 'program' || line.kind === 'net' });
 
-// A line's sub as the page sets it: its likely range held on one line by word joiners.
-const subText = (l) => (l.subRange ? l.sub.replace(moneyRange(...l.subRange), () => rangeText(l.subRange)) : l.sub);
-
 // The two groups' heads, before the first line of each.
 const GROUP_BEFORE = { hrrp: 'stmtGroupPrograms' };
 
 function statementTable(view, m, { lines, none }) {
   const row = (l) => html`<tr class="stmt__row stmt__row--${l.kind}${l.amount === 0 ? ' is-zero' : ''}" data-line="${l.key}">
-<th scope="row"><span class="stmt__name">${l.label}</span>${l.sub ? html` <span class="stmt__sub">${subText(l)}</span>` : ''}</th>
+<th scope="row"><span class="stmt__name">${l.label}</span>${l.sub ? html` <span class="stmt__sub">${l.held ?? l.sub}</span>` : ''}</th>
 <td class="stmt__amt">${signedAmount(l)}</td>
 ${barCell(l.bar)}
 </tr>`;

@@ -288,17 +288,25 @@ test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut a
   for (const [, ccn, cell] of rowsOf) assert.equal(cell, cutText(cutDollars(DATA.dollars.byCcn.get(ccn.toUpperCase()))), ccn);
 });
 
-test('a likely range in the statement is plain in the lines and the figure\'s table, and held on one line on the page', () => {
-  const m = hospitalMoney(CUT);
-  const lines = statementLines(m).lines;
-  for (const l of lines) assert.ok(!(l.sub ?? '').includes('\u2060'), `${l.key}: the data holds the words, not their typesetting`);
-  const ranged = lines.filter((l) => l.subRange);
-  assert.deepEqual(ranged.map((l) => l.key), ['hac', 'net'].filter((k) => m.ranges[k]));
-  for (const l of ranged) assert.ok(l.sub.includes(moneyRange(...l.subRange)), l.key);
-  const page = pageOf(CUT);
-  const subs = [...page.matchAll(/<span class="stmt__sub">([^<]*)<\/span>/g)].map((x) => x[1]);
-  const held = (range) => moneyRange(...range).replace('–', '\u2060–\u2060');
-  for (const l of ranged) assert.ok(subs.some((x) => x.includes(esc(held(l.subRange)))), `${l.key}: held on one line`);
+test('a likely range in the statement is plain in the lines and the figure\'s table, and never breaks on the page', () => {
+  const JOIN = '\u2060';
+  for (const row of [CUT, TEACHING, NEAR]) { // two cut, one not (a net with a range, a HAC line without)
+    const m = hospitalMoney(row);
+    const lines = statementLines(m).lines;
+    for (const l of lines) assert.ok(!(l.sub ?? '').includes(JOIN), `${row.ccn} ${l.key}: the table's words are plain`);
+    const ranged = lines.filter((l) => l.held);
+    assert.deepEqual(ranged.map((l) => l.key), ['hac', 'net'].filter((k) => (k === 'hac' ? m.cut : m.ranges.net)), row.ccn);
+    const subs = [...pageOf(row).matchAll(/<span class="stmt__sub">([^<]*)<\/span>/g)].map((x) => x[1]);
+    for (const l of ranged) {
+      const plain = moneyRange(...m.ranges[l.key]);
+      assert.ok(l.sub.includes(plain), `${row.ccn} ${l.key}: the plain range`);
+      // The page's words are the table's, with the range's dash held by a word joiner on each side
+      assert.equal(l.held, l.sub.replace(plain, plain.replace('–', `${JOIN}–${JOIN}`)), `${row.ccn} ${l.key}`);
+      assert.ok(subs.includes(esc(l.held)), `${row.ccn} ${l.key}: the page sets the held words`);
+    }
+    // No en dash in the statement's words can start a new line: each has a joiner on both sides.
+    for (const x of subs) assert.doesNotMatch(x, new RegExp(`[^${JOIN}]–|–[^${JOIN}]`), `${row.ccn}: ${x}`);
+  }
 });
 
 test('the Medicare Advantage wordings come in pairs: each `…Ma` key has its plain twin, and each key the pages ask maKey for has both', () => {
