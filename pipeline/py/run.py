@@ -1,9 +1,9 @@
 """Python entry point: `python3 -I pipeline/py/run.py <command>`.
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
-here instead, so nothing needs installing. Commands: `test`, `emit`, `extract-pos <raw POS csv>`,
-`extract-hai <zip> <pin id>` (see pp_pipeline/hai_extract.py), and `geocode`, which calls the U.S. Census Bureau
-Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
+here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, then the dollar
+estimates), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see pp_pipeline/hai_extract.py), and `geocode`,
+which calls the U.S. Census Bureau Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
 """
 import sys
 import unittest
@@ -26,8 +26,8 @@ def main(argv):
     if command == "test" and not args:
         return run_tests()
     if command == "emit" and not args:
-        from pp_pipeline import emit_hospital
-        return emit_hospital.main()
+        from pp_pipeline import emit_dollars, emit_hospital
+        return emit_hospital.main() or emit_dollars.main()  # the dollars read the HACRP file, not the master
     if command == "geocode" and not args:
         from pp_pipeline import geocode
         return geocode.main()

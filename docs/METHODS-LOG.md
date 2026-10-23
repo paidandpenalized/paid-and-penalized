@@ -75,3 +75,55 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   FY2026 file lists Maryland's 43 hospitals with Payment Reduction "N/A"; they are now `inProgram: false` with reason
   `maryland`, as in HRRP (3,012 of 3,055 listed hospitals are in HACRP).
 - `schema_version` 2 (the record's new fields are required).
+
+## dollars methods_version 1 (2026-10-22)
+- `data/emitted/dollars/fy2026/dollars.json` is the first emission of the dollar estimates. It is shared by the sites that
+  show dollars, so it sits beside the sites' folders, not under one. For every hospital in the HACRP file it holds a
+  model, not a bill, of what Medicare pays the hospital for the year's inpatient care (`base`, `total`, and `parts`:
+  the federal DRG payment, the Medicare-dependent hospital add-on, indirect medical education, disproportionate share,
+  operating outliers, the sole community hospital difference, the low-volume adjustment, capital and uncompensated care)
+  and what the three programs move: HRRP and HVBP (each the base payment times its adjustment factor minus 1), then
+  the HAC Reduction Program's 1% cut of the payment after both (`atStake` for every hospital; `hac` for a hospital CMS
+  cuts), and their `net`. Dollars are whole dollars that add exactly: the parts are rounded and every sum is built from
+  the rounded parts, so a reader adding up a row or a column gets the figure shown.
+- Inputs: the FY2026 final rule's impact file (cases, case-mix, wage index and the add-on factors; the volume is FY2024
+  claims), Tables 1A-1E (rates), the HRRP supplemental file (factors), Table 16B (HVBP factors) and the HACRP file
+  (who is cut). The year of the HACRP file must equal the rates' year, or the build stops.
+- `status`: `estimated`, or why there is no estimate and no dollar keys: `maryland` (the state's own payment model; no
+  HRRP, HVBP or HAC adjustment), `parhm` (Pennsylvania Rural Health Model participants; CMS publishes no FY2026
+  participant file with CCNs, so none yet), `no-inputs` (no usable row in the impact file). On the pinned files 41
+  hospitals are `no-inputs`, 9 of them cut by CMS; the national dollars cover estimated hospitals only, and the 9 are
+  counted (`yesUnestimated`).
+- A hospital missing from the HRRP file or from Table 16B takes factor 1 (`hrrpListed`, `vbpListed` say which). Hospitals
+  outside HVBP are common and legitimate. On the pinned files 43 estimated hospitals are not in the HRRP file and 524 are
+  not in Table 16B; the build fails if a later file has more.
+- `national` sums the estimated hospitals; `headline` sums the hospitals CMS scored and marked Yes or No, the population
+  the HACRP site counts, so its `yes` equals the site's headline count (one Yes carries no score and is outside it).
+  Cut hospitals with an estimate are `cut`; the rest of `yes` are `yesUnestimated`.
+- `checks` hold the sums against what CMS publishes, with ranges none of which is fitted to the estimate:
+  HRRP dollars over the base payment of the penalized hospitals within 0.40% to 0.48% (CMS's 0.44%; the denominator CMS
+  uses is unconfirmed: its text says all hospitals, the pinned files reproduce the figure only over the penalized ones);
+  the net HVBP dollars within a tenth of the 2% pool (the program is budget-neutral); HAC dollars over everyone's payment
+  within 0.20% to 0.30% (a quarter of hospitals cut by 1%); the cut count equal to the HACRP file's Yes count; and at most
+  9 cut hospitals without an estimate.
+- `assumptions` states the years (rates FY2026, volume FY2024), the end of Medicare-dependent hospital status and of the
+  expanded low-volume tiers (2026-12-31, from the Consolidated Appropriations Act, 2026), and that NTAP is excluded.
+- `bands` is null; ranges from a back-test come in methods_version 2.
+- Where the rule allows more than one reading, the model chooses; each choice, as marked ASSUMPTION in the engine
+  (`pp_engine/dollars.py`):
+  - New-technology add-on payments are in no figure: they are not published per hospital, so the base, the HRRP and HVBP
+    dollars and `atStake` run slightly low for a hospital that receives them.
+  - The IME and DSH add-on factors apply to the federal DRG payment, not to the Medicare-dependent add-on or the sole
+    community difference; DSH is after the 75% reduction in section 1886(r).
+  - The operating outlier factor applies to the federal payment plus IME plus DSH (the file does not say whether the DRG
+    payment alone); a blank factor is no outliers.
+  - A sole community hospital is paid the higher of the federal payment and its hospital-specific rate, and the
+    difference is not part of the base HRRP and HVBP adjust. The comparison is made once, on the year's totals, not claim
+    by claim, which can only understate the difference. A blank or zero hospital-specific rate is no usable rate; the
+    comparison uses the case-mix the file gives for hospital-specific-rate hospitals and the same transfer-adjusted cases.
+  - The low-volume adjustment is a percentage add-on to the operating payment (federal, Medicare-dependent add-on, IME,
+    DSH and operating outliers), not to capital or uncompensated care (to verify against 42 CFR 412.101).
+  - Uncompensated care is the per-claim amount times the file's Medicare bills (FY2024); the amount's own denominator is
+    a three-year average of claims the file does not carry.
+  - HRRP and HVBP each adjust the base operating payment only (not IME, DSH, capital or the rest); the HAC cut is 1% of
+    everything the hospital is paid after both.
