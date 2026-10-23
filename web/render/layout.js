@@ -1,7 +1,9 @@
 // The page shell every page renders through: head metadata, skip link, header (the family's masthead, or a program
 // site's top bar: programHeader), <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
+import { has } from '../../engine/js/has.js';
 import { COPY } from '../copy.js';
 import { SITE } from '../site.js';
+import { fillCopy } from './components.js';
 import { html, jsonText, raw } from './html.js';
 
 const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
@@ -49,17 +51,71 @@ export function programHeader({ name, href, tag, nav, current = null, search = '
 </header>`;
 }
 
-const footer = html`<footer class="foot">
+// The pages' site: the family's own pages are 'hub'; a program's are its key in SITE.sites. siteConfig is that
+// entry (null for the hub) and throws on anything else; siteName is the name the feedback form is prefilled with.
+const HUB = 'hub';
+const NOT_FOUND_PATH = '/404.html';
+function siteConfig(site) {
+  if (site === HUB) return null;
+  if (typeof site === 'string' && has(SITE.sites, site)) return SITE.sites[site];
+  throw new RangeError(`page: site must be "${HUB}" or one of ${Object.keys(SITE.sites).join(', ')}, got ${JSON.stringify(site)}`);
+}
+const siteName = (site) => siteConfig(site)?.title ?? SITE.name;
+
+// The feedback form's address with its two questions prefilled, built at page-build time so it works without
+// scripts. pageUrl: the page's canonical address, passed through encodeURIComponent whole (a page's own query
+// string stays inside the one value); omitted for a page with no address of its own (the not-found page).
+export function feedbackHref({ siteName: name, pageUrl } = {}) {
+  if (typeof name !== 'string' || !name) throw new TypeError('feedbackHref: siteName is required');
+  if (pageUrl !== undefined && (typeof pageUrl !== 'string' || !pageUrl)) throw new TypeError('feedbackHref: pageUrl must be a non-empty string');
+  const { url, siteEntry, pageEntry } = SITE.feedback;
+  const answers = [[siteEntry, name], ...(pageUrl === undefined ? [] : [[pageEntry, pageUrl]])];
+  return `${url}?${answers.map(([entry, answer]) => `${entry}=${encodeURIComponent(answer)}`).join('&')}`;
+}
+
+// The banner a program site's pages carry while SITE.sites.<id>.maintenance names a release it has not been updated
+// for; '' while the flag is null, and always for the hub. The release name comes from the config and is escaped as
+// any value is. role="status" announces it politely once, and it sits above <main>, below the header.
+export function maintenanceBanner(site) {
+  const config = siteConfig(site);
+  if (!config || config.maintenance === null) return '';
+  const release = config.maintenance;
+  if (typeof release !== 'string' || !release || release !== release.trim()) {
+    throw new TypeError(`site "${site}": maintenance must be null or a non-empty trimmed release name, got ${JSON.stringify(release)}`);
+  }
+  return html`<div class="notice" role="status">
+  <div class="wrap">
+    <p>${fillCopy(COPY, 'maintenance', { release })}</p>
+  </div>
+</div>
+`;
+}
+
+// The footer: what the data is and is not (the affiliation and Terms lines), the credit and license, then the
+// feedback link (with the warning beside it) and the site's policy pages.
+function footer({ name, path }) {
+  const feedback = feedbackHref({ siteName: name, pageUrl: path === NOT_FOUND_PATH ? undefined : SITE.origin + path });
+  return html`<footer class="foot">
   <div class="wrap foot__row">
-    <p>${COPY.affiliation}</p>
+    <div class="foot__text">
+      <p>${COPY.affiliation}</p>
+      <p>${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a></p>
+    </div>
     <ul class="foot__meta" role="list">
       <li>${COPY.builtWith}</li>
-      <li><a href="${SITE.feedbackUrl}" target="_blank" rel="noopener">${COPY.feedback}${newTab}</a></li>
       <li>${COPY.licenseLead} <a href="${LICENSE}" target="_blank" rel="license noopener">CC BY 4.0${newTab}</a></li>
+    </ul>
+    <ul class="foot__meta foot__links" role="list">
+      <li class="foot__feedback"><a href="${feedback}" target="_blank" rel="noopener">${COPY.feedback}${newTab}</a> <span class="foot__note">${COPY.feedbackWarning}</span></li>
+      <li><a href="/about/">${COPY.about}</a></li>
       <li><a href="/methods/">${COPY.methods}</a></li>
+      <li><a href="/privacy/">${COPY.privacy}</a></li>
+      <li><a href="/corrections/">${COPY.corrections}</a></li>
+      <li><a href="/accessibility/">${COPY.accessibility}</a></li>
     </ul>
   </div>
 </footer>`;
+}
 
 // A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
 // title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page
@@ -76,12 +132,15 @@ const socialTags = ({ title, description, url, type }) => html`<meta property="o
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
 // topbar: a program site's header (programHeader), in place of the family's masthead.
-export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
+// site: 'hub' for the family's own pages, else the program's key in SITE.sites (required): it names the site in the
+// feedback link and says whose maintenance banner the page carries.
+export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null, site }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
+  const name = siteName(site);
   const modules = [assets.js.theme, ...scripts];
   const url = SITE.origin + path;
   return html`<!doctype html>
@@ -103,10 +162,10 @@ ${jsonLd ? raw(`<script type="application/ld+json">${jsonText(jsonLd)}</script>`
 <body>
 <a class="skip" href="#main">${COPY.skip}</a>
 ${topbar ?? header}
-<main id="main">
+${maintenanceBanner(site)}<main id="main">
 ${body}
 </main>
-${footer}
+${footer({ name, path })}
 ${modules.map((src) => html`<script type="module" src="${src}"></script>
 `)}</body>
 </html>

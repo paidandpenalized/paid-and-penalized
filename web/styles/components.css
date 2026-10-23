@@ -112,6 +112,17 @@
 .foot p { max-width: 62ch; }
 @media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
 .foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
+.foot__text { display: grid; gap: 6px; }
+.foot__meta li { max-width: none; }
+/* The links row (feedback and the policy pages) runs the footer's full width, under the text and the credit. */
+.foot__links { grid-column: 1 / -1; }
+/* The warning keeps to the feedback link's own item, wrapping with it. */
+.foot__note { display: inline-block; margin-left: 4px; }
+
+/* ---------- the maintenance banner (layout.js maintenanceBanner): the site is behind a release ---------- */
+/* A tinted band under the header, its words in the penalty ink on the tint (the .form__title pair), ruled below. */
+.notice { border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 600 var(--fs-sm)/1.4 var(--font-body); }
+.notice p { max-width: none; padding-block: 8px; }
 
 /* ---------- green-bar printout table ---------- */
 /* Rules above and below, no box: the green-bar banding is the almanac detail, and the one framed object on a page is

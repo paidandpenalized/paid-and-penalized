@@ -175,6 +175,7 @@ ${citation({ fy, title: heading, path: place.path, source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-place']],
     assets,
+    site: 'hacrp',
     topbar: siteHeader({ fy, current: 'map', searchUrl }),
   });
 }

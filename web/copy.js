@@ -20,7 +20,19 @@ export const COPY = typesetCopy({
   affiliation: 'Uses public data from the Centers for Medicare & Medicaid Services (CMS) and shows no patient information. Not affiliated with or endorsed by CMS.',
   builtWith: 'Built with Claude Code',
   feedback: 'Send feedback',
+  // Said beside the feedback link: the form is read by people, and a patient's details have no place in it.
+  feedbackWarning: "Don't include patient information.",
+  // The footer's short Terms line, with its link to /terms/, and the links to the other policy pages.
+  termsShort: 'Not affiliated with or endorsed by CMS or any hospital. Estimates are estimates, and nothing here is medical, legal or financial advice.',
+  termsLink: 'Read the terms',
   methods: 'Methods',
+  privacy: 'Privacy',
+  corrections: 'Corrections',
+  about: 'About',
+  accessibility: 'Accessibility',
+  // The banner every page of a site carries while its maintenance flag names a release (web/site.js); {release} is
+  // that name, filled from the config.
+  maintenance: 'This site has not been updated for the {release} release yet. What you see here is from the release before it.',
   licenseLead: 'Text licensed',
   figure: 'Figure',
   showTable: 'Show table',

@@ -25,5 +25,5 @@ ${s.body}
     : html`<div class="prose">${s.body}</div>`))}
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable on a phone (web/client/figure.js).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, topbar: siteHeader({ fy, searchUrl }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, site: 'hacrp', topbar: siteHeader({ fy, searchUrl }) });
 }

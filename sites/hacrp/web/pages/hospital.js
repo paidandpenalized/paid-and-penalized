@@ -339,6 +339,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.share, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
+    site: 'hacrp',
     topbar: siteHeader({ fy: view.fy, current: 'map', searchUrl }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
     // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.

@@ -6,10 +6,11 @@ import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
-import { page } from '../render/layout.js';
+import { COPY } from '../copy.js';
+import { feedbackHref, maintenanceBanner, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
-const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
+const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS, site: 'hacrp' };
 
 test('html escapes every interpolation in text and in attributes', () => {
   assert.equal(String(html`<p>${'<a & "b">'}</p>`), '<p>&lt;a &amp; &quot;b&quot;&gt;</p>');
@@ -119,11 +120,139 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes('Built with Claude Code'));
   // The name and credentials never split; the byline may break after "Built by".
   assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener"><span class="nw">Dalton Haslam, MD, MBA</span><span class="vh"> (opens in a new tab)</span></a>'));
-  assert.ok(out.includes(`href="${SITE.feedbackUrl}"`));
+  assert.ok(out.includes(`href="${SITE.feedback.url}?`));
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));
   assert.ok(out.includes('Paid &amp; <span class="wordmark__pen">Penalized</span>'));
   assert.match(out, /<button type="button" class="theme-toggle" aria-pressed="false" hidden>Dark mode<\/button>/);
+});
+
+// The feedback link's href as the browser reads it: the page's HTML attribute, unescaped, parsed as a URL.
+const feedbackUrlIn = (out) => new URL(/<a href="([^"]*)"[^>]*>Send feedback/.exec(out)[1].replaceAll('&amp;', '&'));
+const SITE_ENTRY = 'entry.2047320042';
+const PAGE_ENTRY = 'entry.1326474028';
+
+test('feedbackHref builds the form URL with the site and the page, each encoded, and the page exactly as given', () => {
+  assert.equal(SITE.feedback.siteEntry, SITE_ENTRY);
+  assert.equal(SITE.feedback.pageEntry, PAGE_ENTRY);
+  assert.equal(feedbackHref({ siteName: 'Paid & Penalized', pageUrl: 'https://paidandpenalized.org/a/' }),
+    `${SITE.feedback.url}?${SITE_ENTRY}=${encodeURIComponent('Paid & Penalized')}&${PAGE_ENTRY}=${encodeURIComponent('https://paidandpenalized.org/a/')}`);
+  const pageUrl = 'https://paidandpenalized.org/a/?x=1&y=2#z';
+  const url = new URL(feedbackHref({ siteName: 'A & B', pageUrl }));
+  assert.equal(url.searchParams.get(PAGE_ENTRY), pageUrl);
+  assert.equal(url.searchParams.get(SITE_ENTRY), 'A & B');
+  // No page given: the site alone is prefilled.
+  const siteOnly = new URL(feedbackHref({ siteName: 'A & B' }));
+  assert.equal(siteOnly.searchParams.get(SITE_ENTRY), 'A & B');
+  assert.ok(!siteOnly.searchParams.has(PAGE_ENTRY));
+  assert.throws(() => feedbackHref({ siteName: '' }), TypeError);
+  assert.throws(() => feedbackHref({}), TypeError);
+});
+
+test("page: the feedback link prefills the program's title and the page's canonical URL; the hub's says the family's name", () => {
+  const program = feedbackUrlIn(page({ ...PAGE, path: '/hacrp/hospital/990001/' }));
+  assert.equal(program.searchParams.get(SITE_ENTRY), SITE.sites.hacrp.title);
+  assert.equal(program.searchParams.get(PAGE_ENTRY), `${SITE.origin}/hacrp/hospital/990001/`);
+  const hub = feedbackUrlIn(page({ ...PAGE, site: 'hub', path: '/methods/' }));
+  assert.equal(hub.searchParams.get(SITE_ENTRY), SITE.name);
+  assert.equal(hub.searchParams.get(PAGE_ENTRY), `${SITE.origin}/methods/`);
+  // The not-found page has no canonical address of its own: the site only.
+  const missing = feedbackUrlIn(page({ ...PAGE, site: 'hub', path: '/404.html' }));
+  assert.equal(missing.searchParams.get(SITE_ENTRY), SITE.name);
+  assert.ok(!missing.searchParams.has(PAGE_ENTRY));
+  // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did.
+  assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
+});
+
+test('page: the footer says not to include patient information beside the feedback link, with the Terms line and the policy links', () => {
+  const foot = /<footer[\s\S]*?<\/footer>/.exec(page(PAGE))[0];
+  const feedbackItem = /<li[^>]*>(?:(?!<\/li>)[\s\S])*Send feedback(?:(?!<\/li>)[\s\S])*<\/li>/.exec(foot)[0];
+  assert.ok(feedbackItem.includes(COPY.feedbackWarning), 'the warning sits in the feedback link\'s own list item');
+  assert.match(COPY.feedbackWarning, /patient information/i);
+  assert.ok(foot.includes(`${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a>`));
+  for (const [href, label] of [['/privacy/', COPY.privacy], ['/corrections/', COPY.corrections], ['/about/', COPY.about],
+    ['/accessibility/', COPY.accessibility], ['/methods/', COPY.methods]]) {
+    assert.ok(foot.includes(`<a href="${href}">${label}</a>`), href);
+  }
+  // The affiliation line, the credit and the license stay.
+  assert.ok(foot.includes('Not affiliated with or endorsed by CMS.'));
+  assert.ok(foot.includes('Built with Claude Code'));
+  assert.ok(foot.includes('rel="license noopener"'));
+});
+
+test('page: the footer\'s new words promise no reply time, fix time or deletion, and carry no digits', () => {
+  const words = ['feedbackWarning', 'termsShort', 'termsLink', 'privacy', 'corrections', 'about', 'accessibility', 'maintenance'].map((k) => COPY[k]).join(' ');
+  assert.doesNotMatch(words, /\d/);
+  assert.doesNotMatch(words, /\b(caught|cheat\w*|dodge\w*|worst|failed)\b/i);
+  assert.doesNotMatch(words, /\b(reply|respond|response|within|delete\w*|erase\w*|fix(ed)? by|soon)\b/i);
+  assert.match(COPY.termsShort, /not affiliated with or endorsed by CMS or any hospital/i);
+  assert.match(COPY.termsShort, /estimates/i);
+  assert.match(COPY.termsShort, /medical, legal or financial advice/i);
+  assert.match(COPY.maintenance, /\{release\}/);
+});
+
+test('page: the footer and the banner use no inline style (a strict CSP forbids it)', () => {
+  const original = SITE.sites.hacrp.maintenance;
+  SITE.sites.hacrp.maintenance = 'FY2027';
+  try {
+    assert.doesNotMatch(page(PAGE), /\sstyle=/);
+  } finally { SITE.sites.hacrp.maintenance = original; }
+});
+
+// Runs fn with a site's maintenance flag set, then puts it back.
+function withMaintenance(id, value, fn) {
+  const original = SITE.sites[id].maintenance;
+  SITE.sites[id].maintenance = value;
+  try { return fn(); } finally { SITE.sites[id].maintenance = original; }
+}
+
+test('maintenance banner: absent while the flag is null, which is how the site launches', () => {
+  assert.equal(SITE.sites.hacrp.maintenance, null);
+  assert.equal(maintenanceBanner('hacrp'), '');
+  assert.doesNotMatch(page(PAGE), /role="status"/);
+});
+
+test('maintenance banner: a release name shows a status banner before <main> on every page of that site, never on the hub', () => {
+  withMaintenance('hacrp', 'FY2027', () => {
+    for (const path of ['/hacrp/', '/hacrp/hospital/990001/', '/hacrp/methods/']) {
+      const out = page({ ...PAGE, path });
+      const banner = /<[a-z]+ [^>]*role="status"[^>]*>[\s\S]*?<\/(?:div|aside|p)>/.exec(out)?.[0];
+      assert.ok(banner, path);
+      assert.ok(banner.includes('FY2027'), path);
+      assert.ok(out.indexOf('role="status"') < out.indexOf('<main'), path);
+      assert.equal(out.match(/role="status"/g).length, 1, path);
+    }
+    assert.ok(maintenanceBanner('hacrp') instanceof Safe);
+    assert.equal(String(maintenanceBanner('hacrp')).includes(COPY.maintenance.replace('{release}', 'FY2027')), true);
+    for (const path of ['/', '/methods/', '/404.html']) assert.doesNotMatch(page({ ...PAGE, site: 'hub', path }), /role="status"/, path);
+    assert.equal(maintenanceBanner('hub'), '');
+  });
+});
+
+test('maintenance banner: the release name is escaped, not trusted', () => {
+  withMaintenance('hacrp', '<b>"FY"</b>', () => {
+    const out = String(maintenanceBanner('hacrp'));
+    assert.ok(!out.includes('<b>'));
+    assert.ok(out.includes('&lt;b&gt;'));
+  });
+});
+
+test('maintenance banner: anything but null or a non-empty trimmed string throws a TypeError naming the site', () => {
+  for (const bad of ['', '  ', ' FY2027', 'FY2027\n', 7, true, undefined, {}]) {
+    withMaintenance('hacrp', bad, () => {
+      assert.throws(() => page(PAGE), (err) => err instanceof TypeError && /hacrp/.test(err.message), JSON.stringify(bad));
+      assert.throws(() => maintenanceBanner('hacrp'), TypeError, JSON.stringify(bad));
+    });
+  }
+});
+
+test('page requires a site: the hub or a key of SITE.sites', () => {
+  const { site, ...without } = PAGE;
+  assert.throws(() => page(without), /site/);
+  assert.throws(() => page({ ...PAGE, site: 'nowhere' }), /nowhere/);
+  assert.throws(() => page({ ...PAGE, site: 'toString' }), /toString/, 'a name from Object.prototype is not a site');
+  assert.throws(() => page({ ...PAGE, site: 7 }), /site/);
+  assert.doesNotThrow(() => page({ ...PAGE, site: 'hub' }));
 });
 
 test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {
