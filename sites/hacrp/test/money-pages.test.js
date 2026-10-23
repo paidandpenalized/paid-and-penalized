@@ -17,18 +17,39 @@ import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
 import { isDecided } from '../../../engine/js/hacrp/hospital.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
-import { nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
+import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
-import { ASSETS } from './fixtures.js';
+import { ASSETS, strippedText as strip } from './fixtures.js';
 
 const PROGRAM = renderProgram();
 const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section class="part" id="map"/.exec(PROGRAM)[0];
-const strip = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 const captionText = (html) => strip(/<figcaption class="fig__cap"[^>]*>([\s\S]*?)<\/figcaption>/.exec(html)[1]);
 const captionOf = (html, id) => captionText(new RegExp(`<section class="psec[^"]*" id="${id}"[\\s\\S]*?</section>`).exec(html)[0]);
+
+test('every group carries the hospitals this site estimates the cut of and those CMS cut, from one rollup: the nation, each kind\'s group, each state, each place', () => {
+  const h = DATA.dollars.headline;
+  assert.deepEqual([MD.headline.cut, MD.headline.cmsCut], [h.cut, h.yes], 'the nation: the file\'s headline, CMS\'s count under the groups\' name');
+  // A kind's group: program-data\'s tally of the same group over every decided hospital.
+  for (const { kind, groups } of MD.byKind) {
+    for (const g of groups) {
+      const tally = PD.types.find((t) => t.kind === kind).groups.find((x) => x.key === g.key);
+      assert.equal(g.cmsCut, tally.yes, `${kind} ${g.key}`);
+      assert.ok(g.cut <= g.cmsCut, `${kind} ${g.key}`);
+    }
+  }
+  for (const s of MD.byState.values()) assert.ok(s.cut <= s.cmsCut, s.state);
+  for (const place of PLACES.list.filter((p) => p.kind === 'state' || p.kind === 'region')) {
+    const pm = placeMoney(MD, place.ccns);
+    assert.equal(pm.cmsCut, place.counts.yes, `${place.key}: the hospitals CMS cut there`);
+    assert.ok(pm.cut <= pm.cmsCut, place.key);
+  }
+  // The placeholders the copy\'s "{cut} of the {yes}" take, for any of them.
+  assert.deepEqual(cutCounts({ cut: 1234, cmsCut: 1300 }), { cut: count(1234), yes: count(1300) });
+  assert.deepEqual(cutCounts(MD.headline), { cut: count(h.cut), yes: count(h.yes) });
+});
 
 test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s cut count, the hospitals estimated, the dollars', () => {
   const h = DATA.dollars.headline;
@@ -42,14 +63,14 @@ test('the money\'s aggregates add up to the emitted file\'s own headline: CMS\'s
   // is in none of a kind's groups) plus the cut hospitals outside every group; the special statuses overlap, so each stays within it.
   for (const [kind, groups] of TYPE_KINDS) {
     const listed = MD.byKind.find((k) => k.kind === kind).groups;
-    assert.ok(listed.every((g) => g.n > 0), kind);
+    assert.ok(listed.every((g) => g.cut > 0), kind);
     if (kind === 'status') {
       for (const g of listed) assert.ok(g.money <= MD.headline.money, `${kind} ${g.key}`);
       continue;
     }
     const outside = MD.cutRows.filter((r) => !groups.some(([, test]) => test(r.master)));
     assert.equal(listed.reduce((s, g) => s + g.money, 0) + sum(outside, 'cut'), MD.headline.money, `${kind}: dollars`);
-    assert.equal(listed.reduce((s, g) => s + g.n, 0) + outside.length, MD.headline.cut, `${kind}: hospitals`);
+    assert.equal(listed.reduce((s, g) => s + g.cut, 0) + outside.length, MD.headline.cut, `${kind}: hospitals`);
   }
   assert.equal([...MD.byState.values()].reduce((s, st) => s + st.money, 0), MD.headline.money, 'the states add to the nation');
   assert.equal([...MD.byState.values()].reduce((s, st) => s + st.cut, 0), MD.headline.cut);
@@ -506,7 +527,14 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   assert.equal(figures, 5);
   assert.ok(text.includes('The same check for five of the figures the method makes'), 'the count in words, from the rows the table has');
   // The tail of a stale date: provisions ending inside the year would make the row false, so the page does not build.
-  assert.throws(() => assumptionsTable({ fy: DATA.fy, volumeFy: 2024, backtestFy: 2024, endsOn: `${DATA.fy}-09-30` }), { name: 'RangeError', message: /not after FY2026 ends/ });
+  const ends = (mdhEnd, lowVolumeEnd) => ({ volumeFy: 2024, mdhEnd, lowVolumeEnd });
+  const inYear = `${DATA.fy}-09-30`;
+  const after = `${DATA.fy}-12-31`;
+  assert.doesNotThrow(() => assumptionsTable({ fy: DATA.fy, assumptions: ends(after, after), backtestFy: 2024 }));
+  // The earlier of the two dates is the one held to the year, whichever provision it is.
+  for (const assumptions of [ends(inYear, after), ends(after, inYear), ends(inYear, inYear)]) {
+    assert.throws(() => assumptionsTable({ fy: DATA.fy, assumptions, backtestFy: 2024 }), { name: 'RangeError', message: /not after FY2026 ends/ });
+  }
 });
 
 // Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element

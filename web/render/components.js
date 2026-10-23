@@ -105,6 +105,19 @@ export function fillCopyKeep(copy, key, values, keep) {
   return new Safe(text);
 }
 
+// A sentence with markup (a link, a box) where some of its placeholders stand. `parts` maps a placeholder's name to the
+// markup that takes its place; `make` fills the sentence: it is called with { name: mark }, one control character
+// ("\u0001", "\u0002", ... in the order of `parts`) for each name, to be given as that placeholder's value, and returns
+// the text (a fillCopy, or any function that fills one). The marks are then swapped for the markup and the words round
+// them are escaped.
+export function fillAround(make, parts) {
+  const names = Object.keys(parts);
+  const marks = Object.fromEntries(names.map((name, i) => [name, String.fromCharCode(i + 1)]));
+  const MARKS = new RegExp(`([\\u0001-\\u${names.length.toString(16).padStart(4, '0')}])`);
+  const markup = make(marks).split(MARKS).map((piece, i) => (i % 2 ? parts[names[piece.charCodeAt(0) - 1]] : piece));
+  return html`${markup}`;
+}
+
 // text (escaped) with the first occurrence of each part kept on one line (a .nw span), e.g. a dataset id that would
 // otherwise break at its hyphen. A part not in text throws.
 export function keepWhole(text, parts) {

@@ -7,7 +7,7 @@
 // show CMS's values and add no inference.
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
-import { footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
+import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -88,12 +88,10 @@ function starsSpec(view, careSource) {
 
 // The Location field's words, the state a link to the program page's map and table for that state (#state=XX, which
 // the table filters on and the map marks), as Thirty Day Readmissions links a hospital's metro area.
-const STATE_AT = '\u0001';
 function locationText(view) {
-  const values = { city: view.city, state: STATE_AT };
-  const [before, after] = (view.zip ? fill('location', { ...values, zip: view.zip }) : fill('locationNoZip', values)).split(STATE_AT);
   const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
-  return html`${before}<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>${after}`;
+  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
+  return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 
 // The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red);
@@ -149,11 +147,10 @@ function stampOf(view) {
 // The verdict beside the record: the stamp, what CMS reports (its decision set apart, in the penalty ink for a cut),
 // why, with what the score is in one sentence, then CMS's line in plain words and how CMS sets it, the line bar and
 // the hospital's rank.
-const DECISION_AT = '\u0001';
 function leadMarkup(view) {
-  const [before, after] = leadSentence(view, DECISION_AT).split(DECISION_AT);
   const pen = view.status === 'yes' || view.status === 'yes-no-score';
-  return html`${before}<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>${after}`;
+  const decision = html`<strong class="hosp__decision${pen ? ' hosp__decision--pen' : ''}">${view.decision.text}</strong>`;
+  return fillAround(({ decision: at }) => leadSentence(view, at), { decision });
 }
 
 function verdict(view, nat, history, money) {

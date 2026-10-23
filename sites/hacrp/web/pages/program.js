@@ -6,7 +6,7 @@
 // Part 3: the US map, the table of every hospital beside the way down by region, division and state. The foot: the
 // sources beside the data facts, downloads and citation. Every number comes from the emitted data or a method
 // constant.
-import { formField, formTitle, stamp } from '../../../../web/render/components.js';
+import { fillAround, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { count, isoDate, pct, shortDate, shortIsoDate } from '../../../../web/render/format.js';
 import { page } from '../../../../web/render/layout.js';
@@ -44,13 +44,12 @@ function programTop({ title, subtitle, fy, counts, boundaryText, periods, source
   const fyText = String(fy);
   const range = (key, { start, end }, more = {}) => fillKeep(key, { ...more, start: shortDate(start), end: shortDate(end) }, ['start', 'end']);
   const payYear = { start: `10/01/${fy - 1}`, end: `09/30/${fy}` };
-  const tryLine = tryPlaces && fill('heroTry', { state: '\u0001', metro: '\u0002', every: '\u0003', how: '\u0004' });
-  const tryMarkup = tryLine && html`${tryLine.split(/([\u0001-\u0004])/).map((part) => ({
-    '\u0001': html`<a href="${tryPlaces.state.path}">${tryPlaces.state.name}</a>`,
-    '\u0002': html`<a href="${tryPlaces.metro.path}">${tryPlaces.metro.name}</a>`,
-    '\u0003': html`<a href="#hospitals">${t('heroEvery')}</a>`,
-    '\u0004': html`<a href="#how">${t('heroHow')}</a>`,
-  })[part] ?? html`${part}`)}`;
+  const tryMarkup = tryPlaces && fillAround((marks) => fill('heroTry', marks), {
+    state: html`<a href="${tryPlaces.state.path}">${tryPlaces.state.name}</a>`,
+    metro: html`<a href="${tryPlaces.metro.path}">${tryPlaces.metro.name}</a>`,
+    every: html`<a href="#hospitals">${t('heroEvery')}</a>`,
+    how: html`<a href="#how">${t('heroHow')}</a>`,
+  });
   return html`<header class="page__head prog__top">
 <div class="prog__intro">
 <p class="cap kicker prog__kicker">${fill('kicker', { subtitle, fy: fyText })}</p>

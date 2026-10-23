@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
 import { cmsText, count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_TEXT } from '../web/constants.js';
+import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from '../web/constants.js';
 import { fill as siteFill } from '../web/copy.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
 import { ALL_STRATUM, BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
@@ -17,7 +17,7 @@ import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, s
 import { COPY as MONEY_COPY, fill as mfill, t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, esc } from './fixtures.js';
+import { ASSETS, esc, markupText as text } from './fixtures.js';
 import { DATA, NAT, PAGE_CTX, RANGE } from './pinned.js';
 
 const { model, estimate } = DATA;
@@ -35,7 +35,6 @@ const pageOf = (row) => {
   const m = hospitalMoney(row);
   return hospitalPage({ ...PAGE_CTX, view: viewOf(row.ccn), hospital: h, master: DATA.master.get(row.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: m.estimated ? { ...h, atStake: m.atStake, atStakeRange: m.ranges.hac } : h, model, estimate, range: RANGE }, money: m });
 };
-const text = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\u2060/g, '').replace(/\s+/g, ' ');
 
 // One row of each kind the pages draw.
 const CUT = pick((r, h) => r.status === 'estimated' && r.cut && h.total !== null, 'estimated, scored, cut');
@@ -74,6 +73,18 @@ test('the contract: an estimated hospital has dollars at stake above $0, since t
   // A row without an estimate has no dollars at stake to plot.
   const other = file.hospitals.find((r) => r.status !== 'estimated');
   assert.doesNotThrow(() => dollarsData({ ...file, hospitals: file.hospitals.map((r) => (r === other ? { ...r, atStake: 0 } : r)) }, DATA.hospitals));
+});
+
+test('the cut is REDUCTION_PCT of the payment after the two adjustments: every estimated row\'s dollars at stake is that share, rounded half to even as the emitter rounds (the engine\'s rate and the page\'s percentage agree)', () => {
+  // Python rounds a half to the even dollar; Math.round would take it up.
+  const halfEven = (x) => {
+    const floor = Math.floor(x);
+    const rest = x - floor;
+    return rest < 0.5 ? floor : rest > 0.5 ? floor + 1 : floor + (floor % 2);
+  };
+  const estimated = rows.filter((r) => r.status === 'estimated');
+  assert.ok(estimated.length > 0);
+  for (const r of estimated) assert.equal(r.atStake, halfEven(r.after * (REDUCTION_PCT / 100)), r.ccn);
 });
 
 test('a row with a dollar status the pages have no words for stops the build, naming the row (the schema lists "parhm", which no hospital has)', () => {

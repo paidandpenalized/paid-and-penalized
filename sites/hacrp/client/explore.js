@@ -104,7 +104,8 @@ export function mountMeasureToggles(root = document, load = null) {
     for (const group of toggles) {
       const fig = group.closest('.fig');
       if (!fig.querySelector(`.mpanel[data-measure="${id}"]`)) continue;
-      for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.measure === id));
+      const buttons = [...group.querySelectorAll('button')];
+      setPressed(buttons, buttons.find((b) => b.dataset.measure === id));
       for (const panel of fig.querySelectorAll('.mpanel')) {
         panel.hidden = panel.dataset.measure !== id;
         if (!panel.hidden && load) drawPanel(panel, load);
@@ -522,7 +523,7 @@ export function mountYearMap(fig, history = assetLoaders()) {
     const [cut, ever] = hist.counts[i];
     const values = { fy: String(hist.fys[i]), cut: count(cut), ever: count(ever) };
     readout.textContent = cut ? fill('ymapSay', values) : fill('ymapSayNone', { fy: values.fy, ever: values.ever });
-    buttons.forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+    setPressed(buttons, buttons[i]);
   };
   const show = (i) => history(box.dataset.roll).then((hist) => draw(hist, i), () => {});
   let timer = null;

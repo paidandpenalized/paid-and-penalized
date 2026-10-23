@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, longDate, pct, shown, signed } from '../render/format.js';
-import { fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
+import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { page } from '../render/layout.js';
 
@@ -223,6 +223,18 @@ test('fillCopyKeep keeps each value, or a run from one value to another, on one 
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 'b' }, ['nope']), /unknown placeholder/);
   assert.throws(() => fillCopyKeep(copy, 'dates', { start: 'a', end: 1 }, []), /formatted string/);
   assert.equal(String(fillCopyKeep({ twice: 'FY{next} expected early {next}' }, 'twice', { next: '2027' }, [])), 'FY2027 expected early 2027', 'a placeholder used twice is filled twice');
+});
+
+test('fillAround puts markup where placeholders stand, typesetting and escaping the words round it, and marks the parts in order', () => {
+  const copy = { one: "CMS's {where} line", two: 'Try {state}, {metro} or {state}', plain: 'No {slot}' };
+  const link = (href, label) => html`<a href="${href}">${label}</a>`;
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'one', marks), { where: link('/x', 'top & bottom') })),
+    'CMS’s <a href="/x">top &amp; bottom</a> line');
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'two', marks), { state: link('/s', 'Ohio'), metro: link('/m', '<M>') })),
+    'Try <a href="/s">Ohio</a>, <a href="/m">&lt;M&gt;</a> or <a href="/s">Ohio</a>', 'a placeholder used twice gets its markup twice');
+  // any function that fills a sentence will do; the words it returns are escaped, the markup is not escaped again
+  assert.equal(String(fillAround(({ slot }) => `a<b ${slot} c&d`, { slot: raw('<i>x</i>') })), 'a&lt;b <i>x</i> c&amp;d');
+  assert.equal(String(fillAround((marks) => fillCopy(copy, 'plain', marks), { slot: 'text' })), 'No text', 'plain text is escaped');
 });
 
 test('lastCall returns its last result for the same key (by identity) and calls again for a new one', () => {

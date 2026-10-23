@@ -6,7 +6,7 @@ import { ruleCompare, scoreRule } from '../../../web/charts/scoreRule.js';
 import { figure, imageOf, imagePair, keysHint, num } from '../../../web/charts/figure.js';
 import { US_MAP_CODES, countiesOf, placeMap, usMap, usPoints } from '../../../web/charts/geo.js';
 import { compareHist } from '../../../web/charts/compareHist.js';
-import { paraOf, printout, wsOp, wsTerm } from '../../../web/render/components.js';
+import { fillAround, paraOf, printout, wsOp, wsTerm } from '../../../web/render/components.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { nameInText, placeCounts } from './places.js';
 import { toUnit } from '../../../engine/js/stats.js';
@@ -242,10 +242,9 @@ const para = paraOf(fill, t);
 // Step 2's first paragraph, its term a box that opens on a click or tap (no script) with the SIR's arithmetic and
 // baseline year. A <details> can't sit inside a <p>, so the paragraph is a div that reads as one.
 function sirPara(one) {
-  const [before, after] = fill('step2a', { sir: '\u0001', one }).split('\u0001');
   const base = String(SIR_BASE_YEAR);
   const box = html`<details class="def def--inline"><summary>${t('sirTerm')}<span class="def__mark" aria-hidden="true">?</span><span class="vh"> ${t('sirMore')}</span></summary><span class="def__box"><strong class="def__math">${t('sirBoxMath')}</strong> ${fill('sirBoxPredicted', { base })} ${fill('sirBoxBaseline', { base, next: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) })}</span></details>`;
-  return html`<div class="step__p">${before}${box}${after}</div>`;
+  return html`<div class="step__p">${fillAround((marks) => fill('step2a', { ...marks, one }), { sir: box })}</div>`;
 }
 
 // ---------- Part 2: the year's picture ----------

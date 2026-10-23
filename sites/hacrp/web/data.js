@@ -104,7 +104,9 @@ export function dollarsData(dollars, hospitals) {
   const ranged = (r) => (r.status === 'estimated'
     ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: rangeOf(bands, 'net', r.stratum, r.net) } } : r);
   const byCcn = new Map([...rows].map(([ccn, r]) => [ccn, ranged(r)]));
-  return { fy, byCcn, national, headline, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
+  // The headline's `yes` (CMS's cut count) also goes by the name every group's rollup gives it (money-data.js), so one
+  // formatter says "n of m" for the nation and for a state alike.
+  return { fy, byCcn, national, headline: { ...headline, cmsCut: headline.yes }, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
 }
 
 export function loadHacrp() {

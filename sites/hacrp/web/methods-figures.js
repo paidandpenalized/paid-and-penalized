@@ -13,7 +13,7 @@ import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { PARHM_THROUGH_YEAR, REDUCTION_TEXT, SHORT_NAMES } from './constants.js';
 import { fyLabel } from './copy.js';
-import { rangeOf, rangeShare } from './money.js';
+import { cutCounts, rangeOf, rangeShare } from './money.js';
 import { fill, fillKeep, t } from './methods/copy.js';
 
 // The pinned-input manifest's fingerprint, by name.
@@ -204,14 +204,18 @@ export function dollarsPipeline(headline) {
     { name: t('dpipe3'), value: money(headline.hvbp), note: fill('dpipe3Note', { one }) },
     { name: t('dpipe4'), value: money(headline.total - headline.base, { sign: true }), note: t('dpipe4Note') },
     { name: t('dpipe5'), value: money(headline.after), note: t('dpipe5Note') },
-    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, cut: count(headline.cut), yes: count(headline.yes) }), check: true },
+    { name: t('dpipe6'), value: money(headline.hac), note: fill('dpipe6Note', { pct: REDUCTION_TEXT, ...cutCounts(headline) }), check: true },
   ], { cls: 'pipe--dollars' });
 }
 
 // The assumptions, as Thirty Day Readmissions lists its own: each choice and its effect on the estimate.
-export function assumptionsTable({ fy, volumeFy, backtestFy, endsOn }) {
+// assumptions: the dollar file's (volumeFy, and the end dates of the two provisions, mdhEnd and lowVolumeEnd, as
+// YYYY-MM-DD); backtestFy: the year of the back-test.
+export function assumptionsTable({ fy, assumptions, backtestFy }) {
+  const { volumeFy, mdhEnd, lowVolumeEnd } = assumptions;
   // The two provisions end after the fiscal year does, which is what lets them count for all of it: a date inside the
-  // year would make the row false, so it stops the build. endsOn: the earlier of the two end dates (YYYY-MM-DD).
+  // year would make the row false, so it stops the build. endsOn: the earlier of the two end dates.
+  const endsOn = mdhEnd < lowVolumeEnd ? mdhEnd : lowVolumeEnd;
   if (!(endsOn > `${fy}-09-30`)) throw new RangeError(`the Medicare-dependent hospital program and the low-volume adjustment end ${endsOn}, not after FY${fy} ends`);
   const rows = [
     ['assumeRates', 'assumeRatesE', { fy: String(fy), volume: String(volumeFy) }], ['assumeModel', 'assumeModelE', null, { fy: String(backtestFy) }], ['assumeShare', 'assumeShareE'],

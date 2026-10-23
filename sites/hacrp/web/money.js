@@ -2,7 +2,7 @@
 // CMS's. Plain numbers and the few facts the words need; the pages format them. A hospital without an estimate
 // (Maryland's, or one with no usable impact-file row) carries only its status.
 
-import { money } from '../../../web/render/format.js';
+import { count, money } from '../../../web/render/format.js';
 import { fill } from './copy.js';
 
 // What the inpatient payment is made of, in the order the statement lists it: the base the readmissions and
@@ -22,6 +22,11 @@ export function cutDollars(row) {
 
 // A hospital's HAC cut in a table cell (cutDollars's number): the dollars, or the words where there is no estimate.
 export const cutText = (dollars) => (Number.isFinite(dollars) ? money(dollars) : fill('tableMoneyNone'));
+
+// The hospitals a group's estimate covers, as the copy's {cut} of the {yes} placeholders take them: those whose cut this
+// site estimates and those CMS cut, estimated or not. group: { cut, cmsCut }, any group's rollup (money-data.js) or the
+// file's headline (data.js dollarsData names CMS's count cmsCut there too). The words round the two stay in the copy.
+export const cutCounts = ({ cut, cmsCut }) => ({ cut: count(cut), yes: count(cmsCut) });
 
 // ---------- the likely ranges (the back-test's bands: dollars.json `bands`) ----------
 

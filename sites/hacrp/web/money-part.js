@@ -20,7 +20,9 @@ import { groupLabel, kindLabel } from './groups.js';
 import { estTag, rangeLine } from './money-figures.js';
 import { countBins } from './compare.js';
 import { nearLine, sides, sum } from './money-data.js';
+import { cutCounts } from './money.js';
 import { fill, t } from './money/copy.js';
+import { TYPE_KINDS } from './program-data.js';
 import { psec } from './program-figures.js';
 
 // Display constant: the across-the-line figure's window either side of CMS's line.
@@ -40,8 +42,8 @@ const groupRow = (label, hospitals, cut, shareHospitals, shareMoney) => [label, 
 
 // ---------- the bill ----------
 
-const TEACH = ['major', 'minor', 'none'];
-export function billFigure(md, { n, source }) {
+const TEACH = TYPE_KINDS.find(([kind]) => kind === 'teach')[1].map(([key]) => key);
+function billFigure(md, { n, source }) {
   const groupOf = (r) => (TEACH.includes(r.master.teach) ? r.master.teach : 'unknown');
   const groups = [...TEACH, 'unknown'].map((key) => {
     const rows = md.cutRows.filter((r) => groupOf(r) === key).sort((a, b) => b.cut - a.cut || (a.ccn < b.ccn ? -1 : 1));
@@ -129,7 +131,7 @@ export function sharesFigure(md, { n, source }) {
       const label = groupLabel(k.kind, g.key);
       return {
         label, a: g.shareHospitals, b: g.shareMoney, aText: pct0(g.shareHospitals), bText: pct0(g.shareMoney),
-        tipA: fill('sharesTipHospitals', { group: label, n: count(g.n), share: pct0(g.shareHospitals) }),
+        tipA: fill('sharesTipHospitals', { group: label, n: count(g.cut), share: pct0(g.shareHospitals) }),
         tipB: fill('sharesTipMoney', { group: label, money: money(g.money), share: pct0(g.shareMoney) }),
       };
     }),
@@ -144,7 +146,7 @@ export function sharesFigure(md, { n, source }) {
     takeaway: fill('sharesTakeaway', { group: fill(`sharesNoun_${top.kind}`, { group: groupLabel(top.kind, top.key) }), shareHospitals: pct0(top.shareHospitals), shareMoney: pct0(top.shareMoney) }),
     table: {
       columns: GROUP_COLUMNS,
-      rows: all.map((g) => groupRow(`${kindLabel(g.kind)}: ${groupLabel(g.kind, g.key)}`, g.n, g.money, g.shareHospitals, g.shareMoney)),
+      rows: all.map((g) => groupRow(`${kindLabel(g.kind)}: ${groupLabel(g.kind, g.key)}`, g.cut, g.money, g.shareHospitals, g.shareMoney)),
     },
   });
 }
@@ -154,8 +156,9 @@ export function sharesFigure(md, { n, source }) {
 export function statesFigure(md, { n, source, shapes }) {
   // Each state's cut per Medicare stay, to the whole dollar, once (the drawing's tooltips, the takeaway and the table say it).
   const states = [...md.byState.values()].filter((s) => s.money > 0).sort((a, b) => (a.state < b.state ? -1 : 1)).map((s) => ({ ...s, stay: Math.round(s.perStay) }));
+  if (!states.length) throw new RangeError('statesFigure: no state with estimated money to draw');
   // A state's tooltip says how many of the hospitals CMS cut there the dollars come from when some have no estimate.
-  const tipTotal = (s) => (s.cut < s.cmsCut ? fill('statesTipTotal', { money: money(s.money), n: count(s.cut), m: count(s.cmsCut) }) : fill('statesTipTotalAll', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }));
+  const tipTotal = (s) => (s.cut < s.cmsCut ? fill('statesTipTotal', { money: money(s.money), ...cutCounts(s) }) : fill('statesTipTotalAll', { money: money(s.money), hospitals: noun(s.cut, 'cut hospital') }));
   const byTotal = Object.fromEntries(states.map((s) => [s.state, { value: s.money, label: tipTotal(s) }]));
   const byStay = Object.fromEntries(states.map((s) => [s.state, { value: s.perStay, label: fill('statesTipStay', { perStay: dollars(s.stay) }) }]));
   const layers = [{ id: 'total', states: byTotal }, { id: 'stay', states: byStay }];
@@ -165,7 +168,6 @@ export function statesFigure(md, { n, source, shapes }) {
   const chart = html`<div class="bubbles" data-view="total">
 <div class="mtoggle bubbles__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view="stay" aria-pressed="false">${t('statesPerStay')}</button></div>
 ${imagePair(art, t('statesAlt'))}</div>`;
-  if (!states.length) throw new RangeError('statesFigure: no state with estimated money to draw');
   // A place with money the map has no circle for (Puerto Rico, if its hospitals were cut) is in the table; the note says so.
   const offMap = states.filter((s) => !hasBubble(shapes, s.state)).map((s) => STATE_NAMES[s.state] ?? s.state);
   const note = offMap.length ? `${t('statesNone')} ${fill('statesOffMap', { places: listText(offMap) })}` : t('statesNone');
@@ -298,12 +300,12 @@ ${psec({ id: 'three', wide: true, heading: t('threeHeading'), text: p('threeText
 }
 
 // The Part's intro: the national estimate and its likely range, with the hospitals it leaves out named in the count.
-export const moneyPartIntro = (md, fy) => fill('moneyPartIntro', { fy: String(fy), money: money(md.headline.money), range: moneyRange(...md.headline.range), cut: count(md.headline.cut), yes: count(md.headline.yes), missing: count(md.headline.yesUnestimated), pct: REDUCTION_TEXT });
+export const moneyPartIntro = (md, fy) => fill('moneyPartIntro', { fy: String(fy), money: money(md.headline.money), range: moneyRange(...md.headline.range), ...cutCounts(md.headline), missing: count(md.headline.yesUnestimated), pct: REDUCTION_TEXT });
 
 // The summary form's field: the national estimate, its tag, the hospitals it covers and its range.
 export const summaryMoneyField = (md) => ({
   label: t('summaryMoney'),
   value: html`<span class="money__field money__field--cut">${money(md.headline.money)}</span> ${estTag()}`,
   as: 'div', size: 'big', fieldCls: 'f-money',
-  note: html`${fill('summaryMoneyNote', { cut: count(md.headline.cut), yes: count(md.headline.yes) })}${rangeLine(md.headline.range, { estimate: md.headline.money })}`,
+  note: html`${fill('summaryMoneyNote', cutCounts(md.headline))}${rangeLine(md.headline.range, { estimate: md.headline.money })}`,
 });

@@ -112,7 +112,7 @@ function barExtent(result, model) {
 // The dollars the HAC Reduction Program takes at the start and in the hypothetical, from the dollars at stake (this
 // site's estimate, on the hospital's record as atStake; absent or null where there is none: the sandbox, Maryland, a
 // hospital without an estimate): { atStake, before, after }, each dollarsOf()'s { lo, hi }, or null.
-export function moneyOf(result, atStake) {
+function moneyOf(result, atStake) {
   if (atStake === undefined || atStake === null) return null;
   return { atStake, before: dollarsOf(result.before.flag, atStake), after: dollarsOf(result.after.flag, atStake) };
 }

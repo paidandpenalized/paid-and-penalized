@@ -256,7 +256,7 @@ export const COPY = {
   statesToggle: { text: 'Show the money as', claim: null },
   // A state's tooltip: its dollars, and how many of the hospitals CMS cut there they come from ({n} of {m} when some have
   // no estimate, else all of them).
-  statesTipTotal: { text: '{money} from {n} of its {m} cut hospitals', claim: null },
+  statesTipTotal: { text: '{money} from {cut} of its {yes} cut hospitals', claim: null },
   statesTipTotalAll: { text: '{money} from {hospitals}', claim: null },
   statesTipStay: { text: '{perStay} per traditional Medicare stay', claim: null },
   statesNone: { text: 'States whose hospitals CMS didn\'t cut, and Maryland, have no circle.', claim: 'HACRP-26' },

@@ -78,9 +78,8 @@ export function buildPlaces({ hospitals, master, rows }) {
 
 // A place's name inside a sentence: Census regions and divisions take "the" ("the South", "the Middle Atlantic"), except
 // New England, which stands alone; start: the name opens the sentence.
-const NO_ARTICLE = new Set(['New England']);
 export function nameInText(place, { start = false } = {}) {
-  const article = (place.kind === 'region' || place.kind === 'division') && !NO_ARTICLE.has(place.name);
+  const article = (place.kind === 'region' || place.kind === 'division') && place.name !== 'New England';
   if (!article) return place.name;
   return `${start ? 'The' : 'the'} ${place.name}`;
 }

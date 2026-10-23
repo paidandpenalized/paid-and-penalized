@@ -129,6 +129,11 @@ export const STANDING = "A penalty reflects how CMS’s formula scored relative 
 export const WHATIF_STANDING = "A what-if shows the formula’s arithmetic, not what a hospital could realistically change or how. "
   + "CMS’s real result also depends on other hospitals.";
 
+// A page's markup as the words a reader sees. markupText: each tag a space, the word joiners (which keep a range on one
+// line) gone, white space collapsed. strippedText: each tag removed, the escapes of & and ' undone, white space collapsed.
+export const markupText = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\u2060/g, '').replace(/\s+/g, ' ');
+export const strippedText = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
+
 // HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.
 export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 

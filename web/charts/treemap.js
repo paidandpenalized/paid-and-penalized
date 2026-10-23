@@ -19,7 +19,7 @@ const GAP = 4;
 // Squarified layout (Bruls, Huizing and van Wijk, 2000): positive values into a rectangle { x, y, w, h }, largest
 // first, rows chosen to keep each tile near square. Returns one { x, y, w, h } per value, in the input's order (a zero
 // or negative value gets a rectangle of no size).
-export function squarify(values, rect) {
+function squarify(values, rect) {
   const out = values.map(() => ({ x: rect.x, y: rect.y, w: 0, h: 0 }));
   const items = values.map((v, i) => ({ v, i })).filter((d) => d.v > 0).sort((a, b) => b.v - a.v || a.i - b.i);
   const total = items.reduce((s, d) => s + d.v, 0);
