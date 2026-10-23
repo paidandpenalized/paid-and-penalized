@@ -194,7 +194,11 @@ function binned(values, cls, reach = 0) {
   const columns = counts.map((n, i) => {
     const [x0, x1] = [edges[i], edges[i + 1]];
     const side = x0 >= 0 ? 1 : -1;
-    return column(seat(x0, side), seat(x1, side), n, cls(x0), `${pctText(x0)}–${pctText(x1)}`);
+    // Zero is its own column, so a bin that touches it says it stops short of it.
+    const range = x0 === 0 ? fill('threeRangeOverZero', { lo: pct(0, 0), hi: pctText(x1) })
+      : x1 === 0 ? fill('threeRangeUnderZero', { lo: pctText(x0), hi: pct(0, 0) })
+        : `${pctText(x0)}–${pctText(x1)}`;
+    return column(seat(x0, side), seat(x1, side), n, cls(x0), range);
   });
   const none = values.length - nonzero.length;
   // In axis order, so the keyboard and a screen reader meet the columns left to right.

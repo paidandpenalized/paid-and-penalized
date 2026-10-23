@@ -245,6 +245,9 @@ test('the three programs\' columns: exactly zero is a column of its own, no cut 
   assert.equal(total(value, 'chart-col chart-col--rew'), 3);
   assert.equal(total(value, 'chart-col chart-col--pen'), 2);
   assert.equal(total(value), 7);
+  // A bin that touches zero says it stops short of it, beside zero's own column.
+  assert.ok(readm.some((c) => c.tip === '2 hospitals at over 0% to 0.1%'), readm.map((c) => c.tip).join(' | '));
+  assert.ok(value.some((c) => /^1 hospital at \S0\.1% to under 0%$/.test(c.tip)), value.map((c) => c.tip).join(' | '));
   // The table counts the hospitals each program adjusted; the columns that aren't "none" add to it.
   assert.deepEqual(table.slice(0, 2), [total(readm) - 3, total(value) - 2]);
   assert.equal(total(hac), rows.length);

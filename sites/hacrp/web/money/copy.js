@@ -256,6 +256,8 @@ export const COPY = {
   threeHacAxis: { text: 'Cut, share of the whole payment', claim: null },
   threeHvbpSplit: { text: '{bonus} paid in bonuses, {penalty} taken in cuts', claim: null },
   threeTip: { text: '{hospitals} at {range}', claim: null },
+  threeRangeOverZero: { text: 'over {lo} to {hi}', claim: null },
+  threeRangeUnderZero: { text: '{lo} to under {hi}', claim: null },
   threeAlt: { text: 'Three column charts: how many hospitals each program moves by how much.', claim: null },
   threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75'] },
   threeColProgram: { text: 'Program', claim: null },
