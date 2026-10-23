@@ -19,7 +19,8 @@ export function pairBars({ sections, labels, width }) {
   const x1 = width - valueW;
   const max = Math.max(...sections.flatMap((s) => s.rows.flatMap((r) => [r.a, r.b])), 0.01);
   const x = (v) => x0 + (v / max) * (x1 - x0);
-  let y = KEY;
+  // On a phone the key's two entries take a row each.
+  let y = narrow ? KEY + 18 : KEY;
   const body = [];
   for (const s of sections) {
     y += HEAD;
@@ -36,9 +37,9 @@ export function pairBars({ sections, labels, width }) {
       y += ROW;
     }
   }
-  const keyB = narrow ? Math.round(width / 2) : 220;
+  const [keyB, keyBy] = narrow ? [0, 22] : [220, 4];
   const key = html`<rect class="chart-pair__a" x="0" y="4" width="14" height="${BAR}"/>${text({ x: 20, y: 13, anchor: 'start', cls: 'chart-label', body: labels.a })}
-<rect class="chart-pair__b" x="${keyB}" y="4" width="14" height="${BAR}"/>${text({ x: keyB + 20, y: 13, anchor: 'start', cls: 'chart-label', body: labels.b })}`;
+<rect class="chart-pair__b" x="${keyB}" y="${keyBy}" width="14" height="${BAR}"/>${text({ x: keyB + 20, y: keyBy + 9, anchor: 'start', cls: 'chart-label', body: labels.b })}`;
   return frame({ kind: 'pair', width, height: y + 6, body: html`${key}
 ${body}` });
 }

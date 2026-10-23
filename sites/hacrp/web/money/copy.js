@@ -196,7 +196,7 @@ export const COPY = {
   acrossText2: { text: 'A hair apart in score, the two sides are all or nothing in money.', claim: 'HACRP-01' },
   acrossTakeaway: { text: "Within {window} of CMS's line, CMS cut {over} hospitals, about {overMoney} by this site's estimate; the {under} just under it kept about {underMoney}.", claim: null },
   acrossUnder1: { text: '{n} not cut', claim: null },
-  acrossUnder2: { text: 'a cut would have been {money}', claim: null },
+  acrossUnder2: { text: '{money} at stake', claim: null },
   acrossOver1: { text: '{n} cut', claim: null },
   acrossOver2: { text: '{money} cut', claim: null },
   acrossLine: { text: "CMS's line", claim: null },

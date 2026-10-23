@@ -762,6 +762,8 @@
 .rulefig__pick[hidden] { display: none; }
 /* The states' map: one drawing, two layers of circles; the figure's data-view says which shows. */
 .bubbles { display: grid; gap: 8px; }
+.bubbles__pick { display: flex; }
+.bubbles__pick[hidden] { display: none; }
 .bubbles[data-view="total"] .chart-bubbles__layer--stay, .bubbles[data-view="stay"] .chart-bubbles__layer--total { display: none; }
 /* Three programs, three shapes: side by side from 900px, stacked under. */
 .three { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }

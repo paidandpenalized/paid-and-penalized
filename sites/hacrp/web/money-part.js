@@ -139,7 +139,7 @@ export function statesFigure(md, { n, source, shapes }) {
   // One drawing, two layers of circles: the buttons (shown by the page script) say which one shows; without the script,
   // the dollars.
   const chart = html`<div class="bubbles" data-view="total">
-<p class="bubbles__pick rulefig__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view-pick="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view-pick="stay" aria-pressed="false">${t('statesPerStay')}</button></p>
+<p class="bubbles__pick" role="group" aria-label="${t('statesToggle')}" hidden><button type="button" class="mtoggle__b" data-view-pick="total" aria-pressed="true">${t('statesTotal')}</button><button type="button" class="mtoggle__b" data-view-pick="stay" aria-pressed="false">${t('statesPerStay')}</button></p>
 ${imagePair(art, t('statesAlt'))}</div>`;
   const lo = states.reduce((a, b) => (b.money < a.money ? b : a));
   const hi = states.reduce((a, b) => (b.money > a.money ? b : a));

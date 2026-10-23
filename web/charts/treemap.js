@@ -63,7 +63,7 @@ export function treemap({ groups, width, height }) {
     const tiles = squarify(g.tiles.map((t) => t.value), inner);
     // A narrow header holds the label alone; the sub line only where it fits; a sliver of a group neither (its header
     // mark's tooltip still names it).
-    const wide = b.w > 150;
+    const wide = b.w > 210;
     const labelled = b.w > 70 && b.h > HEAD + 8;
     const head = mark({
       tip: `${g.label}: ${g.sub}`, value: g.value, hit: null,
