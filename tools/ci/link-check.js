@@ -14,9 +14,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { DIST_DIR, REPO_ROOT, filesUnder, newestYear, readJson } from '../../pipeline/files.js';
+import { DIST_DIR, REPO_ROOT, filesUnder, readJson } from '../../pipeline/files.js';
 import { addressOf, lookup } from '../../pipeline/site/address.js';
-import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
@@ -26,7 +26,7 @@ import { PROGRAM_PATH } from './page-types.js';
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 
 // The state codes a "#state=" fragment may name: the hospitals' states in the newest HACRP data.
-const dataStates = () => readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp'))).hospitals.map((h) => h.state);
+const dataStates = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals.map((h) => h.state);
 
 // The file in dist/ that the server serves for a decoded path, following its redirect of a folder to the folder with
 // its "/", or null. files: every file in dist/; folders: every folder that holds one ('' is dist/ itself).

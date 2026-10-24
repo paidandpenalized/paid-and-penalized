@@ -10,7 +10,7 @@ import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
-import { SOURCES, emittedPath } from '../pipeline/build.js';
+import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
 import { rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
@@ -129,7 +129,7 @@ export function changedOn(files) {
 export function loadHacrp() {
   // The emitted files the pages read, repo-relative, each from its newest year.
   const paths = {
-    data: emittedPath(newestYear('data/emitted/hacrp')),
+    data: newestEmittedPath(),
     master: masterPath(newestYear('data/emitted/hospital')),
     history: existsSync(REPO_ROOT + 'data/emitted/hacrp-history') ? historyPath(newestYear('data/emitted/hacrp-history')) : null,
     dollars: dollarsPath(newestYear('data/emitted/dollars')),

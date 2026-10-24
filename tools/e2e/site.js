@@ -2,9 +2,9 @@
 // engines, and the pages to visit. The launch command (launch.js) reads it as the checks do; lib.js adds the browser.
 import { existsSync, readdirSync } from 'node:fs';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
-import { DIST_DIR, REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
+import { DIST_DIR, REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
-import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { SITE } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placePath } from '../ci/page-types.js';
 
@@ -32,7 +32,7 @@ export async function startSite() {
 }
 
 // The newest HACRP file's hospitals, in the file's order.
-const hospitals = () => readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp'))).hospitals;
+const hospitals = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals;
 
 // The first place page of a kind that dist/ holds, by folder name: '/hacrp/<kind>/<key>/'.
 function placeOf(kind) {
