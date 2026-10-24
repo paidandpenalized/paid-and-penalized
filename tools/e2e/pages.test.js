@@ -1,13 +1,14 @@
 // Every page type in a real browser, in light and dark, at two desktop and three phone widths, each page opened once:
 //   - it loads clean: the status, no console or page errors, no CSP violations, no request to another origin, no
-//     sideways scroll, the footer's feedback link naming the page's canonical address, and no maintenance banner;
+//     sideways scroll, the footer's feedback link naming the page's canonical address, and the maintenance banner
+//     exactly when the page's site has its maintenance flag set (web/site.js);
 //   - axe finds nothing at WCAG 2.2 AA (axe.js), at its three widths, in the same tab once the load checks have read it.
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. Not part of npm test, which needs no browser:
 // run it with npm run e2e.
 import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COPY } from '../../web/copy.js';
-import { SITE } from '../../web/site.js';
+import { SITE, siteOf } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
 import { CONCURRENCY, HEIGHT, SCHEMES, assertQuiet, samplePages, useBrowser, useContext, withPage } from './lib.js';
 
@@ -54,8 +55,9 @@ for (const scheme of SCHEMES) {
             assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
             assertQuiet(seen, name);
             assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
-            assert.equal(got.notices, 0, `${name}: no maintenance banner`);
-            assert.equal(got.bannerWords, false, `${name}: no maintenance banner's words`);
+            const banner = (siteOf(path)?.maintenance ?? null) !== null;
+            assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);
+            assert.equal(got.bannerWords, banner, `${name}: the maintenance banner's words ${banner ? '' : 'not '}shown`);
 
             // Every link to the feedback form (the footer's, and a policy page's own) prefills the page's canonical address.
             // The not-found page is served at every missing address, so it has no canonical link and its link has no page.

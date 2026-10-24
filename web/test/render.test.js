@@ -194,10 +194,11 @@ test('page: the footer and the banner use no inline style (a strict CSP forbids 
   withMaintenance('hacrp', 'FY2027', () => assert.doesNotMatch(page(PAGE), /\sstyle=/));
 });
 
-test('maintenance banner: absent while the flag is null, which is how the site launches', () => {
-  assert.equal(SITE.sites.hacrp.maintenance, null);
-  assert.equal(maintenanceBanner(SITE.sites.hacrp), '');
-  assert.doesNotMatch(page(PAGE), /role="status"/);
+test('maintenance banner: absent while the flag is null', () => {
+  withMaintenance('hacrp', null, () => {
+    assert.equal(maintenanceBanner(SITE.sites.hacrp), '');
+    assert.doesNotMatch(page(PAGE), /role="status"/);
+  });
 });
 
 test('maintenance banner: a release name shows a status banner before <main> on every page of that site, never on the hub', () => {
