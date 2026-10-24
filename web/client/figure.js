@@ -1,9 +1,10 @@
 // Figures in the browser (web/charts/figure.js wrote them): column sort on the table, the CSV download built from
-// the table, and a tooltip for the chart's marks on hover and from the keyboard (the chart takes focus; arrow keys,
-// Home and End step through the marks; Escape hides the tooltip). A tap on a mark shows its tooltip until a tap
-// elsewhere, Escape or a scroll. It also makes every table's scroll box on the page a keyboard-scrollable region while
-// its table overflows (mountScroll). Program-neutral: it runs on any page with figure[data-figure]. Without
-// JavaScript the table, the native SVG tooltips and the page still work. No animation.
+// the table, and a tooltip for the chart's marks on hover and from the keyboard (the chart takes focus, named by the
+// figure's caption if it was hidden from screen readers; arrow keys, Home and End step through the marks; Escape hides
+// the tooltip). A tap on a mark shows its tooltip until a tap elsewhere, Escape or a scroll. It also makes every table's
+// scroll box on the page a keyboard-scrollable region while its table overflows (mountScroll). Program-neutral: it runs
+// on any page with figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work.
+// No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 
@@ -133,6 +134,14 @@ function mountMarks(fig, svg, live) {
   tip.setAttribute('role', 'tooltip');
   tip.hidden = true;
   fig.append(tip);
+  // A chart drawn hidden from screen readers (its words are beside it) cannot also take focus: the keys would work on
+  // something the reader never meets. Once it is focusable it is an image named by the figure's caption.
+  const caption = document.getElementById(`${fig.id}-cap`);
+  if (caption && svg.getAttribute('aria-hidden') === 'true') {
+    svg.removeAttribute('aria-hidden');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-labelledby', caption.id);
+  }
   svg.setAttribute('tabindex', '0');
   const hint = document.getElementById(`${fig.id}-keys`);
   if (hint) svg.setAttribute('aria-describedby', hint.id);
