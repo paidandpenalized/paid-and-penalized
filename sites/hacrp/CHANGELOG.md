@@ -3,6 +3,12 @@
 Changes to how this site computes or shows HACRP's numbers, newest first. Corrections of errors go in the public
 corrections log.
 
+## 2026-10-24
+- Every page links the family's Terms of use, privacy, corrections, About and accessibility pages, and its feedback
+  link fills in the page you're on. Methods points to the family's corrections log.
+- Pages fit a phone's width without scrolling sideways, the lightest gray text is a shade darker so it meets contrast
+  guidelines, and a keyboard's focus no longer hides under the top bar.
+
 ## 2026-10-23
 - This site estimates what the HAC cut, the readmissions adjustment and the value-based adjustment come to in dollars,
   for each hospital and in total, always labeled as its estimate and with a likely range from a check against earlier
