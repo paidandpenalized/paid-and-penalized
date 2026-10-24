@@ -392,7 +392,7 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   const table = /<table class="gb"[\s\S]*?<\/table>/.exec(fig)[0];
   assert.equal([...table.matchAll(/<tr><th scope="row"/g)].length, b.measures.hac.strata.length);
   // Every figure the back-test checks, in the summary table.
-  assert.equal([...sec.matchAll(/<table class="gb bt-measures">[\s\S]*?<\/table>/g)].length, 1);
+  assert.equal([...sec.matchAll(/<table class="gb bt-measures"[^>]*>[\s\S]*?<\/table>/g)].length, 1);
   // The group named as running highest (or lowest) is the one with the largest own median miss among the groups with at
   // least HEADLINE_MIN hospitals of their own, whatever range it uses: on these pins, the largest own median, a positive
   // one, and the sentence says which groups it chose among.
@@ -609,7 +609,7 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   const b = DATA.dollars.bands;
   const text = strip(sec);
   assert.ok(text.includes(`resampling the hospitals puts the middle ${pct(rangeShare(b), 0)} of that between ${pct(b.national.p10, 1)} and ${pct(b.national.p90, 1)}.`));
-  const figures = [...sec.match(/<table class="gb bt-measures">[\s\S]*?<\/table>/)[0].matchAll(/<tr><th scope="row">/g)].length;
+  const figures = [...sec.match(/<table class="gb bt-measures"[^>]*>[\s\S]*?<\/table>/)[0].matchAll(/<tr><th scope="row">/g)].length;
   assert.equal(figures, 5);
   assert.ok(text.includes('The same check for five of the figures the method makes'), 'the count in words, from the rows the table has');
   // The tail of a stale date: provisions ending inside the year would make the row false, so the page does not build.

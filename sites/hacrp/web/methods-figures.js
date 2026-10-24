@@ -361,11 +361,15 @@ export function backtestFigure(bands, { n, source, names }) {
 // The words for each measure in the back-test's summary table, in the order the table lists them.
 export const MEASURE_WORDS = [['hac', 'btMeasureHac'], ['net', 'btMeasureNet'], ['hrrp', 'btMeasureHrrp'], ['hvbp', 'btMeasureHvbp'], ['fed', 'btMeasureFed']];
 
+// The id of the paragraph that leads into the table below (the page writes the paragraph): the table's name, so its
+// scroll box on a phone is a named region a keyboard can scroll.
+export const MEASURES_LEAD_ID = 'backtest-measures-lead';
+
 // Every measure the back-test checks, over all its hospitals: how many it compared, the median estimate over the
 // cost report, and the middle 80% (the 10th and 90th percentiles), as a printable table.
 export function backtestMeasures(bands) {
   const cell = (x) => times(ratioOf(x));
-  return printout(html`<table class="gb bt-measures">
+  return printout(html`<table class="gb bt-measures" aria-labelledby="${MEASURES_LEAD_ID}">
 <thead><tr><th scope="col">${t('btColMeasure')}</th><th scope="col" class="num">${t('btColHospitals')}</th><th scope="col" class="num">${t('btColMedian')}</th><th scope="col" class="num">${fill('btColMiddle', { share: pct(rangeShare(bands), 0) })}</th></tr></thead>
 <tbody>${MEASURE_WORDS.map(([key, words]) => {
     const o = bands.measures[key].overall;

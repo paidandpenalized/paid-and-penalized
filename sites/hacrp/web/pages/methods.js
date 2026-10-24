@@ -14,7 +14,7 @@ import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
+import { MEASURES_LEAD_ID, MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
 import { cutCounts, rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
@@ -155,7 +155,7 @@ ${para(fill('backtestInside', { low: pct(Math.min(...held), 0), high: pct(Math.m
 ${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { min: count(HEADLINE_MIN), group: groupWords, median: absLogPct(most.median, 1), n: count(most.n) })}` : ''}`)}
 ${para(fill('backtestNational', { ratio: pct(n.ratio, 1), share, low: pct(n.p10, 1), high: pct(n.p90, 1) }))}
 ${para(t('backtestPlaces'))}
-${para(fill('backtestMeasures', { n: numberWord(MEASURE_WORDS.length) }))}
+<p id="${MEASURES_LEAD_ID}">${fill('backtestMeasures', { n: numberWord(MEASURE_WORDS.length) })}</p>
 ${backtestMeasures(bands)}
 ${para(t('backtestLimits'))}`;
 }
