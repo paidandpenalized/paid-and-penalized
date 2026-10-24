@@ -16,7 +16,8 @@ if (bar) {
   const root = document.documentElement;
   let height = -1;
   const measure = () => {
-    const next = getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0;
+    // Its exact height: offsetHeight rounds (a 100.2px bar reads 100), which would leave what clears it a fraction under it.
+    const next = getComputedStyle(bar).position === 'sticky' ? bar.getBoundingClientRect().height : 0;
     if (next !== height) root.style.setProperty('--sticky-top', `${(height = next)}px`);
   };
   measure();
