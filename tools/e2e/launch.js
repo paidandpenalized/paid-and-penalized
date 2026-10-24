@@ -16,7 +16,7 @@
 // line that names what failed.
 //
 // The comparison itself (checksFor, compareResponse, formatReport, parseCounts, verdict) is pure and tested in
-// tools/test/launch.test.js, which needs no browser or network.
+// tools/test/launch.test.js, which needs no browser or network; so is stopSuites, how a stop reaches every suite.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -28,6 +28,8 @@ import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
 // A hashed asset that no build has (a hash of eight zeros); were a build ever to write it, its check expects a 200.
 const MISSING_ASSET = '/assets/site.00000000.css';
 const FETCH_TIMEOUT_MS = 30_000;
+// How long a stopped command waits for its suites to exit before it exits itself.
+const STOP_GRACE_MS = 5_000;
 
 // The requests whose headers are compared: [{ label, path, status }]. rules: dist/_headers, parsed. pages: samplePages()'s
 // answer. files: every file in dist/, as filesUnder lists them. The home, program and hospital pages, then one request
@@ -131,23 +133,50 @@ export function verdict(suites, results) {
   return { ok: false, line: `NOT READY: ${failed.join('; and ')}.` };
 }
 
+// Stops the suites running, by pid: a SIGTERM to each one's process group (each suite leads its own, so npm, the test
+// runner and the test files it started all get it, and Playwright closes the browsers those launched), then a wait,
+// of at most graceMs, for every group to empty; a group that still has a process then (the test runner traps SIGTERM
+// to finish its report, and can sit on a test for minutes) gets SIGKILL. A group already gone is skipped. kill:
+// process.kill, or a stand-in in the tests (a signal of 0 asks whether the group has a process left).
+export async function stopSuites(pids, { kill = (pid, signal) => process.kill(pid, signal), graceMs = STOP_GRACE_MS, pollMs = 50 } = {}) {
+  // Whether the signal reached the group: false once no process is left in it (ESRCH).
+  const send = (signal) => (pid) => {
+    try {
+      kill(-pid, signal);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let left = [...pids].filter(send('SIGTERM'));
+  const end = Date.now() + graceMs;
+  while (left.length && Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+    left = left.filter(send(0));
+  }
+  left.forEach(send('SIGKILL'));
+}
+
 // ---- the command (below here touches the browser, the file system and the network) ----
 
-// The suites running now, so a SIGTERM to this command stops them too (main).
+// The pids of the suites running now, so a SIGTERM or SIGINT to this command stops them too (main).
 const running = new Set();
 
 // Runs `npm run e2e` for one engine against `base`, showing its output as it comes. Resolves { engine, code, ms, pass, fail }.
+// The suite is the leader of a process group of its own (detached), so stopSuites can end all of it, and it reads
+// nothing from the terminal: a process outside the terminal's foreground group that read it would be stopped.
 function runSuite(engine, base) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const child = spawn('npm', ['run', 'e2e'], { cwd: REPO_ROOT, env: { ...process.env, E2E_ENGINE: engine, E2E_BASE_URL: base }, stdio: ['inherit', 'pipe', 'inherit'] });
-    running.add(child);
+    const child = spawn('npm', ['run', 'e2e'], { cwd: REPO_ROOT, detached: true, env: { ...process.env, E2E_ENGINE: engine, E2E_BASE_URL: base }, stdio: ['ignore', 'pipe', 'inherit'] });
+    const { pid } = child;
+    if (pid !== undefined) running.add(pid);
     let output = '';
     // Decoded as text, so a character split across two chunks is not garbled.
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk) => { output += chunk; process.stdout.write(chunk); });
-    child.on('error', (error) => { running.delete(child); console.error(`could not start npm: ${error.message}`); resolve({ engine, code: 1, ms: Date.now() - started, pass: null, fail: null }); });
-    child.on('close', (code) => { running.delete(child); resolve({ engine, code: code ?? 1, ms: Date.now() - started, ...parseCounts(output) }); });
+    child.on('error', (error) => { running.delete(pid); console.error(`could not start npm: ${error.message}`); resolve({ engine, code: 1, ms: Date.now() - started, pass: null, fail: null }); });
+    child.on('close', (code) => { running.delete(pid); resolve({ engine, code: code ?? 1, ms: Date.now() - started, ...parseCounts(output) }); });
   });
 }
 
@@ -168,11 +197,14 @@ async function main() {
   const rules = parseHeaders(readFileSync(DIST + '_headers', 'utf8'));
   const checks = checksFor(rules, samplePages(), filesUnder(DIST));
 
-  // Stopped from outside (a SIGTERM, not a terminal's Ctrl-C, which reaches the suites itself): stop the suite running.
-  process.on('SIGTERM', () => {
-    for (const child of running) child.kill('SIGTERM');
-    process.exit(143);
-  });
+  // Stopped (a SIGTERM, or Ctrl-C, which reaches only this command now that each suite has a group of its own): stop
+  // the suite running, then exit as the signal would have. Meanwhile no suite starts and no verdict is given: main
+  // returns the stop, which never resolves, as the process exits first.
+  let stopping = null;
+  for (const [signal, code] of [['SIGTERM', 143], ['SIGINT', 130]]) {
+    process.once(signal, () => { stopping = stopSuites(running).then(() => process.exit(code)); });
+  }
+
   // The headers first: a difference there is known in seconds, not after the browser checks.
   const results = await Promise.all(checks.map(async (check) => {
     try {
@@ -185,9 +217,11 @@ async function main() {
 
   const suites = [];
   for (const engine of ENGINES) {
+    if (stopping) return stopping;
     console.log(`\n=== ${engine}: npm run e2e against ${base} ===\n`);
     suites.push(await runSuite(engine, base));
   }
+  if (stopping) return stopping;
 
   console.log('\n=== summary ===\n');
   for (const s of suites) console.log(`  ${s.code === 0 ? 'ok  ' : 'FAIL'}  ${s.engine.padEnd(8)}  ${s.pass ?? '?'} passed, ${s.fail ?? '?'} failed  ${(s.ms / 1000).toFixed(0)} s`);

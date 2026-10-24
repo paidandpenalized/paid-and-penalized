@@ -2,8 +2,10 @@
 // (The command itself, tools/e2e/launch.js, is run by hand; see its header.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { headersFile, headersFor, parseHeaders } from '../../pipeline/site/headers.js';
-import { checksFor, compareResponse, formatReport, parseCounts, verdict } from '../e2e/launch.js';
+import { checksFor, compareResponse, formatReport, parseCounts, stopSuites, verdict } from '../e2e/launch.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const RULES = parseHeaders(`/*
@@ -171,4 +173,72 @@ test('parseCounts reads the pass and fail totals from either reporter\'s summary
   assert.deepEqual(parseCounts('ℹ tests 12\nℹ pass 11\nℹ fail 1\nℹ cancelled 0\n'), { pass: 11, fail: 1 });
   assert.deepEqual(parseCounts('# tests 12\n# pass 12\n# fail 0\n'), { pass: 12, fail: 0 });
   assert.deepEqual(parseCounts('ok 1 - a pass 3 in a title\n'), { pass: null, fail: null });
+});
+
+// A stand-in for process.kill over process groups: groups[pgid] is how many signal-0 checks the group answers before it
+// is empty (Infinity: it never empties; 0: it is gone already). Every signal sent is recorded.
+function groupsKill(groups) {
+  const sent = [];
+  const kill = (pid, signal) => {
+    const group = -pid;
+    if (!(groups[group] > 0)) throw Object.assign(new Error('kill ESRCH'), { code: 'ESRCH' });
+    sent.push([pid, signal]);
+    if (signal === 0) groups[group]--;
+  };
+  return { sent, kill };
+}
+
+test('stopSuites: a SIGTERM to each suite\'s whole process group, then a wait until every group is empty', async () => {
+  const { sent, kill } = groupsKill({ 101: 1, 202: 3 });
+  await stopSuites(new Set([101, 202]), { kill, graceMs: 60_000, pollMs: 1 });
+  assert.deepEqual(sent.filter(([, signal]) => signal !== 0), [[-101, 'SIGTERM'], [-202, 'SIGTERM']]);
+  assert.ok(sent.some(([pid, signal]) => pid === -202 && signal === 0), 'it asked whether the group had emptied');
+});
+
+test('stopSuites: a group already gone is skipped, and one with a process left after graceMs gets SIGKILL', async () => {
+  const { sent, kill } = groupsKill({ 101: 0, 202: Infinity });
+  const started = Date.now();
+  await stopSuites([101, 202], { kill, graceMs: 50, pollMs: 5 });
+  assert.ok(Date.now() - started >= 45, 'it waited graceMs');
+  assert.deepEqual(sent.filter(([, signal]) => signal !== 0), [[-202, 'SIGTERM'], [-202, 'SIGKILL']]);
+  await stopSuites([], { kill: () => assert.fail('nothing to signal') });
+});
+
+test('stopSuites on a real process tree: the group\'s leader and a process it started that ignores SIGTERM both go', async () => {
+  // A stand-in suite, spawned detached as runSuite spawns one: it starts a process that ignores SIGTERM, as the test
+  // runner keeps going after one, and prints that process's pid once it is listening for the signal.
+  const stubborn = "process.on('SIGTERM', () => {}); console.log(process.pid); setInterval(() => {}, 1000);";
+  const lead = `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(stubborn)}], { stdio: ['ignore', 'inherit', 'ignore'] }); setInterval(() => {}, 1000);`;
+  const child = spawn(process.execPath, ['-e', lead], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
+  const exited = once(child, 'exit');
+  const [line] = await once(child.stdout.setEncoding('utf8'), 'data');
+  // Its pipe closed, so a process left behind cannot hold this test file open.
+  child.stdout.destroy();
+  const started = Number(line.trim());
+  const alive = (pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  try {
+    assert.ok(alive(started), 'the process the suite started is running');
+    await stopSuites([child.pid], { graceMs: 300 });
+    await exited;
+    // The process left after the grace got SIGKILL; its parent being gone, the system reaps it.
+    const end = Date.now() + 5000;
+    while (alive(started) && Date.now() < end) await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(alive(started), false, 'the process the suite started is gone');
+  } finally {
+    // When the test fails, nothing of it is left running.
+    for (const pid of [-child.pid, started]) {
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        // Gone already.
+      }
+    }
+  }
 });
