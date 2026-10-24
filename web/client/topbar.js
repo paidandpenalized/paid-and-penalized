@@ -30,14 +30,22 @@ if (bar) {
   // padding. Once the browser has scrolled, bring one that sits under the bar (by more than the pixel a browser's
   // scrolling rounds to) down to the bar's edge. CSS alone can't: a scroll-margin-top of the bar's height on every
   // focusable element still left elements under it in all three engines (tools/e2e/interact.test.js's walk), and it adds
-  // to the padding, so Chrome and Safari then stop a focus a whole bar below the bar's edge. A focus that follows a
-  // press of a pointer or a touch (with no key since) is the reader's own pick and stays where it is: :focus-visible
-  // can't tell, since a text field matches it on a click too.
+  // to the padding, so Chrome and Safari then stop a focus a whole bar below the bar's edge. The focus a press of a
+  // pointer or a touch gives is the reader's own pick and stays where it is: :focus-visible can't tell, since a text
+  // field matches it on a click too. The press marks that one focus only: the next focusin takes the mark, and the
+  // press's end (its click, a context menu or a cancelled touch) or a key clears a mark no focus took, so a later focus
+  // with no key pressed (a screen reader's cursor, switch access, a script) is brought clear as a keyboard's is. The
+  // end clears it a task later: a label's click focuses its field after the click event, and a tap's focus comes after
+  // its pointerup.
   let pressed = false;
-  for (const type of ['pointerdown', 'touchstart']) document.addEventListener(type, () => { pressed = true; }, { capture: true, passive: true });
-  document.addEventListener('keydown', () => { pressed = false; }, { capture: true });
+  const listen = (types, fn) => { for (const type of types) document.addEventListener(type, fn, { capture: true, passive: true }); };
+  listen(['pointerdown', 'touchstart'], () => { pressed = true; });
+  listen(['click', 'contextmenu', 'pointercancel'], () => setTimeout(() => { pressed = false; }));
+  listen(['keydown'], () => { pressed = false; });
   document.addEventListener('focusin', ({ target }) => {
-    if (height <= 0 || pressed || bar.contains(target) || !target.matches(':focus-visible')) return;
+    const byPress = pressed;
+    pressed = false;
+    if (height <= 0 || byPress || bar.contains(target) || !target.matches(':focus-visible')) return;
     requestAnimationFrame(() => {
       const under = height - target.getBoundingClientRect().top;
       if (under > 1) window.scrollBy(0, -under);

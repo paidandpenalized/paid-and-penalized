@@ -191,34 +191,56 @@ describe('keyboard', { concurrency: CONCURRENCY }, () => {
   }
 });
 
+// The hospital table's name filter on the program page, its top half under the top bar and its bottom half below it
+// (the table shows once its section nears the screen): { field, at }, at being { scrollY, top, edge, x, y }: the field's
+// top and the bar's bottom edge, and the middle of the half that shows.
+async function fieldUnderBar(page) {
+  const field = page.locator('#ht-name');
+  await page.locator('#hospitals').scrollIntoViewIfNeeded();
+  await field.waitFor();
+  await page.waitForLoadState('networkidle');
+  await field.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    window.scrollBy(0, box.top - (document.querySelector('.topbar').getBoundingClientRect().bottom - box.height / 2));
+  });
+  await settle(page);
+  const at = await field.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const edge = document.querySelector('.topbar').getBoundingClientRect().bottom;
+    return { scrollY: window.scrollY, top: box.top, edge, x: box.left + box.width / 2, y: (edge + box.bottom) / 2 };
+  });
+  assert.ok(at.top < at.edge && at.y > at.edge, 'the field sits partly under the bar');
+  return { field, at };
+}
+
 // A click is not a keyboard focus: the top bar's correction (web/client/topbar.js) leaves the page where the reader
 // pointed. A text field matches :focus-visible on a click too, so the bar tells the two apart by the press before it.
+// The press marks only the focus it gives: a later focus with no key pressed (a screen reader's cursor, switch access,
+// a script) is corrected as a keyboard's is.
 describe('the top bar', () => {
   const tabs = useContext(shared);
 
   it('a click on the visible half of a text field partly under it does not scroll the page', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
-    // The hospital table's name filter: the table shows once its section nears the screen.
-    const field = page.locator('#ht-name');
-    await page.locator('#hospitals').scrollIntoViewIfNeeded();
-    await field.waitFor();
-    await page.waitForLoadState('networkidle');
-    // The field's top half under the bar, its bottom half below it; the click lands in the middle of what shows.
-    await field.evaluate((el) => {
-      const box = el.getBoundingClientRect();
-      window.scrollBy(0, box.top - (document.querySelector('.topbar').getBoundingClientRect().bottom - box.height / 2));
-    });
-    await settle(page);
-    const at = await field.evaluate((el) => {
-      const box = el.getBoundingClientRect();
-      const edge = document.querySelector('.topbar').getBoundingClientRect().bottom;
-      return { scrollY: window.scrollY, under: box.top < edge && box.bottom > edge, x: box.left + box.width / 2, y: (edge + box.bottom) / 2 };
-    });
-    assert.ok(at.under, 'the field sits partly under the bar');
+    const { at } = await fieldUnderBar(page);
     await page.mouse.click(at.x, at.y);
     await settle(page);
     const after = await page.evaluate(() => ({ scrollY: window.scrollY, focused: document.activeElement?.id ?? null }));
     assert.equal(after.focused, 'ht-name', 'the click focused the field');
     assert.equal(after.scrollY, at.scrollY, 'the page did not scroll');
+    assertQuiet(seen, 'top bar');
+  }));
+
+  it('after a click that focuses nothing, a text field a script focuses under it is still brought clear', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { field, at } = await fieldUnderBar(page);
+    // A click on the page's margin, at the window's bottom left: nothing there takes focus.
+    await page.mouse.click(1, page.viewportSize().height - 1);
+    await settle(page);
+    assert.deepEqual(await page.evaluate(() => ({ scrollY: window.scrollY, body: document.activeElement === document.body })), { scrollY: at.scrollY, body: true }, 'the click focused nothing and scrolled nothing');
+    await field.evaluate((el) => el.focus());
+    await settle(page);
+    const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));
+    assert.ok(now.focused, 'the script focused the field');
+    assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
     assertQuiet(seen, 'top bar');
   }));
 });
