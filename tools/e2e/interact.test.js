@@ -187,6 +187,40 @@ describe('keyboard', { concurrency: CONCURRENCY }, () => {
   }
 });
 
+// A click is not a keyboard focus: the top bar's correction (web/client/topbar.js) leaves the page where the reader
+// pointed. A text field matches :focus-visible on a click too, so the bar tells the two apart by the press before it.
+describe('the top bar', () => {
+  const tabs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
+
+  it('a click on the visible half of a text field partly under it does not scroll the page', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    // The hospital table's name filter: the table shows once its section nears the screen.
+    const field = page.locator('#ht-name');
+    await page.locator('#hospitals').scrollIntoViewIfNeeded();
+    await field.waitFor();
+    await page.waitForLoadState('networkidle');
+    // The field's top half under the bar, its bottom half below it; the click lands in the middle of what shows.
+    const at = await field.evaluate(async (el) => {
+      const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const barBottom = () => document.querySelector('.topbar').getBoundingClientRect().bottom;
+      const before = el.getBoundingClientRect();
+      window.scrollBy(0, before.top - (barBottom() - before.height / 2));
+      await frames();
+      const box = el.getBoundingClientRect();
+      const edge = barBottom();
+      return { scrollY: window.scrollY, under: box.top < edge && box.bottom > edge, x: box.left + box.width / 2, y: (edge + box.bottom) / 2 };
+    });
+    assert.ok(at.under, 'the field sits partly under the bar');
+    await page.mouse.click(at.x, at.y);
+    const after = await page.evaluate(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return { scrollY: window.scrollY, focused: document.activeElement?.id ?? null };
+    });
+    assert.equal(after.focused, 'ht-name', 'the click focused the field');
+    assert.equal(after.scrollY, at.scrollY, 'the page did not scroll');
+    assertQuiet(seen, 'top bar');
+  }));
+});
+
 describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
   const withJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
   const withoutJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT }, javaScriptEnabled: false });

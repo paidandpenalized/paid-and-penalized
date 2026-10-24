@@ -1,8 +1,9 @@
 // A program site's top bar in the browser (layout.js programHeader). While the bar sticks (641px and up), its height
 // is --sticky-top on <html>, so what sticks under it (the hospital table's head, the what-if's result) and an
 // in-page jump clear it; on a phone, where it scrolls away, 0. A keyboard-focused element the browser left under the
-// bar is brought down to the bar's edge. On a page holding the sections its nav links to, the item for the section in
-// view is marked aria-current as the reader scrolls. Program-neutral; no words of its own.
+// bar is brought down to the bar's edge (not one focused by a click or a touch). On a page holding the sections its
+// nav links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
+// words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
 
 // The section in view: the last one whose top has passed the bar's bottom (with a little slack), else the first.
@@ -29,9 +30,14 @@ if (bar) {
   // padding. Once the browser has scrolled, bring one that sits under the bar (by more than the pixel a browser's
   // scrolling rounds to) down to the bar's edge. CSS alone can't: a scroll-margin-top of the bar's height on every
   // focusable element still left elements under it in all three engines (tools/e2e/interact.test.js's walk), and it adds
-  // to the padding, so Chrome and Safari then stop a focus a whole bar below the bar's edge.
+  // to the padding, so Chrome and Safari then stop a focus a whole bar below the bar's edge. A focus that follows a
+  // press of a pointer or a touch (with no key since) is the reader's own pick and stays where it is: :focus-visible
+  // can't tell, since a text field matches it on a click too.
+  let pressed = false;
+  for (const type of ['pointerdown', 'touchstart']) document.addEventListener(type, () => { pressed = true; }, { capture: true, passive: true });
+  document.addEventListener('keydown', () => { pressed = false; }, { capture: true });
   document.addEventListener('focusin', ({ target }) => {
-    if (height <= 0 || bar.contains(target) || !target.matches(':focus-visible')) return;
+    if (height <= 0 || pressed || bar.contains(target) || !target.matches(':focus-visible')) return;
     requestAnimationFrame(() => {
       const under = height - target.getBoundingClientRect().top;
       if (under > 1) window.scrollBy(0, -under);
