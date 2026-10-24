@@ -63,9 +63,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Test fixtures name no hospital.** Pick rows by property ("a row with an assigned measure"), or use synthetic
   rows.
 - **Dependencies: build time only.** The engine, the pipeline's data code and their tests use none; tests run on
-  Node's built-in `node:test` (`npm test`). The page build uses four pinned dev dependencies: esbuild, d3-scale,
-  d3-array, d3-format (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or
-  download, to Dalton before running it. Pin exact versions.
+  Node's built-in `node:test` (`npm test`, which needs no browser). The page build uses four pinned dev dependencies:
+  esbuild, d3-scale, d3-array, d3-format; the browser checks (`npm run e2e`, `tools/e2e/`) use two more, playwright
+  and axe-core (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or download
+  (including a Playwright browser), to Dalton before running it. Pin exact versions.
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
@@ -103,3 +104,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `make hooks`: point git at `.githooks/`.
 - `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production`.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
+- `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`. Chromium runs the
+  installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks
+  another engine; `E2E_BASE_URL=<url>` tests a running site instead of serving `dist/` (the build still picks the pages). Not part of
+  `make test`.
