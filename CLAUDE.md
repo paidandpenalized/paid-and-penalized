@@ -27,8 +27,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   one ES module per JS entry, content-hashed), then runs each site in its `SITES` list (hub last). Each site exports
   a manifest `{ id, entries, styles, generate }` from its generator (`sites/<program>/web/generate.js`,
   `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
-  hashed data, `robotsFor`, the one indexing rule). `serve.js` previews `dist/` locally. `dist/` is build output and
-  gitignored.
+  hashed data, `robotsFor`, the one indexing rule). Last, the build writes Cloudflare's `dist/_headers`
+  (`headers.js`: the CSP, security headers, caching, `X-Robots-Tag: noindex` on every build but production, and
+  the parser and matcher that read it back as Cloudflare does). `serve.js` previews `dist/` locally with those
+  headers. `dist/` is build output and gitignored.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
   A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
   hook blocks them and a test fails on any tracked file that size.

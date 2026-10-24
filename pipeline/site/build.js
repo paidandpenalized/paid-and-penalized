@@ -1,15 +1,16 @@
 // make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
-// site's scripts and styles), then runs each site's generator in order. PP_ENV=production is the only build that may
-// be indexed (robotsFor in context.js holds the rule).
+// site's scripts and styles), runs each site's generator in order, then writes Cloudflare's _headers (headers.js).
+// PP_ENV=production is the only build that may be indexed (robotsFor in context.js holds the rule for pages).
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
-import { REPO_ROOT } from '../files.js';
+import { REPO_ROOT, writeFileMkdir } from '../files.js';
 import { buildAssets } from './assets.js';
 import { createContext } from './context.js';
+import { headersFile } from './headers.js';
 
 // Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx) }: entries are its browser
 // JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after web/styles/).
@@ -57,6 +58,8 @@ export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites =
   });
   const ctx = createContext({ outDir: dir, env, assets });
   for (const site of sites) await site.generate(ctx);
+  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
+  writeFileMkdir(join(dir, '_headers'), headersFile({ env }));
   return { pages: ctx.pages };
 }
 
