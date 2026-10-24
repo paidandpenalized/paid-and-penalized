@@ -2,13 +2,13 @@
 // all three browser engines; CI runs Chromium only (the `browser` job). It does two things against the site at
 // E2E_BASE_URL (a preview, the live site, or `make serve` at http://127.0.0.1:8080):
 //
-//   1. The browser checks (npm run e2e, tools/e2e/) once per engine: Chromium, Firefox and WebKit (E2E_ENGINE).
-//   2. The live response headers of a request for each rule in dist/_headers (the first sample page or file in dist/
+//   1. The live response headers of a request for each rule in dist/_headers (the first sample page or file in dist/
 //      that the rule matches), the home, program and hospital pages, a path no page has (the 404 page) and a hashed
 //      asset that does not exist (so whether Cloudflare keeps a missing file's 404 for a year is on record), each
 //      compared name by name with what the file says the request gets (headersFor in pipeline/site/headers.js, which
 //      reads the file as Cloudflare does). Only headers the file sets are compared; Cloudflare's own (date, server,
-//      cf-ray, etag, ...) are not.
+//      cf-ray, etag, ...) are not. Its report prints at once, before the half hour of browser checks.
+//   2. The browser checks (npm run e2e, tools/e2e/) once per engine: Chromium, Firefox and WebKit (E2E_ENGINE).
 //
 // It needs a dist/ built from the same commit, and with the same PP_ENV (`PP_ENV=production make build` for the live
 // site; X-Robots-Tag: noindex is in every other build's file), as the site that is deployed: the requests and the
@@ -173,12 +173,7 @@ async function main() {
     for (const child of running) child.kill('SIGTERM');
     process.exit(143);
   });
-  const suites = [];
-  for (const engine of ENGINES) {
-    console.log(`\n=== ${engine}: npm run e2e against ${base} ===\n`);
-    suites.push(await runSuite(engine, base));
-  }
-
+  // The headers first: a difference there is known in seconds, not after the browser checks.
   const results = await Promise.all(checks.map(async (check) => {
     try {
       return compareResponse(rules, check, await fetchLive(base, check));
@@ -186,10 +181,16 @@ async function main() {
       return { ...check, ok: false, error: error.cause?.code ?? error.message };
     }
   }));
+  console.log(`\n${formatReport(results)}`);
+
+  const suites = [];
+  for (const engine of ENGINES) {
+    console.log(`\n=== ${engine}: npm run e2e against ${base} ===\n`);
+    suites.push(await runSuite(engine, base));
+  }
 
   console.log('\n=== summary ===\n');
   for (const s of suites) console.log(`  ${s.code === 0 ? 'ok  ' : 'FAIL'}  ${s.engine.padEnd(8)}  ${s.pass ?? '?'} passed, ${s.fail ?? '?'} failed  ${(s.ms / 1000).toFixed(0)} s`);
-  console.log(`\n${formatReport(results)}`);
   const { ok, line } = verdict(suites, results);
   console.log(`\n${line}`);
   return ok ? 0 : 1;
