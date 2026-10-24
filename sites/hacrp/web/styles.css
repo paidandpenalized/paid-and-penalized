@@ -725,7 +725,9 @@
 
 .receipts td:last-child { white-space: nowrap; }
 @media (max-width: 600px) {
-  .takes thead, .receipts thead { display: none; }
+  /* The column heads are clipped, not display: none: the stacked cells keep their heads for a screen reader (here and
+     on the dollar checks' tape below). */
+  .takes thead, .receipts thead, .receipt--dollars .receipt__t thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .takes tr, .receipts tr { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .takes th, .takes td, .receipts th, .receipts td { display: block; padding: 0; border: 0; text-align: left; }
   .receipts .receipts__hash { display: none; }
@@ -792,7 +794,6 @@
 /* On a phone the tape's four columns are wider than the page, so each check stacks, as the page's other tables do: its
    words, then its results in a row (this build's in bold, the pass at the end). */
 @media (max-width: 600px) {
-  .receipt--dollars .receipt__t thead { display: none; }
   .receipt--dollars .receipt__t tr { display: flex; flex-wrap: wrap; gap: 0 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
   .receipt--dollars .receipt__t th[scope="row"] { flex: 1 0 100%; padding-right: 0; }
   .receipt--dollars .receipt__t td { padding-left: 0; }
