@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { headersFile, headersFor, parseHeaders } from '../../pipeline/site/headers.js';
-import { checksFor, compareResponse, formatReport, parseCounts } from '../e2e/launch.js';
+import { checksFor, compareResponse, formatReport, parseCounts, verdict } from '../e2e/launch.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const RULES = parseHeaders(`/*
@@ -16,29 +16,34 @@ const RULES = parseHeaders(`/*
 const PAGES = [
   { type: 'hub', path: '/' },
   { type: 'program', path: '/prog/' },
-  { type: 'hospital-cut', path: '/prog/hospital/000001/' },
-  { type: 'hospital-unscored', path: '/prog/hospital/000002/' },
+  { type: 'hospital-cut', path: '/prog/hospital/990001/' },
+  { type: 'hospital-unscored', path: '/prog/hospital/990002/' },
   { type: 'not-found', path: '/nothing-here/' },
 ];
 const OK_PAGE = { status: 200, headers: { 'X-Content-Type-Options': 'nosniff', 'strict-transport-security': 'max-age=31536000', date: 'now', server: 'cloudflare', 'cf-ray': 'x' } };
 const check = { label: 'a page', path: '/prog/', status: 200 };
 const diffs = (result) => result.rows.filter((row) => !row.ok);
 
-test('checksFor: the six requests, each page picked by type and the asset by pattern, with a hash no build has for the missing one', () => {
-  assert.deepEqual(checksFor(PAGES, ['site.0bfb0a2f.css', 'theme.3ef483a0.js', 'fonts']), [
-    { label: 'home page', path: '/', status: 200 },
+// A built site's files, as filesUnder lists them.
+const FILES = ['404.html', 'assets/site.0bfb0a2f.css', 'assets/theme.3ef483a0.js', 'index.html', 'prog/hospital/990001/index.html', 'prog/hospital/990002/index.html', 'prog/index.html'];
+
+test('checksFor: the three pages, a request for each rule (a page it matches, else the first file), the unknown path and a missing asset', () => {
+  assert.deepEqual(checksFor(RULES, PAGES, FILES), [
+    { label: 'home page, rule /*', path: '/', status: 200 },
     { label: 'program page', path: '/prog/', status: 200 },
-    { label: 'hospital page', path: '/prog/hospital/000001/', status: 200 },
-    { label: 'hashed asset', path: '/assets/site.0bfb0a2f.css', status: 200 },
+    { label: 'hospital page', path: '/prog/hospital/990001/', status: 200 },
+    { label: 'rule /assets/*.css', path: '/assets/site.0bfb0a2f.css', status: 200 },
     { label: 'unknown path', path: '/nothing-here/', status: 404 },
     { label: 'missing hashed asset', path: '/assets/site.00000000.css', status: 404 },
   ]);
+  // A request expects what the server's address rule gives: 200 for a file's address in dist/, else 404.
+  const bare = checksFor(RULES, PAGES, FILES.filter((f) => !f.startsWith('prog/hospital/')));
+  assert.equal(bare.find((c) => c.label === 'hospital page').status, 404);
 });
 
-test('checksFor throws when a page type or the stylesheet is missing, or the stylesheet could pass for a missing one', () => {
-  assert.throws(() => checksFor(PAGES.filter((p) => p.type !== 'hospital-cut'), ['site.0bfb0a2f.css']), /no "hospital-cut" page/);
-  assert.throws(() => checksFor(PAGES, ['theme.3ef483a0.js', 'site.css']), /no hashed stylesheet/);
-  assert.throws(() => checksFor(PAGES, ['site.00000000.css']), /cannot stand in/);
+test('checksFor throws when a page type is missing, or a rule matches nothing in dist/', () => {
+  assert.throws(() => checksFor(RULES, PAGES.filter((p) => p.type !== 'hospital-cut'), FILES), /no "hospital-cut" page/);
+  assert.throws(() => checksFor(RULES, PAGES, FILES.filter((f) => !f.endsWith('.css'))), /no page or file in dist\/ for the rule \/assets\/\*\.css/);
 });
 
 test('compareResponse: every header the file sets matches, whatever the case of the live names and whatever else is sent', () => {
@@ -88,7 +93,7 @@ test('compareResponse: a missing hashed file\'s 404 is a difference only when it
 test('compareResponse on the real file: a response that is exactly what headersFor gives, plus Cloudflare\'s own headers, differs nowhere', () => {
   for (const env of ['production', 'preview']) {
     const rules = parseHeaders(headersFile({ env }));
-    for (const c of checksFor(PAGES, ['site.0bfb0a2f.css'])) {
+    for (const c of checksFor(rules, PAGES, [...FILES, 'assets/fonts/a.woff2', 'assets/x.1.json', 'favicon.svg'])) {
       const headers = { ...headersFor(rules, c.path, { status: c.status }), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html' };
       assert.equal(compareResponse(rules, c, { status: c.status, headers }).ok, true, `${env} ${c.path}`);
     }
@@ -114,6 +119,16 @@ test('formatReport: a clean run says what was compared; a difference is named wi
   assert.match(report, /\n {2}x-content-type-options\n {4}file: nosniff\n {4}live: sniff$/);
 });
 
+test('formatReport: a difference of letter case or spacing alone is marked as one', () => {
+  const loose = compareResponse(RULES, check, { status: 200, headers: { ...OK_PAGE.headers, 'strict-transport-security': 'Max-Age=31536000 ' } });
+  const spaced = compareResponse(RULES, check, { status: 200, headers: { ...OK_PAGE.headers, 'strict-transport-security': 'max-age = 31536000' } });
+  const other = compareResponse(RULES, check, { status: 200, headers: { ...OK_PAGE.headers, 'strict-transport-security': 'max-age=0' } });
+  for (const result of [loose, spaced, other]) assert.equal(result.ok, false);
+  assert.match(formatReport([loose]), /live: Max-Age=31536000\n {4}\(these differ only in letter case or spacing\)/);
+  assert.match(formatReport([spaced]), /\(these differ only in letter case or spacing\)/);
+  assert.doesNotMatch(formatReport([other]), /differ only/);
+});
+
 test('formatReport: the Cache-Control sent on each 404 is listed, "(not sent)" when there is none', () => {
   const missing = { label: 'missing', path: '/assets/site.00000000.css', status: 404 };
   const unknown = { label: 'unknown', path: '/nothing-here/', status: 404 };
@@ -127,6 +142,29 @@ test('formatReport: a withheld header that the live 404 carries shows the file\'
   const missing = { label: 'missing', path: '/assets/site.00000000.css', status: 404 };
   const kept = compareResponse(RULES, missing, { status: 404, headers: { ...OK_PAGE.headers, 'cache-control': IMMUTABLE } });
   assert.match(formatReport([kept]), new RegExp(`cache-control\\n {4}file: none for a 404 \\(the file's value for a 200 is: ${IMMUTABLE}\\)\\n {4}live: ${IMMUTABLE}\\n`));
+});
+
+test('formatReport: the 404 list holds the responses that were 404s, whatever was expected', () => {
+  const unknown = { label: 'unknown', path: '/nothing-here/', status: 404 };
+  const served = compareResponse(RULES, unknown, { status: 200, headers: { ...OK_PAGE.headers, 'cache-control': 'no-store' } });
+  const gone = compareResponse(RULES, check, { status: 404, headers: { ...OK_PAGE.headers, 'cache-control': 'no-store' } });
+  const report = formatReport([served, gone]);
+  assert.match(report, /Cache-Control the site sends on a 404:\n {2}\/prog\/ +no-store$/);
+  assert.doesNotMatch(formatReport([served]), /on a 404/);
+});
+
+test('verdict: ready only when every engine passes and every header matches; otherwise it names the engines and requests', () => {
+  const pass = (engine) => ({ engine, code: 0 });
+  const good = compareResponse(RULES, check, OK_PAGE);
+  assert.deepEqual(verdict([pass('chromium'), pass('webkit')], [good]), { ok: true, line: 'READY: the browser checks pass on chromium, webkit, and every header matches.' });
+  const bad = compareResponse(RULES, check, { status: 301, headers: { 'x-content-type-options': 'sniff' } });
+  const down = { label: 'down', path: '/x/', status: 200, ok: false, error: 'ECONNREFUSED' };
+  assert.deepEqual(verdict([pass('chromium'), { engine: 'firefox', code: 1 }, { engine: 'webkit', code: 1 }], [good, bad, down]), {
+    ok: false,
+    line: 'NOT READY: the browser checks failed on firefox, webkit; and headers differ on /prog/ (:status, x-content-type-options, strict-transport-security); /x/ (no response).',
+  });
+  assert.deepEqual(verdict([{ engine: 'chromium', code: 1 }], [good]), { ok: false, line: 'NOT READY: the browser checks failed on chromium.' });
+  assert.deepEqual(verdict([pass('chromium')], [down]), { ok: false, line: 'NOT READY: headers differ on /x/ (no response).' });
 });
 
 test('parseCounts reads the pass and fail totals from either reporter\'s summary, and gives null when there is none', () => {
