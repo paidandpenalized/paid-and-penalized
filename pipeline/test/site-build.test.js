@@ -10,7 +10,7 @@ import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
-import { createContext, robotsFor } from '../site/context.js';
+import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { htmlPages, tags } from '../site/html.js';
 import { get, withServer, withTemp as inTemp } from './helpers.js';
@@ -127,41 +127,25 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
     assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
   }));
 
-test('setUpdated records a site\'s two dates once; updated is a Map read in the order they were set', () =>
-  withTemp(async (dir) => {
-    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
-    assert.ok(ctx.updated instanceof Map);
-    assert.equal(ctx.updated.size, 0);
-    ctx.setUpdated('hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' });
-    ctx.setUpdated('other', { cmsReleased: '2026-01-02', changed: '2026-01-03' });
-    assert.deepEqual([...ctx.updated], [['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['other', { cmsReleased: '2026-01-02', changed: '2026-01-03' }]]);
-    assert.throws(() => ctx.setUpdated('hacrp', { cmsReleased: '2026-08-14', changed: '2026-10-23' }), /"hacrp" is already set/);
-    assert.equal(ctx.updated.get('hacrp').cmsReleased, '2026-08-13');
-  }));
+test('siteDates takes a site\'s two dates from what its generate returned; none, or a date that is not YYYY-MM-DD on the calendar, throws naming the site', () => {
+  const ok = { cmsReleased: '2026-08-13', changed: '2026-10-22' };
+  assert.deepEqual(siteDates('hacrp', { updated: ok }), ok);
+  for (const none of [undefined, null, {}]) assert.throws(() => siteDates('hacrp', none), (err) => err instanceof RangeError && /"hacrp" gave the build no dates/.test(err.message), JSON.stringify(none));
+  for (const bad of [undefined, null, '', '2026-02-30', '10/22/2026', '2026-8-13', '2026-10-22T00:00:00Z']) {
+    assert.throws(() => siteDates('hacrp', { updated: { ...ok, cmsReleased: bad } }), (err) => err instanceof RangeError && /"hacrp".*cmsReleased/.test(err.message), `cmsReleased ${bad}`);
+    assert.throws(() => siteDates('hacrp', { updated: { ...ok, changed: bad } }), (err) => err instanceof RangeError && /"hacrp".*changed/.test(err.message), `changed ${bad}`);
+  }
+  assert.throws(() => siteDates('hacrp', { updated: { cmsReleased: '2026-02-30', changed: '2026-10-22' } }), /2026-02-30/);
+});
 
-test('setUpdated refuses a date that is not YYYY-MM-DD on the calendar, naming the site and the date, and records nothing', () =>
-  withTemp(async (dir) => {
-    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
-    const ok = { cmsReleased: '2026-08-13', changed: '2026-10-22' };
-    for (const bad of [undefined, null, '', '2026-02-30', '10/22/2026', '2026-8-13', '2026-10-22T00:00:00Z']) {
-      assert.throws(() => ctx.setUpdated('hacrp', { ...ok, cmsReleased: bad }), (err) => err instanceof RangeError && /"hacrp".*cmsReleased/.test(err.message), `cmsReleased ${bad}`);
-      assert.throws(() => ctx.setUpdated('hacrp', { ...ok, changed: bad }), (err) => err instanceof RangeError && /"hacrp".*changed/.test(err.message), `changed ${bad}`);
-    }
-    assert.throws(() => ctx.setUpdated('hacrp', { cmsReleased: '2026-02-30', changed: '2026-10-22' }), /2026-02-30/);
-    assert.equal(ctx.updated.size, 0);
-    ctx.setUpdated('hacrp', ok);
-    assert.deepEqual([...ctx.updated], [['hacrp', ok]]);
-  }));
+// A site that runs without writing anything, and (when asked) returns its dates.
+const quietSite = (id, { dates = false } = {}) => ({ id, generate: () => (dates ? { updated: { cmsReleased: '2026-08-13', changed: '2026-10-22' } } : undefined) });
 
-// A site that runs without writing anything, and (when it names itself) gives its dates.
-const quietSite = (id, { dates = false } = {}) => ({ id, generate: (ctx) => { if (dates) ctx.setUpdated(id, { cmsReleased: '2026-08-13', changed: '2026-10-22' }); } });
-
-test('the build tells the hub which sites ran: one that never gave its dates stops the build; the hub alone, or every site with its dates, builds', () =>
+test('a program site that returns no dates stops the build; the hub alone, or every program site with its dates, builds; another site owes none', () =>
   withTemp(async (dir) => {
-    await assert.rejects(build({ outDir: join(dir, 'a'), sites: [quietSite('hacrp'), HUB] }), /"hacrp".*setUpdated/);
-    await assert.rejects(build({ outDir: join(dir, 'b'), sites: [quietSite('hacrp', { dates: true }), quietSite('faux'), HUB] }), /"faux".*setUpdated/);
-    assert.ok((await build({ outDir: join(dir, 'c'), sites: [HUB] })).pages > 0);
-    assert.ok((await build({ outDir: join(dir, 'd'), sites: [quietSite('hacrp', { dates: true }), HUB] })).pages > 0);
+    await assert.rejects(build({ outDir: join(dir, 'a'), sites: [quietSite('hacrp'), HUB] }), /"hacrp" gave the build no dates/);
+    assert.ok((await build({ outDir: join(dir, 'b'), sites: [HUB] })).pages > 0);
+    assert.ok((await build({ outDir: join(dir, 'c'), sites: [quietSite('hacrp', { dates: true }), quietSite('faux'), HUB] })).pages > 0);
   }));
 
 // The newest built_at date among the emitted files the numbers come from: the files loadHacrp lists (builtFiles; the

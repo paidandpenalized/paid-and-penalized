@@ -144,18 +144,15 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
-// correctionsDir: the folder of dated corrections entries (absent or empty is an empty log); tests pass their own.
-// Every other site the build runs (ctx.siteIds; a build of the hub alone has none) must have given its two dates
-// (ctx.setUpdated) by now, or the corrections page would leave it out.
-export async function generateHub(ctx, { correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
+// updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
+// corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
+// log); tests pass their own.
+export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
   const { assets } = ctx;
-  for (const id of ctx.siteIds) {
-    if (id !== HUB.id && !ctx.updated.has(id)) throw new RangeError(`hub: the build ran "${id}" but it never called ctx.setUpdated, so /corrections/ has no dates for it`);
-  }
   const robots = robotsFor({ env: ctx.env, released: RELEASED });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
-  const deps = { entries: readCorrections(correctionsDir), updated: ctx.updated };
+  const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
   }

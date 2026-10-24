@@ -1,7 +1,7 @@
 // The corrections page: the policy (the hub's policy template) with the log as its last section. The log is the dated
 // entries in corrections/ (YYYY-MM-DD-<slug>.md, newest first), each rendered from its Markdown; the folder is the
 // append-only record tools/ci/change-gate.js guards, and an absent or empty folder is an empty log. Another section
-// gives, per site, the date of the CMS file it uses and the date its numbers last changed (ctx.setUpdated).
+// gives, per site, the date of the CMS file it uses and the date its numbers last changed (what its generate returns).
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { has } from '../engine/js/has.js';
@@ -66,8 +66,8 @@ function siteLine([id, { cmsReleased, changed }]) {
 }
 
 // The page's content for the policy template (pages.js lays it out with the other policy pages). feedback: the page's
-// prefilled feedback link. entries: readCorrections' result. updated: ctx.updated (site id -> { cmsReleased,
-// changed }); with none, the sites section is left out.
+// prefilled feedback link. entries: readCorrections' result. updated: the build's map of site id -> { cmsReleased,
+// changed }, in build order (generateHub); with none, the sites section is left out.
 export function correctionsContent({ feedback, entries, updated }) {
   const email = html`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`;
   const sites = [...updated].map(siteLine);

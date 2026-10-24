@@ -1,7 +1,7 @@
 // What each site's generator gets from the build: the output folder, the build's env and asset paths, emit() (the
 // one way a page or file is written; it counts pages and collects the paths that may be indexed, which the hub's
-// sitemap lists), asset() for a site's own content-hashed data, and setUpdated() for the two dates the hub's
-// corrections page shows for the site. robotsFor holds the indexing rule.
+// sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds the indexing rule, and siteDates
+// the check on the two dates a program site gives back for the hub's corrections page.
 import { join } from 'node:path';
 import { isIsoDate } from '../../engine/js/dates.js';
 import { writeFileMkdir } from '../files.js';
@@ -21,29 +21,26 @@ export function robotsFor({ env, released, eligible = true }) {
 // Folders are lowercase; a file name may hold capitals, except a page's (.html).
 const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
 
-// siteIds: the ids of the sites this build runs (build.js), so the hub can tell which ones owe it their dates; a
-// context made without them (a test of one generator) has none.
-export function createContext({ outDir, env, assets, siteIds = [] }) {
+// A program site's two dates, each YYYY-MM-DD, from what its generate returned ({ updated: { cmsReleased, changed } }):
+// when CMS released the file the site uses, and when the site's numbers last changed. The hub's /corrections/ page
+// lists them, so a site that returned none, or a date that is not one, stops the build.
+export function siteDates(siteId, result) {
+  if (!result?.updated) throw new RangeError(`"${siteId}" gave the build no dates (its generate returns { updated: { cmsReleased, changed } }), so /corrections/ has none for it`);
+  const { cmsReleased, changed } = result.updated;
+  for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
+    if (!isIsoDate(date)) throw new RangeError(`"${siteId}" ${name} is not a YYYY-MM-DD date on the calendar: ${JSON.stringify(date)}`);
+  }
+  return { cmsReleased, changed };
+}
+
+export function createContext({ outDir, env, assets }) {
   const written = new Set();
-  const updated = new Map();
   const ctx = {
     outDir,
     env,
     assets,
-    siteIds,
     pages: 0,
     indexable: [],
-    // site id -> { cmsReleased, changed }, in the order the sites set them (setUpdated).
-    updated,
-    // A site's two dates, each YYYY-MM-DD: when CMS released the file the site uses, and when the site's numbers last
-    // changed. Once per site; the hub's /corrections/ page lists them, and a date that is not one stops the build.
-    setUpdated(siteId, { cmsReleased, changed }) {
-      if (updated.has(siteId)) throw new RangeError(`setUpdated: "${siteId}" is already set`);
-      for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
-        if (!isIsoDate(date)) throw new RangeError(`setUpdated: "${siteId}" ${name} is not a YYYY-MM-DD date on the calendar: ${JSON.stringify(date)}`);
-      }
-      updated.set(siteId, { cmsReleased, changed });
-    },
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;
     // null lists the page in the sitemap. Leave it out for a file that is not a page.
     emit({ path, text, robots }) {
