@@ -8,8 +8,8 @@ import { SITE } from '../../web/site.js';
 import { launch, newPage, samplePages, startSite, watch } from './lib.js';
 
 const SCHEMES = ['light', 'dark'];
-// A desktop width, and the narrowest phone width pages are designed for.
-const WIDTHS = [1280, 320];
+// A desktop width, a common phone's, and the narrowest phone width pages are designed for.
+const WIDTHS = [1280, 375, 320];
 const HEIGHT = 800;
 const PAGES = samplePages();
 
@@ -26,9 +26,10 @@ after(async () => {
 
 // Loads one page in a fresh tab of the context and returns what the checks read.
 async function load(context, scheme, path) {
-  const page = await newPage(context, scheme);
+  let page;
   try {
-    const seen = await watch(page);
+    page = await newPage(context, scheme, site.base);
+    const seen = await watch(page, site.base);
     const response = await page.goto(new URL(path, site.base).href, { waitUntil: 'load' });
     // Scripts fetch their data after load; a violation or error from them lands before the network goes quiet.
     await page.waitForLoadState('networkidle');
@@ -41,7 +42,7 @@ async function load(context, scheme, path) {
     }), SITE.feedback.url);
     return { status: response.status(), seen, ...facts };
   } finally {
-    await page.close();
+    await page?.close();
   }
 }
 

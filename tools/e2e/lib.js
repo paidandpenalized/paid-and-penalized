@@ -5,9 +5,10 @@
 //                  named in E2E_BASE_URL (a preview, a deployed site), which nothing is started for.
 //   launch()       a browser: Chromium by default, Firefox or WebKit through E2E_ENGINE or the argument. Chromium
 //                  runs the Chrome installed on this machine; with CI set it runs the Chromium Playwright installs.
-//   newPage()      a tab in a context in a colour scheme, whichever the engine.
+//   newPage()      a tab in a context in a colour scheme, whichever the engine, with nothing of its own left loading.
 //   samplePages()  one page of each type, chosen by property from the emitted data and dist/ (no page is named here).
-//   watch(page)    what the page logs, loads and violates from now on.
+//   watch(page)    what the page logs, loads and violates from now on; once per page (its exposed function's name is
+//                  unique), so open a new tab for another watch.
 import { existsSync, readdirSync } from 'node:fs';
 import { chromium, firefox, webkit } from 'playwright';
 import { REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
@@ -19,7 +20,7 @@ import { SITE } from '../../web/site.js';
 const DIST = REPO_ROOT + 'dist/';
 const HACRP = SITE.sites.hacrp.path;
 
-// The origin of the site under test, set by startSite, which watch reads to tell this site's requests from others.
+// The origin of the site under test, set by startSite, which watch falls back on to tell this site's requests from others.
 let siteOrigin = null;
 
 // Serves dist/ (build it first: make build) unless E2E_BASE_URL names the site to test. Returns the site's origin
@@ -44,13 +45,20 @@ export async function startSite() {
 
 // A new tab in the context in the colour scheme, set on the tab itself: Firefox ignores the context's colorScheme option
 // and takes emulateMedia only once the tab has loaded a page from the network, so the tab first loads a small page of
-// the site (not its icon: a browser asks for /favicon.ico after a bare image, and that 404 would land in watch). Call it
-// after startSite, and before watch.
-export async function newPage(context, colorScheme) {
-  if (!siteOrigin) throw new Error('newPage: no site origin; call startSite() first');
+// the site at `base` (its origin; not the page's icon: a browser asks for /favicon.ico after a bare image, and that 404
+// would land in watch). It returns once that page's own requests have settled, so none is blamed on the page the caller
+// opens next. Call it before watch. A tab whose priming fails is closed, not leaked.
+export async function newPage(context, colorScheme, base) {
+  if (!base) throw new TypeError('newPage: the site\'s origin is required');
   const page = await context.newPage();
-  await page.goto(`${siteOrigin}${SITE.pages.about}`);
-  await page.emulateMedia({ colorScheme });
+  try {
+    await page.goto(`${base}${SITE.pages.about}`);
+    await page.emulateMedia({ colorScheme });
+    await page.waitForLoadState('networkidle');
+  } catch (error) {
+    await page.close();
+    throw error;
+  }
   return page;
 }
 
