@@ -6,7 +6,7 @@ import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CSP, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
-import { get, withTemp } from './helpers.js';
+import { get, withServer, withTemp } from './helpers.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
@@ -117,10 +117,7 @@ test('the local server sends the headers _headers gives each path, 404s included
     const text = headersFile({ env: undefined });
     writeFileSync(join(root, '_headers'), text);
     const rules = parseHeaders(text);
-    const server = createSiteServer(root);
-    await new Promise((r) => server.listen(0, '127.0.0.1', r));
-    const { port } = server.address();
-    try {
+    await withServer(root, async (port) => {
       for (const [path, status] of [['/', 200], ['/hacrp/', 200], ['/nope/', 404], ['/assets/site.ab12cd34.css', 200], ['/hacrp', 301]]) {
         const res = await get(port, path);
         assert.equal(res.status, status, path);
@@ -135,9 +132,7 @@ test('the local server sends the headers _headers gives each path, 404s included
         assert.equal(own.status, 404, path);
         assert.equal(own.body, 'not here', path);
       }
-    } finally {
-      server.close();
-    }
+    });
   }));
 
 test('the local server never sends Cache-Control on an error: a missing hashed file is not cached for a year', () =>
@@ -146,10 +141,7 @@ test('the local server never sends Cache-Control on an error: a missing hashed f
     mkdirSync(join(root, 'assets'), { recursive: true });
     writeFileSync(join(root, '404.html'), 'not here');
     writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
-    const server = createSiteServer(root);
-    await new Promise((r) => server.listen(0, '127.0.0.1', r));
-    const { port } = server.address();
-    try {
+    await withServer(root, async (port) => {
       const path = '/assets/site.deadbeef.css';
       assert.equal(headersFor(parseHeaders(headersFile({ env: undefined })), path)['cache-control'], IMMUTABLE);
       for (const [p, status] of [[path, 404], ['/assets/%E0%A4%A.css', 400]]) {
@@ -163,9 +155,7 @@ test('the local server never sends Cache-Control on an error: a missing hashed f
       const bare = await get(port, path);
       assert.equal(bare.status, 404);
       assert.equal(bare.headers['cache-control'], undefined);
-    } finally {
-      server.close();
-    }
+    });
   }));
 
 test('the local server reads _headers again when a rebuild changes it, sends none once it is gone, and refuses a malformed one', () =>
@@ -174,10 +164,7 @@ test('the local server reads _headers again when a rebuild changes it, sends non
     mkdirSync(root, { recursive: true });
     writeFileSync(join(root, 'index.html'), 'home');
     writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
-    const server = createSiteServer(root);
-    await new Promise((r) => server.listen(0, '127.0.0.1', r));
-    const { port } = server.address();
-    try {
+    await withServer(root, async (port) => {
       assert.equal((await get(port, '/')).headers['x-robots-tag'], 'noindex');
       writeFileSync(join(root, '_headers'), headersFile({ env: 'production' }));
       const after = await get(port, '/');
@@ -201,7 +188,5 @@ test('the local server reads _headers again when a rebuild changes it, sends non
         assert.ok(!unreadable.body.includes(dir));
         chmodSync(join(root, '_headers'), 0o644);
       }
-    } finally {
-      server.close();
-    }
+    });
   }));

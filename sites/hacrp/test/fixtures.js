@@ -6,6 +6,7 @@ import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
 import { readPinned } from '../../../pipeline/files.js';
+import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
 
@@ -136,6 +137,20 @@ export const strippedText = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '
 
 // HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.
 export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+// The HACRP site for a build (pipeline/site/build.js) on the data given (a slice of loadHacrp()'s, for speed), quietly.
+// released: as generateHacrp takes it (by default, web/site.js's).
+export const slicedSite = (data, { released } = {}) => ({ ...HACRP, generate: (ctx) => generateHacrp(ctx, { released, data, log: () => {} }) });
+
+// Checks a built page carries one as-of bar (pages/parts.js asofBar), the same as the program page's, after the page's
+// head and after the position `after` (its last section).
+export function checkAsofBar(page, program, after) {
+  const bars = (text) => text.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
+  assert.equal(bars(page)?.length, 1, 'one bar');
+  assert.deepEqual(bars(page), bars(program));
+  const at = page.indexOf('<aside class="asof"');
+  assert.ok(at > page.indexOf('</header>') && at > after, 'after the head and the last section');
+}
 
 // The first pinned row with a property; fails the test, naming the property, if there is none.
 export function pick(hospitals, pred, what) {

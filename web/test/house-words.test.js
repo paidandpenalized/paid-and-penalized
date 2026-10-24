@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT, repoFiles } from '../../pipeline/files.js';
+import { REPO_ROOT } from '../../pipeline/files.js';
+import { copyFiles } from '../../pipeline/test/helpers.js';
 
 const LABELS = [
   /\b(caught|cheat(s|ed|ing)?|dodg(e|es|ed|ing))\b/i,
@@ -17,9 +18,6 @@ const PROMISES = [
   /\b(delete|remove) your\b/i,
 ];
 
-const copyFiles = () => ['web/', 'sites/', 'hub/']
-  .flatMap((dir) => repoFiles(dir, { untracked: true }))
-  .filter((p) => p.split('/').at(-1) === 'copy.js');
 const texts = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? v : v.text]);
 const hits = (patterns, text) => patterns.filter((re) => re.test(text));
 
@@ -33,9 +31,11 @@ test('each pattern catches the phrasing it is for', () => {
 });
 
 for (const file of copyFiles()) {
-  test(`${file}: no word labels a hospital${/^(web|hub)\//.test(file) ? ', and nothing promises a reply, fix or deletion' : ''}`, async () => {
+  // The family's shared and policy words also make no promises.
+  const family = /^(web|hub)\//.test(file);
+  test(`${file}: no word labels a hospital${family ? ', and nothing promises a reply, fix or deletion' : ''}`, async () => {
     const { COPY } = await import(pathToFileURL(REPO_ROOT + file));
-    const patterns = /^(web|hub)\//.test(file) ? [...LABELS, ...PROMISES] : LABELS;
+    const patterns = family ? [...LABELS, ...PROMISES] : LABELS;
     for (const [key, text] of texts(COPY)) assert.deepEqual(hits(patterns, text), [], `${key}: "${text}"`);
   });
 }

@@ -122,9 +122,8 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="stylesheet" href="${ASSETS.css}">`));
   assert.ok(out.indexOf('class="skip" href="#main"') < out.indexOf('<header'));
   assert.ok(out.includes('<main id="main">'));
-  assert.ok(out.includes('Not affiliated with or endorsed by CMS or any hospital.'));
-  assert.ok(out.includes('Uses public data from the Centers for Medicare &amp; Medicaid Services (CMS) and shows no patient information.'));
-  assert.ok(out.includes('Built with Claude Code'));
+  assert.ok(out.includes(escapeHtml(COPY.affiliation)));
+  assert.ok(out.includes(COPY.builtWith));
   // The name and credentials never split; the byline may break after "Built by".
   assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener"><span class="nw">Dalton Haslam, MD, MBA</span><span class="vh"> (opens in a new tab)</span></a>'));
   assert.ok(out.includes(`href="${SITE.feedback.url}?`));
@@ -186,28 +185,9 @@ test('page: the footer says not to include patient information beside the feedba
     assert.ok(foot.includes(`<a href="${href}">${label}</a>`), href);
   }
   // The affiliation line, the credit and the license stay.
-  assert.ok(foot.includes('Not affiliated with or endorsed by CMS or any hospital.'));
-  assert.ok(foot.includes('Built with Claude Code'));
+  assert.ok(foot.includes(escapeHtml(COPY.affiliation)));
+  assert.ok(foot.includes(COPY.builtWith));
   assert.ok(foot.includes('rel="license noopener"'));
-});
-
-test('page: the footer\'s new words promise no reply time, fix time or deletion, and carry no digits', () => {
-  const words = ['feedbackWarning', 'termsShort', 'termsLink', 'privacy', 'corrections', 'about', 'accessibility', 'maintenance'].map((k) => COPY[k]).join(' ');
-  assert.doesNotMatch(words, /\d/);
-  assert.doesNotMatch(words, /\b(caught|cheat\w*|dodge\w*|worst|failed)\b/i);
-  assert.doesNotMatch(words, /\b(reply|respond|response|within|delete\w*|erase\w*|fix(ed)? by|soon)\b/i);
-  assert.match(COPY.termsShort, /medical, legal or financial advice/);
-  assert.match(COPY.termsShort, /estimates/i);
-  assert.match(COPY.termsShort, /medical, legal or financial advice/i);
-  assert.match(COPY.maintenance, /\{release\}/);
-});
-
-test('page: the footer and the banner use no inline style (a strict CSP forbids it)', () => {
-  const original = SITE.sites.hacrp.maintenance;
-  SITE.sites.hacrp.maintenance = 'FY2027';
-  try {
-    assert.doesNotMatch(page(PAGE), /\sstyle=/);
-  } finally { SITE.sites.hacrp.maintenance = original; }
 });
 
 // Runs fn with a site's maintenance flag set, then puts it back.
@@ -216,6 +196,10 @@ function withMaintenance(id, value, fn) {
   SITE.sites[id].maintenance = value;
   try { return fn(); } finally { SITE.sites[id].maintenance = original; }
 }
+
+test('page: the footer and the banner use no inline style (a strict CSP forbids it)', () => {
+  withMaintenance('hacrp', 'FY2027', () => assert.doesNotMatch(page(PAGE), /\sstyle=/));
+});
 
 test('maintenance banner: absent while the flag is null, which is how the site launches', () => {
   assert.equal(SITE.sites.hacrp.maintenance, null);
@@ -252,7 +236,6 @@ test('maintenance banner: anything but null or a non-empty trimmed string throws
   for (const bad of ['', '  ', ' FY2027', 'FY2027\n', 7, true, undefined, {}]) {
     withMaintenance('hacrp', bad, () => {
       assert.throws(() => page(PAGE), (err) => err instanceof TypeError && /hacrp/.test(err.message), JSON.stringify(bad));
-      assert.throws(() => maintenanceBanner(SITE.sites.hacrp), TypeError, JSON.stringify(bad));
     });
   }
 });

@@ -19,7 +19,7 @@ import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
 import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
-import { ASSETS } from './fixtures.js';
+import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
@@ -84,10 +84,7 @@ test('"What changed" links the family\'s corrections log', () => {
 });
 
 test('Methods carries the as-of bar the program page shows, the same items, after the page head and the sections', () => {
-  const bar = (page) => page.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
-  assert.equal(bar(PAGE)?.length, 1, 'one bar');
-  assert.deepEqual(bar(PAGE), bar(WITH.program));
-  assert.ok(PAGE.indexOf('<aside class="asof"') > PAGE.indexOf('</header>') && PAGE.indexOf('<aside class="asof"') > PAGE.indexOf('id="more"'), 'after the head and the last section');
+  checkAsofBar(PAGE, WITH.program, PAGE.indexOf('id="more"'));
 });
 
 test('the glossary defines "Payment decision (in counts)" once, right after "Subject to the reduction", as the hospitals CMS scored and marked Yes or No', () => {

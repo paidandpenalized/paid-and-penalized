@@ -1,9 +1,10 @@
 // The HACRP page generator on the pinned data (rows picked by property, never by name or CCN), plus escaping of
 // hostile text on synthetic hospitals.
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, sep } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
@@ -11,7 +12,7 @@ import { HUB } from '../../../hub/pages.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
+import { filesUnder, withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
@@ -22,7 +23,7 @@ import { programPage } from '../web/pages/program.js';
 import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, WHATIF_STANDING } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
@@ -220,35 +221,39 @@ test('production, released: every hospital page and every place page plus /hacrp
 test('released: false: every page is noindex in production and the sitemap lists none', () =>
   temp(async (dir) => {
     const out = join(dir, 'dist');
-    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: false, data: SLICE, log: quiet }) };
-    await build({ outDir: out, env: 'production', sites: [hacrp, HUB] });
+    await build({ outDir: out, env: 'production', sites: [slicedSite(SLICE, { released: false }), HUB] });
     for (const h of SLICE.hospitals) assert.ok(read(out, hospitalPath(h)).includes(NOINDEX), hospitalPath(h));
     for (const p of SLICE_PLACES.list) assert.ok(read(out, p.path).includes(NOINDEX), p.path);
     for (const path of ['/hacrp/', '/hacrp/data/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
     assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
-test('the data dictionary page carries the as-of bar the program page shows, after its sections', () =>
-  temp(async (dir) => {
-    await generate(dir, 'production', { released: true, data: SLICE });
-    const bar = (page) => page.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
-    const dictionary = read(dir, '/hacrp/data/');
-    assert.equal(bar(dictionary)?.length, 1, 'one bar');
-    assert.deepEqual(bar(dictionary), bar(read(dir, '/hacrp/')));
-    assert.ok(dictionary.indexOf('<aside class="asof"') > dictionary.indexOf('</header>') && dictionary.indexOf('<aside class="asof"') > dictionary.lastIndexOf('</section>'), 'after the head and the last section');
-  }));
+// SLICE released, with the hub: built once, in production, for the tests that read the whole build; removed after them.
+let built = null;
+after(() => built && rmSync(built.dir, { recursive: true, force: true }));
+function builtSlice() {
+  if (!built) {
+    const dir = mkdtempSync(join(tmpdir(), 'pp-hacrp-'));
+    built = { dir, out: join(dir, 'dist') };
+    built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(SLICE, { released: true }), HUB] });
+  }
+  return built.ready.then(() => built.out);
+}
 
-test('no built page links the hub Methods page\'s old AI anchor: the policy lives on About', () =>
-  temp(async (dir) => {
-    const out = join(dir, 'dist');
-    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: true, data: SLICE, log: quiet }) };
-    await build({ outDir: out, env: 'production', sites: [hacrp, HUB] });
-    const pages = readdirSync(out, { recursive: true }).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length));
-    for (const path of ['', 'methods/', 'about/', 'hacrp/', 'hacrp/methods/', 'hacrp/data/']) assert.ok(pages.includes(path), `the scan reads ${path || 'the home page'}`);
-    const links = pages.filter((f) => /href="[^"]*\/methods\/#ai"/.test(readFileSync(join(out, f, 'index.html'), 'utf8')));
-    assert.deepEqual(links, []);
-    assert.match(read(out, '/about/'), /id="ai"/);
-  }));
+test('the data dictionary page carries the as-of bar the program page shows, after its sections', async () => {
+  const out = await builtSlice();
+  const dictionary = read(out, '/hacrp/data/');
+  checkAsofBar(dictionary, read(out, '/hacrp/'), dictionary.lastIndexOf('</section>'));
+});
+
+test('no built page links the hub Methods page\'s old AI anchor: the policy lives on About', async () => {
+  const out = await builtSlice();
+  const pages = filesUnder(out).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length).split(sep).join('/'));
+  for (const path of ['', 'methods/', 'about/', 'hacrp/', 'hacrp/methods/', 'hacrp/data/']) assert.ok(pages.includes(path), `the scan reads ${path || 'the home page'}`);
+  const links = pages.filter((f) => /href="[^"]*\/methods\/#ai"/.test(readFileSync(join(out, f, 'index.html'), 'utf8')));
+  assert.deepEqual(links, []);
+  assert.match(read(out, '/about/'), /id="ai"/);
+});
 
 test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
   temp(async (dir) => {

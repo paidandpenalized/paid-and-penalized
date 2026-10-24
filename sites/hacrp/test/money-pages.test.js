@@ -11,7 +11,6 @@ import { build } from '../../../pipeline/site/build.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { HUB } from '../../../hub/pages.js';
-import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
 import { cutFrom } from '../web/money-figures.js';
 import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
@@ -23,7 +22,7 @@ import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT }
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
-import { ASSETS, strippedText as strip } from './fixtures.js';
+import { ASSETS, slicedSite, strippedText as strip } from './fixtures.js';
 
 const PROGRAM = renderProgram();
 const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section class="part" id="map"/.exec(PROGRAM)[0];
@@ -629,9 +628,8 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
 test('every in-site anchor on the built pages lands on an element of its page', () =>
   withTemp('pp-anchors-', async (dir) => {
     const slice = { ...DATA, hospitals: DATA.hospitals.filter((h, i) => i % 97 === 0 || (h.total === null && h.paymentReduction === 'Yes')) };
-    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { data: slice, log: () => {} }) };
     const out = join(dir, 'dist');
-    await build({ outDir: out, sites: [hacrp, HUB] });
+    await build({ outDir: out, sites: [slicedSite(slice), HUB] });
     const pages = [];
     const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f === 'index.html') pages.push(p); } };
     walk(out);

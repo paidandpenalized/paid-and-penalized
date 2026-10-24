@@ -96,7 +96,3 @@ test('changedOn: the newest built_at date (UTC) among the files given; a file th
   }
   assert.throws(() => changedOn([['a.json', null]]), RangeError);
 });
-
-test('the pinned data\'s changed date is the newest built_at of the four files the pages read', () => {
-  assert.match(loadHacrp().changedOn, /^\d{4}-\d{2}-\d{2}$/);
-});

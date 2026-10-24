@@ -5,14 +5,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT, repoFiles } from '../../../pipeline/files.js';
+import { REPO_ROOT } from '../../../pipeline/files.js';
+import { copyFiles } from '../../../pipeline/test/helpers.js';
 import { CLAIMS } from '../web/constants.js';
 
 const CLAIM = /^HACRP-\d{2}$/;
-
-const copyFiles = () => ['web/', 'sites/', 'hub/']
-  .flatMap((dir) => repoFiles(dir, { untracked: true }))
-  .filter((p) => p.split('/').at(-1) === 'copy.js');
 
 // A copy entry is a plain string (shared page chrome) or { text, claim }.
 const entries = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? { text: v, claim: null } : v]);

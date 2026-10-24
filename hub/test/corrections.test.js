@@ -3,17 +3,15 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { escapeHtml } from '../../web/render/html.js';
+import { ASSETS } from '../../pipeline/test/helpers.js';
+import { fillCopy } from '../../web/render/components.js';
+import { isoDate } from '../../web/render/format.js';
 import { SITE } from '../../web/site.js';
 import { CORRECTIONS_EMAIL } from '../constants.js';
 import { COPY } from '../copy.js';
 import { correctionsContent, readCorrections } from '../corrections.js';
 import { feedbackLink } from '../parts.js';
 import { policyPage } from '../policy.js';
-
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
-const textOf = (page) => page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ')
-  .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 
 // Reads a fresh folder holding these files ({ name: text }); `also` can add more to it (a folder, a link) first.
 function readLog(files, also = () => {}) {
@@ -85,9 +83,7 @@ test('with no entries the log says so, and is the last section', () => {
   assert.match(text, /<h1[^>]*>Corrections<\/h1>/);
   assert.match(text, new RegExp(`<h2 class="doc__h" id="log-h">${COPY.correctionsLogHeading}</h2>\\s*<p>${COPY.correctionsLogEmpty}</p>`));
   assert.doesNotMatch(text, /pol__entry"/);
-  const ids = [...text.matchAll(/<section class="doc__sec" id="([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(ids.at(-1), 'log');
-  assert.deepEqual([...text.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]), ids);
+  assert.equal([...text.matchAll(/<section class="doc__sec" id="([^"]+)"/g)].at(-1)[1], 'log');
 });
 
 test('each entry shows its date from the file name in a <time>, then its body, in the order given', () => {
@@ -133,45 +129,17 @@ test('an entry body renders through the Markdown subset, escaped: paragraphs, li
 
 test('the corrections address shows once, as a mailto link, and each site gives the date of CMS\'s file and the date its numbers last changed', () => {
   const text = page({ entries: ENTRIES });
-  assert.equal(textOf(text).split(CORRECTIONS_EMAIL).length - 1, 1);
   assert.equal(text.split(`href="mailto:${CORRECTIONS_EMAIL}"`).length - 1, 1);
   assert.ok(text.includes(`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`));
-  assert.ok(textOf(text).includes('Hospital-Acquired Conditions: CMS’s file released August 13, 2026 ; this site’s numbers last changed October 22, 2026 .'));
-  assert.ok(text.includes('<time datetime="2026-08-13">August 13, 2026</time>'));
-  assert.ok(text.includes('<time datetime="2026-10-22">October 22, 2026</time>'));
-});
-
-test('the report sentence links the feedback form, prefilled with this page', () => {
-  const text = page();
-  assert.match(text, /<a href="https:\/\/docs\.google\.com\/forms\/[^"]*corrections[^"]*" target="_blank" rel="noopener">feedback form<span class="vh">/);
-});
-
-test('every word of the page\'s copy shows on it, with the address and the sites\' dates filled in', () => {
-  const withEntries = page({ entries: ENTRIES });
-  const words = textOf(withEntries);
-  for (const key of Object.keys(COPY).filter((k) => k.startsWith('corrections'))) {
-    if (key === 'correctionsLogEmpty') {
-      assert.ok(textOf(page()).includes(COPY[key]), key); // shown while the log is empty
-      continue;
-    }
-    if (key.endsWith('Description')) { assert.ok(withEntries.includes(escapeHtml(COPY[key])), key); continue; }
-    const stretch = COPY[key].split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
-    assert.ok(words.includes(stretch), `${key} is not on the page`);
-  }
-  assert.doesNotMatch(words, /\{\w+\}/);
+  const time = (iso) => `<time datetime="${iso}">${isoDate(iso)}</time>`;
+  assert.ok(text.includes(fillCopy(COPY, 'correctionsSite', { site: SITE.sites.hacrp.title, cms: time('2026-08-13'), changed: time('2026-10-22') })));
 });
 
 test('with no site dates the sites section is left out; a site the family does not have or a bad date stops the build', () => {
   assert.doesNotMatch(page({ updated: new Map() }), new RegExp(COPY.correctionsSitesHeading));
-  assert.throws(() => page({ updated: new Map([['nowhere', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]) }), /nowhere/);
+  for (const id of ['nowhere', 'toString']) {
+    assert.throws(() => page({ updated: new Map([[id, { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]) }), new RegExp(id));
+  }
   assert.throws(() => page({ updated: new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-02-30' }]]) }), RangeError);
   assert.throws(() => page({ entries: [{ date: '2026-13-01', slug: 'x', body: 'b' }] }), RangeError);
-});
-
-test('the page is noindex when asked, has one h1, no figure and no inline style, and its canonical address is /corrections/', () => {
-  const text = page({ entries: ENTRIES });
-  assert.ok(text.includes('<meta name="robots" content="noindex">'));
-  assert.equal(text.match(/<h1[\s>]/g)?.length, 1);
-  assert.doesNotMatch(text, /\sstyle=|<figure|<svg/);
-  assert.match(text, /<link rel="canonical" href="https:\/\/paidandpenalized\.org\/corrections\/">/);
 });

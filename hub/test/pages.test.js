@@ -3,17 +3,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext } from '../../pipeline/site/context.js';
-import { withTemp } from '../../pipeline/test/helpers.js';
+import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
+import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { feedbackHref } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
-import { WCAG_VERSION } from '../constants.js';
+import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
 
-const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
 const NOINDEX = '<meta name="robots" content="noindex">';
 
 test('the hub writes the stub root, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
@@ -38,7 +38,7 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     assert.doesNotMatch(methods, /deterministic code/);
     assert.match(methods, /href="\/about\/#ai"/);
     // Its description says what the page covers now that the AI paragraph is on /about/.
-    assert.ok(methods.includes('<meta name="description" content="How this site turns CMS public data into its pages, and what it calls an estimate.">'));
+    assert.ok(methods.includes(`<meta name="description" content="${escapeHtml(COPY.methodsDescription)}">`));
 
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
@@ -66,12 +66,13 @@ test('an empty sitemap is a valid empty urlset; a path that is not a plain site 
 });
 
 // ---------- the policy pages ----------
+// Each page's path, title, and the stem its copy keys start with (termsBrief1, termsWhatHeading, ...).
 const POLICY = [
-  { path: '/terms/', title: SHARED.termsLink, description: COPY.termsDescription, brief: 'termsBrief' },
-  { path: '/privacy/', title: SHARED.privacy, description: COPY.privacyDescription, brief: 'privacyBrief' },
-  { path: '/about/', title: SHARED.about, description: COPY.aboutDescription, brief: 'aboutBrief' },
-  { path: '/accessibility/', title: SHARED.accessibility, description: COPY.a11yDescription, brief: 'a11yBrief' },
-  { path: '/corrections/', title: SHARED.corrections, description: COPY.correctionsDescription, brief: 'correctionsBrief' },
+  { path: '/terms/', title: SHARED.termsLink, stem: 'terms' },
+  { path: '/privacy/', title: SHARED.privacy, stem: 'privacy' },
+  { path: '/about/', title: SHARED.about, stem: 'about' },
+  { path: '/accessibility/', title: SHARED.accessibility, stem: 'a11y' },
+  { path: '/corrections/', title: SHARED.corrections, stem: 'corrections' },
 ];
 
 // Builds the hub once in production mode and hands fn a reader for its files. A site has given its dates (for
@@ -92,7 +93,7 @@ const indexLinks = (page) => [...page.match(/<nav class="doc__toc"[\s\S]*?<\/nav
 
 test('each policy page has one h1, the brief as a record card, an index of its sections and the hub\'s noindex', () =>
   withHub((read) => {
-    for (const { path, title, brief } of POLICY) {
+    for (const { path, title, stem } of POLICY) {
       const text = read(path);
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, path);
       assert.match(text, new RegExp(`<h1[^>]*>${escapeHtml(title)}</h1>`), path);
@@ -102,7 +103,7 @@ test('each policy page has one h1, the brief as a record card, an index of its s
       const card = text.match(/<div class="form pol__brief"[^>]*>[\s\S]*?<\/div>\s*<\/header>/)?.[0];
       assert.ok(card, `${path} has the brief card`);
       assert.ok(card.includes(COPY.briefTitle), path);
-      const lines = briefKeys(brief);
+      const lines = briefKeys(`${stem}Brief`);
       assert.ok(lines.length >= 3 && lines.length <= 5, `${path}: three to five brief lines`);
       assert.equal(card.match(/class="field /g)?.length, lines.length, path);
       // The index names the page's sections: its links are exactly their ids, in order, and each id is unique.
@@ -120,17 +121,17 @@ test('each policy page has one h1, the brief as a record card, an index of its s
 
 test('every word of the five pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
   withHub((read) => {
-    const stems = { '/terms/': 'terms', '/privacy/': 'privacy', '/about/': 'about', '/accessibility/': 'a11y', '/corrections/': 'corrections' };
-    for (const { path } of POLICY) {
+    for (const { path, stem } of POLICY) {
       const text = read(path);
       const words = textOf(text);
-      const keys = Object.keys(COPY).filter((k) => k.startsWith(stems[path]));
+      const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
       for (const key of keys) {
         if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(COPY[key])), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.
         const stretch = COPY[key].split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
         assert.ok(words.includes(stretch), `${path}: ${key} is not on the page`);
       }
+      assert.doesNotMatch(words, /\{\w+\}/, `${path}: a placeholder left unfilled`);
       // Where its words call for the form (not privacy's, which describes the footer's link), the link is the prefilled one.
       const href = feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path });
       if (keys.some((k) => COPY[k].includes('{feedback}'))) assert.ok(text.includes(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${COPY.feedbackForm}<span class="vh">${SHARED.newTab}</span></a>`), `${path}: feedback link`);
@@ -140,7 +141,7 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
 test('/about/ holds the AI and conflict-of-interest sections under the ids other pages link to', () =>
   withHub((read) => {
     const about = read('/about/');
-    assert.match(about, /<section class="doc__sec" id="ai" aria-labelledby="ai-h">\s*<h2 class="doc__h" id="ai-h">How AI tools are used<\/h2>/);
+    assert.match(about, new RegExp(`<section class="doc__sec" id="ai" aria-labelledby="ai-h">\\s*<h2 class="doc__h" id="ai-h">${COPY.aboutAiHeading}</h2>`));
     assert.match(about, /<section class="doc__sec" id="coi"/);
     assert.ok(about.includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
   }));
@@ -150,15 +151,15 @@ test('/terms/ links the definition of "estimate", the corrections page and the l
     const terms = read('/terms/');
     assert.ok(terms.includes(`<a href="/methods/#estimate">${COPY.estimateLink}</a>`));
     assert.ok(terms.includes(`<a href="/corrections/">${SHARED.corrections}</a>`));
-    assert.match(textOf(terms), /licensed under CC BY 4\.0:/);
-    assert.match(textOf(terms), /under the MIT license/);
+    assert.ok(textOf(terms).includes(fillCopy(COPY, 'termsReuse', { contentLicense: SITE.license.content.name, codeLicense: SITE.license.code.name })));
   }));
 
 test('/privacy/ links the two services\' policies and names no retention period', () =>
   withHub((read) => {
     const privacy = read('/privacy/');
-    assert.match(privacy, /<a href="https:\/\/www\.cloudflare\.com\/privacypolicy\/" target="_blank" rel="noopener">Cloudflare’s privacy policy/);
-    assert.match(privacy, /<a href="https:\/\/policies\.google\.com\/privacy" target="_blank" rel="noopener">Google’s privacy policy/);
+    for (const [href, name] of [[CLOUDFLARE_PRIVACY_URL, COPY.cloudflarePolicy], [GOOGLE_PRIVACY_URL, COPY.googlePolicy]]) {
+      assert.ok(privacy.includes(`<a href="${href}" target="_blank" rel="noopener">${name}`), name);
+    }
     // The page's own words (its sections and brief lines, not the numbers that count them) say nothing of how long anything is kept.
     const words = textOf(privacy.match(/<div class="doc__main">[\s\S]*<\/article>/)[0]) + briefKeys('privacyBrief').map((k) => COPY[k]).join(' ');
     assert.doesNotMatch(words, /\d|\b(retain|retained|retention|delete|deleted|deletion|erase|erased)\b|\b(days?|weeks?|months?|years?)\b/i);
