@@ -65,7 +65,7 @@ describe('search', () => {
       const opened = await page.waitForURL((url) => url.pathname === CUT.path, { timeout: 10000 }).then(() => true, () => false);
       assert.ok(opened, 'Enter opens the hospital\'s page');
       assert.ok(normalize(await page.locator('h1').innerText()) === normalize(name), 'the page opened is the hospital\'s');
-      assertQuiet(seen, 'search');
+      await assertQuiet(seen, 'search');
     }));
   }
 });
@@ -95,7 +95,7 @@ describe('what-if', () => {
     assert.ok((await headScore.textContent()) !== was.head, 'the head figure moved');
     // The live sentence follows once the reader stops (SETTLE_MS).
     await eventually(async () => (await sentence.textContent()) !== was.sentence, 'the live sentence did not change');
-    assertQuiet(seen, 'what-if');
+    await assertQuiet(seen, 'what-if');
   }));
 });
 
@@ -227,7 +227,7 @@ describe('the top bar', () => {
     const after = await page.evaluate(() => ({ scrollY: window.scrollY, focused: document.activeElement?.id ?? null }));
     assert.equal(after.focused, 'ht-name', 'the click focused the field');
     assert.equal(after.scrollY, at.scrollY, 'the page did not scroll');
-    assertQuiet(seen, 'top bar');
+    await assertQuiet(seen, 'top bar');
   }));
 
   it('after a click that focuses nothing, a text field a script focuses under it is still brought clear', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
@@ -241,7 +241,7 @@ describe('the top bar', () => {
     const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));
     assert.ok(now.focused, 'the script focused the field');
     assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
-    assertQuiet(seen, 'top bar');
+    await assertQuiet(seen, 'top bar');
   }));
 });
 

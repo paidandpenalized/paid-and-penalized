@@ -1,8 +1,9 @@
 // Positive controls for the harness (lib.js): a watcher that silently stops catching things makes every page check
 // pass for the wrong reason, so these serve a deliberately bad page from a throwaway server and require watch() to
-// report each fault (one a script causes after the load too, which the visit must wait for), and a clean page (and one
-// that aborts its own request) it must report nothing for. They also pin prime's and newPage's contracts: a primed tab
-// is handed over only once its page's requests have settled, and a new tab follows the scheme. No dist/ needed.
+// report each fault (one a script causes after the load too, which the visit must wait for, and one still in flight
+// when the visit ends, which the checks must wait for), and a clean page (and one that aborts its own request) it must
+// report nothing for. They also pin prime's and newPage's contracts: a primed tab is handed over only once its page's
+// requests have settled, and a new tab follows the scheme. No dist/ needed.
 import { createServer } from 'node:http';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,6 +16,11 @@ const BAD = '/bad/';
 const ABORTS = '/aborts/';
 // A page whose script asks for a missing file after the load: the visit must wait for it (lib.js visit).
 const FETCHES_LATE = '/fetches-late/';
+// Pages with no script whose image is still in flight when the visit ends (a lazy image in view does not hold up the
+// load event): one answered 404 after SLOW_MS, one never answered.
+const SLOW_IMAGE = '/slow-image/';
+const STUCK_IMAGE = '/stuck-image/';
+const SLOW_MS = 300;
 const OFFSITE = 'https://example.invalid/x.png';
 // The CSP forbids inline scripts (not images or off-site loads: those must reach the network for the foreign-request
 // detector to see them).
@@ -29,6 +35,8 @@ const PAGES = {
   [SITE.pages.about]: page('<script src="/late.js"></script>'),
   [ABORTS]: page('<script src="/aborts.js"></script>'),
   [FETCHES_LATE]: page('<script src="/late-missing.js"></script>'),
+  [SLOW_IMAGE]: page('', '<img loading="lazy" src="/slow-missing.png" alt="" width="10" height="10">'),
+  [STUCK_IMAGE]: page('', '<img loading="lazy" src="/never.png" alt="" width="10" height="10">'),
 };
 
 let lateDone = false;
@@ -43,8 +51,9 @@ async function startControls() {
     if (pathname === '/late') return void setTimeout(() => { lateDone = true; reply(200, 'text/plain', 'late'); }, LATE_TAKES_MS);
     if (pathname === '/late-missing.js') return reply(200, 'text/javascript', `addEventListener('load', () => setTimeout(() => fetch('/missing-late'), ${LATE_AFTER_MS}));`);
     if (pathname === '/missing.png' || pathname === '/missing-late') return reply(404, 'text/plain', 'not found');
-    // Never answered: the page aborts it (stop ends the open connection).
-    if (pathname === '/hang') return;
+    if (pathname === '/slow-missing.png') return void setTimeout(() => reply(404, 'text/plain', 'not found'), SLOW_MS);
+    // Never answered: the page aborts the first, and the tab's close the second (stop ends the open connection).
+    if (pathname === '/hang' || pathname === '/never.png') return;
     if (pathname === '/aborts.js') {
       return reply(200, 'text/javascript', "const c = new AbortController(); fetch('/hang', { signal: c.signal }).catch(() => {}); setTimeout(() => c.abort(), 50);");
     }
@@ -58,8 +67,13 @@ const shared = useBrowser(startControls);
 
 describe('watch reports what is wrong with a page', () => {
   const tabs = useContext(shared);
-  // What the watcher saw on `path`, opened in a fresh tab watched from the start, once the network went quiet.
-  const seenOn = (path) => withPage(tabs, { path, watched: true }, (_, { seen }) => seen);
+  // What the watcher saw on `path`, opened in a fresh tab watched from the start, once its requests had ended.
+  const seenOn = (path) => withPage(tabs, { path, watched: true }, async (_, { seen }) => {
+    await seen.settled();
+    return seen;
+  });
+  // That the watcher saw nothing wrong on `path`.
+  const quietOn = (path) => withPage(tabs, { path, watched: true }, (_, { seen }) => assertQuiet(seen, path));
 
   it('a Content Security Policy violation (an inline script the policy forbids)', async () => {
     const { cspViolations } = await seenOn(BAD);
@@ -85,13 +99,20 @@ describe('watch reports what is wrong with a page', () => {
     assert.ok(errors.includes(`HTTP 404: ${tabs.base}/missing-late`), `no late 404 in ${JSON.stringify(errors)}`);
   });
 
-  it('nothing on a clean page, and nothing for a document\'s own error status', async () => {
-    for (const path of ['/clean/', '/gone/']) assertQuiet(await seenOn(path), path);
+  it('a subresource answered 404 after a delay, still in flight when the visit ends: the checks wait for it', async () => {
+    const { errors } = await seenOn(SLOW_IMAGE);
+    assert.ok(errors.includes(`HTTP 404: ${tabs.base}/slow-missing.png`), `no slow 404 in ${JSON.stringify(errors)}`);
   });
 
-  it('nothing for a request the page aborted itself', async () => {
-    assertQuiet(await seenOn(ABORTS), ABORTS);
+  it('a request that never ends fails the checks\' wait, named by its path', () => withPage(tabs, { path: STUCK_IMAGE, watched: true }, async (_, { seen }) => {
+    await assert.rejects(seen.settled({ timeoutMs: SLOW_MS }), { message: `requests still in flight ${SLOW_MS} ms after the checks began: /never.png` });
+  }));
+
+  it('nothing on a clean page, and nothing for a document\'s own error status', async () => {
+    for (const path of ['/clean/', '/gone/']) await quietOn(path);
   });
+
+  it('nothing for a request the page aborted itself', () => quietOn(ABORTS));
 });
 
 describe('a new tab', () => {

@@ -49,7 +49,7 @@ async function loadsClean(page, { response, seen }, { type, name, path }) {
   const got = await factsOf(page);
   const notFound = type === 'not-found';
   assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
-  assertQuiet(seen, name);
+  await assertQuiet(seen, name);
   assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
   const banner = (siteOf(path)?.maintenance ?? null) !== null;
   assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);

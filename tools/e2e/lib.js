@@ -2,6 +2,7 @@
 // the way a reader meets it, a watcher for what a page does wrong, and what the checks look for on every page (the
 // footer's feedback link, a settled paint). Playwright is a dev dependency used only by the browser checks; npm test
 // needs no browser. The site and its pages are site.js's.
+import { EventEmitter, once } from 'node:events';
 import { availableParallelism } from 'node:os';
 import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,6 +16,8 @@ export const SCHEMES = ['light', 'dark'];
 export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
 // Every context's window height.
 const HEIGHT = 800;
+// How long a watched page's requests in flight may take to end once its checks begin (watch's settled).
+const SETTLE_TIMEOUT_MS = 5_000;
 
 // A browser for E2E_ENGINE: chromium (when it is unset), firefox or webkit. Chromium is the Google Chrome installed on
 // this machine (channel 'chrome', so no browser is downloaded) unless CI is set, where the workflow installs
@@ -115,8 +118,13 @@ export async function withPage({ context, base, javaScript }, { path, scheme = '
 // cut short by leaving the page): Chromium, Firefox, WebKit on macOS, and WebKit's other ports. Not a failure.
 const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request cancelled)$/;
 
+// A request as a failure names it: a page as the page (a hospital page's address has its CCN), anything else by its
+// path.
+const requestName = (request) => (request.isNavigationRequest() ? 'the page itself' : new URL(request.url()).pathname);
+
 // Records what goes wrong on the page from the next navigation on, for the site at base (its origin). Await it before
-// page.goto: it installs a script in every document the page loads. Returns three arrays that fill as the page runs:
+// page.goto: it installs a script in every document the page loads. Returns three arrays that fill as the page runs,
+// and a wait:
 //   errors           console errors, uncaught page errors, requests that failed (not those the page aborted, ABORTED)
 //                    and subresources answered 400 or above (the status of the page itself, which Chromium also logs
 //                    as a console error, is for the caller to check)
@@ -124,11 +132,24 @@ const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request 
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
 //                    addresses are not requests to a host)
+//   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
+//                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
+//                    failed; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming the requests still in flight
+// A visit to a page that fetches nothing after its load does not wait for the network (visit), so a request can still
+// be in flight when the checks begin (the browser's request for the site's icon, a lazy image); closing the tab would
+// abort it, and an aborted request is not reported, so it would never be judged. Await settled before reading the
+// arrays (assertQuiet does).
 async function watch(page, base) {
   const errors = [];
   const cspViolations = [];
   const foreignRequests = [];
   const documents = new Set();
+  const inFlight = new Set();
+  const idle = new EventEmitter();
+  const ended = (request) => {
+    inFlight.delete(request);
+    if (inFlight.size === 0) idle.emit('idle');
+  };
   // Chromium logs a document's own error status (the 404 page's) as a console error against the document's address.
   const ownStatus = (message) => documents.has(message.location().url) && /^Failed to load resource: the server responded with a status of \d+/.test(message.text());
   page.on('console', (message) => message.type() === 'error' && !ownStatus(message) && errors.push(`console: ${message.text()}`));
@@ -136,11 +157,14 @@ async function watch(page, base) {
   page.on('requestfailed', (request) => {
     const why = request.failure()?.errorText;
     if (!ABORTED.test(why ?? '')) errors.push(`request failed: ${request.url()} (${why})`);
+    ended(request);
   });
+  page.on('requestfinished', ended);
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   page.on('request', (request) => {
+    inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
     if (/^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin) foreignRequests.push(request.url());
@@ -151,11 +175,20 @@ async function watch(page, base) {
       window.reportCspViolation({ directive: e.effectiveDirective, blocked: e.blockedURI, source: e.sourceFile, line: e.lineNumber, sample: e.sample });
     });
   });
-  return { errors, cspViolations, foreignRequests };
+  const settled = async ({ timeoutMs = SETTLE_TIMEOUT_MS } = {}) => {
+    await settle(page);
+    if (inFlight.size === 0) return;
+    await once(idle, 'idle', { signal: AbortSignal.timeout(timeoutMs) }).catch(() => {
+      throw new Error(`requests still in flight ${timeoutMs} ms after the checks began: ${[...inFlight].map(requestName).join(', ')}`);
+    });
+  };
+  return { errors, cspViolations, foreignRequests, settled };
 }
 
-// Asserts that what watch saw is clean: no console or page error, no CSP violation, no request to another origin.
-export function assertQuiet(seen, what) {
+// Asserts that what watch saw is clean, once the page's requests have ended (settled): no console or page error, no
+// CSP violation, no request to another origin.
+export async function assertQuiet(seen, what) {
+  await seen.settled();
   assert.deepEqual(seen.errors, [], `${what}: console and page errors`);
   assert.deepEqual(seen.cspViolations, [], `${what}: CSP violations`);
   assert.deepEqual(seen.foreignRequests, [], `${what}: requests to another origin`);
