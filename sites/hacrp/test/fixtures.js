@@ -167,13 +167,13 @@ export function sliceBuild(data) {
 }
 
 // Checks a built page carries one as-of bar (pages/parts.js asofBar), the same as the program page's, after the page's
-// head and after the position `after` (its last section).
-export function checkAsofBar(page, program, after) {
+// head and after the position `lastSection` (where its last section starts or ends).
+export function checkAsofBar(page, program, lastSection) {
   const bars = (text) => text.match(/<aside class="asof"[\s\S]*?<\/aside>/g);
   assert.equal(bars(page)?.length, 1, 'one bar');
   assert.deepEqual(bars(page), bars(program));
   const at = page.indexOf('<aside class="asof"');
-  assert.ok(at > page.indexOf('</header>') && at > after, 'after the head and the last section');
+  assert.ok(at > page.indexOf('</header>') && at > lastSection, 'after the head and the last section');
 }
 
 // The first pinned row with a property; fails the test, naming the property, if there is none.
