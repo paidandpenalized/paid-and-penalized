@@ -7,7 +7,7 @@
   --paper-2: #f0f1ec;       /* green-bar rows, panels */
   --ink: #1c1b1d;
   --ink-2: #49484d;
-  --ink-3: #6b6a70;
+  --ink-3: #6b6a70;         /* the faintest text ink: 4.5:1 with little to spare on the grain's darkest pixel, which the axe run measures (tools/e2e/axe.js) */
   --line: #8a898f;          /* borders and rules, lighter than ink */
   --pen: #c4303a;           /* penalty: marks, bars, pills */
   --pen-ink: #a5222c;       /* penalty-colored text on paper */

@@ -9,11 +9,10 @@ import { brotliCompressSync, constants } from 'node:zlib';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../../web/site.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
-import { BUDGETS, JS_BUDGET, checkBudgets, measure, pageType, pageWeight } from '../ci/size-budget.js';
+import { BUDGETS, JS_BUDGET, measure, overBudget, pageType, pageWeight } from '../ci/size-budget.js';
 
-const brAt = (quality) => (text) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
-// The size the budget counts: quality 5.
-const br = brAt(5);
+// Brotli's size of the text; quality 5 is the one the budget counts.
+const br = (text, quality = 5) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
 // Text that brotli can't shrink much, so a size is easy to aim at.
 const noise = (n) => randomBytes(n).toString('base64');
 
@@ -107,7 +106,7 @@ test('every page type has a budget; hub and policy start at 100 KB and scripts a
   for (const b of Object.values(BUDGETS)) assert.ok(Number.isInteger(b) && b > 0);
 });
 
-test('checkBudgets: lists the pages over their type\'s budget, and only those', () =>
+test('overBudget: lists the pages over their type\'s budget, and only those', () =>
   withTemp('size-', (dir) => {
     const big = page(`<!-- ${noise(3000)} -->`);
     const small = page();
@@ -118,26 +117,26 @@ test('checkBudgets: lists the pages over their type\'s budget, and only those', 
       'index.html': small,
     });
     const budgets = { hub: 1000, policy: 1000, program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000, notFound: 1000 };
-    const over = checkBudgets(dir, { budgets });
-    assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', total: br(big), budget: 2000 }]);
+    const over = overBudget(measure(dir), { budgets });
+    assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', bytes: br(big), budget: 2000 }]);
     // Everything fits a generous budget.
-    assert.deepEqual(checkBudgets(dir, { budgets: { ...budgets, hospital: 50000 } }), []);
+    assert.deepEqual(overBudget(measure(dir), { budgets: { ...budgets, hospital: 50000 } }), []);
   }));
 
-test('checkBudgets: a page whose scripts alone pass the script budget is reported, whatever its total', () =>
+test('overBudget: a page whose scripts alone pass the script budget is reported, whatever its total', () =>
   withTemp('size-', (dir) => {
     const heavy = noise(4000);
     writeTree(dir, { 'assets/big.1.js': heavy, 'hacrp/index.html': page(js('/assets/big.1.js')) });
     const budgets = { ...BUDGETS };
-    const over = checkBudgets(dir, { budgets, js: 1000 });
-    assert.deepEqual(over, [{ path: '/hacrp/', type: 'program', part: 'js', total: br(heavy), budget: 1000 }]);
+    const over = overBudget(measure(dir), { budgets, js: 1000 });
+    assert.deepEqual(over, [{ path: '/hacrp/', type: 'program', part: 'js', bytes: br(heavy), budget: 1000 }]);
   }));
 
-test('checkBudgets: a page of no known type, or a build with no pages, throws', () =>
+test('measure: a page of no known type, or a build with no pages, throws', () =>
   withTemp('size-', (dir) => {
-    assert.throws(() => checkBudgets(dir), /no pages/);
+    assert.throws(() => measure(dir), /no pages/);
     writeTree(dir, { 'brand-new/index.html': page() });
-    assert.throws(() => checkBudgets(dir), /new page type needs a budget/);
+    assert.throws(() => measure(dir), /new page type needs a budget/);
   }));
 
 test('measure: one row per page, with its type and weight', () =>
@@ -170,18 +169,11 @@ test('CLI: exits 0 on a site within budget, and 1 naming each page over it', () 
     assert.match(unknown.stderr, /new page type needs a budget/);
   }));
 
-// Words picked by a fixed generator: text brotli compresses well, and noticeably better at quality 11 than at 5.
-function prose(words) {
-  let seed = 12345;
-  const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648);
-  const vocabulary = Array.from({ length: 400 }, (_, i) => `w${(i * 7919).toString(36)}`);
-  return Array.from({ length: words }, () => vocabulary[next() % vocabulary.length]).join(' ');
-}
-
 test('pageWeight: measured at brotli quality 5, the quality the budgets were set at', () =>
   withTemp('size-', (dir) => {
-    const text = page(`<p>${prose(20000)}</p>`);
-    assert.notEqual(brAt(11)(text), brAt(5)(text), 'precondition: the two qualities differ on this text');
+    // Repetitive words, which brotli compresses noticeably better at quality 11 than at 5.
+    const text = page(`<p>${Array.from({ length: 3000 }, (_, i) => `w${(i * i) % 997}`).join(' ')}</p>`);
+    assert.notEqual(br(text, 11), br(text), 'precondition: the two qualities differ on this text');
     writeTree(dir, { 'index.html': text });
-    assert.equal(pageWeight(dir, 'index.html').html, brAt(5)(text));
+    assert.equal(pageWeight(dir, 'index.html').html, br(text));
   }));

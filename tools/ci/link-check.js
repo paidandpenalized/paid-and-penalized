@@ -19,7 +19,7 @@ import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
-import { htmlPages, tags } from './html.js';
+import { tags } from './html.js';
 
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 
@@ -47,7 +47,7 @@ const tryDecode = (text) => {
 };
 
 // 'missing file', 'missing id' or null for one href found on the page at `base`.
-function problemWith(href, base, tree, idsByFile, states) {
+function problemWith(href, base, tree, pages, states) {
   let url;
   try {
     url = new URL(href, base);
@@ -63,11 +63,11 @@ function problemWith(href, base, tree, idsByFile, states) {
   if (fragment === '' || fragment.toLowerCase() === 'top' || !target.endsWith('.html')) return null;
   if (decodeState(`#${fragment}`, states) !== null) return null;
   const id = isScenarioHash(`#${fragment}`) ? fragment.split('&')[0] : fragment;
-  return idsByFile.get(target).has(id) ? null : 'missing id';
+  return pages.get(target).ids.has(id) ? null : 'missing id';
 }
 
-// Every broken internal link: [{ from (the page's path), href (as written), problem }], pages in file-name order. A
-// page repeating a link is told once. states: the codes a "#state=" fragment may name.
+// The pages checked, and every broken internal link: found, [{ from (the page's path), href (as written), problem }],
+// pages in file-name order. A page repeating a link is told once. states: the codes a "#state=" fragment may name.
 export function checkLinks(distDir, states = dataStates()) {
   const names = filesUnder(distDir);
   const htmlFiles = names.filter((name) => name.endsWith('.html'));
@@ -75,26 +75,25 @@ export function checkLinks(distDir, states = dataStates()) {
   const files = new Set(names);
   const tree = { files, folders: foldersOf(files) };
   // One read of each page: its ids and its distinct links, in the order they appear.
-  const pages = htmlFiles.map((htmlPath) => {
+  const pages = new Map(htmlFiles.map((htmlPath) => {
     const ids = new Set();
     const links = new Set();
     for (const { attrs } of tags(readFileSync(join(distDir, htmlPath), 'utf8'), { having: ['id', ...LINK_ATTRIBUTES] })) {
       if (attrs.id !== undefined) ids.add(attrs.id);
       for (const name of LINK_ATTRIBUTES) if (attrs[name] !== undefined) links.add(attrs[name]);
     }
-    return { htmlPath, ids, links };
-  });
-  const idsByFile = new Map(pages.map(({ htmlPath, ids }) => [htmlPath, ids]));
+    return [htmlPath, { ids, links }];
+  }));
   const found = [];
-  for (const { htmlPath, links } of pages) {
+  for (const [htmlPath, { links }] of pages) {
     const from = addressOf(htmlPath);
     const base = SITE.origin + from;
     for (const href of links) {
-      const problem = problemWith(href, base, tree, idsByFile, states);
+      const problem = problemWith(href, base, tree, pages, states);
       if (problem) found.push({ from, href, problem });
     }
   }
-  return found;
+  return { pages: pages.size, found };
 }
 
 // The problems by distinct link and kind: [{ problem, href, count (pages), example (the first page) }], the most
@@ -114,7 +113,7 @@ const SHOWN = 40;
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const distDir = process.argv[2] ?? DIST_DIR;
-  const found = checkLinks(distDir);
+  const { pages, found } = checkLinks(distDir);
   if (found.length > 0) {
     const groups = groupProblems(found);
     for (const { problem, href, count, example } of groups.slice(0, SHOWN))
@@ -123,5 +122,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(`link check: ${found.length} problem${found.length === 1 ? '' : 's'} (${groups.length} distinct link${groups.length === 1 ? '' : 's'})`);
     process.exit(1);
   }
-  console.log(`link check: ${htmlPages(distDir).length} pages, 0 problems`);
+  console.log(`link check: ${pages} pages, 0 problems`);
 }

@@ -691,7 +691,8 @@
 .receipt__t th, .receipt__t td { padding: 1px 0; text-align: right; font-weight: 400; }
 .receipt__t th:first-child { text-align: left; }
 .receipt__t thead th { color: var(--ink-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; }
-.receipt__ok { padding-left: 10px !important; color: var(--ink-2); text-transform: uppercase; font-size: var(--fs-xs); }
+/* Written against the table, so it outranks the table's cell padding above without !important. */
+.receipt__t .receipt__ok { padding-left: 10px; color: var(--ink-2); text-transform: uppercase; font-size: var(--fs-xs); }
 .receipt__sum { display: grid; gap: 2px; margin: 10px 0 0; padding-top: 8px; border-top: 1.5px dashed var(--ink-3); }
 .receipt__sum div { display: flex; justify-content: space-between; gap: 12px; }
 .receipt__sum dt { text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
@@ -702,7 +703,7 @@
   .meth__card .receipt { padding-inline: 12px; }
   .meth__card .receipt__t { font-size: var(--fs-xs); }
   .meth__card .receipt__t th + th, .meth__card .receipt__t td { padding-left: 6px; }
-  .meth__card .receipt__ok { padding-left: 6px !important; }
+  .meth__card .receipt__t .receipt__ok { padding-left: 6px; }
 }
 .ymap { display: grid; gap: 10px; }
 .ymap .chart { max-width: none; }
@@ -799,7 +800,7 @@
   .receipt--dollars .receipt__t th[scope="row"] { flex: 1 0 100%; padding-right: 0; }
   .receipt--dollars .receipt__t td { padding-left: 0; }
   .receipt--dollars .receipt__t td:first-of-type { font-weight: 700; }
-  .receipt--dollars .receipt__t .receipt__ok { margin-left: auto; padding-left: 0 !important; }
+  .receipt--dollars .receipt__t .receipt__ok { margin-left: auto; padding-left: 0; }
 }
 /* The back-test's summary of every figure it checks: a small table, the ratios in the type face. */
 .bt-measures { width: min(100%, 38rem); }

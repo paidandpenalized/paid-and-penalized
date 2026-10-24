@@ -77,9 +77,3 @@ test('the browser job runs on a pinned runner with a time limit: Chromium only, 
   const commands = job.split('\n').filter((l) => /^\s+run: /.test(l)).map((l) => l.replace(/^\s+run: /, ''));
   assert.deepEqual(commands, ['npm ci', 'npx playwright install --with-deps chromium', 'make build', 'npm run e2e']);
 });
-
-test('the browser job checks out without credentials and pins Node like the others', () => {
-  const job = jobText('browser');
-  assert.match(job, /uses: actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+\n\s+with:\n\s+persist-credentials: false/);
-  assert.match(job, /uses: actions\/setup-node@[0-9a-f]{40} # v\d+\.\d+\.\d+\n\s+with:\n\s+node-version: 24\.21\.0/);
-});

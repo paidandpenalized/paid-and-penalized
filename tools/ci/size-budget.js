@@ -29,17 +29,18 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 
 // Budgets in bytes of brotli per page (HTML + CSS + JS; 1 KB = 1,024 bytes). Hub and policy pages get ARCH-27's
 // starting number, which they fit. Every other type gets the heaviest page of that type on the FY2026 build of
-// 2026-10-23 (3,540 pages) plus 15%, rounded up to the next 10 KB: the "max" below, measured at quality 5. Raising
-// a budget is a decision to record, not a fix to slip in; lowering one is always fine.
+// 2026-10-23 (3,540 pages) plus 15%, rounded up to the next 10 KB, measured at quality 5; each run prints the heaviest
+// page of each type against its budget. Raising a budget is a decision to record, not a fix to slip in; lowering one is
+// always fine.
 export const BUDGETS = {
-  hub: 100 * KB, // ARCH-27; max 20.5 KB
-  policy: 100 * KB, // ARCH-27; max 21.7 KB
-  program: 360 * KB, // max 309.9 KB. Over ARCH-27's 100 KB for a site's front page by 210 KB.
-  hospital: 120 * KB, // max 97.7 KB (the heaviest hospital page). ARCH-27's 150 KB for these also holds.
-  place: 150 * KB, // max 128.4 KB. ARCH-27 names no number; over its 100 KB for a hub by 28 KB.
-  methods: 100 * KB, // max 85.6 KB
-  dictionary: 40 * KB, // max 30.6 KB
-  notFound: 30 * KB, // max 20.4 KB
+  hub: 100 * KB, // ARCH-27
+  policy: 100 * KB, // ARCH-27
+  program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
+  hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
+  place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
+  methods: 100 * KB,
+  dictionary: 40 * KB,
+  notFound: 30 * KB,
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;
@@ -54,8 +55,9 @@ export function pageType(path) {
 // A script that pulls in another file by a relative or site path (static or dynamic import).
 const IMPORTS = /\b(?:from|import)\s*\(?\s*["'](?:\.{1,2}\/|\/)[^"']*\.m?js["']/;
 
-// One asset's compressed size; cache (reference -> size) lets pages that share an asset compress it once.
-function assetSize(distDir, ref, kind, cache) {
+// One asset's compressed size; cache (reference -> size) lets pages that share an asset compress it once. A script's
+// file must not import another (see the header).
+function assetSize(distDir, ref, cache) {
   if (!cache.has(ref)) {
     if (!ref.startsWith('/') || ref.startsWith('//')) throw new Error(`${ref}: not a path on this site, so it can't be measured`);
     let bytes;
@@ -64,7 +66,7 @@ function assetSize(distDir, ref, kind, cache) {
     } catch {
       throw new Error(`${ref} is referenced but is not in ${distDir}`);
     }
-    if (kind === 'js' && IMPORTS.test(bytes.toString('utf8')))
+    if (/\.m?js$/.test(ref.split(/[?#]/)[0]) && IMPORTS.test(bytes.toString('utf8')))
       throw new Error(`${ref} imports another file, and the size budget does not follow imports`);
     cache.set(ref, brotliSize(bytes));
   }
@@ -80,10 +82,10 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
     if (name === 'link' && attrs.href && attrs.rel?.toLowerCase().split(/\s+/).includes('stylesheet')) css.add(attrs.href);
     else if (name === 'script' && attrs.src) js.add(attrs.src);
   }
-  const sum = (refs, kind) => [...refs].reduce((total, ref) => total + assetSize(distDir, ref, kind, cache), 0);
+  const sum = (refs) => [...refs].reduce((total, ref) => total + assetSize(distDir, ref, cache), 0);
   const html = brotliSize(bytes);
-  const cssBytes = sum(css, 'css');
-  const jsBytes = sum(js, 'js');
+  const cssBytes = sum(css);
+  const jsBytes = sum(js);
   return { html, css: cssBytes, js: jsBytes, total: html + cssBytes + jsBytes };
 }
 
@@ -98,19 +100,17 @@ export function measure(distDir) {
 }
 
 // The rows over a limit: a page over its type's budget (part 'total') and a page whose scripts alone pass the
-// script budget (part 'js'). In both, total is the measured bytes of that part.
+// script budget (part 'js'), each with the measured bytes of that part.
 export function overBudget(rows, { budgets = BUDGETS, js = JS_BUDGET } = {}) {
   const over = [];
   for (const row of rows) {
     const budget = budgets[row.type];
     if (budget === undefined) throw new RangeError(`no budget for page type "${row.type}"`);
-    if (row.total > budget) over.push({ path: row.path, type: row.type, part: 'total', total: row.total, budget });
-    if (row.js > js) over.push({ path: row.path, type: row.type, part: 'js', total: row.js, budget: js });
+    if (row.total > budget) over.push({ path: row.path, type: row.type, part: 'total', bytes: row.total, budget });
+    if (row.js > js) over.push({ path: row.path, type: row.type, part: 'js', bytes: row.js, budget: js });
   }
   return over;
 }
-
-export const checkBudgets = (distDir, limits) => overBudget(measure(distDir), limits);
 
 const kb = (bytes) => (bytes / KB).toFixed(1) + ' KB';
 
@@ -123,8 +123,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`${type.padEnd(10)} ${String(ofType.length).padStart(5)} pages  heaviest ${kb(heaviest.total).padStart(9)} of ${kb(BUDGETS[type])}  (scripts ${kb(heaviest.js)} of ${kb(JS_BUDGET)})  ${heaviest.path}`);
   }
   const over = overBudget(rows);
-  for (const { path, type, part, total, budget } of over)
-    console.error(`OVER BUDGET ${path} (${type}${part === 'js' ? ', scripts' : ''}): ${kb(total)} > ${kb(budget)}`);
+  for (const { path, type, part, bytes, budget } of over)
+    console.error(`OVER BUDGET ${path} (${type}${part === 'js' ? ', scripts' : ''}): ${kb(bytes)} > ${kb(budget)}`);
   if (over.length > 0) process.exit(1);
   console.log(`size budget: ${rows.length} pages within budget`);
 }

@@ -11,7 +11,7 @@ import { checkLinks, groupProblems } from '../ci/link-check.js';
 const ORIGIN = SITE.origin;
 const page = (body, head = '') => `<!doctype html><html><head><title>t</title>${head}</head><body>${body}</body></html>`;
 
-const problems = (dir) => checkLinks(dir).map(({ from, href, problem }) => `${from} ${href} ${problem}`);
+const problems = (dir) => checkLinks(dir).found.map(({ from, href, problem }) => `${from} ${href} ${problem}`);
 
 test('links that resolve pass: a folder, a file, the canonical origin, a relative path, a query, a fragment on a real id', () =>
   withTemp('links-', (dir) => {
@@ -25,7 +25,7 @@ test('links that resolve pass: a folder, a file, the canonical origin, a relativ
       'assets/site.1.css': 'a{}',
       'assets/a.1.js': '1',
     });
-    assert.deepEqual(problems(dir), []);
+    assert.deepEqual(checkLinks(dir), { pages: 3, found: [] });
   }));
 
 test('a broken link is reported with the page it is on, the href as written, and "missing file"', () =>
@@ -79,7 +79,7 @@ test('a state fragment passes only as the page reads it: a code the data holds, 
         + '<a href="/p/#state=ZZZZ">long</a><a href="/p/#state=MD">not in the data</a>'),
       'p/index.html': page('<p>none</p>'),
     });
-    const found = checkLinks(dir, ['TX']).map(({ href, problem }) => `${href} ${problem}`);
+    const found = checkLinks(dir, ['TX']).found.map(({ href, problem }) => `${href} ${problem}`);
     assert.deepEqual(found, ['/p/#state= missing id', '/p/#state=ZZZZ missing id', '/p/#state=MD missing id']);
   }));
 
@@ -139,7 +139,7 @@ test('links inside a comment or a script body are not links; a script src is', (
 test('a link cannot reach outside the built folder', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, { 'site/index.html': page('<a href="/..%2f..%2fpackage.json">up</a><a href="/%2e%2e/%2e%2e/etc/">up2</a>'), 'package.json': '{}' });
-    assert.deepEqual(checkLinks(join(dir, 'site')).map((p) => p.problem), ['missing file', 'missing file']);
+    assert.deepEqual(checkLinks(join(dir, 'site')).found.map((p) => p.problem), ['missing file', 'missing file']);
   }));
 
 test('the same bad link on two pages is reported on each; one page repeating it is reported once', () =>
