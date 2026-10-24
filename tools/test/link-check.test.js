@@ -73,10 +73,22 @@ test('a fragment that carries page state: "#state=TX" names no element, "#whatif
   withTemp('links-', (dir) => {
     build(dir, {
       'index.html': page('<a href="/p/#state=TX">state</a><a href="/p/#whatif&amp;MRSA=0.9&amp;SSI=1.2">ok</a><a href="/p/#nothere&amp;MRSA=0.9">bad</a>'
-        + '<a href="/gone/#state=TX">no page</a>'),
+        + '<a href="/gone/#state=TX">no page</a><a href="/q/#whatif&amp;MRSA=0.9">no what-if</a>'),
       'p/index.html': page('<section id="whatif"></section>'),
+      'q/index.html': page('<p>none</p>'),
     });
-    assert.deepEqual(problems(dir), ['/ /p/#nothere&MRSA=0.9 missing id', '/ /gone/#state=TX missing file']);
+    assert.deepEqual(problems(dir), ['/ /p/#nothere&MRSA=0.9 missing id', '/ /gone/#state=TX missing file', '/ /q/#whatif&MRSA=0.9 missing id']);
+  }));
+
+test('a state fragment passes only as the page reads it: a code the data holds, two letters, nothing else', () =>
+  withTemp('links-', (dir) => {
+    build(dir, {
+      'index.html': page('<a href="/p/#state=TX">ok</a><a href="/p/#state=tx">any case</a><a href="/p/#state=">empty</a>'
+        + '<a href="/p/#state=ZZZZ">long</a><a href="/p/#state=MD">not in the data</a>'),
+      'p/index.html': page('<p>none</p>'),
+    });
+    const found = checkLinks(dir, ['TX']).map(({ href, problem }) => `${href} ${problem}`);
+    assert.deepEqual(found, ['/p/#state= missing id', '/p/#state=ZZZZ missing id', '/p/#state=MD missing id']);
   }));
 
 test('only the one state shape the site uses is exempt: any other key=value fragment is checked as an id', () =>

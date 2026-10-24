@@ -2,23 +2,28 @@
 // for every href, src and data-src (a, link, script, img, SVG use, the search form's index, ...) it checks:
 //   - a same-site URL (a path, or an absolute URL on SITE.origin) names a file in dist/, resolved as the server
 //     does: a folder is its index.html, and a folder without its trailing slash is the redirect to it;
-//   - a #fragment names an id on the page it points at (same page included; ids on SVG elements count). The site
-//     also keeps reader state in fragments, which the page's script reads: "#state=TX" names no element, and
-//     "#whatif&MRSA=0.9" is an element, then the state. So the id checked is the text before the first "&", and
-//     only a fragment starting with "state=" is exempt; any other key=value fragment is checked as an id and fails
-//     until it is added here on purpose.
+//   - a #fragment names an id on the page it points at (same page included; ids on SVG elements count), or is reader
+//     state that the site's own parsers accept: a state the program page opens on ("#state=TX", decodeState, with the
+//     state codes in the emitted data), or a what-if scenario ("#whatif&MRSA=0.9", isScenarioHash), whose section
+//     (the id before the "&") must be on the page. Any other fragment is checked whole as an id, so a new kind of
+//     reader state fails here until its parser is added.
 // Skipped: any other origin, mailto:, tel:, data: and every non-web scheme; external links are never fetched.
 // Not covered: links that scripts build at run time, and URLs outside those attributes (srcset, content,
 // sitemap.xml).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
+import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
+import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
 import { filesIn, htmlPages, pageUrl, tags } from './html.js';
 
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
-const STATE_FRAGMENT = /^state=/;
+
+// The state codes a "#state=" fragment may name: the hospitals' states in the newest HACRP data.
+const dataStates = () => readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp'))).hospitals.map((h) => h.state);
 
 // The file in dist/ that the server serves for a decoded path, or null.
 function locate(path, files) {
@@ -37,7 +42,7 @@ const tryDecode = (text) => {
 };
 
 // 'missing file', 'missing id' or null for one href found on the page at `base`.
-function problemWith(href, base, files, idsByFile) {
+function problemWith(href, base, files, idsByFile, states) {
   let url;
   try {
     url = new URL(href, base);
@@ -50,14 +55,15 @@ function problemWith(href, base, files, idsByFile) {
   if (target === null) return 'missing file';
   // "#" and "#top" always work; ids can only be looked up in a page.
   const fragment = tryDecode(url.hash.slice(1)) ?? url.hash.slice(1);
-  const id = fragment.split('&')[0];
-  if (id === '' || STATE_FRAGMENT.test(id) || id.toLowerCase() === 'top' || !target.endsWith('.html')) return null;
+  if (fragment === '' || fragment.toLowerCase() === 'top' || !target.endsWith('.html')) return null;
+  if (decodeState(`#${fragment}`, states) !== null) return null;
+  const id = isScenarioHash(`#${fragment}`) ? fragment.split('&')[0] : fragment;
   return idsByFile.get(target).has(id) ? null : 'missing id';
 }
 
 // Every broken internal link: [{ from (the page's path), href (as written), problem }], pages in file-name order. A
-// page repeating a link is told once.
-export function checkLinks(distDir) {
+// page repeating a link is told once. states: the codes a "#state=" fragment may name.
+export function checkLinks(distDir, states = dataStates()) {
   const names = filesIn(distDir);
   const htmlFiles = names.filter((name) => name.endsWith('.html'));
   if (htmlFiles.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
@@ -78,7 +84,7 @@ export function checkLinks(distDir) {
     const from = pageUrl(htmlPath);
     const base = SITE.origin + from;
     for (const href of links) {
-      const problem = problemWith(href, base, files, idsByFile);
+      const problem = problemWith(href, base, files, idsByFile, states);
       if (problem) found.push({ from, href, problem });
     }
   }

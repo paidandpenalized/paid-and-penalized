@@ -18,6 +18,7 @@ import { distanceSentence, leadSentence, measureNote, noteSentences, smallNumber
 import { fill, fillKeep, sourceText, t } from '../copy.js';
 import { partsFigure } from '../figures.js';
 import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../hospital-figures.js';
+import { stateHref } from '../hospital-table.js';
 import { careCompareHref } from '../links.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
@@ -90,7 +91,7 @@ function starsSpec(view, careSource) {
 // the table filters on and the map marks), as Thirty Day Readmissions links a hospital's metro area.
 function locationText(view) {
   const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
-  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
+  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}${stateHref(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
   return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 
