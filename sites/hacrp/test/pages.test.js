@@ -1,9 +1,8 @@
 // The HACRP page generator on the pinned data (rows picked by property, never by name or CCN), plus escaping of
 // hostile text on synthetic hospitals.
-import { after, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
@@ -23,7 +22,7 @@ import { programPage } from '../web/pages/program.js';
 import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, WHATIF_STANDING } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, sliceBuild, WHATIF_STANDING } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
@@ -228,17 +227,8 @@ test('released: false: every page is noindex in production and the sitemap lists
     assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
-// SLICE released, with the hub: built once, in production, for the tests that read the whole build; removed after them.
-let built = null;
-after(() => built && rmSync(built.dir, { recursive: true, force: true }));
-function builtSlice() {
-  if (!built) {
-    const dir = mkdtempSync(join(tmpdir(), 'pp-hacrp-'));
-    built = { dir, out: join(dir, 'dist') };
-    built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(SLICE, { released: true }), HUB] });
-  }
-  return built.ready.then(() => built.out);
-}
+// SLICE released, with the hub, built once for the tests that read the whole build.
+const builtSlice = sliceBuild(SLICE);
 
 test('the data dictionary page carries the as-of bar the program page shows, after its sections', async () => {
   const out = await builtSlice();

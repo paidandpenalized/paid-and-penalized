@@ -5,10 +5,10 @@
 // lands on an element of its page.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { build } from '../../../pipeline/site/build.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
+import { filesUnder, withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
 import { HUB } from '../../../hub/pages.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
@@ -630,9 +630,7 @@ test('every in-site anchor on the built pages lands on an element of its page', 
     const slice = { ...DATA, hospitals: DATA.hospitals.filter((h, i) => i % 97 === 0 || (h.total === null && h.paymentReduction === 'Yes')) };
     const out = join(dir, 'dist');
     await build({ outDir: out, sites: [slicedSite(slice), HUB] });
-    const pages = [];
-    const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f === 'index.html') pages.push(p); } };
-    walk(out);
+    const pages = filesUnder(out).filter((f) => basename(f) === 'index.html').map((f) => join(out, f));
     const ids = new Map();
     const idsOf = (file) => {
       if (!ids.has(file)) ids.set(file, new Set([...readFileSync(file, 'utf8').matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));

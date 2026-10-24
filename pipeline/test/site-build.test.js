@@ -1,13 +1,13 @@
-import { after, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { REPO_ROOT, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { CORRECTIONS_EMAIL } from '../../hub/constants.js';
 import { HUB } from '../../hub/pages.js';
-import { slicedSite } from '../../sites/hacrp/test/fixtures.js';
+import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
@@ -169,29 +169,21 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
   .map(([path]) => readJson(REPO_ROOT + path).built_at.slice(0, 10)).sort().at(-1);
 
 // HACRP released on its first four hospitals (every page type, in well under a second) with the hub: built once, in
-// production, for the tests that read a whole build, and removed after them.
-let slice = null;
-after(() => slice && rmSync(slice.dir, { recursive: true, force: true }));
-function builtSlice() {
-  if (!slice) {
-    const data = loadHacrp();
-    const dir = mkdtempSync(join(tmpdir(), 'pp-site-'));
-    slice = { data, dir, out: join(dir, 'dist') };
-    const site = slicedSite({ ...data, hospitals: data.hospitals.slice(0, 4) }, { released: true });
-    slice.ready = build({ outDir: slice.out, env: 'production', sites: [site, HUB] });
-  }
-  return slice.ready.then(() => ({ ...slice, html: filesUnder(slice.out).filter((f) => f.endsWith('.html')) }));
-}
+// production, for the tests that read a whole build.
+const DATA = loadHacrp();
+const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
+const htmlIn = (out) => filesUnder(out).filter((f) => f.endsWith('.html'));
 
 test('HACRP gives the build its two dates, which /corrections/ shows, and the corrections address is on that page and no other', async () => {
-  const { data, out, html } = await builtSlice();
+  const out = await builtSlice();
+  const html = htmlIn(out);
   assert.ok(html.length > 10);
   const withAddress = html.filter((f) => readFileSync(join(out, f), 'utf8').includes(CORRECTIONS_EMAIL));
   assert.deepEqual(withAddress, [join('corrections', 'index.html')]);
   // The dates: CMS's release of the file the site uses, and the newest built_at of the emitted files it reads.
   const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
-  assert.ok(text.includes(`<time datetime="${data.source.pdcReleased}">`));
-  assert.ok(text.includes(`<time datetime="${newestBuilt(data)}">`));
+  assert.ok(text.includes(`<time datetime="${DATA.source.pdcReleased}">`));
+  assert.ok(text.includes(`<time datetime="${newestBuilt(DATA)}">`));
 });
 
 test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
@@ -210,7 +202,8 @@ const SCRIPT_TAG = /<script\b([^>]*)>/gi;
 const HANDLER = /<[a-z][^>]*\son[a-z]+\s*=/i;
 
 test('every built page runs under the CSP: no inline script but data blocks, no <style> element, no on* handler or javascript: URL', async () => {
-  const { out, html: pages } = await builtSlice();
+  const out = await builtSlice();
+  const pages = htmlIn(out);
   assert.ok(pages.length > 10);
   let dataBlocks = 0;
   for (const f of pages) {
@@ -231,7 +224,7 @@ test('every built page runs under the CSP: no inline script but data blocks, no 
 });
 
 test('the immutable rule matches the content-hashed files under /assets/ and nothing else the build writes', async () => {
-  const { out } = await builtSlice();
+  const out = await builtSlice();
   const rules = parseHeaders(readFileSync(join(out, '_headers'), 'utf8'));
   const seen = new Set();
   for (const f of filesUnder(out)) {

@@ -81,9 +81,9 @@ export function maintenanceBanner(site) {
 }
 
 // The footer: what the data is and is not (the affiliation and Terms lines), the credit and license, then the
-// feedback link (with the warning beside it) and the site's policy pages. Only the feedback link differs between
-// pages, so the rest is built once.
-const FOOT_HEAD = html`<footer class="foot">
+// feedback link (with the warning beside it) and the site's policy pages. feedback: the form's prefilled address
+// (feedbackHref), the one part that differs between pages.
+const footer = (feedback) => html`<footer class="foot">
   <div class="wrap foot__row">
     <div class="foot__text">
       <p>${COPY.affiliation}</p>
@@ -94,14 +94,11 @@ const FOOT_HEAD = html`<footer class="foot">
       <li>${COPY.licenseLead} ${externalLink(SITE.license.content.url, SITE.license.content.name, { rel: 'license noopener' })}</li>
     </ul>
     <ul class="foot__meta foot__links" role="list">
-      `;
-const FOOT_TAIL = html`${['about', 'methods', 'privacy', 'corrections', 'accessibility'].map((name) => html`
+      <li>${externalLink(feedback, COPY.feedback)} <span class="foot__note">${COPY.feedbackWarning}</span></li>${['about', 'methods', 'privacy', 'corrections', 'accessibility'].map((name) => html`
       <li><a href="${SITE.pages[name]}">${COPY[name]}</a></li>`)}
     </ul>
   </div>
 </footer>`;
-// feedback: the form's prefilled address (feedbackHref).
-const footer = (feedback) => html`${FOOT_HEAD}<li>${externalLink(feedback, COPY.feedback)} <span class="foot__note">${COPY.feedbackWarning}</span></li>${FOOT_TAIL}`;
 
 // A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
 // title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page

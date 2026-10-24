@@ -1,11 +1,17 @@
 // Synthetic hospitals for the HACRP page tests: invented names, CCNs 990001-990099 (no real hospital), CMS's real
 // footnote crosswalk (CMS text, no hospital in it), and a tiny model with a made-up line.
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after } from 'node:test';
 import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
+import { HUB } from '../../../hub/pages.js';
 import { readPinned } from '../../../pipeline/files.js';
+import { build } from '../../../pipeline/site/build.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -141,6 +147,22 @@ export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').re
 // The HACRP site for a build (pipeline/site/build.js) on the data given (a slice of loadHacrp()'s, for speed), quietly.
 // released: as generateHacrp takes it (by default, web/site.js's).
 export const slicedSite = (data, { released } = {}) => ({ ...HACRP, generate: (ctx) => generateHacrp(ctx, { released, data, log: () => {} }) });
+
+// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub, in production: for the tests that
+// read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
+// file's tests, so call this once, at the top of the test file. The getter resolves to the output folder.
+export function sliceBuild(data) {
+  let built = null;
+  after(() => built && rmSync(built.dir, { recursive: true, force: true }));
+  return () => {
+    if (!built) {
+      const dir = mkdtempSync(join(tmpdir(), 'pp-slice-'));
+      built = { dir, out: join(dir, 'dist') };
+      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), HUB] });
+    }
+    return built.ready.then(() => built.out);
+  };
+}
 
 // Checks a built page carries one as-of bar (pages/parts.js asofBar), the same as the program page's, after the page's
 // head and after the position `after` (its last section).
