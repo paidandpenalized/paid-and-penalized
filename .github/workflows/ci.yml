@@ -32,6 +32,8 @@ jobs:
         run: npm test
       - name: Build the site
         run: make build
+      - name: Size budget (brotli weight per page type)
+        run: node tools/ci/size-budget.js
       - name: Change gate (emitted data needs a reason on record)
         if: ${{ !cancelled() }}
         env:
