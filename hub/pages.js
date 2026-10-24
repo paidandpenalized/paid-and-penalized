@@ -3,6 +3,7 @@
 // and sitemap.xml. It runs last, so the sitemap lists every indexable page the sites before it emitted. The hub's own
 // pages stay noindex until the hub is built.
 import { REPO_ROOT } from '../pipeline/files.js';
+import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { escapeHtml, html } from '../web/render/html.js';
@@ -14,8 +15,6 @@ import { correctionsContent, readCorrections } from './corrections.js';
 import { LINKS, feedbackLink, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
-// The hub is not released: its pages are noindex in every build until it is built.
-const RELEASED = false;
 const PATH = /^\/[a-z0-9/-]*$/;
 
 // A link to one family site, by its id in web/site.js.
@@ -132,7 +131,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: '/404.html', address: null, robots, body, assets });
+  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.
@@ -149,7 +148,7 @@ export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origi
 // log); tests pass their own.
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
   const { assets } = ctx;
-  const robots = robotsFor({ env: ctx.env, released: RELEASED });
+  const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
   const deps = { entries: readCorrections(correctionsDir), updated };
@@ -157,8 +156,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
   }
   // The not-found page is never indexed, released or not.
-  const notFoundRobots = robotsFor({ env: ctx.env, released: RELEASED, eligible: false });
-  ctx.emit({ path: '/404.html', robots: notFoundRobots, text: notFound(assets, notFoundRobots) });
+  const notFoundRobots = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
+  ctx.emit({ path: NOT_FOUND_PATH, robots: notFoundRobots, text: notFound(assets, notFoundRobots) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }

@@ -15,7 +15,7 @@ import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
 import { sourceText } from '../copy.js';
 import { fill, fillKeep, t } from '../program/copy.js';
 import { moneySourceText } from '../money-figures.js';
-import { LINKS } from '../links.js';
+import { LINKS, PROGRAM_PATH } from '../links.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
 import { part4 } from '../history-figures.js';
@@ -25,14 +25,12 @@ import { moneyPart, moneyPartIntro, summaryMoneyField } from '../money-part.js';
 import { t as mt } from '../money/copy.js';
 import { whatIfSection } from './whatif.js';
 
-export const PATH = SITE.sites.hacrp.path;
-
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
 // The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share (its page
 // data, pages/whatif.js, take the same shape as a hospital page's). Its label is the section's, under the heading.
 function sandbox(whatif, { fy, boundaryText, source }) {
-  const data = { name: null, fy, path: PATH, source, boundaryText, baseline: 'sandbox', share: false };
+  const data = { name: null, fy, path: PROGRAM_PATH, source, boundaryText, baseline: 'sandbox', share: false };
   return whatIfSection(whatif, data, 'hacrp-program');
 }
 
@@ -144,7 +142,7 @@ ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 <div class="prog__facts">
 ${asofBar({ fy, periods, source })}
 ${dataLinks(fy, source)}
-${citation({ fy, title: heading, path: PATH, source })}
+${citation({ fy, title: heading, path: PROGRAM_PATH, source })}
 </div>
 </div>
 </article>`;
@@ -152,7 +150,7 @@ ${citation({ fy, title: heading, path: PATH, source })}
   return page({
     title: `${heading} · ${SITE.name}`,
     description: fill('programDescription', { fy: fyText }),
-    path: PATH,
+    path: PROGRAM_PATH,
     robots,
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],

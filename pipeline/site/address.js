@@ -2,6 +2,10 @@
 // the local server, and the checks that read dist/: a path ending in "/" is its folder's index.html, any other path is
 // its own file, and a folder asked for without its "/" is redirected to it (as Cloudflare serves static assets).
 
+// The not-found page: served, with status 404, at every path with no file (Cloudflare's "404-page" handling in
+// wrangler.jsonc reads the root 404.html, and so does serve.js).
+export const NOT_FOUND_PATH = '/404.html';
+
 // The file, relative to the built folder, that a site path is written to and served from: '/a/' is 'a/index.html',
 // '/' is 'index.html', '/404.html' is '404.html'.
 export const fileFor = (path) => (path.endsWith('/') ? `${path}index.html` : path).replace(/^\/+/, '');

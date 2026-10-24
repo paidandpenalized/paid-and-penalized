@@ -8,7 +8,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DIST_DIR } from '../files.js';
-import { isServed, lookup } from './address.js';
+import { NOT_FOUND_PATH, fileFor, isServed, lookup } from './address.js';
 import { headersFor, parseHeaders } from './headers.js';
 
 const TYPES = {
@@ -48,7 +48,8 @@ export function createSiteServer(root) {
     // Matched on the path as the request sent it (percent-encoded), as Cloudflare matches it.
     const reply = (status, headers, body) => res.writeHead(status, { ...headers, ...headersFor(rules, url?.pathname ?? '/', { status }) }).end(body);
     const send = (status, file) => reply(status, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }, readFileSync(file));
-    const notFound = () => (isFile(base + '404.html') ? send(404, base + '404.html') : reply(404, TEXT, 'not found'));
+    const notFoundFile = base + fileFor(NOT_FOUND_PATH);
+    const notFound = () => (isFile(notFoundFile) ? send(404, notFoundFile) : reply(404, TEXT, 'not found'));
     try {
       url = new URL(req.url, 'http://localhost');
       path = decodeURIComponent(url.pathname);

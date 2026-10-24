@@ -1,12 +1,14 @@
 // The site the browser checks visit, with no browser of its own: which site (dist/ served locally, or E2E_BASE_URL), the
 // engines, and the pages to visit. The launch command (launch.js) reads it as the checks do; lib.js adds the browser.
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
 import { DIST_DIR, REPO_ROOT, readJson } from '../../pipeline/files.js';
+import { addressOf } from '../../pipeline/site/address.js';
+import { htmlPages } from '../../pipeline/site/html.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
 import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { SITE } from '../../web/site.js';
-import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placePath } from '../ci/page-types.js';
+import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
 // The browser engines Playwright drives, by the name E2E_ENGINE takes.
 export const ENGINES = ['chromium', 'firefox', 'webkit'];
@@ -34,12 +36,15 @@ export async function startSite() {
 // The newest HACRP file's hospitals, in the file's order.
 const hospitals = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals;
 
-// The first place page of a kind that dist/ holds, by folder name: '/hacrp/<kind>/<key>/'.
-function placeOf(kind) {
-  const dir = `${DIST_DIR}${PROGRAM_PATH.slice(1)}${kind}/`;
-  const key = existsSync(dir) ? readdirSync(dir).sort().find((name) => existsSync(`${dir}${name}/index.html`)) : undefined;
-  if (key === undefined) throw new Error(`samplePages: no ${kind} page in dist/ (run make build)`);
-  return placePath(kind, key);
+// The first place page of each kind that dist/ holds, by file name: '/hacrp/<kind>/<key>/'.
+function firstPlaces() {
+  const first = new Map();
+  for (const path of htmlPages(DIST_DIR).map(addressOf)) {
+    const kind = placeKind(path);
+    if (kind !== null && !first.has(kind)) first.set(kind, path);
+  }
+  for (const kind of KINDS) if (!first.has(kind)) throw new Error(`samplePages: no ${kind} page in dist/ (run make build)`);
+  return first;
 }
 
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, the program page, its
@@ -56,6 +61,7 @@ export function samplePages() {
     return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
   };
   const page = (type, path) => ({ type, name: type, path });
+  const places = firstPlaces();
   return [
     page('hub', '/'),
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', name: `policy ${path}`, path })),
@@ -63,7 +69,7 @@ export function samplePages() {
     hospital('hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'),
     hospital('hospital-unscored', 'with no score', (h) => h.total === null),
     hospital('hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'),
-    ...KINDS.map((kind) => page(kind, placeOf(kind))),
+    ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
     page('not-found', '/no-page-has-this-address/'),

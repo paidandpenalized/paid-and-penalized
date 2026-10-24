@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
+import { NOT_FOUND_PATH, fileFor } from '../../pipeline/site/address.js';
 
 const read = (path) => readFileSync(REPO_ROOT + path, 'utf8');
 // JSONC to JSON: drop the comments, keeping any "//" inside a string.
@@ -16,6 +17,11 @@ test('the config is a Worker named for the site, serving dist/ as static assets 
   assert.equal(config.compatibility_date, '2026-09-01');
   assert.deepEqual(config.assets, { directory: './dist', not_found_handling: '404-page', html_handling: 'auto-trailing-slash' });
   assert.ok(!('main' in config), 'a main entry would add a Worker script');
+});
+
+test('a path with no file gets the not-found page the build writes: "404-page" serves the root 404.html', () => {
+  assert.equal(config.assets.not_found_handling, '404-page');
+  assert.equal(fileFor(NOT_FOUND_PATH), '404.html');
 });
 
 test('it serves on workers.dev and preview URLs, with no route or custom domain', () => {
