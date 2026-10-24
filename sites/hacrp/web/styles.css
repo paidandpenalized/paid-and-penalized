@@ -779,6 +779,16 @@
 .receipt--dollars .receipt__head { max-width: none; }
 .receipt--dollars .receipt__t th[scope="row"] { padding-right: 12px; text-align: left; }
 .receipt--dollars .receipt__t td { white-space: nowrap; padding-left: 10px; }
+/* On a phone the tape's four columns are wider than the page, so each check stacks, as the page's other tables do: its
+   words, then its results in a row (this build's in bold, the pass at the end). */
+@media (max-width: 600px) {
+  .receipt--dollars .receipt__t thead { display: none; }
+  .receipt--dollars .receipt__t tr { display: flex; flex-wrap: wrap; gap: 0 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .receipt--dollars .receipt__t th[scope="row"] { flex: 1 0 100%; padding-right: 0; }
+  .receipt--dollars .receipt__t td { padding-left: 0; }
+  .receipt--dollars .receipt__t td:first-of-type { font-weight: 700; }
+  .receipt--dollars .receipt__t .receipt__ok { margin-left: auto; padding-left: 0 !important; }
+}
 /* The back-test's summary of every figure it checks: a small table, the ratios in the type face. */
 .bt-measures { width: min(100%, 38rem); }
 .bt-measures td { font-family: var(--font-type); white-space: nowrap; }
