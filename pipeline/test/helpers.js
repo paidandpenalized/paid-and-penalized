@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { repoFiles } from '../files.js';
-import { createSiteServer } from '../site/serve.js';
+import { repoFiles, writeFileMkdir } from '../files.js';
+import { createSiteServer, listen, stop } from '../site/serve.js';
 
 // The asset paths page() needs (web/render/layout.js), for a page rendered outside a build.
 export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
@@ -15,14 +15,19 @@ export function withTemp(prefix, fn) {
   return Promise.resolve().then(() => fn(dir)).finally(() => rmSync(dir, { recursive: true, force: true }));
 }
 
+// Writes each { path: text } of files under dir, making its folders first.
+export function writeTree(dir, files) {
+  for (const [path, text] of Object.entries(files)) writeFileMkdir(join(dir, path), text);
+}
+
 // Runs fn(port) against the local server (serve.js) for root, on a free loopback port, and closes it afterwards.
 export async function withServer(root, fn) {
   const server = createSiteServer(root);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = await listen(server);
   try {
-    return await fn(server.address().port);
+    return await fn(port);
   } finally {
-    server.close();
+    await stop(server);
   }
 }
 

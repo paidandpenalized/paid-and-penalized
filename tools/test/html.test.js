@@ -1,9 +1,7 @@
 // The tag reader and page list the CI scripts share.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { withTemp } from '../../pipeline/test/helpers.js';
+import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
 import { decode, htmlPages, tags } from '../ci/html.js';
 
 test('decode: the references the build writes, numeric ones too; anything else is left as it is', () => {
@@ -32,11 +30,20 @@ test('tags: a ">" inside a quoted value does not end the tag', () => {
   assert.deepEqual([...tags('<a title="a > b" href="/y/">')], [{ name: 'a', attrs: { title: 'a > b', href: '/y/' } }]);
 });
 
+test('tags: the names and having filters give exactly the tags the full read gives, filtered', () => {
+  const page = `<!doctype html><HTML lang=en><head><LINK rel=stylesheet href="/a.css"><linker href="/b/"><script src="/a.js"></script>
+<script type="application/json">{"x":"<link href='/no/'>"}</script></head><body><a href="/c/" id=top>c</a><p title="the href= here">p</p>
+<svg><use xlink:href="#s"/></svg><input hidden><form data-src="/i.json"></form><!-- <link href="/gone/"> --><a hrefx="/d/">d</a></body></HTML>`;
+  const all = [...tags(page)];
+  const by = (pick) => all.filter(pick);
+  assert.deepEqual([...tags(page, { names: ['link', 'script'] })], by((t) => ['link', 'script'].includes(t.name)));
+  const having = ['id', 'href', 'src', 'xlink:href', 'data-src'];
+  assert.deepEqual([...tags(page, { having })], by((t) => having.some((a) => a in t.attrs)), 'a tag with none of them is left out');
+  assert.deepEqual([...tags(page, { having: ['hidden'] })], by((t) => 'hidden' in t.attrs), 'an attribute with no value counts');
+});
+
 test('htmlPages: every .html file under the folder, slash-separated, in name order', () =>
   withTemp('html-', (dir) => {
-    for (const path of ['index.html', 'b/index.html', 'a/deep/index.html', '404.html', 'assets/site.css', 'a/data.json']) {
-      mkdirSync(dirname(join(dir, path)), { recursive: true });
-      writeFileSync(join(dir, path), '');
-    }
+    writeTree(dir, Object.fromEntries(['index.html', 'b/index.html', 'a/deep/index.html', '404.html', 'assets/site.css', 'a/data.json'].map((path) => [path, ''])));
     assert.deepEqual(htmlPages(dir), ['404.html', 'a/deep/index.html', 'b/index.html', 'index.html']);
   }));

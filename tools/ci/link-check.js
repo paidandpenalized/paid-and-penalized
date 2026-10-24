@@ -78,7 +78,7 @@ export function checkLinks(distDir, states = dataStates()) {
   const pages = htmlFiles.map((htmlPath) => {
     const ids = new Set();
     const links = new Set();
-    for (const { attrs } of tags(readFileSync(join(distDir, htmlPath), 'utf8'))) {
+    for (const { attrs } of tags(readFileSync(join(distDir, htmlPath), 'utf8'), { having: ['id', ...LINK_ATTRIBUTES] })) {
       if (attrs.id !== undefined) ids.add(attrs.id);
       for (const name of LINK_ATTRIBUTES) if (attrs[name] !== undefined) links.add(attrs[name]);
     }

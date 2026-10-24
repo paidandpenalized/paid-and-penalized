@@ -76,7 +76,7 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
   const bytes = readFileSync(join(distDir, htmlPath));
   const css = new Set();
   const js = new Set();
-  for (const { name, attrs } of tags(bytes.toString('utf8'))) {
+  for (const { name, attrs } of tags(bytes.toString('utf8'), { names: ['link', 'script'] })) {
     if (name === 'link' && attrs.href && attrs.rel?.toLowerCase().split(/\s+/).includes('stylesheet')) css.add(attrs.href);
     else if (name === 'script' && attrs.src) js.add(attrs.src);
   }

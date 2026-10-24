@@ -23,8 +23,8 @@ import { pathToFileURL } from 'node:url';
 import { DIST_DIR as DIST, REPO_ROOT, filesUnder } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
+import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
 
-export const ENGINES = ['chromium', 'firefox', 'webkit'];
 // A hashed asset that no build has (a hash of eight zeros); were a build ever to write it, its check expects a 200.
 const MISSING_ASSET = '/assets/site.00000000.css';
 const FETCH_TIMEOUT_MS = 30_000;
@@ -159,17 +159,13 @@ async function fetchLive(base, check) {
 }
 
 async function main() {
-  const given = process.env.E2E_BASE_URL;
-  if (!given) {
+  const base = baseUrlFromEnv();
+  if (!base) {
     console.error('E2E_BASE_URL is required: the site to test, e.g. E2E_BASE_URL=http://127.0.0.1:8080 npm run e2e:launch\n(build dist/ first, with the same commit and PP_ENV as the deployed site)');
     return 1;
   }
-  const url = new URL(given);
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new RangeError('E2E_BASE_URL must be an http or https address');
-  const base = url.origin;
   // Read before the suites start, so a missing or malformed dist/ fails in a second, not after thirty minutes.
   const rules = parseHeaders(readFileSync(DIST + '_headers', 'utf8'));
-  const { samplePages } = await import('./lib.js');
   const checks = checksFor(rules, samplePages(), filesUnder(DIST));
 
   // Stopped from outside (a SIGTERM, not a terminal's Ctrl-C, which reaches the suites itself): stop the suite running.

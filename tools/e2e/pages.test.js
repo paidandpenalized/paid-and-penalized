@@ -1,84 +1,73 @@
-// Page-load checks in a real browser, for every page type, in light and dark, at three widths (a desktop, a common
-// phone's and the narrowest phone width pages are designed for): the status, no console or page errors, no CSP
-// violations, no request to another origin, no sideways scroll, and the footer's feedback link naming the page's
-// canonical address. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see lib.js. Not part of npm test, which
-// needs no browser: run it with npm run e2e.
-import { after, before, describe, it } from 'node:test';
+// Every page type in a real browser, in light and dark, at a desktop and three phone widths, each page opened once:
+//   - it loads clean: the status, no console or page errors, no CSP violations, no request to another origin, no
+//     sideways scroll, the footer's feedback link naming the page's canonical address, and no maintenance banner;
+//   - axe finds nothing at WCAG 2.2 AA (axe.js), at its three widths, in the same tab once the load checks have read it.
+// Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. Not part of npm test, which needs no browser:
+// run it with npm run e2e.
+import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { COPY } from '../../web/copy.js';
 import { SITE } from '../../web/site.js';
-import { launch, newPage, samplePages, startSite, watch } from './lib.js';
+import { AXE_WIDTHS, audit, openFolds } from './axe.js';
+import { HEIGHT, SCHEMES, assertQuiet, samplePages, useBrowser, useContext, withPage } from './lib.js';
 
-const SCHEMES = ['light', 'dark'];
-// A desktop width, a common phone's, and the narrowest phone width pages are designed for.
-const WIDTHS = [1280, 375, 320];
-const HEIGHT = 800;
+// A desktop width, two common phones' (390 px is axe's), and the narrowest phone width pages are designed for.
+const WIDTHS = [1280, 390, 375, 320];
 const PAGES = samplePages();
+// The maintenance banner's words up to the release name, which the config supplies.
+const BANNER = COPY.maintenance.slice(0, COPY.maintenance.indexOf('{release}'));
 
-let site;
-let browser;
-before(async () => {
-  site = await startSite();
-  browser = await launch();
-});
-after(async () => {
-  await browser?.close();
-  await site?.close();
+const shared = useBrowser();
+
+test('the maintenance banner has words of its own to look for', () => {
+  assert.ok(BANNER.length > 10, `the banner's copy leads up to the release name: ${JSON.stringify(COPY.maintenance)}`);
 });
 
-// Loads one page in a fresh tab of the context and returns what the checks read.
-async function load(context, scheme, path) {
-  let page;
-  try {
-    page = await newPage(context, scheme, site.base);
-    const seen = await watch(page, site.base);
-    const response = await page.goto(new URL(path, site.base).href, { waitUntil: 'load' });
-    // Scripts fetch their data after load; a violation or error from them lands before the network goes quiet.
-    await page.waitForLoadState('networkidle');
-    const facts = await page.evaluate((formUrl) => ({
-      dark: window.matchMedia('(prefers-color-scheme: dark)').matches,
-      scrollWidth: document.documentElement.scrollWidth,
-      innerWidth: window.innerWidth,
-      canonical: document.querySelector('link[rel="canonical"]')?.href ?? null,
-      feedback: [...document.querySelectorAll('a')].filter((a) => a.href.startsWith(formUrl)).map((a) => ({ href: a.href, footer: a.closest('footer') !== null })),
-    }), SITE.feedback.url);
-    return { status: response.status(), seen, ...facts };
-  } finally {
-    await page?.close();
-  }
-}
+// What the load checks read from the page.
+const factsOf = (page) => page.evaluate(([formUrl, banner]) => ({
+  scrollWidth: document.documentElement.scrollWidth,
+  innerWidth: window.innerWidth,
+  canonical: document.querySelector('link[rel="canonical"]')?.href ?? null,
+  feedback: [...document.querySelectorAll('a')].filter((a) => a.href.startsWith(formUrl)).map((a) => ({ href: a.href, footer: a.closest('footer') !== null })),
+  notices: document.querySelectorAll('.notice').length,
+  bannerWords: document.body.innerText.includes(banner),
+}), [SITE.feedback.url, BANNER]);
 
 for (const scheme of SCHEMES) {
   for (const width of WIDTHS) {
     describe(`${scheme}, ${width} px wide`, { concurrency: 4 }, () => {
-      let context;
-      before(async () => {
-        context = await browser.newContext({ colorScheme: scheme, viewport: { width, height: HEIGHT } });
-      });
-      after(() => context?.close());
+      const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
 
-      for (const { type, path } of PAGES) {
-        // A hospital's test is named by its type, not its address, so the output names no hospital.
-        it(type === 'policy' ? `policy ${path}` : type, async () => {
-          const got = await load(context, scheme, path);
-          const notFound = type === 'not-found';
-          assert.equal(got.status, notFound ? 404 : 200, `${path}: status`);
-          assert.equal(got.dark, scheme === 'dark', `${path}: the browser follows the ${scheme} scheme`);
-          assert.deepEqual(got.seen.errors, [], `${path}: console and page errors`);
-          assert.deepEqual(got.seen.cspViolations, [], `${path}: CSP violations`);
-          assert.deepEqual(got.seen.foreignRequests, [], `${path}: requests to another origin`);
-          assert.ok(got.scrollWidth <= got.innerWidth, `${path}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth})`);
+      // A hospital's test is named by its type, not its address, so the output names no hospital.
+      for (const { type, name, path } of PAGES) {
+        it(name, (t) => withPage(tabs, { path, scheme, watched: true }, async (page, { response, seen }) => {
+          await t.test('loads clean', async () => {
+            const got = await factsOf(page);
+            const notFound = type === 'not-found';
+            assert.equal(response.status(), notFound ? 404 : 200, `${path}: status`);
+            assertQuiet(seen, path);
+            assert.ok(got.scrollWidth <= got.innerWidth, `${path}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth})`);
+            assert.equal(got.notices, 0, `${path}: no maintenance banner`);
+            assert.equal(got.bannerWords, false, `${path}: no maintenance banner's words`);
 
-          // Every link to the feedback form (the footer's, and a policy page's own) prefills the page's canonical address.
-          // The not-found page is served at every missing address, so it has no canonical link and its link has no page.
-          assert.equal(got.feedback.filter((link) => link.footer).length, 1, `${path}: one feedback link in the footer`);
-          if (notFound) assert.equal(got.canonical, null, `${path}: no canonical link`);
-          else assert.equal(got.canonical, SITE.origin + path, `${path}: canonical address`);
-          for (const { href } of got.feedback) {
-            const form = new URL(href);
-            assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${path}: a feedback link names the site`);
-            assert.equal(form.searchParams.get(SITE.feedback.pageEntry), got.canonical, `${path}: a feedback link's page`);
+            // Every link to the feedback form (the footer's, and a policy page's own) prefills the page's canonical address.
+            // The not-found page is served at every missing address, so it has no canonical link and its link has no page.
+            assert.equal(got.feedback.filter((link) => link.footer).length, 1, `${path}: one feedback link in the footer`);
+            if (notFound) assert.equal(got.canonical, null, `${path}: no canonical link`);
+            else assert.equal(got.canonical, SITE.origin + path, `${path}: canonical address`);
+            for (const { href } of got.feedback) {
+              const form = new URL(href);
+              assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${path}: a feedback link names the site`);
+              assert.equal(form.searchParams.get(SITE.feedback.pageEntry), got.canonical, `${path}: a feedback link's page`);
+            }
+          });
+          if (AXE_WIDTHS.includes(width)) {
+            await t.test('axe', async () => {
+              await openFolds(page);
+              await audit(page, path);
+            });
           }
-        });
+        }));
       }
     });
   }

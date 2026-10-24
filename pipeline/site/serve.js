@@ -65,6 +65,18 @@ export function createSiteServer(root) {
   });
 }
 
+// Starts a server on a free loopback port; resolves its port.
+export const listen = (server) => new Promise((resolve, reject) => {
+  server.once('error', reject);
+  server.listen(0, '127.0.0.1', () => resolve(server.address().port));
+});
+
+// Stops a server, ending its kept-alive connections (a browser's would otherwise hold the close open).
+export const stop = (server) => new Promise((resolve) => {
+  server.close(resolve);
+  server.closeAllConnections();
+});
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = DIST_DIR;
   if (!isDir(root)) {

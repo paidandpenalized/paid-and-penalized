@@ -2,10 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { join } from 'node:path';
+import { REPO_ROOT, writeFileMkdir } from '../../pipeline/files.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const GATE = join(REPO_ROOT, 'tools/ci/change-gate.js');
@@ -18,10 +18,7 @@ function repo() {
   git('config', 'user.name', 'test');
   git('config', 'commit.gpgsign', 'false');
   git('config', 'core.hooksPath', '/dev/null');
-  const write = (path, text) => {
-    mkdirSync(dirname(join(dir, path)), { recursive: true });
-    writeFileSync(join(dir, path), text);
-  };
+  const write = (path, text) => writeFileMkdir(join(dir, path), text);
   const mv = (from, to) => git('mv', from, to);
   const rm = (path) => git('rm', '-q', path);
   const symlink = (target, path) => symlinkSync(target, join(dir, path));

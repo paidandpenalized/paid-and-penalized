@@ -18,21 +18,36 @@ export function decode(value) {
 }
 
 const INERT = /<!--[\s\S]*?-->|(<(script|style)\b[^>]*>)[\s\S]*?<\/\2\s*>/gi;
-const VALUE = '(?:"[^"]*"|\'[^\']*\'|[^\\s"\'=<>`]+)';
-const ATTRIBUTE = `[^\\s"'<>/=]+(?:\\s*=\\s*${VALUE})?`;
+// An attribute's value, double-quoted, single-quoted or bare; group(text) wraps each form, to capture it or not.
+const value = (group) => `"${group('[^"]*')}"|'${group("[^']*")}'|${group('[^\\s"\'=<>`]+')}`;
+const NAME = `[^\\s"'<>/=]+`;
+const ATTRIBUTE = `${NAME}(?:\\s*=\\s*(?:${value((x) => x)}))?`;
+const ATTRIBUTES = new RegExp(`(${NAME})(?:\\s*=\\s*(?:${value((x) => `(${x})`)}))?`, 'g');
+const escaped = (words) => words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+const compiled = new Map();
+const once = (key, make) => compiled.get(key) ?? compiled.set(key, make()).get(key);
+// A start tag, of any name or of the names given.
 const TAG = new RegExp(`<([a-zA-Z][^\\s/>]*)((?:\\s+${ATTRIBUTE})*)\\s*/?>`, 'g');
-const ATTRIBUTES = new RegExp(`([^\\s"'<>/=]+)(?:\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\`]+)))?`, 'g');
+const tagNamed = (names) => once(`t ${names}`, () => new RegExp(`<(${escaped(names)})(?=[\\s/>])((?:\\s+${ATTRIBUTE})*)\\s*/?>`, 'gi'));
+// Whether a tag's attribute text may hold one of the names: a quick test before the attributes are read, which lets
+// through a name inside another attribute's value too (tags drops that tag once read).
+const mayHold = (names) => once(`a ${names}`, () => new RegExp(`(?:^|\\s)(?:${escaped(names)})(?=\\s|=|$)`, 'i'));
 
 // Every start tag in the page, in order: { name (lowercase), attrs } where attrs maps each lowercase attribute name
-// to its decoded value ('' when it has none). A repeated attribute keeps its first value, as browsers do.
-export function* tags(html) {
+// to its decoded value ('' when it has none). A repeated attribute keeps its first value, as browsers do. A reader
+// that needs few tags says which, and is spared reading the rest: names, only the tags of these names (lowercase);
+// having, only the tags that carry one of these attributes (lowercase).
+export function* tags(html, { names = null, having = null } = {}) {
   const live = html.replace(INERT, (_, open) => open ?? '');
-  for (const [, name, rest] of live.matchAll(TAG)) {
+  const wanted = having && mayHold(having);
+  for (const [, name, rest] of live.matchAll(names ? tagNamed(names) : TAG)) {
+    if (wanted && !wanted.test(rest)) continue;
     const attrs = {};
     for (const [, key, double, single, bare] of rest.matchAll(ATTRIBUTES)) {
       const k = key.toLowerCase();
       if (!(k in attrs)) attrs[k] = decode(double ?? single ?? bare ?? '');
     }
+    if (having && !having.some((a) => a in attrs)) continue;
     yield { name: name.toLowerCase(), attrs };
   }
 }
