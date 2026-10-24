@@ -1,7 +1,7 @@
 // The corrections log's one naming rule, read by the change gate (tools/ci/change-gate.js), which keeps the log
 // append-only, and by the hub's corrections page (hub/corrections.js), which shows it: the folder, and the path a
 // dated entry has. Pure: no file access.
-import { isIsoDate } from '../web/render/format.js';
+import { isIsoDate } from '../engine/js/dates.js';
 
 export const CORRECTIONS = 'corrections/';
 const ENTRY_NAME = /^corrections\/((\d{4})-\d{2}-\d{2})-([a-z0-9][a-z0-9-]*)\.md$/;

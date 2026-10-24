@@ -5,10 +5,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
+import { isIsoDate } from '../../../engine/js/dates.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
-import { isIsoDate } from '../../../web/render/format.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, emittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';

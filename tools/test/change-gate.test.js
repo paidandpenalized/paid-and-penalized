@@ -1,9 +1,11 @@
 // The change gate's rule: emitted data may change only with a reason on record.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { batchTexts, changeGate, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
 import { isEntry, parseEntry } from '../../pipeline/corrections.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
+import { REPO_ROOT } from '../../pipeline/files.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
 const OLDER = 'data/emitted/hacrp/fy2025/hacrp.json';
@@ -164,4 +166,10 @@ test('parseNameStatus reads git -z output, paths with spaces and newlines includ
     { status: 'T', path: 'z' },
   ]);
   assert.deepEqual(parseNameStatus(''), []);
+});
+
+test('the naming rule the gate loads imports only the engine: the gate never loads the page rendering layer', () => {
+  const imports = [...readFileSync(REPO_ROOT + 'pipeline/corrections.js', 'utf8').matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
+  assert.ok(imports.length > 0);
+  for (const from of imports) assert.match(from, /^\.\.\/engine\//, from);
 });

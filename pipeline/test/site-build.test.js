@@ -138,6 +138,31 @@ test('setUpdated records a site\'s two dates once; updated is a Map read in the 
     assert.equal(ctx.updated.get('hacrp').cmsReleased, '2026-08-13');
   }));
 
+test('setUpdated refuses a date that is not YYYY-MM-DD on the calendar, naming the site and the date, and records nothing', () =>
+  withTemp(async (dir) => {
+    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
+    const ok = { cmsReleased: '2026-08-13', changed: '2026-10-22' };
+    for (const bad of [undefined, null, '', '2026-02-30', '10/22/2026', '2026-8-13', '2026-10-22T00:00:00Z']) {
+      assert.throws(() => ctx.setUpdated('hacrp', { ...ok, cmsReleased: bad }), (err) => err instanceof RangeError && /"hacrp".*cmsReleased/.test(err.message), `cmsReleased ${bad}`);
+      assert.throws(() => ctx.setUpdated('hacrp', { ...ok, changed: bad }), (err) => err instanceof RangeError && /"hacrp".*changed/.test(err.message), `changed ${bad}`);
+    }
+    assert.throws(() => ctx.setUpdated('hacrp', { cmsReleased: '2026-02-30', changed: '2026-10-22' }), /2026-02-30/);
+    assert.equal(ctx.updated.size, 0);
+    ctx.setUpdated('hacrp', ok);
+    assert.deepEqual([...ctx.updated], [['hacrp', ok]]);
+  }));
+
+// A site that runs without writing anything, and (when it names itself) gives its dates.
+const quietSite = (id, { dates = false } = {}) => ({ id, generate: (ctx) => { if (dates) ctx.setUpdated(id, { cmsReleased: '2026-08-13', changed: '2026-10-22' }); } });
+
+test('the build tells the hub which sites ran: one that never gave its dates stops the build; the hub alone, or every site with its dates, builds', () =>
+  withTemp(async (dir) => {
+    await assert.rejects(build({ outDir: join(dir, 'a'), sites: [quietSite('hacrp'), HUB] }), /"hacrp".*setUpdated/);
+    await assert.rejects(build({ outDir: join(dir, 'b'), sites: [quietSite('hacrp', { dates: true }), quietSite('faux'), HUB] }), /"faux".*setUpdated/);
+    assert.ok((await build({ outDir: join(dir, 'c'), sites: [HUB] })).pages > 0);
+    assert.ok((await build({ outDir: join(dir, 'd'), sites: [quietSite('hacrp', { dates: true }), HUB] })).pages > 0);
+  }));
+
 // The newest built_at date among the emitted files the numbers come from: the files loadHacrp lists (builtFiles; the
 // history is null in a build without one), each read again from disk.
 const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)

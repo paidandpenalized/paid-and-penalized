@@ -59,6 +59,19 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     assert.equal(sitemap.match(/<url>/g).length, 2);
   }));
 
+test('the hub stops, naming the site, when a site the build ran never gave its dates for /corrections/; the hub alone is fine', () =>
+  withTemp('pp-hub-sites-', async (dir) => {
+    const ran = (siteIds, give = []) => {
+      const ctx = createContext({ outDir: join(dir, siteIds.join('-')), env: 'production', assets: ASSETS, siteIds });
+      for (const id of give) ctx.setUpdated(id, { cmsReleased: '2026-08-13', changed: '2026-10-22' });
+      return generateHub(ctx, { correctionsDir: join(dir, 'no-corrections') }).then(() => ctx);
+    };
+    await assert.rejects(ran(['hacrp', 'hub']), /"hacrp".*setUpdated/);
+    await assert.rejects(ran(['hacrp', 'other', 'hub'], ['hacrp']), /"other".*setUpdated/);
+    assert.ok((await ran(['hub'])).pages > 0);
+    assert.ok((await ran(['hacrp', 'hub'], ['hacrp'])).pages > 0);
+  }));
+
 test('an empty sitemap is a valid empty urlset; a path that is not a plain site path is refused', () => {
   assert.doesNotMatch(sitemapXml([]), /<url>/);
   assert.match(sitemapXml([]), /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">\n<\/urlset>\n$/);

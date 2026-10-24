@@ -56,7 +56,7 @@ export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites =
     entries: mergeEntries(SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
     styles: sites.flatMap((s) => s.styles ?? []),
   });
-  const ctx = createContext({ outDir: dir, env, assets });
+  const ctx = createContext({ outDir: dir, env, assets, siteIds: sites.map((s) => s.id) });
   for (const site of sites) await site.generate(ctx);
   // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
   writeFileMkdir(join(dir, '_headers'), headersFile({ env }));

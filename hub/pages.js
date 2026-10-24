@@ -145,8 +145,13 @@ export function sitemapXml(paths) {
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
 // correctionsDir: the folder of dated corrections entries (absent or empty is an empty log); tests pass their own.
+// Every other site the build runs (ctx.siteIds; a build of the hub alone has none) must have given its two dates
+// (ctx.setUpdated) by now, or the corrections page would leave it out.
 export async function generateHub(ctx, { correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
   const { assets } = ctx;
+  for (const id of ctx.siteIds) {
+    if (id !== HUB.id && !ctx.updated.has(id)) throw new RangeError(`hub: the build ran "${id}" but it never called ctx.setUpdated, so /corrections/ has no dates for it`);
+  }
   const robots = robotsFor({ env: ctx.env, released: RELEASED });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });

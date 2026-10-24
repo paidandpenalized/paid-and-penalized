@@ -3,6 +3,7 @@
 // sitemap lists), asset() for a site's own content-hashed data, and setUpdated() for the two dates the hub's
 // corrections page shows for the site. robotsFor holds the indexing rule.
 import { join } from 'node:path';
+import { isIsoDate } from '../../engine/js/dates.js';
 import { writeFileMkdir } from '../files.js';
 import { writeHashed } from './assets.js';
 
@@ -19,21 +20,27 @@ export function robotsFor({ env, released, eligible = true }) {
 // Folders are lowercase; a file name may hold capitals, except a page's (.html).
 const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
 
-export function createContext({ outDir, env, assets }) {
+// siteIds: the ids of the sites this build runs (build.js), so the hub can tell which ones owe it their dates; a
+// context made without them (a test of one generator) has none.
+export function createContext({ outDir, env, assets, siteIds = [] }) {
   const written = new Set();
   const updated = new Map();
   const ctx = {
     outDir,
     env,
     assets,
+    siteIds,
     pages: 0,
     indexable: [],
     // site id -> { cmsReleased, changed }, in the order the sites set them (setUpdated).
     updated,
     // A site's two dates, each YYYY-MM-DD: when CMS released the file the site uses, and when the site's numbers last
-    // changed. Once per site; the hub's /corrections/ page lists them, and refuses a date that is not one.
+    // changed. Once per site; the hub's /corrections/ page lists them, and a date that is not one stops the build.
     setUpdated(siteId, { cmsReleased, changed }) {
       if (updated.has(siteId)) throw new RangeError(`setUpdated: "${siteId}" is already set`);
+      for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
+        if (!isIsoDate(date)) throw new RangeError(`setUpdated: "${siteId}" ${name} is not a YYYY-MM-DD date on the calendar: ${JSON.stringify(date)}`);
+      }
       updated.set(siteId, { cmsReleased, changed });
     },
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;
