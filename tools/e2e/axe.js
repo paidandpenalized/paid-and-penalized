@@ -81,14 +81,15 @@ const flatten = (page, paper) => page.evaluate((css) => {
 }, `body { background: ${paper} !important; } .printout::after, .receipt::after { display: none !important; }`);
 
 // Runs axe on the page as it is, flattened: its violations ({ id, impact, help, nodes: [{ target, summary }] }), how
-// many rules passed (a run that checked nothing passes nothing), how many elements passed the contrast rule (the text
-// axe could judge) and the targets of the elements whose contrast axe left unjudged because of an image, a gradient or a
+// many rules passed (a run that checked nothing passes nothing), whether the contrast rule passed on any element (some
+// text axe could judge: passes are not a result type asked for, so axe lists each passing rule with its first element
+// only) and the targets of the elements whose contrast axe left unjudged because of an image, a gradient or a
 // pseudo-element drawn behind or over the text.
 export async function runAxe(page) {
   await flatten(page, (await grainWorst(page)).worst);
   if (!(await page.evaluate(() => 'axe' in window))) await page.evaluate(AXE);
   return page.evaluate(async ([tags, drawnOver]) => {
-    const results = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'passes', 'incomplete'] });
+    const results = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'incomplete'] });
     const target = (n) => n.target.map((t) => (Array.isArray(t) ? t.join(' >> ') : t)).join(' >> ');
     const checks = (n) => [...n.any, ...n.all, ...n.none];
     return {

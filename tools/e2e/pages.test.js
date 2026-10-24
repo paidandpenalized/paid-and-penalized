@@ -1,4 +1,5 @@
-// Every page type in a real browser, in light and dark, at two desktop and three phone widths, each page opened once:
+// Every page type in a real browser, in light at two desktop and three phone widths and in dark at axe's three (the
+// layout does not change with the scheme; contrast, which does, is axe's), each page opened once:
 //   - it loads clean: the status, no console or page errors, no CSP violations, no request to another origin, no
 //     sideways scroll, the footer's feedback link naming the page's canonical address, and the maintenance banner
 //     exactly when the page's site has its maintenance flag set (web/site.js);
@@ -65,8 +66,8 @@ async function loadsClean(page, { response, seen }, { type, name, path }) {
   assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: the footer's feedback link names the page's canonical address`);
 }
 
-// Each context the pages are opened in: a scheme and a width.
-const CONTEXTS = SCHEMES.flatMap((scheme) => WIDTHS.map((width) => [scheme, width]));
+// Each context the pages are opened in: a scheme and a width, dark only where axe audits.
+const CONTEXTS = SCHEMES.flatMap((scheme) => WIDTHS.filter((width) => scheme === 'light' || AXE_WIDTHS.includes(width)).map((width) => [scheme, width]));
 
 for (const [scheme, width] of CONTEXTS) {
   describe(`${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {

@@ -74,12 +74,26 @@ export async function newPage(context, colorScheme, base) {
   return page;
 }
 
+// Whether the loaded page can fetch after its load: it runs a script besides the theme toggle's (THEME_SCRIPT, which
+// fetches nothing; a program site's pages all run more), or names a file a script fetches (data-src). A page that may
+// fetch is waited on until the network is quiet; any other (the hub's pages) is quiet once loaded and its fonts are in.
+const THEME_SCRIPT = /^\/assets\/theme\.[0-9a-f]{8}\.js$/;
+async function fetchesAfterLoad(page) {
+  const { scripts, dataSrc } = await page.evaluate(() => ({
+    scripts: [...document.querySelectorAll('script[src]')].map((s) => new URL(s.src).pathname),
+    dataSrc: document.querySelector('[data-src]') !== null,
+  }));
+  return dataSrc || scripts.some((path) => !THEME_SCRIPT.test(path));
+}
+
 // Opens path (from base, the site's origin) in the tab the way a reader meets it: loaded, and quiet (its scripts have
-// fetched what they fetch). javaScript: whether the tab runs scripts; without them nothing fetches after the load, so
-// there is no wait for the network. Returns the response.
+// fetched what they fetch, and its fonts are in). javaScript: whether the tab runs scripts; without them nothing fetches
+// after the load, so there is no wait for the network. Returns the response.
 export async function visit(page, base, path, { javaScript = true } = {}) {
   const response = await page.goto(new URL(path, base).href, { waitUntil: 'load' });
-  if (javaScript) await page.waitForLoadState('networkidle');
+  if (!javaScript) return response;
+  if (await fetchesAfterLoad(page)) await page.waitForLoadState('networkidle');
+  else await page.evaluate(() => document.fonts.ready.then(() => {}));
   return response;
 }
 
