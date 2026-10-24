@@ -16,9 +16,11 @@
 // line that names what failed.
 //
 // The comparison itself (checksFor, compareResponse, formatReport, parseCounts, verdict) is pure and tested in
-// tools/test/launch.test.js, which needs no browser or network; so is stopSuites, how a stop reaches every suite.
+// tools/test/launch.test.js, which needs no browser or network; so are stopSuites and killSuites, how a stop reaches
+// every suite.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { constants } from 'node:os';
 import { DIST_DIR as DIST, REPO_ROOT, filesUnder, isMain } from '../../pipeline/files.js';
 import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
@@ -136,33 +138,42 @@ export function verdict(suites, results) {
   return { ok: false, line: `NOT READY: ${failed.join('; and ')}.` };
 }
 
+const killProcess = (pid, signal) => process.kill(pid, signal);
+// Sends the signal to the process group a pid leads, through kill; whether it reached the group: false once no process
+// is left in it (ESRCH).
+const toGroup = (kill, signal) => (pid) => {
+  try {
+    kill(-pid, signal);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Stops the suites running, by pid: a SIGTERM to each one's process group (each suite leads its own, so npm, the test
 // runner and the test files it started all get it, and Playwright closes the browsers those launched), then a wait,
 // of at most graceMs, for every group to empty; a group that still has a process then (the test runner traps SIGTERM
 // to finish its report, and can sit on a test for minutes) gets SIGKILL. A group already gone is skipped. kill:
 // process.kill, or a stand-in in the tests (a signal of 0 asks whether the group has a process left).
-export async function stopSuites(pids, { kill = (pid, signal) => process.kill(pid, signal), graceMs = STOP_GRACE_MS, pollMs = 50 } = {}) {
-  // Whether the signal reached the group: false once no process is left in it (ESRCH).
-  const send = (signal) => (pid) => {
-    try {
-      kill(-pid, signal);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  let left = [...pids].filter(send('SIGTERM'));
+export async function stopSuites(pids, { kill = killProcess, graceMs = STOP_GRACE_MS, pollMs = 50 } = {}) {
+  let left = [...pids].filter(toGroup(kill, 'SIGTERM'));
   const end = Date.now() + graceMs;
   while (left.length && Date.now() < end) {
     await new Promise((resolve) => setTimeout(resolve, pollMs));
-    left = left.filter(send(0));
+    left = left.filter(toGroup(kill, 0));
   }
-  left.forEach(send('SIGKILL'));
+  killSuites(left, { kill });
+}
+
+// Ends the suites at once: SIGKILL to each one's process group, skipping a group already gone. Synchronous, so it can
+// run in the command's 'exit' handler, where nothing that waits does. kill: as stopSuites's.
+export function killSuites(pids, { kill = killProcess } = {}) {
+  [...pids].forEach(toGroup(kill, 'SIGKILL'));
 }
 
 // ---- the command (below here touches the browser, the file system and the network) ----
 
-// The pids of the suites running now, so a SIGTERM or SIGINT to this command stops them too (main).
+// The pids of the suites running now, so a signal to this command, or its exit, stops them too (main).
 const running = new Set();
 
 // Runs `npm run e2e` for one engine against `base`, showing its output as it comes. Resolves { engine, code, ms, pass, fail }.
@@ -200,13 +211,21 @@ async function main() {
   const rules = parseHeaders(readFileSync(DIST + '_headers', 'utf8'));
   const checks = checksFor(rules, samplePages(), filesUnder(DIST));
 
-  // Stopped (a SIGTERM, or Ctrl-C, which reaches only this command now that each suite has a group of its own): stop
-  // the suite running, then exit as the signal would have. Meanwhile no suite starts and no verdict is given: main
-  // returns the stop, which never resolves, as the process exits first.
+  // Stopped (a SIGTERM; Ctrl-C, which reaches only this command now that each suite has a group of its own; or a
+  // SIGHUP, the terminal closed): stop the suite running, then exit as the signal would have (128 + its number).
+  // Meanwhile no suite starts and no verdict is given: main returns the stop, which never resolves, as the process
+  // exits first. A second signal during the stop's wait exits at once. However the command ends (a verdict, an
+  // uncaught error, a signal), its 'exit' handler kills every suite still running: each leads a group of its own, so
+  // nothing else would end it.
   let stopping = null;
-  for (const [signal, code] of [['SIGTERM', 143], ['SIGINT', 130]]) {
-    process.once(signal, () => { stopping = stopSuites(running).then(() => process.exit(code)); });
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+    const code = 128 + constants.signals[signal];
+    process.on(signal, () => {
+      if (stopping) process.exit(code);
+      stopping = stopSuites(running).then(() => process.exit(code));
+    });
   }
+  process.on('exit', () => killSuites(running));
 
   // The headers first: a difference there is known in seconds, not after the browser checks.
   const results = await Promise.all(checks.map(async (check) => {

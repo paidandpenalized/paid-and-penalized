@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { headersFile, headersFor, parseHeaders } from '../../pipeline/site/headers.js';
-import { checksFor, compareResponse, formatReport, parseCounts, stopSuites, verdict } from '../e2e/launch.js';
+import { checksFor, compareResponse, formatReport, killSuites, parseCounts, stopSuites, verdict } from '../e2e/launch.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const RULES = parseHeaders(`/*
@@ -207,6 +207,34 @@ function groupsKill(groups) {
   return { sent, kill };
 }
 
+// Whether a process with the pid is running.
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Resolves once the process is gone, or after five seconds: a process whose parent has exited is reaped by the system,
+// not at once.
+async function gone(pid) {
+  const end = Date.now() + 5000;
+  while (alive(pid) && Date.now() < end) await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+// SIGKILL to each pid and its group, whatever is left of them when a test ends.
+function cleanUp(pids) {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // Gone already.
+    }
+  }
+}
+
 test('stopSuites: a SIGTERM to each suite\'s whole process group, then a wait until every group is empty', async () => {
   const { sent, kill } = groupsKill({ 101: 1, 202: 3 });
   await stopSuites(new Set([101, 202]), { kill, graceMs: 60_000, pollMs: 1 });
@@ -234,30 +262,47 @@ test('stopSuites on a real process tree: the group\'s leader and a process it st
   // Its pipe closed, so a process left behind cannot hold this test file open.
   child.stdout.destroy();
   const started = Number(line.trim());
-  const alive = (pid) => {
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch {
-      return false;
-    }
-  };
   try {
     assert.ok(alive(started), 'the process the suite started is running');
     await stopSuites([child.pid], { graceMs: 300 });
     await exited;
     // The process left after the grace got SIGKILL; its parent being gone, the system reaps it.
-    const end = Date.now() + 5000;
-    while (alive(started) && Date.now() < end) await new Promise((resolve) => setTimeout(resolve, 20));
+    await gone(started);
     assert.equal(alive(started), false, 'the process the suite started is gone');
   } finally {
     // When the test fails, nothing of it is left running.
-    for (const pid of [-child.pid, started]) {
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch {
-        // Gone already.
-      }
-    }
+    cleanUp([-child.pid, started]);
+  }
+});
+
+test('killSuites: a SIGKILL to each suite\'s whole process group at once, a group already gone skipped', () => {
+  const { sent, kill } = groupsKill({ 101: 0, 202: Infinity, 303: 1 });
+  killSuites(new Set([101, 202, 303]), { kill });
+  assert.deepEqual(sent, [[-202, 'SIGKILL'], [-303, 'SIGKILL']]);
+  killSuites([], { kill: () => assert.fail('nothing to signal') });
+});
+
+test('killSuites in an exit handler: a command that crashes while a suite runs leaves no suite running', async () => {
+  // A stand-in for the command, wired as main is: it starts a suite in a process group of its own (as runSuite does),
+  // kills the suites on its 'exit' event, prints the suite's pid, and crashes on an uncaught error.
+  const command = [
+    "import { spawn } from 'node:child_process';",
+    `import { killSuites } from ${JSON.stringify(import.meta.resolve('../e2e/launch.js'))};`,
+    "const suite = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, stdio: 'ignore' });",
+    "process.on('exit', () => killSuites([suite.pid]));",
+    'console.log(suite.pid);',
+    "setTimeout(() => { throw new Error('a crash'); }, 50);",
+  ].join('\n');
+  const child = spawn(process.execPath, ['--input-type=module', '-e', command], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const exited = once(child, 'exit');
+  const [line] = await once(child.stdout.setEncoding('utf8'), 'data');
+  const suite = Number(line.trim());
+  try {
+    const [code] = await exited;
+    assert.equal(code, 1, 'the command crashed');
+    await gone(suite);
+    assert.equal(alive(suite), false, 'the suite is gone');
+  } finally {
+    cleanUp([-suite, suite]);
   }
 });
