@@ -2,14 +2,12 @@
 // (as Cloudflare does), and the local server that sends them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { CSP, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withTemp } from './helpers.js';
 
-const CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; img-src 'self' data:; "
-  + "font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
 const EVERY_PATH = {
@@ -60,40 +58,51 @@ test('headersFor: hashed scripts, styles and data are immutable; fonts and the f
   }
 });
 
-test('parseHeaders reads rules, headers, detaches and comments, and refuses what it cannot match', () => {
-  const text = '# a comment\n/a/*\n  X-One: 1\n  ! X-Two\n\n/b\n\tX-Three: c: d\n';
-  assert.deepEqual(parseHeaders(text), [
-    { path: '/a/*', set: [['X-One', '1']], detach: ['X-Two'] },
-    { path: '/b', set: [['X-Three', 'c: d']], detach: [] },
+test('parseHeaders reads rules, headers and comments, and refuses what it cannot match or does not support', () => {
+  const text = '# a comment\n/a/*\n  X-One: 1\n\n/b\n\tX-Three: c: d\n';
+  assert.deepEqual(parseHeaders(text).map(({ path, set }) => ({ path, set })), [
+    { path: '/a/*', set: [['X-One', '1']] },
+    { path: '/b', set: [['X-Three', 'c: d']] },
   ]);
   assert.throws(() => parseHeaders('  X-One: 1\n'), /before any rule/);
   assert.throws(() => parseHeaders('/a\n  no colon\n'), /line 2/);
   assert.throws(() => parseHeaders('/a\n  Bad Name: 1\n'), /line 2/);
   assert.throws(() => parseHeaders('https://example.org/*\n  X: 1\n'), /path/);
   assert.throws(() => parseHeaders('/*/*\n  X: 1\n'), /one splat/);
-  assert.throws(() => parseHeaders('/:a/:a\n  X: 1\n'), /once/);
   assert.throws(() => parseHeaders('/a\n  X: 1\n/a\n  Y: 2\n'), /line 3: "\/a" is already a rule/);
+  // The parts of Cloudflare's grammar this file never writes.
+  assert.throws(() => parseHeaders('/docs/:page/\n  X: 1\n'), /line 1: ":placeholder" paths are not supported/);
+  assert.throws(() => parseHeaders('/a\n  ! X-Two\n'), /line 2: detaching a header .* is not supported/);
+  assert.throws(() => parseHeaders('/a/*\n  X-Splat: :splat\n'), /line 2: filling ":splat" into a value is not supported/);
 });
 
 // Cloudflare's rules (https://developers.cloudflare.com/workers/static-assets/headers/): a splat matches any
-// characters, slashes included; a placeholder one path segment; a request takes every matching rule's headers; a
-// header set twice joins with a comma; "! Name" removes what an earlier rule set; matched text fills :splat and
-// :placeholder in a value.
+// characters, slashes included; a request takes every matching rule's headers; a header set twice joins with a comma.
 test('headersFor applies every matching rule in order, as Cloudflare does', () => {
   const rules = parseHeaders([
-    '/*', '  X-All: a', '  X-Gone: g',
-    '/docs/*', '  x-all: b', '  ! X-Gone', '  X-Splat: :splat',
-    '/docs/:page/', '  X-Page: :page',
+    '/*', '  X-All: a',
+    '/docs/*', '  x-all: b', '  X-Docs: d',
     '/*.jpg', '  X-Jpg: yes',
   ].join('\n'));
-  assert.deepEqual(headersFor(rules, '/'), { 'x-all': 'a', 'x-gone': 'g' });
-  assert.deepEqual(headersFor(rules, '/docs/one/'), { 'x-all': 'a, b', 'x-splat': 'one/', 'x-page': 'one' });
-  assert.deepEqual(headersFor(rules, '/docs/one/two/'), { 'x-all': 'a, b', 'x-splat': 'one/two/' });
-  assert.deepEqual(headersFor(rules, '/docs/a/b.jpg'), { 'x-all': 'a, b', 'x-splat': 'a/b.jpg', 'x-jpg': 'yes' });
-  assert.deepEqual(headersFor(rules, '/docs'), { 'x-all': 'a', 'x-gone': 'g' });
+  assert.deepEqual(headersFor(rules, '/'), { 'x-all': 'a' });
+  assert.deepEqual(headersFor(rules, '/docs/one/two/'), { 'x-all': 'a, b', 'x-docs': 'd' });
+  assert.deepEqual(headersFor(rules, '/docs/a/b.jpg'), { 'x-all': 'a, b', 'x-docs': 'd', 'x-jpg': 'yes' });
+  assert.deepEqual(headersFor(rules, '/docs'), { 'x-all': 'a' });
   // A pattern is matched whole and literally, not as a regular expression.
   assert.deepEqual(headersFor(parseHeaders('/a.b\n  X: 1\n'), '/aXb'), {});
   assert.deepEqual(headersFor(parseHeaders('/a\n  X: 1\n'), '/a/'), {});
+});
+
+test('headersFor: a response that is not a success carries no Cache-Control; every other header stays', () => {
+  const rules = parseHeaders(headersFile({ env: undefined }));
+  const path = '/assets/site.deadbeef.css';
+  for (const status of [200, 204]) assert.equal(headersFor(rules, path, { status })['cache-control'], IMMUTABLE, String(status));
+  assert.equal(headersFor(rules, path)['cache-control'], IMMUTABLE, 'a success by default');
+  for (const status of [301, 400, 404, 500]) {
+    const got = headersFor(rules, path, { status });
+    assert.equal(got['cache-control'], undefined, String(status));
+    assert.equal(got['content-security-policy'], CSP, String(status));
+  }
 });
 
 test('the local server sends the headers _headers gives each path, 404s included, and never serves _headers itself', () =>
@@ -182,6 +191,16 @@ test('the local server reads _headers again when a rebuild changes it, sends non
       assert.equal(bad.status, 500);
       assert.match(bad.body, /_headers: .*line 1/);
       assert.throws(() => createSiteServer(root), /line 1/);
+      // One that can't be read: a 500 that gives the error's code, not the folder's local path. (Root reads it anyway.)
+      if (process.getuid?.() !== 0) {
+        writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
+        chmodSync(join(root, '_headers'), 0);
+        const unreadable = await get(port, '/');
+        assert.equal(unreadable.status, 500);
+        assert.match(unreadable.body, /^dist\/_headers: cannot be read \(EACCES\)$/);
+        assert.ok(!unreadable.body.includes(dir));
+        chmodSync(join(root, '_headers'), 0o644);
+      }
     } finally {
       server.close();
     }

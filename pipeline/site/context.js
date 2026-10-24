@@ -6,10 +6,13 @@ import { join } from 'node:path';
 import { writeFileMkdir } from '../files.js';
 import { writeHashed } from './assets.js';
 
+// Whether a build's env (PP_ENV) is production, the one build search engines may index (_headers' X-Robots-Tag too).
+export const isProduction = (env) => env === 'production';
+
 // The meta robots value for a page, or null when it may be indexed (ARCH-13, ARCH-22): only a production build, only
 // a released site, and only a page its site counts as eligible (HACRP: a hospital with a score).
 export function robotsFor({ env, released, eligible = true }) {
-  return env === 'production' && released === true && eligible ? null : 'noindex';
+  return isProduction(env) && released === true && eligible ? null : 'noindex';
 }
 
 // A site path: "/", folders ending in "/", or one file name ("/404.html", "/robots.txt", ".../DATA-DICTIONARY.md").

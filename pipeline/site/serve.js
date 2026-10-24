@@ -1,9 +1,8 @@
 // make serve: preview dist/ at http://127.0.0.1:8080/. Local use only; it binds to the loopback address.
 // A directory serves its index.html, a directory path without its trailing slash redirects to it, and anything
 // else missing gets 404.html with status 404. Paths never resolve outside the served folder. Every response carries
-// the headers the folder's _headers gives its path (headers.js), as Cloudflare sends them, so a local browser run
-// meets the real CSP; an error response drops Cache-Control, so a missing hashed file is not kept for a year. Like
-// Cloudflare, the server never serves _headers itself, in any case.
+// the headers the folder's _headers gives its path and status (headers.js headersFor), as Cloudflare sends them, so a
+// local browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
@@ -32,30 +31,21 @@ const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
 
 export function createSiteServer(root) {
   const base = normalize(root + sep);
-  // The folder's _headers rules, read again whenever the file changes (a rebuild under a running server); none when
-  // there is no file. A malformed file throws here at start, and later gets a 500 naming the error.
-  let loaded = { stamp: null, rules: [] };
-  const currentRules = () => {
-    const stat = statSync(base + '_headers', { throwIfNoEntry: false });
-    const stamp = stat?.isFile() ? `${stat.mtimeMs}:${stat.size}` : null;
-    if (stamp !== loaded.stamp) loaded = { stamp, rules: stamp ? parseHeaders(readFileSync(base + '_headers', 'utf8')) : [] };
-    return loaded.rules;
-  };
-  currentRules();
+  // The folder's _headers rules, read on every request like any other file, so a rebuild under a running server is
+  // picked up; none when there is no file. A malformed file throws here at start, and later gets a 500.
+  const readRules = () => (isFile(base + '_headers') ? parseHeaders(readFileSync(base + '_headers', 'utf8')) : []);
+  readRules();
 
   return createServer((req, res) => {
     let url, path, rules;
     try {
-      rules = currentRules();
+      rules = readRules();
     } catch (err) {
-      return res.writeHead(500, TEXT).end(`dist/_headers: ${err.message}`);
+      // A parse error names the line; a file that can't be read names only the error's code, never a local path.
+      return res.writeHead(500, TEXT).end(`dist/_headers: ${err.code ? `cannot be read (${err.code})` : err.message}`);
     }
     // Matched on the path as the request sent it (percent-encoded), as Cloudflare matches it.
-    const reply = (status, headers, body) => {
-      const extra = headersFor(rules, url?.pathname ?? '/');
-      if (status < 200 || status > 299) delete extra['cache-control'];
-      res.writeHead(status, { ...headers, ...extra }).end(body);
-    };
+    const reply = (status, headers, body) => res.writeHead(status, { ...headers, ...headersFor(rules, url?.pathname ?? '/', { status }) }).end(body);
     const send = (status, file) => reply(status, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }, readFileSync(file));
     const notFound = () => (isFile(base + '404.html') ? send(404, base + '404.html') : reply(404, TEXT, 'not found'));
     try {
