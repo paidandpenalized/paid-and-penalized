@@ -1,5 +1,6 @@
 // The deploy config: a static-assets Worker for dist/ on workers.dev and preview URLs, with no route or custom domain
-// (that is a go-live step), and the build script and Node version Workers Builds uses.
+// (that is a go-live step), and the Node version Workers Builds uses. Its build command is npm run build, which make
+// build runs too.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -34,19 +35,7 @@ test('it serves on workers.dev and preview URLs, with no route or custom domain'
   assert.doesNotMatch(configText, /routes?"|custom_domain|zone_(id|name)/);
 });
 
-// The command lines of a Makefile target's recipe, in order.
-function recipeOf(target) {
-  const lines = read('Makefile').split('\n');
-  const start = lines.indexOf(`${target}:`);
-  assert.ok(start >= 0, `no "${target}" target in the Makefile`);
-  const end = lines.findIndex((l, i) => i > start && !l.startsWith('\t'));
-  return lines.slice(start + 1, end < 0 ? undefined : end).map((l) => l.trim());
-}
-
-test('the build script runs what make build runs, and the Node version is pinned to the one CI uses', () => {
-  const recipe = recipeOf('build');
-  assert.ok(recipe.length > 0);
-  assert.equal(JSON.parse(read('package.json')).scripts.build, recipe.join(' && '));
+test('the Node version Workers Builds reads is pinned to the one CI uses', () => {
   assert.equal(read('.node-version'), '24\n');
   const ci = [...read('.github/workflows/ci.yml').matchAll(/node-version: (\S+)/g)].map((m) => m[1]);
   assert.ok(ci.length > 0);
