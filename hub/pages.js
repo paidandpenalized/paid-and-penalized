@@ -109,7 +109,7 @@ const accessibility = ({ feedback }) => ({
     section('standard', 'a11yTargetHeading', para('a11yTarget', {}, { version: WCAG_VERSION })),
     section('built-in', 'a11yBuiltHeading', para('a11yBuilt')),
     section('testing', 'a11yTestedHeading', para('a11yTested')),
-    section('gaps', 'a11yGapsHeading', html`<ul class="pol__list"><li>${COPY.a11yGap1}</li></ul>
+    section('gaps', 'a11yGapsHeading', html`<ul class="pol__list">${['a11yGap1', 'a11yGap2', 'a11yGap3', 'a11yGap4'].map((key) => html`<li>${COPY[key]}</li>`)}</ul>
 `),
     section('browsers', 'a11yBrowsersHeading', para('a11yBrowsers')),
     section('report', 'a11yReportHeading', para('a11yReport', { feedback })),
