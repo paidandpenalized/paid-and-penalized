@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROGRAM_PATH, METHODS_PATH } from '../ci/page-types.js';
 import { AXE_WIDTHS, audit, grainWorst, runAxe } from './axe.js';
-import { HEIGHT, SCHEMES, SEARCH_BOXES, searchIn, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, HEIGHT, SCHEMES, SEARCH_BOXES, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 
@@ -58,7 +58,7 @@ describe('the paper axe judges text on is the grain\'s worst pixel', () => {
 // hero (the larger box, on top of the page's own content).
 for (const scheme of SCHEMES) {
   for (const width of AXE_WIDTHS) {
-    describe(`the program page with a search list open, ${scheme}, ${width} px wide`, { concurrency: 2 }, () => {
+    describe(`the program page with a search list open, ${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
       const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
       for (const [where, container] of SEARCH_BOXES) {
         it(`in ${where}`, () => withPage(tabs, { path: PROGRAM_PATH, scheme }, async (page) => {

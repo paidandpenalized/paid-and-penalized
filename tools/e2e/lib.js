@@ -1,6 +1,7 @@
 // What the browser checks (npm run e2e) share: a browser held for a test file, tabs in a colour scheme, a page opened
 // the way a reader meets it, and a watcher for what a page does wrong. Playwright is a dev dependency used only by the
 // browser checks; npm test needs no browser. The site and its pages are site.js's.
+import { availableParallelism } from 'node:os';
 import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as playwright from 'playwright';
@@ -10,6 +11,9 @@ import { ENGINES, startSite } from './site.js';
 export { samplePages } from './site.js';
 
 export const SCHEMES = ['light', 'dark'];
+// How many tests a describe runs at once: one core fewer than the machine has, up to four (CI's 2-core runner gets 1,
+// so four tabs never load the heaviest page together there; a laptop gets up to 4).
+export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
 // Every context's window height.
 export const HEIGHT = 800;
 

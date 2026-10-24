@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { COPY } from '../../web/copy.js';
 import { SITE } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
-import { HEIGHT, SCHEMES, assertQuiet, samplePages, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, HEIGHT, SCHEMES, assertQuiet, samplePages, useBrowser, useContext, withPage } from './lib.js';
 
 // A desktop width, a narrow laptop's (where the program page's columns are tightest), two common phones' (390 px is
 // axe's), and the narrowest phone width pages are designed for.
@@ -41,7 +41,7 @@ const factsOf = (page) => page.evaluate(([formUrl, banner]) => ({
 
 for (const scheme of SCHEMES) {
   for (const width of WIDTHS) {
-    describe(`${scheme}, ${width} px wide`, { concurrency: 4 }, () => {
+    describe(`${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
       const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
 
       // A hospital's test is named by its type, not its address, so the output names no hospital.

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { SITE } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { HEIGHT, SEARCH_BOXES, assertQuiet, samplePages, searchIn, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, HEIGHT, SEARCH_BOXES, assertQuiet, samplePages, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const PAGES = samplePages();
 const CUT = PAGES.find((p) => p.type === 'hospital-cut');
@@ -143,9 +143,9 @@ async function walk(page, key, done) {
   return steps;
 }
 
-describe('keyboard', { concurrency: 4 }, () => {
+describe('keyboard', { concurrency: CONCURRENCY }, () => {
   for (const width of WIDTHS) {
-    describe(`${width} px wide`, { concurrency: 4 }, () => {
+    describe(`${width} px wide`, { concurrency: CONCURRENCY }, () => {
       const tabs = useContext(shared, { viewport: { width, height: HEIGHT } });
 
       for (const { name, path } of PAGES) {
@@ -187,7 +187,7 @@ describe('keyboard', { concurrency: 4 }, () => {
   }
 });
 
-describe('without JavaScript', { concurrency: 4 }, () => {
+describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
   const withJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
   const withoutJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT }, javaScriptEnabled: false });
 
