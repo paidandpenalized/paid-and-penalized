@@ -13,15 +13,15 @@
 // another file would hide weight, so it throws here instead; if code splitting is ever turned on, count the
 // chunks first.
 //
-// A page whose path matches no type throws: a new page type needs a budget (and a line in pageType).
+// A page whose path matches no type throws: a new page type needs a budget (and a line in page-types.js).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
-import { SITE } from '../../web/site.js';
 import { htmlPages, tags } from './html.js';
+import { pageType as typeOf } from './page-types.js';
 
 const KB = 1024;
 const QUALITY = 5;
@@ -44,22 +44,11 @@ export const BUDGETS = {
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;
 
-const HACRP = SITE.sites.hacrp.path;
-const POLICY = new Set(Object.values(SITE.pages));
-const HOSPITAL = new RegExp(`^${HACRP}hospital/[0-9A-Z]{6}/$`);
-const PLACE = new RegExp(`^${HACRP}(?:region|division|state|metro)/[a-z0-9-]+/$`);
-
-// The type of the page at a site path ('/hacrp/state/ca/'); a type's budget is in BUDGETS.
+// The type of the page at a site path ('/hacrp/state/ca/', page-types.js); a type's budget is in BUDGETS.
 export function pageType(path) {
-  if (path === '/') return 'hub';
-  if (path === '/404.html') return 'notFound';
-  if (POLICY.has(path)) return 'policy';
-  if (path === HACRP) return 'program';
-  if (path === `${HACRP}methods/`) return 'methods';
-  if (path === `${HACRP}data/`) return 'dictionary';
-  if (HOSPITAL.test(path)) return 'hospital';
-  if (PLACE.test(path)) return 'place';
-  throw new RangeError(`no page type for "${path}": a new page type needs a budget in tools/ci/size-budget.js`);
+  const type = typeOf(path);
+  if (type === null) throw new RangeError(`no page type for "${path}": a new page type needs a budget in tools/ci/size-budget.js`);
+  return type;
 }
 
 // A script that pulls in another file by a relative or site path (static or dynamic import).

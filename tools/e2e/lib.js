@@ -15,10 +15,10 @@ import { chromium, firefox, webkit } from 'playwright';
 import { DIST_DIR as DIST, REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
 import { createSiteServer } from '../../pipeline/site/serve.js';
 import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
-import { KINDS } from '../../sites/hacrp/web/place-paths.js';
+import { isDecided } from '../../engine/js/hacrp/hospital.js';
+import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placePath } from '../ci/page-types.js';
 import { SITE } from '../../web/site.js';
 
-const HACRP = SITE.sites.hacrp.path;
 
 // The origin of the site under test, set by startSite, which watch falls back on to tell this site's requests from others.
 let siteOrigin = null;
@@ -78,15 +78,15 @@ const hospitals = () => readJson(REPO_ROOT + emittedPath(newestYear('data/emitte
 
 // The first place page of a kind that dist/ holds, by folder name: '/hacrp/<kind>/<key>/'.
 function placeOf(kind) {
-  const dir = `${DIST}${HACRP.slice(1)}${kind}/`;
+  const dir = `${DIST}${PROGRAM_PATH.slice(1)}${kind}/`;
   const key = existsSync(dir) ? readdirSync(dir).sort().find((name) => existsSync(`${dir}${name}/index.html`)) : undefined;
   if (key === undefined) throw new Error(`samplePages: no ${kind} page in dist/ (run make build)`);
-  return `${HACRP}${kind}/${key}/`;
+  return placePath(kind, key);
 }
 
 // The emitted record of the hospital whose page is at `path` ('/hacrp/hospital/<ccn>/'), as samplePages gives them.
 export function hospitalAt(path) {
-  const record = hospitals().find((h) => `${HACRP}hospital/${h.ccn.toLowerCase()}/` === path);
+  const record = hospitals().find((h) => hospitalPath(h.ccn) === path);
   if (!record) throw new Error(`hospitalAt: no hospital in the data has a page at ${path}`);
   return record;
 }
@@ -100,18 +100,18 @@ export function samplePages() {
   const hospital = (what, test) => {
     const found = all.find(test);
     if (!found) throw new Error(`samplePages: no hospital ${what} in the data`);
-    return `${HACRP}hospital/${found.ccn.toLowerCase()}/`;
+    return hospitalPath(found.ccn);
   };
   return [
     { type: 'hub', path: '/' },
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', path })),
-    { type: 'program', path: HACRP },
-    { type: 'hospital-cut', path: hospital('with a payment cut', (h) => h.paymentReduction === 'Yes' && h.total !== null) },
+    { type: 'program', path: PROGRAM_PATH },
+    { type: 'hospital-cut', path: hospital('with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes') },
     { type: 'hospital-unscored', path: hospital('with no score', (h) => h.total === null) },
-    { type: 'hospital-not-cut', path: hospital('with a score and no cut', (h) => h.paymentReduction === 'No' && h.total !== null) },
+    { type: 'hospital-not-cut', path: hospital('with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No') },
     ...KINDS.map((kind) => ({ type: kind, path: placeOf(kind) })),
-    { type: 'methods', path: `${HACRP}methods/` },
-    { type: 'dictionary', path: `${HACRP}data/` },
+    { type: 'methods', path: METHODS_PATH },
+    { type: 'dictionary', path: DICTIONARY_PAGE },
     { type: 'not-found', path: '/no-page-has-this-address/' },
   ];
 }

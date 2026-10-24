@@ -87,7 +87,7 @@ test('pageType: every page of the site sorts into one type', () => {
     '/hacrp/methods/': 'methods',
     '/hacrp/data/': 'dictionary',
     '/hacrp/hospital/990001/': 'hospital',
-    '/hacrp/hospital/99A001/': 'hospital',
+    '/hacrp/hospital/99a001/': 'hospital',
     '/hacrp/region/northeast/': 'place',
     '/hacrp/division/south-atlantic/': 'place',
     '/hacrp/state/ca/': 'place',
@@ -101,7 +101,9 @@ test('pageType: every page of the site sorts into one type', () => {
 });
 
 test('pageType: a path that matches no type throws, so a new kind of page needs a budget', () => {
-  for (const path of ['/hacrp/hospital/', '/hacrp/hospital/12345/', '/hacrp/hospital/9900011/', '/hacrp/county/x/', '/hacrp/state/', '/new/', '/other.html', '/hacrp/hospital/990001/extra/'])
+  // A hospital's page is at its CCN in lowercase, and a place's at its key in lowercase.
+  for (const path of ['/hacrp/hospital/', '/hacrp/hospital/12345/', '/hacrp/hospital/9900011/', '/hacrp/hospital/99A001/', '/hacrp/county/x/',
+    '/hacrp/state/', '/hacrp/state/CA/', '/new/', '/other.html', '/hacrp/hospital/990001/extra/', '/hacrp/state/ca/extra/'])
     assert.throws(() => pageType(path), /new page type needs a budget/, path);
 });
 
