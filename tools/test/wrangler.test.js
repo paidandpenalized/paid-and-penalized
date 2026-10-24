@@ -21,14 +21,26 @@ test('the config is a Worker named for the site, serving dist/ as static assets 
 test('it serves on workers.dev and preview URLs, with no route or custom domain', () => {
   assert.equal(config.workers_dev, true);
   assert.equal(config.preview_urls, true);
-  // Every key, so a route, a custom domain, a trigger or a previews block cannot arrive unnoticed.
-  assert.deepEqual(Object.keys(config).sort(), ['assets', 'compatibility_date', 'name', 'preview_urls', 'workers_dev']);
+  // `wrangler preview` stops without a previews block; an empty one makes previews take the top-level settings.
+  assert.deepEqual(config.previews, {});
+  // Every key, so a route, a custom domain, a trigger or any other setting cannot arrive unnoticed.
+  assert.deepEqual(Object.keys(config).sort(), ['assets', 'compatibility_date', 'name', 'preview_urls', 'previews', 'workers_dev']);
   assert.doesNotMatch(configText, /routes?"|custom_domain|zone_(id|name)/);
 });
 
+// The command lines of a Makefile target's recipe, in order.
+function recipeOf(target) {
+  const lines = read('Makefile').split('\n');
+  const start = lines.indexOf(`${target}:`);
+  assert.ok(start >= 0, `no "${target}" target in the Makefile`);
+  const end = lines.findIndex((l, i) => i > start && !l.startsWith('\t'));
+  return lines.slice(start + 1, end < 0 ? undefined : end).map((l) => l.trim());
+}
+
 test('the build script runs what make build runs, and the Node version is pinned to the one CI uses', () => {
-  const recipe = /^build:\n\t(.+)$/m.exec(read('Makefile'))[1];
-  assert.equal(JSON.parse(read('package.json')).scripts.build, recipe);
+  const recipe = recipeOf('build');
+  assert.ok(recipe.length > 0);
+  assert.equal(JSON.parse(read('package.json')).scripts.build, recipe.join(' && '));
   assert.equal(read('.node-version'), '24\n');
   const ci = [...read('.github/workflows/ci.yml').matchAll(/node-version: (\S+)/g)].map((m) => m[1]);
   assert.ok(ci.length > 0);
