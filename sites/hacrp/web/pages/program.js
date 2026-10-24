@@ -60,7 +60,7 @@ ${searchBox(searchUrl, { id: 'hero', hero: true })}
 ${tryMarkup && html`<p class="prog__try">${tryMarkup}</p>`}
 </div>`}
 </div>
-<div class="prog__card">
+<div class="prog__card stack">
 <div class="form prog__summary">
 ${formTitle(fill('summaryTitle', { fy: fyText }), fillKeep('summaryReleased', { date: isoDate(source.pdcReleased) }, ['date']))}
 ${[

@@ -295,12 +295,14 @@
 /* Sized to its column (container units), so the name keeps to two lines at any width. */
 .prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; }
 .prog__title-pen { display: block; color: var(--pen); }
-.prog__card { display: grid; gap: 16px; align-content: start; }
+/* A stack (its column never takes its stamp's width) and a size container, so the stamp is sized to it. */
+.prog__card { display: grid; gap: 16px; align-content: start; container-type: inline-size; }
 /* The summary's fields wrap as the record card's do (each row filled), the title across the top. */
 .prog__summary { display: flex; flex-wrap: wrap; }
 .prog__summary > .field { flex: 1 1 170px; }
 .prog__summary > .form__title { flex-basis: 100%; }
-.prog__card .stamp { justify-self: end; margin-right: 6px; font-size: clamp(1.4rem, 3vw, 2rem); }
+/* The stamp: one line at every width, sized to the card (container units) so it never outgrows it, at most 1.55rem. */
+.prog__card .stamp { justify-self: end; margin: 4px 6px 0 0; white-space: nowrap; font-size: min(4.5cqi, 1.55rem); }
 /* The US map's states take a pointer: a click lists the state's hospitals in the table (client/program.js). */
 .chart--us-map .chart-mark[data-state] { cursor: pointer; }
 
@@ -388,7 +390,6 @@
 .prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
 .prog__try a { color: var(--ink); text-decoration-color: var(--pen); }
 .page--prog .prog__summary > .field { flex: 1 1 210px; }
-.page--prog .prog__card .stamp { margin-top: 4px; }
 
 /* The score rule: the silhouette over a 5px ink bar; its captions in small caps; a pointer finds the hospital. */
 .rulefig { display: grid; gap: 6px; margin: 4px 0 0; }
@@ -579,10 +580,6 @@
 .kids__pct { font: 400 var(--fs-sm)/1.2 var(--font-type); }
 .page--place .hospitals { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
 /* A place's map: the place's land in the panel tone, its neighbors fainter, its hospitals as dots. */
-/* The program page's stamp: one line, sized to its column; wrapped and centered on a phone, where one line at the
-   smallest size is wider than the column and would widen the page. */
-.page--prog .prog__card .stamp { font-size: clamp(1.05rem, 2.2vw, 1.55rem); text-align: center; }
-@media (min-width: 400px) { .page--prog .prog__card .stamp { white-space: nowrap; } }
 /* The sandbox is step 6: its numeral on the step's red hairline, the what-if's own heading under it. */
 .step__n--sandbox { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); }
 .prog .step__n--sandbox + .whatif { margin-top: 10px; padding-top: 0; border-top: 0; }
