@@ -13,7 +13,8 @@ import { withTemp } from '../../pipeline/test/helpers.js';
 import { BUDGETS, JS_BUDGET, checkBudgets, measure, pageType, pageWeight } from '../ci/size-budget.js';
 
 const brAt = (quality) => (text) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
-const br = brAt(11);
+// The size the budget counts: quality 5.
+const br = brAt(5);
 // Text that brotli can't shrink much, so a size is easy to aim at.
 const noise = (n) => randomBytes(n).toString('base64');
 
@@ -29,7 +30,7 @@ function build(dir, files) {
 }
 
 test('pageWeight: brotli of the HTML, each stylesheet and each script, a script shared or repeated counted once', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const site = noise(300);
     const a = noise(200);
     const shared = noise(150);
@@ -39,43 +40,43 @@ test('pageWeight: brotli of the HTML, each stylesheet and each script, a script 
       'assets/site.1.css': site, 'assets/a.1.js': a, 'assets/shared.1.js': shared,
       'hacrp/hospital/990001/index.html': hospital, 'hacrp/hospital/990002/index.html': other,
     });
-    assert.deepEqual(await pageWeight(dir, 'hacrp/hospital/990001/index.html'), {
+    assert.deepEqual(pageWeight(dir, 'hacrp/hospital/990001/index.html'), {
       html: br(hospital), css: br(site), js: br(a) + br(shared), total: br(hospital) + br(site) + br(a) + br(shared),
     });
     // Each page counts its own references: the second page's one script is the shared file, once.
-    assert.deepEqual(await pageWeight(dir, 'hacrp/hospital/990002/index.html'), {
+    assert.deepEqual(pageWeight(dir, 'hacrp/hospital/990002/index.html'), {
       html: br(other), css: br(site), js: br(shared), total: br(other) + br(site) + br(shared),
     });
   }));
 
 test('pageWeight: a script with a src counts, module or not; a data script, a font preload and a page link do not', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const classic = noise(120);
     build(dir, { 'assets/classic.1.js': classic, 'classic/index.html': page('<script src="/assets/classic.1.js" defer></script>') });
-    assert.equal((await pageWeight(dir, 'classic/index.html')).js, br(classic));
+    assert.equal(pageWeight(dir, 'classic/index.html').js, br(classic));
 
     const text = '<link rel="preload" href="/assets/fonts/a.woff2" as="font"><link rel="icon" href="/favicon.svg">'
       + '<a href="/assets/other.1.js">x</a><script type="application/json" id="d">{"a":1}</script><script>var x = 1;</script>';
     const body = page(text);
     build(dir, { 'index.html': body });
-    assert.deepEqual(await pageWeight(dir, 'index.html'), { html: br(body), css: 0, js: 0, total: br(body) });
+    assert.deepEqual(pageWeight(dir, 'index.html'), { html: br(body), css: 0, js: 0, total: br(body) });
   }));
 
 test('pageWeight: a referenced file that is not in dist throws, and so does a script that imports another file', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     build(dir, { 'index.html': page(css('/assets/gone.1.css')) });
-    await assert.rejects(pageWeight(dir, 'index.html'), /gone\.1\.css/);
+    assert.throws(() => pageWeight(dir, 'index.html'), /gone\.1\.css/);
 
     build(dir, {
       'a/index.html': page(js('/assets/split.1.js')),
       'assets/split.1.js': 'import{x as a}from"/assets/chunk.2.js";a();',
     });
-    await assert.rejects(pageWeight(dir, 'a/index.html'), /split\.1\.js.*imports/);
+    assert.throws(() => pageWeight(dir, 'a/index.html'), /split\.1\.js.*imports/);
     build(dir, { 'b/index.html': page(js('/assets/rel.1.js')), 'assets/rel.1.js': 'const m=await import("./chunk.2.js");' });
-    await assert.rejects(pageWeight(dir, 'b/index.html'), /rel\.1\.js.*imports/);
+    assert.throws(() => pageWeight(dir, 'b/index.html'), /rel\.1\.js.*imports/);
     // Words that only look like an import do not.
     build(dir, { 'c/index.html': page(js('/assets/ok.1.js')), 'assets/ok.1.js': 'e.textContent="data from",f("import")' });
-    assert.equal((await pageWeight(dir, 'c/index.html')).js, br('e.textContent="data from",f("import")'));
+    assert.equal(pageWeight(dir, 'c/index.html').js, br('e.textContent="data from",f("import")'));
   }));
 
 test('pageType: every page of the site sorts into one type', () => {
@@ -113,7 +114,7 @@ test('every page type has a budget; hub and policy start at 100 KB and scripts a
 });
 
 test('checkBudgets: lists the pages over their type\'s budget, and only those', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const big = page(`<!-- ${noise(3000)} -->`);
     const small = page();
     build(dir, {
@@ -123,38 +124,38 @@ test('checkBudgets: lists the pages over their type\'s budget, and only those', 
       'index.html': small,
     });
     const budgets = { hub: 1000, policy: 1000, program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000, notFound: 1000 };
-    const over = await checkBudgets(dir, { budgets });
+    const over = checkBudgets(dir, { budgets });
     assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', total: br(big), budget: 2000 }]);
     // Everything fits a generous budget.
-    assert.deepEqual(await checkBudgets(dir, { budgets: { ...budgets, hospital: 50000 } }), []);
+    assert.deepEqual(checkBudgets(dir, { budgets: { ...budgets, hospital: 50000 } }), []);
   }));
 
 test('checkBudgets: a page whose scripts alone pass the script budget is reported, whatever its total', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const heavy = noise(4000);
     build(dir, { 'assets/big.1.js': heavy, 'hacrp/index.html': page(js('/assets/big.1.js')) });
     const budgets = { ...BUDGETS };
-    const over = await checkBudgets(dir, { budgets, js: 1000 });
+    const over = checkBudgets(dir, { budgets, js: 1000 });
     assert.deepEqual(over, [{ path: '/hacrp/', type: 'program', part: 'js', total: br(heavy), budget: 1000 }]);
   }));
 
 test('checkBudgets: a page of no known type, or a build with no pages, throws', () =>
-  withTemp('size-', async (dir) => {
-    await assert.rejects(checkBudgets(dir), /no pages/);
+  withTemp('size-', (dir) => {
+    assert.throws(() => checkBudgets(dir), /no pages/);
     build(dir, { 'brand-new/index.html': page() });
-    await assert.rejects(checkBudgets(dir), /new page type needs a budget/);
+    assert.throws(() => checkBudgets(dir), /new page type needs a budget/);
   }));
 
 test('measure: one row per page, with its type and weight', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const p = page();
     build(dir, { 'index.html': p, '404.html': p });
-    const rows = (await measure(dir)).sort((x, y) => x.path.localeCompare(y.path));
+    const rows = measure(dir).sort((x, y) => x.path.localeCompare(y.path));
     assert.deepEqual(rows.map((r) => [r.path, r.type, r.total]), [['/', 'hub', br(p)], ['/404.html', 'notFound', br(p)]]);
   }));
 
 test('CLI: exits 0 on a site within budget, and 1 naming each page over it', () =>
-  withTemp('size-', async (dir) => {
+  withTemp('size-', (dir) => {
     const cli = (...args) => spawnSync('node', [join(REPO_ROOT, 'tools/ci/size-budget.js'), ...args], { encoding: 'utf8' });
     build(dir, { 'index.html': page(), 'terms/index.html': page() });
     const ok = cli(dir);
@@ -183,19 +184,10 @@ function prose(words) {
   return Array.from({ length: words }, () => vocabulary[next() % vocabulary.length]).join(' ');
 }
 
-test('checkBudgets: the fast pass never changes a verdict; whatever it reports is the quality-11 size', () =>
-  withTemp('size-', async (dir) => {
+test('pageWeight: measured at brotli quality 5, the quality the budgets were set at', () =>
+  withTemp('size-', (dir) => {
     const text = page(`<p>${prose(20000)}</p>`);
-    const fast = brAt(5)(text);
-    const exact = br(text);
-    assert.ok(exact < fast * 0.95, `precondition: quality 11 (${exact}) beats quality 5 (${fast}) by a clear margin`);
-    build(dir, { 'hacrp/hospital/990001/index.html': text });
-    const at = (budget) => checkBudgets(dir, { budgets: { ...BUDGETS, hospital: budget } });
-    // Budgets at or above the exact size pass: above the fast size, at the exact size, and between the two.
-    assert.deepEqual(await at(fast + 10), []);
-    assert.deepEqual(await at(exact), []);
-    // Here the fast size is over the budget and the exact size is not: still a pass.
-    assert.deepEqual(await at(Math.floor((exact + fast) / 2)), []);
-    // Over even by the exact size: reported at that size, not the fast one's.
-    assert.deepEqual(await at(exact - 1), [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', total: exact, budget: exact - 1 }]);
+    assert.notEqual(brAt(11)(text), brAt(5)(text), 'precondition: the two qualities differ on this text');
+    build(dir, { 'index.html': text });
+    assert.equal(pageWeight(dir, 'index.html').html, brAt(5)(text));
   }));
