@@ -200,8 +200,9 @@ wording, then commits. It is not dispatched.
   `build()` writes `dist/_headers`; `createSiteServer(root)` sends `headersFor(...)` on every response.
 - CSP (one line): `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self';
   connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. Tighten `form-action` to `'none'`
-  if the search form never submits. Add `style-src-attr 'unsafe-inline'` only if inline style attributes can't move
-  to classes or CSSOM (JavaScript setting `el.style.x` is allowed under CSP), and record why in the ledger.
+  if the search form never submits. As built (rulings R11 and R13): `style-src 'self' 'unsafe-inline'; style-src-elem
+  'self'`, because server-rendered charts carry data-driven `style` attributes and must render without JavaScript;
+  CSP3 browsers hold `<style>` elements and stylesheets to `'self'`, and older ones fall back instead of breaking.
 - Every path also gets `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
   `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Cross-Origin-Opener-Policy: same-origin` and
   `Strict-Transport-Security: max-age=31536000`. Hashed `/assets/*.js` and `*.css` get `Cache-Control: public,
@@ -215,8 +216,8 @@ wording, then commits. It is not dispatched.
   - `headersFor` on `/assets/site.ab12cd34.css` gives immutable caching; on `/assets/fonts/x.woff2`, not immutable.
   - A 404 response gets the CSP.
   - The local server's responses carry the same headers as `headersFor` for `/`, `/hacrp/` and an unknown path.
-  - Every built HTML page has no inline `<script>` that isn't `type="application/ld+json"`. If `style-src-attr` is not
-    allowed, no `style=` attribute either.
+  - Every built HTML page has no executable inline `<script>` (data blocks `type="application/json"` and
+    `"application/ld+json"` are allowed) and no inline `<style>` element.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement**, checking Cloudflare's current `_headers` documentation for splat and detach rules before
   relying on them.

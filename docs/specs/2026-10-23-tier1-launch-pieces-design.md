@@ -166,7 +166,8 @@ with Workers Builds (ARCH-09); noindex previews with no login (ARCH-13); one sha
 - Where the e2e suite lives and its command names (`npm test` stays Node's built-in runner and must not need a
   browser).
 - How strict `style-src` can be: inline `style` attributes exist in templates and chart code. Prefer moving them to
-  classes or custom properties; otherwise allow attributes only (`style-src-attr 'unsafe-inline'`) and record why.
+  classes or custom properties; otherwise allow attributes only and record why. (Settled in the build: charts keep
+  their attributes so they render without JavaScript; `<style>` elements and stylesheets stay `'self'`.)
 - How Cloudflare Web Analytics will load once it is turned on (an auto-injected beacon or a snippet) and what CSP it
   needs. Write the change it needs into the go-live steps; don't allow its origins before it is on.
 - The order for connecting Workers Builds so a branch can get a preview without merging to `main` first (for
