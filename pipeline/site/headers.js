@@ -11,11 +11,14 @@ const WEEK = `public, max-age=${7 * DAY}`;
 export const CSP = [
   "default-src 'none'",
   "script-src 'self'",
-  "style-src 'self'",
-  // Inline style attributes only; <style> elements and stylesheets stay 'self'. The server-rendered charts
+  // Inline style attributes are allowed, <style> elements and inline stylesheets are not. The server-rendered charts
   // (web/charts/, the sites' figure modules) set their data-driven custom properties in style="" so they draw without
-  // JavaScript, and every such value is a number the build formats and escapes.
-  "style-src-attr 'unsafe-inline'",
+  // JavaScript, and every such value is a number the build formats and escapes. A browser with CSP Level 3's style
+  // directives (Chromium 75, Firefox 108, Safari 15.4 and later) holds elements and stylesheets to style-src-elem's
+  // 'self' and takes attributes from style-src; an older one ignores style-src-elem and falls back to style-src, so
+  // its charts still draw rather than losing every inline style.
+  "style-src 'self' 'unsafe-inline'",
+  "style-src-elem 'self'",
   // data: for the stylesheet's paper grain and stamp mask (web/styles/tokens.css).
   "img-src 'self' data:",
   "font-src 'self'",
@@ -29,7 +32,7 @@ export const CSP = [
 ].join('; ');
 
 // The rules in file order, each [pattern, [[name, value]]]. A request gets every matching rule's headers.
-const rules = (env) => [
+const rulesFor = (env) => [
   ['/*', [
     ['Content-Security-Policy', CSP],
     ['X-Content-Type-Options', 'nosniff'],
@@ -52,7 +55,7 @@ const rules = (env) => [
 
 // The _headers text for a build. env: the build's PP_ENV.
 export function headersFile({ env } = {}) {
-  const blocks = rules(env).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
+  const blocks = rulesFor(env).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
   return `# Written by pipeline/site/headers.js. Cloudflare reads this file and does not serve it.\n${blocks.join('\n\n')}\n`;
 }
 

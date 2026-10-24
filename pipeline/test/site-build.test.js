@@ -197,7 +197,7 @@ test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
   }));
 
 // A tag's attributes: a script with no src runs inline unless it is a data block; an on* attribute and a javascript:
-// URL are inline script too. script-src 'self' blocks all three, and style-src 'self' blocks a <style> element.
+// URL are inline script too. script-src 'self' blocks all three, and style-src-elem 'self' blocks a <style> element.
 const DATA_BLOCK = /\stype="application\/(ld\+)?json"/;
 const SCRIPT_TAG = /<script\b([^>]*)>/gi;
 const HANDLER = /<[a-z][^>]*\son[a-z]+\s*=/i;

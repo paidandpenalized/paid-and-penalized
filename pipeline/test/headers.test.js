@@ -2,13 +2,13 @@
 // (as Cloudflare does), and the local server that sends them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withTemp } from './helpers.js';
 
-const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; "
+const CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; img-src 'self' data:; "
   + "font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
@@ -121,9 +121,67 @@ test('the local server sends the headers _headers gives each path, 404s included
       const missing = await get(port, '/nope/');
       assert.equal(missing.body, 'not here');
       assert.equal(missing.headers['content-security-policy'], CSP);
-      const own = await get(port, '/_headers');
-      assert.equal(own.status, 404);
-      assert.equal(own.body, 'not here');
+      for (const path of ['/_headers', '/_HEADERS', '/_Headers', '/%5Fheaders']) {
+        const own = await get(port, path);
+        assert.equal(own.status, 404, path);
+        assert.equal(own.body, 'not here', path);
+      }
+    } finally {
+      server.close();
+    }
+  }));
+
+test('the local server never sends Cache-Control on an error: a missing hashed file is not cached for a year', () =>
+  withTemp('pp-headers-', async (dir) => {
+    const root = join(dir, 'dist');
+    mkdirSync(join(root, 'assets'), { recursive: true });
+    writeFileSync(join(root, '404.html'), 'not here');
+    writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
+    const server = createSiteServer(root);
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const { port } = server.address();
+    try {
+      const path = '/assets/site.deadbeef.css';
+      assert.equal(headersFor(parseHeaders(headersFile({ env: undefined })), path)['cache-control'], IMMUTABLE);
+      for (const [p, status] of [[path, 404], ['/assets/%E0%A4%A.css', 400]]) {
+        const res = await get(port, p);
+        assert.equal(res.status, status, p);
+        assert.equal(res.headers['cache-control'], undefined, p);
+        assert.equal(res.headers['content-security-policy'], CSP, p);
+      }
+      // No 404.html: the plain-text 404 drops it too.
+      rmSync(join(root, '404.html'));
+      const bare = await get(port, path);
+      assert.equal(bare.status, 404);
+      assert.equal(bare.headers['cache-control'], undefined);
+    } finally {
+      server.close();
+    }
+  }));
+
+test('the local server reads _headers again when a rebuild changes it, sends none once it is gone, and refuses a malformed one', () =>
+  withTemp('pp-headers-', async (dir) => {
+    const root = join(dir, 'dist');
+    mkdirSync(root, { recursive: true });
+    writeFileSync(join(root, 'index.html'), 'home');
+    writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
+    const server = createSiteServer(root);
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const { port } = server.address();
+    try {
+      assert.equal((await get(port, '/')).headers['x-robots-tag'], 'noindex');
+      writeFileSync(join(root, '_headers'), headersFile({ env: 'production' }));
+      const after = await get(port, '/');
+      assert.equal(after.headers['x-robots-tag'], undefined);
+      assert.equal(after.headers['content-security-policy'], CSP);
+      rmSync(join(root, '_headers'));
+      assert.equal((await get(port, '/')).headers['content-security-policy'], undefined);
+      // A malformed file: a 500 that names it, and a server that won't start on one.
+      writeFileSync(join(root, '_headers'), '  X-Orphan: 1\n');
+      const bad = await get(port, '/');
+      assert.equal(bad.status, 500);
+      assert.match(bad.body, /_headers: .*line 1/);
+      assert.throws(() => createSiteServer(root), /line 1/);
     } finally {
       server.close();
     }
