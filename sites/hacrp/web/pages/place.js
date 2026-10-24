@@ -86,7 +86,7 @@ function placeCard(place, { pd, places, fy, md }) {
     { label: t('kpiAssigned'), value: count(c.assigned), note: t('kpiAssignedNote') },
     ...(md ? moneyFields(place, md) : []),
   ].filter(Boolean);
-  return html`<div class="place__card">
+  return html`<div class="place__card stack">
 <div class="form prog__summary">
 ${formTitle(fill('placeCardTitle', { name: place.name, fy: String(fy) }), t('placeCardVs'))}
 ${fields.map((field, i) => html`${formField({ no: i + 1, ...field })}
@@ -138,7 +138,7 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const body = html`<article class="wrap page page--prog page--place"${exploreUrl ? html` data-explore="${exploreUrl}"` : ''}>
 ${breadcrumb(places, place)}
 <header class="page__head prog__top place__top">
-<div class="prog__intro">
+<div class="prog__intro stack">
 <p class="cap kicker prog__kicker">${t(KIND[place.kind])}</p>
 <h1 class="place__title">${place.name}</h1>
 <p class="prog__lede place__deck">${deck}</p>

@@ -170,7 +170,7 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   const state = PLACES.list.find((p) => p.kind === 'state' && p.children.length > 1 && nearLine(MD, ACROSS_WINDOW).rows.some((r) => p.ccns.includes(r.ccn)));
   const page = renderPlace(state);
   const pm = placeMoney(MD, state.ccns);
-  const card = strip(/<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);
+  const card = strip(/<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);
   assert.ok(card.includes(money(pm.money)));
   assert.ok(card.includes(`${pct(pm.share, 1)} of the nation’s ${money(MD.headline.money)}`));
   // The place's likely range: its cut hospitals' ranges added up.
@@ -507,7 +507,7 @@ test('the treemap writes its tiles by hospital name, then CCN, not by size, and 
 });
 
 test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS\'s decision; a place with a cut shows the tag', () => {
-  const card = (place) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place))[0];
+  const card = (place) => /<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place))[0];
   const field = (html) => /<div class="field f-money">[\s\S]*?<\/div>\n/.exec(html)[0];
   const none = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes === 0 && placeMoney(MD, p.ccns).rows.length > 0);
   assert.ok(none, 'some state has estimated hospitals and none cut');
@@ -522,7 +522,7 @@ test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS
 // from this (md.rows) and from the hospitals CMS cut (md.decided), which stay.
 const withoutEstimates = (ccns) => ({ ...MD, rows: MD.rows.filter((r) => !ccns.includes(r.ccn)) });
 const parentOf = (place) => PLACES.list.find((p) => p.children.includes(place.id));
-const cardOf = (place, md) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place, { md }))[0];
+const cardOf = (place, md) => /<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place, { md }))[0];
 // The estimated-dollars field of a place's card, its note too (up to the next field, or the card's end).
 const moneyField = (card) => card.split('<div class="field f-money">')[1].split(/\n<div class="field[ "]/)[0];
 

@@ -51,11 +51,11 @@ function programTop({ title, subtitle, fy, counts, boundaryText, periods, source
     how: html`<a href="#how">${t('heroHow')}</a>`,
   });
   return html`<header class="page__head prog__top">
-<div class="prog__intro">
+<div class="prog__intro stack">
 <p class="cap kicker prog__kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
 <h1 class="prog__title">${at < 0 ? title : html`${title.slice(0, at)} <span class="prog__title-pen">${title.slice(at + 1)}</span>`}</h1>
 <p class="prog__lede">${t('progLedeScore')} ${fill('progLedeCut', { pct: REDUCTION_TEXT })} <strong>${fill('progLedeCount', { fy: fyText, yes: count(counts.yes), decided: count(counts.decided) })}</strong> ${t('progLedeEnd')}</p>
-${searchUrl && html`<div class="prog__find">
+${searchUrl && html`<div class="prog__find stack">
 ${searchBox(searchUrl, { id: 'hero', hero: true })}
 ${tryMarkup && html`<p class="prog__try">${tryMarkup}</p>`}
 </div>`}

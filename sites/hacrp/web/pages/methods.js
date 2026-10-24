@@ -184,13 +184,13 @@ export function methodsPage({ fy, checks, years, newest, pins, changes, estimate
   const source = newest.sourceLine;
 
   const top = html`<header class="page__head meth__top">
-<div class="meth__intro">
+<div class="meth__intro stack">
 ${kicker(fy)}
 <h1 class="meth__title">${t('methodsTitle')}</h1>
 <p class="meth__lede">${t('methodsLede')}</p>
 <p class="meth__lede2">${t('methodsLede2')}</p>
 </div>
-<div class="meth__card">
+<div class="meth__card stack">
 ${receipt(checks)}
 ${stamp({ label: t('checkStamp') })}
 </div>

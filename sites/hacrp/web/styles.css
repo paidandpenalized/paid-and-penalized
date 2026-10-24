@@ -345,10 +345,11 @@
   .ht__sort { display: grid; }
   .ht__controls { display: grid; gap: 12px; }
   .ht__field, .ht select, .ht input { width: 100%; }
-  /* Each cell's column name, for screen readers only (the heads are hidden): generated from data-label, clipped. */
-  .gb--hospitals td::before { content: attr(data-label) ": "; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Each cell's column name, for screen readers only (the heads are hidden): generated from data-label. */
+  .gb--hospitals td::before { content: attr(data-label) ": "; }
+  /* The heads and the cells' names are clipped as .vh is (web/styles/base.css), so a screen reader still reads them. */
+  .gb--hospitals thead, .gb--hospitals td::before { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .gb--hospitals, .gb--hospitals tbody { display: block; width: 100%; }
-  .gb--hospitals thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .gb--hospitals tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name name" "city state score" "money money decision"; gap: 2px 0; padding: 8px 10px 10px; }
   .gb--hospitals tbody tr + tr { border-top: 1px solid var(--line); }
   .gb--hospitals tbody th, .gb--hospitals td { display: block; padding: 0; }
@@ -380,8 +381,7 @@
 .page--prog .prog__top { padding-block: 16px 20px; }
 .prog__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
 .prog__lede strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
-/* One column that may shrink: the search's input has a width of its own, which would otherwise set the column's minimum. */
-.prog__find { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 6px; max-width: 38rem; }
+.prog__find { display: grid; gap: 8px; margin-top: 6px; max-width: 38rem; }
 .omni--hero .omni__field { min-height: 56px; border-color: var(--pen); }
 .omni--hero .omni__label { border-right-color: var(--pen); font-size: var(--fs-sm); padding-inline: 14px; }
 .omni--hero input { font-size: var(--fs-md); padding-inline: 14px; }
@@ -560,8 +560,9 @@
 /* ---------- place pages (pages/place.js) ----------
    The program page's frame: the breadcrumb, the name in the display face beside the summary form, the score rule
    with the place's ticks. */
-/* The rows of a trail that wraps on a phone sit 4px apart: each link keeps WCAG 2.2's 24px of clear space around it. */
-.crumbs ol { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
+/* The rows of a trail that wraps on a phone sit a target's height (--target-min) apart, line to line, whatever the type
+   size: each link keeps WCAG 2.2's 24px of clear space around it. */
+.crumbs ol { display: flex; flex-wrap: wrap; gap: calc(var(--target-min) - 1lh) 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .crumbs li + li::before { content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
 .crumbs a { color: var(--ink); }
 .crumbs [aria-current] { color: var(--ink-2); }
@@ -695,10 +696,9 @@
 .receipt__sum div { display: flex; justify-content: space-between; gap: 12px; }
 .receipt__sum dt { text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
 .receipt__sum dd { margin: 0; font-weight: 700; }
-/* On a phone the self-check tape fits the screen: its card's column may shrink below the tape's own width, and the
-   tape's table takes smaller type, side padding and gaps, so no figure touches the next. */
+/* On a phone the self-check tape fits the screen (its card is a stack, so its column may shrink below the tape's own
+   width): the tape's table takes smaller type, side padding and gaps, so no figure touches the next. */
 @media (max-width: 400px) {
-  .meth__card { grid-template-columns: minmax(0, 1fr); }
   .meth__card .receipt { padding-inline: 12px; }
   .meth__card .receipt__t { font-size: var(--fs-xs); }
   .meth__card .receipt__t th + th, .meth__card .receipt__t td { padding-left: 6px; }
@@ -725,9 +725,10 @@
 
 .receipts td:last-child { white-space: nowrap; }
 @media (max-width: 600px) {
-  /* The column heads are clipped, not display: none: the stacked cells keep their heads for a screen reader (here and
-     on the dollar checks' tape below). */
-  .takes thead, .receipts thead, .receipt--dollars .receipt__t thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  /* The column heads are clipped as .vh is (web/styles/base.css), not display: none: the stacked cells keep their heads
+     for a screen reader (here and on the dollar checks' tape below). The hospital table's are clipped at its own,
+     wider breakpoint (640px, above). */
+  .takes thead, .receipts thead, .receipt--dollars .receipt__t thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .takes tr, .receipts tr { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .takes th, .takes td, .receipts th, .receipts td { display: block; padding: 0; border: 0; text-align: left; }
   .receipts .receipts__hash { display: none; }
