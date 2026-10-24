@@ -3,7 +3,6 @@
 // sitemap lists), asset() for a site's own content-hashed data, and setUpdated() for the two dates the hub's
 // corrections page shows for the site. robotsFor holds the indexing rule.
 import { join } from 'node:path';
-import { isoDate } from '../../web/render/format.js';
 import { writeFileMkdir } from '../files.js';
 import { writeHashed } from './assets.js';
 
@@ -29,18 +28,9 @@ export function createContext({ outDir, env, assets }) {
     // site id -> { cmsReleased, changed }, in the order the sites set them (setUpdated).
     updated,
     // A site's two dates, each YYYY-MM-DD: when CMS released the file the site uses, and when the site's numbers last
-    // changed. Once per site; the hub's /corrections/ page lists them.
-    setUpdated(siteId, { cmsReleased, changed } = {}) {
-      if (typeof siteId !== 'string' || !siteId) throw new TypeError('setUpdated: the site id must be a non-empty string');
+    // changed. Once per site; the hub's /corrections/ page lists them, and refuses a date that is not one.
+    setUpdated(siteId, { cmsReleased, changed }) {
       if (updated.has(siteId)) throw new RangeError(`setUpdated: "${siteId}" is already set`);
-      for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
-        try {
-          if (typeof date !== 'string') throw new TypeError(`expected a YYYY-MM-DD string, got ${typeof date}`);
-          isoDate(date);
-        } catch (err) {
-          throw new RangeError(`setUpdated(${siteId}): ${name}: ${err.message}`);
-        }
-      }
       updated.set(siteId, { cmsReleased, changed });
     },
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;

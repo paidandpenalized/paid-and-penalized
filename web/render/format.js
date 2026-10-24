@@ -109,11 +109,13 @@ export function dollars(x, { sign = false } = {}) {
 // dollars() of the nearest whole dollar, for an average or a share of a total ("$1,234").
 export const roundedDollars = (x, options) => dollars(Math.round(x), options);
 
-function longForm(year, month, day, source) {
+const onCalendar = (year, month, day) => {
   const d = new Date(Date.UTC(year, month - 1, day));
-  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
-    throw new RangeError(`not a calendar date: "${source}"`);
-  }
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+};
+
+function longForm(year, month, day, source) {
+  if (!onCalendar(year, month, day)) throw new RangeError(`not a calendar date: "${source}"`);
   return `${MONTHS[month - 1]} ${day}, ${year}`;
 }
 
@@ -124,11 +126,19 @@ export function longDate(text) {
   return longForm(Number(m[3]), Number(m[1]), Number(m[2]), text);
 }
 
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 // [year, month, day] of a YYYY-MM-DD text.
 function isoParts(text) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  const m = ISO_DATE.exec(text);
   if (!m) throw new RangeError(`expected YYYY-MM-DD, got "${text}"`);
   return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+// Whether text is a YYYY-MM-DD date that exists on the calendar: what the formatters below accept.
+export function isIsoDate(text) {
+  const m = ISO_DATE.exec(text);
+  return m !== null && onCalendar(Number(m[1]), Number(m[2]), Number(m[3]));
 }
 
 // YYYY-MM-DD.

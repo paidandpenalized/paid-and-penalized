@@ -128,7 +128,7 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
     assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
   }));
 
-test('setUpdated records a site\'s two dates once, as real calendar dates; updated is a Map read in the order they were set', () =>
+test('setUpdated records a site\'s two dates once; updated is a Map read in the order they were set', () =>
   withTemp(async (dir) => {
     const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
     assert.ok(ctx.updated instanceof Map);
@@ -138,12 +138,6 @@ test('setUpdated records a site\'s two dates once, as real calendar dates; updat
     assert.deepEqual([...ctx.updated], [['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['other', { cmsReleased: '2026-01-02', changed: '2026-01-03' }]]);
     assert.throws(() => ctx.setUpdated('hacrp', { cmsReleased: '2026-08-14', changed: '2026-10-23' }), /"hacrp" is already set/);
     assert.equal(ctx.updated.get('hacrp').cmsReleased, '2026-08-13');
-    for (const bad of [{}, { cmsReleased: '2026-08-13' }, { changed: '2026-08-13' }, { cmsReleased: '2026-02-30', changed: '2026-08-13' },
-      { cmsReleased: '2026-08-13', changed: '08/13/2026' }, { cmsReleased: '2026-08-13', changed: '2026-08-13T10:00:00Z' }, { cmsReleased: 20260813, changed: '2026-08-13' }]) {
-      assert.throws(() => ctx.setUpdated('x', bad), /setUpdated\(x\)/, JSON.stringify(bad));
-    }
-    assert.equal(ctx.updated.has('x'), false, 'a refused call records nothing');
-    assert.throws(() => ctx.setUpdated('', { cmsReleased: '2026-08-13', changed: '2026-08-13' }), TypeError);
   }));
 
 // The newest built_at date among the emitted files the HACRP pages read (the HACRP file, the hospital master, the

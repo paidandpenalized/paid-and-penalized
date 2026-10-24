@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../site.js';
-import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
+import { cmsText, count, decimal, isIsoDate, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
@@ -76,6 +76,13 @@ test('longDate and isoDate spell the month out and reject non-dates', () => {
   assert.throws(() => longDate('2022-07-01'), RangeError);
   assert.throws(() => isoDate('2026-02-30'), RangeError);
   assert.throws(() => isoDate('August 13, 2026'), RangeError);
+});
+
+test('isIsoDate says whether isoDate takes a text: YYYY-MM-DD on the calendar', () => {
+  for (const ok of ['2026-08-13', '2024-02-29']) assert.equal(isIsoDate(ok), true, ok);
+  for (const bad of ['2026-02-30', '2026-13-01', '2026-8-13', '2026-08-13T00:00:00Z', 'August 13, 2026', '', undefined, 20260813]) {
+    assert.equal(isIsoDate(bad), false, String(bad));
+  }
 });
 
 test('isoMonth gives the month and the year of a date as separate words, and rejects non-dates', () => {
