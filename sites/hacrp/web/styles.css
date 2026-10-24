@@ -694,6 +694,15 @@
 .receipt__sum div { display: flex; justify-content: space-between; gap: 12px; }
 .receipt__sum dt { text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
 .receipt__sum dd { margin: 0; font-weight: 700; }
+/* On a phone the self-check tape fits the screen: its card's column may shrink below the tape's own width, and the
+   tape's table takes smaller type, side padding and gaps, so no figure touches the next. */
+@media (max-width: 400px) {
+  .meth__card { grid-template-columns: minmax(0, 1fr); }
+  .meth__card .receipt { padding-inline: 12px; }
+  .meth__card .receipt__t { font-size: var(--fs-xs); }
+  .meth__card .receipt__t th + th, .meth__card .receipt__t td { padding-left: 6px; }
+  .meth__card .receipt__ok { padding-left: 6px !important; }
+}
 .ymap { display: grid; gap: 10px; }
 .ymap .chart { max-width: none; }
 .ymap__controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
