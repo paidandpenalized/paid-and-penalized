@@ -1,7 +1,8 @@
 // The change gate's rule: emitted data may change only with a reason on record.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { batchTexts, changeGate, isEntry, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
+import { batchTexts, changeGate, parseNameStatus, readableMarkdown, reasonFor } from '../ci/change-gate.js';
+import { isEntry, parseEntry } from '../../pipeline/corrections.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/hacrp/fy2026/hacrp.json';
@@ -51,15 +52,18 @@ test('the corrections log is append-only: editing, retyping or deleting an entry
   assert.equal(changeGate({ changed: [M(EMITTED), NEW_ENTRY, readme], freshEntries: FRESH }).ok, true, 'a non-entry file is not the log');
 });
 
-test('isEntry: a real calendar date and a slug that starts with a letter or digit', () => {
-  for (const ok of ['corrections/2026-11-01-hacrp.md', 'corrections/2026-12-31-a.md', 'corrections/2028-02-29-x-y-2.md']) {
+test('isEntry: a real calendar date from 2000 on and a slug that starts with a letter or digit; parseEntry splits it', () => {
+  for (const ok of ['corrections/2026-11-01-hacrp.md', 'corrections/2026-12-31-a.md', 'corrections/2028-02-29-x-y-2.md', 'corrections/2000-01-01-x.md']) {
     assert.equal(isEntry(ok), true, ok);
   }
   for (const bad of ['corrections/2026-13-01-a.md', 'corrections/2026-00-10-a.md', 'corrections/2026-11-32-a.md',
     'corrections/2026-11-00-a.md', 'corrections/2026-02-31-a.md', 'corrections/2026-04-31-a.md', 'corrections/2027-02-29-a.md',
-    'corrections/0000-01-01-a.md', 'corrections/9999-99-99--.md', 'corrections/2026-11-01--a.md', 'corrections/2026-11-01-A.md']) {
+    'corrections/0000-01-01-a.md', 'corrections/1999-12-31-a.md', 'corrections/9999-99-99--.md', 'corrections/2026-11-01--a.md',
+    'corrections/2026-11-01-A.md', 'corrections/2026-11-01-a.MD', 'corrections/x/2026-11-01-a.md', '2026-11-01-a.md']) {
     assert.equal(isEntry(bad), false, bad);
   }
+  assert.deepEqual(parseEntry('corrections/2028-02-29-x-y-2.md'), { date: '2028-02-29', slug: 'x-y-2' });
+  assert.equal(parseEntry('corrections/README.md'), null);
 });
 
 test('the failure says why an added entry did not count', () => {

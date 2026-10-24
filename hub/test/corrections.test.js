@@ -3,11 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { isEntry } from '../../tools/ci/change-gate.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { CORRECTIONS_EMAIL } from '../constants.js';
 import { COPY } from '../copy.js';
-import { correctionsPage, entryName, readCorrections } from '../corrections.js';
+import { correctionsPage, readCorrections } from '../corrections.js';
 
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
 const textOf = (page) => page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ')
@@ -38,17 +37,20 @@ test('readCorrections returns the entries newest first, then by slug, each with 
   ]);
 });
 
-test('an absent, empty or readme-only corrections folder is an empty log', () => {
+test('an absent, empty or readme-only corrections folder is an empty log; evidence beside the entries is not an entry', () => {
   assert.deepEqual(readLog({}), []);
   assert.deepEqual(readLog({ 'README.md': 'How to write an entry.\n', '.DS_Store': 'x' }), []);
+  assert.deepEqual(readLog({ 'notes.txt': 'x', '2026-11-02-a.pdf': 'x', '2026-11-02-a.md.txt': 'x', '2026-11-02-a.md': 'Body.' }),
+    [{ date: '2026-11-02', slug: 'a', body: 'Body.' }]);
   assert.deepEqual(readCorrections(join(tmpdir(), 'pp-corrections-does-not-exist')), []);
 });
 
-test('a malformed entry stops the read with its file name: a date not on the calendar, no slug, not .md, a blank body', () => {
+test('a malformed entry stops the read with its file name: a date not on the calendar, no slug, a capital, a blank body', () => {
   const bad = {
     '2026-02-30-x.md': 'Body.',
     '2026-13-01-x.md': 'Body.',
-    'notes.txt': 'Body.',
+    '1999-12-31-x.md': 'Body.',
+    'notes.md': 'Body.',
     '2026-11-02-.md': 'Body.',
     '2026-11-02-Upper.md': 'Body.',
     '2026-11-02.md': 'Body.',
@@ -63,15 +65,7 @@ test('a malformed entry stops the read with its file name: a date not on the cal
   assert.throws(() => readLog({}, (dir) => mkdirSync(join(dir, '2026-11-02-dir.md'))), /2026-11-02-dir\.md/);
   assert.throws(() => readLog({}, (dir) => symlinkSync(join(dir, 'target'), join(dir, '2026-11-02-link.md'))), /2026-11-02-link\.md/);
   // One bad file among good ones still stops the build.
-  assert.throws(() => readLog({ '2026-11-02-a.md': 'Body.', 'notes.txt': 'x' }), /notes\.txt/);
-});
-
-test('the build counts exactly the file names the change gate counts as entries', () => {
-  const names = ['2026-11-02-a.md', '2026-11-02-a-b-2.md', '2026-11-02-9.md', '2026-11-02-a--b.md', '2000-01-01-x.md', '2026-02-29-x.md', '2024-02-29-x.md',
-    '2026-13-01-x.md', '2026-00-10-x.md', '2026-11-31-x.md', '2026-11-02-.md', '2026-11-02--x.md', '2026-11-02-A.md', '2026-11-02-a_b.md', '2026-1-02-x.md',
-    '2026-11-02-x.MD', '2026-11-02-x.md.txt', '1999-01-01-x.md', 'notes.txt', 'README.md', 'x/2026-11-02-a.md'];
-  for (const name of names) assert.equal(entryName(name) !== null, isEntry(`corrections/${name}`), name);
-  assert.deepEqual(entryName('2026-11-02-a-b-2.md'), { date: '2026-11-02', slug: 'a-b-2' });
+  assert.throws(() => readLog({ '2026-11-02-a.md': 'Body.', 'notes.md': 'x' }), /notes\.md/);
 });
 
 // ---------- correctionsPage ----------
@@ -163,12 +157,11 @@ test('every word of the page\'s copy shows on it, with the address and the sites
   assert.doesNotMatch(words, /\{\w+\}/);
 });
 
-test('with no site dates the sites section is left out; a site the family does not have, a bad date or a blank body stops the build', () => {
+test('with no site dates the sites section is left out; a site the family does not have or a bad date stops the build', () => {
   assert.doesNotMatch(page({ updated: new Map() }), new RegExp(COPY.correctionsSitesHeading));
   assert.throws(() => page({ updated: new Map([['nowhere', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]) }), /nowhere/);
   assert.throws(() => page({ updated: new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-02-30' }]]) }), RangeError);
   assert.throws(() => page({ entries: [{ date: '2026-13-01', slug: 'x', body: 'b' }] }), RangeError);
-  assert.throws(() => page({ entries: [{ date: '2026-11-02', slug: 'x', body: '   ' }] }), /2026-11-02-x/);
 });
 
 test('the page is noindex when asked, has one h1, no figure and no inline style, and its canonical address is /corrections/', () => {

@@ -4,6 +4,7 @@
 // gives, per site, the date of the CMS file it uses and the date its numbers last changed (ctx.setUpdated).
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { CORRECTIONS, parseEntry } from '../pipeline/corrections.js';
 import { isoDate } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { markdownSections } from '../web/render/markdown.js';
@@ -13,24 +14,11 @@ import { COPY } from './copy.js';
 import { feedbackLink, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
-// An entry's file name, YYYY-MM-DD-<slug>.md with a real date: { date, slug }, or null. The rule is the change gate's
-// (tools/ci/change-gate.js isEntry; a test keeps the two equal), so the build refuses what the gate would not count.
-const NAME = /^(\d{4}-\d{2}-\d{2})-([a-z0-9][a-z0-9-]*)\.md$/;
-export function entryName(name) {
-  const m = NAME.exec(name);
-  if (!m || Number(m[1].slice(0, 4)) < 2000) return null;
-  try {
-    isoDate(m[1]);
-  } catch {
-    return null;
-  }
-  return { date: m[1], slug: m[2] };
-}
-
-// The dated entries in dir, newest first and by slug within a day: [{ date: 'YYYY-MM-DD', slug, body }]. A file the
+// The dated entries in dir, newest first and by slug within a day: [{ date: 'YYYY-MM-DD', slug, body }]. A .md the
 // change gate would not count as an entry (a name that is not corrections/YYYY-MM-DD-<slug>.md with a real date, or
 // not a regular file) or one with a blank body stops the build and names the file, rather than show a wrong date or
-// nothing. A README.md (which the gate allows) and dotfiles are not entries.
+// nothing. A README.md (which the gate allows), dotfiles and other regular files (evidence such as a PDF, which the
+// gate tolerates) are not entries.
 export function readCorrections(dir) {
   let files;
   try {
@@ -42,15 +30,16 @@ export function readCorrections(dir) {
   const entries = [];
   for (const file of files) {
     const { name } = file;
-    if (name.startsWith('.') || /^readme\.md$/i.test(name)) continue;
-    const parsed = entryName(name);
-    if (!parsed) throw new RangeError(`corrections/${name} is not an entry: a name is YYYY-MM-DD-<slug>.md, a real date, then lowercase letters, digits and hyphens`);
-    if (!file.isFile()) throw new RangeError(`corrections/${name} is not a regular file`);
+    if (name.startsWith('.') || /^readme\.md$/i.test(name) || (file.isFile() && !/\.md$/i.test(name))) continue;
+    const parsed = parseEntry(CORRECTIONS + name);
+    if (!parsed) throw new RangeError(`${CORRECTIONS}${name} is not an entry: a name is YYYY-MM-DD-<slug>.md, a real date, then lowercase letters, digits and hyphens`);
+    if (!file.isFile()) throw new RangeError(`${CORRECTIONS}${name} is not a regular file`);
     const body = readFileSync(join(dir, name), 'utf8').trim();
-    if (!body) throw new RangeError(`corrections/${name} is blank`);
+    if (!body) throw new RangeError(`${CORRECTIONS}${name} is blank`);
     entries.push({ ...parsed, body });
   }
-  return entries.sort((a, b) => (a.date === b.date ? (a.slug < b.slug ? -1 : 1) : a.date < b.date ? 1 : -1));
+  // Dates are ISO text of one length, so they order as text.
+  return entries.sort((a, b) => b.date.localeCompare(a.date) || (a.slug < b.slug ? -1 : 1));
 }
 
 // A date (YYYY-MM-DD) as a reader says it, with the machine-readable one beside it.
@@ -59,7 +48,6 @@ const time = (iso) => html`<time datetime="${iso}">${isoDate(iso)}</time>`;
 // One entry: its date (and its "# " title, if it has one) as the heading, then its Markdown body, escaped. A "## "
 // heading in the body sits a level below the date and labels the table under it.
 function entryBlock({ date, slug, body }) {
-  if (!body.trim()) throw new RangeError(`corrections entry ${date}-${slug} is blank`);
   const { title, sections } = markdownSections(body, { idPrefix: `h-${date}-${slug}` });
   return html`<article class="pol__entry" id="e-${date}-${slug}">
 <h3 class="pol__entry-h">${time(date)}${title ? html` <span class="pol__entry-title">${title}</span>` : ''}</h3>
