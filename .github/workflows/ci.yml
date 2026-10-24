@@ -34,6 +34,8 @@ jobs:
         run: make build
       - name: Size budget (brotli weight per page type)
         run: node tools/ci/size-budget.js
+      - name: Link check (every internal link and fragment in dist/ resolves)
+        run: node tools/ci/link-check.js
       - name: Change gate (emitted data needs a reason on record)
         if: ${{ !cancelled() }}
         env:
