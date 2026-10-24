@@ -6,6 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "build": "node pipeline/site/build.js",
     "test": "node --test \"engine/js/test/**/*.test.js\" \"pipeline/test/**/*.test.js\" \"sites/*/test/**/*.test.js\" \"tools/test/**/*.test.js\" \"web/test/**/*.test.js\" \"hub/test/**/*.test.js\""
   },
   "devDependencies": {
