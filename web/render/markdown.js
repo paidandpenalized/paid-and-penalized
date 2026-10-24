@@ -23,9 +23,12 @@ const inParagraph = (line) => line.trim() && !/^(#|- |\|)/.test(line);
 // { title, intro, sections: [{ heading, id, body }] }: the "# " title's text, the first paragraph's plain text, and
 // each "## " section with its body as markup (blocks before the first "## " form a section with no heading). idPrefix
 // names each heading's id; a section's table is labelled by its heading and sits in the printout frame
-// (tableClass: the table's classes; its first column is the row head).
-export function markdownSections(text, { idPrefix, tableClass = 'gb' }) {
+// (tableClass: the table's classes; its first column is the row head). Text the ids or the title could not stand
+// for stops it with a RangeError that starts with label (default idPrefix): a second "# " title, a "## " heading
+// with no letter or digit to make an id from, or two that make the same id.
+export function markdownSections(text, { idPrefix, tableClass = 'gb', label = idPrefix }) {
   const sections = [{ heading: null, id: null, blocks: [] }];
+  const headings = new Map(); // id -> the heading that made it
   let title = null;
   let intro = null;
   const section = () => sections[sections.length - 1];
@@ -36,11 +39,16 @@ export function markdownSections(text, { idPrefix, tableClass = 'gb' }) {
     if (!line.trim()) {
       i += 1;
     } else if (line.startsWith('# ')) {
+      if (title !== null) throw new RangeError(`${label}: more than one "# " title`);
       title = line.slice(2).trim();
       i += 1;
     } else if (line.startsWith('## ')) {
       const heading = line.slice(3).trim();
-      sections.push({ heading, id: `${idPrefix}-${slug(heading)}`, blocks: [] });
+      if (!slug(heading)) throw new RangeError(`${label}: the heading "${heading}" has no letters or digits to make an id from`);
+      const id = `${idPrefix}-${slug(heading)}`;
+      if (headings.has(id)) throw new RangeError(`${label}: the heading "${heading}" gives the id "${id}" that "${headings.get(id)}" already has`);
+      headings.set(id, heading);
+      sections.push({ heading, id, blocks: [] });
       i += 1;
     } else if (isItem(line)) {
       const [items, next] = take(lines, i, isItem);

@@ -18,8 +18,8 @@ import { para, section, sentence } from './parts.js';
 // The dated entries in dir, newest first and by slug within a day: [{ date: 'YYYY-MM-DD', slug, body }]. A .md the
 // change gate would not count as an entry (a name that is not corrections/YYYY-MM-DD-<slug>.md with a real date, or
 // not a regular file) or one with a blank body stops the build and names the file, rather than show a wrong date or
-// nothing. A README.md (which the gate allows), dotfiles and other regular files (evidence such as a PDF, which the
-// gate tolerates) are not entries.
+// nothing. A README.md (which the gate allows), dotfiles and anything whose name does not end in .md (evidence such
+// as a PDF or a folder of it, which the gate tolerates) are not entries.
 export function readCorrections(dir) {
   let files;
   try {
@@ -31,7 +31,7 @@ export function readCorrections(dir) {
   const entries = [];
   for (const file of files) {
     const { name } = file;
-    if (name.startsWith('.') || /^readme\.md$/i.test(name) || (file.isFile() && !/\.md$/i.test(name))) continue;
+    if (name.startsWith('.') || /^readme\.md$/i.test(name) || !/\.md$/i.test(name)) continue;
     const parsed = parseEntry(CORRECTIONS + name);
     if (!parsed) throw new RangeError(`${CORRECTIONS}${name} is not an entry: a name is YYYY-MM-DD-<slug>.md, a real date, then lowercase letters, digits and hyphens`);
     if (!file.isFile()) throw new RangeError(`${CORRECTIONS}${name} is not a regular file`);
@@ -49,7 +49,7 @@ const time = (iso) => html`<time datetime="${iso}">${isoDate(iso)}</time>`;
 // One entry: its date (and its "# " title, if it has one) as the heading, then its Markdown body, escaped. A "## "
 // heading in the body sits a level below the date and labels the table under it.
 function entryBlock({ date, slug, body }) {
-  const { title, sections } = markdownSections(body, { idPrefix: `h-${date}-${slug}` });
+  const { title, sections } = markdownSections(body, { idPrefix: `h-${date}-${slug}`, label: `${CORRECTIONS}${date}-${slug}.md` });
   return html`<article class="pol__entry" id="e-${date}-${slug}">
 <h3 class="pol__entry-h">${time(date)}${title ? html` <span class="pol__entry-title">${title}</span>` : ''}</h3>
 ${sections.map((s) => html`${s.heading ? html`<h4 class="pol__entry-sub" id="${s.id}">${s.heading}</h4>

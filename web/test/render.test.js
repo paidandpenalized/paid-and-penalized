@@ -418,6 +418,21 @@ test('markdownSections: a line outside the subset ("### x", a "|" line with no r
   assert.equal(String(sections[0].body), '<p>### Not a heading</p><p>| a | b next line</p>');
 });
 
+test('markdownSections: a second "# " title, two "## " headings with one id and a heading with no id stop it, naming the label', async () => {
+  const { markdownSections } = await import('../render/markdown.js');
+  const bad = [
+    ['# One\n\ntext\n\n# Two\n', /more than one "# " title/],
+    ['## Same\n\ntext\n\n## same!\n', /"same!" gives the id "d-same" that "Same" already has/],
+    ['## !!!\n\ntext\n', /"!!!" has no letters or digits/],
+  ];
+  for (const [md, message] of bad) {
+    assert.throws(() => markdownSections(md, { idPrefix: 'd', label: 'the-label' }), (err) => err instanceof RangeError && err.message.startsWith('the-label: ') && message.test(err.message), md);
+    assert.throws(() => markdownSections(md, { idPrefix: 'd' }), /^RangeError: d: /, 'the label defaults to the id prefix');
+  }
+  // One title and headings that differ are fine.
+  assert.deepEqual(markdownSections('# T\n\n## A b\n\n## A-c\n', { idPrefix: 'd' }).sections.map((x) => x.id), ['d-a-b', 'd-a-c']);
+});
+
 test('programHeader: the small mark to /, the name and edition tag, the search slot, the toggle, then the numbered nav and the byline', async () => {
   const { programHeader } = await import('../render/layout.js');
   const nav = [{ id: 'how', label: 'How it works', href: '/x/#how' }, { id: 'list', label: 'Every <one>', href: '/x/#list' }];

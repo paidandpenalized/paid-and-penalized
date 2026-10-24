@@ -46,6 +46,19 @@ test('an absent, empty or readme-only corrections folder is an empty log; eviden
   assert.deepEqual(readCorrections(join(tmpdir(), 'pp-corrections-does-not-exist')), []);
 });
 
+test('an item whose name does not end in .md is skipped whatever it is: a folder of evidence, a link to a PDF', () => {
+  const also = (dir) => {
+    mkdirSync(join(dir, 'evidence'));
+    writeFileSync(join(dir, 'evidence', '2026-11-02-inside.md'), 'Not an entry: it is inside a folder.');
+    mkdirSync(join(dir, '2026-11-02-folder'));
+    writeFileSync(join(dir, 'proof.pdf'), 'x');
+    symlinkSync(join(dir, 'proof.pdf'), join(dir, '2026-11-02-proof.pdf'));
+    symlinkSync(join(dir, 'missing.pdf'), join(dir, 'dangling.pdf'));
+  };
+  assert.deepEqual(readLog({ '2026-11-02-a.md': 'Body.' }, also), [{ date: '2026-11-02', slug: 'a', body: 'Body.' }]);
+  assert.deepEqual(readLog({}, also), []);
+});
+
 test('a malformed entry stops the read with its file name: a date not on the calendar, no slug, a capital, a blank body', () => {
   const bad = {
     '2026-02-30-x.md': 'Body.',
@@ -125,6 +138,12 @@ test('an entry body renders through the Markdown subset, escaped: paragraphs, li
   const ids = [...text.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(new Set(ids).size, ids.length);
   assert.doesNotMatch(text, /\sstyle=/);
+});
+
+test('an entry with two titles, two headings with one id, or a heading with no id stops the build and names the entry', () => {
+  for (const body of ['# One\n\n# Two\n\nText.', '## Same\n\nText.\n\n## same\n\nText.', '## ???\n\nText.']) {
+    assert.throws(() => page({ entries: [ENTRIES[0], { date: '2026-11-02', slug: 'bad', body }] }), (err) => err instanceof RangeError && err.message.startsWith('corrections/2026-11-02-bad.md: '), body);
+  }
 });
 
 test('the corrections address shows once, as a mailto link, and each site gives the date of CMS\'s file and the date its numbers last changed', () => {
