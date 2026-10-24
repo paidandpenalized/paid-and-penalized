@@ -3,12 +3,23 @@
 // no other browser test does that, so those keep the real policy. A failure names each rule once, with the selector of
 // every element it flags. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see lib.js.
 //
-// The page is audited as a reader can meet it, which takes two steps before axe runs:
-//   - the paper's grain (a faint noise image on the body) stops axe judging the contrast of any text over it: it reports
-//     the background "could not be determined" and leaves the text for review, which is nearly all of it. So the run lays
-//     the flat paper colour over the grain (FLAT_PAPER) and axe measures the text against that, as WCAG does a plain
-//     background. Text drawn inside an SVG (the charts' labels) stays unjudged by axe whatever the background;
-//   - every <details> is opened (openFolds): what a fold keeps closed is not laid out, so axe skips it.
+// What axe judges here is the page with changes, and the second matters for contrast:
+//   - every <details> is opened (openFolds): what a fold keeps closed is not laid out, so axe skips it;
+//   - the flat paper colour is laid over the body's grain image (FLATTEN), so axe judges text against the flat paper.
+//     The grain is a faint noise image; with it axe reports "background could not be determined" and leaves nearly all
+//     text unjudged. This is NOT how a reader sees the page: the grain makes the paper darker (luminance 0.899 on
+//     average and 0.846 at its darkest pixel, against 0.963 flat), which lowers every text contrast a little (--ink-3,
+//     5.09:1 on the flat paper, is 4.77 on the average and 4.50 at the darkest pixel; the dark theme's grain lightens
+//     its paper a little and its text colours have the room). axe cannot see that, so the one text colour near 4.5:1,
+//     light --ink-3, was chosen to clear it at the darkest pixel (tokens.css), and a text colour added close to 4.5:1 on
+//     the flat paper needs the same check by hand: its margin here is overstated;
+//   - FLATTEN also hides two decorations drawn over text, for the run only: the scroll frames' fade (a 28px gradient over a
+//     table's right edge) and the tape's torn edge. axe gives up on every cell of a table one of them overlaps (about
+//     19,000 cells in a run of every page), and the fade only dims a strip of it.
+// Two controls keep this honest: some text must have been judged on every page, and none may be left unjudged because of an
+// image, a gradient or a pseudo-element drawn over it (what FLATTEN removes). axe still leaves some text unjudged, which is
+// not covered here: text inside an SVG (the charts' labels), and in HTML text overlapped or partly obscured by another
+// element, text beside an image node, lone characters and glyphs such as the minus sign or the stars.
 // The search list is audited open, on the program page, in its own tests.
 //
 // A confirmed axe false positive may be excluded in FALSE_POSITIVES: one rule, one selector (exactly as axe prints it),
@@ -28,7 +39,10 @@ const PAGES = samplePages();
 const HACRP = SITE.sites.hacrp.path;
 const AXE = readFileSync(new URL('../../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 
-const FLAT_PAPER = 'body { background-image: none !important; }';
+// The decorations hidden for the run (see the header): the page as axe can judge it, not as a reader sees it.
+const FLATTEN = 'body { background-image: none !important; } .printout::after, .receipt::after { display: none !important; }';
+// The reasons axe gives (the contrast check's messageKey) for leaving text unjudged because of what is drawn behind or over it.
+const DRAWN_OVER = ['bgImage', 'bgGradient', 'pseudoContent'];
 
 // { rule: 'axe-rule-id', selector: '.exact > .selector', reason: 'why axe is wrong here' }
 const FALSE_POSITIVES = [];
@@ -52,31 +66,36 @@ const openFolds = (page) => page.evaluate(async () => {
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 });
 
-// Runs axe on the page as it is: its violations ({ id, impact, help, nodes: [{ target, summary }] }), how many rules
-// passed (a run that checked nothing passes nothing) and how many elements passed the contrast rule (the text axe could
-// judge: none if something behind the text stops it).
+// Runs axe on the page as it is, flattened (see the header): its violations ({ id, impact, help, nodes: [{ target,
+// summary }] }), how many rules passed (a run that checked nothing passes nothing), how many elements passed the contrast
+// rule (the text axe could judge) and the targets of the elements whose contrast axe left unjudged because of an image,
+// a gradient or a pseudo-element drawn behind or over the text.
 async function runAxe(page) {
-  await page.addStyleTag({ content: FLAT_PAPER });
+  await page.addStyleTag({ content: FLATTEN });
   await page.addScriptTag({ content: AXE });
-  return page.evaluate(async (tags) => {
-    const results = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'passes'] });
+  return page.evaluate(async ([tags, drawnOver]) => {
+    const results = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'passes', 'incomplete'] });
+    const target = (n) => n.target.map((t) => (Array.isArray(t) ? t.join(' >> ') : t)).join(' >> ');
+    const checks = (n) => [...n.any, ...n.all, ...n.none];
     return {
       passes: results.passes.length,
       contrastPassed: results.passes.find((r) => r.id === 'color-contrast')?.nodes.length ?? 0,
+      unjudgedDrawnOver: results.incomplete.filter((r) => r.id === 'color-contrast')
+        .flatMap((r) => r.nodes.filter((n) => checks(n).some((c) => drawnOver.includes(c.data?.messageKey))).map(target)),
       violations: results.violations.map((v) => ({
         id: v.id,
         impact: v.impact,
         help: v.help,
-        nodes: v.nodes.map((n) => ({ target: n.target.map((t) => (Array.isArray(t) ? t.join(' >> ') : t)).join(' >> '), summary: (n.failureSummary ?? '').replace(/\s+/g, ' ').trim() })),
+        nodes: v.nodes.map((n) => ({ target: target(n), summary: (n.failureSummary ?? '').replace(/\s+/g, ' ').trim() })),
       })),
     };
-  }, TAGS);
+  }, [TAGS, DRAWN_OVER]);
 }
 
 // Violations left once the confirmed false positives are removed, grouped by rule.
-function remaining(violations) {
+function remaining(violations, falsePositives = FALSE_POSITIVES) {
   return violations
-    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !FALSE_POSITIVES.some((f) => f.rule === v.id && f.selector === n.target)) }))
+    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !falsePositives.some((f) => f.rule === v.id && f.selector === n.target)) }))
     .filter((v) => v.nodes.length > 0);
 }
 
@@ -84,11 +103,13 @@ const describeViolations = (violations) => violations
   .map((v) => `${v.id} (${v.impact}, ${v.nodes.length}): ${v.help}\n${v.nodes.map((n) => `    ${n.target}\n      ${n.summary}`).join('\n')}`)
   .join('\n');
 
-// Runs axe and requires that it ran, judged some text and found nothing.
+// Runs axe and requires that it ran, judged some text, left none unjudged for something drawn behind or over it, and found
+// nothing.
 async function audit(page, what) {
-  const { violations, passes, contrastPassed } = await runAxe(page);
+  const { violations, passes, contrastPassed, unjudgedDrawnOver } = await runAxe(page);
   assert.ok(passes > 20, `${what}: axe passed only ${passes} rules: did it run?`);
-  assert.ok(contrastPassed > 0, `${what}: axe judged the contrast of no text: something behind the text stops it`);
+  assert.ok(contrastPassed > 0, `${what}: axe judged the contrast of no text`);
+  assert.equal(unjudgedDrawnOver.length, 0, `${what}: axe could not judge the contrast of ${unjudgedDrawnOver.length} elements behind or over an image, gradient or pseudo-element (FLATTEN should have removed it), among them ${unjudgedDrawnOver.slice(0, 6).join(', ')}`);
   const left = remaining(violations);
   assert.equal(left.length, 0, `${what}: axe violations\n${describeViolations(left)}`);
 }
@@ -109,24 +130,53 @@ async function openTab(context, scheme, path) {
 }
 
 describe('axe finds what it should (a positive control)', () => {
-  it('flags a page with a missing alternative, a nameless button and low contrast', async () => {
+  // A page of our own in a context like the real ones, audited the way the real pages are.
+  async function control(body) {
     const context = await browser.newContext({ bypassCSP: true });
     try {
       const page = await context.newPage();
-      await page.setContent('<!doctype html><html lang="en"><title>control</title><main><h1>control</h1><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><button></button><p style="color:#ccc;background:#fff">faint words</p></main>');
-      const { violations, passes } = await runAxe(page);
-      assert.ok(passes > 0, 'axe checked rules');
-      const ids = violations.map((v) => v.id);
-      for (const id of ['image-alt', 'button-name', 'color-contrast']) assert.ok(ids.includes(id), `${id} not among ${ids}`);
+      await page.setContent(`<!doctype html><html lang="en"><title>control</title><main><h1>control</h1>${body}</main>`);
+      return await runAxe(page);
+    } finally {
+      await context.close();
+    }
+  }
+  const GIF = 'url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)';
+
+  it('flags a missing alternative, a nameless button and low contrast', async () => {
+    const { violations, passes } = await control(`<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><button></button><p style="color:#ccc;background:#fff">faint words</p>`);
+    assert.ok(passes > 0, 'axe checked rules');
+    const ids = violations.map((v) => v.id);
+    for (const id of ['image-alt', 'button-name', 'color-contrast']) assert.ok(ids.includes(id), `${id} not among ${ids}`);
+  });
+
+  it('reports text over an image, a gradient or under a pseudo-element as unjudged (what FLATTEN exists to avoid)', async () => {
+    const { unjudgedDrawnOver } = await control(`<style>#over { position: relative } #over::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 100%; background: linear-gradient(to right, transparent, #fff) }</style>
+<p id="img" style="background-image:${GIF}">over an image</p><p id="grad" style="background-image:linear-gradient(#fff,#ddd)">over a gradient</p><p id="over">under a pseudo-element</p>`);
+    assert.deepEqual(unjudgedDrawnOver.sort(), ['#grad', '#img', '#over']);
+  });
+
+  it('judges text over the body\'s own image once the flat paper is laid over it', async () => {
+    const context = await browser.newContext({ bypassCSP: true });
+    try {
+      const page = await context.newPage();
+      await page.setContent(`<!doctype html><html lang="en"><title>control</title><body style="background:${GIF} repeat, #fbfbf8"><main><h1>control</h1><p>words</p></main>`);
+      const { unjudgedDrawnOver, contrastPassed } = await runAxe(page);
+      assert.deepEqual(unjudgedDrawnOver, []);
+      assert.ok(contrastPassed > 0);
     } finally {
       await context.close();
     }
   });
 
-  it('the exclusion list matches by rule and exact selector, and holds nothing now', () => {
-    assert.deepEqual(FALSE_POSITIVES, []);
-    const found = [{ id: 'color-contrast', nodes: [{ target: '.a' }, { target: '.b' }] }];
-    assert.deepEqual(remaining(found).map((v) => v.nodes.map((n) => n.target)), [['.a', '.b']]);
+  it('the exclusion list names one rule, one selector and a reason, and removes exactly those nodes', () => {
+    for (const f of FALSE_POSITIVES) for (const key of ['rule', 'selector', 'reason']) assert.ok(typeof f[key] === 'string' && f[key].trim(), `a false positive needs a ${key}`);
+    const found = [{ id: 'color-contrast', nodes: [{ target: '.a' }, { target: '.b' }] }, { id: 'label', nodes: [{ target: '.a' }] }];
+    const targets = (list) => list.map((v) => [v.id, v.nodes.map((n) => n.target)]);
+    assert.deepEqual(targets(remaining(found, [])), [['color-contrast', ['.a', '.b']], ['label', ['.a']]], 'no entries: nothing removed');
+    assert.deepEqual(targets(remaining(found, [{ rule: 'color-contrast', selector: '.a', reason: 'x' }])), [['color-contrast', ['.b']], ['label', ['.a']]], 'the rule and the selector must both match');
+    assert.deepEqual(targets(remaining(found, [{ rule: 'label', selector: '.a', reason: 'x' }])), [['color-contrast', ['.a', '.b']]], 'a rule left with no node is dropped');
+    assert.deepEqual(targets(remaining(found, [{ rule: 'color-contrast', selector: '.', reason: 'x' }])), [['color-contrast', ['.a', '.b']], ['label', ['.a']]], 'a selector must match exactly');
   });
 });
 
@@ -171,3 +221,35 @@ for (const scheme of SCHEMES) {
     });
   }
 }
+
+// Below 600 px three Methods tables stack their rows and clip their column heads (sites/hacrp/web/styles.css). A head
+// removed with display: none would leave the stacked cells without the names axe never asks for. Playwright's snapshot of
+// the accessibility tree leaves out what is display: none and keeps what is only clipped, in every engine; it models the
+// tree from the page rather than reading the browser's own (Chrome's real tree, read through the protocol, has the heads
+// too, and loses them with display: none). Each table must show every head it has, and the control shows the check bite.
+describe('the tables that stack on a phone keep their column heads', () => {
+  const STACKED = ['.receipt--dollars table', 'table.takes', 'table.receipts'];
+  const heads = async (table) => ((await table.ariaSnapshot()).match(/^\s*- columnheader\b/gm) ?? []).length;
+  let context;
+  before(async () => {
+    context = await browser.newContext({ viewport: { width: 390, height: HEIGHT }, bypassCSP: true });
+  });
+  after(() => context?.close());
+
+  for (const selector of STACKED) {
+    it(selector, async () => {
+      const page = await openTab(context, 'light', `${HACRP}methods/`);
+      try {
+        const table = page.locator(selector);
+        const expected = await table.locator('thead th').count();
+        assert.ok(expected >= 3, `${selector} has its column heads in the markup`);
+        assert.equal(await heads(table), expected, `${selector}: column heads in the accessibility tree`);
+        // The control: the same page with its head removed the way the page once did.
+        await page.addStyleTag({ content: `@media (max-width: 600px) { ${selector} thead { display: none !important; } }` });
+        assert.equal(await heads(table), 0, `${selector}: the check does not see a head removed with display: none`);
+      } finally {
+        await page.close();
+      }
+    });
+  }
+});
