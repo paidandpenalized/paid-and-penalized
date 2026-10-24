@@ -577,8 +577,10 @@
 .kids__pct { font: 400 var(--fs-sm)/1.2 var(--font-type); }
 .page--place .hospitals { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
 /* A place's map: the place's land in the panel tone, its neighbors fainter, its hospitals as dots. */
-/* The program page's stamp: one line, sized to its column. */
-.page--prog .prog__card .stamp { white-space: nowrap; font-size: clamp(1.05rem, 2.2vw, 1.55rem); }
+/* The program page's stamp: one line, sized to its column; wrapped and centered on a phone, where one line at the
+   smallest size is wider than the column and would widen the page. */
+.page--prog .prog__card .stamp { font-size: clamp(1.05rem, 2.2vw, 1.55rem); text-align: center; }
+@media (min-width: 400px) { .page--prog .prog__card .stamp { white-space: nowrap; } }
 /* The sandbox is step 6: its numeral on the step's red hairline, the what-if's own heading under it. */
 .step__n--sandbox { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); }
 .prog .step__n--sandbox + .whatif { margin-top: 10px; padding-top: 0; border-top: 0; }
