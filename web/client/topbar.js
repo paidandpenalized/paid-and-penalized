@@ -23,9 +23,12 @@ if (bar) {
   if ('ResizeObserver' in window) new ResizeObserver(measure).observe(bar);
   window.addEventListener('resize', measure, { passive: true });
 
-  // Where a browser leaves a keyboard-focused element is its own call: Chrome keeps it clear of the bar (scroll-padding),
-  // Firefox leaves one that is partly in view where it is, and Safari ignores the padding. Once the browser has scrolled,
-  // bring one that sits under the bar (by more than the pixel a browser's scrolling rounds to) down to the bar's edge.
+  // Where a browser leaves a keyboard-focused element is its own call: Chrome keeps it clear of the bar (scroll-padding)
+  // unless it is taller than the window, Firefox leaves one that is partly in view where it is, and Safari ignores the
+  // padding. Once the browser has scrolled, bring one that sits under the bar (by more than the pixel a browser's
+  // scrolling rounds to) down to the bar's edge. CSS alone can't: a scroll-margin-top of the bar's height on every
+  // focusable element still left elements under it in all three engines (tools/e2e/interact.test.js's walk), and it adds
+  // to the padding, so Chrome and Safari then stop a focus a whole bar below the bar's edge.
   document.addEventListener('focusin', ({ target }) => {
     if (height <= 0 || bar.contains(target) || !target.matches(':focus-visible')) return;
     requestAnimationFrame(() => {
