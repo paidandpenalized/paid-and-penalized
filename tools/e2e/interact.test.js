@@ -17,8 +17,9 @@ const WIDTHS = [1280, 641, 320];
 const HEIGHT = 800;
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
 const SNAP = 1;
-// The fewest Tab presses a walk is allowed (the longest page needs a little over half of this).
-const MIN_PRESSES = 400;
+// The floor on a walk's cap of Tab presses: a page with few tab stops still gets this many (the cap is twice the page's
+// stops or this, whichever is more; the longest page needs a little over half of the floor).
+const PRESS_CAP_FLOOR = 400;
 
 let site;
 let browser;
@@ -76,22 +77,34 @@ describe('search', () => {
 
   // The program page holds two boxes over one index: the top bar's and the larger one in its hero.
   for (const [where, container] of [['the top bar', '.topbar'], ['the hero', 'main']]) {
-    it(`${where}: the first word of a hospital's name lists it, and Enter opens its page`, async () => {
+    it(`${where}: the hospital's name, typed word by word, lists it, and Enter opens its page`, async () => {
       const { path } = PAGES.find((p) => p.type === 'hospital-cut');
-      const name = hospitalAt(path).name;
-      const word = name.split(/\s+/)[0];
+      const { name, state } = hospitalAt(path);
+      const words = name.split(/\s+/);
       await inTab(context, async (page) => {
         const seen = await watch(page, site.base);
         await open(page, HACRP);
         const box = page.locator(container).getByRole('search').getByRole('combobox');
-        await box.pressSequentially(word);
         const list = page.locator(container).getByRole('search').getByRole('option');
-        // The list shows names in display case; the data holds them as CMS prints them.
-        const labels = () => list.locator('.omni__t').allTextContents();
-        const at = await eventually(async () => (await labels()).findIndex((label) => normalize(label) === normalize(name)) + 1, `"${word}" does not list the hospital`);
+        // The list shows names in display case (the data holds them as CMS prints them), each with its city and state
+        // beneath. It lists at most ten, so a name that opens with a common word needs more of its words to be listed:
+        // the query grows by one until the hospital is among them. The hospital is the option with its name and its state.
+        const options = () => list.evaluateAll((items) => items.map((li) => ({ label: li.querySelector('.omni__t')?.textContent ?? '', sub: li.querySelector('.omni__s')?.textContent ?? '' })));
+        const find = async () => (await options()).findIndex((o) => normalize(o.label) === normalize(name) && o.sub.includes(`, ${state}`));
+        let at = -1;
+        let tried = '';
+        for (const [i, word] of words.entries()) {
+          await box.pressSequentially(i === 0 ? word : ` ${word}`);
+          tried = words.slice(0, i + 1).join(' ');
+          // The index loads on first focus: the list is up once it has, and a later word repaints it at once.
+          await eventually(async () => (await box.getAttribute('aria-expanded')) === 'true', `the list is not up for "${tried}"`);
+          at = await find();
+          if (at >= 0) break;
+        }
+        assert.ok(at >= 0, `typing the whole name ("${tried}") does not list the hospital; the list shows ${JSON.stringify(await options())}`);
         // The first match is active; arrow down to the hospital's, as a reader would, then Enter.
-        for (let i = 1; i < at; i++) await box.press('ArrowDown');
-        assert.equal(await box.getAttribute('aria-activedescendant'), await list.nth(at - 1).getAttribute('id'), 'the hospital\'s option is the active one');
+        for (let i = 0; i < at; i++) await box.press('ArrowDown');
+        assert.equal(await box.getAttribute('aria-activedescendant'), await list.nth(at).getAttribute('id'), 'the hospital\'s option is the active one');
         await box.press('Enter');
         await page.waitForURL(new URL(path, site.base).href, { timeout: 10000 });
         assert.equal(normalize(await page.locator('h1').innerText()), normalize(name), 'the page opened is the hospital\'s');
@@ -122,8 +135,12 @@ describe('what-if', () => {
       assert.equal(await hypothetical.getAttribute('data-same'), '', 'the hypothetical starts as "same"');
 
       // The best a measure can read (lower is better) is its input's minimum: a hospital CMS cut scores lower with it.
-      const input = whatIf.getByRole('spinbutton').first();
-      await input.fill(await input.getAttribute('min'));
+      // Setting a measure already at its floor changes nothing, so the first one above it is the one to set.
+      const inputs = whatIf.getByRole('spinbutton');
+      const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
+      const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
+      assert.notEqual(at, -1, `the hospital has a measure above its floor to lower; the inputs read ${JSON.stringify(readings)}`);
+      await inputs.nth(at).fill(readings[at].min);
       await eventually(async () => (await hypothetical.textContent()) !== before.hypothetical, 'the hypothetical score did not change');
       assert.equal(await hypothetical.getAttribute('data-same'), null, 'the hypothetical no longer reads "same"');
       const score = Number.parseFloat((await hypothetical.textContent()).replace('\u2212', '-'));
@@ -210,7 +227,7 @@ describe('keyboard', { concurrency: 4 }, () => {
               assert.ok(offered.nav > 0, 'the top bar\'s nav');
             }
             const wanted = ['theme', 'feedback', ...(hasTopBar ? ['search', ...Array.from({ length: offered.nav }, (_, i) => `nav ${i}`)] : [])];
-            const bound = Math.max(MIN_PRESSES, 2 * offered.tabbable);
+            const bound = Math.max(PRESS_CAP_FLOOR, 2 * offered.tabbable);
             const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
             const last = (steps) => steps.at(-1)?.desc;
 

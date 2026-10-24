@@ -1,7 +1,8 @@
 // A program site's top bar in the browser (layout.js programHeader). While the bar sticks (641px and up), its height
 // is --sticky-top on <html>, so what sticks under it (the hospital table's head, the what-if's result) and an
-// in-page jump clear it; on a phone, where it scrolls away, 0. On a page holding the sections its nav links to, the
-// item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no words of its own.
+// in-page jump clear it; on a phone, where it scrolls away, 0. A keyboard-focused element the browser left under the
+// bar is brought down to the bar's edge. On a page holding the sections its nav links to, the item for the section in
+// view is marked aria-current as the reader scrolls. Program-neutral; no words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
 
 // The section in view: the last one whose top has passed the bar's bottom (with a little slack), else the first.

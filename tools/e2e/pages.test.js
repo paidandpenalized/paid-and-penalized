@@ -1,7 +1,8 @@
-// Page-load checks in a real browser, for every page type, in light and dark, at a desktop and a phone width: the
-// status, no console or page errors, no CSP violations, no request to another origin, no sideways scroll, and the
-// footer's feedback link naming the page's canonical address. Runs against dist/ (make build) or any URL
-// (E2E_BASE_URL); see lib.js. Not part of npm test, which needs no browser: run it with npm run e2e.
+// Page-load checks in a real browser, for every page type, in light and dark, at three widths (a desktop, a common
+// phone's and the narrowest phone width pages are designed for): the status, no console or page errors, no CSP
+// violations, no request to another origin, no sideways scroll, and the footer's feedback link naming the page's
+// canonical address. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see lib.js. Not part of npm test, which
+// needs no browser: run it with npm run e2e.
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../../web/site.js';

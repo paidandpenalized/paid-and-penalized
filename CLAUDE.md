@@ -104,7 +104,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `make hooks`: point git at `.githooks/`.
 - `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production`.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
-- `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`. Chromium runs the
+- `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`; a test that takes over 3 minutes fails. Chromium runs the
   installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks
   another engine; `E2E_BASE_URL=<url>` tests a running site instead of serving `dist/` (the build still picks the pages). Not part of
   `make test`.

@@ -48,7 +48,7 @@ export async function startSite() {
 // and takes emulateMedia only once the tab has loaded a page from the network, so the tab first loads a small page of
 // the site at `base` (its origin; not the page's icon: a browser asks for /favicon.ico after a bare image, and that 404
 // would land in watch). It returns once that page's own requests have settled, so none is blamed on the page the caller
-// opens next. Call it before watch. A tab whose priming fails is closed, not leaked.
+// opens next. Call it before watch. A tab whose priming fails is closed, not leaked (the failure thrown is the priming's).
 export async function newPage(context, colorScheme, base) {
   if (!base) throw new TypeError('newPage: the site\'s origin is required');
   const page = await context.newPage();
@@ -57,7 +57,8 @@ export async function newPage(context, colorScheme, base) {
     await page.emulateMedia({ colorScheme });
     await page.waitForLoadState('networkidle');
   } catch (error) {
-    await page.close();
+    // A close that fails must not replace the error that brought us here.
+    await page.close().catch(() => {});
     throw error;
   }
   return page;

@@ -124,6 +124,11 @@ describe('newPage', () => {
     assert.equal(context.pages().length, before, 'a failed newPage leaked its tab');
   });
 
+  it('throws the priming failure, not the error of closing the tab that failed', async () => {
+    const tab = { goto: async () => { throw new Error('priming failed'); }, close: async () => { throw new Error('close failed'); } };
+    await assert.rejects(newPage({ newPage: async () => tab }, 'light', base), /priming failed/);
+  });
+
   it('needs the origin', async () => {
     await assert.rejects(newPage(context, 'light'), /origin/);
   });
