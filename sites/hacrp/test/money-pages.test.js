@@ -1,17 +1,10 @@
 // The money on the program page, the place pages and Methods (money-data.js, money-part.js, pages/*.js), on the
 // pinned data: the aggregates add up to the emitted file's own headline; every figure's takeaway is the data's; no
 // hospital is named outside a tooltip (DES-25); the national total always says how many of CMS's cut hospitals it
-// covers; Methods holds the dollars section every estimate tag links to; and every in-site anchor on the built pages
-// lands on an element of its page.
+// covers; and Methods holds the dollars section every estimate tag links to.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
-import { build } from '../../../pipeline/site/build.js';
-import { filesUnder } from '../../../pipeline/files.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
-import { HUB } from '../../../hub/pages.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
 import { cutFrom } from '../web/money-figures.js';
 import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
@@ -23,7 +16,7 @@ import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT }
 import { furthestGroup, methodsPage } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
-import { ASSETS, slicedSite, strippedText as strip } from './fixtures.js';
+import { ASSETS, strippedText as strip } from './fixtures.js';
 
 const PROGRAM = renderProgram();
 const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section class="part" id="map"/.exec(PROGRAM)[0];
@@ -623,31 +616,3 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
     assert.throws(() => assumptionsTable({ fy: DATA.fy, assumptions, backtestFy: 2024 }), { name: 'RangeError', message: /not after FY2026 ends/ });
   }
 });
-
-// Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element
-// with that id in its page. Fragments that carry state (#state=XX, a what-if's #whatif&…) are not ids and are skipped.
-test('every in-site anchor on the built pages lands on an element of its page', () =>
-  withTemp('pp-anchors-', async (dir) => {
-    const slice = { ...DATA, hospitals: DATA.hospitals.filter((h, i) => i % 97 === 0 || (h.total === null && h.paymentReduction === 'Yes')) };
-    const out = join(dir, 'dist');
-    await build({ outDir: out, sites: [slicedSite(slice), HUB] });
-    const pages = filesUnder(out).filter((f) => basename(f) === 'index.html').map((f) => join(out, f));
-    const ids = new Map();
-    const idsOf = (file) => {
-      if (!ids.has(file)) ids.set(file, new Set([...readFileSync(file, 'utf8').matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
-      return ids.get(file);
-    };
-    let checked = 0;
-    for (const file of pages) {
-      const text = readFileSync(file, 'utf8');
-      for (const [, path, frag] of text.matchAll(/href="(\/[^"#]*)?#([^"]+)"/g)) {
-        if (/[=&]/.test(frag)) continue;
-        const target = path ? join(out, path, 'index.html') : file;
-        assert.ok(existsSync(target), `${file}: ${path} is not a page`);
-        assert.ok(idsOf(target).has(frag), `${file.slice(out.length)}: #${frag} is not on ${path ?? 'its page'}`);
-        checked++;
-      }
-    }
-    assert.ok(checked > 100, `${checked} anchors checked`);
-    assert.ok(idsOf(join(out, 'hacrp', 'methods', 'index.html')).has(DOLLARS_HREF.split('#')[1]), 'Methods holds #dollars');
-  }));

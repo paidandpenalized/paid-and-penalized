@@ -8,10 +8,11 @@ import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { HUB } from '../../../hub/pages.js';
-import { REPO_ROOT, filesUnder } from '../../../pipeline/files.js';
+import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
+import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
@@ -236,13 +237,12 @@ test('the data dictionary page carries the as-of bar the program page shows, aft
   checkAsofBar(dictionary, read(out, '/hacrp/'), dictionary.lastIndexOf('</section>'));
 });
 
-test('no built page links the hub Methods page\'s old AI anchor: the policy lives on About', async () => {
-  const out = await builtSlice();
-  const pages = filesUnder(out).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length));
-  for (const path of ['', 'methods/', 'about/', 'hacrp/', 'hacrp/methods/', 'hacrp/data/']) assert.ok(pages.includes(path), `the scan reads ${path || 'the home page'}`);
-  const links = pages.filter((f) => /href="[^"]*\/methods\/#ai"/.test(readFileSync(join(out, f, 'index.html'), 'utf8')));
-  assert.deepEqual(links, []);
-  assert.match(read(out, '/about/'), /id="ai"/);
+// CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, so a moved anchor
+// fails before CI does. The slice's hospitals are the only ones built, and "#state=" names their states.
+test('every internal link on the built pages lands on a file, and every fragment on an id or a state the page reads', async () => {
+  const { pages, found } = checkLinks(await builtSlice(), SLICE.hospitals.map((h) => h.state));
+  assert.deepEqual(found, []);
+  assert.ok(pages > SLICE.hospitals.length + SLICE_PLACES.list.length, `${pages} pages checked`);
 });
 
 test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>

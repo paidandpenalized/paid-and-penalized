@@ -151,12 +151,9 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
     }
   }));
 
-test('/about/ holds the AI and conflict-of-interest sections under the ids other pages link to', () =>
+test('/about/ links the byline\'s profile', () =>
   withHub((read) => {
-    const about = read('/about/');
-    assert.match(about, new RegExp(`<section class="doc__sec" id="ai" aria-labelledby="ai-h">\\s*<h2 class="doc__h" id="ai-h">${COPY.aboutAiHeading}</h2>`));
-    assert.match(about, /<section class="doc__sec" id="coi"/);
-    assert.ok(about.includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
+    assert.ok(read('/about/').includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
   }));
 
 test('/terms/ links the definition of "estimate", the corrections page and the license values', () =>
