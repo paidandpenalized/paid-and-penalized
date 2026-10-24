@@ -22,6 +22,17 @@ if (bar) {
   if ('ResizeObserver' in window) new ResizeObserver(measure).observe(bar);
   window.addEventListener('resize', measure, { passive: true });
 
+  // Where a browser leaves a keyboard-focused element is its own call: Chrome keeps it clear of the bar (scroll-padding),
+  // Firefox leaves one that is partly in view where it is, and Safari ignores the padding. Once the browser has scrolled,
+  // bring one that sits under the bar (by more than the pixel a browser's scrolling rounds to) down to the bar's edge.
+  document.addEventListener('focusin', ({ target }) => {
+    if (height <= 0 || bar.contains(target) || !target.matches(':focus-visible')) return;
+    requestAnimationFrame(() => {
+      const under = height - target.getBoundingClientRect().top;
+      if (under > 1) window.scrollBy(0, -under);
+    });
+  });
+
   const here = [...bar.querySelectorAll('.nav a[data-nav]')].map((a) => {
     const url = new URL(a.href, window.location.href);
     const target = url.pathname === window.location.pathname && url.hash ? document.getElementById(url.hash.slice(1)) : null;
