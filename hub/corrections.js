@@ -13,8 +13,7 @@ import { markdownSections } from '../web/render/markdown.js';
 import { SITE } from '../web/site.js';
 import { CORRECTIONS_EMAIL } from './constants.js';
 import { COPY } from './copy.js';
-import { feedbackLink, para, section, sentence } from './parts.js';
-import { policyPage } from './policy.js';
+import { para, section, sentence } from './parts.js';
 
 // The dated entries in dir, newest first and by slug within a day: [{ date: 'YYYY-MM-DD', slug, body }]. A .md the
 // change gate would not count as an entry (a name that is not corrections/YYYY-MM-DD-<slug>.md with a real date, or
@@ -66,18 +65,18 @@ function siteLine([id, { cmsReleased, changed }]) {
 `;
 }
 
-// entries: readCorrections' result. updated: ctx.updated (site id -> { cmsReleased, changed }); with none, the sites
-// section is left out.
-export function correctionsPage({ entries, updated, assets, robots }) {
+// The page's content for the policy template (pages.js lays it out with the other policy pages). feedback: the page's
+// prefilled feedback link. entries: readCorrections' result. updated: ctx.updated (site id -> { cmsReleased,
+// changed }); with none, the sites section is left out.
+export function correctionsContent({ feedback, entries, updated }) {
   const email = html`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`;
   const sites = [...updated].map(siteLine);
-  return policyPage({
-    path: SITE.pages.corrections,
+  return {
     title: SHARED.corrections,
     description: COPY.correctionsDescription,
     brief: [COPY.correctionsBrief1, COPY.correctionsBrief2, COPY.correctionsBrief3, COPY.correctionsBrief4],
     sections: [
-      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback: feedbackLink(SITE.pages.corrections), email })),
+      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback, email })),
       section('counts', 'correctionsCountsHeading', para('correctionsCounts')),
       section('hospital', 'correctionsHospitalHeading', para('correctionsHospital')),
       section('process', 'correctionsProcessHeading', para('correctionsProcess'), para('correctionsProcess2')),
@@ -87,7 +86,5 @@ export function correctionsPage({ entries, updated, assets, robots }) {
       section('log', 'correctionsLogHeading', entries.length ? html`${entries.map(entryBlock)}` : html`<p>${COPY.correctionsLogEmpty}</p>
 `),
     ],
-    assets,
-    robots,
-  });
+  };
 }

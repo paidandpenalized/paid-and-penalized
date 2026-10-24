@@ -5,14 +5,13 @@
 import { REPO_ROOT } from '../pipeline/files.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
-import { fillAround, fillCopy } from '../web/render/components.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink, page } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
-import { correctionsPage, readCorrections } from './corrections.js';
-import { LINKS, feedbackLink, para, section } from './parts.js';
+import { correctionsContent, readCorrections } from './corrections.js';
+import { LINKS, feedbackLink, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
 // The hub is not released: its pages are noindex in every build until it is built.
@@ -52,14 +51,14 @@ function methods(assets, robots) {
 <p>${COPY.estimateHow}</p>
 <p>${COPY.estimateNot}</p>
 </section>
-<p>${fillAround((marks) => fillCopy(COPY, 'methodsAiPointer', marks), { about: html`<a href="${SITE.pages.about}#ai">${SHARED.about}</a>` })}</p>
-</article>`;
+${para('methodsAiPointer', { about: LINKS.ai })}</article>`;
   return page({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, assets });
 }
 
 // ---------- the policy pages: their words (copy.js) and the links they fill in (parts.js); the layout is policy.js's ----------
-// Each page's content, given its feedback link: the title, description, brief lines and sections policyPage lays out.
-const terms = (feedback) => ({
+// Each page's content: the title, description, brief lines and sections policyPage lays out, given what the build
+// hands every page (deps): its feedback link, the corrections entries and the sites' dates.
+const terms = ({ feedback }) => ({
   title: SHARED.termsLink,
   description: COPY.termsDescription,
   brief: [COPY.termsBrief1, COPY.termsBrief2, COPY.termsBrief3, COPY.termsBrief4],
@@ -89,7 +88,7 @@ const privacy = () => ({
   ],
 });
 
-const about = (feedback) => ({
+const about = ({ feedback }) => ({
   title: SHARED.about,
   description: COPY.aboutDescription,
   brief: [COPY.aboutBrief1, COPY.aboutBrief2, COPY.aboutBrief3, COPY.aboutBrief4],
@@ -102,10 +101,10 @@ const about = (feedback) => ({
   ],
 });
 
-const accessibility = (feedback) => ({
+const accessibility = ({ feedback }) => ({
   title: SHARED.accessibility,
   description: COPY.a11yDescription,
-  brief: [fillCopy(COPY, 'a11yBrief1', { version: WCAG_VERSION }), COPY.a11yBrief2, COPY.a11yBrief3, COPY.a11yBrief4],
+  brief: [sentence('a11yBrief1', {}, { version: WCAG_VERSION }), COPY.a11yBrief2, COPY.a11yBrief3, COPY.a11yBrief4],
   sections: [
     section('standard', 'a11yTargetHeading', para('a11yTarget', {}, { version: WCAG_VERSION })),
     section('built-in', 'a11yBuiltHeading', para('a11yBuilt')),
@@ -117,7 +116,10 @@ const accessibility = (feedback) => ({
   ],
 });
 
-const POLICY_PAGES = { [SITE.pages.terms]: terms, [SITE.pages.privacy]: privacy, [SITE.pages.about]: about, [SITE.pages.accessibility]: accessibility };
+const POLICY_PAGES = [
+  [SITE.pages.terms, terms], [SITE.pages.privacy, privacy], [SITE.pages.about, about],
+  [SITE.pages.accessibility, accessibility], [SITE.pages.corrections, correctionsContent],
+];
 
 function notFound(assets, robots) {
   const body = html`<article class="wrap page">
@@ -148,10 +150,10 @@ export async function generateHub(ctx, { correctionsDir = REPO_ROOT + 'correctio
   const robots = robotsFor({ env: ctx.env, released: RELEASED });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
-  for (const [path, content] of Object.entries(POLICY_PAGES)) {
-    ctx.emit({ path, robots, text: policyPage({ path, ...content(feedbackLink(path)), assets, robots }) });
+  const deps = { entries: readCorrections(correctionsDir), updated: ctx.updated };
+  for (const [path, content] of POLICY_PAGES) {
+    ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
   }
-  ctx.emit({ path: SITE.pages.corrections, robots, text: correctionsPage({ entries: readCorrections(correctionsDir), updated: ctx.updated, assets, robots }) });
   // The not-found page is never indexed, released or not.
   const notFoundRobots = robotsFor({ env: ctx.env, released: RELEASED, eligible: false });
   ctx.emit({ path: '/404.html', robots: notFoundRobots, text: notFound(assets, notFoundRobots) });

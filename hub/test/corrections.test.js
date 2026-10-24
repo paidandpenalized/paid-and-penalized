@@ -4,9 +4,12 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { escapeHtml } from '../../web/render/html.js';
+import { SITE } from '../../web/site.js';
 import { CORRECTIONS_EMAIL } from '../constants.js';
 import { COPY } from '../copy.js';
-import { correctionsPage, readCorrections } from '../corrections.js';
+import { correctionsContent, readCorrections } from '../corrections.js';
+import { feedbackLink } from '../parts.js';
+import { policyPage } from '../policy.js';
 
 const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
 const textOf = (page) => page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ')
@@ -68,9 +71,10 @@ test('a malformed entry stops the read with its file name: a date not on the cal
   assert.throws(() => readLog({ '2026-11-02-a.md': 'Body.', 'notes.md': 'x' }), /notes\.md/);
 });
 
-// ---------- correctionsPage ----------
+// ---------- correctionsContent, laid out as the build lays it out ----------
 const SITE_DATES = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]);
-const page = (over = {}) => correctionsPage({ entries: [], updated: SITE_DATES, assets: ASSETS, robots: 'noindex', ...over });
+const PATH = SITE.pages.corrections;
+const page = (over = {}) => policyPage({ path: PATH, ...correctionsContent({ feedback: feedbackLink(PATH), entries: [], updated: SITE_DATES, ...over }), assets: ASSETS, robots: 'noindex' });
 const ENTRIES = [
   { date: '2026-11-02', slug: 'a', body: 'The first correction.' },
   { date: '2026-10-30', slug: 'b', body: 'The second correction.' },

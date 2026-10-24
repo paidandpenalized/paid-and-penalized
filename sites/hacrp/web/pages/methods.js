@@ -5,7 +5,7 @@
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
 // glossary, and links to the family's pages for feedback, privacy, AI and corrections; the as-of bar closes the page,
 // as it does the program page.
-import { fillAround, printout, stamp, typeset } from '../../../../web/render/components.js';
+import { fillAround, printout, sentenceOf, stamp, typeset } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -23,6 +23,7 @@ import { asofBar, kicker, siteHeader } from './parts.js';
 export { METHODS_PATH };
 
 const para = (text) => html`<p>${text}</p>`;
+const sentence = sentenceOf(fill);
 
 // A section of the page: its heading, words, and (optionally) a figure beside them.
 const sec = ({ id, heading, body, fig = null }) => html`<section class="doc__sec msec${fig ? ' msec--fig' : ''}" id="${id}" aria-labelledby="${id}-h">
@@ -232,9 +233,9 @@ ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estima
     { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(t('sourcesCode'))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}
 <ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${typeset(i)}</li>`)}</ul></li>`)}</ol>
-${para(fillAround((marks) => fill('changedCorrections', marks), { log: html`<a href="${SITE.pages.corrections}">${t('changedLogLink')}</a>` }))}` },
+${para(sentence('changedCorrections', { log: html`<a href="${SITE.pages.corrections}">${t('changedLogLink')}</a>` }))}` },
     { id: 'glossary', heading: t('glossaryHeading'), body: html`<dl class="glossary">${GLOSSARY({ eqFy }).map(([term, def, values, termValues]) => html`<div class="glossary__item"><dt>${termValues ? fill(term, termValues) : t(term)}</dt><dd>${values ? fill(def, values) : t(def)}</dd></div>`)}</dl>` },
-    { id: 'more', heading: t('familyHeading'), body: html`${para(fillAround((marks) => fill('familyText', marks), { privacy: html`<a href="${SITE.pages.privacy}">${t('familyPrivacyLink')}</a>`, ai: html`<a href="${SITE.pages.about}#ai">${t('familyAiLink')}</a>` }))}
+    { id: 'more', heading: t('familyHeading'), body: html`${para(sentence('familyText', { privacy: html`<a href="${SITE.pages.privacy}">${t('familyPrivacyLink')}</a>`, ai: html`<a href="${SITE.pages.about}#ai">${t('familyAiLink')}</a>` }))}
 <h3 class="msec__sub">${t('reuseHeading')}</h3>${para(t('reuseText'))}
 <h3 class="msec__sub">${t('accessHeading')}</h3>${para(t('accessText'))}` },
   ];

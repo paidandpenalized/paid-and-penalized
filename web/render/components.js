@@ -121,6 +121,10 @@ export function fillAround(make, parts) {
   return html`${markup}`;
 }
 
+// A sentence of a site's words with markup in it (fill: a copy table's): parts maps a placeholder to the markup (a
+// link) that stands there, values fills the plain ones.
+export const sentenceOf = (fill) => (key, parts = {}, values = {}) => fillAround((marks) => fill(key, { ...values, ...marks }), parts);
+
 // text (escaped) with the first occurrence of each part kept on one line (a .nw span), e.g. a dataset id that would
 // otherwise break at its hyphen. A part not in text throws.
 export function keepWhole(text, parts) {
