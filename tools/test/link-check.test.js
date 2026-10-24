@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { SITE } from '../../web/site.js';
 import { withTemp } from '../../pipeline/test/helpers.js';
-import { checkLinks } from '../ci/link-check.js';
+import { checkLinks, groupProblems } from '../ci/link-check.js';
 
 const ORIGIN = SITE.origin;
 const page = (body, head = '') => `<!doctype html><html><head><title>t</title>${head}</head><body>${body}</body></html>`;
@@ -73,10 +73,29 @@ test('a fragment that carries page state: "#state=TX" names no element, "#whatif
   withTemp('links-', (dir) => {
     build(dir, {
       'index.html': page('<a href="/p/#state=TX">state</a><a href="/p/#whatif&amp;MRSA=0.9&amp;SSI=1.2">ok</a><a href="/p/#nothere&amp;MRSA=0.9">bad</a>'
-        + '<a href="/p/#a=1&amp;whatif">pure state</a><a href="/gone/#state=TX">no page</a>'),
+        + '<a href="/gone/#state=TX">no page</a>'),
       'p/index.html': page('<section id="whatif"></section>'),
     });
     assert.deepEqual(problems(dir), ['/ /p/#nothere&MRSA=0.9 missing id', '/ /gone/#state=TX missing file']);
+  }));
+
+test('only the one state shape the site uses is exempt: any other key=value fragment is checked as an id', () =>
+  withTemp('links-', (dir) => {
+    build(dir, {
+      'index.html': page('<a href="/p/#view=map">new key</a><a href="/p/#a=1&amp;whatif">key first</a><a href="/p/#State=TX">case</a>'
+        + '<a href="/p/#state=TX&amp;sort=name">state first</a>'),
+      'p/index.html': page('<section id="whatif"></section>'),
+    });
+    assert.deepEqual(problems(dir), ['/ /p/#view=map missing id', '/ /p/#a=1&whatif missing id', '/ /p/#State=TX missing id']);
+  }));
+
+test('data-src is a link too: the search index a form names must exist', () =>
+  withTemp('links-', (dir) => {
+    build(dir, {
+      'index.html': page('<form data-src="/assets/index.1.json"></form><form data-src="/assets/gone.1.json"></form>'),
+      'assets/index.1.json': '{}',
+    });
+    assert.deepEqual(problems(dir), ['/ /assets/gone.1.json missing file']);
   }));
 
 test('a fragment on a page that does not exist is a missing file, not also a missing id', () =>
@@ -133,7 +152,23 @@ test('an empty build is an error, not a pass', () =>
     assert.throws(() => checkLinks(dir), /no pages/);
   }));
 
-test('CLI: exits 0 when every link resolves, and 1 listing each problem', () =>
+test('groupProblems: one entry per distinct link and problem, with a count and the first page, most widespread first', () => {
+  const found = [
+    { from: '/a/', href: '/gone/', problem: 'missing file' },
+    { from: '/a/', href: '/x/#y', problem: 'missing id' },
+    { from: '/b/', href: '/gone/', problem: 'missing file' },
+    { from: '/c/', href: '/gone/', problem: 'missing file' },
+    { from: '/c/', href: '/gone/', problem: 'missing id' },
+  ];
+  assert.deepEqual(groupProblems(found), [
+    { problem: 'missing file', href: '/gone/', count: 3, example: '/a/' },
+    { problem: 'missing id', href: '/x/#y', count: 1, example: '/a/' },
+    { problem: 'missing id', href: '/gone/', count: 1, example: '/c/' },
+  ]);
+  assert.deepEqual(groupProblems([]), []);
+});
+
+test('CLI: exits 0 when every link resolves, and 1 with a short list, one line per distinct broken link', () =>
   withTemp('links-', (dir) => {
     const cli = (target) => spawnSync('node', [join(REPO_ROOT, 'tools/ci/link-check.js'), target], { encoding: 'utf8' });
     build(dir, { 'index.html': page('<a href="/about/#who">ok</a>'), 'about/index.html': page('<h2 id="who"></h2>') });
@@ -141,14 +176,21 @@ test('CLI: exits 0 when every link resolves, and 1 listing each problem', () =>
     assert.equal(ok.status, 0, ok.stderr);
     assert.match(ok.stdout, /2 pages, 0 problems/);
 
-    build(dir, { 'about/index.html': page('<a href="/gone/">x</a><a href="/#none">y</a>') });
+    // A template-wide break (the same link on every page) prints once, with its count and a first page.
+    build(dir, {
+      'about/index.html': page('<a href="/gone/">x</a><a href="/#none">y</a>'),
+      'b/index.html': page('<a href="/gone/">x</a>'),
+      'c/index.html': page('<a href="/gone/">x</a>'),
+    });
     const bad = cli(dir);
     assert.equal(bad.status, 1);
-    assert.match(bad.stderr, /\/about\/ -> \/gone\/: missing file/);
-    assert.match(bad.stderr, /\/about\/ -> \/#none: missing id/);
-    // The home page's link to the id the rewrite removed is a problem too.
-    assert.match(bad.stderr, /\/ -> \/about\/#who: missing id/);
-    assert.match(bad.stderr, /3 problems/);
+    const lines = bad.stderr.trim().split('\n');
+    assert.deepEqual(lines, [
+      'missing file: /gone/ (on 3 pages, e.g. /about/)',
+      'missing id: /#none (on /about/)',
+      'missing id: /about/#who (on /)',
+      'link check: 5 problems (3 distinct links)',
+    ]);
 
     assert.equal(cli(join(dir, 'absent')).status, 1);
   }));
