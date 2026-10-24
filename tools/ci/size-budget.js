@@ -16,12 +16,11 @@
 // A page whose path matches no type throws: a new page type needs a budget (and a line in page-types.js).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { brotliCompressSync, constants } from 'node:zlib';
-import { DIST_DIR } from '../../pipeline/files.js';
+import { DIST_DIR, isMain } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages, tags } from '../../pipeline/site/html.js';
-import { pageType as typeOf } from './page-types.js';
+import { pageType } from './page-types.js';
 
 const KB = 1024;
 const QUALITY = 5;
@@ -44,13 +43,6 @@ export const BUDGETS = {
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;
-
-// The type of the page at a site path ('/hacrp/state/ca/', page-types.js); a type's budget is in BUDGETS.
-export function pageType(path) {
-  const type = typeOf(path);
-  if (type === null) throw new RangeError(`no page type for "${path}": a new page type needs a budget in tools/ci/size-budget.js`);
-  return type;
-}
 
 // A script that pulls in another file by a relative or site path (static or dynamic import).
 const IMPORTS = /\b(?:from|import)\s*\(?\s*["'](?:\.{1,2}\/|\/)[^"']*\.m?js["']/;
@@ -93,7 +85,11 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
 // or an empty build, before anything is measured.
 export function measure(distDir) {
   const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: addressOf(htmlPath) }));
-  for (const page of pages) page.type = pageType(page.path);
+  for (const page of pages) {
+    // The type of the page (page-types.js); a type's budget is in BUDGETS.
+    page.type = pageType(page.path);
+    if (page.type === null) throw new RangeError(`no page type for "${page.path}": a new page type needs a budget in tools/ci/size-budget.js`);
+  }
   const cache = new Map();
   return pages.map(({ htmlPath, path, type }) => ({ path, type, ...pageWeight(distDir, htmlPath, cache) }));
 }
@@ -113,7 +109,7 @@ export function overBudget(rows, { budgets = BUDGETS, js = JS_BUDGET } = {}) {
 
 const kb = (bytes) => (bytes / KB).toFixed(1) + ' KB';
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const rows = measure(process.argv[2] ?? DIST_DIR);
   for (const type of Object.keys(BUDGETS)) {
     const ofType = rows.filter((row) => row.type === type);

@@ -13,8 +13,8 @@
 // A deleted or renamed file (git reports a rename as delete + add) needs a corrections entry. The evidence is all
 // in the tree, so PR runs and the push to main after the merge reach the same verdict.
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
 import { CORRECTIONS, isEntry } from '../../pipeline/corrections.js';
+import { isMain } from '../../pipeline/files.js';
 import { METHODS_LOG, latestMethodsVersion } from '../../pipeline/methods-log.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
@@ -181,7 +181,7 @@ function main() {
   if (!result.ok) process.exit(1);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (err) {

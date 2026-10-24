@@ -1,5 +1,6 @@
 // The size budget: a page's brotli weight (its HTML plus each stylesheet and module script it loads, each once),
-// the page types, and the over-budget report, on a synthetic built site.
+// every page type's budget, and the over-budget report, on a synthetic built site. The page types are page-types.js's
+// (page-types.test.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -7,9 +8,8 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { REPO_ROOT } from '../../pipeline/files.js';
-import { SITE } from '../../web/site.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
-import { BUDGETS, JS_BUDGET, measure, overBudget, pageType, pageWeight } from '../ci/size-budget.js';
+import { BUDGETS, JS_BUDGET, measure, overBudget, pageWeight } from '../ci/size-budget.js';
 
 // Brotli's size of the text; quality 5 is the one the budget counts.
 const br = (text, quality = 5) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
@@ -69,34 +69,6 @@ test('pageWeight: a referenced file that is not in dist throws, and so does a sc
     writeTree(dir, { 'c/index.html': page(js('/assets/ok.1.js')), 'assets/ok.1.js': 'e.textContent="data from",f("import")' });
     assert.equal(pageWeight(dir, 'c/index.html').js, br('e.textContent="data from",f("import")'));
   }));
-
-test('pageType: every page of the site sorts into one type', () => {
-  const sorted = {
-    '/': 'hub',
-    '/404.html': 'notFound',
-    '/hacrp/': 'program',
-    '/hacrp/methods/': 'methods',
-    '/hacrp/data/': 'dictionary',
-    '/hacrp/hospital/990001/': 'hospital',
-    '/hacrp/hospital/99a001/': 'hospital',
-    '/hacrp/region/northeast/': 'place',
-    '/hacrp/division/south-atlantic/': 'place',
-    '/hacrp/state/ca/': 'place',
-    '/hacrp/metro/new-york-newark-jersey-city-ny-nj/': 'place',
-  };
-  for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
-  for (const [path, type] of Object.entries(sorted)) assert.equal(pageType(path), type, path);
-  // The hub's methods page and the program's are different pages.
-  assert.equal(pageType('/methods/'), 'policy');
-  assert.equal(pageType('/hacrp/methods/'), 'methods');
-});
-
-test('pageType: a path that matches no type throws, so a new kind of page needs a budget', () => {
-  // A hospital's page is at its CCN in lowercase, and a place's at its key in lowercase.
-  for (const path of ['/hacrp/hospital/', '/hacrp/hospital/12345/', '/hacrp/hospital/9900011/', '/hacrp/hospital/99A001/', '/hacrp/county/x/',
-    '/hacrp/state/', '/hacrp/state/CA/', '/new/', '/other.html', '/hacrp/hospital/990001/extra/', '/hacrp/state/ca/extra/'])
-    assert.throws(() => pageType(path), /new page type needs a budget/, path);
-});
 
 test('every page type has a budget; hub and policy start at 100 KB and scripts at 120 KB (ARCH-27)', () => {
   assert.deepEqual(Object.keys(BUDGETS).sort(), ['dictionary', 'hospital', 'hub', 'methods', 'notFound', 'place', 'policy', 'program']);

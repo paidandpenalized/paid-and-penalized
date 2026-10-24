@@ -4,10 +4,9 @@
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
-import { DIST_DIR, REPO_ROOT, writeFileMkdir } from '../files.js';
+import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
 import { SITE } from '../../web/site.js';
 import { buildAssets } from './assets.js';
 import { createContext, siteDates } from './context.js';
@@ -70,7 +69,7 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
   return { pages: ctx.pages };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const { pages } = await build();
   console.log(`dist/: ${pages} pages (PP_ENV=${process.env.PP_ENV ?? 'unset'})`);
 }

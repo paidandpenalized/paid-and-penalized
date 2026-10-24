@@ -13,11 +13,10 @@
 // sitemap.xml).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { DIST_DIR, REPO_ROOT, filesUnder, readJson } from '../../pipeline/files.js';
+import { DIST_DIR, filesUnder, isMain } from '../../pipeline/files.js';
 import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { htmlPages, tags } from '../../pipeline/site/html.js';
-import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
@@ -26,7 +25,7 @@ import { PROGRAM_PATH } from './page-types.js';
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 
 // The state codes a "#state=" fragment may name: the hospitals' states in the newest HACRP data.
-const dataStates = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals.map((h) => h.state);
+const dataStates = () => readNewestEmitted().hospitals.map((h) => h.state);
 
 // The file in dist/ that the server serves for a decoded path, following its redirect of a folder to the folder with
 // its "/", or null. at: dist/'s files, as filesAt gives them.
@@ -108,7 +107,7 @@ export function groupProblems(found) {
 
 const SHOWN = 40;
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const distDir = process.argv[2] ?? DIST_DIR;
   const { pages, found } = checkLinks(distDir);
   if (found.length > 0) {

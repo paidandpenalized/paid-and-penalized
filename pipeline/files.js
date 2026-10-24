@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const PINNED_DIR = REPO_ROOT + 'data/pinned/';
@@ -11,6 +11,10 @@ export const SCHEMAS_DIR = REPO_ROOT + 'schemas/';
 export const DIST_DIR = REPO_ROOT + 'dist/';
 
 export const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+
+// Whether the module at metaUrl (its import.meta.url) is the script node was asked to run, not one imported by it: a
+// CLI's guard around what it does on its own. False under node -e or a REPL, where there is no script.
+export const isMain = (metaUrl) => process.argv[1] !== undefined && metaUrl === pathToFileURL(process.argv[1]).href;
 
 // Every regular file under dir, as a '/'-separated path from it, in name order.
 export const filesUnder = (dir) => readdirSync(dir, { recursive: true, withFileTypes: true })

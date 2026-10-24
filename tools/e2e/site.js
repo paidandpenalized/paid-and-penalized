@@ -2,11 +2,11 @@
 // engines, and the pages to visit. The launch command (launch.js) reads it as the checks do; lib.js adds the browser.
 import { existsSync } from 'node:fs';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
-import { DIST_DIR, REPO_ROOT, readJson } from '../../pipeline/files.js';
+import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
-import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { SITE } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
@@ -33,9 +33,6 @@ export async function startSite() {
   return { base: `http://127.0.0.1:${port}`, close: () => stop(server) };
 }
 
-// The newest HACRP file's hospitals, in the file's order.
-const hospitals = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals;
-
 // The first place page of each kind that dist/ holds, by file name: '/hacrp/<kind>/<key>/'.
 function firstPlaces() {
   const first = new Map();
@@ -54,7 +51,8 @@ function firstPlaces() {
 // title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the emitted data,
 // whichever site the browser visits.
 export function samplePages() {
-  const all = hospitals();
+  // The newest HACRP file's hospitals, in the file's order.
+  const all = readNewestEmitted().hospitals;
   const hospital = (type, what, test) => {
     const found = all.find(test);
     if (!found) throw new Error(`samplePages: no hospital ${what} in the data`);

@@ -6,8 +6,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { DIST_DIR } from '../files.js';
+import { DIST_DIR, isMain } from '../files.js';
 import { NOT_FOUND_PATH, fileFor, isServed, lookup } from './address.js';
 import { headersFor, parseHeaders } from './headers.js';
 
@@ -78,7 +77,7 @@ export const stop = (server) => new Promise((resolve) => {
   server.closeAllConnections();
 });
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const root = DIST_DIR;
   if (!isDir(root)) {
     console.error('dist/ not found: run `make build` first');

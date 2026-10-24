@@ -19,8 +19,7 @@
 // tools/test/launch.test.js, which needs no browser or network; so is stopSuites, how a stop reaches every suite.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-import { DIST_DIR as DIST, REPO_ROOT, filesUnder } from '../../pipeline/files.js';
+import { DIST_DIR as DIST, REPO_ROOT, filesUnder, isMain } from '../../pipeline/files.js';
 import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
 import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
@@ -234,6 +233,6 @@ async function main() {
   return ok ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   main().then((code) => process.exit(code), (error) => { console.error(error.message); process.exit(1); });
 }

@@ -12,7 +12,7 @@ export const fileFor = (path) => (path.endsWith('/') ? `${path}index.html` : pat
 
 // The address a file in the built folder is served at, fileFor's inverse: 'a/index.html' is '/a/', 'index.html' is '/',
 // any other file keeps its name ('404.html' is '/404.html').
-export const addressOf = (file) => `/${file === 'index.html' ? '' : file.endsWith('/index.html') ? file.slice(0, -'index.html'.length) : file}`;
+export const addressOf = (file) => `/${file.replace(/(^|\/)index\.html$/, '$1')}`;
 
 // How a request for a site path (decoded, from the root) is answered: { status: 200, file } with the file as fileFor
 // names it, { status: 301 } for a folder asked for without its "/" (the server sends it to the path with one), or
@@ -34,6 +34,8 @@ export const isServed = (file) => file.toLowerCase() !== '_headers';
 // folder when it holds one of the files ('/' is the built folder itself).
 export function filesAt(files) {
   const names = new Set(files);
-  const folders = new Set(files.flatMap((file) => file.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/')))).add('');
+  // Every folder that holds a file, at any depth: each file's path up to each of its "/".
+  const folders = new Set(['']);
+  for (const file of files) for (let i = file.indexOf('/'); i >= 0; i = file.indexOf('/', i + 1)) folders.add(file.slice(0, i));
   return { isFile: (p) => names.has(p.slice(1)) && isServed(p.slice(1)), isDir: (p) => folders.has(p.slice(1).replace(/\/$/, '')) };
 }
