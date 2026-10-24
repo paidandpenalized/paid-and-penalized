@@ -7,6 +7,7 @@
 //                  runs the Chrome installed on this machine; with CI set it runs the Chromium Playwright installs.
 //   newPage()      a tab in a context in a colour scheme, whichever the engine, with nothing of its own left loading.
 //   samplePages()  one page of each type, chosen by property from the emitted data and dist/ (no page is named here).
+//   hospitalAt()   the emitted record of the hospital whose page is at a path, for checks that need its name.
 //   watch(page)    what the page logs, loads and violates from now on; once per page (its exposed function's name is
 //                  unique), so open a new tab for another watch.
 import { existsSync, readdirSync } from 'node:fs';
@@ -81,6 +82,13 @@ function placeOf(kind) {
   const key = existsSync(dir) ? readdirSync(dir).sort().find((name) => existsSync(`${dir}${name}/index.html`)) : undefined;
   if (key === undefined) throw new Error(`samplePages: no ${kind} page in dist/ (run make build)`);
   return `${HACRP}${kind}/${key}/`;
+}
+
+// The emitted record of the hospital whose page is at `path` ('/hacrp/hospital/<ccn>/'), as samplePages gives them.
+export function hospitalAt(path) {
+  const record = hospitals().find((h) => `${HACRP}hospital/${h.ccn.toLowerCase()}/` === path);
+  if (!record) throw new Error(`hospitalAt: no hospital in the data has a page at ${path}`);
+  return record;
 }
 
 // One page of every type, [{ type, path }]: the hub's home and each of its policy pages, the program page, its Methods
