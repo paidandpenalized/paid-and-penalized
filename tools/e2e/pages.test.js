@@ -44,33 +44,34 @@ for (const scheme of SCHEMES) {
     describe(`${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
       const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
 
-      // A hospital's test is named by its type, not its address, so the output names no hospital.
+      // A hospital's test is named by its type, not its address, and so are its messages, so the output names no
+      // hospital: CI's logs are public. An assertion on an address says only whether it is right.
       for (const { type, name, path } of PAGES) {
         it(name, (t) => withPage(tabs, { path, scheme, watched: true }, async (page, { response, seen }) => {
           await t.test('loads clean', async () => {
             const got = await factsOf(page);
             const notFound = type === 'not-found';
-            assert.equal(response.status(), notFound ? 404 : 200, `${path}: status`);
-            assertQuiet(seen, path);
-            assert.ok(got.scrollWidth <= got.innerWidth, `${path}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
-            assert.equal(got.notices, 0, `${path}: no maintenance banner`);
-            assert.equal(got.bannerWords, false, `${path}: no maintenance banner's words`);
+            assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
+            assertQuiet(seen, name);
+            assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
+            assert.equal(got.notices, 0, `${name}: no maintenance banner`);
+            assert.equal(got.bannerWords, false, `${name}: no maintenance banner's words`);
 
             // Every link to the feedback form (the footer's, and a policy page's own) prefills the page's canonical address.
             // The not-found page is served at every missing address, so it has no canonical link and its link has no page.
-            assert.equal(got.feedback.filter((link) => link.footer).length, 1, `${path}: one feedback link in the footer`);
-            if (notFound) assert.equal(got.canonical, null, `${path}: no canonical link`);
-            else assert.equal(got.canonical, SITE.origin + path, `${path}: canonical address`);
+            assert.equal(got.feedback.filter((link) => link.footer).length, 1, `${name}: one feedback link in the footer`);
+            if (notFound) assert.equal(got.canonical, null, `${name}: no canonical link`);
+            else assert.ok(got.canonical === SITE.origin + path, `${name}: the canonical link is the page's own address`);
             for (const { href } of got.feedback) {
               const form = new URL(href);
-              assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${path}: a feedback link names the site`);
-              assert.equal(form.searchParams.get(SITE.feedback.pageEntry), got.canonical, `${path}: a feedback link's page`);
+              assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${name}: a feedback link names the site`);
+              assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: a feedback link names the page's canonical address`);
             }
           });
           if (AXE_WIDTHS.includes(width)) {
             await t.test('axe', async () => {
               await openFolds(page);
-              await audit(page, path);
+              await audit(page, name);
             });
           }
         }));

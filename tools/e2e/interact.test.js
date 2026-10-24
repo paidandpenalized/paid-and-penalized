@@ -1,7 +1,8 @@
 // What a reader does on the pages, in a real browser: the hospital search finds a hospital and opens its page, the
 // what-if recomputes when a measure changes, the keyboard reaches every control without a focused element sliding under
 // the sticky top bar, and with JavaScript off every page keeps its footer (and the hub's pages lose nothing). Runs
-// against dist/ (make build) or any URL (E2E_BASE_URL); see site.js.
+// against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
+// here prints a hospital's name, city, CCN or values, or a search list's options: they say counts, or the page type.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
@@ -47,22 +48,23 @@ describe('search', () => {
       const options = () => list.evaluateAll((items) => items.map((li) => ({ label: li.querySelector('.omni__t')?.textContent ?? '', sub: li.querySelector('.omni__s')?.textContent ?? '' })));
       const find = async () => (await options()).findIndex((o) => normalize(o.label) === normalize(name) && o.sub.includes(`, ${state}`));
       let at = -1;
-      let tried = '';
       for (const [i, word] of words.entries()) {
         await box.pressSequentially(i === 0 ? word : ` ${word}`);
-        tried = words.slice(0, i + 1).join(' ');
         // The index loads on first focus: the list is up once it has, and a later word repaints it at once.
-        await eventually(async () => (await box.getAttribute('aria-expanded')) === 'true', `the list is not up for "${tried}"`);
+        await eventually(async () => (await box.getAttribute('aria-expanded')) === 'true', `the list is not up after ${i + 1} of the name's ${words.length} words`);
         at = await find();
         if (at >= 0) break;
       }
-      assert.ok(at >= 0, `typing the whole name ("${tried}") does not list the hospital; the list shows ${JSON.stringify(await options())}`);
+      const shown = await list.count();
+      assert.ok(at >= 0, `typing all ${words.length} words of the name does not list the hospital; the list shows ${shown} option${shown === 1 ? '' : 's'}`);
       // The first match is active; arrow down to the hospital's, as a reader would, then Enter.
       for (let i = 0; i < at; i++) await box.press('ArrowDown');
       assert.equal(await box.getAttribute('aria-activedescendant'), await list.nth(at).getAttribute('id'), 'the hospital\'s option is the active one');
       await box.press('Enter');
-      await page.waitForURL(new URL(CUT.path, tabs.base).href, { timeout: 10000 });
-      assert.equal(normalize(await page.locator('h1').innerText()), normalize(name), 'the page opened is the hospital\'s');
+      // Waited for by a test, not by address: a timeout would print the address.
+      const opened = await page.waitForURL((url) => url.pathname === CUT.path, { timeout: 10000 }).then(() => true, () => false);
+      assert.ok(opened, 'Enter opens the hospital\'s page');
+      assert.ok(normalize(await page.locator('h1').innerText()) === normalize(name), 'the page opened is the hospital\'s');
       assertQuiet(seen, 'search');
     }));
   }
@@ -84,13 +86,13 @@ describe('what-if', () => {
     const inputs = whatIf.getByRole('spinbutton');
     const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
     const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
-    assert.notEqual(at, -1, `the hospital has a measure above its floor to lower; the inputs read ${JSON.stringify(readings)}`);
+    assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
     await inputs.nth(at).fill(readings[at].min);
     await eventually(async () => (await hypothetical.textContent()) !== was.hypothetical, 'the hypothetical score did not change');
     assert.equal(await hypothetical.getAttribute('data-same'), null, 'the hypothetical no longer reads "same"');
     const score = Number.parseFloat((await hypothetical.textContent()).replace('−', '-'));
-    assert.ok(score < CUT.hospital.total, `the score fell from ${CUT.hospital.total} to ${score}`);
-    assert.notEqual(await headScore.textContent(), was.head, 'the head figure moved');
+    assert.ok(score < CUT.hospital.total, 'the score fell');
+    assert.ok((await headScore.textContent()) !== was.head, 'the head figure moved');
     // The live sentence follows once the reader stops (SETTLE_MS).
     await eventually(async () => (await sentence.textContent()) !== was.sentence, 'the live sentence did not change');
     assertQuiet(seen, 'what-if');
@@ -101,7 +103,8 @@ describe('what-if', () => {
 // bar's search, the theme toggle, a nav item (by position) or the footer's feedback link; its rect against the bar's.
 // The skip link is left out of the rect check: it is placed over the top of the page on purpose, above the bar. The
 // browser scrolls to a whole device pixel, so an element focused at the bar's edge can land a fraction of a pixel under
-// it (an svg at 99.8 px under a bar ending at 100): only an overlap over SNAP counts.
+// it (an svg at 99.8 px under a bar ending at 100): only an overlap over SNAP counts. An element is described by its
+// tag, id and first class and the number of words it reads, never its text or address (a link can be a hospital's).
 async function focusFacts([formUrl, snap]) {
   // A frame for the page to finish moving what was focused, as a reader's eye would wait: the top bar's correction
   // (web/client/topbar.js) is queued in a frame during the key press, so it runs before this one.
@@ -122,8 +125,8 @@ async function focusFacts([formUrl, snap]) {
   const barBox = bar?.getBoundingClientRect();
   const under = Boolean(barBox) && role !== 'skip' && !bar.contains(el) && box.width * box.height > 0
     && box.top < barBox.bottom - snap && box.bottom > barBox.top && box.left < barBox.right && box.right > barBox.left;
-  const text = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('href') || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-  return { role, under, desc: `<${el.localName}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(/\s+/)[0]}` : ''}> "${text}"`, box: [box.top, box.bottom].map(Math.round), bar: barBox && [barBox.top, barBox.bottom].map(Math.round) };
+  const words = (el.getAttribute('aria-label') || el.textContent || '').trim().split(/\s+/).filter(Boolean).length;
+  return { role, under, desc: `<${el.localName}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(/\s+/)[0]}` : ''}> (${words} words)`, box: [box.top, box.bottom].map(Math.round), bar: barBox && [barBox.top, barBox.bottom].map(Math.round) };
 }
 
 // The keys that move focus forward and back. Safari's engine, on macOS, tabs only through form controls unless Option is
