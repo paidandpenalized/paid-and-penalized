@@ -7,7 +7,7 @@
   --paper-2: #f0f1ec;       /* green-bar rows, panels */
   --ink: #1c1b1d;
   --ink-2: #49484d;
-  --ink-3: #75747a;
+  --ink-3: #747379;
   --line: #8a898f;          /* borders and rules, lighter than ink */
   --pen: #c4303a;           /* penalty: marks, bars, pills */
   --pen-ink: #a5222c;       /* penalty-colored text on paper */
@@ -73,7 +73,7 @@
 @media print {
   :root {
     --paper: #ffffff !important; --paper-2: #f0f1ec !important; --ink: #1c1b1d !important;
-    --ink-2: #49484d !important; --ink-3: #75747a !important; --line: #8a898f !important;
+    --ink-2: #49484d !important; --ink-3: #747379 !important; --line: #8a898f !important;
     --pen: #c4303a !important; --pen-ink: #a5222c !important; --pen-tint: #f7e1e2 !important; --pen-scar: #e8a2a2 !important;
     --rew: #00876f !important; --neutral: #9a999f !important; --on-mark: #ffffff !important;
     --hatch: rgba(28, 27, 29, 0.3) !important; --pen-seq-1: #e8a2a2 !important; --pen-seq-2: #d9706f !important;
