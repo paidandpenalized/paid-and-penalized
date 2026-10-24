@@ -688,8 +688,10 @@
 .receipt__t th, .receipt__t td { padding: 1px 0; text-align: right; font-weight: 400; }
 .receipt__t th:first-child { text-align: left; }
 .receipt__t thead th { color: var(--ink-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; }
-/* Written against the table, so it outranks the table's cell padding above without !important. */
-.receipt__t .receipt__ok { padding-left: 10px; color: var(--ink-2); text-transform: uppercase; font-size: var(--fs-xs); }
+/* Written against the tape and its table (three classes), so its padding outranks both tapes' cell padding, the
+   table's above and the dollar tape's .receipt--dollars .receipt__t td below (two classes and a type), without
+   !important; the phone rules that move it again are three classes too, and come later. */
+.receipt .receipt__t .receipt__ok { padding-left: 10px; color: var(--ink-2); text-transform: uppercase; font-size: var(--fs-xs); }
 .receipt__sum { display: grid; gap: 2px; margin: 10px 0 0; padding-top: 8px; border-top: 1.5px dashed var(--ink-3); }
 .receipt__sum div { display: flex; justify-content: space-between; gap: 12px; }
 .receipt__sum dt { text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
