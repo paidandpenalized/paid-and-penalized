@@ -68,18 +68,12 @@
 }
 @media (pointer: coarse) { :root { --control-h: 44px; } }
 /* Print: always the light tokens on plain white paper, whatever the device or the toggle says (a dark page printed
-   with its backgrounds stripped would put near-white text on white). !important beats the dark media block and the
-   toggle's copy of it, which the build appends after this file. The rest of the print rules are in print.css. */
+   with its backgrounds stripped would put near-white text on white). This block holds only what print alone sets; the
+   build writes it out as every color the light block sets, then these, each !important, which beats the dark media
+   block and the toggle's copy of it that the build appends after this file. The rest of the print rules are in
+   print.css. */
 @media print {
-  :root {
-    --paper: #ffffff !important; --paper-2: #f0f1ec !important; --ink: #1c1b1d !important;
-    --ink-2: #49484d !important; --ink-3: #6b6a70 !important; --line: #8a898f !important;
-    --pen: #c4303a !important; --pen-ink: #a5222c !important; --pen-tint: #f7e1e2 !important; --pen-scar: #e8a2a2 !important;
-    --rew: #00876f !important; --neutral: #9a999f !important; --on-mark: #ffffff !important;
-    --hatch: rgba(28, 27, 29, 0.3) !important; --pen-seq-1: #e8a2a2 !important; --pen-seq-2: #d9706f !important;
-    --pen-seq-3: #c4303a !important; --pen-seq-4: #9a1f28 !important; --pen-seq-5: #6a1119 !important;
-    --grain: none !important; --stamp-blend: multiply !important;
-    color-scheme: light !important;
-  }
+  :root { --paper: #ffffff; --grain: none; --stamp-blend: multiply; color-scheme: light; }
 }
-/* The build copies the dark block's declarations to :root[data-theme="dark"], for the toggle (pipeline/site/assets.js). */
+/* The build copies the dark block's declarations to :root[data-theme="dark"], for the toggle, and writes out the print
+   block (pipeline/site/assets.js). */

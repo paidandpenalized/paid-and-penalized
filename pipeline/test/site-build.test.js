@@ -309,19 +309,17 @@ test('tokens.css keeps the dark block in the shape the build copies, and every t
   }
 });
 
-test('print forces the light tokens on white: every color token the light block sets, the print block sets with !important', () => {
+test('print forces the light tokens on white: the bundle\'s print block sets every color token the light block sets, each !important', () => {
   const tokens = readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8');
-  const decls = (block) => new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+?)\s*(?:!important)?;/g)].map((m) => [m[1], m[2]]));
-  const light = decls(/^:root \{([^}]*)\}/m.exec(tokens)[1]);
-  const block = /@media print \{\s*:root \{([^}]*)\}\s*\}/.exec(tokens);
+  const decls = (block) => new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+?)\s*;/g)].map((m) => [m[1], m[2]]));
+  const light = [...decls(/^:root \{([^}]*)\}/m.exec(tokens)[1])].filter(([, value]) => /^(#|rgba?\()/.test(value));
+  assert.ok(light.length > 10, 'the light block\'s colors');
+  const block = /@media print \{\s*:root \{([^}]*)\}\s*\}/.exec(stylesheet());
   assert.ok(block, 'print block');
   const print = decls(block[1]);
-  for (const [name, value] of light) {
-    if (!/#|rgba?\(/.test(value) || name === '--grain') continue;
-    assert.equal(print.get(name), name === '--paper' ? '#ffffff' : value, name);
-  }
+  for (const [name, value] of light) assert.equal(print.get(name), `${name === '--paper' ? '#ffffff' : value} !important`, name);
+  assert.equal(print.get('--grain'), 'none !important');
   assert.equal(block[1].match(/;/g).length, block[1].match(/!important;/g).length, 'every print declaration is !important');
-  assert.ok(stylesheet().includes('@media print'), 'the bundle carries the print rules');
 });
 
 test('the local server serves index.html for directories, 404.html for unknown paths, and nothing outside its root', () =>
