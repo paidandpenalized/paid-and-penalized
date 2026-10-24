@@ -144,6 +144,9 @@ export function loadHacrp() {
   const dollarsFile = readJson(REPO_ROOT + paths.dollars);
   checkDollarsYear(dollarsFile, data.fy);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  // The files this site's numbers come from. The hospital master is left out: it is shared, so a re-emit for another
+  // program rebuilds it without changing a number here. The history is null in a build without one.
+  const builtFiles = [[paths.data, data], [paths.history, history], [paths.dollars, dollarsFile]];
 
   for (const h of data.hospitals) {
     if (!CCN.test(h.ccn)) throw new RangeError(`HACRP: CCN "${h.ccn}" is not six digits or capital letters`);
@@ -166,8 +169,9 @@ export function loadHacrp() {
   const topo = JSON.parse(readPinned(ATLAS_ID));
   return {
     fy: data.fy,
-    // The day this site's numbers last changed (the corrections page shows it): the newest built_at of the files read.
-    changedOn: changedOn([[paths.data, data], [paths.master, masterFile], [paths.history, history], [paths.dollars, dollarsFile]]),
+    // The day this site's numbers last changed (the corrections page shows it): the newest built_at of builtFiles.
+    builtFiles,
+    changedOn: changedOn(builtFiles),
     hospitals: data.hospitals,
     model: data.model,
     boundaryText: boundaryText(data.hospitals, data.model.boundary),

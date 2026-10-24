@@ -85,6 +85,12 @@ test('checkHistoryYear: a history that does not end with the HACRP file\'s year 
   assert.throws(() => checkHistoryYear({ fy: 2026 }, 2027), /history ends at FY2026/);
 });
 
+test('the day the numbers last changed reads the HACRP file, its history and its dollar estimates: not the hospital master, which another program\'s re-emit also rebuilds', () => {
+  const { builtFiles, changedOn: day } = loadHacrp();
+  assert.deepEqual(builtFiles.map(([path]) => path.split('/')[2]), ['hacrp', 'hacrp-history', 'dollars']);
+  assert.equal(day, changedOn(builtFiles));
+});
+
 test('changedOn: the newest built_at date (UTC) among the files given; a file that is absent is skipped; a stamp that is not the schema\'s timestamp stops the build and names the file', () => {
   const at = (built_at, path = 'data/emitted/x/fy2026/x.json') => [path, { built_at }];
   assert.equal(changedOn([at('2026-10-20T16:29:57Z'), at('2026-10-23T14:02:59Z'), at('2026-10-22T12:15:15Z')]), '2026-10-23');

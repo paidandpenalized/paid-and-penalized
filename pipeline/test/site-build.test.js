@@ -3,12 +3,10 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
-import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, repoFiles } from '../files.js';
+import { REPO_ROOT, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { CORRECTIONS_EMAIL } from '../../hub/constants.js';
 import { HUB } from '../../hub/pages.js';
-import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
-import { historyPath } from '../../sites/hacrp/pipeline/history.js';
 import { slicedSite } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
@@ -140,12 +138,10 @@ test('setUpdated records a site\'s two dates once; updated is a Map read in the 
     assert.equal(ctx.updated.get('hacrp').cmsReleased, '2026-08-13');
   }));
 
-// The newest built_at date among the emitted files the HACRP pages read (the HACRP file, the hospital master, the
-// history and the dollars), each file read from its newest year.
-const newestBuilt = () => [
-  emittedPath(newestYear('data/emitted/hacrp')), masterPath(newestYear('data/emitted/hospital')),
-  historyPath(newestYear('data/emitted/hacrp-history')), dollarsPath(newestYear('data/emitted/dollars')),
-].map((f) => readJson(REPO_ROOT + f).built_at.slice(0, 10)).sort().at(-1);
+// The newest built_at date among the emitted files the numbers come from: the files loadHacrp lists (builtFiles; the
+// history is null in a build without one), each read again from disk.
+const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
+  .map(([path]) => readJson(REPO_ROOT + path).built_at.slice(0, 10)).sort().at(-1);
 
 // HACRP released on its first four hospitals (every page type, in well under a second) with the hub: built once, in
 // production, for the tests that read a whole build, and removed after them.
@@ -170,7 +166,7 @@ test('HACRP gives the build its two dates, which /corrections/ shows, and the co
   // The dates: CMS's release of the file the site uses, and the newest built_at of the emitted files it reads.
   const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
   assert.ok(text.includes(`<time datetime="${data.source.pdcReleased}">`));
-  assert.ok(text.includes(`<time datetime="${newestBuilt()}">`));
+  assert.ok(text.includes(`<time datetime="${newestBuilt(data)}">`));
 });
 
 test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
