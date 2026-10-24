@@ -1,8 +1,8 @@
 // Shared test helpers for the page build.
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { repoFiles } from '../files.js';
 import { createSiteServer } from '../site/serve.js';
 
@@ -14,11 +14,6 @@ export function withTemp(prefix, fn) {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   return Promise.resolve().then(() => fn(dir)).finally(() => rmSync(dir, { recursive: true, force: true }));
 }
-
-// Every regular file under dir, as a path from it (with the platform's separator).
-export const filesUnder = (dir) => readdirSync(dir, { recursive: true, withFileTypes: true })
-  .filter((entry) => entry.isFile())
-  .map((entry) => relative(dir, join(entry.parentPath, entry.name)));
 
 // Runs fn(port) against the local server (serve.js) for root, on a free loopback port, and closes it afterwards.
 export async function withServer(root, fn) {

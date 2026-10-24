@@ -5,6 +5,7 @@
 import { join } from 'node:path';
 import { isIsoDate } from '../../engine/js/dates.js';
 import { writeFileMkdir } from '../files.js';
+import { fileFor } from './address.js';
 import { writeHashed } from './assets.js';
 
 // Whether a build's env (PP_ENV) is production, the one build search engines may index (_headers' X-Robots-Tag too).
@@ -47,7 +48,7 @@ export function createContext({ outDir, env, assets, siteIds = [] }) {
     // null lists the page in the sitemap. Leave it out for a file that is not a page.
     emit({ path, text, robots }) {
       if (!PATH.test(path)) throw new RangeError(`emit: bad path "${path}"`);
-      const file = path.endsWith('/') ? `${path}index.html` : path;
+      const file = fileFor(path);
       if (file.endsWith('.html') && /[A-Z]/.test(file)) throw new RangeError(`emit: bad path "${path}"`);
       // Compared without case, so two paths that one case-insensitive disk would merge never both get written.
       if (written.has(file.toLowerCase())) throw new RangeError(`emit: "${path}" is already written`);

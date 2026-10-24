@@ -1,14 +1,22 @@
 // Repo file access for pipeline CLIs and tests. The engine itself never reads files.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { dirname } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const PINNED_DIR = REPO_ROOT + 'data/pinned/';
 export const SCHEMAS_DIR = REPO_ROOT + 'schemas/';
+// What make build writes and make serve, the link check, the size budget and the browser checks read.
+export const DIST_DIR = REPO_ROOT + 'dist/';
 
 export const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+
+// Every regular file under dir, as a '/'-separated path from it, in name order.
+export const filesUnder = (dir) => readdirSync(dir, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile())
+  .map((entry) => relative(dir, join(entry.parentPath, entry.name)).split(sep).join('/'))
+  .sort();
 
 // Writes a file, creating its folder first.
 export function writeFileMkdir(path, text) {

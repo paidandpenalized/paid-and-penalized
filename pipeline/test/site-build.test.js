@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
-import { REPO_ROOT, readJson, repoFiles } from '../files.js';
+import { join } from 'node:path';
+import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { CORRECTIONS_EMAIL } from '../../hub/constants.js';
 import { HUB } from '../../hub/pages.js';
@@ -12,7 +12,7 @@ import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
-import { filesUnder, get, withServer, withTemp as inTemp } from './helpers.js';
+import { get, withServer, withTemp as inTemp } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
@@ -228,7 +228,7 @@ test('the immutable rule matches the content-hashed files under /assets/ and not
   const rules = parseHeaders(readFileSync(join(out, '_headers'), 'utf8'));
   const seen = new Set();
   for (const f of filesUnder(out)) {
-    const path = `/${f.split(sep).join('/')}`;
+    const path = `/${f}`;
     const hashed = /^\/assets\/[a-z0-9-]+\.[0-9a-f]{8}\.[a-z]+$/.test(path);
     const cache = headersFor(rules, path)['cache-control'] ?? '';
     assert.equal(cache.includes('immutable'), hashed, path);

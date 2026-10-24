@@ -2,8 +2,7 @@
 // parser: the build writes every attribute value double-quoted and escaped, and this reads exactly that, plus
 // single-quoted and bare values so a hand-written page is not misread. A tag inside a comment, or inside a
 // script's or style's text, is not a tag; the <script> element's own start tag still is.
-import { readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { filesUnder } from '../../pipeline/files.js';
 
 const ENTITY = /&(#x[0-9a-f]+|#[0-9]+|amp|lt|gt|quot|apos);/gi;
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
@@ -38,16 +37,5 @@ export function* tags(html) {
   }
 }
 
-// Every file under distDir, as a '/'-separated path from it, in name order.
-export const filesIn = (distDir) => readdirSync(distDir, { recursive: true, withFileTypes: true })
-  .filter((entry) => entry.isFile())
-  .map((entry) => relative(distDir, join(entry.parentPath, entry.name)).split(sep).join('/'))
-  .sort();
-
-export const htmlPages = (distDir) => filesIn(distDir).filter((path) => path.endsWith('.html'));
-
-// The address the server gives a page file: dir/index.html is /dir/; any other file keeps its name.
-export function pageUrl(htmlPath) {
-  if (htmlPath === 'index.html') return '/';
-  return htmlPath.endsWith('/index.html') ? '/' + htmlPath.slice(0, -'index.html'.length) : '/' + htmlPath;
-}
+// Every page (.html file) under distDir, as a '/'-separated path from it, in name order.
+export const htmlPages = (distDir) => filesUnder(distDir).filter((path) => path.endsWith('.html'));

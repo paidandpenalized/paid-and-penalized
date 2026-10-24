@@ -18,9 +18,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { brotliCompressSync, constants } from 'node:zlib';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { DIST_DIR } from '../../pipeline/files.js';
+import { addressOf } from '../../pipeline/site/address.js';
 import { SITE } from '../../web/site.js';
-import { htmlPages, pageUrl, tags } from './html.js';
+import { htmlPages, tags } from './html.js';
 
 const KB = 1024;
 const QUALITY = 5;
@@ -100,7 +101,7 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
 // Every page in distDir: { path, type, html, css, js, total }, in path order. Throws on a page of no known type
 // or an empty build, before anything is measured.
 export function measure(distDir) {
-  const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: pageUrl(htmlPath) }));
+  const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: addressOf(htmlPath) }));
   if (pages.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
   for (const page of pages) page.type = pageType(page.path);
   const cache = new Map();
@@ -125,7 +126,7 @@ export const checkBudgets = (distDir, limits) => overBudget(measure(distDir), li
 const kb = (bytes) => (bytes / KB).toFixed(1) + ' KB';
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const rows = measure(process.argv[2] ?? REPO_ROOT + 'dist/');
+  const rows = measure(process.argv[2] ?? DIST_DIR);
   for (const type of Object.keys(BUDGETS)) {
     const ofType = rows.filter((row) => row.type === type);
     if (ofType.length === 0) continue;

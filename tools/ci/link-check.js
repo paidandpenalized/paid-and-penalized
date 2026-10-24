@@ -13,25 +13,30 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
+import { DIST_DIR, REPO_ROOT, filesUnder, newestYear, readJson } from '../../pipeline/files.js';
+import { addressOf, lookup } from '../../pipeline/site/address.js';
 import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
-import { filesIn, htmlPages, pageUrl, tags } from './html.js';
+import { htmlPages, tags } from './html.js';
 
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 
 // The state codes a "#state=" fragment may name: the hospitals' states in the newest HACRP data.
 const dataStates = () => readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp'))).hospitals.map((h) => h.state);
 
-// The file in dist/ that the server serves for a decoded path, or null.
-function locate(path, files) {
-  const rel = path.slice(1);
-  if (path.endsWith('/')) return files.has(rel + 'index.html') ? rel + 'index.html' : null;
-  if (files.has(rel)) return rel;
-  return files.has(rel + '/index.html') ? rel + '/index.html' : null;
+// The file in dist/ that the server serves for a decoded path, following its redirect of a folder to the folder with
+// its "/", or null. files: every file in dist/; folders: every folder that holds one ('' is dist/ itself).
+function locate(path, { files, folders }) {
+  const at = { isFile: (p) => files.has(p.slice(1)), isDir: (p) => folders.has(p.slice(1).replace(/\/$/, '')) };
+  let found = lookup(path, at);
+  if (found.status === 301) found = lookup(`${path}/`, at);
+  return found.status === 200 ? found.file : null;
 }
+
+// Every folder holding one of the files ('a/b/c.html' is in 'a/b', 'a' and ''), as '/'-separated paths.
+const foldersOf = (files) => new Set([...files].flatMap((file) => file.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/'))).concat(''));
 
 const tryDecode = (text) => {
   try {
@@ -42,7 +47,7 @@ const tryDecode = (text) => {
 };
 
 // 'missing file', 'missing id' or null for one href found on the page at `base`.
-function problemWith(href, base, files, idsByFile, states) {
+function problemWith(href, base, tree, idsByFile, states) {
   let url;
   try {
     url = new URL(href, base);
@@ -51,7 +56,7 @@ function problemWith(href, base, files, idsByFile, states) {
   }
   if (url.origin !== SITE.origin) return null;
   const path = tryDecode(url.pathname);
-  const target = path === null ? null : locate(path, files);
+  const target = path === null ? null : locate(path, tree);
   if (target === null) return 'missing file';
   // "#" and "#top" always work; ids can only be looked up in a page.
   const fragment = tryDecode(url.hash.slice(1)) ?? url.hash.slice(1);
@@ -64,10 +69,11 @@ function problemWith(href, base, files, idsByFile, states) {
 // Every broken internal link: [{ from (the page's path), href (as written), problem }], pages in file-name order. A
 // page repeating a link is told once. states: the codes a "#state=" fragment may name.
 export function checkLinks(distDir, states = dataStates()) {
-  const names = filesIn(distDir);
+  const names = filesUnder(distDir);
   const htmlFiles = names.filter((name) => name.endsWith('.html'));
   if (htmlFiles.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
   const files = new Set(names);
+  const tree = { files, folders: foldersOf(files) };
   // One read of each page: its ids and its distinct links, in the order they appear.
   const pages = htmlFiles.map((htmlPath) => {
     const ids = new Set();
@@ -81,10 +87,10 @@ export function checkLinks(distDir, states = dataStates()) {
   const idsByFile = new Map(pages.map(({ htmlPath, ids }) => [htmlPath, ids]));
   const found = [];
   for (const { htmlPath, links } of pages) {
-    const from = pageUrl(htmlPath);
+    const from = addressOf(htmlPath);
     const base = SITE.origin + from;
     for (const href of links) {
-      const problem = problemWith(href, base, files, idsByFile, states);
+      const problem = problemWith(href, base, tree, idsByFile, states);
       if (problem) found.push({ from, href, problem });
     }
   }
@@ -107,7 +113,7 @@ export function groupProblems(found) {
 const SHOWN = 40;
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const distDir = process.argv[2] ?? REPO_ROOT + 'dist/';
+  const distDir = process.argv[2] ?? DIST_DIR;
   const found = checkLinks(distDir);
   if (found.length > 0) {
     const groups = groupProblems(found);

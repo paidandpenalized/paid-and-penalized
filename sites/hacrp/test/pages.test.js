@@ -3,15 +3,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { join } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { HUB } from '../../../hub/pages.js';
-import { REPO_ROOT } from '../../../pipeline/files.js';
+import { REPO_ROOT, filesUnder } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
-import { filesUnder, withTemp } from '../../../pipeline/test/helpers.js';
+import { withTemp } from '../../../pipeline/test/helpers.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
@@ -238,7 +238,7 @@ test('the data dictionary page carries the as-of bar the program page shows, aft
 
 test('no built page links the hub Methods page\'s old AI anchor: the policy lives on About', async () => {
   const out = await builtSlice();
-  const pages = filesUnder(out).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length).split(sep).join('/'));
+  const pages = filesUnder(out).filter((f) => f.endsWith('index.html')).map((f) => f.slice(0, -'index.html'.length));
   for (const path of ['', 'methods/', 'about/', 'hacrp/', 'hacrp/methods/', 'hacrp/data/']) assert.ok(pages.includes(path), `the scan reads ${path || 'the home page'}`);
   const links = pages.filter((f) => /href="[^"]*\/methods\/#ai"/.test(readFileSync(join(out, f, 'index.html'), 'utf8')));
   assert.deepEqual(links, []);

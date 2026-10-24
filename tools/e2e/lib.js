@@ -12,13 +12,12 @@
 //                  unique), so open a new tab for another watch.
 import { existsSync, readdirSync } from 'node:fs';
 import { chromium, firefox, webkit } from 'playwright';
-import { REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
+import { DIST_DIR as DIST, REPO_ROOT, newestYear, readJson } from '../../pipeline/files.js';
 import { createSiteServer } from '../../pipeline/site/serve.js';
 import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { KINDS } from '../../sites/hacrp/web/place-paths.js';
 import { SITE } from '../../web/site.js';
 
-const DIST = REPO_ROOT + 'dist/';
 const HACRP = SITE.sites.hacrp.path;
 
 // The origin of the site under test, set by startSite, which watch falls back on to tell this site's requests from others.

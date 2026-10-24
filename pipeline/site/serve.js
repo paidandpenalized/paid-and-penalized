@@ -7,7 +7,8 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT } from '../files.js';
+import { DIST_DIR } from '../files.js';
+import { lookup } from './address.js';
 import { headersFor, parseHeaders } from './headers.js';
 
 const TYPES = {
@@ -56,17 +57,16 @@ export function createSiteServer(root) {
     }
     const file = normalize(join(base, path));
     if (path.includes('\0') || !file.startsWith(base) || file.slice(base.length).toLowerCase() === '_headers') return notFound();
-    if (isDir(file)) {
-      // One leading slash, so the redirect can't become a protocol-relative URL to another host.
-      if (!path.endsWith('/')) return reply(301, { location: `${url.pathname.replace(/^\/+/, '/')}/${url.search}` });
-      return isFile(join(file, 'index.html')) ? send(200, join(file, 'index.html')) : notFound();
-    }
-    return isFile(file) ? send(200, file) : notFound();
+    const onDisk = (p) => join(base, p);
+    const found = lookup(path, { isFile: (p) => isFile(onDisk(p)), isDir: (p) => isDir(onDisk(p)) });
+    // One leading slash, so the redirect can't become a protocol-relative URL to another host.
+    if (found.status === 301) return reply(301, { location: `${url.pathname.replace(/^\/+/, '/')}/${url.search}` });
+    return found.status === 200 ? send(200, onDisk(found.file)) : notFound();
   });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const root = REPO_ROOT + 'dist';
+  const root = DIST_DIR;
   if (!isDir(root)) {
     console.error('dist/ not found: run `make build` first');
     process.exit(1);

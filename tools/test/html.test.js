@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { withTemp } from '../../pipeline/test/helpers.js';
-import { decode, htmlPages, pageUrl, tags } from '../ci/html.js';
+import { decode, htmlPages, tags } from '../ci/html.js';
 
 test('decode: the references the build writes, numeric ones too; anything else is left as it is', () => {
   assert.equal(decode('a=1&amp;b=2&lt;&gt;&quot;&#39;&#x27;&#X41;'), 'a=1&b=2<>"\'\'A');
@@ -30,13 +30,6 @@ test('tags: markup inside a comment or a script or style body is not read, but t
 
 test('tags: a ">" inside a quoted value does not end the tag', () => {
   assert.deepEqual([...tags('<a title="a > b" href="/y/">')], [{ name: 'a', attrs: { title: 'a > b', href: '/y/' } }]);
-});
-
-test('pageUrl: a folder page is its folder, any other file keeps its name', () => {
-  assert.equal(pageUrl('index.html'), '/');
-  assert.equal(pageUrl('hacrp/index.html'), '/hacrp/');
-  assert.equal(pageUrl('hacrp/hospital/990001/index.html'), '/hacrp/hospital/990001/');
-  assert.equal(pageUrl('404.html'), '/404.html');
 });
 
 test('htmlPages: every .html file under the folder, slash-separated, in name order', () =>

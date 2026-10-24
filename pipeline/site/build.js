@@ -7,7 +7,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
-import { REPO_ROOT, writeFileMkdir } from '../files.js';
+import { DIST_DIR, REPO_ROOT, writeFileMkdir } from '../files.js';
 import { buildAssets } from './assets.js';
 import { createContext } from './context.js';
 import { headersFile } from './headers.js';
@@ -21,7 +21,7 @@ export const SITES = [HACRP, HUB];
 // one); layout.js loads the theme script, and a page lists the others it needs.
 export const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
 
-const DIST = resolve(REPO_ROOT, 'dist');
+const DIST = resolve(DIST_DIR);
 const inside = (dir, parent) => {
   const rel = relative(parent, dir);
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
@@ -47,7 +47,7 @@ export function mergeEntries(...sets) {
   return merged;
 }
 
-export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites = SITES } = {}) {
+export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });

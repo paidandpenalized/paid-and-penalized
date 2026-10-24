@@ -18,11 +18,10 @@
 import { spawn } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { DIST_DIR as DIST, REPO_ROOT } from '../../pipeline/files.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
 
 export const ENGINES = ['chromium', 'firefox', 'webkit'];
-const DIST = REPO_ROOT + 'dist/';
 // A hashed asset that no build has: the hash is eight zeros, and checksFor refuses the real file if it ever matches.
 const MISSING_HASH = '00000000';
 const FETCH_TIMEOUT_MS = 30_000;
