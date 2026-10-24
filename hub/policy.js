@@ -1,7 +1,7 @@
 // The template for the hub's policy pages (Terms, privacy, corrections, About, accessibility): the title and, beside
 // or under it, an "in brief" record card (a .form of numbered lines, the family's signature device), then the page's
 // sections with an index of them beside the text on a wide screen and above it on a narrow one. No figures; the look
-// is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".pol__*").
+// is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".doc" and ".pol__*").
 import { formField, formTitle } from '../web/render/components.js';
 import { Safe, html } from '../web/render/html.js';
 import { page } from '../web/render/layout.js';
@@ -35,14 +35,14 @@ ${formTitle(COPY.briefTitle, SITE.name)}
 ${brief.map((line, i) => html`${formField({ no: i + 1, label: '', value: line, size: 'sm', wide: true })}
 `)}</div>
 </header>
-<div class="pol__body">
-<nav class="pol__toc" aria-label="${COPY.indexLabel}">
-<p class="pol__toc-h cap" aria-hidden="true">${COPY.indexLabel}</p>
-<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="pol__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
+<div class="doc">
+<nav class="doc__toc" aria-label="${COPY.indexLabel}">
+<p class="doc__toc-h cap" aria-hidden="true">${COPY.indexLabel}</p>
+<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
 </nav>
-<div class="pol__main">
-${sections.map((s) => html`<section class="pol__sec" id="${s.id}" aria-labelledby="${s.id}-h">
-<h2 class="pol__h" id="${s.id}-h">${s.heading}</h2>
+<div class="doc__main">
+${sections.map((s) => html`<section class="doc__sec" id="${s.id}" aria-labelledby="${s.id}-h">
+<h2 class="doc__h" id="${s.id}-h">${s.heading}</h2>
 ${s.body}
 </section>
 `)}</div>

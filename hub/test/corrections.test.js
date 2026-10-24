@@ -79,11 +79,11 @@ const ENTRIES = [
 test('with no entries the log says so, and is the last section', () => {
   const text = page();
   assert.match(text, /<h1[^>]*>Corrections<\/h1>/);
-  assert.match(text, new RegExp(`<h2 class="pol__h" id="log-h">${COPY.correctionsLogHeading}</h2>\\s*<p>${COPY.correctionsLogEmpty}</p>`));
+  assert.match(text, new RegExp(`<h2 class="doc__h" id="log-h">${COPY.correctionsLogHeading}</h2>\\s*<p>${COPY.correctionsLogEmpty}</p>`));
   assert.doesNotMatch(text, /pol__entry"/);
-  const ids = [...text.matchAll(/<section class="pol__sec" id="([^"]+)"/g)].map((m) => m[1]);
+  const ids = [...text.matchAll(/<section class="doc__sec" id="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(ids.at(-1), 'log');
-  assert.deepEqual([...text.match(/<nav class="pol__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]), ids);
+  assert.deepEqual([...text.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]), ids);
 });
 
 test('each entry shows its date from the file name in a <time>, then its body, in the order given', () => {

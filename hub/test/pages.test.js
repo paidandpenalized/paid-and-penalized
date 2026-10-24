@@ -87,8 +87,8 @@ const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
 const textOf = (page) => page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ')
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 const briefKeys = (prefix) => Object.keys(COPY).filter((k) => new RegExp(`^${prefix}\\d+$`).test(k));
-const sectionIds = (page) => [...page.matchAll(/<section class="pol__sec" id="([^"]+)"/g)].map((m) => m[1]);
-const indexLinks = (page) => [...page.match(/<nav class="pol__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]);
+const sectionIds = (page) => [...page.matchAll(/<section class="doc__sec" id="([^"]+)"/g)].map((m) => m[1]);
+const indexLinks = (page) => [...page.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]);
 
 test('each policy page has one h1, the brief as a record card, an index of its sections and the hub\'s noindex', () =>
   withHub((read) => {
@@ -111,8 +111,8 @@ test('each policy page has one h1, the brief as a record card, an index of its s
       assert.equal(new Set(ids).size, ids.length, `${path}: section ids are unique`);
       assert.ok(ids.every((id) => /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(id)), `${path}: ids are short, lowercase, hyphenated`);
       assert.deepEqual(indexLinks(text), ids, path);
-      assert.match(text, new RegExp(`<nav class="pol__toc" aria-label="${escapeHtml(COPY.indexLabel)}">`), path);
-      for (const id of ids) assert.match(text, new RegExp(`<h2 class="pol__h" id="${id}-h">`), `${path}#${id} has its heading`);
+      assert.match(text, new RegExp(`<nav class="doc__toc" aria-label="${escapeHtml(COPY.indexLabel)}">`), path);
+      for (const id of ids) assert.match(text, new RegExp(`<h2 class="doc__h" id="${id}-h">`), `${path}#${id} has its heading`);
       assert.doesNotMatch(text, /\sstyle=/, `${path}: no inline style (a strict CSP comes)`);
       assert.doesNotMatch(text, /<figure|<svg/, `${path}: no figures`);
     }
@@ -140,8 +140,8 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
 test('/about/ holds the AI and conflict-of-interest sections under the ids other pages link to', () =>
   withHub((read) => {
     const about = read('/about/');
-    assert.match(about, /<section class="pol__sec" id="ai" aria-labelledby="ai-h">\s*<h2 class="pol__h" id="ai-h">How AI tools are used<\/h2>/);
-    assert.match(about, /<section class="pol__sec" id="coi"/);
+    assert.match(about, /<section class="doc__sec" id="ai" aria-labelledby="ai-h">\s*<h2 class="doc__h" id="ai-h">How AI tools are used<\/h2>/);
+    assert.match(about, /<section class="doc__sec" id="coi"/);
     assert.ok(about.includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
   }));
 
@@ -160,7 +160,7 @@ test('/privacy/ links the two services\' policies and names no retention period'
     assert.match(privacy, /<a href="https:\/\/www\.cloudflare\.com\/privacypolicy\/" target="_blank" rel="noopener">Cloudflare’s privacy policy/);
     assert.match(privacy, /<a href="https:\/\/policies\.google\.com\/privacy" target="_blank" rel="noopener">Google’s privacy policy/);
     // The page's own words (its sections and brief lines, not the numbers that count them) say nothing of how long anything is kept.
-    const words = textOf(privacy.match(/<div class="pol__main">[\s\S]*<\/article>/)[0]) + briefKeys('privacyBrief').map((k) => COPY[k]).join(' ');
+    const words = textOf(privacy.match(/<div class="doc__main">[\s\S]*<\/article>/)[0]) + briefKeys('privacyBrief').map((k) => COPY[k]).join(' ');
     assert.doesNotMatch(words, /\d|\b(retain|retained|retention|delete|deleted|deletion|erase|erased)\b|\b(days?|weeks?|months?|years?)\b/i);
   }));
 

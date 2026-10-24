@@ -79,12 +79,33 @@
 .gb--dict { min-width: 44rem; }
 .gb--dict td { font-family: var(--font-body); }
 .dict code { font-family: var(--font-type); font-size: 0.92em; }
-/* A bare URL in its prose breaks rather than widen a phone's page. */
-.dict :is(p, li) { overflow-wrap: break-word; }
+/* A bare URL (or the corrections address) in its prose breaks rather than widen a phone's page. */
+:is(.dict, .doc__sec) :is(p, li) { overflow-wrap: break-word; }
 
-/* ---------- The hub's policy pages (hub/policy.js): the title and the "in brief" record card, then the sections beside an
-   index of them (above them on a narrow screen). The Methods page's pattern (a rule across, a contents column, sections
-   ruled apart), without its figures. ---------- */
+/* ---------- Contents and sections (the hub's policy pages, HACRP Methods): under a heavy rule, the sections ruled apart
+   beside a numbered contents column on a wide screen, the contents above them on a narrow one. .doc--side-toc shows
+   the contents only beside the text, on a wide screen. ---------- */
+.doc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 48px; margin-top: 12px; border-top: 5px solid var(--ink); }
+@media (min-width: 1120px) { .doc { grid-template-columns: 200px minmax(0, 1fr); } }
+.doc__toc { padding-top: 20px; }
+.doc--side-toc .doc__toc { display: none; }
+@media (min-width: 1120px) {
+  .doc__toc { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); align-self: start; padding-top: 28px; }
+  .doc--side-toc .doc__toc { display: block; }
+}
+.doc__toc-h { margin-bottom: 8px; color: var(--pen-ink); }
+.doc__toc ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 24px; }
+@media (min-width: 1120px) { .doc__toc ol { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.doc__toc a { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: baseline; min-height: var(--target-min); padding: 3px 0; color: var(--ink); text-decoration: none; font-size: var(--fs-sm); line-height: 1.3; }
+.doc__toc a:hover { text-decoration: underline; }
+.doc__toc-n { color: var(--pen-ink); font: 700 var(--fs-xs)/1.6 var(--font-type); }
+.doc__main { min-width: 0; }
+.doc__sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; padding-top: 28px; margin-top: 36px; border-top: 1px solid var(--line); }
+.doc__sec:first-child { margin-top: 0; border-top: 0; }
+.doc__h { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
+
+/* ---------- The hub's policy pages (hub/policy.js): the title and the "in brief" record card, then the contents and
+   sections, without figures. ---------- */
 .pol__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 48px; padding-block: 16px 20px; }
 @media (min-width: 960px) { .pol__top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; } }
 /* The title is sized to its column (container units), so the longest name keeps to one line at any width. */
@@ -93,25 +114,7 @@
 /* A brief line: its number box beside the sentence, not over it. */
 .pol__brief .field { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 12px; align-items: baseline; }
 .pol__brief .field__value { margin-top: 0; }
-.pol__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 48px; margin-top: 12px; border-top: 5px solid var(--ink); }
-@media (min-width: 1120px) { .pol__body { grid-template-columns: 200px minmax(0, 1fr); } }
-.pol__toc { padding-top: 20px; }
-@media (min-width: 1120px) {
-  .pol__toc { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); align-self: start; padding-top: 28px; }
-}
-.pol__toc-h { margin-bottom: 8px; color: var(--pen-ink); }
-.pol__toc ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 24px; }
-@media (min-width: 1120px) { .pol__toc ol { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
-.pol__toc a { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: baseline; min-height: var(--target-min); padding: 3px 0; color: var(--ink); text-decoration: none; font-size: var(--fs-sm); line-height: 1.3; }
-.pol__toc a:hover { text-decoration: underline; }
-.pol__toc-n { color: var(--pen-ink); font: 700 var(--fs-xs)/1.6 var(--font-type); }
-.pol__main { min-width: 0; }
-.pol__sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; padding-top: 28px; margin-top: 36px; border-top: 1px solid var(--line); }
-.pol__sec:first-child { margin-top: 0; border-top: 0; }
-.pol__h { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
 .pol__list { margin: 0; padding-left: 1.2em; }
-/* A long unbroken string (the corrections address) breaks rather than widen a phone's page. */
-.pol__sec :is(p, li) { overflow-wrap: break-word; }
 /* The corrections log (hub/corrections.js): an entry per dated block, ruled off from the one above; its date is the
    heading, its title (if any) beside the date in the body weight. */
 .pol__entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }

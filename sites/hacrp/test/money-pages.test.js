@@ -359,7 +359,7 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
     robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }),
   });
   const id = DOLLARS_HREF.split('#')[1];
-  const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   // The estimate section's sentence on the dollars' tag links to this section, which the page has.
   assert.match(page, new RegExp(`Every dollar figure carries the tag too: the dollars are this site’s estimate, explained under <a href="#${id}">`));
   const h = DATA.dollars.headline;
@@ -579,7 +579,7 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
     robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => null,
   });
   const id = DOLLARS_HREF.split('#')[1];
-  const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   const table = /<table class="gb assume">[\s\S]*?<\/table>/.exec(sec)[0];
   const rows = [...table.matchAll(/<tr><th scope="row">([\s\S]*?)<\/th><td>([\s\S]*?)<\/td><\/tr>/g)].map((m) => [strip(m[1]), strip(m[2])]);
   const row = (start) => rows.find(([a]) => a.startsWith(start)) ?? assert.fail(`no assumption "${start}"`);

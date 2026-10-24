@@ -25,9 +25,9 @@ export { METHODS_PATH };
 const para = (text) => html`<p>${text}</p>`;
 
 // A section of the page: its heading, words, and (optionally) a figure beside them.
-const sec = ({ id, heading, body, fig = null }) => html`<section class="msec${fig ? ' msec--fig' : ''}" id="${id}" aria-labelledby="${id}-h">
+const sec = ({ id, heading, body, fig = null }) => html`<section class="doc__sec msec${fig ? ' msec--fig' : ''}" id="${id}" aria-labelledby="${id}-h">
 <div class="msec__text">
-<h2 class="msec__title" id="${id}-h">${heading}</h2>
+<h2 class="doc__h" id="${id}-h">${heading}</h2>
 ${body}
 </div>
 ${fig ? html`<div class="msec__fig">${fig}</div>` : ''}
@@ -241,12 +241,12 @@ ${para(fillAround((marks) => fill('changedCorrections', marks), { log: html`<a h
 
   const body = html`<article class="wrap page page--meth meth">
 ${top}
-<div class="meth__body">
-<nav class="meth__toc" aria-labelledby="toc-h">
-<p class="meth__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
-<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="meth__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
+<div class="doc doc--side-toc">
+<nav class="doc__toc" aria-labelledby="toc-h">
+<p class="doc__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
+<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
 </nav>
-<div class="meth__main">
+<div class="doc__main">
 ${sections.map(sec)}
 </div>
 </div>

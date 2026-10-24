@@ -59,18 +59,18 @@ test('the Methods page is written, indexable, with one h1, its ids once and ever
 });
 
 test('the sections run pipeline, check, decisions, formula, estimate, dollars, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
-  const sections = [...PAGE.matchAll(/<section class="msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
+  const sections = [...PAGE.matchAll(/<section class="doc__sec msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
   assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'dollars', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
-  const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="meth__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
+  const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="doc__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
   assert.deepEqual(toc.map(([id]) => id), sections);
   assert.deepEqual(toc.map(([, n]) => n), sections.map((_, i) => i + 1));
-  for (const id of sections) assert.ok(PAGE.includes(`<h2 class="msec__title" id="${id}-h">`), `${id}: heading`);
+  for (const id of sections) assert.ok(PAGE.includes(`<h2 class="doc__h" id="${id}-h">`), `${id}: heading`);
   // The family page's estimate section is linked from ours, and ours is the one the family page's "What is shown" points at.
   assert.ok(PAGE.includes('<a href="/methods/#estimate">'));
 });
 
 test('"Feedback, privacy and AI" points to the family\'s privacy page and the About page\'s AI section, and no longer says the site keeps nothing about readers', () => {
-  const more = /<section class="msec" id="more"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  const more = /<section class="doc__sec msec" id="more"[\s\S]*?<\/section>/.exec(PAGE)[0];
   assert.match(more, /<a href="\/privacy\/">what the site and its host can see<\/a>/);
   assert.match(more, /<a href="\/about\/#ai">how AI tools are used<\/a>/);
   assert.equal(strip(/<p>[\s\S]*?<\/p>/.exec(more)[0]), 'The same rules for feedback, privacy and AI tools cover every Paid & Penalized site: see what the site and its host can see and how AI tools are used.');
@@ -78,7 +78,7 @@ test('"Feedback, privacy and AI" points to the family\'s privacy page and the Ab
 });
 
 test('"What changed" links the family\'s corrections log', () => {
-  const changed = /<section class="msec" id="changed"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  const changed = /<section class="doc__sec msec" id="changed"[\s\S]*?<\/section>/.exec(PAGE)[0];
   assert.match(changed, /<a href="\/corrections\/">corrections log<\/a>/);
   assert.ok(strip(changed).includes('Corrections go in the family’s public, dated corrections log; this site cannot change CMS’s values.'));
 });
@@ -198,7 +198,7 @@ test('the count note: CMS\'s fact-sheet count and the updated list\'s for the ye
 });
 
 test('the estimate section: what is shown, where it comes from and how it is labeled, and the tolerance and largest miss from the estimate', () => {
-  const section = /<section class="msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  const section = /<section class="doc__sec msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
   const rows = [...section.matchAll(/<tr><th scope="row">[^<]*<\/th><td>[\s\S]*?<\/td><td><span class="takes__tag takes__tag--(\w+)">/g)].map((m) => m[1]);
   assert.equal(rows.length, 8, 'CMS\'s values, its line, the recomputes, the derived constants, the medians, the what-ifs, earlier years and the dollar estimates');
   assert.deepEqual([...new Set(rows)].sort(), ['cms', 'hyp', 'site']);
@@ -412,7 +412,7 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   const total = checks.reduce((n, c) => n + c.check.scored, 0);
   assert.ok(page.includes(`<dt>Scores recomputed</dt><dd>${count(total)}</dd>`));
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
-  assert.match(page, /<section class="msec" id="estimate"/);
+  assert.match(page, /<section class="doc__sec msec" id="estimate"/);
   // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
   assert.doesNotMatch(page, /id="dollars"/);
   assert.doesNotMatch(page, /href="#dollars"/);
