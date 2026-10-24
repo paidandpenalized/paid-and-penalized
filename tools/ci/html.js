@@ -26,12 +26,15 @@ const ATTRIBUTES = new RegExp(`(${NAME})(?:\\s*=\\s*(?:${value((x) => `(${x})`)}
 const escaped = (words) => words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 const compiled = new Map();
 const once = (key, make) => compiled.get(key) ?? compiled.set(key, make()).get(key);
+// Each attribute after the tag's name: after whitespace, or straight after a quoted value's closing quote, which a
+// browser reads as the start of the next attribute (<a href="/x"class="y"> has both).
+const ATTRIBUTE_LIST = `((?:(?:\\s+|(?<=["']))${ATTRIBUTE})*)`;
 // A start tag, of any name or of the names given.
-const TAG = new RegExp(`<([a-zA-Z][^\\s/>]*)((?:\\s+${ATTRIBUTE})*)\\s*/?>`, 'g');
-const tagNamed = (names) => once(`t ${names}`, () => new RegExp(`<(${escaped(names)})(?=[\\s/>])((?:\\s+${ATTRIBUTE})*)\\s*/?>`, 'gi'));
+const TAG = new RegExp(`<([a-zA-Z][^\\s/>]*)${ATTRIBUTE_LIST}\\s*/?>`, 'g');
+const tagNamed = (names) => once(`t ${names}`, () => new RegExp(`<(${escaped(names)})(?=[\\s/>])${ATTRIBUTE_LIST}\\s*/?>`, 'gi'));
 // Whether a tag's attribute text may hold one of the names: a quick test before the attributes are read, which lets
 // through a name inside another attribute's value too (tags drops that tag once read).
-const mayHold = (names) => once(`a ${names}`, () => new RegExp(`(?:^|\\s)(?:${escaped(names)})(?=\\s|=|$)`, 'i'));
+const mayHold = (names) => once(`a ${names}`, () => new RegExp(`(?:^|[\\s"'])(?:${escaped(names)})(?=\\s|=|$)`, 'i'));
 
 // Every start tag in the page, in order: { name (lowercase), attrs } where attrs maps each lowercase attribute name
 // to its decoded value ('' when it has none). A repeated attribute keeps its first value, as browsers do. A reader

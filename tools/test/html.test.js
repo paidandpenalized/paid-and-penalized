@@ -26,6 +26,18 @@ test('tags: markup inside a comment or a script or style body is not read, but t
   assert.deepEqual(found, [['script', 'd'], ['style', null], ['script', '/s.js'], ['p', 'p']]);
 });
 
+test('tags: an attribute straight after a quoted value, with no space between, is read as browsers read it', () => {
+  const page = `<a href="/x"class="y"><img src='/i.svg'alt=''id=k><a id="z"href="/w/"hidden>`;
+  const want = [
+    { name: 'a', attrs: { href: '/x', class: 'y' } },
+    { name: 'img', attrs: { src: '/i.svg', alt: '', id: 'k' } },
+    { name: 'a', attrs: { id: 'z', href: '/w/', hidden: '' } },
+  ];
+  assert.deepEqual([...tags(page)], want);
+  assert.deepEqual([...tags(page, { names: ['a'] })], want.filter((t) => t.name === 'a'));
+  assert.deepEqual([...tags(page, { having: ['class', 'href'] })], [want[0], want[2]], 'a name right after a quote passes the having filter');
+});
+
 test('tags: a ">" inside a quoted value does not end the tag', () => {
   assert.deepEqual([...tags('<a title="a > b" href="/y/">')], [{ name: 'a', attrs: { title: 'a > b', href: '/y/' } }]);
 });
