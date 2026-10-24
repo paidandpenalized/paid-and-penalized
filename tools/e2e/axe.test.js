@@ -9,7 +9,7 @@
 //     The grain is a faint noise image; with it axe reports "background could not be determined" and leaves nearly all
 //     text unjudged. This is NOT how a reader sees the page: the grain makes the paper darker (luminance 0.899 on
 //     average and 0.846 at its darkest pixel, against 0.963 flat), which lowers every text contrast a little (--ink-3,
-//     5.09:1 on the flat paper, is 4.77 on the average and 4.50 at the darkest pixel; the dark theme's grain lightens
+//     5.17:1 on the flat paper, is 4.84 on the average and 4.57 at the darkest pixel; the dark theme's grain lightens
 //     its paper a little and its text colours have the room). axe cannot see that, so the one text colour near 4.5:1,
 //     light --ink-3, was chosen to clear it at the darkest pixel (tokens.css), and a text colour added close to 4.5:1 on
 //     the flat paper needs the same check by hand: its margin here is overstated;
