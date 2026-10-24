@@ -380,7 +380,8 @@
 .page--prog .prog__top { padding-block: 16px 20px; }
 .prog__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
 .prog__lede strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
-.prog__find { display: grid; gap: 8px; margin-top: 6px; max-width: 38rem; }
+/* One column that may shrink: the search's input has a width of its own, which would otherwise set the column's minimum. */
+.prog__find { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 6px; max-width: 38rem; }
 .omni--hero .omni__field { min-height: 56px; border-color: var(--pen); }
 .omni--hero .omni__label { border-right-color: var(--pen); font-size: var(--fs-sm); padding-inline: 14px; }
 .omni--hero input { font-size: var(--fs-md); padding-inline: 14px; }
