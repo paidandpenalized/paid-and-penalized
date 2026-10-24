@@ -43,6 +43,29 @@ jobs:
           GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node tools/ci/change-gate.js
 
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Install the pinned build dependencies (from package-lock.json)
+        run: npm ci
+      # Chromium only, the version the lockfile's Playwright pins (npx runs the local copy). The Linux libraries it
+      # needs come from apt, which Playwright runs through sudo itself; hosted runners allow sudo without a password.
+      # Firefox and WebKit are not installed here: `npm run e2e:launch` runs all three engines before a launch.
+      - name: Install Chromium and its system libraries
+        run: npx playwright install --with-deps chromium
+      - name: Build the site
+        run: make build
+      # Actions sets CI=true, so tools/e2e/lib.js runs this Chromium, not an installed Google Chrome.
+      - name: Browser checks (pages, interaction, watch, accessibility)
+        run: npm run e2e
+
   python:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
