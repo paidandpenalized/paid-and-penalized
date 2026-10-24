@@ -1,8 +1,7 @@
 // The page shell every page renders through: head metadata, skip link, header (the family's masthead, or a program
 // site's top bar: programHeader), <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
-import { has } from '../../engine/js/has.js';
 import { COPY } from '../copy.js';
-import { SITE } from '../site.js';
+import { SITE, siteOf } from '../site.js';
 import { fillCopy } from './components.js';
 import { html, jsonText, raw } from './html.js';
 
@@ -53,16 +52,7 @@ export function programHeader({ name, href, tag, nav, current = null, search = '
 </header>`;
 }
 
-// The pages' site: the family's own pages are 'hub'; a program's are its key in SITE.sites. siteConfig is that
-// entry (null for the hub) and throws on anything else; siteName is the name the feedback form is prefilled with.
-const HUB = 'hub';
 const NOT_FOUND_PATH = '/404.html';
-function siteConfig(site) {
-  if (site === HUB) return null;
-  if (typeof site === 'string' && has(SITE.sites, site)) return SITE.sites[site];
-  throw new RangeError(`page: site must be "${HUB}" or one of ${Object.keys(SITE.sites).join(', ')}, got ${JSON.stringify(site)}`);
-}
-const siteName = (site) => siteConfig(site)?.title ?? SITE.name;
 
 // The feedback form's address with its two questions prefilled, built at page-build time so it works without
 // scripts. pageUrl: the page's canonical address, passed through encodeURIComponent whole (a page's own query
@@ -76,14 +66,14 @@ export function feedbackHref({ siteName: name, pageUrl } = {}) {
 }
 
 // The banner a program site's pages carry while SITE.sites.<id>.maintenance names a release it has not been updated
-// for; '' while the flag is null, and always for the hub. The release name comes from the config and is escaped as
-// any value is. role="status" announces it politely once, and it sits above <main>, below the header.
+// for; '' while the flag is null, and always for the hub (site: null, as siteOf gives it). The release name comes from
+// the config and is escaped as any value is. role="status" announces it politely once, and it sits above <main>,
+// below the header.
 export function maintenanceBanner(site) {
-  const config = siteConfig(site);
-  if (!config || config.maintenance === null) return '';
-  const release = config.maintenance;
+  if (!site || site.maintenance === null) return '';
+  const release = site.maintenance;
   if (typeof release !== 'string' || !release || release !== release.trim()) {
-    throw new TypeError(`site "${site}": maintenance must be null or a non-empty trimmed release name, got ${JSON.stringify(release)}`);
+    throw new TypeError(`site ${site.path}: maintenance must be null or a non-empty trimmed release name, got ${JSON.stringify(release)}`);
   }
   return html`<div class="notice" role="status">
   <div class="wrap">
@@ -133,16 +123,16 @@ const socialTags = ({ title, description, url, type }) => html`<meta property="o
 // body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
-// topbar: a program site's header (programHeader), in place of the family's masthead.
-// site: 'hub' for the family's own pages, else the program's key in SITE.sites (required): it names the site in the
-// feedback link and says whose maintenance banner the page carries.
-export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null, site }) {
+// topbar: a program site's header (programHeader), in place of the family's masthead. The page's site, from its path
+// (siteOf), names the site in the feedback link and says whose maintenance banner the page carries.
+export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
-  const name = siteName(site);
+  const site = siteOf(path);
+  const name = site?.title ?? SITE.name;
   const modules = [assets.js.theme, ...scripts];
   const url = SITE.origin + path;
   return html`<!doctype html>

@@ -4,6 +4,7 @@
 // gives, per site, the date of the CMS file it uses and the date its numbers last changed (ctx.setUpdated).
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { has } from '../engine/js/has.js';
 import { CORRECTIONS, parseEntry } from '../pipeline/corrections.js';
 import { isoDate } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
@@ -59,9 +60,8 @@ ${sections.map((s) => html`${s.heading ? html`<h4 class="pol__entry-sub" id="${s
 
 // One site's line: its name, the date of the CMS file it uses and the date its numbers last changed.
 function siteLine([id, { cmsReleased, changed }]) {
-  const site = SITE.sites[id];
-  if (!site) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
-  return html`<li>${sentence('correctionsSite', { cms: time(cmsReleased), changed: time(changed) }, { site: site.title })}</li>
+  if (!has(SITE.sites, id)) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
+  return html`<li>${sentence('correctionsSite', { cms: time(cmsReleased), changed: time(changed) }, { site: SITE.sites[id].title })}</li>
 `;
 }
 

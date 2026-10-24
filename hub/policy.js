@@ -48,5 +48,5 @@ ${s.body}
 `)}</div>
 </div>
 </article>`;
-  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, assets, site: 'hub' });
+  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, assets });
 }

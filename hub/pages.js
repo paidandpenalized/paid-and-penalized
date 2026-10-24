@@ -37,7 +37,7 @@ function home(assets, robots) {
 <ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
 </section>
 </article>`;
-  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, assets, site: 'hub' });
+  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, assets });
 }
 
 function methods(assets, robots) {
@@ -54,7 +54,7 @@ function methods(assets, robots) {
 </section>
 <p>${fillAround((marks) => fillCopy(COPY, 'methodsAiPointer', marks), { about: html`<a href="/about/#ai">${COPY.aboutLink}</a>` })}</p>
 </article>`;
-  return page({ title: `${COPY.methodsTitle} · ${SITE.name}`, description: COPY.methodsDescription, path: '/methods/', robots, body, assets, site: 'hub' });
+  return page({ title: `${COPY.methodsTitle} · ${SITE.name}`, description: COPY.methodsDescription, path: '/methods/', robots, body, assets });
 }
 
 // ---------- the policy pages: their words (copy.js) and the links they fill in (parts.js); the layout is policy.js's ----------
@@ -130,7 +130,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: '/404.html', robots, body, assets, site: 'hub' });
+  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: '/404.html', robots, body, assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.

@@ -261,7 +261,6 @@ ${asofBar({ fy, periods: newest.periods, source: newest.source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search']],
     assets,
-    site: 'hacrp',
     topbar: siteHeader({ fy, current: 'methods', searchUrl }),
   });
 }

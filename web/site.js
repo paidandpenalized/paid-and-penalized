@@ -15,3 +15,7 @@ export const SITE = {
     hacrp: { path: '/hacrp/', released: false, maintenance: null, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
 };
+
+// The site a page belongs to, by its path: the entry in SITE.sites whose path starts the page's, or null for the
+// family's own pages (the hub).
+export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.startsWith(site.path)) ?? null;

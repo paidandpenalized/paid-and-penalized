@@ -10,7 +10,7 @@ import { COPY } from '../copy.js';
 import { feedbackHref, maintenanceBanner, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
-const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS, site: 'hacrp' };
+const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
 
 test('html escapes every interpolation in text and in attributes', () => {
   assert.equal(String(html`<p>${'<a & "b">'}</p>`), '<p>&lt;a &amp; &quot;b&quot;&gt;</p>');
@@ -160,11 +160,11 @@ test("page: the feedback link prefills the program's title and the page's canoni
   const program = feedbackUrlIn(page({ ...PAGE, path: '/hacrp/hospital/990001/' }));
   assert.equal(program.searchParams.get(SITE_ENTRY), SITE.sites.hacrp.title);
   assert.equal(program.searchParams.get(PAGE_ENTRY), `${SITE.origin}/hacrp/hospital/990001/`);
-  const hub = feedbackUrlIn(page({ ...PAGE, site: 'hub', path: '/methods/' }));
+  const hub = feedbackUrlIn(page({ ...PAGE, path: '/methods/' }));
   assert.equal(hub.searchParams.get(SITE_ENTRY), SITE.name);
   assert.equal(hub.searchParams.get(PAGE_ENTRY), `${SITE.origin}/methods/`);
   // The not-found page has no canonical address of its own: the site only.
-  const missing = feedbackUrlIn(page({ ...PAGE, site: 'hub', path: '/404.html' }));
+  const missing = feedbackUrlIn(page({ ...PAGE, path: '/404.html' }));
   assert.equal(missing.searchParams.get(SITE_ENTRY), SITE.name);
   assert.ok(!missing.searchParams.has(PAGE_ENTRY));
   // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did.
@@ -215,7 +215,7 @@ function withMaintenance(id, value, fn) {
 
 test('maintenance banner: absent while the flag is null, which is how the site launches', () => {
   assert.equal(SITE.sites.hacrp.maintenance, null);
-  assert.equal(maintenanceBanner('hacrp'), '');
+  assert.equal(maintenanceBanner(SITE.sites.hacrp), '');
   assert.doesNotMatch(page(PAGE), /role="status"/);
 });
 
@@ -229,16 +229,16 @@ test('maintenance banner: a release name shows a status banner before <main> on 
       assert.ok(out.indexOf('role="status"') < out.indexOf('<main'), path);
       assert.equal(out.match(/role="status"/g).length, 1, path);
     }
-    assert.ok(maintenanceBanner('hacrp') instanceof Safe);
-    assert.equal(String(maintenanceBanner('hacrp')).includes(COPY.maintenance.replace('{release}', 'FY2027')), true);
-    for (const path of ['/', '/methods/', '/404.html']) assert.doesNotMatch(page({ ...PAGE, site: 'hub', path }), /role="status"/, path);
-    assert.equal(maintenanceBanner('hub'), '');
+    assert.ok(maintenanceBanner(SITE.sites.hacrp) instanceof Safe);
+    assert.equal(String(maintenanceBanner(SITE.sites.hacrp)).includes(COPY.maintenance.replace('{release}', 'FY2027')), true);
+    for (const path of ['/', '/methods/', '/404.html', '/hacrp-like/']) assert.doesNotMatch(page({ ...PAGE, path }), /role="status"/, path);
+    assert.equal(maintenanceBanner(null), '');
   });
 });
 
 test('maintenance banner: the release name is escaped, not trusted', () => {
   withMaintenance('hacrp', '<b>"FY"</b>', () => {
-    const out = String(maintenanceBanner('hacrp'));
+    const out = String(maintenanceBanner(SITE.sites.hacrp));
     assert.ok(!out.includes('<b>'));
     assert.ok(out.includes('&lt;b&gt;'));
   });
@@ -248,18 +248,9 @@ test('maintenance banner: anything but null or a non-empty trimmed string throws
   for (const bad of ['', '  ', ' FY2027', 'FY2027\n', 7, true, undefined, {}]) {
     withMaintenance('hacrp', bad, () => {
       assert.throws(() => page(PAGE), (err) => err instanceof TypeError && /hacrp/.test(err.message), JSON.stringify(bad));
-      assert.throws(() => maintenanceBanner('hacrp'), TypeError, JSON.stringify(bad));
+      assert.throws(() => maintenanceBanner(SITE.sites.hacrp), TypeError, JSON.stringify(bad));
     });
   }
-});
-
-test('page requires a site: the hub or a key of SITE.sites', () => {
-  const { site, ...without } = PAGE;
-  assert.throws(() => page(without), /site/);
-  assert.throws(() => page({ ...PAGE, site: 'nowhere' }), /nowhere/);
-  assert.throws(() => page({ ...PAGE, site: 'toString' }), /toString/, 'a name from Object.prototype is not a site');
-  assert.throws(() => page({ ...PAGE, site: 7 }), /site/);
-  assert.doesNotThrow(() => page({ ...PAGE, site: 'hub' }));
 });
 
 test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {
