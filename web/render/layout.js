@@ -5,19 +5,18 @@ import { SITE, siteOf } from '../site.js';
 import { fillCopy } from './components.js';
 import { html, jsonText, raw } from './html.js';
 
-// The byline's profile (the About page links it too).
-export const LINKEDIN = 'https://www.linkedin.com/in/dalton-haslam';
-const LICENSE = 'https://creativecommons.org/licenses/by/4.0/';
 // The fonts a page preloads (files in web/fonts), by default: the headline face, the body face and IBM Plex Mono 400
 // (tables, facts and place lines). A page whose first screen shows another face passes its own list (preloadFonts):
 // a hospital page swaps in the mono 700 of its hero number.
 export const PRELOAD_FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
 const FONT_NAME = /^[a-z0-9-]+$/;
 
-// The hidden words a link that opens a new tab carries, for a screen reader.
-export const newTab = html`<span class="vh">${COPY.newTab}</span>`;
+// A link to another site: it opens in a new tab, and hidden words tell a screen reader so. text: words or markup.
+// rel: the link's relations, noopener among them.
+const newTab = html`<span class="vh">${COPY.newTab}</span>`;
+export const externalLink = (href, text, { rel = 'noopener' } = {}) => html`<a href="${href}" target="_blank" rel="${rel}">${text}${newTab}</a>`;
 
-const byline = html`<p class="byline">${COPY.bylineLead} <a href="${LINKEDIN}" target="_blank" rel="noopener"><span class="nw">${COPY.bylineName}</span>${newTab}</a></p>`;
+const byline = html`<p class="byline">${COPY.bylineLead} ${externalLink(SITE.linkedin, html`<span class="nw">${COPY.bylineName}</span>`)}</p>`;
 const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${COPY.themeToggle}</button>`;
 
 // The family's header (the hub's pages): the wordmark, the byline, the theme toggle.
@@ -88,25 +87,21 @@ const FOOT_HEAD = html`<footer class="foot">
   <div class="wrap foot__row">
     <div class="foot__text">
       <p>${COPY.affiliation}</p>
-      <p>${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a></p>
+      <p>${COPY.termsShort} <a href="${SITE.pages.terms}">${COPY.termsLink}</a></p>
     </div>
     <ul class="foot__meta" role="list">
       <li>${COPY.builtWith}</li>
-      <li>${COPY.licenseLead} <a href="${LICENSE}" target="_blank" rel="license noopener">CC BY 4.0${newTab}</a></li>
+      <li>${COPY.licenseLead} ${externalLink(SITE.license.content.url, SITE.license.content.name, { rel: 'license noopener' })}</li>
     </ul>
     <ul class="foot__meta foot__links" role="list">
       `;
-const FOOT_TAIL = html`
-      <li><a href="/about/">${COPY.about}</a></li>
-      <li><a href="/methods/">${COPY.methods}</a></li>
-      <li><a href="/privacy/">${COPY.privacy}</a></li>
-      <li><a href="/corrections/">${COPY.corrections}</a></li>
-      <li><a href="/accessibility/">${COPY.accessibility}</a></li>
+const FOOT_TAIL = html`${['about', 'methods', 'privacy', 'corrections', 'accessibility'].map((name) => html`
+      <li><a href="${SITE.pages[name]}">${COPY[name]}</a></li>`)}
     </ul>
   </div>
 </footer>`;
 // feedback: the form's prefilled address (feedbackHref).
-const footer = (feedback) => html`${FOOT_HEAD}<li class="foot__feedback"><a href="${feedback}" target="_blank" rel="noopener">${COPY.feedback}${newTab}</a> <span class="foot__note">${COPY.feedbackWarning}</span></li>${FOOT_TAIL}`;
+const footer = (feedback) => html`${FOOT_HEAD}<li>${externalLink(feedback, COPY.feedback)} <span class="foot__note">${COPY.feedbackWarning}</span></li>${FOOT_TAIL}`;
 
 // A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
 // title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page

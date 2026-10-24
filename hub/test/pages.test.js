@@ -6,7 +6,7 @@ import { createContext } from '../../pipeline/site/context.js';
 import { withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
-import { LINKEDIN, feedbackHref } from '../../web/render/layout.js';
+import { feedbackHref } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
 import { WCAG_VERSION } from '../constants.js';
 import { COPY } from '../copy.js';
@@ -67,11 +67,11 @@ test('an empty sitemap is a valid empty urlset; a path that is not a plain site 
 
 // ---------- the policy pages ----------
 const POLICY = [
-  { path: '/terms/', title: COPY.termsTitle, description: COPY.termsDescription, brief: 'termsBrief' },
-  { path: '/privacy/', title: COPY.privacyTitle, description: COPY.privacyDescription, brief: 'privacyBrief' },
-  { path: '/about/', title: COPY.aboutTitle, description: COPY.aboutDescription, brief: 'aboutBrief' },
-  { path: '/accessibility/', title: COPY.a11yTitle, description: COPY.a11yDescription, brief: 'a11yBrief' },
-  { path: '/corrections/', title: COPY.correctionsTitle, description: COPY.correctionsDescription, brief: 'correctionsBrief' },
+  { path: '/terms/', title: SHARED.termsLink, description: COPY.termsDescription, brief: 'termsBrief' },
+  { path: '/privacy/', title: SHARED.privacy, description: COPY.privacyDescription, brief: 'privacyBrief' },
+  { path: '/about/', title: SHARED.about, description: COPY.aboutDescription, brief: 'aboutBrief' },
+  { path: '/accessibility/', title: SHARED.accessibility, description: COPY.a11yDescription, brief: 'a11yBrief' },
+  { path: '/corrections/', title: SHARED.corrections, description: COPY.correctionsDescription, brief: 'correctionsBrief' },
 ];
 
 // Builds the hub once in production mode and hands fn a reader for its files. A site has given its dates (for
@@ -142,14 +142,14 @@ test('/about/ holds the AI and conflict-of-interest sections under the ids other
     const about = read('/about/');
     assert.match(about, /<section class="pol__sec" id="ai" aria-labelledby="ai-h">\s*<h2 class="pol__h" id="ai-h">How AI tools are used<\/h2>/);
     assert.match(about, /<section class="pol__sec" id="coi"/);
-    assert.ok(about.includes(`<a href="${LINKEDIN}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
+    assert.ok(about.includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
   }));
 
 test('/terms/ links the definition of "estimate", the corrections page and the license values', () =>
   withHub((read) => {
     const terms = read('/terms/');
     assert.ok(terms.includes(`<a href="/methods/#estimate">${COPY.estimateLink}</a>`));
-    assert.ok(terms.includes(`<a href="/corrections/">${COPY.correctionsLink}</a>`));
+    assert.ok(terms.includes(`<a href="/corrections/">${SHARED.corrections}</a>`));
     assert.match(textOf(terms), /licensed under CC BY 4\.0:/);
     assert.match(textOf(terms), /under the MIT license/);
   }));

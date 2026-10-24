@@ -1,7 +1,7 @@
 // The template for the hub's policy pages (Terms, privacy, corrections, About, accessibility): the title and, beside
 // or under it, an "in brief" record card (a .form of numbered lines, the family's signature device), then the page's
 // sections with an index of them beside the text on a wide screen and above it on a narrow one. No figures; the look
-// is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".pol").
+// is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".pol__*").
 import { formField, formTitle } from '../web/render/components.js';
 import { Safe, html } from '../web/render/html.js';
 import { page } from '../web/render/layout.js';
@@ -25,7 +25,7 @@ export function policyPage({ path, title, description, brief, sections, assets, 
     if (typeof heading !== 'string' || !heading) throw new TypeError(`policyPage: section "${id}" needs a heading`);
     if (!(body instanceof Safe)) throw new TypeError(`policyPage: section "${id}" body must be markup (html\`\`), not a string`);
   }
-  const body = html`<article class="wrap page pol">
+  const body = html`<article class="wrap page">
 <header class="page__head pol__top">
 <div class="pol__intro">
 <h1 class="pol__title">${title}</h1>

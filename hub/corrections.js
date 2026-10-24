@@ -6,11 +6,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { has } from '../engine/js/has.js';
 import { CORRECTIONS, parseEntry } from '../pipeline/corrections.js';
+import { COPY as SHARED } from '../web/copy.js';
 import { isoDate } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { markdownSections } from '../web/render/markdown.js';
 import { SITE } from '../web/site.js';
-import { CORRECTIONS_EMAIL, CORRECTIONS_PATH } from './constants.js';
+import { CORRECTIONS_EMAIL } from './constants.js';
 import { COPY } from './copy.js';
 import { feedbackLink, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
@@ -71,12 +72,12 @@ export function correctionsPage({ entries, updated, assets, robots }) {
   const email = html`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`;
   const sites = [...updated].map(siteLine);
   return policyPage({
-    path: CORRECTIONS_PATH,
-    title: COPY.correctionsTitle,
+    path: SITE.pages.corrections,
+    title: SHARED.corrections,
     description: COPY.correctionsDescription,
     brief: [COPY.correctionsBrief1, COPY.correctionsBrief2, COPY.correctionsBrief3, COPY.correctionsBrief4],
     sections: [
-      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback: feedbackLink(CORRECTIONS_PATH), email })),
+      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback: feedbackLink(SITE.pages.corrections), email })),
       section('counts', 'correctionsCountsHeading', para('correctionsCounts')),
       section('hospital', 'correctionsHospitalHeading', para('correctionsHospital')),
       section('process', 'correctionsProcessHeading', para('correctionsProcess'), para('correctionsProcess2')),

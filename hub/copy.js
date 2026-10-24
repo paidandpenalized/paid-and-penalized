@@ -9,7 +9,6 @@ export const COPY = typesetCopy({
   homeDescription: 'Plain-language explainers for Medicare hospital payment programs, built from public CMS data.',
   sitesHeading: 'Programs',
 
-  methodsTitle: 'Methods',
   methodsDescription: 'How this site turns CMS public data into its pages, and what it calls an estimate.',
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
@@ -18,23 +17,21 @@ export const COPY = typesetCopy({
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
 
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
-  // Each page: a title, a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading
-  // and its paragraphs). {placeholders} are links or values the page fills: {feedback} the feedback form, {email}
-  // the corrections address, {estimate} /methods/#estimate, {corrections} /corrections/, {about} /about/,
-  // {linkedin} the byline's profile, {cloudflarePolicy} and {googlePolicy} those companies' privacy pages,
-  // {contentLicense}, {codeLicense} and {version} from hub/constants.js.
+  // Each page: a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading and its
+  // paragraphs); its title, and the Methods page's, is the footer's word for it (web/copy.js). {placeholders} are
+  // links or values the page fills: {feedback} the feedback form, {email} the corrections address, {estimate}
+  // /methods/#estimate, {corrections} /corrections/, {about} /about/, {linkedin} the byline's profile,
+  // {cloudflarePolicy} and {googlePolicy} those companies' privacy pages, {contentLicense} and {codeLicense} from
+  // web/site.js, {version} from hub/constants.js.
   briefTitle: 'In brief',
   indexLabel: 'On this page',
   feedbackForm: 'feedback form',
-  correctionsLink: 'Corrections',
-  aboutLink: 'About',
   estimateLink: 'estimate',
   linkedinLink: 'His profile is on LinkedIn',
   cloudflarePolicy: 'Cloudflare’s privacy policy',
   googlePolicy: 'Google’s privacy policy',
 
   // /terms/
-  termsTitle: 'Terms of use',
   termsDescription: 'The plain-English terms for reading and reusing Paid & Penalized: what its numbers are, what they are not, and how to credit them.',
   termsBrief1: 'Free to read, and free to reuse with credit.',
   termsBrief2: 'Not affiliated with or endorsed by CMS, any hospital, health system or health plan.',
@@ -59,7 +56,6 @@ export const COPY = typesetCopy({
   termsContact: 'Send questions through the {feedback}. To report an error, see {corrections}.',
 
   // /privacy/
-  privacyTitle: 'Privacy',
   privacyDescription: 'What Paid & Penalized, and the services it uses, can see when you read it or send feedback.',
   privacyBrief1: 'No cookies, no accounts, no ads.',
   privacyBrief2: 'The host sees IP addresses, as every web host does.',
@@ -81,7 +77,6 @@ export const COPY = typesetCopy({
   privacyLinks: 'Links to CMS, LinkedIn and other sites take you off Paid & Penalized. Their own privacy policies apply there.',
 
   // /corrections/
-  correctionsTitle: 'Corrections',
   correctionsDescription: 'How Paid & Penalized handles errors, and every correction made to its sites, with dates.',
   correctionsBrief1: 'Errors are fixed, and each fix is logged here with its date.',
   correctionsBrief2: "Disagreeing with CMS's method is not an error on this site.",
@@ -104,7 +99,6 @@ export const COPY = typesetCopy({
   correctionsLogEmpty: 'No corrections yet.',
 
   // /about/
-  aboutTitle: 'About',
   aboutDescription: 'Who builds Paid & Penalized, how it is paid for, and how it uses AI tools.',
   aboutBrief1: 'Built by Dalton Haslam, MD, MBA, a physician advisor.',
   aboutBrief2: 'Independent: no funding, no ads, no sponsors.',
@@ -122,7 +116,6 @@ export const COPY = typesetCopy({
   aboutContact: 'Send questions, ideas or problems through the {feedback}.',
 
   // /accessibility/
-  a11yTitle: 'Accessibility',
   a11yDescription: 'The accessibility standard Paid & Penalized aims for, how it is tested, the gaps it knows of, and how to report a problem.',
   a11yBrief1: 'Aims for WCAG {version} at level AA.',
   a11yBrief2: 'Every chart has a table with the same numbers.',
