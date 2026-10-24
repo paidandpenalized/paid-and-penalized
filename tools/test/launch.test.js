@@ -43,9 +43,28 @@ test('checksFor: the three pages, a request for each rule (a page it matches, el
   assert.equal(bare.find((c) => c.label === 'hospital page').status, 404);
 });
 
+test('checksFor: a rule\'s request goes to an address served with a 200, never _headers or a .html file Cloudflare redirects', () => {
+  // In file order, the first address each rule matches is /404.html (/*l) and /_headers (/*s); the first that both
+  // servers answer with a 200 is the sitemap and the stylesheet.
+  const rules = parseHeaders('/*l\n  X-A: 1\n\n/*s\n  X-B: 2\n');
+  const files = [...FILES, '_headers', 'sitemap.xml'].sort();
+  assert.deepEqual(files.slice(0, 2), ['404.html', '_headers']);
+  assert.deepEqual(checksFor(rules, PAGES, files).filter((c) => c.label.startsWith('rule')), [
+    { label: 'rule /*l', path: '/sitemap.xml', status: 200 },
+    { label: 'rule /*s', path: '/assets/site.0bfb0a2f.css', status: 200 },
+  ]);
+  // A rule that only those two match has no request to make.
+  for (const rule of ['/*.html', '/_*']) {
+    assert.throws(() => checksFor(parseHeaders(`${rule}\n  X-A: 1\n`), PAGES, files), /no page or file in dist\/ served with a 200 for the rule/);
+  }
+  // And a page at _headers' address would be expected to be a 404, as the server answers.
+  const odd = PAGES.map((p) => (p.type === 'not-found' ? { ...p, path: '/_headers' } : p));
+  assert.equal(checksFor(RULES, odd, files).find((c) => c.label === 'unknown path').status, 404);
+});
+
 test('checksFor throws when a page type is missing, or a rule matches nothing in dist/', () => {
   assert.throws(() => checksFor(RULES, PAGES.filter((p) => p.type !== 'hospital-cut'), FILES), /no "hospital-cut" page/);
-  assert.throws(() => checksFor(RULES, PAGES, FILES.filter((f) => !f.endsWith('.css'))), /no page or file in dist\/ for the rule \/assets\/\*\.css/);
+  assert.throws(() => checksFor(RULES, PAGES, FILES.filter((f) => !f.endsWith('.css'))), /no page or file in dist\/ served with a 200 for the rule \/assets\/\*\.css/);
 });
 
 test('compareResponse: every header the file sets matches, whatever the case of the live names and whatever else is sent', () => {

@@ -20,3 +20,16 @@ export function lookup(path, { isFile, isDir }) {
   }
   return isFile(path) ? { status: 200, file: fileFor(path) } : { status: 404 };
 }
+
+// Whether a file in the built folder is ever served: every one but _headers (in any letter case), which Cloudflare reads
+// its response headers from and never serves, and nor does serve.js.
+export const isServed = (file) => file.toLowerCase() !== '_headers';
+
+// lookup's isFile and isDir over a list of the built folder's files ('/'-separated, from it, as filesUnder lists them),
+// for the checks that read dist/ without a server: a site path is a file when the list has it and it is served, and a
+// folder when it holds one of the files ('/' is the built folder itself).
+export function filesAt(files) {
+  const names = new Set(files);
+  const folders = new Set(files.flatMap((file) => file.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/')))).add('');
+  return { isFile: (p) => names.has(p.slice(1)) && isServed(p.slice(1)), isDir: (p) => folders.has(p.slice(1).replace(/\/$/, '')) };
+}

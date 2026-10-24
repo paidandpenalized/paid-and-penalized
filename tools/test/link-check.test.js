@@ -157,6 +157,12 @@ test('links inside a comment or a script body are not links; a script src is', (
     assert.deepEqual(problems(dir), ['/ /assets/x.js missing file']);
   }));
 
+test('a link to _headers is a missing file: the server never serves it', () =>
+  withTemp('links-', (dir) => {
+    writeTree(dir, { 'index.html': page('<a href="/_headers">h</a><a href="/_HEADERS">H</a>'), _headers: '/*\n  X-A: 1\n' });
+    assert.deepEqual(problems(dir), ['/ /_headers missing file', '/ /_HEADERS missing file']);
+  }));
+
 test('a link cannot reach outside the built folder', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, { 'site/index.html': page('<a href="/..%2f..%2fpackage.json">up</a><a href="/%2e%2e/%2e%2e/etc/">up2</a>'), 'package.json': '{}' });

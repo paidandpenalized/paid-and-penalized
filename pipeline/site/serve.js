@@ -8,7 +8,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DIST_DIR } from '../files.js';
-import { lookup } from './address.js';
+import { isServed, lookup } from './address.js';
 import { headersFor, parseHeaders } from './headers.js';
 
 const TYPES = {
@@ -56,7 +56,7 @@ export function createSiteServer(root) {
       return reply(400, TEXT, 'bad request');
     }
     const file = normalize(join(base, path));
-    if (path.includes('\0') || !file.startsWith(base) || file.slice(base.length).toLowerCase() === '_headers') return notFound();
+    if (path.includes('\0') || !file.startsWith(base) || !isServed(file.slice(base.length))) return notFound();
     const onDisk = (p) => join(base, p);
     const found = lookup(path, { isFile: (p) => isFile(onDisk(p)), isDir: (p) => isDir(onDisk(p)) });
     // One leading slash, so the redirect can't become a protocol-relative URL to another host.

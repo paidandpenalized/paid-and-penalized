@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DIST_DIR, REPO_ROOT, filesUnder, readJson } from '../../pipeline/files.js';
-import { addressOf, lookup } from '../../pipeline/site/address.js';
+import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
@@ -29,16 +29,12 @@ const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 const dataStates = () => readJson(REPO_ROOT + newestEmittedPath()).hospitals.map((h) => h.state);
 
 // The file in dist/ that the server serves for a decoded path, following its redirect of a folder to the folder with
-// its "/", or null. files: every file in dist/; folders: every folder that holds one ('' is dist/ itself).
-function locate(path, { files, folders }) {
-  const at = { isFile: (p) => files.has(p.slice(1)), isDir: (p) => folders.has(p.slice(1).replace(/\/$/, '')) };
+// its "/", or null. at: dist/'s files, as filesAt gives them.
+function locate(path, at) {
   let found = lookup(path, at);
   if (found.status === 301) found = lookup(`${path}/`, at);
   return found.status === 200 ? found.file : null;
 }
-
-// Every folder holding one of the files ('a/b/c.html' is in 'a/b', 'a' and ''), as '/'-separated paths.
-const foldersOf = (files) => new Set([...files].flatMap((file) => file.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/'))).concat(''));
 
 const tryDecode = (text) => {
   try {
@@ -75,8 +71,7 @@ export function checkLinks(distDir, states = dataStates()) {
   const names = filesUnder(distDir);
   const htmlFiles = names.filter((name) => name.endsWith('.html'));
   if (htmlFiles.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
-  const files = new Set(names);
-  const tree = { files, folders: foldersOf(files) };
+  const tree = filesAt(names);
   // One read of each page: its ids and its distinct links, in the order they appear.
   const pages = new Map(htmlFiles.map((htmlPath) => {
     const ids = new Set();

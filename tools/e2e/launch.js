@@ -21,7 +21,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { DIST_DIR as DIST, REPO_ROOT, filesUnder } from '../../pipeline/files.js';
-import { addressOf } from '../../pipeline/site/address.js';
+import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
 import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
 
@@ -33,31 +33,35 @@ const STOP_GRACE_MS = 5_000;
 
 // The requests whose headers are compared: [{ label, path, status }]. rules: dist/_headers, parsed. pages: samplePages()'s
 // answer. files: every file in dist/, as filesUnder lists them. The home, program and hospital pages, then one request
-// per rule (the first of those pages, else of the files, that the rule matches; a page already listed gains the rule
-// in its label), the unknown path and the missing asset. A request expects 200 when it is a file's address in dist/
-// (addressOf) and 404 otherwise. The pages are picked by type, so none is named here.
+// per rule (the first of those pages, else of the files' addresses (addressOf), that the rule matches and that is
+// served with a 200; a page already listed gains the rule in its label), the unknown path and the missing asset. A
+// request expects what the server answers, by the lookup rule serve.js uses (address.js: lookup over filesAt, which
+// never serves _headers). A rule's request never goes to a .html file's address (a folder's index.html is the folder's
+// address): Cloudflare's auto-trailing-slash redirects /404.html to /404, where serve.js serves it with a 200. The
+// pages are picked by type, so none is named here.
 export function checksFor(rules, pages, files) {
   const pathOf = (type) => {
     const page = pages.find((p) => p.type === type);
     if (!page) throw new Error(`checksFor: no "${type}" page among the sample pages`);
     return page.path;
   };
-  const addresses = files.map(addressOf);
+  const at = filesAt(files);
+  const statusOf = (path) => lookup(path, at).status;
   const checks = [
     { label: 'home page', path: pathOf('hub') },
     { label: 'program page', path: pathOf('program') },
     { label: 'hospital page', path: pathOf('hospital-cut') },
   ];
+  const probes = [...checks.map((c) => c.path), ...files.map(addressOf)].filter((p) => !p.endsWith('.html') && statusOf(p) === 200);
   for (const rule of rules) {
-    const path = [...checks.map((c) => c.path), ...addresses].find((p) => rule.pattern.test(p));
-    if (!path) throw new Error(`checksFor: no page or file in dist/ for the rule ${rule.path} (run make build)`);
+    const path = probes.find((p) => rule.pattern.test(p));
+    if (!path) throw new Error(`checksFor: no page or file in dist/ served with a 200 for the rule ${rule.path} (run make build)`);
     const listed = checks.find((c) => c.path === path);
     if (listed) listed.label += `, rule ${rule.path}`;
     else checks.push({ label: `rule ${rule.path}`, path });
   }
   checks.push({ label: 'unknown path', path: pathOf('not-found') }, { label: 'missing hashed asset', path: MISSING_ASSET });
-  const served = new Set(addresses);
-  return checks.map((check) => ({ ...check, status: served.has(check.path) ? 200 : 404 }));
+  return checks.map((check) => ({ ...check, status: statusOf(check.path) }));
 }
 
 const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), String(value).trim()]));

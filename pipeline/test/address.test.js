@@ -1,7 +1,7 @@
 // Where a page is written and the address it is served at (address.js): one rule for the build, the server and the checks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addressOf, fileFor, lookup } from '../site/address.js';
+import { addressOf, fileFor, filesAt, isServed, lookup } from '../site/address.js';
 
 test('fileFor: a folder path is its index.html, a file path its own file, both from the built folder', () => {
   assert.equal(fileFor('/'), 'index.html');
@@ -32,4 +32,22 @@ test('lookup: a file is served, a folder with its "/" serves its index.html, one
   assert.deepEqual(lookup('/empty', at), { status: 301 }, 'redirected, then a 404');
   assert.deepEqual(lookup('/nope/', at), { status: 404 });
   assert.deepEqual(lookup('/a/x.css/', at), { status: 404 }, 'a file asked for as a folder');
+});
+
+test('isServed: every file but _headers, in any letter case', () => {
+  for (const file of ['index.html', '404.html', 'assets/site.0a1b2c3d.css', 'a/_headers', '_headers.txt']) assert.equal(isServed(file), true, file);
+  for (const file of ['_headers', '_HEADERS', '_Headers']) assert.equal(isServed(file), false, file);
+});
+
+test('filesAt: lookup over a list of built files answers as it does over the folder, and never serves _headers', () => {
+  const at = filesAt(['_headers', '404.html', 'a/index.html', 'a/x.css', 'empty/keep/index.html', 'index.html']);
+  assert.deepEqual(lookup('/', at), { status: 200, file: 'index.html' });
+  assert.deepEqual(lookup('/a/', at), { status: 200, file: 'a/index.html' });
+  assert.deepEqual(lookup('/a', at), { status: 301 });
+  assert.deepEqual(lookup('/a/x.css', at), { status: 200, file: 'a/x.css' });
+  assert.deepEqual(lookup('/404.html', at), { status: 200, file: '404.html' });
+  assert.deepEqual(lookup('/empty/', at), { status: 404 }, 'a folder with no index.html');
+  assert.deepEqual(lookup('/a/x.css/', at), { status: 404 }, 'a file asked for as a folder');
+  assert.deepEqual(lookup('/_headers', at), { status: 404 });
+  assert.deepEqual(lookup('/nope/', at), { status: 404 });
 });
