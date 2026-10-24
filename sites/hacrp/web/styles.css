@@ -560,7 +560,8 @@
 /* ---------- place pages (pages/place.js) ----------
    The program page's frame: the breadcrumb, the name in the display face beside the summary form, the score rule
    with the place's ticks. */
-.crumbs ol { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
+/* The rows of a trail that wraps on a phone sit 4px apart: each link keeps WCAG 2.2's 24px of clear space around it. */
+.crumbs ol { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .crumbs li + li::before { content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
 .crumbs a { color: var(--ink); }
 .crumbs [aria-current] { color: var(--ink-2); }
