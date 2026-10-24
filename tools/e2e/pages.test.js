@@ -59,16 +59,16 @@ for (const scheme of SCHEMES) {
             assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);
             assert.equal(got.bannerWords, banner, `${name}: the maintenance banner's words ${banner ? '' : 'not '}shown`);
 
-            // Every link to the feedback form (the footer's, and a policy page's own) prefills the page's canonical address.
-            // The not-found page is served at every missing address, so it has no canonical link and its link has no page.
-            assert.equal(got.feedback.filter((link) => link.footer).length, 1, `${name}: one feedback link in the footer`);
+            // The footer's link to the feedback form prefills the page's canonical address (a policy page's own link is
+            // the same prefill, layout.js feedbackFor). The not-found page is served at every missing address, so it has
+            // no canonical link and its link has no page.
+            const inFooter = got.feedback.filter((link) => link.footer);
+            assert.equal(inFooter.length, 1, `${name}: one feedback link in the footer`);
             if (notFound) assert.equal(got.canonical, null, `${name}: no canonical link`);
             else assert.ok(got.canonical === SITE.origin + path, `${name}: the canonical link is the page's own address`);
-            for (const { href } of got.feedback) {
-              const form = new URL(href);
-              assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${name}: a feedback link names the site`);
-              assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: a feedback link names the page's canonical address`);
-            }
+            const form = new URL(inFooter[0].href);
+            assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${name}: the footer's feedback link names the site`);
+            assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: the footer's feedback link names the page's canonical address`);
           });
           if (AXE_WIDTHS.includes(width)) {
             await t.test('axe', async () => {

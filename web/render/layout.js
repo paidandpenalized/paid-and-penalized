@@ -62,6 +62,11 @@ export function feedbackHref({ siteName: name, pageUrl = null } = {}) {
   return `${url}?${answers.map(([entry, answer]) => `${entry}=${encodeURIComponent(answer)}`).join('&')}`;
 }
 
+// The feedback form's address for a page, the one prefill the footer and a page's own link use: the page's site by
+// name (siteOf(path); the family's on the hub's pages) and its canonical address (address: by default the origin and
+// its path; null for a page with none of its own).
+export const feedbackFor = ({ path, address = SITE.origin + path }) => feedbackHref({ siteName: siteOf(path)?.title ?? SITE.name, pageUrl: address });
+
 // The banner a program site's pages carry while SITE.sites.<id>.maintenance names a release it has not been updated
 // for; '' while the flag is null, and always for the hub (site: null, as siteOf gives it). The release name comes from
 // the config and is escaped as any value is. role="status" announces it politely once, and it sits above <main>,
@@ -82,7 +87,7 @@ export function maintenanceBanner(site) {
 
 // The footer: what the data is and is not (the affiliation and Terms lines), the credit and license, then the
 // feedback link (with the warning beside it) and the family's other pages, in SITE.pages' order. feedback: the form's
-// prefilled address (feedbackHref), the one part that differs between pages.
+// prefilled address (feedbackFor), the one part that differs between pages.
 const FOOTER_PAGES = Object.keys(SITE.pages).filter((name) => name !== 'terms');
 const footer = (feedback) => html`<footer class="foot">
   <div class="wrap foot__row">
@@ -116,7 +121,7 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
 // topbar: a program site's header (programHeader), in place of the family's masthead. The page's site, from its path
-// (siteOf), names the site in the feedback link and says whose maintenance banner the page carries.
+// (siteOf), names the site in the feedback link (feedbackFor) and says whose maintenance banner the page carries.
 // address: the page's canonical address, by default the origin and its path; null for a page with none of its own
 // (the not-found page, served at every missing address), which then has no canonical link, og:url or page prefill.
 export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
@@ -126,7 +131,6 @@ export function page({ title, description, path, address = SITE.origin + path, r
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
   const site = siteOf(path);
-  const name = site?.title ?? SITE.name;
   const modules = [assets.js.theme, ...scripts];
   return html`<!doctype html>
 <html lang="en">
@@ -150,7 +154,7 @@ ${topbar ?? header}
 ${maintenanceBanner(site)}<main id="main">
 ${body}
 </main>
-${footer(feedbackHref({ siteName: name, pageUrl: address }))}
+${footer(feedbackFor({ path, address }))}
 ${modules.map((src) => html`<script type="module" src="${src}"></script>
 `)}</body>
 </html>

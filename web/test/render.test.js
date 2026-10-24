@@ -7,7 +7,7 @@ import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signe
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
-import { feedbackHref, maintenanceBanner, page } from '../render/layout.js';
+import { feedbackFor, feedbackHref, maintenanceBanner, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -165,6 +165,14 @@ test("page: the feedback link prefills the program's title and the page's canoni
   assert.ok(!missing.searchParams.has(PAGE_ENTRY));
   // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did.
   assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
+});
+
+test('feedbackFor: the one prefill, the page\'s site (the family\'s on the hub\'s pages) and its canonical address or none; the footer uses it', () => {
+  assert.equal(feedbackFor({ path: '/hacrp/x/' }), feedbackHref({ siteName: SITE.sites.hacrp.title, pageUrl: `${SITE.origin}/hacrp/x/` }));
+  assert.equal(feedbackFor({ path: '/about/' }), feedbackHref({ siteName: SITE.name, pageUrl: `${SITE.origin}/about/` }));
+  assert.equal(feedbackFor({ path: '/hacrp/x/', address: 'https://elsewhere.example/y' }), feedbackHref({ siteName: SITE.sites.hacrp.title, pageUrl: 'https://elsewhere.example/y' }));
+  assert.equal(feedbackFor({ path: '/404.html', address: null }), feedbackHref({ siteName: SITE.name }));
+  assert.ok(page(PAGE).includes(`href="${escapeHtml(feedbackFor({ path: PAGE.path }))}"`));
 });
 
 test('page: the footer says not to include patient information beside the feedback link, with the Terms line and the policy links', () => {

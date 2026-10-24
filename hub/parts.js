@@ -4,12 +4,12 @@
 import { COPY as SHARED } from '../web/copy.js';
 import { fillCopy, sentenceOf } from '../web/render/components.js';
 import { html } from '../web/render/html.js';
-import { externalLink, feedbackHref } from '../web/render/layout.js';
+import { externalLink, feedbackFor } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
 import { COPY } from './copy.js';
 
-// The feedback form, prefilled with the page it was opened from.
-export const feedbackLink = (path) => externalLink(feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path }), COPY.feedbackForm);
+// The feedback form, prefilled with the page it was opened from, as the footer's link is (feedbackFor).
+export const feedbackLink = (path) => externalLink(feedbackFor({ path }), COPY.feedbackForm);
 export const LINKS = {
   corrections: html`<a href="${SITE.pages.corrections}">${SHARED.corrections}</a>`,
   estimate: html`<a href="${SITE.pages.methods}#estimate">${COPY.estimateLink}</a>`,
