@@ -1,8 +1,8 @@
-// The tag reader and page list the CI scripts share.
+// The reader of built pages: the tag reader, the page's text and the page list.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
-import { decode, htmlPages, tags } from '../ci/html.js';
+import { decode, htmlPages, tags, textOf } from '../site/html.js';
+import { withTemp, writeTree } from './helpers.js';
 
 test('decode: the references the build writes, numeric ones too; anything else is left as it is', () => {
   assert.equal(decode('a=1&amp;b=2&lt;&gt;&quot;&#39;&#x27;&#X41;'), 'a=1&b=2<>"\'\'A');
@@ -54,8 +54,15 @@ test('tags: the names and having filters give exactly the tags the full read giv
   assert.deepEqual([...tags(page, { having: ['hidden'] })], by((t) => 'hidden' in t.attrs), 'an attribute with no value counts');
 });
 
-test('htmlPages: every .html file under the folder, slash-separated, in name order', () =>
+test('textOf: the words between the tags, decoded, with comments, scripts, styles and a quoted ">" left out', () => {
+  const page = '<!doctype html><p title="a > b">One &amp; <b>two</b>&#39;s</p><!-- not this --><script>no()</script>\n<style>p{}</style><p>three</p>';
+  assert.equal(textOf(page), " One & two 's three ");
+});
+
+test('htmlPages: every .html file under the folder, slash-separated, in name order, or the files given; none throws', () =>
   withTemp('html-', (dir) => {
     writeTree(dir, Object.fromEntries(['index.html', 'b/index.html', 'a/deep/index.html', '404.html', 'assets/site.css', 'a/data.json'].map((path) => [path, ''])));
     assert.deepEqual(htmlPages(dir), ['404.html', 'a/deep/index.html', 'b/index.html', 'index.html']);
+    assert.deepEqual(htmlPages(dir, ['a/x.css', 'a/index.html']), ['a/index.html']);
+    assert.throws(() => htmlPages(dir, ['assets/site.css']), /no pages in .*: build the site first/);
   }));

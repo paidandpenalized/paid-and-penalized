@@ -12,6 +12,7 @@ import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { htmlPages, tags } from '../site/html.js';
 import { get, withServer, withTemp as inTemp } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
@@ -172,11 +173,10 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
 // production, for the tests that read a whole build.
 const DATA = loadHacrp();
 const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
-const htmlIn = (out) => filesUnder(out).filter((f) => f.endsWith('.html'));
 
 test('HACRP gives the build its two dates, which /corrections/ shows, and the corrections address is on that page and no other', async () => {
   const out = await builtSlice();
-  const html = htmlIn(out);
+  const html = htmlPages(out);
   assert.ok(html.length > 10);
   const withAddress = html.filter((f) => readFileSync(join(out, f), 'utf8').includes(CORRECTIONS_EMAIL));
   assert.deepEqual(withAddress, [join('corrections', 'index.html')]);
@@ -195,32 +195,42 @@ test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
     }
   }));
 
-// A tag's attributes: a script with no src runs inline unless it is a data block; an on* attribute and a javascript:
-// URL are inline script too. script-src 'self' blocks all three, and style-src-elem 'self' blocks a <style> element.
-const DATA_BLOCK = /\stype="application\/(ld\+)?json"/;
-const SCRIPT_TAG = /<script\b([^>]*)>/gi;
-const HANDLER = /<[a-z][^>]*\son[a-z]+\s*=/i;
+// What a page holds that runs as inline script or style: a script with no src of the site's own runs inline unless it
+// is a data block; an on* attribute and a javascript: URL are inline script too. script-src 'self' blocks all three,
+// and style-src-elem 'self' blocks a <style> element. dataBlocks: the data blocks, which may stay.
+const DATA_TYPES = new Set(['application/json', 'application/ld+json']);
+function inlineCode(page) {
+  const problems = [];
+  let dataBlocks = 0;
+  for (const { name, attrs } of tags(page)) {
+    if (name === 'script' && DATA_TYPES.has(attrs.type)) dataBlocks++;
+    else if (name === 'script' && !/^\/[^/]/.test(attrs.src ?? '')) problems.push(`<script src="${attrs.src ?? ''}">`);
+    if (name === 'style') problems.push('<style>');
+    for (const [attr, value] of Object.entries(attrs)) {
+      if (/^on[a-z]+$/.test(attr)) problems.push(`<${name} ${attr}>`);
+      if (/^\s*javascript:/i.test(value)) problems.push(`<${name} ${attr}="javascript:...">`);
+    }
+  }
+  return { problems, dataBlocks };
+}
 
 test('every built page runs under the CSP: no inline script but data blocks, no <style> element, no on* handler or javascript: URL', async () => {
   const out = await builtSlice();
-  const pages = htmlIn(out);
+  const pages = htmlPages(out);
   assert.ok(pages.length > 10);
   let dataBlocks = 0;
   for (const f of pages) {
-    const text = readFileSync(join(out, f), 'utf8');
-    for (const [, attrs] of text.matchAll(SCRIPT_TAG)) {
-      if (DATA_BLOCK.test(attrs)) dataBlocks++;
-      else assert.match(attrs, /\ssrc="\/[^/]/, `${f}: <script${attrs}>`);
-    }
-    assert.doesNotMatch(text, /<style[\s>]/i, f);
-    assert.doesNotMatch(text, HANDLER, f);
-    assert.doesNotMatch(text, /=\s*"\s*javascript:/i, f);
+    const found = inlineCode(readFileSync(join(out, f), 'utf8'));
+    assert.deepEqual(found.problems, [], f);
+    dataBlocks += found.dataBlocks;
   }
   assert.ok(dataBlocks > 0, 'the checks see the data blocks');
   // The checks see what they are meant to.
-  assert.match('<button onclick="x()">', HANDLER);
-  assert.doesNotMatch('<p data-on="1" class="on">on=</p>', HANDLER);
-  assert.doesNotMatch(' type="module"', DATA_BLOCK);
+  assert.deepEqual(inlineCode('<button onclick="x()">').problems, ['<button onclick>']);
+  assert.deepEqual(inlineCode('<p data-on="1" class="on">on=</p>'), { problems: [], dataBlocks: 0 });
+  assert.equal(inlineCode('<script type="module">x()</script><script src="//elsewhere.example/x.js"></script>').problems.length, 2);
+  assert.deepEqual(inlineCode('<script type="application/ld+json">{}</script><script src="/assets/x.js"></script>'), { problems: [], dataBlocks: 1 });
+  assert.equal(inlineCode('<style>p{}</style><a href=" javascript:x()">').problems.length, 2);
 });
 
 test('the immutable rule matches the content-hashed files under /assets/ and nothing else the build writes', async () => {

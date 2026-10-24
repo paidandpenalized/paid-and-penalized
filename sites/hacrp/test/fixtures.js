@@ -12,6 +12,7 @@ import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synth
 import { HUB } from '../../../hub/pages.js';
 import { readPinned } from '../../../pipeline/files.js';
 import { build } from '../../../pipeline/site/build.js';
+import { textOf } from '../../../pipeline/site/html.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -136,9 +137,10 @@ export const STANDING = "A penalty reflects how CMS’s formula scored relative 
 export const WHATIF_STANDING = "A what-if shows the formula’s arithmetic, not what a hospital could realistically change or how. "
   + "CMS’s real result also depends on other hospitals.";
 
-// A page's markup as the words a reader sees. markupText: each tag a space, the word joiners (which keep a range on one
-// line) gone, white space collapsed. strippedText: each tag removed, the escapes of & and ' undone, white space collapsed.
-export const markupText = (safe) => String(safe).replace(/<[^>]+>/g, ' ').replace(/\u2060/g, '').replace(/\s+/g, ' ');
+// A page's markup as the words a reader sees. markupText: the built pages' reader's text (textOf: each tag a space,
+// references decoded, white space collapsed) with the word joiners (which keep a range on one line) gone.
+// strippedText: each tag removed, the escapes of & and ' undone, white space collapsed.
+export const markupText = (safe) => textOf(String(safe).replace(/\u2060/g, ''));
 export const strippedText = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 
 // HTML escaping, written out on its own so the tests check web/render/html.js rather than reuse it.

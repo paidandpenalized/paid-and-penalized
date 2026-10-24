@@ -16,11 +16,11 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DIST_DIR, REPO_ROOT, filesUnder, readJson } from '../../pipeline/files.js';
 import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
+import { htmlPages, tags } from '../../pipeline/site/html.js';
 import { newestEmittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
-import { tags } from './html.js';
 import { PROGRAM_PATH } from './page-types.js';
 
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
@@ -69,8 +69,7 @@ function problemWith(href, base, tree, pages, states) {
 // pages in file-name order. A page repeating a link is told once. states: the codes a "#state=" fragment may name.
 export function checkLinks(distDir, states = dataStates()) {
   const names = filesUnder(distDir);
-  const htmlFiles = names.filter((name) => name.endsWith('.html'));
-  if (htmlFiles.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
+  const htmlFiles = htmlPages(distDir, names);
   const tree = filesAt(names);
   // One read of each page: its ids and its distinct links, in the order they appear.
   const pages = new Map(htmlFiles.map((htmlPath) => {

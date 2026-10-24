@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext } from '../../pipeline/site/context.js';
+import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
@@ -97,12 +98,10 @@ const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
 
-// The words a reader sees: tags dropped, the five entities the build writes undone, whitespace collapsed.
-const textOf = (page) => page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ' ')
-  .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
 const briefKeys = (prefix) => Object.keys(COPY).filter((k) => new RegExp(`^${prefix}\\d+$`).test(k));
-const sectionIds = (page) => [...page.matchAll(/<section class="doc__sec" id="([^"]+)"/g)].map((m) => m[1]);
-const indexLinks = (page) => [...page.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0].matchAll(/<a href="#([^"]+)"/g)].map((m) => m[1]);
+// The page's sections' ids, and the ids its index links to, in order.
+const sectionIds = (page) => [...tags(page, { names: ['section'] })].filter(({ attrs }) => attrs.class === 'doc__sec').map(({ attrs }) => attrs.id);
+const indexLinks = (page) => [...tags(page.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0], { names: ['a'] })].map(({ attrs }) => attrs.href.replace(/^#/, ''));
 
 test('each policy page has one h1, the brief as a record card, an index of its sections and the hub\'s noindex', () =>
   withHub((read) => {

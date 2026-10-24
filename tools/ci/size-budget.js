@@ -20,7 +20,7 @@ import { pathToFileURL } from 'node:url';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
-import { htmlPages, tags } from './html.js';
+import { htmlPages, tags } from '../../pipeline/site/html.js';
 import { pageType as typeOf } from './page-types.js';
 
 const KB = 1024;
@@ -93,7 +93,6 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
 // or an empty build, before anything is measured.
 export function measure(distDir) {
   const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: addressOf(htmlPath) }));
-  if (pages.length === 0) throw new Error(`no pages in ${distDir}: build the site first (make build)`);
   for (const page of pages) page.type = pageType(page.path);
   const cache = new Map();
   return pages.map(({ htmlPath, path, type }) => ({ path, type, ...pageWeight(distDir, htmlPath, cache) }));
