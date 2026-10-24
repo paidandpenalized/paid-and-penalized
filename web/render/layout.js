@@ -52,16 +52,14 @@ export function programHeader({ name, href, tag, nav, current = null, search = '
 </header>`;
 }
 
-const NOT_FOUND_PATH = '/404.html';
-
 // The feedback form's address with its two questions prefilled, built at page-build time so it works without
 // scripts. pageUrl: the page's canonical address, passed through encodeURIComponent whole (a page's own query
-// string stays inside the one value); omitted for a page with no address of its own (the not-found page).
-export function feedbackHref({ siteName: name, pageUrl } = {}) {
+// string stays inside the one value); null or omitted for a page with no address of its own (the not-found page).
+export function feedbackHref({ siteName: name, pageUrl = null } = {}) {
   if (typeof name !== 'string' || !name) throw new TypeError('feedbackHref: siteName is required');
-  if (pageUrl !== undefined && (typeof pageUrl !== 'string' || !pageUrl)) throw new TypeError('feedbackHref: pageUrl must be a non-empty string');
+  if (pageUrl !== null && (typeof pageUrl !== 'string' || !pageUrl)) throw new TypeError('feedbackHref: pageUrl must be a non-empty string');
   const { url, siteEntry, pageEntry } = SITE.feedback;
-  const answers = [[siteEntry, name], ...(pageUrl === undefined ? [] : [[pageEntry, pageUrl]])];
+  const answers = [[siteEntry, name], ...(pageUrl === null ? [] : [[pageEntry, pageUrl]])];
   return `${url}?${answers.map(([entry, answer]) => `${entry}=${encodeURIComponent(answer)}`).join('&')}`;
 }
 
@@ -84,10 +82,9 @@ export function maintenanceBanner(site) {
 }
 
 // The footer: what the data is and is not (the affiliation and Terms lines), the credit and license, then the
-// feedback link (with the warning beside it) and the site's policy pages.
-function footer({ name, path }) {
-  const feedback = feedbackHref({ siteName: name, pageUrl: path === NOT_FOUND_PATH ? undefined : SITE.origin + path });
-  return html`<footer class="foot">
+// feedback link (with the warning beside it) and the site's policy pages. Only the feedback link differs between
+// pages, so the rest is built once.
+const FOOT_HEAD = html`<footer class="foot">
   <div class="wrap foot__row">
     <div class="foot__text">
       <p>${COPY.affiliation}</p>
@@ -98,7 +95,8 @@ function footer({ name, path }) {
       <li>${COPY.licenseLead} <a href="${LICENSE}" target="_blank" rel="license noopener">CC BY 4.0${newTab}</a></li>
     </ul>
     <ul class="foot__meta foot__links" role="list">
-      <li class="foot__feedback"><a href="${feedback}" target="_blank" rel="noopener">${COPY.feedback}${newTab}</a> <span class="foot__note">${COPY.feedbackWarning}</span></li>
+      `;
+const FOOT_TAIL = html`
       <li><a href="/about/">${COPY.about}</a></li>
       <li><a href="/methods/">${COPY.methods}</a></li>
       <li><a href="/privacy/">${COPY.privacy}</a></li>
@@ -107,7 +105,8 @@ function footer({ name, path }) {
     </ul>
   </div>
 </footer>`;
-}
+// feedback: the form's prefilled address (feedbackHref).
+const footer = (feedback) => html`${FOOT_HEAD}<li class="foot__feedback"><a href="${feedback}" target="_blank" rel="noopener">${COPY.feedback}${newTab}</a> <span class="foot__note">${COPY.feedbackWarning}</span></li>${FOOT_TAIL}`;
 
 // A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
 // title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page
@@ -117,15 +116,17 @@ const socialTags = ({ title, description, url, type }) => html`<meta property="o
 <meta property="og:site_name" content="${SITE.name}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
-<meta property="og:url" content="${url}">
-<meta name="twitter:card" content="summary">`;
+${url === null ? '' : html`<meta property="og:url" content="${url}">
+`}<meta name="twitter:card" content="summary">`;
 
 // body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
 // topbar: a program site's header (programHeader), in place of the family's masthead. The page's site, from its path
 // (siteOf), names the site in the feedback link and says whose maintenance banner the page carries.
-export function page({ title, description, path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
+// address: the page's canonical address, by default the origin and its path; null for a page with none of its own
+// (the not-found page, served at every missing address), which then has no canonical link, og:url or page prefill.
+export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
@@ -134,7 +135,6 @@ export function page({ title, description, path, robots, body, scripts = [], jso
   const site = siteOf(path);
   const name = site?.title ?? SITE.name;
   const modules = [assets.js.theme, ...scripts];
-  const url = SITE.origin + path;
   return html`<!doctype html>
 <html lang="en">
 <head>
@@ -142,9 +142,9 @@ export function page({ title, description, path, robots, body, scripts = [], jso
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${description}">
-<link rel="canonical" href="${url}">
-${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${socialTags({ title, description, url, type: WEBSITES.has(path) ? 'website' : 'article' })}
+${address === null ? '' : html`<link rel="canonical" href="${address}">
+`}${robots ? html`<meta name="robots" content="${robots}">` : ''}
+${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article' })}
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
@@ -157,7 +157,7 @@ ${topbar ?? header}
 ${maintenanceBanner(site)}<main id="main">
 ${body}
 </main>
-${footer({ name, path })}
+${footer(feedbackHref({ siteName: name, pageUrl: address }))}
 ${modules.map((src) => html`<script type="module" src="${src}"></script>
 `)}</body>
 </html>

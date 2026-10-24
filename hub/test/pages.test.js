@@ -43,6 +43,9 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
+    // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
+    assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
+    assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));
 
     for (const text of [home, methods, notFound]) {
       assert.ok(text.includes(NOINDEX), 'hub pages stay noindex until the hub is built');

@@ -152,8 +152,10 @@ test('feedbackHref builds the form URL with the site and the page, each encoded,
   const siteOnly = new URL(feedbackHref({ siteName: 'A & B' }));
   assert.equal(siteOnly.searchParams.get(SITE_ENTRY), 'A & B');
   assert.ok(!siteOnly.searchParams.has(PAGE_ENTRY));
+  assert.equal(feedbackHref({ siteName: 'A & B', pageUrl: null }), feedbackHref({ siteName: 'A & B' }));
   assert.throws(() => feedbackHref({ siteName: '' }), TypeError);
   assert.throws(() => feedbackHref({}), TypeError);
+  assert.throws(() => feedbackHref({ siteName: 'A', pageUrl: '' }), TypeError);
 });
 
 test("page: the feedback link prefills the program's title and the page's canonical URL; the hub's says the family's name", () => {
@@ -163,8 +165,10 @@ test("page: the feedback link prefills the program's title and the page's canoni
   const hub = feedbackUrlIn(page({ ...PAGE, path: '/methods/' }));
   assert.equal(hub.searchParams.get(SITE_ENTRY), SITE.name);
   assert.equal(hub.searchParams.get(PAGE_ENTRY), `${SITE.origin}/methods/`);
-  // The not-found page has no canonical address of its own: the site only.
-  const missing = feedbackUrlIn(page({ ...PAGE, path: '/404.html' }));
+  // A page with no address of its own (the not-found page): no canonical link or og:url, and the site alone prefilled.
+  const unaddressed = page({ ...PAGE, path: '/404.html', address: null });
+  assert.doesNotMatch(unaddressed, /rel="canonical"|og:url/);
+  const missing = feedbackUrlIn(unaddressed);
   assert.equal(missing.searchParams.get(SITE_ENTRY), SITE.name);
   assert.ok(!missing.searchParams.has(PAGE_ENTRY));
   // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did.

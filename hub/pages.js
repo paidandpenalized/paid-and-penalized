@@ -130,7 +130,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: '/404.html', robots, body, assets });
+  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: '/404.html', address: null, robots, body, assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.
