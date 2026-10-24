@@ -66,7 +66,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart[data-fit="wide"] { display: block; }
 }
 .chart-axis__line, .chart-axis__tick { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-/* Tick labels in --ink-2: --ink-3 clears 4.5:1 on the grained paper only narrowly (4.57 at its darkest pixel), so a chart's text keeps the stronger ink. */
+/* Tick labels in --ink-2: --ink-3 clears 4.5:1 on the grained paper only narrowly, and the axe run cannot judge text in an SVG, so a chart's text keeps the stronger ink. */
 .chart-axis__label, .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart-grid { stroke: var(--line); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }

@@ -3,21 +3,18 @@
 // no other browser test does that, so those keep the real policy. A failure names each rule once, with the selector of
 // every element it flags. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see lib.js.
 //
-// What axe judges here is the page with changes, and the second matters for contrast:
+// axe judges each page with three changes, made for the run only:
 //   - every <details> is opened (openFolds): what a fold keeps closed is not laid out, so axe skips it;
-//   - the flat paper colour is laid over the body's grain image (FLATTEN), so axe judges text against the flat paper.
-//     The grain is a faint noise image; with it axe reports "background could not be determined" and leaves nearly all
-//     text unjudged. This is NOT how a reader sees the page: the grain makes the paper darker (luminance 0.899 on
-//     average and 0.846 at its darkest pixel, against 0.963 flat), which lowers every text contrast a little (--ink-3,
-//     5.17:1 on the flat paper, is 4.84 on the average and 4.57 at the darkest pixel; the dark theme's grain lightens
-//     its paper a little and its text colours have the room). axe cannot see that, so the one text colour near 4.5:1,
-//     light --ink-3, was chosen to clear it at the darkest pixel (tokens.css), and a text colour added close to 4.5:1 on
-//     the flat paper needs the same check by hand: its margin here is overstated;
-//   - FLATTEN also hides two decorations drawn over text, for the run only: the scroll frames' fade (a 28px gradient over a
-//     table's right edge) and the tape's torn edge. axe gives up on every cell of a table one of them overlaps (about
-//     19,000 cells in a run of every page), and the fade only dims a strip of it.
+//   - the body's grain image is replaced by one flat colour, the grain's worst pixel for text (flatten, grainWorst). The
+//     grain is a faint noise image; over it axe reports "background could not be determined" and leaves nearly all text
+//     unjudged. The grain darkens the light paper and lightens the dark one, a little more at some pixels than others, so
+//     the run lays down the paper as the grain leaves it at its darkest pixel (light) or its lightest (dark), measured in
+//     the browser, and axe holds every text colour on the paper to 4.5:1 there. The control below prints both colours;
+//   - the two decorations drawn over text are hidden: the scroll frames' fade (a 28px gradient over a table's right edge)
+//     and the tape's torn edge. axe gives up on every cell of a table one of them overlaps (about 19,000 cells in a run of
+//     every page), and the fade only dims a strip of it.
 // Two controls keep this honest: some text must have been judged on every page, and none may be left unjudged because of an
-// image, a gradient or a pseudo-element drawn over it (what FLATTEN removes). axe still leaves some text unjudged, which is
+// image, a gradient or a pseudo-element drawn over it (what flatten removes). axe still leaves some text unjudged, which is
 // not covered here: text inside an SVG (the charts' labels), and in HTML text overlapped or partly obscured by another
 // element, text beside an image node, lone characters and glyphs such as the minus sign or the stars.
 // The search list is audited open, on the program page, in its own tests.
@@ -39,8 +36,9 @@ const PAGES = samplePages();
 const HACRP = SITE.sites.hacrp.path;
 const AXE = readFileSync(new URL('../../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 
-// The decorations hidden for the run (see the header): the page as axe can judge it, not as a reader sees it.
-const FLATTEN = 'body { background-image: none !important; } .printout::after, .receipt::after { display: none !important; }';
+// The page as axe can judge it (see the header): the body's grain replaced by the colour `paper` (grainWorst's worst), and
+// the decorations drawn over text hidden.
+const flatten = (paper) => `body { background: ${paper} !important; } .printout::after, .receipt::after { display: none !important; }`;
 // The reasons axe gives (the contrast check's messageKey) for leaving text unjudged because of what is drawn behind or over it.
 const DRAWN_OVER = ['bgImage', 'bgGradient', 'pseudoContent'];
 
@@ -66,12 +64,43 @@ const openFolds = (page) => page.evaluate(async () => {
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 });
 
+// The body's paper as the grain leaves it, measured in the page: the grain's tile drawn on a canvas over the body's own
+// colour, and of its pixels the one that leaves text the least contrast: the darkest on a light paper, the lightest on a
+// dark one. Returns { paper, worst }, each as the browser prints a colour ('rgb(r, g, b)'); worst is paper when the body
+// has no image.
+const grainWorst = (page) => page.evaluate(async () => {
+  const body = getComputedStyle(document.body);
+  const paper = body.backgroundColor;
+  // The grain is the body's one image layer (its others are none), a data: URL of an SVG holding its own url(#filter).
+  const src = /url\("(.*?)"\)/.exec(body.backgroundImage)?.[1];
+  if (!src) return { paper, worst: paper };
+  const tile = new Image();
+  tile.src = src;
+  await tile.decode();
+  const canvas = Object.assign(document.createElement('canvas'), { width: tile.naturalWidth, height: tile.naturalHeight });
+  const draw = canvas.getContext('2d', { willReadFrequently: true });
+  draw.fillStyle = paper;
+  draw.fillRect(0, 0, canvas.width, canvas.height);
+  const flat = draw.getImageData(0, 0, 1, 1).data;
+  draw.drawImage(tile, 0, 0);
+  const { data } = draw.getImageData(0, 0, canvas.width, canvas.height);
+  // WCAG's relative luminance of the pixel at byte offset i of px.
+  const channel = (c) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const luminance = (px, i) => 0.2126 * channel(px[i]) + 0.7152 * channel(px[i + 1]) + 0.0722 * channel(px[i + 2]);
+  const light = luminance(flat, 0) > 0.5;
+  let at = 0;
+  for (let i = 4; i < data.length; i += 4) {
+    if (light ? luminance(data, i) < luminance(data, at) : luminance(data, i) > luminance(data, at)) at = i;
+  }
+  return { paper, worst: `rgb(${data[at]}, ${data[at + 1]}, ${data[at + 2]})` };
+});
+
 // Runs axe on the page as it is, flattened (see the header): its violations ({ id, impact, help, nodes: [{ target,
 // summary }] }), how many rules passed (a run that checked nothing passes nothing), how many elements passed the contrast
 // rule (the text axe could judge) and the targets of the elements whose contrast axe left unjudged because of an image,
 // a gradient or a pseudo-element drawn behind or over the text.
 async function runAxe(page) {
-  await page.addStyleTag({ content: FLATTEN });
+  await page.addStyleTag({ content: flatten((await grainWorst(page)).worst) });
   await page.addScriptTag({ content: AXE });
   return page.evaluate(async ([tags, drawnOver]) => {
     const results = await window.axe.run(document, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'passes', 'incomplete'] });
@@ -109,7 +138,7 @@ async function audit(page, what) {
   const { violations, passes, contrastPassed, unjudgedDrawnOver } = await runAxe(page);
   assert.ok(passes > 20, `${what}: axe passed only ${passes} rules: did it run?`);
   assert.ok(contrastPassed > 0, `${what}: axe judged the contrast of no text`);
-  assert.equal(unjudgedDrawnOver.length, 0, `${what}: axe could not judge the contrast of ${unjudgedDrawnOver.length} elements behind or over an image, gradient or pseudo-element (FLATTEN should have removed it), among them ${unjudgedDrawnOver.slice(0, 6).join(', ')}`);
+  assert.equal(unjudgedDrawnOver.length, 0, `${what}: axe could not judge the contrast of ${unjudgedDrawnOver.length} elements behind or over an image, gradient or pseudo-element (flatten should have removed it), among them ${unjudgedDrawnOver.slice(0, 6).join(', ')}`);
   const left = remaining(violations);
   assert.equal(left.length, 0, `${what}: axe violations\n${describeViolations(left)}`);
 }
@@ -141,7 +170,8 @@ describe('axe finds what it should (a positive control)', () => {
       await context.close();
     }
   }
-  const GIF = 'url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)';
+  // A transparent 1px image, whole enough to decode (the grain is measured from the body's image).
+  const GIF = 'url(data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7)';
 
   it('flags a missing alternative, a nameless button and low contrast', async () => {
     const { violations, passes } = await control(`<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><button></button><p style="color:#ccc;background:#fff">faint words</p>`);
@@ -150,7 +180,7 @@ describe('axe finds what it should (a positive control)', () => {
     for (const id of ['image-alt', 'button-name', 'color-contrast']) assert.ok(ids.includes(id), `${id} not among ${ids}`);
   });
 
-  it('reports text over an image, a gradient or under a pseudo-element as unjudged (what FLATTEN exists to avoid)', async () => {
+  it('reports text over an image, a gradient or under a pseudo-element as unjudged (what flatten exists to avoid)', async () => {
     const { unjudgedDrawnOver } = await control(`<style>#over { position: relative } #over::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 100%; background: linear-gradient(to right, transparent, #fff) }</style>
 <p id="img" style="background-image:${GIF}">over an image</p><p id="grad" style="background-image:linear-gradient(#fff,#ddd)">over a gradient</p><p id="over">under a pseudo-element</p>`);
     assert.deepEqual(unjudgedDrawnOver.sort(), ['#grad', '#img', '#over']);
@@ -178,6 +208,26 @@ describe('axe finds what it should (a positive control)', () => {
     assert.deepEqual(targets(remaining(found, [{ rule: 'label', selector: '.a', reason: 'x' }])), [['color-contrast', ['.a', '.b']]], 'a rule left with no node is dropped');
     assert.deepEqual(targets(remaining(found, [{ rule: 'color-contrast', selector: '.', reason: 'x' }])), [['color-contrast', ['.a', '.b']], ['label', ['.a']]], 'a selector must match exactly');
   });
+});
+
+// The colour the run lays under the text is measured, not the flat paper: the grain darkens the light paper and lightens
+// the dark one. Both colours are printed with the run.
+describe('the paper axe judges text on is the grain\'s worst pixel', () => {
+  const total = (rgb) => rgb.match(/\d+/g).slice(0, 3).map(Number).reduce((a, b) => a + b);
+  for (const scheme of SCHEMES) {
+    it(scheme, async (t) => {
+      const context = await browser.newContext({ colorScheme: scheme });
+      try {
+        const { paper, worst } = await grainWorst(await openTab(context, scheme, '/'));
+        t.diagnostic(`${scheme}: the paper is ${paper}; the grain's worst pixel for text is ${worst}`);
+        assert.notEqual(worst, paper, 'the grain changes the paper');
+        if (scheme === 'light') assert.ok(total(worst) < total(paper), `the light paper's worst pixel ${worst} is darker than ${paper}`);
+        else assert.ok(total(worst) > total(paper), `the dark paper's worst pixel ${worst} is lighter than ${paper}`);
+      } finally {
+        await context.close();
+      }
+    });
+  }
 });
 
 for (const scheme of SCHEMES) {
