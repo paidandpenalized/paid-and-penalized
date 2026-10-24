@@ -2,11 +2,11 @@
 // (as Cloudflare does), and the local server that sends them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CSP, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
-import { get, withServer, withTemp } from './helpers.js';
+import { get, withServer, withTemp, writeTree } from './helpers.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
@@ -108,14 +108,8 @@ test('headersFor: a response that is not a success carries no Cache-Control; eve
 test('the local server sends the headers _headers gives each path, 404s included, and never serves _headers itself', () =>
   withTemp('pp-headers-', async (dir) => {
     const root = join(dir, 'dist');
-    mkdirSync(join(root, 'hacrp'), { recursive: true });
-    mkdirSync(join(root, 'assets'));
-    writeFileSync(join(root, 'index.html'), 'home');
-    writeFileSync(join(root, '404.html'), 'not here');
-    writeFileSync(join(root, 'hacrp', 'index.html'), 'hacrp');
-    writeFileSync(join(root, 'assets', 'site.ab12cd34.css'), 'a{}');
     const text = headersFile({ env: undefined });
-    writeFileSync(join(root, '_headers'), text);
+    writeTree(root, { 'index.html': 'home', '404.html': 'not here', 'hacrp/index.html': 'hacrp', 'assets/site.ab12cd34.css': 'a{}', _headers: text });
     const rules = parseHeaders(text);
     await withServer(root, async (port) => {
       for (const [path, status] of [['/', 200], ['/hacrp/', 200], ['/nope/', 404], ['/assets/site.ab12cd34.css', 200], ['/hacrp', 301]]) {
@@ -138,9 +132,7 @@ test('the local server sends the headers _headers gives each path, 404s included
 test('the local server never sends Cache-Control on an error: a missing hashed file is not cached for a year', () =>
   withTemp('pp-headers-', async (dir) => {
     const root = join(dir, 'dist');
-    mkdirSync(join(root, 'assets'), { recursive: true });
-    writeFileSync(join(root, '404.html'), 'not here');
-    writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
+    writeTree(root, { '404.html': 'not here', _headers: headersFile({ env: undefined }) });
     await withServer(root, async (port) => {
       const path = '/assets/site.deadbeef.css';
       assert.equal(headersFor(parseHeaders(headersFile({ env: undefined })), path)['cache-control'], IMMUTABLE);
@@ -161,9 +153,7 @@ test('the local server never sends Cache-Control on an error: a missing hashed f
 test('the local server reads _headers again when a rebuild changes it, sends none once it is gone, and refuses a malformed one', () =>
   withTemp('pp-headers-', async (dir) => {
     const root = join(dir, 'dist');
-    mkdirSync(root, { recursive: true });
-    writeFileSync(join(root, 'index.html'), 'home');
-    writeFileSync(join(root, '_headers'), headersFile({ env: undefined }));
+    writeTree(root, { 'index.html': 'home', _headers: headersFile({ env: undefined }) });
     await withServer(root, async (port) => {
       assert.equal((await get(port, '/')).headers['x-robots-tag'], 'noindex');
       writeFileSync(join(root, '_headers'), headersFile({ env: 'production' }));

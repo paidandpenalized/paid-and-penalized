@@ -10,7 +10,8 @@ import assert from 'node:assert/strict';
 import { COPY } from '../../web/copy.js';
 import { SITE, siteOf } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
-import { CONCURRENCY, HEIGHT, SCHEMES, assertQuiet, samplePages, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
+import { samplePages } from './site.js';
 
 // A desktop width, a narrow laptop's (where the program page's columns are tightest), two common phones' (390 px is
 // axe's), and the narrowest phone width pages are designed for.
@@ -26,7 +27,7 @@ test('the maintenance banner has words of its own to look for', () => {
 });
 
 // What the load checks read from the page.
-const factsOf = (page) => page.evaluate(([formUrl, banner]) => ({
+const factsOf = (page) => page.evaluate(([feedbackLink, banner]) => ({
   scrollWidth: document.documentElement.scrollWidth,
   innerWidth: window.innerWidth,
   // When the page scrolls sideways, the first few elements that reach past the window's right edge, to name in the failure.
@@ -35,49 +36,51 @@ const factsOf = (page) => page.evaluate(([formUrl, banner]) => ({
       .map((el) => `${el.localName}${[...el.classList].map((c) => `.${c}`).join('')} (to ${Math.round(el.getBoundingClientRect().right)} px)`)
     : [],
   canonical: document.querySelector('link[rel="canonical"]')?.href ?? null,
-  feedback: [...document.querySelectorAll('a')].filter((a) => a.href.startsWith(formUrl)).map((a) => ({ href: a.href, footer: a.closest('footer') !== null })),
+  feedback: [...document.querySelectorAll(feedbackLink)].map((a) => a.href),
   notices: document.querySelectorAll('.notice').length,
   bannerWords: document.body.innerText.includes(banner),
-}), [SITE.feedback.url, BANNER]);
+}), [FEEDBACK_LINK, BANNER]);
 
-for (const scheme of SCHEMES) {
-  for (const width of WIDTHS) {
-    describe(`${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
-      const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
+// The load checks on a page, as visited (withPage). A page is named by its type, not its address, and so are the
+// messages, so the output names no hospital: CI's logs are public. An assertion on an address says only whether it is
+// right.
+async function loadsClean(page, { response, seen }, { type, name, path }) {
+  const got = await factsOf(page);
+  const notFound = type === 'not-found';
+  assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
+  assertQuiet(seen, name);
+  assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
+  const banner = (siteOf(path)?.maintenance ?? null) !== null;
+  assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);
+  assert.equal(got.bannerWords, banner, `${name}: the maintenance banner's words ${banner ? '' : 'not '}shown`);
 
-      // A hospital's test is named by its type, not its address, and so are its messages, so the output names no
-      // hospital: CI's logs are public. An assertion on an address says only whether it is right.
-      for (const { type, name, path } of PAGES) {
-        it(name, (t) => withPage(tabs, { path, scheme, watched: true }, async (page, { response, seen }) => {
-          await t.test('loads clean', async () => {
-            const got = await factsOf(page);
-            const notFound = type === 'not-found';
-            assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
-            assertQuiet(seen, name);
-            assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
-            const banner = (siteOf(path)?.maintenance ?? null) !== null;
-            assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);
-            assert.equal(got.bannerWords, banner, `${name}: the maintenance banner's words ${banner ? '' : 'not '}shown`);
+  // The footer's link to the feedback form prefills the page's canonical address (a policy page's own link is the same
+  // prefill, layout.js feedbackFor). The not-found page is served at every missing address, so it has no canonical link
+  // and its link has no page.
+  assert.equal(got.feedback.length, 1, `${name}: one feedback link in the footer`);
+  if (notFound) assert.equal(got.canonical, null, `${name}: no canonical link`);
+  else assert.ok(got.canonical === SITE.origin + path, `${name}: the canonical link is the page's own address`);
+  const form = new URL(got.feedback[0]);
+  assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${name}: the footer's feedback link names the site`);
+  assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: the footer's feedback link names the page's canonical address`);
+}
 
-            // The footer's link to the feedback form prefills the page's canonical address (a policy page's own link is
-            // the same prefill, layout.js feedbackFor). The not-found page is served at every missing address, so it has
-            // no canonical link and its link has no page.
-            const inFooter = got.feedback.filter((link) => link.footer);
-            assert.equal(inFooter.length, 1, `${name}: one feedback link in the footer`);
-            if (notFound) assert.equal(got.canonical, null, `${name}: no canonical link`);
-            else assert.ok(got.canonical === SITE.origin + path, `${name}: the canonical link is the page's own address`);
-            const form = new URL(inFooter[0].href);
-            assert.ok(form.searchParams.get(SITE.feedback.siteEntry), `${name}: the footer's feedback link names the site`);
-            assert.ok(form.searchParams.get(SITE.feedback.pageEntry) === got.canonical, `${name}: the footer's feedback link names the page's canonical address`);
+// Each context the pages are opened in: a scheme and a width.
+const CONTEXTS = SCHEMES.flatMap((scheme) => WIDTHS.map((width) => [scheme, width]));
+
+for (const [scheme, width] of CONTEXTS) {
+  describe(`${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width });
+    for (const sample of PAGES) {
+      it(sample.name, (t) => withPage(tabs, { path: sample.path, scheme, watched: true }, async (page, visited) => {
+        await t.test('loads clean', () => loadsClean(page, visited, sample));
+        if (AXE_WIDTHS.includes(width)) {
+          await t.test('axe', async () => {
+            await openFolds(page);
+            await audit(page, sample.name);
           });
-          if (AXE_WIDTHS.includes(width)) {
-            await t.test('axe', async () => {
-              await openFolds(page);
-              await audit(page, name);
-            });
-          }
-        }));
-      }
-    });
-  }
+        }
+      }));
+    }
+  });
 }

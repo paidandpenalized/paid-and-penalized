@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROGRAM_PATH, METHODS_PATH } from '../ci/page-types.js';
 import { AXE_WIDTHS, audit, grainWorst, runAxe } from './axe.js';
-import { CONCURRENCY, HEIGHT, SCHEMES, SEARCH_BOXES, searchIn, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, SCHEMES, SEARCH_BOXES, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 
@@ -42,8 +42,8 @@ describe('axe finds what it should (a positive control)', () => {
 // the dark one. Both colours are printed with the run.
 describe('the paper axe judges text on is the grain\'s worst pixel', () => {
   const total = (rgb) => rgb.match(/\d+/g).slice(0, 3).map(Number).reduce((a, b) => a + b);
+  const tabs = useContext(shared);
   for (const scheme of SCHEMES) {
-    const tabs = useContext(shared, { colorScheme: scheme });
     it(scheme, (t) => withPage(tabs, { path: '/', scheme }, async (page) => {
       const { paper, worst } = await grainWorst(page);
       t.diagnostic(`${scheme}: the paper is ${paper}; the grain's worst pixel for text is ${worst}`);
@@ -59,7 +59,7 @@ describe('the paper axe judges text on is the grain\'s worst pixel', () => {
 for (const scheme of SCHEMES) {
   for (const width of AXE_WIDTHS) {
     describe(`the program page with a search list open, ${scheme}, ${width} px wide`, { concurrency: CONCURRENCY }, () => {
-      const tabs = useContext(shared, { colorScheme: scheme, viewport: { width, height: HEIGHT } });
+      const tabs = useContext(shared, { width });
       for (const [where, container] of SEARCH_BOXES) {
         it(`in ${where}`, () => withPage(tabs, { path: PROGRAM_PATH, scheme }, async (page) => {
           const { box, list } = searchIn(page, container);
@@ -81,7 +81,7 @@ for (const scheme of SCHEMES) {
 describe('the tables that stack on a phone keep their column heads', () => {
   const STACKED = ['.receipt--dollars table', 'table.takes', 'table.receipts'];
   const heads = async (table) => ((await table.ariaSnapshot()).match(/^\s*- columnheader\b/gm) ?? []).length;
-  const tabs = useContext(shared, { viewport: { width: 390, height: HEIGHT } });
+  const tabs = useContext(shared, { width: 390 });
 
   it('on the Methods page, each one, and the control', () => withPage(tabs, { path: METHODS_PATH }, async (page) => {
     for (const selector of STACKED) {

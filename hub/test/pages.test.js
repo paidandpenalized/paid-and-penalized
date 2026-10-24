@@ -8,7 +8,7 @@ import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
-import { feedbackHref } from '../../web/render/layout.js';
+import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { COPY } from '../copy.js';
@@ -133,13 +133,13 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
       assert.doesNotMatch(words, /\{\w+\}/, `${path}: a placeholder left unfilled`);
       // Where its words call for the form (not privacy's, which describes the footer's link), the link is the prefilled one.
       const href = feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path });
-      if (keys.some((k) => COPY[k].includes('{feedback}'))) assert.ok(text.includes(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${COPY.feedbackForm}<span class="vh">${SHARED.newTab}</span></a>`), `${path}: feedback link`);
+      if (keys.some((k) => COPY[k].includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
     }
   }));
 
 test('/about/ links the byline\'s profile', () =>
   withHub((read) => {
-    assert.ok(read('/about/').includes(`<a href="${SITE.linkedin}" target="_blank" rel="noopener">${COPY.linkedinLink}`));
+    assert.ok(read('/about/').includes(String(externalLink(SITE.linkedin, COPY.linkedinLink))));
   }));
 
 test('/terms/ links the definition of "estimate", the corrections page and the license values', () =>
@@ -154,7 +154,7 @@ test('/privacy/ links the two services\' policies and names no retention period'
   withHub((read) => {
     const privacy = read('/privacy/');
     for (const [href, name] of [[CLOUDFLARE_PRIVACY_URL, COPY.cloudflarePolicy], [GOOGLE_PRIVACY_URL, COPY.googlePolicy]]) {
-      assert.ok(privacy.includes(`<a href="${href}" target="_blank" rel="noopener">${name}`), name);
+      assert.ok(privacy.includes(String(externalLink(href, name))), name);
     }
     // The page's own words (its sections and brief lines, not the numbers that count them) say nothing of how long anything is kept.
     const words = textOf(privacy.match(/<div class="doc__main">[\s\S]*<\/article>/)[0]) + briefKeys('privacyBrief').map((k) => COPY[k]).join(' ');

@@ -18,9 +18,9 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
-import { DATA, HD } from './pinned.js';
+import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
 const quiet = () => {};
@@ -400,10 +400,9 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   const checks = checksOf();
   const years = S.years.map((y) => ({ fy: y.fy, periods: y.periods }));
   const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
-  const page = methodsPage({
+  const page = renderMethods({
     fy: 2025, checks, years, newest: { rows: 3, source: DATA.source, periods: DATA.periods, pin, measures: 6, pages: 10, sourceLine: SRC },
-    pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
+    pins: [pin], estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, dollars: null,
   });
   assert.equal(page.match(/<h1[\s>]/g).length, 1);
   const total = checks.reduce((n, c) => n + c.check.scored, 0);
@@ -426,12 +425,7 @@ test('the line notes say which side of the percentile CMS\'s line sits: a year w
   const lower = at(base.at(-1), { p75InGap: false, aboveNotCut: 0 });
   const allCut = at(base.at(-2), { p75InGap: false, aboveNotCut: null });
   const checks = HD.checks.map((c) => (c.fy === lower.fy ? lower : c.fy === allCut.fy ? allCut : c));
-  const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
-  const page = methodsPage({
-    fy: 2026, checks, years: HD.years ?? DATA.history.years.map((y) => ({ fy: y.fy, periods: y.periods })), newest: { rows: 3, source: DATA.source, periods: DATA.periods, pin, measures: 6, pages: 10, sourceLine: SRC },
-    pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
-  });
+  const page = renderMethods({ checks, dollars: null });
   const paragraphs = [...page.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => strip(m[1]));
   const lowerNote = paragraphs.find((p) => p.includes('sits below the percentile'));
   assert.ok(lowerNote && lowerNote.includes(`FY${lower.fy}`) && lowerNote.includes(`FY${allCut.fy}`), lowerNote);

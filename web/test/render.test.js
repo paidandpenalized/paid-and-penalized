@@ -7,7 +7,7 @@ import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signe
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
-import { feedbackFor, feedbackHref, maintenanceBanner, page } from '../render/layout.js';
+import { externalLink, feedbackFor, feedbackHref, maintenanceBanner, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -118,7 +118,7 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(escapeHtml(COPY.affiliation)));
   assert.ok(out.includes(COPY.builtWith));
   // The name and credentials never split; the byline may break after "Built by".
-  assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener"><span class="nw">Dalton Haslam, MD, MBA</span><span class="vh"> (opens in a new tab)</span></a>'));
+  assert.ok(out.includes(`Built by ${externalLink('https://www.linkedin.com/in/dalton-haslam', html`<span class="nw">Dalton Haslam, MD, MBA</span>`)}`));
   assert.ok(out.includes(`href="${SITE.feedback.url}?`));
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));
@@ -163,7 +163,8 @@ test("page: the feedback link prefills the program's title and the page's canoni
   const missing = feedbackUrlIn(unaddressed);
   assert.equal(missing.searchParams.get(SITE_ENTRY), SITE.name);
   assert.ok(!missing.searchParams.has(PAGE_ENTRY));
-  // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did.
+  // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did. The one test
+  // that spells out an external link's markup (externalLink); every other test compares with the helper's output.
   assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
 });
 

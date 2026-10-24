@@ -6,9 +6,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
-import { SITE } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, HEIGHT, SEARCH_BOXES, assertQuiet, samplePages, searchIn, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { samplePages } from './site.js';
 
 const PAGES = samplePages();
 const CUT = PAGES.find((p) => p.type === 'hospital-cut');
@@ -34,7 +34,7 @@ async function eventually(fn, what) {
 }
 
 describe('search', () => {
-  const tabs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
+  const tabs = useContext(shared);
 
   // The program page holds two boxes over one index: the top bar's and the larger one in its hero.
   for (const [where, container] of SEARCH_BOXES) {
@@ -71,7 +71,7 @@ describe('search', () => {
 });
 
 describe('what-if', () => {
-  const tabs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
+  const tabs = useContext(shared);
 
   it('changing a measure on a hospital CMS cut changes the result', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
     const whatIf = page.locator('#whatif');
@@ -105,7 +105,7 @@ describe('what-if', () => {
 // browser scrolls to a whole device pixel, so an element focused at the bar's edge can land a fraction of a pixel under
 // it (an svg at 99.8 px under a bar ending at 100): only an overlap over SNAP counts. An element is described by its
 // tag, id and first class and the number of words it reads, never its text or address (a link can be a hospital's).
-async function focusFacts([formUrl, snap]) {
+async function focusFacts([feedbackLink, snap]) {
   // A frame for the page to finish moving what was focused, as a reader's eye would wait: the top bar's correction
   // (web/client/topbar.js) is queued in a frame during the key press, so it runs before this one.
   await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -117,7 +117,7 @@ async function focusFacts([formUrl, snap]) {
     if (el.matches('.theme-toggle')) return 'theme';
     const nav = [...document.querySelectorAll('.nav a')].indexOf(el);
     if (nav >= 0) return `nav ${nav}`;
-    if (el.closest('footer') && el.matches('a') && el.href.startsWith(formUrl)) return 'feedback';
+    if (el.matches(feedbackLink)) return 'feedback';
     return null;
   };
   const role = roleOf();
@@ -140,52 +140,53 @@ async function walk(page, key, done) {
   const steps = [];
   for (let i = 0; i < MAX_PRESSES; i++) {
     await page.keyboard.press(key);
-    steps.push(await page.evaluate(focusFacts, [SITE.feedback.url, SNAP]));
+    steps.push(await page.evaluate(focusFacts, [FEEDBACK_LINK, SNAP]));
     if (done(steps)) break;
   }
   return steps;
 }
 
+// Tabs forward from the top of the page at path, then back from the footer: every control the page offers is reached
+// and none is focused under the top bar.
+async function keyboardWalk(page, path) {
+  // What the page offers, so a control a page lacks is a failure and not a skipped target. The theme toggle and the
+  // search appear when the page's scripts have run. A program page has the top bar: search and the nav.
+  const hasTopBar = path.startsWith(PROGRAM_PATH);
+  const offered = await page.evaluate((feedbackLink) => ({
+    theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => !b.hidden).length,
+    search: [...document.querySelectorAll('.topbar [role="combobox"]')].filter((b) => !b.closest('[hidden]')).length,
+    nav: document.querySelectorAll('.nav a').length,
+    feedback: document.querySelectorAll(feedbackLink).length,
+  }), FEEDBACK_LINK);
+  assert.equal(offered.theme, 1, 'one theme toggle');
+  assert.equal(offered.feedback, 1, 'one feedback link in the footer');
+  if (hasTopBar) {
+    assert.equal(offered.search, 1, 'the top bar\'s search');
+    assert.ok(offered.nav > 0, 'the top bar\'s nav');
+  }
+  const wanted = ['theme', 'feedback', ...(hasTopBar ? ['search', ...Array.from({ length: offered.nav }, (_, i) => `nav ${i}`)] : [])];
+  const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
+  const last = (steps) => steps.at(-1)?.desc;
+
+  // Forward from the top: the first stop is the skip link, then each control is reached.
+  const forward = await walk(page, keys().next, reached);
+  assert.equal(forward[0].role, 'skip', `the first Tab stop is the skip link, not ${forward[0].desc}`);
+  const missed = wanted.filter((role) => !forward.some((s) => s.role === role));
+  assert.deepEqual(missed, [], `Tab never reached ${missed.join(', ')} in ${forward.length} presses; the last focus was ${last(forward)}`);
+
+  // And back up from the footer: a focus that moves up lands at the top edge, where the bar is.
+  const backward = await walk(page, keys().back, (steps) => steps.at(-1).role === 'skip');
+  assert.equal(backward.at(-1).role, 'skip', `Shift+Tab never came back to the skip link in ${backward.length} presses; the last focus was ${last(backward)}`);
+
+  const hidden = [...forward, ...backward].filter((s) => s.under).map((s) => `${s.desc} at ${s.box} under the bar at ${s.bar}`);
+  assert.deepEqual([...new Set(hidden)], [], 'focused elements under the top bar');
+}
+
 describe('keyboard', { concurrency: CONCURRENCY }, () => {
   for (const width of WIDTHS) {
     describe(`${width} px wide`, { concurrency: CONCURRENCY }, () => {
-      const tabs = useContext(shared, { viewport: { width, height: HEIGHT } });
-
-      for (const { name, path } of PAGES) {
-        it(name, () => withPage(tabs, { path }, async (page) => {
-          // What the page offers, so a control a page lacks is a failure and not a skipped target. The theme toggle and
-          // the search appear when the page's scripts have run. A program page has the top bar: search and the nav.
-          const hasTopBar = path.startsWith(PROGRAM_PATH);
-          const offered = await page.evaluate((formUrl) => ({
-            theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => !b.hidden).length,
-            search: [...document.querySelectorAll('.topbar [role="combobox"]')].filter((b) => !b.closest('[hidden]')).length,
-            nav: document.querySelectorAll('.nav a').length,
-            feedback: [...document.querySelectorAll('footer a')].filter((a) => a.href.startsWith(formUrl)).length,
-          }), SITE.feedback.url);
-          assert.equal(offered.theme, 1, 'one theme toggle');
-          assert.equal(offered.feedback, 1, 'one feedback link in the footer');
-          if (hasTopBar) {
-            assert.equal(offered.search, 1, 'the top bar\'s search');
-            assert.ok(offered.nav > 0, 'the top bar\'s nav');
-          }
-          const wanted = ['theme', 'feedback', ...(hasTopBar ? ['search', ...Array.from({ length: offered.nav }, (_, i) => `nav ${i}`)] : [])];
-          const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
-          const last = (steps) => steps.at(-1)?.desc;
-
-          // Forward from the top: the first stop is the skip link, then each control is reached.
-          const forward = await walk(page, keys().next, reached);
-          assert.equal(forward[0].role, 'skip', `the first Tab stop is the skip link, not ${forward[0].desc}`);
-          const missed = wanted.filter((role) => !forward.some((s) => s.role === role));
-          assert.deepEqual(missed, [], `Tab never reached ${missed.join(', ')} in ${forward.length} presses; the last focus was ${last(forward)}`);
-
-          // And back up from the footer: a focus that moves up lands at the top edge, where the bar is.
-          const backward = await walk(page, keys().back, (steps) => steps.at(-1).role === 'skip');
-          assert.equal(backward.at(-1).role, 'skip', `Shift+Tab never came back to the skip link in ${backward.length} presses; the last focus was ${last(backward)}`);
-
-          const hidden = [...forward, ...backward].filter((s) => s.under).map((s) => `${s.desc} at ${s.box} under the bar at ${s.bar}`);
-          assert.deepEqual([...new Set(hidden)], [], 'focused elements under the top bar');
-        }));
-      }
+      const tabs = useContext(shared, { width });
+      for (const { name, path } of PAGES) it(name, () => withPage(tabs, { path }, (page) => keyboardWalk(page, path)));
     });
   }
 });
@@ -193,7 +194,7 @@ describe('keyboard', { concurrency: CONCURRENCY }, () => {
 // A click is not a keyboard focus: the top bar's correction (web/client/topbar.js) leaves the page where the reader
 // pointed. A text field matches :focus-visible on a click too, so the bar tells the two apart by the press before it.
 describe('the top bar', () => {
-  const tabs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
+  const tabs = useContext(shared);
 
   it('a click on the visible half of a text field partly under it does not scroll the page', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
     // The hospital table's name filter: the table shows once its section nears the screen.
@@ -202,22 +203,20 @@ describe('the top bar', () => {
     await field.waitFor();
     await page.waitForLoadState('networkidle');
     // The field's top half under the bar, its bottom half below it; the click lands in the middle of what shows.
-    const at = await field.evaluate(async (el) => {
-      const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const barBottom = () => document.querySelector('.topbar').getBoundingClientRect().bottom;
-      const before = el.getBoundingClientRect();
-      window.scrollBy(0, before.top - (barBottom() - before.height / 2));
-      await frames();
+    await field.evaluate((el) => {
       const box = el.getBoundingClientRect();
-      const edge = barBottom();
+      window.scrollBy(0, box.top - (document.querySelector('.topbar').getBoundingClientRect().bottom - box.height / 2));
+    });
+    await settle(page);
+    const at = await field.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const edge = document.querySelector('.topbar').getBoundingClientRect().bottom;
       return { scrollY: window.scrollY, under: box.top < edge && box.bottom > edge, x: box.left + box.width / 2, y: (edge + box.bottom) / 2 };
     });
     assert.ok(at.under, 'the field sits partly under the bar');
     await page.mouse.click(at.x, at.y);
-    const after = await page.evaluate(async () => {
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      return { scrollY: window.scrollY, focused: document.activeElement?.id ?? null };
-    });
+    await settle(page);
+    const after = await page.evaluate(() => ({ scrollY: window.scrollY, focused: document.activeElement?.id ?? null }));
     assert.equal(after.focused, 'ht-name', 'the click focused the field');
     assert.equal(after.scrollY, at.scrollY, 'the page did not scroll');
     assertQuiet(seen, 'top bar');
@@ -225,15 +224,15 @@ describe('the top bar', () => {
 });
 
 describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
-  const withJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT } });
-  const withoutJs = useContext(shared, { viewport: { width: 1280, height: HEIGHT }, javaScriptEnabled: false });
+  const withJs = useContext(shared);
+  const withoutJs = useContext(shared, { javaScript: false });
 
   // The page's visible text, one entry per line, and what its footer and theme toggle show. No watcher: watch needs
-  // scripts. Without them nothing fetches after the load, so there is no wait for the network to go quiet.
-  const look = (tabs, path) => withPage(tabs, { path, idle: tabs === withJs }, async (page) => ({
+  // scripts.
+  const look = (tabs, path) => withPage(tabs, { path }, async (page) => ({
     lines: (await page.locator('body').innerText()).split('\n').map((line) => line.trim()).filter(Boolean),
     footer: await page.locator('footer').isVisible(),
-    feedback: await page.locator('footer a').evaluateAll((links, url) => links.filter((a) => a.href.startsWith(url)).length, SITE.feedback.url),
+    feedback: await page.locator(FEEDBACK_LINK).count(),
     toggle: await page.evaluate(() => document.querySelector('.theme-toggle')?.innerText ?? null),
   }));
 

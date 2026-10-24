@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
@@ -13,7 +13,7 @@ import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { htmlPages, tags } from '../site/html.js';
-import { get, withServer, withTemp as inTemp } from './helpers.js';
+import { get, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
@@ -325,13 +325,8 @@ test('print forces the light tokens on white: the bundle\'s print block sets eve
 test('the local server serves index.html for directories, 404.html for unknown paths, and nothing outside its root', () =>
   withTemp(async (dir) => {
     const root = join(dir, 'dist');
-    mkdirSync(join(root, 'hacrp'), { recursive: true });
-    writeFileSync(join(root, 'index.html'), 'home');
-    writeFileSync(join(root, '404.html'), 'not here');
-    writeFileSync(join(root, 'hacrp', 'index.html'), 'hacrp');
+    writeTree(root, { 'index.html': 'home', '404.html': 'not here', 'hacrp/index.html': 'hacrp', 'd.csv': 'a', 'D.md': 'b' });
     writeFileSync(join(dir, 'secret.txt'), 'outside');
-    writeFileSync(join(root, 'd.csv'), 'a');
-    writeFileSync(join(root, 'D.md'), 'b');
     await withServer(root, async (port) => {
       const home = await get(port, '/');
       assert.deepEqual([home.status, home.type, home.location, home.body], [200, 'text/html; charset=utf-8', undefined, 'home']);

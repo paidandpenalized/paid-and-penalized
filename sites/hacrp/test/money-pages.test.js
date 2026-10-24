@@ -13,10 +13,10 @@ import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
-import { furthestGroup, methodsPage } from '../web/pages/methods.js';
+import { furthestGroup } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
-import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
-import { ASSETS, strippedText as strip } from './fixtures.js';
+import { DATA, MD, PD, PLACES, renderMethods, renderPlace, renderProgram } from './pinned.js';
+import { strippedText as strip } from './fixtures.js';
 
 const PROGRAM = renderProgram();
 const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section class="part" id="map"/.exec(PROGRAM)[0];
@@ -345,12 +345,7 @@ test('the hospitals near the line: both sides, lowest score first, worked out on
 });
 
 test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to; the back-test drawn where every range links', () => {
-  const page = methodsPage({
-    fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }),
-  });
+  const page = renderMethods({ names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }) });
   const id = DOLLARS_HREF.split('#')[1];
   const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   // The estimate section's sentence on the dollars' tag links to this section, which the page has.
@@ -465,12 +460,7 @@ test('the group named as furthest from its cost reports has at least HEADLINE_MI
   // On the page the sentence is left out when no group is big enough, and says the filter when one is.
   const page = (hac) => {
     const dollars = { ...DATA.dollars, bands: { ...DATA.dollars.bands, measures: { ...DATA.dollars.bands.measures, hac: { ...DATA.dollars.bands.measures.hac, strata: hac } } } };
-    return strip(methodsPage({
-      fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-      newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-      pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-      robots: null, assets: ASSETS, searchUrl: null, dollars, names: () => null,
-    }));
+    return strip(renderMethods({ dollars }));
   };
   const real = DATA.dollars.bands.measures.hac.strata;
   const small = real.map((s) => ({ ...s, n: Math.min(s.n, HEADLINE_MIN - 1) }));
@@ -565,12 +555,7 @@ test('the assumptions table names the month and the year the earlier of the two 
 });
 
 test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {
-  const page = methodsPage({
-    fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => null,
-  });
+  const page = renderMethods();
   const id = DOLLARS_HREF.split('#')[1];
   const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   const table = /<table class="gb assume">[\s\S]*?<\/table>/.exec(sec)[0];

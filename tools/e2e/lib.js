@@ -1,6 +1,7 @@
 // What the browser checks (npm run e2e) share: a browser held for a test file, tabs in a colour scheme, a page opened
-// the way a reader meets it, and a watcher for what a page does wrong. Playwright is a dev dependency used only by the
-// browser checks; npm test needs no browser. The site and its pages are site.js's.
+// the way a reader meets it, a watcher for what a page does wrong, and what the checks look for on every page (the
+// footer's feedback link, a settled paint). Playwright is a dev dependency used only by the browser checks; npm test
+// needs no browser. The site and its pages are site.js's.
 import { availableParallelism } from 'node:os';
 import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,30 +9,29 @@ import * as playwright from 'playwright';
 import { SITE } from '../../web/site.js';
 import { ENGINES, startSite } from './site.js';
 
-export { samplePages } from './site.js';
-
 export const SCHEMES = ['light', 'dark'];
 // How many tests a describe runs at once: one core fewer than the machine has, up to four (CI's 2-core runner gets 1,
 // so four tabs never load the heaviest page together there; a laptop gets up to 4).
 export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
 // Every context's window height.
-export const HEIGHT = 800;
+const HEIGHT = 800;
 
 // A browser for E2E_ENGINE: chromium (when it is unset), firefox or webkit. Chromium is the Google Chrome installed on
 // this machine (channel 'chrome', so no browser is downloaded) unless CI is set, where the workflow installs
 // Playwright's own Chromium. The other engines are Playwright's builds.
-export function launch() {
+function launch() {
   const engine = process.env.E2E_ENGINE || 'chromium';
   if (!ENGINES.includes(engine)) throw new RangeError(`unknown browser engine "${engine}": use ${ENGINES.join(', ')}`);
   return playwright[engine].launch(engine === 'chromium' && !process.env.CI ? { channel: 'chrome' } : {});
 }
 
-// The site under test (site.js startSite) and a browser, for the tests of the file that calls it (once, at its top):
-// { site, browser }, filled in before the first test, and both closed after the last.
-export function useBrowser() {
+// The site under test and a browser, for the tests of the file that calls it (once, at its top): { site, browser },
+// filled in before the first test, and both closed after the last (the browser first). start: what starts the site,
+// resolving its { base, close } (site.js startSite, by default; the harness's own controls pass a throwaway server).
+export function useBrowser(start = startSite) {
   const shared = {};
   before(async () => {
-    shared.site = await startSite();
+    shared.site = await start();
     shared.browser = await launch();
   });
   after(async () => {
@@ -41,12 +41,13 @@ export function useBrowser() {
   return shared;
 }
 
-// A browser context (options as browser.newContext takes them) for the tests of the describe that calls it: { context,
-// base } (base: the site's origin), filled in before its first test, and closed after its last.
-export function useContext(shared, options) {
-  const held = {};
+// A browser context for the tests of the describe that calls it: a window width px wide (HEIGHT tall), with scripts on
+// or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before its first test, and
+// closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
+export function useContext(shared, { width = 1280, javaScript = true } = {}) {
+  const held = { javaScript };
   before(async () => {
-    held.context = await shared.browser.newContext(options);
+    held.context = await shared.browser.newContext({ viewport: { width, height: HEIGHT }, javaScriptEnabled: javaScript });
     held.base = shared.site.base;
   });
   after(() => held.context?.close());
@@ -74,22 +75,22 @@ export async function newPage(context, colorScheme, base) {
 }
 
 // Opens path (from base, the site's origin) in the tab the way a reader meets it: loaded, and quiet (its scripts have
-// fetched what they fetch). With scripts off nothing fetches after the load, so idle: false spares that wait. Returns
-// the response.
-export async function visit(page, base, path, { idle = true } = {}) {
+// fetched what they fetch). javaScript: whether the tab runs scripts; without them nothing fetches after the load, so
+// there is no wait for the network. Returns the response.
+export async function visit(page, base, path, { javaScript = true } = {}) {
   const response = await page.goto(new URL(path, base).href, { waitUntil: 'load' });
-  if (idle) await page.waitForLoadState('networkidle');
+  if (javaScript) await page.waitForLoadState('networkidle');
   return response;
 }
 
 // Runs fn(page, { response, seen }) on path, visited in a fresh tab (newPage) of a useContext context in the scheme, and
 // closes the tab; returns what fn returns. watched: the tab is watched from before the visit, and seen is what watch
 // reports (null otherwise).
-export async function withPage({ context, base }, { path, scheme = 'light', watched = false, idle = true }, fn) {
+export async function withPage({ context, base, javaScript }, { path, scheme = 'light', watched = false }, fn) {
   const page = await newPage(context, scheme, base);
   try {
     const seen = watched ? await watch(page, base) : null;
-    const response = await visit(page, base, path, { idle });
+    const response = await visit(page, base, path, { javaScript });
     return await fn(page, { response, seen });
   } finally {
     await page.close();
@@ -109,7 +110,7 @@ const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request 
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
 //                    addresses are not requests to a host)
-export async function watch(page, base) {
+async function watch(page, base) {
   const errors = [];
   const cspViolations = [];
   const foreignRequests = [];
@@ -145,6 +146,12 @@ export function assertQuiet(seen, what) {
   assert.deepEqual(seen.cspViolations, [], `${what}: CSP violations`);
   assert.deepEqual(seen.foreignRequests, [], `${what}: requests to another origin`);
 }
+
+// The footer's link to the feedback form, which every page has, as a selector for the page and for a locator.
+export const FEEDBACK_LINK = `footer a[href^="${SITE.feedback.url}"]`;
+
+// Resolves once the page has painted twice: what it changed has been laid out and drawn.
+export const settle = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 // The program page's two search boxes over one index, by where each sits: the top bar's, and the larger one in the hero.
 export const SEARCH_BOXES = [['the top bar', '.topbar'], ['the hero', 'main']];

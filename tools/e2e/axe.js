@@ -21,6 +21,7 @@
 // another element, text beside an image node, lone characters and glyphs such as the minus sign or the stars.
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
+import { settle } from './lib.js';
 
 const AXE = readFileSync(new URL('../../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -32,11 +33,13 @@ const DRAWN_OVER = ['bgImage', 'bgGradient', 'pseudoContent'];
 
 // Opens every closed <details>, resolving once each has toggled (the scripts that watch a fold have run) and the page
 // has painted twice.
-export const openFolds = (page) => page.evaluate(async () => {
-  const closed = [...document.querySelectorAll('details:not([open])')];
-  await Promise.all(closed.map((d) => new Promise((resolve) => { d.addEventListener('toggle', resolve, { once: true }); d.open = true; })));
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-});
+export async function openFolds(page) {
+  await page.evaluate(async () => {
+    const closed = [...document.querySelectorAll('details:not([open])')];
+    await Promise.all(closed.map((d) => new Promise((resolve) => { d.addEventListener('toggle', resolve, { once: true }); d.open = true; })));
+  });
+  await settle(page);
+}
 
 // The body's paper as the grain leaves it, measured in the page: the grain's tile drawn on a canvas over the body's own
 // colour, and of its pixels the one that leaves text the least contrast: the darkest on a light paper, the lightest on a
