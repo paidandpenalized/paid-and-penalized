@@ -1,7 +1,8 @@
 // Positive controls for the harness (lib.js): a watcher that silently stops catching things makes every page check
 // pass for the wrong reason, so these serve a deliberately bad page from a throwaway server and require watch() to
-// report each fault, and a clean page it must report nothing for. They also pin prime's and newPage's contracts: a
-// primed tab is handed over only once its page's requests have settled, and a new tab follows the scheme. No dist/ needed.
+// report each fault, and a clean page (and one that aborts its own request) it must report nothing for. They also pin
+// prime's and newPage's contracts: a primed tab is handed over only once its page's requests have settled, and a new
+// tab follows the scheme. No dist/ needed.
 import { createServer } from 'node:http';
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,6 +11,8 @@ import { SITE } from '../../web/site.js';
 import { assertQuiet, launch, newPage, prime, withPage } from './lib.js';
 
 const BAD = '/bad/';
+// A page that gives up on a request of its own: a fetch it aborts.
+const ABORTS = '/aborts/';
 const OFFSITE = 'https://example.invalid/x.png';
 // The CSP forbids inline scripts (not images or off-site loads: those must reach the network for the foreign-request
 // detector to see them).
@@ -22,6 +25,7 @@ const PAGES = {
   [BAD]: page(`<script>document.title = 'an inline script ran'</script><script src="/bad.js"></script>`, `<img src="${OFFSITE}" alt=""><img src="/missing.png" alt="">`),
   // The page prime loads (SITE.pages.about): it asks for something late, as a page's script can.
   [SITE.pages.about]: page('<script src="/late.js"></script>'),
+  [ABORTS]: page('<script src="/aborts.js"></script>'),
 };
 
 let server;
@@ -38,6 +42,11 @@ before(async () => {
     if (pathname === '/late.js') return reply(200, 'text/javascript', `addEventListener('load', () => setTimeout(() => fetch('/late'), ${LATE_AFTER_MS}));`);
     if (pathname === '/late') return void setTimeout(() => { lateDone = true; reply(200, 'text/plain', 'late'); }, LATE_TAKES_MS);
     if (pathname === '/missing.png') return reply(404, 'text/plain', 'not found');
+    // Never answered: the page aborts it (stop ends the open connection).
+    if (pathname === '/hang') return;
+    if (pathname === '/aborts.js') {
+      return reply(200, 'text/javascript', "const c = new AbortController(); fetch('/hang', { signal: c.signal }).catch(() => {}); setTimeout(() => c.abort(), 50);");
+    }
     if (pathname === '/gone/') return reply(404, 'text/html', page('', '<p>gone</p>'));
     reply(200, 'text/html', PAGES[pathname] ?? page('', '<p>clean</p>'), pathname === BAD ? { 'content-security-policy': CSP } : {});
   });
@@ -75,6 +84,10 @@ describe('watch reports what is wrong with a page', () => {
 
   it('nothing on a clean page, and nothing for a document\'s own error status', async () => {
     for (const path of ['/clean/', '/gone/']) assertQuiet(await visit(path), path);
+  });
+
+  it('nothing for a request the page aborted itself', async () => {
+    assertQuiet(await visit(ABORTS), ABORTS);
   });
 });
 

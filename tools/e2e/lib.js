@@ -92,10 +92,15 @@ export async function withPage({ context, base }, { path, scheme = 'light', watc
   }
 }
 
+// How each engine words a request the page gave up on itself (a fetch it aborted, an image whose src it changed, a load
+// cut short by leaving the page): Chromium, Firefox, WebKit on macOS, and WebKit's other ports. Not a failure.
+const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request cancelled)$/;
+
 // Records what goes wrong on the page from the next navigation on, for the site at base (its origin). Await it before
 // page.goto: it installs a script in every document the page loads. Returns three arrays that fill as the page runs:
-//   errors           console errors, uncaught page errors, requests that failed and subresources answered 400 or above
-//                    (the status of the page itself, which Chromium also logs as a console error, is for the caller to check)
+//   errors           console errors, uncaught page errors, requests that failed (not those the page aborted, ABORTED)
+//                    and subresources answered 400 or above (the status of the page itself, which Chromium also logs
+//                    as a console error, is for the caller to check)
 //   cspViolations    each Content Security Policy violation, { directive, blocked, source, line, sample }, from a
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
@@ -109,7 +114,10 @@ export async function watch(page, base) {
   const ownStatus = (message) => documents.has(message.location().url) && /^Failed to load resource: the server responded with a status of \d+/.test(message.text());
   page.on('console', (message) => message.type() === 'error' && !ownStatus(message) && errors.push(`console: ${message.text()}`));
   page.on('pageerror', (error) => errors.push(`page error: ${error.message}`));
-  page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()} (${request.failure()?.errorText})`));
+  page.on('requestfailed', (request) => {
+    const why = request.failure()?.errorText;
+    if (!ABORTED.test(why ?? '')) errors.push(`request failed: ${request.url()} (${why})`);
+  });
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
   });
