@@ -4,11 +4,16 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../../pipeline/files.js';
+import { fileFor } from '../../pipeline/site/address.js';
 import { SITE } from '../../web/site.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
 import { checkLinks, groupProblems } from '../ci/link-check.js';
+import { METHODS_PATH, PROGRAM_PATH } from '../ci/page-types.js';
 
 const ORIGIN = SITE.origin;
+// The program page, the one page whose script reads a "#state=" fragment, and its file in the built folder.
+const P = PROGRAM_PATH;
+const P_FILE = fileFor(PROGRAM_PATH);
 const page = (body, head = '') => `<!doctype html><html><head><title>t</title>${head}</head><body>${body}</body></html>`;
 
 const problems = (dir) => checkLinks(dir).found.map(({ from, href, problem }) => `${from} ${href} ${problem}`);
@@ -64,33 +69,49 @@ test('a fragment must name an id on its target page: same page, another page, an
 test('a fragment that carries page state: "#state=TX" names no element, "#whatif&A=1" names the element before the "&"', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, {
-      'index.html': page('<a href="/p/#state=TX">state</a><a href="/p/#whatif&amp;MRSA=0.9&amp;SSI=1.2">ok</a><a href="/p/#nothere&amp;MRSA=0.9">bad</a>'
+      'index.html': page(`<a href="${P}#state=TX">state</a><a href="/p/#whatif&amp;MRSA=0.9&amp;SSI=1.2">ok</a><a href="/p/#nothere&amp;MRSA=0.9">bad</a>`
         + '<a href="/gone/#state=TX">no page</a><a href="/q/#whatif&amp;MRSA=0.9">no what-if</a>'),
+      [P_FILE]: page('<p>none</p>'),
       'p/index.html': page('<section id="whatif"></section>'),
       'q/index.html': page('<p>none</p>'),
     });
     assert.deepEqual(problems(dir), ['/ /p/#nothere&MRSA=0.9 missing id', '/ /gone/#state=TX missing file', '/ /q/#whatif&MRSA=0.9 missing id']);
   }));
 
+test('a state fragment passes only on a link to the program page, the page whose script reads it', () =>
+  withTemp('links-', (dir) => {
+    writeTree(dir, {
+      'index.html': page(`<a href="${P}#state=TX">ok</a><a href="${ORIGIN}${P}#state=TX">absolute</a><a href="${METHODS_PATH}#state=TX">Methods</a>`
+        + '<a href="/p/#state=TX">another page</a><a href="#state=TX">this page</a>'),
+      [P_FILE]: page('<p>none</p>'),
+      [fileFor(METHODS_PATH)]: page('<p>none</p>'),
+      'p/index.html': page('<p>none</p>'),
+    });
+    assert.deepEqual(problems(dir).filter((p) => p.startsWith('/ ')), [`/ ${METHODS_PATH}#state=TX missing id`, '/ /p/#state=TX missing id', '/ #state=TX missing id']);
+  }));
+
 test('a state fragment passes only as the page reads it: a code the data holds, two letters, nothing else', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, {
-      'index.html': page('<a href="/p/#state=TX">ok</a><a href="/p/#state=tx">any case</a><a href="/p/#state=">empty</a>'
-        + '<a href="/p/#state=ZZZZ">long</a><a href="/p/#state=MD">not in the data</a>'),
-      'p/index.html': page('<p>none</p>'),
+      'index.html': page(`<a href="${P}#state=TX">ok</a><a href="${P}#state=tx">any case</a><a href="${P}#state=">empty</a>`
+        + `<a href="${P}#state=ZZZZ">long</a><a href="${P}#state=MD">not in the data</a>`),
+      [P_FILE]: page('<p>none</p>'),
     });
     const found = checkLinks(dir, ['TX']).found.map(({ href, problem }) => `${href} ${problem}`);
-    assert.deepEqual(found, ['/p/#state= missing id', '/p/#state=ZZZZ missing id', '/p/#state=MD missing id']);
+    assert.deepEqual(found, [`${P}#state= missing id`, `${P}#state=ZZZZ missing id`, `${P}#state=MD missing id`]);
   }));
 
-test('only the one state shape the site uses is exempt: any other key=value fragment is checked as an id', () =>
+test('only the one state shape the site uses is exempt, and only whole: any other key=value fragment, or the state with more parts, is checked as an id', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, {
-      'index.html': page('<a href="/p/#view=map">new key</a><a href="/p/#a=1&amp;whatif">key first</a><a href="/p/#State=TX">case</a>'
-        + '<a href="/p/#state=TX&amp;sort=name">state first</a>'),
-      'p/index.html': page('<section id="whatif"></section>'),
+      'index.html': page(`<a href="${P}#view=map">new key</a><a href="${P}#a=1&amp;whatif">key first</a><a href="${P}#State=TX">case</a>`
+        + `<a href="${P}#state=TX&amp;sort=name">state first</a><a href="${P}#tabel&amp;state=TX">state last</a><a href="${P}#state=TX&amp;state=TX">twice</a>`),
+      [P_FILE]: page('<section id="whatif"></section>'),
     });
-    assert.deepEqual(problems(dir), ['/ /p/#view=map missing id', '/ /p/#a=1&whatif missing id', '/ /p/#State=TX missing id']);
+    assert.deepEqual(problems(dir), [
+      `/ ${P}#view=map missing id`, `/ ${P}#a=1&whatif missing id`, `/ ${P}#State=TX missing id`,
+      `/ ${P}#state=TX&sort=name missing id`, `/ ${P}#tabel&state=TX missing id`, `/ ${P}#state=TX&state=TX missing id`,
+    ]);
   }));
 
 test('data-src is a link too: the search index a form names must exist', () =>

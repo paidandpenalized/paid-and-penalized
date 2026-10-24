@@ -4,9 +4,10 @@
 //     does: a folder is its index.html, and a folder without its trailing slash is the redirect to it;
 //   - a #fragment names an id on the page it points at (same page included; ids on SVG elements count), or is reader
 //     state that the site's own parsers accept: a state the program page opens on ("#state=TX", decodeState, with the
-//     state codes in the emitted data), or a what-if scenario ("#whatif&MRSA=0.9", isScenarioHash), whose section
-//     (the id before the "&") must be on the page. Any other fragment is checked whole as an id, so a new kind of
-//     reader state fails here until its parser is added.
+//     state codes in the emitted data), on a link to the program page (the one page whose script reads it) and as the
+//     whole fragment, or a what-if scenario ("#whatif&MRSA=0.9", isScenarioHash), whose section (the id before the
+//     "&") must be on the page. Any other fragment is checked whole as an id, so a new kind of reader state fails here
+//     until its parser is added.
 // Skipped: any other origin, mailto:, tel:, data: and every non-web scheme; external links are never fetched.
 // Not covered: links that scripts build at run time, and URLs outside those attributes (srcset, content,
 // sitemap.xml).
@@ -20,6 +21,7 @@ import { decodeState } from '../../sites/hacrp/web/hospital-table.js';
 import { isScenarioHash } from '../../web/whatif/fragment.js';
 import { SITE } from '../../web/site.js';
 import { tags } from './html.js';
+import { PROGRAM_PATH } from './page-types.js';
 
 const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 
@@ -61,7 +63,8 @@ function problemWith(href, base, tree, pages, states) {
   // "#" and "#top" always work; ids can only be looked up in a page.
   const fragment = tryDecode(url.hash.slice(1)) ?? url.hash.slice(1);
   if (fragment === '' || fragment.toLowerCase() === 'top' || !target.endsWith('.html')) return null;
-  if (decodeState(`#${fragment}`, states) !== null) return null;
+  // decodeState skips the parts it doesn't read, so a link with more than the state is checked as an id.
+  if (addressOf(target) === PROGRAM_PATH && !fragment.includes('&') && decodeState(`#${fragment}`, states) !== null) return null;
   const id = isScenarioHash(`#${fragment}`) ? fragment.split('&')[0] : fragment;
   return pages.get(target).ids.has(id) ? null : 'missing id';
 }
