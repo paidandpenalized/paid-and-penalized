@@ -6,7 +6,8 @@ import { SITE } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
-import { page } from '../render/layout.js';
+import { COPY } from '../copy.js';
+import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -114,16 +115,82 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="stylesheet" href="${ASSETS.css}">`));
   assert.ok(out.indexOf('class="skip" href="#main"') < out.indexOf('<header'));
   assert.ok(out.includes('<main id="main">'));
-  assert.ok(out.includes('Not affiliated with or endorsed by CMS.'));
-  assert.ok(out.includes('Uses public data from the Centers for Medicare &amp; Medicaid Services (CMS) and shows no patient information.'));
-  assert.ok(out.includes('Built with Claude Code'));
+  assert.ok(out.includes(escapeHtml(COPY.affiliation)));
+  assert.ok(out.includes(COPY.builtWith));
   // The name and credentials never split; the byline may break after "Built by".
-  assert.ok(out.includes('Built by <a href="https://www.linkedin.com/in/dalton-haslam" target="_blank" rel="noopener"><span class="nw">Dalton Haslam, MD, MBA</span><span class="vh"> (opens in a new tab)</span></a>'));
-  assert.ok(out.includes(`href="${SITE.feedbackUrl}"`));
+  assert.ok(out.includes(`Built by ${externalLink('https://www.linkedin.com/in/dalton-haslam', html`<span class="nw">Dalton Haslam, MD, MBA</span>`)}`));
+  assert.ok(out.includes(`href="${SITE.feedback.url}?`));
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));
   assert.ok(out.includes('Paid &amp; <span class="wordmark__pen">Penalized</span>'));
   assert.match(out, /<button type="button" class="theme-toggle" aria-pressed="false" hidden>Dark mode<\/button>/);
+});
+
+// The feedback link's href as the browser reads it: the page's HTML attribute, unescaped, parsed as a URL.
+const feedbackUrlIn = (out) => new URL(/<a href="([^"]*)"[^>]*>Send feedback/.exec(out)[1].replaceAll('&amp;', '&'));
+const SITE_ENTRY = 'entry.2047320042';
+const PAGE_ENTRY = 'entry.1326474028';
+
+test('feedbackHref builds the form URL with the site and the page, each encoded, and the page exactly as given', () => {
+  assert.equal(SITE.feedback.siteEntry, SITE_ENTRY);
+  assert.equal(SITE.feedback.pageEntry, PAGE_ENTRY);
+  assert.equal(feedbackHref({ siteName: 'Paid & Penalized', pageUrl: 'https://paidandpenalized.org/a/' }),
+    `${SITE.feedback.url}?${SITE_ENTRY}=${encodeURIComponent('Paid & Penalized')}&${PAGE_ENTRY}=${encodeURIComponent('https://paidandpenalized.org/a/')}`);
+  const pageUrl = 'https://paidandpenalized.org/a/?x=1&y=2#z';
+  const url = new URL(feedbackHref({ siteName: 'A & B', pageUrl }));
+  assert.equal(url.searchParams.get(PAGE_ENTRY), pageUrl);
+  assert.equal(url.searchParams.get(SITE_ENTRY), 'A & B');
+  // No page given: the site alone is prefilled.
+  const siteOnly = new URL(feedbackHref({ siteName: 'A & B' }));
+  assert.equal(siteOnly.searchParams.get(SITE_ENTRY), 'A & B');
+  assert.ok(!siteOnly.searchParams.has(PAGE_ENTRY));
+  assert.equal(feedbackHref({ siteName: 'A & B', pageUrl: null }), feedbackHref({ siteName: 'A & B' }));
+  assert.throws(() => feedbackHref({ siteName: '' }), TypeError);
+  assert.throws(() => feedbackHref({}), TypeError);
+  assert.throws(() => feedbackHref({ siteName: 'A', pageUrl: '' }), TypeError);
+});
+
+test("page: the feedback link prefills the program's title and the page's canonical URL; the hub's says the family's name", () => {
+  const program = feedbackUrlIn(page({ ...PAGE, path: '/hacrp/hospital/990001/' }));
+  assert.equal(program.searchParams.get(SITE_ENTRY), SITE.sites.hacrp.title);
+  assert.equal(program.searchParams.get(PAGE_ENTRY), `${SITE.origin}/hacrp/hospital/990001/`);
+  const hub = feedbackUrlIn(page({ ...PAGE, path: '/methods/' }));
+  assert.equal(hub.searchParams.get(SITE_ENTRY), SITE.name);
+  assert.equal(hub.searchParams.get(PAGE_ENTRY), `${SITE.origin}/methods/`);
+  // A page with no address of its own (the not-found page): no canonical link or og:url, and the site alone prefilled.
+  const unaddressed = page({ ...PAGE, path: '/404.html', address: null });
+  assert.doesNotMatch(unaddressed, /rel="canonical"|og:url/);
+  const missing = feedbackUrlIn(unaddressed);
+  assert.equal(missing.searchParams.get(SITE_ENTRY), SITE.name);
+  assert.ok(!missing.searchParams.has(PAGE_ENTRY));
+  // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did. The one test
+  // that spells out an external link's markup (externalLink); every other test compares with the helper's output.
+  assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
+});
+
+test('feedbackFor: the one prefill, the page\'s site (the family\'s on the hub\'s pages) and its canonical address or none; the footer uses it', () => {
+  assert.equal(feedbackFor({ path: '/hacrp/x/' }), feedbackHref({ siteName: SITE.sites.hacrp.title, pageUrl: `${SITE.origin}/hacrp/x/` }));
+  assert.equal(feedbackFor({ path: '/about/' }), feedbackHref({ siteName: SITE.name, pageUrl: `${SITE.origin}/about/` }));
+  assert.equal(feedbackFor({ path: '/hacrp/x/', address: 'https://elsewhere.example/y' }), feedbackHref({ siteName: SITE.sites.hacrp.title, pageUrl: 'https://elsewhere.example/y' }));
+  assert.equal(feedbackFor({ path: '/404.html', address: null }), feedbackHref({ siteName: SITE.name }));
+  assert.ok(page(PAGE).includes(`href="${escapeHtml(feedbackFor({ path: PAGE.path }))}"`));
+});
+
+test('page: the footer has the Terms line and the policy links', () => {
+  const foot = /<footer[\s\S]*?<\/footer>/.exec(page(PAGE))[0];
+  assert.ok(foot.includes(`${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a>`));
+  for (const [href, label] of [['/privacy/', COPY.privacy], ['/corrections/', COPY.corrections], ['/about/', COPY.about],
+    ['/accessibility/', COPY.accessibility], ['/methods/', COPY.methods]]) {
+    assert.ok(foot.includes(`<a href="${href}">${label}</a>`), href);
+  }
+  // The affiliation line, the credit and the license stay.
+  assert.ok(foot.includes(escapeHtml(COPY.affiliation)));
+  assert.ok(foot.includes(COPY.builtWith));
+  assert.ok(foot.includes('rel="license noopener"'));
+});
+
+test('page: the footer uses no inline style (a strict CSP forbids it)', () => {
+  assert.doesNotMatch(page(PAGE), /\sstyle=/);
 });
 
 test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {
@@ -302,6 +369,21 @@ test('markdownSections: a line outside the subset ("### x", a "|" line with no r
   const { markdownSections } = await import('../render/markdown.js');
   const { sections } = markdownSections('### Not a heading\n\n| a | b\nnext line\n', { idPrefix: 'd' });
   assert.equal(String(sections[0].body), '<p>### Not a heading</p><p>| a | b next line</p>');
+});
+
+test('markdownSections: a second "# " title, two "## " headings with one id and a heading with no id stop it, naming the label', async () => {
+  const { markdownSections } = await import('../render/markdown.js');
+  const bad = [
+    ['# One\n\ntext\n\n# Two\n', /more than one "# " title/],
+    ['## Same\n\ntext\n\n## same!\n', /"same!" gives the id "d-same" that "Same" already has/],
+    ['## !!!\n\ntext\n', /"!!!" has no letters or digits/],
+  ];
+  for (const [md, message] of bad) {
+    assert.throws(() => markdownSections(md, { idPrefix: 'd', label: 'the-label' }), (err) => err instanceof RangeError && err.message.startsWith('the-label: ') && message.test(err.message), md);
+    assert.throws(() => markdownSections(md, { idPrefix: 'd' }), /^RangeError: d: /, 'the label defaults to the id prefix');
+  }
+  // One title and headings that differ are fine.
+  assert.deepEqual(markdownSections('# T\n\n## A b\n\n## A-c\n', { idPrefix: 'd' }).sections.map((x) => x.id), ['d-a-b', 'd-a-c']);
 });
 
 test('programHeader: the small mark to /, the name and edition tag, the search slot, the toggle, then the numbered nav and the byline', async () => {

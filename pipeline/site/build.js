@@ -1,26 +1,29 @@
 // make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
-// site's scripts and styles), then runs each site's generator in order. PP_ENV=production is the only build that may
-// be indexed (robotsFor in context.js holds the rule).
+// site's scripts and styles), runs each site's generator in order, then writes Cloudflare's _headers (headers.js).
+// PP_ENV=production is the only build that may be indexed (robotsFor in context.js holds the rule for pages).
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
-import { REPO_ROOT } from '../files.js';
+import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
+import { SITE } from '../../web/site.js';
 import { buildAssets } from './assets.js';
-import { createContext } from './context.js';
+import { createContext, siteDates } from './context.js';
+import { headersFile } from './headers.js';
 
-// Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx) }: entries are its browser
-// JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after web/styles/).
-// Last: the hub writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
+// Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx, { updated }) }: entries are
+// its browser JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after
+// web/styles/). A program site (one in web/site.js's SITE.sites) returns its two dates for the corrections page,
+// { updated: { cmsReleased, changed } }; updated is the dates of the program sites run before, by id. Last: the hub
+// lists those dates, and writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
 // Shared by every site: the theme toggle (every page), the figure layer (pages with a figure), the citation Copy
 // button (pages with a citation block), the share control (pages with one) and a program site's top bar (pages with
 // one); layout.js loads the theme script, and a page lists the others it needs.
 export const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
 
-const DIST = resolve(REPO_ROOT, 'dist');
+const DIST = resolve(DIST_DIR);
 const inside = (dir, parent) => {
   const rel = relative(parent, dir);
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
@@ -46,7 +49,7 @@ export function mergeEntries(...sets) {
   return merged;
 }
 
-export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites = SITES } = {}) {
+export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -56,11 +59,17 @@ export async function build({ outDir = 'dist', env = process.env.PP_ENV, sites =
     styles: sites.flatMap((s) => s.styles ?? []),
   });
   const ctx = createContext({ outDir: dir, env, assets });
-  for (const site of sites) await site.generate(ctx);
+  const updated = new Map();
+  for (const site of sites) {
+    const result = await site.generate(ctx, { updated });
+    if (Object.hasOwn(SITE.sites, site.id)) updated.set(site.id, siteDates(site.id, result));
+  }
+  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
+  writeFileMkdir(join(dir, '_headers'), headersFile({ env }));
   return { pages: ctx.pages };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   const { pages } = await build();
   console.log(`dist/: ${pages} pages (PP_ENV=${process.env.PP_ENV ?? 'unset'})`);
 }

@@ -15,7 +15,7 @@ import { REDUCTION_TEXT, SHORT_NAMES } from '../constants.js';
 import { sourceText } from '../copy.js';
 import { fill, fillKeep, t } from '../program/copy.js';
 import { moneySourceText } from '../money-figures.js';
-import { LINKS } from '../links.js';
+import { LINKS, PROGRAM_PATH } from '../links.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
 import { part4 } from '../history-figures.js';
@@ -25,14 +25,12 @@ import { moneyPart, moneyPartIntro, summaryMoneyField } from '../money-part.js';
 import { t as mt } from '../money/copy.js';
 import { whatIfSection } from './whatif.js';
 
-export const PATH = SITE.sites.hacrp.path;
-
 const link = (href, text, note) => html`<li><a href="${href}">${text}</a>${note && html` <span class="muted">${note}</span>`}</li>`;
 
 // The sandbox: the what-if on the synthetic median hospital, from its own values, with no link to share (its page
 // data, pages/whatif.js, take the same shape as a hospital page's). Its label is the section's, under the heading.
 function sandbox(whatif, { fy, boundaryText, source }) {
-  const data = { name: null, fy, path: PATH, source, boundaryText, baseline: 'sandbox', share: false };
+  const data = { name: null, fy, path: PROGRAM_PATH, source, boundaryText, baseline: 'sandbox', share: false };
   return whatIfSection(whatif, data, 'hacrp-program');
 }
 
@@ -51,16 +49,16 @@ function programTop({ title, subtitle, fy, counts, boundaryText, periods, source
     how: html`<a href="#how">${t('heroHow')}</a>`,
   });
   return html`<header class="page__head prog__top">
-<div class="prog__intro">
+<div class="prog__intro stack">
 <p class="cap kicker prog__kicker">${fill('kicker', { subtitle, fy: fyText })}</p>
 <h1 class="prog__title">${at < 0 ? title : html`${title.slice(0, at)} <span class="prog__title-pen">${title.slice(at + 1)}</span>`}</h1>
 <p class="prog__lede">${t('progLedeScore')} ${fill('progLedeCut', { pct: REDUCTION_TEXT })} <strong>${fill('progLedeCount', { fy: fyText, yes: count(counts.yes), decided: count(counts.decided) })}</strong> ${t('progLedeEnd')}</p>
-${searchUrl && html`<div class="prog__find">
+${searchUrl && html`<div class="prog__find stack">
 ${searchBox(searchUrl, { id: 'hero', hero: true })}
 ${tryMarkup && html`<p class="prog__try">${tryMarkup}</p>`}
 </div>`}
 </div>
-<div class="prog__card">
+<div class="prog__card stack">
 <div class="form prog__summary">
 ${formTitle(fill('summaryTitle', { fy: fyText }), fillKeep('summaryReleased', { date: isoDate(source.pdcReleased) }, ['date']))}
 ${[
@@ -131,20 +129,26 @@ ${hd ? html`<section class="part" id="history" aria-labelledby="history-h">
 ${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: String(hd.fys.length), k: String(hd.cutYears) }), intro: hfill('part4Intro', { first: String(hd.fys[0]), share: pct(hd.counts[hd.counts.length - 1].ever / hd.recs.size, 0) }) })}
 ${part4({ hd, figure: figureNo, rollUrl, src: searchUrl, shapes, master })}
 </section>` : ''}
-<div class="prog__foot">
-<section class="block" aria-labelledby="links-h">
+<section class="block prog__links" aria-labelledby="links-h">
 <h2 id="links-h" class="h-sm">${t('linksHeading')}</h2>
+<div class="prog__links-cols">
 <ul class="links" role="list">
 ${link(LINKS.cmsProgram, t('linkCmsProgram'))}
 ${link(source.landingPage, t('linkPdc'))}
+</ul>
+<ul class="links" role="list">
 ${link(LINKS.careCompare, t('linkCareCompare'), t('linkCareCompareNote'))}
 ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </ul>
+</div>
 </section>
+<div class="prog__foot">
 <div class="prog__facts">
 ${asofBar({ fy, periods, source })}
 ${dataLinks(fy, source)}
-${citation({ fy, title: heading, path: PATH, source })}
+</div>
+<div class="prog__facts">
+${citation({ fy, title: heading, path: PROGRAM_PATH, source })}
 </div>
 </div>
 </article>`;
@@ -152,7 +156,7 @@ ${citation({ fy, title: heading, path: PATH, source })}
   return page({
     title: `${heading} · ${SITE.name}`,
     description: fill('programDescription', { fy: fyText }),
-    path: PATH,
+    path: PROGRAM_PATH,
     robots,
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],

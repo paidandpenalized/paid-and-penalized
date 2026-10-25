@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
-import { changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
+import { changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
 
 test('the master must be built for the same HACRP year as the HACRP file; the message names both years', () => {
   checkMasterYear({ programYears: { hacrp: 2026 } }, 2026);
@@ -83,4 +83,22 @@ test('checkHistoryYear: a history that does not end with the HACRP file\'s year 
   assert.doesNotThrow(() => checkHistoryYear(null, 2027));
   assert.doesNotThrow(() => checkHistoryYear({ fy: 2027 }, 2027));
   assert.throws(() => checkHistoryYear({ fy: 2026 }, 2027), /history ends at FY2026/);
+});
+
+test('the day the numbers last changed reads the HACRP file, its history and its dollar estimates: not the hospital master, which another program\'s re-emit also rebuilds', () => {
+  const { builtFiles, changedOn: day } = loadHacrp();
+  assert.deepEqual(builtFiles.map(([path]) => path.split('/')[2]), ['hacrp', 'hacrp-history', 'dollars']);
+  assert.equal(day, changedOn(builtFiles));
+});
+
+test('changedOn: the newest built_at date (UTC) among the files given; a file that is absent is skipped; a stamp that is not the schema\'s timestamp stops the build and names the file', () => {
+  const at = (built_at, path = 'data/emitted/x/fy2026/x.json') => [path, { built_at }];
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z'), at('2026-10-23T14:02:59Z'), at('2026-10-22T12:15:15Z')]), '2026-10-23');
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z'), ['data/emitted/absent', null], at('2026-10-19T00:00:00Z')]), '2026-10-20');
+  assert.equal(changedOn([at('2026-10-20T16:29:57Z')]), '2026-10-20');
+  for (const bad of [at(undefined, 'b.json'), at('', 'b.json'), at('2026-10-20', 'b.json'), at('10/20/2026', 'b.json'),
+    at('2026-02-30T00:00:00Z', 'b.json'), at('2026-10-20T16:29:57.5Z', 'b.json'), ['b.json', {}]]) {
+    assert.throws(() => changedOn([at('2026-10-20T16:29:57Z'), bad]), /b\.json: built_at/, JSON.stringify(bad));
+  }
+  assert.throws(() => changedOn([['a.json', null]]), RangeError);
 });

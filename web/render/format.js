@@ -1,4 +1,6 @@
 // Display formatting. CMS's own text is shown as CMS published it; only the hyphen-minus becomes a true minus.
+import { isoParts, onCalendar } from '../../engine/js/dates.js';
+
 const MINUS = '−';
 const NUMBER = new Intl.NumberFormat('en-US');
 const LIST = new Intl.ListFormat('en-US', { type: 'conjunction' });
@@ -110,10 +112,7 @@ export function dollars(x, { sign = false } = {}) {
 export const roundedDollars = (x, options) => dollars(Math.round(x), options);
 
 function longForm(year, month, day, source) {
-  const d = new Date(Date.UTC(year, month - 1, day));
-  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
-    throw new RangeError(`not a calendar date: "${source}"`);
-  }
+  if (!onCalendar(year, month, day)) throw new RangeError(`not a calendar date: "${source}"`);
   return `${MONTHS[month - 1]} ${day}, ${year}`;
 }
 
@@ -122,13 +121,6 @@ export function longDate(text) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
   if (!m) throw new RangeError(`expected MM/DD/YYYY, got "${text}"`);
   return longForm(Number(m[3]), Number(m[1]), Number(m[2]), text);
-}
-
-// [year, month, day] of a YYYY-MM-DD text.
-function isoParts(text) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-  if (!m) throw new RangeError(`expected YYYY-MM-DD, got "${text}"`);
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
 // YYYY-MM-DD.

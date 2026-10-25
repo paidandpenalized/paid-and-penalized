@@ -21,13 +21,13 @@ import { loadHacrp } from './data.js';
 import { historyData } from './history-data.js';
 import { historySource, rollAsset } from './history-figures.js';
 import { compareDefault } from './hospital-table.js';
-import { DICTIONARY_PAGE, csvPath, dictionaryPath } from './links.js';
+import { DICTIONARY_PAGE, PROGRAM_PATH, csvPath, dictionaryPath } from './links.js';
 import { t as mt } from './methods/copy.js';
 import { dictionaryPage } from './pages/dictionary.js';
 import { hospitalPage } from './pages/hospital.js';
 import { methodsPage, METHODS_PATH } from './pages/methods.js';
 import { placePage } from './pages/place.js';
-import { programPage, PATH as PROGRAM_PATH } from './pages/program.js';
+import { programPage } from './pages/program.js';
 import { exploreAsset, programData } from './program-data.js';
 import { cutDollars, hospitalMoney } from './money.js';
 import { moneyData } from './money-data.js';
@@ -70,10 +70,11 @@ export function scoreRange(hospitals) {
 }
 
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass
-// data from loadHacrp() to read the files once.
+// data from loadHacrp() to read the files once. Returns the site's two dates for the hub's corrections page
+// (build.js): the CMS file's release and the day its numbers last changed.
 export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released, data = loadHacrp(), log = console.log } = {}) {
   const { env, assets } = ctx;
-  const { fy, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
+  const { fy, changedOn, hospitals, model, estimate, footnotes, master, periods, source, boundaryText, dictionary, careCompare, careCompareSource, shapes, counties, masterFy, changes, manifest, sourceRows, history, infections, pinsUsed, dollars } = data;
   // Every program year, when the build holds the history: Part 4, the Methods page's checks, each hospital's record.
   const hd = history ? historyData({ history, master }) : null;
   if (hd) {
@@ -110,7 +111,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
   // The hospitals asset: the searches on every page (hospitals and places), and the hospital tables.
   const searchUrl = ctx.asset('hacrp-hospitals', 'json', JSON.stringify(hospitalRows(views, places, dollars.byCcn)));
   // The dictionary as a page, which the data links open; indexed as the program page is.
-  emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
+  emitPage({ path: DICTIONARY_PAGE, robots: programRobots, text: dictionaryPage({ text: dictionaryFilled, fy, periods, source, path: DICTIONARY_PAGE, robots: programRobots, assets, searchUrl }) });
   // The explore asset: what the explorable figures draw in the browser (program-data.js exploreAsset).
   const exploreUrl = ctx.asset('hacrp-explore', 'json', JSON.stringify(exploreAsset(pd, model)));
   // The hero's suggestions: the state and the metro area with the most hospitals with a payment decision.
@@ -178,7 +179,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       fy,
       checks,
       years: hd ? hd.years.map((y) => ({ fy: y.fy, periods: y.periods })) : [{ fy, periods }],
-      newest: { rows: sourceRows, source, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: pageCount + 1, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
+      newest: { rows: sourceRows, source, periods, pin: manifest.find((e) => e.id === source.id), measures: MEASURE_IDS.length, pages: pageCount + 1, sourceLine: hd ? historySource(hd) : sourceText({ fy, source }) },
       pins: pinsUsed,
       changes,
       estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.length ? listText(tagged.map((id) => SHORT_NAMES[id])) : null, maxError: tagged.length ? Math.max(...tagged.map((id) => estimate[id].maxError)) : null },
@@ -195,6 +196,7 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       },
     }),
   });
+  return { updated: { cmsReleased: source.pdcReleased, changed: changedOn } };
 }
 
 // The newest year's self-check, for a build without the history: each hospital's z-scores averaged again against

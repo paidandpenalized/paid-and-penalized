@@ -5,11 +5,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
+import { isIsoDate } from '../../../engine/js/dates.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
-import { SOURCES, emittedPath } from '../pipeline/build.js';
+import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
 import { rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
@@ -109,17 +110,43 @@ export function dollarsData(dollars, hospitals) {
   return { fy, byCcn, national, headline: { ...headline, cmsCut: headline.yes }, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
 }
 
+// An emitted file's built_at: UTC, whole seconds (builtAt in schemas/common.schema.json).
+const BUILT_AT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}Z$/;
+
+// The date (YYYY-MM-DD, UTC) the newest of these emitted files was built: the newest built_at among them. files:
+// [[repo path, the parsed file]]; a file that is absent (the history, in a build without one) is null and skipped. A
+// built_at that is not a timestamp on the calendar stops the build and names the file.
+export function changedOn(files) {
+  const days = files.filter(([, file]) => file).map(([path, file]) => {
+    const day = BUILT_AT.exec(file.built_at)?.[1];
+    if (!isIsoDate(day)) throw new RangeError(`HACRP: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
+    return day;
+  });
+  if (!days.length) throw new RangeError('HACRP: no emitted file to take a built_at from');
+  return days.sort().at(-1);
+}
+
 export function loadHacrp() {
-  const data = readJson(REPO_ROOT + emittedPath(newestYear('data/emitted/hacrp')));
-  const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
+  // The emitted files the pages read, repo-relative, each from its newest year.
+  const paths = {
+    data: newestEmittedPath(),
+    master: masterPath(newestYear('data/emitted/hospital')),
+    history: existsSync(REPO_ROOT + 'data/emitted/hacrp-history') ? historyPath(newestYear('data/emitted/hacrp-history')) : null,
+    dollars: dollarsPath(newestYear('data/emitted/dollars')),
+  };
+  const data = readJson(REPO_ROOT + paths.data);
+  const masterFile = readJson(REPO_ROOT + paths.master);
   // The history, when the build holds one, must end with the year the pages show: a new year's pin without its
   // history fails here rather than dropping the history from the site.
-  const history = existsSync(REPO_ROOT + 'data/emitted/hacrp-history') ? readJson(REPO_ROOT + historyPath(newestYear('data/emitted/hacrp-history'))) : null;
+  const history = paths.history ? readJson(REPO_ROOT + paths.history) : null;
   checkHistoryYear(history, data.fy);
   checkMasterYear(masterFile, data.fy);
-  const dollarsFile = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
+  const dollarsFile = readJson(REPO_ROOT + paths.dollars);
   checkDollarsYear(dollarsFile, data.fy);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  // The files this site's numbers come from. The hospital master is left out: it is shared, so a re-emit for another
+  // program rebuilds it without changing a number here. The history is null in a build without one.
+  const builtFiles = [[paths.data, data], [paths.history, history], [paths.dollars, dollarsFile]];
 
   for (const h of data.hospitals) {
     if (!CCN.test(h.ccn)) throw new RangeError(`HACRP: CCN "${h.ccn}" is not six digits or capital letters`);
@@ -142,6 +169,9 @@ export function loadHacrp() {
   const topo = JSON.parse(readPinned(ATLAS_ID));
   return {
     fy: data.fy,
+    // The day this site's numbers last changed (the corrections page shows it): the newest built_at of builtFiles.
+    builtFiles,
+    changedOn: changedOn(builtFiles),
     hospitals: data.hospitals,
     model: data.model,
     boundaryText: boundaryText(data.hospitals, data.model.boundary),

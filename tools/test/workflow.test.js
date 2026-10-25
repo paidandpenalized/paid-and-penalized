@@ -59,3 +59,37 @@ test('python runs isolated (-I), so the working directory never shadows a module
   assert.ok(runs.length > 0);
   for (const l of runs) assert.match(l, /run: python3? -I /, l);
 });
+
+// The text of one job, from its "  <name>:" line to the next job's.
+function jobText(name) {
+  const start = lines.indexOf(`  ${name}:`);
+  assert.ok(start > 0, `no "${name}" job`);
+  const end = lines.findIndex((l, i) => i > start && /^ {2}[\w-]+:/.test(l));
+  return lines.slice(start, end < 0 ? undefined : end).join('\n');
+}
+
+// A job's one-line run commands, in order.
+const commandsOf = (job) => job.split('\n').filter((l) => /^\s+run: /.test(l)).map((l) => l.replace(/^\s+run: /, ''));
+
+test('the browser job runs on a pinned runner with a time limit: Chromium only, built site, then the e2e suite', () => {
+  const job = jobText('browser');
+  assert.match(job, /^ {4}runs-on: ubuntu-24\.04$/m);
+  assert.match(job, /^ {4}timeout-minutes: 15$/m);
+  // The commands in order: the browser is installed before the checks run, and the site is built before they read it.
+  // Chromium alone: Firefox and WebKit run in the launch command on a machine that has them, not on every push.
+  assert.deepEqual(commandsOf(job), ['npm ci', 'npx playwright install --with-deps chromium', 'make build', 'npm run e2e']);
+});
+
+test('the tests and the checks on the built site run as two jobs side by side, each on a pinned runner with a time limit', () => {
+  const tests = jobText('test');
+  const dist = jobText('dist');
+  for (const job of [tests, dist]) {
+    assert.match(job, /^ {4}runs-on: ubuntu-24\.04$/m);
+    assert.match(job, /^ {4}timeout-minutes: 10$/m);
+    assert.doesNotMatch(job, /^ {4}needs:/m, 'neither waits for the other');
+  }
+  // The change gate reads the history (fetch-depth 0); the site is built before its size and links are checked.
+  assert.deepEqual(commandsOf(tests), ['npm ci', 'npm test', 'node tools/ci/change-gate.js']);
+  assert.match(tests, /fetch-depth: 0/);
+  assert.deepEqual(commandsOf(dist), ['npm ci', 'make build', 'node tools/ci/size-budget.js', 'node tools/ci/link-check.js']);
+});

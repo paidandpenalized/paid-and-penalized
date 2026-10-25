@@ -1,10 +1,18 @@
 // Test setup read from the pinned HACRP data (fixtures.js holds only synthetic data): the loaded files, the
 // national ranges and score span the pages draw, the national context, what the program page and the place pages
 // draw, each hospital's view, the history, and the program page's arguments for tests that vary one of them.
+import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
+import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
+import { ESTIMATE_THRESHOLD } from '../../../engine/js/hacrp/params.js';
+import { listText } from '../../../web/render/format.js';
+import { SHORT_NAMES } from '../web/constants.js';
 import { loadHacrp } from '../web/data.js';
 import { scoreRange } from '../web/generate.js';
 import { nationalContext } from '../web/compare.js';
+import { historySource } from '../web/history-figures.js';
+import { t as mt } from '../web/methods/copy.js';
+import { methodsPage } from '../web/pages/methods.js';
 import { placePage } from '../web/pages/place.js';
 import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
@@ -54,6 +62,21 @@ export const renderProgram = (overrides = {}) => programPage({
 export const renderPlace = (place, overrides = {}) => placePage({
   place, places: PLACES, pd: PD, model: DATA.model, hospitalRows: HOSPITAL_ROWS, master: DATA.master, shapes: DATA.shapes, counties: DATA.counties,
   fy: DATA.fy, periods: DATA.periods, source: DATA.source, searchUrl: SEARCH_URL, robots: null, assets: ASSETS, md: MD, ...overrides,
+});
+
+// The Methods page as the build renders it (generate.js), on the pinned data with its history and the dollars: the
+// self-check for every year, the newest year's pipeline numbers, the estimate's tolerance and tagged measures.
+// overrides replace any argument.
+const tagged = MEASURE_IDS.filter((id) => DATA.estimate[id].tagged);
+export const renderMethods = (overrides = {}) => methodsPage({
+  fy: DATA.fy,
+  checks: HD.checks.map((c) => ({ fy: c.fy, rule: mt(c.ruleKey), check: c.check })),
+  years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
+  newest: { rows: DATA.sourceRows, source: DATA.source, periods: DATA.periods, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: MEASURE_IDS.length, pages: 1, sourceLine: historySource(HD) },
+  pins: DATA.pinsUsed, changes: DATA.changes,
+  estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.length ? listText(tagged.map((id) => SHORT_NAMES[id])) : null, maxError: tagged.length ? Math.max(...tagged.map((id) => DATA.estimate[id].maxError)) : null },
+  boundaryText: DATA.boundaryText, eqFy: EQUAL_FROM, zFy: Z_FROM, robots: null, assets: ASSETS, searchUrl: SEARCH_URL, dollars: DATA.dollars, names: () => null,
+  ...overrides,
 });
 
 export const PROGRAM_ARGS = {

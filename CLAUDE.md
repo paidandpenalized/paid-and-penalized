@@ -19,7 +19,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   or clock) so the page build and the browser share one copy.
 - `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page. A site's
   own CSS is `sites/<program>/web/styles.css` (bundled after `web/styles/`); its browser scripts are in `client/`.
-- `web/`: what every page shares: `site.js` (name, origin, each site's path, names and release state), `render/`
+- `web/`: what every page shares: `site.js` (name, origin, the hub's release state, each site's path, names and release state), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
   `styles/` (`tokens.css` is the only CSS or JS file under `web/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
   licenses, the favicon.
@@ -27,8 +27,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   one ES module per JS entry, content-hashed), then runs each site in its `SITES` list (hub last). Each site exports
   a manifest `{ id, entries, styles, generate }` from its generator (`sites/<program>/web/generate.js`,
   `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
-  hashed data, `robotsFor`, the one indexing rule). `serve.js` previews `dist/` locally. `dist/` is build output and
-  gitignored.
+  hashed data, `robotsFor`, the one indexing rule). Last, the build writes Cloudflare's `dist/_headers`
+  (`headers.js`: the CSP, security headers, caching, `X-Robots-Tag: noindex` on every build but production, and
+  the parser and matcher that read it back as Cloudflare does). `serve.js` previews `dist/` locally with those
+  headers. `dist/` is build output and gitignored.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
   A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
   hook blocks them and a test fails on any tracked file that size.
@@ -61,9 +63,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Test fixtures name no hospital.** Pick rows by property ("a row with an assigned measure"), or use synthetic
   rows.
 - **Dependencies: build time only.** The engine, the pipeline's data code and their tests use none; tests run on
-  Node's built-in `node:test` (`npm test`). The page build uses four pinned dev dependencies: esbuild, d3-scale,
-  d3-array, d3-format (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or
-  download, to Dalton before running it. Pin exact versions.
+  Node's built-in `node:test` (`npm test`, which needs no browser). The page build uses four pinned dev dependencies:
+  esbuild, d3-scale, d3-array, d3-format; the browser checks (`npm run e2e`, `tools/e2e/`) use two more, playwright
+  and axe-core (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or download
+  (including a Playwright browser), to Dalton before running it. Pin exact versions.
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).
@@ -103,3 +106,11 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `make hooks`: point git at `.githooks/`.
 - `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production`.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
+- `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`; a test that takes over 3 minutes fails. Chromium runs the
+  installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks
+  another engine; `E2E_BASE_URL=<url>` tests a running site instead of serving `dist/` (the build still picks the pages). Not part of
+  `make test`.
+- `E2E_BASE_URL=<site> npm run e2e:launch`: the launch check, run by hand where all three browser engines are installed.
+  Compares the site's live response headers with `dist/_headers` first (home, program and hospital pages, a request for
+  each `_headers` rule, an unknown path, a missing hashed asset), then runs `npm run e2e` on Chromium, Firefox and WebKit
+  against the site. Needs a `dist/` built from the deployed commit with the deployed `PP_ENV`. CI's `browser` job runs `npm run e2e` on Chromium only.

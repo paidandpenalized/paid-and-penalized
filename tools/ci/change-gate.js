@@ -13,22 +13,12 @@
 // A deleted or renamed file (git reports a rename as delete + add) needs a corrections entry. The evidence is all
 // in the tree, so PR runs and the push to main after the merge reach the same verdict.
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { CORRECTIONS, isEntry } from '../../pipeline/corrections.js';
+import { isMain } from '../../pipeline/files.js';
 import { METHODS_LOG, latestMethodsVersion } from '../../pipeline/methods-log.js';
 import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const EMITTED = 'data/emitted/';
-const CORRECTIONS = 'corrections/';
-const ENTRY_NAME = /^corrections\/(\d{4})-(\d{2})-(\d{2})-[a-z0-9][a-z0-9-]*\.md$/;
-
-// A dated entry's path: corrections/YYYY-MM-DD-<slug>.md with a date that exists on the calendar.
-export function isEntry(path) {
-  const m = ENTRY_NAME.exec(path);
-  if (!m) return false;
-  const [y, mo, d] = m.slice(1).map(Number);
-  const date = new Date(Date.UTC(y, mo - 1, d));
-  return y >= 2000 && date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
-}
 const MANIFEST = 'data/pinned/manifest.json';
 
 // Dated entries this change edits, retypes or deletes.
@@ -191,7 +181,7 @@ function main() {
   if (!result.ok) process.exit(1);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (err) {

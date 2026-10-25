@@ -1,16 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { request } from 'node:http';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { REPO_ROOT, repoFiles } from '../files.js';
+import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
+import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
+import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
-import { createContext, robotsFor } from '../site/context.js';
-import { createSiteServer } from '../site/serve.js';
-import { withTemp as inTemp } from './helpers.js';
+import { createContext, robotsFor, siteDates } from '../site/context.js';
+import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { htmlPages, tags } from '../site/html.js';
+import { get, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
@@ -124,6 +126,106 @@ test('emit refuses a path outside the site; asset writes a content-hashed file',
     assert.equal(readFileSync(join(dir, url), 'utf8'), '[1]');
   }));
 
+test('siteDates takes a site\'s two dates from what its generate returned; none, or a date that is not YYYY-MM-DD on the calendar, throws naming the site', () => {
+  const ok = { cmsReleased: '2026-08-13', changed: '2026-10-22' };
+  assert.deepEqual(siteDates('hacrp', { updated: ok }), ok);
+  for (const none of [undefined, null, {}]) assert.throws(() => siteDates('hacrp', none), (err) => err instanceof RangeError && /"hacrp" gave the build no dates/.test(err.message), JSON.stringify(none));
+  for (const bad of [undefined, null, '', '2026-02-30', '10/22/2026', '2026-8-13', '2026-10-22T00:00:00Z']) {
+    assert.throws(() => siteDates('hacrp', { updated: { ...ok, cmsReleased: bad } }), (err) => err instanceof RangeError && /"hacrp".*cmsReleased/.test(err.message), `cmsReleased ${bad}`);
+    assert.throws(() => siteDates('hacrp', { updated: { ...ok, changed: bad } }), (err) => err instanceof RangeError && /"hacrp".*changed/.test(err.message), `changed ${bad}`);
+  }
+  assert.throws(() => siteDates('hacrp', { updated: { cmsReleased: '2026-02-30', changed: '2026-10-22' } }), /2026-02-30/);
+});
+
+// A site that runs without writing anything, and (when asked) returns its dates.
+const quietSite = (id, { dates = false } = {}) => ({ id, generate: () => (dates ? { updated: { cmsReleased: '2026-08-13', changed: '2026-10-22' } } : undefined) });
+
+test('a program site that returns no dates stops the build; the hub alone, or every program site with its dates, builds; another site owes none', () =>
+  withTemp(async (dir) => {
+    await assert.rejects(build({ outDir: join(dir, 'a'), sites: [quietSite('hacrp'), HUB] }), /"hacrp" gave the build no dates/);
+    assert.ok((await build({ outDir: join(dir, 'b'), sites: [HUB] })).pages > 0);
+    assert.ok((await build({ outDir: join(dir, 'c'), sites: [quietSite('hacrp', { dates: true }), quietSite('faux'), HUB] })).pages > 0);
+  }));
+
+// The newest built_at date among the emitted files the numbers come from: the files loadHacrp lists (builtFiles; the
+// history is null in a build without one), each read again from disk.
+const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
+  .map(([path]) => readJson(REPO_ROOT + path).built_at.slice(0, 10)).sort().at(-1);
+
+// HACRP released on its first four hospitals (every page type, in well under a second) with the hub: built once, in
+// production, for the tests that read a whole build.
+const DATA = loadHacrp();
+const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
+
+test('HACRP gives the build its two dates, which /corrections/ shows', async () => {
+  const out = await builtSlice();
+  // The dates: CMS's release of the file the site uses, and the newest built_at of the emitted files it reads.
+  const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
+  assert.ok(text.includes(`<time datetime="${DATA.source.pdcReleased}">`));
+  assert.ok(text.includes(`<time datetime="${newestBuilt(DATA)}">`));
+});
+
+test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
+  withTemp(async (dir) => {
+    for (const env of ['preview', 'production']) {
+      const out = join(dir, env);
+      await build({ outDir: out, env, sites: [] });
+      assert.equal(readFileSync(join(out, '_headers'), 'utf8'), headersFile({ env }), env);
+    }
+  }));
+
+// What a page holds that runs as inline script or style: a script with no src of the site's own runs inline unless it
+// is a data block; an on* attribute and a javascript: URL are inline script too. script-src 'self' blocks all three,
+// and style-src-elem 'self' blocks a <style> element. dataBlocks: the data blocks, which may stay.
+const DATA_TYPES = new Set(['application/json', 'application/ld+json']);
+function inlineCode(page) {
+  const problems = [];
+  let dataBlocks = 0;
+  for (const { name, attrs } of tags(page)) {
+    if (name === 'script' && DATA_TYPES.has(attrs.type)) dataBlocks++;
+    else if (name === 'script' && !/^\/[^/]/.test(attrs.src ?? '')) problems.push(`<script src="${attrs.src ?? ''}">`);
+    if (name === 'style') problems.push('<style>');
+    for (const [attr, value] of Object.entries(attrs)) {
+      if (/^on[a-z]+$/.test(attr)) problems.push(`<${name} ${attr}>`);
+      if (/^\s*javascript:/i.test(value)) problems.push(`<${name} ${attr}="javascript:...">`);
+    }
+  }
+  return { problems, dataBlocks };
+}
+
+test('every built page runs under the CSP: no inline script but data blocks, no <style> element, no on* handler or javascript: URL', async () => {
+  const out = await builtSlice();
+  const pages = htmlPages(out);
+  assert.ok(pages.length > 10);
+  let dataBlocks = 0;
+  for (const f of pages) {
+    const found = inlineCode(readFileSync(join(out, f), 'utf8'));
+    assert.deepEqual(found.problems, [], f);
+    dataBlocks += found.dataBlocks;
+  }
+  assert.ok(dataBlocks > 0, 'the checks see the data blocks');
+  // The checks see what they are meant to.
+  assert.deepEqual(inlineCode('<button onclick="x()">').problems, ['<button onclick>']);
+  assert.deepEqual(inlineCode('<p data-on="1" class="on">on=</p>'), { problems: [], dataBlocks: 0 });
+  assert.equal(inlineCode('<script type="module">x()</script><script src="//elsewhere.example/x.js"></script>').problems.length, 2);
+  assert.deepEqual(inlineCode('<script type="application/ld+json">{}</script><script src="/assets/x.js"></script>'), { problems: [], dataBlocks: 1 });
+  assert.equal(inlineCode('<style>p{}</style><a href=" javascript:x()">').problems.length, 2);
+});
+
+test('the immutable rule matches the content-hashed files under /assets/ and nothing else the build writes', async () => {
+  const out = await builtSlice();
+  const rules = parseHeaders(readFileSync(join(out, '_headers'), 'utf8'));
+  const seen = new Set();
+  for (const f of filesUnder(out)) {
+    const path = `/${f}`;
+    const hashed = /^\/assets\/[a-z0-9-]+\.[0-9a-f]{8}\.[a-z]+$/.test(path);
+    const cache = headersFor(rules, path)['cache-control'] ?? '';
+    assert.equal(cache.includes('immutable'), hashed, path);
+    if (hashed) seen.add(path.split('.').at(-1));
+  }
+  assert.deepEqual([...seen].sort(), ['css', 'js', 'json']);
+});
+
 test('robotsFor: only a production build of a released site indexes, and only eligible pages', () => {
   const cases = [
     [{ env: 'production', released: true }, null],
@@ -202,49 +304,27 @@ test('tokens.css keeps the dark block in the shape the build copies, and every t
   }
 });
 
-test('print forces the light tokens on white: every color token the light block sets, the print block sets with !important', () => {
+test('print forces the light tokens on white: the bundle\'s print block sets every color token the light block sets, each !important', () => {
   const tokens = readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8');
-  const decls = (block) => new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+?)\s*(?:!important)?;/g)].map((m) => [m[1], m[2]]));
-  const light = decls(/^:root \{([^}]*)\}/m.exec(tokens)[1]);
-  const block = /@media print \{\s*:root \{([^}]*)\}\s*\}/.exec(tokens);
+  const decls = (block) => new Map([...block.matchAll(/(--[\w-]+):\s*([^;]+?)\s*;/g)].map((m) => [m[1], m[2]]));
+  const light = [...decls(/^:root \{([^}]*)\}/m.exec(tokens)[1])].filter(([, value]) => /^(#|rgba?\()/.test(value));
+  assert.ok(light.length > 10, 'the light block\'s colors');
+  const block = /@media print \{\s*:root \{([^}]*)\}\s*\}/.exec(stylesheet());
   assert.ok(block, 'print block');
   const print = decls(block[1]);
-  for (const [name, value] of light) {
-    if (!/#|rgba?\(/.test(value) || name === '--grain') continue;
-    assert.equal(print.get(name), name === '--paper' ? '#ffffff' : value, name);
-  }
+  for (const [name, value] of light) assert.equal(print.get(name), `${name === '--paper' ? '#ffffff' : value} !important`, name);
+  assert.equal(print.get('--grain'), 'none !important');
   assert.equal(block[1].match(/;/g).length, block[1].match(/!important;/g).length, 'every print declaration is !important');
-  assert.ok(stylesheet().includes('@media print'), 'the bundle carries the print rules');
 });
-
-// A raw request, so the path reaches the server exactly as written (no client-side normalising of ..).
-function get(port, path) {
-  return new Promise((resolve, reject) => {
-    const req = request({ host: '127.0.0.1', port, path }, (res) => {
-      let body = '';
-      res.on('data', (c) => (body += c));
-      res.on('end', () => resolve({ status: res.statusCode, type: res.headers['content-type'], location: res.headers.location, body }));
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
 
 test('the local server serves index.html for directories, 404.html for unknown paths, and nothing outside its root', () =>
   withTemp(async (dir) => {
     const root = join(dir, 'dist');
-    mkdirSync(join(root, 'hacrp'), { recursive: true });
-    writeFileSync(join(root, 'index.html'), 'home');
-    writeFileSync(join(root, '404.html'), 'not here');
-    writeFileSync(join(root, 'hacrp', 'index.html'), 'hacrp');
+    writeTree(root, { 'index.html': 'home', '404.html': 'not here', 'hacrp/index.html': 'hacrp', 'd.csv': 'a', 'D.md': 'b' });
     writeFileSync(join(dir, 'secret.txt'), 'outside');
-    writeFileSync(join(root, 'd.csv'), 'a');
-    writeFileSync(join(root, 'D.md'), 'b');
-    const server = createSiteServer(root);
-    await new Promise((r) => server.listen(0, '127.0.0.1', r));
-    const { port } = server.address();
-    try {
-      assert.deepEqual(await get(port, '/'), { status: 200, type: 'text/html; charset=utf-8', location: undefined, body: 'home' });
+    await withServer(root, async (port) => {
+      const home = await get(port, '/');
+      assert.deepEqual([home.status, home.type, home.location, home.body], [200, 'text/html; charset=utf-8', undefined, 'home']);
       assert.equal((await get(port, '/hacrp/?x=1')).body, 'hacrp');
       assert.equal((await get(port, '/d.csv')).type, 'text/csv; charset=utf-8');
       assert.equal((await get(port, '/D.md')).type, 'text/markdown; charset=utf-8');
@@ -257,7 +337,5 @@ test('the local server serves index.html for directories, 404.html for unknown p
         assert.notEqual(res.body, 'outside', path);
       }
       assert.equal((await get(port, '/nope/')).body, 'not here');
-    } finally {
-      server.close();
-    }
+    });
   }));

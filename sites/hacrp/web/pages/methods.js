@@ -3,8 +3,9 @@
 // file to the pages with the newest run's real numbers, the check drawn (every recomputed score against CMS's, every
 // decision against the line this site finds, each year), the formula, what comes from CMS and what this site works
 // out, the periods behind each year's cut, the baseline, how to read a penalty, the pinned sources, what changed, the
-// glossary, and a link to the family's page for feedback, privacy and AI.
-import { fillAround, printout, stamp, typeset } from '../../../../web/render/components.js';
+// glossary, and links to the family's pages for feedback, privacy, AI and corrections; the as-of bar closes the page,
+// as it does the program page.
+import { fillAround, printout, sentenceOf, stamp, typeset } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -13,20 +14,21 @@ import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
+import { MEASURES_LEAD_ID, MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
 import { cutCounts, rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
-import { kicker, siteHeader } from './parts.js';
+import { asofBar, kicker, siteHeader } from './parts.js';
 
 export { METHODS_PATH };
 
 const para = (text) => html`<p>${text}</p>`;
+const sentence = sentenceOf(fill);
 
 // A section of the page: its heading, words, and (optionally) a figure beside them.
-const sec = ({ id, heading, body, fig = null }) => html`<section class="msec${fig ? ' msec--fig' : ''}" id="${id}" aria-labelledby="${id}-h">
+const sec = ({ id, heading, body, fig = null }) => html`<section class="doc__sec msec${fig ? ' msec--fig' : ''}" id="${id}" aria-labelledby="${id}-h">
 <div class="msec__text">
-<h2 class="msec__title" id="${id}-h">${heading}</h2>
+<h2 class="doc__h" id="${id}-h">${heading}</h2>
 ${body}
 </div>
 ${fig ? html`<div class="msec__fig">${fig}</div>` : ''}
@@ -153,7 +155,7 @@ ${para(fill('backtestInside', { low: pct(Math.min(...held), 0), high: pct(Math.m
 ${para(html`${t('backtestBias')}${most ? html` ${fill(most.median >= 0 ? 'backtestBiasHigh' : 'backtestBiasLow', { min: count(HEADLINE_MIN), group: groupWords, median: absLogPct(most.median, 1), n: count(most.n) })}` : ''}`)}
 ${para(fill('backtestNational', { ratio: pct(n.ratio, 1), share, low: pct(n.p10, 1), high: pct(n.p90, 1) }))}
 ${para(t('backtestPlaces'))}
-${para(fill('backtestMeasures', { n: numberWord(MEASURE_WORDS.length) }))}
+<p id="${MEASURES_LEAD_ID}">${fill('backtestMeasures', { n: numberWord(MEASURE_WORDS.length) })}</p>
 ${backtestMeasures(bands)}
 ${para(t('backtestLimits'))}`;
 }
@@ -169,7 +171,8 @@ const GLOSSARY = (v) => [
 ];
 
 // checks: [{ fy, rule, check }] oldest first (yearCheck results); years: [{ fy, periods }] oldest first; newest: the
-// newest year's { rows (CMS's file), source, pin (its manifest entry), measures, pages }; pins: the manifest entries
+// newest year's { rows (CMS's file), source, periods (the performance periods the as-of bar shows), pin (its manifest
+// entry), measures, pages }; pins: the manifest entries
 // the HACRP pages read; changes: [{ date, items }] newest first; estimate: { tolerance, tagged, maxError };
 // boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
@@ -181,13 +184,13 @@ export function methodsPage({ fy, checks, years, newest, pins, changes, estimate
   const source = newest.sourceLine;
 
   const top = html`<header class="page__head meth__top">
-<div class="meth__intro">
+<div class="meth__intro stack">
 ${kicker(fy)}
 <h1 class="meth__title">${t('methodsTitle')}</h1>
 <p class="meth__lede">${t('methodsLede')}</p>
 <p class="meth__lede2">${t('methodsLede2')}</p>
 </div>
-<div class="meth__card">
+<div class="meth__card stack">
 ${receipt(checks)}
 ${stamp({ label: t('checkStamp') })}
 </div>
@@ -222,7 +225,7 @@ ${printout(html`<table class="gb takes">
 </table>`)}
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
 ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollars ? dollarsTagNote() : ''}`)}
-<p><a href="/methods/#estimate">${t('estimateFamily')}</a></p>` },
+<p><a href="${SITE.pages.methods}#estimate">${t('estimateFamily')}</a></p>` },
     ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
     { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },
@@ -230,24 +233,25 @@ ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estima
     { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(t('sourcesCode'))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}
 <ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${typeset(i)}</li>`)}</ul></li>`)}</ol>
-${para(t('changedCorrections'))}` },
+${para(sentence('changedCorrections', { log: html`<a href="${SITE.pages.corrections}">${t('changedLogLink')}</a>` }))}` },
     { id: 'glossary', heading: t('glossaryHeading'), body: html`<dl class="glossary">${GLOSSARY({ eqFy }).map(([term, def, values, termValues]) => html`<div class="glossary__item"><dt>${termValues ? fill(term, termValues) : t(term)}</dt><dd>${values ? fill(def, values) : t(def)}</dd></div>`)}</dl>` },
-    { id: 'more', heading: t('familyHeading'), body: html`<p>${t('familyText')} <a href="/methods/">${t('familyLink')}</a>.</p>
+    { id: 'more', heading: t('familyHeading'), body: html`${para(sentence('familyText', { privacy: html`<a href="${SITE.pages.privacy}">${t('familyPrivacyLink')}</a>`, ai: html`<a href="${SITE.pages.about}#ai">${t('familyAiLink')}</a>` }))}
 <h3 class="msec__sub">${t('reuseHeading')}</h3>${para(t('reuseText'))}
 <h3 class="msec__sub">${t('accessHeading')}</h3>${para(t('accessText'))}` },
   ];
 
   const body = html`<article class="wrap page page--meth meth">
 ${top}
-<div class="meth__body">
-<nav class="meth__toc" aria-labelledby="toc-h">
-<p class="meth__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
-<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="meth__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
+<div class="doc doc--side-toc">
+<nav class="doc__toc" aria-labelledby="toc-h">
+<p class="doc__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
+<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
 </nav>
-<div class="meth__main">
+<div class="doc__main">
 ${sections.map(sec)}
 </div>
 </div>
+${asofBar({ fy, periods: newest.periods, source: newest.source })}
 </article>`;
 
   return page({

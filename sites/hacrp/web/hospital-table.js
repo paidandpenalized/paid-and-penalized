@@ -54,6 +54,9 @@ export function decodeState(hash, codes) {
   return null;
 }
 
+// The fragment that opens the program page on a state (decodeState reads it back): "#state=XX".
+export const stateHref = (code) => withState('', code);
+
 // The fragment with its state= part set to code (or removed when code is null); every other part is kept.
 export function withState(hash, code) {
   const parts = String(hash ?? '').replace(/^#/, '').split('&').filter((p) => p && !/^state=/.test(p));

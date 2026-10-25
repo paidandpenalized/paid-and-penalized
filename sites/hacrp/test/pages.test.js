@@ -12,7 +12,9 @@ import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
+import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
+import { externalLink } from '../../../web/render/layout.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
@@ -22,7 +24,7 @@ import { programPage } from '../web/pages/program.js';
 import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, esc, inputs, master, pick as pickFrom, WHATIF_STANDING } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, sliceBuild, WHATIF_STANDING } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
@@ -220,13 +222,29 @@ test('production, released: every hospital page and every place page plus /hacrp
 test('released: false: every page is noindex in production and the sitemap lists none', () =>
   temp(async (dir) => {
     const out = join(dir, 'dist');
-    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { released: false, data: SLICE, log: quiet }) };
-    await build({ outDir: out, env: 'production', sites: [hacrp, HUB] });
+    await build({ outDir: out, env: 'production', sites: [slicedSite(SLICE, { released: false }), HUB] });
     for (const h of SLICE.hospitals) assert.ok(read(out, hospitalPath(h)).includes(NOINDEX), hospitalPath(h));
     for (const p of SLICE_PLACES.list) assert.ok(read(out, p.path).includes(NOINDEX), p.path);
     for (const path of ['/hacrp/', '/hacrp/data/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
     assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
+
+// SLICE released, with the hub, built once for the tests that read the whole build.
+const builtSlice = sliceBuild(SLICE);
+
+test('the data dictionary page carries the as-of bar the program page shows, after its sections', async () => {
+  const out = await builtSlice();
+  const dictionary = read(out, '/hacrp/data/');
+  checkAsofBar(dictionary, read(out, '/hacrp/'), dictionary.lastIndexOf('</section>'));
+});
+
+// CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, so a moved anchor
+// fails before CI does. The slice's hospitals are the only ones built, and "#state=" names their states.
+test('every internal link on the built pages lands on a file, and every fragment on an id or a state the page reads', async () => {
+  const { pages, found } = checkLinks(await builtSlice(), SLICE.hospitals.map((h) => h.state));
+  assert.deepEqual(found, []);
+  assert.ok(pages > SLICE.hospitals.length + SLICE_PLACES.list.length, `${pages} pages checked`);
+});
 
 test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>
   temp(async (dir) => {
@@ -544,7 +562,7 @@ test('the as-of strip is a list of facts, each a term and its value from their o
   const list = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(text)[1];
   const rows = [...list.matchAll(/<div><dt>(.*?)<\/dt><dd>(.*?)<\/dd><\/div>/g)].map(([, dt, dd]) => [dt.replace(/<[^>]+>/g, ''), dd.replace(/<[^>]+>/g, '')]);
   const fy = String(DATA.fy);
-  assert.deepEqual(rows.map(([dt]) => dt), ['Fiscal year', 'PSI 90 period', 'Infection measures period', 'Latest public hospital results', 'Provider Data Catalog release']);
+  assert.deepEqual(rows.map(([dt]) => dt), ['Fiscal year', 'PSI 90 period', 'Infection measures period', 'Newest results at last update', 'Provider Data Catalog release']);
   assert.equal(rows[0][1], fy);
   assert.equal(rows[3][1], `FY${fy}; FY${DATA.fy + 1} expected early ${DATA.fy + 1}`);
   assert.equal(rows[4][1], cmsText(isoDateOf(DATA.source.pdcReleased)));
@@ -606,7 +624,7 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div>/);
   assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
-  assert.match(text, /href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990002" target="_blank" rel="noopener">Open on Care Compare/);
+  assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002', 'Open on Care Compare'))));
   assert.match(text, /<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
   // No caption on how the dot was placed; the data list credits the geocoder once, for a geocoded address only.
   assert.doesNotMatch(text, /Placed /);

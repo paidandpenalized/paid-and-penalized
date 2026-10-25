@@ -7,11 +7,10 @@
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
 // show CMS's values and add no inference.
 import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
-import { COPY as SHARED } from '../../../../web/copy.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { page } from '../../../../web/render/layout.js';
+import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
 import { biggestLever } from '../compare.js';
@@ -19,6 +18,7 @@ import { distanceSentence, leadSentence, measureNote, noteSentences, smallNumber
 import { fill, fillKeep, sourceText, t } from '../copy.js';
 import { partsFigure } from '../figures.js';
 import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../hospital-figures.js';
+import { stateHref } from '../hospital-table.js';
 import { careCompareHref } from '../links.js';
 import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
 import { whatIfSection } from './whatif.js';
@@ -83,7 +83,7 @@ function starsSpec(view, careSource) {
   const value = n !== null && n <= CARE_COMPARE_STARS
     ? html`<span class="stars" aria-hidden="true">${'★'.repeat(n)}<span class="stars__off">${'☆'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
     : cc.rating;
-  const note = html`${fillKeep('starsNote', { date: isoDate(careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br><a href="${careCompareHref(view.ccn)}" target="_blank" rel="noopener">${t('starsLink')}<span class="vh">${SHARED.newTab}</span></a>`;
+  const note = html`${fillKeep('starsNote', { date: isoDate(careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br>${externalLink(careCompareHref(view.ccn), t('starsLink'))}`;
   return { label: t('fieldStars'), value, note, size: n === null ? 'sm' : null, fieldCls: 'f-stars' };
 }
 
@@ -91,7 +91,7 @@ function starsSpec(view, careSource) {
 // the table filters on and the map marks), as Thirty Day Readmissions links a hospital's metro area.
 function locationText(view) {
   const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
-  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}#state=${encodeURIComponent(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
+  const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}${stateHref(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
   return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 

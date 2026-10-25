@@ -18,9 +18,9 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH, methodsPage } from '../web/pages/methods.js';
-import { ASSETS } from './fixtures.js';
-import { DATA, HD } from './pinned.js';
+import { ABOVE_BY, METHODS_PATH } from '../web/pages/methods.js';
+import { ASSETS, checkAsofBar } from './fixtures.js';
+import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
 const quiet = () => {};
@@ -59,14 +59,32 @@ test('the Methods page is written, indexable, with one h1, its ids once and ever
 });
 
 test('the sections run pipeline, check, decisions, formula, estimate, dollars, periods, baseline, reading, sources, changed, glossary, more; the contents list links each', () => {
-  const sections = [...PAGE.matchAll(/<section class="msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
+  const sections = [...PAGE.matchAll(/<section class="doc__sec msec(?: msec--fig)?" id="([^"]+)" aria-labelledby="([^"]+)-h">/g)].map((m) => m[1]);
   assert.deepEqual(sections, ['pipeline', 'check', 'decisions', 'formula', 'estimate', 'dollars', 'periods', 'baseline', 'reading', 'sources', 'changed', 'glossary', 'more']);
-  const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="meth__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
+  const toc = [...PAGE.matchAll(/<li><a href="#([^"]+)"><span class="doc__toc-n">(\d+)<\/span>/g)].map((m) => [m[1], Number(m[2])]);
   assert.deepEqual(toc.map(([id]) => id), sections);
   assert.deepEqual(toc.map(([, n]) => n), sections.map((_, i) => i + 1));
-  for (const id of sections) assert.ok(PAGE.includes(`<h2 class="msec__title" id="${id}-h">`), `${id}: heading`);
+  for (const id of sections) assert.ok(PAGE.includes(`<h2 class="doc__h" id="${id}-h">`), `${id}: heading`);
   // The family page's estimate section is linked from ours, and ours is the one the family page's "What is shown" points at.
   assert.ok(PAGE.includes('<a href="/methods/#estimate">'));
+});
+
+test('"Feedback, privacy and AI" points to the family\'s privacy page and the About page\'s AI section, and no longer says the site keeps nothing about readers', () => {
+  const more = /<section class="doc__sec msec" id="more"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  assert.match(more, /<a href="\/privacy\/">what the site and its host can see<\/a>/);
+  assert.match(more, /<a href="\/about\/#ai">how AI tools are used<\/a>/);
+  assert.equal(strip(/<p>[\s\S]*?<\/p>/.exec(more)[0]), 'The same rules for feedback, privacy and AI tools cover every Paid & Penalized site: see what the site and its host can see and how AI tools are used.');
+  assert.doesNotMatch(more, /keeps about you|\(nothing\)|href="\/methods\/"/);
+});
+
+test('"What changed" links the family\'s corrections log', () => {
+  const changed = /<section class="doc__sec msec" id="changed"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  assert.match(changed, /<a href="\/corrections\/">corrections log<\/a>/);
+  assert.ok(strip(changed).includes('Corrections go in the family’s public, dated corrections log; this site cannot change CMS’s values.'));
+});
+
+test('Methods carries the as-of bar the program page shows, the same items, after the page head and the sections', () => {
+  checkAsofBar(PAGE, WITH.program, PAGE.indexOf('id="more"'));
 });
 
 test('the glossary defines "Payment decision (in counts)" once, right after "Subject to the reduction", as the hospitals CMS scored and marked Yes or No', () => {
@@ -177,7 +195,7 @@ test('the count note: CMS\'s fact-sheet count and the updated list\'s for the ye
 });
 
 test('the estimate section: what is shown, where it comes from and how it is labeled, and the tolerance and largest miss from the estimate', () => {
-  const section = /<section class="msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
+  const section = /<section class="doc__sec msec" id="estimate"[\s\S]*?<\/section>/.exec(PAGE)[0];
   const rows = [...section.matchAll(/<tr><th scope="row">[^<]*<\/th><td>[\s\S]*?<\/td><td><span class="takes__tag takes__tag--(\w+)">/g)].map((m) => m[1]);
   assert.equal(rows.length, 8, 'CMS\'s values, its line, the recomputes, the derived constants, the medians, the what-ifs, earlier years and the dollar estimates');
   assert.deepEqual([...new Set(rows)].sort(), ['cms', 'hyp', 'site']);
@@ -382,16 +400,15 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   const checks = checksOf();
   const years = S.years.map((y) => ({ fy: y.fy, periods: y.periods }));
   const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
-  const page = methodsPage({
-    fy: 2025, checks, years, newest: { rows: 3, source: DATA.source, pin, measures: 6, pages: 10, sourceLine: SRC },
-    pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
+  const page = renderMethods({
+    fy: 2025, checks, years, newest: { rows: 3, source: DATA.source, periods: DATA.periods, pin, measures: 6, pages: 10, sourceLine: SRC },
+    pins: [pin], estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, dollars: null,
   });
   assert.equal(page.match(/<h1[\s>]/g).length, 1);
   const total = checks.reduce((n, c) => n + c.check.scored, 0);
   assert.ok(page.includes(`<dt>Scores recomputed</dt><dd>${count(total)}</dd>`));
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
-  assert.match(page, /<section class="msec" id="estimate"/);
+  assert.match(page, /<section class="doc__sec msec" id="estimate"/);
   // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
   assert.doesNotMatch(page, /id="dollars"/);
   assert.doesNotMatch(page, /href="#dollars"/);
@@ -408,12 +425,7 @@ test('the line notes say which side of the percentile CMS\'s line sits: a year w
   const lower = at(base.at(-1), { p75InGap: false, aboveNotCut: 0 });
   const allCut = at(base.at(-2), { p75InGap: false, aboveNotCut: null });
   const checks = HD.checks.map((c) => (c.fy === lower.fy ? lower : c.fy === allCut.fy ? allCut : c));
-  const pin = DATA.manifest.find((e) => e.id === DATA.source.id);
-  const page = methodsPage({
-    fy: 2026, checks, years: HD.years ?? DATA.history.years.map((y) => ({ fy: y.fy, periods: y.periods })), newest: { rows: 3, source: DATA.source, pin, measures: 6, pages: 10, sourceLine: SRC },
-    pins: [pin], changes: DATA.changes, estimate: { tolerance: 0.001, tagged: 'PSI 90', maxError: 0.002 }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: '/assets/h.json',
-  });
+  const page = renderMethods({ checks, dollars: null });
   const paragraphs = [...page.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((m) => strip(m[1]));
   const lowerNote = paragraphs.find((p) => p.includes('sits below the percentile'));
   assert.ok(lowerNote && lowerNote.includes(`FY${lower.fy}`) && lowerNote.includes(`FY${allCut.fy}`), lowerNote);

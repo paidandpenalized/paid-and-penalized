@@ -10,7 +10,7 @@ emit:
 	python3 -I pipeline/py/run.py emit
 
 build:
-	node pipeline/site/build.js
+	npm run build
 
 serve:
 	node pipeline/site/serve.js

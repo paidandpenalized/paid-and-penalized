@@ -1,19 +1,37 @@
 // What each site's generator gets from the build: the output folder, the build's env and asset paths, emit() (the
 // one way a page or file is written; it counts pages and collects the paths that may be indexed, which the hub's
-// sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds the indexing rule.
+// sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds the indexing rule, and siteDates
+// the check on the two dates a program site gives back for the hub's corrections page.
 import { join } from 'node:path';
+import { isIsoDate } from '../../engine/js/dates.js';
 import { writeFileMkdir } from '../files.js';
+import { fileFor } from './address.js';
 import { writeHashed } from './assets.js';
+
+// Whether a build's env (PP_ENV) is production, the one build search engines may index (_headers' X-Robots-Tag too).
+export const isProduction = (env) => env === 'production';
 
 // The meta robots value for a page, or null when it may be indexed (ARCH-13, ARCH-22): only a production build, only
 // a released site, and only a page its site counts as eligible (HACRP: a hospital with a score).
 export function robotsFor({ env, released, eligible = true }) {
-  return env === 'production' && released === true && eligible ? null : 'noindex';
+  return isProduction(env) && released === true && eligible ? null : 'noindex';
 }
 
 // A site path: "/", folders ending in "/", or one file name ("/404.html", "/robots.txt", ".../DATA-DICTIONARY.md").
 // Folders are lowercase; a file name may hold capitals, except a page's (.html).
 const PATH = /^\/(?:[a-z0-9-]+\/)*(?:[A-Za-z0-9-]+\.[a-z]+)?$/;
+
+// A program site's two dates, each YYYY-MM-DD, from what its generate returned ({ updated: { cmsReleased, changed } }):
+// when CMS released the file the site uses, and when the site's numbers last changed. The hub's /corrections/ page
+// lists them, so a site that returned none, or a date that is not one, stops the build.
+export function siteDates(siteId, result) {
+  if (!result?.updated) throw new RangeError(`"${siteId}" gave the build no dates (its generate returns { updated: { cmsReleased, changed } }), so /corrections/ has none for it`);
+  const { cmsReleased, changed } = result.updated;
+  for (const [name, date] of [['cmsReleased', cmsReleased], ['changed', changed]]) {
+    if (!isIsoDate(date)) throw new RangeError(`"${siteId}" ${name} is not a YYYY-MM-DD date on the calendar: ${JSON.stringify(date)}`);
+  }
+  return { cmsReleased, changed };
+}
 
 export function createContext({ outDir, env, assets }) {
   const written = new Set();
@@ -27,7 +45,7 @@ export function createContext({ outDir, env, assets }) {
     // null lists the page in the sitemap. Leave it out for a file that is not a page.
     emit({ path, text, robots }) {
       if (!PATH.test(path)) throw new RangeError(`emit: bad path "${path}"`);
-      const file = path.endsWith('/') ? `${path}index.html` : path;
+      const file = fileFor(path);
       if (file.endsWith('.html') && /[A-Z]/.test(file)) throw new RangeError(`emit: bad path "${path}"`);
       // Compared without case, so two paths that one case-insensitive disk would merge never both get written.
       if (written.has(file.toLowerCase())) throw new RangeError(`emit: "${path}" is already written`);

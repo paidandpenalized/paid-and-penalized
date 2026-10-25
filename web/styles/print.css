@@ -11,7 +11,7 @@
   @page { margin: 1.5cm; }
   body { background: var(--paper); font-size: 10.5pt; line-height: 1.45; }
   .whatif:not([data-changed]) :is(.wi-intro, .wi-result) { display: none !important; }
-  .theme-toggle, .skip, .search, .omni, .nav, .wi-actions, [data-wi="controls"], [data-wi="nojs"], .wi-fields, .wi-copy, .wi-slide,
+  .theme-toggle, .skip, .search, .omni, .nav, .doc__toc, .wi-actions, [data-wi="controls"], [data-wi="nojs"], .wi-fields, .wi-copy, .wi-slide,
   .wi-echo, .wi-banner, .wi-solver, .wi-weights, .wi-detail summary, .fig__table summary, .fig__actions, .fig__tip, .ht__controls, #ht-all, .cite__row, .share {
     display: none !important;
   }

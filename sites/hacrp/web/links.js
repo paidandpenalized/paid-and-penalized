@@ -11,15 +11,17 @@ export const LINKS = Object.freeze({
 // A hospital's page on Care Compare, by its CCN (the record card's stars link to it).
 export const careCompareHref = (ccn) => `${LINKS.careCompare}details/hospital/${encodeURIComponent(ccn)}`;
 
+// The program page: the site's own path.
+export const PROGRAM_PATH = SITE.sites.hacrp.path;
 // The dataset CSV of every hospital's CMS values (written by the page build), at one path per fiscal year. The
 // program page links to it, so the hospital table's data are there without JavaScript.
 export const csvPath = (fy) => `/data/hacrp/fy${fy}/hacrp-hospitals.csv`;
 // Its data dictionary (sites/hacrp/DATA-DICTIONARY.md), beside it, and the same dictionary as a page.
 export const dictionaryPath = (fy) => `/data/hacrp/fy${fy}/DATA-DICTIONARY.md`;
-export const DICTIONARY_PAGE = `${SITE.sites.hacrp.path}data/`;
+export const DICTIONARY_PAGE = `${PROGRAM_PATH}data/`;
 // The Methods page, and its note on the one count of hospitals cut that differs from CMS's own (the program page's
 // roll call links to it).
-export const METHODS_PATH = `${SITE.sites.hacrp.path}methods/`;
+export const METHODS_PATH = `${PROGRAM_PATH}methods/`;
 export const COUNT_NOTE = 'count-note';
 // The Methods page's section on the dollar estimates: every dollar figure's estimate tag links to it.
 export const DOLLARS_HREF = `${METHODS_PATH}#dollars`;

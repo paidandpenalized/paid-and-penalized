@@ -15,15 +15,33 @@ export const hash8 = (text) => createHash('sha256').update(text).digest('hex').s
 
 const repoPath = (path) => (isAbsolute(path) ? path : REPO_ROOT + path);
 
-// The theme toggle reuses the dark media block's declarations verbatim under :root[data-theme="dark"].
-// siteStyles: each site's stylesheet (repo-relative), bundled after the shared ones.
+// A CSS block's declarations, [name, value], in order, its comments left out.
+const declarations = (block) => [...block.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([\w-]+)\s*:\s*([^;]+?)\s*;/g)].map(([, name, value]) => [name, value]);
+// A color value: hex, rgb() or rgba(), the forms tokens.css writes.
+const COLOR = /^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i;
+// The print block: every color custom property the light block sets, then the print block's own declarations (what
+// print alone sets), each !important. A print value for a light color takes that color's place.
+export function printBlock(light, print) {
+  const own = new Map(declarations(print));
+  const colors = declarations(light).filter(([name, value]) => name.startsWith('--') && COLOR.test(value));
+  const all = new Map([...colors.map(([name, value]) => [name, own.get(name) ?? value]), ...own]);
+  return `@media print {\n  :root {\n${[...all].map(([name, value]) => `    ${name}: ${value} !important;\n`).join('')}  }\n}`;
+}
+
+const PRINT = /@media print \{\s*:root \{([^}]*)\}\s*\}/;
+
+// tokens.css as the bundle carries it: its print block written out (printBlock). The theme toggle reuses the dark
+// media block's declarations verbatim under :root[data-theme="dark"], after it. siteStyles: each site's stylesheet
+// (repo-relative), bundled after the shared ones.
 export function stylesheet(siteStyles = []) {
   const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f)).sort();
   const [tokens, ...rest] = [...[...FIRST, ...files].map((f) => STYLES + f), ...siteStyles.map(repoPath)]
     .map((f) => readFileSync(f, 'utf8'));
+  const light = /^:root \{([^}]*)\}/m.exec(tokens)?.[1];
   const dark = /:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/.exec(tokens)?.[1];
-  if (!dark) throw new Error('web/styles/tokens.css: dark media block not found');
-  return [tokens, `:root[data-theme="dark"] {${dark}}`, ...rest].join('\n');
+  const print = PRINT.exec(tokens);
+  if (!light || !dark || !print) throw new Error('web/styles/tokens.css: the light block, the dark media block or the print block not found');
+  return [tokens.replace(PRINT, () => printBlock(light, print[1])), `:root[data-theme="dark"] {${dark}}`, ...rest].join('\n');
 }
 
 // Writes <dir>/<name>.<hash>.<ext> and returns its public path under /assets/.

@@ -2,7 +2,7 @@
 // the state and name filters, and the #state= fragment. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareByName, compareDefault, decodeState, filterRows, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
+import { compareByName, compareDefault, decodeState, filterRows, sortRows, stateCodes, stateHref, tableRows, withState } from '../web/hospital-table.js';
 
 // [ccn, name, city, state, total (CMS's text, hyphen-minus), decision]
 const ROWS = [
@@ -38,6 +38,11 @@ test('decodeState accepts only #state=XX for a code in the data, any case, and i
   }
   assert.equal(decodeState('#state=ZZ&state=ca', codes), 'CA', 'the first valid value wins');
   assert.equal(decodeState(undefined, codes), null);
+});
+
+test('stateHref writes the fragment decodeState reads back', () => {
+  assert.equal(stateHref('MD'), '#state=MD');
+  for (const code of stateCodes(ROWS)) assert.equal(decodeState(stateHref(code), stateCodes(ROWS)), code);
 });
 
 test('scores sort by value, with "N/A" and blanks last in either direction; text sorts by locale; ties keep order', () => {

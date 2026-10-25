@@ -1,17 +1,10 @@
 // The money on the program page, the place pages and Methods (money-data.js, money-part.js, pages/*.js), on the
 // pinned data: the aggregates add up to the emitted file's own headline; every figure's takeaway is the data's; no
 // hospital is named outside a tooltip (DES-25); the national total always says how many of CMS's cut hospitals it
-// covers; Methods holds the dollars section every estimate tag links to; and every in-site anchor on the built pages
-// lands on an element of its page.
+// covers; and Methods holds the dollars section every estimate tag links to.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { build } from '../../../pipeline/site/build.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
-import { HUB } from '../../../hub/pages.js';
-import { HACRP, generateHacrp } from '../web/generate.js';
 import { ACROSS_WINDOW, acrossFigure, hacAxis, programsFigure, sharesFigure, statesFigure } from '../web/money-part.js';
 import { cutFrom } from '../web/money-figures.js';
 import { moneyData, nearLine, placeMoney, sum } from '../web/money-data.js';
@@ -20,10 +13,10 @@ import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
-import { furthestGroup, methodsPage } from '../web/pages/methods.js';
+import { furthestGroup } from '../web/pages/methods.js';
 import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
-import { DATA, HD, MD, PD, PLACES, renderPlace, renderProgram } from './pinned.js';
-import { ASSETS, strippedText as strip } from './fixtures.js';
+import { DATA, MD, PD, PLACES, renderMethods, renderPlace, renderProgram } from './pinned.js';
+import { strippedText as strip } from './fixtures.js';
 
 const PROGRAM = renderProgram();
 const part = /<section class="part" id="money"[\s\S]*?<\/section>\n<section class="part" id="map"/.exec(PROGRAM)[0];
@@ -171,7 +164,7 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   const state = PLACES.list.find((p) => p.kind === 'state' && p.children.length > 1 && nearLine(MD, ACROSS_WINDOW).rows.some((r) => p.ccns.includes(r.ccn)));
   const page = renderPlace(state);
   const pm = placeMoney(MD, state.ccns);
-  const card = strip(/<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);
+  const card = strip(/<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(page)[0]);
   assert.ok(card.includes(money(pm.money)));
   assert.ok(card.includes(`${pct(pm.share, 1)} of the nation’s ${money(MD.headline.money)}`));
   // The place's likely range: its cut hospitals' ranges added up.
@@ -352,14 +345,9 @@ test('the hospitals near the line: both sides, lowest score first, worked out on
 });
 
 test('Methods: how this site estimates the dollars, at the anchor every estimate tag links to; the back-test drawn where every range links', () => {
-  const page = methodsPage({
-    fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }),
-  });
+  const page = renderMethods({ names: () => ({ name: 'INVENTED HOSPITAL', city: 'NOWHERE', state: 'ZZ' }) });
   const id = DOLLARS_HREF.split('#')[1];
-  const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   // The estimate section's sentence on the dollars' tag links to this section, which the page has.
   assert.match(page, new RegExp(`Every dollar figure carries the tag too: the dollars are this site’s estimate, explained under <a href="#${id}">`));
   const h = DATA.dollars.headline;
@@ -393,7 +381,7 @@ test('Methods: how this site estimates the dollars, at the anchor every estimate
   const table = /<table class="gb"[\s\S]*?<\/table>/.exec(fig)[0];
   assert.equal([...table.matchAll(/<tr><th scope="row"/g)].length, b.measures.hac.strata.length);
   // Every figure the back-test checks, in the summary table.
-  assert.equal([...sec.matchAll(/<table class="gb bt-measures">[\s\S]*?<\/table>/g)].length, 1);
+  assert.equal([...sec.matchAll(/<table class="gb bt-measures"[^>]*>[\s\S]*?<\/table>/g)].length, 1);
   // The group named as running highest (or lowest) is the one with the largest own median miss among the groups with at
   // least HEADLINE_MIN hospitals of their own, whatever range it uses: on these pins, the largest own median, a positive
   // one, and the sentence says which groups it chose among.
@@ -472,12 +460,7 @@ test('the group named as furthest from its cost reports has at least HEADLINE_MI
   // On the page the sentence is left out when no group is big enough, and says the filter when one is.
   const page = (hac) => {
     const dollars = { ...DATA.dollars, bands: { ...DATA.dollars.bands, measures: { ...DATA.dollars.bands.measures, hac: { ...DATA.dollars.bands.measures.hac, strata: hac } } } };
-    return strip(methodsPage({
-      fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-      newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-      pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-      robots: null, assets: ASSETS, searchUrl: null, dollars, names: () => null,
-    }));
+    return strip(renderMethods({ dollars }));
   };
   const real = DATA.dollars.bands.measures.hac.strata;
   const small = real.map((s) => ({ ...s, n: Math.min(s.n, HEADLINE_MIN - 1) }));
@@ -508,7 +491,7 @@ test('the treemap writes its tiles by hospital name, then CCN, not by size, and 
 });
 
 test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS\'s decision; a place with a cut shows the tag', () => {
-  const card = (place) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place))[0];
+  const card = (place) => /<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place))[0];
   const field = (html) => /<div class="field f-money">[\s\S]*?<\/div>\n/.exec(html)[0];
   const none = PLACES.list.find((p) => p.kind === 'state' && p.counts.yes === 0 && placeMoney(MD, p.ccns).rows.length > 0);
   assert.ok(none, 'some state has estimated hospitals and none cut');
@@ -523,7 +506,7 @@ test('a place where CMS cut no hospital shows $0 with no estimate tag: it is CMS
 // from this (md.rows) and from the hospitals CMS cut (md.decided), which stay.
 const withoutEstimates = (ccns) => ({ ...MD, rows: MD.rows.filter((r) => !ccns.includes(r.ccn)) });
 const parentOf = (place) => PLACES.list.find((p) => p.children.includes(place.id));
-const cardOf = (place, md) => /<div class="place__card">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place, { md }))[0];
+const cardOf = (place, md) => /<div class="place__card stack">[\s\S]*?<\/div>\n<p class="stamp/.exec(renderPlace(place, { md }))[0];
 // The estimated-dollars field of a place's card, its note too (up to the next field, or the card's end).
 const moneyField = (card) => card.split('<div class="field f-money">')[1].split(/\n<div class="field[ "]/)[0];
 
@@ -572,14 +555,9 @@ test('the assumptions table names the month and the year the earlier of the two 
 });
 
 test('Methods: the assumptions table, row by row (the rows the accuracy pass added and changed), the national ratio and the figures the check covers', () => {
-  const page = methodsPage({
-    fy: DATA.fy, checks: HD.checks.map((c) => ({ fy: c.fy, rule: 'rule', check: c.check })), years: HD.years.map((y) => ({ fy: y.fy, periods: y.periods })),
-    newest: { rows: DATA.sourceRows, source: DATA.source, pin: DATA.manifest.find((e) => e.id === DATA.source.id), measures: 6, pages: 1, sourceLine: 'Source.' },
-    pins: DATA.pinsUsed, changes: [], estimate: { tolerance: 0.001, tagged: null, maxError: null }, boundaryText: DATA.boundaryText, eqFy: 2020, zFy: 2018,
-    robots: null, assets: ASSETS, searchUrl: null, dollars: DATA.dollars, names: () => null,
-  });
+  const page = renderMethods();
   const id = DOLLARS_HREF.split('#')[1];
-  const sec = new RegExp(`<section class="msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
+  const sec = new RegExp(`<section class="doc__sec msec" id="${id}"[\\s\\S]*?</section>`).exec(page)[0];
   const table = /<table class="gb assume">[\s\S]*?<\/table>/.exec(sec)[0];
   const rows = [...table.matchAll(/<tr><th scope="row">([\s\S]*?)<\/th><td>([\s\S]*?)<\/td><\/tr>/g)].map((m) => [strip(m[1]), strip(m[2])]);
   const row = (start) => rows.find(([a]) => a.startsWith(start)) ?? assert.fail(`no assumption "${start}"`);
@@ -610,7 +588,7 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
   const b = DATA.dollars.bands;
   const text = strip(sec);
   assert.ok(text.includes(`resampling the hospitals puts the middle ${pct(rangeShare(b), 0)} of that between ${pct(b.national.p10, 1)} and ${pct(b.national.p90, 1)}.`));
-  const figures = [...sec.match(/<table class="gb bt-measures">[\s\S]*?<\/table>/)[0].matchAll(/<tr><th scope="row">/g)].length;
+  const figures = [...sec.match(/<table class="gb bt-measures"[^>]*>[\s\S]*?<\/table>/)[0].matchAll(/<tr><th scope="row">/g)].length;
   assert.equal(figures, 5);
   assert.ok(text.includes('The same check for five of the figures the method makes'), 'the count in words, from the rows the table has');
   // The tail of a stale date: provisions ending inside the year would make the row false, so the page does not build.
@@ -623,34 +601,3 @@ test('Methods: the assumptions table, row by row (the rows the accuracy pass add
     assert.throws(() => assumptionsTable({ fy: DATA.fy, assumptions, backtestFy: 2024 }), { name: 'RangeError', message: /not after FY2026 ends/ });
   }
 });
-
-// Every in-site link with a fragment that names an element (#id), on every page the build writes, lands on an element
-// with that id in its page. Fragments that carry state (#state=XX, a what-if's #whatif&…) are not ids and are skipped.
-test('every in-site anchor on the built pages lands on an element of its page', () =>
-  withTemp('pp-anchors-', async (dir) => {
-    const slice = { ...DATA, hospitals: DATA.hospitals.filter((h, i) => i % 97 === 0 || (h.total === null && h.paymentReduction === 'Yes')) };
-    const hacrp = { ...HACRP, generate: (ctx) => generateHacrp(ctx, { data: slice, log: () => {} }) };
-    const out = join(dir, 'dist');
-    await build({ outDir: out, sites: [hacrp, HUB] });
-    const pages = [];
-    const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f === 'index.html') pages.push(p); } };
-    walk(out);
-    const ids = new Map();
-    const idsOf = (file) => {
-      if (!ids.has(file)) ids.set(file, new Set([...readFileSync(file, 'utf8').matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
-      return ids.get(file);
-    };
-    let checked = 0;
-    for (const file of pages) {
-      const text = readFileSync(file, 'utf8');
-      for (const [, path, frag] of text.matchAll(/href="(\/[^"#]*)?#([^"]+)"/g)) {
-        if (/[=&]/.test(frag)) continue;
-        const target = path ? join(out, path, 'index.html') : file;
-        assert.ok(existsSync(target), `${file}: ${path} is not a page`);
-        assert.ok(idsOf(target).has(frag), `${file.slice(out.length)}: #${frag} is not on ${path ?? 'its page'}`);
-        checked++;
-      }
-    }
-    assert.ok(checked > 100, `${checked} anchors checked`);
-    assert.ok(idsOf(join(out, 'hacrp', 'methods', 'index.html')).has(DOLLARS_HREF.split('#')[1]), 'Methods holds #dollars');
-  }));
