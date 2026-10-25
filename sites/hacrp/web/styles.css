@@ -409,12 +409,20 @@
 @media (min-width: 1040px) { .prog__browse { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); } }
 .prog__browse > * { min-width: 0; margin-top: 0; }
 
-/* The foot: sources beside the data facts, downloads and citation, over a bold rule. */
-.prog__foot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 56px; margin-top: 64px; padding-top: 24px; border-top: 5px solid var(--ink); }
-@media (min-width: 980px) { .prog__foot { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+/* The foot, over a bold rule: the sources and related sites in a band of their own, ruled below, the sources (CMS's
+   pages) in one column and the related sites in the other from 560px; then the data's facts, with the as-of list and
+   downloads beside the citation on a wide screen. */
+.prog__foot { margin-top: 64px; border-top: 5px solid var(--ink); }
 .prog__foot > * { margin-top: 0; min-width: 0; }
-.prog__facts { display: grid; gap: 20px; align-content: start; }
+.prog__links { padding-block: 24px; border-bottom: var(--rule) solid var(--ink); }
+.prog__links .links { gap: 8px 48px; }
+@media (min-width: 560px) { .prog__links .links { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); grid-auto-flow: column; } }
+.prog__facts { display: grid; gap: 20px; align-content: start; padding-top: 24px; }
 .prog__facts .asof { padding-top: 0; border-top: 0; }
+@media (min-width: 1180px) {
+  .prog__facts { grid-template-columns: auto minmax(0, 1fr); column-gap: 72px; }
+  .prog__facts .cite { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }
+}
 
 /* Part 1's steps: a big red numeral and the heading over the words, left (sticky); the figure right, 5fr 7fr from
    980px; stacked under that. Each step opens on a red hairline. */

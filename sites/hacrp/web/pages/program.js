@@ -130,7 +130,7 @@ ${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: Str
 ${part4({ hd, figure: figureNo, rollUrl, src: searchUrl, shapes, master })}
 </section>` : ''}
 <div class="prog__foot">
-<section class="block" aria-labelledby="links-h">
+<section class="block prog__links" aria-labelledby="links-h">
 <h2 id="links-h" class="h-sm">${t('linksHeading')}</h2>
 <ul class="links" role="list">
 ${link(LINKS.cmsProgram, t('linkCmsProgram'))}
