@@ -129,19 +129,25 @@ ${hd ? html`<section class="part" id="history" aria-labelledby="history-h">
 ${partHead({ n: partNo(), id: 'history', heading: hfill('part4Heading', { n: String(hd.fys.length), k: String(hd.cutYears) }), intro: hfill('part4Intro', { first: String(hd.fys[0]), share: pct(hd.counts[hd.counts.length - 1].ever / hd.recs.size, 0) }) })}
 ${part4({ hd, figure: figureNo, rollUrl, src: searchUrl, shapes, master })}
 </section>` : ''}
-<div class="prog__foot">
 <section class="block prog__links" aria-labelledby="links-h">
 <h2 id="links-h" class="h-sm">${t('linksHeading')}</h2>
+<div class="prog__links-cols">
 <ul class="links" role="list">
 ${link(LINKS.cmsProgram, t('linkCmsProgram'))}
 ${link(source.landingPage, t('linkPdc'))}
+</ul>
+<ul class="links" role="list">
 ${link(LINKS.careCompare, t('linkCareCompare'), t('linkCareCompareNote'))}
 ${link(LINKS.leapfrog, t('linkLeapfrog'), t('linkLeapfrogNote'))}
 </ul>
+</div>
 </section>
+<div class="prog__foot">
 <div class="prog__facts">
 ${asofBar({ fy, periods, source })}
 ${dataLinks(fy, source)}
+</div>
+<div class="prog__facts">
 ${citation({ fy, title: heading, path: PROGRAM_PATH, source })}
 </div>
 </div>

@@ -19,10 +19,9 @@ export const COPY = typesetCopy({
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
   // Each page: a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading and its
   // paragraphs); its title, and the Methods page's, is the footer's word for it (web/copy.js). {placeholders} are
-  // links or values the page fills: {feedback} the feedback form, {estimate}
-  // /methods/#estimate, {corrections} /corrections/, {about} /about/, {linkedin} the byline's profile,
-  // {cloudflarePolicy} and {googlePolicy} those companies' privacy pages, {contentLicense} and {codeLicense} from
-  // web/site.js, {version} from hub/constants.js.
+  // links or values the page fills: {feedback} the feedback form, {estimate} /methods/#estimate, {corrections}
+  // /corrections/, {about} /about/, {linkedin} the byline's profile, {cloudflarePolicy} and {googlePolicy} those
+  // companies' privacy pages, {contentLicense} and {codeLicense} from web/site.js, {version} from hub/constants.js.
   briefTitle: 'In brief',
   indexLabel: 'On this page',
   feedbackForm: 'feedback form',

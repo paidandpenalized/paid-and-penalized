@@ -95,6 +95,7 @@
 .field__value { max-width: none; margin-top: 4px; font: 400 var(--fs-lg)/1.25 var(--font-type); overflow-wrap: anywhere; }
 .field__value--big { font-size: var(--fs-xl); }
 .field__value--sm { font-size: var(--fs-base); line-height: 1.4; }
+.field__value--text { font: 400 var(--fs-sm)/1.35 var(--font-body); }
 .field__note { margin-top: 2px; color: var(--ink-2); font: 400 var(--fs-sm)/1.35 var(--font-type); }
 .field--wide { grid-column: 1 / -1; }
 .form__title { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; max-width: none; padding: 6px 10px; border-right: var(--rule) solid var(--pen); border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
@@ -112,10 +113,10 @@
 .foot p { max-width: 62ch; }
 @media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
 .foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
-.foot__text { display: grid; gap: 6px; }
+/* The text, and the credit, feedback and license with the family's pages under them (the second column on a wide
+   screen). */
+.foot__text, .foot__side { display: grid; gap: 6px; align-content: start; }
 .foot__meta li { max-width: none; }
-/* The credit, feedback and license, with the family's pages under them: the second column on a wide screen. */
-.foot__side { display: grid; gap: 6px; align-content: start; }
 
 /* ---------- green-bar printout table ---------- */
 /* Rules above and below, no box: the green-bar banding is the almanac detail, and the one framed object on a page is

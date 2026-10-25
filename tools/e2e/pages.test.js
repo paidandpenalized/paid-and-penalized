@@ -5,7 +5,7 @@
 //   - axe finds nothing at WCAG 2.2 AA (axe.js), at its three widths, in the same tab once the load checks have read it.
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. Not part of npm test, which needs no browser:
 // run it with npm run e2e.
-import { describe, it, test } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';

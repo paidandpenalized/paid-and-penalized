@@ -202,7 +202,8 @@ export function footnoteLegend({ heading, lists }) {
 
 // A boxed form field, Thirty Day Readmissions' signature device: a numbered label (no: its number or letter, or
 // null), the value (text or Safe; `as` sets its element, e.g. 'h1' for a record's name) and an optional note under
-// it. Fields sit in a .form grid, whose red rules box them. size: 'big' or 'sm' for the value; wide: the full row.
+// it. Fields sit in a .form grid, whose red rules box them. size: 'big' or 'sm' for the value, or 'text' for a sentence
+// in the body face; wide: the full row.
 // fieldCls: classes on the field's box (a page's layout hook).
 export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null, fieldCls = '' }) {
   const valueClass = `field__value${size ? ` field__value--${size}` : ''}${cls ? ` ${cls}` : ''}`;

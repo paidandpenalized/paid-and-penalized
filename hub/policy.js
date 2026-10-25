@@ -1,8 +1,8 @@
 // The template for the hub's policy pages (Terms, privacy, corrections, About, accessibility): the title over its
 // one-line description and, beside them or under them, an "in brief" record card (a .form of numbered lines, the
-// family's signature device), then the page's
-// sections with an index of them beside the text on a wide screen and above it on a narrow one. No figures; the look
-// is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".doc" and ".pol__*").
+// family's signature device), then the page's sections with an index of them beside the text on a wide screen and
+// above it on a narrow one. No figures; the look is components.js's form parts and tokens.css's inks (styles:
+// web/styles/pages.css, ".doc" and ".pol__*").
 import { formField, formTitle } from '../web/render/components.js';
 import { Safe, html } from '../web/render/html.js';
 import { page } from '../web/render/layout.js';
@@ -34,7 +34,7 @@ export function policyPage({ path, title, description, brief, sections, assets, 
 </div>
 <div class="form pol__brief" role="group" aria-label="${COPY.briefTitle}">
 ${formTitle(COPY.briefTitle, SITE.name)}
-${brief.map((line, i) => html`${formField({ no: i + 1, label: '', value: line, size: 'sm', wide: true })}
+${brief.map((line, i) => html`${formField({ no: i + 1, label: '', value: line, size: 'text', wide: true })}
 `)}</div>
 </header>
 <div class="doc">
