@@ -2,6 +2,10 @@
 
 2026-10-23. Branch `p2b-launch-pieces`, off `main` at `8fff77b`.
 
+> **Later change (2026-10-25, the owner's review):** the maintenance banner and its `SITE.sites.<id>.maintenance` flag
+> were removed, and `/corrections/` shows no email address; reports go through the feedback form. Each page's as-of
+> bar is how a reader tells which CMS release it reflects.
+
 ## Intent
 
 The HACRP site (`/hacrp/`) is built. This work adds what a public page that names hospitals needs before it goes

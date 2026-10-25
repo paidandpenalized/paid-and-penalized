@@ -690,8 +690,9 @@ test('the program page with the history: Part 5 is #history, the figures run 1 t
   const nums = figureNumbers(page);
   assert.deepEqual([...nums].sort((a, b) => a - b), Array.from({ length: 27 }, (_, i) => i + 1));
   assert.equal(new Set(nums).size, nums.length);
-  // Part 5 comes after the map and the hospital table, and holds the nine figures.
-  const part = page.slice(page.indexOf('id="history"'), page.indexOf('class="prog__foot"'));
+  // Part 5 comes after the map and the hospital table, and before the sources band; it holds the nine figures.
+  const part = page.slice(page.indexOf('id="history"'), page.indexOf('class="block prog__links"'));
+  assert.ok(part.length > 0 && page.indexOf('class="block prog__links"') > page.indexOf('id="history"'));
   assert.equal(figureNumbers(part).length, 9);
   assert.ok(page.indexOf('id="map"') < page.indexOf('id="history"'));
   assert.deepEqual(['roll', 'ever', 'spread', 'infections', 'chance', 'again', 'kinds', 'coverage', 'statemaps'].filter((id) => !new RegExp(`id="${id}"`).test(part)), []);

@@ -89,7 +89,7 @@ export const COPY = typesetCopy({
   correctionsProcessHeading: 'What happens to a report',
   correctionsProcess: 'Each report is checked against the CMS source. If the site is wrong, the page is fixed and an entry goes in the log below: what changed, when, and which pages and numbers it affects. Numbers are not changed quietly, and a mistake in an entry is fixed with a new entry.',
   correctionsCmsHeading: 'When CMS revises its data',
-  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each page still names the CMS file it was built from and when CMS released it.",
+  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each of the site's pages still names the CMS file it was built from and when CMS released it.",
   correctionsSitesHeading: "Each site's data",
   correctionsSite: "{site}: CMS's file released {cms}; this site's numbers last changed {changed}.",
   correctionsLogHeading: 'The log',

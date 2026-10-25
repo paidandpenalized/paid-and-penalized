@@ -5,6 +5,10 @@
 **Goal:** Add the family's policy pages, the parts every page carries, response headers, the remaining CI layers and a
 Workers Builds preview, so the HACRP site can pass its launch checklist.
 
+> **Later change (2026-10-25, the owner's review):** the maintenance banner and its `SITE.sites.<id>.maintenance` flag
+> were removed, and `/corrections/` shows no email address; reports go through the feedback form. Each page's as-of
+> bar is how a reader tells which CMS release it reflects.
+
 **Architecture:** Everything renders through the existing page shell (`web/render/layout.js`) and the hub generator
 (`hub/pages.js`); the build writes Cloudflare's `_headers`; CI gains three stdlib Node scripts (size, links) and a
 browser suite (`tools/e2e/`, Node's built-in runner driving Playwright) that runs locally, in CI and against any URL.

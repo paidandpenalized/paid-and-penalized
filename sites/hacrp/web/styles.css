@@ -418,7 +418,8 @@
 /* The program page's sources and related sites come first, in a band of their own over the bold rule, CMS's pages in
    one list and the related sites in the other, side by side from 560px. The foot under it is ruled off lightly, its
    as-of list in the wider column, as a hospital page's is. */
-.prog__links { margin-top: 64px; padding-block: 24px; border-top: 5px solid var(--ink); }
+/* .page > raises it over pages.css's .page > .block spacing. */
+.page > .prog__links { margin-top: 64px; padding-block: 24px; border-top: 5px solid var(--ink); }
 .prog__links-cols { display: grid; gap: 8px 48px; }
 .prog__links-cols > .links { align-content: start; }
 @media (min-width: 560px) { .prog__links-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
