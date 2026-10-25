@@ -146,8 +146,12 @@ async function watch(page, base) {
   const foreignRequests = [];
   const documents = new Set();
   const inFlight = new Set();
+  // Requests answered with a redirect: each stays in flight until the browser reports its next hop (a request
+  // redirectedFrom it), since it finishes before that hop starts and the page would go idle between the two.
+  const redirected = new Set();
   const idle = new EventEmitter();
   const ended = (request) => {
+    if (redirected.has(request)) return;
     inFlight.delete(request);
     if (inFlight.size === 0) idle.emit('idle');
   };
@@ -158,13 +162,20 @@ async function watch(page, base) {
   page.on('requestfailed', (request) => {
     const why = request.failure()?.errorText;
     if (!ABORTED.test(why ?? '')) errors.push(`request failed: ${request.url()} (${why})`);
+    redirected.delete(request);
     ended(request);
   });
   page.on('requestfinished', ended);
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
+    if (response.status() >= 300 && response.status() < 400 && response.headers().location) redirected.add(response.request());
   });
   page.on('request', (request) => {
+    const from = request.redirectedFrom();
+    if (from) {
+      redirected.delete(from);
+      inFlight.delete(from);
+    }
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
@@ -176,15 +187,12 @@ async function watch(page, base) {
       window.reportCspViolation({ directive: e.effectiveDirective, blocked: e.blockedURI, source: e.sourceFile, line: e.lineNumber, sample: e.sample });
     });
   });
-  // A redirected request finishes before its next hop starts, so the page can go idle between the two: each idle is
-  // checked again after a round trip to the page (two paints), by when the browser has reported the next hop.
   const settled = async ({ timeoutMs = SETTLE_TIMEOUT_MS } = {}) => {
-    const signal = AbortSignal.timeout(timeoutMs);
-    for (await settle(page); inFlight.size > 0; await settle(page)) {
-      await once(idle, 'idle', { signal }).catch(() => {
-        throw new Error(`requests still in flight ${timeoutMs} ms after the checks began: ${[...inFlight].map(requestName).join(', ')}`);
-      });
-    }
+    await settle(page);
+    if (inFlight.size === 0) return;
+    await once(idle, 'idle', { signal: AbortSignal.timeout(timeoutMs) }).catch(() => {
+      throw new Error(`requests still in flight ${timeoutMs} ms after the checks began: ${[...inFlight].map(requestName).join(', ')}`);
+    });
   };
   return { errors, cspViolations, foreignRequests, settled };
 }

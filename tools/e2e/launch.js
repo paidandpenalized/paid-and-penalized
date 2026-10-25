@@ -78,10 +78,11 @@ export function checksFor(rules, pages, files) {
 const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), String(value).trim()]));
 
 // One check's result: the live response ({ status, headers }) against the rules. `rows` has one entry per header
-// compared, { name, file, live, ok } (null: not sent), plus the status as ':status'; `live` is all the response's
-// headers, names lowercased, and `liveStatus` its status. Every header the file sets for the path is compared, and a
-// redirect's Location (':location') with where lookup sends it. On a 404 a header may also be absent: the deployed Worker sends the file's headers there, but a preview URL sends none
-// (headersFor in pipeline/site/headers.js).
+// compared, { name, file, live, ok } (null: not sent), plus the status as ':status' and a redirect's Location as
+// ':location'; `live` is all the response's headers, names lowercased, and `liveStatus` its status. Every header the
+// file sets for the path is compared, and a redirect's Location with where lookup sends it. On a 404 a header may also
+// be absent: the deployed Worker sends the file's headers there, but a preview URL sends none (headersFor in
+// pipeline/site/headers.js).
 export function compareResponse(rules, check, response) {
   const live = lowercased(response.headers);
   const missingOk = response.status === 404;

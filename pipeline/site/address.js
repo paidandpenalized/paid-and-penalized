@@ -31,16 +31,16 @@ const redirect = (to) => ({ status: 307, to });
 // index ('/a', '/a/index.html', '/a/index' go to '/a/'), and another page's name with ".html" or a "/" ('/404.html',
 // '/404/' go to '/404'). Repeated slashes are sent to the path with one. Any other file is served at its own name only.
 // isFile answers for a site path.
-export function lookup(path, { isFile }) {
-  const at = (p) => lookup(p, { isFile });
+export function lookup(path, at) {
+  const { isFile } = at;
   const single = path.replace(/\/{2,}/g, '/');
   if (single !== path) {
-    const there = at(single);
+    const there = lookup(single, at);
     return there.status === 200 ? redirect(single) : there;
   }
   if (/\/index(?:\.html)?$/.test(path)) {
     const folder = path.slice(0, path.lastIndexOf('/') + 1);
-    const there = at(folder);
+    const there = lookup(folder, at);
     if (there.status !== 404) return there.status === 200 ? redirect(folder) : there;
   }
   if (path.endsWith('.html')) return isFile(path) ? redirect(path.slice(0, -'.html'.length)) : NOT_FOUND;

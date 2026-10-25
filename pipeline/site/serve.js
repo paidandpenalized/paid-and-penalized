@@ -1,8 +1,8 @@
 // make serve: preview dist/ at http://127.0.0.1:8080/. Local use only; it binds to the loopback address.
 // Each path is answered as Cloudflare answers it (address.js lookup): a page at its address, each other way of asking
-// for one redirected there with a 307, and anything else missing gets 404.html with status 404. Paths never resolve outside the served folder. Every response carries
-// the headers the folder's _headers gives its path (headers.js headersFor), as Cloudflare sends them, so a local
-// browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
+// for one redirected there with a 307, and anything else missing gets 404.html with status 404. Paths never resolve
+// outside the served folder. Every response carries the headers the folder's _headers gives its path (headers.js
+// headersFor), as Cloudflare sends them, so a local browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
@@ -61,7 +61,8 @@ export function createSiteServer(root) {
     if (path.includes('\0') || !file.startsWith(base) || !isServed(file.slice(base.length))) return notFound();
     const onDisk = (p) => join(base, p);
     const found = lookup(path, { isFile: (p) => isFile(onDisk(p)) });
-    // One leading slash, so the redirect can't become a protocol-relative URL to another host.
+    // One leading slash, so the redirect can't become a protocol-relative URL to another host. lookup already collapses
+    // repeated slashes; this keeps the guard here, where the header is written.
     if (found.status === 307) return reply(307, { location: `${encodePath(found.to).replace(/^\/+/, '/')}${url.search}` });
     return found.status === 200 ? send(200, onDisk(found.file)) : notFound();
   });
