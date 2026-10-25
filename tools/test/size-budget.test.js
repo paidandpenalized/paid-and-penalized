@@ -116,7 +116,7 @@ test('measure: one row per page, with its type and weight', () =>
     const p = page();
     writeTree(dir, { 'index.html': p, '404.html': p });
     const rows = measure(dir).sort((x, y) => x.path.localeCompare(y.path));
-    assert.deepEqual(rows.map((r) => [r.path, r.type, r.total]), [['/', 'hub', br(p)], ['/404.html', 'notFound', br(p)]]);
+    assert.deepEqual(rows.map((r) => [r.path, r.type, r.total]), [['/', 'hub', br(p)], ['/404', 'notFound', br(p)]]);
   }));
 
 test('CLI: exits 0 on a site within budget, and 1 naming each page over it', () =>

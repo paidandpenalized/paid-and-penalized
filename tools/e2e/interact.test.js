@@ -6,6 +6,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
+import { RELEASE_MS } from '../../web/client/topbar.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
@@ -236,6 +237,19 @@ describe('the top bar', () => {
     await page.mouse.click(1, page.viewportSize().height - 1);
     await settle(page);
     assert.deepEqual(await page.evaluate(() => ({ scrollY: window.scrollY, body: document.activeElement === document.body })), { scrollY: at.scrollY, body: true }, 'the click focused nothing and scrolled nothing');
+    await field.evaluate((el) => el.focus());
+    await settle(page);
+    const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));
+    assert.ok(now.focused, 'the script focused the field');
+    assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
+    await assertQuiet(seen, 'top bar');
+  }));
+
+  it('after a press with no click (a middle button\'s), a text field a script focuses under it is still brought clear', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { field } = await fieldUnderBar(page);
+    await page.mouse.click(1, page.viewportSize().height - 1, { button: 'middle' });
+    // The release clears the press's mark RELEASE_MS later; the slack covers a busy machine's late timer.
+    await page.waitForTimeout(RELEASE_MS + 1_000);
     await field.evaluate((el) => el.focus());
     await settle(page);
     const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));

@@ -38,6 +38,14 @@ test('tags: an attribute straight after a quoted value, with no space between, i
   assert.deepEqual([...tags(page, { having: ['class', 'href'] })], [want[0], want[2]], 'a name right after a quote passes the having filter');
 });
 
+test('tags: two lists of names whose words join to the same text are never read as one (the regex cache)', () => {
+  const page = '<a href="/x"><img src="/i.svg">';
+  assert.equal([...tags(page, { names: ['a', 'img'] })].length, 2);
+  assert.deepEqual([...tags(page, { names: ['a,img'] })], []);
+  assert.equal([...tags(page, { having: ['href', 'src'] })].length, 2);
+  assert.deepEqual([...tags(page, { having: ['href,src'] })], []);
+});
+
 test('tags: a ">" inside a quoted value does not end the tag', () => {
   assert.deepEqual([...tags('<a title="a > b" href="/y/">')], [{ name: 'a', attrs: { title: 'a > b', href: '/y/' } }]);
 });

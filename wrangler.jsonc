@@ -15,7 +15,8 @@
     "directory": "./dist",
     // A path with no file gets the root 404.html, with status 404, as serve.js does.
     "not_found_handling": "404-page",
-    // Cloudflare's default, named here so a change of default can't move the pages' addresses.
+    // Cloudflare's default, named here so a change of default can't move the pages' addresses. address.js lookup
+    // models it for the local server and the checks.
     "html_handling": "auto-trailing-slash"
   }
 }

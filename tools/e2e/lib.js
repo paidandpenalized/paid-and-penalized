@@ -122,6 +122,9 @@ const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request 
 // path.
 const requestName = (request) => (request.isNavigationRequest() ? 'the page itself' : new URL(request.url()).pathname);
 
+// The statuses a browser follows to their Location (300 and 304 it does not).
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
+
 // Records what goes wrong on the page from the next navigation on, for the site at base (its origin). Await it before
 // page.goto: it installs a script in every document the page loads. Returns three arrays that fill as the page runs,
 // and a wait:
@@ -134,7 +137,8 @@ const requestName = (request) => (request.isNavigationRequest() ? 'the page itse
 //                    addresses are not requests to a host)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
-//                    failed; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming the requests still in flight
+//                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
+//                    the requests still in flight
 // A visit to a page that fetches nothing after its load does not wait for the network (visit), so a request can still
 // be in flight when the checks begin (the browser's request for the site's icon, a lazy image); closing the tab would
 // abort it, and an aborted request is not reported, so it would never be judged. Await settled before reading the
@@ -145,8 +149,12 @@ async function watch(page, base) {
   const foreignRequests = [];
   const documents = new Set();
   const inFlight = new Set();
+  // Requests answered with a redirect: each stays in flight until the browser reports its next hop (a request
+  // redirectedFrom it), since it finishes before that hop starts and the page would go idle between the two.
+  const redirected = new Set();
   const idle = new EventEmitter();
   const ended = (request) => {
+    if (redirected.has(request)) return;
     inFlight.delete(request);
     if (inFlight.size === 0) idle.emit('idle');
   };
@@ -157,13 +165,20 @@ async function watch(page, base) {
   page.on('requestfailed', (request) => {
     const why = request.failure()?.errorText;
     if (!ABORTED.test(why ?? '')) errors.push(`request failed: ${request.url()} (${why})`);
+    redirected.delete(request);
     ended(request);
   });
   page.on('requestfinished', ended);
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
+    if (REDIRECTS.has(response.status()) && response.headers().location) redirected.add(response.request());
   });
   page.on('request', (request) => {
+    const from = request.redirectedFrom();
+    if (from) {
+      redirected.delete(from);
+      inFlight.delete(from);
+    }
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());

@@ -5,6 +5,8 @@
 // nav links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
 // words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
+// How long after a press's release with no click its mark is cleared (below).
+export const RELEASE_MS = 1000;
 
 // The section in view: the last one whose top has passed the bar's bottom (with a little slack), else the first.
 export function sectionInView(tops, line) {
@@ -35,12 +37,19 @@ if (bar) {
   // field matches it on a click too. The press marks that one focus only: the next focusin takes the mark, and the
   // press's end (its click, a context menu or a cancelled touch) or a key clears a mark no focus took, so a later focus
   // with no key pressed (a screen reader's cursor, switch access, a script) is brought clear as a keyboard's is. The
-  // end clears it a task later: a label's click focuses its field after the click event, and a tap's focus comes after
-  // its pointerup.
+  // end clears it a task later: a label's click focuses its field after the click event. A press that ends with no
+  // click (a middle button's) is cleared by its release, RELEASE_MS later: a tap's focus comes after its pointerup. One
+  // clear is pending at a time, and a new press cancels it, so a clear never takes the mark of a press made since.
   let pressed = false;
+  let clearing;
   const listen = (types, fn) => { for (const type of types) document.addEventListener(type, fn, { capture: true, passive: true }); };
-  listen(['pointerdown', 'touchstart'], () => { pressed = true; });
-  listen(['click', 'contextmenu', 'pointercancel'], () => setTimeout(() => { pressed = false; }));
+  const release = (ms) => () => {
+    clearTimeout(clearing);
+    clearing = setTimeout(() => { pressed = false; }, ms);
+  };
+  listen(['pointerdown', 'touchstart'], () => { clearTimeout(clearing); pressed = true; });
+  listen(['click', 'contextmenu', 'pointercancel'], release(0));
+  listen(['pointerup'], release(RELEASE_MS));
   listen(['keydown'], () => { pressed = false; });
   document.addEventListener('focusin', ({ target }) => {
     const byPress = pressed;

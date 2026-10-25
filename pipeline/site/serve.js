@@ -1,8 +1,8 @@
 // make serve: preview dist/ at http://127.0.0.1:8080/. Local use only; it binds to the loopback address.
-// A directory serves its index.html, a directory path without its trailing slash redirects to it, and anything
-// else missing gets 404.html with status 404. Paths never resolve outside the served folder. Every response carries
-// the headers the folder's _headers gives its path (headers.js headersFor), as Cloudflare sends them, so a local
-// browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
+// Each path is answered as Cloudflare answers it (address.js lookup): a page at its address, each other way of asking
+// for one redirected there with a 307, and anything else missing gets 404.html with status 404. Paths never resolve
+// outside the served folder. Every response carries the headers the folder's _headers gives its path (headers.js
+// headersFor), as Cloudflare sends them, so a local browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
@@ -26,6 +26,8 @@ const TYPES = {
 
 const isFile = (p) => existsSync(p) && statSync(p).isFile();
 const isDir = (p) => existsSync(p) && statSync(p).isDirectory();
+// A decoded site path as a URL's path, each segment percent-encoded again.
+const encodePath = (path) => path.split('/').map(encodeURIComponent).join('/');
 
 const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
 
@@ -58,9 +60,10 @@ export function createSiteServer(root) {
     const file = normalize(join(base, path));
     if (path.includes('\0') || !file.startsWith(base) || !isServed(file.slice(base.length))) return notFound();
     const onDisk = (p) => join(base, p);
-    const found = lookup(path, { isFile: (p) => isFile(onDisk(p)), isDir: (p) => isDir(onDisk(p)) });
-    // One leading slash, so the redirect can't become a protocol-relative URL to another host.
-    if (found.status === 301) return reply(301, { location: `${url.pathname.replace(/^\/+/, '/')}/${url.search}` });
+    const found = lookup(path, { isFile: (p) => isFile(onDisk(p)) });
+    // One leading slash, so the redirect can't become a protocol-relative URL to another host. lookup already collapses
+    // repeated slashes; this keeps the guard here, where the header is written.
+    if (found.status === 307) return reply(307, { location: `${encodePath(found.to).replace(/^\/+/, '/')}${url.search}` });
     return found.status === 200 ? send(200, onDisk(found.file)) : notFound();
   });
 }

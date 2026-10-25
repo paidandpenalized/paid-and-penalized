@@ -26,10 +26,10 @@ const problemsIn = (files) => withTemp('links-', (dir) => {
 test('links that resolve pass: a folder, a file, the canonical origin, a relative path, a query, a fragment on a real id', () =>
   withTemp('links-', (dir) => {
     writeTree(dir, {
-      'index.html': page(`<a href="/about/">a</a><a href="/about">no slash</a><a href="${ORIGIN}/about/">abs</a><a href="${ORIGIN}">root</a>`
+      'index.html': page(`<a href="/about/">a</a><a href="${ORIGIN}/about/">abs</a><a href="${ORIGIN}">root</a>`
         + '<a href="about/#who">rel + id</a><a href="/about/?x=1&amp;y=2#who">query</a><a href="#top">top</a><a href="#">bare</a>'
-        + '<a href="/404.html">file</a><img src="/favicon.svg">', '<link rel="stylesheet" href="/assets/site.1.css"><script type="module" src="/assets/a.1.js"></script>'),
-      'about/index.html': page('<h2 id="who">Who</h2><a href="../">up</a><a href="./index.html">self</a><a href="/">home</a>'),
+        + '<a href="/404">page</a><img src="/favicon.svg">', '<link rel="stylesheet" href="/assets/site.1.css"><script type="module" src="/assets/a.1.js"></script>'),
+      'about/index.html': page('<h2 id="who">Who</h2><a href="../">up</a><a href="./">self</a><a href="/">home</a>'),
       '404.html': page('<p>none</p>'),
       'favicon.svg': '<svg/>',
       'assets/site.1.css': 'a{}',
@@ -51,6 +51,21 @@ test('a broken link is reported with the page it is on, the href as written, and
     '/ /about/nope.html missing file',
     '/ /assets/gone.png missing file',
     '/ /assets/gone.1.css missing file',
+  ]);
+});
+
+test('a link to an address the server redirects is reported as "redirects": a folder without its "/", a page\'s .html name', async () => {
+  const found = await problemsIn({
+    'index.html': page(`<a href="/about">x</a><a href="${ORIGIN}/about/index.html">y</a><a href="/404.html">z</a><a href="about/index">w</a>`),
+    'about/index.html': page('<a href="./index.html#who">self</a><h2 id="who">Who</h2>'),
+    '404.html': page('<p>none</p>'),
+  });
+  assert.deepEqual(found, [
+    '/about/ ./index.html#who redirects',
+    '/ /about redirects',
+    `/ ${ORIGIN}/about/index.html redirects`,
+    '/ /404.html redirects',
+    '/ about/index redirects',
   ]);
 });
 

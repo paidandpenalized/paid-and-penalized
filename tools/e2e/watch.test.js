@@ -1,7 +1,7 @@
 // Positive controls for the harness (lib.js): a watcher that silently stops catching things makes every page check
 // pass for the wrong reason, so these serve a deliberately bad page from a throwaway server and require watch() to
 // report each fault (one a script causes after the load too, which the visit must wait for, and one still in flight
-// when the visit ends, which the checks must wait for), and a clean page (and one that aborts its own request) it must
+// when the visit ends, or across a redirect, which the checks must wait for), and a clean page (and one that aborts its own request) it must
 // report nothing for. They also pin prime's and newPage's contracts: a primed tab is handed over only once its page's
 // requests have settled, and a new tab follows the scheme. No dist/ needed.
 import { createServer } from 'node:http';
@@ -20,6 +20,9 @@ const FETCHES_LATE = '/fetches-late/';
 // load event): one answered 404 after SLOW_MS, one never answered.
 const SLOW_IMAGE = '/slow-image/';
 const STUCK_IMAGE = '/stuck-image/';
+// A page whose image is still in flight when the visit ends and is then redirected, after SLOW_MS, to an image answered
+// 404 after SLOW_MS: between the two hops no request is in flight.
+const REDIRECTED_IMAGE = '/redirected-image/';
 const SLOW_MS = 300;
 const OFFSITE = 'https://example.invalid/x.png';
 // The CSP forbids inline scripts (not images or off-site loads: those must reach the network for the foreign-request
@@ -37,6 +40,7 @@ const PAGES = {
   [FETCHES_LATE]: page('<script src="/late-missing.js"></script>'),
   [SLOW_IMAGE]: page('', '<img loading="lazy" src="/slow-missing.png" alt="" width="10" height="10">'),
   [STUCK_IMAGE]: page('', '<img loading="lazy" src="/never.png" alt="" width="10" height="10">'),
+  [REDIRECTED_IMAGE]: page('', '<img loading="lazy" src="/moved.png" alt="" width="10" height="10">'),
 };
 
 let lateDone = false;
@@ -52,6 +56,7 @@ async function startControls() {
     if (pathname === '/late-missing.js') return reply(200, 'text/javascript', `addEventListener('load', () => setTimeout(() => fetch('/missing-late'), ${LATE_AFTER_MS}));`);
     if (pathname === '/missing.png' || pathname === '/missing-late') return reply(404, 'text/plain', 'not found');
     if (pathname === '/slow-missing.png') return void setTimeout(() => reply(404, 'text/plain', 'not found'), SLOW_MS);
+    if (pathname === '/moved.png') return void setTimeout(() => reply(307, 'text/plain', '', { location: '/slow-missing.png' }), SLOW_MS);
     // Never answered: the page aborts the first, and the tab's close the second (stop ends the open connection).
     if (pathname === '/hang' || pathname === '/never.png') return;
     if (pathname === '/aborts.js') {
@@ -102,6 +107,11 @@ describe('watch reports what is wrong with a page', () => {
   it('a subresource answered 404 after a delay, still in flight when the visit ends: the checks wait for it', async () => {
     const { errors } = await seenOn(SLOW_IMAGE);
     assert.ok(errors.includes(`HTTP 404: ${tabs.base}/slow-missing.png`), `no slow 404 in ${JSON.stringify(errors)}`);
+  });
+
+  it('a subresource redirected to one answered 404, both hops slow: the checks wait across the redirect', async () => {
+    const { errors } = await seenOn(REDIRECTED_IMAGE);
+    assert.ok(errors.includes(`HTTP 404: ${tabs.base}/slow-missing.png`), `no 404 after the redirect in ${JSON.stringify(errors)}`);
   });
 
   it('a request that never ends fails the checks\' wait, named by its path', () => withPage(tabs, { path: STUCK_IMAGE, watched: true }, async (_, { seen }) => {

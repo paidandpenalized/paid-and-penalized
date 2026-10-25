@@ -1,7 +1,8 @@
 // CI link check: every internal link in the built site (dist/) must resolve. It reads each page's static HTML, and
 // for every href, src and data-src (a, link, script, img, SVG use, the search form's index, ...) it checks:
-//   - a same-site URL (a path, or an absolute URL on SITE.origin) names a file in dist/, resolved as the server
-//     does: a folder is its index.html, and a folder without its trailing slash is the redirect to it;
+//   - a same-site URL (a path, or an absolute URL on SITE.origin) is an address a file in dist/ is served at, as the
+//     server answers it (address.js lookup): an address the server redirects ("/about", "/about/index.html",
+//     "/404.html") is reported too, since each costs the reader a round trip;
 //   - a #fragment names an id on the page it points at (same page included; ids on SVG elements count), or is reader
 //     state that the site's own parsers accept: a state the program page opens on ("#state=TX", decodeState, with the
 //     state codes in the emitted data), on a link to the program page (the one page whose script reads it) and as the
@@ -27,14 +28,6 @@ const LINK_ATTRIBUTES = ['href', 'src', 'xlink:href', 'data-src'];
 // The state codes a "#state=" fragment may name: the hospitals' states in the newest HACRP data.
 const dataStates = () => readNewestEmitted().hospitals.map((h) => h.state);
 
-// The file in dist/ that the server serves for a decoded path, following its redirect of a folder to the folder with
-// its "/", or null. at: dist/'s files, as filesAt gives them.
-function locate(path, at) {
-  let found = lookup(path, at);
-  if (found.status === 301) found = lookup(`${path}/`, at);
-  return found.status === 200 ? found.file : null;
-}
-
 const tryDecode = (text) => {
   try {
     return decodeURIComponent(text);
@@ -53,8 +46,10 @@ function problemWith(href, base, tree, pages, states) {
   }
   if (url.origin !== SITE.origin) return null;
   const path = tryDecode(url.pathname);
-  const target = path === null ? null : locate(path, tree);
-  if (target === null) return 'missing file';
+  const found = path === null ? { status: 404 } : lookup(path, tree);
+  if (found.status === 307) return 'redirects';
+  if (found.status !== 200) return 'missing file';
+  const target = found.file;
   // "#" and "#top" always work; ids can only be looked up in a page.
   const fragment = tryDecode(url.hash.slice(1)) ?? url.hash.slice(1);
   if (fragment === '' || fragment.toLowerCase() === 'top' || !target.endsWith('.html')) return null;
