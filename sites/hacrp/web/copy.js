@@ -305,7 +305,7 @@ export const COPY = {
   asofPsi: { text: '{start} to {end}', claim: null },
   asofHaiLabel: { text: 'Infection measures period', claim: null },
   asofHai: { text: '{start} to {end}', claim: null },
-  asofLatestLabel: { text: 'Latest public hospital results', claim: null },
+  asofLatestLabel: { text: 'Newest results at last update', claim: null },
   asofLatest: { text: 'FY{fy}; FY{next} expected early {next}', claim: 'HACRP-12' },
   asofReleasedLabel: { text: 'Provider Data Catalog release', claim: null },
   asofReleased: { text: '{date}', claim: null },

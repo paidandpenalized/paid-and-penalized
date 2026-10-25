@@ -562,7 +562,7 @@ test('the as-of strip is a list of facts, each a term and its value from their o
   const list = /<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(text)[1];
   const rows = [...list.matchAll(/<div><dt>(.*?)<\/dt><dd>(.*?)<\/dd><\/div>/g)].map(([, dt, dd]) => [dt.replace(/<[^>]+>/g, ''), dd.replace(/<[^>]+>/g, '')]);
   const fy = String(DATA.fy);
-  assert.deepEqual(rows.map(([dt]) => dt), ['Fiscal year', 'PSI 90 period', 'Infection measures period', 'Latest public hospital results', 'Provider Data Catalog release']);
+  assert.deepEqual(rows.map(([dt]) => dt), ['Fiscal year', 'PSI 90 period', 'Infection measures period', 'Newest results at last update', 'Provider Data Catalog release']);
   assert.equal(rows[0][1], fy);
   assert.equal(rows[3][1], `FY${fy}; FY${DATA.fy + 1} expected early ${DATA.fy + 1}`);
   assert.equal(rows[4][1], cmsText(isoDateOf(DATA.source.pdcReleased)));

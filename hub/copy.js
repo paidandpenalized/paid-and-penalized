@@ -109,7 +109,7 @@ export const COPY = typesetCopy({
   aboutCoiHeading: 'Conflicts of interest',
   aboutCoi: "Dalton works for a hospital system. Hospitals that employ Dalton, or once did, may appear on these sites. They go through the same formula as every other hospital, and the formula has not been told which ones they are.",
   aboutCoi2: "Despite the name, Paid & Penalized has never paid Dalton anything. Its costs come out of Dalton's own pocket, which makes Dalton the one being penalized. There are no ads and, so far, no sponsors. If a sponsor ever signs on, this section will name it.",
-  aboutCoi3: "What Dalton does get: practice explaining Medicare's rules, whatever professional credit a useful site earns, and the odd satisfaction of making CMS's arithmetic come out the same. Listing those here is, admittedly, a little self-promotional too.",
+  aboutCoi3: "What Dalton does get: practice explaining Medicare's rules, whatever professional credit a useful site earns, and the odd satisfaction of making CMS's arithmetic and data accessible to a broader audience. Listing those here is, admittedly, a little self-promotional as well.",
   aboutAiHeading: 'How AI tools are used',
   aboutAi: "AI tools help write this site's code and draft its text. Every number comes from deterministic, published code run on public data, CMS's above all, and is checked against CMS's published values wherever CMS publishes them. Dalton reviews the work.",
   aboutContactHeading: 'Contact',
