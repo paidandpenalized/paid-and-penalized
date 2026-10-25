@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
-import { CORRECTIONS_EMAIL } from '../../hub/constants.js';
 import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
@@ -158,12 +157,8 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
 const DATA = loadHacrp();
 const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
 
-test('HACRP gives the build its two dates, which /corrections/ shows, and the corrections address is on that page and no other', async () => {
+test('HACRP gives the build its two dates, which /corrections/ shows', async () => {
   const out = await builtSlice();
-  const html = htmlPages(out);
-  assert.ok(html.length > 10);
-  const withAddress = html.filter((f) => readFileSync(join(out, f), 'utf8').includes(CORRECTIONS_EMAIL));
-  assert.deepEqual(withAddress, [join('corrections', 'index.html')]);
   // The dates: CMS's release of the file the site uses, and the newest built_at of the emitted files it reads.
   const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
   assert.ok(text.includes(`<time datetime="${DATA.source.pdcReleased}">`));

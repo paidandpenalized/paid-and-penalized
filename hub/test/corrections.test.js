@@ -7,7 +7,6 @@ import { ASSETS } from '../../pipeline/test/helpers.js';
 import { fillCopy } from '../../web/render/components.js';
 import { isoDate } from '../../web/render/format.js';
 import { SITE } from '../../web/site.js';
-import { CORRECTIONS_EMAIL } from '../constants.js';
 import { COPY } from '../copy.js';
 import { correctionsContent, readCorrections } from '../corrections.js';
 import { feedbackLink } from '../parts.js';
@@ -146,10 +145,9 @@ test('an entry with two titles, two headings with one id, or a heading with no i
   }
 });
 
-test('the corrections address shows once, as a mailto link, and each site gives the date of CMS\'s file and the date its numbers last changed', () => {
+test('each site gives the date of CMS\'s file and the date its numbers last changed; reports go through the form, not an address', () => {
   const text = page({ entries: ENTRIES });
-  assert.equal(text.split(`href="mailto:${CORRECTIONS_EMAIL}"`).length - 1, 1);
-  assert.ok(text.includes(`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`));
+  assert.doesNotMatch(text, /mailto:/);
   const time = (iso) => `<time datetime="${iso}">${isoDate(iso)}</time>`;
   assert.ok(text.includes(fillCopy(COPY, 'correctionsSite', { site: SITE.sites.hacrp.title, cms: time('2026-08-13'), changed: time('2026-10-22') })));
 });

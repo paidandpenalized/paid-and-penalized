@@ -11,7 +11,6 @@ import { isoDate } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { markdownSections } from '../web/render/markdown.js';
 import { SITE } from '../web/site.js';
-import { CORRECTIONS_EMAIL } from './constants.js';
 import { COPY } from './copy.js';
 import { para, section, sentence } from './parts.js';
 
@@ -69,17 +68,16 @@ function siteLine([id, { cmsReleased, changed }]) {
 // prefilled feedback link. entries: readCorrections' result. updated: the build's map of site id -> { cmsReleased,
 // changed }, in build order (generateHub); with none, the sites section is left out.
 export function correctionsContent({ feedback, entries, updated }) {
-  const email = html`<a href="mailto:${CORRECTIONS_EMAIL}">${CORRECTIONS_EMAIL}</a>`;
   const sites = [...updated].map(siteLine);
   return {
     title: SHARED.corrections,
     description: COPY.correctionsDescription,
-    brief: [COPY.correctionsBrief1, COPY.correctionsBrief2, COPY.correctionsBrief3, COPY.correctionsBrief4],
+    brief: [COPY.correctionsBrief1, COPY.correctionsBrief2, COPY.correctionsBrief3],
     sections: [
-      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback, email })),
+      section('report', 'correctionsReportHeading', para('correctionsReport', { feedback })),
       section('counts', 'correctionsCountsHeading', para('correctionsCounts')),
       section('hospital', 'correctionsHospitalHeading', para('correctionsHospital')),
-      section('process', 'correctionsProcessHeading', para('correctionsProcess'), para('correctionsProcess2')),
+      section('process', 'correctionsProcessHeading', para('correctionsProcess')),
       section('cms', 'correctionsCmsHeading', para('correctionsCms')),
       ...(sites.length ? [section('sites', 'correctionsSitesHeading', html`<ul class="pol__list">${sites}</ul>
 `)] : []),

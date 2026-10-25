@@ -19,7 +19,7 @@ export const COPY = typesetCopy({
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
   // Each page: a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading and its
   // paragraphs); its title, and the Methods page's, is the footer's word for it (web/copy.js). {placeholders} are
-  // links or values the page fills: {feedback} the feedback form, {email} the corrections address, {estimate}
+  // links or values the page fills: {feedback} the feedback form, {estimate}
   // /methods/#estimate, {corrections} /corrections/, {about} /about/, {linkedin} the byline's profile,
   // {cloudflarePolicy} and {googlePolicy} those companies' privacy pages, {contentLicense} and {codeLicense} from
   // web/site.js, {version} from hub/constants.js.
@@ -39,7 +39,7 @@ export const COPY = typesetCopy({
   termsBrief4: 'Not medical, legal, financial or investment advice.',
   termsWhatHeading: 'What this site is',
   termsWhat: "Paid & Penalized explains Medicare's hospital payment programs with the public data CMS publishes. Each program's pages show what CMS decided for each hospital, how CMS's formula got there and, as an estimate, what the decision is worth in dollars.",
-  termsAffiliationHeading: 'Independent',
+  termsAffiliationHeading: 'Not affiliated',
   termsAffiliation: 'Paid & Penalized is not affiliated with or endorsed by the Centers for Medicare & Medicaid Services (CMS), the Department of Health and Human Services, or any hospital, health system or health plan.',
   termsNumbersHeading: 'What the numbers are',
   termsNumbers: "Where CMS publishes a value, these pages show it as CMS published it. Where this site recomputes CMS's arithmetic, or estimates something CMS doesn't publish, the page says so, and its Methods page shows how.",
@@ -47,7 +47,7 @@ export const COPY = typesetCopy({
   termsAdviceHeading: 'What the numbers are not',
   termsAdvice: "Nothing here is medical, legal, financial or investment advice. A hospital's result in a CMS program comes from CMS's formula applied to the data hospitals report to CMS. It is not a quality grade, and it says nothing about any one patient's care. Don't use these pages on their own to choose a hospital or a treatment.",
   termsAsOfHeading: 'How current it is',
-  termsAsOf: "Every page built from CMS data names the CMS file it uses and when CMS released it. CMS revises and replaces its files. When it does, this site is updated and its corrections log says so, or the site shows a notice that it hasn't been updated yet. Before relying on a number for a decision, check it against CMS's own release.",
+  termsAsOf: "Every page built from CMS data names the CMS file it uses and when CMS released it. CMS revises and replaces its files. This site can lag behind a new release; when it is updated, its corrections log says so. Before relying on a number for a decision, check it against CMS's own release.",
   termsReuseHeading: 'Reusing this work',
   termsReuse: "This site's text, charts and derived data are licensed under {contentLicense}: reuse them, commercially or not, with credit to Paid & Penalized and a link to the page. The code is under the {codeLicense} license. CMS's data are works of the U.S. government. The typefaces are under the SIL Open Font License.",
   termsWarrantyHeading: 'No warranty',
@@ -70,7 +70,7 @@ export const COPY = typesetCopy({
   privacySearch: "The hospital search downloads a list of hospitals and searches it in your browser. What you type isn't sent anywhere. A what-if you share is stored in the link after its # sign, a part of the address browsers don't send to servers.",
   privacyFeedbackHeading: 'Sending feedback',
   privacyFeedback: "The feedback link opens a Google Form owned by the project's Google account. Google receives what you submit, along with your IP address, under {googlePolicy}. The form doesn't collect email addresses and doesn't ask you to sign in.",
-  privacyFeedback2: "The site and page you came from are filled in for you; you can change or clear them. One optional question asks how to reach you, if you'd like a reply, and another asks which role best describes you. Answers go to a private spreadsheet that only Dalton Haslam reads.",
+  privacyFeedback2: "The site and page you came from are filled in for you; you can change or clear them. One optional question asks how to reach you, if you'd like a reply, and another asks which role best describes you. Answers go to a private spreadsheet.",
   privacyPhiHeading: 'Leave out patient information',
   privacyPhi: "Don't include any patient information in feedback: no names, dates of birth, record numbers or details about anyone's care.",
   privacyLinksHeading: 'Other sites',
@@ -81,18 +81,16 @@ export const COPY = typesetCopy({
   correctionsBrief1: 'Errors are fixed, and each fix is logged here with its date.',
   correctionsBrief2: "Disagreeing with CMS's method is not an error on this site.",
   correctionsBrief3: 'When CMS revises its data, the site follows and says so.',
-  correctionsBrief4: 'One person runs this project, and every report is read.',
   correctionsReportHeading: 'Reporting an error',
-  correctionsReport: 'Use the {feedback} and choose “Something looks wrong,” or write to {email}. Say which page, which number or sentence, and what you think it should be. A link to the CMS file or rule behind your point helps most.',
+  correctionsReport: 'Use the {feedback} and choose “Something looks wrong.” Say which page, which number or sentence, and what you think it should be. A link to the CMS file or rule behind your point helps most.',
   correctionsCountsHeading: 'What counts as an error',
   correctionsCounts: "A number that doesn't match CMS's file, a calculation done wrong, or a sentence its source doesn't support. Disagreeing with how CMS designed a program is a different matter: these pages explain CMS's method, and CMS sets it. CMS takes public comments on its payment rules each year.",
   correctionsHospitalHeading: "A hospital's own data",
   correctionsHospital: "If a hospital's data in CMS's file is wrong, the fix happens at CMS. Hospitals review their data with CMS before CMS publishes it, and this site can't change CMS's values; it shows what CMS published.",
   correctionsProcessHeading: 'What happens to a report',
   correctionsProcess: 'Each report is checked against the CMS source. If the site is wrong, the page is fixed and an entry goes in the log below: what changed, when, and which pages and numbers it affects. Numbers are not changed quietly, and a mistake in an entry is fixed with a new entry.',
-  correctionsProcess2: "Paid & Penalized is one person's project, built in his own time, so there is no set time for a reply or a fix.",
   correctionsCmsHeading: 'When CMS revises its data',
-  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, the site's pages show a notice that it hasn't been updated for the new release.",
+  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each page still names the CMS file it was built from and when CMS released it.",
   correctionsSitesHeading: "Each site's data",
   correctionsSite: "{site}: CMS's file released {cms}; this site's numbers last changed {changed}.",
   correctionsLogHeading: 'The log',
@@ -100,18 +98,20 @@ export const COPY = typesetCopy({
 
   // /about/
   aboutDescription: 'Who builds Paid & Penalized, how it is paid for, and how it uses AI tools.',
-  aboutBrief1: 'Built by Dalton Haslam, MD, MBA, a physician advisor.',
-  aboutBrief2: 'Independent: no funding, no ads, no sponsors.',
+  aboutBrief1: 'Built by Dalton Haslam, MD, MBA.',
+  aboutBrief2: "Paid for out of Dalton's own pocket. No ads, and no sponsors so far.",
   aboutBrief3: "Every number comes from public data, CMS's above all, and is checked against CMS's own figures wherever CMS publishes them.",
-  aboutBrief4: 'AI tools help write the code and draft the text. A person reviews every sentence.',
+  aboutBrief4: 'AI tools help write the code and draft the text, and Dalton reviews the work.',
   aboutWhatHeading: 'What this is',
   aboutWhat: "Paid & Penalized explains how Medicare's payment programs reward, penalize and adjust what hospitals are paid, one program at a time, from the data CMS publishes. Each site reproduces CMS's published results, shows the arithmetic, and lets you look up any hospital.",
   aboutWhoHeading: 'Who builds it',
   aboutWho: 'Dalton Haslam, MD, MBA, builds and maintains it in his own time. {linkedin}.',
   aboutCoiHeading: 'Conflicts of interest',
-  aboutCoi: 'Dalton is a physician advisor employed by a hospital system. Hospitals where he works or has worked may appear on these sites. He receives no funding or compensation for this project and pays its costs himself. It carries no ads and has no sponsors.',
+  aboutCoi: "Dalton works for a hospital system. Hospitals that employ Dalton, or once did, may appear on these sites. They go through the same formula as every other hospital, and the formula has not been told which ones they are.",
+  aboutCoi2: "Despite the name, Paid & Penalized has never paid Dalton anything. Its costs come out of Dalton's own pocket, which makes Dalton the one being penalized. There are no ads and, so far, no sponsors. If a sponsor ever signs on, this section will name it.",
+  aboutCoi3: "What Dalton does get: practice explaining Medicare's rules, whatever professional credit a useful site earns, and the odd satisfaction of making CMS's arithmetic come out the same. Listing those here is, admittedly, a little self-promotional too.",
   aboutAiHeading: 'How AI tools are used',
-  aboutAi: "AI tools help write this site's code and draft its text. Every number comes from deterministic, published code run on public data, CMS's above all, and is checked against CMS's published values wherever CMS publishes them. Dalton reviews every sentence before it is published.",
+  aboutAi: "AI tools help write this site's code and draft its text. Every number comes from deterministic, published code run on public data, CMS's above all, and is checked against CMS's published values wherever CMS publishes them. Dalton reviews the work.",
   aboutContactHeading: 'Contact',
   aboutContact: 'Send questions, ideas or problems through the {feedback}.',
 

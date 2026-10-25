@@ -63,7 +63,7 @@ const terms = ({ feedback }) => ({
   brief: [COPY.termsBrief1, COPY.termsBrief2, COPY.termsBrief3, COPY.termsBrief4],
   sections: [
     section('what', 'termsWhatHeading', para('termsWhat')),
-    section('independent', 'termsAffiliationHeading', para('termsAffiliation')),
+    section('affiliation', 'termsAffiliationHeading', para('termsAffiliation')),
     section('numbers', 'termsNumbersHeading', para('termsNumbers'), para('termsEstimate', { estimate: LINKS.estimate })),
     section('advice', 'termsAdviceHeading', para('termsAdvice')),
     section('current', 'termsAsOfHeading', para('termsAsOf')),
@@ -94,7 +94,7 @@ const about = ({ feedback }) => ({
   sections: [
     section('what', 'aboutWhatHeading', para('aboutWhat')),
     section('who', 'aboutWhoHeading', para('aboutWho', { linkedin: externalLink(SITE.linkedin, COPY.linkedinLink) })),
-    section('coi', 'aboutCoiHeading', para('aboutCoi')),
+    section('coi', 'aboutCoiHeading', para('aboutCoi'), para('aboutCoi2'), para('aboutCoi3')),
     section('ai', 'aboutAiHeading', para('aboutAi')),
     section('contact', 'aboutContactHeading', para('aboutContact', { feedback })),
   ],
