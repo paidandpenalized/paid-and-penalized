@@ -7,7 +7,7 @@ import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signe
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
-import { externalLink, feedbackFor, feedbackHref, maintenanceBanner, page } from '../render/layout.js';
+import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
 
 const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -176,11 +176,8 @@ test('feedbackFor: the one prefill, the page\'s site (the family\'s on the hub\'
   assert.ok(page(PAGE).includes(`href="${escapeHtml(feedbackFor({ path: PAGE.path }))}"`));
 });
 
-test('page: the footer says not to include patient information beside the feedback link, with the Terms line and the policy links', () => {
+test('page: the footer has the Terms line and the policy links', () => {
   const foot = /<footer[\s\S]*?<\/footer>/.exec(page(PAGE))[0];
-  const feedbackItem = /<li[^>]*>(?:(?!<\/li>)[\s\S])*Send feedback(?:(?!<\/li>)[\s\S])*<\/li>/.exec(foot)[0];
-  assert.ok(feedbackItem.includes(COPY.feedbackWarning), 'the warning sits in the feedback link\'s own list item');
-  assert.match(COPY.feedbackWarning, /patient information/i);
   assert.ok(foot.includes(`${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a>`));
   for (const [href, label] of [['/privacy/', COPY.privacy], ['/corrections/', COPY.corrections], ['/about/', COPY.about],
     ['/accessibility/', COPY.accessibility], ['/methods/', COPY.methods]]) {
@@ -192,55 +189,8 @@ test('page: the footer says not to include patient information beside the feedba
   assert.ok(foot.includes('rel="license noopener"'));
 });
 
-// Runs fn with a site's maintenance flag set, then puts it back.
-function withMaintenance(id, value, fn) {
-  const original = SITE.sites[id].maintenance;
-  SITE.sites[id].maintenance = value;
-  try { return fn(); } finally { SITE.sites[id].maintenance = original; }
-}
-
-test('page: the footer and the banner use no inline style (a strict CSP forbids it)', () => {
-  withMaintenance('hacrp', 'FY2027', () => assert.doesNotMatch(page(PAGE), /\sstyle=/));
-});
-
-test('maintenance banner: absent while the flag is null', () => {
-  withMaintenance('hacrp', null, () => {
-    assert.equal(maintenanceBanner(SITE.sites.hacrp), '');
-    assert.doesNotMatch(page(PAGE), /role="status"/);
-  });
-});
-
-test('maintenance banner: a release name shows a status banner before <main> on every page of that site, never on the hub', () => {
-  withMaintenance('hacrp', 'FY2027', () => {
-    for (const path of ['/hacrp/', '/hacrp/hospital/990001/', '/hacrp/methods/']) {
-      const out = page({ ...PAGE, path });
-      const banner = /<[a-z]+ [^>]*role="status"[^>]*>[\s\S]*?<\/(?:div|aside|p)>/.exec(out)?.[0];
-      assert.ok(banner, path);
-      assert.ok(banner.includes('FY2027'), path);
-      assert.ok(out.indexOf('role="status"') < out.indexOf('<main'), path);
-      assert.equal(out.match(/role="status"/g).length, 1, path);
-    }
-    assert.ok(maintenanceBanner(SITE.sites.hacrp) instanceof Safe);
-    assert.equal(String(maintenanceBanner(SITE.sites.hacrp)).includes(COPY.maintenance.replace('{release}', 'FY2027')), true);
-    for (const path of ['/', '/methods/', '/404.html', '/hacrp-like/']) assert.doesNotMatch(page({ ...PAGE, path }), /role="status"/, path);
-    assert.equal(maintenanceBanner(null), '');
-  });
-});
-
-test('maintenance banner: the release name is escaped, not trusted', () => {
-  withMaintenance('hacrp', '<b>"FY"</b>', () => {
-    const out = String(maintenanceBanner(SITE.sites.hacrp));
-    assert.ok(!out.includes('<b>'));
-    assert.ok(out.includes('&lt;b&gt;'));
-  });
-});
-
-test('maintenance banner: anything but null or a non-empty trimmed string throws a TypeError naming the site', () => {
-  for (const bad of ['', '  ', ' FY2027', 'FY2027\n', 7, true, undefined, {}]) {
-    withMaintenance('hacrp', bad, () => {
-      assert.throws(() => page(PAGE), (err) => err instanceof TypeError && /hacrp/.test(err.message), JSON.stringify(bad));
-    });
-  }
+test('page: the footer uses no inline style (a strict CSP forbids it)', () => {
+  assert.doesNotMatch(page(PAGE), /\sstyle=/);
 });
 
 test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {

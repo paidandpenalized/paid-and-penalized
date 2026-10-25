@@ -4,8 +4,6 @@
 // pages: the hub's policy pages and the family's Methods, by name, in the footer's order. The footer links Terms in
 // its text (web/copy.js's termsLink) and lists the rest, each labelled with web/copy.js's word of the same name.
 // feedback: the shared Google Form, and the names of its two prefilled questions (the site's name, the page's address).
-// A site's maintenance: null, or the name of a release the site has not yet been updated for ('FY2027'): while it is
-// set, every page of that site carries a banner saying so (layout.js maintenanceBanner).
 export const SITE = {
   name: 'Paid & Penalized',
   origin: 'https://paidandpenalized.org',
@@ -22,7 +20,7 @@ export const SITE = {
   // The family's own pages (the hub's): noindex in every build until the hub is built.
   hub: { released: false },
   sites: {
-    hacrp: { path: '/hacrp/', released: false, maintenance: null, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
+    hacrp: { path: '/hacrp/', released: false, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
 };
 

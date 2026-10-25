@@ -1,15 +1,13 @@
 // Every page type in a real browser, in light at two desktop and three phone widths and in dark at axe's three (the
 // layout does not change with the scheme; contrast, which does, is axe's), each page opened once:
 //   - it loads clean: the status, no console or page errors, no CSP violations, no request to another origin, no
-//     sideways scroll, the footer's feedback link naming the page's canonical address, and the maintenance banner
-//     exactly when the page's site has its maintenance flag set (web/site.js);
+//     sideways scroll, and the footer's feedback link naming the page's canonical address;
 //   - axe finds nothing at WCAG 2.2 AA (axe.js), at its three widths, in the same tab once the load checks have read it.
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. Not part of npm test, which needs no browser:
 // run it with npm run e2e.
 import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COPY } from '../../web/copy.js';
-import { SITE, siteOf } from '../../web/site.js';
+import { SITE } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
 import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
@@ -18,17 +16,11 @@ import { samplePages } from './site.js';
 // axe's), and the narrowest phone width pages are designed for.
 const WIDTHS = [1280, 1024, 390, 375, 320];
 const PAGES = samplePages();
-// The maintenance banner's words up to the release name, which the config supplies.
-const BANNER = COPY.maintenance.slice(0, COPY.maintenance.indexOf('{release}'));
 
 const shared = useBrowser();
 
-test('the maintenance banner has words of its own to look for', () => {
-  assert.ok(BANNER.length > 10, `the banner's copy leads up to the release name: ${JSON.stringify(COPY.maintenance)}`);
-});
-
 // What the load checks read from the page.
-const factsOf = (page) => page.evaluate(([feedbackLink, banner]) => ({
+const factsOf = (page) => page.evaluate((feedbackLink) => ({
   scrollWidth: document.documentElement.scrollWidth,
   innerWidth: window.innerWidth,
   // When the page scrolls sideways, the first few elements that reach past the window's right edge, to name in the failure.
@@ -38,9 +30,7 @@ const factsOf = (page) => page.evaluate(([feedbackLink, banner]) => ({
     : [],
   canonical: document.querySelector('link[rel="canonical"]')?.href ?? null,
   feedback: [...document.querySelectorAll(feedbackLink)].map((a) => a.href),
-  notices: document.querySelectorAll('.notice').length,
-  bannerWords: document.body.innerText.includes(banner),
-}), [FEEDBACK_LINK, BANNER]);
+}), FEEDBACK_LINK);
 
 // The load checks on a page, as visited (withPage). A page is named by its type, not its address, and so are the
 // messages, so the output names no hospital: CI's logs are public. An assertion on an address says only whether it is
@@ -51,9 +41,6 @@ async function loadsClean(page, { response, seen }, { type, name, path }) {
   assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
   await assertQuiet(seen, name);
   assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
-  const banner = (siteOf(path)?.maintenance ?? null) !== null;
-  assert.equal(got.notices, banner ? 1 : 0, `${name}: ${banner ? 'one' : 'no'} maintenance banner`);
-  assert.equal(got.bannerWords, banner, `${name}: the maintenance banner's words ${banner ? '' : 'not '}shown`);
 
   // The footer's link to the feedback form prefills the page's canonical address (a policy page's own link is the same
   // prefill, layout.js feedbackFor). The not-found page is served at every missing address, so it has no canonical link

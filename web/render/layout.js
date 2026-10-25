@@ -2,7 +2,6 @@
 // site's top bar: programHeader), <main>, footer, scripts. The body supplies the page's one <h1>; the header has none.
 import { COPY } from '../copy.js';
 import { SITE, siteOf } from '../site.js';
-import { fillCopy } from './components.js';
 import { html, jsonText, raw } from './html.js';
 
 // The fonts a page preloads (files in web/fonts), by default: the headline face, the body face and IBM Plex Mono 400
@@ -67,27 +66,9 @@ export function feedbackHref({ siteName: name, pageUrl = null } = {}) {
 // its path; null for a page with none of its own).
 export const feedbackFor = ({ path, address = SITE.origin + path }) => feedbackHref({ siteName: siteOf(path)?.title ?? SITE.name, pageUrl: address });
 
-// The banner a program site's pages carry while SITE.sites.<id>.maintenance names a release it has not been updated
-// for; '' while the flag is null, and always for the hub (site: null, as siteOf gives it). The release name comes from
-// the config and is escaped as any value is. role="status" announces it politely once, and it sits above <main>,
-// below the header.
-export function maintenanceBanner(site) {
-  if (!site || site.maintenance === null) return '';
-  const release = site.maintenance;
-  if (typeof release !== 'string' || !release || release !== release.trim()) {
-    throw new TypeError(`site ${site.path}: maintenance must be null or a non-empty trimmed release name, got ${JSON.stringify(release)}`);
-  }
-  return html`<div class="notice" role="status">
-  <div class="wrap">
-    <p>${fillCopy(COPY, 'maintenance', { release })}</p>
-  </div>
-</div>
-`;
-}
-
-// The footer: what the data is and is not (the affiliation and Terms lines), the credit and license, then the
-// feedback link (with the warning beside it) and the family's other pages, in SITE.pages' order. feedback: the form's
-// prefilled address (feedbackFor), the one part that differs between pages.
+// The footer: what the data is and is not (the affiliation and Terms lines) beside the credit, the feedback link and
+// the license, with the family's other pages under them in SITE.pages' order. feedback: the form's prefilled address
+// (feedbackFor), the one part that differs between pages.
 const FOOTER_PAGES = Object.keys(SITE.pages).filter((name) => name !== 'terms');
 const footer = (feedback) => html`<footer class="foot">
   <div class="wrap foot__row">
@@ -95,14 +76,16 @@ const footer = (feedback) => html`<footer class="foot">
       <p>${COPY.affiliation}</p>
       <p>${COPY.termsShort} <a href="${SITE.pages.terms}">${COPY.termsLink}</a></p>
     </div>
-    <ul class="foot__meta" role="list">
-      <li>${COPY.builtWith}</li>
-      <li>${COPY.licenseLead} ${externalLink(SITE.license.content.url, SITE.license.content.name, { rel: 'license noopener' })}</li>
-    </ul>
-    <ul class="foot__meta foot__links" role="list">
-      <li>${externalLink(feedback, COPY.feedback)} <span class="foot__note">${COPY.feedbackWarning}</span></li>${FOOTER_PAGES.map((name) => html`
-      <li><a href="${SITE.pages[name]}">${COPY[name]}</a></li>`)}
-    </ul>
+    <div class="foot__side">
+      <ul class="foot__meta" role="list">
+        <li>${COPY.builtWith}</li>
+        <li>${externalLink(feedback, COPY.feedback)}</li>
+        <li>${COPY.licenseLead} ${externalLink(SITE.license.content.url, SITE.license.content.name, { rel: 'license noopener' })}</li>
+      </ul>
+      <ul class="foot__meta" role="list">${FOOTER_PAGES.map((name) => html`
+        <li><a href="${SITE.pages[name]}">${COPY[name]}</a></li>`)}
+      </ul>
+    </div>
   </div>
 </footer>`;
 
@@ -121,7 +104,7 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 // after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
 // block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
 // topbar: a program site's header (programHeader), in place of the family's masthead. The page's site, from its path
-// (siteOf), names the site in the feedback link (feedbackFor) and says whose maintenance banner the page carries.
+// (siteOf), names the site in the feedback link (feedbackFor).
 // address: the page's canonical address, by default the origin and its path; null for a page with none of its own
 // (the not-found page, served at every missing address), which then has no canonical link, og:url or page prefill.
 export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, topbar = null }) {
@@ -130,7 +113,6 @@ export function page({ title, description, path, address = SITE.origin + path, r
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
-  const site = siteOf(path);
   const modules = [assets.js.theme, ...scripts];
   return html`<!doctype html>
 <html lang="en">
@@ -151,7 +133,7 @@ ${jsonLd ? raw(`<script type="application/ld+json">${jsonText(jsonLd)}</script>`
 <body>
 <a class="skip" href="#main">${COPY.skip}</a>
 ${topbar ?? header}
-${maintenanceBanner(site)}<main id="main">
+<main id="main">
 ${body}
 </main>
 ${footer(feedbackFor({ path, address }))}
