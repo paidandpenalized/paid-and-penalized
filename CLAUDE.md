@@ -112,5 +112,6 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `make test`.
 - `E2E_BASE_URL=<site> npm run e2e:launch`: the launch check, run by hand where all three browser engines are installed.
   Compares the site's live response headers with `dist/_headers` first (home, program and hospital pages, a request for
-  each `_headers` rule, an unknown path, a missing hashed asset), then runs `npm run e2e` on Chromium, Firefox and WebKit
+  each `_headers` rule, an unknown path, a missing hashed asset, and two redirects with their Location: the program
+  page without its "/" and `/404.html`), then runs `npm run e2e` on Chromium, Firefox and WebKit
   against the site. Needs a `dist/` built from the deployed commit with the deployed `PP_ENV`. CI's `browser` job runs `npm run e2e` on Chromium only.

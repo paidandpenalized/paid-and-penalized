@@ -6,6 +6,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
+import { RELEASE_MS } from '../../web/client/topbar.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
@@ -247,8 +248,8 @@ describe('the top bar', () => {
   it('after a press with no click (a middle button\'s), a text field a script focuses under it is still brought clear', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
     const { field } = await fieldUnderBar(page);
     await page.mouse.click(1, page.viewportSize().height - 1, { button: 'middle' });
-    // The release clears the press's mark a second later (RELEASE_MS in web/client/topbar.js).
-    await page.waitForTimeout(1_100);
+    // The release clears the press's mark RELEASE_MS later; the slack covers a busy machine's late timer.
+    await page.waitForTimeout(RELEASE_MS + 1_000);
     await field.evaluate((el) => el.focus());
     await settle(page);
     const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));

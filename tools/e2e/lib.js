@@ -122,6 +122,9 @@ const ABORTED = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled|Load request 
 // path.
 const requestName = (request) => (request.isNavigationRequest() ? 'the page itself' : new URL(request.url()).pathname);
 
+// The statuses a browser follows to their Location (300 and 304 it does not).
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
+
 // Records what goes wrong on the page from the next navigation on, for the site at base (its origin). Await it before
 // page.goto: it installs a script in every document the page loads. Returns three arrays that fill as the page runs,
 // and a wait:
@@ -168,7 +171,7 @@ async function watch(page, base) {
   page.on('requestfinished', ended);
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
-    if (response.status() >= 300 && response.status() < 400 && response.headers().location) redirected.add(response.request());
+    if (REDIRECTS.has(response.status()) && response.headers().location) redirected.add(response.request());
   });
   page.on('request', (request) => {
     const from = request.redirectedFrom();

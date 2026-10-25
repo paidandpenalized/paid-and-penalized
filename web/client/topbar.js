@@ -5,6 +5,8 @@
 // nav links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
 // words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
+// How long after a press's release with no click its mark is cleared (below).
+export const RELEASE_MS = 1000;
 
 // The section in view: the last one whose top has passed the bar's bottom (with a little slack), else the first.
 export function sectionInView(tops, line) {
@@ -38,7 +40,6 @@ if (bar) {
   // end clears it a task later: a label's click focuses its field after the click event. A press that ends with no
   // click (a middle button's) is cleared by its release, RELEASE_MS later: a tap's focus comes after its pointerup. One
   // clear is pending at a time, and a new press cancels it, so a clear never takes the mark of a press made since.
-  const RELEASE_MS = 1000;
   let pressed = false;
   let clearing;
   const listen = (types, fn) => { for (const type of types) document.addEventListener(type, fn, { capture: true, passive: true }); };
