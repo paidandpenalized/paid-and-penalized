@@ -98,24 +98,22 @@ test('compareResponse: a hashed file is expected to carry the year-long Cache-Co
   assert.deepEqual(diffs(without), [{ name: 'cache-control', file: IMMUTABLE, live: null, ok: false }]);
 });
 
-test('compareResponse: a missing hashed file\'s 404 is a difference only when it carries the file\'s year-long Cache-Control', () => {
+test('compareResponse: on a 404 each header is the file\'s value (the deployed Worker) or absent (a preview URL); another value differs', () => {
   const missing = { label: 'missing', path: '/assets/site.00000000.css', status: 404 };
-  const response = (cacheControl) => ({ status: 404, headers: { ...OK_PAGE.headers, ...(cacheControl && { 'cache-control': cacheControl }) } });
-  assert.equal(compareResponse(RULES, missing, response(null)).ok, true);
-  // Cloudflare's own Cache-Control on a 404 is not the file's, so it is recorded (live) and not a difference.
-  const own = compareResponse(RULES, missing, response('public, max-age=0, must-revalidate'));
-  assert.equal(own.ok, true);
-  assert.equal(own.live['cache-control'], 'public, max-age=0, must-revalidate');
-  const kept = compareResponse(RULES, missing, response(IMMUTABLE));
-  assert.equal(kept.ok, false);
-  assert.deepEqual(diffs(kept), [{ name: 'cache-control', file: null, live: IMMUTABLE, ok: false, withheld: IMMUTABLE }]);
+  const declared = headersFor(RULES, missing.path);
+  assert.equal(compareResponse(RULES, missing, { status: 404, headers: { ...declared, server: 'cloudflare' } }).ok, true, 'the deployed Worker');
+  assert.equal(compareResponse(RULES, missing, { status: 404, headers: { server: 'cloudflare' } }).ok, true, 'a preview URL');
+  const other = compareResponse(RULES, missing, { status: 404, headers: { ...declared, 'cache-control': 'no-store' } });
+  assert.deepEqual(diffs(other), [{ name: 'cache-control', file: IMMUTABLE, live: 'no-store', ok: false }]);
+  // A 200 must carry every one.
+  assert.equal(compareResponse(RULES, { ...missing, status: 200 }, { status: 200, headers: { server: 'cloudflare' } }).ok, false);
 });
 
 test('compareResponse on the real file: a response that is exactly what headersFor gives, plus Cloudflare\'s own headers, differs nowhere', () => {
   for (const env of ['production', 'preview']) {
     const rules = parseHeaders(headersFile({ env }));
     for (const c of checksFor(rules, PAGES, [...FILES, 'assets/fonts/a.woff2', 'assets/x.1.json', 'favicon.svg'])) {
-      const headers = { ...headersFor(rules, c.path, { status: c.status }), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html' };
+      const headers = { ...headersFor(rules, c.path), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html' };
       assert.equal(compareResponse(rules, c, { status: c.status, headers }).ok, true, `${env} ${c.path}`);
     }
   }
@@ -123,7 +121,7 @@ test('compareResponse on the real file: a response that is exactly what headersF
 
 test('compareResponse on the real file: a preview\'s noindex missing from a response is caught', () => {
   const rules = parseHeaders(headersFile({ env: 'preview' }));
-  const headers = headersFor(rules, '/', {});
+  const headers = headersFor(rules, '/');
   delete headers['x-robots-tag'];
   assert.deepEqual(diffs(compareResponse(rules, { label: 'home', path: '/', status: 200 }, { status: 200, headers })).map((r) => r.name), ['x-robots-tag']);
 });
@@ -157,12 +155,6 @@ test('formatReport: the Cache-Control sent on each 404 is listed, "(not sent)" w
   const none = compareResponse(RULES, unknown, { status: 404, headers: OK_PAGE.headers });
   const report = formatReport([sent, none]);
   assert.match(report, /Cache-Control the site sends on a 404:\n {2}\/assets\/site\.00000000\.css +no-store\n {2}\/nothing-here\/ +\(not sent\)$/);
-});
-
-test('formatReport: a withheld header that the live 404 carries shows the file\'s 200 value beside what is sent', () => {
-  const missing = { label: 'missing', path: '/assets/site.00000000.css', status: 404 };
-  const kept = compareResponse(RULES, missing, { status: 404, headers: { ...OK_PAGE.headers, 'cache-control': IMMUTABLE } });
-  assert.match(formatReport([kept]), new RegExp(`cache-control\\n {4}file: none for a 404 \\(the file's value for a 200 is: ${IMMUTABLE}\\)\\n {4}live: ${IMMUTABLE}\\n`));
 });
 
 test('formatReport: the 404 list holds the responses that were 404s, whatever was expected', () => {
