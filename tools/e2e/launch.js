@@ -70,9 +70,10 @@ const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map((
 // One check's result: the live response ({ status, headers }) against the rules. `rows` has one entry per header
 // compared, { name, file, live, ok } (null: not sent), plus the status as ':status'; `live` is all the response's
 // headers, names lowercased, and `liveStatus` its status. A header is compared when the file sets it for this path and
-// status; a header the file sets for the path but withholds from this status (the Cache-Control of a 404, which
-// headersFor omits) is a difference only when the live response carries the file's value, because Cloudflare may send a
-// Cache-Control of its own there; the row's `withheld` flag marks it for the report.
+// status. A header the file sets for the path but withholds from this status (every header on a 404, which Cloudflare
+// does not apply there; the Cache-Control of a redirect) is recorded, and is a difference only when it is the file's own
+// Cache-Control, which would keep an error or a redirect cached for a year (Cloudflare may send a Cache-Control of its
+// own there). The row's `withheld` flag marks it for the report.
 export function compareResponse(rules, check, response) {
   const live = lowercased(response.headers);
   const expected = headersFor(rules, check.path, { status: check.status });
@@ -81,7 +82,7 @@ export function compareResponse(rules, check, response) {
   for (const [name, value] of Object.entries(expected)) rows.push({ name, file: value, live: live[name] ?? null, ok: live[name] === value });
   for (const [name, value] of Object.entries(declared)) {
     if (name in expected) continue;
-    rows.push({ name, file: null, live: live[name] ?? null, ok: live[name] !== value, withheld: value });
+    rows.push({ name, file: null, live: live[name] ?? null, ok: name !== 'cache-control' || live[name] !== value, withheld: value });
   }
   return { ...check, rows, live, liveStatus: response.status, ok: rows.every((row) => row.ok) };
 }

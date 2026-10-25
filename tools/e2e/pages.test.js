@@ -38,7 +38,10 @@ const factsOf = (page) => page.evaluate((feedbackLink) => ({
 async function loadsClean(page, { response, seen }, { type, name, path }) {
   const got = await factsOf(page);
   const notFound = type === 'not-found';
-  assert.equal(response.status(), notFound ? 404 : 200, `${name}: status`);
+  // A page the browser already holds may come back 304 (unchanged) from a host that sends ETags, as Cloudflare does;
+  // Firefox revalidates that way on navigation. The local server sends none.
+  if (notFound) assert.equal(response.status(), 404, `${name}: status`);
+  else assert.ok([200, 304].includes(response.status()), `${name}: status ${response.status()}, not 200 or 304`);
   await assertQuiet(seen, name);
   assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
 

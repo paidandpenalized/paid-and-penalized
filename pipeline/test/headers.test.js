@@ -93,19 +93,20 @@ test('headersFor applies every matching rule in order, as Cloudflare does', () =
   assert.deepEqual(headersFor(parseHeaders('/a\n  X: 1\n'), '/a/'), {});
 });
 
-test('headersFor: a response that is not a success carries no Cache-Control; every other header stays', () => {
+test('headersFor: a redirect keeps every header but Cache-Control; an error response gets none, as on Cloudflare', () => {
   const rules = parseHeaders(headersFile({ env: undefined }));
   const path = '/assets/site.deadbeef.css';
   for (const status of [200, 204]) assert.equal(headersFor(rules, path, { status })['cache-control'], IMMUTABLE, String(status));
   assert.equal(headersFor(rules, path)['cache-control'], IMMUTABLE, 'a success by default');
-  for (const status of [301, 400, 404, 500]) {
+  for (const status of [301, 307]) {
     const got = headersFor(rules, path, { status });
     assert.equal(got['cache-control'], undefined, String(status));
     assert.equal(got['content-security-policy'], CSP, String(status));
   }
+  for (const status of [400, 404, 500]) assert.deepEqual(headersFor(rules, path, { status }), {}, String(status));
 });
 
-test('the local server sends the headers _headers gives each path, 404s included, and never serves _headers itself', () =>
+test('the local server sends the headers _headers gives each path, none on a 404 (as Cloudflare), and never serves _headers itself', () =>
   withTemp('pp-headers-', async (dir) => {
     const root = join(dir, 'dist');
     const text = headersFile({ env: undefined });
@@ -115,12 +116,14 @@ test('the local server sends the headers _headers gives each path, 404s included
       for (const [path, status] of [['/', 200], ['/hacrp/', 200], ['/nope/', 404], ['/assets/site.ab12cd34.css', 200], ['/hacrp', 301]]) {
         const res = await get(port, path);
         assert.equal(res.status, status, path);
-        const sent = Object.fromEntries(Object.keys(headersFor(rules, path)).map((name) => [name, res.headers[name]]));
-        assert.deepEqual(sent, headersFor(rules, path), path);
+        const declared = Object.keys(headersFor(rules, path));
+        const sent = Object.fromEntries(declared.map((name) => [name, res.headers[name]]));
+        const expected = headersFor(rules, path, { status });
+        assert.deepEqual(sent, Object.fromEntries(declared.map((name) => [name, expected[name]])), path);
       }
       const missing = await get(port, '/nope/');
       assert.equal(missing.body, 'not here');
-      assert.equal(missing.headers['content-security-policy'], CSP);
+      assert.equal(missing.headers['content-security-policy'], undefined);
       for (const path of ['/_headers', '/_HEADERS', '/_Headers', '/%5Fheaders']) {
         const own = await get(port, path);
         assert.equal(own.status, 404, path);
@@ -129,7 +132,7 @@ test('the local server sends the headers _headers gives each path, 404s included
     });
   }));
 
-test('the local server never sends Cache-Control on an error: a missing hashed file is not cached for a year', () =>
+test('the local server sends none of the file\'s headers on an error: a missing hashed file is not cached for a year', () =>
   withTemp('pp-headers-', async (dir) => {
     const root = join(dir, 'dist');
     writeTree(root, { '404.html': 'not here', _headers: headersFile({ env: undefined }) });
@@ -140,7 +143,7 @@ test('the local server never sends Cache-Control on an error: a missing hashed f
         const res = await get(port, p);
         assert.equal(res.status, status, p);
         assert.equal(res.headers['cache-control'], undefined, p);
-        assert.equal(res.headers['content-security-policy'], CSP, p);
+        assert.equal(res.headers['content-security-policy'], undefined, p);
       }
       // No 404.html: the plain-text 404 drops it too.
       rmSync(join(root, '404.html'));

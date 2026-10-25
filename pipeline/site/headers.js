@@ -103,10 +103,12 @@ export function parseHeaders(text) {
 }
 
 // The headers the rules give a response, names lowercased: a request path and the response's status. Every matching
-// rule applies, in file order, and a header set again joins the earlier value with a comma. A response that is not a
-// success (a 404 for a missing hashed file) carries no Cache-Control, so it is never kept for a year. Cloudflare's own
-// defaults (Cache-Control, ETag, Content-Type) are not part of the result.
+// rule applies, in file order, and a header set again joins the earlier value with a comma. An error response (the
+// not-found page, a missing hashed file) gets none of them: Cloudflare applies _headers to the files it serves and to
+// its trailing-slash redirects, not to a 404 (seen on the preview, 2026-10-25). A redirect carries no Cache-Control.
+// Cloudflare's own defaults (Cache-Control, ETag, Content-Type) are not part of the result.
 export function headersFor(rules, pathname, { status = 200 } = {}) {
+  if (status >= 400) return {};
   const headers = new Map();
   for (const { pattern, set } of rules) {
     if (!pattern.test(pathname)) continue;
