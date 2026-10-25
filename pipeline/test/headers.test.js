@@ -100,7 +100,7 @@ test('the local server sends the headers _headers gives each path, on a 404 and 
     writeTree(root, { 'index.html': 'home', '404.html': 'not here', 'hacrp/index.html': 'hacrp', 'assets/site.ab12cd34.css': 'a{}', _headers: text });
     const rules = parseHeaders(text);
     await withServer(root, async (port) => {
-      for (const [path, status] of [['/', 200], ['/hacrp/', 200], ['/nope/', 404], ['/assets/site.ab12cd34.css', 200], ['/hacrp', 301]]) {
+      for (const [path, status] of [['/', 200], ['/hacrp/', 200], ['/nope/', 404], ['/assets/site.ab12cd34.css', 200], ['/hacrp', 307], ['/404.html', 307]]) {
         const res = await get(port, path);
         assert.equal(res.status, status, path);
         const sent = Object.fromEntries(Object.keys(headersFor(rules, path)).map((name) => [name, res.headers[name]]));

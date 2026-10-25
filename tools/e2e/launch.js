@@ -3,11 +3,13 @@
 // E2E_BASE_URL (a preview, the live site, or `make serve` at http://127.0.0.1:8080):
 //
 //   1. The live response headers of a request for each rule in dist/_headers (the first sample page or file in dist/
-//      that the rule matches), the home, program and hospital pages, a path no page has (the 404 page) and a hashed
-//      asset that does not exist (so whether Cloudflare keeps a missing file's 404 for a year is on record), each
+//      that the rule matches), the home, program and hospital pages, a path no page has (the 404 page), a hashed
+//      asset that does not exist (so whether Cloudflare keeps a missing file's 404 for a year is on record) and two
+//      addresses Cloudflare redirects (the program page without its "/", and the not-found page's file name), each
 //      compared name by name with what the file says the request gets (headersFor in pipeline/site/headers.js, which
-//      reads the file as Cloudflare does). Only headers the file sets are compared; Cloudflare's own (date, server,
-//      cf-ray, etag, ...) are not. Its report prints at once, before the half hour of browser checks.
+//      reads the file as Cloudflare does), and a redirect's Location with where address.js lookup sends it. Only
+//      headers the file sets are compared; Cloudflare's own (date, server, cf-ray, etag, ...) are not. Its report
+//      prints at once, before the half hour of browser checks.
 //   2. The browser checks (npm run e2e, tools/e2e/) once per engine: Chromium, Firefox and WebKit (E2E_ENGINE).
 //
 // It needs a dist/ built from the same commit, and with the same PP_ENV (`PP_ENV=production make build` for the live
@@ -22,7 +24,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { constants } from 'node:os';
 import { DIST_DIR as DIST, REPO_ROOT, filesUnder, isMain } from '../../pipeline/files.js';
-import { addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
+import { NOT_FOUND_PATH, addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
 import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
 
@@ -32,14 +34,13 @@ const FETCH_TIMEOUT_MS = 30_000;
 // How long a stopped command waits for its suites to exit before it exits itself.
 const STOP_GRACE_MS = 5_000;
 
-// The requests whose headers are compared: [{ label, path, status }]. rules: dist/_headers, parsed. pages: samplePages()'s
-// answer. files: every file in dist/, as filesUnder lists them. The home, program and hospital pages, then one request
-// per rule (the first of those pages, else of the files' addresses (addressOf), that the rule matches and that is
-// served with a 200; a page already listed gains the rule in its label), the unknown path and the missing asset. A
-// request expects what the server answers, by the lookup rule serve.js uses (address.js: lookup over filesAt, which
-// never serves _headers). A rule's request never goes to a .html file's address (a folder's index.html is the folder's
-// address): Cloudflare's auto-trailing-slash redirects /404.html to /404, where serve.js serves it with a 200. The
-// pages are picked by type, so none is named here.
+// The requests whose headers are compared: [{ label, path, status }], and a redirect's `location`. rules: dist/_headers,
+// parsed. pages: samplePages()'s answer. files: every file in dist/, as filesUnder lists them. The home, program and
+// hospital pages, then one request per rule (the first of those pages, else of the files' addresses (addressOf), that
+// the rule matches and that is served with a 200; a page already listed gains the rule in its label), the unknown
+// path, the missing asset and the two redirects. A request expects what the server answers, by the lookup rule
+// serve.js uses (address.js: lookup over filesAt, which never serves _headers). The pages are picked by type, so none
+// is named here.
 export function checksFor(rules, pages, files) {
   const pathOf = (type) => {
     const page = pages.find((p) => p.type === type);
@@ -48,12 +49,13 @@ export function checksFor(rules, pages, files) {
   };
   const at = filesAt(files);
   const statusOf = (path) => lookup(path, at).status;
+  const program = pathOf('program');
   const checks = [
     { label: 'home page', path: pathOf('hub') },
-    { label: 'program page', path: pathOf('program') },
+    { label: 'program page', path: program },
     { label: 'hospital page', path: pathOf('hospital-cut') },
   ];
-  const probes = [...checks.map((c) => c.path), ...files.map(addressOf)].filter((p) => !p.endsWith('.html') && statusOf(p) === 200);
+  const probes = [...checks.map((c) => c.path), ...files.map(addressOf)].filter((p) => statusOf(p) === 200);
   for (const rule of rules) {
     const path = probes.find((p) => rule.pattern.test(p));
     if (!path) throw new Error(`checksFor: no page or file in dist/ served with a 200 for the rule ${rule.path} (run make build)`);
@@ -61,21 +63,30 @@ export function checksFor(rules, pages, files) {
     if (listed) listed.label += `, rule ${rule.path}`;
     else checks.push({ label: `rule ${rule.path}`, path });
   }
-  checks.push({ label: 'unknown path', path: pathOf('not-found') }, { label: 'missing hashed asset', path: MISSING_ASSET });
-  return checks.map((check) => ({ ...check, status: statusOf(check.path) }));
+  checks.push(
+    { label: 'unknown path', path: pathOf('not-found') },
+    { label: 'missing hashed asset', path: MISSING_ASSET },
+    { label: 'folder without its "/"', path: program.replace(/\/$/, '') },
+    { label: 'not-found page by file name', path: NOT_FOUND_PATH },
+  );
+  return checks.map((check) => {
+    const { status, to } = lookup(check.path, at);
+    return { ...check, status, ...(to !== undefined && { location: to }) };
+  });
 }
 
 const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), String(value).trim()]));
 
 // One check's result: the live response ({ status, headers }) against the rules. `rows` has one entry per header
 // compared, { name, file, live, ok } (null: not sent), plus the status as ':status'; `live` is all the response's
-// headers, names lowercased, and `liveStatus` its status. Every header the file sets for the path is compared. On a
-// 404 a header may also be absent: the deployed Worker sends the file's headers there, but a preview URL sends none
+// headers, names lowercased, and `liveStatus` its status. Every header the file sets for the path is compared, and a
+// redirect's Location (':location') with where lookup sends it. On a 404 a header may also be absent: the deployed Worker sends the file's headers there, but a preview URL sends none
 // (headersFor in pipeline/site/headers.js).
 export function compareResponse(rules, check, response) {
   const live = lowercased(response.headers);
   const missingOk = response.status === 404;
   const rows = [{ name: ':status', file: String(check.status), live: String(response.status), ok: response.status === check.status }];
+  if (check.location !== undefined) rows.push({ name: ':location', file: check.location, live: live.location ?? null, ok: live.location === check.location });
   for (const [name, value] of Object.entries(headersFor(rules, check.path))) {
     rows.push({ name, file: value, live: live[name] ?? null, ok: live[name] === value || (missingOk && !(name in live)) });
   }

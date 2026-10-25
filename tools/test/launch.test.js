@@ -37,15 +37,17 @@ test('checksFor: the three pages, a request for each rule (a page it matches, el
     { label: 'rule /assets/*.css', path: '/assets/site.0bfb0a2f.css', status: 200 },
     { label: 'unknown path', path: '/nothing-here/', status: 404 },
     { label: 'missing hashed asset', path: '/assets/site.00000000.css', status: 404 },
+    { label: 'folder without its "/"', path: '/prog', status: 307, location: '/prog/' },
+    { label: 'not-found page by file name', path: '/404.html', status: 307, location: '/404' },
   ]);
   // A request expects what the server's address rule gives: 200 for a file's address in dist/, else 404.
   const bare = checksFor(RULES, PAGES, FILES.filter((f) => !f.startsWith('prog/hospital/')));
   assert.equal(bare.find((c) => c.label === 'hospital page').status, 404);
 });
 
-test('checksFor: a rule\'s request goes to an address served with a 200, never _headers or a .html file Cloudflare redirects', () => {
-  // In file order, the first address each rule matches is /404.html (/*l) and /_headers (/*s); the first that both
-  // servers answer with a 200 is the sitemap and the stylesheet.
+test('checksFor: a rule\'s request goes to an address served with a 200, never _headers or a .html name Cloudflare redirects', () => {
+  // In file order, the first file each rule's pattern matches is 404.html (/*l, but its address is /404) and _headers
+  // (/*s, never served); the first address that both servers answer with a 200 is the sitemap and the stylesheet.
   const rules = parseHeaders('/*l\n  X-A: 1\n\n/*s\n  X-B: 2\n');
   const files = [...FILES, '_headers', 'sitemap.xml'].sort();
   assert.deepEqual(files.slice(0, 2), ['404.html', '_headers']);
@@ -79,9 +81,18 @@ test('compareResponse: a changed value, a missing header and a different status 
   assert.deepEqual(diffs(changed), [{ name: 'x-content-type-options', file: 'nosniff', live: 'sniff', ok: false }]);
   const missing = compareResponse(RULES, check, { status: 200, headers: { 'x-content-type-options': 'nosniff' } });
   assert.deepEqual(diffs(missing), [{ name: 'strict-transport-security', file: 'max-age=31536000', live: null, ok: false }]);
-  const redirected = compareResponse(RULES, check, { ...OK_PAGE, status: 301 });
-  assert.deepEqual(diffs(redirected), [{ name: ':status', file: '200', live: '301', ok: false }]);
+  const redirected = compareResponse(RULES, check, { ...OK_PAGE, status: 307 });
+  assert.deepEqual(diffs(redirected), [{ name: ':status', file: '200', live: '307', ok: false }]);
   assert.equal(changed.ok || missing.ok || redirected.ok, false);
+});
+
+test('compareResponse: a redirect\'s Location must be where lookup sends it', () => {
+  const bare = { label: 'bare', path: '/prog', status: 307, location: '/prog/' };
+  const sent = (location) => compareResponse(RULES, bare, { status: 307, headers: { ...OK_PAGE.headers, ...(location && { Location: location }) } });
+  assert.equal(sent('/prog/').ok, true);
+  assert.deepEqual(diffs(sent('/elsewhere/')), [{ name: ':location', file: '/prog/', live: '/elsewhere/', ok: false }]);
+  assert.deepEqual(diffs(sent(null)), [{ name: ':location', file: '/prog/', live: null, ok: false }]);
+  assert.equal(compareResponse(RULES, check, OK_PAGE).rows.some((r) => r.name === ':location'), false, 'only a redirect has one');
 });
 
 test('compareResponse: a header the file does not set for the path is ignored, and one it does set for another path is not required', () => {
@@ -109,11 +120,11 @@ test('compareResponse: on a 404 each header is the file\'s value (the deployed W
   assert.equal(compareResponse(RULES, { ...missing, status: 200 }, { status: 200, headers: { server: 'cloudflare' } }).ok, false);
 });
 
-test('compareResponse on the real file: a response that is exactly what headersFor gives, plus Cloudflare\'s own headers, differs nowhere', () => {
+test('compareResponse on the real file: a response that is exactly what headersFor gives (and lookup\'s Location), plus Cloudflare\'s own headers, differs nowhere', () => {
   for (const env of ['production', 'preview']) {
     const rules = parseHeaders(headersFile({ env }));
     for (const c of checksFor(rules, PAGES, [...FILES, 'assets/fonts/a.woff2', 'assets/x.1.json', 'favicon.svg'])) {
-      const headers = { ...headersFor(rules, c.path), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html' };
+      const headers = { ...headersFor(rules, c.path), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html', ...(c.location && { location: c.location }) };
       assert.equal(compareResponse(rules, c, { status: c.status, headers }).ok, true, `${env} ${c.path}`);
     }
   }

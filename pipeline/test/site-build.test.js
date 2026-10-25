@@ -328,9 +328,13 @@ test('the local server serves index.html for directories, 404.html for unknown p
       assert.equal((await get(port, '/hacrp/?x=1')).body, 'hacrp');
       assert.equal((await get(port, '/d.csv')).type, 'text/csv; charset=utf-8');
       assert.equal((await get(port, '/D.md')).type, 'text/markdown; charset=utf-8');
-      const bare = await get(port, '/hacrp');
-      assert.equal(bare.status, 301);
-      assert.equal(bare.location, '/hacrp/');
+      // Redirected as Cloudflare redirects them (address.js lookup), with a 307, the query kept.
+      for (const [path, to] of [['/hacrp', '/hacrp/'], ['/hacrp?x=1', '/hacrp/?x=1'], ['/hacrp/index.html', '/hacrp/'], ['/404.html', '/404']]) {
+        const res = await get(port, path);
+        assert.deepEqual([res.status, res.location], [307, to], path);
+      }
+      const notFoundPage = await get(port, '/404');
+      assert.deepEqual([notFoundPage.status, notFoundPage.body], [200, 'not here'], 'the not-found page at its own address');
       for (const path of ['/nope/', '/../secret.txt', '/%2e%2e/secret.txt', '/%2e%2e%2fsecret.txt', '/a%00b', '/%E0%A4%A']) {
         const res = await get(port, path);
         assert.equal(res.status, path === '/%E0%A4%A' ? 400 : 404, path);

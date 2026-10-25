@@ -7,7 +7,7 @@ import { pageType, placeKind } from '../ci/page-types.js';
 test('pageType: every page of the site sorts into one type', () => {
   const sorted = {
     '/': 'hub',
-    '/404.html': 'notFound',
+    '/404': 'notFound',
     '/hacrp/': 'program',
     '/hacrp/methods/': 'methods',
     '/hacrp/data/': 'dictionary',

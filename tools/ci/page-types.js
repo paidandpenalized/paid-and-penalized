@@ -2,7 +2,7 @@
 // place, Methods and dictionary paths; the not-found page's, address.js), so the size budget (size-budget.js) and the
 // browser checks' sample pages (tools/e2e/site.js) read one layout. No browser and no file access.
 import { CCN } from '../../engine/js/ccn.js';
-import { NOT_FOUND_PATH } from '../../pipeline/site/address.js';
+import { NOT_FOUND_ADDRESS } from '../../pipeline/site/address.js';
 import { hospitalHref } from '../../sites/hacrp/web/hospital-table.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/web/links.js';
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
@@ -34,7 +34,7 @@ export const placeKind = (path) => KINDS.find((kind) => {
 // 'notFound'; null for a path that is none of them.
 export function pageType(path) {
   if (path === '/') return 'hub';
-  if (path === NOT_FOUND_PATH) return 'notFound';
+  if (path === NOT_FOUND_ADDRESS) return 'notFound';
   if (POLICY.has(path)) return 'policy';
   if (path === PROGRAM_PATH) return 'program';
   if (path === METHODS_PATH) return 'methods';
