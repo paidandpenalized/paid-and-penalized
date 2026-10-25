@@ -1,0 +1,48 @@
+// The deploy config: a static-assets Worker for dist/ on workers.dev and preview URLs, with no route or custom domain
+// (that is a go-live step), and the build script and Node version Workers Builds uses.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT } from '../../pipeline/files.js';
+
+const read = (path) => readFileSync(REPO_ROOT + path, 'utf8');
+// JSONC to JSON: drop the comments, keeping any "//" inside a string.
+const stripComments = (text) => text.replace(/"(?:[^"\\]|\\.)*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) => (m[0] === '"' ? m : ''));
+const configText = stripComments(read('wrangler.jsonc'));
+const config = JSON.parse(configText);
+
+test('the config is a Worker named for the site, serving dist/ as static assets with no Worker script', () => {
+  assert.equal(config.name, 'paid-and-penalized');
+  assert.equal(config.compatibility_date, '2026-09-01');
+  assert.deepEqual(config.assets, { directory: './dist', not_found_handling: '404-page', html_handling: 'auto-trailing-slash' });
+  assert.ok(!('main' in config), 'a main entry would add a Worker script');
+});
+
+test('it serves on workers.dev and preview URLs, with no route or custom domain', () => {
+  assert.equal(config.workers_dev, true);
+  assert.equal(config.preview_urls, true);
+  // `wrangler preview` stops without a previews block; an empty one makes previews take the top-level settings.
+  assert.deepEqual(config.previews, {});
+  // Every key, so a route, a custom domain, a trigger or any other setting cannot arrive unnoticed.
+  assert.deepEqual(Object.keys(config).sort(), ['assets', 'compatibility_date', 'name', 'preview_urls', 'previews', 'workers_dev']);
+  assert.doesNotMatch(configText, /routes?"|custom_domain|zone_(id|name)/);
+});
+
+// The command lines of a Makefile target's recipe, in order.
+function recipeOf(target) {
+  const lines = read('Makefile').split('\n');
+  const start = lines.indexOf(`${target}:`);
+  assert.ok(start >= 0, `no "${target}" target in the Makefile`);
+  const end = lines.findIndex((l, i) => i > start && !l.startsWith('\t'));
+  return lines.slice(start + 1, end < 0 ? undefined : end).map((l) => l.trim());
+}
+
+test('the build script runs what make build runs, and the Node version is pinned to the one CI uses', () => {
+  const recipe = recipeOf('build');
+  assert.ok(recipe.length > 0);
+  assert.equal(JSON.parse(read('package.json')).scripts.build, recipe.join(' && '));
+  assert.equal(read('.node-version'), '24\n');
+  const ci = [...read('.github/workflows/ci.yml').matchAll(/node-version: (\S+)/g)].map((m) => m[1]);
+  assert.ok(ci.length > 0);
+  for (const version of ci) assert.match(version, /^24\./, `CI runs Node ${version}, not the pinned 24`);
+});

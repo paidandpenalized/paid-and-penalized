@@ -91,6 +91,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   in, quoted, or echoed; hits report only an entry number. Tests use invented names.
 - **CI** (`.github/workflows/ci.yml`): actions pinned by full SHA, a read-only token, no `pull_request_target`,
   no `${{ }}` inside `run:` (pass values through `env`). `tools/test/workflow.test.js` enforces these.
+- **Deploy** (`wrangler.jsonc`): a static-assets Cloudflare Worker serving `dist/` on workers.dev and preview URLs;
+  no custom domain until go-live. Once Workers Builds is connected, a merge to `main` deploys.
 - **Outward actions need Dalton's explicit OK in the session:** pushing to a public remote, changing repo
   visibility, deploys, DNS, GitHub Releases. The repo stays private until the first public launch.
 
