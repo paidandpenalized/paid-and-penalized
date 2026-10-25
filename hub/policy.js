@@ -1,5 +1,6 @@
-// The template for the hub's policy pages (Terms, privacy, corrections, About, accessibility): the title and, beside
-// or under it, an "in brief" record card (a .form of numbered lines, the family's signature device), then the page's
+// The template for the hub's policy pages (Terms, privacy, corrections, About, accessibility): the title over its
+// one-line description and, beside them or under them, an "in brief" record card (a .form of numbered lines, the
+// family's signature device), then the page's
 // sections with an index of them beside the text on a wide screen and above it on a narrow one. No figures; the look
 // is components.js's form parts and tokens.css's inks (styles: web/styles/pages.css, ".doc" and ".pol__*").
 import { formField, formTitle } from '../web/render/components.js';
@@ -29,6 +30,7 @@ export function policyPage({ path, title, description, brief, sections, assets, 
 <header class="page__head pol__top">
 <div class="pol__intro">
 <h1 class="pol__title">${title}</h1>
+<p class="dek pol__dek">${description}</p>
 </div>
 <div class="form pol__brief" role="group" aria-label="${COPY.briefTitle}">
 ${formTitle(COPY.briefTitle, SITE.name)}

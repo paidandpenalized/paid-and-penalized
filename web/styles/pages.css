@@ -104,16 +104,18 @@
 .doc__sec:first-child { margin-top: 0; border-top: 0; }
 .doc__h { font: 400 clamp(1.6rem, 3.2vw, 2.3rem)/1.05 var(--font-display); }
 
-/* ---------- The hub's policy pages (hub/policy.js): the title and the "in brief" record card, then the contents and
-   sections, without figures. ---------- */
+/* ---------- The hub's policy pages (hub/policy.js): the title over its description beside the "in brief" record card,
+   both from the top and of about one height, then the contents and sections, without figures. ---------- */
 .pol__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 48px; padding-block: 16px 20px; }
-@media (min-width: 960px) { .pol__top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; } }
+@media (min-width: 960px) { .pol__top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 /* The title is sized to its column (container units), so the longest name keeps to one line at any width. */
 .pol__intro { container-type: inline-size; }
 .pol__title { font: 400 clamp(2.2rem, 10cqi, 4.4rem)/0.95 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
-/* A brief line: its number box beside the sentence, not over it. */
-.pol__brief .field { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 12px; align-items: baseline; }
-.pol__brief .field__value { margin-top: 0; }
+.pol__dek { margin-top: 16px; max-width: 34ch; }
+/* A brief line: its number box beside the sentence, not over it, in the body face at the small size, so the card
+   keeps to about the title's height. */
+.pol__brief .field { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 12px; align-items: baseline; padding-block: 4px 5px; }
+.pol__brief .field__value { margin-top: 0; font: 400 var(--fs-sm)/1.35 var(--font-body); }
 .pol__list { margin: 0; padding-left: 1.2em; }
 /* The corrections log (hub/corrections.js): an entry per dated block, ruled off from the one above; its date is the
    heading, its title (if any) beside the date in the body weight. */
