@@ -1,8 +1,8 @@
 // make serve: preview dist/ at http://127.0.0.1:8080/. Local use only; it binds to the loopback address.
 // A directory serves its index.html, a directory path without its trailing slash redirects to it, and anything
 // else missing gets 404.html with status 404. Paths never resolve outside the served folder. Every response carries
-// the headers the folder's _headers gives its path and status (headers.js headersFor), as Cloudflare sends them, so a
-// local browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
+// the headers the folder's _headers gives its path (headers.js headersFor), as Cloudflare sends them, so a local
+// browser run meets the real CSP. Like Cloudflare, the server never serves _headers itself, in any case.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
@@ -45,7 +45,7 @@ export function createSiteServer(root) {
       return res.writeHead(500, TEXT).end(`dist/_headers: ${err.code ? `cannot be read (${err.code})` : err.message}`);
     }
     // Matched on the path as the request sent it (percent-encoded), as Cloudflare matches it.
-    const reply = (status, headers, body) => res.writeHead(status, { ...headers, ...headersFor(rules, url?.pathname ?? '/', { status }) }).end(body);
+    const reply = (status, headers, body) => res.writeHead(status, { ...headers, ...headersFor(rules, url?.pathname ?? '/') }).end(body);
     const send = (status, file) => reply(status, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }, readFileSync(file));
     const notFoundFile = base + fileFor(NOT_FOUND_PATH);
     const notFound = () => (isFile(notFoundFile) ? send(404, notFoundFile) : reply(404, TEXT, 'not found'));

@@ -69,20 +69,15 @@ const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map((
 
 // One check's result: the live response ({ status, headers }) against the rules. `rows` has one entry per header
 // compared, { name, file, live, ok } (null: not sent), plus the status as ':status'; `live` is all the response's
-// headers, names lowercased, and `liveStatus` its status. A header is compared when the file sets it for this path and
-// status. A header the file sets for the path but withholds from this status (every header on a 404, which Cloudflare
-// does not apply there; the Cache-Control of a redirect) is recorded, and is a difference only when it is the file's own
-// Cache-Control, which would keep an error or a redirect cached for a year (Cloudflare may send a Cache-Control of its
-// own there). The row's `withheld` flag marks it for the report.
+// headers, names lowercased, and `liveStatus` its status. Every header the file sets for the path is compared. On a
+// 404 a header may also be absent: the deployed Worker sends the file's headers there, but a preview URL sends none
+// (headersFor in pipeline/site/headers.js).
 export function compareResponse(rules, check, response) {
   const live = lowercased(response.headers);
-  const expected = headersFor(rules, check.path, { status: check.status });
-  const declared = headersFor(rules, check.path);
+  const missingOk = response.status === 404;
   const rows = [{ name: ':status', file: String(check.status), live: String(response.status), ok: response.status === check.status }];
-  for (const [name, value] of Object.entries(expected)) rows.push({ name, file: value, live: live[name] ?? null, ok: live[name] === value });
-  for (const [name, value] of Object.entries(declared)) {
-    if (name in expected) continue;
-    rows.push({ name, file: null, live: live[name] ?? null, ok: name !== 'cache-control' || live[name] !== value, withheld: value });
+  for (const [name, value] of Object.entries(headersFor(rules, check.path))) {
+    rows.push({ name, file: value, live: live[name] ?? null, ok: live[name] === value || (missingOk && !(name in live)) });
   }
   return { ...check, rows, live, liveStatus: response.status, ok: rows.every((row) => row.ok) };
 }
@@ -99,15 +94,14 @@ export function formatReport(results) {
   const labelWidth = Math.max(...results.map((r) => r.label.length));
   const lines = ['Live headers against dist/_headers', ''];
   for (const r of results) {
-    const detail = r.error ? `no response: ${r.error}` : r.ok ? `${r.rows.filter((row) => !row.withheld).length} compared, all match` : `${r.rows.filter((row) => !row.ok).length} differ`;
+    const detail = r.error ? `no response: ${r.error}` : r.ok ? `${r.rows.length} compared, all match` : `${r.rows.filter((row) => !row.ok).length} differ`;
     lines.push(`  ${r.ok ? 'ok  ' : 'DIFF'}  ${r.path.padEnd(pathWidth)}  ${String(r.status).padEnd(3)}  ${r.label.padEnd(labelWidth)}  ${detail}`);
   }
   for (const r of results.filter((x) => x.rows?.some((row) => !row.ok))) {
     lines.push('', `${r.path} (${r.label}, expect ${r.status})`);
     for (const row of r.rows.filter((x) => !x.ok)) {
-      const file = row.withheld === undefined ? show(row.file) : `none for a ${r.status} (the file's value for a 200 is: ${row.withheld})`;
-      lines.push(`  ${row.name}`, `    file: ${file}`, `    live: ${show(row.live)}`);
-      if (row.withheld === undefined && looselyEqual(row.file, row.live)) lines.push('    (these differ only in letter case or spacing)');
+      lines.push(`  ${row.name}`, `    file: ${show(row.file)}`, `    live: ${show(row.live)}`);
+      if (looselyEqual(row.file, row.live)) lines.push('    (these differ only in letter case or spacing)');
     }
   }
   const notes = results.filter((r) => r.liveStatus === 404);

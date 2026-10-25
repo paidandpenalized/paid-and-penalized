@@ -102,13 +102,14 @@ export function parseHeaders(text) {
   return out;
 }
 
-// The headers the rules give a response, names lowercased: a request path and the response's status. Every matching
-// rule applies, in file order, and a header set again joins the earlier value with a comma. An error response (the
-// not-found page, a missing hashed file) gets none of them: Cloudflare applies _headers to the files it serves and to
-// its trailing-slash redirects, not to a 404 (seen on the preview, 2026-10-25). A redirect carries no Cache-Control.
-// Cloudflare's own defaults (Cache-Control, ETag, Content-Type) are not part of the result.
-export function headersFor(rules, pathname, { status = 200 } = {}) {
-  if (status >= 400) return {};
+// The headers the rules give a response to a request path, names lowercased. Every matching rule applies, in file
+// order, and a header set again joins the earlier value with a comma. They go on every response, whatever its status,
+// as the deployed Worker sends them (seen 2026-10-25): a redirect and a 404 carry them too, Cache-Control included, so
+// a missing hashed file's 404 says immutable for a year. That is accepted: a hashed name is never reused for other
+// content, so a cached 404 can only hide a file that comes back unchanged after a later deploy removed it. (A
+// Cloudflare preview URL sends none of them on a 404.) Cloudflare's own defaults (Cache-Control, ETag, Content-Type)
+// are not part of the result.
+export function headersFor(rules, pathname) {
   const headers = new Map();
   for (const { pattern, set } of rules) {
     if (!pattern.test(pathname)) continue;
@@ -117,6 +118,5 @@ export function headersFor(rules, pathname, { status = 200 } = {}) {
       headers.set(key, headers.has(key) ? `${headers.get(key)}, ${value}` : value);
     }
   }
-  if (status < 200 || status > 299) headers.delete('cache-control');
   return Object.fromEntries(headers);
 }
