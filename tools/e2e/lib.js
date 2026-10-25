@@ -134,7 +134,8 @@ const requestName = (request) => (request.isNavigationRequest() ? 'the page itse
 //                    addresses are not requests to a host)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
-//                    failed; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming the requests still in flight
+//                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
+//                    the requests still in flight
 // A visit to a page that fetches nothing after its load does not wait for the network (visit), so a request can still
 // be in flight when the checks begin (the browser's request for the site's icon, a lazy image); closing the tab would
 // abort it, and an aborted request is not reported, so it would never be judged. Await settled before reading the
@@ -175,12 +176,15 @@ async function watch(page, base) {
       window.reportCspViolation({ directive: e.effectiveDirective, blocked: e.blockedURI, source: e.sourceFile, line: e.lineNumber, sample: e.sample });
     });
   });
+  // A redirected request finishes before its next hop starts, so the page can go idle between the two: each idle is
+  // checked again after a round trip to the page (two paints), by when the browser has reported the next hop.
   const settled = async ({ timeoutMs = SETTLE_TIMEOUT_MS } = {}) => {
-    await settle(page);
-    if (inFlight.size === 0) return;
-    await once(idle, 'idle', { signal: AbortSignal.timeout(timeoutMs) }).catch(() => {
-      throw new Error(`requests still in flight ${timeoutMs} ms after the checks began: ${[...inFlight].map(requestName).join(', ')}`);
-    });
+    const signal = AbortSignal.timeout(timeoutMs);
+    for (await settle(page); inFlight.size > 0; await settle(page)) {
+      await once(idle, 'idle', { signal }).catch(() => {
+        throw new Error(`requests still in flight ${timeoutMs} ms after the checks began: ${[...inFlight].map(requestName).join(', ')}`);
+      });
+    }
   };
   return { errors, cspViolations, foreignRequests, settled };
 }
