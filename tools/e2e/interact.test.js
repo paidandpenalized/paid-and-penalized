@@ -243,6 +243,19 @@ describe('the top bar', () => {
     assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
     await assertQuiet(seen, 'top bar');
   }));
+
+  it('after a press with no click (a middle button\'s), a text field a script focuses under it is still brought clear', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { field } = await fieldUnderBar(page);
+    await page.mouse.click(1, page.viewportSize().height - 1, { button: 'middle' });
+    // The release clears the press's mark a second later (RELEASE_MS in web/client/topbar.js).
+    await page.waitForTimeout(1_100);
+    await field.evaluate((el) => el.focus());
+    await settle(page);
+    const now = await field.evaluate((el) => ({ top: el.getBoundingClientRect().top, edge: document.querySelector('.topbar').getBoundingClientRect().bottom, focused: document.activeElement === el }));
+    assert.ok(now.focused, 'the script focused the field');
+    assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
+    await assertQuiet(seen, 'top bar');
+  }));
 });
 
 describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
