@@ -25,7 +25,8 @@ export function mountSteps({ story, onStep, phone, still }) {
   const stage = story.querySelector('.stage');
   const bar = document.querySelector('.topbar');
   let current = -1;
-  let queued = false;
+  // The frame an update waits for (0: none).
+  let frame = 0;
 
   const headerBottom = () => (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0);
 
@@ -40,7 +41,7 @@ export function mountSteps({ story, onStep, phone, still }) {
   }
 
   function update() {
-    queued = false;
+    frame = 0;
     const vh = window.innerHeight;
     const narrow = phone.matches;
     const top = headerBottom();
@@ -64,23 +65,22 @@ export function mountSteps({ story, onStep, phone, still }) {
     }
   }
   const queue = () => {
-    if (!queued) {
-      queued = true;
-      window.requestAnimationFrame(update);
-    }
+    if (!frame) frame = window.requestAnimationFrame(update);
   };
 
   // A pointer's click on the rail glides to its step, so the chart moves through the steps between. A keyboard's (a click
   // with no pointer, detail 0) and any click when the reader asks for less motion keep the link's own jump, which also
   // moves the keyboard's place in the page to the step.
-  for (const a of links) {
-    a.addEventListener('click', (event) => {
+  const glides = links.map((a) => {
+    const glide = (event) => {
       const target = document.getElementById(a.hash.slice(1));
       if (!target || still.matches || event.detail === 0 || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
+    };
+    a.addEventListener('click', glide);
+    return glide;
+  });
 
   const resized = () => {
     measure();
@@ -92,10 +92,14 @@ export function mountSteps({ story, onStep, phone, still }) {
   update();
   return {
     refresh: resized,
-    // Back to the page as the server wrote it: no fading, no current step.
+    // Back to the page as the server wrote it: no fading, no current step, no update still to come, the rail's links
+    // their own jumps.
     stop() {
       window.removeEventListener('scroll', queue);
       window.removeEventListener('resize', resized);
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+      links.forEach((a, i) => a.removeEventListener('click', glides[i]));
       for (const s of steps) s.classList.remove('step--tall', 'is-current');
       for (const a of links) a.removeAttribute('aria-current');
       for (const li of now) li.classList.remove('is-now');
