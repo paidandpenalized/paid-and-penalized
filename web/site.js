@@ -57,8 +57,7 @@ export const SITE = {
 export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.startsWith(site.path)) ?? null;
 
 // A program by its id (SITE.programs), or null for an id the registry has not.
-const BY_ID = new Map(SITE.programs.map((p) => [p.id, p]));
-export const programById = (id) => BY_ID.get(id) ?? null;
+export const programById = (id) => SITE.programs.find((p) => p.id === id) ?? null;
 
 // The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
