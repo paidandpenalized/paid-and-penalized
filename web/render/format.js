@@ -40,10 +40,13 @@ function fixed(x, dp, style) {
   return FIXED.get(key).format(x);
 }
 
-// x is a fraction: 0.123 with dp 1 reads 12.3%. sign: + before a positive share (never before one that reads 0%).
+// x is a fraction: 0.123 with dp 1 reads 12.3%. A share that reads zero has no sign, however it got there (-0.00004 at
+// two decimals is "0.00%", not "−0.00%"); sign: + before a positive share that does not.
 export function pct(x, dp = 1, { sign = false } = {}) {
-  const text = fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
-  return sign && x > 0 && /[1-9]/.test(text) ? `+${text}` : text;
+  const raw = fixed(x, dp, 'percent');
+  if (!/[1-9]/.test(raw)) return raw.replace(/^-/, '');
+  const text = raw.replace(/^-(?=\d)/, MINUS);
+  return sign && x > 0 ? `+${text}` : text;
 }
 
 // A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%

@@ -31,6 +31,8 @@ test('money and pct take a sign on request: + before a positive amount, never be
   assert.equal(pct(0.0301, 1, { sign: true }), '+3.0%');
   assert.equal(pct(-0.0155, 1, { sign: true }), '−1.6%');
   assert.equal(pct(0.0001, 1, { sign: true }), '0.0%');
+  assert.equal(pct(-0.0001, 1), '0.0%', 'a negative share that reads zero has no minus');
+  assert.equal(pct(-0.0001, 1, { sign: true }), '0.0%');
   assert.equal(pct(0.5, 0), '50%');
 });
 
