@@ -115,9 +115,7 @@ ${card}`,
 // and in dollars, each program's dollars, how its state's hospitals fare, and the way to its own page. Its words are
 // cardModel's (hub/client/story/find.js), which the story's script uses to rewrite it for the reader's hospital and peer
 // group, so the two never differ.
-function exampleCard({ hospitals, fy }) {
-  const h = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
-  if (!h?.est) throw new RangeError(`hub home: the example hospital ${EXAMPLE_CCN} has no estimate`);
+function exampleCard({ h, hospitals, fy }) {
   const mode = PEER_MODES[0];
   const m = cardModel(h, peersOf(hospitals, h, mode), mode, fy);
   const row = (r) => html`<div class="card__row"><dt>${r.label}</dt><dd class="v${r.kind ? ` v--${r.kind}` : ''}">${r.text}</dd></div>`;
@@ -149,7 +147,10 @@ export function homePage({ hospitals, facts, states, shapes, assets, robots }) {
   // The last step's search: a family search box (hub/client/search.js mounts it) over the hospitals only, whose pick the
   // story's script takes and follows in place.
   const search = searchForm({ id: 'find', src: hubUrl, label: COPY.findLabel, find: COPY.findWord, findRest: COPY.findRest, placeholder: COPY.findPlaceholder, hero: true, hub: true, only: 'hospital' });
-  const words = stepWords({ hospitals, facts, states, fy, search, card: exampleCard({ hospitals, fy }) });
+  // The example hospital: the last step's card and the worksheet below the story.
+  const example = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
+  if (!example?.est) throw new RangeError(`hub home: the example hospital ${EXAMPLE_CCN} has no estimate`);
+  const words = stepWords({ hospitals, facts, states, fy, search, card: exampleCard({ h: example, hospitals, fy }) });
   const zero = money(0);
   const railWords = STEPS.map((s) => fill(s.rail, s.slug === 'start' ? { zero } : {}));
   const rail = html`<nav class="railbox" aria-label="${COPY.railLabel}"><ol class="rail">${STEPS.map((s, i) => html`<li><a href="#step-${s.slug}">${railWords[i]}</a></li>`)}</ol></nav>`;
@@ -177,7 +178,7 @@ ${peerToggle()}
 </div>
 <div class="wrap below">
 ${directory({ programs: SITE.programs, facts, hospitals, fy })}
-${methodsBrief({ h: hospitals.find((x) => x.ccn === EXAMPLE_CCN), fy, src: hubUrl })}
+${methodsBrief({ h: example, fy, src: hubUrl })}
 ${yourTurn({ feedback: feedbackFor({ path: '/' }) })}
 </div>`;
   return hubPage({ title: SITE.name, description: COPY.description, path: '/', robots, body, scripts: [assets.js['hub-home']], assets });

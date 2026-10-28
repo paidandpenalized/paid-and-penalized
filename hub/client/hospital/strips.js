@@ -198,7 +198,8 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
       scenery(st, scale, f, W);
     }
     // Moves glide only on a group change, not on a resize, nor before the first paint.
-    st.svg.classList.toggle('st--live', animate && !still.matches);
+    const glide = animate && !still.matches;
+    st.svg.classList.toggle('st--live', glide);
     const { items, pile } = rows[st.id];
     const { square, side } = drawnDot(pile.r, dpr);
     const s = side / dpr;
@@ -214,19 +215,19 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
       if (fresh) {
         mark = el('rect', { class: signClass(it.v) }, st.dots);
         st.marks.set(it.id, mark);
-        if (animate && !still.matches) mark.style.opacity = '0';
+        if (glide) mark.style.opacity = '0';
       }
       mark.setAttribute('width', String(s));
       mark.setAttribute('height', String(s));
       mark.setAttribute('rx', square ? '0' : String(s / 2));
       mark.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
-      if (fresh && animate && !still.matches) requestAnimationFrame(() => requestAnimationFrame(() => { mark.style.opacity = ''; }));
+      if (fresh && glide) requestAnimationFrame(() => requestAnimationFrame(() => { mark.style.opacity = ''; }));
       if (it.id === h.ccn) st.at = { x: p.x, y: p.y, r: s / 2 };
     }
     for (const [ccn, mark] of st.marks) {
       if (seen.has(ccn)) continue;
       st.marks.delete(ccn);
-      if (animate && !still.matches) {
+      if (glide) {
         mark.style.opacity = '0';
         setTimeout(() => mark.remove(), FADE);
       } else mark.remove();

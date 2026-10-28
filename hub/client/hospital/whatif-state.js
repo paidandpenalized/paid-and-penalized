@@ -48,13 +48,16 @@ export function ranges(h, { vbpMax }) {
 // The actual state: h's own factors and cut, as CMS's files have them.
 export const initial = (h) => ({ hrrp: h.est.hrrpFactor, hvbp: h.est.vbpFactor, hac: h.est.cut });
 
+// h's range for id (ranges'), or null for an id that is not a factor (the cut) or a program h is not in.
+const rangeOf = (rng, id) => (has(FACTOR, id) ? rng[id] : null);
+
 // A factor to four decimals, or the actual factor when it reads the same.
 const settle = (x, actual) => (round4(x) === round4(actual) ? actual : round4(x));
 
 // A value for id that h may take, normalized (a factor in its range, settled; the cut as true or false), or null.
 function accept(id, value, h, rng) {
   if (id === 'hac') return value === 1 || value === true ? true : value === 0 || value === false ? false : null;
-  const r = has(FACTOR, id) ? rng[id] : null;
+  const r = rangeOf(rng, id);
   if (!r || typeof value !== 'number' || !Number.isFinite(value)) return null;
   const actual = initial(h)[id];
   if (round4(value) === round4(actual)) return actual;
@@ -88,7 +91,7 @@ export function reduce(state, action, ctx) {
     return same(next, state) ? state : next;
   };
   const id = action?.id;
-  const r = has(FACTOR, id) ? rng[id] : null;
+  const r = rangeOf(rng, id);
   switch (action?.type) {
     case 'set': {
       if (!r || !Number.isFinite(action.value)) return state;

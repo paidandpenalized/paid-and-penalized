@@ -132,7 +132,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const info = { s, lines, pile, zero: zeroLabel(pile) };
     // After hospital-acquired conditions: the column of hospitals whose only cut is that one (no Readmissions cut).
     if (s === 2) {
-      const only = rows.map((r, i) => i).filter((i) => rows[i].c[1] === 0 && rows[i].c[2] < 0);
+      const only = rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []));
       const at = new Map();
       for (const i of only) at.set(L.X[i], (at.get(L.X[i]) ?? 0) + 1);
       const x = [...at].sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -149,13 +149,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const pile = pileLayout(items, g.scale, pileOpts(g.bottom - 1, top, size('net')));
     const L = blank('net');
     place(L, pile, items, 1);
-    let cut = 0;
-    let bonus = 0;
-    for (const r of rows) {
-      if (r.c[3] < 0) cut += 1;
-      else if (r.c[3] > 0) bonus += 1;
-    }
-    L.info = { pile, top, zero: zeroLabel(pile), cut, bonus };
+    L.info = { pile, top, zero: zeroLabel(pile), cut: rows.filter((r) => r.c[3] < 0).length, bonus: rows.filter((r) => r.c[3] > 0).length };
     return hideCopies(L);
   }
 

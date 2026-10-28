@@ -63,14 +63,12 @@ export function mountMap(stageEl) {
   // The listeners sit on the map's figure, an HTML element (an SVG element that listens for focus becomes a stop in the
   // tab order of its own).
   const box = svg.closest('.smapfig') ?? stageEl;
-  box.addEventListener('pointerover', (e) => {
-    on = stateOf(e.target);
-    write();
-  });
-  box.addEventListener('focusin', (e) => {
-    on = stateOf(e.target);
-    write();
-  });
+  for (const type of ['pointerover', 'focusin']) {
+    box.addEventListener(type, (e) => {
+      on = stateOf(e.target);
+      write();
+    });
+  }
   // Leaving a state (the next one's pointerover, if any, follows at once).
   for (const type of ['pointerout', 'focusout']) {
     box.addEventListener(type, () => {

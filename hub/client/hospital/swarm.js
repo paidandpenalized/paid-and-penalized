@@ -368,9 +368,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
       const d = Math.hypot(CX[s] - x, CY[s] - y);
       const reach = Math.max(9, CR[s] + 5);
       // The group's copies (s >= N) win a tie with everyone's dots.
-      if (d <= reach && d + (s >= N ? 0 : 0.5) < bestD) {
+      const rank = d + (s >= N ? 0 : 0.5);
+      if (d <= reach && rank < bestD) {
         best = s;
-        bestD = d + (s >= N ? 0 : 0.5);
+        bestD = rank;
       }
     }
     return best;
@@ -476,7 +477,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
 
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerleave', onLeave);
-  canvas.addEventListener('click', (e) => onClick(e));
+  canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);
 
