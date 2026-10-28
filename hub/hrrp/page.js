@@ -88,34 +88,40 @@ ${summaryCard(summary, fy)}
 // ---------- /hrrp/hospital/<ccn>/ ----------
 
 // A condition's row: its label, eligible discharges, the ratio as CMS published it with the words for which side of one it
-// is on (a word, so color is never the only mark), and whether CMS counted it toward the cut (its flag). The words are said
-// once for all the rows.
+// is on (a word, so color is never the only mark), the median of the hospital's peer group (what CMS compares the ratio with)
+// and whether CMS counted it toward the reduction (its flag: enough discharges and a ratio above that median, not above one).
+// Only a counted row carries the penalty ink. The words are said once for all the rows.
 const WORDS = {
-  discharges: fill('colDischarges'), ratio: fill('colRatio'), counted: fill('colCounted'), yes: fill('counted'), no: fill('notCounted'),
+  discharges: fill('colDischarges'), ratio: fill('colRatio'), median: fill('colMedian'), counted: fill('colCounted'),
+  yes: fill('counted'), no: fill('notCounted'), noMedian: fill('noMedian'),
   above: fill('above', { par: String(ERR_PAR) }), atOrBelow: fill('atOrBelow', { par: String(ERR_PAR) }),
 };
-function conditionRow(condition, c) {
+function conditionRow(condition, c, median) {
   const side = shown(c.err, ERR_DP) > ERR_PAR ? 'above' : 'atOrBelow';
+  const counted = c.flag === 1;
   return html`<tr>
 <th scope="row">${condition.label}</th>
 <td class="num" data-label="${WORDS.discharges}">${count(c.n)}</td>
-<td class="num" data-label="${WORDS.ratio}"><span class="rd__r">${decimal(c.err, ERR_DP)}</span> <span class="rd__w rd__w--${side}">${WORDS[side]}</span></td>
-<td data-label="${WORDS.counted}">${c.flag === 1 ? WORDS.yes : WORDS.no}</td>
+<td class="num" data-label="${WORDS.ratio}"><span class="rd__r">${decimal(c.err, ERR_DP)}</span> <span class="rd__w">${WORDS[side]}</span></td>
+<td class="num" data-label="${WORDS.median}">${median === null ? WORDS.noMedian : decimal(median, ERR_DP)}</td>
+<td data-label="${WORDS.counted}"${counted ? html` class="rd__yes"` : ''}>${counted ? WORDS.yes : WORDS.no}</td>
 </tr>
 `;
 }
 
 // The conditions CMS measured for the hospital (the ones it has, in the file's order of conditions), in a table, with the
-// note on what "counted" means.
+// note on what "counted" means. tdr.peerMedians is each peer group's median ratio by condition.
 function conditions(record, tdr) {
+  const medians = tdr.peerMedians?.[String(record.peer)] ?? {};
   const rows = tdr.conditions.filter((condition) => record.c[condition.key]);
+  const fy = String(tdr.fy);
   return html`<section class="rd__cond" aria-labelledby="rd-cond-h">
-<h2 class="h-sm" id="rd-cond-h">${fill('conditionsHeading')}</h2>
+<h2 class="h-sm" id="rd-cond-h">${fill('conditionsHeading', { fy })}</h2>
 <table class="gb rd__tbl">
-<caption class="vh">${fill('conditionsCaption', { fy: String(tdr.fy) })}</caption>
-<thead><tr><th scope="col">${fill('colCondition')}</th><th scope="col" class="num">${WORDS.discharges}</th><th scope="col" class="num">${WORDS.ratio}</th><th scope="col">${WORDS.counted}</th></tr></thead>
+<caption class="vh">${fill('conditionsCaption', { fy })}</caption>
+<thead><tr><th scope="col">${fill('colCondition')}</th><th scope="col" class="num">${WORDS.discharges}</th><th scope="col" class="num">${WORDS.ratio}</th><th scope="col" class="num">${WORDS.median}</th><th scope="col">${WORDS.counted}</th></tr></thead>
 <tbody>
-${rows.map((condition) => conditionRow(condition, record.c[condition.key]))}</tbody>
+${rows.map((condition) => conditionRow(condition, record.c[condition.key], medians[condition.key] ?? null))}</tbody>
 </table>
 <p class="rd__cnote">${fill('conditionsNote', { par: String(ERR_PAR) })}</p>
 </section>`;
@@ -150,11 +156,11 @@ function estimate({ h, hubFy, pinFy }) {
     figure = html`<div class="hh__netline"><p class="hh__big">${money(h.est.hrrp)}</p>${pill({ kind: cut ? 'pen' : null, label: fill(cut ? 'wordCut' : 'wordNoCut') })}</div>
 <p class="hh__fy">${fill('estimateNote', { fy: hubFy, pinFy })}</p>`;
   } else if (h?.est) {
-    figure = html`<div class="hh__netline">${pill({ kind: 'na', label: HOSPITAL.notInProgram })}</div>
+    figure = html`<div class="hh__netline">${pill({ kind: 'na', label: fill('estimateOutPill', { fy: hubFy }) })}</div>
 <p class="hh__fy">${fill('estimateOut', { fy: hubFy })}</p>`;
   } else {
     figure = html`<div class="hh__netline"><p class="stamp stamp--ink">${fill('estimateNone')}</p></div>
-<p class="hh__fy">${fill('estimateNoneWhy', { fy: hubFy })}</p>`;
+<p class="hh__fy">${fill(h ? 'estimateNoneWhy' : 'estimateNotInFile', { fy: hubFy })}</p>`;
   }
   return html`<section class="hh__net rd__est" aria-labelledby="rd-est-h">
 <p class="hh__netlab" id="rd-est-h">${fill('estimateLabel', { fy: hubFy })}${figured ? tag : ''}</p>

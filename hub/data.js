@@ -27,7 +27,9 @@ let loaded = null;
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
 //   master        the hospital master's records by CCN
-//   tdr           { fy, conditions, hospitals: Map<ccn, record> } from the pinned Thirty Day Readmissions file
+//   tdr           { fy, conditions, peerMedians, hospitals: Map<ccn, record> } from the pinned Thirty Day Readmissions file
+//                 (peerMedians: each peer group's median ratio by condition, { '<group>': { <key>: median } }, which CMS compares
+//                 a hospital's ratios with)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 export function loadHub() {
   if (loaded) return loaded;
@@ -40,7 +42,7 @@ export function loadHub() {
     builtAt: dollars.built_at,
     dollars,
     master: new Map(masterFile.hospitals.map((r) => [r.ccn, r])),
-    tdr: { fy: pinned.meta.fy, conditions: pinned.conditions, hospitals: new Map(pinned.hospitals.map((r) => [r.id, r])) },
+    tdr: { fy: pinned.meta.fy, conditions: pinned.conditions, peerMedians: pinned.meta.peerMedians, hospitals: new Map(pinned.hospitals.map((r) => [r.id, r])) },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };
   return loaded;

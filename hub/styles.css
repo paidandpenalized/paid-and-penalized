@@ -587,10 +587,12 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__money > .rd__kicker { margin-bottom: 8px; }
 .rd__main { display: grid; gap: 22px; align-content: start; }
 .rd__tbl thead th { position: static; white-space: normal; }
-.rd__tbl .num { vertical-align: top; }
+.rd__tbl :is(thead, tbody) th, .rd__tbl td { padding-inline: 6px; }
+.rd__tbl tbody th { min-width: 8.5em; }
+.rd__tbl .num { vertical-align: top; white-space: normal; }
 .rd__r { font-weight: 700; }
 .rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
-.rd__w--above { color: var(--pen-ink); font-weight: 700; }
+.rd__yes { color: var(--pen-ink); font-weight: 700; }
 .rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
 @media (min-width: 960px) {
   .rd__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
@@ -602,5 +604,4 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
   .rd__tbl th[scope="row"] { grid-column: 1 / -1; padding: 0; }
   .rd__tbl td, .rd__tbl td.num { padding: 0; text-align: left; white-space: normal; }
   .rd__tbl td::before { content: attr(data-label); display: block; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
-  .rd__tbl td:last-child { grid-column: 1 / -1; }
 }

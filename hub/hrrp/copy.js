@@ -50,18 +50,21 @@ export const COPY = typesetCopy({
   wordCut: 'cut',
   wordNoCut: 'no cut',
 
-  // The conditions CMS measured for this hospital.
-  conditionsHeading: 'What CMS measured',
-  conditionsCaption: "The conditions CMS measured for this hospital in FY{fy}, with the excess readmission ratio as CMS published it.",
+  // The conditions CMS measured for this hospital, in FY{fy}: the hospital's ratio, the median of its peer group (what CMS
+  // compares the ratio with) and CMS's indicator that the condition counts toward the reduction.
+  conditionsHeading: 'What CMS measured, FY{fy}',
+  conditionsCaption: "The conditions CMS measured for this hospital in FY{fy}, with the excess readmission ratio as CMS published it and the median of the hospital's peer group.",
   colCondition: 'Condition',
   colDischarges: 'Eligible discharges',
   colRatio: 'Excess readmission ratio',
-  colCounted: 'Counted toward the cut',
+  colMedian: 'Peer group median',
+  colCounted: 'Counted by CMS',
+  noMedian: 'Not available',
   above: 'above {par}',
   atOrBelow: 'at or below {par}',
   counted: 'Yes',
   notCounted: 'No',
-  conditionsNote: "A ratio above {par} means more readmissions than expected for the hospital's patients. CMS counts a condition toward the cut only when it has enough eligible discharges and its ratio is above the median of the hospital's peer group.",
+  conditionsNote: "A ratio above {par} means more readmissions than expected for the hospital's patients. CMS counts a condition only when it has enough eligible discharges and its ratio is above the median of the hospital's peer group, so a counted ratio can sit at or below {par}. A counted condition adds to the hospital's reduction, which can round to none.",
 
   // The estimate the front page's net uses, from a different fiscal year.
   estimateHeading: 'The estimate the net uses',
@@ -69,9 +72,11 @@ export const COPY = typesetCopy({
   estimateTag: 'Estimate',
   estimateTagLabel: 'Estimate: how this site estimates the dollars',
   estimateNote: "The net across all three programs adds each program's estimated dollars for FY{fy}, the latest year they share. Readmissions' part can differ from the FY{pinFy} values on this page.",
+  estimateOutPill: 'Not in the FY{fy} file',
   estimateOut: "Not in CMS's FY{fy} Readmissions file, so the net has no Readmissions dollars for this hospital.",
   estimateNone: 'No estimate',
   estimateNoneWhy: "This site's estimated FY{fy} dollars have no usable row for this hospital.",
+  estimateNotInFile: "This site's FY{fy} dollar file does not have this hospital.",
   hubLink: 'This hospital across the programs',
 
   // The source and fairness lines, as the hospital pages end.

@@ -118,9 +118,9 @@ test('a hospital with no cut: a factor of one, no reduction and the words "no cu
   assert.ok(main.includes(`<p class="hh__big">${money(BY_CCN.get(NO_CUT.id).est.hrrp)}</p>`), 'the estimate');
 });
 
-test('the conditions: each the hospital has, in CMS\'s order, with its discharges, the ratio as CMS published it (four decimals), the words for its side of one and whether CMS counted it', () => {
+test('the conditions: each the hospital has, in CMS\'s order, with its discharges, the ratio as CMS published it (four decimals), the words for its side of one, its peer group\'s median and whether CMS counted it', () => {
   const main = mainOf(render(MIXED));
-  const rows = [...main.matchAll(/<tr>\n<th scope="row">([^<]*)<\/th>\n<td class="num" data-label="[^"]*">([^<]*)<\/td>\n<td class="num" data-label="[^"]*"><span class="rd__r">([^<]*)<\/span> <span class="rd__w rd__w--(\w+)">([^<]*)<\/span><\/td>\n<td data-label="[^"]*">([^<]*)<\/td>\n<\/tr>/g)];
+  const rows = [...main.matchAll(/<tr>\n<th scope="row">([^<]*)<\/th>\n<td class="num" data-label="[^"]*">([^<]*)<\/td>\n<td class="num" data-label="[^"]*"><span class="rd__r">([^<]*)<\/span> <span class="rd__w">([^<]*)<\/span><\/td>\n<td class="num" data-label="[^"]*">([^<]*)<\/td>\n<td data-label="[^"]*"( class="rd__yes")?>([^<]*)<\/td>\n<\/tr>/g)];
   const want = HUB.tdr.conditions.filter((c) => MIXED.c[c.key]);
   assert.equal(rows.length, want.length, 'one row per condition the hospital has');
   rows.forEach((row, i) => {
@@ -128,18 +128,32 @@ test('the conditions: each the hospital has, in CMS\'s order, with its discharge
     assert.equal(row[1], esc(want[i].label), 'the condition\'s label');
     assert.equal(row[2], count(c.n), 'eligible discharges');
     assert.equal(row[3], decimal(c.err, 4), 'the ratio, four decimals as CMS published it');
-    const above = Number(decimal(c.err, 4)) > 1;
-    assert.equal(row[4], above ? 'above' : 'atOrBelow', 'its side of one, as printed');
-    assert.equal(row[5], above ? 'above 1' : 'at or below 1', 'the words, not color alone');
-    assert.equal(row[6], c.flag === 1 ? 'Yes' : 'No', 'counted by CMS');
+    assert.equal(row[4], Number(decimal(c.err, 4)) > 1 ? 'above 1' : 'at or below 1', 'the words, as the ratio prints, not color alone');
+    assert.equal(row[5], decimal(HUB.tdr.peerMedians[String(MIXED.peer)][want[i].key], 4), 'the median of the hospital\'s peer group, which CMS compares the ratio with');
+    assert.equal(row[7], c.flag === 1 ? 'Yes' : 'No', 'counted by CMS');
+    assert.equal(Boolean(row[6]), c.flag === 1, 'the penalty ink on a counted row only');
   });
-  assert.ok(rows.some((r) => r[4] === 'above' && r[6] === 'No') && rows.some((r) => r[4] === 'above' && r[6] === 'Yes') && rows.some((r) => r[4] === 'atOrBelow'), 'the page shows every combination');
-  assert.ok(main.includes('<th scope="col">Condition</th>') && main.includes('<caption class="vh">'), 'a labeled table');
+  assert.ok(rows.some((r) => r[4] === 'above 1' && r[7] === 'No') && rows.some((r) => r[4] === 'above 1' && r[7] === 'Yes') && rows.some((r) => r[4] === 'at or below 1'), 'the page shows every combination');
+  assert.ok(main.includes(`<h2 class="h-sm" id="rd-cond-h">What CMS measured, FY${FY}</h2>`), 'the fiscal year is in the visible heading');
+  assert.ok(main.includes('<th scope="col" class="num">Peer group median</th>') && main.includes('<th scope="col">Counted by CMS</th>') && main.includes('<caption class="vh">'), 'a labeled table');
+  assert.ok(main.includes('so a counted ratio can sit at or below 1. A counted condition adds to the hospital’s reduction, which can round to none.'), 'what counted means');
+  assert.ok(!/Counted toward the cut/.test(main), 'CMS\'s indicator, not "the cut"');
+});
+
+// What the page says "counted" means is what the pinned flag is: enough discharges and a ratio above the peer group's median.
+test('the pinned flag is CMS\'s penalty indicator: eligible discharges of at least the minimum and a ratio above the hospital\'s peer group median', () => {
+  const MIN_DISCHARGES = 25;
+  let wrong = 0;
+  for (const r of RECORDS) for (const [key, c] of Object.entries(r.c)) if ((c.flag === 1) !== (c.n >= MIN_DISCHARGES && c.err > HUB.tdr.peerMedians[String(r.peer)][key])) wrong += 1;
+  assert.equal(wrong, 0, 'conditions whose flag is not that rule');
+  // So a flagged condition can sit at or below one, and a hospital with one can have no cut: the cases the page words for.
+  assert.ok(RECORDS.some((r) => Object.values(r.c).some((c) => c.flag === 1 && c.err <= 1)), 'a counted ratio at or below one');
+  assert.ok(RECORDS.some((r) => r.paf >= 1 && Object.values(r.c).some((c) => c.flag === 1)), 'a counted condition on a hospital with no cut');
 });
 
 test('the estimate block by case: not in the FY file, no estimate, and a hospital the dollar file lacks', () => {
   const out = mainOf(render(OUT_OF_FY));
-  assert.ok(out.includes('<span class="pill pill--na">Not in this program</span>') && out.includes(esc(`Not in CMS’s FY${HUB_FY} Readmissions file, so the net has no Readmissions dollars for this hospital.`)), 'not in the file');
+  assert.ok(out.includes(`<span class="pill pill--na">Not in the FY${HUB_FY} file</span>`) && out.includes(esc(`Not in CMS’s FY${HUB_FY} Readmissions file, so the net has no Readmissions dollars for this hospital.`)), 'not in the file');
   assert.ok(!/\$0|hh__big/.test(out), 'never $0 for not in the program');
   const none = mainOf(render(NO_ESTIMATE));
   assert.ok(none.includes('<p class="stamp stamp--ink">No estimate</p>') && none.includes(esc(`This site’s estimated FY${HUB_FY} dollars have no usable row for this hospital.`)), 'no estimate and why');
@@ -149,7 +163,7 @@ test('the estimate block by case: not in the FY file, no estimate, and a hospita
   // and the page says no estimate without a link to a page that is not there.
   const lacking = render(NOT_IN_DOLLARS);
   const main = mainOf(lacking);
-  assert.ok(main.includes('No estimate') && !main.includes('This hospital across the programs'), 'no estimate and no link to a missing page');
+  assert.ok(main.includes('No estimate') && main.includes(esc(`This site’s FY${HUB_FY} dollar file does not have this hospital.`)) && !main.includes('This hospital across the programs'), 'no estimate, why, and no link to a missing page');
   const hrefs = tabsOf(lacking).map(([href]) => href);
   assert.equal(hrefs.some((href) => href.startsWith('/hospital/')), false, 'no tab opens a hospital page across the programs');
   assert.equal(hrefs.some((href) => href.startsWith('/hacrp/hospital/')), false, 'no tab opens a hospital-acquired conditions page');
@@ -161,21 +175,19 @@ test('the estimate block by case: not in the FY file, no estimate, and a hospita
 
 // ---------- invented rows: the odd shapes ----------
 const CONDITIONS = [{ key: 'AA', short: 'A', label: 'Condition A' }, { key: 'BB', short: 'B', label: 'Condition B' }, { key: 'CC', short: 'C', label: 'Condition C' }];
-const TDR = { fy: HUB.tdr.fy, conditions: CONDITIONS, hospitals: new Map() };
-const record = (extra = {}) => ({ id: '990001', paf: 0.9876, red: 1.24, c: { CC: { n: 30, err: 1, flag: 0, ratio: 0.01 }, AA: { n: 3, err: 1.5, flag: 0, ratio: null } }, ...extra });
+const TDR = { fy: HUB.tdr.fy, conditions: CONDITIONS, peerMedians: { 3: { AA: 0.98, BB: 1.01, CC: 0.995 } }, hospitals: new Map() };
+const record = (extra = {}) => ({ id: '990001', peer: 3, paf: 0.9876, red: 1.24, c: { CC: { n: 30, err: 1, flag: 1, ratio: 0.01 }, AA: { n: 3, err: 1.5, flag: 0, ratio: null } }, ...extra });
 const master = (extra = {}) => ({ name: 'Invented Hospital', city: 'Exampleton', state: 'ZZ', beds: 120, teach: 'none', own: 'Nonprofit', urban: true, ...extra });
 const synthetic = (rec, mast, h = null) => hrrpHospitalPage({ record: rec, tdr: TDR, master: mast, h, assets: ASSETS, robots: 'noindex' });
+const cells = (main) => [...main.matchAll(/<th scope="row">([^<]*)<\/th>\n<td class="num"[^>]*>([^<]*)<\/td>\n<td class="num"[^>]*><span class="rd__r">([^<]*)<\/span> <span class="rd__w">([^<]*)<\/span><\/td>\n<td class="num"[^>]*>([^<]*)<\/td>\n<td[^>]*?( class="rd__yes")?>([^<]*)<\/td>/g)].map((m) => ({ label: m[1], n: m[2], ratio: m[3], words: m[4], median: m[5], ink: Boolean(m[6]), counted: m[7] }));
 
 test('invented rows: conditions in the file\'s order, a ratio of exactly one reads "at or below", a ratio with no weight and few discharges still shows, a missing city drops the place', () => {
   const page = synthetic(record(), master({ city: null }));
   const main = mainOf(page);
-  const labels = [...main.matchAll(/<th scope="row">([^<]*)<\/th>/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ['Condition A', 'Condition C'], 'the conditions it has, in the conditions list\'s order');
-  assert.ok(main.includes('<span class="rd__r">1.5000</span> <span class="rd__w rd__w--above">above 1</span>'), 'a small count above one');
-  assert.ok(main.includes('<span class="rd__r">1.0000</span> <span class="rd__w rd__w--atOrBelow">at or below 1</span>'), 'exactly one');
-  // A pinned ratio a hair over one prints as CMS's 1.0000, and the words follow what is printed.
-  const hair = mainOf(synthetic(record({ c: { AA: { n: 40, err: 1.00003, flag: 0, ratio: 0.01 } } }), master()));
-  assert.ok(hair.includes('<span class="rd__r">1.0000</span> <span class="rd__w rd__w--atOrBelow">at or below 1</span>'), 'a ratio printed as one');
+  assert.deepEqual(cells(main).map((c) => c.label), ['Condition A', 'Condition C'], 'the conditions it has, in the conditions list\'s order');
+  const [a, c] = cells(main);
+  assert.deepEqual([a.ratio, a.words, a.median, a.counted, a.ink], ['1.5000', 'above 1', '0.9800', 'No', false], 'a small count above one, below the minimum, not counted');
+  assert.deepEqual([c.ratio, c.words, c.median, c.counted, c.ink], ['1.0000', 'at or below 1', '0.9950', 'Yes', true], 'exactly one, above its peer median, counted');
   assert.ok(main.includes('<p class="field__value">ZZ</p>'), 'a state alone is the location');
   assert.ok(page.includes('<title>Invented Hospital (ZZ): Hospital Readmissions Reduction Program, FY2027 · Paid &amp; Penalized</title>'), 'a title with the state alone');
   const bare = synthetic(record(), master({ city: null, state: null }));
@@ -184,6 +196,29 @@ test('invented rows: conditions in the file\'s order, a ratio of exactly one rea
   assert.ok(main.includes('<p class="field__value field__value--big">0.9876</p>') && main.includes('<p class="field__value field__value--big">1.24%</p>'), 'the factor and the reduction');
   const withPlace = synthetic(record(), master());
   assert.ok(withPlace.includes('<title>Invented Hospital (Exampleton, ZZ): Hospital Readmissions Reduction Program, FY2027 · Paid &amp; Penalized</title>'), 'a title with its place');
+  // A pinned ratio a hair over one prints as CMS's 1.0000, and the words follow what is printed.
+  const hair = cells(mainOf(synthetic(record({ c: { AA: { n: 40, err: 1.00003, flag: 0, ratio: 0.01 } } }), master())));
+  assert.deepEqual([hair[0].ratio, hair[0].words], ['1.0000', 'at or below 1'], 'a ratio printed as one');
+});
+
+test('invented rows: a counted condition on a hospital with no cut, and a counted ratio at or below one, are shown as CMS counted them', () => {
+  // Counted (enough discharges, above the peer median of 0.98) with a ratio at or below one, and a factor of exactly one.
+  const page = synthetic(record({ paf: 1, red: 0, c: { AA: { n: 120, err: 0.99, flag: 1, ratio: null }, BB: { n: 80, err: 1.2, flag: 0, ratio: 0.02 } } }), master());
+  const main = mainOf(page);
+  const [a, b] = cells(main);
+  assert.deepEqual([a.ratio, a.words, a.median, a.counted, a.ink], ['0.9900', 'at or below 1', '0.9800', 'Yes', true], 'counted though at or below one, because above its peer median');
+  assert.deepEqual([b.ratio, b.words, b.median, b.counted, b.ink], ['1.2000', 'above 1', '1.0100', 'No', false], 'above one and above its median, but flagged not counted by CMS here: the page shows CMS\'s flag, not its own rule');
+  const card = main.slice(0, main.indexOf('<section class="hh__net'));
+  assert.ok(card.includes('<p class="field__value field__value--big">1.0000</p>') && card.includes('<p class="field__value field__value--big">0.00%</p>') && card.includes('<span class="pill">no cut</span>'), 'a factor of one, no reduction, "no cut"');
+  assert.ok(main.includes('which can round to none'), 'the page says a counted condition can round to none');
+  assert.equal((main.match(/class="rd__yes"/g) ?? []).length, 1, 'the penalty ink on the counted row alone');
+});
+
+test('invented rows: a peer group with no median shows "Not available", never NaN', () => {
+  const page = synthetic(record({ peer: 9 }), master());
+  const [a] = cells(mainOf(page));
+  assert.equal(a.median, 'Not available');
+  assert.ok(!/NaN|undefined|Infinity/.test(page));
 });
 
 test('the program page counts a factor of exactly one as no cut, and an empty file stops the build', () => {

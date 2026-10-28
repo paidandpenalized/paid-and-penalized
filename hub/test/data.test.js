@@ -20,6 +20,8 @@ test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Re
   assert.ok(hub.tdr.hospitals instanceof Map && hub.tdr.hospitals.size > 0);
   assert.equal(typeof hub.tdr.fy, 'number');
   assert.ok(Array.isArray(hub.tdr.conditions) && hub.tdr.conditions.length > 0);
+  // Each hospital's peer group has a median for each condition it has a ratio for.
+  for (const r of hub.tdr.hospitals.values()) for (const key of Object.keys(r.c)) assert.equal(typeof hub.tdr.peerMedians[String(r.peer)]?.[key], 'number', 'a peer median for each condition');
   for (const [ccn, h] of hub.tdr.hospitals) assert.equal(h.id, ccn);
   assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
 });
