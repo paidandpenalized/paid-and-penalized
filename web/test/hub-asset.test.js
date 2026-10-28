@@ -58,6 +58,24 @@ test('decodeRows stops on an asset it cannot read: a missing column, a short row
   assert.throws(() => decodeRows(null), TypeError);
 });
 
+test('a flag that is not exactly 0 or 1 stops the decode: null, NaN, 2, true and "1" are not guessed into false', () => {
+  for (const flag of ['cut', 'hrrpL', 'vbpL']) {
+    for (const bad of [null, undefined, NaN, 2, -1, true, '1', 0.5]) {
+      assert.throws(() => decodeRows(asset([row({ [flag]: bad })])), (e) => e instanceof RangeError && /^hub asset: /.test(e.message) && e.message.includes(flag), `${flag} ${String(bad)}`);
+    }
+  }
+  // tdr is on every row, so a bad one stops even a row with no estimate.
+  const none = { status: 'm', base: null, total: null, hrrp: null, hvbp: null, hac: null, net: null, hrrpF: null, vbpF: null, cut: null, hrrpL: null, vbpL: null };
+  for (const bad of [null, undefined, NaN, 2, true, '0']) {
+    assert.throws(() => decodeRows(asset([row({ tdr: bad })])), /^RangeError: hub asset: .*tdr/, `tdr ${String(bad)}`);
+    assert.throws(() => decodeRows(asset([row({ ...none, tdr: bad })])), RangeError, `tdr ${String(bad)} on a row with no estimate`);
+  }
+  // 0 and 1 are the flags, and a row with no estimate still has null flags.
+  const [h] = decodeRows(asset([row({ cut: 1, hac: -10, net: -20, hrrpL: 0, vbpL: 1, tdr: 0 })])).hospitals;
+  assert.deepEqual([h.est.cut, h.est.hrrpListed, h.est.vbpListed, h.inTdr], [true, false, true, false]);
+  assert.equal(decodeRows(asset([row({ ...none, tdr: 1 })])).hospitals[0].est, null);
+});
+
 test('loadHubAsset fetches and decodes once per url, and tries again after a failure', async () => {
   const real = globalThis.fetch;
   const calls = [];

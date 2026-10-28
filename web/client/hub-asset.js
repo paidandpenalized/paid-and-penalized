@@ -16,6 +16,13 @@ const STATUS = new Map(Object.entries(STATUS_CODES).map(([word, code]) => [code,
 const DOLLAR_COLS = ['base', 'total', 'hrrp', 'hvbp', 'hac', 'net'];
 const NUMBER_COLS = [...DOLLAR_COLS, 'hrrpF', 'vbpF'];
 
+// A flag column's value, which the build writes as exactly 0 or 1: anything else (null, NaN, a string) means the asset
+// is not what the build wrote, and reading it as false would hide that.
+function flag(ccn, name, value) {
+  if (value !== 0 && value !== 1) throw new RangeError(`hub asset: ${ccn} has ${name} ${JSON.stringify(value) ?? 'undefined'}, not 0 or 1`);
+  return value === 1;
+}
+
 // An estimated row's figures, as hubHospitals' `est` has them. The asset leaves out `after` and `atStake`, which follow
 // from the rest (the build checks they do): the pay after Readmissions and value-based purchasing, and 1% of it. `pct`
 // is each program's dollars as a percent of the hospital's estimated pay.
@@ -24,7 +31,7 @@ function decodeEstimate(ccn, v) {
   const [base, total, hrrp, hvbp, hac, net] = DOLLAR_COLS.map(v);
   return {
     base, total, hrrp, hvbp, hac, net, ...derivedDollars({ total, hrrp, hvbp }),
-    hrrpFactor: v('hrrpF'), vbpFactor: v('vbpF'), cut: v('cut') === 1, hrrpListed: v('hrrpL') === 1, vbpListed: v('vbpL') === 1,
+    hrrpFactor: v('hrrpF'), vbpFactor: v('vbpF'), cut: flag(ccn, 'cut', v('cut')), hrrpListed: flag(ccn, 'hrrpL', v('hrrpL')), vbpListed: flag(ccn, 'vbpL', v('vbpL')),
     share: netShare(net, total),
     pct: { hrrp: (hrrp * 100) / total, hac: (hac * 100) / total, hvbp: (hvbp * 100) / total, net: (net * 100) / total },
   };
@@ -45,7 +52,7 @@ export function decodeRows(asset) {
     if (!status) throw new RangeError(`hub asset: ${v('ccn')} has the status "${v('status')}"`);
     return {
       ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, band: v('band'), teach: v('teach'),
-      x: v('x'), y: v('y'), inTdr: v('tdr') === 1, est: status === 'estimated' ? decodeEstimate(v('ccn'), v) : null,
+      x: v('x'), y: v('y'), inTdr: flag(v('ccn'), 'tdr', v('tdr')), est: status === 'estimated' ? decodeEstimate(v('ccn'), v) : null,
     };
   });
   return { fy, mapW, mapH, hospitals, byCcn: new Map(hospitals.map((h) => [h.ccn, h])) };
