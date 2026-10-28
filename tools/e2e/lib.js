@@ -200,6 +200,29 @@ export async function assertQuiet(seen, what) {
   assert.deepEqual(seen.foreignRequests, [], `${what}: requests to another origin`);
 }
 
+// Asserts the page does not scroll sideways (its content is no wider than the window). The failure names the first few
+// elements that reach past the window's right edge, by tag and class and how far they reach, never their text (a
+// hospital's name stays out of CI's public logs); an element inside a box that scrolls or clips within the window is
+// not one (a wide table in its sideways-scrolling frame).
+export async function assertNoSideways(page, what) {
+  const got = await page.evaluate(() => {
+    const edge = window.innerWidth + 0.5;
+    const held = (el) => {
+      for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+        if (getComputedStyle(up).overflowX !== 'visible' && up.getBoundingClientRect().right <= edge) return true;
+      }
+      return false;
+    };
+    const scrollWidth = document.documentElement.scrollWidth;
+    const pastEdge = scrollWidth > window.innerWidth
+      ? [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > edge && !held(el)).slice(0, 3)
+        .map((el) => `${el.localName}${[...el.classList].map((c) => `.${c}`).join('')} (to ${Math.round(el.getBoundingClientRect().right)} px)`)
+      : [];
+    return { scrollWidth, innerWidth: window.innerWidth, pastEdge };
+  });
+  assert.ok(got.scrollWidth <= got.innerWidth, `${what}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
+}
+
 // The footer's link to the feedback form, which every page has, as a selector for the page and for a locator.
 export const FEEDBACK_LINK = `footer a[href^="${SITE.feedback.url}"]`;
 

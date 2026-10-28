@@ -22,7 +22,8 @@
 .wi-side { display: grid; gap: 10px; }
 
 /* ---------- the result ---------- */
-.wi-result { display: grid; gap: 10px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
+/* A size container: its table reads the box's own width (below). */
+.wi-result { container-type: inline-size; display: grid; gap: 10px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
 .wi-result > * { min-width: 0; }
 /* The head: the score and decision as the hero shows them, the loudest thing in the box. */
 .wi-head { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -70,6 +71,16 @@
 .wi-ramp--under .wi-ramp__zone, .wi-ramp--under .wi-ramp__zone-label { display: none; }
 .wi-table__money th { white-space: nowrap; }
 .wi-table__money .est-tag { margin-left: 4px; vertical-align: 0.1em; }
+/* A narrow box (just over 900px, a column beside the measures; a phone): the table fits it. The last column gives up
+   its right padding (the box's padding is its margin) and the row heads wrap. With a dollars row, the two figure
+   columns keep to their figures' width so the row heads take the rest, and the estimate tag sits under its row head's
+   words, flush left. Without one (Maryland's: its decision is long words), the columns share the room as they would. */
+@container (width < 25rem) {
+  .wi-table :is(th, td):last-child { padding-right: 0; }
+  .wi-table:has(.wi-table__money) thead th { width: 1%; }
+  .wi-table__money th { white-space: normal; }
+  .wi-table__money .est-tag { display: block; width: fit-content; margin: 4px 0 0; }
+}
 /* The cliff sits on the ramp's own x: the same 5% margins, so its drop stands over the ramp's line and its dot over the
    hypothetical's mark. Levels at 22px ($0) and 82px (the cut). The dot crosses at once and falls (or climbs) to its
    level: an accelerating fall, an easing climb; reduced motion, no movement. */
