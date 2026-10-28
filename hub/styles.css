@@ -216,8 +216,8 @@
 .story__progress.is-on { opacity: 1; }
 /* By state, live (hub/client/story/map.js): the readout and the small states' buttons answer only while the states are
    read (step 7), or while a button keeps the keyboard's focus. They keep their room at every step, so the map never
-   moves under the dots. A state pointed at or
-   focused is outlined in ink; a pinned one more heavily, and its line stays in the readout. */
+   moves under the dots. A state pointed at or focused is outlined in ink; a pinned one more heavily, and its line stays
+   in the readout. */
 .story--drawn:not([data-step="7"]) .readout, .story--drawn:not([data-step="7"]) .smalls:not(:focus-within) { visibility: hidden; }
 .story .readout.is-line { color: var(--ink); font-weight: 600; }
 .story--live .smap .st[role="button"] { cursor: pointer; }
@@ -416,7 +416,6 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__netlab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; color: var(--ink-2); font: 600 13.5px/1.3 var(--font-body); }
 .hh__netline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
 .hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
-/* The stamp at 24px is large text, so the bonus's green meets its contrast (3:1) as the cut's red and the ink do. */
 /* 24px: large text, so the bonus ink on paper meets its 3:1 (at 22px it would need 4.5:1). The worksheet's stamp too. */
 .hh__stamp .stamp, .wsx .stamp { font-size: 24px; padding: 5px 11px 2px; }
 .hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
