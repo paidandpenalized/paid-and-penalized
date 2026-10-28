@@ -2,7 +2,7 @@
 // Pure and browser-safe (no file, network or DOM access), so the page's script can redo it for another peer group.
 // Hospitals are the hub's (hub/model.js hubHospitals, or the browser asset's rows, which carry the same `est`); only
 // hospitals with an estimate are anyone's peers.
-import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../engine/js/peers.js';
+import { BED_BAND_EDGES, median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { count } from '../../web/render/format.js';
 
@@ -71,11 +71,11 @@ export function groupName(fill, h, mode) {
   return fill('groupSizeMid', { lo: count(BED_BAND_EDGES[band - 1]), hi: count(BED_BAND_EDGES[band] - 1) });
 }
 
-// Every way h can be grouped (PEER_MODES order), each { mode, peers, figures, group }, or null where h has no group.
-export const peerGroups = (fill, hospitals, h) => PEER_MODES.map((mode) => {
+// h's group under mode and what it shows: { mode, peers, figures, group }, or null when h has no group in that mode.
+export function peerGroup(fill, hospitals, h, mode) {
   const peers = peersOf(hospitals, h, mode);
   return peers && peers.length ? { mode, peers, figures: peerFigures(peers), group: groupName(fill, h, mode) } : null;
-});
+}
 
 // The dollar rows' one scale (the hospital's dollars and its peers' medians against a zero line): every value given and
 // zero, a little room at each end, as a fraction of the track. All zero is a scale too (one dollar wide).

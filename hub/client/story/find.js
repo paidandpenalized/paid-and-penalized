@@ -7,25 +7,14 @@
 // Hospitals are the hub asset's rows (web/client/hub-asset.js) or hubHospitals': both carry state, band (the size band's
 // index, null without a bed count) and teach; only hospitals with an estimate are anyone's peers.
 import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../../engine/js/peers.js';
-import { STATE_NAMES } from '../../../engine/js/states.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { capitalize, count, dollars } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { COPY } from './copy.js';
-import { ROWS, inProgram } from '../../hospital/peers.js';
+import { ROWS, groupName, inProgram, peersOf } from '../../hospital/peers.js';
 import { signedShareText } from '../../hospital/text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-
-// The group a hospital is in under mode (engine/js/peers.js PEER_MODES), or null when it lacks the attribute. Size goes
-// by the band, which both the asset's rows and the build's hospitals carry (the asset has no bed count).
-export const groupKey = (h, mode) => (mode === 'size' ? (Number.isInteger(h.band) ? `b${h.band}` : null) : peerKey(h, mode));
-
-// The hospitals with an estimate in h's group under mode, h among them, in the order given; null when h has no group.
-export function peersIn(hospitals, h, mode) {
-  const key = groupKey(h, mode);
-  return key === null ? null : hospitals.filter((x) => x.est && groupKey(x, mode) === key);
-}
 
 // A size band in words, from the bands' bed-count edges: "under 100 beds", "100 to 299 beds", "500 or more beds".
 export function sizeWords(band) {
@@ -35,18 +24,14 @@ export function sizeWords(band) {
   return fill('sizeBand', { lo: count(edges[band - 1]), hi: count(edges[band] - 1) });
 }
 
-// h's group under mode, named: "Ohio hospitals", "hospitals with 100 to 299 beds", "major teaching hospitals".
-const TEACH_GROUP = { major: 'groupTeachMajor', minor: 'groupTeachMinor', none: 'groupTeachNone' };
-export function groupName(h, mode) {
-  if (mode === 'state') return fill('groupState', { state: STATE_NAMES[h.state] ?? h.state });
-  if (mode === 'size') return fill('groupSize', { size: sizeWords(h.band) });
-  return fill(TEACH_GROUP[h.teach]);
-}
+// h's group under mode, named in the story's words (hub/hospital/peers.js groupName): "Ohio hospitals", "hospitals with
+// 100 to 299 beds", "major teaching hospitals".
+const nameOf = (h, mode) => groupName(fill, h, mode);
 
-// The card's line about the group: "Of 117 Ohio hospitals, 81 take a net cut; the median is −0.47%." peers: peersIn's.
+// The card's line about the group: "Of 117 Ohio hospitals, 81 take a net cut; the median is −0.47%." peers: peersOf's.
 export function peerLine(h, peers, mode) {
   const cut = peers.filter((x) => x.est.net < 0).length;
-  return fill('cardPeers', { n: count(peers.length), group: groupName(h, mode), cutN: count(cut), median: signedShareText(median(peers.map((x) => x.est.share))) });
+  return fill('cardPeers', { n: count(peers.length), group: nameOf(h, mode), cutN: count(cut), median: signedShareText(median(peers.map((x) => x.est.share))) });
 }
 
 // Teaching status in words (null: not reported), and each program's row on the card.
@@ -59,7 +44,7 @@ function programRow(est, { id, key }) {
   return { key: label, label: fill(label), text: `${dollars(v, { sign: true })} ${fill(v < 0 ? 'wordCut' : v > 0 ? 'wordBonus' : 'wordNone')}`, kind: v < 0 ? 'pen' : '' };
 }
 
-// What the card says about a hospital with an estimate, h, among peers (peersIn's, under mode), for fiscal year fy:
+// What the card says about a hospital with an estimate, h, among peers (peersOf's, under mode), for fiscal year fy:
 // { ccn, name, place, pct, usd, pen, netWords, rows: [{ key, label, text, kind }], peer, href }. pct is its net as a
 // signed share of its pay, usd the net in whole dollars, pen whether it is a cut; a row's kind is 'pen' (a cut), 'na'
 // (not in the program: "Not in this program", never $0) or ''.
@@ -101,17 +86,17 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
 
   const current = () => chosen ?? example;
   // The mode a hospital is shown in: the reader's, unless the hospital has no group there (then by state).
-  const modeFor = (h) => (groupKey(h, mode) === null ? PEER_MODES[0] : mode);
+  const modeFor = (h) => (peerKey(h, mode) === null ? PEER_MODES[0] : mode);
   const groupOf = (h) => {
     const m = modeFor(h);
-    return { peers: peersIn(estimated, h, m), label: groupName(h, m) };
+    return { peers: peersOf(estimated, h, m), label: nameOf(h, m) };
   };
 
   // The card and the toggle, for the current hospital and mode. Text goes into the card's own elements.
   function paint() {
     const h = current();
     const m = modeFor(h);
-    const model = cardModel(h, peersIn(estimated, h, m), m, fy);
+    const model = cardModel(h, peersOf(estimated, h, m), m, fy);
     card.dataset.ccn = model.ccn;
     part('.card__ex').hidden = Boolean(chosen);
     part('.card__nm').textContent = model.name;
@@ -130,7 +115,7 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
     part('.card__peer').textContent = model.peer;
     part('.card__go').setAttribute('href', model.href);
     for (const b of buttons) {
-      const off = groupKey(h, b.dataset.peer) === null;
+      const off = peerKey(h, b.dataset.peer) === null;
       b.setAttribute('aria-pressed', String(b.dataset.peer === m));
       if (off) {
         b.setAttribute('aria-disabled', 'true');

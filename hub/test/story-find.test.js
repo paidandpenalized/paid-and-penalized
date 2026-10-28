@@ -3,16 +3,19 @@
 // the state an address's #state= names. No hospital is named: rows are picked by property, or the example by its CCN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BED_BAND_EDGES, PEER_MODES, median } from '../../engine/js/peers.js';
+import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { decodeRows } from '../../web/client/hub-asset.js';
+import { fillCopy } from '../../web/render/components.js';
 import { count, dollars } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { hubAsset } from '../asset.js';
-import { cardModel, groupKey, groupName, peerLine, peersIn, sizeWords } from '../client/story/find.js';
+import { COPY as STORY_COPY } from '../client/story/copy.js';
+import { cardModel, peerLine, sizeWords } from '../client/story/find.js';
 import { lineOf, stateFromHash } from '../client/story/map.js';
 import { loadHub } from '../data.js';
 import { stateLine, statesMap } from '../home/states.js';
+import { groupName, peersOf } from '../hospital/peers.js';
 import { signedShareText } from '../hospital/text.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
 
@@ -40,28 +43,28 @@ test('peerLine: the hospital\'s group in each way of grouping, counted, with its
   const picks = [example, ...[0, 1, 2, 3].map((b) => estimated.find((h) => h.band === b)), ...['major', 'minor'].map((t) => estimated.find((h) => h.teach === t))];
   for (const h of picks) {
     assert.ok(h, 'a hospital with that property');
-    assert.equal(peerLine(h, peersIn(estimated, h, 'state'), 'state'), expectedLine(h, 'state', `${STATE_NAMES[h.state]} hospitals`));
-    assert.equal(peerLine(h, peersIn(estimated, h, 'size'), 'size'), expectedLine(h, 'size', `hospitals with ${sizeOf(h.band)}`));
-    assert.equal(peerLine(h, peersIn(estimated, h, 'teach'), 'teach'), expectedLine(h, 'teach', teachOf[h.teach]));
+    assert.equal(peerLine(h, peersOf(estimated, h, 'state'), 'state'), expectedLine(h, 'state', `${STATE_NAMES[h.state]} hospitals`));
+    assert.equal(peerLine(h, peersOf(estimated, h, 'size'), 'size'), expectedLine(h, 'size', `hospitals with ${sizeOf(h.band)}`));
+    assert.equal(peerLine(h, peersOf(estimated, h, 'teach'), 'teach'), expectedLine(h, 'teach', teachOf[h.teach]));
   }
   // The brief's shape: "Of 117 Ohio hospitals, 81 take a net cut; the median is −0.47%."
-  assert.match(peerLine(example, peersIn(estimated, example, 'state'), 'state'), /^Of [\d,]+ [A-Z][A-Za-z ]+ hospitals, [\d,]+ take a net cut; the median is [−+]?\d+\.\d+%\.$/);
+  assert.match(peerLine(example, peersOf(estimated, example, 'state'), 'state'), /^Of [\d,]+ [A-Z][A-Za-z ]+ hospitals, [\d,]+ take a net cut; the median is [−+]?\d+\.\d+%\.$/);
 });
 
 test('groups: a hospital without a bed count or teaching status has no group there; every group holds the hospital', () => {
   const noTeach = { ...example, teach: null };
   const noBeds = { ...example, band: null };
-  assert.equal(groupKey(noTeach, 'teach'), null);
-  assert.equal(groupKey(noBeds, 'size'), null);
-  assert.equal(peersIn(estimated, noTeach, 'teach'), null);
-  assert.equal(peersIn(estimated, noBeds, 'size'), null);
-  assert.ok(groupKey(noBeds, 'state'));
+  assert.equal(peerKey(noTeach, 'teach'), null);
+  assert.equal(peerKey(noBeds, 'size'), null);
+  assert.equal(peersOf(estimated, noTeach, 'teach'), null);
+  assert.equal(peersOf(estimated, noBeds, 'size'), null);
+  assert.ok(peerKey(noBeds, 'state'));
   for (const mode of PEER_MODES) {
-    const peers = peersIn(estimated, example, mode);
+    const peers = peersOf(estimated, example, mode);
     assert.ok(peers.includes(example), mode);
     assert.ok(peers.every((x) => x.est), `${mode}: only hospitals with an estimate`);
   }
-  assert.equal(groupName(example, 'state'), `${STATE_NAMES[example.state]} hospitals`);
+  assert.equal(groupName((key, values) => fillCopy(STORY_COPY, key, values), example, 'state'), `${STATE_NAMES[example.state]} hospitals`);
   assert.deepEqual([0, 1, 2, 3].map(sizeWords), [`under ${count(BED_BAND_EDGES[0])} beds`, `${count(BED_BAND_EDGES[0])} to ${count(BED_BAND_EDGES[1] - 1)} beds`,
     `${count(BED_BAND_EDGES[1])} to ${count(BED_BAND_EDGES[2] - 1)} beds`, `${count(BED_BAND_EDGES[2])} or more beds`]);
 });
@@ -69,7 +72,7 @@ test('groups: a hospital without a bed count or teaching status has no group the
 test('cardModel: the hospital\'s place, net, programs and peers; a hospital outside value-based purchasing reads "Not in this program", never $0', () => {
   const out = estimated.find((h) => !h.est.vbpListed && h.est.hrrpListed);
   assert.ok(out, 'a hospital not in value-based purchasing');
-  const m = cardModel(out, peersIn(estimated, out, 'state'), 'state', fy);
+  const m = cardModel(out, peersOf(estimated, out, 'state'), 'state', fy);
   assert.equal(m.ccn, out.ccn);
   assert.equal(m.name, out.name);
   assert.equal(m.href, hospitalPathOf('hub', out.ccn));
@@ -81,12 +84,12 @@ test('cardModel: the hospital\'s place, net, programs and peers; a hospital outs
   assert.equal(m.pct, signedShareText(out.est.share));
   assert.equal(m.pen, out.est.net < 0);
   assert.match(m.netWords, new RegExp(`^Estimated FY${fy} net `));
-  assert.equal(m.peer, peerLine(out, peersIn(estimated, out, 'state'), 'state'));
+  assert.equal(m.peer, peerLine(out, peersOf(estimated, out, 'state'), 'state'));
   assert.match(m.place, new RegExp(`^${out.city}, ${out.state}\\. `));
   const said = JSON.stringify(m);
   for (const bad of ['NaN', 'undefined', 'Infinity', 'null']) assert.ok(!said.includes(bad), bad);
   // The example: in both programs, a size and a teaching status.
-  const ex = cardModel(example, peersIn(estimated, example, 'size'), 'size', fy);
+  const ex = cardModel(example, peersOf(estimated, example, 'size'), 'size', fy);
   assert.ok(ex.rows.every((r) => r.kind !== 'na'));
   assert.equal(ex.place, `${example.city}, ${example.state}. ${sizeWords(example.band)}, non-teaching.`);
   assert.match(ex.peer, /^Of [\d,]+ hospitals with /);

@@ -17,8 +17,9 @@ import { html } from '../../web/render/html.js';
 import { externalLink, feedbackFor } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
-import { cardModel, peersIn } from '../client/story/find.js';
+import { cardModel } from '../client/story/find.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
+import { peersOf } from '../hospital/peers.js';
 import { EXAMPLE_CCN } from '../model.js';
 import { hubPage } from '../parts.js';
 import { barFigure } from './bar.js';
@@ -128,7 +129,7 @@ function exampleCard({ hospitals, fy }) {
   const h = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
   if (!h?.est) throw new RangeError(`hub home: the example hospital ${EXAMPLE_CCN} has no estimate`);
   const mode = PEER_MODES[0];
-  const m = cardModel(h, peersIn(hospitals, h, mode), mode, fy);
+  const m = cardModel(h, peersOf(hospitals, h, mode), mode, fy);
   if (m.href !== exampleHref(h.ccn)) throw new RangeError('hub home: the example card links somewhere other than the hospital\'s page');
   const row = (r) => html`<div class="card__row"><dt>${r.label}</dt><dd class="v${r.kind ? ` v--${r.kind}` : ''}">${r.text}</dd></div>`;
   return html`<div class="card" data-card data-ccn="${m.ccn}" aria-live="polite">

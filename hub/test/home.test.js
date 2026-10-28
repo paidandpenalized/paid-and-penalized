@@ -17,7 +17,8 @@ import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
 import { MAGNIFY, barOrder } from '../home/bar.js';
 import { exampleHref, homePage, simpleFraction } from '../home/page.js';
-import { cardModel, peersIn, sizeWords } from '../client/story/find.js';
+import { cardModel, sizeWords } from '../client/story/find.js';
+import { peersOf } from '../hospital/peers.js';
 import { stateKey } from '../home/states.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
 
@@ -237,7 +238,7 @@ test('the example card: the example hospital, its place, size, teaching, net, th
   assert.ok(card.includes(`<a class="card__go" href="${exampleHref(EXAMPLE_CCN)}">Open its hospital page`));
   assert.equal(exampleHref(EXAMPLE_CCN), hospitalPathOf('hub', EXAMPLE_CCN));
   // Its words are the ones the story's script writes for a found hospital (cardModel), each in its element.
-  const m = cardModel(h, peersIn(hospitals, h, 'state'), 'state', hub.fy);
+  const m = cardModel(h, peersOf(hospitals, h, 'state'), 'state', hub.fy);
   for (const [cls, text] of [['card__nm', m.name], ['card__loc', m.place], ['card__pct', m.pct], ['card__usd', m.usd], ['card__netl', m.netWords], ['card__peer', m.peer]]) {
     assert.equal(textOf(element(card, `<[a-z]+ class="${cls}[" ]`, cls === 'card__pct' || cls === 'card__usd' ? 'span' : 'p')).trim(), text, cls);
   }

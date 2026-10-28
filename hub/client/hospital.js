@@ -12,7 +12,7 @@ import { count } from '../../web/client/format.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { fillCopy } from '../../web/render/components.js';
 import { COPY } from '../hospital/copy.js';
-import { ROWS, groupName, peerFigures, peersOf, sumValues } from '../hospital/peers.js';
+import { ROWS, peerGroup, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { mountStrips } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
@@ -44,11 +44,8 @@ function start(page) {
 function live(page, { hospitals, h, fy, still }) {
   const $ = (selector) => page.querySelector(selector);
   const all = count(hospitals.filter((x) => x.est).length);
-  // Every way the hospital can be grouped, worked out once: { mode, peers, figures, group } or null.
-  const groups = new Map(PEER_MODES.map((mode) => {
-    const peers = peersOf(hospitals, h, mode);
-    return [mode, peers && peers.length ? { mode, peers, figures: peerFigures(peers), group: groupName(fill, h, mode) } : null];
-  }));
+  // Every way the hospital can be grouped, worked out once (peers.js peerGroup).
+  const groups = new Map(PEER_MODES.map((mode) => [mode, peerGroup(fill, hospitals, h, mode)]));
   // The dollar rows' scale's values, as the build drew it: every group's medians are on it, so only the ticks move (the
   // what-if adds its own figures).
   const values = sumValues(h.est, [...groups.values()].filter(Boolean).map((g) => g.figures));

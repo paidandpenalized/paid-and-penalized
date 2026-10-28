@@ -70,10 +70,12 @@ export const COPY = Object.freeze({
   wordNone: 'no change',
   notInProgram: 'Not in this program',
   cardPeers: 'Of {n} {group}, {cutN} take a net cut; the median is {median}.',
-  // The groups the peer toggle picks ({state}: a state's name; {size}: a size band's words), and a size band in words
-  // from its bed-count edges ({lo}, {hi}: the band's first and last bed counts).
+  // The groups the peer toggle picks (hub/hospital/peers.js groupName: {state}, a state's name; {beds}, {lo}, {hi}, a size
+  // band's bed-count edges), and a size band in words from those edges ({lo}, {hi}: the band's first and last bed counts).
   groupState: '{state} hospitals',
-  groupSize: 'hospitals with {size}',
+  groupSizeLow: 'hospitals with under {beds} beds',
+  groupSizeMid: 'hospitals with {lo} to {hi} beds',
+  groupSizeHigh: 'hospitals with {beds} or more beds',
   groupTeachMajor: 'major teaching hospitals',
   groupTeachMinor: 'minor teaching hospitals',
   groupTeachNone: 'non-teaching hospitals',

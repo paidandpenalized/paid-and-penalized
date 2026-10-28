@@ -19,7 +19,7 @@ import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubPage } from '../parts.js';
 import { COPY } from './copy.js';
-import { ROWS, groupName, inProgram, peerFigures, peersOf, rowDollars, sumScale, sumValues } from './peers.js';
+import { ROWS, inProgram, peerGroup, rowDollars, sumScale, sumValues } from './peers.js';
 import { comparison, rowWord, signOf, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -48,17 +48,13 @@ function deepLink(h, id) {
     : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
 }
 
-// Each group (a mode and its key) and what its peers show, worked out once per list of hospitals: { peers, figures,
-// group }, or null for a hospital with no group in that mode.
+// Each group (a mode and its key) and what its peers show (peers.js peerGroup), worked out once per list of hospitals.
 const GROUPS = new WeakMap();
 function groupOf(hospitals, h, mode) {
   let groups = GROUPS.get(hospitals);
   if (!groups) GROUPS.set(hospitals, (groups = new Map()));
   const id = `${mode}:${peerKey(h, mode)}`;
-  if (!groups.has(id)) {
-    const peers = peersOf(hospitals, h, mode);
-    groups.set(id, peers && peers.length ? { peers, figures: peerFigures(peers), group: groupName(fill, h, mode) } : null);
-  }
+  if (!groups.has(id)) groups.set(id, peerGroup(fill, hospitals, h, mode));
   return groups.get(id);
 }
 

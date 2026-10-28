@@ -12,7 +12,7 @@ import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { stripLayout } from '../client/hospital/strips.js';
 import { shareDomain } from '../client/scale.js';
-import { ROWS, groupName, peerFigures, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
+import { ROWS, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { hubHospitals } from '../model.js';
 
@@ -52,8 +52,12 @@ test('a hospital with no teaching status has no teaching group, and its other gr
   const h = estimated.find((x) => x.teach === null);
   assert.ok(h, 'a hospital with no teaching status');
   assert.equal(peersOf(hospitals, h, 'teach'), null);
+  assert.equal(peerGroup(fill, hospitals, h, 'teach'), null);
   assert.ok(peersOf(hospitals, h, 'state').length > 0);
   assert.ok(peersOf(hospitals, h, 'size').length > 0);
+  // A group as the page and its script use it: the mode, the peers, what they show and the group's name.
+  const g = peerGroup(fill, hospitals, h, 'state');
+  assert.deepEqual(g, { mode: 'state', peers: peersOf(hospitals, h, 'state'), figures: peerFigures(g.peers), group: groupName(fill, h, 'state') });
 });
 
 test('every group has a name, with the band\'s edges from the constants', () => {
