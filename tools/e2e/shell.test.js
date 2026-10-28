@@ -5,7 +5,7 @@
 // hospital's own page shows its chip from the server and its tabs carry it, the chip leaves the bar whole between a
 // phone's width and a desktop's, the family search on a hub page opens a state, a hospital's page across the programs
 // answers 200 from the family search's result and from the chip's name, the theme button flips the theme and
-// says so, and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
+// says so (and a hub page's own stylesheet, linked after the shared one, follows it and print), and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
 // desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
@@ -33,7 +33,8 @@ const HOSPITAL = hospitalSample('hospital-cut').path;
 // The front page (its story fetches the hub's asset to draw its dots), another hub page, a placeholder for a program
 // without a site here, the program page and a hospital's page there: each wears the same header, [the name a test's
 // title gives it, path].
-const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', SITE.programs.find((p) => p.id === 'hvbp').path], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
+const PLACEHOLDER = SITE.programs.find((p) => p.id === 'hvbp').path;
+const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', PLACEHOLDER], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
 
 // The hub's asset as the page's header names it, fetched in the page: its fiscal year and its rows as { ccn, name, net,
 // tdr, status }, so the test needs no hospital of its own (and prints none). Call it after any check that the asset was
@@ -372,5 +373,48 @@ describe('the theme button', () => {
     assert.deepEqual(await page.evaluate(() => window.themeEvents), [!dark, dark]);
     assert.deepEqual(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie]), [0, 0, '']);
     await assertQuiet(seen, 'theme');
+  }));
+
+  // The hub's page styles are a stylesheet of their own (hub/styles.css), linked after the shared one, and read the tokens;
+  // the tokens' dark values, their copy for this button and the print block are the shared stylesheet's. A placeholder
+  // page's waiting band (.cm__wait: border var(--pen); its words on var(--paper)) is drawn by the hub's rules.
+  it('a hub page\'s own stylesheet follows the theme button and print, through the shared stylesheet\'s tokens', () => withPage(tabs, { path: PLACEHOLDER, watched: true }, async (page, { seen }) => {
+    const sheets = await page.evaluate(() => [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => new URL(l.href).pathname));
+    assert.equal(sheets.length, 2, 'the shared stylesheet and the hub\'s');
+    assert.match(sheets[0], /^\/assets\/site\.[0-9a-f]{8}\.css$/);
+    assert.match(sheets[1], /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
+    // The band's colors, and the tokens' own values now (a probe painted with them).
+    const colors = () => page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('div'));
+      probe.style.background = 'var(--paper)';
+      probe.style.borderTop = '1px solid var(--pen)';
+      const band = document.querySelector('.cm__wait');
+      const out = {
+        words: getComputedStyle(band.querySelector('p')).backgroundColor, border: getComputedStyle(band).borderRightColor,
+        paper: getComputedStyle(probe).backgroundColor, pen: getComputedStyle(probe).borderTopColor,
+      };
+      probe.remove();
+      return out;
+    });
+    const same = (c, state) => {
+      assert.equal(c.words, c.paper, `${state}: the band's words sit on the paper token`);
+      assert.equal(c.border, c.pen, `${state}: the band's border is the pen token`);
+    };
+    const light = await colors();
+    same(light, 'light');
+    await page.locator('.theme-toggle:visible').click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    const dark = await colors();
+    same(dark, 'dark by the button');
+    assert.notEqual(dark.words, light.words, 'the dark paper differs from the light');
+    assert.notEqual(dark.border, light.border, 'the dark pen differs from the light');
+    // Print forces the light tokens (paper white), whatever the theme.
+    await page.emulateMedia({ media: 'print' });
+    const print = await colors();
+    same(print, 'print');
+    assert.equal(print.border, light.border, 'print takes the light pen');
+    assert.notEqual(print.words, dark.words, 'print leaves the dark paper');
+    await page.emulateMedia({ media: 'screen' });
+    await assertQuiet(seen, 'hub stylesheet and theme');
   }));
 });

@@ -422,6 +422,20 @@ test('page: the shell script and then the sticky header\'s always load first, ex
   assert.deepEqual(JSON.parse(ld), { name: '</script>' });
 });
 
+test('page: links the shared stylesheet alone, or it and then each named sheet in order; an unknown name throws', () => {
+  const links = (out) => [...out.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
+  assert.deepEqual(links(page(PAGE)), [ASSETS.css]);
+  assert.deepEqual(links(page({ ...PAGE, sheets: ['hub'] })), [ASSETS.css, ASSETS.sheets.hub]);
+  const assets = { ...ASSETS, sheets: { hub: '/assets/hub.dddddddd.css', more: '/assets/more.eeeeeeee.css' } };
+  assert.deepEqual(links(page({ ...PAGE, assets, sheets: ['more', 'hub'] })), [ASSETS.css, '/assets/more.eeeeeeee.css', '/assets/hub.dddddddd.css']);
+  // Both in the head, before the body's first element.
+  assert.ok(page({ ...PAGE, sheets: ['hub'] }).indexOf(ASSETS.sheets.hub) < page({ ...PAGE, sheets: ['hub'] }).indexOf('</head>'));
+  for (const name of ['nope', 'constructor', '__proto__', '']) {
+    assert.throws(() => page({ ...PAGE, sheets: [name] }), (err) => err instanceof TypeError && /stylesheet/.test(err.message), name);
+  }
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, sheets: undefined }, sheets: ['hub'] }), TypeError);
+});
+
 test('page: hostile title, description and path-free text render as text; a plain-string body is escaped', () => {
   const out = page({ ...PAGE, title: '<i>&"', description: '"><script>x</script>', body: '<script>y</script>' });
   assert.ok(out.includes('<title>&lt;i&gt;&amp;&quot;</title>'));

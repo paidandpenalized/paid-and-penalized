@@ -1,7 +1,10 @@
-/* The hub's own pages (hub/), bundled after web/styles/ and every site's styles. Tokens only (tokens.css); no color is
-   written here. The bundle is one stylesheet for the whole family, so each page's rules sit under its root: the home
-   page's generic class names (.step, .num, .card, .st, ...) are scoped to its story (and .story > .step undoes the
-   program site's own .step), the hospital page's under .hh, the interim Readmissions pages' under .rd.
+/* The hub's own pages (hub/), in a stylesheet of their own (/assets/hub.<hash>.css; the hub's manifest says ownSheet) that
+   every hub page links after the shared one (web/styles/ and the program sites' styles) and no program site's page
+   loads. Tokens only (tokens.css); no color is written here, and no theme: the dark tokens, their copy for the theme
+   button and the print block are the shared stylesheet's, and reach these rules through the custom properties. A hub
+   page carries the program sites' styles too, so each page's rules sit under its root: the home page's generic class
+   names (.step, .num, .card, .st, ...) are scoped to its story (and .story > .step undoes the program site's own .step),
+   the hospital page's under .hh, the interim Readmissions pages' under .rd.
 
    The home page (hub/home/): the masthead hero, then the story. Without its script the story is complete: on a wide
    screen the steps' words scroll in a column between the rail and the stage, and each of the stage's two charts sticks

@@ -26,6 +26,7 @@ export const para = (key, parts, values) => html`<p>${sentence(key, parts, value
 // A section from a heading's copy key and its paragraphs.
 export const section = (id, headingKey, ...paragraphs) => ({ id, heading: COPY[headingKey], body: html`${paragraphs}` });
 
-// A hub page (layout.js page(), with the same arguments): the family search in the shell's bar, over the hub's asset, and
-// its script, before the page's own scripts.
-export const hubPage = ({ assets, scripts = [], ...rest }) => page({ ...rest, search: hubSearchForm(assets.shell.hubUrl), scripts: [assets.js['hub-search'], ...scripts], assets });
+// A hub page (layout.js page(), with the same arguments): the hub's stylesheet after the shared one (the hub's styles are a
+// sheet of their own, by the manifest's id: HUB in pages.js says ownSheet, so the program sites' pages never carry them),
+// the family search in the shell's bar, over the hub's asset, and its script, before the page's own scripts.
+export const hubPage = ({ assets, scripts = [], ...rest }) => page({ ...rest, sheets: ['hub'], search: hubSearchForm(assets.shell.hubUrl), scripts: [assets.js['hub-search'], ...scripts], assets });

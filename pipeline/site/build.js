@@ -16,11 +16,14 @@ import { buildAssets, writeHashed } from './assets.js';
 import { createContext, siteDates } from './context.js';
 import { headersFile } from './headers.js';
 
-// Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx, { updated }) }: entries are
-// its browser JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files (bundled after
-// web/styles/). A program site (one in web/site.js's SITE.sites) returns its two dates for the corrections page,
-// { updated: { cmsReleased, changed } }; updated is the dates of the program sites run before, by id. Last: the hub
-// lists those dates, and writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
+// Every site, in build order. Each exports a manifest { id, entries, styles, ownSheet, generate(ctx, { updated }) }:
+// entries are its browser JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files, bundled
+// after web/styles/ into the stylesheet every page links, or, when ownSheet is true, kept apart in a stylesheet of their
+// own named by its id (/assets/<id>.<hash>.css, ctx.assets.sheets[id]) that only the pages asking for it link (layout.js
+// page()'s `sheets`), so the other sites' pages don't carry them. A program site (one in web/site.js's SITE.sites)
+// returns its two dates for the corrections page, { updated: { cmsReleased, changed } }; updated is the dates of the
+// program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml, listing every
+// page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
 // Shared by every site: the shell's script (the theme buttons, the followed hospital, the phone's search button, the
 // tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads first on
@@ -74,7 +77,8 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
   const assets = await buildAssets({
     outDir: dir,
     entries: mergeEntries(SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
-    styles: sites.flatMap((s) => s.styles ?? []),
+    styles: sites.filter((s) => !s.ownSheet).flatMap((s) => s.styles ?? []),
+    siteStyles: Object.fromEntries(sites.filter((s) => s.ownSheet).map((s) => [s.id, s.styles ?? []])),
   });
   const ctx = buildContext({ outDir: dir, env, assets });
   const updated = new Map();
