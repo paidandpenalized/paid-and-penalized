@@ -68,7 +68,14 @@ test('the highest factor in the data, past the range\'s four-decimal end: typed 
   const tctx = { ...ctx, h: top };
   assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.0453 }, tctx), s0);
   assert.equal(reduce(s0, { type: 'step', id: 'hvbp', dir: 1 }, tctx), s0, 'no step up past it');
-  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, 1.0452, 'past it clamps to the range');
+  // Its own factor is the top: a value past it (a drag to the strip's end, a typed 1.05) is its own factor, never the
+  // range's end below it (a hypothetical cut).
+  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx), s0, 'past it is its own factor');
+  const below = reduce(s0, { type: 'set', id: 'hvbp', value: 1.0452 }, tctx);
+  assert.equal(below.hvbp, 1.0452, 'the range\'s end below it is a value of its own');
+  assert.equal(reduce(below, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, VBP_MAX, 'and from there, past it is its own factor again');
+  assert.equal(reduce(below, { type: 'step', id: 'hvbp', dir: 1 }, tctx).hvbp, VBP_MAX, 'a step up reaches it');
+  assert.equal(reduce(below, { type: 'median', id: 'hvbp' }, { ...tctx, peers: [top] }).hvbp, VBP_MAX, 'a group\'s median at it is it');
 });
 
 test('Home and End go to the ends the slider states (extent), never the wrong way, even from the highest factor in the data', () => {

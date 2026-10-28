@@ -76,19 +76,20 @@ function accept(id, value, h, rng) {
 }
 
 // The peers' median for id, as a patch of the state, or null when there is none: a factor among the peers the program
-// lists (h among them), clamped to h's range; the cut when most peers are cut.
+// lists (h among them), clamped to h's ends (extent's); the cut when most peers are cut.
 function medianPatch(id, h, rng, peers) {
   if (id === 'hac') return peers.length ? { hac: peers.filter((p) => p.est.cut).length > peers.length / 2 } : null;
   const f = has(FACTOR, id) ? FACTOR[id] : null;
   if (!f || !rng[id]) return null;
   const m = median(peers.filter((p) => inProgram(p.est, f.row)).map((p) => p.est[f.key]));
-  return m === null ? null : { [id]: settle(clamp(m, rng[id]), initial(h)[id]) };
+  const own = initial(h)[id];
+  return m === null ? null : { [id]: settle(clamp(m, widen(rng[id], own)), own) };
 }
 
 // The next state after action, given ctx { h, vbpMax, peers } (peers: h's group, for the medians). Actions:
-//   { type: 'set', id, value }   a factor, clamped to the range
+//   { type: 'set', id, value }   a factor, clamped to its ends (extent's: the range, widened to hold h's own factor)
 //   { type: 'step', id, dir, big } a step of STEP (BIG_STEP when big) down (dir < 0) or up, clamped
-//   { type: 'end', id, dir }     Home (dir < 0) or End: the factor's end that way (extent's)
+//   { type: 'end', id, dir }     Home (dir < 0) or End: the factor's end that way
 //   { type: 'hac', cut }         the cut on (true) or off
 //   { type: 'median', id }       the peers' median for id ('hrrp', 'hvbp' or 'hac'); { type: 'medianAll' } all three
 //   { type: 'reset' }            the actual state
@@ -104,26 +105,25 @@ export function reduce(state, action, ctx) {
   };
   const id = action?.id;
   const r = rangeOf(rng, id);
+  // A factor's own value and its ends (extent's). Past the range's four-decimal end the highest factor in the data is
+  // its own top, so nothing lands between the two.
+  const own = r && initial(h)[id];
+  const span = r && widen(r, own);
   switch (action?.type) {
-    case 'set': {
-      if (!r || !Number.isFinite(action.value)) return state;
-      // A value that reads as the actual factor is the actual factor, even one past the range's four-decimal end.
-      const own = initial(h)[id];
-      return put({ [id]: round4(action.value) === round4(own) ? own : settle(clamp(action.value, r), own) });
-    }
+    case 'set':
+      // A value that reads as the actual factor is the actual factor (settle).
+      return r && Number.isFinite(action.value) ? put({ [id]: settle(clamp(action.value, span), own) }) : state;
     case 'step': {
       const dir = Math.sign(action.dir);
       if (!r || !dir) return state;
-      const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), r), initial(h)[id]);
-      // Never a step the wrong way (an actual factor past the range's four-decimal end).
+      const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), span), own);
+      // Never a step the wrong way.
       return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
     }
     case 'end': {
       const dir = Math.sign(action.dir);
       if (!r || !dir) return state;
-      const own = initial(h)[id];
-      const next = settle(widen(r, own)[dir < 0 ? 0 : 1], own);
-      // Never a move the wrong way, as step.
+      const next = settle(span[dir < 0 ? 0 : 1], own);
       return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
     }
     case 'hac':
