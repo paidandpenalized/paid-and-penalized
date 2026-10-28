@@ -165,7 +165,7 @@ function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
   const byCcn = new Map(hospitals.map((h) => [h.ccn, h]));
   for (const record of tdr.hospitals.values()) {
     if (only && !only.has(record.id)) continue;
-    const text = hrrpHospitalPage({ record, tdr, master: masterRecord(master, record.id), h: byCcn.get(record.id) ?? null, assets, robots: never });
+    const text = hrrpHospitalPage({ record, tdr, master: masterRecord(master, record.id, 'a record in the pinned Thirty Day Readmissions file'), h: byCcn.get(record.id) ?? null, assets, robots: never });
     ctx.emit({ path: hospitalPathOf('hrrp', record.id, { inTdr: true }), robots: never, text });
   }
 }

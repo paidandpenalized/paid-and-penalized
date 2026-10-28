@@ -271,3 +271,13 @@ test('a slice of hospitals gets the interim pages of its pinned hospitals only, 
     for (const h of slice) assert.ok(existsSync(join(dir, 'hrrp', 'hospital', h.ccn.toLowerCase(), 'index.html')), 'a sliced hospital\'s page');
     assert.equal(RECORDS.filter((r) => existsSync(join(dir, 'hrrp', 'hospital', r.id.toLowerCase()))).length, slice.length, 'and no other');
   }));
+
+test('a pinned Readmissions record with no master record stops the build, naming the pinned file, not the dollar file', () =>
+  withTemp('pp-hrrp-master-', async (dir) => {
+    const h = HOSPITALS.find((x) => x.inTdr);
+    const master = new Map(HUB.master);
+    master.delete(h.ccn);
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    await assert.rejects(generateHub(ctx, { hospitals: [h], master }), (e) => e instanceof RangeError
+      && e.message.includes(h.ccn) && /Thirty Day Readmissions/.test(e.message) && !/dollar/.test(e.message));
+  }));
