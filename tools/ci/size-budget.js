@@ -35,7 +35,7 @@ export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27
   // The coming-soon pages of the programs still to come (hub/coming.js): a hub page with the family search's script.
-  coming: 50 * KB, // R26: hub CSS rides the one shared stylesheet (40.8 KB on 2026-10-28, + 15%); the owner to OK, or give hub pages their own stylesheet.
+  coming: 50 * KB, // R26: hub CSS rides the one shared stylesheet (40.7 KB on 2026-10-28, + 15%); the owner to OK, or give hub pages their own stylesheet.
   program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.

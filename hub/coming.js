@@ -9,7 +9,7 @@ import { estTag, fillCopy, formField, formTitle, sentenceOf, stamp } from '../we
 import { money } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { SITE } from '../web/site.js';
-import { COPY } from './coming-copy.js';
+import { COPY } from './coming/copy.js';
 import { COPY as HOME } from './home/copy.js';
 import { COPY as HOSPITAL } from './hospital/copy.js';
 import { feedbackLink, hubPage } from './parts.js';

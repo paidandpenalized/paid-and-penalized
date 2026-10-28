@@ -632,7 +632,9 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 /* ---------- the interim Readmissions pages (hub/hrrp/page.js), root .rd ----------
    /hrrp/ (.rd--program): the masthead and the year's summary card, side by side from 960px. A hospital's page (.hh.rd) is
    the hospital page's record card and layout with the conditions table in the right column; on a phone each condition is a
-   short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways. */
+   short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways.
+   The masthead rules (.rd--program, .rd__top, .rd__intro, .rd__kicker, .rd__title, .rd__note, .rd__go, .rd__sum) are shared with
+   the coming-soon pages (hub/coming.js): when Readmissions folds in, keep them or move them there. */
 .rd--program { padding-block: 28px 44px; }
 .rd__top { display: grid; gap: 28px 48px; }
 .rd__intro { align-content: start; container-type: inline-size; }
@@ -656,8 +658,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
 .rd__yes { color: var(--pen-ink); font-weight: 700; }
 .rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
-/* The coming-soon pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside the
-   summary card's flex form (.rd__sum), whose fields are boxes waiting to be filled; the band across it is hatched. */
+/* The coming-soon pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside
+   the summary card's flex form (.rd__sum), whose fields are boxes waiting to be filled; the band across it is hatched. */
 .cm__acts { display: flex; flex-wrap: wrap; gap: 10px 14px; }
 .cm__back { transform: scaleX(-1); }
 .cm__card { position: relative; margin-bottom: 26px; }

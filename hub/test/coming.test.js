@@ -12,7 +12,6 @@ import { money } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS } from '../../web/site.js';
-import { COPY } from '../coming-copy.js';
 import { comingPage } from '../coming.js';
 import { COPY as HOME } from '../home/copy.js';
 import { loadHub } from '../data.js';
@@ -130,12 +129,11 @@ test('a program in the data with no figure to show, or with a group the page has
   assert.throws(() => render(HVBP, { ...FACTS, vbpBonus: Number.NaN }), RangeError);
 });
 
-test('the copy holds no digit, and nothing that judges, ranks or promises', () => {
-  const source = readFileSync(new URL('../coming-copy.js', import.meta.url), 'utf8');
-  assert.ok(!/\d/.test(source.replace(/^\s*\/\/.*$/gm, '')), 'a digit in the copy file (numbers arrive through placeholders)');
-  for (const text of Object.values(COPY)) {
-    assert.doesNotMatch(text, /\b(caught|cheat(s|ed|ing)?|dodg(e|es|ed|ing)|worst|best|rank(s|ed|ing)?|should|failed|within|promptly|soon as|business days?)\b/i, text);
+// The words' own guards (no digit, the house words, no promise of a reply, fix or deletion) are the shared ones, which scan
+// hub/coming/copy.js (copy-gate.test.js, web/test/house-words.test.js). What only the page can break:
+test('the page itself promises no date and no turnaround, and judges and ranks no one', () => {
+  for (const p of PLACEHOLDER_PROGRAMS) {
+    const text = textOf(mainOf(render(p)));
+    assert.doesNotMatch(text, /\b(will launch|by (next|the end)|in (a|the next) (week|month|few)|best|worst|rank(s|ed|ing)?|should)\b/i, p.id);
   }
-  // The page promises no date and no turnaround: "sooner" is a request, and the page says nothing of when.
-  for (const p of PLACEHOLDER_PROGRAMS) assert.doesNotMatch(textOf(mainOf(render(p))), /\b(will launch|by (next|the end)|in (a|the next) (week|month|few))\b/i, p.id);
 });

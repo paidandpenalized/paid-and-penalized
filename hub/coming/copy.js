@@ -1,6 +1,6 @@
 // The words of the coming-soon pages (hub/coming.js), one at the folder of each program still to come. No digit
 // characters: numbers arrive through {placeholders}. The buttons' first word is the family's (web/copy.js allPrograms).
-import { typesetCopy } from '../web/render/components.js';
+import { typesetCopy } from '../../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({

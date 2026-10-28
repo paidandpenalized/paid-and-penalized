@@ -3,8 +3,9 @@
 // reply time, fix time or deletion.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { REPO_ROOT, repoFiles } from '../../pipeline/files.js';
 import { copyFiles } from '../../pipeline/test/helpers.js';
 
 const LABELS = [
@@ -28,6 +29,14 @@ test('each pattern catches the phrasing it is for', () => {
     assert.ok(hits(PROMISES, s).length, s);
   for (const s of ['CMS assigned the worst score', "its data failed CMS's validation", 'the worst-performing quarter'])
     assert.equal(hits(LABELS, s).length, 0, s);
+});
+
+// A file that exports COPY but is not named copy.js would sit outside every copy guard (digits, house words, promises).
+test('every web, hub or sites file that exports COPY is one of the guarded copy files', () => {
+  const guarded = new Set(copyFiles());
+  const strays = repoFiles('', { untracked: true }).filter((p) => /^(web|hub|sites)\/.+\.js$/.test(p) && !/\/test\//.test(p)
+    && /^export (const|let|function) COPY\b/m.test(readFileSync(REPO_ROOT + p, 'utf8')) && !guarded.has(p));
+  assert.deepEqual(strays, []);
 });
 
 for (const file of copyFiles()) {
