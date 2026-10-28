@@ -177,7 +177,9 @@ export const COPY = typesetCopy({
   wsVbp: 'Value-based purchasing',
   wsNet: '{net}, lines {a} + {b} + {c}',
   wsNetWord: 'Net',
-  wsNetNote: 'in dollars, each line rounded to the dollar; percentages don’t add across programs',
+  // Each line is rounded on its own (line 3 is the factor times the unrounded base), so worked from the printed lines the
+  // arithmetic can be a dollar off.
+  wsNetNote: 'in whole dollars, each line rounded on its own, so the arithmetic can be off by a dollar; percentages don’t add across programs',
   wsFind: 'Find your hospital above and this worksheet fills in for it.',
   wsGo: 'Its hospital page',
 

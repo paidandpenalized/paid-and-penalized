@@ -199,6 +199,13 @@ test('the worksheet adds up the example\'s estimate: line 6 = 3 + 4 + 5 = its ne
   assert.ok(ws.includes(`<a data-ws="go" href="${hospitalPathOf('hub', EXAMPLE_CCN)}">Its hospital page</a>`));
 });
 
+test('the worksheet claims no more than its rounding allows: each line rounded on its own, so the arithmetic can be off by a dollar', () => {
+  const ws = words(element(out, '<div class="form wsx" data-worksheet', 'div'));
+  // Line 3 is the factor times the unrounded base, so worked from the printed line 2 it can be a dollar away.
+  assert.ok(ws.includes('each line rounded on its own, so the arithmetic can be off by a dollar'), ws);
+  assert.ok(!ws.includes('to the dollar'), 'no claim that the lines agree to the dollar');
+});
+
 test('worksheetModel: every hospital\'s lines add to its net; outside a program reads "Not in this program", never $0', () => {
   for (const h of estimated) {
     const m = worksheetModel(h);
