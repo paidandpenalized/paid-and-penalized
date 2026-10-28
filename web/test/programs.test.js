@@ -41,6 +41,16 @@ test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps onl
   assert.equal(siteOf('/hrrp/'), null);
 });
 
+test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no placeholder program (interim or soon) has one; every site is a live program', () => {
+  for (const p of SITE.programs) {
+    const site = Object.hasOwn(SITE.sites, p.id) ? SITE.sites[p.id] : null;
+    if (p.stage === 'live') assert.equal(site?.path, p.path, `${p.id}: a live program has a site at its folder`);
+    else assert.equal(site, null, `${p.id}: a ${p.stage} program has no entry in SITE.sites`);
+  }
+  for (const p of PLACEHOLDER_PROGRAMS) assert.ok(!Object.hasOwn(SITE.sites, p.id), p.id);
+  for (const id of Object.keys(SITE.sites)) assert.equal(SITE.programs.find((p) => p.id === id)?.stage, 'live', `SITE.sites.${id} is a live program`);
+});
+
 test('programOf names the program whose folder holds the path, or null for the family\'s own pages', () => {
   assert.equal(programOf('/hacrp/')?.id, 'hacrp');
   assert.equal(programOf('/hacrp/hospital/990001/')?.id, 'hacrp');
