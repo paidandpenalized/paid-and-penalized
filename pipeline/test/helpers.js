@@ -8,11 +8,11 @@ import { createSiteServer, listen, stop } from '../site/serve.js';
 
 // The assets page() needs (web/render/layout.js), for a page rendered outside a build: the CSS and script paths, and the
 // shell's facts (what a build computes once and hands every page: ctx.assets.shell). Invented numbers and no hospital.
-// Pass css, js (merged over the shell and sticky-header scripts every page can load) or shell (merged over the facts
-// below) to change a part.
+// Pass css, js (merged over the shell, sticky-header and family-search scripts a page can load) or shell (merged over
+// the facts below) to change a part.
 export const testAssets = ({ css = '/assets/site.test.css', js = {}, shell = {} } = {}) => ({
   css,
-  js: { shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', ...js },
+  js: { shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', ...js },
   shell: {
     fy: 2026,
     hospitals: 3,

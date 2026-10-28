@@ -48,10 +48,11 @@ export const asofBar = lastCall(({ fy, periods, source, typeFy = null, geocoded 
 // The program page's sections the section menu links to, by id (program.js gives each section its id), then Methods.
 export const SECTIONS = Object.freeze(['how', 'fy', 'money', 'map', 'history']);
 
-// The family shell's fields for a HACRP page (layout.js page(): program, sections, current, search): the HACRP tab,
-// the numbered section menu to the program page's sections and Methods, the item to mark (current: an id, or null)
-// and the bar's search (searchUrl: the hospitals asset, or null for none). Built once per build for each current item.
-export const shellOf = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current = null, searchUrl = null }) => {
+// The family shell's fields for a HACRP page (layout.js page(): program, sections, current, search, hospital): the
+// HACRP tab, the numbered section menu to the program page's sections and Methods, the item to mark (current: an id, or
+// null), the bar's search (searchUrl: the hospitals asset, or null for none) and, on a hospital's page, the hospital
+// the header follows (followed). The parts every page of a build shares are built once for each current item.
+const shellParts = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current, searchUrl }) => {
   const { path } = SITE.sites.hacrp;
   const labels = { how: t('navHow'), fy: fill('navFy', { fy: String(fy) }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
   return {
@@ -60,6 +61,20 @@ export const shellOf = lastCall(({ fy, current, searchUrl }) => [fy, current, se
     current,
     search: searchUrl ? searchBox(searchUrl) : '',
   };
+});
+export const shellOf = ({ fy, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ fy, current, searchUrl }), hospital });
+
+// The family's pages for a hospital that are not built yet: its own page across the programs and its Readmissions page.
+// Until they are, the header links neither (its chip's name is plain text; All programs and Readmissions open their
+// folders, which the shell's script points at the hospital), so no link opens a missing page.
+const NOT_BUILT = Object.freeze({ hub: false, hrrp: false });
+
+// The hospital a HACRP hospital page's header follows (render/shell.js familyHeader): its CCN and name, its estimated net
+// from the dollar estimates (money: money.js hospitalMoney; null without an estimate) and whether Thirty Day
+// Readmissions has it (master: its hospital master record, whose Readmissions membership is read from that site's
+// pinned file).
+export const followed = ({ view, money, master }) => ({
+  ccn: view.ccn, name: view.name, net: money.estimated ? money.net : null, inTdr: master?.programs?.hrrp?.inProgram === true, pages: NOT_BUILT,
 });
 
 // HACRP's search box (render/shell.js searchForm) in its words: a combobox over the hospitals asset (searchUrl), with

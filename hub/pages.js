@@ -14,7 +14,7 @@ import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './cons
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
 import { PENDING, comingPage } from './coming.js';
-import { LINKS, feedbackLink, para, section, sentence } from './parts.js';
+import { LINKS, feedbackLink, hubBar, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
 const PATH = /^\/[a-z0-9/-]*$/;
@@ -37,7 +37,7 @@ function home(assets, robots) {
 <ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
 </section>
 </article>`;
-  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, scripts: [assets.js.topbar], assets });
+  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, ...hubBar(assets), assets });
 }
 
 function methods(assets, robots) {
@@ -53,7 +53,7 @@ function methods(assets, robots) {
 <p>${COPY.estimateNot}</p>
 </section>
 ${para('methodsAiPointer', { about: LINKS.ai })}</article>`;
-  return page({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, scripts: [assets.js.topbar], assets });
+  return page({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, ...hubBar(assets), assets });
 }
 
 // ---------- the policy pages: their words (copy.js) and the links they fill in (parts.js); the layout is policy.js's ----------
@@ -133,7 +133,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, scripts: [assets.js.topbar], assets });
+  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, ...hubBar(assets), assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.

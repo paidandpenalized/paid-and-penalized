@@ -8,6 +8,7 @@ import { html } from '../web/render/html.js';
 import { page } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
 import { COPY } from './copy.js';
+import { hubBar } from './parts.js';
 
 export const PENDING = Object.freeze(SITE.programs.filter((p) => p.stage !== 'live'));
 
@@ -21,5 +22,5 @@ export function comingPage({ program, assets, robots }) {
 </header>
 <p>${COPY.comingNote} <a href="/">${SHARED.allPrograms}</a></p>
 </article>`;
-  return page({ title: `${program.name} · ${SITE.name}`, description: dek, path: program.path, robots, body, scripts: [assets.js.topbar], assets, program: program.id });
+  return page({ title: `${program.name} · ${SITE.name}`, description: dek, path: program.path, robots, body, ...hubBar(assets), assets, program: program.id });
 }

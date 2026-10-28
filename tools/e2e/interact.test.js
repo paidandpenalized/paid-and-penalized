@@ -153,8 +153,9 @@ async function walk(page, key, done) {
 // and none is focused under the top bar.
 async function keyboardWalk(page, path) {
   // What the page offers, so a control a page lacks is a failure and not a skipped target. The theme toggle and the
-  // search appear when the page's scripts have run. A program page has the top bar: search and the nav.
-  const hasTopBar = path.startsWith(PROGRAM_PATH);
+  // search appear when the page's scripts have run. Every page's bar has a search (a program's, or the family's on the
+  // hub's pages); a program page also has its section menu.
+  const hasNav = path.startsWith(PROGRAM_PATH);
   const offered = await page.evaluate((feedbackLink) => ({
     // Two in the markup (the bar's and the footer's); the CSS shows one at any width.
     theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => b.checkVisibility()).length,
@@ -164,11 +165,9 @@ async function keyboardWalk(page, path) {
   }), FEEDBACK_LINK);
   assert.equal(offered.theme, 1, 'one theme toggle');
   assert.equal(offered.feedback, 1, 'one feedback link in the footer');
-  if (hasTopBar) {
-    assert.equal(offered.search, 1, 'the top bar\'s search');
-    assert.ok(offered.nav > 0, 'the top bar\'s nav');
-  }
-  const wanted = ['theme', 'feedback', ...(hasTopBar ? ['search', ...Array.from({ length: offered.nav }, (_, i) => `nav ${i}`)] : [])];
+  assert.equal(offered.search, 1, 'the top bar\'s search');
+  if (hasNav) assert.ok(offered.nav > 0, 'the top bar\'s nav');
+  const wanted = ['theme', 'feedback', 'search', ...(hasNav ? Array.from({ length: offered.nav }, (_, i) => `nav ${i}`) : [])];
   const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
   const last = (steps) => steps.at(-1)?.desc;
 
@@ -266,13 +265,19 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
   const withJs = useContext(shared);
   const withoutJs = useContext(shared, { javaScript: false });
 
-  // The page's visible text, one entry per line, and what its footer and theme toggle show. No watcher: watch needs
-  // scripts.
+  // The page's visible text, one entry per line, and what its footer, theme toggle and the bar's search show. No
+  // watcher: watch needs scripts.
+  const linesOf = (text) => text.split('\n').map((line) => line.trim()).filter(Boolean);
   const look = (tabs, path) => withPage(tabs, { path }, async (page) => ({
-    lines: (await page.locator('body').innerText()).split('\n').map((line) => line.trim()).filter(Boolean),
+    lines: linesOf(await page.locator('body').innerText()),
     footer: await page.locator('footer').isVisible(),
     feedback: await page.locator(FEEDBACK_LINK).count(),
     toggle: await page.evaluate(() => document.querySelector('.theme-toggle')?.innerText ?? null),
+    // A hidden element's innerText is all its text, so a search that does not show has none.
+    search: linesOf(await page.evaluate(() => {
+      const form = document.querySelector('.topbar form.omni');
+      return form?.checkVisibility() ? form.innerText : '';
+    })),
   }));
 
   for (const { type, name, path } of PAGES) {
@@ -281,13 +286,17 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
       assert.equal(off.footer, true, 'the footer shows');
       assert.equal(off.feedback, 1, 'the footer\'s feedback link shows');
 
-      // The hub's own pages are plain text: reading them without scripts loses nothing. The one thing scripts add is
-      // the theme toggle, which is hidden in the markup because it does nothing without them.
+      // The hub's own pages are plain text: reading them without scripts loses nothing. What scripts add is the theme
+      // toggle and the bar's search (its words, and the list it shows once a reader types), which are hidden in the
+      // markup because they do nothing without them.
       if (['hub', 'policy', 'coming', 'not-found'].includes(type)) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');
+        assert.ok(on.search.length > 0, 'the bar\'s search shows with scripts');
+        assert.deepEqual(off.search, [], 'and not without');
+        const added = new Set([on.toggle, ...on.search]);
         const offLines = new Set(off.lines);
-        const lost = on.lines.filter((line) => line !== on.toggle && !offLines.has(line));
+        const lost = on.lines.filter((line) => !added.has(line) && !offLines.has(line));
         assert.deepEqual(lost, [], 'text that shows with scripts and not without');
       }
     });

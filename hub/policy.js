@@ -8,6 +8,7 @@ import { Safe, html } from '../web/render/html.js';
 import { page } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
 import { COPY } from './copy.js';
+import { hubBar } from './parts.js';
 
 // A section's id is a link target other pages and readers keep: lowercase words joined by single hyphens.
 const SECTION_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -50,5 +51,5 @@ ${s.body}
 `)}</div>
 </div>
 </article>`;
-  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, scripts: [assets.js.topbar], assets });
+  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, ...hubBar(assets), assets });
 }

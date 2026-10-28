@@ -34,13 +34,15 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27
-  coming: 30 * KB, // The programs' placeholders (hub/coming.js), measured 2026-10-27 at 23.7 KB.
+  // The programs' placeholders (hub/coming.js), measured 2026-10-27 at 23.7 KB; raised 2026-10-28 to 33.1 KB + 15% when
+  // every hub page took the family search into its bar (its script, 5.3 KB).
+  coming: 40 * KB,
   program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
   methods: 100 * KB,
   dictionary: 40 * KB,
-  notFound: 30 * KB,
+  notFound: 40 * KB, // Raised 2026-10-28 with the placeholders' (the family search in the bar): 33.0 KB + 15%.
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;

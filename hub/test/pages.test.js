@@ -15,6 +15,7 @@ import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../con
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
+import { hubSearchForm } from '../search/form.js';
 
 const NOINDEX = '<meta name="robots" content="noindex">';
 
@@ -82,6 +83,26 @@ test('each program without a site here has a placeholder at its folder: its name
       assert.ok(!ctx.indexable.includes(p.path), p.id);
       assert.match(text, new RegExp(`<a class="tab[^"]*" href="${p.path}"[^>]* aria-current="page">`), p.id);
       assert.ok(text.includes(`<title>${escapeHtml(p.name)} · Paid &amp; Penalized</title>`), p.id);
+    }
+  }));
+
+test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
+  withTemp('pp-hub-search-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections') });
+    const pages = ['/', SITE.pages.methods, ...Object.values(SITE.pages), ...SITE.programs.filter((p) => p.stage !== 'live').map((p) => p.path)];
+    const files = [...new Set(pages)].map((path) => [path, join(dir, path, 'index.html')]).concat([['not found', join(dir, '404.html')]]);
+    const box = String(hubSearchForm(ASSETS.shell.hubUrl));
+    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-hospitals\.test\.json" data-hub hidden>/);
+    for (const [path, file] of files) {
+      const text = readFileSync(file, 'utf8');
+      const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+      // In the bar's end, between the phone's find button and the theme toggle; the only search on the page.
+      assert.ok(header.includes(box), `${path}: the family search in the bar`);
+      assert.ok(header.indexOf('class="fam__find"') < header.indexOf(box) && header.indexOf(box) < header.indexOf('class="theme-toggle"'), `${path}: search between the find button and the toggle`);
+      assert.equal(text.match(/role="search"/g).length, 1, `${path}: one search`);
+      assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hub-search']}"></script>`), `${path}: loads the family search's script`);
+      assert.doesNotMatch(header, /data-hospital|<p class="chip" data-chip>/, `${path}: follows no hospital of its own`);
     }
   }));
 

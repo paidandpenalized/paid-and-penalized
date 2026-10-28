@@ -13,11 +13,13 @@ import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/buil
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { checkLinks } from '../../../tools/ci/link-check.js';
-import { cmsText, count, decimal, isoDate as isoDateOf, shortIsoDate } from '../../../web/render/format.js';
+import { cmsText, count, decimal, isoDate as isoDateOf, money as moneyText, shortIsoDate } from '../../../web/render/format.js';
 import { externalLink } from '../../../web/render/layout.js';
+import { SITE } from '../../../web/site.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
+import { hospitalMoney } from '../web/money.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { METHODS_PATH } from '../web/pages/methods.js';
 import { programPage } from '../web/pages/program.js';
@@ -25,7 +27,7 @@ import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, sliceBuild, WHATIF_STANDING } from './fixtures.js';
-import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, renderPlace, renderProgram } from './pinned.js';
+import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, SEARCH_URL, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -476,6 +478,15 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
     assert.equal(JSON.parse(json).page.share, false);
     assert.match(text, /<form class="omni" id="omni" role="search"[^>]*data-src="\/assets\/hacrp-hospitals\.[0-9a-f]{8}\.json"/, 'the top bar searches the same asset');
     for (const path of SLICE.hospitals.map(hospitalPath)) assert.ok(read(dir, path).includes('<form class="omni" id="omni" role="search"'), `${path}: a search on every page`);
+    // Each hospital page's header follows its hospital, with the net from its dollar row (none without an estimate).
+    for (const h of SLICE.hospitals) {
+      const page = read(dir, hospitalPath(h));
+      const row = DATA.dollars.byCcn.get(h.ccn);
+      assert.ok(page.includes(`data-hospital="${h.ccn}">`), `${row.status}: the header names its hospital`);
+      const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(page)?.[0] ?? '';
+      if (row.status === 'estimated') assert.ok(chip.includes(`</span>${moneyText(row.net, { sign: true })}</span>`), 'estimated: the chip\'s net is the dollar row\'s');
+      else assert.ok(chip && !chip.includes('chip__v'), `${row.status}: the chip has no figure`);
+    }
   }));
 
 test('the ledger: one row per measure, CMS\'s value and z-score (a dash where CMS published none), CMS\'s footnotes and this site\'s part', () => {
@@ -607,6 +618,46 @@ test("the HACRP header: the program's tab current, its section menu to the progr
   assert.deepEqual(currentOf(renderPlace(PLACES.list[0], HISTORY_ARGS)), ['map']);
   assert.deepEqual(currentOf(program), ['how']);
   assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">4<\/span>Every hospital</);
+});
+
+// A pinned hospital's page as the build renders it, with its dollar row and its master record (generate.js).
+const pinnedPage = (h) => hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: DATA.master.get(h.ccn), money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
+const tabLinks = (header) => [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1], Boolean(m[2])]);
+
+test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net, its tab current, the other tabs at their folders until those pages are built', () => {
+  const h = pick((x) => x.paymentReduction === 'Yes' && DATA.dollars.byCcn.get(x.ccn).status === 'estimated' && DATA.master.get(x.ccn).programs.hrrp?.inProgram, 'an estimated hospital CMS cut, in Readmissions');
+  const row = DATA.dollars.byCcn.get(h.ccn);
+  const text = pinnedPage(h);
+  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+  // Messages only, no values: a failure prints no hospital's name or CCN.
+  assert.ok(header.startsWith(`<header class="topbar fam" data-hub-src="${ASSETS.shell.hubUrl}" data-hospital="${h.ccn}">`), 'the header names the hospital');
+  const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(header)?.[0];
+  assert.ok(chip, 'the chip shows, not hidden');
+  const name = esc(DATA.master.get(h.ccn).name);
+  assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${name}</span> <span class="chip__v"><span class="vh">Estimated FY${DATA.fy} net: </span>${moneyText(row.net, { sign: true })}</span></span>`), 'the name and the dollar row\'s net, plain text');
+  assert.ok(chip.includes(`<a class="chip__x" href="/hacrp/" aria-label="Stop following ${name}">×</a>`), 'stopping opens the program page');
+  // Its HACRP page is this page; the family's hospital page and the Readmissions pages are not built yet, so All programs
+  // and Readmissions open their folders (the shell's script adds ?h=), and nothing links them.
+  const own = hospitalPath(h);
+  const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href, current]);
+  assert.deepEqual(named, [['/', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : [p.path, false]))]);
+  assert.equal(tabLinks(header)[1][0], '/hrrp/', 'Readmissions, though the hospital is in it');
+  assert.ok(!/href="\/hospital\/|href="\/hrrp\/hospital\//.test(text), 'no link to a page not built');
+  // The section menu, Every hospital current, and the bar's search.
+  assert.deepEqual([...header.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);
+  assert.ok(header.includes('data-nav="map" aria-current="true"'), 'Every hospital is the current part');
+  assert.ok(header.includes(`<form class="omni" id="omni" role="search" aria-label="Find a hospital" data-src="${SEARCH_URL}" hidden>`), 'the bar holds HACRP\'s search');
+});
+
+test('a hospital page with no estimate (Maryland\'s, or no inputs) shows its chip with the name alone, never $0', () => {
+  for (const [what, status] of [['Maryland', 'maryland'], ['no inputs', 'no-inputs']]) {
+    const h = pick((x) => DATA.dollars.byCcn.get(x.ccn).status === status, `a hospital with the dollar status ${status}`);
+    const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(pinnedPage(h))[0];
+    const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(header)?.[0];
+    assert.ok(chip, `${what}: the chip shows`);
+    assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${esc(DATA.master.get(h.ccn).name)}</span></span>`), `${what}: the name alone`);
+    assert.ok(!/chip__v|\$0|NaN|undefined/.test(chip), `${what}: no figure`);
+  }
 });
 
 test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {
