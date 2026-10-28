@@ -72,12 +72,18 @@ export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
 export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));
 
-// The address of a hospital's page in a program, or null when the program has none for it. Folders are lowercase, so the
-// CCN is too. programId is 'hub' (the hospital page, every hospital), 'hacrp' (that site's hospital pages), or 'hrrp'
-// (the slim Readmissions page, only for a hospital Thirty Day Readmissions has: inTdr). No other program has one yet.
+// The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' (that site's
+// hospital pages) or 'hrrp' (the slim Readmissions pages), each under its program's folder; null for any other program,
+// which has none yet.
+export function hospitalFolderOf(programId) {
+  if (programId === 'hub') return '/hospital/';
+  return programId === 'hacrp' || programId === 'hrrp' ? `${programById(programId).path}hospital/` : null;
+}
+
+// The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: every
+// hospital has a hub and a HACRP page, and a Readmissions page only when Thirty Day Readmissions has it (inTdr). Folders
+// are lowercase, so the CCN is too.
 export function hospitalPathOf(programId, ccn, { inTdr = false } = {}) {
-  const folder = ccn.toLowerCase();
-  if (programId === 'hub') return `/hospital/${folder}/`;
-  const program = programById(programId);
-  return program && (programId === 'hacrp' || (programId === 'hrrp' && inTdr)) ? `${program.path}hospital/${folder}/` : null;
+  const folder = hospitalFolderOf(programId);
+  return folder && (programId !== 'hrrp' || inTdr) ? `${folder}${ccn.toLowerCase()}/` : null;
 }

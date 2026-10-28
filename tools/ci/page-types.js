@@ -7,7 +7,7 @@ import { hospitalHref } from '../../sites/hacrp/web/hospital-table.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/web/links.js';
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
 import { HOSPITALS_PATH } from '../../sites/hacrp/web/view.js';
-import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalFolderOf, hospitalPathOf, programById } from '../../web/site.js';
 
 export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 // A hospital's page, by its CCN (any case): '/hacrp/hospital/<ccn, lowercase>/'.
@@ -21,21 +21,17 @@ const folderUnder = (path, prefix) => {
   const name = path.startsWith(prefix) && path.endsWith('/') ? path.slice(prefix.length, -1) : '';
   return name && !name.includes('/') ? name : null;
 };
-// A path is a hospital's or a place's page when the site's own helper writes it from the name in it.
-const isHospital = (path) => {
-  const ccn = folderUnder(path, HOSPITALS_PATH)?.toUpperCase();
-  return ccn !== undefined && CCN.test(ccn) && hospitalPath(ccn) === path;
-};
-// Whether a path is a hospital's page in a program's folder (the hub's, '/hospital/<ccn, lowercase>/', or Readmissions' interim
-// page, '/hrrp/hospital/<ccn, lowercase>/'), by the family's own helper (web/site.js hospitalPathOf).
+// A path is a hospital's or a place's page when the helper that writes it writes it from the name in it. A hospital's page
+// in a program's hospital folder (web/site.js hospitalFolderOf: HACRP's, the hub's own, Readmissions' interim one), by
+// hospitalPathOf, which a test holds equal to HACRP's own writer (hospitalPath).
 const hospitalPageIn = (programId) => {
-  const at = (ccn) => hospitalPathOf(programId, ccn, { inTdr: true });
-  const folder = at('X').replace(/x\/$/, '');
+  const folder = hospitalFolderOf(programId);
   return (path) => {
     const ccn = folderUnder(path, folder)?.toUpperCase();
-    return ccn !== undefined && CCN.test(ccn) && at(ccn) === path;
+    return ccn !== undefined && CCN.test(ccn) && hospitalPathOf(programId, ccn, { inTdr: true }) === path;
   };
 };
+const isHospital = hospitalPageIn('hacrp');
 const isHubHospital = hospitalPageIn('hub');
 const isHrrpHospital = hospitalPageIn('hrrp');
 // The interim Readmissions page (hub/hrrp/page.js): the program's folder.

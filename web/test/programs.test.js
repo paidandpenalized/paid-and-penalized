@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { COPY } from '../copy.js';
 import { LINE_PERCENTILE } from '../../engine/js/hacrp/history.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek, rulePercent } from '../programs.js';
-import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programById, programOf, siteOf } from '../site.js';
+import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalFolderOf, hospitalPathOf, programById, programOf, siteOf } from '../site.js';
 
 const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
 
@@ -79,6 +79,10 @@ test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital
   // A CCN with a letter is lowercased, since a folder is.
   assert.equal(hospitalPathOf('hub', '99A001'), '/hospital/99a001/');
   assert.equal(hospitalPathOf('hacrp', '99A001'), '/hacrp/hospital/99a001/');
+  // Each page sits in its program's hospital folder; a program with none has no folder.
+  assert.deepEqual(['hub', 'hacrp', 'hrrp'].map(hospitalFolderOf), ['/hospital/', '/hacrp/hospital/', '/hrrp/hospital/']);
+  for (const id of ['hub', 'hacrp', 'hrrp']) assert.ok(hospitalPathOf(id, '990001', { inTdr: true }).startsWith(hospitalFolderOf(id)), id);
+  for (const id of ['hvbp', 'team', 'nope']) assert.equal(hospitalFolderOf(id), null, id);
 });
 
 test('Thirty Day Readmissions: its name, its address, and the link to one of its hospitals', () => {
