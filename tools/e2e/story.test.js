@@ -117,3 +117,54 @@ for (const width of [320, 390, 1280]) {
     }));
   });
 }
+
+// The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
+// the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
+// the 'hub:select' event name it), and a hospital without a teaching status has that peer toggle disabled with the
+// hospital page's note.
+describe('states you can read, and Find yours', () => {
+  const tabs = useContext(shared);
+
+  it('#state= pins a state on the map; a junk one is ignored', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await settle(page);
+    const s = await page.evaluate(() => ({
+      step: document.querySelector('.story').dataset.step, line: document.querySelector('.readout').textContent,
+      pinned: [...document.querySelectorAll('.smap .is-pin')].map((el) => el.dataset.st),
+      focusable: [...document.querySelectorAll('.smap .st')].every((el) => el.getAttribute('role') === 'button' && el.tabIndex === 0),
+    }));
+    assert.equal(s.step, '7');
+    assert.match(s.line, /^Ohio: [\d,]+ hospitals, net [−+]?\d\.\d\d% of pay, \d+% take a net cut$/);
+    assert.deepEqual(s.pinned, ['OH']);
+    assert.ok(s.focusable, 'the states are buttons in the tab order on step 7');
+    await page.goto(new URL('/about/', page.url()).href, { waitUntil: 'networkidle' });
+    await page.goto(new URL('/#state=%3Cimg%20src=x%3E', page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.smap .is-pin, img[src="x"]').length), 0, 'nothing pinned, no markup');
+    await assertQuiet(seen, 'state fragment');
+  }));
+
+  it('the last step\'s search follows a hospital in place, with its card, its event and its peer toggles', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    // A hospital with an estimate and no teaching status, from the page's own asset.
+    const ccn = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === null)[at('ccn')];
+    });
+    await page.evaluate(() => document.addEventListener('hub:select', (e) => { window.selected = e.detail.ccn; }));
+    const box = page.locator('main form#find').getByRole('combobox');
+    await box.pressSequentially(ccn.toLowerCase());
+    await page.locator('main form#find [role="option"]').first().waitFor();
+    await box.press('Enter');
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+    const s = await page.evaluate(() => ({
+      path: window.location.pathname, selected: window.selected, step: document.querySelector('.story').dataset.step,
+      teach: document.querySelector('.peers [data-peer="teach"]').getAttribute('aria-disabled'),
+      why: document.querySelector('#peers-no-teach').checkVisibility(), example: document.querySelector('.card__ex').hidden,
+    }));
+    assert.deepEqual(s, { path: '/', selected: ccn, step: '8', teach: 'true', why: true, example: true });
+    await assertQuiet(seen, 'find yours');
+  }));
+});

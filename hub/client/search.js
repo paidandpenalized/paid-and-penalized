@@ -1,4 +1,4 @@
-// The family search, on every hub page that has its box (hub/search/form.js): the shared combobox
+// The family search, on every hub page that has its box (hub/search/form.js; a form with data-hub): the shared combobox
 // (web/client/omnibox.js) over the hub's hospitals and the fifty states and DC. A hospital is found by its name, city,
 // state or CCN and opens its page; a state is found by its name or code and opens the front page at that state, where the
 // story's map reads the address's #state=<code> (the code as the data holds it, capitals; the reader accepts either
@@ -38,11 +38,25 @@ export const hubWords = {
   more: null,
 };
 
-// Mounts the combobox on each form: one index, built once for all of them, from the asset the first form to need it names.
-// loadAsset(src) resolves to { hospitals }; open(href) is what a pick does (the page by default).
-export function mountHubSearch(forms, { loadAsset = loadHubAsset, open } = {}) {
-  const load = once((src) => loadAsset(src).then(({ hospitals }) => buildIndex(hubEntries(hospitals))));
-  for (const form of forms) mountOmnibox(form, { load: () => load(form.dataset.src), words: hubWords, open });
+// Mounts the combobox on each form: the entries made once for all of them, from the asset the first form to need them
+// names, and one index per kind of form (a form with data-only="<type>" lists only that type: the home story's search,
+// hospitals). A pick is first announced on its form as a cancelable 'hub:pick' event ({ href }): a page's script that
+// acts on it in place cancels it (the home story follows the hospital); otherwise open(href) opens it (the page by
+// default). loadAsset(src) resolves to { hospitals }.
+export function mountHubSearch(forms, { loadAsset = loadHubAsset, open = (href) => window.location.assign(href) } = {}) {
+  const entries = once((src) => loadAsset(src).then(({ hospitals }) => hubEntries(hospitals)));
+  const indexes = new Map();
+  const indexFor = (form) => {
+    const only = form.dataset.only ?? '';
+    if (!indexes.has(only)) indexes.set(only, once(() => entries(form.dataset.src).then((all) => buildIndex(only ? all.filter((e) => e.type === only) : all))));
+    return indexes.get(only)();
+  };
+  for (const form of forms) {
+    const pick = (href) => {
+      if (form.dispatchEvent(new CustomEvent('hub:pick', { detail: { href }, cancelable: true }))) open(href);
+    };
+    mountOmnibox(form, { load: () => indexFor(form), words: hubWords, open: pick });
+  }
 }
 
 if (typeof document !== 'undefined') mountHubSearch([...document.querySelectorAll('form.omni[data-src][data-hub]')]);

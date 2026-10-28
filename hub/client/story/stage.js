@@ -10,7 +10,6 @@
 //   else      every dot glides to its next place, a little staggered.
 // Old scenery leaves early and new scenery arrives late, so the moving dots are never drawn over two charts at once; a
 // pile's count arrives once its dots have settled. Reduced motion: every change is instant.
-import { STATE_NAMES } from '../../../web/charts/geo.js';
 import { count, money, pct } from '../../../web/client/format.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT } from '../../../web/programs.js';
 import { onThemeChange, readColors } from '../colors.js';
@@ -42,9 +41,10 @@ const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 //   rows       the story's hospitals (layouts.js storyRows); facts: storyFacts of the hospitals; fy: the fiscal year;
 //   domain     the share axis's [lo, hi]; mapW, mapH: the map's projected size;
 //   panels     the server's drawings: { bar (its panel), barSvg, map (its panel), mapSvg, mapFoot } (elements);
-//   example    the hospital the last step opens on; peersOf(h): its group (the hospitals of its state);
+//   example    the hospital the last step opens on; peersOf(h): its group as { peers (hospitals, h among them), label
+//              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js);
 //   railHidden () -> whether the step's name sits in the stage (no rail beside it); still: the reduced-motion query.
-// Returns { show(i, { instant }), select(h), resize(), redraw() }.
+// Returns { show(i, { instant }), select(h), regroup(), resize(), redraw() }.
 export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH, panels, example, peersOf, railHidden, still }) {
   const ctx = canvas.getContext('2d');
   const N = rows.length;
@@ -103,8 +103,12 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       if (!cache[5]) cache[5] = make.layNet(cache[4]);
       return cache[i];
     }
-    const h = selected ?? example;
-    cache[i] = i === 6 ? make.layMap(false) : i === 7 ? make.layMap(true) : make.layYou(h, peersOf(h));
+    if (i === 8) {
+      const h = selected ?? example;
+      const { peers, label } = peersOf(h);
+      cache[8] = make.layYou(h, peers);
+      cache[8].info.label = label;
+    } else cache[i] = make.layMap(i === 7);
     return cache[i];
   }
 
@@ -364,11 +368,10 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it.
   function youWords(L, a) {
     const { info } = L;
-    const h = rows[info.h]?.h;
-    if (!h) return;
+    if (!rows[info.h]) return;
     ctx.globalAlpha = a;
     const f = font(g.narrow ? 12 : 13.5, 600);
-    text(say('groupOf', { group: STATE_NAMES[h.state] ?? h.state, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
+    text(say('groupOf', { group: info.label, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
     text(say('everyone', { n: count(N) }), g.x0, info.all[0] - 10, f, colors.ink);
     if (info.median !== null) {
       const x = g.scale.xs(info.median);
@@ -567,6 +570,12 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     else run(L, { dur: 1050, span: 0.85, delay: (s) => hash(s) * 0.15 });
   }
 
+  function regroup() {
+    cache[8] = null;
+    if (step === 8) run(lay(8), { dur: 800 });
+    else if (!raf) draw();
+  }
+
   function resize() {
     measure();
     if (!W || !H) return;
@@ -588,13 +597,13 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   return {
     show,
     // Follow a hospital (a decoded asset row with an estimate), or stop (null): it is ringed with its name at every step,
-    // and the last step shows it among its state's hospitals.
+    // and the last step shows it among its group.
     select(h) {
       selected = h;
-      cache[8] = null;
-      if (step === 8) run(lay(8), { dur: 800 });
-      else if (!raf) draw();
+      regroup();
     },
+    // The group changed (another peer mode): the last step's peers rise anew out of everyone.
+    regroup,
     resize,
     redraw: () => {
       if (!raf) draw();

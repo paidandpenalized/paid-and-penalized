@@ -11,6 +11,7 @@ export function el(tag) {
     append(...xs) { node.children.push(...xs); },
     replaceChildren(...xs) { node.children = xs; },
     addEventListener(type, fn) { node.listeners[type] = fn; },
+    dispatchEvent(event) { node.listeners[event.type]?.(event); return !event.defaultPrevented; },
     closest(sel) { return sel === '[role="option"]' && node.attrs.role === 'option' ? node : null; },
   };
   return node;

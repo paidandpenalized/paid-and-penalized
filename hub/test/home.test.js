@@ -17,6 +17,7 @@ import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
 import { MAGNIFY, barOrder } from '../home/bar.js';
 import { exampleHref, homePage, simpleFraction } from '../home/page.js';
+import { cardModel, peersIn, sizeWords } from '../client/story/find.js';
 import { stateKey } from '../home/states.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
 
@@ -189,8 +190,15 @@ test('what only a script uses is hidden: the small states\' buttons, the peer to
   const form = [...tags(out, { names: ['form'] })].find(({ attrs }) => attrs.class === 'omni omni--hero');
   assert.ok(form, 'the hero search');
   assert.equal(form.attrs['data-src'], assets.shell.hubUrl);
-  assert.ok('data-hub' in form.attrs && 'hidden' in form.attrs);
+  assert.ok('hidden' in form.attrs);
+  // A family search box (hub/client/search.js mounts it) that lists hospitals only.
+  assert.ok('data-hub' in form.attrs);
+  assert.equal(form.attrs['data-only'], 'hospital');
   assert.ok(step(8).includes('class="omni omni--hero"'), 'the search is in the last step');
+  // The peer toggle's notes for a hospital with no group in a mode: the hospital page's words, hidden.
+  const peers = element(out, '<div class="peers"', 'div');
+  assert.ok(peers.includes('<p class="peers__why" id="peers-no-size" data-why="size" hidden>Same size: no bed count on record for this hospital.</p>'));
+  assert.ok(peers.includes('<p class="peers__why" id="peers-no-teach" data-why="teach" hidden>Same teaching: no teaching status on record for this hospital.</p>'));
 });
 
 test('the live story\'s parts are in the markup, so its script adds no words: the step names "n/9", the progress line, the script', () => {
@@ -217,7 +225,7 @@ test('the example card: the example hospital, its place, size, teaching, net, th
   const said = textOf(card);
   assert.ok(said.includes(h.name));
   assert.ok(said.includes(`${h.city}, ${h.state}`));
-  assert.ok(said.includes(`${count(h.beds)} beds`));
+  assert.ok(said.includes(`${sizeWords(h.band)}, non-teaching`), 'its size band and teaching status');
   assert.ok(said.includes(pct(h.est.share, 2)));
   assert.ok(said.includes(dollars(h.est.net)));
   for (const label of ['Readmissions', 'Hospital-acquired conditions', 'Value-based purchasing']) assert.ok(said.includes(label), label);
@@ -228,6 +236,13 @@ test('the example card: the example hospital, its place, size, teaching, net, th
   // Its page: the one place that sets it (a page the build emits: the link check holds it to one).
   assert.ok(card.includes(`<a class="card__go" href="${exampleHref(EXAMPLE_CCN)}">Open its hospital page`));
   assert.equal(exampleHref(EXAMPLE_CCN), hospitalPathOf('hub', EXAMPLE_CCN));
+  // Its words are the ones the story's script writes for a found hospital (cardModel), each in its element.
+  const m = cardModel(h, peersIn(hospitals, h, 'state'), 'state', hub.fy);
+  for (const [cls, text] of [['card__nm', m.name], ['card__loc', m.place], ['card__pct', m.pct], ['card__usd', m.usd], ['card__netl', m.netWords], ['card__peer', m.peer]]) {
+    assert.equal(textOf(element(card, `<[a-z]+ class="${cls}[" ]`, cls === 'card__pct' || cls === 'card__usd' ? 'span' : 'p')).trim(), text, cls);
+  }
+  assert.deepEqual([...card.matchAll(/<dt>([^<]*)<\/dt><dd class="([^"]*)">([^<]*)<\/dd>/g)].map((x) => [x[1], x[2], x[3]]),
+    m.rows.map((r) => [r.label, r.kind ? `v v--${r.kind}` : 'v', r.text]));
 });
 
 test('a claim the words make that the data no longer bear out stops the build; the net heading says a share in words only near a simple fraction', () => {
