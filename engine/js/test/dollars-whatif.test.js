@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, readJson } from '../../../pipeline/files.js';
-import { HAC_RATE, netShare, programDollars, roundHalfEven } from '../dollars/whatif.js';
+import { HAC_RATE, SHOWN_STATUSES, derivedDollars, netShare, programDollars, roundHalfEven } from '../dollars/whatif.js';
 import { mulberry32 } from './prng.js';
 
 // The hub's common fiscal year.
@@ -20,7 +20,7 @@ const synthetic = (over = {}) => ({
 
 test('HAC_RATE is the 1% of what a hospital is paid after the other two programs', () => assert.equal(HAC_RATE, 0.01));
 
-test('with no scenario, or one equal to the actual values, every estimated row in the file is reproduced exactly', () => {
+test('with no scenario, one equal to the actual values, or one within 1e-9 of them, every estimated row in the file is reproduced exactly', () => {
   assert.equal(estimated.length, dollars.national.hospitals);
   for (const row of estimated) {
     const want = shown(row);
@@ -29,13 +29,8 @@ test('with no scenario, or one equal to the actual values, every estimated row i
     assert.deepEqual(programDollars(row, {}), want, row.ccn);
     const same = { hrrpFactor: row.hrrpFactor, vbpFactor: row.vbpFactor, cut: row.cut };
     assert.deepEqual(programDollars(row, same), want, row.ccn);
-  }
-});
-
-test('a scenario factor within 1e-9 of the actual one counts as the actual one', () => {
-  for (const row of estimated.slice(0, 200)) {
     const near = { hrrpFactor: row.hrrpFactor + 5e-10, vbpFactor: row.vbpFactor - 5e-10 };
-    assert.deepEqual(programDollars(row, near), shown(row), row.ccn);
+    assert.deepEqual(programDollars(row, near), want, row.ccn);
   }
 });
 
@@ -57,19 +52,24 @@ test('roundHalfEven: ties go to the even integer, like Python round', () => {
   assert.equal(roundHalfEven(3.5), 4);
   assert.equal(roundHalfEven(-2.5), -2);
   assert.equal(roundHalfEven(-3.5), -4);
-  assert.equal(roundHalfEven(0.5), 0);
-  assert.equal(roundHalfEven(1.5), 2);
-  assert.equal(roundHalfEven(2.4999), 2);
   assert.equal(roundHalfEven(2.5001), 3);
   assert.equal(roundHalfEven(-2.5001), -3);
   assert.equal(roundHalfEven(1e9 + 0.5), 1e9);
   assert.equal(roundHalfEven(1e9 + 1.5), 1e9 + 2);
-  assert.equal(roundHalfEven(7), 7);
 });
 
 test('roundHalfEven never returns negative zero, and refuses what is not a finite number', () => {
-  for (const x of [-0.4, -0.5, -0, 0, 0.4]) assert.ok(Object.is(roundHalfEven(x), 0), String(x));
+  for (const x of [-0.4, -0.5, -0, 0, 0.4, 0.5]) assert.ok(Object.is(roundHalfEven(x), 0), String(x));
   for (const x of [NaN, Infinity, -Infinity]) assert.throws(() => roundHalfEven(x), RangeError, String(x));
+});
+
+test('derivedDollars: the pay after Readmissions and value-based purchasing, and 1% of it rounded half to even', () => {
+  assert.deepEqual(derivedDollars({ total: 1.4e6, hrrp: -30000, hvbp: 10000 }), { after: 1380000, atStake: 13800 });
+  // 1% of 250 is 2.5, a tie: the even whole dollar.
+  assert.deepEqual(derivedDollars({ total: 300, hrrp: -40, hvbp: -10 }), { after: 250, atStake: 2 });
+  assert.throws(() => derivedDollars({ total: NaN, hrrp: 0, hvbp: 0 }), RangeError);
+  // A row's own after and atStake are what the rule gives, for every estimated row in the file.
+  for (const row of estimated) assert.deepEqual(derivedDollars(row), { after: row.after, atStake: row.atStake }, row.ccn);
 });
 
 test('a synthetic row: the actual figures, then a changed HRRP factor', () => {
@@ -143,4 +143,9 @@ test('netShare throws unless the pay is above zero', () => {
   assert.throws(() => netShare(1, 0), RangeError);
   assert.throws(() => netShare(1, -10), RangeError);
   assert.throws(() => netShare(1, NaN), RangeError);
+});
+
+test('the statuses a page has words for are the three a hospital has', () => {
+  assert.deepEqual([...SHOWN_STATUSES], ['estimated', 'maryland', 'no-inputs']);
+  for (const h of dollars.hospitals) assert.ok(SHOWN_STATUSES.includes(h.status), h.ccn);
 });

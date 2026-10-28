@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { programDollars } from '../../engine/js/dollars/whatif.js';
-import { decodeRows } from '../../web/client/hub-asset.js';
+import { SHOWN_STATUSES, programDollars } from '../../engine/js/dollars/whatif.js';
+import { STATUS_CODES, decodeRows } from '../../web/client/hub-asset.js';
 import { loadHub } from '../data.js';
 import { MAP_WIDTH, hubAsset } from '../asset.js';
 import { hubHospitals } from '../model.js';
@@ -24,7 +24,7 @@ test('the asset is one row per hospital in the column order the browser reads', 
     assert.equal(row.length, COLS.length, h.ccn);
     assert.equal(row[0], h.ccn);
     assert.ok(row.every((v) => v !== undefined), `${h.ccn} has an undefined value`);
-    assert.equal(row[COLS.indexOf('status')], { estimated: 'e', maryland: 'm', 'no-inputs': 'n' }[h.status]);
+    assert.equal(row[COLS.indexOf('status')], STATUS_CODES[h.status]);
     assert.equal(row[COLS.indexOf('tdr')], h.inTdr ? 1 : 0);
     assert.equal(row[COLS.indexOf('band')], h.band);
     assert.equal(row[COLS.indexOf('teach')], h.teach);
@@ -70,56 +70,48 @@ test('a hospital with no location gets no place on the map', () => {
   assert.deepEqual([out[COLS.indexOf('x')], out[COLS.indexOf('y')]], [null, null]);
 });
 
-// Picked by property, never by name.
-function picks() {
-  const by = (pred) => hospitals.find(pred);
-  return {
-    'an estimated hospital with a HAC cut': by((h) => h.est?.cut),
-    'an estimated hospital with a bonus and no cut': by((h) => h.est && !h.est.cut && h.est.hvbp > 0 && h.est.hrrp < 0),
-    'an estimated hospital outside HVBP': by((h) => h.est && !h.est.vbpListed),
-    'an estimated hospital with no HRRP dollars': by((h) => h.est && h.est.hrrp === 0),
-    'a Maryland hospital': by((h) => h.status === 'maryland'),
-    'a hospital with no estimate': by((h) => h.status === 'no-inputs'),
-    'a hospital with no teaching status': by((h) => h.teach === null),
-    'a hospital outside the Thirty Day Readmissions file': by((h) => !h.inTdr),
-    'a hospital in it': by((h) => h.inTdr && h.est),
-    'the first hospital': hospitals[0],
-  };
-}
+test('every status a page has words for has one code, and no code is shared', () => {
+  assert.deepEqual(Object.keys(STATUS_CODES), [...SHOWN_STATUSES]);
+  const codes = Object.values(STATUS_CODES);
+  assert.ok(codes.every((c) => typeof c === 'string' && c.length === 1));
+  assert.equal(new Set(codes).size, codes.length);
+});
 
-test('decodeRows gives back every field of a hospital, picked by property', () => {
+// The real file has every kind of hospital the browser must carry, so the sweep below is not an easy one.
+const KINDS = {
+  'an estimated hospital with a HAC cut': (h) => h.est?.cut,
+  'an estimated hospital with a bonus and no cut': (h) => h.est && !h.est.cut && h.est.hvbp > 0 && h.est.hrrp < 0,
+  'an estimated hospital outside HVBP': (h) => h.est && !h.est.vbpListed,
+  'an estimated hospital with no HRRP dollars': (h) => h.est && h.est.hrrp === 0,
+  'a Maryland hospital': (h) => h.status === 'maryland',
+  'a hospital with no estimate': (h) => h.status === 'no-inputs',
+  'a hospital with no teaching status': (h) => h.teach === null,
+  'a hospital outside the Thirty Day Readmissions file': (h) => !h.inTdr,
+  'a hospital in it': (h) => h.inTdr && h.est,
+};
+
+test('every hospital decodes to what the build holds, and a decoded hospital can be re-run through the what-if arithmetic', () => {
+  for (const [what, has] of Object.entries(KINDS)) assert.ok(hospitals.some(has), `the file has ${what}`);
   const decoded = decodeRows(JSON.parse(JSON.stringify(asset)));
   assert.deepEqual([decoded.fy, decoded.mapW, decoded.mapH], [asset.fy, asset.mapW, asset.mapH]);
   assert.equal(decoded.hospitals.length, hospitals.length);
   assert.equal(decoded.byCcn.size, hospitals.length);
-  const cases = Object.entries(picks());
-  assert.equal(cases.length, 10);
-  for (const [what, h] of cases) {
-    assert.ok(h, `a fixture for ${what}`);
-    const d = decoded.byCcn.get(h.ccn);
-    assert.equal(d, decoded.hospitals[hospitals.indexOf(h)], what);
-    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.band, d.teach, d.inTdr], [h.ccn, h.name, h.city, h.state, h.status, h.band, h.teach, h.inTdr], what);
-    const row = asset.rows[hospitals.indexOf(h)];
-    assert.deepEqual([d.x, d.y], [row[COLS.indexOf('x')], row[COLS.indexOf('y')]], what);
+  hospitals.forEach((h, i) => {
+    const d = decoded.hospitals[i];
+    const row = asset.rows[i];
+    assert.equal(decoded.byCcn.get(h.ccn), d, h.ccn);
+    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.band, d.teach, d.inTdr, d.x, d.y],
+      [h.ccn, h.name, h.city, h.state, h.status, h.band, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
     if (!h.est) {
-      assert.equal(d.est, null, what);
-      continue;
+      assert.equal(d.est, null, h.ccn);
+      return;
     }
     const { pct, ...est } = d.est;
-    assert.deepEqual(est, h.est, what);
+    assert.deepEqual(est, h.est, h.ccn);
     assert.deepEqual(pct, {
       hrrp: h.est.hrrp * 100 / h.est.total, hac: h.est.hac * 100 / h.est.total,
       hvbp: h.est.hvbp * 100 / h.est.total, net: h.est.net * 100 / h.est.total,
-    }, what);
-  }
-});
-
-test('every hospital decodes to what the build holds, and a decoded hospital can be re-run through the what-if arithmetic', () => {
-  const decoded = decodeRows(JSON.parse(JSON.stringify(asset)));
-  hospitals.forEach((h, i) => {
-    const d = decoded.hospitals[i];
-    assert.equal(d.ccn, h.ccn);
-    assert.deepEqual(d.est && { ...d.est, pct: undefined }, h.est && { ...h.est, pct: undefined }, h.ccn);
-    if (d.est) assert.equal(programDollars(d.est).net, d.est.net, h.ccn);
+    }, h.ccn);
+    assert.equal(programDollars(est).net, est.net, h.ccn);
   });
 });

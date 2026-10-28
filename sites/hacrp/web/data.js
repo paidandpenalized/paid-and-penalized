@@ -5,7 +5,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
-import { isIsoDate } from '../../../engine/js/dates.js';
+import { builtOn } from '../../../engine/js/dates.js';
+import { SHOWN_STATUSES } from '../../../engine/js/dollars/whatif.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
@@ -83,9 +84,6 @@ export function checkDollarsYear(dollars, fy) {
   if (dollars.fy !== fy) throw new RangeError(`HACRP: the dollar estimates are FY${dollars.fy} but the HACRP file is FY${fy}`);
 }
 
-// The statuses of a dollar row the pages have words for (the file's schema lists a fourth, `parhm`, which no hospital has).
-const SHOWN_STATUSES = ['estimated', 'maryland', 'no-inputs'];
-
 // What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
 // the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
 // `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
@@ -109,16 +107,13 @@ export function dollarsData(dollars, hospitals) {
   return { fy, byCcn, national, headline: { ...headline, cmsCut: headline.yes }, checks, assumptions, bands, backtest: { share: rangeShare(bands), fy: bands.fy } };
 }
 
-// An emitted file's built_at: UTC, whole seconds (builtAt in schemas/common.schema.json).
-const BUILT_AT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}Z$/;
-
 // The date (YYYY-MM-DD, UTC) the newest of these emitted files was built: the newest built_at among them. files:
 // [[repo path, the parsed file]]; a file that is absent (the history, in a build without one) is null and skipped. A
 // built_at that is not a timestamp on the calendar stops the build and names the file.
 export function changedOn(files) {
   const days = files.filter(([, file]) => file).map(([path, file]) => {
-    const day = BUILT_AT.exec(file.built_at)?.[1];
-    if (!isIsoDate(day)) throw new RangeError(`HACRP: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
+    const day = builtOn(file.built_at);
+    if (!day) throw new RangeError(`HACRP: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
     return day;
   });
   if (!days.length) throw new RangeError('HACRP: no emitted file to take a built_at from');

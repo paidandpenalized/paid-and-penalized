@@ -1,8 +1,8 @@
 // The hub's facts, computed from the dollar estimates joined to the hospital master and the pinned Thirty Day
 // Readmissions file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
-import { isIsoDate } from '../engine/js/dates.js';
-import { netShare } from '../engine/js/dollars/whatif.js';
+import { builtOn } from '../engine/js/dates.js';
+import { SHOWN_STATUSES, netShare } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
 
 // The example hospital a page that opens on one uses, never another default. Chosen once by the rule in exampleRule
@@ -11,10 +11,6 @@ import { bedBand, median } from '../engine/js/peers.js';
 // default opens. The model test says when the rule would pick another hospital today; re-choose then, and check the
 // new one with the owner before changing this.
 export const EXAMPLE_CCN = '360174';
-
-// The statuses a dollar row can have that a page has words for. (The file's schema lists a fourth, `parhm`, which no
-// hospital has.)
-const STATUSES = ['estimated', 'maryland', 'no-inputs'];
 
 // An estimated row's dollars and factors, as the dollar file has them, with the hospital's net as a share of its pay.
 function estimate(row) {
@@ -30,7 +26,7 @@ export function hubHospitals({ dollars, master, tdr }) {
   return dollars.hospitals.map((row) => {
     const m = master.get(row.ccn);
     if (!m) throw new RangeError(`hub: CCN ${row.ccn} has a dollar row but no hospital master record`);
-    if (!STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
+    if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
     const beds = m.beds ?? null;
     return {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, band: bedBand(beds), teach: m.teach ?? null,
@@ -111,16 +107,13 @@ export function exampleRule(hospitals) {
   return picks.length ? picks[0].ccn : null;
 }
 
-// An emitted file's built_at: UTC, whole seconds.
-const BUILT_AT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}Z$/;
-
 // What the shell shows on every page, as numbers (the shell formats them): the fiscal year, how many hospitals have an
 // estimate, the day the estimates were built (YYYY-MM-DD, from `builtAt`), and each program's figure for the tabs and
 // the footer: Readmissions' and hospital-acquired conditions' dollars and cut hospitals, and the value-based purchasing
 // bonuses moved and the program's net.
 export function shellFacts({ facts, builtAt, fy }) {
-  const changed = BUILT_AT.exec(builtAt)?.[1];
-  if (!isIsoDate(changed)) throw new RangeError(`hub: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(builtAt)}`);
+  const changed = builtOn(builtAt);
+  if (!changed) throw new RangeError(`hub: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(builtAt)}`);
   return {
     fy,
     hospitals: facts.n,

@@ -1,14 +1,18 @@
 // The hub's hospitals in the browser: fetch the build's hub asset (hub/asset.js writes it) and decode its rows into one
 // object per hospital. Pure apart from loadHubAsset's fetch. Shared (the shell, the home story and the hospital pages
 // read it), so it lives here, not under hub/.
-import { HAC_RATE, netShare, roundHalfEven } from '../../engine/js/dollars/whatif.js';
+import { derivedDollars, netShare } from '../../engine/js/dollars/whatif.js';
+import { once } from './once.js';
 
 // The columns of a row, in the order the build writes them. The decoder reads by name through the asset's own `cols`, so
 // it needs only that every one of these is there.
 export const HUB_COLS = Object.freeze(['ccn', 'name', 'city', 'state', 'status', 'band', 'teach', 'x', 'y', 'base', 'total',
   'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr']);
 
-const STATUS = new Map([['e', 'estimated'], ['m', 'maryland'], ['n', 'no-inputs']]);
+// The one-letter code the asset holds for each status, and the words it decodes to. The build's encoder (hub/asset.js)
+// reads the same map; a test holds its keys to the statuses the pages have words for.
+export const STATUS_CODES = Object.freeze({ estimated: 'e', maryland: 'm', 'no-inputs': 'n' });
+const STATUS = new Map(Object.entries(STATUS_CODES).map(([word, code]) => [code, word]));
 const DOLLAR_COLS = ['base', 'total', 'hrrp', 'hvbp', 'hac', 'net'];
 const NUMBER_COLS = [...DOLLAR_COLS, 'hrrpF', 'vbpF'];
 
@@ -18,9 +22,8 @@ const NUMBER_COLS = [...DOLLAR_COLS, 'hrrpF', 'vbpF'];
 function decodeEstimate(ccn, v) {
   for (const c of NUMBER_COLS) if (!Number.isFinite(v(c))) throw new RangeError(`hub asset: ${ccn} has no ${c}`);
   const [base, total, hrrp, hvbp, hac, net] = DOLLAR_COLS.map(v);
-  const after = total + hrrp + hvbp;
   return {
-    base, total, hrrp, hvbp, hac, net, after, atStake: roundHalfEven(HAC_RATE * after),
+    base, total, hrrp, hvbp, hac, net, ...derivedDollars({ total, hrrp, hvbp }),
     hrrpFactor: v('hrrpF'), vbpFactor: v('vbpF'), cut: v('cut') === 1, hrrpListed: v('hrrpL') === 1, vbpListed: v('vbpL') === 1,
     share: netShare(net, total),
     pct: { hrrp: (hrrp * 100) / total, hac: (hac * 100) / total, hvbp: (hvbp * 100) / total, net: (net * 100) / total },
@@ -50,17 +53,13 @@ export function decodeRows(asset) {
 
 // Each url is fetched and decoded once per page, however many scripts ask; a failed load is forgotten so a retry fetches
 // again. Rejects with an Error naming the HTTP status; the caller shows its one quiet "couldn't load" line.
-const LOADS = new Map();
+const loaders = new Map();
 export function loadHubAsset(url) {
-  if (!LOADS.has(url)) {
-    const load = fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`hub asset: ${url} answered ${res.status}`);
-        return res.json();
-      })
-      .then(decodeRows);
-    load.catch(() => LOADS.delete(url));
-    LOADS.set(url, load);
+  if (!loaders.has(url)) {
+    loaders.set(url, once(() => fetch(url).then((res) => {
+      if (!res.ok) throw new Error(`hub asset: ${url} answered ${res.status}`);
+      return res.json();
+    }).then(decodeRows)));
   }
-  return LOADS.get(url);
+  return loaders.get(url)();
 }

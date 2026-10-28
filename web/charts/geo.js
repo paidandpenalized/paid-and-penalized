@@ -61,7 +61,14 @@ const PARALLEL_INSET = 1 / 6;
 const DOT_R = 4;
 const HALO_R = 9;
 // The US map's height as a share of its width (geoAlbersUsa's frame with Alaska and Hawaii inset).
-export const US_ASPECT = 0.62;
+const US_ASPECT = 0.62;
+
+// The US map's height at a width: the frame usProjected and the US map's paths share.
+export const usMapHeight = (width) => Math.round(width * US_ASPECT);
+
+// Where a record with `lat` and `lon` (a hospital in the master) goes in usProjected's points: [lon, lat], longitude
+// first as the projection takes it, or null without both.
+export const pointOf = ({ lat, lon }) => (Number.isFinite(lat) && Number.isFinite(lon) ? [lon, lat] : null);
 
 // Each state's GeoJSON feature by postal code, decoded once per topology.
 const SHAPES = new WeakMap();
@@ -176,7 +183,7 @@ const US = new Map();
 function usPaths(shapes, width) {
   const key = String(width);
   if (US.get(key)?.shapes === shapes) return US.get(key);
-  const height = Math.round(width * US_ASPECT);
+  const height = usMapHeight(width);
   const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
   const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
   // Wider than the wide variant, the outlines thin in proportion, so a map drawn across a page keeps the wide one's
