@@ -13,23 +13,20 @@
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
 // step, Shift (or Page Up and Down) steps bigger, Home and End go to the range's ends; Escape anywhere in the what-if or
 // the banner resets the page.
-import { factor, money } from '../../../web/client/format.js';
+import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
-import { ROWS, ROW_IDS, ROW_KEY, rowDollars, sumScale } from '../../hospital/peers.js';
-import { HAC_CUT_TEXT, comparison, rowWord, signOf } from '../../hospital/text.js';
+import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
+import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-const usd = (x) => money(x, { sign: true });
-const frac = (x) => String(Math.round(x * 1e4) / 1e4);
 // The actual struck through beside a figure only where the two print differently (a cent of arithmetic is not news).
 const struck = (now, actual) => (usd(now) === usd(actual) ? null : actual);
-const INK = { cut: 'pen', bonus: 'rew', zero: null };
 // How long the "What if? Adjust any program" button's jump takes before the first handle takes focus and wiggles.
 const JUMP_MS = 450;
 // The room kept between the sticky row and a focused control it would otherwise cover (CSS pixels).
@@ -72,10 +69,10 @@ function paintBar(track, sel, cls, dollars, x) {
     bar = node('span');
     track.prepend(bar);
   }
-  const [zero, end] = [x(0), x(dollars)];
-  bar.className = `${cls} hh__bar--${INK[signOf(dollars)]}`;
-  bar.style.setProperty('--a', frac(Math.min(zero, end)));
-  bar.style.setProperty('--w', frac(Math.abs(end - zero)));
+  const { a, w } = barSpan(x, dollars);
+  bar.className = `${cls} hh__bar--${inkOf(dollars)}`;
+  bar.style.setProperty('--a', a);
+  bar.style.setProperty('--w', w);
 }
 
 // mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), hospitals (every decoded
@@ -234,8 +231,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     const now = (id) => (rowDollars(h.est, id, g.figures).own === null ? null : out[ROW_KEY[id]]);
     const x = sumScale([...values, ...ROW_IDS.map(now).filter((v) => v !== null)]);
     const list = $('.hh__sum');
-    list?.style.setProperty('--z', frac(x(0)));
-    $('.hh__ax')?.style.setProperty('--z', frac(x(0)));
+    list?.style.setProperty('--z', trackAt(x(0)));
+    $('.hh__ax')?.style.setProperty('--z', trackAt(x(0)));
     for (const li of page.querySelectorAll('[data-sum]')) {
       const id = li.dataset.sum;
       const track = li.querySelector('.hh__track');
@@ -252,7 +249,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
         said?.remove();
       } else {
         if (!tick) track.append((tick = node('span', { class: 'hh__tick' })));
-        tick.style.setProperty('--m', frac(x(median)));
+        tick.style.setProperty('--m', trackAt(x(median)));
         if (!said) li.querySelector('.hh__sw')?.append((said = node('span', { class: 'vh' })));
         said.textContent = `; ${fill('sumMedian', { amount: usd(median) })}`;
       }
@@ -275,7 +272,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       const v = out[key];
       if (r.num) r.num.textContent = usd(v);
       if (r.pill) {
-        r.pill.className = pillClass(INK[signOf(v)]);
+        r.pill.className = pillClass(inkOf(v));
         r.pill.textContent = rowWord(fill, id, v);
       }
       if (r.rv) was(r.rv, struck(v, h.est[key]));

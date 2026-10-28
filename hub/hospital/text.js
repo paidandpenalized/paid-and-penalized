@@ -2,7 +2,7 @@
 // restates for another peer group or a what-if. Pure and browser-safe. fill(key, values) fills hub/hospital/copy.js's
 // words (the build's fillCopy, or the script's own).
 import { HAC_CUT_PCT, rulePercent } from '../../web/programs.js';
-import { count, decimal, pct } from '../../web/render/format.js';
+import { count, factor, money, pct } from '../../web/render/format.js';
 
 // The most decimals a share is printed with.
 const MAX_DP = 6;
@@ -22,6 +22,10 @@ export const signedShareText = (x) => (x === 0 ? pct(0, 2) : `${x < 0 ? '−' : 
 
 // Which way a figure goes: 'cut' (below zero), 'bonus' (above) or 'zero'.
 export const signOf = (x) => (x < 0 ? 'cut' : x > 0 ? 'bonus' : 'zero');
+// A figure's ink: 'pen' for a cut, 'rew' for a bonus, null for zero.
+export const inkOf = (x) => ({ cut: 'pen', bonus: 'rew', zero: null })[signOf(x)];
+// Dollars with their sign, as the page's figures print them: "−$1.2M", "+$34K".
+export const signedMoney = (dollars) => money(dollars, { sign: true });
 const KEY = { cut: 'Cut', bonus: 'Bonus', zero: 'Zero' };
 
 // The median's phrase: "a 0.57% cut", "a 0.10% bonus" or "no change".
@@ -50,7 +54,6 @@ export function rowWord(fill, id, dollars) {
   if (sign === 'bonus') return fill('wordBonus');
   return id === 'hrrp' || id === 'hacrp' ? fill('wordNoCut') : fill('wordNoChange');
 }
-const factor = (x) => decimal(x, 4);
 
 // A program row's sentences: why the hospital has its dollars, what its peers have (each count with its words; the counts
 // after the first two only when there are some) and, for a program that lists its hospitals, their median. id: 'hrrp',

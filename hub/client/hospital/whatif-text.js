@@ -2,15 +2,13 @@
 // the hypothetical banner. Pure and browser-safe; every dollar says estimated and its fiscal year. The words are
 // hub/hospital/copy.js's: "would" and "hypothetical", never a verdict.
 import { fillCopy } from '../../../web/render/components.js';
-import { decimal, money } from '../../../web/render/format.js';
+import { factor } from '../../../web/render/format.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROW_KEY, rowFigures } from '../../hospital/peers.js';
-import { HAC_CUT_TEXT, comparison, rowWord, signedShareText } from '../../hospital/text.js';
+import { HAC_CUT_TEXT, comparison, rowWord, signedMoney as usd, signedShareText } from '../../hospital/text.js';
 import { changed, initial, outcome } from './whatif-state.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-const factor = (x) => decimal(x, 4);
-const usd = (x) => money(x, { sign: true });
 
 // The changes from h's actual state, each a clause of the sentence, in the page's order.
 function clauses(state, h) {

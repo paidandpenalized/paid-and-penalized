@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { count as clientCount, factor, money as clientMoney, pct as clientPct } from '../client/format.js';
-import { count, money, pct } from '../render/format.js';
+import { count as clientCount, factor as clientFactor, money as clientMoney, pct as clientPct } from '../client/format.js';
+import { count, factor, money, pct } from '../render/format.js';
 
-test('money and count are the build\'s own, re-exported rather than copied (web/test/format.test.js holds their steps and minus)', () => {
+test('money, count and factor are the build\'s own, re-exported rather than copied (web/test/format.test.js holds their steps and minus)', () => {
   assert.equal(clientMoney, money);
   assert.equal(clientCount, count);
+  assert.equal(clientFactor, factor);
   assert.equal(clientCount(2971), '2,971');
 });
 

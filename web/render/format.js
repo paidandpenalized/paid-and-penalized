@@ -88,6 +88,9 @@ function withSign(x, dp, plus) {
 // A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
 export const decimal = (x, dp) => withSign(x, dp, '');
 
+// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
+export const factor = (x) => decimal(x, 4);
+
 // As decimal, with + for positives.
 export const signed = (x, dp = 1) => withSign(x, dp, '+');
 

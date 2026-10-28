@@ -2,10 +2,10 @@
 // net and the net as a share of pay; this hospital's row marked. A program a hospital is not in reads "Not in this
 // program", never $0. Built when the reader first opens the fold, and again when the group changes while it is open
 // (or at the next opening). Nothing here ranks: the order is the names'.
-import { count, money } from '../../../web/client/format.js';
+import { count } from '../../../web/client/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { ROW_KEY, inProgram } from '../../hospital/peers.js';
-import { signedShareText } from '../../hospital/text.js';
+import { signedMoney, signedShareText } from '../../hospital/text.js';
 
 const COLS = [
   { key: 'colHospital' }, { key: 'colCity' }, { key: 'colState' },
@@ -54,7 +54,7 @@ export function fillPeerTable(details, { peers, h, fill, fy, group }) {
     }
     tr.append(th, cell('td', x.city ?? ''), cell('td', x.state ?? ''));
     for (const col of COLS.slice(3, 7)) {
-      tr.append(inProgram(x.est, col.id) ? cell('td', money(x.est[ROW_KEY[col.id]], { sign: true }), 'num') : cell('td', fill('notInProgram'), 'num hh__na'));
+      tr.append(inProgram(x.est, col.id) ? cell('td', signedMoney(x.est[ROW_KEY[col.id]]), 'num') : cell('td', fill('notInProgram'), 'num hh__na'));
     }
     tr.append(cell('td', signedShareText(x.est.share), 'num'));
     body.append(tr);

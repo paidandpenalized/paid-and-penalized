@@ -93,6 +93,17 @@ export function sumScale(values) {
   return (v) => (v - lo + pad) / (span + 2 * pad);
 }
 
+// A place on the dollar rows' track (a fraction, as sumScale gives it) as a style's custom property: four places.
+export const trackAt = (f) => String(Math.round(f * 1e4) / 1e4);
+
+// A row's bar on the track x (sumScale's), from the zero line to dollars: its start (--a) and width (--w), as trackAt
+// writes them.
+export function barSpan(x, dollars) {
+  const zero = x(0);
+  const end = x(dollars);
+  return { a: trackAt(Math.min(zero, end)), w: trackAt(Math.abs(end - zero)) };
+}
+
 // The values the dollar rows' scale must hold for a hospital's estimate: its own dollars in each row and the net, and the
 // peers' median in every one of figureSets (peerFigures of each way it can be grouped), so switching the peer group moves
 // only the median ticks, never the hospital's own bars.

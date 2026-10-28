@@ -19,8 +19,8 @@ import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { hubPage } from '../parts.js';
 import { COPY } from './copy.js';
-import { ROWS, inProgram, peerGroup, rowDollars, sumScale, sumValues } from './peers.js';
-import { comparison, rowWord, signOf, whyText } from './text.js';
+import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
+import { comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -94,20 +94,14 @@ ${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
 
 // ---------- the net and its rows ----------
 const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: fill('estimateTagLabel'), text: fill('estimateTag') });
-const signed = (dollars) => money(dollars, { sign: true });
-const inkOf = (dollars) => ({ cut: 'pen', bonus: 'rew', zero: null })[signOf(dollars)];
 
 const word = (id, dollars) => rowWord(fill, id, dollars);
 
-// A number for a style attribute (a custom property): a fraction to four places.
-const frac = (x) => String(Math.round(x * 1e4) / 1e4);
-
 // A row's track: the signed bar from the zero line (none for $0) and the peers' median tick (none when it has no median).
 function track(x, own, median) {
-  const zero = x(0);
-  const end = x(own);
-  const bar = own === 0 ? '' : html`<span class="hh__bar hh__bar--${inkOf(own)}" style="--a:${frac(Math.min(zero, end))};--w:${frac(Math.abs(end - zero))}"></span>`;
-  const tick = median === null ? '' : html`<span class="hh__tick" style="--m:${frac(x(median))}"></span>`;
+  const { a, w } = barSpan(x, own);
+  const bar = own === 0 ? '' : html`<span class="hh__bar hh__bar--${inkOf(own)}" style="--a:${a};--w:${w}"></span>`;
+  const tick = median === null ? '' : html`<span class="hh__tick" style="--m:${trackAt(x(median))}"></span>`;
   return html`<span class="hh__track" aria-hidden="true">${bar}${tick}</span>`;
 }
 
@@ -122,12 +116,12 @@ function sumRows(h, figures, fy, sets) {
   const line = (row) => {
     const cls = `hh__sr${row.id === 'net' ? ' hh__sr--net' : ''}`;
     if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill('notInProgram')}</span></span></li>`;
-    const med = row.median === null ? '' : html`<span class="vh">; ${fill('sumMedian', { amount: signed(row.median) })}</span>`;
-    return html`<li class="${cls}" data-sum="${row.id}"><span class="hh__sl">${row.label}</span>${track(x, row.own, row.median)}<span class="hh__sv">${signed(row.own)}</span><span class="hh__sw">${word(row.id, row.own)}${med}</span></li>`;
+    const med = row.median === null ? '' : html`<span class="vh">; ${fill('sumMedian', { amount: signedMoney(row.median) })}</span>`;
+    return html`<li class="${cls}" data-sum="${row.id}"><span class="hh__sl">${row.label}</span>${track(x, row.own, row.median)}<span class="hh__sv">${signedMoney(row.own)}</span><span class="hh__sw">${word(row.id, row.own)}${med}</span></li>`;
   };
   // Under the zero line: "$0", with which side is a cut and which a bonus where the side has room for its word.
-  const axis = html`<li class="hh__axis" aria-hidden="true"><span class="hh__ax" style="--z:${frac(zero)}">${zero > 0.3 ? html`<span class="hh__ax-cut">← ${fill('wordCut')}</span>` : ''}<span class="hh__ax-0">${money(0)}</span>${zero < 0.7 ? html`<span class="hh__ax-bonus">${fill('wordBonus')} →</span>` : ''}</span></li>`;
-  return html`<ul class="hh__sum" role="list" aria-label="${fill('sumLabel', { fy })}" style="--z:${frac(zero)}">
+  const axis = html`<li class="hh__axis" aria-hidden="true"><span class="hh__ax" style="--z:${trackAt(zero)}">${zero > 0.3 ? html`<span class="hh__ax-cut">← ${fill('wordCut')}</span>` : ''}<span class="hh__ax-0">${money(0)}</span>${zero < 0.7 ? html`<span class="hh__ax-bonus">${fill('wordBonus')} →</span>` : ''}</span></li>`;
+  return html`<ul class="hh__sum" role="list" aria-label="${fill('sumLabel', { fy })}" style="--z:${trackAt(zero)}">
 ${rows.map(line)}
 ${axis}
 </ul>
@@ -143,7 +137,7 @@ function netBlock(h, figures, fy, sets) {
   return html`<section class="hh__net" aria-labelledby="hh-net-h">
 <p class="hh__netlab" id="hh-net-h">${fill('netLabel', { fy })} ${estimateTag()}</p>
 <div class="hh__netline">
-<p class="hh__big">${signed(net)}</p>
+<p class="hh__big">${signedMoney(net)}</p>
 <div class="hh__stamp hh__stamp--${sign}">${stamp({ label: stampLabel, ink: sign === 'zero' })}</div>
 </div>
 <div class="hh__band" data-band></div>
@@ -187,7 +181,7 @@ function programRow(h, id, figures, ctx) {
   const listed = inProgram(h.est, id);
   const own = rowDollars(h.est, id, figures).own;
   const value = listed
-    ? html`<span class="vh">${fill('rowValue', { fy: ctx.fy })} </span><span class="hh__num">${signed(own)}</span> ${pill({ kind: inkOf(own), label: word(id, own) })}`
+    ? html`<span class="vh">${fill('rowValue', { fy: ctx.fy })} </span><span class="hh__num">${signedMoney(own)}</span> ${pill({ kind: inkOf(own), label: word(id, own) })}`
     : pill({ kind: 'na', label: fill('notInProgram') });
   return html`<div class="hh__row" data-row="${id}">
 <div class="hh__rt">
@@ -221,7 +215,7 @@ ${ROWS.map((r) => programRow(h, r.id, figures, ctx))}
 <h3 class="hh__rh">${fill('netHeading')}</h3>
 <div class="hh__result" data-result aria-live="polite">
 <p class="hh__rhd">${fill('resultHead', { fy })} ${estimateTag()}</p>
-<p class="hh__rbig">${signed(h.est.net)}</p>
+<p class="hh__rbig">${signedMoney(h.est.net)}</p>
 <p class="hh__rs">${result}</p>
 </div>
 <p class="hh__stand">${fill('whatifStanding')}</p>
