@@ -410,6 +410,40 @@ for (const width of [390, 1280]) {
   }
 }
 
+// The front page's chart words at every width: the directory's histograms draw their tick labels and counts at a fixed
+// size (the site's chart labels: 11 px ticks, 12 px counts; the drawing stretches, the words do not), the states map's
+// key draws its scale (each swatch as tall as the scale), its words are in the 12 px of the page's smallest text, and its
+// "0%" sits under the middle of its scale.
+describe('the front page\'s chart words', () => {
+  const tabs = useContext(shared, { width: 1440 });
+  it('hold their size from 320 to 1440 px, and the key\'s 0% is centred on its scale', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [320, 390, 800, 1024, 1100, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        // A text's drawn size: its font size times its drawing's scale on screen.
+        const drawn = (t) => parseFloat(getComputedStyle(t).fontSize) * t.getScreenCTM().a;
+        const sizes = (sel) => [...document.querySelectorAll(sel)].map(drawn);
+        const box = (el) => el.getBoundingClientRect();
+        const scale = box(document.querySelector('.dkey__g'));
+        const zero = box(document.querySelector('.dkey__s > :nth-child(2)'));
+        return {
+          ticks: sizes('.pc__hist .st__tl'), counts: sizes('.pc__hist .st__out'),
+          key: parseFloat(getComputedStyle(document.querySelector('.dkey__s')).fontSize),
+          swatches: [...document.querySelectorAll('.dkey__g rect.st')].map((r) => Math.round(box(r).height)),
+          scaleH: Math.round(scale.height),
+          off: (zero.left + zero.width / 2) - (scale.left + scale.width / 2),
+        };
+      });
+      assert.ok(f.ticks.length >= 18 && f.ticks.every((v) => Math.abs(v - 11) < 0.01), `${width} px: tick labels drawn at ${[...new Set(f.ticks.map((v) => v.toFixed(1)))]} px, not 11`);
+      assert.ok(f.counts.length >= 6 && f.counts.every((v) => Math.abs(v - 12) < 0.01), `${width} px: counts drawn at ${[...new Set(f.counts.map((v) => v.toFixed(1)))]} px, not 12`);
+      assert.ok(f.key >= 12, `${width} px: the key's words are ${f.key} px`);
+      assert.ok(f.swatches.length > 1 && f.swatches.every((h) => h === f.scaleH && h > 0), `${width} px: the key's swatches are ${f.swatches} px tall on a ${f.scaleH} px scale`);
+      assert.ok(Math.abs(f.off) <= 1, `${width} px: the key's 0% is ${f.off.toFixed(1)} px off its scale's middle`);
+    }
+  }));
+});
+
 // Below the story, the directory: each live program's card ends in a way to its page whose words sit on one line, as its
 // neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
 // row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom

@@ -143,7 +143,9 @@
 .dkey { color: var(--ink-3); font-size: 0.75rem; line-height: 1.35; }
 .dkey__t { max-width: none; margin-bottom: 5px; color: var(--ink-2); }
 .dkey__g { display: block; width: 240px; height: 10px; }
-.dkey__s { display: flex; justify-content: space-between; width: 240px; margin-top: 4px; font: 400 0.6875rem/1.3 var(--font-type); }
+/* The scale's three words: the ends at its ends and "0%" centred under its middle, whatever the end words' widths. */
+.dkey__s { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); width: 240px; margin-top: 4px; font: 400 var(--fs-xs)/1.3 var(--font-type); white-space: nowrap; }
+.dkey__s > :last-child { justify-self: end; }
 .dkey__md { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
 .dkey__hatch { flex: none; width: 14px; height: 10px; background: var(--hatch-fill), var(--paper-2); box-shadow: inset 0 0 0 1px var(--line); }
 .smalls { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; max-width: 330px; }
@@ -357,6 +359,9 @@
 .ab { align-self: start; padding: 2px 5px 1px; border: 1px solid; color: var(--pen-ink); font: 400 var(--fs-cap)/1.2 var(--font-type); text-decoration: none; }
 .pc__dek, .slip { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
 .pc figure { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font: 600 13px/1.35 var(--font-body); }
+/* The histogram's marks stretch across the card (hub/home/below.js); their lines keep their width. */
+.pc__marks { overflow: visible; }
+.pc__marks :is(.st__grid, .st__base) { vector-effect: non-scaling-stroke; }
 .pc__big { margin-top: 12px; font: 700 26px/1 var(--font-type); }
 .pc__sub { margin-bottom: 16px; color: var(--ink-2); font: 400 12.5px/1.4 var(--font-type); }
 .go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
@@ -528,12 +533,15 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__rows { position: relative; }
 .hh__strip { min-width: 0; }
 .hh__strip:empty { display: none; }
-/* The strips (hub/client/hospital/strips.js): one SVG per row, the peers as dots, this hospital ringed, the median's ▲. */
-.st { display: block; width: 100%; height: auto; overflow: visible; }
+/* The strips (hub/client/hospital/strips.js): one SVG per row, the peers as dots, this hospital ringed, the median's ▲.
+   The drawing only (svg.st): the states map's shapes and its key's swatches carry .st too, and a swatch's box must keep
+   its own width and height. */
+svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .st__gut { fill: var(--paper-2); }
 .st__grid { stroke: var(--line); stroke-width: 1; opacity: .55; }
 .st__base { stroke: var(--ink-3); stroke-width: 1; }
-.st__tl, .st__med text { fill: var(--ink-3); font: 400 10.5px var(--font-type); }
+/* Tick labels at the site's chart size (HACRP's .chart-tick: 11px, in --ink-2, which keeps 4.5:1 on the grain). */
+.st__tl, .st__med text { fill: var(--ink-2); font: 400 11px var(--font-type); }
 .st__d--pen { fill: var(--pen); }
 .st__d--rew { fill: var(--rew); }
 .st__d--neu { fill: var(--neutral); }
