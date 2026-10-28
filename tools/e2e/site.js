@@ -44,20 +44,31 @@ function firstPlaces() {
   return first;
 }
 
+// The sample hospitals by type, each the first in the newest HACRP file (in the file's order) that CMS cut, that has no
+// score, and that has a score and was not cut: [type, what it is, the test].
+const HOSPITALS = [
+  ['hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'],
+  ['hospital-unscored', 'with no score', (h) => h.total === null],
+  ['hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'],
+];
+
+// The sample hospital's page of a type (HOSPITALS), { type, name, path, hospital: its emitted record }, from the
+// emitted data alone (no walk of dist/). all: the newest HACRP file's hospitals, when the caller has read them.
+export function hospitalSample(type, all = readNewestEmitted().hospitals) {
+  const [, what, test] = HOSPITALS.find(([t]) => t === type) ?? [];
+  if (!test) throw new RangeError(`hospitalSample: no sample type "${type}"`);
+  const found = all.find(test);
+  if (!found) throw new Error(`hospitalSample: no hospital ${what} in the data`);
+  return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
+}
+
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
-// placeholder (value-based purchasing's), the program page, its Methods and dictionary, three hospitals (the first in
-// the data that CMS cut, that has no score, and that has a score and was not cut; each with its emitted record as
-// `hospital`), the first region, division, state and metro page in dist/, and a path no page has (the not-found page,
-// served with status 404). name is the page's name in a test's title: its type, and a policy page's path; never a
+// placeholder (value-based purchasing's), the program page, its Methods and dictionary, the three sample hospitals
+// (hospitalSample), the first region, division, state and metro page in dist/, and a path no page has (the not-found
+// page, served with status 404). name is the page's name in a test's title: its type, and a policy page's path; never a
 // hospital's name or address. Needs dist/ and the emitted data, whichever site the browser visits.
 export function samplePages() {
-  // The newest HACRP file's hospitals, in the file's order.
   const all = readNewestEmitted().hospitals;
-  const hospital = (type, what, test) => {
-    const found = all.find(test);
-    if (!found) throw new Error(`samplePages: no hospital ${what} in the data`);
-    return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
-  };
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
   return [
@@ -65,9 +76,7 @@ export function samplePages() {
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', name: `policy ${path}`, path })),
     page('coming', SITE.programs.find((p) => p.id === 'hvbp').path),
     page('program', PROGRAM_PATH),
-    hospital('hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'),
-    hospital('hospital-unscored', 'with no score', (h) => h.total === null),
-    hospital('hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'),
+    ...HOSPITALS.map(([type]) => hospitalSample(type, all)),
     ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),

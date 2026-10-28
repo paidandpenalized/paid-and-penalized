@@ -2,49 +2,36 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COPY } from '../copy.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT, programDek } from '../programs.js';
-import { SITE, hospitalPathOf, programOf, siteOf } from '../site.js';
+import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programOf, siteOf } from '../site.js';
 
 const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
 
-test('the registry lists the nine programs in order, each with its names, folder, stage, group and whether the hub has its data', () => {
-  const row = (p) => [p.id, p.name, p.ab, p.path, p.stage, p.group, p.inData];
+test('the registry lists the nine programs in order, each with its names (CMS\'s, exactly, in `long`), folder, stage, group and whether the hub has its data', () => {
+  const row = (p) => [p.id, p.name, p.ab, p.long, p.path, p.stage, p.group, p.inData];
   assert.deepEqual(SITE.programs.map(row), [
-    ['hrrp', 'Readmissions', 'HRRP', '/hrrp/', 'interim', 'quality', true],
-    ['hacrp', 'Hospital-acquired conditions', 'HACRP', '/hacrp/', 'live', 'quality', true],
-    ['hvbp', 'Value-based purchasing', 'HVBP', '/hvbp/', 'soon', 'quality', true],
-    ['wage-index', 'Local wages', 'Wage index', '/wage-index/', 'soon', 'price', false],
-    ['dsh', 'Low-income patients', 'DSH + UC', '/dsh/', 'soon', 'price', false],
-    ['ime', 'Teaching', 'IME', '/ime/', 'soon', 'price', false],
-    ['iqr', 'Quality reporting', 'IQR', '/iqr/', 'soon', 'reporting', false],
-    ['pi', 'Electronic health records', 'PI', '/pi/', 'soon', 'reporting', false],
-    ['team', 'Surgical episodes', 'TEAM', '/team/', 'soon', 'episode', false],
+    ['hrrp', 'Readmissions', 'HRRP', 'Hospital Readmissions Reduction Program', '/hrrp/', 'interim', 'quality', true],
+    ['hacrp', 'Hospital-acquired conditions', 'HACRP', 'Hospital-Acquired Condition Reduction Program', '/hacrp/', 'live', 'quality', true],
+    ['hvbp', 'Value-based purchasing', 'HVBP', 'Hospital Value-Based Purchasing Program', '/hvbp/', 'soon', 'quality', true],
+    ['wage-index', 'Local wages', 'Wage index', 'Hospital Wage Index', '/wage-index/', 'soon', 'price', false],
+    ['dsh', 'Low-income patients', 'DSH + UC', 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments', '/dsh/', 'soon', 'price', false],
+    ['ime', 'Teaching', 'IME', 'Indirect Medical Education Adjustment', '/ime/', 'soon', 'price', false],
+    ['iqr', 'Quality reporting', 'IQR', 'Hospital Inpatient Quality Reporting Program', '/iqr/', 'soon', 'reporting', false],
+    ['pi', 'Electronic health records', 'PI', 'Medicare Promoting Interoperability Program', '/pi/', 'soon', 'reporting', false],
+    ['team', 'Surgical episodes', 'TEAM', 'Transforming Episode Accountability Model', '/team/', 'soon', 'episode', false],
   ]);
-  assert.deepEqual(SITE.programs.map((p) => p.id), IDS);
 });
 
-test('every program has CMS\'s program name in `long`, and a path that is a lowercase folder ending in "/"', () => {
-  for (const p of SITE.programs) {
-    assert.equal(typeof p.long, 'string', p.id);
-    assert.ok(p.long.length > p.name.length, `${p.id}: long is the full program name`);
-    assert.match(p.path, /^\/[a-z0-9-]+\/$/, p.id);
-    assert.ok(['live', 'interim', 'soon'].includes(p.stage), p.id);
-    assert.ok(['quality', 'price', 'reporting', 'episode'].includes(p.group), p.id);
-  }
-  assert.equal(new Set(SITE.programs.map((p) => p.path)).size, SITE.programs.length, 'no two programs share a folder');
+test('every program\'s path is a lowercase folder ending in "/", and no two programs share one', () => {
+  for (const p of SITE.programs) assert.match(p.path, /^\/[a-z0-9-]+\/$/, p.id);
+  assert.equal(new Set(SITE.programs.map((p) => p.path)).size, SITE.programs.length);
 });
 
-test('each program\'s `long` is CMS\'s name for it, exactly', () => {
-  assert.deepEqual(Object.fromEntries(SITE.programs.map((p) => [p.id, p.long])), {
-    hrrp: 'Hospital Readmissions Reduction Program',
-    hacrp: 'Hospital-Acquired Condition Reduction Program',
-    hvbp: 'Hospital Value-Based Purchasing Program',
-    'wage-index': 'Hospital Wage Index',
-    dsh: 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments',
-    ime: 'Indirect Medical Education Adjustment',
-    iqr: 'Hospital Inpatient Quality Reporting Program',
-    pi: 'Medicare Promoting Interoperability Program',
-    team: 'Transforming Episode Accountability Model',
-  });
+test('the registry\'s groups: listed (full tabs and the footer\'s figures), unlisted (dashed), and those with a placeholder (no site here)', () => {
+  const ids = (list) => list.map((p) => p.id);
+  assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp']);
+  assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hrrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  for (const list of [LISTED_PROGRAMS, UNLISTED_PROGRAMS, PLACEHOLDER_PROGRAMS]) assert.ok(Object.isFrozen(list));
 });
 
 test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps only the program sites built in this repo', () => {

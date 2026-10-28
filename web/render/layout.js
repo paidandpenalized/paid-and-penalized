@@ -42,8 +42,9 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 `}<meta name="twitter:card" content="summary">`;
 
 // body: Safe markup (a plain string is escaped, never trusted). assets: the build's paths (css, js by entry name) and
-// the shell's facts (assets.shell: what the header and footer show on every page, computed once by the build). scripts:
-// the page's module URLs, loaded in order after the shell script: a page with a figure (web/charts/figure.js) lists
+// the shell's facts (assets.shell: what the header and footer show on every page, computed once by the build). Every
+// page loads the shell's script first, then the sticky header's (topbar.js), since every page wears that header. scripts:
+// the page's own module URLs, loaded in order after those two: a page with a figure (web/charts/figure.js) lists
 // assets.js.figure, one with the citation block (components.js) assets.js.cite, then its own. preloadFonts: font file
 // names to preload (PRELOAD_FONTS).
 // The shell's parts (render/shell.js familyHeader): program, the current program's id (null on the family's own pages);
@@ -56,11 +57,12 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, program = null, hospital = null, sections = null, current = null, search = '' }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
-  if (!assets?.css || !assets.js?.shell) throw new TypeError('page: assets must hold the CSS and shell script paths');
+  if (!assets?.css || !assets.js?.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, shell and sticky-header script paths');
   if (!assets.shell) throw new TypeError('page: assets must hold the shell facts (the build computes them once, as ctx.assets.shell)');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
+  if (scripts.includes(assets.js.shell) || scripts.includes(assets.js.topbar)) throw new TypeError('page: every page loads the shell and sticky-header scripts; leave them out of scripts');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
-  const modules = [assets.js.shell, ...scripts];
+  const modules = [assets.js.shell, assets.js.topbar, ...scripts];
   return html`<!doctype html>
 <html lang="en">
 <head>

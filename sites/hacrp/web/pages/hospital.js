@@ -337,7 +337,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.share, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.share, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
     ...shellOf({ fy: view.fy, current: 'map', searchUrl, hospital: followed({ view, money, master }) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

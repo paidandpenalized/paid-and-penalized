@@ -10,7 +10,7 @@ import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { newestYear, readJson, REPO_ROOT } from '../../../pipeline/files.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { typeset } from '../../../web/render/components.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
+import { headerOf, withTemp } from '../../../pipeline/test/helpers.js';
 import { count, decimal, isoDate, listText } from '../../../web/render/format.js';
 import { HISTORY_PINS } from '../pipeline/history.js';
 import { FACT_SHEET_CUT, SHORT_NAMES } from '../web/constants.js';
@@ -98,7 +98,7 @@ test('the glossary defines "Payment decision (in counts)" once, right after "Sub
 });
 
 test('the nav marks Methods as current and nothing else; the page loads the figure, cite, top-bar and search scripts', () => {
-  const bar = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(PAGE)[0];
+  const bar = headerOf(PAGE);
   const current = [...bar.matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   assert.deepEqual(current, ['methods']);
   assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);

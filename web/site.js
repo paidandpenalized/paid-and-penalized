@@ -58,6 +58,14 @@ export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.st
 // The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
 
+// The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live and
+// interim programs and the coming ones the dollar estimates already include, the shell's full tabs and the footer's
+// figures; unlisted: the rest, the dashed tabs after the "coming" gap and the footer's "Coming:" line. Placeholder: every
+// program without a site here, whose folder holds the hub's placeholder page (hub/coming.js).
+export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
+export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
+export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'live'));
+
 // The address of a hospital's page in a program, or null when the program has none for it. Folders are lowercase, so the
 // CCN is too. programId is 'hub' (the hospital page, every hospital), 'hacrp' (that site's hospital pages), or 'hrrp'
 // (the slim Readmissions page, only for a hospital Thirty Day Readmissions has: inTdr). No other program has one yet.

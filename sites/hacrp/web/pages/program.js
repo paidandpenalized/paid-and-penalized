@@ -159,7 +159,7 @@ ${citation({ fy, title: heading, path: PROGRAM_PATH, source })}
     path: PROGRAM_PATH,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],
+    scripts: [assets.js.figure, assets.js.cite, assets.js['hacrp-search'], assets.js['hacrp-program']],
     assets,
     ...shellOf({ fy, current: 'how', searchUrl }),
   });

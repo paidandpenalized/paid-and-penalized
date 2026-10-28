@@ -1,8 +1,8 @@
 // The family's page types by address (page-types.js), which the size budget and the browser checks' sample pages read.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SITE } from '../../web/site.js';
-import { pageType, placeKind } from '../ci/page-types.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
+import { hospitalPath, pageType, placeKind } from '../ci/page-types.js';
 
 test('pageType: every page of the site sorts into one type', () => {
   const sorted = {
@@ -20,12 +20,16 @@ test('pageType: every page of the site sorts into one type', () => {
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
   // Every program without a site here has a placeholder at its folder until its own page is built.
-  for (const { path, stage } of SITE.programs) if (stage !== 'live') sorted[path] = 'coming';
+  for (const { path } of PLACEHOLDER_PROGRAMS) sorted[path] = 'coming';
   assert.equal(sorted['/hvbp/'], 'coming');
   for (const [path, type] of Object.entries(sorted)) assert.equal(pageType(path), type, path);
   // The hub's methods page and the program's are different pages.
   assert.equal(pageType('/methods/'), 'policy');
   assert.equal(pageType('/hacrp/methods/'), 'methods');
+});
+
+test('the family\'s address for a HACRP hospital page (web/site.js hospitalPathOf) is the one the HACRP site writes', () => {
+  for (const ccn of ['990001', '99A001']) assert.equal(hospitalPathOf('hacrp', ccn), hospitalPath(ccn), ccn);
 });
 
 test('pageType: a path that matches no type is none (null)', () => {

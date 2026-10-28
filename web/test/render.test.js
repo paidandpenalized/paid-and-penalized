@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
-import { SITE } from '../site.js';
+import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
@@ -10,7 +10,7 @@ import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
 import { searchForm } from '../render/shell.js';
 import { textOf } from '../../pipeline/site/html.js';
-import { testAssets } from '../../pipeline/test/helpers.js';
+import { chipOf, footerOf, headerOf, testAssets } from '../../pipeline/test/helpers.js';
 
 const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { shell: '/assets/shell.bbbbbbbb.js' } });
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -101,7 +101,7 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.match(out, /^<!doctype html>\n<html lang="en">/);
   assert.equal(out.match(/<header[ >]/g).length, 1);
   assert.equal(out.match(/<main[ >]/g).length, 1);
-  const header = /<header[\s\S]*?<\/header>/.exec(out)[0];
+  const header = headerOf(out);
   assert.ok(!/<h1/.test(header));
   assert.equal(out.match(/<h1/g).length, 1);
   assert.ok(out.includes('<meta charset="utf-8">'));
@@ -126,12 +126,10 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));
   // No h1, no drawing and no inline style in the header or the footer: icons are CSS masks (tokens.css).
-  for (const part of [header, /<footer[\s\S]*?<\/footer>/.exec(out)[0]]) assert.doesNotMatch(part, /<h1|<svg|\sstyle=/);
+  for (const part of [header, footerOf(out)]) assert.doesNotMatch(part, /<h1|<svg|\sstyle=/);
 });
 
 // ---------- the shell: the family bar, the program tabs, the section menu, the short footer (render/shell.js) ----------
-const headerOf = (out) => /<header[\s\S]*?<\/header>/.exec(out)[0];
-const footerOf = (out) => /<footer[\s\S]*?<\/footer>/.exec(out)[0];
 // The tabs' links, in order: [href, its words (tags dropped), aria-current or null, the class].
 const tabsOf = (out) => [...headerOf(out).matchAll(/<a class="(tab[^"]*)" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>([\s\S]*?)<\/a>/g)]
   .map(([, cls, href, current, inner]) => [href, inner.replace(/<[^>]+>/g, ''), current ? 'page' : null, cls]);
@@ -179,14 +177,11 @@ test('shell: on a phone the compact wordmark is a 44px target, as every control 
 });
 
 test('shell: the program tabs in the registry\'s order, the coming ones after a "coming" gap, the current one marked', () => {
-  const main = SITE.programs.filter((p) => p.stage !== 'soon' || p.inData);
-  const soon = SITE.programs.filter((p) => !main.includes(p));
-  assert.deepEqual(main.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp']);
   const hub = tabsOf(page({ ...PAGE, path: '/' }));
   assert.deepEqual(hub, [
     ['/', 'All programs', 'page', 'tab'],
-    ...main.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
-    ...soon.map((p) => [p.path, p.ab, null, 'tab tab--soon']),
+    ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
+    ...UNLISTED_PROGRAMS.map((p) => [p.path, p.ab, null, 'tab tab--soon']),
   ]);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
@@ -194,7 +189,7 @@ test('shell: the program tabs in the registry\'s order, the coming ones after a 
   assert.ok(header.includes('<a class="tab tab--soon" href="/wage-index/" title="Local wages (Wage index): coming"><span class="tab__ab">Wage index</span></a>'));
   // The gap sits between the last full tab and the first coming one.
   const gap = header.indexOf('<span class="tabs__gap" aria-hidden="true">coming</span>');
-  assert.ok(gap > header.indexOf(`href="${main.at(-1).path}"`) && gap < header.indexOf(`href="${soon[0].path}"`));
+  assert.ok(gap > header.indexOf(`href="${LISTED_PROGRAMS.at(-1).path}"`) && gap < header.indexOf(`href="${UNLISTED_PROGRAMS[0].path}"`));
   // On a program's pages its tab is current, and only it.
   const hacrp = tabsOf(page({ ...PAGE, program: 'hacrp' }));
   assert.deepEqual(hacrp.filter(([, , current]) => current).map(([href]) => href), ['/hacrp/']);
@@ -227,7 +222,7 @@ test('shell: a hospital\'s pages not built yet (hospital.pages) are linked nowhe
   const header = headerOf(out);
   assert.doesNotMatch(header, /href="\/hospital\//, 'no link to the hospital\'s own page');
   assert.doesNotMatch(header, /href="\/hrrp\/hospital\//, 'no link to its Readmissions page');
-  const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(header)[0];
+  const chip = chipOf(header);
   assert.ok(chip.includes('<span class="chip__n"><span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span> <span class="chip__v"><span class="vh">Estimated FY2026 net: </span>−$58K</span></span>'), 'the name and net, not a link');
   assert.ok(chip.includes('<a class="chip__x" href="/hacrp/" aria-label="Stop following Exampleton &lt;General&gt; &amp; Sons">×</a>'), 'stopping still leaves for the program\'s page');
   assert.match(header, /^<header class="topbar fam" data-hub-src="[^"]+" data-hospital="990001">/, 'the header still names the hospital');
@@ -241,7 +236,7 @@ test('shell: the chip is empty and hidden without a hospital; with one it names 
   assert.doesNotMatch(plain, /data-hospital/);
   const followed = headerOf(page({ ...PAGE, path: '/hacrp/hospital/990001/', program: 'hacrp', hospital: FOLLOWED }));
   assert.match(followed, /^<header class="topbar fam" data-hub-src="[^"]+" data-hospital="990001">/);
-  const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(followed)?.[0];
+  const chip = chipOf(followed);
   assert.ok(chip, 'a chip, not hidden');
   assert.ok(chip.includes('<span class="chip__k">Hospital</span>'));
   assert.ok(chip.includes('<a class="chip__n" href="/hospital/990001/"><span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span>'));
@@ -289,7 +284,7 @@ test('shell: the footer is one numbered form row (programs, the site, data as of
   const coming = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(coming.startsWith('Coming: '));
   assert.deepEqual([...coming.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
-    SITE.programs.filter((p) => p.stage === 'soon' && !p.inData).map((p) => [p.path, p.ab]));
+    UNLISTED_PROGRAMS.map((p) => [p.path, p.ab]));
   // 2: the family's pages, Methods first, Terms last.
   const site = [...foot.matchAll(/<li><a href="(\/[a-z]+\/)">([^<]+)<\/a><\/li>/g)].map((m) => m[1]);
   assert.deepEqual(site, ['/methods/', '/about/', '/corrections/', '/accessibility/', '/privacy/', '/terms/']);
@@ -389,16 +384,18 @@ test('page: the footer uses no inline style (a strict CSP forbids it)', () => {
   assert.doesNotMatch(page(PAGE), /\sstyle=/);
 });
 
-test('page: the shell script always loads first, extra scripts follow, and robots and JSON-LD appear only when given', () => {
+test('page: the shell script and then the sticky header\'s always load first, extra scripts follow, and robots and JSON-LD appear only when given', () => {
   const plain = page(PAGE);
   assert.ok(!plain.includes('name="robots"'));
   assert.ok(!plain.includes('ld+json'));
-  assert.equal(plain.match(/<script /g).length, 1);
-  assert.ok(plain.includes('<script type="module" src="/assets/shell.bbbbbbbb.js"></script>'));
+  assert.deepEqual([...plain.matchAll(/<script type="module" src="([^"]+)"><\/script>/g)].map((m) => m[1]), ['/assets/shell.bbbbbbbb.js', ASSETS.js.topbar]);
+  assert.equal(plain.match(/<script /g).length, 2);
 
   const full = page({ ...PAGE, robots: 'noindex', scripts: ['/assets/hacrp.cccccccc.js'], jsonLd: { name: '</script>' } });
   assert.ok(full.includes('<meta name="robots" content="noindex">'));
-  assert.ok(full.indexOf('shell.bbbbbbbb.js') < full.indexOf('hacrp.cccccccc.js'));
+  assert.ok(full.indexOf('shell.bbbbbbbb.js') < full.indexOf(ASSETS.js.topbar) && full.indexOf(ASSETS.js.topbar) < full.indexOf('hacrp.cccccccc.js'));
+  // A page does not list them again.
+  for (const src of [ASSETS.js.shell, ASSETS.js.topbar]) assert.throws(() => page({ ...PAGE, scripts: [src] }), TypeError);
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(full)[1];
   assert.deepEqual(JSON.parse(ld), { name: '</script>' });
 });

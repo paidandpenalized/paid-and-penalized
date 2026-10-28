@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
-import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
+import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { programDek } from '../../web/programs.js';
-import { SITE } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
@@ -28,8 +28,7 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     await generateHub(ctx);
     // The three pages before, the stub root, /methods/, the 404 page, the five policy pages and a placeholder per
     // program without a site here.
-    const placeholders = SITE.programs.filter((p) => p.stage !== 'live');
-    assert.equal(ctx.pages, 3 + 3 + 5 + placeholders.length);
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -69,9 +68,8 @@ test('each program without a site here has a placeholder at its folder: its name
   withTemp('pp-hub-coming-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     await generateHub(ctx);
-    const pending = SITE.programs.filter((p) => p.stage !== 'live');
-    assert.deepEqual(pending.map((p) => p.path), ['/hrrp/', '/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
-    for (const p of pending) {
+    assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.path), ['/hrrp/', '/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
+    for (const p of PLACEHOLDER_PROGRAMS) {
       const text = readFileSync(join(dir, p.path, 'index.html'), 'utf8');
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, p.id);
       assert.ok(text.includes(`<h1>${escapeHtml(p.name)}</h1>`), p.id);
@@ -90,13 +88,13 @@ test('every hub page holds the family search in its bar, over the hub\'s asset, 
   withTemp('pp-hub-search-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections') });
-    const pages = ['/', SITE.pages.methods, ...Object.values(SITE.pages), ...SITE.programs.filter((p) => p.stage !== 'live').map((p) => p.path)];
-    const files = [...new Set(pages)].map((path) => [path, join(dir, path, 'index.html')]).concat([['not found', join(dir, '404.html')]]);
+    const paths = ['/', ...Object.values(SITE.pages), ...PLACEHOLDER_PROGRAMS.map((p) => p.path)];
+    const files = [...paths.map((path) => [path, join(dir, path, 'index.html')]), ['not found', join(dir, '404.html')]];
     const box = String(hubSearchForm(ASSETS.shell.hubUrl));
     assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-hospitals\.test\.json" data-hub hidden>/);
     for (const [path, file] of files) {
       const text = readFileSync(file, 'utf8');
-      const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+      const header = headerOf(text);
       // In the bar's end, between the phone's find button and the theme toggle; the only search on the page.
       assert.ok(header.includes(box), `${path}: the family search in the bar`);
       assert.ok(header.indexOf('class="fam__find"') < header.indexOf(box) && header.indexOf(box) < header.indexOf('class="theme-toggle"'), `${path}: search between the find button and the toggle`);

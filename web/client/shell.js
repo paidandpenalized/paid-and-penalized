@@ -48,6 +48,8 @@ const make = (doc, tag, className, text) => {
   return node;
 };
 // The chip's words with their {placeholders} filled by a function, so a name holding "$&" is printed, not interpreted.
+// The copy's own fill (render/components.js fillCopy) would bring the page-markup modules into the script every page
+// loads first, for one replace.
 const fillWords = (words, name, value) => words.replace(`{${name}}`, () => value);
 
 // Fills the empty chip as the build writes it for a hospital's own page: the key, the hospital's name linked to its page

@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LIMIT, buildIndex, normalize, search } from '../client/search.js';
 import { mountOmnibox } from '../client/omnibox.js';
+import { comboForm } from './dom.js';
 
 const INDEX = buildIndex([
   { type: 'hospital', key: '990001', label: 'Saint Example Hospital', sub: 'Exampleton, AL 35000', extra: 'Exampleton AL 35000', href: '/h/990001/' },
@@ -59,53 +60,19 @@ test('results stop at the limit; total counts every match', () => {
   assert.equal(total, 25);
 });
 
-// A stand-in DOM: elements that keep attributes, children and listeners.
-function el(tag) {
-  const node = {
-    tag, attrs: {}, children: [], listeners: {}, className: '', textContent: '', hidden: false, value: '', id: '',
-    setAttribute(k, v) { node.attrs[k] = String(v); },
-    getAttribute: (k) => node.attrs[k] ?? null,
-    removeAttribute(k) { delete node.attrs[k]; },
-    append(...xs) { node.children.push(...xs); },
-    replaceChildren(...xs) { node.children = xs; },
-    addEventListener(type, fn) { node.listeners[type] = fn; },
-    closest(sel) { return sel === '[role="option"]' && node.attrs.role === 'option' ? node : null; },
-  };
-  return node;
-}
-
-const ORIGINAL = { document: globalThis.document, window: globalThis.window };
+// The combobox mounted on a stand-in search form (dom.js), over INDEX by default.
 function setup(t, { load = async () => INDEX, onMore = null, more = null } = {}) {
-  globalThis.document = { createElement: el };
-  globalThis.window = { location: { assign() {} } };
-  t.after(() => {
-    for (const [k, v] of Object.entries(ORIGINAL)) {
-      if (v === undefined) delete globalThis[k];
-      else globalThis[k] = v;
-    }
-  });
-  const input = el('input');
-  input.setAttribute('role', 'combobox');
-  input.setAttribute('aria-expanded', 'false');
-  const list = el('ul');
-  list.id = 'omni-list';
-  list.hidden = true;
-  const status = el('p');
-  const form = el('form');
-  form.hidden = true;
-  form.querySelector = (s) => ({ '[role="combobox"]': input, '[role="listbox"]': list, '[role="status"]': status })[s];
+  const s = comboForm(t);
   const opened = [];
   const loads = { n: 0 };
-  mountOmnibox(form, {
+  mountOmnibox(s.form, {
     load: () => { loads.n++; return load(); },
     words: { empty: 'No matches.', kind: { hospital: 'Hospital', state: 'State' }, count: (n) => `${n} matches`, failed: 'Did not load.', more },
     open: (href) => opened.push(href),
     onMore,
   });
-  const type = async (value) => { input.value = value; await input.listeners.input(); };
-  const key = (k) => { let prevented = false; input.listeners.keydown({ key: k, preventDefault: () => { prevented = true; } }); return prevented; };
-  const texts = () => list.children.map((li) => li.children.map((c) => c.textContent).join('|') || li.textContent);
-  return { form, input, list, status, opened, loads, type, key, texts };
+  const key = (k) => { let prevented = false; s.input.listeners.keydown({ key: k, preventDefault: () => { prevented = true; } }); return prevented; };
+  return { ...s, opened, loads, key };
 }
 
 test('the combobox: shown by script; typing lists the matches as options, the first active, the count said politely', async (t) => {

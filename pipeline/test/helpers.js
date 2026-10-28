@@ -28,6 +28,12 @@ export const testAssets = ({ css = '/assets/site.test.css', js = {}, shell = {} 
 });
 export const ASSETS = testAssets();
 
+// A rendered page's shell, as tests read it (web/render/shell.js): the family's header, the footer, and the followed
+// hospital's chip when it shows (null when it is hidden or absent).
+export const headerOf = (page) => /<header class="topbar fam"[\s\S]*?<\/header>/.exec(page)[0];
+export const footerOf = (page) => /<footer class="foot">[\s\S]*?<\/footer>/.exec(page)[0];
+export const chipOf = (page) => /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(page)?.[0] ?? null;
+
 // Runs fn(dir) in a fresh folder under the system temp directory and removes it afterwards, pass or fail.
 export function withTemp(prefix, fn) {
   const dir = mkdtempSync(join(tmpdir(), prefix));

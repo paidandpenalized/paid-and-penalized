@@ -5,7 +5,7 @@
 // the header's .topbar class). Icons are CSS masks (tokens.css --icon-*), drawn on empty spans, so the shell holds no
 // drawing and no inline style.
 import { COPY } from '../copy.js';
-import { SITE, hospitalPathOf, programOf } from '../site.js';
+import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programOf } from '../site.js';
 import { fillAround, fillCopy, fillCopyKeep } from './components.js';
 import { count, isoDate, money } from './format.js';
 import { html } from './html.js';
@@ -22,25 +22,21 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 // in the markup, since it does nothing without its script, which shows it.
 const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${icon('theme')}<span class="vh">${COPY.themeToggle}</span></button>`;
 
-// The tabs' programs: the live and interim ones and the coming ones the dollar estimates already include, as full tabs;
-// then, after the "coming" gap, the rest, dashed. The footer's first field splits them the same way.
-const LISTED = SITE.programs.filter((p) => p.stage !== 'soon' || p.inData);
-const COMING = SITE.programs.filter((p) => !LISTED.includes(p));
-
 // The followed hospital's page in a program (hospitalPathOf: 'hub' for its own page), or null when it has none there or
 // that kind of page is not built yet: hospital.pages marks a kind not built with false ({ hub: false, hrrp: false }), and
 // every kind it leaves out is built.
-const hospitalHref = (hospital, id) => (hospital.pages?.[id] === false ? null : hospitalPathOf(id, hospital.ccn, { inTdr: hospital.inTdr }));
+const pageFor = (hospital, id) => (hospital.pages?.[id] === false ? null : hospitalPathOf(id, hospital.ccn, { inTdr: hospital.inTdr }));
 const PAGE_KINDS = new Set(['hub', ...SITE.programs.map((p) => p.id)]);
 
-// The program tabs, in the registry's order. program: the current program's id, or null on the family's own pages
-// (All programs is current). hospital: the followed hospital, or null; with one, every tab opens that program's page for
-// it (hospitalHref), or the program's folder when it has none, and All programs opens the hospital's own page (the
-// front page while that is not built).
+// The program tabs, in the registry's order: the listed programs as full tabs, then, after the "coming" gap, the
+// unlisted ones, dashed (web/site.js; the footer's first field splits them the same way). program: the current
+// program's id, or null on the family's own pages (All programs is current). hospital: the followed hospital, or null;
+// with one, every tab opens that program's page for it (pageFor), or the program's folder when it has none, and All
+// programs opens the hospital's own page (the front page while that is not built).
 export function programTabs({ program = null, hospital = null } = {}) {
-  const hrefOf = (p) => (hospital && hospitalHref(hospital, p.id)) || p.path;
+  const hrefOf = (p) => (hospital && pageFor(hospital, p.id)) || p.path;
   const current = (id) => (id === program ? html` aria-current="page"` : '');
-  return html`<nav class="wrap tabs" aria-label="${COPY.programs}"><div class="tabs__scroll"><a class="tab" href="${(hospital && hospitalHref(hospital, 'hub')) || '/'}"${current(null)}>${COPY.allPrograms}</a>${LISTED.map((p) => html`<a class="tab" href="${hrefOf(p)}"${current(p.id)}><span>${p.name}</span> <span class="tab__ab">${p.ab}</span></a>`)}<span class="tabs__gap" aria-hidden="true">${COPY.coming}</span>${COMING.map((p) => html`<a class="tab tab--soon" href="${hrefOf(p)}" title="${fill('comingTitle', { name: p.name, ab: p.ab })}"${current(p.id)}><span class="tab__ab">${p.ab}</span></a>`)}</div></nav>`;
+  return html`<nav class="wrap tabs" aria-label="${COPY.programs}"><div class="tabs__scroll"><a class="tab" href="${(hospital && pageFor(hospital, 'hub')) || '/'}"${current(null)}>${COPY.allPrograms}</a>${LISTED_PROGRAMS.map((p) => html`<a class="tab" href="${hrefOf(p)}"${current(p.id)}><span>${p.name}</span> <span class="tab__ab">${p.ab}</span></a>`)}<span class="tabs__gap" aria-hidden="true">${COPY.coming}</span>${UNLISTED_PROGRAMS.map((p) => html`<a class="tab tab--soon" href="${hrefOf(p)}" title="${fill('comingTitle', { name: p.name, ab: p.ab })}"${current(p.id)}><span class="tab__ab">${p.ab}</span></a>`)}</div></nav>`;
 }
 
 // The followed hospital's chip: its name to its own page (plain text while that is not built), its estimated net (none
@@ -51,7 +47,7 @@ function chip({ path, hospital, fy }) {
   if (!hospital) return html`<p class="chip" data-chip hidden></p>`;
   const { name, net } = hospital;
   const value = net === null ? '' : html` <span class="chip__v"><span class="vh">${fill('chipNet', { fy: String(fy) })} </span>${money(net, { sign: true })}</span>`;
-  const own = hospitalHref(hospital, 'hub');
+  const own = pageFor(hospital, 'hub');
   const named = html`<span class="chip__t">${name}</span>${value}`;
   return html`<p class="chip" data-chip><span class="chip__k">${COPY.chipKey}</span>${own ? html`<a class="chip__n" href="${own}">${named}</a>` : html`<span class="chip__n">${named}</span>`}<a class="chip__x" href="${programOf(path)?.path ?? '/'}" aria-label="${fill('chipStop', { name })}">×</a></p>`;
 }
@@ -111,8 +107,8 @@ export function familyFooter({ feedback, shell }) {
   const fyText = String(fy);
   // Each figure is an estimate for the fiscal year, said to a screen reader beside it (field 3 says so on screen).
   const estimated = fill('footEstimated', { fy: fyText });
-  const listed = html`<ul class="ft__list" role="list">${LISTED.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v"><span class="vh">${estimated} </span>${figureOf(programs[p.id])}</span></li>`)}</ul>
-<p class="ft__soon">${COPY.footComing} ${COMING.map((p, i) => html`${i ? '\u00a0· ' : ''}<a href="${p.path}" title="${p.name}">${p.ab}</a>`)}</p>`;
+  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v"><span class="vh">${estimated} </span>${figureOf(programs[p.id])}</span></li>`)}</ul>
+<p class="ft__soon">${COPY.footComing} ${UNLISTED_PROGRAMS.map((p, i) => html`${i ? '\u00a0· ' : ''}<a href="${p.path}" title="${p.name}">${p.ab}</a>`)}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
   const asOf = html`<p>${fillAround((marks) => fill('footEstimates', { ...marks, n: count(hospitals) }), { fy: html`<span class="ft__fy">${fill('footFy', { fy: fyText })}</span>` })}</p>
 <p class="ft__note">${fillCopyKeep(COPY, 'footChanged', { date: isoDate(changed) }, ['date'])}<br><a href="${SITE.pages.corrections}">${COPY.footDates}</a></p>

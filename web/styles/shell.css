@@ -8,7 +8,6 @@
 .ico--search { --ico: var(--icon-search); }
 .ico--theme { --ico: var(--icon-theme); }
 .ico--arrow { --ico: var(--icon-arrow); width: 1.125em; height: 0.625em; }
-.ico--close { --ico: var(--icon-close); }
 
 /* ---------- the header: sticky at every width (its height: --sticky-top, web/client/topbar.js) ---------- */
 /* Its two rules run the window's full width from inside the centred rows (a 100vw line, clipped at the window's
@@ -56,12 +55,14 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 @media (max-width: 1199px) { .fam__end .omni { flex-basis: 280px; } }
 .fam__find { display: none; }
 
-/* The theme toggle: a small round icon button with a 44px hit area. The bar's shows from 641px, the footer's below. */
-.theme-toggle { position: relative; display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--ink); cursor: pointer; }
+/* The theme toggle: a small round icon button with a 44px hit area, once its script shows it. The bar's shows from 641px,
+   the footer's below (the phone block). */
+.theme-toggle:not([hidden]) { display: inline-grid; }
+.theme-toggle { position: relative; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--ink); cursor: pointer; }
 .theme-toggle::after { content: ""; position: absolute; inset: -6px; }
 .theme-toggle:hover { border-color: var(--ink); }
 .theme-toggle[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-.theme-toggle[hidden], .ft__base .theme-toggle { display: none; }
+@media (min-width: 641px) { .ft__base .theme-toggle { display: none; } }
 
 /* ---------- the program tabs: a ledger's raised paper tabs standing on the heavy rule ---------- */
 /* The row scrolls sideways when it outgrows the window, edge to edge; a fade marks more to the right (.tabs--more, set
@@ -152,7 +153,7 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .chip__n { flex: 1 1 auto; justify-content: space-between; }
   .chip__x { width: 44px; }
   .fam__bar .theme-toggle { display: none; }
-  .ft__base .theme-toggle:not([hidden]) { display: inline-grid; width: 44px; height: 44px; margin-top: 8px; }
+  .ft__base .theme-toggle { width: 44px; height: 44px; margin-top: 8px; }
   .ft__base .theme-toggle::after { content: none; }
   .fam__find:not([hidden]) { display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
   .fam__find .ico { width: 18px; height: 18px; }
@@ -163,13 +164,12 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .fam__end .omni { display: none; }
   .fam__bar:has(.fam__find[hidden] + .omni:not([hidden])) { flex-wrap: wrap; }
   .fam__end:has(> .fam__find[hidden] + .omni:not([hidden])) { flex: 1 1 100%; }
-  .fam__find[hidden] + .omni:not([hidden]) { display: block; flex: 1 1 auto; width: auto; min-width: 0; }
   .fam--searching .fam__bar { flex-wrap: wrap; row-gap: 6px; }
   /* The bar's end stops being a box of its own, so the find button stays where it was (the toggle does not move) and the
      search drops to a row of its own under the bar. */
   .fam--searching .fam__end { display: contents; }
   .fam--searching .fam__find { margin-left: auto; }
-  .fam--searching .fam__end .omni:not([hidden]) { display: block; flex: 1 1 100%; width: auto; min-width: 0; }
+  .fam__find[hidden] + .omni:not([hidden]), .fam--searching .fam__end .omni:not([hidden]) { display: block; flex: 1 1 100%; width: auto; min-width: 0; }
   .fam--searching .omni__field { min-height: 44px; }
   .tabs__scroll { padding-top: 2px; }
   .tab { align-items: center; justify-content: center; min-width: 48px; min-height: 44px; padding: 0 13px; font-size: 0.84375rem; }

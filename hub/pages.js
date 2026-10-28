@@ -8,13 +8,13 @@ import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { escapeHtml, html } from '../web/render/html.js';
-import { externalLink, page } from '../web/render/layout.js';
-import { SITE } from '../web/site.js';
+import { externalLink } from '../web/render/layout.js';
+import { PLACEHOLDER_PROGRAMS, SITE } from '../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
-import { PENDING, comingPage } from './coming.js';
-import { LINKS, feedbackLink, hubBar, para, section, sentence } from './parts.js';
+import { comingPage } from './coming.js';
+import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
 const PATH = /^\/[a-z0-9/-]*$/;
@@ -37,7 +37,7 @@ function home(assets, robots) {
 <ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
 </section>
 </article>`;
-  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, ...hubBar(assets), assets });
+  return hubPage({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, assets });
 }
 
 function methods(assets, robots) {
@@ -53,7 +53,7 @@ function methods(assets, robots) {
 <p>${COPY.estimateNot}</p>
 </section>
 ${para('methodsAiPointer', { about: LINKS.ai })}</article>`;
-  return page({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, ...hubBar(assets), assets });
+  return hubPage({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, assets });
 }
 
 // ---------- the policy pages: their words (copy.js) and the links they fill in (parts.js); the layout is policy.js's ----------
@@ -133,7 +133,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, ...hubBar(assets), assets });
+  return hubPage({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.
@@ -159,7 +159,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   }
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
-  for (const program of PENDING) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
+  for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });

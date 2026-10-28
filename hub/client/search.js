@@ -42,7 +42,7 @@ export const hubWords = {
 // loadAsset(src) resolves to { hospitals }; open(href) is what a pick does (the page by default).
 export function mountHubSearch(forms, { loadAsset = loadHubAsset, open } = {}) {
   const load = once((src) => loadAsset(src).then(({ hospitals }) => buildIndex(hubEntries(hospitals))));
-  for (const form of forms) mountOmnibox(form, { load: () => load(form.dataset.src), words: hubWords, ...(open && { open }) });
+  for (const form of forms) mountOmnibox(form, { load: () => load(form.dataset.src), words: hubWords, open });
 }
 
 if (typeof document !== 'undefined') mountHubSearch([...document.querySelectorAll('form.omni[data-src][data-hub]')]);

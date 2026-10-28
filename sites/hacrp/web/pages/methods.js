@@ -260,7 +260,7 @@ ${asofBar({ fy, periods: newest.periods, source: newest.source })}
     path: METHODS_PATH,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search']],
+    scripts: [assets.js.figure, assets.js.cite, assets.js['hacrp-search']],
     assets,
     ...shellOf({ fy, current: 'methods', searchUrl }),
   });

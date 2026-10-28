@@ -7,11 +7,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { buildIndex, search } from '../../web/client/search.js';
-import { STATES, US_STATES } from '../../engine/js/states.js';
+import { US_STATES } from '../../engine/js/states.js';
 import { hubEntries, hubWords, mountHubSearch } from '../client/search.js';
 import { loadHub } from '../data.js';
 import { EXAMPLE_CCN, hubHospitals } from '../model.js';
 import { hubSearchForm } from '../search/form.js';
+import { comboForm } from '../../web/test/dom.js';
 
 const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inTdr: false, est: null });
 const SAMPLE = [
@@ -31,10 +32,9 @@ test('each hospital is an entry: its name, "City, ST" under it, found by its cit
 
 test('the states are the fifty and DC, each by name and by code, with the hospitals in it; Puerto Rico is a place hospitals are in, not a state', () => {
   const states = hubEntries(SAMPLE).filter((e) => e.type === 'state');
-  assert.equal(states.length, US_STATES.length);
-  assert.equal(states.length, STATES.length - 1);
-  assert.ok(!states.some((e) => e.key === 'PR'));
   assert.deepEqual(states.map((e) => e.key), US_STATES.map(([code]) => code));
+  assert.equal(states.length, 51);
+  assert.ok(!states.some((e) => e.key === 'PR'));
   const ohio = states.find((e) => e.key === 'OH');
   assert.deepEqual(ohio, { type: 'state', key: 'OH', label: 'Ohio', sub: 'State · one hospital', extra: '', href: '/#state=OH' });
   assert.equal(states.find((e) => e.key === 'NY').sub, 'State · 2 hospitals');
@@ -86,48 +86,18 @@ test('the real list: a CCN finds its hospital first, and a state carries the cou
 
 // ---------- the combobox on the hub's forms ----------
 
-// A stand-in DOM, as in web/test/search.test.js: elements that keep attributes, children and listeners.
-function el(tag) {
-  const node = {
-    tag, attrs: {}, children: [], listeners: {}, className: '', textContent: '', hidden: false, value: '', id: '', dataset: {},
-    setAttribute(k, v) { node.attrs[k] = String(v); },
-    getAttribute: (k) => node.attrs[k] ?? null,
-    removeAttribute(k) { delete node.attrs[k]; },
-    append(...xs) { node.children.push(...xs); },
-    replaceChildren(...xs) { node.children = xs; },
-    addEventListener(type, fn) { node.listeners[type] = fn; },
-  };
-  return node;
-}
+// The family search mounted on a stand-in search form (web/test/dom.js) over the hub's asset, which holds SAMPLE unless
+// load says otherwise.
 function stage(t, { load } = {}) {
-  const saved = { document: globalThis.document, window: globalThis.window };
-  globalThis.document = { createElement: el };
-  globalThis.window = { location: { assign() {} } };
-  t.after(() => {
-    for (const [k, v] of Object.entries(saved)) {
-      if (v === undefined) delete globalThis[k];
-      else globalThis[k] = v;
-    }
-  });
-  const input = el('input');
-  input.setAttribute('role', 'combobox');
-  const list = el('ul');
-  list.id = 'omni-list';
-  list.hidden = true;
-  const status = el('p');
-  const form = el('form');
-  form.hidden = true;
-  form.dataset.src = '/assets/hub-hospitals.test.json';
-  form.querySelector = (s) => ({ '[role="combobox"]': input, '[role="listbox"]': list, '[role="status"]': status })[s];
+  const s = comboForm(t);
+  s.form.dataset.src = '/assets/hub-hospitals.test.json';
   const opened = [];
   const loads = [];
-  mountHubSearch([form], {
+  mountHubSearch([s.form], {
     loadAsset: async (src) => { loads.push(src); if (load) return load(); return { hospitals: SAMPLE }; },
     open: (href) => opened.push(href),
   });
-  const type = async (value) => { input.value = value; await input.listeners.input(); };
-  const texts = () => list.children.map((li) => li.children.map((c) => c.textContent).join('|') || li.textContent);
-  return { form, input, list, status, opened, loads, type, texts };
+  return { ...s, opened, loads };
 }
 
 test('mountHubSearch: the form shows; the asset loads once, from the form\'s own address, on first focus; typing lists hospitals and states in the family\'s words', async (t) => {
@@ -172,9 +142,6 @@ test('hubSearchForm: the shell\'s search form over the hub asset, marked data-hu
   assert.match(bar, /^<form class="omni" id="omni" role="search" aria-label="[^"]+" data-src="\/assets\/hub-hospitals\.abcd1234\.json" data-hub hidden>/);
   assert.ok(bar.includes('<input id="omni-q" type="search" role="combobox"'));
   assert.ok(bar.includes('aria-controls="omni-list"'));
-  const other = String(hubSearchForm('/assets/x.json', { id: 'find' }));
-  assert.match(other, /^<form class="omni" id="find" /);
-  assert.ok(other.includes('<input id="find-q"') && other.includes('aria-controls="find-list"') && other.includes('data-hub'));
   assert.doesNotMatch(bar, /\sstyle=/);
 });
 

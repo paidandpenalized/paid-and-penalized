@@ -27,5 +27,5 @@ ${s.body}
 ${asofBar({ fy, periods, source })}
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable on a phone (web/client/figure.js).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, ...shellOf({ fy, searchUrl }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, ...shellOf({ fy, searchUrl }) });
 }

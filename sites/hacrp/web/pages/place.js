@@ -173,7 +173,7 @@ ${citation({ fy, title: heading, path: place.path, source })}
     path: place.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-place']],
+    scripts: [assets.js.figure, assets.js.cite, assets.js['hacrp-search'], assets.js['hacrp-place']],
     assets,
     ...shellOf({ fy, current: 'map', searchUrl }),
   });

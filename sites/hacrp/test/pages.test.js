@@ -11,7 +11,7 @@ import { HUB } from '../../../hub/pages.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
-import { withTemp } from '../../../pipeline/test/helpers.js';
+import { chipOf, headerOf, withTemp } from '../../../pipeline/test/helpers.js';
 import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, money as moneyText, shortIsoDate } from '../../../web/render/format.js';
 import { externalLink } from '../../../web/render/layout.js';
@@ -290,7 +290,7 @@ test('the program page links the hospitals asset and inlines no hospital data; h
     searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
   // The search sits in the top bar: a combobox over the asset, hidden until its script shows it. It finds places too.
-  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+  const header = headerOf(text);
   assert.match(header, /<form class="omni" id="omni" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
   assert.match(header, /<label class="omni__field" for="omni-q"><span class="omni__label cap">Find<span class="vh"> a hospital or place by name, city, state, ZIP code or CCN<\/span><\/span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list"/);
   assert.match(header, /<ul class="omni__list" id="omni-list" role="listbox" aria-label="Find a hospital" hidden><\/ul>/);
@@ -483,7 +483,7 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
       const page = read(dir, hospitalPath(h));
       const row = DATA.dollars.byCcn.get(h.ccn);
       assert.ok(page.includes(`data-hospital="${h.ccn}">`), `${row.status}: the header names its hospital`);
-      const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(page)?.[0] ?? '';
+      const chip = chipOf(page) ?? '';
       if (row.status === 'estimated') assert.ok(chip.includes(`</span>${moneyText(row.net, { sign: true })}</span>`), 'estimated: the chip\'s net is the dollar row\'s');
       else assert.ok(chip && !chip.includes('chip__v'), `${row.status}: the chip has no figure`);
     }
@@ -595,7 +595,7 @@ test("a hospital page's foot sets the facts (the data's release among them), dat
 
 test("the HACRP header: the program's tab current, its section menu to the program page's sections (each id on the page) and Methods", () => {
   const program = renderProgram(HISTORY_ARGS);
-  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(program)[0];
+  const header = headerOf(program);
   assert.ok(header.includes('<a class="tab" href="/hacrp/" aria-current="page"><span>Hospital-acquired conditions</span> <span class="tab__ab">HACRP</span></a>'));
   assert.equal(header.match(/aria-current="page"/g).length, 1, 'one current tab');
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
@@ -610,14 +610,13 @@ test("the HACRP header: the program's tab current, its section menu to the progr
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
   const view = hospitalView(inputs(CASES.yes));
   const hosp = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS });
-  const barOf = (text) => /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
-  const currentOf = (text) => [...barOf(text).matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
+  const currentOf = (text) => [...headerOf(text).matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   // The hospital and place pages mark "Every hospital" (the program page's #map), the Methods page marks Methods, and
   // each bar has the same five links.
   assert.deepEqual(currentOf(hosp), ['map']);
   assert.deepEqual(currentOf(renderPlace(PLACES.list[0], HISTORY_ARGS)), ['map']);
   assert.deepEqual(currentOf(program), ['how']);
-  assert.match(barOf(hosp), /data-nav="map"[^>]*><span class="nav__num">4<\/span>Every hospital</);
+  assert.match(headerOf(hosp), /data-nav="map"[^>]*><span class="nav__num">4<\/span>Every hospital</);
 });
 
 // A pinned hospital's page as the build renders it, with its dollar row and its master record (generate.js).
@@ -628,10 +627,10 @@ test('a hospital page follows its hospital: the chip names it with the dollar ro
   const h = pick((x) => x.paymentReduction === 'Yes' && DATA.dollars.byCcn.get(x.ccn).status === 'estimated' && DATA.master.get(x.ccn).programs.hrrp?.inProgram, 'an estimated hospital CMS cut, in Readmissions');
   const row = DATA.dollars.byCcn.get(h.ccn);
   const text = pinnedPage(h);
-  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+  const header = headerOf(text);
   // Messages only, no values: a failure prints no hospital's name or CCN.
   assert.ok(header.startsWith(`<header class="topbar fam" data-hub-src="${ASSETS.shell.hubUrl}" data-hospital="${h.ccn}">`), 'the header names the hospital');
-  const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(header)?.[0];
+  const chip = chipOf(header);
   assert.ok(chip, 'the chip shows, not hidden');
   const name = esc(DATA.master.get(h.ccn).name);
   assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${name}</span> <span class="chip__v"><span class="vh">Estimated FY${DATA.fy} net: </span>${moneyText(row.net, { sign: true })}</span></span>`), 'the name and the dollar row\'s net, plain text');
@@ -652,8 +651,8 @@ test('a hospital page follows its hospital: the chip names it with the dollar ro
 test('a hospital page with no estimate (Maryland\'s, or no inputs) shows its chip with the name alone, never $0', () => {
   for (const [what, status] of [['Maryland', 'maryland'], ['no inputs', 'no-inputs']]) {
     const h = pick((x) => DATA.dollars.byCcn.get(x.ccn).status === status, `a hospital with the dollar status ${status}`);
-    const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(pinnedPage(h))[0];
-    const chip = /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(header)?.[0];
+    const header = headerOf(pinnedPage(h));
+    const chip = chipOf(header);
     assert.ok(chip, `${what}: the chip shows`);
     assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${esc(DATA.master.get(h.ccn).name)}</span></span>`), `${what}: the name alone`);
     assert.ok(!/chip__v|\$0|NaN|undefined/.test(chip), `${what}: no figure`);

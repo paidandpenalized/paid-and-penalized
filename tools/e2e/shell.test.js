@@ -15,7 +15,7 @@ import { tabHref, withFollow } from '../../web/client/follow.js';
 import { SITE } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
-import { samplePages } from './site.js';
+import { hospitalSample } from './site.js';
 
 const shared = useBrowser();
 
@@ -27,22 +27,24 @@ const BAR = 51;
 const PHONE = { width: 390, height: 844 };
 
 // A hospital's page on a program site (one CMS cut): its header follows the hospital.
-const HOSPITAL = samplePages().find((p) => p.type === 'hospital-cut').path;
+const HOSPITAL = hospitalSample('hospital-cut').path;
 // A hub page that is plain text (the front page now), another hub page, a placeholder for a program without a site here,
 // the program page and a hospital's page there: each wears the same header, [the name a test's title gives it, path].
 const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', SITE.programs.find((p) => p.id === 'hvbp').path], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
 
-// Two estimated hospitals from the hub's asset, one Thirty Day Readmissions has and one it does not, as { ccn, name }:
-// read in the page, so the test needs no hospital of its own and prints none.
-const pickHospitals = (page) => page.evaluate(async ({ estimated }) => {
+// The hub's asset as the page's header names it, fetched in the page: its fiscal year and its rows as { ccn, name, net,
+// tdr, status }, so the test needs no hospital of its own (and prints none). Call it after any check that the asset was
+// not fetched.
+const hubRows = (page) => page.evaluate(async () => {
   const asset = await (await fetch(document.querySelector('.topbar').dataset.hubSrc)).json();
   const at = (c) => asset.cols.indexOf(c);
-  const pick = (tdr) => {
-    const row = asset.rows.find((r) => r[at('status')] === estimated && r[at('tdr')] === tdr);
-    return { ccn: row[at('ccn')], name: row[at('name')] };
-  };
-  return { tdr: pick(1), plain: pick(0) };
-}, { estimated: STATUS_CODES.estimated });
+  return { fy: asset.fy, rows: asset.rows.map((r) => ({ ccn: r[at('ccn')], name: r[at('name')], net: r[at('net')], tdr: r[at('tdr')], status: r[at('status')] })) };
+});
+
+// The tab links, as the page holds them.
+const hrefsOf = (page) => page.evaluate(() => [...document.querySelectorAll('.tabs__scroll a')].map((a) => a.getAttribute('href')));
+// How many times the page has fetched the hub's asset.
+const assetFetches = (page) => page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length);
 
 // What the header shows: its height, the bar's, whether the find button shows, whether the bar holds a search form, the
 // tab row's fade and scroll, and the current tab's place against the row's.
@@ -66,13 +68,15 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
 
   for (const [name, path] of PATHS) {
-    it(`${name}: the sticky header is at most ${MAX_STICKY} px tall, the bar one row, and the find button shows exactly when the bar holds a search, which every page's bar does`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    it(`${name}: the sticky header is at most ${MAX_STICKY} px tall, the bar one row, and the find button shows exactly when the bar holds a search, which every page's bar does; with no ?h= the hub's asset is not fetched`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
       const facts = await headerFacts(page);
       assert.ok(facts.header <= MAX_STICKY, `the header is ${facts.header} px tall`);
       assert.ok(facts.bar <= BAR, `the bar is ${facts.bar} px tall, not one row`);
       assert.equal(facts.barSearch, true, 'the bar holds a search');
       assert.equal(facts.find, facts.barSearch, 'the find button shows iff the bar holds a search form');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
+      // A hub page's family search loads its list on first focus, and only a ?h= makes the shell look a hospital up.
+      assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
       await assertQuiet(seen, 'header');
     }));
   }
@@ -135,12 +139,12 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
 
 describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
-  // The tab links, as the page holds them.
-  const hrefsOf = (page) => page.evaluate(() => [...document.querySelectorAll('.tabs__scroll a')].map((a) => a.getAttribute('href')));
 
   it('a ?h= naming a hospital fills the chip, points the tabs and the wordmark at it, and the × stops following', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
-    const { tdr, plain } = await pickHospitals(page);
-    for (const [row, inTdr] of [[tdr, true], [plain, false]]) {
+    // Two estimated hospitals, one Thirty Day Readmissions has and one it does not.
+    const { rows } = await hubRows(page);
+    const pick = (tdr) => rows.find((r) => r.status === STATUS_CODES.estimated && r.tdr === tdr);
+    for (const [row, inTdr] of [[pick(1), true], [pick(0), false]]) {
       // Lowercase on purpose: a CCN is accepted in either case.
       await visit(page, tabs.base, `${PROGRAM_PATH}?x=1&h=${row.ccn.toLowerCase()}`);
       const chip = page.locator('[data-chip]');
@@ -180,40 +184,24 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
         const state = await page.evaluate(() => ({
           imgs: document.querySelectorAll('main img, header img').length,
           pwned: window.pwned ?? null,
-          assetRequests: performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length,
         }));
         assert.deepEqual([state.imgs, state.pwned], [0, null], `${what}: no markup from the value`);
-        if (!mayFetch) assert.equal(state.assetRequests, 0, `${what}: the hub's asset is not fetched for a value that is no CCN`);
+        if (!mayFetch) assert.equal(await assetFetches(page), 0, `${what}: the hub's asset is not fetched for a value that is no CCN`);
         await assertQuiet(seen, what);
       });
     }
   });
-
-  it('a page with no ?h= fetches no hub asset, though its bar holds the family search (its list loads on first focus)', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
-    assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length), 0);
-    await assertQuiet(seen, 'no ?h=');
-  }));
 });
-
-// The followed hospital's figures as the hub's asset holds them, read in the page (so the test prints none): its name and
-// its estimated net (null without an estimate). Fetches the asset: call it after any check that it was not fetched.
-const assetRow = (page, ccn) => page.evaluate(async (want) => {
-  const asset = await (await fetch(document.querySelector('.topbar').dataset.hubSrc)).json();
-  const at = (c) => asset.cols.indexOf(c);
-  const row = asset.rows.find((r) => r[at('ccn')] === want);
-  return row && { name: row[at('name')], net: row[at('net')], fy: asset.fy };
-}, ccn);
 
 describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
-  const hrefsOf = (page) => page.evaluate(() => [...document.querySelectorAll('.tabs__scroll a')].map((a) => a.getAttribute('href')));
 
   it('the server\'s chip names it with its estimated net; the script points the folder tabs and the wordmark at it and fetches nothing', () => withPage(tabs, { path: HOSPITAL, watched: true }, async (page, { seen }) => {
     const ccn = await page.locator('.topbar').getAttribute('data-hospital');
     assert.ok(ccn && HOSPITAL.includes(ccn.toLowerCase()), 'the header names the page\'s hospital');
     const chip = page.locator('[data-chip]');
     assert.equal(await chip.isVisible(), true, 'the chip shows without waiting for a script');
-    assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length), 0, 'no hub asset fetched');
+    assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
     // The tabs and the wordmark carry the hospital to every program's folder and the front page; its HACRP tab is this
     // page. Compared as one answer, so a failure prints no CCN.
     const want = ['/', ...SITE.programs.map((p) => p.path)].map((path) => (path === '/hacrp/' ? HOSPITAL : withFollow(path, ccn)));
@@ -222,59 +210,64 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     // Until the family's hospital page is built, the chip's name is plain text, not a link.
     assert.equal(await chip.locator('a.chip__n').count(), 0, 'the name links nowhere yet');
     assert.equal(await page.locator('.chip__x').getAttribute('href'), '/hacrp/', 'the × opens the program page');
-    const row = await assetRow(page, ccn);
+    const { fy, rows } = await hubRows(page);
+    const row = rows.find((r) => r.ccn === ccn);
     assert.ok(row, 'the hospital is in the hub\'s asset');
     assert.ok(await chip.locator('.chip__t').textContent() === row.name, 'the chip\'s name is the hub\'s');
     const value = chip.locator('.chip__v');
     if (row.net === null) assert.equal(await value.count(), 0, 'no figure without an estimate');
-    else assert.ok(await value.textContent() === `Estimated FY${row.fy} net: ${money(row.net, { sign: true })}`, 'the chip\'s net is the hub\'s estimate');
+    else assert.ok(await value.textContent() === `Estimated FY${fy} net: ${money(row.net, { sign: true })}`, 'the chip\'s net is the hub\'s estimate');
     await assertQuiet(seen, 'hospital page');
   }));
 });
 
 // Between a phone's layout and the widest bar: the followed hospital's chip beside the program's search. The bar stays one
-// row with nothing past its edge; the chip's name gives way (cut short with an ellipsis), never its net or its ×.
-describe('the chip beside a program\'s search', { concurrency: CONCURRENCY }, () => {
-  for (const width of [641, 720, 800, 1024, 1280]) {
-    describe(`${width} px wide`, () => {
-      const tabs = useContext(shared, { width, height: 400 });
-      it('the bar is one row, whole, and only the name gives way', () => withPage(tabs, { path: HOSPITAL }, async (page) => {
-        const f = await page.evaluate(() => {
-          // A name three times as long as this one stands for the longest: the chip is at its widest.
-          const name = document.querySelector('.chip__t');
-          name.textContent = name.textContent.repeat(3);
-          const bar = document.querySelector('.fam__bar');
-          const box = bar.getBoundingClientRect();
-          const whole = (el) => el.scrollWidth <= el.clientWidth;
-          const t = document.querySelector('.chip__t');
-          const v = document.querySelector('.chip__v');
-          const x = document.querySelector('.chip__x');
-          const toggle = bar.querySelector('.theme-toggle');
-          const form = bar.querySelector('form#omni');
-          return {
-            bar: box.height,
-            past: [...bar.querySelectorAll('*')].filter((e) => e.checkVisibility() && e.getBoundingClientRect().right > box.right + 0.5).length,
-            toggle: toggle.checkVisibility() && toggle.getBoundingClientRect().right <= box.right + 0.5,
-            ellipsis: getComputedStyle(t).textOverflow === 'ellipsis' && getComputedStyle(t).whiteSpace === 'nowrap',
-            value: !v || whole(v),
-            x: x.getBoundingClientRect().width,
-            search: form.getBoundingClientRect().width,
-            sideways: document.documentElement.scrollWidth > window.innerWidth,
-          };
-        });
-        assert.ok(f.bar <= 63, `the bar is ${f.bar} px tall, not one row`);
-        assert.equal(f.past, 0, 'nothing in the bar reaches past its edge');
-        assert.equal(f.toggle, true, 'the theme toggle shows whole');
-        assert.equal(f.ellipsis, true, 'the name is cut short with an ellipsis');
-        assert.equal(f.value, true, 'the net shows whole');
-        assert.ok(f.x >= 30, `the × is ${f.x} px wide`);
-        assert.ok(f.search >= 180, `the search is ${f.search} px wide`);
-        // On a wide screen the search keeps its full width beside the chip (the tagline steps aside).
-        if (width >= 1200) assert.ok(f.search >= 360, `the search is ${f.search} px wide`);
-        assert.equal(f.sideways, false, 'no sideways scroll');
-      }));
+// row with nothing past its edge; the chip's name gives way (cut short with an ellipsis), never its net or its ×. One
+// page, its name lengthened once, measured at each width in turn.
+describe('the chip beside a program\'s search', () => {
+  const WIDTHS = [641, 720, 800, 1024, 1280];
+  const tabs = useContext(shared, { width: WIDTHS[0], height: 400 });
+  it(`the bar is one row, whole, and only the name gives way, at ${WIDTHS.join(', ')} px`, () => withPage(tabs, { path: HOSPITAL }, async (page) => {
+    // A name three times as long as this one stands for the longest: the chip is at its widest.
+    await page.evaluate(() => {
+      const name = document.querySelector('.chip__t');
+      name.textContent = name.textContent.repeat(3);
     });
-  }
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 400 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        const bar = document.querySelector('.fam__bar');
+        const box = bar.getBoundingClientRect();
+        const whole = (el) => el.scrollWidth <= el.clientWidth;
+        const t = document.querySelector('.chip__t');
+        const v = document.querySelector('.chip__v');
+        const x = document.querySelector('.chip__x');
+        const toggle = bar.querySelector('.theme-toggle');
+        const form = bar.querySelector('form#omni');
+        return {
+          bar: box.height,
+          past: [...bar.querySelectorAll('*')].filter((e) => e.checkVisibility() && e.getBoundingClientRect().right > box.right + 0.5).length,
+          toggle: toggle.checkVisibility() && toggle.getBoundingClientRect().right <= box.right + 0.5,
+          ellipsis: getComputedStyle(t).textOverflow === 'ellipsis' && getComputedStyle(t).whiteSpace === 'nowrap',
+          value: !v || whole(v),
+          x: x.getBoundingClientRect().width,
+          search: form.getBoundingClientRect().width,
+          sideways: document.documentElement.scrollWidth > window.innerWidth,
+        };
+      });
+      assert.ok(f.bar <= 63, `${width} px: the bar is ${f.bar} px tall, not one row`);
+      assert.equal(f.past, 0, `${width} px: nothing in the bar reaches past its edge`);
+      assert.equal(f.toggle, true, `${width} px: the theme toggle shows whole`);
+      assert.equal(f.ellipsis, true, `${width} px: the name is cut short with an ellipsis`);
+      assert.equal(f.value, true, `${width} px: the net shows whole`);
+      assert.ok(f.x >= 30, `${width} px: the × is ${f.x} px wide`);
+      assert.ok(f.search >= 180, `${width} px: the search is ${f.search} px wide`);
+      // On a wide screen the search keeps its full width beside the chip (the tagline steps aside).
+      if (width >= 1200) assert.ok(f.search >= 360, `${width} px: the search is ${f.search} px wide`);
+      assert.equal(f.sideways, false, `${width} px: no sideways scroll`);
+    }
+  }));
 });
 
 describe('the family search on a hub page', () => {
