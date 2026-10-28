@@ -1,5 +1,5 @@
 // What a reader does on the pages, in a real browser: the hospital search finds a hospital and opens its page, the
-// what-if recomputes when a measure changes and, opened and used, fits the window where its result box is narrowest,
+// what-if recomputes when a measure changes and, opened and used, fits the window and its box where that box is narrow,
 // the keyboard reaches every control without a focused element sliding under the sticky top bar, and with JavaScript
 // off every page keeps its footer (the hub's pages lose nothing, and a hospital's page across the programs shows its
 // record, net, dollars and headline, with no empty frame). Runs against dist/ (make build) or any URL (E2E_BASE_URL);
@@ -9,18 +9,25 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { RELEASE_MS } from '../../web/client/topbar.js';
-import { PROGRAM_PATH } from '../ci/page-types.js';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
+import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
 import { openFolds } from './axe.js';
 import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
 const CUT = PAGES.find((p) => p.type === 'hospital-cut');
-// The hospital pages with a what-if: the hospital CMS cut and the one with a score and no cut.
-const WHAT_IFS = PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut');
-// Where the what-if's result box is narrowest: just over 900 px, where it turns a column beside the measures, and on
-// phones, where its table is folded until a reader opens it.
-const FIT_WIDTHS = [1000, 960, 900, 390, 320];
+// The hospital pages with a what-if: the hospital CMS cut, the one with a score and no cut, and a Maryland hospital's (the
+// first scored one in the newest HACRP file: not subject to the cut, so its result table holds long words and no dollars).
+const MARYLAND = readNewestEmitted().hospitals.find((h) => h.state === 'MD' && h.total !== null);
+const WHAT_IFS = [
+  ...PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut'),
+  { name: 'hospital-maryland', path: hospitalPath(MARYLAND.ccn) },
+];
+// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1100 px
+// (1040: its table outgrew the box there without scrolling the page), and on phones, where its table is folded until a
+// reader opens it.
+const FIT_WIDTHS = [1040, 1000, 960, 900, 390, 320];
 // 1280 px, the narrowest width the top bar sticks (641), and the narrowest phone width, where it scrolls away.
 const WIDTHS = [1280, 641, 320];
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
@@ -115,18 +122,26 @@ describe('what-if', () => {
   }));
 });
 
-// The what-if, opened (every fold, the result's table among them: a phone folds it) and used (a measure lowered), scrolls
-// nothing sideways where its result box is narrowest.
+// The what-if, opened (every fold, the result's table among them: a phone folds it) and used (a measure lowered), where
+// its result box is narrow: nothing scrolls sideways, and the result's table stays inside its box.
 describe('the what-if fits the window', { concurrency: CONCURRENCY }, () => {
   for (const width of FIT_WIDTHS) {
     describe(`${width} px wide`, { concurrency: CONCURRENCY }, () => {
       const tabs = useContext(shared, { width });
       for (const { name, path } of WHAT_IFS) {
-        it(`${name}: opened and used, nothing scrolls sideways`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+        it(`${name}: opened and used, it fits`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
           await openFolds(page);
           await lowerAMeasure(page.locator('#whatif'));
           await settle(page);
           await assertNoSideways(page, `${name} at ${width} px, its what-if opened and used`);
+          // How far the table's right edge runs past the box's content edge (its border and padding inside).
+          const past = await page.evaluate(() => {
+            const box = document.querySelector('#whatif .wi-result');
+            const style = getComputedStyle(box);
+            const edge = box.getBoundingClientRect().right - Number.parseFloat(style.borderRightWidth) - Number.parseFloat(style.paddingRight);
+            return box.querySelector('.wi-table').getBoundingClientRect().right - edge;
+          });
+          assert.ok(past <= 0.5, `${name} at ${width} px: the what-if's result table runs ${Math.round(past)} px past its box`);
           await assertQuiet(seen, name);
         }));
       }
