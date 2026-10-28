@@ -1,19 +1,26 @@
 // What a reader does on the pages, in a real browser: the hospital search finds a hospital and opens its page, the
-// what-if recomputes when a measure changes, the keyboard reaches every control without a focused element sliding under
-// the sticky top bar, and with JavaScript off every page keeps its footer (the hub's pages lose nothing, and a hospital's
-// page across the programs shows its record, net, dollars and headline, with no empty frame). Runs
-// against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
-// here prints a hospital's name, city, CCN or values, or a search list's options: they say counts, or the page type.
+// what-if recomputes when a measure changes and, opened and used, fits the window where its result box is narrowest,
+// the keyboard reaches every control without a focused element sliding under the sticky top bar, and with JavaScript
+// off every page keeps its footer (the hub's pages lose nothing, and a hospital's page across the programs shows its
+// record, net, dollars and headline, with no empty frame). Runs against dist/ (make build) or any URL (E2E_BASE_URL);
+// see site.js. CI's logs are public, so no message or assertion here prints a hospital's name, city, CCN or values, or
+// a search list's options: they say counts, or the page type.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { RELEASE_MS } from '../../web/client/topbar.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { openFolds } from './axe.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
 const CUT = PAGES.find((p) => p.type === 'hospital-cut');
+// The hospital pages with a what-if: the hospital CMS cut and the one with a score and no cut.
+const WHAT_IFS = PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut');
+// Where the what-if's result box is narrowest: just over 900 px, where it turns a column beside the measures, and on
+// phones, where its table is folded until a reader opens it.
+const FIT_WIDTHS = [1000, 960, 900, 390, 320];
 // 1280 px, the narrowest width the top bar sticks (641), and the narrowest phone width, where it scrolls away.
 const WIDTHS = [1280, 641, 320];
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
@@ -72,6 +79,19 @@ describe('search', () => {
   }
 });
 
+// Lowers the first of the what-if's measures that reads above its floor to that floor, its input's minimum (lower is
+// better; a measure already at its floor would change nothing), and waits for the hypothetical score to change.
+async function lowerAMeasure(whatIf) {
+  const hypothetical = whatIf.locator('[data-wi="score"]');
+  const was = await hypothetical.textContent();
+  const inputs = whatIf.getByRole('spinbutton');
+  const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
+  const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
+  assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
+  await inputs.nth(at).fill(readings[at].min);
+  await eventually(async () => (await hypothetical.textContent()) !== was, 'the hypothetical score did not change');
+}
+
 describe('what-if', () => {
   const tabs = useContext(shared);
 
@@ -83,14 +103,8 @@ describe('what-if', () => {
     const was = { head: await headScore.textContent(), hypothetical: await hypothetical.textContent(), sentence: await sentence.textContent() };
     assert.equal(await hypothetical.getAttribute('data-same'), '', 'the hypothetical starts as "same"');
 
-    // The best a measure can read (lower is better) is its input's minimum: a hospital CMS cut scores lower with it.
-    // Setting a measure already at its floor changes nothing, so the first one above it is the one to set.
-    const inputs = whatIf.getByRole('spinbutton');
-    const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
-    const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
-    assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
-    await inputs.nth(at).fill(readings[at].min);
-    await eventually(async () => (await hypothetical.textContent()) !== was.hypothetical, 'the hypothetical score did not change');
+    // A hospital CMS cut scores lower with a measure at its best.
+    await lowerAMeasure(whatIf);
     assert.equal(await hypothetical.getAttribute('data-same'), null, 'the hypothetical no longer reads "same"');
     const score = Number.parseFloat((await hypothetical.textContent()).replace('−', '-'));
     assert.ok(score < CUT.hospital.total, 'the score fell');
@@ -99,6 +113,25 @@ describe('what-if', () => {
     await eventually(async () => (await sentence.textContent()) !== was.sentence, 'the live sentence did not change');
     await assertQuiet(seen, 'what-if');
   }));
+});
+
+// The what-if, opened (every fold, the result's table among them: a phone folds it) and used (a measure lowered), scrolls
+// nothing sideways where its result box is narrowest.
+describe('the what-if fits the window', { concurrency: CONCURRENCY }, () => {
+  for (const width of FIT_WIDTHS) {
+    describe(`${width} px wide`, { concurrency: CONCURRENCY }, () => {
+      const tabs = useContext(shared, { width });
+      for (const { name, path } of WHAT_IFS) {
+        it(`${name}: opened and used, nothing scrolls sideways`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+          await openFolds(page);
+          await lowerAMeasure(page.locator('#whatif'));
+          await settle(page);
+          await assertNoSideways(page, `${name} at ${width} px, its what-if opened and used`);
+          await assertQuiet(seen, name);
+        }));
+      }
+    });
+  }
 });
 
 // A focused element's part in the walk, and whether it sits under the top bar. In the page: the skip link, the top

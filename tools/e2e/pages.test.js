@@ -1,5 +1,5 @@
-// Every page type in a real browser, in light at two desktop and three phone widths and in dark at axe's three (the
-// layout does not change with the scheme; contrast, which does, is axe's), each page opened once:
+// Every page type in a real browser, in light at five widths from 1280 px down to 900 and at three phone widths, and in
+// dark at axe's three (the layout does not change with the scheme; contrast, which does, is axe's), each page opened once:
 //   - it loads clean: the status, no console or page errors, no CSP violations, no request to another origin, no
 //     sideways scroll, and the footer's feedback link naming the page's canonical address;
 //   - axe finds nothing at WCAG 2.2 AA (axe.js), at its three widths, in the same tab once the load checks have read it.
@@ -9,25 +9,19 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
-import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertNoSideways, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
-// A desktop width, a narrow laptop's (where the program page's columns are tightest), two common phones' (390 px is
-// axe's), and the narrowest phone width pages are designed for.
-const WIDTHS = [1280, 1024, 390, 375, 320];
+// A desktop width, a narrow laptop's (where the program page's columns are tightest), three just over 900 px (where a
+// part that turns two columns there, as the what-if's measures and result box do, is at its narrowest), two common
+// phones' (390 px is axe's), and the narrowest phone width pages are designed for.
+const WIDTHS = [1280, 1024, 1000, 960, 900, 390, 375, 320];
 const PAGES = samplePages();
 
 const shared = useBrowser();
 
 // What the load checks read from the page.
 const factsOf = (page) => page.evaluate((feedbackLink) => ({
-  scrollWidth: document.documentElement.scrollWidth,
-  innerWidth: window.innerWidth,
-  // When the page scrolls sideways, the first few elements that reach past the window's right edge, to name in the failure.
-  pastEdge: document.documentElement.scrollWidth > window.innerWidth
-    ? [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > window.innerWidth + 0.5).slice(0, 3)
-      .map((el) => `${el.localName}${[...el.classList].map((c) => `.${c}`).join('')} (to ${Math.round(el.getBoundingClientRect().right)} px)`)
-    : [],
   canonical: document.querySelector('link[rel="canonical"]')?.href ?? null,
   feedback: [...document.querySelectorAll(feedbackLink)].map((a) => a.href),
 }), FEEDBACK_LINK);
@@ -43,7 +37,7 @@ async function loadsClean(page, { response, seen }, { type, name, path }) {
   if (notFound) assert.equal(response.status(), 404, `${name}: status`);
   else assert.ok([200, 304].includes(response.status()), `${name}: status ${response.status()}, not 200 or 304`);
   await assertQuiet(seen, name);
-  assert.ok(got.scrollWidth <= got.innerWidth, `${name}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
+  await assertNoSideways(page, name);
 
   // The footer's link to the feedback form prefills the page's canonical address (a policy page's own link is the same
   // prefill, layout.js feedbackFor). The not-found page is served at every missing address, so it has no canonical link

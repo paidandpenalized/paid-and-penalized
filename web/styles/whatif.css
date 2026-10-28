@@ -31,7 +31,11 @@
 .wi-head .pill { padding: 3px 9px 2px; font-size: var(--fs-md); }
 .wi-table { width: 100%; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-body); }
 .wi-table th, .wi-table td { padding: 5px 10px 5px 0; text-align: left; vertical-align: baseline; }
-.wi-table thead th { border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-sm)/1.25 var(--font-body); }
+/* The figure columns take only the width their heads and figures need (the box's padding is the last one's margin);
+   the row heads take the rest and wrap, so the table fits the box at any width (narrowest just over 900px, beside the
+   measures, and on a phone). */
+.wi-table thead th { width: 1%; border-bottom: 1px solid var(--line); color: var(--ink-2); font: 600 var(--fs-sm)/1.25 var(--font-body); }
+.wi-table tr > :last-child { padding-right: 0; }
 .wi-table tbody th { font-weight: 600; }
 .wi-table td { font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 /* The decision is words, in the body face, so a long one (Maryland's) wraps narrow enough for a 320px phone. */
@@ -68,8 +72,8 @@
 .wi-money__was { color: var(--ink-2); font: 700 var(--fs-lg)/1 var(--font-type); font-variant-numeric: tabular-nums; }
 /* Under the cliff, the ramp is its axis: the cliff's pit already shades the cut and names it. */
 .wi-ramp--under .wi-ramp__zone, .wi-ramp--under .wi-ramp__zone-label { display: none; }
-.wi-table__money th { white-space: nowrap; }
-.wi-table__money .est-tag { margin-left: 4px; vertical-align: 0.1em; }
+/* The estimate tag sits under its row head's words, flush left, wherever they wrap. */
+.wi-table__money .est-tag { display: table; margin: 4px 0 0; }
 /* The cliff sits on the ramp's own x: the same 5% margins, so its drop stands over the ramp's line and its dot over the
    hypothetical's mark. Levels at 22px ($0) and 82px (the cut). The dot crosses at once and falls (or climbs) to its
    level: an accelerating fall, an easing climb; reduced motion, no movement. */
