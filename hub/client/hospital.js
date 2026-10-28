@@ -17,6 +17,7 @@ import { whyText } from '../hospital/text.js';
 import { mountStrips } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
 import { fillPeerTable } from './hospital/table.js';
+import { reach, vbpMaxOf } from './hospital/whatif-state.js';
 import { mountWhatIf } from './hospital/whatif.js';
 import { shareDomain } from './scale.js';
 
@@ -66,7 +67,10 @@ function live(page, { hospitals, h, fy, still }) {
   for (const note of page.querySelectorAll('[data-peer-note]')) note.hidden = false;
   setBar();
 
-  const domain = shareDomain(hospitals);
+  // One share axis for the swarm and the strips, wide enough for every figure the what-if can show for this hospital, so a
+  // hypothetical never sits pinned at the axis's end and a drag reaches each factor's ends. It is fixed for the page: an
+  // axis that grew as a drag left it would move every dot, and the value, under the pointer.
+  const domain = shareDomain(hospitals, reach(h, { vbpMax: vbpMaxOf(hospitals) }));
   const swarmEl = $('[data-swarm]');
   const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');

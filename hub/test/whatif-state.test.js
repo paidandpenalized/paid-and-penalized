@@ -5,8 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, extent, fromHash, initial, outcome, ranges, reduce, toHash } from '../client/hospital/whatif-state.js';
-import { makeHospital as make } from './helpers.js';
+import { BIG_STEP, STEP, changed, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { shareDomain, shareScale } from '../client/scale.js';
+import { BASE, TOTAL, makeHospital as make } from './helpers.js';
 
 
 const VBP_MAX = 1.0452822242;
@@ -189,4 +190,44 @@ test('load: what is valid loads; nothing valid returns the same state', () => {
   assert.equal(reduce(s0, { type: 'load', changes: { hrrp: 3, hac: 7 } }, ctx), s0);
   assert.equal(reduce(s0, { type: 'load', changes: {} }, ctx), s0);
   assert.equal(reduce(s0, { type: 'load', changes: { hrrp: 0.98, hac: 1 } }, ctx).hac, true);
+});
+
+test('reach: every percent of pay the what-if can show, at each corner of what a reader may set', () => {
+  const r = reach(H, ctx);
+  const pct = (d) => (d * 100) / TOTAL;
+  const lowest = outcome({ hrrp: 0.97, hvbp: 0.98, hac: true }, H);
+  const highest = outcome({ hrrp: 1, hvbp: 1.0452, hac: false }, H);
+  assert.equal(Math.min(...r), pct(lowest.net), 'the lowest: both factors at their bottoms, cut');
+  assert.equal(Math.max(...r), pct(highest.net), 'the highest: both at their tops, not cut');
+  for (const v of [lowest.hrrp, lowest.hvbp, lowest.hac, highest.hvbp]) assert.ok(r.includes(pct(v)), `${pct(v)} is in reach`);
+  // A program the hospital is not in keeps its own dollars at every corner.
+  const out = make('990014', { hrrpFactor: 0.99, hrrpListed: false });
+  assert.ok(reach(out, ctx).every((v) => v >= pct(outcome({ hrrp: 0.99, hvbp: 0.98, hac: true }, out).net)));
+  assert.equal(vbpMaxOf([H, ...peers, { est: null }]), 1.01, 'the highest factor among the hospitals the program lists');
+  assert.equal(factorAt(H, (BASE * -0.03 * 100) / TOTAL), 0.97, 'the factor at a share: the inverse of base x (factor - 1)');
+});
+
+test('on each hospital\'s page axis, a drag to a strip\'s end lands where Home or End does, and no what-if figure is past it', () => {
+  const all = hubHospitals(loadHub());
+  const est = all.filter((h) => h.est);
+  const vbpMax = vbpMaxOf(all);
+  let ends = 0;
+  for (const h of est) {
+    const shares = reach(h, { vbpMax });
+    const domain = shareDomain(est, shares);
+    for (const v of shares) assert.ok(v >= domain[0] && v <= domain[1], `${h.ccn}: ${v} on [${domain}]`);
+    if (!(h.est.base > 0)) continue;
+    const s = shareScale({ x0: 4, x1: 604, gutter: 20, domain });
+    const hctx = { h, vbpMax };
+    for (const id of ['hrrp', 'hvbp']) {
+      if (!extent(h, hctx, id)) continue;
+      for (const [x, dir] of [[0, -1], [608, 1]]) {
+        const dragged = reduce(initial(h), { type: 'set', id, value: factorAt(h, s.invert(x)) }, hctx);
+        const keyed = reduce(initial(h), { type: 'end', id, dir }, hctx);
+        assert.equal(dragged[id], keyed[id], `${h.ccn} ${id} ${dir > 0 ? 'End' : 'Home'}`);
+        ends += 1;
+      }
+    }
+  }
+  assert.ok(ends > 4000, `${ends} ends checked`);
 });

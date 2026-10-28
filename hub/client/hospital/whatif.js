@@ -22,7 +22,7 @@ import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
-import { changed, extent, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -82,7 +82,7 @@ function paintBar(track, sel, cls, dollars, x) {
 // ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for the peer toggle.
 export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group }) {
   const $ = (sel) => page.querySelector(sel);
-  const vbpMax = Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
+  const vbpMax = vbpMaxOf(hospitals);
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
   // A factor's ends as the field and the slider state them (whatif-state.js extent).
@@ -185,7 +185,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
         // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
         const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
         apply({ type: 'hac', cut: v < cutAt / 2 });
-      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: 1 + ((v / 100) * h.est.total) / h.est.base });
+      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
     });
     const end = () => {
       offset = null;

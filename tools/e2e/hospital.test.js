@@ -270,4 +270,35 @@ describe('the what-if\'s edges', () => {
     assert.equal((await hypo(page)).banner, false, 'back on the actual figures');
     await assertQuiet(seen, 'Home and End on the highest factor');
   }));
+
+  it('a handle dragged to its strip\'s ends reaches its range\'s ends; two hypothetical nets stand at two places', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hvbp');
+    await handle.waitFor();
+    await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
+    const drag = async (side) => {
+      const box = await handle.locator('.st__hb').boundingBox();
+      const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
+      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(side > 0 ? strip.x + strip.width - 1 : strip.x + 1, y, { steps: 8 });
+      await page.mouse.up();
+    };
+    await drag(1);
+    assert.equal(await value(handle), await handle.getAttribute('aria-valuemax'), 'the strip\'s right end: the range\'s top');
+    await drag(-1);
+    assert.equal(await value(handle), await handle.getAttribute('aria-valuemin'), 'its left end: the bottom');
+    // Both factors at their lowest, then the cut on and off: the hypothetical net moves, never pinned at the axis's end.
+    await at(page, 'hrrp').focus();
+    await page.keyboard.press('Home');
+    const net = () => page.evaluate(() => Number(/translate\(([-\d.]+)px/.exec(document.querySelector('[data-row="net"] .st__hyp').style.transform)?.[1]));
+    await at(page, 'hacrp').focus();
+    await page.keyboard.press('Home');
+    const cut = await net();
+    await page.keyboard.press('End');
+    const none = await net();
+    assert.ok(cut < none, `the net with the cut (${cut} px) left of the net without it (${none} px)`);
+    await assertQuiet(seen, 'the what-if at its ends');
+  }));
 });
