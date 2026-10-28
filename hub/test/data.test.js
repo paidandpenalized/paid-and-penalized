@@ -42,6 +42,15 @@ test('checkHubInputs stops when the dollar file is not for the master\'s HACRP y
   assert.throws(() => checkHubInputs(inputs({ masterFile: { hospitals: [] } })), (e) => e instanceof RangeError && /^hub: /.test(e.message));
 });
 
+test('checkHubInputs names a master with no program years in a hub RangeError, whatever the other years are (never a TypeError)', () => {
+  const isHub = (e) => e instanceof RangeError && /^hub: /.test(e.message) && /program years/.test(e.message);
+  // Every year missing at once: undefined equals undefined, which once slipped past to a TypeError.
+  assert.throws(() => checkHubInputs({ dollars: { hospitals: [] }, masterFile: { hospitals: [] } }), isHub);
+  assert.throws(() => checkHubInputs(inputs({ masterFile: { programYears: null, hospitals: [] } })), isHub);
+  assert.throws(() => checkHubInputs(inputs({ masterFile: { programYears: { hacrp: 2026 }, hospitals: [] } })), isHub);
+  assert.throws(() => checkHubInputs(inputs({ masterFile: { programYears: { hrrp: 2027 }, hospitals: [] } })), isHub);
+});
+
 test('checkHubInputs stops when a dollar CCN has no master record', () => {
   const dollars = { fy: 2026, hospitals: [{ ccn: '990001' }, { ccn: '990009' }] };
   assert.throws(() => checkHubInputs(inputs({ dollars })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'));

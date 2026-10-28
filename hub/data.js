@@ -9,10 +9,12 @@ export const TDR_ID = 'tdr-hrrp-fy2027';
 
 // The inputs must agree before any page is built from them: the dollar estimates are for the year the master calls its
 // HACRP year (the common fiscal year the hub shows), every dollar CCN is in the master, and the Thirty Day Readmissions
-// file is for the master's HRRP year. Throws a RangeError naming the mismatch.
+// file is for the master's HRRP year. Throws a RangeError naming the mismatch. This is the one place a dollar CCN with no
+// master record is caught: hubHospitals and the pages that follow rely on it.
 export function checkHubInputs({ dollars, masterFile, tdrFy }) {
   const years = masterFile.programYears;
-  if (dollars.fy !== years?.hacrp) throw new RangeError(`hub: the dollar estimates are FY${dollars.fy} but the hospital master's HACRP year is ${years?.hacrp}`);
+  if (!Number.isInteger(years?.hacrp) || !Number.isInteger(years?.hrrp)) throw new RangeError('hub: the hospital master names no HACRP and HRRP program years');
+  if (dollars.fy !== years.hacrp) throw new RangeError(`hub: the dollar estimates are FY${dollars.fy} but the hospital master's HACRP year is ${years.hacrp}`);
   if (tdrFy !== years.hrrp) throw new RangeError(`hub: the Thirty Day Readmissions file is FY${tdrFy} but the hospital master's HRRP year is ${years.hrrp}`);
   const known = new Set(masterFile.hospitals.map((r) => r.ccn));
   for (const row of dollars.hospitals) if (!known.has(row.ccn)) throw new RangeError(`hub: CCN ${row.ccn} has a dollar row but no hospital master record`);

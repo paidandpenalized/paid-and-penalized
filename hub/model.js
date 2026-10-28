@@ -25,8 +25,7 @@ function estimate(row) {
 // bed count has no size band.
 export function hubHospitals({ dollars, master, tdr }) {
   return dollars.hospitals.map((row) => {
-    const m = master.get(row.ccn);
-    if (!m) throw new RangeError(`hub: CCN ${row.ccn} has a dollar row but no hospital master record`);
+    const m = master.get(row.ccn); // every dollar CCN is in the master: checkHubInputs (hub/data.js) stops the build otherwise
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
     const beds = m.beds ?? null;
     return {

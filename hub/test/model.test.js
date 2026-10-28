@@ -64,12 +64,11 @@ test('a size band is set exactly when the hospital has beds, and a teaching key 
   assert.ok(hospitals.some((h) => h.teach === null));
 });
 
-test('hubHospitals stops on a status no page has words for, and on a dollar CCN with no master record', () => {
+test('hubHospitals stops on a status no page has words for', () => {
   const master = new Map([['990001', { ccn: '990001', name: 'Hospital 990001', city: 'Town', state: 'ZZ', beds: 10, teach: 'none', lat: 1, lon: 2 }]]);
   const tdr = { hospitals: new Map() };
   const row = { ccn: '990001', status: 'parhm', cut: false, hrrpListed: false, vbpListed: false };
   assert.throws(() => hubHospitals({ dollars: { hospitals: [row] }, master, tdr }), /status "parhm"/);
-  assert.throws(() => hubHospitals({ dollars: { hospitals: [{ ...row, ccn: '990002', status: 'maryland' }] }, master, tdr }), RangeError);
   const [h] = hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr });
   assert.deepEqual([h.status, h.est, h.inTdr, h.band], ['maryland', null, false, 0]);
 });
