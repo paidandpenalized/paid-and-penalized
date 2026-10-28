@@ -9,7 +9,8 @@ import { HUB_COLS, STATUS_CODES } from '../web/client/hub-asset.js';
 export const MAP_WIDTH = 975;
 
 // The asset: { fy, mapW, mapH, cols, rows }, one row per hospital in the order given, values in `cols` order. Status is
-// 'e', 'm' or 'n'; flags are 0 or 1; a number the hospital does not have is null (a hospital without an estimate has no
+// 'e', 'm' or 'n'; flags are 0 or 1; beds is the bed count (the browser works out the size band from it); a number the
+// hospital does not have is null (a hospital without an estimate has no
 // dollars, factors or flags; one without a location, no x and y). x and y are the hospital on the US map at MAP_WIDTH,
 // to a tenth. `after` and `atStake` are left out because they follow from the rest; a row where they do not, or where
 // `hac` and `net` do not follow from the cut flag and the other dollars, stops the build, since the browser could not
@@ -31,7 +32,7 @@ export function hubAsset(hospitals, { shapes, fy }) {
     }
     const [x, y] = places[i] ?? [null, null];
     const values = {
-      ccn: h.ccn, name: h.name, city: h.city, state: h.state, status: STATUS_CODES[h.status], band: h.band, teach: h.teach, x, y,
+      ccn: h.ccn, name: h.name, city: h.city, state: h.state, status: STATUS_CODES[h.status], beds: h.beds, teach: h.teach, x, y,
       base: e ? e.base : null, total: e ? e.total : null, hrrp: e ? e.hrrp : null, hvbp: e ? e.hvbp : null, hac: e ? e.hac : null,
       net: e ? e.net : null, hrrpF: e ? e.hrrpFactor : null, vbpF: e ? e.vbpFactor : null, cut: e ? Number(e.cut) : null,
       hrrpL: e ? Number(e.hrrpListed) : null, vbpL: e ? Number(e.vbpListed) : null, tdr: Number(h.inTdr),

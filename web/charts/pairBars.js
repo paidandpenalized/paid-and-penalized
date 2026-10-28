@@ -5,15 +5,21 @@
 //   labels   { a, b }: what the two bars are (the key over the chart)
 import { html } from '../render/html.js';
 import { frame, isNarrow, mark, r2, text } from './svg.js';
+import { textWidth } from './text.js';
 
 const ROW = 30;
+// The names' type size (the chart's text, web/styles/charts.css .chart) and the gap between a name and its bars.
+const LABEL_PX = 12;
+const LABEL_GAP = 8;
 const BAR = 10;
 const HEAD = 26;
 const KEY = 26;
 
 export function pairBars({ sections, labels, width }) {
   const narrow = isNarrow(width);
-  const nameW = narrow ? 92 : 170;
+  // The name column: its usual width, or wider where a name needs it, so none runs off the drawing's left edge.
+  const widest = Math.max(...sections.flatMap((s) => s.rows.map((r) => textWidth(r.label, LABEL_PX))));
+  const nameW = Math.max(narrow ? 92 : 170, Math.ceil(widest) + LABEL_GAP);
   const valueW = 44;
   const x0 = nameW;
   const x1 = width - valueW;
@@ -29,7 +35,7 @@ export function pairBars({ sections, labels, width }) {
     for (const r of s.rows) {
       const ya = y + 2;
       const yb = ya + BAR + 1;
-      body.push(text({ x: nameW - 8, y: ya + BAR + 3, anchor: 'end', cls: 'chart-label', body: r.label }));
+      body.push(text({ x: nameW - LABEL_GAP, y: ya + BAR + 3, anchor: 'end', cls: 'chart-label', body: r.label }));
       body.push(mark({ tip: r.tipA, value: r.a, hit: null, body: html`<rect class="chart-pair__a" x="${x0}" y="${r2(ya)}" width="${r2(Math.max(0.5, x(r.a) - x0))}" height="${BAR}"/>` }));
       body.push(mark({ tip: r.tipB, value: r.b, hit: null, body: html`<rect class="chart-pair__b" x="${x0}" y="${r2(yb)}" width="${r2(Math.max(0.5, x(r.b) - x0))}" height="${BAR}"/>` }));
       body.push(text({ x: x(r.a) + 4, y: ya + BAR - 1, anchor: 'start', cls: 'chart-value chart-pair__v', body: r.aText }));

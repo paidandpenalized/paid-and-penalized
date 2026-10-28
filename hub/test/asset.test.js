@@ -10,7 +10,7 @@ import { hubHospitals } from '../model.js';
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
 const asset = hubAsset(hospitals, { shapes: hub.shapes, fy: hub.fy });
-const COLS = ['ccn', 'name', 'city', 'state', 'status', 'band', 'teach', 'x', 'y', 'base', 'total', 'hrrp', 'hvbp', 'hac', 'net',
+const COLS = ['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total', 'hrrp', 'hvbp', 'hac', 'net',
   'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr'];
 
 test('the asset is one row per hospital in the column order the browser reads', () => {
@@ -27,7 +27,7 @@ test('the asset is one row per hospital in the column order the browser reads', 
     assert.ok(row.every((v) => v !== undefined), `${h.ccn} has an undefined value`);
     assert.equal(row[COLS.indexOf('status')], STATUS_CODES[h.status]);
     assert.equal(row[COLS.indexOf('tdr')], h.inTdr ? 1 : 0);
-    assert.equal(row[COLS.indexOf('band')], h.band);
+    assert.equal(row[COLS.indexOf('beds')], h.beds);
     assert.equal(row[COLS.indexOf('teach')], h.teach);
   });
 });
@@ -116,8 +116,8 @@ test('every hospital decodes to what the build holds, and a decoded hospital can
     const d = decoded.hospitals[i];
     const row = asset.rows[i];
     assert.equal(decoded.byCcn.get(h.ccn), d, h.ccn);
-    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.band, d.teach, d.inTdr, d.x, d.y],
-      [h.ccn, h.name, h.city, h.state, h.status, h.band, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
+    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.beds, d.band, d.teach, d.inTdr, d.x, d.y],
+      [h.ccn, h.name, h.city, h.state, h.status, h.beds, h.band, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
     if (!h.est) {
       assert.equal(d.est, null, h.ccn);
       return;

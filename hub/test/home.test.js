@@ -18,7 +18,7 @@ import { barOrder } from '../client/story/bar-frame.js';
 import { MAGNIFY } from '../home/bar.js';
 import { simpleFraction } from '../home/claims.js';
 import { homePage } from '../home/page.js';
-import { cardModel, sizeWords } from '../client/story/find.js';
+import { cardModel } from '../client/story/find.js';
 import { peersOf } from '../hospital/peers.js';
 import { stateKey } from '../home/states.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
@@ -209,13 +209,13 @@ test('the live story\'s parts are in the markup, so its script adds no words: th
   assert.match(element(out, '<div class="card"', 'div'), new RegExp(`^<div class="card" data-card data-ccn="${EXAMPLE_CCN}"`));
 });
 
-test('the example card: the example hospital, its place, size, teaching, net, three programs, its state\'s peers and its page', () => {
+test('the example card: the example hospital, its place, beds, teaching, net, three programs, its state\'s peers and its page', () => {
   const h = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
   const card = element(out, '<div class="card"', 'div');
   const said = textOf(card);
   assert.ok(said.includes(h.name));
   assert.ok(said.includes(`${h.city}, ${h.state}`));
-  assert.ok(said.includes(`${sizeWords(h.band)}, non-teaching`), 'its size band and teaching status');
+  assert.ok(said.includes(`${count(h.beds)} beds, non-teaching`), 'its bed count and teaching status');
   assert.ok(said.includes(pct(h.est.share, 2)));
   assert.ok(said.includes(dollars(h.est.net)));
   for (const label of ['Readmissions', 'Hospital-acquired conditions', 'Value-based purchasing']) assert.ok(said.includes(label), label);

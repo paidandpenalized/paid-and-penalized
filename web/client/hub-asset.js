@@ -2,11 +2,12 @@
 // object per hospital. Pure apart from loadHubAsset's fetch. Shared (the shell, the home story and the hospital pages
 // read it), so it lives here, not under hub/.
 import { derivedDollars, netShare, pctOf } from '../../engine/js/dollars/whatif.js';
+import { bedBand } from '../../engine/js/peers.js';
 import { once } from './once.js';
 
 // The columns of a row, in the order the build writes them. The decoder reads by name through the asset's own `cols`, so
 // it needs only that every one of these is there.
-export const HUB_COLS = Object.freeze(['ccn', 'name', 'city', 'state', 'status', 'band', 'teach', 'x', 'y', 'base', 'total',
+export const HUB_COLS = Object.freeze(['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total',
   'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr']);
 
 // The one-letter code the asset holds for each status, and the words it decodes to. The build's encoder (hub/asset.js)
@@ -37,9 +38,16 @@ function decodeEstimate(ccn, v) {
   };
 }
 
+// A bed count as the build writes it: a whole number, or null for none.
+function bedsOf(ccn, value) {
+  if (value !== null && !(Number.isInteger(value) && value >= 0)) throw new RangeError(`hub asset: ${ccn} has beds ${JSON.stringify(value) ?? 'undefined'}`);
+  return value;
+}
+
 // The asset as `{ fy, mapW, mapH, hospitals, byCcn }`: hospitals in the asset's order, each `{ ccn, name, city, state,
-// status, band, teach, x, y, inTdr, est }` (status in words; x and y a place on the map at mapW wide, or null; est null
-// unless the status is 'estimated'), and byCcn a Map. Throws on an asset it cannot read rather than guess.
+// status, beds, band, teach, x, y, inTdr, est }` (status in words; band the size band of its bed count, engine/js/peers.js
+// bedBand, null without one; x and y a place on the map at mapW wide, or null; est null unless the status is
+// 'estimated'), and byCcn a Map. Throws on an asset it cannot read rather than guess.
 export function decodeRows(asset) {
   if (!asset || !Array.isArray(asset.cols) || !Array.isArray(asset.rows)) throw new TypeError('hub asset: expected { cols, rows }');
   const { fy, mapW, mapH, cols, rows } = asset;
@@ -50,8 +58,9 @@ export function decodeRows(asset) {
     const v = (c) => row[at.get(c)];
     const status = STATUS.get(v('status'));
     if (!status) throw new RangeError(`hub asset: ${v('ccn')} has the status "${v('status')}"`);
+    const beds = bedsOf(v('ccn'), v('beds'));
     return {
-      ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, band: v('band'), teach: v('teach'),
+      ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, beds, band: bedBand(beds), teach: v('teach'),
       x: v('x'), y: v('y'), inTdr: flag(v('ccn'), 'tdr', v('tdr')), est: status === 'estimated' ? decodeEstimate(v('ccn'), v) : null,
     };
   });

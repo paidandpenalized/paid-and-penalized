@@ -4,9 +4,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readPinned } from '../../pipeline/files.js';
 import { acrossLine, dodge } from '../charts/acrossLine.js';
+import { pairBars } from '../charts/pairBars.js';
 import { PAGE } from '../charts/figure.js';
 import { stateShapes, usBubbles } from '../charts/geo.js';
 import { WIDTH } from '../charts/svg.js';
+import { textWidth } from '../charts/text.js';
 import { treemap } from '../charts/treemap.js';
 
 const height = (svg) => Number(/viewBox="0 0 \d+ (\d+)"/.exec(svg)[1]);
@@ -112,4 +114,20 @@ test('usBubbles: the decorative land is drawn to whole units, so the one map tha
   assert.ok(land.length > 100 && !land.includes('.'), 'whole units');
   const radius = (w) => Number(/<circle class="chart-bubble"[^>]* r="([\d.]+)"/.exec(String(usBubbles({ shapes, layers: [{ id: 'total', states }], width: w })))[1]);
   assert.ok(radius(WIDTH) < radius(PAGE), 'larger circles across a page');
+});
+
+test('pairBars: the name column holds its longest label at a phone\'s width and a page\'s, so no name runs off the drawing\'s left edge', () => {
+  const row = (label) => ({ label, a: 0.2, b: 0.4, aText: '20%', bText: '40%', tipA: 'a', tipB: 'b' });
+  const sections = [{ heading: 'Beds', rows: [row('A label longer than the column ever was'), row('Short')] }];
+  for (const width of [358, 640]) {
+    const svg = String(pairBars({ sections, labels: { a: 'Count', b: 'Money' }, width }));
+    // Each name ends 8 units left of the bars' baseline; the longest must start at or right of the drawing's edge.
+    const end = Number(/<text class="chart-label" x="([\d.]+)"[^>]*text-anchor="end">A label longer/.exec(svg)[1]);
+    assert.ok(end - textWidth('A label longer than the column ever was', 12) >= 0, `${width}: the longest name starts at ${end - textWidth('A label longer than the column ever was', 12)}`);
+    const base = Number(/<line class="chart-baseline" x1="([\d.]+)"/.exec(svg)[1]);
+    assert.equal(base, end + 8, `${width}: the bars start just right of the names`);
+  }
+  // Short names keep the column's usual width.
+  const plain = String(pairBars({ sections: [{ heading: 'Beds', rows: [row('Short')] }], labels: { a: 'Count', b: 'Money' }, width: 358 }));
+  assert.match(plain, /<line class="chart-baseline" x1="92"/);
 });

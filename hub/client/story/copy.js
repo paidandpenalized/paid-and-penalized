@@ -1,6 +1,8 @@
 // The words the home story's canvas paints (stage.js): the programs' gates, the share axis, the piles' counts and the
 // last step's groups. No digit characters: every number arrives through a {placeholder} from the data (the programs'
-// rules from web/programs.js), formatted as the page formats it (web/client/format.js).
+// rules from web/programs.js), formatted as the page formats it (web/client/format.js). The peer groups' names are the
+// hospital page's own (hub/hospital/group-copy.js), so a group reads the same on both.
+import { GROUPS } from '../../hospital/group-copy.js';
 
 export const COPY = Object.freeze({
   // The gates, by program: the name (and a phone's shorter one), the rule while it waits, and what it moved once passed
@@ -51,9 +53,9 @@ export const COPY = Object.freeze({
   median: 'median {value}',
 
   // The last step's card (find.js cardModel; the server's example card and the found hospital's): the hospital's place
-  // ({place}: "City, ST") and size ({size}: its size band's words; {teaching}: its teaching status), its net, the three
-  // programs, its peers ({n} {group}: the group counted and named).
-  cardPlace: '{place}. {size}, {teaching}.',
+  // ({place}: "City, ST"), its bed count ({beds}) and its teaching status ({teaching}), its net, the three programs, its
+  // peers ({n} {group}: the group counted and named; picking size names the size group there).
+  cardPlace: '{place}. {beds} beds, {teaching}.',
   cardPlaceNoBeds: '{place}. {teaching}.',
   teachMajor: 'major teaching',
   teachMinor: 'minor teaching',
@@ -70,16 +72,6 @@ export const COPY = Object.freeze({
   wordNone: 'no change',
   notInProgram: 'Not in this program',
   cardPeers: 'Of {n} {group}, {cutN} take a net cut; the median is {median}.',
-  // The groups the peer toggle picks (hub/hospital/peers.js groupName: {state}, a state's name; {beds}, {lo}, {hi}, a size
-  // band's bed-count edges), and a size band in words from those edges ({lo}, {hi}: the band's first and last bed counts).
-  groupState: '{state} hospitals',
-  groupSizeLow: 'hospitals with under {beds} beds',
-  groupSizeMid: 'hospitals with {lo} to {hi} beds',
-  groupSizeHigh: 'hospitals with {beds} or more beds',
-  groupTeachMajor: 'major teaching hospitals',
-  groupTeachMinor: 'minor teaching hospitals',
-  groupTeachNone: 'non-teaching hospitals',
-  sizeUnder: 'under {hi} beds',
-  sizeBand: '{lo} to {hi} beds',
-  sizeOver: '{lo} or more beds',
+  // The groups the peer toggle picks (hub/hospital/peers.js groupName), in the hospital page's words.
+  ...GROUPS,
 });

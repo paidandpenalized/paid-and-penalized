@@ -532,7 +532,7 @@ export const COPY = {
   groupTeachmajor: { text: 'Major teaching', claim: null },
   groupTeachminor: { text: 'Minor teaching', claim: null },
   groupTeachnone: { text: 'Not teaching', claim: null },
-  groupBedsUnder: { text: 'Under {beds} beds', claim: null },
+  groupBedsUnder: { text: 'Fewer than {beds} beds', claim: null },
   groupBedsRange: { text: '{low} to {high} beds', claim: null },
   groupBedsUp: { text: '{beds} beds and up', claim: null },
   groupOwnNonprofit: { text: 'Nonprofit', claim: null },

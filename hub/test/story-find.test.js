@@ -3,16 +3,17 @@
 // the state an address's #state= names. No hospital is named: rows are picked by property, or the example by its CCN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../engine/js/peers.js';
+import { BED_BAND_EDGES, PEER_MODES, bedBand, median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { fillCopy } from '../../web/render/components.js';
 import { count, dollars } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { COPY as STORY_COPY } from '../client/story/copy.js';
-import { cardModel, peerLine, sizeWords } from '../client/story/find.js';
+import { cardModel, peerLine } from '../client/story/find.js';
 import { lineOf, stateFromHash } from '../client/story/map.js';
 import { loadHub } from '../data.js';
 import { stateLine, statesMap } from '../home/states.js';
+import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { groupName, peersOf } from '../hospital/peers.js';
 import { signedShareText } from '../hospital/text.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
@@ -34,8 +35,9 @@ function expectedLine(h, mode, group) {
 }
 
 test('peerLine: the hospital\'s group in each way of grouping, counted, with its net cuts and median, in the hospital page\'s figures', () => {
-  const sizeOf = (band) => (band === 0 ? `under ${count(BED_BAND_EDGES[0])} beds`
-    : band === BED_BAND_EDGES.length ? `${count(BED_BAND_EDGES[band - 1])} or more beds`
+  // The size groups in the words the hospital page uses (one wording for the smallest: "fewer than", ruling R36).
+  const sizeOf = (band) => (band === 0 ? `fewer than ${count(BED_BAND_EDGES[0])} beds`
+    : band === BED_BAND_EDGES.length ? `${count(BED_BAND_EDGES[band - 1])} beds or more`
       : `${count(BED_BAND_EDGES[band - 1])} to ${count(BED_BAND_EDGES[band] - 1)} beds`);
   const teachOf = { major: 'major teaching hospitals', minor: 'minor teaching hospitals', none: 'non-teaching hospitals' };
   // The example, and a hospital of each band and teaching status (picked by property).
@@ -64,8 +66,19 @@ test('groups: a hospital without a bed count or teaching status has no group the
     assert.ok(peers.every((x) => x.est), `${mode}: only hospitals with an estimate`);
   }
   assert.equal(groupName((key, values) => fillCopy(STORY_COPY, key, values), example, 'state'), `${STATE_NAMES[example.state]} hospitals`);
-  assert.deepEqual([0, 1, 2, 3].map(sizeWords), [`under ${count(BED_BAND_EDGES[0])} beds`, `${count(BED_BAND_EDGES[0])} to ${count(BED_BAND_EDGES[1] - 1)} beds`,
-    `${count(BED_BAND_EDGES[1])} to ${count(BED_BAND_EDGES[2] - 1)} beds`, `${count(BED_BAND_EDGES[2])} or more beds`]);
+  // One set of group words: the story's are the hospital page's, in every way of grouping, for every size band.
+  const story = (key, values) => fillCopy(STORY_COPY, key, values);
+  const page = (key, values) => fillCopy(HOSPITAL_COPY, key, values);
+  for (const band of [0, 1, 2, 3]) {
+    const h = estimated.find((x) => x.band === band);
+    for (const mode of PEER_MODES) assert.equal(groupName(story, h, mode), groupName(page, h, mode), `band ${band}, ${mode}`);
+  }
+  // The browser's rows carry the bed count, and the band follows from it as the build's does.
+  for (const h of hospitals) {
+    const s = server.find((x) => x.ccn === h.ccn);
+    assert.deepEqual([h.beds, h.band], [s.beds, s.band], h.ccn);
+    assert.equal(h.band, bedBand(h.beds), h.ccn);
+  }
 });
 
 test('cardModel: the hospital\'s place, net, programs and peers; a hospital outside value-based purchasing reads "Not in this program", never $0', () => {
@@ -90,13 +103,14 @@ test('cardModel: the hospital\'s place, net, programs and peers; a hospital outs
   // The example: in both programs, a size and a teaching status.
   const ex = cardModel(example, peersOf(estimated, example, 'size'), 'size', fy);
   assert.ok(ex.rows.every((r) => r.kind !== 'na'));
-  assert.equal(ex.place, `${example.city}, ${example.state}. ${sizeWords(example.band)}, non-teaching.`);
-  assert.match(ex.peer, /^Of [\d,]+ hospitals with /);
-  // A size band starts its sentence with a capital.
+  // The hospital's own bed count, not its size group (the peer line names the group when the toggle picks size).
+  assert.equal(ex.place, `${example.city}, ${example.state}. ${count(example.beds)} beds, non-teaching.`);
+  assert.match(ex.peer, /^Of [\d,]+ hospitals with [\d,]+ to [\d,]+ beds, /);
   const small = estimated.find((h) => h.band === 0);
-  assert.match(cardModel(small, [small], 'state', fy).place, new RegExp(`^${small.city}, ${small.state}\\. Under [\\d,]+ beds, `));
+  assert.equal(cardModel(small, [small], 'state', fy).place.split('. ')[1].split(',')[0], `${count(small.beds)} beds`);
+  assert.match(cardModel(small, peersOf(estimated, small, 'size'), 'size', fy).peer, new RegExp(`^Of [\\d,]+ hospitals with fewer than ${count(BED_BAND_EDGES[0])} beds, `));
   // No bed count, no teaching status: the place says so without a gap.
-  assert.equal(cardModel({ ...example, band: null, teach: null }, [example], 'state', fy).place, `${example.city}, ${example.state}. Teaching status not reported.`);
+  assert.equal(cardModel({ ...example, beds: null, band: null, teach: null }, [example], 'state', fy).place, `${example.city}, ${example.state}. Teaching status not reported.`);
   // A record without a city still has a place.
   assert.match(cardModel({ ...example, city: null }, [example], 'state', fy).place, new RegExp(`^${example.state}\\. `));
 });

@@ -5,7 +5,7 @@ import { HUB_COLS, decodeRows, loadHubAsset } from '../client/hub-asset.js';
 // An invented asset: one row of each status, a column order that is not the build's (the decoder reads by name).
 const row = (over) => {
   const base = {
-    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'e', band: 1, teach: 'none', x: 100.5, y: 200.1,
+    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'e', beds: 150, teach: 'none', x: 100.5, y: 200.1,
     base: 800, total: 1000, hrrp: -30, hvbp: 20, hac: 0, net: -10, hrrpF: 0.99, vbpF: 1.002, cut: 0, hrrpL: 1, vbpL: 1, tdr: 1,
   };
   return { ...base, ...over };
@@ -13,7 +13,7 @@ const row = (over) => {
 const asset = (rows, order = HUB_COLS) => ({ fy: 2026, mapW: 975, mapH: 605, cols: [...order], rows: rows.map((r) => order.map((c) => r[c])) });
 
 test('decodeRows reads columns by name, so the order of the build\'s columns does not matter', () => {
-  const rows = [row({}), row({ ccn: '990002', status: 'm', band: null, teach: null, x: null, y: null, tdr: 0, base: null, total: null, hrrp: null, hvbp: null, hac: null, net: null, hrrpF: null, vbpF: null, cut: null, hrrpL: null, vbpL: null })];
+  const rows = [row({}), row({ ccn: '990002', status: 'm', beds: null, teach: null, x: null, y: null, tdr: 0, base: null, total: null, hrrp: null, hvbp: null, hac: null, net: null, hrrpF: null, vbpF: null, cut: null, hrrpL: null, vbpL: null })];
   const a = decodeRows(asset(rows));
   const b = decodeRows(asset(rows, [...HUB_COLS].reverse()));
   assert.deepEqual(b.hospitals, a.hospitals);
@@ -25,7 +25,7 @@ test('decodeRows reads columns by name, so the order of the build\'s columns doe
 test('an estimated row decodes to its dollars, the derived after-pay and dollars at stake, the share and the percents of pay', () => {
   const [h] = decodeRows(asset([row({})])).hospitals;
   assert.deepEqual(h, {
-    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'estimated', band: 1, teach: 'none', x: 100.5, y: 200.1, inTdr: true,
+    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'estimated', beds: 150, band: 1, teach: 'none', x: 100.5, y: 200.1, inTdr: true,
     est: {
       base: 800, total: 1000, hrrp: -30, hvbp: 20, hac: 0, net: -10, after: 990, atStake: 10, hrrpFactor: 0.99, vbpFactor: 1.002,
       cut: false, hrrpListed: true, vbpListed: true, share: -0.01,
@@ -54,6 +54,7 @@ test('decodeRows stops on an asset it cannot read: a missing column, a short row
   assert.throws(() => decodeRows(short), RangeError);
   assert.throws(() => decodeRows(asset([row({ status: 'x' })])), RangeError);
   assert.throws(() => decodeRows(asset([row({ net: null })])), RangeError);
+  for (const beds of [-1, 1.5, '150', Number.NaN]) assert.throws(() => decodeRows(asset([row({ beds })])), RangeError, String(beds));
   assert.throws(() => decodeRows({}), TypeError);
   assert.throws(() => decodeRows(null), TypeError);
 });
@@ -97,4 +98,9 @@ test('loadHubAsset fetches and decodes once per url, and tries again after a fai
   } finally {
     globalThis.fetch = real;
   }
+});
+
+test('a row carries its bed count; its size band follows from it, and none without one', () => {
+  const bands = decodeRows(asset([row({ beds: 99 }), row({ ccn: '990002', beds: 100 }), row({ ccn: '990003', beds: 500 }), row({ ccn: '990004', beds: null })])).hospitals.map((h) => [h.beds, h.band]);
+  assert.deepEqual(bands, [[99, 0], [100, 1], [500, 3], [null, null]]);
 });
