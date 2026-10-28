@@ -28,8 +28,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
-    // without a site here, and a page per hospital in the dollar file (none indexable while the hub is unreleased).
-    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length);
+    // still to come, a page per hospital in the dollar file, and the interim Readmissions pages (/hrrp/ and one per hospital
+    // in the pinned file); none indexable while the hub is unreleased, and the interim pages never.
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length + 1 + loadHub().tdr.hospitals.size);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -68,11 +69,11 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.equal(sitemap.match(/<url>/g).length, 2);
   }));
 
-test('each program without a site here has a placeholder at its folder: its name, its dek, a line saying its page is coming, the way home', () =>
+test('each program still to come has a placeholder at its folder: its name, its dek, a line saying its page is coming, the way home', () =>
   withTemp('pp-hub-coming-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     await generateHub(ctx, { hospitals: [] });
-    assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.path), ['/hrrp/', '/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
+    assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.path), ['/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
     for (const p of PLACEHOLDER_PROGRAMS) {
       const text = readFileSync(join(dir, p.path, 'index.html'), 'utf8');
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, p.id);

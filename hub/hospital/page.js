@@ -29,24 +29,22 @@ const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
 // record's fields and the net's large figure).
 const FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700']);
 
-// The family's pages for a hospital that are not built yet (render/shell.js familyHeader's hospital.pages): its
-// Readmissions page. Until it is, the header's Readmissions tab and this page's Readmissions row open the program's
-// folder, so no link opens a missing page.
-const NOT_BUILT = Object.freeze({ hrrp: false });
-
-// The hospital's page in a program, or null when it has none there yet. Every hospital in the dollar file has a
-// hospital-acquired conditions page: the dollar file has a row for each hospital in that program's file.
-const pageOf = (h, id) => (NOT_BUILT[id] === false ? null : hospitalPathOf(id, h.ccn, { inTdr: h.inTdr }));
+// The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
+// hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
+// Thirty Day Readmissions has (inTdr) has an interim Readmissions page (hub/hrrp/page.js).
+const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
 
 const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 
-// A program row's link: to the hospital's page there, or to the program's folder, which says it is coming.
+// A program row's link: to the hospital's page there; else to the program's folder, which says it is coming (a program still
+// to come) or is the program's own page (one with pages for other hospitals but not this one).
 function deepLink(h, id) {
-  const { name, path } = PROGRAM[id];
+  const { name, path, stage } = PROGRAM[id];
   const own = pageOf(h, id);
-  return own
-    ? html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`
-    : html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepComing', { name })}</a>`;
+  if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
+  return stage === 'soon'
+    ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepComing', { name })}</a>`
+    : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
 }
 
 // Each group (a mode and its key) and what its peers show, worked out once per list of hospitals: { peers, figures,
@@ -78,17 +76,23 @@ function typeText(h, master) {
   return parts.length ? parts.join(' · ') : null;
 }
 
-function recordCard(h, master, fy) {
+// The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,
+// beds } (the hub hospital, or the same fields from the master); master: its master record, or null. The interim
+// Readmissions pages (hub/hrrp/page.js) add their own fields after these.
+export function recordSpecs(h, master) {
   const type = typeText(h, master);
   const place = h.city && h.state ? fill('location', { city: h.city, state: h.state }) : h.state ?? h.city ?? '';
-  const specs = [
+  return [
     { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },
     { label: fill('fieldLocation'), value: place, wide: !type },
     type && { label: fill('fieldType'), value: type, size: 'sm' },
   ].filter(Boolean);
+}
+
+function recordCard(h, master, fy) {
   return html`<div class="form hh__card">
 ${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: h.ccn }))}
-${specs.map((spec, i) => formField({ no: i + 1, ...spec }))}
+${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
 </div>`;
 }
 
@@ -304,6 +308,6 @@ export function hospitalPage({ h, hospitals, facts, assets, robots, master = nul
     assets,
     scripts: h.est ? [assets.js['hub-hospital']] : [],
     preloadFonts: FONTS,
-    hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inTdr: h.inTdr, pages: NOT_BUILT },
+    hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inTdr: h.inTdr },
   });
 }

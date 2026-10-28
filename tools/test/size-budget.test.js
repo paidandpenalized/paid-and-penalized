@@ -71,9 +71,11 @@ test('pageWeight: a referenced file that is not in dist throws, and so does a sc
   }));
 
 test('every page type has a budget; hub and policy start at 100 KB and scripts at 120 KB (ARCH-27)', () => {
-  assert.deepEqual(Object.keys(BUDGETS).sort(), ['coming', 'dictionary', 'hospital', 'hub', 'hubHospital', 'methods', 'notFound', 'place', 'policy', 'program']);
+  assert.deepEqual(Object.keys(BUDGETS).sort(), ['coming', 'dictionary', 'hospital', 'hrrp', 'hrrpHospital', 'hub', 'hubHospital', 'methods', 'notFound', 'place', 'policy', 'program']);
   assert.ok(BUDGETS.coming <= 100 * 1024, 'a placeholder is a hub page (ARCH-27)');
   assert.ok(BUDGETS.hubHospital <= 150 * 1024, 'a hospital page (ARCH-27)');
+  assert.ok(BUDGETS.hrrp <= 100 * 1024, 'the interim Readmissions page is a hub page (ARCH-27)');
+  assert.ok(BUDGETS.hrrpHospital <= 150 * 1024, 'an interim Readmissions hospital page (ARCH-27)');
   assert.equal(BUDGETS.hub, 100 * 1024);
   assert.equal(BUDGETS.policy, 100 * 1024);
   assert.equal(JS_BUDGET, 120 * 1024);
@@ -90,7 +92,7 @@ test('overBudget: lists the pages over their type\'s budget, and only those', ()
       'hacrp/state/ca/index.html': big,
       'index.html': small,
     });
-    const budgets = { hub: 1000, policy: 1000, coming: 1000, program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000, notFound: 1000, hubHospital: 1000 };
+    const budgets = { hub: 1000, policy: 1000, coming: 1000, program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000, notFound: 1000, hubHospital: 1000, hrrp: 1000, hrrpHospital: 1000 };
     const over = overBudget(measure(dir), { budgets });
     assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', bytes: br(big), budget: 2000 }]);
     // Everything fits a generous budget.

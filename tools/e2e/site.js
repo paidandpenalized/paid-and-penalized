@@ -82,15 +82,38 @@ export function hubHospitalSample(type, all = hubHospitals(loadHub())) {
   return { type, name: type, path: hospitalPathOf('hub', found.ccn), hospital: found };
 }
 
+// The sample interim Readmissions hospital pages (hub/hrrp/page.js), by type, each the first hospital in the pinned Thirty Day
+// Readmissions file with a payment cut and an estimate, with no cut, or that the dollar file does not have (no estimate, no
+// page across the programs): [type, what it is, the test]. test reads the pinned record and the hub hospital (null when the
+// dollar file does not have it).
+const HRRP_HOSPITALS = [
+  ['hrrp-hospital-cut', 'with a payment cut and an estimate', (r, h) => r.paf < 1 && h?.est?.hrrpListed === true],
+  ['hrrp-hospital-no-cut', 'with no payment cut', (r) => r.paf >= 1],
+  ['hrrp-hospital-no-estimate', 'the dollar file does not have', (r, h) => h === null],
+];
+
+// The sample interim Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its pinned
+// record }, from the pinned file and the emitted data alone.
+export function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
+  const [, what, test] = HRRP_HOSPITALS.find(([t]) => t === type) ?? [];
+  if (!test) throw new RangeError(`hrrpHospitalSample: no sample type "${type}"`);
+  const byCcn = new Map(all.map((h) => [h.ccn, h]));
+  const found = [...hub.tdr.hospitals.values()].find((r) => test(r, byCcn.get(r.id) ?? null));
+  if (!found) throw new Error(`hrrpHospitalSample: no hospital ${what} in the data`);
+  return { type, name: type, path: hospitalPathOf('hrrp', found.id, { inTdr: true }), hospital: found };
+}
+
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
 // placeholder (value-based purchasing's), the program page, its Methods and dictionary, the three sample hospitals
 // (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
-// programs (hubHospitalSample), and a path no page has (the not-found page, served with status 404). name is the page's
+// programs (hubHospitalSample), the interim Readmissions page and its three sample hospitals' pages (hrrpHospitalSample), and
+// a path no page has (the not-found page, served with status 404). name is the page's
 // name in a test's title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the
 // emitted data, whichever site the browser visits.
 export function samplePages() {
   const all = readNewestEmitted().hospitals;
-  const hub = hubHospitals(loadHub());
+  const hubData = loadHub();
+  const hub = hubHospitals(hubData);
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
   return [
@@ -103,6 +126,8 @@ export function samplePages() {
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
     ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
+    page('hrrp', SITE.programs.find((p) => p.id === 'hrrp').path),
+    ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hubData, hub)),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }

@@ -61,10 +61,11 @@ export const programOf = (path) => SITE.programs.find((program) => path.startsWi
 // The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live and
 // interim programs and the coming ones the dollar estimates already include, the shell's full tabs and the footer's
 // figures; unlisted: the rest, the dashed tabs after the "coming" gap and the footer's "Coming:" line. Placeholder: every
-// program without a site here, whose folder holds the hub's placeholder page (hub/coming.js).
+// program that is still to come (stage soon), whose folder holds the hub's coming-soon page (hub/coming.js). A live
+// program's folder holds its site and an interim one's the hub's own Readmissions pages (hub/hrrp/page.js).
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
-export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'live'));
+export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));
 
 // The address of a hospital's page in a program, or null when the program has none for it. Folders are lowercase, so the
 // CCN is too. programId is 'hub' (the hospital page, every hospital), 'hacrp' (that site's hospital pages), or 'hrrp'

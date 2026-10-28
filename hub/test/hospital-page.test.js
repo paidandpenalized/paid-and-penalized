@@ -50,7 +50,8 @@ function sameState(h) {
 }
 const medianWords = (m) => (m === 0 ? 'no change' : `a ${shareText(m)} ${m < 0 ? 'cut' : 'bonus'}`);
 
-const CUT = pick((h) => h.est && h.est.cut && h.est.net < 0 && h.est.hrrpListed && h.est.vbpListed && h.est.hrrp < 0 && Math.abs(h.est.share) >= 1e-4, 'an estimated hospital with a HAC cut and a net cut, in all three programs');
+const CUT = pick((h) => h.est && h.est.cut && h.est.net < 0 && h.est.hrrpListed && h.est.vbpListed && h.est.hrrp < 0 && Math.abs(h.est.share) >= 1e-4 && h.inTdr, 'an estimated hospital with a HAC cut and a net cut, in all three programs and in Thirty Day Readmissions');
+const NOT_IN_TDR = pick((h) => h.est && !h.inTdr, 'an estimated hospital Thirty Day Readmissions does not have');
 const BONUS = pick((h) => h.est && h.est.net > 0 && h.est.vbpListed, 'an estimated hospital with a net bonus');
 const ZERO = pick((h) => h.est && h.est.net === 0, 'an estimated hospital with no net change');
 const NO_VBP = pick((h) => h.est && !h.est.vbpListed, 'an estimated hospital value-based purchasing does not list');
@@ -142,7 +143,11 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');
   // The deep links: a built hospital page, or the program's folder while it says "coming".
-  assert.ok(hrrp.includes('<a class="hh__deep hh__deep--soon" href="/hrrp/">Readmissions: coming</a>'), 'Readmissions: its folder until its hospital pages are built');
+  assert.ok(hrrp.includes(`<a class="hh__deep" href="${hospitalPathOf('hrrp', CUT.ccn, { inTdr: true })}">Readmissions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'Readmissions: its interim page');
+  // A hospital Thirty Day Readmissions does not have has no such page: the row opens the program's own page, which is not "coming".
+  const outside = whatifRow(block(mainOf(render(NOT_IN_TDR)), 'id="whatif"', '</section>'), 'hrrp');
+  assert.ok(outside.includes('<a class="hh__deep" href="/hrrp/">Readmissions: program page<span class="ico ico--arrow" aria-hidden="true"></span></a>'), 'Readmissions: the program page for a hospital with none of its own');
+  assert.ok(!/hrrp\/hospital\//.test(outside), 'and no interim page link');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`<a class="hh__deep" href="${hospitalPathOf('hacrp', CUT.ccn)}">Hospital-acquired conditions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'HACRP: its hospital page');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`CMS’s FY${FY} decision: the flat ${pct(HAC_CUT_PCT / 100, 0)} cut.`), 'HACRP: CMS\'s decision');
   assert.ok(whatifRow(whatif, 'hvbp').includes('<a class="hh__deep hh__deep--soon" href="/hvbp/">Value-based purchasing: coming</a>'), 'HVBP: its coming page');
@@ -212,13 +217,17 @@ test('Maryland\'s and a no-inputs hospital\'s pages are the variant: record, sta
   }
 });
 
-test('the header follows the hospital: All programs is this page, the chip names it, Readmissions opens its folder until built', () => {
+test('the header follows the hospital: All programs is this page, the chip names it, Readmissions opens its interim page (the program\'s folder when Thirty Day Readmissions lacks the hospital)', () => {
   const page = render(CUT);
   const header = headerOf(page);
   assert.ok(header.includes(`data-hospital="${CUT.ccn}"`), 'the header names the hospital');
   const own = hospitalPathOf('hub', CUT.ccn);
   const tabs = [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1] === own ? 'own' : m[1] === hospitalPathOf('hacrp', CUT.ccn) ? 'hacrp page' : m[1], Boolean(m[2])]);
-  assert.deepEqual(tabs, [['own', true], ['/hrrp/', false], ['hacrp page', false], ...SITE.programs.slice(2).map((p) => [p.path, false])]);
+  const interim = hospitalPathOf('hrrp', CUT.ccn, { inTdr: true });
+  const named = tabs.map(([href, current]) => [href === interim ? 'interim page' : href, current]);
+  assert.deepEqual(named, [['own', true], ['interim page', false], ['hacrp page', false], ...SITE.programs.slice(2).map((p) => [p.path, false])]);
+  const outside = [...headerOf(render(NOT_IN_TDR)).matchAll(/<a class="tab[^"]*" href="([^"]*)"/g)].map((m) => m[1]);
+  assert.equal(outside[1] === '/hrrp/', true, 'Readmissions opens its folder for a hospital Thirty Day Readmissions lacks');
   assert.ok(chipOf(header).includes(`<a class="chip__n" href="${own}">`), 'the chip\'s name links this page');
   assert.ok(page.includes(`<link rel="canonical" href="${SITE.origin}${own}">`), 'the canonical address');
   assert.ok(page.includes('/assets/fonts/ibm-plex-mono-700.woff2'), 'the large figure\'s font is preloaded');
@@ -237,7 +246,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     await generateHub(base, { hospitals: [], master: new Map() });
     const ctx = createContext({ outDir: join(dir, 'b'), env: 'production', assets: ASSETS });
     await generateHub(ctx);
-    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length, 'one page per hospital in the dollar file');
+    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + HUB.tdr.hospitals.size, 'one page per hospital in the dollar file, and one interim Readmissions page per hospital in the pinned file');
     let bad = 0;
     let wrongCanonical = 0;
     for (const h of HOSPITALS) {

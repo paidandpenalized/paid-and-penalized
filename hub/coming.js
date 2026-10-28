@@ -1,7 +1,6 @@
-// A placeholder at the folder of each program without a site here (web/site.js PLACEHOLDER_PROGRAMS), so the program tabs
-// and the footer never link to a missing page: the program's name, its dek, a line saying its page is coming and the
-// way back to the front page, under the program's own tab. Never indexed. The program's full coming-soon page (or, for
-// Readmissions, its interim page) takes its place at the same address.
+// A placeholder at the folder of each program still to come (web/site.js PLACEHOLDER_PROGRAMS), so the program tabs and the
+// footer never link to a missing page: the program's name, its dek, a line saying its page is coming and the way back to
+// the front page, under the program's own tab. Never indexed. The program's own page takes its place at the same address.
 import { COPY as SHARED } from '../web/copy.js';
 import { programDek } from '../web/programs.js';
 import { html } from '../web/render/html.js';

@@ -206,17 +206,19 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     assert.equal(await chip.isVisible(), true, 'the chip shows without waiting for a script');
     assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
     // The tabs and the wordmark carry the hospital to every program's folder and the front page; its HACRP tab is this
-    // page and All programs its page across the programs. Compared as one answer, so a failure prints no CCN.
+    // page, All programs its page across the programs and Readmissions its interim page when Thirty Day Readmissions has the
+    // hospital (the hub's asset says). Compared as one answer, so a failure prints no CCN.
+    const { fy, rows } = await hubRows(page);
+    const row = rows.find((r) => r.ccn === ccn);
+    assert.ok(row, 'the hospital is in the hub\'s asset');
     const own = hospitalPathOf('hub', ccn);
-    const want = [own, ...SITE.programs.map((p) => (p.id === 'hacrp' ? HOSPITAL : withFollow(p.path, ccn)))];
+    const tabFor = (p) => (p.id === 'hacrp' ? HOSPITAL : p.id === 'hrrp' && row.tdr === 1 ? hospitalPathOf('hrrp', ccn, { inTdr: true }) : withFollow(p.path, ccn));
+    const want = [own, ...SITE.programs.map(tabFor)];
     assert.ok(JSON.stringify(await hrefsOf(page)) === JSON.stringify(want), 'the tabs follow the hospital');
     assert.ok(await page.locator('a.wordmark').getAttribute('href') === withFollow('/', ccn), 'the wordmark follows the hospital');
     // The chip's name opens the hospital's page across the programs.
     assert.ok(await chip.locator('a.chip__n').getAttribute('href') === own, 'the name links the hospital\'s page');
     assert.equal(await page.locator('.chip__x').getAttribute('href'), '/hacrp/', 'the × opens the program page');
-    const { fy, rows } = await hubRows(page);
-    const row = rows.find((r) => r.ccn === ccn);
-    assert.ok(row, 'the hospital is in the hub\'s asset');
     assert.ok(await chip.locator('.chip__t').textContent() === row.name, 'the chip\'s name is the hub\'s');
     const value = chip.locator('.chip__v');
     if (row.net === null) assert.equal(await value.count(), 0, 'no figure without an estimate');

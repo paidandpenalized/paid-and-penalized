@@ -20,11 +20,17 @@ test('pageType: every page of the site sorts into one type', () => {
     // A hospital's page across the programs: its CCN, lowercase, under /hospital/.
     '/hospital/990001/': 'hubHospital',
     '/hospital/99a001/': 'hubHospital',
+    // The interim Readmissions pages: the program's folder, and a hospital's page under it.
+    '/hrrp/': 'hrrp',
+    '/hrrp/hospital/990001/': 'hrrpHospital',
+    '/hrrp/hospital/99a001/': 'hrrpHospital',
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
-  // Every program without a site here has a placeholder at its folder until its own page is built.
+  // Every program still to come has a placeholder at its folder until its own page is built; Readmissions' folder holds the
+  // interim page, not a placeholder.
   for (const { path } of PLACEHOLDER_PROGRAMS) sorted[path] = 'coming';
   assert.equal(sorted['/hvbp/'], 'coming');
+  assert.equal(sorted['/hrrp/'], 'hrrp');
   for (const [path, type] of Object.entries(sorted)) assert.equal(pageType(path), type, path);
   // The hub's methods page and the program's are different pages.
   assert.equal(pageType('/methods/'), 'policy');
@@ -34,6 +40,12 @@ test('pageType: every page of the site sorts into one type', () => {
 test('pageType: a hospital\'s page across the programs is hubHospital only at a valid CCN\'s lowercase folder', () => {
   for (const ccn of ['990001', '99A001']) assert.equal(pageType(hospitalPathOf('hub', ccn)), 'hubHospital', ccn);
   for (const path of ['/hospital/', '/hospital/99A001/', '/hospital/12345/', '/hospital/9900011/', '/hospital/99-001/', '/hospital/990001/extra/', '/hospital/990001', '/hospitals/990001/'])
+    assert.equal(pageType(path), null, path);
+});
+
+test('pageType: an interim Readmissions hospital page is hrrpHospital only at a valid CCN\'s lowercase folder under /hrrp/hospital/', () => {
+  for (const ccn of ['990001', '99A001']) assert.equal(pageType(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hrrpHospital', ccn);
+  for (const path of ['/hrrp/hospital/', '/hrrp/hospital/99A001/', '/hrrp/hospital/12345/', '/hrrp/hospital/9900011/', '/hrrp/hospital/990001/extra/', '/hrrp/hospital/990001', '/hrrp/hospitals/990001/', '/hrrp', '/hrrp/x/'])
     assert.equal(pageType(path), null, path);
 });
 

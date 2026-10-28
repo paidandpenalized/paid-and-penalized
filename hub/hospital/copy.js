@@ -114,6 +114,7 @@ export const COPY = typesetCopy({
   whyMedian: 'Peer median, among those in the program: {median} of pay.',
   deepHospital: '{name} for this hospital',
   deepComing: '{name}: coming',
+  deepProgram: '{name}: program page',
   nextHeading: 'Next program',
   nextText: 'Each program joins this page as its site launches, as one more row on the same scale.',
   nextBox: 'Room for the next program',

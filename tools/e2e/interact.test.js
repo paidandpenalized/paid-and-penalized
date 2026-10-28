@@ -296,13 +296,14 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
 
       // The hub's own pages lose no words without scripts. What scripts add is the theme toggle, the bar's search (its
       // words, and the list it shows once a reader types) and, on the front page, the story's search and the hint that
-      // points at it, which are hidden in the markup because they do nothing without them.
-      if (['hub', 'policy', 'coming', 'not-found'].includes(type)) {
+      // points at it, which are hidden in the markup because they do nothing without them (the Readmissions page's own search is
+      // the same hidden box).
+      if (['hub', 'policy', 'coming', 'not-found', 'hrrp'].includes(type) || type.startsWith('hrrp-hospital')) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');
         assert.ok(on.search.length > 0, 'the bar\'s search shows with scripts');
         assert.deepEqual(off.search, [], 'and not without');
-        assert.equal(on.story.length > 0, path === '/', 'the story\'s search shows with scripts on the front page only');
+        assert.equal(on.story.length > 0, path === '/' || type === 'hrrp', 'the story\'s search shows with scripts on the front page and the Readmissions page only');
         assert.deepEqual(off.story, [], 'and not without');
         const added = new Set([on.toggle, ...on.search]);
         const offLines = new Set(off.lines);

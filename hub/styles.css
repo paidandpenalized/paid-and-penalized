@@ -1,7 +1,7 @@
 /* The hub's own pages (hub/), bundled after web/styles/ and every site's styles. Tokens only (tokens.css); no color is
    written here. The bundle is one stylesheet for the whole family, so each page's rules sit under its root: the home
    page's generic class names (.step, .num, .card, .st, ...) are scoped to its story (and .story > .step undoes the
-   program site's own .step), the hospital page's under .hh.
+   program site's own .step), the hospital page's under .hh, the interim Readmissions pages' under .rd.
 
    The home page (hub/home/): the masthead hero, then the story. Without its script the story is complete: on a wide
    screen the steps' words scroll in a column between the rail and the stage, and each of the stage's two charts sticks
@@ -565,4 +565,42 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 @media print {
   .hh__peers, .hh__wbtn, .hh__ctl, .hh__how, .st__h { display: none; }
   .hh__progs { break-before: page; }
+}
+
+/* ---------- the interim Readmissions pages (hub/hrrp/page.js), root .rd ----------
+   /hrrp/ (.rd--program): the masthead and the year's summary card, side by side from 960px. A hospital's page (.hh.rd) is
+   the hospital page's record card and layout with the conditions table in the right column; on a phone each condition is a
+   short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways. */
+.rd--program { padding-block: 28px 44px; }
+.rd__top { display: grid; gap: 28px 48px; }
+.rd__intro { align-content: start; container-type: inline-size; }
+.rd__kicker, .rd__kicker a { color: var(--pen-ink); }
+.rd__title { font: 400 clamp(2.2rem, 11.5cqi, 5rem)/0.95 var(--font-display); letter-spacing: -0.01em; }
+.rd__pen { display: block; color: var(--pen); }
+.rd__note { max-width: 46ch; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+.rd__go a { display: inline-flex; align-items: center; gap: 10px; min-height: var(--target-min); padding: 10px 16px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 var(--fs-md)/1.25 var(--font-body); text-decoration: none; }
+.rd__go a:hover, .rd__go a:focus-visible { background: var(--ink); color: var(--paper); }
+.rd__sum { display: flex; flex-wrap: wrap; align-self: start; }
+.rd__sum > .field { flex: 1 1 170px; }
+.rd__sum > .form__title { flex-basis: 100%; }
+.rd .hh__card .field__value--big { font-size: var(--fs-xl); }
+.hh__money > .rd__kicker { margin-bottom: 8px; }
+.rd__main { display: grid; gap: 22px; align-content: start; }
+.rd__tbl thead th { position: static; white-space: normal; }
+.rd__tbl .num { vertical-align: top; }
+.rd__r { font-weight: 700; }
+.rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.rd__w--above { color: var(--pen-ink); font-weight: 700; }
+.rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+@media (min-width: 960px) {
+  .rd__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
+}
+@media (max-width: 640px) {
+  .rd__tbl thead { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rd__tbl, .rd__tbl tbody { display: block; }
+  .rd__tbl tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding: 12px 0; }
+  .rd__tbl th[scope="row"] { grid-column: 1 / -1; padding: 0; }
+  .rd__tbl td, .rd__tbl td.num { padding: 0; text-align: left; white-space: normal; }
+  .rd__tbl td::before { content: attr(data-label); display: block; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+  .rd__tbl td:last-child { grid-column: 1 / -1; }
 }

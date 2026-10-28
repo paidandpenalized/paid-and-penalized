@@ -1,6 +1,7 @@
 // The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
 // stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder per program
-// without a site here (coming.js), every hospital's page across the programs (hospital/page.js), the not-found page, and
+// still to come (coming.js), every hospital's page across the programs (hospital/page.js), the interim Readmissions
+// pages (hrrp/page.js: /hrrp/ and a page per hospital in the pinned Thirty Day Readmissions file), the not-found page, and
 // the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
 // sites before it emitted. The hub's own pages stay noindex until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
@@ -17,7 +18,8 @@ import { comingPage } from './coming.js';
 import { loadHub } from './data.js';
 import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
-import { hubHospitals, stateTotals, storyFacts } from './model.js';
+import { hrrpHospitalPage, hrrpProgramPage } from './hrrp/page.js';
+import { hubHospitals, masterRecord, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -151,11 +153,28 @@ function hospitalPages(ctx, { hospitals, master, robots, never }) {
   }
 }
 
+// The interim Readmissions pages: /hrrp/ and a page for each hospital in the pinned Thirty Day Readmissions file, at
+// hospitalPathOf('hrrp', ccn, { inTdr: true }). A hospital the dollar file has is joined to its hub hospital (hospitals: its
+// estimate); one it lacks (the file has a few) is built from the master alone. With a list of hospitals given (a test's
+// slice), only the pinned hospitals in it get a page. Never indexed, released or not: these slim pages stand in for the
+// program's own site and say so, and the full explorer is the page to find. The sitemap leaves them out.
+function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
+  const { assets } = ctx;
+  ctx.emit({ path: SITE.programs.find((p) => p.id === 'hrrp').path, robots: never, text: hrrpProgramPage({ tdr, assets, robots: never }) });
+  const byCcn = new Map(hospitals.map((h) => [h.ccn, h]));
+  for (const record of tdr.hospitals.values()) {
+    if (only && !only.has(record.id)) continue;
+    const text = hrrpHospitalPage({ record, tdr, master: masterRecord(master, record.id), h: byCcn.get(record.id) ?? null, assets, robots: never });
+    ctx.emit({ path: hospitalPathOf('hrrp', record.id, { inTdr: true }), robots: never, text });
+  }
+}
+
 // updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
 // corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
 // log); tests pass their own. hospitals and master: the hospitals that get a page (model.js hubHospitals) and their master
 // records by CCN, read once from the newest files (data.js loadHub) unless a test passes its own (no hospitals: no
-// hospital pages). The front page always tells the newest files' whole story.
+// hospital pages and no interim Readmissions page for a hospital; /hrrp/ is always written). The front page always tells
+// the newest files' whole story.
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
@@ -171,6 +190,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, master: master ?? hub.master, robots, never });
+  hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });

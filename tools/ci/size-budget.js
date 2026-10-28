@@ -34,7 +34,7 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27
-  // The programs' placeholders (hub/coming.js): a hub page with the family search's script.
+  // The placeholders of the programs still to come (hub/coming.js): a hub page with the family search's script.
   coming: 40 * KB,
   program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
@@ -49,6 +49,11 @@ export const BUDGETS = {
   // peer toggle, the strips and the peer table): the heaviest of the 3,055 on the FY2026 build of 2026-10-28 (56.9 KB)
   // plus 15%, rounded up to 10 KB. ARCH-27's 150 KB for a hospital page holds.
   hubHospital: 70 * KB,
+  // The interim Readmissions pages (hub/hrrp/page.js): hub pages with the family search's script and no script of their own.
+  // The heaviest of each on the FY2026 build of 2026-10-28 (/hrrp/ 40.1 KB; the heaviest of the 2,912 hospital pages 41.0 KB)
+  // plus 15%, rounded up to 10 KB. ARCH-27's 100 KB for a hub page and 150 KB for a hospital page hold.
+  hrrp: 50 * KB,
+  hrrpHospital: 50 * KB,
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;

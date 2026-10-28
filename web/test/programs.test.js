@@ -27,11 +27,13 @@ test('every program\'s path is a lowercase folder ending in "/", and no two prog
   assert.equal(new Set(SITE.programs.map((p) => p.path)).size, SITE.programs.length);
 });
 
-test('the registry\'s groups: listed (full tabs and the footer\'s figures), unlisted (dashed), and those with a placeholder (no site here)', () => {
+test('the registry\'s groups: listed (full tabs and the footer\'s figures), unlisted (dashed), and those with a placeholder (still to come)', () => {
   const ids = (list) => list.map((p) => p.id);
   assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp']);
   assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
-  assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hrrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  // Readmissions' folder holds the hub's interim pages (hub/hrrp/page.js), so only the programs still to come have a placeholder.
+  assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  assert.deepEqual(ids(SITE.programs.filter((p) => p.stage === 'interim')), ['hrrp']);
   for (const list of [LISTED_PROGRAMS, UNLISTED_PROGRAMS, PLACEHOLDER_PROGRAMS]) assert.ok(Object.isFrozen(list));
 });
 
@@ -42,7 +44,7 @@ test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps onl
   assert.equal(siteOf('/hrrp/'), null);
 });
 
-test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no placeholder program (interim or soon) has one; every site is a live program', () => {
+test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no program that is not live (interim or soon) has one; every site is a live program', () => {
   for (const p of SITE.programs) {
     const site = Object.hasOwn(SITE.sites, p.id) ? SITE.sites[p.id] : null;
     if (p.stage === 'live') assert.equal(site?.path, p.path, `${p.id}: a live program has a site at its folder`);

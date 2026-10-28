@@ -14,7 +14,7 @@ export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 export const hospitalPath = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
 
 const POLICY = new Set(Object.values(SITE.pages));
-// The folders of the programs without a site here, each holding a placeholder (hub/coming.js).
+// The folders of the programs still to come, each holding a placeholder (hub/coming.js).
 const PLACEHOLDERS = new Set(PLACEHOLDER_PROGRAMS.map((p) => p.path));
 // The one folder name under prefix that path is, or null ('/a/b/' under '/a/' is 'b').
 const folderUnder = (path, prefix) => {
@@ -26,12 +26,20 @@ const isHospital = (path) => {
   const ccn = folderUnder(path, HOSPITALS_PATH)?.toUpperCase();
   return ccn !== undefined && CCN.test(ccn) && hospitalPath(ccn) === path;
 };
-// A hospital's page across the programs (the hub's): '/hospital/<ccn, lowercase>/'.
-const HUB_HOSPITALS = hospitalPathOf('hub', 'X').replace(/x\/$/, '');
-const isHubHospital = (path) => {
-  const ccn = folderUnder(path, HUB_HOSPITALS)?.toUpperCase();
-  return ccn !== undefined && CCN.test(ccn) && hospitalPathOf('hub', ccn) === path;
+// Whether a path is a hospital's page in a program's folder (the hub's, '/hospital/<ccn, lowercase>/', or Readmissions' interim
+// page, '/hrrp/hospital/<ccn, lowercase>/'), by the family's own helper (web/site.js hospitalPathOf).
+const hospitalPageIn = (programId) => {
+  const at = (ccn) => hospitalPathOf(programId, ccn, { inTdr: true });
+  const folder = at('X').replace(/x\/$/, '');
+  return (path) => {
+    const ccn = folderUnder(path, folder)?.toUpperCase();
+    return ccn !== undefined && CCN.test(ccn) && at(ccn) === path;
+  };
 };
+const isHubHospital = hospitalPageIn('hub');
+const isHrrpHospital = hospitalPageIn('hrrp');
+// The interim Readmissions page (hub/hrrp/page.js): the program's folder.
+const HRRP_PATH = SITE.programs.find((p) => p.id === 'hrrp').path;
 // The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
 export const placeKind = (path) => KINDS.find((kind) => {
   const key = folderUnder(path, `${PROGRAM_PATH}${kind}/`);
@@ -39,17 +47,19 @@ export const placeKind = (path) => KINDS.find((kind) => {
 }) ?? null;
 
 // The type of the page at a site path: 'hub', 'policy', 'coming', 'program', 'methods', 'dictionary', 'hospital',
-// 'place', 'hubHospital' or 'notFound'; null for a path that is none of them.
+// 'place', 'hubHospital', 'hrrp', 'hrrpHospital' or 'notFound'; null for a path that is none of them.
 export function pageType(path) {
   if (path === '/') return 'hub';
   if (path === NOT_FOUND_ADDRESS) return 'notFound';
   if (POLICY.has(path)) return 'policy';
   if (PLACEHOLDERS.has(path)) return 'coming';
   if (path === PROGRAM_PATH) return 'program';
+  if (path === HRRP_PATH) return 'hrrp';
   if (path === METHODS_PATH) return 'methods';
   if (path === DICTIONARY_PAGE) return 'dictionary';
   if (isHospital(path)) return 'hospital';
   if (placeKind(path) !== null) return 'place';
   if (isHubHospital(path)) return 'hubHospital';
+  if (isHrrpHospital(path)) return 'hrrpHospital';
   return null;
 }

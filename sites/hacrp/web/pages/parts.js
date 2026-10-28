@@ -64,17 +64,14 @@ const shellParts = lastCall(({ fy, current, searchUrl }) => [fy, current, search
 });
 export const shellOf = ({ fy, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ fy, current, searchUrl }), hospital });
 
-// The family's pages for a hospital that are not built yet: its Readmissions page. Until it is, the header's Readmissions
-// tab opens the program's folder (which the shell's script points at the hospital), so no link opens a missing page. Its
-// own page across the programs is built: the chip's name and All programs open it.
-const NOT_BUILT = Object.freeze({ hrrp: false });
-
 // The hospital a HACRP hospital page's header follows (render/shell.js familyHeader): its CCN and name, its estimated net
 // from the dollar estimates (money: money.js hospitalMoney; null without an estimate) and whether Thirty Day
 // Readmissions has it (master: its hospital master record, whose Readmissions membership is read from that site's
-// pinned file).
+// pinned file). The header's Readmissions tab opens the hospital's interim Readmissions page when it has one, else the
+// program's folder (which the shell's script points at the hospital); the chip's name and All programs open its page
+// across the programs.
 export const followed = ({ view, money, master }) => ({
-  ccn: view.ccn, name: view.name, net: money.estimated ? money.net : null, inTdr: master?.programs?.hrrp?.inProgram === true, pages: NOT_BUILT,
+  ccn: view.ccn, name: view.name, net: money.estimated ? money.net : null, inTdr: master?.programs?.hrrp?.inProgram === true,
 });
 
 // HACRP's search box (render/shell.js searchForm) in its words: a combobox over the hospitals asset (searchUrl), with

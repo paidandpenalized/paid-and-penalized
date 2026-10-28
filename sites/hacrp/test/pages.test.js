@@ -625,7 +625,7 @@ test("the HACRP header: the program's tab current, its section menu to the progr
 const pinnedPage = (h) => hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: DATA.master.get(h.ccn), money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
 const tabLinks = (header) => [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1], Boolean(m[2])]);
 
-test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net and links its page across the programs, its tab current, All programs that page, the other tabs at their folders until those pages are built', () => {
+test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net and links its page across the programs, its tab current, All programs that page, Readmissions its interim page for the hospital, the other tabs at their folders until those pages are built', () => {
   const h = pick((x) => x.paymentReduction === 'Yes' && DATA.dollars.byCcn.get(x.ccn).status === 'estimated' && DATA.master.get(x.ccn).programs.hrrp?.inProgram, 'an estimated hospital CMS cut, in Readmissions');
   const row = DATA.dollars.byCcn.get(h.ccn);
   const text = pinnedPage(h);
@@ -638,14 +638,18 @@ test('a hospital page follows its hospital: the chip names it with the dollar ro
   const hub = hospitalPathOf('hub', h.ccn);
   assert.ok(chip.includes(`<a class="chip__n" href="${hub}"><span class="chip__t">${name}</span> <span class="chip__v"><span class="vh">Estimated FY${DATA.fy} net: </span>${moneyText(row.net, { sign: true })}</span></a>`), 'the name and the dollar row\'s net, linking the hospital\'s page across the programs');
   assert.ok(chip.includes(`<a class="chip__x" href="/hacrp/" aria-label="Stop following ${name}">×</a>`), 'stopping opens the program page');
-  // Its HACRP page is this page and All programs its page across the programs; the Readmissions pages are not built yet,
-  // so Readmissions opens its folder (the shell's script adds ?h=), and nothing links them. Each href is compared as a
-  // yes or no, so a failure prints no CCN.
+  // Its HACRP page is this page and All programs its page across the programs; Readmissions opens its interim page for the
+  // hospital (Thirty Day Readmissions has it), and the other programs their folders (the shell's script adds ?h=). Each
+  // href is compared as a yes or no, so a failure prints no CCN.
   const own = hospitalPath(h);
-  const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href === hub ? 'its page' : href, current]);
-  assert.ok(JSON.stringify(named) === JSON.stringify([['its page', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : [p.path, false]))]), 'the tabs: its page, its HACRP page current, the other folders');
-  assert.equal(tabLinks(header)[1][0] === '/hrrp/', true, 'Readmissions, though the hospital is in it');
-  assert.equal(/href="\/hrrp\/hospital\//.test(text), false, 'no link to a page not built');
+  const interim = hospitalPathOf('hrrp', h.ccn, { inTdr: true });
+  const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href === hub ? 'its page' : href === interim ? 'its Readmissions page' : href, current]);
+  assert.ok(JSON.stringify(named) === JSON.stringify([['its page', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : p.id === 'hrrp' ? ['its Readmissions page', false] : [p.path, false]))]), 'the tabs: its page, its Readmissions page, its HACRP page current, the other folders');
+  // A hospital Thirty Day Readmissions does not have keeps the program's folder.
+  const notInTdr = { ...DATA.master.get(h.ccn), programs: { hrrp: { inProgram: false } } };
+  const outside = hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: notInTdr, fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: notInTdr, money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
+  assert.equal(tabLinks(headerOf(outside))[1][0] === '/hrrp/', true, 'Readmissions opens its folder for a hospital outside it');
+  assert.equal(/href="\/hrrp\/hospital\//.test(outside), false, 'and nothing links an interim page for it');
   // The section menu, Every hospital current, and the bar's search.
   assert.deepEqual([...header.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);
   assert.ok(header.includes('data-nav="map" aria-current="true"'), 'Every hospital is the current part');
