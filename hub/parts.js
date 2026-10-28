@@ -1,9 +1,9 @@
 // The parts the hub's pages share: links (to the feedback form, to the pages that define a word), a sentence or
-// paragraph of copy with those links filled in, a section from a heading's copy key, and the page every hub page renders
-// through (hubPage). pages.js builds the policy pages' content from them and corrections.js the corrections page's; the
-// layout is policy.js's.
+// paragraph of copy with those links filled in, a section from a heading's copy key, the arrow after a link's words, the
+// estimate tag, and the page every hub page renders through (hubPage). pages.js builds the policy pages' content from them
+// and corrections.js the corrections page's; the layout is policy.js's.
 import { COPY as SHARED } from '../web/copy.js';
-import { fillCopy, sentenceOf } from '../web/render/components.js';
+import { estTag, fillCopy, sentenceOf } from '../web/render/components.js';
 import { html } from '../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../web/render/layout.js';
 import { SITE } from '../web/site.js';
@@ -25,6 +25,11 @@ export const para = (key, parts, values) => html`<p>${sentence(key, parts, value
 `;
 // A section from a heading's copy key and its paragraphs.
 export const section = (id, headingKey, ...paragraphs) => ({ id, heading: COPY[headingKey], body: html`${paragraphs}` });
+
+// The arrow after a link's words.
+export const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
+// The tag beside an estimated figure: "Estimate", linked to what the site calls an estimate (the methods' #estimate).
+export const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: COPY.estimateTagLabel, text: COPY.estimateTag });
 
 // A hub page (layout.js page(), with the same arguments): the hub's stylesheet after the shared one (the hub's styles are a
 // sheet of their own, by the manifest's id: HUB in pages.js says ownSheet, so the program sites' pages never carry them),

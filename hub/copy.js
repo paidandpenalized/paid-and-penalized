@@ -21,6 +21,9 @@ export const COPY = typesetCopy({
   indexLabel: 'On this page',
   feedbackForm: 'feedback form',
   estimateLink: 'estimate',
+  // The estimate tag beside an estimated figure on the hub's pages (parts.js estimateTag): its word, and its link's name.
+  estimateTag: 'Estimate',
+  estimateTagLabel: 'Estimate: how this site estimates the dollars',
   linkedinLink: 'His profile is on LinkedIn',
   cloudflarePolicy: 'Cloudflare’s privacy policy',
   googlePolicy: 'Google’s privacy policy',

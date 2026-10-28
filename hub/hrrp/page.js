@@ -6,7 +6,7 @@
 // only ones they load. The masthead's styles (hub/styles.css, the .rd__ rules) are shared with the placeholder pages
 // (hub/coming.js), so retiring this page for Thirty Day Readmissions' fold-in must keep them.
 import { programDek } from '../../web/programs.js';
-import { estTag, fillCopy, formField, formTitle, pill } from '../../web/render/components.js';
+import { fillCopy, formField, formTitle, pill } from '../../web/render/components.js';
 import { count, decimal, money, pct, placeText, shown } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
@@ -14,7 +14,7 @@ import { searchForm } from '../../web/render/shell.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { COPY as HOSPITAL } from '../hospital/copy.js';
 import { recordSpecs } from '../hospital/page.js';
-import { hubPage } from '../parts.js';
+import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -29,7 +29,6 @@ const REDUCTION_DP = 2;
 const ERR_PAR = 1;
 
 const HRRP = programById('hrrp');
-const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 // The large link out, to Thirty Day Readmissions (the site, or one hospital's place on it): new tab, rel noopener.
 const explorer = (href) => html`<p class="rd__go">${externalLink(href, html`${fill('explorer')} ${arrow}`)}</p>`;
 
@@ -149,7 +148,7 @@ ${fields.map((field, i) => formField({ no: i + 1, ...field }))}
 function estimate({ h, hubFy, pinFy }) {
   const link = h ? html`<a class="hh__deep" href="${hospitalPathOf('hub', h.ccn)}">${fill('hubLink')}${arrow}</a>` : '';
   // The estimate tag rides with a figure only.
-  const tag = html` ${estTag({ href: `${SITE.pages.methods}#estimate`, label: fill('estimateTagLabel'), text: fill('estimateTag') })}`;
+  const tag = html` ${estimateTag()}`;
   const figured = h?.est?.hrrpListed === true;
   let figure;
   if (figured) {

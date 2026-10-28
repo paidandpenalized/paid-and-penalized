@@ -70,8 +70,6 @@ export const COPY = typesetCopy({
   // The estimate the front page's net uses, from a different fiscal year.
   estimateHeading: 'The estimate the net uses',
   estimateLabel: 'Readmissions, estimated FY{fy}',
-  estimateTag: 'Estimate',
-  estimateTagLabel: 'Estimate: how this site estimates the dollars',
   estimateNote: "The net across all three programs adds each program's estimated dollars for FY{fy}, the latest year they share. Readmissions' part can differ from the FY{pinFy} values on this page.",
   estimateOutPill: 'Not in the FY{fy} file',
   estimateOut: "Not in CMS's FY{fy} Readmissions file, so the net has no Readmissions dollars for this hospital.",

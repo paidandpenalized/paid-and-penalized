@@ -41,11 +41,9 @@ export const COPY = typesetCopy({
   typeUrban: 'Urban',
   typeRural: 'Rural',
 
-  // The net: its label and estimate tag, the stamp, the common fiscal year's note, then each program's dollars as rows
-  // adding to it, each with its peers' median tick, and the key to the tick.
+  // The net: its label (and the estimate tag, hub/parts.js), the stamp, the common fiscal year's note, then each program's
+  // dollars as rows adding to it, each with its peers' median tick, and the key to the tick.
   netLabel: 'Net, three programs, FY{fy}',
-  estimateTag: 'Estimate',
-  estimateTagLabel: 'Estimate: how this site estimates the dollars',
   stampCut: 'Net cut',
   stampBonus: 'Net bonus',
   stampZero: 'No net change',

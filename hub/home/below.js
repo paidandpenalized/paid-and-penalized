@@ -8,7 +8,7 @@
 // hospital page's strip drawing (.st: its gutter, grid, base line, inks and labels) and empty-program band.
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
-import { estTag, fillAround, fillCopy } from '../../web/render/components.js';
+import { fillCopy, sentenceOf } from '../../web/render/components.js';
 import { capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
@@ -17,14 +17,13 @@ import { shareDomain, shareScale, wholePercents } from '../client/scale.js';
 import { OUTSIDE, worksheetModel } from '../client/story/worksheet.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { ROWS, inProgram } from '../hospital/peers.js';
+import { arrow, estimateTag } from '../parts.js';
 import { holds, simpleFraction } from './claims.js';
 import { COPY } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
-const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: HOSPITAL_COPY.estimateTagLabel, text: HOSPITAL_COPY.estimateTag });
 // A sentence of copy with some placeholders filled with markup (parts) and the rest with words (values).
-const sentence = (key, parts, values = {}) => fillAround((marks) => fill(key, { ...values, ...marks }), parts);
+const sentence = sentenceOf(fill);
 
 // ---------- the program directory ----------
 

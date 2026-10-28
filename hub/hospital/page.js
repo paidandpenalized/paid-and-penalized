@@ -13,11 +13,11 @@
 //                       and its [data-match] and [data-reset] buttons (hidden until the script)
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
-import { estTag, fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
+import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, money, placeText } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
-import { hubPage } from '../parts.js';
+import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
 import { comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
@@ -32,8 +32,6 @@ const FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-ple
 // hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
 // Thirty Day Readmissions has (inTdr) has an interim Readmissions page (hub/hrrp/page.js).
 const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
-
-const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 
 // A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
@@ -92,7 +90,6 @@ ${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
 }
 
 // ---------- the net and its rows ----------
-const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: fill('estimateTagLabel'), text: fill('estimateTag') });
 
 const word = (id, dollars) => rowWord(fill, id, dollars);
 

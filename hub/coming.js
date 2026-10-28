@@ -6,14 +6,13 @@
 // so and promises no page and no date. Never indexed. A program's own page, if one is built, takes the same address.
 import { COPY as SHARED } from '../web/copy.js';
 import { programDek } from '../web/programs.js';
-import { estTag, fillCopy, formField, formTitle, sentenceOf, stamp } from '../web/render/components.js';
+import { fillCopy, formField, formTitle, sentenceOf, stamp } from '../web/render/components.js';
 import { money } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { SITE } from '../web/site.js';
 import { COPY } from './coming/copy.js';
 import { COPY as HOME } from './home/copy.js';
-import { COPY as HOSPITAL } from './hospital/copy.js';
-import { feedbackLink, hubPage } from './parts.js';
+import { estimateTag, feedbackLink, hubPage } from './parts.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const sentence = sentenceOf(fill);
@@ -24,7 +23,6 @@ const GROUPS = { quality: COPY.groupQuality, price: HOME.soonPrice, reporting: H
 const MOVED = { hvbp: (facts) => facts.vbpBonus };
 
 const arrow = html`<span class="ico ico--arrow cm__back" aria-hidden="true"></span>`;
-const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: HOSPITAL.estimateTagLabel, text: HOSPITAL.estimateTag });
 
 // The Figures field's value: the dollars the estimates move between hospitals, with the estimate tag, or none.
 function figures(program, facts, fy) {

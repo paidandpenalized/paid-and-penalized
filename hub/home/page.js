@@ -21,7 +21,7 @@ import { cardModel } from '../client/story/find.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { peersOf } from '../hospital/peers.js';
 import { EXAMPLE_CCN } from '../model.js';
-import { hubPage } from '../parts.js';
+import { arrow, hubPage } from '../parts.js';
 import { barFigure } from './bar.js';
 import { directory, methodsBrief, yourTurn } from './below.js';
 import { holds, simpleFraction } from './claims.js';
@@ -139,7 +139,7 @@ function exampleCard({ hospitals, fy }) {
 <dl class="card__rows" aria-label="${fill('cardRowsLabel', { fy: String(fy) })}">${m.rows.map(row)}</dl>
 <p class="card__peer">${m.peer}</p>
 <p class="card__next">${COPY.cardNext}</p>
-<a class="card__go" href="${m.href}">${COPY.cardGo}<span class="ico ico--arrow" aria-hidden="true"></span></a>
+<a class="card__go" href="${m.href}">${COPY.cardGo}${arrow}</a>
 </div>`;
 }
 
