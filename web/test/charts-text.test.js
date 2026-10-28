@@ -6,21 +6,42 @@ import assert from 'node:assert/strict';
 import { fitLabel, textWidth, wrapText } from '../charts/text.js';
 
 test('textWidth: the type face at 0.6em a character; in the body face a wide glyph costs more than a narrow one', () => {
-  assert.equal(textWidth('25% cut', 12, { mono: true }), 7 * 0.6 * 12);
+  assert.ok(Math.abs(textWidth('25% cut', 12, { mono: true }) - 7 * 0.6 * 12) < 1e-9);
   assert.ok(textWidth('WWW', 12) > textWidth('iii', 12) * 3);
   assert.ok(textWidth('Ab', 11) < textWidth('Ab', 12));
   assert.equal(textWidth('', 12), 0);
+  // Over by a few percent, not a fifth: Chrome draws this name 144.2 units wide at 12px in the site's face.
+  const w = textWidth('Washington, DC-MD area', 12);
+  assert.ok(w >= 144.2 && w <= 144.2 * 1.04, String(w));
+  assert.ok(textWidth('¤', 12) >= textWidth('W', 12), 'a character not in the table counts as the widest');
 });
 
-test('wrapText: lines fit the width, breaking after a space or a run of hyphens, and keep every character', () => {
+test('wrapText: lines fit the width, breaking after a space or a run of hyphens, and joined are the text', () => {
   const name = 'Nashville-Davidson--Murfreesboro--Franklin, TN area';
   const lines = wrapText(name, 140, 12);
   assert.ok(lines.length > 1);
-  for (const line of lines) assert.ok(textWidth(line, 12) <= 140, line);
-  assert.equal(lines.join(' ').replace(/- /g, '-'), name, 'nothing lost or doubled');
-  assert.ok(lines.every((line) => !line.startsWith('-')), 'a hyphen run stays on the line it ends');
+  for (const line of lines) assert.ok(textWidth(line.trimEnd(), 12) <= 140, line);
+  assert.equal(lines.join(''), name, 'nothing lost or doubled; a line broken at a space keeps it, for copy and find');
+  assert.ok(lines.every((line) => !line.startsWith('-') && !line.startsWith(' ')), 'a hyphen run stays on the line it ends');
   assert.deepEqual(wrapText('All hospitals', 300, 12), ['All hospitals']);
   assert.deepEqual(wrapText('Unbreakable', 10, 12), ['Unbreakable'], 'a piece wider than the width keeps its own line');
+});
+
+test('wrapText: a last line of one word takes the word before it when the line above has more and the two fit', () => {
+  // "Lake Charles, LA" fills the width and "area" would sit alone under it.
+  const width = textWidth('Lake Charles, LA', 12) + 1;
+  assert.deepEqual(wrapText('Lake Charles, LA area', width, 12), ['Lake Charles, ', 'LA area']);
+  // Over every width a group name might be wrapped to, no last line is a lone word that could have had company.
+  for (const name of ['Montgomery County-Bucks County-Chester County, PA area', 'West Palm Beach-Boca Raton-Delray Beach, FL area', 'Lake Charles, LA area']) {
+    for (let max = 60; max <= 320; max += 2) {
+      const lines = wrapText(name, max, 12);
+      if (lines.length < 2) continue;
+      const last = lines[lines.length - 1];
+      const above = lines[lines.length - 2].split(/(?<=\s)|(?<=-)(?!-)/);
+      const lone = !/[\s-]/.test(last.trim());
+      assert.ok(!(lone && above.length > 1 && textWidth(`${above[above.length - 1]}${last}`, 12) <= max), `${name} at ${max}: ${JSON.stringify(lines)}`);
+    }
+  }
 });
 
 test('fitLabel: a label that fits keeps its place; one past an end is set against that end, or beside its mark', () => {

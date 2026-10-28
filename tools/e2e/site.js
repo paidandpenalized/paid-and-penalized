@@ -119,6 +119,7 @@ export function peerChartSamples() {
   const charted = hospitals.filter((h) => h.total !== null && nat.groupsOf(h.ccn).length >= 2);
   const longest = (h) => Math.max(...nat.groupsOf(h.ccn).map((g) => groupLabel(g.kind, g.key, { metro: master.get(h.ccn)?.cbsaName }).length));
   const centred = charted.filter((h) => labelAt((h.total - lo) / (hi - lo)).anchor === 'middle');
+  if (!centred.length) throw new Error('peerChartSamples: no hospital in the data has a peer chart with a centred label');
   const pick = (type, h) => ({ type, name: type, path: hospitalPath(h.ccn) });
   return [
     pick('peers-long-name', charted.reduce((a, b) => (longest(b) > longest(a) ? b : a))),

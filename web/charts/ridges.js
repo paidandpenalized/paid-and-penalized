@@ -19,8 +19,9 @@ import { fitLabel, textWidth, wrapText } from './text.js';
 const WIDE_FROM = 400;
 const PLOT_H = 26;
 const GAP = 10;
-// The narrow drawing's room over each plot for one line of words; a line's height; the room kept between a row's
-// words and its share or (wide) its plot; the labels' and the sizes' type sizes (charts.css: 12px, notes 11px).
+// The narrow drawing's room over each plot for one line of words; a line's height; the room kept between a narrow row's
+// words and its share; the labels' and the sizes' type sizes (charts.css: 12px, notes 11px). A wide row's name may run
+// to its plot's start: its width is estimated over (text.js), so it ends short of the first column.
 const HEAD = 20;
 const LINE = 13;
 const ROOM = 8;
@@ -35,7 +36,7 @@ const lines = (x, y, cls, list) => html`<text class="${cls}" x="${x}" y="${r2(y)
 // lines across the plot.
 function wordsOf(row, wide, left, right) {
   if (wide) {
-    const wrapped = wrapText(row.label, left - ROOM, LABEL_PX);
+    const wrapped = wrapText(row.label, left, LABEL_PX);
     return { wrapped: wrapped.length > 1 ? wrapped : null, head: (wrapped.length - 1) * LINE };
   }
   const across = textWidth(`${row.label} `, LABEL_PX) + textWidth(row.sub, NOTE_PX) + ROOM + textWidth(row.share, LABEL_PX, { mono: true });

@@ -95,8 +95,9 @@
 .wi-cliff__level--zero { top: 2px; left: 0; }
 /* The cut's level: in the pit, against its right end and clear of CMS's line; where the pit is too narrow for one line (a
    phone, or a box just over 900px), its words go under its figure, the second line rising into the pit. On one line it
-   sits where it always has: 20px off the plot's foot, its figure 6.5px from its words (the old margin and space). */
-.wi-cliff__level--cut { bottom: 20px; left: calc(var(--line) * 100% + 6px); right: 4px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; column-gap: 6.5px; }
+   sits where it always has: 20px off the plot's foot, its figure 6.5px from its words (the old margin and space). A
+   figure wider than the pit starts at the pit's left (safe) and runs out of its right, never back across the line. */
+.wi-cliff__level--cut { bottom: 20px; left: calc(var(--line) * 100% + 6px); right: 4px; display: flex; flex-wrap: wrap; justify-content: safe flex-end; align-items: baseline; column-gap: 6.5px; }
 .wi-cliff__level--cut b { margin: 0; color: var(--pen-ink); }
 .wi-cliff__dot, .wi-cliff__start { position: absolute; left: calc(var(--at) * 100%); top: calc(var(--top) + var(--y) * var(--drop)); border-radius: 50%; }
 .wi-cliff__dot { z-index: 1; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 3px solid var(--ink); background: var(--paper); box-shadow: 0 0 0 2px var(--paper); transition: top 520ms cubic-bezier(0.55, 0, 0.9, 0.45); }

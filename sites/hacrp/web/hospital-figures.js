@@ -201,13 +201,14 @@ export function sumFigure({ view, n, source }) {
 
 
 // Where a score sits against the middle of each group's scores, in words for all, some or none of the k groups (none
-// above reads "below" in all of them, or "at or below" when the score sits on a group's middle).
+// above reads "below" in all of them, or "at or below" when the score sits on a group's middle; two groups are "both").
 export function peersPosition(total, rows) {
   const k = String(rows.length);
+  const all = rows.length === 2 ? t('figPeersBoth') : fill('figPeersEvery', { k });
   const above = rows.filter((r) => total > r.g.median).length;
-  if (above === rows.length) return fill('figPeersAboveAll', { k });
+  if (above === rows.length) return fill('figPeersAboveAll', { all });
   if (above > 0) return fill('figPeersAboveSome', { above: String(above), k });
-  return fill(rows.every((r) => total < r.g.median) ? 'figPeersBelowAll' : 'figPeersAtOrBelowAll', { k });
+  return fill(rows.every((r) => total < r.g.median) ? 'figPeersBelowAll' : 'figPeersAtOrBelowAll', { all });
 }
 
 export function peersFigure({ view, nat, master, n, source }) {

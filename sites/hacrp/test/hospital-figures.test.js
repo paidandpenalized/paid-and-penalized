@@ -182,6 +182,9 @@ test('the groups\' takeaway says where the score sits in words for all, some, on
   assert.equal(peersPosition(1, groups(0, 0.5, 3)), 'Its score is above the middle in 2 of the 3 groups it belongs to');
   assert.equal(peersPosition(-1, groups(0, 0.5, 3)), 'Its score is below the middle in all 3 groups it belongs to');
   assert.equal(peersPosition(0, groups(0, 0.5, 3)), 'Its score is at or below the middle in all 3 groups it belongs to', 'on a group\'s middle is not below it');
+  assert.equal(peersPosition(1, groups(0, 0.5)), 'Its score is above the middle in both groups it belongs to');
+  assert.equal(peersPosition(-1, groups(0, 0.5)), 'Its score is below the middle in both groups it belongs to');
+  assert.equal(peersPosition(0.2, groups(0, 0.5)), 'Its score is above the middle in 1 of the 2 groups it belongs to');
   // Every pinned hospital with the figure: the takeaway never counts zero groups.
   for (const h of DATA.hospitals.filter((x) => x.total !== null).slice(0, 400)) {
     const fig = peersFigure({ view: pinnedView(h), nat: NAT, master: DATA.master.get(h.ccn), n: 4, source: 's' });
