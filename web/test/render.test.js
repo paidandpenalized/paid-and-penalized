@@ -300,6 +300,9 @@ test('searchForm: a combobox over a data asset, hidden until its script shows it
   const hero = String(searchForm({ id: 'hero', hero: true, ...words }));
   assert.match(hero, /^<form class="omni omni--hero" id="hero" role="search"/);
   assert.match(hero, /for="hero-q"[\s\S]*id="hero-list"/);
+  // A search over the hub's hospitals and states is marked for the hub's search script; others are not.
+  assert.match(String(searchForm({ id: 'find', hero: true, hub: true, ...words })), /^<form class="omni omni--hero" id="find" role="search" aria-label="[^"]*" data-src="\/assets\/x\.json" data-hub hidden>/);
+  assert.doesNotMatch(bar + hero, /data-hub/);
 });
 
 // The feedback link's href as the browser reads it: the page's HTML attribute, unescaped, parsed as a URL.

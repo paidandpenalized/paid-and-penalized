@@ -1,0 +1,197 @@
+/* The hub's own pages (hub/), bundled after web/styles/ and every site's styles. Tokens only (tokens.css); no color is
+   written here. The bundle is one stylesheet for the whole family, so the home page's generic class names (.step,
+   .num, .card, .st, ...) are scoped to its story, and .story > .step undoes the program site's own .step.
+
+   The home page (hub/home/): the masthead hero, then the story. Without its script the story is complete: on a wide
+   screen the steps' words scroll in a column between the rail and the stage, and each of the stage's two charts sticks
+   beside the steps it belongs to (the scale bar beside steps 0 to 5, the states map beside 6 to 8: the stage's own box
+   is dropped, so its panels sit in the story's grid rows); on a phone the charts sit between the steps. */
+
+/* ---------- the hero: the wordmark across the page, the tagline and byline between rules, a heavy break rule ---------- */
+.hero { padding-top: 34px; }
+.hero__in { container-type: inline-size; }
+.hero__mark { margin: 0; color: var(--ink); font: 400 19.5cqi/1 var(--font-display); letter-spacing: -0.015em; }
+.hero__mark > span { display: block; width: max-content; }
+.hero__m2 { margin-top: -0.08em; color: var(--pen); }
+@media (min-width: 560px) {
+  .hero__mark { font-size: 11.5cqi; white-space: nowrap; }
+  .hero__mark > span { display: inline-block; }
+  .hero__m2 { margin-top: 0; }
+}
+.hero__strip { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 24px; margin-top: 18px; padding-block: 9px; border-block: 1px solid var(--ink); }
+.hero__tag { color: var(--pen-ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.hero__by { color: var(--ink-2); font: 400 var(--fs-sm)/1.45 var(--font-type); }
+.hero__by a { color: var(--ink); text-decoration-color: var(--pen); }
+.hero__rule { margin: 22px 0 0; border: 0; border-top: 5px double var(--ink); }
+
+/* ---------- the story: the rail, the steps' column and the stage, on the page's grid ---------- */
+/* --stage-top: where the rail and the charts stick, under the sticky header (its height, from web/client/topbar.js, or
+   about the header's height without that script). */
+.story {
+  --stage-top: var(--sticky-top, 100px);
+  --railw: 150px;
+  --textw: 400px;
+  display: grid;
+  grid-template-columns: var(--railw) var(--textw) minmax(0, 1fr);
+  grid-template-rows: repeat(9, auto);
+  max-width: var(--page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.story > * { min-width: 0; }
+
+/* The rail: the steps by name, a link to each, centred in the window beside the steps. */
+.railbox { grid-column: 1; grid-row: 1 / -1; position: sticky; top: var(--stage-top); align-self: start; display: flex; align-items: center; height: calc(100vh - var(--stage-top)); }
+.story .rail { margin: 0; padding: 0; border-left: 1px solid var(--line); list-style: none; }
+.story .rail li { position: relative; max-width: none; }
+.story .rail a { display: block; min-height: var(--target-min); padding: 6px 12px 6px 14px; color: var(--ink-3); font: 400 0.8125rem/1.2 var(--font-body); text-decoration: none; white-space: nowrap; }
+.story .rail a::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: -1px; width: 2px; }
+.story .rail a:hover { color: var(--ink); }
+.story .rail a[aria-current="step"] { color: var(--ink); font-weight: 600; }
+.story .rail a[aria-current="step"]::before { background: var(--pen); }
+
+/* The steps: a heading in the display face over a short column of words, each step about a window tall. */
+.story > .step { display: block; grid-column: 2; min-height: 92vh; margin: 0; padding: 32vh 40px 0 0; border: 0; }
+.story > .step[data-step="0"] { min-height: 70vh; padding-top: 44px; }
+.story > .step[data-step="8"] { min-height: calc(100vh - var(--stage-top)); padding-top: 9vh; padding-bottom: 12vh; }
+.step__in { max-width: 22em; }
+.step__in h2 { margin-bottom: 16px; font: 400 var(--fs-xl)/1.14 var(--font-display); letter-spacing: 0.003em; }
+.step__in > p { margin-bottom: 14px; color: var(--ink-2); }
+.step__in .num { color: var(--ink); font-weight: 700; }
+.step__in .num--pen { color: var(--pen-ink); }
+.step__in > .cue { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink); font: 600 0.875rem/1.3 var(--font-body); }
+.cue__line { position: relative; flex: none; width: 1px; height: 30px; background: var(--ink); }
+.cue__line::after { content: ""; position: absolute; bottom: 0; left: -3px; border: 3.5px solid transparent; border-top: 5px solid var(--ink); border-bottom: 0; }
+.step__in > .asof-line { margin-top: 20px; color: var(--ink-3); font: 400 0.78125rem/1.5 var(--font-type); }
+
+/* ---------- the stage: its charts, each sticking beside its steps ---------- */
+/* A panel fills its steps' rows; the chart in it (its pin) sticks within the panel, so it leaves with its last step. */
+.story > .stage { display: contents; }
+.stage__panel { grid-column: 3; min-width: 0; }
+.stage__panel--bar { grid-row: 1 / 7; }
+.stage__panel--map { grid-row: 7 / -1; }
+.stage__pin { position: sticky; top: var(--stage-top); display: flex; flex-direction: column; justify-content: center; height: calc(100vh - var(--stage-top)); }
+.stage__panel--bar > .stage__pin { padding-bottom: 8vh; }
+
+/* The scale bar (hub/home/bar.js): its words are HTML around a drawing that is graphics only. */
+.sbar { margin: 0; }
+.sbar__cap { max-width: none; color: var(--ink-3); font: 400 0.8125rem/1.4 var(--font-body); }
+.sbar__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; max-width: none; margin-top: 4px; }
+.sbar__pay { color: var(--ink); font: 400 1.75rem/1.15 var(--font-type); }
+.sbar__moved { color: var(--pen-ink); font: 400 1.0625rem/1.2 var(--font-type); }
+.sbar__draw { position: relative; margin-top: 6px; }
+.sbar__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sbar__frame { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.sbar__sliver, .sbar__np { fill: var(--pen); }
+.sbar__bo { fill: var(--rew); }
+.sbar__mag { fill: none; stroke: var(--pen); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.sbar__x { position: absolute; top: calc(var(--my) * 100%); right: calc((1 - var(--mx)) * 100% + 8px); color: var(--ink-3); font: 400 0.75rem/1 var(--font-type); transform: translateY(-50%); }
+.sbar__split { display: flex; justify-content: space-between; gap: 4px 16px; margin: 6px 0 0 calc(var(--mx) * 100%); }
+.sbar__part { max-width: none; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
+.sbar__part:first-child { flex: none; }
+.sbar__part--end { text-align: right; }
+.sbar__v { display: block; color: var(--ink); font: 400 0.9375rem/1.3 var(--font-type); }
+.sbar__v--pen { color: var(--pen-ink); }
+
+/* The states map (hub/home/states.js): the land in --paper-2, each state over it in its meaning ink at its step's
+   opacity (--t), Maryland hatched; the readout over it, the key and the small states' buttons under it. */
+.smapfig { display: flex; flex-direction: column; gap: 10px; }
+.story .readout { max-width: none; min-height: 2.7em; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.35; }
+.smap { display: block; width: 100%; height: auto; max-height: calc(100vh - var(--stage-top) - 13rem); overflow: visible; }
+.smap__land { fill: var(--paper-2); }
+.story .st { fill-opacity: var(--t); stroke: var(--paper); stroke-width: 1px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.story .st--pen { fill: var(--pen); }
+.story .st--rew { fill: var(--rew); }
+.story .st--zero { fill: none; }
+.story .st--md { fill: url(#smap-hatch); }
+.smap__hatch-bg { fill: var(--paper-2); }
+.smap__hatch { stroke: var(--ink-3); stroke-width: 1.2px; }
+.mapfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
+.dkey { color: var(--ink-3); font-size: 0.75rem; line-height: 1.35; }
+.dkey__t { max-width: none; margin-bottom: 5px; color: var(--ink-2); }
+.dkey__g { display: block; width: 240px; height: 10px; }
+.dkey__s { display: flex; justify-content: space-between; width: 240px; margin-top: 4px; font: 400 0.6875rem/1.3 var(--font-type); }
+.dkey__md { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+.dkey__hatch { flex: none; width: 14px; height: 10px; background: var(--hatch-fill), var(--paper-2); box-shadow: inset 0 0 0 1px var(--line); }
+.smalls { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; max-width: 330px; }
+.smalls[hidden] { display: none; }
+.smalls__cap { width: 100%; color: var(--ink-3); font-size: 0.75rem; text-align: right; }
+.story .sb { position: relative; width: 32px; height: var(--target-min); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 2px; background: var(--paper-2); color: var(--ink); font: 600 0.6875rem/1 var(--font-type); cursor: pointer; }
+.story .sb::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 4px; background: var(--pen); opacity: var(--t); }
+.story .sb--rew::after { background: var(--rew); }
+.story .sb--md::after { background: var(--hatch-fill); opacity: 1; }
+.story .sb--zero::after { content: none; }
+
+/* The peer toggle the last step's chart wears (the script shows it). */
+.story .peers { display: flex; align-items: center; gap: 10px; }
+.story .peers[hidden] { display: none; }
+.peers__lbl { color: var(--ink-3); font-size: 0.8125rem; }
+.story .seg { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: 2px; }
+.story .seg button { min-height: var(--target-min); padding: 6px 11px; border: 0; background: var(--paper); color: var(--ink-2); font: 600 0.78125rem/1 var(--font-body); cursor: pointer; }
+.story .seg button + button { border-left: 1px solid var(--line); }
+.story .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* ---------- the last step: the search over the hub's hospitals and the example card ---------- */
+.story .omni--hero { margin-top: 4px; }
+.story .omni--hero input { padding: 11px 14px; font-size: 1.0625rem; }
+.story .card { max-width: 380px; margin-top: 22px; padding-top: 12px; border-top: var(--rule) solid var(--ink); color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.card__ex { margin-bottom: 6px; color: var(--ink-3); font-size: 0.78125rem; }
+/* The hint points at the search, so it shows only with it. */
+.story .omni[hidden] + .card .card__hint { display: none; }
+.card__nm { color: var(--ink); font: 700 1.125rem/1.25 var(--font-body); }
+.card__loc { margin: 2px 0 10px; color: var(--ink-3); font-size: 0.8125rem; }
+.card__net { color: var(--ink); font: 400 1.5rem/1.1 var(--font-type); }
+.card__pct.v--pen { color: var(--pen-ink); }
+.card__usd { font-size: 0.9375rem; }
+.card__netl { margin: 3px 0 10px; color: var(--ink-3); font-size: 0.78125rem; }
+.card__rows { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 14px; margin: 0; padding: 8px 0; border-block: 1px solid var(--line); }
+.card__row { display: contents; }
+.card__rows dd { max-width: none; margin: 0; color: var(--ink); font: 400 0.8125rem/1.45 var(--font-type); text-align: right; white-space: nowrap; }
+.card__rows .v--pen { color: var(--pen-ink); }
+.card__rows .v--na { color: var(--ink-3); font-family: var(--font-body); }
+.card__peer { margin: 10px 0 8px; }
+.card__next { margin-bottom: 12px; color: var(--ink-3); font-size: 0.78125rem; }
+.card__go { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-h); padding: 10px 14px; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); font: 700 0.90625rem/1 var(--font-body); text-decoration: none; }
+.card__go:hover { background: var(--ink); color: var(--paper); }
+
+/* ---------- narrower: no rail; phones: one column, each chart between the steps ---------- */
+@media (max-width: 1079px) {
+  .story { --railw: 0px; --textw: 360px; }
+  .railbox { display: none; }
+  .story > .step { padding-right: 28px; }
+}
+@media (max-width: 760px) {
+  .hero { padding-top: 20px; }
+  .hero__rule { margin-top: 24px; }
+  .story { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  /* The bar first, then the steps, with the map after the step that names its states. */
+  .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { grid-column: 1; min-height: 0; padding: 36px 0 0; }
+  .step__in { max-width: none; }
+  .step__in h2 { margin-bottom: 10px; font-size: 1.375rem; }
+  .step__in > p { margin-bottom: 10px; font-size: 0.96875rem; line-height: 1.55; }
+  .stage__panel { grid-column: 1; }
+  .stage__pin { position: static; height: auto; }
+  .stage__panel--bar { grid-row: 1; padding-top: 28px; }
+  .stage__panel--bar > .stage__pin { padding-bottom: 0; }
+  .stage__panel--map { grid-row: 10; padding-top: 28px; }
+  .sbar__pay { font-size: 1.375rem; }
+  .sbar__moved { font-size: 0.9375rem; }
+  .smap { max-height: none; }
+  .story .card { max-width: none; }
+}
+
+@media print {
+  .railbox { display: none; }
+  .stage__pin { position: static; height: auto; }
+  .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { min-height: 0; padding-top: 24px; }
+}
+
+/* Forced colors: the meaning inks and the hatch keep their colors (each state's sign is in its title and the key's
+   words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
+@media (forced-colors: active) {
+  .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
+  .sbar__frame, .sbar__mag, .smap__hatch { stroke: CanvasText; }
+  .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }
+  .story .seg button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .story .rail a[aria-current="step"]::before { background: Highlight; }
+}

@@ -1,8 +1,8 @@
-// The hub: the family's front page (a stub until the hub is built), the methods stub, the policy pages (Terms,
-// privacy, About, accessibility, and corrections with its log), a placeholder per program without a site here
-// (coming.js), the not-found page, and the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the
-// sitemap lists every indexable page the sites before it emitted. The hub's own pages stay noindex until the hub is
-// built.
+// The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
+// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder per program
+// without a site here (coming.js), the not-found page, and the two files crawlers read: robots.txt and sitemap.xml. It
+// runs last, so the sitemap lists every indexable page the sites before it emitted. The hub's own pages stay noindex
+// until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
@@ -14,6 +14,9 @@ import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './cons
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
 import { PENDING, comingPage } from './coming.js';
+import { loadHub } from './data.js';
+import { homePage } from './home/page.js';
+import { hubHospitals, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -26,18 +29,11 @@ function siteLink(id) {
 }
 const SITE_IDS = Object.keys(SITE.sites);
 
+// The front page, from the hub's data (hub/data.js reads it once per build).
 function home(assets, robots) {
-  const body = html`<article class="wrap page home">
-<header class="page__head">
-<h1 class="home__mark">${SHARED.wordmarkLead} <span class="wordmark__pen">${SHARED.wordmarkPen}</span></h1>
-<p class="dek">${SHARED.tagline}</p>
-</header>
-<section class="block" aria-labelledby="sites-h">
-<h2 id="sites-h" class="h-sm">${COPY.sitesHeading}</h2>
-<ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
-</section>
-</article>`;
-  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, scripts: [assets.js.topbar], assets });
+  const hub = loadHub();
+  const hospitals = hubHospitals(hub);
+  return homePage({ hospitals, facts: storyFacts(hospitals), states: stateTotals(hospitals), shapes: hub.shapes, assets, robots });
 }
 
 function methods(assets, robots) {
@@ -165,4 +161,4 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
-export const HUB = { id: 'hub', entries: {}, styles: [], generate: generateHub };
+export const HUB = { id: 'hub', entries: {}, styles: ['hub/styles.css'], generate: generateHub };

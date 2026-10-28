@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css'];
+const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'hub/styles.css'];
 const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
@@ -35,6 +35,9 @@ const MARKS = [
   '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
   '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
   '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
+  // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
+  '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
+  '.st--md', '.dkey__hatch', '.sb',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.
@@ -69,7 +72,7 @@ test('a state shown only by fill or shadow keeps a system-color cue under forced
 });
 
 test('a hatch drawn with a CSS gradient is redrawn under forced colors with its own system colors', () => {
-  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar']) {
+  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar', '.dkey__hatch']) {
     const rule = new RegExp(`${escape(mark)}[^{]*\\{[^}]*forced-color-adjust: none`);
     assert.match(forced, rule, `${mark} opts out of the adjustment`);
   }

@@ -18,23 +18,26 @@ import { policyPage } from '../policy.js';
 
 const NOINDEX = '<meta name="robots" content="noindex">';
 
-test('the hub writes the stub root, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
+test('the hub writes the home page, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
   withTemp('pp-hub-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     ctx.emit({ path: '/hacrp/', robots: null, text: 'a' });
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    // The three pages before, the stub root, /methods/, the 404 page, the five policy pages and a placeholder per
+    // The three pages before, the home page, /methods/, the 404 page, the five policy pages and a placeholder per
     // program without a site here.
     const placeholders = SITE.programs.filter((p) => p.stage !== 'live');
     assert.equal(ctx.pages, 3 + 3 + 5 + placeholders.length);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
+    // The home page is the story (hub/test/home.test.js has its parts): the masthead, then the story's steps and stage.
     const home = read('index.html');
     assert.ok(home.includes('Public Medicare data, made visible.'));
-    assert.match(home, /href="\/hacrp\/">Hospital-Acquired Conditions <span class="short">\(HACRP\)<\/span>/);
+    assert.match(home, /<h1 class="hero__mark"/);
+    assert.match(home, /<div class="story" data-story>[\s\S]*<div class="stage" data-stage>/);
+    assert.ok(home.includes(`<title>${escapeHtml(SITE.name)}</title>`));
 
     const methods = read('methods/index.html');
     assert.match(methods, /id="estimate"/);
