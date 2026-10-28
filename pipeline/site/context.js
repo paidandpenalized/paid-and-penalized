@@ -33,8 +33,8 @@ export function siteDates(siteId, result) {
   return { cmsReleased, changed };
 }
 
-// shell: the facts the header and footer show on every page, computed once by the build (build.js); it becomes
-// ctx.assets.shell, beside the paths in `assets` (which the caller's object keeps unchanged). Leave it out when
+// shell: the facts the header and footer show on every page, computed once by the build (build.js's buildContext); it
+// becomes ctx.assets.shell, beside the paths in `assets` (which the caller's object keeps unchanged). Leave it out when
 // `assets` already holds one.
 export function createContext({ outDir, env, assets, shell }) {
   const written = new Set();

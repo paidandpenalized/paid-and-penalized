@@ -8,7 +8,7 @@ import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
-import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
+import { SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { htmlPages, tags } from '../site/html.js';
@@ -151,6 +151,21 @@ test('createContext puts the shell\'s facts on ctx.assets.shell without changing
   assert.equal(assets.shell, shell, 'the caller\'s object is not edited');
   assert.equal(ctx.assets.css, assets.css);
 });
+
+test('buildContext, the build\'s own path to a context, writes the hub\'s asset and passes the shell through createContext, leaving the assets it was given untouched', () =>
+  withTemp(async (dir) => {
+    const assets = Object.freeze({ css: '/assets/site.test.css', js: Object.freeze({ shell: '/assets/shell.test.js' }) });
+    const ctx = buildContext({ outDir: dir, env: 'preview', assets });
+    assert.notEqual(ctx.assets, assets);
+    assert.equal(assets.shell, undefined, 'the caller\'s object is not edited');
+    assert.equal(ctx.assets.css, assets.css);
+    assert.equal(ctx.assets.js, assets.js);
+    assert.equal(ctx.env, 'preview');
+    const { hubUrl, ...facts } = ctx.assets.shell;
+    assert.match(hubUrl, /^\/assets\/hub-hospitals\.[0-9a-f]{8}\.json$/);
+    assert.ok(existsSync(join(dir, hubUrl)), 'the asset the facts name is written');
+    assert.deepEqual(Object.keys(facts), ['fy', 'hospitals', 'changed', 'programs']);
+  }));
 
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {
   assert.equal(SITES.at(-1), HUB);

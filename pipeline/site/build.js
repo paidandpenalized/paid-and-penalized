@@ -12,7 +12,7 @@ import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
 import { SITE } from '../../web/site.js';
-import { buildAssets } from './assets.js';
+import { buildAssets, writeHashed } from './assets.js';
 import { createContext, siteDates } from './context.js';
 import { headersFile } from './headers.js';
 
@@ -54,15 +54,17 @@ export function mergeEntries(...sets) {
   return merged;
 }
 
-// The hub's one browser asset (every hospital's dollars and place, hub-hospitals.<hash>.json) and the facts every page's
-// shell shows (hub/model.js's shellFacts, and hubUrl: the asset's path), computed once for the whole build and handed to
-// every page as ctx.assets.shell. A change to the dollar estimates changes the facts on every page, the hub's and a
-// program site's alike.
-function hubShell(ctx) {
+// The build's context for the sites. The hub's one browser asset (every hospital's dollars and place,
+// hub-hospitals.<hash>.json) is written once, and the facts every page's shell shows (hub/model.js's shellFacts, and
+// hubUrl: the asset's path) are computed once and handed to every page as ctx.assets.shell. A change to the dollar
+// estimates changes the facts on every page, the hub's and a program site's alike. `assets` (what buildAssets
+// returned) is not edited: createContext copies it with the shell added.
+export function buildContext({ outDir, env, assets }) {
   const hub = loadHub();
   const hospitals = hubHospitals(hub);
   const facts = shellFacts({ facts: storyFacts(hospitals), builtAt: hub.builtAt, fy: hub.fy });
-  return { ...facts, hubUrl: ctx.asset('hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub))) };
+  const hubUrl = writeHashed(join(outDir, 'assets'), 'hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub)));
+  return createContext({ outDir, env, assets, shell: { ...facts, hubUrl } });
 }
 
 export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites = SITES } = {}) {
@@ -74,8 +76,7 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
     entries: mergeEntries(SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
     styles: sites.flatMap((s) => s.styles ?? []),
   });
-  const ctx = createContext({ outDir: dir, env, assets });
-  ctx.assets.shell = hubShell(ctx);
+  const ctx = buildContext({ outDir: dir, env, assets });
   const updated = new Map();
   for (const site of sites) {
     const result = await site.generate(ctx, { updated });
