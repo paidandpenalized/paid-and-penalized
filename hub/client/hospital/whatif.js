@@ -15,7 +15,7 @@
 // the banner resets the page.
 import { factor, money } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
-import { SITE } from '../../../web/site.js';
+import { programById } from '../../../web/site.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
@@ -29,7 +29,6 @@ const usd = (x) => money(x, { sign: true });
 const frac = (x) => String(Math.round(x * 1e4) / 1e4);
 // The actual struck through beside a figure only where the two print differently (a cent of arithmetic is not news).
 const struck = (now, actual) => (usd(now) === usd(actual) ? null : actual);
-const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
 const INK = { cut: 'pen', bonus: 'rew', zero: null };
 // How long the "What if? Adjust any program" button's jump takes before the first handle takes focus and wiggles.
 const JUMP_MS = 450;
@@ -106,7 +105,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     const row = $(`[data-row="${id}"]`);
     const adjustable = id === 'hacrp' || rng[id];
     if (!row || !adjustable) continue;
-    const program = PROGRAM[id].name;
+    const program = programById(id).name;
     const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, cuts: [], editing: false };
     const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': ROW_KEY[id] }, [fill('wiMedian')]);
     let kids;

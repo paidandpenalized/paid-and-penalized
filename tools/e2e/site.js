@@ -13,7 +13,7 @@ import { nationalContext } from '../../sites/hacrp/web/compare.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { groupLabel } from '../../sites/hacrp/web/groups.js';
 import { labelAt } from '../../web/whatif/marks.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
 // The browser engines Playwright drives, by the name E2E_ENGINE takes.
@@ -144,14 +144,14 @@ export function samplePages() {
   return [
     page('hub', '/'),
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', name: `policy ${path}`, path })),
-    page('coming', SITE.programs.find((p) => p.id === 'hvbp').path),
+    page('coming', programById('hvbp').path),
     page('program', PROGRAM_PATH),
     ...HOSPITALS.map(([type]) => hospitalSample(type, all)),
     ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
     ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
-    page('hrrp', SITE.programs.find((p) => p.id === 'hrrp').path),
+    page('hrrp', programById('hrrp').path),
     ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hubData, hub)),
     page('not-found', '/no-page-has-this-address/'),
   ];

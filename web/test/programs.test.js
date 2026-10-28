@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { COPY } from '../copy.js';
 import { LINE_PERCENTILE } from '../../engine/js/hacrp/history.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek } from '../programs.js';
-import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programOf, siteOf } from '../site.js';
+import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programById, programOf, siteOf } from '../site.js';
 
 const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
 
@@ -39,7 +39,7 @@ test('the registry\'s groups: listed (full tabs and the footer\'s figures), unli
 
 test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
   assert.deepEqual(Object.keys(SITE.sites), ['hacrp']);
-  assert.equal(SITE.sites.hacrp.path, SITE.programs.find((p) => p.id === 'hacrp').path);
+  assert.equal(SITE.sites.hacrp.path, programById('hacrp').path);
   assert.equal(siteOf('/hacrp/hospital/990001/'), SITE.sites.hacrp);
   assert.equal(siteOf('/hrrp/'), null);
 });
@@ -51,7 +51,7 @@ test('the registry\'s stage and SITE.sites agree: every live program has a site 
     else assert.equal(site, null, `${p.id}: a ${p.stage} program has no entry in SITE.sites`);
   }
   for (const p of PLACEHOLDER_PROGRAMS) assert.ok(!Object.hasOwn(SITE.sites, p.id), p.id);
-  for (const id of Object.keys(SITE.sites)) assert.equal(SITE.programs.find((p) => p.id === id)?.stage, 'live', `SITE.sites.${id} is a live program`);
+  for (const id of Object.keys(SITE.sites)) assert.equal(programById(id)?.stage, 'live', `SITE.sites.${id} is a live program`);
 });
 
 test('programOf names the program whose folder holds the path, or null for the family\'s own pages', () => {
@@ -60,6 +60,11 @@ test('programOf names the program whose folder holds the path, or null for the f
   assert.equal(programOf('/hrrp/hospital/990001/')?.id, 'hrrp');
   assert.equal(programOf('/wage-index/')?.id, 'wage-index');
   for (const path of ['/', '/methods/', '/hospital/990001/', '/hacrpx/', '/404.html']) assert.equal(programOf(path), null, path);
+});
+
+test('programById: each program by its id, the registry\'s own entry; null for any other id', () => {
+  for (const p of SITE.programs) assert.equal(programById(p.id), p, p.id);
+  for (const id of ['hub', 'HRRP', 'toString', '__proto__', '', undefined]) assert.equal(programById(id), null, String(id));
 });
 
 test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital Thirty Day Readmissions has, no other program', () => {

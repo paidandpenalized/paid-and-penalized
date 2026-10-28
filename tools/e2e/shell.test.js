@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { STATUS_CODES } from '../../web/client/hub-asset.js';
 import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
-import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
+import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample } from './site.js';
@@ -34,7 +34,7 @@ const HOSPITAL = hospitalSample('hospital-cut').path;
 // The front page (its story fetches the hub's asset to draw its dots), another hub page, a placeholder for a program
 // without a site here, the program page and a hospital's page there: each wears the same header, [the name a test's
 // title gives it, path].
-const PLACEHOLDER = SITE.programs.find((p) => p.id === 'hvbp').path;
+const PLACEHOLDER = programById('hvbp').path;
 const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', PLACEHOLDER], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
 
 // The hub's asset as the page's header names it, fetched in the page: its fiscal year and its rows as { ccn, name, net,

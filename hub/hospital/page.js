@@ -16,14 +16,13 @@ import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { estTag, fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, money } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, inProgram, peerGroup, rowDollars, sumScale, sumValues } from './peers.js';
 import { comparison, rowWord, signOf, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
 
 // The fonts the first screen shows: the name in the display face, the body face, and IBM Plex Mono in both weights (the
 // record's fields and the net's large figure).
@@ -40,7 +39,7 @@ const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
 // one).
 function deepLink(h, id) {
-  const { name, path, stage } = PROGRAM[id];
+  const { name, path, stage } = programById(id);
   const own = pageOf(h, id);
   if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
   return stage === 'soon'
@@ -116,7 +115,7 @@ function track(x, own, median) {
 // The scale holds the medians of every way the hospital can be grouped (sets), so the page's peer toggle moves only the
 // ticks.
 function sumRows(h, figures, fy, sets) {
-  const rows = [...ROWS.map((r) => ({ id: r.id, label: PROGRAM[r.id].name })), { id: 'net', label: fill('sumNet') }]
+  const rows = [...ROWS.map((r) => ({ id: r.id, label: programById(r.id).name })), { id: 'net', label: fill('sumNet') }]
     .map((row) => ({ ...row, ...rowDollars(h.est, row.id, figures) }));
   const x = sumScale(sumValues(h.est, sets));
   const zero = x(0);
@@ -184,7 +183,7 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 
 // ---------- the what-if section ----------
 function programRow(h, id, figures, ctx) {
-  const { name, ab } = PROGRAM[id];
+  const { name, ab } = programById(id);
   const listed = inProgram(h.est, id);
   const own = rowDollars(h.est, id, figures).own;
   const value = listed

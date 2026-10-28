@@ -11,7 +11,7 @@ import { count, decimal, money, pct, shown } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { COPY as HOSPITAL } from '../hospital/copy.js';
 import { recordSpecs } from '../hospital/page.js';
 import { hubPage } from '../parts.js';
@@ -28,7 +28,7 @@ const FACTOR_DP = 4;
 const REDUCTION_DP = 2;
 const ERR_PAR = 1;
 
-const HRRP = SITE.programs.find((p) => p.id === 'hrrp');
+const HRRP = programById('hrrp');
 const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 // The large link out, to Thirty Day Readmissions (the site, or one hospital's place on it): new tab, rel noopener.
 const explorer = (href) => html`<p class="rd__go">${externalLink(href, html`${fill('explorer')} ${arrow}`)}</p>`;

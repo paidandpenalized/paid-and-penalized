@@ -10,7 +10,7 @@ import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink } from '../web/render/layout.js';
-import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
@@ -160,7 +160,7 @@ function hospitalPages(ctx, { hospitals, master, robots, never }) {
 // program's own site and say so, and the full explorer is the page to find. The sitemap leaves them out.
 function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
   const { assets } = ctx;
-  ctx.emit({ path: SITE.programs.find((p) => p.id === 'hrrp').path, robots: never, text: hrrpProgramPage({ tdr, assets, robots: never }) });
+  ctx.emit({ path: programById('hrrp').path, robots: never, text: hrrpProgramPage({ tdr, assets, robots: never }) });
   const byCcn = new Map(hospitals.map((h) => [h.ccn, h]));
   for (const record of tdr.hospitals.values()) {
     if (only && !only.has(record.id)) continue;

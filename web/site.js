@@ -56,6 +56,10 @@ export const SITE = {
 // family's own pages (the hub).
 export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.startsWith(site.path)) ?? null;
 
+// A program by its id (SITE.programs), or null for an id the registry has not.
+const BY_ID = new Map(SITE.programs.map((p) => [p.id, p]));
+export const programById = (id) => BY_ID.get(id) ?? null;
+
 // The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
 
@@ -75,6 +79,6 @@ export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.
 export function hospitalPathOf(programId, ccn, { inTdr = false } = {}) {
   const folder = ccn.toLowerCase();
   if (programId === 'hub') return `/hospital/${folder}/`;
-  const program = SITE.programs.find((p) => p.id === programId);
+  const program = programById(programId);
   return program && (programId === 'hacrp' || (programId === 'hrrp' && inTdr)) ? `${program.path}hospital/${folder}/` : null;
 }

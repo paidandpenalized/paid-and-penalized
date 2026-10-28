@@ -3,7 +3,7 @@
 // (a bundle that imports shell.js would run it twice). Strings in, strings out; nothing reads the page or stores
 // anything. A value that is not a CCN is nothing: no hospital is followed, and nothing is built from it.
 import { CCN } from '../../engine/js/ccn.js';
-import { SITE, hospitalPathOf } from '../site.js';
+import { SITE, hospitalPathOf, programById } from '../site.js';
 
 // Six ASCII digits or letters, in either case. Checked before the CCN is uppercased, because uppercasing turns a few
 // other characters (a dotless i, a long s) into ASCII letters, and those are not a lowercase CCN.
@@ -28,7 +28,7 @@ export function tabHref(program, ccn, row = null) {
   if (program === null || program === 'hub') return hospitalPathOf('hub', ccn);
   const own = hospitalPathOf(program, ccn, { inTdr: Boolean(row?.inTdr) });
   if (own) return own;
-  const folder = SITE.programs.find((p) => p.id === program)?.path;
+  const folder = programById(program)?.path;
   if (!folder) throw new RangeError(`tabHref: no program "${program}"`);
   return withFollow(folder, ccn);
 }

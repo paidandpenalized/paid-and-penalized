@@ -7,7 +7,7 @@ import { hospitalHref } from '../../sites/hacrp/web/hospital-table.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/web/links.js';
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
 import { HOSPITALS_PATH } from '../../sites/hacrp/web/view.js';
-import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 
 export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 // A hospital's page, by its CCN (any case): '/hacrp/hospital/<ccn, lowercase>/'.
@@ -39,7 +39,7 @@ const hospitalPageIn = (programId) => {
 const isHubHospital = hospitalPageIn('hub');
 const isHrrpHospital = hospitalPageIn('hrrp');
 // The interim Readmissions page (hub/hrrp/page.js): the program's folder.
-const HRRP_PATH = SITE.programs.find((p) => p.id === 'hrrp').path;
+const HRRP_PATH = programById('hrrp').path;
 // The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
 export const placeKind = (path) => KINDS.find((kind) => {
   const key = folderUnder(path, `${PROGRAM_PATH}${kind}/`);
