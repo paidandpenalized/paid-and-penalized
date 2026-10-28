@@ -377,6 +377,31 @@ for (const width of [390, 1280]) {
   });
 }
 
+// On a phone the story's first screen before its script runs is the one the script sets (the chart pinned under the
+// words, the story as tall), so nothing moves when it starts: the rules hub/styles.css copies from the live layout stay
+// in step with it.
+for (const width of [320, 390]) {
+  describe(`the phone story before its script at ${width} px`, () => {
+    const tabs = useContext(shared, { width, height: 844 });
+    it('lays out the chart, the first step and the story\'s height as the live story does', () => withPage(tabs, { path: '/about/' }, async (page) => {
+      const boxes = () => page.evaluate(() => {
+        const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return [r.top, r.height].map((v) => Math.round(v)); };
+        return { stage: box('.stage'), bar: box('.sbar'), first: box('#step-scale'), story: box('.story') };
+      });
+      await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
+      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await page.evaluate(() => document.fonts.ready);
+      const before = await boxes();
+      await page.unroute(/\/assets\/hub-home\.[^/]+\.js$/);
+      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await settle(page);
+      assert.deepEqual(before, await boxes(), 'the same boxes before the script and once it has drawn');
+    }));
+  });
+}
+
 // Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
 // (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
 // header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.

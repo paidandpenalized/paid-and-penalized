@@ -307,7 +307,8 @@
 }
 
 /* Before the story's script runs (scripts on), a phone sets the story's first screen as the live layout above will
-   (the chart pinned under the words: only the rules that place it), so the page does not jump when the script starts.
+   (the chart pinned under the words: only the rules that place it or set the story's height), so the page does not jump
+   when the script starts.
    The script's .story--live then takes over; .story--static (its data failed) and scripts off keep the server's
    layout. Change these with the live rules they copy. */
 @media (scripting: enabled) and (max-width: 760px) {
@@ -319,6 +320,12 @@
   .story:not(.story--live):not(.story--static) > .step { min-height: calc(100svh - var(--stage-h) - var(--stage-top) + 200px); padding: 56px 0 0; }
   .story:not(.story--live):not(.story--static) > .step[data-step="0"] { padding-top: 40px; }
   .story:not(.story--live):not(.story--static) > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
+  /* The last step's card, trimmed as the live layout trims it, so the story is the same height before and after (the
+     pinned chart's place follows the story's end). */
+  .story:not(.story--live):not(.story--static) .card { margin-top: 14px; padding-top: 8px; }
+  .story:not(.story--live):not(.story--static) :is(.card__rows, .card__next) { display: none; }
+  .story:not(.story--live):not(.story--static) :is(.card__loc, .card__netl) { margin-bottom: 6px; }
+  .story:not(.story--live):not(.story--static) .card__peer { margin: 6px 0; }
 }
 
 @media print {
