@@ -146,8 +146,12 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
 
   for (const b of buttons) {
     b.addEventListener('click', () => {
-      if (b.getAttribute('aria-disabled') === 'true' || modeFor(current()) === b.dataset.peer) return;
+      if (b.getAttribute('aria-disabled') === 'true') return;
+      // The reader's choice is remembered even when it is already what shows (a hospital with no group in the mode
+      // chosen before shows by state), so the next hospital keeps it.
+      const was = modeFor(current());
       mode = b.dataset.peer;
+      if (mode === was) return;
       paint();
       stage.regroup();
     });

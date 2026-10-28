@@ -70,6 +70,18 @@ function start(root) {
   };
   window.addEventListener('hashchange', () => goToState(true));
   goToState(false);
+  // A state picked in the bar's search while on this page: the same state again changes no fragment (no hashchange),
+  // so the pick is taken here and the story goes to the state either way.
+  for (const bar of document.querySelectorAll('form.omni[data-hub]')) {
+    if (bar === form) continue;
+    bar.addEventListener('hub:pick', (e) => {
+      const to = new URL(e.detail.href, window.location.href);
+      if (to.origin !== window.location.origin || to.pathname !== window.location.pathname || !stateFromHash(to.hash)) return;
+      e.preventDefault();
+      if (window.location.hash === to.hash) goToState(true);
+      else window.location.hash = to.hash;
+    });
+  }
 
   loadHubAsset(src).then(({ hospitals, fy, mapW, mapH, byCcn }) => {
     const rows = storyRows(hospitals);

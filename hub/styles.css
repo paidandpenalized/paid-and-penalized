@@ -257,6 +257,9 @@
   .story--live .step__in { position: sticky; top: calc(var(--stage-top) + 12px); }
   .story--live > .step--tall .step__in, .story--live > .step[data-step="8"] .step__in { position: static; }
   .story--live .smap { max-height: calc(var(--stage-h) - 11rem); }
+  /* A control in the steps' words (the last step's search and card link) that takes the keyboard's focus is scrolled
+     clear of the pinned chart, never left under it; the chart's own controls (the states, the peer toggle) are not. */
+  .story--live > .step :is(a, button, input) { scroll-margin-bottom: calc(var(--stage-h) + 8px); }
   /* The peer toggle in the stage's top right, beside the step's name; its label said to a screen reader only. */
   .story--live .peers { top: 6px; right: 10px; left: auto; justify-content: flex-end; max-width: calc(100% - 120px); }
   .story--live .peers__lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -154,6 +154,10 @@ describe('states you can read, and Find yours', () => {
       return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === null)[at('ccn')];
     });
     await page.evaluate(() => document.addEventListener('hub:select', (e) => { window.selected = e.detail.ccn; }));
+    // The reader groups the example by teaching status first.
+    await page.locator('#step-find').scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+    await page.locator('.peers [data-peer="teach"]').click();
     const box = page.locator('main form#find').getByRole('combobox');
     await box.pressSequentially(ccn.toLowerCase());
     await page.locator('main form#find [role="option"]').first().waitFor();
@@ -165,6 +169,66 @@ describe('states you can read, and Find yours', () => {
       why: document.querySelector('#peers-no-teach').checkVisibility(), example: document.querySelector('.card__ex').hidden,
     }));
     assert.deepEqual(s, { path: '/', selected: ccn, step: '8', teach: 'true', why: true, example: true });
+    // Shown by state (it has no teaching group), "Same state" is still the reader's choice for the next hospital.
+    const pressed = () => page.evaluate(() => [...document.querySelectorAll('.peers [data-peer]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.peer));
+    await page.locator('.peers [data-peer="state"]').click();
+    const other = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === 'major')[at('ccn')];
+    });
+    await box.fill('');
+    await box.pressSequentially(other.toLowerCase());
+    await page.locator('main form#find [role="option"]').first().waitFor();
+    await box.press('Enter');
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, other);
+    assert.deepEqual(await pressed(), ['state']);
+    await page.locator('.peers [data-peer="teach"]').click();
+    assert.deepEqual(await pressed(), ['teach']);
     await assertQuiet(seen, 'find yours');
   }));
+
+  it('a state picked twice in the bar\'s search on the front page goes to it both times', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    const box = page.locator('.topbar form#omni').getByRole('combobox');
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await settle(page);
+      await box.fill('');
+      await box.pressSequentially('Ohio');
+      await page.locator('.topbar form#omni [role="option"]').filter({ hasText: 'Ohio' }).first().click();
+      await page.waitForFunction(() => document.querySelector('.story').dataset.step === '7' && document.querySelector('.readout').textContent.startsWith('Ohio:'));
+      assert.equal(new URL(page.url()).hash, '#state=OH', `pick ${i + 1}`);
+    }
+    await assertQuiet(seen, 'a state picked twice');
+  }));
 });
+
+// On a phone the chart is pinned over the lower part of the window: a keyboard reader who tabs to the last step's search
+// and its card's link finds each in view, clear of the chart, and then reaches the peer toggle on the chart.
+for (const [width, height] of [[390, 844], [320, 640]]) {
+  describe(`Find yours by keyboard at ${width} px`, () => {
+    const tabs = useContext(shared, { width, height });
+
+    it('Tab reaches the search and the card\'s link clear of the pinned chart, then the peer toggle', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      const reached = [];
+      for (let i = 0; i < 80 && !reached.some((f) => f.peer === 'teach'); i++) {
+        await page.keyboard.press('Tab');
+        await settle(page);
+        const f = await page.evaluate(() => {
+          const el = document.activeElement;
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { id: el.id || el.className, peer: el.dataset?.peer ?? null, clear: Boolean(hit) && (el.contains(hit) || hit.contains(el)) && !(hit.closest('[data-stage]') && !el.closest('[data-stage]')) };
+        });
+        if (f.id === 'find-q' || f.id === 'card__go' || f.peer) reached.push(f);
+      }
+      assert.deepEqual(reached.map((f) => f.id === 'find-q' || f.id === 'card__go' ? f.id : f.peer), ['find-q', 'card__go', 'state', 'size', 'teach']);
+      for (const f of reached) assert.ok(f.clear, `${f.id}${f.peer ? ` ${f.peer}` : ''} is in view, not under the chart`);
+      await assertQuiet(seen, `Find yours by keyboard at ${width} px`);
+    }));
+  });
+}

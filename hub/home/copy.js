@@ -70,8 +70,8 @@ export const COPY = typesetCopy({
   findLabel: 'Find your hospital',
   findWord: 'Find',
   findRest: 'your hospital among its peers',
-  // Short enough to show whole in the box at every width.
-  findPlaceholder: 'Hospital name or city',
+  // Short enough to show whole in the box at every width, down to 320.
+  findPlaceholder: 'Hospital or city',
 
   // The scale bar (bar.js). Its caption ({n} hospitals), the pay and what the programs move ({gross}, {share}, with the
   // words that say so), the magnification ({times}), the two parts, and the image's takeaway for a screen reader.
