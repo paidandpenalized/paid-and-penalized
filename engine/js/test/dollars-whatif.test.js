@@ -133,6 +133,20 @@ test('a scenario that is not a number or not a boolean throws instead of printin
   assert.throws(() => programDollars(row, { cut: 'yes' }), TypeError);
 });
 
+test('a changed factor must be a positive adjustment factor, as the Python twin\'s _factor requires: zero and negatives throw', () => {
+  const row = synthetic();
+  for (const key of ['hrrpFactor', 'vbpFactor']) {
+    for (const bad of [0, -0, -0.5, -1]) {
+      assert.throws(() => programDollars(row, { [key]: bad }), (e) => e instanceof RangeError && e.message.includes(key), `${key} ${bad}`);
+    }
+  }
+  // Even a value equal to the row's own factor is refused when it is not positive: the check is on the scenario.
+  assert.throws(() => programDollars(synthetic({ hrrpFactor: 0 }), { hrrpFactor: 0 }), RangeError);
+  // A small positive factor is a legal (if extreme) scenario: the whole base is taken.
+  assert.equal(programDollars(row, { hrrpFactor: 0.000001 }).hrrp, -1000000 + 1);
+  assert.equal(programDollars(row, { hrrpFactor: 1e-9 * 2 }).hrrp, -1000000);
+});
+
 test('netShare is a fraction of the estimated Medicare inpatient pay', () => {
   assert.equal(netShare(-5, 1000), -0.005);
   assert.equal(netShare(0, 1000), 0);

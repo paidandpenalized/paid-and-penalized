@@ -33,11 +33,13 @@ export function roundHalfEven(x) {
 }
 
 // The scenario's factor for a program when it names one that differs from the row's (a closer pair is the same factor),
-// else null: the program keeps the row's dollars.
+// else null: the program keeps the row's dollars. A factor is a positive multiplier (1 = no adjustment), as the Python
+// twin's `_factor` requires: 0 would take the whole base and a negative one more than the base.
 const changedFactor = (scenario, key, actual) => {
   const wanted = scenario?.[key];
   if (wanted === undefined) return null;
   assertFinite(wanted, key);
+  if (!(wanted > 0)) throw new RangeError(`${key} must be a positive adjustment factor (1 = none), not ${wanted}`);
   return Math.abs(wanted - actual) >= SAME_FACTOR ? wanted : null;
 };
 
@@ -61,7 +63,10 @@ export function derivedDollars({ total, hrrp, hvbp }) {
 // meaning "as it is". A program whose scenario value equals the row's keeps the row's dollars, so no scenario (or one
 // equal to the actual values) returns the emitted figures exactly. A changed factor gives round(base x (factor - 1));
 // `after` is the total plus both; the at-stake figure is the row's unless a factor changed, else round(1% x after); the
-// HAC dollars are minus that when the hospital is cut and a plain 0 when not; the net is the three added.
+// HAC dollars are minus that when the hospital is cut and a plain 0 when not; the net is the three added. A changed
+// factor is applied to the row's whole-dollar `base`, the only base the emitted file holds, so it can differ by up to a
+// dollar from what dollars.py would emit at that factor from the unrounded base: a what-if is hypothetical and shown in
+// K and M, so the dollar is accepted.
 export function programDollars(row, scenario = null) {
   const hrrpTo = changedFactor(scenario, 'hrrpFactor', row.hrrpFactor);
   const vbpTo = changedFactor(scenario, 'vbpFactor', row.vbpFactor);
