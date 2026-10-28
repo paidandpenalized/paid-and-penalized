@@ -164,6 +164,20 @@ test('shell: one header, the skip link before it; the family bar runs wordmark, 
   }
 });
 
+test('shell: on a phone the compact wordmark is a 44px target, as every control in the bar is', () => {
+  const css = readFileSync(`${REPO_ROOT}/web/styles/shell.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const at = css.indexOf('@media (max-width: 640px)');
+  assert.ok(at >= 0, 'the phone block');
+  // The block's text, braces balanced.
+  let i = css.indexOf('{', at) + 1;
+  for (let depth = 1; depth > 0; i++) depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
+  const phone = css.slice(at, i);
+  const rule = /(?:^|[\s}])\.wordmark\s*\{([^}]*)\}/.exec(phone)?.[1] ?? '';
+  assert.match(rule, /display:\s*inline-flex/);
+  assert.match(rule, /align-items:\s*center/);
+  assert.match(rule, /min-height:\s*44px/);
+});
+
 test('shell: the program tabs in the registry\'s order, the coming ones after a "coming" gap, the current one marked', () => {
   const main = SITE.programs.filter((p) => p.stage !== 'soon' || p.inData);
   const soon = SITE.programs.filter((p) => !main.includes(p));
