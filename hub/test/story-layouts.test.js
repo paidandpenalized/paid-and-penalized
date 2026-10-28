@@ -5,21 +5,20 @@
 // where its numbers say.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hubAsset } from '../asset.js';
 import { loadHub } from '../data.js';
 import { EXAMPLE_CCN, hubHospitals, storyFacts } from '../model.js';
-import { decodeRows } from '../../web/client/hub-asset.js';
 import { shareDomain } from '../client/scale.js';
 import { BAR } from '../client/story/bar-frame.js';
 import { INK, NEUTRAL, PEN, REW } from '../client/colors.js';
 import { drawnDot } from '../client/pile.js';
 import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
 import { createLayouts, storyRows } from '../client/story/layouts.js';
+import { decodedHub } from './helpers.js';
 
 const hub = loadHub();
 const server = hubHospitals(hub);
 const facts = storyFacts(server);
-const asset = decodeRows(JSON.parse(JSON.stringify(hubAsset(server, hub))));
+const asset = decodedHub(hub);
 const rows = storyRows(asset.hospitals);
 const N = rows.length;
 const domain = shareDomain(asset.hospitals);

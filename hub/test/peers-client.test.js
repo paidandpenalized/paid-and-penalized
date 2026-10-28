@@ -6,8 +6,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BED_BAND_EDGES, PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy } from '../../web/render/components.js';
-import { decodeRows } from '../../web/client/hub-asset.js';
-import { hubAsset } from '../asset.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { stripLayout } from '../client/hospital/strips.js';
@@ -15,11 +13,12 @@ import { shareDomain } from '../client/scale.js';
 import { ROWS, ROW_IDS, ROW_KEY, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { hubHospitals } from '../model.js';
+import { decodedHub } from './helpers.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const hub = loadHub();
 const built = hubHospitals(hub);
-const { hospitals } = decodeRows(JSON.parse(JSON.stringify(hubAsset(built, { shapes: hub.shapes, fy: hub.fy }))));
+const { hospitals } = decodedHub(hub);
 const builtBy = new Map(built.map((h) => [h.ccn, h]));
 const estimated = hospitals.filter((h) => h.est);
 

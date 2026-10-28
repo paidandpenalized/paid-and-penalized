@@ -5,11 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
-import { decodeRows } from '../../web/client/hub-asset.js';
 import { fillCopy } from '../../web/render/components.js';
 import { count, dollars } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
-import { hubAsset } from '../asset.js';
 import { COPY as STORY_COPY } from '../client/story/copy.js';
 import { cardModel, peerLine, sizeWords } from '../client/story/find.js';
 import { lineOf, stateFromHash } from '../client/story/map.js';
@@ -18,10 +16,11 @@ import { stateLine, statesMap } from '../home/states.js';
 import { groupName, peersOf } from '../hospital/peers.js';
 import { signedShareText } from '../hospital/text.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
+import { decodedHub } from './helpers.js';
 
 const hub = loadHub();
 const server = hubHospitals(hub);
-const { hospitals, byCcn, fy } = decodeRows(JSON.parse(JSON.stringify(hubAsset(server, hub))));
+const { hospitals, byCcn, fy } = decodedHub(hub);
 const example = byCcn.get(EXAMPLE_CCN);
 const estimated = hospitals.filter((h) => h.est);
 

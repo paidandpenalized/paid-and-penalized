@@ -18,26 +18,12 @@ import { GROUP_WORDS } from '../home/copy.js';
 import { loadHub } from '../data.js';
 import { hubHospitals, storyFacts } from '../model.js';
 import { generateHub } from '../pages.js';
+import { NOINDEX, element, mainOf } from './helpers.js';
 
 const HUB = loadHub();
 const FACTS = storyFacts(hubHospitals(HUB));
 const FY = String(ASSETS.shell.fy);
-const NOINDEX = '<meta name="robots" content="noindex">';
 const esc = (text) => escapeHtml(text);
-const mainOf = (page) => page.slice(page.indexOf('<main'), page.indexOf('</main>'));
-// The markup of the first element that opens with `open`, to its matching close.
-function element(html, open, name) {
-  const start = html.indexOf(open);
-  assert.ok(start >= 0, `no element ${open}`);
-  const re = new RegExp(`<(/?)${name}[\\s>]`, 'g');
-  re.lastIndex = start;
-  let depth = 0;
-  for (let m = re.exec(html); m; m = re.exec(html)) {
-    depth += m[1] ? -1 : 1;
-    if (!depth) return html.slice(start, html.indexOf('>', m.index) + 1);
-  }
-  assert.fail(`element ${open} is not closed`);
-}
 const cardOf = (page) => element(mainOf(page), '<div class="form rd__sum cm__card">', 'div');
 const render = (program, facts = FACTS) => comingPage({ program, facts, assets: ASSETS, robots: 'noindex' });
 const HVBP = PLACEHOLDER_PROGRAMS.find((p) => p.id === 'hvbp');

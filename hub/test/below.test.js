@@ -8,13 +8,11 @@ import assert from 'node:assert/strict';
 import { programDollars } from '../../engine/js/dollars/whatif.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, footerOf } from '../../pipeline/test/helpers.js';
-import { decodeRows } from '../../web/client/hub-asset.js';
 import { HAC_TOP_SHARE, programDek } from '../../web/programs.js';
 import { count, fractionWord, money, numberWord } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
-import { hubAsset } from '../asset.js';
 import { factorText, paintWorksheet, worksheetModel } from '../client/story/worksheet.js';
 import { loadHub } from '../data.js';
 import { BIN_POINTS, directory, programBins } from '../home/below.js';
@@ -22,6 +20,7 @@ import { COPY } from '../home/copy.js';
 import { simpleFraction } from '../home/claims.js';
 import { homePage } from '../home/page.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
+import { decodedHub, element, elements } from './helpers.js';
 
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
@@ -32,30 +31,6 @@ const out = homePage({ hospitals, facts, states: stateTotals(hospitals), shapes:
 const estimated = hospitals.filter((h) => h.est);
 const example = hospitals.find((h) => h.ccn === EXAMPLE_CCN);
 
-// The markup of the first element that opens with `open` (a regex source for its start tag), to its matching close.
-function element(html, open, name) {
-  const start = html.search(new RegExp(open));
-  assert.ok(start >= 0, `no element ${open}`);
-  const re = new RegExp(`<(/?)${name}[\\s>]`, 'g');
-  re.lastIndex = start;
-  let depth = 0;
-  for (let m = re.exec(html); m; m = re.exec(html)) {
-    depth += m[1] ? -1 : 1;
-    if (depth === 0) return html.slice(start, html.indexOf('>', m.index) + 1);
-  }
-  throw new Error(`unclosed ${open}`);
-}
-// Every element that opens with `open`, in order.
-function elements(html, open, name) {
-  const found = [];
-  let rest = html;
-  for (let at = rest.search(new RegExp(open)); at >= 0; at = rest.search(new RegExp(open))) {
-    const el = element(rest, open, name);
-    found.push(el);
-    rest = rest.slice(rest.indexOf(el) + el.length);
-  }
-  return found;
-}
 const words = (html) => textOf(html).trim();
 
 const PROGRAMS = { hrrp: { key: 'hrrp', listed: 'hrrpListed' }, hacrp: { key: 'hac', listed: null }, hvbp: { key: 'hvbp', listed: 'vbpListed' } };
@@ -242,7 +217,7 @@ test('worksheetModel: every hospital\'s lines add to its net; outside a program 
 });
 
 test('the browser\'s worksheet for a hospital is the server\'s, word for word', () => {
-  const { byCcn } = decodeRows(JSON.parse(JSON.stringify(hubAsset(hospitals, hub))));
+  const { byCcn } = decodedHub(hub);
   for (const h of [example, estimated.find((x) => !x.est.vbpListed), estimated.find((x) => x.est.cut), estimated.find((x) => x.est.net > 0)]) {
     assert.ok(h, 'a hospital of each kind');
     const { text, show, sign, href } = worksheetModel(h);

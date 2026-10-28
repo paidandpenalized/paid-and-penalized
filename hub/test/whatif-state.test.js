@@ -3,19 +3,11 @@
 // one sweep over every estimated hospital of the data (by property, none named): the actual state reproduces its dollars.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { programDollars } from '../../engine/js/dollars/whatif.js';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
 import { BIG_STEP, STEP, changed, fromHash, initial, outcome, ranges, reduce, toHash } from '../client/hospital/whatif-state.js';
+import { makeHospital as make } from './helpers.js';
 
-const BASE = 48_000_000;
-const TOTAL = 70_000_000;
-// A synthetic hospital whose dollars follow from its factors and cut, as the dollar file's would.
-function make(ccn, { hrrpFactor = 1, vbpFactor = 1, cut = false, hrrpListed = true, vbpListed = true } = {}) {
-  const row = { base: BASE, total: TOTAL, hrrpFactor: 1, vbpFactor: 1, cut: false, hrrp: 0, hvbp: 0, hac: 0, net: 0, after: TOTAL, atStake: TOTAL / 100 };
-  const out = programDollars(row, { hrrpFactor, vbpFactor, cut });
-  return { ccn, est: { ...row, hrrpFactor, vbpFactor, cut, ...out, hrrpListed, vbpListed, share: out.net / TOTAL } };
-}
 
 const VBP_MAX = 1.0452822242;
 const H = make('990001', { hrrpFactor: 0.9988, vbpFactor: 1.0021821642 });

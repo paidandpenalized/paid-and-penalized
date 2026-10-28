@@ -20,6 +20,7 @@ import { peerFigures, peersOf } from '../hospital/peers.js';
 import { shareText, signedShareText } from '../hospital/text.js';
 import { hubHospitals, storyFacts } from '../model.js';
 import { generateHub } from '../pages.js';
+import { mainOf } from './helpers.js';
 
 const HUB = loadHub();
 const HOSPITALS = hubHospitals(HUB);
@@ -33,8 +34,6 @@ const pick = (pred, what) => {
   return h;
 };
 const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn) });
-// The page's <main>: the shell's header and footer carry their own figures (the chip's net, the footer's totals).
-const mainOf = (page) => page.slice(page.indexOf('<main'), page.indexOf('</main>'));
 // The markup of one element, from its opening tag's attribute to its closing tag (the first after it).
 const block = (text, attr, close) => {
   const at = text.indexOf(attr);

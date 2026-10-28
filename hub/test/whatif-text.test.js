@@ -3,20 +3,13 @@
 // "would" and "hypothetical", never "should", "failed" or "could have avoided". Synthetic hospitals (99xxxx).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { programDollars } from '../../engine/js/dollars/whatif.js';
 import { money } from '../../web/render/format.js';
 import { rowFigures } from '../hospital/peers.js';
 import { signedShareText } from '../hospital/text.js';
 import { initial, outcome, reduce } from '../client/hospital/whatif-state.js';
 import { bannerText, sentence, valueText } from '../client/hospital/whatif-text.js';
+import { TOTAL, makeHospital as make } from './helpers.js';
 
-const BASE = 48_000_000;
-const TOTAL = 70_000_000;
-function make(ccn, { hrrpFactor = 1, vbpFactor = 1, cut = false, hrrpListed = true, vbpListed = true } = {}) {
-  const row = { base: BASE, total: TOTAL, hrrpFactor: 1, vbpFactor: 1, cut: false, hrrp: 0, hvbp: 0, hac: 0, net: 0, after: TOTAL, atStake: TOTAL / 100 };
-  const out = programDollars(row, { hrrpFactor, vbpFactor, cut });
-  return { ccn, est: { ...row, hrrpFactor, vbpFactor, cut, ...out, hrrpListed, vbpListed, share: out.net / TOTAL } };
-}
 const H = make('990001', { hrrpFactor: 0.9988, vbpFactor: 1.0021821642 });
 const peers = [H, make('990002', { hrrpFactor: 0.995, cut: true }), make('990003', { hrrpFactor: 0.99, vbpFactor: 0.999, cut: true })];
 const ctx = { h: H, vbpMax: 1.04, peers };

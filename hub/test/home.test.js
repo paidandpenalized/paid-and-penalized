@@ -22,6 +22,7 @@ import { cardModel, sizeWords } from '../client/story/find.js';
 import { peersOf } from '../hospital/peers.js';
 import { stateKey } from '../home/states.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
+import { element } from './helpers.js';
 
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
@@ -30,19 +31,6 @@ const states = stateTotals(hospitals);
 const assets = { ...ASSETS, shell: { ...ASSETS.shell, fy: hub.fy } };
 const out = homePage({ hospitals, facts, states, shapes: hub.shapes, assets, robots: 'noindex' });
 
-// The markup of the first element that opens with `open` (a regex source for its start tag), to its matching close.
-function element(html, open, name) {
-  const start = html.search(new RegExp(open));
-  assert.ok(start >= 0, `no element ${open}`);
-  const re = new RegExp(`<(/?)${name}[\\s>]`, 'g');
-  re.lastIndex = start;
-  let depth = 0;
-  for (let m = re.exec(html); m; m = re.exec(html)) {
-    depth += m[1] ? -1 : 1;
-    if (depth === 0) return html.slice(start, html.indexOf('>', m.index) + 1);
-  }
-  throw new Error(`unclosed ${open}`);
-}
 const STEP_IDS = ['scale', 'start', 'readmissions', 'hac', 'vbp', 'net', 'map', 'states', 'find'];
 const step = (i) => element(out, `<section class="step" id="step-${STEP_IDS[i]}"`, 'section');
 const words = (i) => textOf(step(i));

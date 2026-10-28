@@ -16,6 +16,7 @@ import { COPY } from '../hrrp/copy.js';
 import { hrrpHospitalPage, hrrpProgramPage, summaryOf } from '../hrrp/page.js';
 import { hubHospitals } from '../model.js';
 import { generateHub } from '../pages.js';
+import { NOINDEX, mainOf } from './helpers.js';
 
 const HUB = loadHub();
 const HOSPITALS = hubHospitals(HUB);
@@ -24,7 +25,6 @@ const RECORDS = [...HUB.tdr.hospitals.values()];
 const FY = String(HUB.tdr.fy);
 const HUB_FY = String(ASSETS.shell.fy);
 const esc = (text) => escapeHtml(text);
-const NOINDEX = '<meta name="robots" content="noindex">';
 
 const pick = (pred, what) => {
   const r = RECORDS.find((x) => pred(x, BY_CCN.get(x.id) ?? null));
@@ -32,7 +32,6 @@ const pick = (pred, what) => {
   return r;
 };
 const render = (record, h = BY_CCN.get(record.id) ?? null) => hrrpHospitalPage({ record, tdr: HUB.tdr, master: HUB.master.get(record.id), h, assets: ASSETS, robots: 'noindex' });
-const mainOf = (page) => page.slice(page.indexOf('<main'), page.indexOf('</main>'));
 const tabsOf = (page) => [...headerOf(page).matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1], Boolean(m[2])]);
 
 const CUT = pick((r, h) => r.paf < 1 && h?.est?.hrrpListed && h.est.hrrp < 0 && Object.keys(r.c).length >= 3, 'a hospital with a cut, an estimate and several conditions');
