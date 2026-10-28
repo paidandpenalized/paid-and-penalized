@@ -8,29 +8,16 @@ import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
+import { STATES, STATE_NAMES, US_STATES } from '../../engine/js/states.js';
 
 // The pinned us-atlas topology (its `states` and `counties` objects) every map here is drawn from; a site reads it with
 // readPinned(ATLAS_ID) and hands it to stateShapes.
 export const ATLAS_ID = 'us-atlas-counties-3.0.1';
 
 // The states, DC and Puerto Rico: postal code, Census FIPS code (us-atlas's geometry id) and name, as
-// engine/py/pp_engine/geo.py lists them. A territory without a code here (AS, GU, MP, VI) is never drawn.
-export const STATES = Object.freeze([
-  ['AL', '01', 'Alabama'], ['AK', '02', 'Alaska'], ['AZ', '04', 'Arizona'], ['AR', '05', 'Arkansas'],
-  ['CA', '06', 'California'], ['CO', '08', 'Colorado'], ['CT', '09', 'Connecticut'], ['DE', '10', 'Delaware'],
-  ['DC', '11', 'District of Columbia'], ['FL', '12', 'Florida'], ['GA', '13', 'Georgia'], ['HI', '15', 'Hawaii'],
-  ['ID', '16', 'Idaho'], ['IL', '17', 'Illinois'], ['IN', '18', 'Indiana'], ['IA', '19', 'Iowa'],
-  ['KS', '20', 'Kansas'], ['KY', '21', 'Kentucky'], ['LA', '22', 'Louisiana'], ['ME', '23', 'Maine'],
-  ['MD', '24', 'Maryland'], ['MA', '25', 'Massachusetts'], ['MI', '26', 'Michigan'], ['MN', '27', 'Minnesota'],
-  ['MS', '28', 'Mississippi'], ['MO', '29', 'Missouri'], ['MT', '30', 'Montana'], ['NE', '31', 'Nebraska'],
-  ['NV', '32', 'Nevada'], ['NH', '33', 'New Hampshire'], ['NJ', '34', 'New Jersey'], ['NM', '35', 'New Mexico'],
-  ['NY', '36', 'New York'], ['NC', '37', 'North Carolina'], ['ND', '38', 'North Dakota'], ['OH', '39', 'Ohio'],
-  ['OK', '40', 'Oklahoma'], ['OR', '41', 'Oregon'], ['PA', '42', 'Pennsylvania'], ['RI', '44', 'Rhode Island'],
-  ['SC', '45', 'South Carolina'], ['SD', '46', 'South Dakota'], ['TN', '47', 'Tennessee'], ['TX', '48', 'Texas'],
-  ['UT', '49', 'Utah'], ['VT', '50', 'Vermont'], ['VA', '51', 'Virginia'], ['WA', '53', 'Washington'],
-  ['WV', '54', 'West Virginia'], ['WI', '55', 'Wisconsin'], ['WY', '56', 'Wyoming'], ['PR', '72', 'Puerto Rico'],
-]);
-export const STATE_NAMES = Object.freeze(Object.fromEntries(STATES.map(([code, , name]) => [code, name])));
+// engine/py/pp_engine/geo.py lists them (engine/js/states.js holds the table, which the browser's search reads too). A
+// territory without a code there (AS, GU, MP, VI) is never drawn.
+export { STATES, STATE_NAMES };
 const CODE_OF_FIPS = new Map(STATES.map(([code, fips]) => [fips, code]));
 // A state's counties (us-atlas county ids begin with the state's FIPS code).
 export const countiesOf = (counties, code) => {
@@ -39,7 +26,7 @@ export const countiesOf = (counties, code) => {
 };
 
 // The codes the US map draws: the states and DC (geoAlbersUsa has no place for Puerto Rico), in STATES order.
-export const US_MAP_CODES = Object.freeze(STATES.map(([code]) => code).filter((code) => code !== 'PR'));
+export const US_MAP_CODES = Object.freeze(US_STATES.map(([code]) => code));
 // The codes a locator map draws. A territory, Puerto Rico included, gets no map (pages say so by leaving it out).
 const LOCATOR_CODES = new Set(US_MAP_CODES);
 

@@ -36,13 +36,13 @@ test('build writes hashed CSS holding the tokens and the dark copy, the six font
     assert.ok(existsSync(join(out, 'favicon.svg')));
   }));
 
-test('two sites (or a site and the shared theme script) naming one JS entry fail the build', () =>
+test('two sites (or a site and the shared shell script) naming one JS entry fail the build', () =>
   withTemp(async (dir) => {
-    assert.deepEqual(mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, {}), { theme: 'a.js', x: 'b.js' });
-    assert.throws(() => mergeEntries({ theme: 'a.js' }, { theme: 'b.js' }), /"theme" is defined twice/);
-    assert.throws(() => mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, { x: 'c.js' }), /"x" is defined twice/);
-    const clash = { id: 'clash', entries: { theme: 'web/client/theme.js' }, generate: () => {} };
-    await assert.rejects(build({ outDir: join(dir, 'dist'), sites: [clash] }), /"theme" is defined twice/);
+    assert.deepEqual(mergeEntries({ shell: 'a.js' }, { x: 'b.js' }, {}), { shell: 'a.js', x: 'b.js' });
+    assert.throws(() => mergeEntries({ shell: 'a.js' }, { shell: 'b.js' }), /"shell" is defined twice/);
+    assert.throws(() => mergeEntries({ shell: 'a.js' }, { x: 'b.js' }, { x: 'c.js' }), /"x" is defined twice/);
+    const clash = { id: 'clash', entries: { shell: 'web/client/shell.js' }, generate: () => {} };
+    await assert.rejects(build({ outDir: join(dir, 'dist'), sites: [clash] }), /"shell" is defined twice/);
   }));
 
 test('buildAssets bundles each JS entry as minified ESM under a content hash and returns the public paths', () =>

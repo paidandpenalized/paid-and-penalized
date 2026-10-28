@@ -165,4 +165,5 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
-export const HUB = { id: 'hub', entries: {}, styles: [], generate: generateHub };
+// entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box.
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js' }, styles: [], generate: generateHub };

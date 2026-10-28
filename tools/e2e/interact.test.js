@@ -101,7 +101,8 @@ describe('what-if', () => {
 });
 
 // A focused element's part in the walk, and whether it sits under the top bar. In the page: the skip link, the top
-// bar's search, the theme toggle, a nav item (by position) or the footer's feedback link; its rect against the bar's.
+// bar's search (or, on a phone, the button that opens it), the theme toggle, a nav item (by position) or the footer's
+// feedback link; its rect against the bar's.
 // The skip link is left out of the rect check: it is placed over the top of the page on purpose, above the bar. The
 // browser scrolls to a whole device pixel, so an element focused at the bar's edge can land a fraction of a pixel under
 // it (an svg at 99.8 px under a bar ending at 100): only an overlap over SNAP counts. An element is described by its
@@ -114,7 +115,8 @@ async function focusFacts([feedbackLink, snap]) {
   const bar = document.querySelector('.topbar');
   const roleOf = () => {
     if (el.matches('.skip')) return 'skip';
-    if (bar?.contains(el) && el.matches('[role="combobox"]')) return 'search';
+    // On a phone the bar's search is behind the find button, which is a reader's way in: it stands for the search there.
+    if (bar?.contains(el) && el.matches('[role="combobox"], .fam__find')) return 'search';
     if (el.matches('.theme-toggle')) return 'theme';
     const nav = [...document.querySelectorAll('.nav a')].indexOf(el);
     if (nav >= 0) return `nav ${nav}`;

@@ -1,5 +1,6 @@
 // Fixed words shared by every page's header and footer, and the chart kit's figure frame (web/charts/figure.js).
 // No digit characters: numbers never live in copy files.
+import { CHIP } from './chip-copy.js';
 import { typesetCopy } from './render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
@@ -15,10 +16,8 @@ export const COPY = typesetCopy({
   tagline: 'Public Medicare data, made visible.',
   find: 'Find a hospital or state',
   themeToggle: 'Dark mode',
-  // The followed hospital's chip: its key, the words a screen reader hears before its net, and the stop link's name.
-  chipKey: 'Hospital',
-  chipNet: 'Estimated FY{fy} net:',
-  chipStop: 'Stop following {name}',
+  // The followed hospital's chip (key, net, stop link): chip-copy.js, which the shell's script reads too.
+  ...CHIP,
   // The program tabs (and the footer's first field): their name, the first tab, the gap before the coming programs,
   // and a coming tab's title.
   programs: 'Programs',

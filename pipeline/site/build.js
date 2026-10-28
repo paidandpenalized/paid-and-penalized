@@ -22,10 +22,11 @@ import { headersFile } from './headers.js';
 // { updated: { cmsReleased, changed } }; updated is the dates of the program sites run before, by id. Last: the hub
 // lists those dates, and writes robots.txt and sitemap.xml, listing every page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
-// Shared by every site: the theme toggle (every page), the figure layer (pages with a figure), the citation Copy
-// button (pages with a citation block), the share control (pages with one) and a program site's top bar (pages with
-// one); layout.js loads the theme script, and a page lists the others it needs.
-export const SHARED_ENTRIES = { theme: 'web/client/theme.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
+// Shared by every site: the shell's script (every page: the theme buttons, the followed hospital, the phone's search
+// button, the tabs' scroll), the figure layer (pages with a figure), the citation Copy button (pages with a citation
+// block), the share control (pages with one) and a program site's top bar (pages with one); layout.js loads the shell
+// script first, and a page lists the others it needs.
+export const SHARED_ENTRIES = { shell: 'web/client/shell.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
 
 const DIST = resolve(DIST_DIR);
 const inside = (dir, parent) => {

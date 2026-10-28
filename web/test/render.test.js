@@ -12,7 +12,7 @@ import { searchForm } from '../render/shell.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { testAssets } from '../../pipeline/test/helpers.js';
 
-const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } });
+const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { shell: '/assets/shell.bbbbbbbb.js' } });
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
 
 test('html escapes every interpolation in text and in attributes', () => {
@@ -370,16 +370,16 @@ test('page: the footer uses no inline style (a strict CSP forbids it)', () => {
   assert.doesNotMatch(page(PAGE), /\sstyle=/);
 });
 
-test('page: the theme script always loads, extra scripts follow, and robots and JSON-LD appear only when given', () => {
+test('page: the shell script always loads first, extra scripts follow, and robots and JSON-LD appear only when given', () => {
   const plain = page(PAGE);
   assert.ok(!plain.includes('name="robots"'));
   assert.ok(!plain.includes('ld+json'));
   assert.equal(plain.match(/<script /g).length, 1);
-  assert.ok(plain.includes('<script type="module" src="/assets/theme.bbbbbbbb.js"></script>'));
+  assert.ok(plain.includes('<script type="module" src="/assets/shell.bbbbbbbb.js"></script>'));
 
   const full = page({ ...PAGE, robots: 'noindex', scripts: ['/assets/hacrp.cccccccc.js'], jsonLd: { name: '</script>' } });
   assert.ok(full.includes('<meta name="robots" content="noindex">'));
-  assert.ok(full.indexOf('theme.bbbbbbbb.js') < full.indexOf('hacrp.cccccccc.js'));
+  assert.ok(full.indexOf('shell.bbbbbbbb.js') < full.indexOf('hacrp.cccccccc.js'));
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(full)[1];
   assert.deepEqual(JSON.parse(ld), { name: '</script>' });
 });
@@ -407,42 +407,6 @@ test('page preloads the default fonts unless the page names its own; a font name
   assert.deepEqual(preloads(page(PAGE)), ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
   assert.deepEqual(preloads(page({ ...PAGE, preloadFonts: ['ibm-plex-mono-700'] })), ['ibm-plex-mono-700']);
   assert.throws(() => page({ ...PAGE, preloadFonts: ['../x'] }), TypeError);
-});
-
-test('theme.js stores nothing and sets only data-theme', () => {
-  const src = readFileSync(REPO_ROOT + 'web/client/theme.js', 'utf8');
-  for (const word of ['localStorage', 'sessionStorage', 'cookie', 'indexedDB']) assert.ok(!src.includes(word), word);
-  assert.match(src, /dataset\.theme/);
-});
-
-test('theme.js wires every theme toggle (the bar\'s and the footer\'s): each flips data-theme and both keep aria-pressed in step', async () => {
-  const toggle = () => {
-    const button = { hidden: true, attrs: {}, clicks: [] };
-    Object.assign(button, { setAttribute: (k, v) => { button.attrs[k] = v; }, addEventListener: (_, fn) => button.clicks.push(fn) });
-    return button;
-  };
-  const buttons = [toggle(), toggle()];
-  const root = { dataset: {} };
-  const query = { matches: true, addEventListener() {} };
-  const saved = { document: globalThis.document, window: globalThis.window };
-  globalThis.document = { documentElement: root, querySelectorAll: (s) => (s === '.theme-toggle' ? buttons : []) };
-  globalThis.window = { matchMedia: () => query };
-  try {
-    await import('../client/theme.js');
-  } finally {
-    Object.assign(globalThis, saved);
-    if (saved.document === undefined) delete globalThis.document;
-    if (saved.window === undefined) delete globalThis.window;
-  }
-  const pressed = () => buttons.map((b) => b.attrs['aria-pressed']);
-  assert.deepEqual(buttons.map((b) => b.hidden), [false, false]);
-  assert.deepEqual(pressed(), ['true', 'true']);
-  buttons[0].clicks[0]();
-  assert.equal(root.dataset.theme, 'light');
-  assert.deepEqual(pressed(), ['false', 'false']);
-  buttons[1].clicks[0]();
-  assert.equal(root.dataset.theme, 'dark');
-  assert.deepEqual(pressed(), ['true', 'true']);
 });
 
 test('fillCopy fills plain-string and { text } entries and refuses a missing, unused or unformatted value', () => {

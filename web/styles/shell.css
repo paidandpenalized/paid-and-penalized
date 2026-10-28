@@ -153,9 +153,12 @@
   .fam__bar:has(.fam__find[hidden] + .omni:not([hidden])) { flex-wrap: wrap; }
   .fam__end:has(> .fam__find[hidden] + .omni:not([hidden])) { flex: 1 1 100%; }
   .fam__find[hidden] + .omni:not([hidden]) { display: block; flex: 1 1 auto; width: auto; min-width: 0; }
-  .fam--searching .fam__bar { flex-wrap: wrap; }
-  .fam--searching .fam__end { flex: 1 1 100%; gap: 8px; }
-  .fam--searching .fam__end .omni:not([hidden]) { display: block; flex: 1 1 auto; width: auto; min-width: 0; }
+  .fam--searching .fam__bar { flex-wrap: wrap; row-gap: 6px; }
+  /* The bar's end stops being a box of its own, so the find button stays where it was (the toggle does not move) and the
+     search drops to a row of its own under the bar. */
+  .fam--searching .fam__end { display: contents; }
+  .fam--searching .fam__find { margin-left: auto; }
+  .fam--searching .fam__end .omni:not([hidden]) { display: block; flex: 1 1 100%; width: auto; min-width: 0; }
   .fam--searching .omni__field { min-height: 44px; }
   .tabs__scroll { padding-top: 2px; }
   .tab { align-items: center; justify-content: center; min-width: 48px; min-height: 44px; padding: 0 13px; font-size: 0.84375rem; }

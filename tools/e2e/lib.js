@@ -44,13 +44,13 @@ export function useBrowser(start = startSite) {
   return shared;
 }
 
-// A browser context for the tests of the describe that calls it: a window width px wide (HEIGHT tall), with scripts on
-// or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before its first test, and
-// closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
-export function useContext(shared, { width = 1280, javaScript = true } = {}) {
+// A browser context for the tests of the describe that calls it: a window width px wide and height px tall (HEIGHT by
+// default), with scripts on or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before
+// its first test, and closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
+export function useContext(shared, { width = 1280, height = HEIGHT, javaScript = true } = {}) {
   const held = { javaScript };
   before(async () => {
-    held.context = await shared.browser.newContext({ viewport: { width, height: HEIGHT }, javaScriptEnabled: javaScript });
+    held.context = await shared.browser.newContext({ viewport: { width, height }, javaScriptEnabled: javaScript });
     held.base = shared.site.base;
   });
   after(() => held.context?.close());
@@ -77,16 +77,18 @@ export async function newPage(context, colorScheme, base) {
   return page;
 }
 
-// Whether the loaded page can fetch after its load: it runs a script besides the theme toggle's (THEME_SCRIPT, which
-// fetches nothing; a program site's pages all run more), or names a file a script fetches (data-src). A page that may
-// fetch is waited on until the network is quiet; any other (the hub's pages) is quiet once loaded and its fonts are in.
-const THEME_SCRIPT = /^\/assets\/theme\.[0-9a-f]{8}\.js$/;
+// Whether the loaded page can fetch after its load: it runs a script besides the shell's (SHELL_SCRIPT, which fetches
+// nothing unless the address follows a hospital with ?h=; a program site's pages all run more), or names a file a script
+// fetches (data-src). A page that may fetch is waited on until the network is quiet; any other (the hub's pages) is quiet
+// once loaded and its fonts are in.
+const SHELL_SCRIPT = /^\/assets\/shell\.[0-9a-f]{8}\.js$/;
 async function fetchesAfterLoad(page) {
-  const { scripts, dataSrc } = await page.evaluate(() => ({
+  const { scripts, dataSrc, follows } = await page.evaluate(() => ({
     scripts: [...document.querySelectorAll('script[src]')].map((s) => new URL(s.src).pathname),
     dataSrc: document.querySelector('[data-src]') !== null,
+    follows: new URLSearchParams(window.location.search).has('h'),
   }));
-  return dataSrc || scripts.some((path) => !THEME_SCRIPT.test(path));
+  return dataSrc || follows || scripts.some((path) => !SHELL_SCRIPT.test(path));
 }
 
 // Opens path (from base, the site's origin) in the tab the way a reader meets it: loaded, and quiet (its scripts have
