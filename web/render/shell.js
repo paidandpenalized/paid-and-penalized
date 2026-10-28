@@ -112,8 +112,13 @@ export function familyFooter({ feedback, shell }) {
   const fyText = String(fy);
   // Each figure is an estimate for the fiscal year, said to a screen reader beside it (field 3 says so on screen).
   const estimated = fill('footEstimated', { fy: fyText });
+  // The programs under consideration: each separator stays with the program after it, so no line ends on a "·".
+  const considered = UNLISTED_PROGRAMS.map((p, i) => {
+    const link = html`<a href="${p.path}" title="${p.name}">${p.ab}</a>`;
+    return i ? html` <span class="nw">· ${link}</span>` : link;
+  });
   const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v"><span class="vh">${estimated} </span>${figureOf(programs[p.id])}</span></li>`)}</ul>
-<p class="ft__soon">${COPY.footConsidered} ${UNLISTED_PROGRAMS.map((p, i) => html`${i ? '\u00a0· ' : ''}<a href="${p.path}" title="${p.name}">${p.ab}</a>`)}</p>`;
+<p class="ft__soon">${COPY.footConsidered} ${considered}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
   const asOf = html`<p>${fillAround((marks) => fill('footEstimates', { ...marks, n: count(hospitals) }), { fy: html`<span class="ft__fy">${fill('footFy', { fy: fyText })}</span>` })}</p>
 <p class="ft__note">${fillCopyKeep(COPY, 'footChanged', { date: isoDate(changed) }, ['date'])}<br><a href="${SITE.pages.corrections}">${COPY.footDates}</a></p>

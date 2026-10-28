@@ -49,7 +49,7 @@ test('/hrrp/: the kicker, the masthead with its last word in the penalty ink, th
   const page = hrrpProgramPage({ tdr: HUB.tdr, assets: ASSETS, robots: 'noindex' });
   const main = mainOf(page);
   assert.equal(main.match(/<h1[\s>]/g)?.length, 1, 'one h1');
-  assert.ok(main.includes('<p class="cap kicker rd__kicker">HRRP · Interim page</p>'), 'the kicker');
+  assert.ok(main.includes('<p class="cap kicker rd__kicker">HRRP · Summary</p>'), 'the kicker');
   assert.ok(main.includes('<h1 class="rd__title">Hospital <span class="rd__pen">Readmissions</span></h1>'), 'the masthead');
   assert.ok(main.includes(`<p class="dek">${esc(programDek('hrrp'))}</p>`), 'the program\'s dek');
   // The counts come from the pinned file by the rule "payment adjustment factor below one", and the share from the counts.

@@ -3,7 +3,7 @@
 // the pinned file's CMS values (the payment adjustment factor, the reduction and the conditions CMS measured) as CMS
 // published them, the estimate of the dollars the front page's net uses (a different fiscal year, labeled), and a large link
 // to the full explorer there. Server-rendered, no script of their own: the family search and the shell's script are the
-// only ones they load. The masthead's styles (hub/styles.css, the .rd__ rules) are shared with the coming-soon pages
+// only ones they load. The masthead's styles (hub/styles.css, the .rd__ rules) are shared with the placeholder pages
 // (hub/coming.js), so retiring this page for Thirty Day Readmissions' fold-in must keep them.
 import { programDek } from '../../web/programs.js';
 import { estTag, fillCopy, formField, formTitle, pill } from '../../web/render/components.js';

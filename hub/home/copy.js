@@ -142,12 +142,11 @@ export const COPY = typesetCopy({
   dirNet: 'net {amount} nationally, FY{fy}',
   dirOpen: 'Open {name}',
   // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
-  // internal stage, soon), the note at each group's right (the quality programs' is dirGroupNote), and the words in each
-  // slip's empty band. The note and the band are each one short line in the narrowest group (hub/styles.css).
+  // internal stage, soon), and the words in each slip's empty band. Each group's name and each band's words fit one line
+  // in the narrowest group (hub/styles.css).
   soonPrice: 'Price adjustments',
   soonReporting: 'Reporting rules',
   soonEpisode: 'Episode payment',
-  soonNote: 'not estimated',
   soonNone: 'under consideration',
 
   // Methods, in brief: the heading, a paragraph and three points ({fy}), then the worksheet (worksheet.js fills it for a

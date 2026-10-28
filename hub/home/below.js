@@ -193,7 +193,7 @@ export function directory({ programs, facts, hospitals, fy }) {
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${COPY.dirGroup}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, domain }))}</div>
-<div class="soon">${groups.map(([key, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${COPY[key]}</span><span>${COPY.soonNote}</span></p>${members.map(slip)}</div>`)}</div>
+<div class="soon">${groups.map(([key, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${COPY[key]}</span></p>${members.map(slip)}</div>`)}</div>
 </section>`;
 }
 

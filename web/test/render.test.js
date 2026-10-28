@@ -290,6 +290,10 @@ test('shell: the footer is one numbered form row (programs, the site, data as of
   assert.ok(considered.startsWith('Under consideration: '));
   assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
     UNLISTED_PROGRAMS.map((p) => [p.path, p.ab]));
+  // Each "·" is held to the program after it (a no-wrap span), so a wrapped line never ends on one.
+  const held = considered.match(/<span class="nw">· <a href="[^"]+" title="[^"]+">[^<]+<\/a><\/span>/g) ?? [];
+  assert.equal(held.length, UNLISTED_PROGRAMS.length - 1);
+  assert.ok(!held.reduce((rest, part) => rest.replace(part, ''), considered).includes('·'), 'no separator outside a held pair');
   // 2: the family's pages, Methods first, Terms last.
   const site = [...foot.matchAll(/<li><a href="(\/[a-z]+\/)">([^<]+)<\/a><\/li>/g)].map((m) => m[1]);
   assert.deepEqual(site, ['/methods/', '/about/', '/corrections/', '/accessibility/', '/privacy/', '/terms/']);

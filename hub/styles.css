@@ -324,10 +324,10 @@
 .go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
 .go:hover, .ask__act > a:hover { background: var(--ink); color: var(--paper); }
 .pc .go { margin: auto 0 0; }
-/* A slip for a program under consideration: dashed, quiet, over an empty hatched band. */
+/* A slip for a program under consideration: dashed, quiet, over an empty hatched band. Each group's name is one line. */
 .soon { margin-top: 40px; }
 .sg { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; align-content: start; }
-.sg .grp { grid-column: 1 / -1; align-items: end; min-height: 3.2em; margin: 0; }
+.sg .grp { grid-column: 1 / -1; margin: 0; white-space: nowrap; }
 .slip { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px 12px; border: 1.5px dashed var(--line); text-decoration: none; }
 .slip b { color: var(--ink); }
 .slip .ab { color: var(--ink-3); }
@@ -359,10 +359,13 @@
   .bsec__head, .ests { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; }
   .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-/* The slips side by side, a column each, once the one-slip group is wide enough for its name and note. */
-@media (min-width: 1280px) {
-  .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
-  .sg { grid-column: span var(--n); grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+/* The six slips side by side, a column each, once the page is at its full width (narrower, a column is too tight for a
+   slip's band words on one line and its dek; the groups stack, as on a tablet). Each group spans its columns and both
+   rows of one shared grid (subgrid), so the groups' names and rules line up, every slip is the height of the tallest,
+   and the bands share one bottom edge. */
+@media (min-width: 1200px) {
+  .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto; gap: 12px 16px; }
+  .sg { grid-column: span var(--n); grid-row: span 2; grid-template-columns: subgrid; grid-template-rows: subgrid; }
 }
 
 /* ---------- a hospital's page across the programs (hub/hospital/page.js), root .hh ----------

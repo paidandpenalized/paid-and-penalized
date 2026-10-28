@@ -1,7 +1,7 @@
 // The hub's pages promise no program, page or date to come (pipeline/test/helpers.js FUTURE_WORDS): a program without a
 // page here is "under consideration" and its page "not built yet". The copy files are guarded word by word
 // (web/test/house-words.test.js); this reads what the rendered pages show and say, shell included: each placeholder page,
-// the front page, a hospital's page (with an estimate, and each variant) and the interim Readmissions page. Rows are
+// the front page, a hospital's page (with an estimate, and each variant) and the Readmissions summary pages. Rows are
 // picked by property. The data's own words (a hospital's or a place's name, which may hold such a word as a proper name)
 // are taken out first. A failure names the page by its kind and the word, never a hospital.
 import { test } from 'node:test';
@@ -12,7 +12,7 @@ import { comingPage } from '../coming.js';
 import { loadHub } from '../data.js';
 import { homePage } from '../home/page.js';
 import { hospitalPage } from '../hospital/page.js';
-import { hrrpProgramPage } from '../hrrp/page.js';
+import { hrrpHospitalPage, hrrpProgramPage } from '../hrrp/page.js';
 import { hubHospitals, stateTotals, storyFacts } from '../model.js';
 
 const HUB = loadHub();
@@ -59,6 +59,9 @@ test('a hospital\'s page, with an estimate and in each variant, promises nothing
   if (named) assertNoPromise(hospital(named), 'a hospital whose name holds such a word');
 });
 
-test('the interim Readmissions page promises nothing', () => {
-  assertNoPromise(hrrpProgramPage({ tdr: HUB.tdr, assets, robots: 'noindex' }), 'interim Readmissions page');
+test('the Readmissions summary pages, the program\'s and a hospital\'s, promise nothing and call themselves no stand-in', () => {
+  assertNoPromise(hrrpProgramPage({ tdr: HUB.tdr, assets, robots: 'noindex' }), 'Readmissions summary page');
+  const record = [...HUB.tdr.hospitals.values()][0];
+  const h = HOSPITALS.find((x) => x.ccn === record.id) ?? null;
+  assertNoPromise(hrrpHospitalPage({ record, tdr: HUB.tdr, master: HUB.master.get(record.id), h, assets, robots: 'noindex' }), 'a hospital\'s Readmissions summary page');
 });

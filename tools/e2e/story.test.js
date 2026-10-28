@@ -333,29 +333,48 @@ for (const width of [390, 1280]) {
   });
 }
 
-// Below the story, the directory's programs under consideration: at every layout each group's name and note stay inside
-// their row, and each slip's band holds its words on one line (the band is one line tall).
+// Below the story, the directory's programs under consideration: at every layout each group's name sits on one line
+// inside its row, each slip's band holds its words on one line, and slips in one row are one height with their bands on
+// one bottom edge (from 1200 px the six share one row).
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
-  it('fit their rows and bands at 1024, 1279, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
-    for (const width of [1024, 1279, 1280, 1440, 390]) {
+  it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [1024, 1100, 1199, 1200, 1280, 1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await settle(page);
       const f = await page.evaluate(() => {
-        const inside = (el, box) => { const r = el.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
-        const rows = [...document.querySelectorAll('.sg .grp')];
-        const bands = [...document.querySelectorAll('.slip__none')];
+        const box = (el) => el.getBoundingClientRect();
+        const inside = (el, outer) => box(el).left >= box(outer).left - 0.5 && box(el).right <= box(outer).right + 0.5;
+        const oneLine = (el) => box(el).height <= parseFloat(getComputedStyle(el).lineHeight) * 1.5;
+        const names = [...document.querySelectorAll('.sg .grp > span')];
+        const slips = [...document.querySelectorAll('.slip')];
+        // The slips by row (their tops within a pixel), each row's slip heights and band bottoms.
+        const rows = [];
+        for (const s of slips) {
+          const top = box(s).top;
+          let row = rows.find((r) => Math.abs(r.top - top) <= 1);
+          if (!row) rows.push((row = { top, heights: [], bands: [] }));
+          row.heights.push(box(s).height);
+          row.bands.push(box(s.querySelector('.slip__none')).bottom);
+        }
+        const spread = (xs) => Math.max(...xs) - Math.min(...xs);
         return {
+          names: names.length,
+          namesOk: names.every((n) => oneLine(n) && inside(n, n.parentElement)),
+          bands: slips.length,
+          bandsOk: slips.every((s) => { const b = s.querySelector('.slip__none'); return box(b.firstElementChild).height <= box(b).height + 0.5 && inside(b.firstElementChild, b); }),
           rows: rows.length,
-          rowsInside: rows.every((g) => [...g.children].every((s) => inside(s, g.getBoundingClientRect()))),
-          bands: bands.length,
-          oneLine: bands.every((b) => { const s = b.firstElementChild.getBoundingClientRect(); return s.height <= b.getBoundingClientRect().height + 0.5 && inside(b.firstElementChild, b.getBoundingClientRect()); }),
+          heightSpread: Math.max(...rows.map((r) => spread(r.heights))),
+          bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
-      assert.equal(f.rows, 3, `${width} px: three groups`);
-      assert.equal(f.rowsInside, true, `${width} px: each group's name and note inside its row`);
+      assert.equal(f.names, 3, `${width} px: three groups`);
+      assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
       assert.equal(f.bands, 6, `${width} px: six slips`);
-      assert.equal(f.oneLine, true, `${width} px: each band's words on one line, inside it`);
+      assert.equal(f.bandsOk, true, `${width} px: each band's words on one line, inside it`);
+      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the six slips share one row`);
+      assert.ok(f.heightSpread <= 1, `${width} px: slips in one row are one height (spread ${f.heightSpread} px)`);
+      assert.ok(f.bandSpread <= 1, `${width} px: bands in one row share a bottom edge (spread ${f.bandSpread} px)`);
     }
   }));
 });

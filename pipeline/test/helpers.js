@@ -75,10 +75,11 @@ export function get(port, path) {
 let copyList = null;
 export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter((p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)));
 
-// Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches". A program the
-// site has no page for is "under consideration" and its page "not built yet"; nothing says one will arrive, or when.
+// Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches", and the
+// words that call a page a stand-in for a later one ("interim", "temporary", "temporarily", "for now"). A program the site
+// has no page for is "under consideration" and its page "not built yet"; nothing says one will arrive, or when.
 // web/test/house-words.test.js runs it over every copy file, hub/test/promises.test.js over rendered pages.
-export const FUTURE_WORDS = /\bcoming\b|\bsoon(er)?\b|\blaunch(es)?\b/i;
+export const FUTURE_WORDS = /\bcoming\b|\bsoon(er)?\b|\blaunch(es)?\b|\binterim\b|\btemporar(y|ily)\b|\bfor now\b/i;
 
 // The words a page shows or reads aloud: its text (comments, scripts and styles dropped) and the attributes a browser
 // shows on hover or a screen reader says (title, aria-label, alt, placeholder) or a search result shows (a meta's content).

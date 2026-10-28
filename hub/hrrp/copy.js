@@ -1,12 +1,13 @@
-// The words of the interim Readmissions pages (hub/hrrp/page.js): /hrrp/ and a page per hospital in the pinned Thirty Day
-// Readmissions file, until that site folds in. No digit characters: numbers arrive through {placeholders}, the one
+// The words of the Readmissions summary pages (hub/hrrp/page.js): /hrrp/ and a page per hospital in the pinned Thirty Day
+// Readmissions file. They say what the pages are (a summary of CMS's values, with the full explorer on Thirty Day
+// Readmissions) and promise no later page. No digit characters: numbers arrive through {placeholders}, the one
 // comparison point (a ratio against one) through a named constant in page.js.
 import { typesetCopy } from '../../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  // The kicker over both pages' headings.
-  kicker: 'HRRP · Interim page',
+  // The kicker over both pages' headings: what the page is.
+  kicker: 'HRRP · Summary',
 
   // ---------- /hrrp/ ----------
   // The masthead: the program's name, its last word in the penalty ink. <title> and description; {cut} of {n} hospitals.

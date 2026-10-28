@@ -147,11 +147,11 @@ test('each card\'s histogram: bins of 0.2 points whose counts add to the program
   }
 });
 
-test('the programs under consideration: six dashed slips in three groups ("not estimated"), each with its abbreviation, name, dek and "under consideration"', () => {
+test('the programs under consideration: six dashed slips in three named groups, each with its abbreviation, name, dek and "under consideration"', () => {
   const section = element(out, '<section class="bsec" id="programs"', 'section');
   const groups = elements(section, '<div class="sg"', 'div');
   const want = [['price', 'Price adjustments'], ['reporting', 'Reporting rules'], ['episode', 'Episode payment']];
-  assert.deepEqual(groups.map((g) => words(element(g, '<p class="grp cap"', 'p'))), want.map(([, name]) => `${name} not estimated`));
+  assert.deepEqual(groups.map((g) => element(g, '<p class="grp cap"', 'p')), want.map(([, name]) => `<p class="grp cap"><span>${name}</span></p>`));
   const slips = [];
   groups.forEach((g, i) => {
     const members = SITE.programs.filter((p) => p.group === want[i][0] && !p.inData);
