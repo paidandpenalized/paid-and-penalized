@@ -1,8 +1,9 @@
-// The page at the folder of each program still to come (web/site.js PLACEHOLDER_PROGRAMS), so the program tabs and the footer
-// never link to a missing page. Laid out as the interim Readmissions page's masthead is (hub/hrrp/page.js; its classes, hub/
-// styles.css): the kicker, the program's name, its dek and two ways back, beside a status card, a form waiting to be filled in:
-// a hatched band saying the page is coming, CMS's name for the program, and the figures (HVBP's estimate from the dollar file,
-// otherwise none) under a "Coming" stamp. Never indexed. The program's own page takes its place at the same address.
+// The placeholder page at the folder of each program with no page here (web/site.js PLACEHOLDER_PROGRAMS), so the program
+// tabs, the footer and the front page's directory never link to a missing page. Laid out as the interim Readmissions page's
+// masthead is (hub/hrrp/page.js; its classes, hub/styles.css): the kicker, the program's name, its dek and two ways back,
+// beside a status card, a form waiting to be filled in: a hatched band saying the page isn't built, CMS's name for the
+// program, and the figures (HVBP's estimate from the dollar file, otherwise none) under a "Not built" stamp. It says what is
+// so and promises no page and no date. Never indexed. A program's own page, if one is built, takes the same address.
 import { COPY as SHARED } from '../web/copy.js';
 import { programDek } from '../web/programs.js';
 import { estTag, fillCopy, formField, formTitle, sentenceOf, stamp } from '../web/render/components.js';
@@ -25,7 +26,7 @@ const MOVED = { hvbp: (facts) => facts.vbpBonus };
 const arrow = html`<span class="ico ico--arrow cm__back" aria-hidden="true"></span>`;
 const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: HOSPITAL.estimateTagLabel, text: HOSPITAL.estimateTag });
 
-// The Figures field's value: the dollars the estimates move between hospitals, with the estimate tag, or none yet.
+// The Figures field's value: the dollars the estimates move between hospitals, with the estimate tag, or none.
 function figures(program, facts, fy) {
   if (!program.inData) return fill('figuresNone');
   const moved = MOVED[program.id];
@@ -34,7 +35,8 @@ function figures(program, facts, fy) {
 }
 
 // program: its SITE.programs entry (stage 'soon'); facts: the story's facts (hub/model.js storyFacts); assets: the build's
-// (the fiscal year is the shell's); robots: the page's robots value (noindex).
+// (the fiscal year is the shell's, at the card's title bar only when the card shows a figure); robots: the page's robots
+// value (noindex).
 export function comingPage({ program, facts, assets, robots }) {
   if (!Object.hasOwn(GROUPS, program.group)) throw new RangeError(`hub coming: the page has no words for the group "${program.group}"`);
   const dek = programDek(program.id);
@@ -46,18 +48,18 @@ export function comingPage({ program, facts, assets, robots }) {
   const body = html`<article class="wrap rd rd--program">
 <header class="rd__top">
 <div class="rd__intro stack">
-<p class="cap kicker rd__kicker">${program.ab} · ${GROUPS[program.group]} · ${COPY.coming}</p>
+<p class="cap kicker rd__kicker">${program.ab} · ${GROUPS[program.group]} · ${program.inData ? COPY.statusInData : COPY.statusConsidered}</p>
 <h1 class="rd__title">${program.name}</h1>
 <p class="dek">${dek}</p>
 <p class="rd__go cm__acts"><a href="/">${arrow} ${SHARED.allPrograms}</a><a href="/#programs">${COPY.livePrograms}</a></p>
 </div>
 <div class="form rd__sum cm__card">
-${formTitle(fill('cardTitle', { ab: program.ab }), `FY${fy}`)}
-<div class="cm__wait"><p>${COPY.comingBand}</p></div>
-${fields.map((field, i) => formField({ no: i + 1, size: 'text', ...field }))}<div class="cm__stamp" aria-hidden="true">${stamp({ label: COPY.coming, ink: true })}</div>
+${formTitle(fill('cardTitle', { ab: program.ab }), program.inData ? `FY${fy}` : null)}
+<div class="cm__wait"><p>${COPY.band}</p></div>
+${fields.map((field, i) => formField({ no: i + 1, size: 'text', ...field }))}<div class="cm__stamp" aria-hidden="true">${stamp({ label: COPY.stamp, ink: true })}</div>
 </div>
 </header>
-<p class="rd__note">${sentence('sooner', { feedback: feedbackLink(program.path) })}</p>
+<p class="rd__note">${sentence('ask', { feedback: feedbackLink(program.path) })}</p>
 </article>`;
   return hubPage({ title: `${program.name} · ${SITE.name}`, description: dek, path: program.path, robots, body, assets, program: program.id });
 }

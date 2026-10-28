@@ -36,14 +36,15 @@ const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
 
 const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 
-// A program row's link: to the hospital's page there; else to the program's folder, which says it is coming (a program still
-// to come) or is the program's own page (one with pages for other hospitals but not this one).
+// A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
+// program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
+// one).
 function deepLink(h, id) {
   const { name, path, stage } = PROGRAM[id];
   const own = pageOf(h, id);
   if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
   return stage === 'soon'
-    ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepComing', { name })}</a>`
+    ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepNotBuilt', { name })}</a>`
     : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
 }
 

@@ -304,8 +304,8 @@
 /* ---------- below the story (hub/home/below.js): the program directory, the methods in brief, the invitation ----------
    Most of the look is the family's parts: the form (.form, .field, the numbered box .field__no, .stamp, .est-tag) and,
    from the hospital page below, the strip drawing (.st and its parts: each card's histogram) and the empty-program band
-   (.hh__nextbox: each coming program's slip). A script fills the worksheet in for a found hospital; [hidden] hides the
-   notes and stamps it does not need. */
+   (.hh__nextbox: each slip for a program under consideration). A script fills the worksheet in for a found hospital;
+   [hidden] hides the notes and stamps it does not need. */
 .bsec { margin-top: 96px; padding-top: 28px; border-top: 5px double var(--ink); }
 .below h2 { margin: 8px 0 14px; font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
 .bsec__head, .ests, .dir, .soon { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -324,7 +324,7 @@
 .go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
 .go:hover, .ask__act > a:hover { background: var(--ink); color: var(--paper); }
 .pc .go { margin: auto 0 0; }
-/* A coming program's slip: dashed, quiet, an empty hatched band where its data will go. */
+/* A slip for a program under consideration: dashed, quiet, over an empty hatched band. */
 .soon { margin-top: 40px; }
 .sg { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; align-content: start; }
 .sg .grp { grid-column: 1 / -1; align-items: end; min-height: 3.2em; margin: 0; }
@@ -358,6 +358,9 @@
 @media (min-width: 1024px) {
   .bsec__head, .ests { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; }
   .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The slips side by side, a column each, once the one-slip group is wide enough for its name and note. */
+@media (min-width: 1280px) {
   .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
   .sg { grid-column: span var(--n); grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
 }
@@ -634,7 +637,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
    the hospital page's record card and layout with the conditions table in the right column; on a phone each condition is a
    short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways.
    The masthead rules (.rd--program, .rd__top, .rd__intro, .rd__kicker, .rd__title, .rd__note, .rd__go, .rd__sum) are shared with
-   the coming-soon pages (hub/coming.js): when Readmissions folds in, keep them or move them there. */
+   the placeholder pages (hub/coming.js): when Readmissions folds in, keep them or move them there. */
 .rd--program { padding-block: 28px 44px; }
 .rd__top { display: grid; gap: 28px 48px; }
 .rd__intro { align-content: start; container-type: inline-size; }
@@ -658,7 +661,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
 .rd__yes { color: var(--pen-ink); font-weight: 700; }
 .rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
-/* The coming-soon pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside
+/* The placeholder pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside
    the summary card's flex form (.rd__sum), whose fields are boxes waiting to be filled; the band across it is hatched. */
 .cm__acts { display: flex; flex-wrap: wrap; gap: 10px 14px; }
 .cm__back { transform: scaleX(-1); }

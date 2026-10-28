@@ -10,7 +10,7 @@ import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
 import { searchForm } from '../render/shell.js';
 import { textOf } from '../../pipeline/site/html.js';
-import { chipOf, footerOf, headerOf, testAssets } from '../../pipeline/test/helpers.js';
+import { FUTURE_WORDS, chipOf, footerOf, headerOf, readerWords, testAssets } from '../../pipeline/test/helpers.js';
 
 const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { shell: '/assets/shell.bbbbbbbb.js' } });
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
@@ -176,25 +176,29 @@ test('shell: on a phone the compact wordmark is a 44px target, as every control 
   assert.match(rule, /min-height:\s*44px/);
 });
 
-test('shell: the program tabs in the registry\'s order, the coming ones after a "coming" gap, the current one marked', () => {
+test('shell: the program tabs are All programs and the programs with dollar estimates, in the registry\'s order, the current one marked', () => {
   const hub = tabsOf(page({ ...PAGE, path: '/' }));
   assert.deepEqual(hub, [
     ['/', 'All programs', 'page', 'tab'],
     ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
-    ...UNLISTED_PROGRAMS.map((p) => [p.path, p.ab, null, 'tab tab--soon']),
   ]);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp']);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
   assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
-  assert.ok(header.includes('<a class="tab tab--soon" href="/wage-index/" title="Local wages (Wage index): coming"><span class="tab__ab">Wage index</span></a>'));
-  // The gap sits between the last full tab and the first coming one.
-  const gap = header.indexOf('<span class="tabs__gap" aria-hidden="true">coming</span>');
-  assert.ok(gap > header.indexOf(`href="${LISTED_PROGRAMS.at(-1).path}"`) && gap < header.indexOf(`href="${UNLISTED_PROGRAMS[0].path}"`));
-  // On a program's pages its tab is current, and only it.
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a></div></nav>'), 'the row ends at the last program with estimates');
+  // The programs under consideration have no tab, and the row no gap or label before where they were.
+  for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
+  assert.doesNotMatch(header, /tab--soon|tabs__gap/);
+  // On a program's pages its tab is current, and only it; on the placeholder page of a program under consideration none
+  // is (nor All programs), and on one with estimates (HVBP) its tab is.
   const hacrp = tabsOf(page({ ...PAGE, program: 'hacrp' }));
   assert.deepEqual(hacrp.filter(([, , current]) => current).map(([href]) => href), ['/hacrp/']);
-  const coming = tabsOf(page({ ...PAGE, path: '/team/', program: 'team' }));
-  assert.deepEqual(coming.filter(([, , current]) => current).map(([href]) => href), ['/team/']);
+  const team = page({ ...PAGE, path: '/team/', program: 'team' });
+  assert.deepEqual(tabsOf(team).filter(([, , current]) => current), []);
+  assert.doesNotMatch(headerOf(team), /aria-current="page"/);
+  const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
+  assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
   assert.throws(() => page({ ...PAGE, program: 'nope' }), /nope/);
 });
 
@@ -205,7 +209,7 @@ test('shell: with a followed hospital, each tab opens that program\'s page for i
   assert.equal(href('HRRP'), '/hrrp/hospital/990001/');
   assert.equal(href('HACRP'), '/hacrp/hospital/990001/');
   assert.equal(href('HVBP'), '/hvbp/');
-  assert.equal(href('Wage index'), '/wage-index/');
+  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs and the programs with estimates');
   // Not in Thirty Day Readmissions: the Readmissions folder.
   const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inTdr: false } }));
   assert.equal(notTdr[1][0], '/hrrp/');
@@ -277,13 +281,14 @@ test('shell: the footer is one numbered form row (programs, the site, data as of
   assert.ok(foot.includes('<div class="form ft">'));
   const labels = [...foot.matchAll(/<span class="field__no">(\d)<\/span>([^<]+)</g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(labels, [['1', 'Programs'], ['2', 'The site'], ['3', 'Data as of'], ['4', 'Feedback']]);
-  // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the coming ones.
+  // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the ones under
+  // consideration, linked to their placeholder pages.
   for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
     assert.match(foot, new RegExp(`<a href="${href}">${name} <span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
   }
-  const coming = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
-  assert.ok(coming.startsWith('Coming: '));
-  assert.deepEqual([...coming.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
+  const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
+  assert.ok(considered.startsWith('Under consideration: '));
+  assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
     UNLISTED_PROGRAMS.map((p) => [p.path, p.ab]));
   // 2: the family's pages, Methods first, Terms last.
   const site = [...foot.matchAll(/<li><a href="(\/[a-z]+\/)">([^<]+)<\/a><\/li>/g)].map((m) => m[1]);
@@ -315,14 +320,15 @@ test('shell: a listed program with no figure in the shell\'s facts stops the pag
   }
 });
 
-test('shell: header and footer show no email address and promise no reply, fix or deletion', () => {
-  // The house words' promise patterns (web/test/house-words.test.js), over what the shell shows.
-  const PROMISES = [/\b(within|business days?|promptly|as soon as)\b/i, /\bwe will (reply|respond|fix|delete)\b/i, /\b(delete|remove) your\b/i];
-  const out = page({ ...PAGE, program: 'hacrp', hospital: FOLLOWED, sections: SECTIONS });
-  for (const part of [headerOf(out), footerOf(out)]) {
-    const words = textOf(part);
-    assert.doesNotMatch(words, /@/, 'no email address');
-    for (const re of PROMISES) assert.doesNotMatch(words, re);
+test('shell: header and footer show no email address and promise no reply, fix or deletion, and no program, page or date', () => {
+  // The house words' promise patterns (web/test/house-words.test.js), over what the shell shows and says.
+  const PROMISES = [/\b(within|business days?|promptly|as soon as)\b/i, /\bwe will (reply|respond|fix|delete)\b/i, /\b(delete|remove) your\b/i, FUTURE_WORDS];
+  for (const out of [page({ ...PAGE, program: 'hacrp', hospital: FOLLOWED, sections: SECTIONS }), page({ ...PAGE, path: '/team/', program: 'team' })]) {
+    for (const part of [headerOf(out), footerOf(out)]) {
+      const words = readerWords(part);
+      assert.doesNotMatch(words, /@/, 'no email address');
+      for (const re of PROMISES) assert.doesNotMatch(words, re);
+    }
   }
 });
 

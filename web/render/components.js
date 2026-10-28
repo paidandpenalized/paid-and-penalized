@@ -215,8 +215,8 @@ ${shown}
 ${note && html`<div class="field__note">${note}</div>`}</div>`;
 }
 
-// The record's title bar across the top of a .form: two runs of words, left and right.
-export const formTitle = (left, right) => html`<p class="form__title"><span>${left}</span><span>${right}</span></p>`;
+// The record's title bar across the top of a .form: two runs of words, left and right (null: the left alone).
+export const formTitle = (left, right = null) => html`<p class="form__title"><span>${left}</span>${right === null ? '' : html`<span>${right}</span>`}</p>`;
 
 // A rubber stamp (Thirty Day Readmissions): the decision in the display face, rotated and grain-masked. ink: the
 // neutral variant (no cut, no score, not subject); otherwise it is in the penalty ink.

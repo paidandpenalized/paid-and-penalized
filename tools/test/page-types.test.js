@@ -26,8 +26,8 @@ test('pageType: every page of the site sorts into one type', () => {
     '/hrrp/hospital/99a001/': 'hrrpHospital',
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
-  // Every program still to come has a placeholder at its folder until its own page is built; Readmissions' folder holds the
-  // interim page, not a placeholder.
+  // Every program with no page here has a placeholder at its folder; Readmissions' folder holds the interim page, not a
+  // placeholder.
   for (const { path } of PLACEHOLDER_PROGRAMS) sorted[path] = 'coming';
   assert.equal(sorted['/hvbp/'], 'coming');
   assert.equal(sorted['/hrrp/'], 'hrrp');

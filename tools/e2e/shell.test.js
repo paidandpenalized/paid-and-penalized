@@ -5,7 +5,8 @@
 // hospital's own page shows its chip from the server and its tabs carry it, the chip leaves the bar whole between a
 // phone's width and a desktop's, the family search on a hub page opens a state, a hospital's page across the programs
 // answers 200 from the family search's result and from the chip's name, the theme button flips the theme and
-// says so, and the tab row scrolls its current tab into view and fades while more lie to the right.
+// says so, and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
+// desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
 import { describe, it } from 'node:test';
@@ -13,7 +14,7 @@ import assert from 'node:assert/strict';
 import { STATUS_CODES } from '../../web/client/hub-asset.js';
 import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample } from './site.js';
@@ -119,7 +120,7 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
   }));
 
   it('the tab row: it scrolls the current tab into view clear of the fade, and the fade shows while more tabs lie to the right and goes at the end', async () => {
-    const last = SITE.programs.at(-1).path;
+    const last = LISTED_PROGRAMS.at(-1).path;
     await withPage(tabs, { path: last }, async (page) => {
       const f = await headerFacts(page);
       assert.ok(f.scrollLeft > 0, 'the row scrolled to the last tab');
@@ -140,6 +141,24 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
   });
 });
 
+// On a desktop the row holds All programs and the programs with dollar estimates whole: it neither scrolls nor fades. A
+// placeholder page for a program under consideration has no tab of its own, so none is current.
+describe('the tab row on a desktop', { concurrency: CONCURRENCY }, () => {
+  const tabs = useContext(shared, { width: 1280 });
+  it('fits without a scroll or a fade, and a program under consideration marks no tab', async () => {
+    const considered = SITE.programs.find((p) => !LISTED_PROGRAMS.includes(p)).path;
+    for (const path of ['/', PROGRAM_PATH, considered]) {
+      await withPage(tabs, { path }, async (page) => {
+        const f = await headerFacts(page);
+        const fits = await page.evaluate(() => { const row = document.querySelector('.tabs__scroll'); return row.scrollWidth <= row.clientWidth; });
+        assert.equal(fits, true, `${path}: the row fits`);
+        assert.equal(f.more, false, `${path}: no fade`);
+        assert.equal(!f.current, path === considered, `${path}: a current tab exactly where the page has one`);
+      });
+    }
+  });
+});
+
 describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
 
@@ -155,7 +174,7 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
       assert.equal(await chip.locator('.chip__t').textContent(), row.name, 'the chip names the hospital');
       assert.match(await chip.locator('.chip__v').textContent(), /^Estimated FY\d{4} net:\s*[+−]?\$[\d.,]+[KMB]?$/);
       assert.equal(await chip.locator('.chip__n').getAttribute('href'), tabHref(null, row.ccn));
-      assert.deepEqual(await hrefsOf(page), [tabHref(null, row.ccn), ...SITE.programs.map((p) => tabHref(p.id, row.ccn, { inTdr }))]);
+      assert.deepEqual(await hrefsOf(page), [tabHref(null, row.ccn), ...LISTED_PROGRAMS.map((p) => tabHref(p.id, row.ccn, { inTdr }))]);
       assert.equal(await page.locator('a.wordmark').getAttribute('href'), `/?h=${row.ccn}`);
       assert.ok((await headerFacts(page)).header <= MAX_STICKY, 'the header stays modest with the chip');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
@@ -165,7 +184,7 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
     await page.locator('.chip__x').click();
     await page.waitForURL((url) => url.pathname === PROGRAM_PATH && url.search === '?x=1');
     assert.equal(await page.locator('[data-chip]').isHidden(), true, 'no hospital is followed');
-    assert.deepEqual(await hrefsOf(page), ['/', ...SITE.programs.map((p) => p.path)]);
+    assert.deepEqual(await hrefsOf(page), ['/', ...LISTED_PROGRAMS.map((p) => p.path)]);
     await assertQuiet(seen, 'followed hospital');
   }));
 
@@ -182,7 +201,7 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
     for (const [what, search, mayFetch] of junk) {
       await withPage(tabs, { path: PROGRAM_PATH + search, watched: true }, async (page, { seen }) => {
         assert.equal(await page.locator('[data-chip]').isHidden(), true, `${what}: no chip`);
-        assert.deepEqual(await hrefsOf(page), ['/', ...SITE.programs.map((p) => p.path)], `${what}: the tabs are as written`);
+        assert.deepEqual(await hrefsOf(page), ['/', ...LISTED_PROGRAMS.map((p) => p.path)], `${what}: the tabs are as written`);
         assert.equal(await page.locator('a.wordmark').getAttribute('href'), '/', `${what}: the wordmark`);
         const state = await page.evaluate(() => ({
           imgs: document.querySelectorAll('main img, header img').length,
@@ -213,7 +232,7 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     assert.ok(row, 'the hospital is in the hub\'s asset');
     const own = hospitalPathOf('hub', ccn);
     const tabFor = (p) => (p.id === 'hacrp' ? HOSPITAL : p.id === 'hrrp' && row.tdr === 1 ? hospitalPathOf('hrrp', ccn, { inTdr: true }) : withFollow(p.path, ccn));
-    const want = [own, ...SITE.programs.map(tabFor)];
+    const want = [own, ...LISTED_PROGRAMS.map(tabFor)];
     assert.ok(JSON.stringify(await hrefsOf(page)) === JSON.stringify(want), 'the tabs follow the hospital');
     assert.ok(await page.locator('a.wordmark').getAttribute('href') === withFollow('/', ccn), 'the wordmark follows the hospital');
     // The chip's name opens the hospital's page across the programs.

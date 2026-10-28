@@ -1,8 +1,8 @@
 // What sits below the home page's story, server-rendered: the program directory (a card per program the dollar
-// estimates hold, each with its national figure and a histogram of its hospitals, then the coming programs as dashed
-// slips by what they do to payment), "Methods, in brief" with a worksheet that adds up one hospital's estimate (the
-// example's; hub/client/story/worksheet.js refills it for a hospital the story finds), and the invitation to say what
-// to build next. Every number comes from the data or a program's rule; the words are copy.js's.
+// estimates hold, each with its national figure and a histogram of its hospitals, then the programs under consideration
+// as dashed slips by what they do to payment), "Methods, in brief" with a worksheet that adds up one hospital's estimate
+// (the example's; hub/client/story/worksheet.js refills it for a hospital the story finds), and the invitation to say
+// what to build next. Every number comes from the data or a program's rule; the words are copy.js's.
 //
 // The look reuses the family's parts: the form (.form, .field, the numbered boxes, the stamp, the estimate tag) and the
 // hospital page's strip drawing (.st: its gutter, grid, base line, inks and labels) and empty-program band.
@@ -148,7 +148,7 @@ const FIGURES = {
   hvbp: (facts, fy) => ({ big: fill('dirMoved', { amount: money(facts.vbpBonus) }), sub: fill('dirNet', { amount: money(facts.vbpNet), fy }) }),
 };
 
-// The coming programs' groups, in order: the registry's `group` and its words.
+// The groups of the programs under consideration, in order: the registry's `group` and its words.
 const SOON_GROUPS = [['price', 'soonPrice'], ['reporting', 'soonReporting'], ['episode', 'soonEpisode']];
 
 // A program's card: its name and abbreviation, dek, takeaway and histogram, national figure (an estimate, for the year)
@@ -173,7 +173,8 @@ function card(p, { hospitals, facts, fy, domain }) {
 </article>`;
 }
 
-// A coming program's slip: its abbreviation, name and dek over an empty hatched band, linking to its coming-soon page.
+// A slip for a program under consideration: its abbreviation, name and dek over an empty hatched band, linking to its
+// placeholder page (hub/coming.js).
 const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title="${p.long}">${p.ab}</abbr><b>${p.name}</b><span>${programDek(p.id)}</span><span class="hh__nextbox slip__none"><span>${COPY.soonNone}</span></span></a>`;
 
 // The directory. programs: the registry (SITE.programs); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year.
@@ -182,13 +183,13 @@ export function directory({ programs, facts, hospitals, fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
   const soon = programs.filter((p) => !p.inData);
-  for (const p of soon) if (!SOON_GROUPS.some(([g]) => g === p.group)) throw new RangeError(`hub home: the coming program "${p.id}" is in the group "${p.group}", which the directory has no words for`);
+  for (const p of soon) if (!SOON_GROUPS.some(([g]) => g === p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
   const domain = shareDomain(hospitals.filter((h) => h.est).map(({ est }) => ({ est: { pct: Object.fromEntries(['hrrp', 'hac', 'hvbp', 'net'].map((k) => [k, (est[k] * 100) / est.total])) } })));
   const groups = SOON_GROUPS.map(([group, key]) => [key, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
-<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${fill('dirHead', { count: capitalize(numberWord(live.length)) })}</h2></div>
+<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${fill('dirHead', { count: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${COPY.dirGroup}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, domain }))}</div>

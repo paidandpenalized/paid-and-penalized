@@ -10,7 +10,7 @@ import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.
 import { programDek } from '../../web/programs.js';
 import { count, decimal, money, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hrrp/copy.js';
 import { hrrpHospitalPage, hrrpProgramPage, summaryOf } from '../hrrp/page.js';
@@ -67,7 +67,7 @@ test('/hrrp/: the kicker, the masthead with its last word in the penalty ink, th
   assert.ok(!/data-hospital/.test(headerOf(page)) && !chipOf(headerOf(page)), 'no hospital followed');
   assert.ok(page.includes(NOINDEX), 'noindex');
   assert.ok(page.includes(`<title>Hospital Readmissions Reduction Program, FY${FY} · Paid &amp; Penalized</title>`), 'the title');
-  assert.ok(!page.includes('This program’s page is coming.'), 'not the coming placeholder');
+  assert.ok(!page.includes('This program’s page isn’t built yet.'), 'not the placeholder');
 });
 
 test('a hospital with a cut: its record card with CMS\'s factor to four decimals and the reduction, the link to its page on Thirty Day Readmissions, the FY estimate', () => {
@@ -102,7 +102,7 @@ test('the header follows the hospital: its interim page current, the chip with t
   assert.ok(header.includes(`data-hospital="${CUT.id}"`), 'the header names the hospital');
   const interim = hospitalPathOf('hrrp', CUT.id, { inTdr: true });
   const named = tabsOf(render(CUT)).map(([href, current]) => [href === interim ? 'interim' : href === hospitalPathOf('hub', CUT.id) ? 'hub' : href === hospitalPathOf('hacrp', CUT.id) ? 'hacrp' : href, current]);
-  assert.deepEqual(named, [['hub', false], ['interim', true], ['hacrp', false], ...SITE.programs.slice(2).map((p) => [p.path, false])]);
+  assert.deepEqual(named, [['hub', false], ['interim', true], ['hacrp', false], ...LISTED_PROGRAMS.slice(2).map((p) => [p.path, false])]);
   const chip = chipOf(header);
   assert.ok(chip.includes(money(h.est.net, { sign: true })) && chip.includes('href="/hrrp/"'), 'the chip carries the net and stops at the program page');
   assert.ok(render(CUT).includes(`<link rel="canonical" href="${SITE.origin}${interim}">`), 'the canonical address');
@@ -242,7 +242,7 @@ test('the build writes /hrrp/ and a page per pinned hospital, never indexed, at 
     // The program's page is written either way; the hospitals' pages are the pinned file's, one each.
     assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + RECORDS.length, 'one page per hospital in each file');
     const program = readFileSync(join(dir, 'b', 'hrrp', 'index.html'), 'utf8');
-    assert.ok(program.includes('<h1 class="rd__title">') && !program.includes("This program’s page is coming."), '/hrrp/ is the interim page, not the placeholder');
+    assert.ok(program.includes('<h1 class="rd__title">') && !program.includes('This program’s page isn’t built yet.'), '/hrrp/ is the interim page, not the placeholder');
     assert.ok(program.includes(NOINDEX) && !ctx.indexable.some((p) => p.startsWith('/hrrp/')), 'never indexed, in the sitemap\'s list or the page');
     let missing = 0;
     let bad = 0;

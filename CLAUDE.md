@@ -20,7 +20,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page. A site's
   own CSS is `sites/<program>/web/styles.css` (bundled after `web/styles/`); its browser scripts are in `client/`.
 - `web/`: what every page shares: `site.js` (name, origin, the hub's release state, each site's path, names and release state,
-  and the registry of every program, live and coming), `programs.js` (the programs' method constants and deks), `render/`
+  and the registry of every program, live and under consideration), `programs.js` (the programs' method constants and deks), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
   `styles/` (`tokens.css` is the only CSS or JS file under `web/` or `hub/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
   licenses, the favicon.

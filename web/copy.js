@@ -18,12 +18,9 @@ export const COPY = typesetCopy({
   themeToggle: 'Dark mode',
   // The followed hospital's chip (key, net, stop link): chip-copy.js, which the shell's script reads too.
   ...CHIP,
-  // The program tabs (and the footer's first field): their name, the first tab, the gap before the coming programs,
-  // and a coming tab's title.
+  // The program tabs (and the footer's first field): their name and the first tab.
   programs: 'Programs',
   allPrograms: 'All programs',
-  coming: 'coming',
-  comingTitle: '{name} ({ab}): coming',
   // A program's numbered section menu.
   navLabel: 'Sections',
   // The footer, the back of the form: its four fields, their words, then the signature lines.
@@ -32,7 +29,7 @@ export const COPY = typesetCopy({
   footFeedback: 'Feedback',
   footEstimated: 'Estimated FY{fy}:',
   footMoved: '{amount} moved',
-  footComing: 'Coming:',
+  footConsidered: 'Under consideration:',
   footFy: 'FY{fy}',
   footEstimates: '{fy} estimates from public CMS files, {n} hospitals.',
   footChanged: 'Estimates last changed {date}.',
@@ -67,8 +64,9 @@ export const COPY = typesetCopy({
   claimEstimate: 'Estimate',
   claimHypothetical: 'Hypothetical',
   // Each program's one-sentence dek (web/programs.js fills the placeholders from the programs' rules, in digits or in
-  // words): on the shell's coming-soon pages, the home page's directory and a program's tab. dekHrrp says "in the
-  // {days} days after leaving" where CMS says "within", since the house-words test reads "within" as a promised time.
+  // words): on the placeholder pages of the programs without a page of their own (hub/coming.js), the interim
+  // Readmissions page and the home page's directory. dekHrrp says "in the {days} days after leaving" where CMS says
+  // "within", since the house-words test reads "within" as a promised time.
   dekHrrp: 'Cuts pay by up to {cap} when more patients than expected return to the hospital in the {days} days after leaving.',
   dekHacrp: 'Cuts pay by a flat {cut} for {top} of hospitals with the highest infection and patient-safety scores.',
   dekHvbp: 'Holds back {withhold} of pay and returns it by quality score, as a bonus or a net cut. Budget-neutral by design.',

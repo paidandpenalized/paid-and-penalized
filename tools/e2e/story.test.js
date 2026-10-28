@@ -1,7 +1,8 @@
 // The home page's story, live (hub/client/home.js), in a real browser: on a phone and on a desktop, with reduced motion
 // each step shows its end state at once (the chart drawn, the right drawing behind it, the rail or the step's name
 // marking it), nothing scrolls sideways, and nothing goes wrong on the page; without the story's data the page stays as
-// the server wrote it. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js.
+// the server wrote it; below it, the directory's slips fit their rows. Runs against dist/ (make build) or any URL
+// (E2E_BASE_URL); see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { audit } from './axe.js';
@@ -331,3 +332,30 @@ for (const width of [390, 1280]) {
     }));
   });
 }
+
+// Below the story, the directory's programs under consideration: at every layout each group's name and note stay inside
+// their row, and each slip's band holds its words on one line (the band is one line tall).
+describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
+  const tabs = useContext(shared, { width: 1024 });
+  it('fit their rows and bands at 1024, 1279, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [1024, 1279, 1280, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        const inside = (el, box) => { const r = el.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
+        const rows = [...document.querySelectorAll('.sg .grp')];
+        const bands = [...document.querySelectorAll('.slip__none')];
+        return {
+          rows: rows.length,
+          rowsInside: rows.every((g) => [...g.children].every((s) => inside(s, g.getBoundingClientRect()))),
+          bands: bands.length,
+          oneLine: bands.every((b) => { const s = b.firstElementChild.getBoundingClientRect(); return s.height <= b.getBoundingClientRect().height + 0.5 && inside(b.firstElementChild, b.getBoundingClientRect()); }),
+        };
+      });
+      assert.equal(f.rows, 3, `${width} px: three groups`);
+      assert.equal(f.rowsInside, true, `${width} px: each group's name and note inside its row`);
+      assert.equal(f.bands, 6, `${width} px: six slips`);
+      assert.equal(f.oneLine, true, `${width} px: each band's words on one line, inside it`);
+    }
+  }));
+});

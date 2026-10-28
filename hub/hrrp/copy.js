@@ -31,7 +31,7 @@ export const COPY = typesetCopy({
   findPlaceholder: 'Hospital or city',
   // The link out, large, on both pages; the hospital's own page links to that hospital's page there.
   explorer: 'Full explorer on Thirty Day Readmissions',
-  explorerNote: 'Every condition, the peer groups, the history behind these numbers and a what-if, until Readmissions joins this site.',
+  explorerNote: 'Every condition, the peer groups, the history behind these numbers and a what-if.',
   // Which fiscal year this page shows, against the net the rest of the site shows.
   fyNote: "This page shows CMS's FY{fy} values. The estimated dollars across all three programs, on the front page and each hospital's page, use FY{hubFy}, the latest year all three programs share.",
 

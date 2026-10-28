@@ -92,7 +92,8 @@ export const COPY = typesetCopy({
   stripMedian: 'median',
   stripOut: 'This hospital: not in this program',
 
-  // The what-if section (#whatif): one row per program, an empty row for the next one, then the net with its result.
+  // The what-if section (#whatif): one row per program, an empty row for another (it promises none), then the net with
+  // its result.
   whatifKicker: 'Every program, among its peers',
   whatifHeading: 'What if? Adjust any program',
   whatifLede: "This hospital's estimated FY{fy} dollars in each program, beside the same {n} {group}.",
@@ -113,11 +114,11 @@ export const COPY = typesetCopy({
   partOut: '{n} not in the program',
   whyMedian: 'Peer median, among those in the program: {median} of pay.',
   deepHospital: '{name} for this hospital',
-  deepComing: '{name}: coming',
+  deepNotBuilt: '{name}: page not built yet',
   deepProgram: '{name}: program page',
-  nextHeading: 'Next program',
-  nextText: 'Each program joins this page as its site launches, as one more row on the same scale.',
-  nextBox: 'Room for the next program',
+  nextHeading: 'Other programs',
+  nextText: 'Programs under consideration would add a row here, on the same scale.',
+  nextBox: 'Room for another program',
   netHeading: 'Net, all three programs',
   resultHead: "Estimated FY{fy}, from CMS's factors",
   resultCut: 'That is a {share} net cut of Medicare inpatient pay; the median of the {n} {group} is {median}.',

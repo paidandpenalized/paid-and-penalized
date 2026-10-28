@@ -4,6 +4,7 @@ import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { repoFiles, writeFileMkdir } from '../files.js';
+import { tags, textOf } from '../site/html.js';
 import { createSiteServer, listen, stop } from '../site/serve.js';
 
 // The assets page() needs (web/render/layout.js), for a page rendered outside a build: the CSS and script paths, and the
@@ -73,3 +74,13 @@ export function get(port, path) {
 // Every copy file (web/copy.js, hub/copy.js and each site's), tracked or not yet added, from one listing of the repo.
 let copyList = null;
 export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter((p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)));
+
+// Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches". A program the
+// site has no page for is "under consideration" and its page "not built yet"; nothing says one will arrive, or when.
+// web/test/house-words.test.js runs it over every copy file, hub/test/promises.test.js over rendered pages.
+export const FUTURE_WORDS = /\bcoming\b|\bsoon(er)?\b|\blaunch(es)?\b/i;
+
+// The words a page shows or reads aloud: its text (comments, scripts and styles dropped) and the attributes a browser
+// shows on hover or a screen reader says (title, aria-label, alt, placeholder) or a search result shows (a meta's content).
+const SPOKEN = ['title', 'aria-label', 'alt', 'placeholder', 'content'];
+export const readerWords = (page) => [textOf(page), ...[...tags(page, { having: SPOKEN })].flatMap(({ attrs }) => SPOKEN.filter((a) => a in attrs).map((a) => attrs[a]))].join(' \n ');

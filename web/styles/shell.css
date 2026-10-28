@@ -70,9 +70,9 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 @media (min-width: 641px) { .ft__base .theme-toggle { display: none; } }
 
 /* ---------- the program tabs: a ledger's raised paper tabs standing on the heavy rule ---------- */
-/* The row scrolls sideways when it outgrows the window, edge to edge; a fade marks more to the right (.tabs--more, set
-   by the shell's script). The current tab is joined to the rule by its ink sides, with a red top edge. Coming
-   programs are dashed, in mono. */
+/* All programs, then a tab per program with dollar estimates. The row scrolls sideways when it outgrows the window,
+   edge to edge; a fade marks more to the right (.tabs--more, set by the shell's script). The current tab is joined to
+   the rule by its ink sides, with a red top edge. */
 .tabs { padding-bottom: var(--rule); }
 .tabs__scroll { display: flex; align-items: flex-end; margin-inline: calc(-1 * var(--gutter)); padding: 6px var(--gutter) 0; overflow-x: auto; scrollbar-width: none; }
 .tabs__scroll::-webkit-scrollbar { display: none; }
@@ -84,11 +84,6 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .tab:focus-visible { outline-offset: -4px; }
 .tab__ab { color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); letter-spacing: 0.02em; }
 .tab[aria-current="page"] { z-index: 1; padding-top: 10px; border: var(--rule) solid var(--ink); border-bottom: 0; background: var(--paper); color: var(--ink); box-shadow: inset 0 3px 0 var(--pen); }
-.tab--soon { padding-inline: 8px; border-style: dashed; background: none; color: var(--ink-3); font-weight: 400; }
-.tab--soon .tab__ab { color: inherit; }
-.tab--soon:hover { background: var(--hatch-fill); color: var(--ink-2); }
-.tab--soon[aria-current="page"] { border-style: solid; background: var(--paper); color: var(--ink); }
-.tabs__gap { flex: none; align-self: center; padding: 0 6px 0 12px; color: var(--ink-3); font: 400 0.6875rem/1 var(--font-type); white-space: nowrap; }
 
 /* ---------- a program's section menu: numbered, in caps, under the tabs; the current part underlined in red ---------- */
 .fam__sub { padding-bottom: 1px; }

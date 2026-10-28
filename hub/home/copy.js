@@ -115,11 +115,11 @@ export const COPY = typesetCopy({
   cardGo: 'Open its hospital page',
 
   // ---------- below the story (below.js) ----------
-  // The program directory: its heading ({count}: the programs with data, in words), the lede ({gross}: what they move in
-  // FY{fy}), the group over the cards.
+  // The program directory: its heading ({count}: the programs with data, {more}: the programs under consideration, in
+  // words; it promises no site and no date), the lede ({gross}: what they move in FY{fy}), the group over the cards.
   dirKicker: 'The programs',
-  dirHead: '{count} programs live. More as each site launches.',
-  dirLede: 'Each program gets its own site, with every hospital, built on the same look, search and way of counting. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
+  dirHead: '{count} programs live, {more} under consideration.',
+  dirLede: 'Each card puts its program’s hospitals on one shared scale. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
   dirGroup: 'Quality programs',
   dirGroupNote: 'Estimated FY{fy}',
   // Each card's takeaway over its histogram. Readmissions: the share of its hospitals at {zero}, as one in {whole} when a
@@ -141,12 +141,14 @@ export const COPY = typesetCopy({
   dirMoved: '{amount} moved',
   dirNet: 'net {amount} nationally, FY{fy}',
   dirOpen: 'Open {name}',
-  // The coming programs, by what they do to payment (web/site.js `group`), and each slip's empty band.
+  // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
+  // internal stage, soon), the note at each group's right (the quality programs' is dirGroupNote), and the words in each
+  // slip's empty band. The note and the band are each one short line in the narrowest group (hub/styles.css).
   soonPrice: 'Price adjustments',
   soonReporting: 'Reporting rules',
   soonEpisode: 'Episode payment',
-  soonNote: 'coming',
-  soonNone: 'no data yet',
+  soonNote: 'not estimated',
+  soonNone: 'under consideration',
 
   // Methods, in brief: the heading, a paragraph and three points ({fy}), then the worksheet (worksheet.js fills it for a
   // found hospital). Its lines' numbers arrive as {pay}, {base}, {hrrp}, {vbp}, {a} {b} {c}; {one} is the factor's 1,

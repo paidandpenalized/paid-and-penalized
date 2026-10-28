@@ -1,6 +1,6 @@
 // The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
-// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a coming-soon page per program
-// still to come (coming.js), every hospital's page across the programs (hospital/page.js), the interim Readmissions
+// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder page per program
+// with no page here (coming.js), every hospital's page across the programs (hospital/page.js), the interim Readmissions
 // pages (hrrp/page.js: /hrrp/ and a page per hospital in the pinned Thirty Day Readmissions file), the not-found page, and
 // the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
 // sites before it emitted. The hub's own pages stay noindex until the hub is released.

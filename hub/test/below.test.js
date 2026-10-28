@@ -1,8 +1,8 @@
 // What sits below the home page's story (hub/home/below.js, hub/client/story/worksheet.js): the program directory (a card
-// per program with data, each with its national figure and a histogram, then the coming programs as dashed slips), the
-// methods in brief with a worksheet that adds up one hospital's estimate, and the invitation. Built from the real data;
-// no hospital is named here (the worksheet's is the example, read from the data by its CCN; synthetic rows use invented
-// CCNs).
+// per program with data, each with its national figure and a histogram, then the programs under consideration as dashed
+// slips), the methods in brief with a worksheet that adds up one hospital's estimate, and the invitation. Built from the
+// real data; no hospital is named here (the worksheet's is the example, read from the data by its CCN; synthetic rows use
+// invented CCNs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { programDollars } from '../../engine/js/dollars/whatif.js';
@@ -62,12 +62,13 @@ const PROGRAMS = { hrrp: { key: 'hrrp', listed: 'hrrpListed' }, hacrp: { key: 'h
 const inProgram = (id) => estimated.filter((h) => !PROGRAMS[id].listed || h.est[PROGRAMS[id].listed]);
 const percentOf = (h, id) => (h.est[PROGRAMS[id].key] * 100) / h.est.total;
 
-test('the directory: #programs with its kicker, a heading that counts the programs with data, and the gross figure in its lede', () => {
+test('the directory: #programs with its kicker, a heading that counts the programs with data and those under consideration, and the gross figure in its lede', () => {
   const section = element(out, '<section class="bsec" id="programs"', 'section');
   assert.match(section, /^<section class="bsec" id="programs" aria-labelledby="programs-h">/);
   assert.ok(words(section).startsWith('The programs'), 'the kicker');
   const withData = SITE.programs.filter((p) => p.inData).length;
-  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData).replace(/^./, (c) => c.toUpperCase())} programs live. More as each site launches.`);
+  const considered = SITE.programs.length - withData;
+  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData).replace(/^./, (c) => c.toUpperCase())} programs live, ${numberWord(considered)} under consideration.`);
   const lede = words(element(section, '<p class="bsec__lede"', 'p'));
   assert.ok(lede.includes(money(facts.gross)), lede);
   assert.ok(lede.includes(`FY${fy}`) && lede.includes('estimated'), lede);
@@ -146,11 +147,11 @@ test('each card\'s histogram: bins of 0.2 points whose counts add to the program
   }
 });
 
-test('the coming programs: six dashed slips in three groups, each with its abbreviation, name, dek and "no data yet"', () => {
+test('the programs under consideration: six dashed slips in three groups ("not estimated"), each with its abbreviation, name, dek and "under consideration"', () => {
   const section = element(out, '<section class="bsec" id="programs"', 'section');
   const groups = elements(section, '<div class="sg"', 'div');
   const want = [['price', 'Price adjustments'], ['reporting', 'Reporting rules'], ['episode', 'Episode payment']];
-  assert.deepEqual(groups.map((g) => words(element(g, '<p class="grp cap"', 'p'))), want.map(([, name]) => `${name} coming`));
+  assert.deepEqual(groups.map((g) => words(element(g, '<p class="grp cap"', 'p'))), want.map(([, name]) => `${name} not estimated`));
   const slips = [];
   groups.forEach((g, i) => {
     const members = SITE.programs.filter((p) => p.group === want[i][0] && !p.inData);
@@ -161,7 +162,7 @@ test('the coming programs: six dashed slips in three groups, each with its abbre
       const p = members[j];
       assert.ok(s.includes(`<abbr class="ab" title="${escapeHtml(p.long)}">${escapeHtml(p.ab)}</abbr><b>${escapeHtml(p.name)}</b>`), p.id);
       assert.ok(words(s).includes(programDek(p.id)), p.id);
-      assert.match(s, /<span class="hh__nextbox slip__none"><span>no data yet<\/span><\/span><\/a>$/, p.id);
+      assert.match(s, /<span class="hh__nextbox slip__none"><span>under consideration<\/span><\/span><\/a>$/, p.id);
     });
     slips.push(...found);
   });

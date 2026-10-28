@@ -23,11 +23,12 @@ export const SITE = {
   sites: {
     hacrp: { path: '/hacrp/', released: false, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
-  // Every program, live and coming, in the order the shell's tabs and the home page's directory show them. Separate from
-  // `sites` (the sites built in this repo): a program here may have no site yet.
+  // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
+  // Separate from `sites` (the sites built in this repo): a program here may have no site.
   //   name, ab, long   the tab's name, its short form, and CMS's name for the program
-  //   path             the program's folder (a coming program's is its coming-soon page)
+  //   path             the program's folder (a program not built here holds a placeholder page there)
   //   stage            live (a site here), interim (a slim page here until Thirty Day Readmissions folds in), soon
+  //                    (no page here: not built; the id is internal)
   //   group            what the program does to payment: quality (a cut or bonus for scores), price (an adjustment to
   //                    the rate), reporting (a cut for not reporting), episode (a spending target)
   //   inData           whether the dollar estimates (hub/) include the program
@@ -59,10 +60,11 @@ export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.st
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
 
 // The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live and
-// interim programs and the coming ones the dollar estimates already include, the shell's full tabs and the footer's
-// figures; unlisted: the rest, the dashed tabs after the "coming" gap and the footer's "Coming:" line. Placeholder: every
-// program that is still to come (stage soon), whose folder holds the hub's coming-soon page (hub/coming.js). A live
-// program's folder holds its site and an interim one's the hub's own Readmissions pages (hub/hrrp/page.js).
+// interim programs and the not-built ones the dollar estimates already include, the shell's tabs and the footer's
+// figures; unlisted: the rest, under consideration, the footer's "Under consideration:" line and the front page's
+// slips (no tab). Placeholder: every program with no page here (stage soon), whose folder holds the hub's placeholder
+// page (hub/coming.js). A live program's folder holds its site and an interim one's the hub's own Readmissions pages
+// (hub/hrrp/page.js).
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
 export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));

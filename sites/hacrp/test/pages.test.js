@@ -15,7 +15,7 @@ import { chipOf, headerOf, withTemp } from '../../../pipeline/test/helpers.js';
 import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, money as moneyText, shortIsoDate } from '../../../web/render/format.js';
 import { externalLink } from '../../../web/render/layout.js';
-import { SITE, hospitalPathOf } from '../../../web/site.js';
+import { LISTED_PROGRAMS, hospitalPathOf } from '../../../web/site.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
@@ -625,7 +625,7 @@ test("the HACRP header: the program's tab current, its section menu to the progr
 const pinnedPage = (h) => hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: DATA.master.get(h.ccn), money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
 const tabLinks = (header) => [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1], Boolean(m[2])]);
 
-test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net and links its page across the programs, its tab current, All programs that page, Readmissions its interim page for the hospital, the other tabs at their folders until those pages are built', () => {
+test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net and links its page across the programs, its tab current, All programs that page, Readmissions its interim page for the hospital, the other tabs at their folders', () => {
   const h = pick((x) => x.paymentReduction === 'Yes' && DATA.dollars.byCcn.get(x.ccn).status === 'estimated' && DATA.master.get(x.ccn).programs.hrrp?.inProgram, 'an estimated hospital CMS cut, in Readmissions');
   const row = DATA.dollars.byCcn.get(h.ccn);
   const text = pinnedPage(h);
@@ -644,7 +644,7 @@ test('a hospital page follows its hospital: the chip names it with the dollar ro
   const own = hospitalPath(h);
   const interim = hospitalPathOf('hrrp', h.ccn, { inTdr: true });
   const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href === hub ? 'its page' : href === interim ? 'its Readmissions page' : href, current]);
-  assert.ok(JSON.stringify(named) === JSON.stringify([['its page', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : p.id === 'hrrp' ? ['its Readmissions page', false] : [p.path, false]))]), 'the tabs: its page, its Readmissions page, its HACRP page current, the other folders');
+  assert.ok(JSON.stringify(named) === JSON.stringify([['its page', false], ...LISTED_PROGRAMS.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : p.id === 'hrrp' ? ['its Readmissions page', false] : [p.path, false]))]), 'the tabs: its page, its Readmissions page, its HACRP page current, the other folders');
   // A hospital Thirty Day Readmissions does not have keeps the program's folder.
   const notInTdr = { ...DATA.master.get(h.ccn), programs: { hrrp: { inProgram: false } } };
   const outside = hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: notInTdr, fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: notInTdr, money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
