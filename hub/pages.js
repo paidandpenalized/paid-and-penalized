@@ -1,19 +1,22 @@
 // The hub: the family's front page (a stub until the hub is built), the methods stub, the policy pages (Terms,
 // privacy, About, accessibility, and corrections with its log), a placeholder per program without a site here
-// (coming.js), the not-found page, and the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the
-// sitemap lists every indexable page the sites before it emitted. The hub's own pages stay noindex until the hub is
-// built.
+// (coming.js), every hospital's page across the programs (hospital/page.js), the not-found page, and the two files
+// crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the sites before it
+// emitted. The hub's own pages stay noindex until the hub is built.
 import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink } from '../web/render/layout.js';
-import { PLACEHOLDER_PROGRAMS, SITE } from '../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
 import { comingPage } from './coming.js';
+import { loadHub } from './data.js';
+import { hospitalPage } from './hospital/page.js';
+import { hubHospitals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -145,10 +148,22 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
+// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
+// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures.
+function hospitalPages(ctx, { hospitals, master, robots, never }) {
+  if (!hospitals.length) return;
+  const facts = storyFacts(hospitals);
+  for (const h of hospitals) {
+    const r = h.est ? robots : never;
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null }) });
+  }
+}
+
 // updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
 // corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
-// log); tests pass their own.
-export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
+// log); tests pass their own. hospitals and master: the hub's hospitals (model.js hubHospitals) and their master records
+// by CCN, read once from the newest files (data.js loadHub) unless a test passes its own (no hospitals: no hospital pages).
+export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
   ctx.emit({ path: '/', robots, text: home(assets, robots) });
@@ -160,10 +175,13 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
+  const hub = hospitals ? null : loadHub();
+  hospitalPages(ctx, { hospitals: hospitals ?? hubHospitals(hub), master: master ?? hub?.master ?? new Map(), robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
 // entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box.
-export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js' }, styles: [], generate: generateHub };
+// styles: the hub's own pages' styles (each page's rules under its root class).
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js' }, styles: ['hub/styles.css'], generate: generateHub };

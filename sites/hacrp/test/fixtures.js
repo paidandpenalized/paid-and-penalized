@@ -9,7 +9,9 @@ import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
-import { HUB } from '../../../hub/pages.js';
+import { loadHub } from '../../../hub/data.js';
+import { hubHospitals } from '../../../hub/model.js';
+import { HUB, generateHub } from '../../../hub/pages.js';
 import { readPinned } from '../../../pipeline/files.js';
 import { build } from '../../../pipeline/site/build.js';
 import { textOf } from '../../../pipeline/site/html.js';
@@ -151,8 +153,17 @@ export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').re
 // released: as generateHacrp takes it (by default, web/site.js's).
 export const slicedSite = (data, { released } = {}) => ({ ...HACRP, generate: (ctx) => generateHacrp(ctx, { released, data, log: () => {} }) });
 
-// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub, in production: for the tests that
-// read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
+// The hub for a build of a slice (data: a slice of loadHacrp()'s): its hospital pages only for the slice's hospitals, so
+// every page it writes links HACRP pages the slice built (each one's peers are the slice's).
+export function slicedHub(data) {
+  const hub = loadHub();
+  const ccns = new Set(data.hospitals.map((h) => h.ccn));
+  const hospitals = hubHospitals(hub).filter((h) => ccns.has(h.ccn));
+  return { ...HUB, generate: (ctx, options) => generateHub(ctx, { ...options, hospitals, master: hub.master }) };
+}
+
+// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub (slicedHub), in production: for the
+// tests that read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
 // file's tests, so call this once, at the top of the test file. The getter resolves to the output folder.
 export function sliceBuild(data) {
   let built = null;
@@ -161,7 +172,7 @@ export function sliceBuild(data) {
     if (!built) {
       const dir = mkdtempSync(join(tmpdir(), 'pp-slice-'));
       built = { dir, out: join(dir, 'dist') };
-      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), HUB] });
+      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), slicedHub(data)] });
     }
     return built.ready.then(() => built.out);
   };

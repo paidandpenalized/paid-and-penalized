@@ -1,6 +1,7 @@
 // What a reader does on the pages, in a real browser: the hospital search finds a hospital and opens its page, the
 // what-if recomputes when a measure changes, the keyboard reaches every control without a focused element sliding under
-// the sticky top bar, and with JavaScript off every page keeps its footer (and the hub's pages lose nothing). Runs
+// the sticky top bar, and with JavaScript off every page keeps its footer (the hub's pages lose nothing, and a hospital's
+// page across the programs shows its record, net, dollars and headline, with no empty frame). Runs
 // against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, city, CCN or values, or a search list's options: they say counts, or the page type.
 import { describe, it } from 'node:test';
@@ -300,5 +301,24 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
         assert.deepEqual(lost, [], 'text that shows with scripts and not without');
       }
     });
+  }
+
+  // A hospital's page across the programs without scripts: its record, the net, each program's dollars and the headline
+  // show, and nothing the script fills shows as an empty frame (the swarm's frame, its caption, the load error, the
+  // toggle and the what-if's buttons). The variant (Maryland's) shows its record and status.
+  for (const { type, name, path } of PAGES.filter((p) => p.type.startsWith('hub-hospital'))) {
+    it(`${name}: the server's page is whole without scripts`, () => withPage(withoutJs, { path }, async (page) => {
+      const shown = (selector) => page.evaluate((s) => [...document.querySelectorAll(s)].map((el) => el.checkVisibility()), selector);
+      assert.deepEqual(await shown('main h1'), [true], 'the record\'s name');
+      if (type === 'hub-hospital-maryland') {
+        assert.deepEqual(await shown('.hh__status'), [true], 'the status');
+        assert.deepEqual(await shown('[data-swarm], #whatif, [data-peers]'), [], 'no swarm, what-if or peer row');
+        return;
+      }
+      for (const selector of ['.hh__big', '[data-headline]', '[data-result]']) assert.deepEqual(await shown(selector), [true], `${selector} shows`);
+      assert.deepEqual(await shown('.hh__sr'), [true, true, true, true], 'each program\'s dollars and the net');
+      for (const selector of ['[data-swarm]', '[data-swarm-note]', '[data-load-error]', '[data-peers] button', '[data-match]', '[data-reset]', '[data-strip]'])
+        assert.ok((await shown(selector)).every((v) => v === false), `${selector} does not show`);
+    }));
   }
 });

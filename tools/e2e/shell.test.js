@@ -3,7 +3,8 @@
 // find button is there exactly when it does and that search opens and closes by touch and by Escape, the followed
 // hospital in ?h= fills the chip and points the tabs at it (and a malformed, markup or unknown value changes nothing), a
 // hospital's own page shows its chip from the server and its tabs carry it, the chip leaves the bar whole between a
-// phone's width and a desktop's, the family search on a hub page opens a state, the theme button flips the theme and
+// phone's width and a desktop's, the family search on a hub page opens a state, a hospital's page across the programs
+// answers 200 from the family search's result and from the chip's name, the theme button flips the theme and
 // says so, and the tab row scrolls its current tab into view and fades while more lie to the right.
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
@@ -12,7 +13,7 @@ import assert from 'node:assert/strict';
 import { STATUS_CODES } from '../../web/client/hub-asset.js';
 import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
-import { SITE } from '../../web/site.js';
+import { SITE, hospitalPathOf } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample } from './site.js';
@@ -203,12 +204,13 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     assert.equal(await chip.isVisible(), true, 'the chip shows without waiting for a script');
     assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
     // The tabs and the wordmark carry the hospital to every program's folder and the front page; its HACRP tab is this
-    // page. Compared as one answer, so a failure prints no CCN.
-    const want = ['/', ...SITE.programs.map((p) => p.path)].map((path) => (path === '/hacrp/' ? HOSPITAL : withFollow(path, ccn)));
+    // page and All programs its page across the programs. Compared as one answer, so a failure prints no CCN.
+    const own = hospitalPathOf('hub', ccn);
+    const want = [own, ...SITE.programs.map((p) => (p.id === 'hacrp' ? HOSPITAL : withFollow(p.path, ccn)))];
     assert.ok(JSON.stringify(await hrefsOf(page)) === JSON.stringify(want), 'the tabs follow the hospital');
     assert.ok(await page.locator('a.wordmark').getAttribute('href') === withFollow('/', ccn), 'the wordmark follows the hospital');
-    // Until the family's hospital page is built, the chip's name is plain text, not a link.
-    assert.equal(await chip.locator('a.chip__n').count(), 0, 'the name links nowhere yet');
+    // The chip's name opens the hospital's page across the programs.
+    assert.ok(await chip.locator('a.chip__n').getAttribute('href') === own, 'the name links the hospital\'s page');
     assert.equal(await page.locator('.chip__x').getAttribute('href'), '/hacrp/', 'the × opens the program page');
     const { fy, rows } = await hubRows(page);
     const row = rows.find((r) => r.ccn === ccn);
@@ -283,6 +285,48 @@ describe('the family search on a hub page', () => {
     await option.click();
     await page.waitForURL((url) => url.pathname === '/' && url.hash === '#state=OH');
     await assertQuiet(seen, 'family search');
+  }));
+});
+
+// The pages a hospital's links open: the family search's result and the followed hospital's chip both open its page
+// across the programs, which the hub builds for every hospital in its asset, with an estimate or not.
+describe('a hospital\'s page across the programs, from the search and the chip', { concurrency: CONCURRENCY }, () => {
+  const tabs = useContext(shared);
+  // An estimated hospital and one without an estimate, from the hub's asset.
+  const picks = (rows) => [rows.find((r) => r.status === STATUS_CODES.estimated), rows.find((r) => r.status !== STATUS_CODES.estimated)];
+
+  it('a hospital the family search finds by its CCN opens its page, which answers 200 and names it', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+    const { rows } = await hubRows(page);
+    for (const [i, row] of picks(rows).entries()) {
+      if (i) await visit(page, tabs.base, SITE.pages.about);
+      const box = page.locator('.topbar form#omni[data-hub]').getByRole('combobox');
+      await box.pressSequentially(row.ccn);
+      const option = page.locator('.topbar form#omni [role="option"]').first();
+      await option.waitFor();
+      const [response] = await Promise.all([
+        page.waitForResponse((r) => r.request().isNavigationRequest() && new URL(r.url()).pathname === hospitalPathOf('hub', row.ccn)),
+        option.click(),
+      ]);
+      assert.equal(response.status(), 200, `result ${i + 1}: the page answers 200`);
+      await page.waitForURL((url) => url.pathname === hospitalPathOf('hub', row.ccn));
+      await page.waitForLoadState('networkidle');
+      assert.ok((await page.locator('main h1').innerText()).trim() === row.name, `result ${i + 1}: the page is the hospital's`);
+    }
+    await assertQuiet(seen, 'search to a hospital page');
+  }));
+
+  it('the ?h= chip\'s name opens the hospital\'s page, which answers 200', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { rows } = await hubRows(page);
+    for (const [i, row] of picks(rows).entries()) {
+      await visit(page, tabs.base, `${PROGRAM_PATH}?h=${row.ccn}`);
+      const name = page.locator('[data-chip] a.chip__n');
+      await name.waitFor({ state: 'visible' });
+      assert.ok(await name.getAttribute('href') === hospitalPathOf('hub', row.ccn), `chip ${i + 1}: the name links the hospital's page`);
+      const [response] = await Promise.all([page.waitForResponse((r) => r.request().isNavigationRequest()), name.click()]);
+      assert.equal(response.status(), 200, `chip ${i + 1}: the page answers 200`);
+      await page.waitForLoadState('networkidle');
+    }
+    await assertQuiet(seen, 'chip to a hospital page');
   }));
 });
 

@@ -12,6 +12,7 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { programDek } from '../../web/programs.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
+import { loadHub } from '../data.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
@@ -26,9 +27,9 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    // The three pages before, the stub root, /methods/, the 404 page, the five policy pages and a placeholder per
-    // program without a site here.
-    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length);
+    // The three pages before, the stub root, /methods/, the 404 page, the five policy pages, a placeholder per program
+    // without a site here, and a page per hospital in the dollar file (none indexable while the hub is unreleased).
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -67,7 +68,7 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
 test('each program without a site here has a placeholder at its folder: its name, its dek, a line saying its page is coming, the way home', () =>
   withTemp('pp-hub-coming-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-    await generateHub(ctx);
+    await generateHub(ctx, { hospitals: [] });
     assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.path), ['/hrrp/', '/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
     for (const p of PLACEHOLDER_PROGRAMS) {
       const text = readFileSync(join(dir, p.path, 'index.html'), 'utf8');
@@ -87,7 +88,7 @@ test('each program without a site here has a placeholder at its folder: its name
 test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
   withTemp('pp-hub-search-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections') });
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
     const paths = ['/', ...Object.values(SITE.pages), ...PLACEHOLDER_PROGRAMS.map((p) => p.path)];
     const files = [...paths.map((path) => [path, join(dir, path, 'index.html')]), ['not found', join(dir, '404.html')]];
     const box = String(hubSearchForm(ASSETS.shell.hubUrl));
@@ -125,7 +126,7 @@ const POLICY = [
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
   const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]);
-  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections') });
+  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
 

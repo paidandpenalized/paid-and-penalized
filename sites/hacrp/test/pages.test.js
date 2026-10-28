@@ -7,7 +7,6 @@ import { join } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
-import { HUB } from '../../../hub/pages.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
@@ -15,7 +14,7 @@ import { chipOf, headerOf, withTemp } from '../../../pipeline/test/helpers.js';
 import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, money as moneyText, shortIsoDate } from '../../../web/render/format.js';
 import { externalLink } from '../../../web/render/layout.js';
-import { SITE } from '../../../web/site.js';
+import { SITE, hospitalPathOf } from '../../../web/site.js';
 import { REDUCTION_TEXT } from '../web/constants.js';
 import { HACRP, generateHacrp, hospitalRows, placeEntries, scoreRange } from '../web/generate.js';
 import { compareDefault } from '../web/hospital-table.js';
@@ -26,7 +25,7 @@ import { programPage } from '../web/pages/program.js';
 import { KINDS, buildPlaces } from '../web/places.js';
 import { programData } from '../web/program-data.js';
 import { hospitalView } from '../web/view.js';
-import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedSite, sliceBuild, WHATIF_STANDING } from './fixtures.js';
+import { ASSETS, BOUNDARY_TEXT as BOUNDARY, CASES, checkAsofBar, esc, inputs, master, pick as pickFrom, slicedHub, slicedSite, sliceBuild, WHATIF_STANDING } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PLACES, PROGRAM_ARGS, PAGE_CTX, SEARCH_URL, renderPlace, renderProgram } from './pinned.js';
 
 const quiet = () => {};
@@ -224,7 +223,7 @@ test('production, released: every hospital page and every place page plus /hacrp
 test('released: false: every page is noindex in production and the sitemap lists none', () =>
   temp(async (dir) => {
     const out = join(dir, 'dist');
-    await build({ outDir: out, env: 'production', sites: [slicedSite(SLICE, { released: false }), HUB] });
+    await build({ outDir: out, env: 'production', sites: [slicedSite(SLICE, { released: false }), slicedHub(SLICE)] });
     for (const h of SLICE.hospitals) assert.ok(read(out, hospitalPath(h)).includes(NOINDEX), hospitalPath(h));
     for (const p of SLICE_PLACES.list) assert.ok(read(out, p.path).includes(NOINDEX), p.path);
     for (const path of ['/hacrp/', '/hacrp/data/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
@@ -623,7 +622,7 @@ test("the HACRP header: the program's tab current, its section menu to the progr
 const pinnedPage = (h) => hospitalPage({ ...PAGE_CTX, view: hospitalView({ hospital: h, model: DATA.model, estimate: DATA.estimate, footnotes: DATA.footnotes, master: DATA.master.get(h.ccn), fy: DATA.fy, periods: DATA.periods, boundaryText: DATA.boundaryText }), master: DATA.master.get(h.ccn), money: hospitalMoney(DATA.dollars.byCcn.get(h.ccn)), source: DATA.source, robots: null, assets: ASSETS, searchUrl: SEARCH_URL });
 const tabLinks = (header) => [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1], Boolean(m[2])]);
 
-test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net, its tab current, the other tabs at their folders until those pages are built', () => {
+test('a hospital page follows its hospital: the chip names it with the dollar row\'s signed net and links its page across the programs, its tab current, All programs that page, the other tabs at their folders until those pages are built', () => {
   const h = pick((x) => x.paymentReduction === 'Yes' && DATA.dollars.byCcn.get(x.ccn).status === 'estimated' && DATA.master.get(x.ccn).programs.hrrp?.inProgram, 'an estimated hospital CMS cut, in Readmissions');
   const row = DATA.dollars.byCcn.get(h.ccn);
   const text = pinnedPage(h);
@@ -633,15 +632,17 @@ test('a hospital page follows its hospital: the chip names it with the dollar ro
   const chip = chipOf(header);
   assert.ok(chip, 'the chip shows, not hidden');
   const name = esc(DATA.master.get(h.ccn).name);
-  assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${name}</span> <span class="chip__v"><span class="vh">Estimated FY${DATA.fy} net: </span>${moneyText(row.net, { sign: true })}</span></span>`), 'the name and the dollar row\'s net, plain text');
+  const hub = hospitalPathOf('hub', h.ccn);
+  assert.ok(chip.includes(`<a class="chip__n" href="${hub}"><span class="chip__t">${name}</span> <span class="chip__v"><span class="vh">Estimated FY${DATA.fy} net: </span>${moneyText(row.net, { sign: true })}</span></a>`), 'the name and the dollar row\'s net, linking the hospital\'s page across the programs');
   assert.ok(chip.includes(`<a class="chip__x" href="/hacrp/" aria-label="Stop following ${name}">×</a>`), 'stopping opens the program page');
-  // Its HACRP page is this page; the family's hospital page and the Readmissions pages are not built yet, so All programs
-  // and Readmissions open their folders (the shell's script adds ?h=), and nothing links them.
+  // Its HACRP page is this page and All programs its page across the programs; the Readmissions pages are not built yet,
+  // so Readmissions opens its folder (the shell's script adds ?h=), and nothing links them. Each href is compared as a
+  // yes or no, so a failure prints no CCN.
   const own = hospitalPath(h);
-  const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href, current]);
-  assert.deepEqual(named, [['/', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : [p.path, false]))]);
-  assert.equal(tabLinks(header)[1][0], '/hrrp/', 'Readmissions, though the hospital is in it');
-  assert.ok(!/href="\/hospital\/|href="\/hrrp\/hospital\//.test(text), 'no link to a page not built');
+  const named = tabLinks(header).map(([href, current]) => [href === own ? 'its HACRP page' : href === hub ? 'its page' : href, current]);
+  assert.ok(JSON.stringify(named) === JSON.stringify([['its page', false], ...SITE.programs.map((p) => (p.id === 'hacrp' ? ['its HACRP page', true] : [p.path, false]))]), 'the tabs: its page, its HACRP page current, the other folders');
+  assert.equal(tabLinks(header)[1][0] === '/hrrp/', true, 'Readmissions, though the hospital is in it');
+  assert.equal(/href="\/hrrp\/hospital\//.test(text), false, 'no link to a page not built');
   // The section menu, Every hospital current, and the bar's search.
   assert.deepEqual([...header.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);
   assert.ok(header.includes('data-nav="map" aria-current="true"'), 'Every hospital is the current part');
@@ -654,7 +655,7 @@ test('a hospital page with no estimate (Maryland\'s, or no inputs) shows its chi
     const header = headerOf(pinnedPage(h));
     const chip = chipOf(header);
     assert.ok(chip, `${what}: the chip shows`);
-    assert.ok(chip.includes(`<span class="chip__n"><span class="chip__t">${esc(DATA.master.get(h.ccn).name)}</span></span>`), `${what}: the name alone`);
+    assert.ok(chip.includes(`<a class="chip__n" href="${hospitalPathOf('hub', h.ccn)}"><span class="chip__t">${esc(DATA.master.get(h.ccn).name)}</span></a>`), `${what}: the name alone, linking its page`);
     assert.ok(!/chip__v|\$0|NaN|undefined/.test(chip), `${what}: no figure`);
   }
 });

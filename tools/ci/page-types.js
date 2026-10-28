@@ -7,7 +7,7 @@ import { hospitalHref } from '../../sites/hacrp/web/hospital-table.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/web/links.js';
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
 import { HOSPITALS_PATH } from '../../sites/hacrp/web/view.js';
-import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 
 export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 // A hospital's page, by its CCN (any case): '/hacrp/hospital/<ccn, lowercase>/'.
@@ -26,6 +26,12 @@ const isHospital = (path) => {
   const ccn = folderUnder(path, HOSPITALS_PATH)?.toUpperCase();
   return ccn !== undefined && CCN.test(ccn) && hospitalPath(ccn) === path;
 };
+// A hospital's page across the programs (the hub's): '/hospital/<ccn, lowercase>/'.
+const HUB_HOSPITALS = hospitalPathOf('hub', 'X').replace(/x\/$/, '');
+const isHubHospital = (path) => {
+  const ccn = folderUnder(path, HUB_HOSPITALS)?.toUpperCase();
+  return ccn !== undefined && CCN.test(ccn) && hospitalPathOf('hub', ccn) === path;
+};
 // The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
 export const placeKind = (path) => KINDS.find((kind) => {
   const key = folderUnder(path, `${PROGRAM_PATH}${kind}/`);
@@ -33,7 +39,7 @@ export const placeKind = (path) => KINDS.find((kind) => {
 }) ?? null;
 
 // The type of the page at a site path: 'hub', 'policy', 'coming', 'program', 'methods', 'dictionary', 'hospital',
-// 'place' or 'notFound'; null for a path that is none of them.
+// 'place', 'hubHospital' or 'notFound'; null for a path that is none of them.
 export function pageType(path) {
   if (path === '/') return 'hub';
   if (path === NOT_FOUND_ADDRESS) return 'notFound';
@@ -44,5 +50,6 @@ export function pageType(path) {
   if (path === DICTIONARY_PAGE) return 'dictionary';
   if (isHospital(path)) return 'hospital';
   if (placeKind(path) !== null) return 'place';
+  if (isHubHospital(path)) return 'hubHospital';
   return null;
 }

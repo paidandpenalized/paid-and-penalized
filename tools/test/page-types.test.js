@@ -17,6 +17,9 @@ test('pageType: every page of the site sorts into one type', () => {
     '/hacrp/division/south-atlantic/': 'place',
     '/hacrp/state/ca/': 'place',
     '/hacrp/metro/new-york-newark-jersey-city-ny-nj/': 'place',
+    // A hospital's page across the programs: its CCN, lowercase, under /hospital/.
+    '/hospital/990001/': 'hubHospital',
+    '/hospital/99a001/': 'hubHospital',
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
   // Every program without a site here has a placeholder at its folder until its own page is built.
@@ -26,6 +29,12 @@ test('pageType: every page of the site sorts into one type', () => {
   // The hub's methods page and the program's are different pages.
   assert.equal(pageType('/methods/'), 'policy');
   assert.equal(pageType('/hacrp/methods/'), 'methods');
+});
+
+test('pageType: a hospital\'s page across the programs is hubHospital only at a valid CCN\'s lowercase folder', () => {
+  for (const ccn of ['990001', '99A001']) assert.equal(pageType(hospitalPathOf('hub', ccn)), 'hubHospital', ccn);
+  for (const path of ['/hospital/', '/hospital/99A001/', '/hospital/12345/', '/hospital/9900011/', '/hospital/99-001/', '/hospital/990001/extra/', '/hospital/990001', '/hospitals/990001/'])
+    assert.equal(pageType(path), null, path);
 });
 
 test('the family\'s address for a HACRP hospital page (web/site.js hospitalPathOf) is the one the HACRP site writes', () => {

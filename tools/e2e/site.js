@@ -2,12 +2,14 @@
 // engines, and the pages to visit. The launch command (launch.js) reads it as the checks do; lib.js adds the browser.
 import { existsSync } from 'node:fs';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
+import { loadHub } from '../../hub/data.js';
+import { hubHospitals } from '../../hub/model.js';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
-import { SITE } from '../../web/site.js';
+import { SITE, hospitalPathOf } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
 // The browser engines Playwright drives, by the name E2E_ENGINE takes.
@@ -62,13 +64,33 @@ export function hospitalSample(type, all = readNewestEmitted().hospitals) {
   return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
 }
 
+// The sample hospitals' pages across the programs (the hub's), by type, each the first in the dollar file's order that
+// has an estimate with a net cut and the hospital-acquired conditions cut, and that is in Maryland (no estimate: the
+// variant page): [type, what it is, the test].
+const HUB_HOSPITALS = [
+  ['hub-hospital-cut', 'with a net cut and the HAC cut', (h) => h.est !== null && h.est.cut && h.est.net < 0],
+  ['hub-hospital-maryland', 'in Maryland', (h) => h.status === 'maryland'],
+];
+
+// The sample hospital's page across the programs of a type (HUB_HOSPITALS), { type, name, path, hospital: its hub
+// record }, from the emitted data alone.
+export function hubHospitalSample(type, all = hubHospitals(loadHub())) {
+  const [, what, test] = HUB_HOSPITALS.find(([t]) => t === type) ?? [];
+  if (!test) throw new RangeError(`hubHospitalSample: no sample type "${type}"`);
+  const found = all.find(test);
+  if (!found) throw new Error(`hubHospitalSample: no hospital ${what} in the data`);
+  return { type, name: type, path: hospitalPathOf('hub', found.ccn), hospital: found };
+}
+
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
 // placeholder (value-based purchasing's), the program page, its Methods and dictionary, the three sample hospitals
-// (hospitalSample), the first region, division, state and metro page in dist/, and a path no page has (the not-found
-// page, served with status 404). name is the page's name in a test's title: its type, and a policy page's path; never a
-// hospital's name or address. Needs dist/ and the emitted data, whichever site the browser visits.
+// (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
+// programs (hubHospitalSample), and a path no page has (the not-found page, served with status 404). name is the page's
+// name in a test's title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the
+// emitted data, whichever site the browser visits.
 export function samplePages() {
   const all = readNewestEmitted().hospitals;
+  const hub = hubHospitals(loadHub());
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
   return [
@@ -80,6 +102,7 @@ export function samplePages() {
     ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
+    ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }
