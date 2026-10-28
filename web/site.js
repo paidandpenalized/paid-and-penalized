@@ -2,13 +2,13 @@
 // byline's profile, the feedback form, the hub's state, each site (its path, names and state) and the program registry.
 // The hub or a site with released: false stays noindex and out of the sitemap even in a production build; go-live
 // flips them here.
-// pages: the hub's policy pages and the family's Methods, by name, in the footer's order. The footer links Terms in
-// its text (web/copy.js's termsLink) and lists the rest, each labelled with web/copy.js's word of the same name.
+// pages: the hub's policy pages and the family's Methods, by name, in the order the footer's second field lists them,
+// each labelled with web/copy.js's word of the same name (Terms: termsLink, which the footer's Terms line links too).
 // feedback: the shared Google Form, and the names of its two prefilled questions (the site's name, the page's address).
 export const SITE = {
   name: 'Paid & Penalized',
   origin: 'https://paidandpenalized.org',
-  pages: { terms: '/terms/', about: '/about/', methods: '/methods/', privacy: '/privacy/', corrections: '/corrections/', accessibility: '/accessibility/' },
+  pages: { methods: '/methods/', about: '/about/', corrections: '/corrections/', accessibility: '/accessibility/', privacy: '/privacy/', terms: '/terms/' },
   // The site's text, charts and derived data, and its code.
   license: { content: { name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' }, code: { name: 'MIT' } },
   // The byline's profile (the About page links it too).
@@ -36,7 +36,7 @@ export const SITE = {
     { id: 'hacrp', name: 'Hospital-acquired conditions', ab: 'HACRP', long: 'Hospital-Acquired Condition Reduction Program', path: '/hacrp/', stage: 'live', group: 'quality', inData: true },
     { id: 'hvbp', name: 'Value-based purchasing', ab: 'HVBP', long: 'Hospital Value-Based Purchasing Program', path: '/hvbp/', stage: 'soon', group: 'quality', inData: true },
     { id: 'wage-index', name: 'Local wages', ab: 'Wage index', long: 'Hospital Wage Index', path: '/wage-index/', stage: 'soon', group: 'price', inData: false },
-    { id: 'dsh', name: 'Low-income patients', ab: 'DSH + UC', long: 'Disproportionate Share Hospital and Uncompensated Care Payments', path: '/dsh/', stage: 'soon', group: 'price', inData: false },
+    { id: 'dsh', name: 'Low-income patients', ab: 'DSH + UC', long: 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments', path: '/dsh/', stage: 'soon', group: 'price', inData: false },
     { id: 'ime', name: 'Teaching', ab: 'IME', long: 'Indirect Medical Education Adjustment', path: '/ime/', stage: 'soon', group: 'price', inData: false },
     { id: 'iqr', name: 'Quality reporting', ab: 'IQR', long: 'Hospital Inpatient Quality Reporting Program', path: '/iqr/', stage: 'soon', group: 'reporting', inData: false },
     { id: 'pi', name: 'Electronic health records', ab: 'PI', long: 'Medicare Promoting Interoperability Program', path: '/pi/', stage: 'soon', group: 'reporting', inData: false },

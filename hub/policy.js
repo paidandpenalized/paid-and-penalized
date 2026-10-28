@@ -50,5 +50,5 @@ ${s.body}
 `)}</div>
 </div>
 </article>`;
-  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, assets });
+  return page({ title: `${title} · ${SITE.name}`, description, path, robots, body, scripts: [assets.js.topbar], assets });
 }

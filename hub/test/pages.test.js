@@ -9,6 +9,7 @@ import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
+import { programDek } from '../../web/programs.js';
 import { SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { COPY } from '../copy.js';
@@ -24,7 +25,10 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    assert.equal(ctx.pages, 3 + 3 + 5);
+    // The three pages before, the stub root, /methods/, the 404 page, the five policy pages and a placeholder per
+    // program without a site here.
+    const placeholders = SITE.programs.filter((p) => p.stage !== 'live');
+    assert.equal(ctx.pages, 3 + 3 + 5 + placeholders.length);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -58,6 +62,27 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/<\/loc>/);
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/hospital\/990001\/<\/loc>/);
     assert.equal(sitemap.match(/<url>/g).length, 2);
+  }));
+
+test('each program without a site here has a placeholder at its folder: its name, its dek, a line saying its page is coming, the way home', () =>
+  withTemp('pp-hub-coming-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    await generateHub(ctx);
+    const pending = SITE.programs.filter((p) => p.stage !== 'live');
+    assert.deepEqual(pending.map((p) => p.path), ['/hrrp/', '/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
+    for (const p of pending) {
+      const text = readFileSync(join(dir, p.path, 'index.html'), 'utf8');
+      assert.equal(text.match(/<h1[\s>]/g)?.length, 1, p.id);
+      assert.ok(text.includes(`<h1>${escapeHtml(p.name)}</h1>`), p.id);
+      assert.ok(text.includes(`<p class="dek">${escapeHtml(programDek(p.id))}</p>`), p.id);
+      assert.ok(text.includes(COPY.comingNote), p.id);
+      assert.ok(text.includes(`<a href="/">${SHARED.allPrograms}</a>`), p.id);
+      // Never indexed, released or not, and the program's own tab is the current one.
+      assert.ok(text.includes(NOINDEX), p.id);
+      assert.ok(!ctx.indexable.includes(p.path), p.id);
+      assert.match(text, new RegExp(`<a class="tab[^"]*" href="${p.path}"[^>]* aria-current="page">`), p.id);
+      assert.ok(text.includes(`<title>${escapeHtml(p.name)} · Paid &amp; Penalized</title>`), p.id);
+    }
   }));
 
 test('an empty sitemap is a valid empty urlset; a path that is not a plain site path is refused', () => {

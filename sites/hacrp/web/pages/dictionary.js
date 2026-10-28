@@ -6,7 +6,7 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { markdownSections } from '../../../../web/render/markdown.js';
 import { SITE } from '../../../../web/site.js';
-import { asofBar, kicker, siteHeader } from './parts.js';
+import { asofBar, kicker, shellOf } from './parts.js';
 
 // text: the filled Markdown (csv.js dictionaryText), as the downloadable file holds it; fy for the kicker; periods and
 // source for the as-of bar; robots: null for an indexable page.
@@ -27,5 +27,5 @@ ${s.body}
 ${asofBar({ fy, periods, source })}
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable on a phone (web/client/figure.js).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, topbar: siteHeader({ fy, searchUrl }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path, robots, body, scripts: [assets.js.figure, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : [])], assets, ...shellOf({ fy, searchUrl }) });
 }

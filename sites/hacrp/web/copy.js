@@ -213,8 +213,7 @@ export const COPY = {
   measureCDI: { text: 'Clostridioides difficile (C. diff) infections', claim: 'HACRP-10' },
   measureMRSA: { text: 'MRSA bloodstream infections', claim: 'HACRP-11' },
 
-  // The site's top bar (pages/parts.js siteHeader): the edition tag beside the program's name and the numbered nav.
-  edition: { text: '{subtitle} · FY{fy}', claim: null },
+  // The section menu under the family's program tabs (pages/parts.js shellOf).
   navHow: { text: 'How it works', claim: null },
   navFy: { text: 'FY{fy}', claim: null },
   fyShort: { text: 'FY{fy}', claim: null },
@@ -354,7 +353,7 @@ export const COPY = {
     text: "Maryland's hospitals are scored but not subject to the reduction.",
     claim: 'HACRP-13',
   },
-  // The top bar's search (pages/parts.js searchBox): its form's name, the visible "Find" and the rest of the box's
+  // The bar's search (pages/parts.js searchBox): its form's name, the visible "Find" and the rest of the box's
   // name for screen readers, and the placeholder. What its list and status say is in search/copy.js.
   searchHeading: { text: 'Find a hospital', claim: null },
   searchFind: { text: 'Find', claim: null },

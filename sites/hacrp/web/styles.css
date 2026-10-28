@@ -508,13 +508,13 @@
 .swarm__opts { display: flex; flex-wrap: wrap; gap: 0 6px; }
 @media (max-width: 560px) { .swarm__kinds { grid-template-columns: minmax(0, 1fr); } }
 .swarm__kind { padding-top: 5px; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
-.chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target-min); padding: 2px 8px 2px 4px; border: 0; background: none; color: var(--ink); font: 400 var(--fs-sm)/1.2 var(--font-type); cursor: pointer; }
+.swarm__chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target-min); padding: 2px 8px 2px 4px; border: 0; background: none; color: var(--ink); font: 400 var(--fs-sm)/1.2 var(--font-type); cursor: pointer; }
 /* A form's check box before each choice: empty, or marked in the penalty ink when picked. */
-.chip::before { content: ""; flex: none; width: 13px; height: 13px; border: 1.5px solid var(--ink); background: var(--paper); }
-.chip[aria-pressed="true"]::before { background: linear-gradient(45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), var(--paper); border-color: var(--pen); }
-.chip[aria-pressed="true"] { font-weight: 700; }
-.chip:hover::before { background-color: var(--paper-2); }
-@media (forced-colors: active) { .chip[aria-pressed="true"]::before { background: Highlight; } }
+.swarm__chip::before { content: ""; flex: none; width: 13px; height: 13px; border: 1.5px solid var(--ink); background: var(--paper); }
+.swarm__chip[aria-pressed="true"]::before { background: linear-gradient(45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, var(--pen) 42% 58%, transparent 58%), var(--paper); border-color: var(--pen); }
+.swarm__chip[aria-pressed="true"] { font-weight: 700; }
+.swarm__chip:hover::before { background-color: var(--paper-2); }
+@media (forced-colors: active) { .swarm__chip[aria-pressed="true"]::before { background: Highlight; } }
 .swarm__readout { min-height: 1.5em; font: 600 var(--fs-sm)/1.5 var(--font-type); }
 .swarm__art { position: relative; }
 .swarm__art .chart { max-width: none; }
@@ -598,7 +598,7 @@
 .usmap__key--rings .usmap__sw--faint { background: var(--ink-3); opacity: 0.6; }
 
 /* Forced colors: the swarm's check boxes keep their frames. */
-@media (forced-colors: active) { .chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; } }
+@media (forced-colors: active) { .swarm__chip::before { forced-color-adjust: none; border-color: CanvasText; background: Canvas; } }
 
 /* ---------- The Methods page (pages/methods.js) ---------- */
 .meth__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 16px 20px; }

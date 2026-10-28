@@ -19,6 +19,9 @@ test('pageType: every page of the site sorts into one type', () => {
     '/hacrp/metro/new-york-newark-jersey-city-ny-nj/': 'place',
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
+  // Every program without a site here has a placeholder at its folder until its own page is built.
+  for (const { path, stage } of SITE.programs) if (stage !== 'live') sorted[path] = 'coming';
+  assert.equal(sorted['/hvbp/'], 'coming');
   for (const [path, type] of Object.entries(sorted)) assert.equal(pageType(path), type, path);
   // The hub's methods page and the program's are different pages.
   assert.equal(pageType('/methods/'), 'policy');
@@ -27,7 +30,7 @@ test('pageType: every page of the site sorts into one type', () => {
 
 test('pageType: a path that matches no type is none (null)', () => {
   // A hospital's page is at its CCN in lowercase, and a place's at its key in lowercase.
-  for (const path of ['/hacrp/hospital/', '/hacrp/hospital/12345/', '/hacrp/hospital/9900011/', '/hacrp/hospital/99A001/', '/hacrp/county/x/',
+  for (const path of ['/hvbp/x/', '/hvbp', '/hacrp/hospital/', '/hacrp/hospital/12345/', '/hacrp/hospital/9900011/', '/hacrp/hospital/99A001/', '/hacrp/county/x/',
     '/hacrp/state/', '/hacrp/state/CA/', '/new/', '/other.html', '/hacrp/hospital/990001/extra/', '/hacrp/state/ca/extra/'])
     assert.equal(pageType(path), null, path);
 });

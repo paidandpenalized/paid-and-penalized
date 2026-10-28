@@ -20,7 +20,7 @@ import { sourceText } from '../copy.js';
 import { fill, t } from '../program/copy.js';
 import { childrenTable, placeHistFigure, placeMapFigure, placeMeasuresFigure, psec, ruleFigure } from '../program-figures.js';
 import { ancestors } from '../places.js';
-import { asofBar, citation, dataLinks, hospitalTable, printLink, siteHeader } from './parts.js';
+import { asofBar, citation, dataLinks, hospitalTable, printLink, shellOf } from './parts.js';
 import { acrossFigure, ACROSS_WINDOW } from '../money-part.js';
 import { nearLine, placeMoney } from '../money-data.js';
 import { cutText } from '../money.js';
@@ -175,6 +175,6 @@ ${citation({ fy, title: heading, path: place.path, source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-place']],
     assets,
-    topbar: siteHeader({ fy, current: 'map', searchUrl }),
+    ...shellOf({ fy, current: 'map', searchUrl }),
   });
 }

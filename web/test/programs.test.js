@@ -33,6 +33,20 @@ test('every program has CMS\'s program name in `long`, and a path that is a lowe
   assert.equal(new Set(SITE.programs.map((p) => p.path)).size, SITE.programs.length, 'no two programs share a folder');
 });
 
+test('each program\'s `long` is CMS\'s name for it, exactly', () => {
+  assert.deepEqual(Object.fromEntries(SITE.programs.map((p) => [p.id, p.long])), {
+    hrrp: 'Hospital Readmissions Reduction Program',
+    hacrp: 'Hospital-Acquired Condition Reduction Program',
+    hvbp: 'Hospital Value-Based Purchasing Program',
+    'wage-index': 'Hospital Wage Index',
+    dsh: 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments',
+    ime: 'Indirect Medical Education Adjustment',
+    iqr: 'Hospital Inpatient Quality Reporting Program',
+    pi: 'Medicare Promoting Interoperability Program',
+    team: 'Transforming Episode Accountability Model',
+  });
+});
+
 test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
   assert.deepEqual(Object.keys(SITE.sites), ['hacrp']);
   assert.equal(SITE.sites.hacrp.path, SITE.programs.find((p) => p.id === 'hacrp').path);

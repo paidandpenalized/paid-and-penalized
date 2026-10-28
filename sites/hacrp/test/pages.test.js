@@ -288,13 +288,13 @@ test('the program page links the hospitals asset and inlines no hospital data; h
     searchUrl: '/assets/hacrp-hospitals.0000abcd.json', robots: 'noindex',
   });
   // The search sits in the top bar: a combobox over the asset, hidden until its script shows it. It finds places too.
-  const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(text)[0];
-  assert.match(header, /<form class="omni" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
+  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
+  assert.match(header, /<form class="omni" id="omni" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>/);
   assert.match(header, /<label class="omni__field" for="omni-q"><span class="omni__label cap">Find<span class="vh"> a hospital or place by name, city, state, ZIP code or CCN<\/span><\/span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list"/);
   assert.match(header, /<ul class="omni__list" id="omni-list" role="listbox" aria-label="Find a hospital" hidden><\/ul>/);
   assert.match(header, /<p class="vh" role="status" aria-live="polite"><\/p>/);
   // The hero's larger box reads the same asset, with its own ids.
-  assert.match(text, /<form class="omni omni--hero" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>\n<label class="omni__field" for="hero-q"><span class="omni__label cap">Find<span class="vh"> a hospital, state or metro area<\/span><\/span><input id="hero-q" type="search" role="combobox"/);
+  assert.match(text, /<form class="omni omni--hero" id="hero" role="search" aria-label="Find a hospital" data-src="\/assets\/hacrp-hospitals\.0000abcd\.json" hidden>\n<label class="omni__field" for="hero-q"><span class="omni__label cap">Find<span class="vh"> a hospital, state or metro area<\/span><\/span><input id="hero-q" type="search" role="combobox"/);
   assert.match(text, /<ul class="omni__list" id="hero-list" role="listbox"/);
   assert.doesNotMatch(text, /<datalist/);
   assert.doesNotMatch(text, /application\/json/);
@@ -474,8 +474,8 @@ test('the build writes the sandbox into /hacrp/, its page data saying share fals
     assert.doesNotMatch(text, /data-wi="banner"/);
     const [, json] = /<script type="application\/json" id="hacrp-program">(.*?)<\/script>/s.exec(text);
     assert.equal(JSON.parse(json).page.share, false);
-    assert.match(text, /<form class="omni" role="search"[^>]*data-src="\/assets\/hacrp-hospitals\.[0-9a-f]{8}\.json"/, 'the top bar searches the same asset');
-    for (const path of SLICE.hospitals.map(hospitalPath)) assert.ok(read(dir, path).includes('<form class="omni" role="search"'), `${path}: a search on every page`);
+    assert.match(text, /<form class="omni" id="omni" role="search"[^>]*data-src="\/assets\/hacrp-hospitals\.[0-9a-f]{8}\.json"/, 'the top bar searches the same asset');
+    for (const path of SLICE.hospitals.map(hospitalPath)) assert.ok(read(dir, path).includes('<form class="omni" id="omni" role="search"'), `${path}: a search on every page`);
   }));
 
 test('the ledger: one row per measure, CMS\'s value and z-score (a dash where CMS published none), CMS\'s footnotes and this site\'s part', () => {
@@ -582,10 +582,11 @@ test("a hospital page's foot sets the facts (the data's release among them), dat
   assert.ok(text.includes('<p class="page__links"><a href="/hacrp/" data-print-href="https://paidandpenalized.org/hacrp/">'));
 });
 
-test("the HACRP top bar: the program's name and FY tag, its nav to the program page's sections (each id on the page) and Methods", () => {
+test("the HACRP header: the program's tab current, its section menu to the program page's sections (each id on the page) and Methods", () => {
   const program = renderProgram(HISTORY_ARGS);
-  const header = /<header class="topbar">[\s\S]*?<\/header>/.exec(program)[0];
-  assert.ok(header.includes('<span class="wordmark__name">Hospital-Acquired Conditions</span> <span class="wordmark__tag">HACRP · FY2026</span>'));
+  const header = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(program)[0];
+  assert.ok(header.includes('<a class="tab" href="/hacrp/" aria-current="page"><span>Hospital-acquired conditions</span> <span class="tab__ab">HACRP</span></a>'));
+  assert.equal(header.match(/aria-current="page"/g).length, 1, 'one current tab');
   const targets = [...header.matchAll(/<a href="([^"]+)" data-nav="(\w+)"/g)].map((m) => [m[2], m[1]]);
   assert.deepEqual(targets.map(([id]) => id), ['how', 'fy', 'money', 'map', 'history', 'methods']);
   for (const [id, href] of targets.slice(0, 5)) {
@@ -598,7 +599,7 @@ test("the HACRP top bar: the program's name and FY tag, its nav to the program p
   assert.ok(program.includes(`<script type="module" src="${ASSETS.js.topbar}">`));
   const view = hospitalView(inputs(CASES.yes));
   const hosp = hospitalPage({ ...PAGE_CTX, view, source: DATA.source, robots: null, assets: ASSETS });
-  const barOf = (text) => /<header class="topbar">[\s\S]*?<\/header>/.exec(text)[0];
+  const barOf = (text) => /<header class="topbar fam"[\s\S]*?<\/header>/.exec(text)[0];
   const currentOf = (text) => [...barOf(text).matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   // The hospital and place pages mark "Every hospital" (the program page's #map), the Methods page marks Methods, and
   // each bar has the same five links.

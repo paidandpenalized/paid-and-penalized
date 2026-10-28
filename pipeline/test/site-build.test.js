@@ -128,6 +128,10 @@ test('build writes the hub\'s asset once and hands every site the shell\'s facts
     assert.ok(shell.programs.hrrp.dollars < 0 && shell.programs.hrrp.cutN > 0);
     assert.ok(shell.programs.hacrp.dollars < 0 && shell.programs.hacrp.cutN > 0);
     assert.ok(shell.programs.hvbp.moved > 0 && Number.isInteger(shell.programs.hvbp.net));
+    // The test helper's invented facts have the build's shape, so a page rendered in a test meets the same fields.
+    const shape = (facts) => ({ ...Object.fromEntries(Object.keys(facts).map((k) => [k, typeof facts[k]])),
+      programs: Object.fromEntries(Object.entries(facts.programs).map(([id, figures]) => [id, Object.keys(figures)])) });
+    assert.deepEqual(shape(testAssets().shell), shape(shell));
   }));
 
 test('a build with no sites still writes the hub\'s asset, once', () =>

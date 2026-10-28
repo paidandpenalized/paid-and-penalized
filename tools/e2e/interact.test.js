@@ -154,7 +154,8 @@ async function keyboardWalk(page, path) {
   // search appear when the page's scripts have run. A program page has the top bar: search and the nav.
   const hasTopBar = path.startsWith(PROGRAM_PATH);
   const offered = await page.evaluate((feedbackLink) => ({
-    theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => !b.hidden).length,
+    // Two in the markup (the bar's and the footer's); the CSS shows one at any width.
+    theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => b.checkVisibility()).length,
     search: [...document.querySelectorAll('.topbar [role="combobox"]')].filter((b) => !b.closest('[hidden]')).length,
     nav: document.querySelectorAll('.nav a').length,
     feedback: document.querySelectorAll(feedbackLink).length,
@@ -280,7 +281,7 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
 
       // The hub's own pages are plain text: reading them without scripts loses nothing. The one thing scripts add is
       // the theme toggle, which is hidden in the markup because it does nothing without them.
-      if (['hub', 'policy', 'not-found'].includes(type)) {
+      if (['hub', 'policy', 'coming', 'not-found'].includes(type)) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');
         const offLines = new Set(off.lines);

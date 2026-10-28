@@ -98,7 +98,7 @@ test('the glossary defines "Payment decision (in counts)" once, right after "Sub
 });
 
 test('the nav marks Methods as current and nothing else; the page loads the figure, cite, top-bar and search scripts', () => {
-  const bar = /<header class="topbar">[\s\S]*?<\/header>/.exec(PAGE)[0];
+  const bar = /<header class="topbar fam"[\s\S]*?<\/header>/.exec(PAGE)[0];
   const current = [...bar.matchAll(/data-nav="(\w+)"( aria-current="true")?/g)].filter((m) => m[2]).map((m) => m[1]);
   assert.deepEqual(current, ['methods']);
   assert.deepEqual([...bar.matchAll(/data-nav="(\w+)"/g)].map((m) => m[1]), ['how', 'fy', 'money', 'map', 'history', 'methods']);

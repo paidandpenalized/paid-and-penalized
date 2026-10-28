@@ -18,7 +18,7 @@ import { MEASURES_LEAD_ID, MEASURE_WORDS, absLogPct, assumptionsTable, backtestF
 import { moneySourceText } from '../money-figures.js';
 import { cutCounts, rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
-import { asofBar, kicker, siteHeader } from './parts.js';
+import { asofBar, kicker, shellOf } from './parts.js';
 
 export { METHODS_PATH };
 
@@ -262,6 +262,6 @@ ${asofBar({ fy, periods: newest.periods, source: newest.source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search']],
     assets,
-    topbar: siteHeader({ fy, current: 'methods', searchUrl }),
+    ...shellOf({ fy, current: 'methods', searchUrl }),
   });
 }

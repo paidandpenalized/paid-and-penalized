@@ -14,6 +14,8 @@ export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 export const hospitalPath = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
 
 const POLICY = new Set(Object.values(SITE.pages));
+// The folders of the programs without a site here, each holding a placeholder (hub/coming.js).
+const COMING = new Set(SITE.programs.filter((p) => p.stage !== 'live').map((p) => p.path));
 // The one folder name under prefix that path is, or null ('/a/b/' under '/a/' is 'b').
 const folderUnder = (path, prefix) => {
   const name = path.startsWith(prefix) && path.endsWith('/') ? path.slice(prefix.length, -1) : '';
@@ -30,12 +32,13 @@ export const placeKind = (path) => KINDS.find((kind) => {
   return key !== null && placePath(kind, key) === path;
 }) ?? null;
 
-// The type of the page at a site path: 'hub', 'policy', 'program', 'methods', 'dictionary', 'hospital', 'place' or
-// 'notFound'; null for a path that is none of them.
+// The type of the page at a site path: 'hub', 'policy', 'coming', 'program', 'methods', 'dictionary', 'hospital',
+// 'place' or 'notFound'; null for a path that is none of them.
 export function pageType(path) {
   if (path === '/') return 'hub';
   if (path === NOT_FOUND_ADDRESS) return 'notFound';
   if (POLICY.has(path)) return 'policy';
+  if (COMING.has(path)) return 'coming';
   if (path === PROGRAM_PATH) return 'program';
   if (path === METHODS_PATH) return 'methods';
   if (path === DICTIONARY_PAGE) return 'dictionary';

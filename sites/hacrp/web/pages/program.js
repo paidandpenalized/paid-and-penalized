@@ -20,7 +20,7 @@ import { counter } from '../../../../web/charts/figure.js';
 import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
 import { part4 } from '../history-figures.js';
 import { fill as hfill } from '../history/copy.js';
-import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, siteHeader } from './parts.js';
+import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, shellOf } from './parts.js';
 import { moneyPart, moneyPartIntro, summaryMoneyField } from '../money-part.js';
 import { t as mt } from '../money/copy.js';
 import { whatIfSection } from './whatif.js';
@@ -161,6 +161,6 @@ ${citation({ fy, title: heading, path: PROGRAM_PATH, source })}
     body,
     scripts: [assets.js.figure, assets.js.cite, assets.js.topbar, assets.js['hacrp-search'], assets.js['hacrp-program']],
     assets,
-    topbar: siteHeader({ fy, current: 'how', searchUrl }),
+    ...shellOf({ fy, current: 'how', searchUrl }),
   });
 }

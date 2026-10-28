@@ -1,70 +1,7 @@
-/* Shared page parts: header, footer, green-bar tables, pills. Site-specific styles extend these. */
+/* Shared page parts: the search box, the record form, the stamp, green-bar tables, pills. The header and footer are
+   shell.css's. Site-specific styles extend these. */
 
-/* ---------- header: one-line wordmark, byline, theme toggle ---------- */
-.masthead { background: var(--paper); border-bottom: var(--rule) solid var(--ink); }
-.masthead__row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; }
-.wordmark { font: 400 var(--fs-lg)/1 var(--font-display); letter-spacing: 0.005em; text-decoration: none; white-space: nowrap; }
-.wordmark__pen { color: var(--pen); }
-.wordmark:hover { color: inherit; }
-.byline { font: 400 var(--fs-sm)/1.4 var(--font-type); color: var(--ink-2); }
-.theme-toggle { margin-left: auto; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); font: 600 var(--fs-xs)/1 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
-.theme-toggle:hover { border-color: var(--ink); }
-.theme-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-/* One order at every width, the markup's: wordmark, byline, toggle, so what is seen is what tabbing follows.
-   Narrow screens: the wordmark has the first row; the byline starts the second with the toggle at its right. */
-@media (max-width: 520px) {
-  .masthead__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
-  .wordmark { grid-column: 1 / -1; justify-self: start; }
-  .theme-toggle { margin-left: 0; justify-self: end; }
-}
-/* The byline keeps the name and credentials whole (layout.js); on the narrowest phones a step smaller, so they fit
-   beside the toggle. */
-@media (max-width: 360px) { .byline { font-size: var(--fs-xs); } }
-
-/* ---------- a program site's top bar (layout.js programHeader), after Thirty Day Readmissions' ---------- */
-/* Sticky from 641px (on a phone it scrolls away); its height, which the hospital table's head and the what-if's
-   result box clear, is --sticky-top, measured by the site's shell script (0 without it). */
-.topbar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: var(--rule) solid var(--ink); }
-.topbar__row { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
-.pp-mark { flex: none; padding: 3px 6px 2px; border: var(--rule) solid var(--ink); font: 400 var(--fs-sm)/1 var(--font-display); letter-spacing: 0.02em; text-decoration: none; white-space: nowrap; }
-.pp-mark:hover { background: var(--ink); color: var(--paper); }
-/* The mark's last "P" in the program name's red (the wordmark's --pen), in both themes; plain on hover's ink. */
-.pp-mark__pen { color: var(--pen); }
-.pp-mark:hover .pp-mark__pen { color: inherit; }
-.program-mark { display: flex; align-items: baseline; gap: 10px; min-width: 0; text-decoration: none; }
-.wordmark__name { font: 400 1.4rem/1.05 var(--font-display); color: var(--ink); }
-/* The edition tag: the one red word in the bar, as on Thirty Day Readmissions (the program's edition, not a mark). */
-.wordmark__tag { font: 400 var(--fs-sm)/1 var(--font-type); color: var(--pen-ink); white-space: nowrap; }
-.topbar__search { margin-left: auto; flex: 0 1 340px; min-width: 0; }
-.topbar__search:empty { flex-basis: 0; }
-.topbar .theme-toggle { margin-left: 0; flex: none; }
-.topbar__sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; border-top: 1px solid var(--line); }
-/* The section nav: numbered, uppercase, the numerals in red mono; the current item is underlined in ink. A row too
-   long for the screen scrolls inside its own box, never the page. */
-.nav { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.nav::-webkit-scrollbar { display: none; }
-.nav ol { display: flex; margin: 0; padding: 0; list-style: none; white-space: nowrap; }
-.nav li { flex: none; max-width: none; }
-.nav a { display: block; min-height: var(--target-min); padding: 9px 0 7px; margin-right: 24px; border-bottom: 3px solid transparent; color: var(--ink-2); font: 600 var(--fs-sm)/1 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; }
-.nav__num { margin-right: 6px; color: var(--pen-ink); font: 400 var(--fs-sm)/1 var(--font-type); }
-@media (max-width: 600px) { .nav ol { flex-wrap: wrap; white-space: normal; column-gap: 16px; } .nav a { margin-right: 0; } }
-.nav a:hover, .nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.nav a:focus-visible { outline-offset: -2px; }
-.topbar__sub .byline { margin-left: auto; padding-block: 6px; font-size: var(--fs-xs); white-space: nowrap; }
-@media (max-width: 640px) {
-  .topbar { position: static; }
-  .topbar__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; }
-  .wordmark__name { font-size: 1.05rem; }
-  .wordmark__tag { display: none; }
-  .topbar__search { grid-column: 1 / 3; margin-left: 0; }
-  .topbar__search:empty { display: none; }
-  .topbar__sub .byline { margin-left: 0; white-space: normal; }
-}
-@media (forced-colors: active) {
-  .nav a[aria-current="true"] { border-bottom-color: Highlight; }
-}
-
-/* ---------- the top bar's search: a combobox (web/client/omnibox.js), after Thirty Day Readmissions' ---------- */
+/* ---------- the search box: a combobox (web/client/omnibox.js), after Thirty Day Readmissions' ---------- */
 .omni { position: relative; }
 .omni__field { display: flex; align-items: stretch; min-height: var(--control-h); border: var(--rule) solid var(--ink); background: var(--paper); }
 .omni__label { display: flex; align-items: center; padding: 0 8px; border-right: var(--rule) solid var(--ink); color: var(--pen-ink); }
@@ -107,17 +44,6 @@
 @media (forced-colors: active) { .stamp { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
 @media print { .stamp { -webkit-mask-image: none; mask-image: none; mix-blend-mode: normal; } }
 
-/* ---------- footer ---------- */
-.foot { margin-top: 56px; padding-block: 20px 40px; border-top: var(--rule) solid var(--ink); font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-2); }
-.foot__row { display: grid; gap: 12px; }
-.foot p { max-width: 62ch; }
-@media (min-width: 860px) { .foot__row { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
-.foot__meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; }
-/* The text, and the credit, feedback and license with the family's pages under them (the second column on a wide
-   screen). */
-.foot__text, .foot__side { display: grid; gap: 6px; align-content: start; }
-.foot__meta li { max-width: none; }
-
 /* ---------- green-bar printout table ---------- */
 /* Rules above and below, no box: the green-bar banding is the almanac detail, and the one framed object on a page is
    the what-if result, so a frame means "this responds to you". */
@@ -153,14 +79,12 @@
 /* Forced colors: the word carries the decision. Every part drawn with the hatch (a gradient, dropped there) opts out
    of the adjustment and redraws it in system colors: the N/A pill, the figure key's "scores the same" swatch and the
    hospital page's no-score box. A new hatched part joins this one rule. The html raises it over each part's own rule, which
-   loads later (charts.css, the site's styles). The pressed theme toggle keeps its state in system colors (its ink
-   fill is dropped), and a table head keeps its rule as a border (the inset shadow is dropped); whatif.css does the
-   same for the what-if's buttons and fields. */
+   loads later (charts.css, the site's styles). A table head keeps its rule as a border (the inset shadow is dropped);
+   whatif.css does the same for the what-if's buttons and fields, shell.css for the theme toggle and the tabs. */
 @media (forced-colors: active) {
   .pill { border-color: CanvasText; }
   html :is(.pill--na, .fig__swatch--same, .hosp__none) { forced-color-adjust: none; --hatch: CanvasText; border-color: CanvasText; background-color: Canvas; }
   .pill--na { color: CanvasText; }
-  .theme-toggle[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .gb thead th { border-bottom: var(--rule) solid CanvasText; }
 }
 

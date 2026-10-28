@@ -1,0 +1,186 @@
+/* The family's shell on every page (web/render/shell.js): the header (the family bar, the ledger of program tabs, a
+   program's numbered section menu) and the footer, the back of the form. Ported from the approved hub mockup's nav A.
+   Tokens only (tokens.css); the icons are its --icon-* masks. Markup order is the visual and tab order at every
+   width: nothing here reorders it. */
+
+/* ---------- icons: a mask in the text's color ---------- */
+.ico { display: inline-block; flex: none; width: 1em; height: 1em; background-color: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+.ico--search { --ico: var(--icon-search); }
+.ico--theme { --ico: var(--icon-theme); }
+.ico--arrow { --ico: var(--icon-arrow); width: 1.125em; height: 0.625em; }
+.ico--close { --ico: var(--icon-close); }
+
+/* ---------- the header: sticky at every width (its height: --sticky-top, web/client/topbar.js) ---------- */
+/* Its two rules run the window's full width from inside the centred rows (a 100vw line, clipped at the window's
+   edges where a scrollbar takes room): the heavy rule the tabs stand on, and the hairline under the section menu. */
+.fam { position: sticky; top: 0; z-index: 20; background: var(--paper); overflow-x: clip; }
+.tabs, .fam__sub { position: relative; }
+.tabs::after, .fam__sub::after { content: ""; position: absolute; bottom: 0; left: 50%; width: 100vw; margin-left: -50vw; border-bottom: var(--rule) solid var(--ink); pointer-events: none; }
+.fam__sub::after { border-bottom: 1px solid var(--line); }
+
+/* The family bar: the wordmark, the tagline in red caps behind a hairline, the followed hospital, search, the toggle. */
+.fam__bar { display: flex; align-items: center; gap: 18px; min-height: 58px; padding-block: 9px; }
+.wordmark { flex: none; color: var(--ink); font: 400 1.4375rem/1 var(--font-display); letter-spacing: 0.005em; text-decoration: none; white-space: nowrap; }
+.wordmark:hover { color: var(--ink); }
+.wordmark__pen { color: var(--pen); }
+.wordmark__short { display: none; }
+.fam__tag { flex: none; max-width: none; padding-left: 14px; border-left: 1px solid var(--line); color: var(--pen-ink); font: 600 0.6875rem/1.25 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+@media (max-width: 1099px) { .fam__tag { display: none; } }
+
+/* The followed hospital: a torn-off record tab in the form's red, its name cut short before its net. */
+.chip { display: inline-flex; flex: 0 1 auto; align-items: stretch; min-width: 0; max-width: 360px; border: 1.5px solid var(--pen); background: var(--paper); font-size: var(--fs-sm); line-height: 1.3; }
+.chip[hidden] { display: none; }
+.chip__k { display: flex; align-items: center; padding: 0 7px; border-right: 1.5px solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 600 0.6875rem/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.chip__n { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 8px; font-weight: 600; text-decoration: none; }
+.chip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: var(--ink); }
+.chip__v { flex: none; font: 400 0.8125rem/1 var(--font-type); white-space: nowrap; }
+.chip__x { display: grid; flex: none; place-items: center; width: 30px; border-left: 1px solid var(--line); color: var(--ink-2); font: 400 1.0625rem/1 var(--font-body); text-decoration: none; }
+.chip__x:hover { background: var(--paper-2); color: var(--ink); }
+
+.fam__end { display: flex; align-items: center; gap: 12px; min-width: 0; margin-left: auto; }
+.fam__end .omni { flex: 0 1 360px; width: 360px; min-width: 180px; }
+.fam__end .omni input { font-size: 0.9375rem; }
+.fam__end .omni__label { font: 600 var(--fs-cap)/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+@media (max-width: 1199px) { .fam__end .omni { flex-basis: 280px; } }
+.fam__find { display: none; }
+
+/* The theme toggle: a small round icon button with a 44px hit area. The bar's shows from 641px, the footer's below. */
+.theme-toggle { position: relative; display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--ink); cursor: pointer; }
+.theme-toggle::after { content: ""; position: absolute; inset: -6px; }
+.theme-toggle:hover { border-color: var(--ink); }
+.theme-toggle[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.theme-toggle[hidden], .ft__base .theme-toggle { display: none; }
+
+/* ---------- the program tabs: a ledger's raised paper tabs standing on the heavy rule ---------- */
+/* The row scrolls sideways when it outgrows the window, edge to edge; a fade marks more to the right (.tabs--more, set
+   by the shell's script). The current tab is joined to the rule by its ink sides, with a red top edge. Coming
+   programs are dashed, in mono. */
+.tabs { padding-bottom: var(--rule); }
+.tabs__scroll { display: flex; align-items: flex-end; margin-inline: calc(-1 * var(--gutter)); padding: 6px var(--gutter) 0; overflow-x: auto; scrollbar-width: none; }
+.tabs__scroll::-webkit-scrollbar { display: none; }
+/* The fade is a mask on the row, not a layer of paper over it, which would leave the tabs' text unjudged by a contrast
+   check. */
+.tabs--more .tabs__scroll { -webkit-mask-image: linear-gradient(to right, currentColor calc(100% - 40px), transparent); mask-image: linear-gradient(to right, currentColor calc(100% - 40px), transparent); }
+.tab { position: relative; display: flex; flex: none; align-items: baseline; gap: 6px; margin-right: -1px; padding: 8px 12px; border: 1.5px solid var(--line); border-bottom: 0; border-radius: 5px 5px 0 0; background: var(--paper-2); color: var(--ink-2); font: 600 var(--fs-sm)/1.1 var(--font-body); text-decoration: none; white-space: nowrap; }
+.tab:hover { background: var(--paper); color: var(--ink); }
+.tab:focus-visible { outline-offset: -4px; }
+.tab__ab { color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); letter-spacing: 0.02em; }
+.tab[aria-current="page"] { z-index: 1; padding-top: 10px; border: var(--rule) solid var(--ink); border-bottom: 0; background: var(--paper); color: var(--ink); box-shadow: inset 0 3px 0 var(--pen); }
+.tab--soon { padding-inline: 8px; border-style: dashed; background: none; color: var(--ink-3); font-weight: 400; }
+.tab--soon .tab__ab { color: inherit; }
+.tab--soon:hover { background: var(--hatch-fill); color: var(--ink-2); }
+.tab--soon[aria-current="page"] { border-style: solid; background: var(--paper); color: var(--ink); }
+.tabs__gap { flex: none; align-self: center; padding: 0 6px 0 12px; color: var(--ink-3); font: 400 0.6875rem/1 var(--font-type); white-space: nowrap; }
+
+/* ---------- a program's section menu: numbered, in caps, under the tabs; the current part underlined in red ---------- */
+.fam__sub { padding-bottom: 1px; }
+.nav { min-width: 0; margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.nav ol { display: flex; gap: 0 24px; margin: 0; padding: 0; list-style: none; white-space: nowrap; }
+.nav li { flex: none; max-width: none; }
+.nav a { display: block; min-height: var(--target-min); padding: 10px 0 7px; border-bottom: 3px solid transparent; color: var(--ink-2); font: 600 var(--fs-sm)/1 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; }
+.nav a:hover { border-bottom-color: var(--line); color: var(--ink); }
+.nav a[aria-current="true"] { border-bottom-color: var(--pen); color: var(--ink); }
+.nav a:focus-visible { outline-offset: -2px; }
+.nav__num { margin-right: 6px; color: var(--pen-ink); font: 400 var(--fs-sm)/1 var(--font-type); }
+
+/* ---------- the footer: the back of the form, one numbered row, then the signature lines ---------- */
+.foot { margin-top: 88px; padding-bottom: 48px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.foot > .wrap::before { content: ""; display: block; margin-bottom: 18px; border-top: 5px double var(--ink); }
+.ft { grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr); }
+.ft__f { position: relative; padding: 8px 14px 13px; }
+.ft__f .field__label { margin-bottom: 8px; }
+.ft__f a { color: var(--ink); }
+.ft__list, .ft__links { margin: 0; padding: 0; list-style: none; }
+.ft__list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; max-width: none; }
+.ft__list a { font-weight: 600; text-decoration: none; }
+.ft__list a:hover { text-decoration: underline; text-decoration-color: var(--ink); }
+.ft__ab { margin-left: 4px; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
+.ft__v { flex: none; color: var(--ink-2); font: 400 0.75rem/1.3 var(--font-type); white-space: nowrap; }
+.ft__soon { max-width: none; margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--ink-3); font: 400 0.75rem/1.5 var(--font-type); }
+.ft__f .ft__soon a { color: inherit; }
+.ft__links { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.ft__links li { max-width: none; }
+/* The listed links are each a 24px target (WCAG 2.2's minimum), not a 20px line. */
+.ft__links a, .ft__list a { display: inline-block; min-height: var(--target-min); padding-block: 2px; }
+.ft__fy { color: var(--ink); font: 700 1em var(--font-type); }
+.ft__note { margin-top: 6px; color: var(--ink-2); font: 400 0.75rem/1.5 var(--font-type); }
+.ft__asof .ft__note { padding-right: 64px; }
+.ft__base a { white-space: nowrap; }
+.ft__stamp { position: absolute; right: 12px; bottom: 12px; padding: 4px 8px 2px; font-size: 0.875rem; }
+.ft__fb { display: grid; align-content: start; justify-items: start; gap: 8px; }
+.ft__fb .field__label { margin-bottom: 0; }
+.ft__f.ft__fb a { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-h); padding: 8px 14px; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); font: 600 0.9375rem/1 var(--font-body); text-decoration: none; }
+.ft__f.ft__fb a:hover { background: var(--ink); color: var(--paper); }
+.ft__fb .ft__note { margin-top: 0; color: var(--ink-3); font-family: var(--font-body); }
+
+/* The signature lines: the byline over what the data is, the Terms line over the license, the form's number. */
+.ft__base { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto; grid-auto-flow: column; align-items: baseline; gap: 4px 32px; padding-top: 12px; color: var(--ink-3); font-size: 0.8125rem; }
+.ft__base p { max-width: 62ch; }
+.ft__base p:first-child { color: var(--ink-2); }
+.ft__base a { color: var(--ink); }
+.ft__form { color: var(--ink-3); font: 400 0.75rem/1.4 var(--font-type); white-space: nowrap; }
+
+@media (max-width: 960px) {
+  .ft { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ft__base { display: flex; flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------- phones: the compact P&P mark, the followed hospital beside it, search behind an icon, the theme toggle in
+   the footer; every control in the bar and the tabs at least 44px. Bar, tabs and section menu stay under 132px. ---------- */
+@media (max-width: 640px) {
+  .fam__bar { gap: 10px; min-height: 50px; padding-block: 3px; }
+  /* The wordmark's words stay for screen readers (the compact mark is hidden from them). */
+  .wordmark__lead, .wordmark > .wordmark__pen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .wordmark__short { display: inline-block; padding: 7px 7px 5px; border: var(--rule) solid var(--ink); font: 400 1.1875rem/1 var(--font-display); letter-spacing: 0.02em; }
+  .chip { flex: 1 1 0; min-height: 44px; max-width: none; border-left-width: 4px; }
+  .chip__k { display: none; }
+  .chip__n { flex: 1 1 auto; justify-content: space-between; }
+  .chip__x { width: 44px; }
+  .fam__bar .theme-toggle { display: none; }
+  .ft__base .theme-toggle:not([hidden]) { display: inline-grid; width: 44px; height: 44px; margin-top: 8px; }
+  .ft__base .theme-toggle::after { content: none; }
+  .fam__find:not([hidden]) { display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+  .fam__find .ico { width: 18px; height: 18px; }
+  .fam__find[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
+  .fam__find[aria-expanded="true"] .ico--search { --ico: var(--icon-close); }
+  /* The bar's search opens as a row of its own under the bar (.fam--searching, set by the shell's script). Until that
+     script shows the find button, a search its own script has shown stands in that row from the start. */
+  .fam__end .omni { display: none; }
+  .fam__bar:has(.fam__find[hidden] + .omni:not([hidden])) { flex-wrap: wrap; }
+  .fam__end:has(> .fam__find[hidden] + .omni:not([hidden])) { flex: 1 1 100%; }
+  .fam__find[hidden] + .omni:not([hidden]) { display: block; flex: 1 1 auto; width: auto; min-width: 0; }
+  .fam--searching .fam__bar { flex-wrap: wrap; }
+  .fam--searching .fam__end { flex: 1 1 100%; gap: 8px; }
+  .fam--searching .fam__end .omni:not([hidden]) { display: block; flex: 1 1 auto; width: auto; min-width: 0; }
+  .fam--searching .omni__field { min-height: 44px; }
+  .tabs__scroll { padding-top: 2px; }
+  .tab { align-items: center; justify-content: center; min-width: 48px; min-height: 44px; padding: 0 13px; font-size: 0.84375rem; }
+  .tab[aria-current="page"] { min-height: 46px; padding-top: 2px; }
+  .nav a { padding: 8px 0 5px; font-size: 0.8125rem; }
+  .nav__num { font-size: 0.8125rem; }
+  .ft__progs, .ft__fb { grid-column: 1 / -1; }
+  .ft__fb { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+  .ft__fb .field__label { grid-column: 1 / -1; }
+  .ft__links { grid-template-columns: minmax(0, 1fr); }
+  .ft__asof .ft__note { padding-right: 0; }
+  .ft__stamp { position: static; display: inline-block; margin-top: 8px; }
+}
+
+@media print {
+  .fam { position: static; }
+  .tabs, .fam__sub, .fam__find, .chip__x, .ft__fb { display: none !important; }
+}
+
+/* Forced colors: an icon is a background, which the theme would repaint as the page's own background, so the icons
+   keep their color as system colors; the current tab and section, and the pressed toggle, keep a system-color cue. */
+@media (forced-colors: active) {
+  .ico { forced-color-adjust: none; background-color: CanvasText; }
+  a .ico { background-color: LinkText; }
+  button .ico { background-color: ButtonText; }
+  .theme-toggle[aria-pressed="true"] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
+  .theme-toggle[aria-pressed="true"] .ico { background-color: HighlightText; }
+  .tab[aria-current="page"] { border-color: Highlight; }
+  .nav a[aria-current="true"] { border-bottom-color: Highlight; }
+}

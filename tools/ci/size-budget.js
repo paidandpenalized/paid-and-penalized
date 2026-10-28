@@ -34,6 +34,7 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27
+  coming: 30 * KB, // The programs' placeholders (hub/coming.js), measured 2026-10-27 at 23.7 KB.
   program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.

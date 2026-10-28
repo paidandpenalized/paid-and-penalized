@@ -44,12 +44,12 @@ function firstPlaces() {
   return first;
 }
 
-// One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, the program page, its
-// Methods and dictionary, three hospitals (the first in the data that CMS cut, that has no score, and that has a score
-// and was not cut; each with its emitted record as `hospital`), the first region, division, state and metro page in
-// dist/, and a path no page has (the not-found page, served with status 404). name is the page's name in a test's
-// title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the emitted data,
-// whichever site the browser visits.
+// One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
+// placeholder (value-based purchasing's), the program page, its Methods and dictionary, three hospitals (the first in
+// the data that CMS cut, that has no score, and that has a score and was not cut; each with its emitted record as
+// `hospital`), the first region, division, state and metro page in dist/, and a path no page has (the not-found page,
+// served with status 404). name is the page's name in a test's title: its type, and a policy page's path; never a
+// hospital's name or address. Needs dist/ and the emitted data, whichever site the browser visits.
 export function samplePages() {
   // The newest HACRP file's hospitals, in the file's order.
   const all = readNewestEmitted().hospitals;
@@ -63,6 +63,7 @@ export function samplePages() {
   return [
     page('hub', '/'),
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', name: `policy ${path}`, path })),
+    page('coming', SITE.programs.find((p) => p.id === 'hvbp').path),
     page('program', PROGRAM_PATH),
     hospital('hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'),
     hospital('hospital-unscored', 'with no score', (h) => h.total === null),

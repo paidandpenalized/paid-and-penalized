@@ -5,22 +5,49 @@ import { typesetCopy } from './render/components.js';
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
   skip: 'Skip to content',
+  // The family bar (render/shell.js): the wordmark, and the compact mark a phone shows in its place ("P&" in ink, the
+  // last "P" in the penalty red, as the wordmark's "Penalized"); the tagline beside it; the phone's search button and
+  // the theme toggle, each named for screen readers (they show an icon).
   wordmarkLead: 'Paid &',
   wordmarkPen: 'Penalized',
+  markLead: 'P&',
+  markPen: 'P',
+  tagline: 'Public Medicare data, made visible.',
+  find: 'Find a hospital or state',
+  themeToggle: 'Dark mode',
+  // The followed hospital's chip: its key, the words a screen reader hears before its net, and the stop link's name.
+  chipKey: 'Hospital',
+  chipNet: 'Estimated FY{fy} net:',
+  chipStop: 'Stop following {name}',
+  // The program tabs (and the footer's first field): their name, the first tab, the gap before the coming programs,
+  // and a coming tab's title.
+  programs: 'Programs',
+  allPrograms: 'All programs',
+  coming: 'coming',
+  comingTitle: '{name} ({ab}): coming',
+  // A program's numbered section menu.
+  navLabel: 'Sections',
+  // The footer, the back of the form: its four fields, their words, then the signature lines.
+  footSite: 'The site',
+  footAsOf: 'Data as of',
+  footFeedback: 'Feedback',
+  footEstimated: 'Estimated FY{fy}:',
+  footMoved: '{amount} moved',
+  footComing: 'Coming:',
+  footFy: 'FY{fy}',
+  footEstimates: '{fy} estimates from public CMS files, {n} hospitals.',
+  footChanged: 'Estimates last changed {date}.',
+  footDates: 'Dates and corrections',
+  footStamp: 'Est.',
+  footFeedbackNote: 'Opens a Google Form.',
+  footForm: 'Form P&P-{yy} · FY{fy}',
   bylineLead: 'Built by',
   bylineName: 'Dalton Haslam, MD, MBA',
   newTab: ' (opens in a new tab)',
-  themeToggle: 'Dark mode',
-  // A program site's top bar (layout.js programHeader): the family's small mark ("P&" in ink, the last "P" in the
-  // penalty red, as the wordmark's "Penalized"), its link's full name for screen readers, and the section nav's name.
-  markLead: 'P&',
-  markPen: 'P',
-  markHome: 'Paid & Penalized home',
-  navLabel: 'Sections',
   affiliation: 'Uses public data from the Centers for Medicare & Medicaid Services (CMS) and shows no patient information. Not affiliated with or endorsed by CMS or any hospital.',
   builtWith: 'Built with Claude Code',
   feedback: 'Send feedback',
-  // The footer's short Terms line, with its link to /terms/, and the links to the other policy pages.
+  // The footer's short Terms line, with its link to /terms/, and the family's pages its second field lists.
   termsShort: 'Nothing here is medical, legal or financial advice.',
   termsLink: 'Terms of use',
   methods: 'Methods',

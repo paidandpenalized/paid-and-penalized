@@ -1,4 +1,4 @@
-// The top bar's hospital search on every HACRP page (pages/parts.js searchBox): the shared combobox
+// The bar's hospital search on every HACRP page (pages/parts.js searchBox): the shared combobox
 // (web/client/omnibox.js) over the hospitals asset, each hospital found by its name, city, state, ZIP code or CCN,
 // opening its page. On the program page a last option hands every match to the hospital table below (its text filter,
 // through the 'hacrp:show-in-table' event client/program.js listens for).
