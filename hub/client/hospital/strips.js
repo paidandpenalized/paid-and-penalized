@@ -10,7 +10,7 @@
 // (hub/client/hospital/whatif.js binds its keys and drag). The net's hypothetical is a hollow "What if" mark. The thread
 // shows where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
 import { count, pct } from '../../../web/client/format.js';
-import { ROW_IDS, ROW_KEY, inProgram, rowFigures } from '../../hospital/peers.js';
+import { ROW_IDS, ROW_KEY, inProgram } from '../../hospital/peers.js';
 import { deviceRatio } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile.js';
 import { shareScale, wholePercents } from '../scale.js';
@@ -53,10 +53,12 @@ export function stripLayout(group, { W, dpr, domain }) {
     base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(dMin, floor), gap, mirror: true, px, byValue: true,
   });
   // A row's pile: at the readable floor (dMinOf) when that widens its bins to at most MAX_M sub-columns, else at the
-  // device's floor, so a dot stays near its own value.
+  // device's floor, so a dot stays near its own value (a row whose readable floor is already the device's has nothing
+  // lower to try).
   const pileOf = (list, scale) => {
-    const readable = pileLayout(list, scale, opts(list.length, dMinOf(list.length, narrow)));
-    return readable.m <= MAX_M ? readable : pileLayout(list, scale, opts(list.length, 0));
+    const floor = dMinOf(list.length, narrow);
+    const readable = pileLayout(list, scale, opts(list.length, floor));
+    return readable.m <= MAX_M || floor === 0 ? readable : pileLayout(list, scale, opts(list.length, 0));
   };
   let gutter = GUTTER[narrow ? 'narrow' : 'wide'];
   let out = null;
@@ -114,17 +116,17 @@ function handleOf(svg, fill, hint) {
   return { g, dot };
 }
 
-// mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group), domain (the
-// share axis's [lo, hi]), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if
+// mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group) and figures
+// (what they show: hub/hospital/peers.js peerFigures), domain (the share axis's [lo, hi]), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if
 // handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
-//   update(peers)        another group: the same dots move
+//   update(peers, figures) another group: the same dots move
 //   setScenario(s)       a what-if: s is { hrrp, hacrp, hvbp, net } in percent of pay, a value only for each row that
 //                        differs from the actual (or null for none). A row's handle moves to its value, the net gets a
 //                        hollow mark, and the actual's ring stays as a ghost.
 //   handle(id)           the row's handle (an SVG <g role="slider">), or null
 //   shareAt(id, clientX) the share of pay (percent) under a point on the row's strip, or null before it is laid out
 //   nudge()              wiggles the first handle once (not under reduced motion)
-export function mountStrips(root, { h, peers, domain, fill, still, handles = [] }) {
+export function mountStrips(root, { h, peers, figures, domain, fill, still, handles = [] }) {
   const list = root.querySelector('.hh__rows');
   const hidden = { 'aria-hidden': 'true' };
   // The first handle carries the hint.
@@ -159,6 +161,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
   list?.prepend(thread);
 
   let group = peers;
+  let shows = figures;
   let scenario = null;
   const ticks = wholePercents(domain);
 
@@ -242,7 +245,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
     }
     st.out.textContent = listed ? '' : fill('stripOut');
     // The group's median, among those the program lists (the net's and HAC's: among all of them).
-    const median = rowFigures(group, st.id).median;
+    const { median } = shows[st.id];
     st.med.style.display = median === null ? 'none' : '';
     if (median !== null) st.med.style.transform = `translate(${round(scale.xs(median * 100))}px, ${f.base}px)`;
     st.svg.dataset.n = count(items.length);
@@ -328,8 +331,9 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
 
   const first = strips.find((st) => st.handle);
   return {
-    update(next) {
+    update(next, nextFigures) {
       group = next;
+      shows = nextFigures;
       all(true);
     },
     setScenario(next) {

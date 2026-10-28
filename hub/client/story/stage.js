@@ -110,22 +110,31 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     return cache[i];
   }
 
-  // The stage's size, the device pixel and the drawings' boxes, measured; the layouts rebuilt for them.
+  // The stage's size, the device pixel, whether the rail is hidden and the drawings' boxes, measured; when any of them
+  // changed, the layouts rebuilt for them (true), else nothing (false: a resize or a font load that moved nothing).
+  let measured = '';
   function measure() {
     const r = stage.getBoundingClientRect();
-    W = r.width;
-    H = r.height;
-    dpr = deviceRatio();
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+    const ratio = deviceRatio();
     const rel = (el) => {
       const b = el.getBoundingClientRect();
       const vb = el.viewBox.baseVal;
       return fitBox({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height }, vb.width, vb.height);
     };
-    g = stageGeometry({ W, H, railHidden: railHidden(), px: 1 / dpr, domain, boxes: { bar: rel(panels.barSvg), map: rel(panels.mapSvg) } });
+    const boxes = { bar: rel(panels.barSvg), map: rel(panels.mapSvg) };
+    const hidden = railHidden();
+    const now = JSON.stringify([r.width, r.height, ratio, hidden, boxes]);
+    if (now === measured) return false;
+    measured = now;
+    W = r.width;
+    H = r.height;
+    dpr = ratio;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    g = stageGeometry({ W, H, railHidden: hidden, px: 1 / dpr, domain, boxes });
     make = createLayouts({ rows, g, mapW, mapH });
     cache = [];
+    return true;
   }
 
   // ---------- motion ----------
@@ -531,8 +540,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   }
 
   function resize() {
-    measure();
-    if (!W || !H) return;
+    if (!measure() || !W || !H) return;
     cur = lay(step);
     settle(cur);
     cancelAnimationFrame(raf);

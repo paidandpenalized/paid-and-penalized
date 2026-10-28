@@ -71,7 +71,7 @@ function live(page, { hospitals, h, fy, still }) {
   const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');
   if (note) note.hidden = false;
-  const strips = mountStrips($('#whatif'), { h, peers: first.peers, domain, fill, still, handles: ROWS.map((r) => r.id) });
+  const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain, fill, still, handles: ROWS.map((r) => r.id) });
   const whatIf = mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group: first });
 
   const details = $('[data-peer-table]');
@@ -119,7 +119,7 @@ function live(page, { hospitals, h, fy, still }) {
     for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.peer === mode));
     words(g);
     swarm.setPeers(g.peers, g.group);
-    strips.update(g.peers);
+    strips.update(g.peers, g.figures);
     whatIf.setGroup(g);
     if (details?.open) table();
   }

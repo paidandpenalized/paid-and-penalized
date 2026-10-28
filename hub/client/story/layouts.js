@@ -3,7 +3,8 @@
 // the stage (stage.js) moves the dots between these and paints them.
 //
 // A layout is { scene, X, Y, R, A, C, info }: typed arrays of length 2N (N hospitals, then their copies) for each dot's
-// center, radius, opacity and color code, plus what the scene's painter needs (lines, piles, label anchors).
+// center, radius, opacity and color code, plus what the scene's painter needs (lines, label anchors) and whether its piles
+// fit their room (fits).
 import { median } from '../../../engine/js/peers.js';
 import { INK, NEUTRAL, signCode } from '../colors.js';
 import { R_MIN, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
@@ -129,7 +130,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const pile = pileLayout(items, g.scale, pileOpts(lines[s] - 1, gateTop(g, s) + g.label, size('gate')));
     const L = blank('machine');
     place(L, pile, items, 1);
-    const info = { s, lines, pile, zero: zeroLabel(pile) };
+    const info = { s, lines, fits: pile.fits, zero: zeroLabel(pile) };
     // After hospital-acquired conditions: the column of hospitals whose only cut is that one (no Readmissions cut).
     if (s === 2) {
       const only = rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []));
@@ -149,7 +150,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const pile = pileLayout(items, g.scale, pileOpts(g.bottom - 1, top, size('net')));
     const L = blank('net');
     place(L, pile, items, 1);
-    L.info = { pile, top, zero: zeroLabel(pile), cut: rows.filter((r) => r.c[3] < 0).length, bonus: rows.filter((r) => r.c[3] > 0).length };
+    L.info = { fits: pile.fits, top, zero: zeroLabel(pile), cut: rows.filter((r) => r.c[3] < 0).length, bonus: rows.filter((r) => r.c[3] > 0).length };
     return hideCopies(L);
   }
 
@@ -188,7 +189,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const pBot = aTop - (g.narrow ? 34 : 54);
     const peerPile = pileLayout(mine, g.scale, pileOpts(pBot, pTop, peerPitch(mine.length, g.narrow), { mirror: true }));
     place(L, peerPile, mine, 1);
-    L.info = { h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: pileExtent(peerPile), all: pileExtent(allPile), peerPile, allPile };
+    L.info = { h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: pileExtent(peerPile), all: pileExtent(allPile), fits: allPile.fits && peerPile.fits };
     return L;
   }
 

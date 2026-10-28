@@ -116,11 +116,10 @@ for (const size of SIZES) {
       for (let i = 0; i < N; i++) assert.ok(L.A[i] > 0 || !Number.isFinite(rows[i].h.x), `${name}: hospital ${i} unseen`);
     }
     for (const name of ['g1', 'g2', 'g3', 'net']) {
-      assert.equal(layouts[name].info.pile.fits, true, `${name} fits its room`);
+      assert.equal(layouts[name].info.fits, true, `${name} fits its room`);
       assertSeparate(layouts[name], 0, N, size.dpr, name);
     }
-    assert.equal(layouts.you.info.allPile.fits, true, 'everyone\'s swarm fits');
-    assert.equal(layouts.you.info.peerPile.fits, true, 'the peers\' swarm fits');
+    assert.equal(layouts.you.info.fits, true, 'everyone\'s swarm and the peers\' fit');
     assertSeparate(layouts.you, 0, N, size.dpr, 'you, everyone');
     assertSeparate(layouts.you, N, 2 * N, size.dpr, 'you, the peers');
     // The start block is one block of separate dots.

@@ -426,9 +426,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
   function onLeave() {
+    const was = hover;
     hover = -1;
     tip.hidden = true;
-    if (!moving) draw();
+    if (was >= 0 && !moving) draw();
   }
   function onClick(e) {
     const s = hit(...point(e));
@@ -520,7 +521,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     },
     // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand.
     setHypothetical(pct) {
-      hypo = Number.isFinite(pct) ? pct : null;
+      const next = Number.isFinite(pct) ? pct : null;
+      if (next === hypo) return;
+      hypo = next;
       if (!moving) draw();
     },
   };
