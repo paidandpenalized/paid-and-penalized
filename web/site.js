@@ -80,10 +80,10 @@ export function hospitalFolderOf(programId) {
   return programId === 'hacrp' || programId === 'hrrp' ? `${programById(programId).path}hospital/` : null;
 }
 
-// The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: every
-// hospital has a hub and a HACRP page, and a Readmissions page only when Thirty Day Readmissions has it (inTdr). Folders
-// are lowercase, so the CCN is too.
-export function hospitalPathOf(programId, ccn, { inTdr = false } = {}) {
+// The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: a hospital
+// in the dollar file (inHub, as every hospital the hub's pages and data hold is) has a hub page and a HACRP page, and one
+// Thirty Day Readmissions has (inTdr) a Readmissions page. Folders are lowercase, so the CCN is too.
+export function hospitalPathOf(programId, ccn, { inTdr = false, inHub = true } = {}) {
   const folder = hospitalFolderOf(programId);
-  return folder && (programId !== 'hrrp' || inTdr) ? `${folder}${ccn.toLowerCase()}/` : null;
+  return folder && (programId === 'hrrp' ? inTdr : inHub) ? `${folder}${ccn.toLowerCase()}/` : null;
 }

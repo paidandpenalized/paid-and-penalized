@@ -22,25 +22,22 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 // in the markup, since it does nothing without its script, which shows it.
 const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${icon('theme')}<span class="vh">${COPY.themeToggle}</span></button>`;
 
-// The followed hospital's page in a program (hospitalPathOf: 'hub' for its own page), or null when it has none there or
-// that kind of page is not built yet: hospital.pages marks a kind not built with false ({ hub: false, hrrp: false }), and
-// every kind it leaves out is built.
-const pageFor = (hospital, id) => (hospital.pages?.[id] === false ? null : hospitalPathOf(id, hospital.ccn, { inTdr: hospital.inTdr }));
-const PAGE_KINDS = new Set(['hub', ...SITE.programs.map((p) => p.id)]);
+// The followed hospital's page in a program (hospitalPathOf: 'hub' for its own page), or null when it has none there.
+const pageFor = (hospital, id) => hospitalPathOf(id, hospital.ccn, { inTdr: hospital.inTdr, inHub: hospital.inHub });
 
 // The program tabs, in the registry's order: All programs, then the listed programs, the ones with dollar estimates
 // (web/site.js). The programs under consideration have no tab; the footer's first field and the front page's directory
 // link their placeholder pages. program: the current program's id, or null on the family's own pages (All programs is
 // current); on an unlisted program's placeholder page no tab is current. hospital: the followed hospital, or null; with
 // one, every tab opens that program's page for it (pageFor), or the program's folder when it has none, and All programs
-// opens the hospital's own page (the front page while that is not built).
+// opens the hospital's own page (the front page for a hospital without one).
 export function programTabs({ program = null, hospital = null } = {}) {
   const hrefOf = (p) => (hospital && pageFor(hospital, p.id)) || p.path;
   const current = (id) => (id === program ? html` aria-current="page"` : '');
   return html`<nav class="wrap tabs" aria-label="${COPY.programs}"><div class="tabs__scroll"><a class="tab" href="${(hospital && pageFor(hospital, 'hub')) || '/'}"${current(null)}>${COPY.allPrograms}</a>${LISTED_PROGRAMS.map((p) => html`<a class="tab" href="${hrefOf(p)}"${current(p.id)}><span>${p.name}</span> <span class="tab__ab">${p.ab}</span></a>`)}</div></nav>`;
 }
 
-// The followed hospital's chip: its name to its own page (plain text while that is not built), its estimated net (none
+// The followed hospital's chip: its name to its own page (plain text for a hospital without one), its estimated net (none
 // when it has no estimate) and a link that stops following it, to the same program's page without a hospital (its
 // folder, or the family's front page on the hub's pages: a page that names a hospital is that hospital's page). Without
 // a hospital the chip is empty and hidden, for the shell's script to fill from the link's ?h=.
@@ -64,15 +61,14 @@ const sectionMenu = (sections, current) => html`<div class="wrap fam__sub"><nav 
 // hospital's page, its CCN.
 //   path      the page's path
 //   program   the current program's id (SITE.programs), or null on the family's own pages
-//   hospital  { ccn, name, net: number|null, inTdr, pages? } or null; pages marks the kinds of the hospital's page not
-//             built yet ({ hub: false }: the chip's name and All programs link nowhere new), so no link opens a missing page
+//   hospital  { ccn, name, net: number|null, inTdr, inHub? } or null; inHub false (a hospital the dollar file lacks): it
+//             has no hub or HACRP page, so the chip's name, All programs and the HACRP tab link to none
 //   sections  [{ id, label, href }] or null; current: a section id or null
 //   shell     the build's shell facts (assets.shell)
 export function familyHeader({ path, program = null, hospital = null, sections = null, current = null, search = '', shell }) {
   if (program !== null && !SITE.programs.some((p) => p.id === program)) throw new RangeError(`familyHeader: no program "${program}"`);
   if (sections !== null && (!Array.isArray(sections) || !sections.length)) throw new TypeError('familyHeader: sections must be a non-empty list or null');
   if (current !== null && !sections?.some((s) => s.id === current)) throw new RangeError(`familyHeader: no section "${current}"`);
-  for (const kind of Object.keys(hospital?.pages ?? {})) if (!PAGE_KINDS.has(kind)) throw new RangeError(`familyHeader: a hospital has no kind of page "${kind}"`);
   return html`<header class="topbar fam" data-hub-src="${shell.hubUrl}"${hospital ? html` data-hospital="${hospital.ccn}"` : ''}>
 <div class="wrap fam__bar"><a class="wordmark" href="/"><span class="wordmark__lead">${COPY.wordmarkLead}</span> <span class="wordmark__pen">${COPY.wordmarkPen}</span><span class="wordmark__short" aria-hidden="true">${COPY.markLead}<span class="wordmark__pen">${COPY.markPen}</span></span></a><p class="fam__tag">${COPY.tagline}</p>${chip({ path, hospital, fy: shell.fy })}<div class="fam__end"><button type="button" class="fam__find" aria-expanded="false" aria-controls="omni" hidden>${icon('search')}<span class="vh">${COPY.find}</span></button>${search}${themeToggle}</div></div>
 ${programTabs({ program, hospital })}

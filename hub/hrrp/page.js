@@ -203,6 +203,6 @@ ${explorer(SITE.tdr.hospital(record.id))}
     body,
     assets,
     program: 'hrrp',
-    hospital: { ccn: record.id, name: view.name, net: h?.est ? h.est.net : null, inTdr: true, ...(h ? {} : { pages: { hub: false, hacrp: false } }) },
+    hospital: { ccn: record.id, name: view.name, net: h?.est ? h.est.net : null, inTdr: true, inHub: Boolean(h) },
   });
 }

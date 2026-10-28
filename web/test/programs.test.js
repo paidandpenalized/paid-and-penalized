@@ -76,6 +76,10 @@ test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital
   for (const id of ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team', 'nope']) {
     assert.equal(hospitalPathOf(id, '990001', { inTdr: true }), null, id);
   }
+  // A hospital the dollar file lacks has no hub or HACRP page; its Readmissions page goes by inTdr alone.
+  assert.equal(hospitalPathOf('hub', '990001', { inHub: false }), null);
+  assert.equal(hospitalPathOf('hacrp', '990001', { inHub: false }), null);
+  assert.equal(hospitalPathOf('hrrp', '990001', { inTdr: true, inHub: false }), '/hrrp/hospital/990001/');
   // A CCN with a letter is lowercased, since a folder is.
   assert.equal(hospitalPathOf('hub', '99A001'), '/hospital/99a001/');
   assert.equal(hospitalPathOf('hacrp', '99A001'), '/hacrp/hospital/99a001/');

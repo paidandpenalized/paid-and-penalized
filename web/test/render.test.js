@@ -215,23 +215,21 @@ test('shell: with a followed hospital, each tab opens that program\'s page for i
   assert.equal(notTdr[1][0], '/hrrp/');
 });
 
-test('shell: a hospital\'s pages not built yet (hospital.pages) are linked nowhere: their tabs open the folder, the chip\'s name is plain text', () => {
-  const out = page({ ...PAGE, path: '/hacrp/hospital/990001/', program: 'hacrp', hospital: { ...FOLLOWED, pages: { hub: false, hrrp: false } } });
+test('shell: a hospital the dollar file lacks (inHub false) has no page across the programs or in HACRP, so none is linked: their tabs open the folder, the chip\'s name is plain text', () => {
+  const out = page({ ...PAGE, path: '/hrrp/hospital/990001/', program: 'hrrp', hospital: { ...FOLLOWED, inHub: false } });
   const tabs = tabsOf(out);
   const href = (ab) => tabs.find(([, words]) => words.endsWith(ab))[0];
-  assert.equal(tabs[0][0], '/', 'All programs is the front page while the hospital\'s own page is not built');
-  assert.equal(href('HRRP'), '/hrrp/', 'Readmissions is its folder while its hospital pages are not built');
-  assert.equal(href('HACRP'), '/hacrp/hospital/990001/', 'a page that is built stays linked');
+  assert.equal(tabs[0][0], '/', 'All programs is the front page for a hospital without its own page');
+  assert.equal(href('HACRP'), '/hacrp/', 'hospital-acquired conditions is its folder');
+  assert.equal(href('HRRP'), '/hrrp/hospital/990001/', 'its Readmissions page stays linked');
   assert.equal(href('HVBP'), '/hvbp/');
   const header = headerOf(out);
-  assert.doesNotMatch(header, /href="\/hospital\//, 'no link to the hospital\'s own page');
-  assert.doesNotMatch(header, /href="\/hrrp\/hospital\//, 'no link to its Readmissions page');
+  assert.doesNotMatch(header, /href="\/hospital\//, 'no link to a page across the programs');
+  assert.doesNotMatch(header, /href="\/hacrp\/hospital\//, 'no link to a HACRP page');
   const chip = chipOf(header);
   assert.ok(chip.includes('<span class="chip__n"><span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span> <span class="chip__v"><span class="vh">Estimated FY2026 net: </span>−$58K</span></span>'), 'the name and net, not a link');
-  assert.ok(chip.includes('<a class="chip__x" href="/hacrp/" aria-label="Stop following Exampleton &lt;General&gt; &amp; Sons">×</a>'), 'stopping still leaves for the program\'s page');
+  assert.ok(chip.includes('<a class="chip__x" href="/hrrp/" aria-label="Stop following Exampleton &lt;General&gt; &amp; Sons">×</a>'), 'stopping still leaves for the program\'s page');
   assert.match(header, /^<header class="topbar fam" data-hub-src="[^"]+" data-hospital="990001">/, 'the header still names the hospital');
-  // Only the kinds of page a hospital can have are named.
-  assert.throws(() => page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, pages: { hopsital: false } } }), /hopsital/);
 });
 
 test('shell: the chip is empty and hidden without a hospital; with one it names it, signs its net and links to stop following', () => {
