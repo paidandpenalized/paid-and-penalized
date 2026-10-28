@@ -11,7 +11,7 @@
 // Old scenery leaves early and new scenery arrives late, so the moving dots are never drawn over two charts at once; a
 // pile's count arrives once its dots have settled. Reduced motion: every change is instant.
 import { count, money, pct } from '../../../web/client/format.js';
-import { HAC_CUT_PCT, HRRP_CAP_PCT } from '../../../web/programs.js';
+import { HAC_CUT_PCT, HRRP_CAP_PCT, rulePercent } from '../../../web/programs.js';
 import { onThemeChange, readColors } from '../colors.js';
 import { COPY } from './copy.js';
 import { drawnDot, fitBox, stageGeometry } from './geometry.js';
@@ -330,7 +330,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     { name: 'gateHac', short: 'gateHacShort', rule: 'ruleHac', ruleShort: 'ruleHacShort', past: () => say('pastCut', { amount: money(facts.hacSum) }) },
     { name: 'gateVbp', short: 'gateVbpShort', rule: 'ruleVbp', ruleShort: 'ruleVbpShort', past: () => say('pastMoved', { amount: money(facts.vbpBonus) }) },
   ];
-  const rules = { cap: pct(HRRP_CAP_PCT / 100, 0), cut: pct(HAC_CUT_PCT / 100, 0) };
+  const rules = { cap: rulePercent(HRRP_CAP_PCT), cut: rulePercent(HAC_CUT_PCT) };
   function gates(L, lines, a) {
     const { s } = L.info;
     ctx.globalAlpha = a;

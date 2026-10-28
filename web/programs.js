@@ -26,14 +26,14 @@ export const PI_REDUCTION_SHARE = 0.75;
 // The number of surgeries whose episodes the surgical episodes program measures.
 export const TEAM_SURGERIES = 5;
 
-// A rule's percent as the page writes it: percent(3) is "3%".
-const percent = (n) => pct(n / 100, 0);
+// A rule's percent as the pages write it: rulePercent(3) is "3%".
+export const rulePercent = (n) => pct(n / 100, 0);
 
 // The dek of each program, by id: its copy key, and the values that fill the key's placeholders.
 const DEKS = {
-  hrrp: ['dekHrrp', () => ({ cap: percent(HRRP_CAP_PCT), days: spelled(HRRP_WINDOW_DAYS) })],
-  hacrp: ['dekHacrp', () => ({ cut: percent(HAC_CUT_PCT), top: fractionWord(HAC_TOP_SHARE, 'the') })],
-  hvbp: ['dekHvbp', () => ({ withhold: percent(VBP_WITHHOLD_PCT) })],
+  hrrp: ['dekHrrp', () => ({ cap: rulePercent(HRRP_CAP_PCT), days: spelled(HRRP_WINDOW_DAYS) })],
+  hacrp: ['dekHacrp', () => ({ cut: rulePercent(HAC_CUT_PCT), top: fractionWord(HAC_TOP_SHARE, 'the') })],
+  hvbp: ['dekHvbp', () => ({ withhold: rulePercent(VBP_WITHHOLD_PCT) })],
   'wage-index': ['dekWageIndex'],
   dsh: ['dekDsh'],
   ime: ['dekIme'],

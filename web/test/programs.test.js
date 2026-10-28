@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COPY } from '../copy.js';
 import { LINE_PERCENTILE } from '../../engine/js/hacrp/history.js';
-import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek } from '../programs.js';
+import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek, rulePercent } from '../programs.js';
 import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programById, programOf, siteOf } from '../site.js';
 
 const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
@@ -89,6 +89,8 @@ test('Thirty Day Readmissions: its name, its address, and the link to one of its
 
 test('the method constants are the programs\' own rules: the 3% Readmissions cap, the 1% hospital-acquired conditions cut, the 2% withheld', () => {
   assert.deepEqual([HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT], [3, 1, 2]);
+  // As the pages write them.
+  assert.deepEqual([HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT].map(rulePercent), ['3%', '1%', '2%']);
 });
 
 test('the other method constants the deks say in words: the 30-day window, the highest-scoring quarter, the quarter and three-quarters of a yearly increase, five surgeries', () => {

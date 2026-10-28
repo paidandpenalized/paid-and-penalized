@@ -1,7 +1,7 @@
 // The sentences a hospital's page (hub/hospital/page.js) states about its net against its peers, which the page's script
 // restates for another peer group or a what-if. Pure and browser-safe. fill(key, values) fills hub/hospital/copy.js's
 // words (the build's fillCopy, or the script's own).
-import { HAC_CUT_PCT } from '../../web/programs.js';
+import { HAC_CUT_PCT, rulePercent } from '../../web/programs.js';
 import { count, decimal, pct } from '../../web/render/format.js';
 
 // The most decimals a share is printed with.
@@ -40,13 +40,13 @@ export function comparison(fill, kind, { share, median, n, group }) {
 }
 
 // The hospital-acquired conditions cut as the page writes it ("1%").
-export const HAC_RATE = pct(HAC_CUT_PCT / 100, 0);
+export const HAC_CUT_TEXT = rulePercent(HAC_CUT_PCT);
 
 // The word beside a row's dollars: a cut (hospital-acquired conditions': its flat rate), a bonus, or none. id: 'hrrp',
 // 'hacrp', 'hvbp' or 'net'.
 export function rowWord(fill, id, dollars) {
   const sign = signOf(dollars);
-  if (sign === 'cut') return id === 'hacrp' ? fill('wordHacCut', { rate: HAC_RATE }) : fill('wordCut');
+  if (sign === 'cut') return id === 'hacrp' ? fill('wordHacCut', { rate: HAC_CUT_TEXT }) : fill('wordCut');
   if (sign === 'bonus') return fill('wordBonus');
   return id === 'hrrp' || id === 'hacrp' ? fill('wordNoCut') : fill('wordNoChange');
 }
@@ -60,14 +60,14 @@ export function whyText(fill, h, id, f, { fy, group }) {
   const part = (key, n, values = {}) => ({ n, text: fill(key, { n: count(n), ...values }) });
   const parts = {
     hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part('partOut', f.out)],
-    hacrp: [part('partHacCut', f.cut, { rate: HAC_RATE }), part('partNoCut', f.none)],
+    hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none)],
     hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part('partOut', f.out)],
   }[id].filter((p, i) => i < 2 || p.n > 0);
   const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
   const median = id !== 'hacrp' && f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
   const own = {
     hrrp: () => (est.hrrpListed ? fill('whyFactor', { factor: factor(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
-    hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_RATE }) : fill('whyHacNone', { fy })),
+    hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('whyHacNone', { fy })),
     hvbp: () => (est.vbpListed ? fill('whyFactor', { factor: factor(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
   }[id]();
   return [own, peers, ...median];

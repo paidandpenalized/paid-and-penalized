@@ -7,7 +7,7 @@
 // The look reuses the family's parts: the form (.form, .field, the numbered boxes, the stamp, the estimate tag) and the
 // hospital page's strip drawing (.st: its gutter, grid, base line, inks and labels) and empty-program band.
 import { COPY as SHARED } from '../../web/copy.js';
-import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek } from '../../web/programs.js';
+import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
 import { estTag, fillAround, fillCopy } from '../../web/render/components.js';
 import { capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
@@ -21,8 +21,6 @@ import { holds, simpleFraction } from './claims.js';
 import { COPY } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-// A rule's percent as the page writes it: percent(1) is "1%".
-const percent = (n) => pct(n / 100, 0);
 const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span>`;
 const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: HOSPITAL_COPY.estimateTagLabel, text: HOSPITAL_COPY.estimateTag });
 // A sentence of copy with some placeholders filled with markup (parts) and the rest with words (values).
@@ -132,7 +130,7 @@ const TAKEAWAYS = {
   hacrp(members, { n, zero, bins }) {
     holds(bins.every((b) => b.lo < 0), COPY.takeHac);
     holds(Math.abs((n - zero) / n - HAC_TOP_SHARE) <= RULE_SHARE_NEAR, COPY.takeHac);
-    return fill('takeHac', { quarter: fractionWord(HAC_TOP_SHARE, 'the'), cut: percent(HAC_CUT_PCT), zero: money(0) });
+    return fill('takeHac', { quarter: fractionWord(HAC_TOP_SHARE, 'the'), cut: rulePercent(HAC_CUT_PCT), zero: money(0) });
   },
   hvbp(members, { bins }) {
     holds(bins.some((b) => b.lo < 0) && bins.some((b) => b.lo >= 0), COPY.takeVbp);
@@ -216,7 +214,7 @@ function worksheet(h, { fy, src }) {
   const note = (words, flag = null) => html`<small${flag ? html` data-ws-if="${flag}"${m.show[flag] ? '' : html` hidden`}` : ''}>${words}</small>`;
   const row = (n, head, key, cls = null) => html`<tr${cls ? html` class="${cls}"` : ''}><td>${no(n)}</td><th scope="row">${head}</th>${cell(key)}</tr>`;
   const factor = (key) => sentence('wsFactor', { factor: html`<span data-ws="${key}">${t[key]}</span>` }, { one: count(1), base: count(LINE.base) });
-  const cut = percent(HAC_CUT_PCT);
+  const cut = rulePercent(HAC_CUT_PCT);
   return html`<div class="form wsx" data-worksheet data-src="${src}" data-ccn="${t.ccn}">
 <p class="form__title"><span>${fill('wsTitle', { fy })}<span data-ws-ex> · ${COPY.wsExample}</span></span><span>${sentence('wsCcn', { ccn: html`<span data-ws="ccn">${t.ccn}</span>` })}</span></p>
 <table class="wst"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody>

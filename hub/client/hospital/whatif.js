@@ -20,7 +20,7 @@ import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, rowDollars, sumScale } from '../../hospital/peers.js';
-import { HAC_RATE, comparison, rowWord, signOf } from '../../hospital/text.js';
+import { HAC_CUT_TEXT, comparison, rowWord, signOf } from '../../hospital/text.js';
 import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
@@ -111,7 +111,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     let kids;
     if (id === 'hacrp') {
       r.cuts = [
-        node('button', { type: 'button', class: 'hh__pb', 'data-cut': '1' }, [fill('wiHacCut', { rate: HAC_RATE })]),
+        node('button', { type: 'button', class: 'hh__pb', 'data-cut': '1' }, [fill('wiHacCut', { rate: HAC_CUT_TEXT })]),
         node('button', { type: 'button', class: 'hh__pb', 'data-cut': '0' }, [fill('wiHacNone')]),
       ];
       kids = [node('div', { class: 'hh__seg', role: 'group', 'aria-label': fill('wiHacGroup') }, r.cuts), median];

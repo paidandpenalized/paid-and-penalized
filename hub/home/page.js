@@ -10,7 +10,7 @@
 import { PEER_MODES, median } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../web/charts/geo.js';
 import { COPY as SHARED } from '../../web/copy.js';
-import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT } from '../../web/programs.js';
+import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT, rulePercent } from '../../web/programs.js';
 import { fillAround, fillCopy } from '../../web/render/components.js';
 import { capitalize, count, listText, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
@@ -38,8 +38,6 @@ export const STEPS = Object.freeze([
 const ALMOST_ALL = 0.8;
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-// A rule's percent as the page writes it: percent(3) is "3%".
-const percent = (n) => pct(n / 100, 0);
 // The programs the dollar estimates hold (the story's three), in words: "three".
 const IN_DATA = SITE.programs.filter((p) => p.inData);
 
@@ -100,11 +98,11 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
     html`<h2>${fill('startHead', { zero })}</h2>
 <p>${fill('startText', { programs })}</p>`,
     html`<h2>${COPY.hrrpHead}</h2>
-<p>${say('hrrpText', { cutN: count(facts.hrrpCut), median: pct(median(hrrpCuts), 2), zeroN: count(facts.hrrpZero) }, { plain: { cap: percent(HRRP_CAP_PCT), zero } })}</p>`,
-    html`<h2>${fill('hacHead', { cut: percent(HAC_CUT_PCT) })}</h2>
-<p>${say('hacText', { cutN: count(facts.hacCut), onlyN: count(facts.hacOnly) }, { plain: { cut: percent(HAC_CUT_PCT) } })}</p>`,
+<p>${say('hrrpText', { cutN: count(facts.hrrpCut), median: pct(median(hrrpCuts), 2), zeroN: count(facts.hrrpZero) }, { plain: { cap: rulePercent(HRRP_CAP_PCT), zero } })}</p>`,
+    html`<h2>${fill('hacHead', { cut: rulePercent(HAC_CUT_PCT) })}</h2>
+<p>${say('hacText', { cutN: count(facts.hacCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>
-<p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: percent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
+<p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: rulePercent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
     html`<h2>${netHead}</h2>
 <p>${say('netText', { cutN: count(facts.netCut), bonusN: count(facts.netBonus), zeroN: count(facts.netZero), notPaid: money(facts.notPaid) }, { plain: { programs, zero, fy: fyText }, pen: ['cutN', 'notPaid'] })}</p>`,
     html`<h2>${COPY.mapHead}</h2>

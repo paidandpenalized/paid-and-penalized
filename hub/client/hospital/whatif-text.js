@@ -5,7 +5,7 @@ import { fillCopy } from '../../../web/render/components.js';
 import { decimal, money } from '../../../web/render/format.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROW_KEY, rowFigures } from '../../hospital/peers.js';
-import { HAC_RATE, comparison, rowWord, signedShareText } from '../../hospital/text.js';
+import { HAC_CUT_TEXT, comparison, rowWord, signedShareText } from '../../hospital/text.js';
 import { changed, initial, outcome } from './whatif-state.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -17,7 +17,7 @@ function clauses(state, h) {
   const a = initial(h);
   const out = [];
   if (state.hrrp !== a.hrrp) out.push(fill('wiIfHrrp', { to: factor(state.hrrp), from: factor(a.hrrp) }));
-  if (state.hac !== a.hac) out.push(state.hac ? fill('wiIfHacOn', { rate: HAC_RATE }) : fill('wiIfHacOff'));
+  if (state.hac !== a.hac) out.push(state.hac ? fill('wiIfHacOn', { rate: HAC_CUT_TEXT }) : fill('wiIfHacOff'));
   if (state.hvbp !== a.hvbp) out.push(fill('wiIfHvbp', { to: factor(state.hvbp), from: factor(a.hvbp) }));
   return out;
 }
