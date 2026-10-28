@@ -12,18 +12,15 @@
 // pile's count arrives once its dots have settled. Reduced motion: every change is instant.
 import { count, money, pct } from '../../../web/client/format.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, rulePercent } from '../../../web/programs.js';
-import { onThemeChange, readColors } from '../colors.js';
+import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
+import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
 import { COPY } from './copy.js';
-import { drawnDot, fitBox, stageGeometry } from './geometry.js';
-import { INK, PEN, REW, createLayouts } from './layouts.js';
+import { fitBox, stageGeometry } from './geometry.js';
+import { createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
 const say = (key, values = {}) => COPY[key].replace(/\{(\w+)\}/g, (_, name) => values[name]);
 const percent = (v) => pct(v / 100, 0, { sign: true });
-const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
-const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
-const smooth = (x) => x * x * (3 - 2 * x);
-const TAU = Math.PI * 2;
 // The gate sweep: it starts at SW0 of the transition and takes SW1 of it. It rises through the crowd at a steady pace
 // over the first CROSS of its time, so each hospital is seen to move as the gate reaches it, then speeds to the top.
 const SW0 = 0.04;
@@ -35,6 +32,9 @@ const sweepAt = (u, fc) => (u <= CROSS ? (fc * u) / CROSS : fc + (1 - fc) * (1 -
 const sweepTime = (f, fc) => (f <= fc ? (CROSS * f) / fc : CROSS + (1 - CROSS) * (1 - Math.sqrt(Math.max(0, 1 - (f - fc) / (1 - fc)))));
 // Scenes that stand on the share axis, and the two the map's drawing serves.
 const AXIS = new Set(['machine', 'net', 'you']);
+// The moves whose dots go across and down on curves of their own ([across, down]): out of the bar, across early and down
+// late; back into it, up early and across late. Every other move eases both ways at once.
+const CURVES = { pour: [outCubic, smooth], gather: [smooth, outCubic] };
 const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 
 // The stage over `canvas` (inside the stage element, `stage`):
@@ -85,11 +85,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   let fonts = readFonts();
   let panelState = '';
 
-  function readFonts() {
-    const style = getComputedStyle(document.documentElement);
-    return { body: style.getPropertyValue('--font-body').trim(), type: style.getPropertyValue('--font-type').trim() };
-  }
-  const ink = (code) => (code === PEN ? colors.pen : code === REW ? colors.rew : code === INK ? colors.ink2 : colors.neutral);
+  const ink = (code) => inkColor(colors, code);
 
   // ---------- the layouts, built on demand for the stage's size ----------
 
@@ -117,8 +113,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     const r = stage.getBoundingClientRect();
     W = r.width;
     H = r.height;
-    // The device pixels to a CSS pixel, held between 1 and 3: a page zoomed out below 1 lays out and draws as at 1.
-    dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    dpr = deviceRatio();
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     const rel = (el) => {
@@ -185,26 +180,13 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   function tick(now) {
     raw = Math.min(1, (now - t0) / dur);
     const L = cur;
+    const curves = CURVES[mode];
     for (let s = 0; s < S; s++) {
       if (A0[s] < 0.01 && L.A[s] < 0.01) continue;
       const p = clamp01((raw - DL[s]) / span);
       const q = ease(p);
-      if (mode === 'pour') {
-        // Out of the bar: across early, down late.
-        const qx = 1 - (1 - p) ** 3;
-        const qy = p * p * (3 - 2 * p);
-        CX[s] = X0[s] + (L.X[s] - X0[s]) * qx;
-        CY[s] = Y0[s] + (L.Y[s] - Y0[s]) * qy;
-      } else if (mode === 'gather') {
-        // Back into the bar: up early, across late.
-        const qy = 1 - (1 - p) ** 3;
-        const qx = p * p * (3 - 2 * p);
-        CX[s] = X0[s] + (L.X[s] - X0[s]) * qx;
-        CY[s] = Y0[s] + (L.Y[s] - Y0[s]) * qy;
-      } else {
-        CX[s] = X0[s] + (L.X[s] - X0[s]) * q;
-        CY[s] = Y0[s] + (L.Y[s] - Y0[s]) * q;
-      }
+      CX[s] = X0[s] + (L.X[s] - X0[s]) * (curves ? curves[0](p) : q);
+      CY[s] = Y0[s] + (L.Y[s] - Y0[s]) * (curves ? curves[1](p) : q);
       CR[s] = R0[s] + (L.R[s] - R0[s]) * q;
       CA[s] = A0[s] + (L.A[s] - A0[s]) * q;
       // A gate recolors a dot as it passes; otherwise the color turns halfway.
@@ -225,9 +207,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
 
   // ---------- painting ----------
 
-  function font(size, weight = 400, mono = false) {
-    return `${weight} ${size}px ${mono ? fonts.type : fonts.body}`;
-  }
+  const font = (size, weight, mono) => fontOf(fonts, size, weight, mono);
   // Text at (x, y) on its baseline; halo: a paper backing, so a label stays legible over dots and lines.
   function text(s, x, y, f, color, align = 'left', halo = false) {
     ctx.font = f;
@@ -428,35 +408,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = 1;
   }
 
-  // The dots, batched by ink and opacity (tenths). A small dot is a square on the device's grid (geometry.js drawnDot).
-  function dots() {
-    const buckets = new Map();
-    for (let s = 0; s < S; s++) {
-      const a = CA[s];
-      if (a < 0.02) continue;
-      const k = CC[s] * 16 + Math.round(a * 10);
-      let list = buckets.get(k);
-      if (!list) buckets.set(k, (list = []));
-      list.push(s);
-    }
-    for (const [k, list] of buckets) {
-      ctx.fillStyle = ink(k >> 4);
-      ctx.globalAlpha = (k & 15) / 10;
-      ctx.beginPath();
-      for (const s of list) {
-        const r = CR[s];
-        const { square, side } = drawnDot(r, dpr);
-        if (square) {
-          ctx.rect(Math.round(CX[s] * dpr - side / 2) / dpr, Math.round(CY[s] * dpr - side / 2) / dpr, side / dpr, side / dpr);
-        } else {
-          ctx.moveTo(CX[s] + r, CY[s]);
-          ctx.arc(CX[s], CY[s], r, 0, TAU);
-        }
-      }
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
+  // The dots, batched by ink and opacity (paint.js paintDots).
+  const dots = () => paintDots(ctx, { count: S, x: CX, y: CY, r: CR, a: CA, code: (s) => CC[s], ink, dpr });
 
   // The followed hospital (selected), or on the last step the example: ringed wherever it is drawn (in its group and in
   // everyone, joined by a dashed line), with its name.
@@ -562,8 +515,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     const L = lay(i);
     const hash = (s) => rows[s % N].hash;
     if (instant || !cur) run(L, { instant: true });
-    else if (i === from + 1 && i === 1) run(L, { mode: 'pour', dur: 1900, span: 0.55, delay: (s) => (s < N ? rows[s].mid * 0.4 + hash(s) * 0.05 : 0) });
-    else if (i === from - 1 && i === 0) run(L, { mode: 'gather', dur: 1500, span: 0.55, delay: (s) => (s < N ? (1 - rows[s].mid) * 0.3 + hash(s) * 0.05 : 0) });
+    else if (from === 0 && i === 1) run(L, { mode: 'pour', dur: 1900, span: 0.55, delay: (s) => (s < N ? rows[s].mid * 0.4 + hash(s) * 0.05 : 0) });
+    else if (from === 1 && i === 0) run(L, { mode: 'gather', dur: 1500, span: 0.55, delay: (s) => (s < N ? (1 - rows[s].mid) * 0.3 + hash(s) * 0.05 : 0) });
     else if (i === from + 1 && i >= 2 && i <= 4) run(L, { mode: 'gate', dur: 2600, span: 0.3 });
     else if (i === from + 1 && i === 6) run(L, { dur: 1500, span: 0.7, delay: (s) => hash(s) * 0.3 });
     else if (Math.abs(i - from) === 1 && isMap(cur) && isMap(L)) run(L, { dur: 700 });

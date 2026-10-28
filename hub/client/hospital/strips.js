@@ -1,5 +1,5 @@
 // A hospital page's program strips (#whatif): in each program's row and the net's, one SVG strip of the peers as dots on
-// the shared share axis (scale.js; piled by pile.js and drawn by the home story's dot rule, so a pile stays dots), this
+// the shared share axis (scale.js; piled and drawn by pile.js's rules, so a pile stays dots), this
 // hospital's mark ringed, the group's median as a ▲ on the axis, and one dashed thread down the rows through the
 // hospital's mark in each. A peer a program does not list is not in its strip (never a dot at $0); nor is the hospital,
 // whose strip then says so. Switching the group moves the same dots (CSS transitions on each dot's transform, off under
@@ -11,13 +11,11 @@
 // shows where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
 import { count, pct } from '../../../web/client/format.js';
 import { ROW_IDS, ROW_KEY, inProgram, rowFigures } from '../../hospital/peers.js';
-import { pileLayout } from '../pile.js';
+import { deviceRatio } from '../paint.js';
+import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile.js';
 import { shareScale } from '../scale.js';
-import { drawnDot } from '../story/geometry.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-// A strip narrower than this lays out as a phone's.
-const NARROW_BELOW = 520;
 // The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
 // a size band's hospitals within a few hundredths of a percent of $0 in Readmissions) need the height to stay narrow
 // blocks of dots, so each dot stands near its own value.
@@ -40,13 +38,6 @@ const WIDEN = 8;
 // The most sub-columns a bin widens to by choice (for readable dots); past it the dots shrink instead.
 const MAX_M = 3;
 
-// A hospital's stable spread in [0, 1), by CCN: its place in a pile's stacking order.
-export function hashOf(text) {
-  let s = 2166136261;
-  for (let i = 0; i < text.length; i++) s = Math.imul(s ^ text.charCodeAt(i), 16777619);
-  return ((s >>> 0) % 100003) / 100003;
-}
-
 // Every strip's layout for a group at a strip width W (CSS pixels) on a screen of dpr device pixels to a CSS pixel, on the
 // share axis's domain: { f (stripFrame), narrow, gutter, scale, rows: { hrrp, hacrp, hvbp, net: { items, pile } } }. Only
 // the hospitals a program lists are in its row. The piles keep each dot within its value's slice of a bin (pileLayout's
@@ -56,10 +47,10 @@ export function stripLayout(group, { W, dpr, domain }) {
   const narrow = W < NARROW_BELOW;
   const px = 1 / dpr;
   const f = stripFrame(group.length, narrow);
+  const { gap, dMin } = pileSpacing(px);
   const items = Object.fromEntries(ROW_IDS.map((id) => [id, group.filter((x) => inProgram(x.est, id)).map((x) => ({ id: x.ccn, v: x.est.pct[ROW_KEY[id]], key: hashOf(x.ccn) }))]));
   const opts = (n, floor) => ({
-    base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(1, 2 * px, floor), gap: (d) => Math.max(px, d * 0.24),
-    mirror: true, px, byValue: true,
+    base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(dMin, floor), gap, mirror: true, px, byValue: true,
   });
   // A row's pile: at the readable floor (dMinOf) when that widens its bins to at most MAX_M sub-columns, else at the
   // device's floor, so a dot stays near its own value.
@@ -194,7 +185,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
   function render(st, animate) {
     const W = st.box.clientWidth;
     if (!W) return;
-    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    const dpr = deviceRatio();
     const { f, gutter, scale, rows } = lay(W, dpr);
     const resized = W !== st.W || gutter !== st.gutter || f.H !== st.H;
     if (resized) {

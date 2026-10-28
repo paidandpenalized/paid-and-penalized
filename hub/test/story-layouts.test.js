@@ -11,8 +11,10 @@ import { EXAMPLE_CCN, hubHospitals, storyFacts } from '../model.js';
 import { decodeRows } from '../../web/client/hub-asset.js';
 import { shareDomain } from '../client/scale.js';
 import { BAR } from '../client/story/bar-frame.js';
-import { drawnDot, fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
-import { INK, NEUTRAL, PEN, REW, createLayouts, storyRows } from '../client/story/layouts.js';
+import { INK, NEUTRAL, PEN, REW } from '../client/colors.js';
+import { drawnDot } from '../client/pile.js';
+import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
+import { createLayouts, storyRows } from '../client/story/layouts.js';
 
 const hub = loadHub();
 const server = hubHospitals(hub);
@@ -60,7 +62,7 @@ function all(size) {
   return { g, layouts: { bar, start, g1, g2, g3, net, map: L.layMap(false), mapfill: L.layMap(true), you: L.layYou(example, statePeers) } };
 }
 
-// The visible dots of a layout among ids from..to, as the stage draws them on a screen of dpr (geometry.js drawnDot): by
+// The visible dots of a layout among ids from..to, as the stage draws them on a screen of dpr (pile.js drawnDot): by
 // column, a whole number of device pixels between neighbours where the dots are squares on the device's grid, and at
 // least one device pixel of paper between two dots side by side or one above the other.
 function assertSeparate(L, from, to, dpr, what) {

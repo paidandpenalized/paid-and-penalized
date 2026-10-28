@@ -1,6 +1,6 @@
-// The colors a canvas paints with, read from the family's tokens (web/styles/tokens.css, the one file that holds color
-// values) as the page has them now, light or dark; and the one signal to paint again when the theme changes. Shared by
-// the hub's canvases (the home story, the hospital page's swarm).
+// The colors and fonts a canvas paints with, read from the family's tokens (web/styles/tokens.css, the one file that holds
+// color values) as the page has them now, light or dark; the codes its dots carry for an ink; and the one signal to paint
+// again when the theme changes. Shared by the hub's canvases (the home story, the hospital page's swarm).
 
 // Each color's name here and its custom property.
 const TOKENS = {
@@ -14,6 +14,21 @@ export function readColors(root = document.documentElement) {
   const style = getComputedStyle(root);
   return Object.fromEntries(Object.entries(TOKENS).map(([name, prop]) => [name, style.getPropertyValue(prop).trim()]));
 }
+
+// { body, type }: the body face's and the mono face's font-family, as root has them.
+export function readFonts(root = document.documentElement) {
+  const style = getComputedStyle(root);
+  return { body: style.getPropertyValue('--font-body').trim(), type: style.getPropertyValue('--font-type').trim() };
+}
+
+// A dot's ink, as a code (a typed array holds it): no change, a cut, a bonus, the scale bar's ink; a value's code by its
+// sign; and a code's color among colors (readColors').
+export const NEUTRAL = 0;
+export const PEN = 1;
+export const REW = 2;
+export const INK = 3;
+export const signCode = (v) => (v < 0 ? PEN : v > 0 ? REW : NEUTRAL);
+export const inkColor = (colors, code) => (code === PEN ? colors.pen : code === REW ? colors.rew : code === INK ? colors.ink2 : colors.neutral);
 
 // Calls fn once after the theme changes, however it changed: the shell's toggle says so on the document ('pp-theme',
 // detail { dark }); the device's color scheme can change; and a toggle that flips data-theme on the root without saying

@@ -1,6 +1,7 @@
 // The story stage's geometry (the home page's sticky chart): where the share axis runs, where the programs' gates stand,
 // and where the scale bar's and the map's drawings sit, so the canvas's dots land exactly on them. Pure: the stage
 // measures the page (its size, the device pixel, the two drawings' boxes) and hands the numbers in.
+import { NARROW_BELOW } from '../pile.js';
 import { shareScale } from '../scale.js';
 import { BAR } from './bar-frame.js';
 
@@ -9,13 +10,11 @@ import { BAR } from './bar-frame.js';
 // space a gate's label needs above a pile.
 const WIDE = { x0: 40, right: 26, gutter: 24, top: 22, topLabel: 40, bottom: 62, pitch: 30, label: 24 };
 const NARROW = { x0: 12, right: 12, gutter: 12, top: 26, topLabel: 26, bottom: 34, pitch: 18, label: 14 };
-// A stage narrower than this lays out as a phone's.
-export const NARROW_BELOW = 520;
 // The gates: the three programs, then the floor the last pile rests on.
 export const GATES = 4;
 
 // The stage's frame: { W, H, narrow, px, x0, x1, top, bottom, pitch, label, gutter, scale, boxes }.
-//   W, H        the stage's size; narrow: a phone's layout (W under NARROW_BELOW unless given)
+//   W, H        the stage's size; narrow: a phone's layout (W under pile.js NARROW_BELOW unless given)
 //   railHidden  the step's name sits in the stage's top left (no rail beside it)
 //   px          a device pixel in CSS pixels (1 / devicePixelRatio): piles and the $0 gutter snap to it
 //   domain      the share axis's [lo, hi] (scale.js shareDomain)
@@ -29,15 +28,6 @@ export function stageGeometry({ W, H, narrow = W < NARROW_BELOW, railHidden = fa
     W, H, narrow, px, x0, x1, top: railHidden ? m.topLabel : m.top, bottom: H - m.bottom, pitch: m.pitch, label: m.label,
     gutter: m.gutter, scale, boxes,
   };
-}
-
-// A dot as the stage draws it on a screen of dpr device pixels to a CSS pixel: under SQUARE_BELOW device pixels across,
-// a square of whole device pixels (at least one) on the device's grid, so the smallest piles keep a clear device pixel
-// between dots instead of blurring into a bar; larger, a circle. side: its size across in device pixels.
-export const SQUARE_BELOW = 2.5;
-export function drawnDot(r, dpr) {
-  const across = 2 * r * dpr;
-  return across < SQUARE_BELOW ? { square: true, side: Math.max(1, Math.floor(across)) } : { square: false, side: across };
 }
 
 // A gate's line when passed (stacked at the top, in order) and when still waiting (stacked above the axis).

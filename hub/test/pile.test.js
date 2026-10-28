@@ -4,8 +4,7 @@
 // (the Readmissions step: a tall spike just under $0), at a phone's and two desktops' widths and device pixels.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { R_MIN, pileLayout } from '../client/pile.js';
-import { drawnDot } from '../client/story/geometry.js';
+import { R_MIN, SQUARE_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../client/pile.js';
 import { shareScale } from '../client/scale.js';
 
 // A fixed stream of numbers in [0, 1) (a linear congruential generator), so every run lays out the same values.
@@ -38,7 +37,7 @@ const CASES = [
   { name: '1366 at 1x', x0: 40, x1: 548, gutter: 24, base: 440, top: 62, dMax: 3.8, dMin: 2, px: 1 },
 ];
 
-// A dot as the story's stage draws it (geometry.js drawnDot): its size across in device pixels.
+// A dot as the story's stage draws it (pile.js drawnDot): its size across in device pixels.
 const across = (r, px) => drawnDot(r, 1 / px).side;
 
 function check(layout, items, { base, top, mirror, px }, scale) {
@@ -213,4 +212,26 @@ test('pileLayout byValue: widened bins hold value slices left to right; the same
       assert.ok(sorted.pos.get(items[i].id).x >= sorted.pos.get(items[i - 1].id).x - 1e-9, `${items[i - 1].v} drawn right of ${items[i].v}`);
     }
   }
+});
+
+test('the piles\' shared rules: a dot\'s drawn shape, a CCN\'s stacking spread, the spacing, a peer group\'s pitch and a pile\'s extent', () => {
+  // A dot under SQUARE_BELOW device pixels across is a square of whole device pixels, at least one; a larger one a circle.
+  assert.deepEqual(drawnDot(0.5, 2), { square: true, side: 2 });
+  assert.deepEqual(drawnDot(0.2, 1), { square: true, side: 1 });
+  assert.deepEqual(drawnDot(SQUARE_BELOW / 2, 1), { square: false, side: SQUARE_BELOW });
+  // A CCN's spread: stable, in [0, 1), and not the same for two CCNs.
+  assert.equal(hashOf('990001'), hashOf('990001'));
+  for (const ccn of ['990001', '99000A', '010001']) assert.ok(hashOf(ccn) >= 0 && hashOf(ccn) < 1, ccn);
+  assert.notEqual(hashOf('990001'), hashOf('990002'));
+  // The spacing: a gap of at least a device pixel (a quarter pixel without one), and a floor of a CSS pixel and two device
+  // pixels.
+  assert.equal(pileSpacing(1 / 3).gap(1), 1 / 3);
+  assert.equal(pileSpacing(0).gap(1), 0.25);
+  assert.equal(pileSpacing(1).dMin, 2);
+  assert.equal(pileSpacing(0).dMin, 1);
+  // A smaller group's dots are larger, and narrow ones smaller than wide.
+  for (const narrow of [false, true]) assert.ok(peerPitch(100, narrow) > peerPitch(400, narrow) && peerPitch(400, narrow) > peerPitch(2000, narrow));
+  assert.ok(peerPitch(100, true) < peerPitch(100, false));
+  // The extent: the highest top and the lowest bottom of its columns.
+  assert.deepEqual(pileExtent({ cols: [{ top: 5, bottom: 9 }, { top: 2, bottom: 7 }, { top: 6, bottom: 12 }] }), [2, 12]);
 });

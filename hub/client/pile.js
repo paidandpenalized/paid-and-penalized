@@ -1,10 +1,40 @@
-// The dot histogram the hub's charts share (the home story's piles, the hospital page's swarm): one dot per hospital,
+// The dot histogram the hub's charts share (the home story's piles, the hospital page's swarm and strips): one dot per hospital,
 // stacked in bins along the share axis (scale.js), so a dot never hides another and a pile never turns into a solid bar.
 // The dots shrink until the tallest bin fits, but never below a dot a reader can still tell apart (R_MIN across, and a
 // gap of at least a device pixel). When even those dots cannot fit, the bins widen instead: each holds m dot-wide
 // sub-columns side by side (m = 1, 2, 3, ... the smallest that fits), filled a row at a time, so a spike stands as a
 // wider, shorter block of separate dots and no hospital is hidden or overlapped. Exactly $0 has the axis's gutter to
 // itself and wraps across as many columns as the gutter holds. Pure.
+
+// A chart narrower than this (CSS pixels) lays out as a phone's.
+export const NARROW_BELOW = 520;
+
+// A dot as the charts draw it on a screen of dpr device pixels to a CSS pixel: under SQUARE_BELOW device pixels across,
+// a square of whole device pixels (at least one) on the device's grid, so the smallest piles keep a clear device pixel
+// between dots instead of blurring into a bar; larger, a circle. side: its size across in device pixels.
+export const SQUARE_BELOW = 2.5;
+export function drawnDot(r, dpr) {
+  const across = 2 * r * dpr;
+  return across < SQUARE_BELOW ? { square: true, side: Math.max(1, Math.floor(across)) } : { square: false, side: across };
+}
+
+// A hospital's stable spread in [0, 1), by its CCN: its place in a pile's stacking order, never the asset's order.
+export function hashOf(text) {
+  let s = 2166136261;
+  for (let i = 0; i < text.length; i++) s = Math.imul(s ^ text.charCodeAt(i), 16777619);
+  return ((s >>> 0) % 100003) / 100003;
+}
+
+// The space between dots at a device pixel px (CSS pixels; 0 for none): gap, a function of the pitch, at least a device
+// pixel so even the smallest dots stay apart on the screen; and dMin, the smallest pitch, a CSS pixel and two device pixels
+// (a dot and a gap).
+export const pileSpacing = (px) => ({ gap: (d) => Math.max(px || 0.25, d * 0.24), dMin: Math.max(1, 2 * (px || 0)) });
+
+// A peer group's largest pitch by its size, narrow or wide: a small group's dots can be larger.
+export const peerPitch = (n, narrow) => (n < 160 ? (narrow ? 5 : 8.5) : n < 700 ? (narrow ? 3.4 : 5.6) : narrow ? 2.6 : 4.2);
+
+// A pile's (pileLayout's) top and bottom: [the highest column's top, the lowest column's bottom].
+export const pileExtent = (pile) => pile.cols.reduce((e, c) => [Math.min(e[0], c.top), Math.max(e[1], c.bottom)], [Infinity, -Infinity]);
 
 // How much the pitch shrinks per try when no device pixel is given.
 const STEP = 0.1;

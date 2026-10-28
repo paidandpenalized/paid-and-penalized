@@ -5,9 +5,8 @@
 // it. The classes are the script's, so without it both wordmarks simply show. Reduced motion: no trip, the header's
 // wordmark shows at once. dockPath is pure; mountDock wires it to the page.
 
-const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-const smooth = (x) => x * x * (3 - 2 * x);
-const inOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - ((2 - 2 * x) ** 3) / 2);
+import { clamp } from '../../../engine/js/stats.js';
+import { ease, smooth } from '../paint.js';
 
 // The share of the trip spent shrinking and sweeping under the header; the rest rises into the bar.
 const SWEEP = 0.78;
@@ -34,7 +33,7 @@ const PARK_GAP = 8;
 export function dockPath(p, { big, small, from: { m1, m2 }, to, park, stacked, compact }) {
   p = clamp(p, 0, 1);
   const sp = Math.min(1, p / SWEEP);
-  const rise = inOutCubic(clamp((p - SWEEP) / (1 - SWEEP), 0, 1));
+  const rise = ease(clamp((p - SWEEP) / (1 - SWEEP), 0, 1));
   // Shrinking fast at first and easing as it nears its end, geometrically, so the steps read as even.
   const shrinkTo = (end) => Math.exp(Math.log(end) * (1 - (1 - sp) ** 2));
 

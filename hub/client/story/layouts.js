@@ -4,16 +4,11 @@
 //
 // A layout is { scene, X, Y, R, A, C, info }: typed arrays of length 2N (N hospitals, then their copies) for each dot's
 // center, radius, opacity and color code, plus what the scene's painter needs (lines, piles, label anchors).
-import { R_MIN, pileLayout } from '../pile.js';
+import { median } from '../../../engine/js/peers.js';
+import { INK, NEUTRAL, signCode } from '../colors.js';
+import { R_MIN, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
 import { barDot, barHash, barOrder } from './bar-frame.js';
 import { barGeometry, gateLines, gateTop, mapGeometry } from './geometry.js';
-
-// The color codes: no change, a cut, a bonus, the scale bar's ink.
-export const NEUTRAL = 0;
-export const PEN = 1;
-export const REW = 2;
-export const INK = 3;
-export const signCode = (v) => (v < 0 ? PEN : v > 0 ? REW : NEUTRAL);
 
 // The story's hospitals: each one with an estimate, in the hub asset's order, as { h, row, mid, hash, c }: h the decoded
 // hospital, row its index in the asset (the scale bar's dot height hashes it, as the build's does), mid the middle of its
@@ -30,18 +25,14 @@ export function storyRows(hospitals) {
   return rows;
 }
 
-// The piles' sizes per scene, narrow and wide: the largest pitch, and the space between dots (at least a device pixel, so
-// even the smallest dots stay apart on the screen). The smallest pitch is a CSS pixel and two device pixels (a dot and a
-// gap); pileLayout also never goes below a dot of R_MIN, and widens a pile's bins rather than shrink past that.
+// The piles' largest pitch per scene, narrow and wide (a peer group's: pile.js peerPitch). The space between dots and the
+// smallest pitch are pile.js pileSpacing's; pileLayout also never goes below a dot of R_MIN, and widens a pile's bins
+// rather than shrink past that.
 const PILE = {
   gate: { narrow: 2.6, wide: 3.8 },
   net: { narrow: 3.2, wide: 5.6 },
   all: { narrow: 2.6, wide: 4.2 },
 };
-// A peer group's largest pitch by its size: a small group's dots can be larger.
-const peerMax = (n, narrow) => (n < 160 ? (narrow ? 5 : 8.5) : n < 700 ? (narrow ? 3.4 : 5.6) : (narrow ? 2.6 : 4.2));
-const gapFor = (g) => (d) => Math.max(g.px || 0.25, d * 0.24);
-const dMinFor = (g) => Math.max(1, 2 * (g.px || 0));
 
 // The layouts over rows (storyRows) on a stage (geometry.js stageGeometry), with the map's projected size (mapW by mapH):
 // { N, layBar, layStart, layGate, layNet, layMap, layYou }.
@@ -49,8 +40,8 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   const N = rows.length;
   const S = 2 * N;
   const index = new Map(rows.map((r, i) => [r.h, i]));
-  const gap = gapFor(g);
-  const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin: dMinFor(g), gap, px: g.px, ...extra });
+  const { gap, dMin } = pileSpacing(g.px);
+  const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin, gap, px: g.px, ...extra });
   const size = (kind) => PILE[kind][g.narrow ? 'narrow' : 'wide'];
 
   function blank(scene, info = {}) {
@@ -110,7 +101,7 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     if (g.px) d = Math.floor(d / g.px + 1e-9) * g.px;
     // Never smaller than the piles' smallest separate dot.
     const unit = g.px || 0.1;
-    d = Math.max(d, dMinFor(g));
+    d = Math.max(d, dMin);
     while ((d - gap(d)) / 2 < R_MIN - 1e-9) d += unit;
     const r = (d - gap(d)) / 2;
     // A pitch raised to that floor may need fewer, taller columns to stay inside the plot.
@@ -201,13 +192,9 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const mine = peers.map((p) => index.get(p)).filter((i) => i !== undefined).map((i) => ({ id: N + i, v: rows[i].c[3], key: rows[i].hash }));
     const pTop = g.top + (g.narrow ? 44 : 70);
     const pBot = aTop - (g.narrow ? 34 : 54);
-    const peerPile = pileLayout(mine, g.scale, pileOpts(pBot, pTop, peerMax(mine.length, g.narrow), { mirror: true }));
+    const peerPile = pileLayout(mine, g.scale, pileOpts(pBot, pTop, peerPitch(mine.length, g.narrow), { mirror: true }));
     place(L, peerPile, mine, 1);
-    const values = mine.map((it) => it.v).sort((a, b) => a - b);
-    const mid = values.length >> 1;
-    const median = values.length ? (values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2) : null;
-    const extent = (pile) => pile.cols.reduce((e, c) => [Math.min(e[0], c.top), Math.max(e[1], c.bottom)], [Infinity, -Infinity]);
-    L.info = { h: index.get(h) ?? -1, n: mine.length, median, peers: extent(peerPile), all: extent(allPile), peerPile, allPile };
+    L.info = { h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: pileExtent(peerPile), all: pileExtent(allPile), peerPile, allPile };
     return L;
   }
 
