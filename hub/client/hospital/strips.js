@@ -4,6 +4,10 @@
 // hospital's mark in each. A peer a program does not list is not in its strip (never a dot at $0); nor is the hospital,
 // whose strip then says so. Switching the group moves the same dots (CSS transitions on each dot's transform, off under
 // reduced motion): a hospital that stays glides to its new place, one that joins fades in, one that leaves fades out.
+// The axis is the tight one (the actual figures, so the data has the full width) until the what-if opens, then the wide
+// one (every figure it can show: whatif.js asks for it, scale.js stripAxis). A change of axis glides the same way, and
+// every part of a strip (the ticks, the gutter, the dots, the ring, the median, the handle, the marks) rides the one
+// transition, so a dot never leaves its tick; the thread follows the rings frame by frame.
 // The strips are pictures of what each row's sentences say, so their marks are hidden from assistive technology; the one
 // exception is the what-if's handle (handles), a capsule with arrows on each adjustable program's strip that sits on the
 // hospital's dot and, once the row is hypothetical, on the hypothetical value, with the actual's ring left as a ghost
@@ -16,6 +20,12 @@ import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile
 import { shareScale, wholePercents } from '../scale.js';
 
 const NS = 'http://www.w3.org/2000/svg';
+// A glide's length (ms): hub/styles.css .st--live's transitions.
+const GLIDE_MS = 700;
+// How far above and below the strip its ticks still show (CSS pixels). Across, a tick's line shows within the strip,
+// where the baseline runs, and its label only as far past a side as an end label at rest reaches (one can stand 4 px in
+// from a side), so a label coming or going in a change of axis never shows in the page's margin.
+const BLEED = 12;
 // The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
 // a size band's hospitals within a few hundredths of a percent of $0 in Readmissions) need the height to stay narrow
 // blocks of dots, so each dot stands near its own value.
@@ -117,16 +127,22 @@ function handleOf(svg, fill, hint) {
 }
 
 // mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group) and figures
-// (what they show: hub/hospital/peers.js peerFigures), domain (the share axis's [lo, hi]), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if
-// handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
+// (what they show: hub/hospital/peers.js peerFigures), domain (the share axis's [lo, hi] for the actual figures: the
+// tight one), wide (the axis that also holds every figure the what-if can show for h), fill (the page's copy filler),
+// still (reduced motion), handles (the rows that get a what-if handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
 //   update(peers, figures) another group: the same dots move
+//   setWide(on, animate)  the wide axis (on) or the tight one: every part glides there together (animate, and not under
+//                        reduced motion), or moves at once
 //   setScenario(s)       a what-if: s is { hrrp, hacrp, hvbp, net } in percent of pay, a value only for each row that
 //                        differs from the actual (or null for none). A row's handle moves to its value, the net gets a
 //                        hollow mark, and the actual's ring stays as a ghost.
 //   handle(id)           the row's handle (an SVG <g role="slider">), or null
 //   shareAt(id, clientX) the share of pay (percent) under a point on the row's strip, or null before it is laid out
-//   nudge()              wiggles the first handle once (not under reduced motion)
-export function mountStrips(root, { h, peers, figures, domain, fill, still, handles = [] }) {
+//   nudge()              wiggles the first handle once (not under reduced motion), once any glide has ended
+// A press on a handle lands a glide at once, so the handle then stays where it is under the pointer.
+export function mountStrips(root, { h, peers, figures, domain: tight, wide: wideAxis = tight, fill, still, handles = [] }) {
+  // The wide axis, or the tight one itself when the what-if reaches no further.
+  const wide = wideAxis[0] === tight[0] && wideAxis[1] === tight[1] ? tight : wideAxis;
   const list = root.querySelector('.hh__rows');
   const hidden = { 'aria-hidden': 'true' };
   // The first handle carries the hint.
@@ -137,6 +153,9 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     const adjustable = handles.includes(id) && inProgram(h.est, id);
     // A strip with a handle keeps the handle reachable: its other marks are hidden from assistive technology one by one.
     const svg = el('svg', adjustable ? { class: 'st', focusable: 'false' } : { class: 'st', 'aria-hidden': 'true', focusable: 'false' }, box);
+    // The ticks' lines show within the strip, their labels a little past its sides (BLEED).
+    const defs = el('defs', {}, svg);
+    const clips = ['l', 't'].map((k) => el('rect', {}, el('clipPath', { id: `st-clip-${id}-${k}` }, defs)));
     const bg = el('g', hidden, svg);
     const dots = el('g', hidden, svg);
     const med = el('g', { class: 'st__med', ...hidden }, svg);
@@ -154,7 +173,7 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     const out = el('text', { class: 'st__out', x: 4, y: 14, ...hidden }, svg);
     const handle = adjustable ? handleOf(svg, fill, !hinted) : null;
     if (handle) hinted = true;
-    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), at: null, W: 0, gutter: 0, H: 0, scale: null, f: null };
+    return { id, box, svg, clips, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), ticks: new Map(), gut: null, lines: null, labels: null, reach: 0, rests: 0, at: null, W: 0, H: 0, scale: null, f: null };
   }).filter(Boolean);
   const thread = el('svg', { class: 'hh__thread', 'aria-hidden': 'true', focusable: 'false' });
   const path = el('path', {}, thread);
@@ -163,25 +182,88 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
   let group = peers;
   let shows = figures;
   let scenario = null;
-  const ticks = wholePercents(domain);
+  // The axis drawn: tight until the what-if opens (setWide).
+  let domain = tight;
 
-  // The strip's scenery for its width: the $0 gutter, a faint line and a label at each whole percent, the baseline.
-  function scenery(st, scale, f, W) {
-    st.bg.textContent = '';
-    el('rect', { class: 'st__gut', x: round(scale.zL), y: f.top - 4, width: round(scale.zR - scale.zL), height: f.base - f.top + 4 }, st.bg);
-    for (const v of ticks) {
-      const x = round(scale.xs(v));
-      if (v !== 0) el('line', { class: 'st__grid', x1: x, x2: x, y1: f.top - 4, y2: f.base + 3 }, st.bg);
-      const t = el('text', { class: 'st__tl', x, y: f.H - 4, 'text-anchor': 'middle' }, st.bg);
-      t.textContent = pct(v / 100, 0, { sign: true });
+  // The strip's frame for its size: the clips, the $0 gutter (a unit rect its transform stretches), the layers for the
+  // ticks' lines and labels, and the baseline; the ticks are placed by scenery.
+  function frame(st, f, W) {
+    for (const clip of st.clips) {
+      for (const [k, v] of Object.entries({ x: 0, y: -BLEED, width: W, height: f.H + 2 * BLEED })) clip.setAttribute(k, String(v));
     }
+    st.reach = 0;
+    st.bg.textContent = '';
+    st.ticks.clear();
+    st.gut = el('rect', { class: 'st__gut', x: 0, y: f.top - 4, width: 1, height: f.base - f.top + 4 }, st.bg);
+    st.lines = el('g', { 'clip-path': `url(#st-clip-${st.id}-l)` }, st.bg);
+    st.labels = el('g', { 'clip-path': `url(#st-clip-${st.id}-t)` }, st.bg);
     el('line', { class: 'st__base', x1: 0, x2: W, y1: f.base + 0.5, y2: f.base + 0.5 }, st.bg);
   }
 
-  // The layout for the strips' width now (one width: they share a column), worked out once per group and width.
+  // A tick: a faint line (none at $0) and its label, each stood at x by its transform.
+  function tickAt(st, v, f, x) {
+    const parts = [el('text', { class: 'st__tl', x: 0, y: f.H - 4, 'text-anchor': 'middle' }, st.labels)];
+    parts[0].textContent = pct(v / 100, 0, { sign: true });
+    if (v !== 0) parts.push(el('line', { class: 'st__grid', x1: 0, x2: 0, y1: f.top - 4, y2: f.base + 3 }, st.lines));
+    for (const p of parts) p.style.transform = `translate(${round(x)}px, 0px)`;
+    st.ticks.set(v, parts);
+    return parts;
+  }
+
+  // How far the labels show past the strip's sides (the label clip's reach, CSS pixels).
+  function reachOut(st, px) {
+    st.reach = px;
+    st.clips[1].setAttribute('x', String(-px));
+    st.clips[1].setAttribute('width', String(st.W + 2 * px));
+  }
+
+  // The scenery on scale: the gutter and a tick at each whole percent of the axis. In a glide (from: the scale the strip
+  // had), a tick the axis adds comes in from where the old axis's line would put it (across the strip's side) and fades
+  // in, and one it drops goes out the same way; the rest move with the dots. The labels show past a side only as far as an
+  // end label at rest reaches, on either axis while it glides (rests: the new axis's, kept for when it ends).
+  function scenery(st, scale, f, from) {
+    const want = new Set(wholePercents(domain));
+    const coming = [];
+    for (const v of want) {
+      if (st.ticks.has(v)) continue;
+      const parts = tickAt(st, v, f, from ? from.line(v) : scale.xs(v));
+      if (from) {
+        for (const p of parts) p.style.opacity = '0';
+        coming.push(...parts);
+      }
+    }
+    // The new ticks' start, styled before they move, so they glide from it.
+    for (const p of coming) void getComputedStyle(p).transform;
+    for (const p of coming) p.style.opacity = '';
+    st.gut.style.transform = `translate(${round(scale.zL)}px, 0px) scaleX(${round(scale.zR - scale.zL)})`;
+    for (const [v, parts] of st.ticks) {
+      const keep = want.has(v);
+      if (!keep) st.ticks.delete(v);
+      for (const p of parts) {
+        if (keep) p.style.transform = `translate(${round(scale.xs(v))}px, 0px)`;
+        else if (!from) p.remove();
+        else {
+          p.style.transform = `translate(${round(scale.line(v))}px, 0px)`;
+          p.style.opacity = '0';
+          setTimeout(() => p.remove(), GLIDE_MS);
+        }
+      }
+    }
+    let rests = 0;
+    for (const [v, [label]] of st.ticks) {
+      const half = label.getComputedTextLength() / 2 + 2;
+      const x = scale.xs(v);
+      rests = Math.max(rests, half - x, x + half - st.W);
+    }
+    st.rests = Math.ceil(rests);
+    reachOut(st, from ? Math.max(st.reach, st.rests) : st.rests);
+  }
+
+  // The layout for the strips' width and axis now (one width: they share a column), worked out once per group, width and
+  // axis.
   let layout = null;
   function lay(W, dpr) {
-    if (!layout || layout.W !== W || layout.dpr !== dpr || layout.group !== group) layout = { W, dpr, group, ...stripLayout(group, { W, dpr, domain }) };
+    if (!layout || layout.W !== W || layout.dpr !== dpr || layout.group !== group || layout.domain !== domain) layout = { W, dpr, group, domain, ...stripLayout(group, { W, dpr, domain }) };
     return layout;
   }
 
@@ -189,20 +271,21 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     const W = st.box.clientWidth;
     if (!W) return;
     const dpr = deviceRatio();
-    const { f, gutter, scale, rows } = lay(W, dpr);
-    const resized = W !== st.W || gutter !== st.gutter || f.H !== st.H;
-    if (resized) {
+    const { f, scale, rows } = lay(W, dpr);
+    // Moves glide only on a change of group or axis, not on a resize, nor before the first paint. The class stays on until
+    // the glide ends (follow).
+    const glide = animate && !still.matches && st.scale !== null;
+    if (glide) st.svg.classList.add('st--live');
+    else st.svg.classList.remove('st--live');
+    if (W !== st.W || f.H !== st.H) {
       st.W = W;
-      st.gutter = gutter;
       st.H = f.H;
       st.svg.setAttribute('viewBox', `0 0 ${W} ${f.H}`);
       st.svg.setAttribute('width', String(W));
       st.svg.setAttribute('height', String(f.H));
-      scenery(st, scale, f, W);
-    }
-    // Moves glide only on a group change, not on a resize, nor before the first paint.
-    const glide = animate && !still.matches;
-    st.svg.classList.toggle('st--live', glide);
+      frame(st, f, W);
+      scenery(st, scale, f, null);
+    } else if (scale !== st.scale) scenery(st, scale, f, glide ? st.scale : null);
     const { items, pile } = rows[st.id];
     const { square, side } = drawnDot(pile.r, dpr);
     const s = side / dpr;
@@ -269,10 +352,7 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     const y = moved ? (st.f.top + st.f.bot) / 2 : st.at.y;
     st.me.classList.toggle('st__me--ghost', moved);
     st.ghost.style.display = moved ? '' : 'none';
-    if (moved) {
-      st.ghost.setAttribute('x', String(round(st.at.x)));
-      st.ghost.setAttribute('y', String(round(st.at.y - st.at.r - 8)));
-    }
+    if (moved) st.ghost.style.transform = `translate(${round(st.at.x)}px, ${round(st.at.y - st.at.r - 8)}px)`;
     if (st.handle) {
       st.handle.g.style.display = '';
       st.handle.g.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
@@ -284,6 +364,15 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
   }
 
+  // Where the hospital's ring stands now: mid-glide, where its transition has it this frame; else its place.
+  function ringAt(st) {
+    if (!gliding) return [st.at.x, st.at.y];
+    const t = getComputedStyle(st.me).transform;
+    if (!t || t === 'none') return [st.at.x, st.at.y];
+    const m = new DOMMatrixReadOnly(t);
+    return [m.e, m.f];
+  }
+
   // The thread: one dashed line down the rows through the hospital's mark in each strip that has one.
   function drawThread() {
     if (!list) return;
@@ -292,7 +381,8 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     thread.setAttribute('height', String(Math.round(box.height)));
     const pts = strips.filter((st) => st.at && st.W).map((st) => {
       const b = st.svg.getBoundingClientRect();
-      return [round(b.left - box.left + st.at.x), round(b.top - box.top + st.at.y)];
+      const [x, y] = ringAt(st);
+      return [round(b.left - box.left + x), round(b.top - box.top + y)];
     });
     if (pts.length < 2) {
       path.setAttribute('d', '');
@@ -308,9 +398,40 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     path.setAttribute('d', d);
   }
 
+  // A glide under way: each frame the thread goes through the rings where they are; once no part of a strip is still
+  // moving, the glide's class comes off (a handle then follows a drag at once), and a nudge asked for meanwhile runs.
+  let gliding = 0;
+  let nudgeAfter = false;
+  const busy = () => strips.some((st) => (st.svg.getAnimations?.({ subtree: true }) ?? []).some((a) => a.transitionProperty === 'transform'));
+  function rest() {
+    cancelAnimationFrame(gliding);
+    gliding = 0;
+    for (const st of strips) {
+      st.svg.classList.remove('st--live');
+      if (st.W) reachOut(st, st.rests);
+    }
+    drawThread();
+    if (nudgeAfter) {
+      nudgeAfter = false;
+      nudge();
+    }
+  }
+  function follow() {
+    cancelAnimationFrame(gliding);
+    const until = performance.now() + GLIDE_MS + 50;
+    const step = (now) => {
+      drawThread();
+      if (now < until || busy()) gliding = requestAnimationFrame(step);
+      else rest();
+    };
+    gliding = requestAnimationFrame(step);
+  }
+
   function all(animate) {
     for (const st of strips) render(st, animate);
-    drawThread();
+    if (strips.some((st) => st.svg.classList.contains('st--live'))) follow();
+    else if (gliding) rest();
+    else drawThread();
   }
 
   all(false);
@@ -330,11 +451,38 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
   }
 
   const first = strips.find((st) => st.handle);
+  function nudge() {
+    if (!first || still.matches) return;
+    if (gliding) {
+      nudgeAfter = true;
+      return;
+    }
+    const g = first.handle.g;
+    g.classList.remove('st__h--nudge');
+    void g.getBBox();
+    g.classList.add('st__h--nudge');
+    setTimeout(() => g.classList.remove('st__h--nudge'), NUDGE_MS);
+  }
+  // A press on a handle mid-glide lands the glide first (capture: before whatif.js measures where the handle is), with no
+  // nudge: the reader has the handle.
+  for (const st of strips) {
+    st.handle?.g.addEventListener('pointerdown', () => {
+      nudgeAfter = false;
+      if (gliding) rest();
+    }, true);
+  }
+
   return {
     update(next, nextFigures) {
       group = next;
       shows = nextFigures;
       all(true);
+    },
+    setWide(on, animate = true) {
+      const next = on ? wide : tight;
+      if (next === domain) return;
+      domain = next;
+      all(animate);
     },
     setScenario(next) {
       scenario = next;
@@ -342,13 +490,6 @@ export function mountStrips(root, { h, peers, figures, domain, fill, still, hand
     },
     handle: (id) => strips.find((st) => st.id === id)?.handle?.g ?? null,
     shareAt,
-    nudge() {
-      if (!first || still.matches) return;
-      const g = first.handle.g;
-      g.classList.remove('st__h--nudge');
-      void g.getBBox();
-      g.classList.add('st__h--nudge');
-      setTimeout(() => g.classList.remove('st__h--nudge'), NUDGE_MS);
-    },
+    nudge,
   };
 }

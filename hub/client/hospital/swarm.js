@@ -3,7 +3,8 @@
 // net as a share of its pay (pile.js; painted as the home story's dots are, paint.js paintDots, so a pile never turns into a
 // solid bar). This hospital is ringed in both, joined by a dashed line; the group's median is a tick under
 // its pile. Switching the group moves the same dots: a hospital that joins rises out of the pile below into the group, one
-// that leaves sinks back into it, and those that stay restack (instant under reduced motion).
+// that leaves sinks back into it, and those that stay restack (instant under reduced motion). A change of axis (a
+// what-if's net past it) moves every dot at once, and the ticks, the gutter, the median and the marks with them.
 //
 // Every dot answers a pointer (its name, city and net in a tooltip, with a hit target larger than the dot) and a click
 // opens its hospital's page; on a touch screen the first tap shows the tooltip and a second opens. The canvas takes focus:
@@ -17,7 +18,7 @@ import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
-import { shareScale, whatIfAxis, wholePercents } from '../scale.js';
+import { mixScale, shareScale, ticksBetween, whatIfAxis } from '../scale.js';
 // The move between two groups: its length (ms) and how much of it the dots' start times spread over.
 const MOVE = 700;
 const SPREAD = 0.2;
@@ -77,9 +78,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   let picked = -1;
   let tapped = -1;
   let hypo = null;
-  // The axis drawn now (domain, or wide during a what-if past it) and its ticks.
+  // The axis (domain, or wide during a what-if past it), and during a move to it the scale the move began from and how
+  // far along it is (eased): the axis is drawn part way between, as the dots are (view).
   let axisOf = domain;
-  let ticks = wholePercents(domain);
+  let from = null;
+  let qa = 1;
+  const view = () => (from ? mixScale(from, scale, qa) : scale);
   let order = [];
   let colors = readColors();
   let fonts = readFonts();
@@ -127,6 +131,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   }
 
   function measure() {
+    // A new size lays every dot out again where it ends: any move is over.
+    cancelAnimationFrame(raf);
+    moving = false;
     W = el.clientWidth;
     m = W < NARROW_BELOW ? NARROW : WIDE;
     dpr = deviceRatio();
@@ -137,6 +144,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   }
   const rescale = () => {
     scale = shareScale({ x0: m.x, x1: W - m.x, gutter: m.gutter, domain: axisOf, px: 1 / dpr });
+    from = null;
   };
 
   function settle() {
@@ -152,6 +160,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     cancelAnimationFrame(raf);
     if (still.matches || !W) {
       moving = false;
+      from = null;
       settle();
       draw();
       return;
@@ -167,8 +176,11 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
 
   function tick(now) {
     const raw = Math.min(1, (now - t0) / MOVE);
+    // A change of axis moves every dot at once, with the axis; a change of group spreads their starts.
+    const spread = from ? 0 : SPREAD;
+    if (from) qa = ease(raw);
     for (let s = 0; s < S; s++) {
-      const q = ease(clamp01((raw - KEY[s % N] * SPREAD) / (1 - SPREAD)));
+      const q = ease(clamp01((raw - KEY[s % N] * spread) / (1 - spread)));
       CX[s] = X0[s] + (TX[s] - X0[s]) * q;
       CY[s] = Y0[s] + (TY[s] - Y0[s]) * q;
       CR[s] = R0[s] + (TR[s] - R0[s]) * q;
@@ -178,6 +190,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     if (raw < 1) raf = requestAnimationFrame(tick);
     else {
       moving = false;
+      from = null;
       settle();
       draw();
     }
@@ -214,22 +227,23 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     ctx.arc(x, y, r, 0, TAU);
   }
 
-  // The share axis under both piles: the $0 gutter shaded, a faint line at each whole percent, the baseline, the ticks'
-  // values and which side is a cut and which a bonus (each word underlined in its ink).
-  function axis() {
-    const { zL, zR } = scale;
+  // The share axis under both piles (sc: as drawn now): the $0 gutter shaded, a faint line at each whole percent, the
+  // baseline, the ticks' values and which side is a cut and which a bonus (each word underlined in its ink). Mid-move, a
+  // tick only one end of it shows fades (ticksBetween).
+  function axis(sc) {
+    const { zL, zR } = sc;
     const base = m.aBot + 8;
     ctx.fillStyle = colors.paper2;
     ctx.fillRect(zL, m.pTop - 6, zR - zL, base - m.pTop + 6);
     const tick = font(W < NARROW_BELOW ? 10 : 11, 400, true);
-    for (const v of ticks) {
-      const x = scale.xs(v);
+    for (const { v, x, alpha } of ticksBetween(from ?? scale, scale, from ? qa : 1)) {
       if (v !== 0) {
-        ctx.globalAlpha = 0.45;
+        ctx.globalAlpha = 0.45 * alpha;
         vline(x, m.pTop - 6, base + 4, colors.line);
-        ctx.globalAlpha = 1;
       }
+      ctx.globalAlpha = alpha;
       text(pct(v / 100, 0, { sign: true }), x, base + 17, tick, colors.ink3, 'center');
+      ctx.globalAlpha = 1;
     }
     ctx.fillStyle = colors.ink2;
     ctx.fillRect(m.x, Math.round(base), W - 2 * m.x, 1);
@@ -252,15 +266,16 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   const dots = () => paintDots(ctx, { count: S, x: CX, y: CY, r: CR, a: CA, code: (s) => C[s % N], ink, dpr });
 
   // The piles' words: the group's name and count over it, its median as a tick under it with its cuts and bonuses either
-  // side of $0, and everyone's name over the pile below.
-  function words() {
+  // side of $0, and everyone's name over the pile below (sc: the axis as drawn now).
+  function words(sc) {
     const narrow = W < NARROW_BELOW;
     const n = count(members.size);
     text(`${n} ${groupName}`, m.x, m.pTop - 14, font(narrow ? 12.5 : 13.5, 700), colors.ink);
     text(fill('swarmAll', { n: count(N) }), m.x, m.aTop - 12, font(narrow ? 11 : 11.5, 400, true), colors.ink2, 'left', true);
     const y = Math.max(info.peer[1], m.pTop) + 6;
-    const x = scale.xs(info.median);
-    ctx.globalAlpha = moving ? 0.35 : 1;
+    const x = sc.xs(info.median);
+    // Dimmed while a change of group moves it to the new group's median; a change of axis carries the same one along.
+    ctx.globalAlpha = moving && !from ? 0.35 : 1;
     vline(x, y, y + 11, colors.ink, 2);
     const f = font(narrow ? 10.5 : 11, 400, true);
     const med = fill('swarmMedian', { share: signedShareText(info.median / 100) });
@@ -268,8 +283,8 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     const right = x + 5 + ctx.measureText(med).width > W - m.x;
     text(med, right ? x - 5 : x + 5, y + 11, f, colors.ink2, right ? 'right' : 'left', true);
     const cy = y + 28;
-    if (info.cut) text(fill('swarmCut', { n: count(info.cut) }), scale.zL - 6, cy, f, colors.ink2, 'right', true);
-    if (info.bonus) text(fill('swarmBonus', { n: count(info.bonus) }), scale.zR + 6, cy, f, colors.ink2, 'left', true);
+    if (info.cut) text(fill('swarmCut', { n: count(info.cut) }), sc.zL - 6, cy, f, colors.ink2, 'right', true);
+    if (info.bonus) text(fill('swarmBonus', { n: count(info.bonus) }), sc.zR + 6, cy, f, colors.ink2, 'left', true);
     ctx.globalAlpha = 1;
   }
 
@@ -329,11 +344,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     text(name, x, Math.max(m.pTop + 2, CY[up] - rr - 3), f, colors.ink, align, true);
   }
 
-  // A what-if's net: a hollow mark (a paper core in an ink line, then a dashed ring) where the hospital would stand, at
-  // its rings' heights in the group and in everyone, labeled "What if" under the group's (the name is over its ring).
-  function hypothetical() {
+  // A what-if's net: a hollow mark (a paper core in an ink line, then a dashed ring) where the hospital would stand on the
+  // axis as drawn (sc), at its rings' heights in the group and in everyone, labeled "What if" under the group's (the name
+  // is over its ring).
+  function hypothetical(sc) {
     if (hypo === null || self < 0) return;
-    const x = scale.xs(hypo);
+    const x = sc.xs(hypo);
     const r = Math.max(CR[N + self], 1.4);
     for (const y of [CY[N + self], CY[self]]) {
       ctx.fillStyle = colors.paper;
@@ -360,11 +376,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     if (!W || !info) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, m.H);
-    axis();
+    const sc = view();
+    axis(sc);
     dots();
-    words();
+    words(sc);
     self_();
-    hypothetical();
+    hypothetical(sc);
     for (const s of [hover, picked]) if (s >= 0 && s % N !== self && CA[s] > 0.05) ring(s, 1.5);
   }
 
@@ -529,10 +546,16 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
       tip.hidden = true;
       label();
       layout();
+      // Mid-way through a change of axis, the axis carries on from where it is drawn.
+      if (from) {
+        from = view();
+        qa = 0;
+      }
       move();
     },
     // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand. A net past the
-    // axis widens it to `wide` and the dots glide there; it narrows again when the what-if ends.
+    // axis widens it to `wide` and everything glides there together (the dots, the ticks, the gutter, the median, the
+    // marks); it narrows again when the what-if ends. A dot shown or ringed under the pointer or the keys lets go.
     setHypothetical(pct) {
       const next = Number.isFinite(pct) ? pct : null;
       if (next === hypo) return;
@@ -542,11 +565,16 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
         if (!moving) draw();
         return;
       }
+      const was = view();
       axisOf = want;
-      ticks = wholePercents(want);
+      picked = -1;
+      hover = -1;
+      tapped = -1;
       tip.hidden = true;
       rescale();
       layout();
+      from = was;
+      qa = 0;
       move();
     },
   };

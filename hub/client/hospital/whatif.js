@@ -13,6 +13,10 @@
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
 // step, Shift (or Page Up and Down) steps bigger, Home and End go to the ends it states; Escape anywhere in the what-if or
 // the banner resets the page.
+//
+// The strips draw the actual figures' axis until the reader opens the what-if (the "What if?" button, a link to #whatif,
+// a control's focus or input), then glide once to the wide one, and back on a reset; a drag keeps the axis it began on
+// until it ends (scale.js stripAxis). A link that opens on the what-if starts wide, with no glide.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
 import { siteAddress } from '../../../web/client/follow.js';
@@ -20,10 +24,11 @@ import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
-import { isScenarioHash } from '../../../web/whatif/fragment.js';
+import { isScenarioHash, isWhatIfHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
+import { stripAxis } from '../scale.js';
 import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
@@ -94,6 +99,14 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   let state = actual;
   let linked = false;
   let timer = 0;
+  // The strips' axis as the reader opens, resets and drags (scale.js stripAxis): event 'open', 'reset', 'press' or
+  // 'release'; animate false to move at once (a page opened on the what-if).
+  let axis = { open: false, held: false, wide: false };
+  const axisOn = (event, animate = true) => {
+    const next = stripAxis(axis, event);
+    if (next.wide !== axis.wide) strips.setWide(next.wide, animate);
+    axis = next;
+  };
 
   // ---------- the controls ----------
   const lede = $('.hh__lede');
@@ -191,6 +204,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       const b = el.querySelector('.st__hb').getBoundingClientRect();
       offset = b.left + b.width / 2 - e.clientX;
       el.setPointerCapture?.(e.pointerId);
+      axisOn('press');
       el.focus({ preventScroll: true });
       page.classList.add('hh--used', 'hh--dragging');
     });
@@ -208,6 +222,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       }
       offset = null;
       page.classList.remove('hh--dragging');
+      axisOn('release');
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
@@ -364,6 +379,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   }
 
   function apply(action) {
+    axisOn(action.type === 'reset' ? 'reset' : 'open');
     const next = reduce(state, action, ctx());
     if (next === state) return;
     state = next;
@@ -375,8 +391,10 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     timer = setTimeout(settle, SETTLE_MS);
   }
 
-  // A scenario from the address: on load, and when a link opens in this tab.
-  function load() {
+  // A scenario from the address: on load (animate false: the strips start on the axis the link asks for), and when a
+  // link opens in this tab.
+  function load(animate = true) {
+    if (isWhatIfHash(location.hash)) axisOn('open', animate);
     const next = fromHash(location.hash, h, ctx()).state;
     linked = changed(next, h);
     state = next;
@@ -420,12 +438,19 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   }
   if (bar && 'ResizeObserver' in window) new ResizeObserver(keepInView).observe(bar);
 
-  // The first handle: the button above jumps to it, and it wiggles once when the rows first come into view.
+  // A control taking focus opens the what-if (the drag's own focus waits for its end: stripAxis).
+  page.addEventListener('focusin', (e) => {
+    if (e.target.closest?.('.st__h, .hh__ctl')) axisOn('open');
+  });
+
+  // The first handle: the button above jumps to it (the strips widen once the jump has landed, then it wiggles), and it
+  // wiggles once when the rows first come into view.
   const first = ROWS.map((r) => strips.handle(r.id)).find(Boolean);
   $('.hh__wbtn')?.addEventListener('click', () => {
     setTimeout(() => {
       // The jump's #whatif took the place of a scenario's fragment: put the scenario back.
       writeHash();
+      axisOn('open');
       first?.focus({ preventScroll: true });
       strips.nudge();
     }, still.matches ? 0 : JUMP_MS);
@@ -439,7 +464,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     seen.observe(first.closest('[data-row]') ?? first);
   }
 
-  load();
+  load(false);
 
   return {
     setGroup(next) {

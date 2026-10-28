@@ -526,7 +526,10 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .st__hyp-t { fill: var(--ink); font: 700 12px var(--font-body); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
 .st__med path { fill: var(--ink); }
 .st__out { fill: var(--ink-2); font: 600 12px var(--font-body); }
-.st--live .st__d, .st--live .st__me, .st--live .st__med { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
+/* A glide (a change of group, or of axis as the what-if opens or resets): every part of a strip moves on one curve in one
+   time (strips.js GLIDE_MS), so a dot never leaves its tick; the class comes off when it ends, so a handle then follows
+   a drag at once. */
+.st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
 /* The thread: one dashed line down the rows through the hospital's mark in each strip. */
 .hh__thread { position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none; }
 .hh__thread path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .7; }
@@ -631,7 +634,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
   .hh__scen .hh__reset { margin-left: auto; padding: 5px 12px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hh--live .hh__tick, .st--live .st__d, .st--live .st__me, .st--live .st__med, .st__hint { transition: none; }
+  .hh--live .hh__tick, .st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost), .st__hint { transition: none; }
   .st__h--nudge .st__hin { animation: none; }
 }
 @media (forced-colors: active) {

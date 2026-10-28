@@ -5,7 +5,8 @@
 // the data the page stays as the server wrote it, with one quiet line. The factor what-if: a handle stepped by keyboard
 // or dragged marks the page hypothetical everywhere (the banner, the stamp, the struck actuals, the ghost rings, the
 // fragment) and Escape or Reset puts it back; a shared link with a valid changed scenario opens on it under "Reader-made
-// scenario", one with junk opens on the actual figures. Runs against dist/ (make build) or any URL.
+// scenario", one with junk opens on the actual figures. The strips keep the actual figures' axis until the what-if opens,
+// widen once (every part on one glide), and narrow on a reset; never in a drag. Runs against dist/ (make build) or any URL.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../../hub/data.js';
@@ -276,6 +277,8 @@ describe('the what-if\'s edges', () => {
     const handle = at(page, 'hvbp');
     await handle.waitFor();
     await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
+    // The what-if open (a handle's focus): the strips on the axis that holds every figure it can show.
+    await handle.focus();
     const drag = async (side) => {
       const box = await handle.locator('.st__hb').boundingBox();
       const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
@@ -359,5 +362,222 @@ describe('the what-if\'s edges', () => {
     await page.waitForSelector('.st__h');
     assert.equal(await page.evaluate(() => location.pathname), `/${path}`);
     assert.equal(await page.locator('.hh__shared a').getAttribute('href'), path);
+  }));
+});
+
+// The strips' axis: the actual figures' (the full width for the data) until the reader opens the what-if, then the wide
+// one that holds every figure it can show, glided to once with every part of each strip on one transition, and back on a
+// reset; a drag keeps the axis it began on until it ends; a link that opens on a scenario starts wide, with no glide.
+describe('the strips\' axis', () => {
+  const tabs = useContext(shared);
+  const path = hospitalPathOf('hub', HIGH_BASE.ccn);
+  // A strip's axis as it stands on the screen, read off its tick labels and its $0 gutter (strips.js: the plot runs 4 px
+  // in from each side): k, pixels per percentage point between the two leftmost labels, and the span in points the plot
+  // holds beside the gutter. A label on its way out (faded) is not counted.
+  const axisOf = (page, id = 'hrrp') => page.evaluate((row) => {
+    const svg = document.querySelector(`[data-row="${row}"] svg.st`);
+    const ticks = [...svg.querySelectorAll('.st__tl')].filter((t) => getComputedStyle(t).opacity !== '0').map((t) => {
+      const b = t.getBoundingClientRect();
+      return { v: Number(t.textContent.replace('−', '-').replace('%', '')), x: b.left + b.width / 2 };
+    }).sort((a, b) => a.v - b.v);
+    const k = (ticks[1].x - ticks[0].x) / (ticks[1].v - ticks[0].v);
+    const gutter = svg.querySelector('.st__gut').getBoundingClientRect().width;
+    return { k, span: (svg.getBoundingClientRect().width - 8 - gutter) / k, ticks: ticks.map((t) => t.v).join(' ') };
+  }, id);
+  // Glides started in the strips since the page loaded (an init script counts each transform transition's start).
+  const counting = (page) => page.addInitScript(() => {
+    window.stGlides = 0;
+    document.addEventListener('transitionstart', (e) => {
+      if (e.propertyName === 'transform' && e.target.closest?.('svg.st')) window.stGlides += 1;
+    }, true);
+  });
+  const glides = (page) => page.evaluate(() => window.stGlides);
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+
+  it('tight until the what-if opens, wide once it does, every part of a strip on one glide (the thread too), tight again after Reset', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
+    await counting(page);
+    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    await page.locator('#whatif').scrollIntoViewIfNeeded();
+    await settle(page);
+    const before = await axisOf(page);
+    assert.equal(await glides(page), 0, 'no glide at rest');
+    // A handle takes focus: the what-if opens. Every transition the strips start is paused part way, at one moment.
+    const mid = await page.evaluate(async () => {
+      const parts = [...document.querySelectorAll('svg.st :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h)')];
+      const place = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform);
+      const start = new Map(parts.map((el) => [el, place(el)]));
+      document.querySelector('[data-row="hrrp"] .st__h').focus();
+      const glide = document.getAnimations().filter((a) => a.transitionProperty === 'transform');
+      for (const a of glide) {
+        a.pause();
+        a.currentTime = 300;
+      }
+      // Each part's way along its move (x, and the gutter's width), where it moves at all.
+      const along = [];
+      for (const el of parts) {
+        const [a, now, end] = [start.get(el), place(el), new DOMMatrixReadOnly(el.style.transform || 'none')];
+        for (const [p, q, r] of [[a.e, now.e, end.e], [a.a, now.a, end.a]]) if (Math.abs(r - p) > 2) along.push((q - p) / (r - p));
+      }
+      // A frame later, the thread goes through each ring where it stands now.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const box = document.querySelector('.hh__rows').getBoundingClientRect();
+      const rings = [...document.querySelectorAll('svg.st')].map((svg) => [svg, svg.querySelector('.st__me')]).filter(([, me]) => me.style.display !== 'none')
+        .map(([svg, me]) => {
+          const b = svg.getBoundingClientRect();
+          const m = place(me);
+          return [Math.round(b.left - box.left + m.e), Math.round(b.top - box.top + m.f)];
+        });
+      const d = document.querySelector('.hh__thread path').getAttribute('d');
+      const thread = d.split(/[MC]/).filter(Boolean).map((seg) => seg.trim().split(/\s+/).map(Number).slice(-2).map(Math.round));
+      for (const a of glide) a.play();
+      return { glides: glide.length, along, rings, thread };
+    });
+    assert.ok(mid.glides > 100, `the strips glide (${mid.glides} transitions)`);
+    assert.ok(mid.along.length > 50, `${mid.along.length} parts move`);
+    const [lo, hi] = [Math.min(...mid.along), Math.max(...mid.along)];
+    assert.ok(lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `every part the same way along at one moment: dots and ticks move as one (${lo}..${hi})`);
+    assert.deepEqual(mid.thread, mid.rings, 'the thread goes through each ring where it stands mid-glide');
+    await page.waitForTimeout(1200);
+    const open = await axisOf(page);
+    assert.ok(open.span > before.span + 0.5, `wider once open: ${before.span.toFixed(2)} → ${open.span.toFixed(2)} points (${before.ticks} → ${open.ticks})`);
+    assert.ok(await page.evaluate(() => !document.querySelector('svg.st.st--live')), 'the glide\'s class comes off when it ends');
+    // More input while open changes nothing; Reset to actual (the banner's) goes back.
+    const handle = page.locator('[data-row="hrrp"] .st__h');
+    await page.keyboard.press('ArrowLeft');
+    if ((await handle.getAttribute('aria-valuenow')) === String(HIGH_BASE.est.hrrpFactor)) await page.keyboard.press('ArrowRight');
+    await settle(page);
+    assert.ok(near((await axisOf(page)).span, open.span), 'a step keeps the wide axis');
+    await page.locator('.hh__scen .hh__reset').click();
+    await page.waitForTimeout(1200);
+    const reset = await axisOf(page);
+    assert.deepEqual([reset.ticks, near(reset.span, before.span), near(reset.k, before.k)], [before.ticks, true, true], 'after Reset: the axis it had before');
+    // Escape resets the same way.
+    await handle.focus();
+    await page.keyboard.press('ArrowLeft');
+    if (!(await page.locator('.hh__scen').isVisible())) await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(1200);
+    assert.ok(near((await axisOf(page)).span, open.span), 'open again');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1200);
+    assert.ok(near((await axisOf(page)).span, before.span), 'after Escape: tight again');
+    assert.equal((await hypo(page)).sideways, 0);
+    await assertQuiet(seen, 'the strips widening and narrowing');
+  }));
+
+  it('the "What if?" button opens it: the strips widen once the jump lands', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    await page.waitForSelector('.st__h');
+    const before = await axisOf(page);
+    await page.locator('.hh__wbtn').click();
+    await page.waitForTimeout(1600);
+    const after = await axisOf(page);
+    assert.ok(after.span > before.span + 0.5, `${before.span} → ${after.span}`);
+    assert.equal(await page.evaluate(() => document.activeElement?.closest('[data-row]')?.dataset.row ?? null), 'hrrp', 'the first handle has focus');
+    await assertQuiet(seen, 'the What if? button');
+  }));
+
+  it('a drag keeps the axis it began on; the strips widen once it ends', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = page.locator('[data-row="hrrp"] .st__h');
+    await handle.waitFor();
+    await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
+    const before = await axisOf(page);
+    const box = await handle.locator('.st__hb').boundingBox();
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    for (const dx of [-15, -30, -45, -60]) await page.mouse.move(x + dx, y);
+    await settle(page);
+    const held = await axisOf(page);
+    assert.notEqual(await handle.getAttribute('aria-valuenow'), String(HIGH_BASE.est.hrrpFactor), 'the drag moved the factor');
+    assert.deepEqual([held.ticks, near(held.span, before.span)], [before.ticks, true], 'the handle\'s focus and the drag\'s input leave the axis alone while held');
+    const hb = await handle.locator('.st__hb').boundingBox();
+    assert.ok(Math.abs(hb.x + hb.width / 2 - (x - 60)) < 2, 'the handle stays under the pointer');
+    await page.mouse.up();
+    const after = await axisOf(page);
+    assert.ok(after.span > before.span + 0.5, `wide once released: ${before.span} → ${after.span}`);
+    await assertQuiet(seen, 'a drag on the tight axis');
+  }));
+
+  it('under reduced motion the axis changes at once, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
+    await counting(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    const before = await axisOf(page);
+    const handle = page.locator('[data-row="hrrp"] .st__h');
+    await handle.focus();
+    // Read in the same task as the focus: already there.
+    const now = await page.evaluate(() => document.getAnimations().filter((a) => a.transitionProperty === 'transform').length);
+    const open = await axisOf(page);
+    assert.equal(now, 0, 'no transition running');
+    assert.ok(open.span > before.span + 0.5, `wide at once: ${before.span} → ${open.span}`);
+    await page.keyboard.press('ArrowLeft');
+    if (!(await page.locator('.hh__scen').isVisible())) await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Escape');
+    assert.ok(near((await axisOf(page)).span, before.span), 'tight at once after Escape');
+    await settle(page);
+    assert.equal(await glides(page), 0, 'no glide started at any point');
+    await assertQuiet(seen, 'the strips under reduced motion');
+  }));
+
+  it('the swarm\'s change of axis lets go of the dot the pointer showed: no ring is left without its tooltip', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.hh__cv');
+    await page.locator('.hh__cv').scrollIntoViewIfNeeded();
+    await settle(page);
+    // The pointer over a dot of the swarm: its tooltip and ring show.
+    const shown = await page.evaluate(() => {
+      const canvas = document.querySelector('.hh__cv');
+      const b = canvas.getBoundingClientRect();
+      for (let y = b.top + 20; y < b.bottom - 20; y += 3) {
+        for (let x = b.left + 10; x < b.right - 10; x += 3) {
+          canvas.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y, pointerType: 'mouse' }));
+          if (!document.querySelector('.hh__tip').hidden) return true;
+        }
+      }
+      return false;
+    });
+    assert.ok(shown, 'a dot under the pointer shows its tooltip');
+    // By keys alone (the pointer stays), every factor to its floor and the cut on: the net lies past the swarm's axis.
+    for (const id of ['hrrp', 'hacrp', 'hvbp']) {
+      await page.locator(`[data-row="${id}"] .st__h`).focus();
+      await page.keyboard.press('Home');
+    }
+    await settle(page);
+    const pixels = () => page.evaluate(() => {
+      const c = document.querySelector('.hh__cv');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 7) sum = (sum * 31 + d[i]) % 1000000007;
+      return sum;
+    });
+    assert.equal(await page.evaluate(() => document.querySelector('.hh__tip').hidden), true, 'the tooltip goes as the axis changes');
+    // Chrome's first read of a canvas can differ from the next with no paint between: read once to settle it.
+    await pixels();
+    const drawn = await pixels();
+    await page.evaluate(() => document.querySelector('.hh__cv').dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })));
+    assert.equal(await pixels(), drawn, 'no hover ring left to clear when the pointer leaves');
+    await assertQuiet(seen, 'the swarm\'s change of axis');
+  }));
+
+  it('a shared link that opens on a scenario loads on the wide axis, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
+    await counting(page);
+    await page.goto(new URL(`${path}#whatif&hrrp=0.97`, page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    await page.waitForTimeout(SETTLED_MS);
+    const linked = await axisOf(page);
+    assert.equal((await hypo(page)).banner, true, 'the scenario loaded');
+    assert.equal(await glides(page), 0, 'no glide on load');
+    // The same page without the link: tight, and the same wide axis once opened.
+    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.st__h');
+    const tight = await axisOf(page);
+    await page.locator('[data-row="hrrp"] .st__h').focus();
+    const wide = await axisOf(page);
+    assert.ok(linked.span > tight.span + 0.5, `the link's axis is the wide one (${linked.span} against ${tight.span})`);
+    assert.deepEqual([linked.ticks, near(linked.span, wide.span)], [wide.ticks, true]);
+    await assertQuiet(seen, 'a shared what-if link, on the wide axis');
   }));
 });

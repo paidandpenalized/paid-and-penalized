@@ -28,6 +28,17 @@ export function shareDomain(hospitals, extra = []) {
 // ends, so the axis changes at most twice in a what-if, never back and forth with each value.
 export const whatIfAxis = (pct, { actual, wide, now }) => (pct === null ? actual : pct < actual[0] || pct > actual[1] ? wide : now);
 
+// Which axis a hospital page's strips draw as the reader acts: s is { open, held, wide } (the what-if open, a handle held
+// in a drag, the strips on the wide axis: every figure the what-if can show), event one of 'open' (the "What if?" button,
+// a link to it, a control's focus or input), 'reset', 'press' (a drag begins) and 'release' (it ends). Tight (the actual
+// figures, the full width for the data) until the what-if opens, wide while it is open; a drag keeps the axis it began on,
+// so nothing moves under the pointer, and the change waits for its end.
+export function stripAxis(s, event) {
+  const open = event === 'open' ? true : event === 'reset' ? false : s.open;
+  const held = event === 'press' ? true : event === 'release' ? false : s.held;
+  return { open, held, wide: held ? s.wide : open };
+}
+
 // The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand.
 export function wholePercents([lo, hi]) {
   const out = [];
@@ -35,21 +46,48 @@ export function wholePercents([lo, hi]) {
   return out;
 }
 
-// The scale from x0 to x1 (pixels) with a gutter for exactly $0: { xs(v), invert(x), zL, zR, zM, k } where k is pixels per
-// percentage point on both sides, the cuts end at zL, the bonuses start at zR and $0 sits at zM, mid-gutter. A value
-// outside the domain clamps to its end; invert is the share at a pixel ($0 across the gutter), held to the domain. px: a
-// device pixel, in the same units, when the gutter's edges should land on whole device pixels (so dot columns counted
-// from them do too).
+// The scale from x0 to x1 (pixels) with a gutter for exactly $0: { xs(v), line(v), invert(x), zL, zR, zM, k, lo, hi }
+// where k is pixels per percentage point on both sides, the cuts end at zL, the bonuses start at zR and $0 sits at zM,
+// mid-gutter. A value outside the domain [lo, hi] clamps to its end; line is the place on the same line without the
+// clamp (where a tick off the domain would stand, coming or going in a move); invert is the share at a pixel ($0 across
+// the gutter), held to the domain. px: a device pixel, in the same units, when the gutter's edges should land on whole
+// device pixels (so dot columns counted from them do too).
 export function shareScale({ x0, x1, gutter, domain: [lo, hi], px = 0 }) {
   const k = (x1 - x0 - gutter) / (hi - lo);
   const snap = (v) => (px ? Math.round(v / px) * px : v);
   const zL = snap(x0 - lo * k);
   const zR = zL + snap(gutter);
   const zM = (zL + zR) / 2;
-  const xs = (v) => {
-    const c = v < lo ? lo : v > hi ? hi : v;
-    return c < 0 ? zL + c * k : c > 0 ? zR + c * k : zM;
-  };
+  const line = (v) => (v < 0 ? zL + v * k : v > 0 ? zR + v * k : zM);
+  const xs = (v) => line(v < lo ? lo : v > hi ? hi : v);
   const invert = (x) => Math.min(hi, Math.max(lo, x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0));
-  return { xs, invert, zL, zR, zM, k };
+  return { xs, line, invert, zL, zR, zM, k, lo, hi };
+}
+
+// An axis part way (q: 0 at a, 1 at b) through a move between two scales (shareScale's, or this): every place, the
+// gutter's edges and the domain's ends on a straight line from a's to b's, as each dot moves from its place on one to its
+// place on the other, so a dot stays on its tick all the way. { xs, line, zL, zR, lo, hi }.
+export function mixScale(a, b, q) {
+  const mix = (u, v) => u + (v - u) * q;
+  return {
+    xs: (v) => mix(a.xs(v), b.xs(v)),
+    line: (v) => mix(a.line(v), b.line(v)),
+    zL: mix(a.zL, b.zL),
+    zR: mix(a.zR, b.zR),
+    lo: mix(a.lo, b.lo),
+    hi: mix(a.hi, b.hi),
+  };
+}
+
+// The ticks of an axis part way (q) from a to b: [{ v, x, alpha }] for each whole percent either shows, in order, at its
+// place on the line between its places on the two (line, so one that only b shows comes in from where a's line would put
+// it), seen in full where both show it and fading in (or out) where only b (or a) does.
+export function ticksBetween(a, b, q) {
+  const on = (s, v) => v >= s.lo - 1e-9 && v <= s.hi + 1e-9;
+  const out = [];
+  for (const v of wholePercents([Math.min(a.lo, b.lo), Math.max(a.hi, b.hi)])) {
+    const alpha = (on(a, v) ? 1 - q : 0) + (on(b, v) ? q : 0);
+    if (alpha > 0) out.push({ v, x: a.line(v) + (b.line(v) - a.line(v)) * q, alpha });
+  }
+  return out;
 }
