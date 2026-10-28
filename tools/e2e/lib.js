@@ -223,6 +223,31 @@ export async function assertNoSideways(page, what) {
   assert.ok(got.scrollWidth <= got.innerWidth, `${what}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
 }
 
+// Calls fn until it returns something truthy, for up to five seconds; its last answer goes in the failure.
+export async function eventually(fn, what) {
+  const end = Date.now() + 5000;
+  let last;
+  while (Date.now() < end) {
+    last = await fn();
+    if (last) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.fail(`${what} (last seen: ${JSON.stringify(last)})`);
+}
+
+// Lowers the first of the what-if's measures that reads above its floor to that floor, its input's minimum (lower is
+// better; a measure already at its floor would change nothing), and waits for the hypothetical score to change.
+export async function lowerAMeasure(whatIf) {
+  const hypothetical = whatIf.locator('[data-wi="score"]');
+  const was = await hypothetical.textContent();
+  const inputs = whatIf.getByRole('spinbutton');
+  const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
+  const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
+  assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
+  await inputs.nth(at).fill(readings[at].min);
+  await eventually(async () => (await hypothetical.textContent()) !== was, 'the hypothetical score did not change');
+}
+
 // The footer's link to the feedback form, which every page has, as a selector for the page and for a locator.
 export const FEEDBACK_LINK = `footer a[href^="${SITE.feedback.url}"]`;
 

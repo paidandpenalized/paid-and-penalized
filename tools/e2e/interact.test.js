@@ -12,7 +12,7 @@ import { RELEASE_MS } from '../../web/client/topbar.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
 import { openFolds } from './axe.js';
-import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
@@ -37,18 +37,6 @@ const SNAP = 1;
 const MAX_PRESSES = 1000;
 
 const shared = useBrowser();
-
-// Calls fn until it returns something truthy, for up to five seconds; its last answer goes in the failure.
-async function eventually(fn, what) {
-  const end = Date.now() + 5000;
-  let last;
-  while (Date.now() < end) {
-    last = await fn();
-    if (last) return last;
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  assert.fail(`${what} (last seen: ${JSON.stringify(last)})`);
-}
 
 describe('search', () => {
   const tabs = useContext(shared);
@@ -86,19 +74,6 @@ describe('search', () => {
     }));
   }
 });
-
-// Lowers the first of the what-if's measures that reads above its floor to that floor, its input's minimum (lower is
-// better; a measure already at its floor would change nothing), and waits for the hypothetical score to change.
-async function lowerAMeasure(whatIf) {
-  const hypothetical = whatIf.locator('[data-wi="score"]');
-  const was = await hypothetical.textContent();
-  const inputs = whatIf.getByRole('spinbutton');
-  const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
-  const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
-  assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
-  await inputs.nth(at).fill(readings[at].min);
-  await eventually(async () => (await hypothetical.textContent()) !== was, 'the hypothetical score did not change');
-}
 
 describe('what-if', () => {
   const tabs = useContext(shared);
