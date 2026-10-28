@@ -12,7 +12,7 @@ import { RELEASE_MS } from '../../web/client/topbar.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
 import { openFolds } from './axe.js';
-import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
@@ -20,14 +20,15 @@ const CUT = PAGES.find((p) => p.type === 'hospital-cut');
 // The hospital pages with a what-if: the hospital CMS cut, the one with a score and no cut, and a Maryland hospital's (the
 // first scored one in the newest HACRP file: not subject to the cut, so its result table holds long words and no dollars).
 const MARYLAND = readNewestEmitted().hospitals.find((h) => h.state === 'MD' && h.total !== null);
+if (!MARYLAND) throw new Error('interact.test.js: no scored Maryland hospital in the newest HACRP file');
 const WHAT_IFS = [
   ...PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut'),
   { name: 'hospital-maryland', path: hospitalPath(MARYLAND.ccn) },
 ];
-// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1100 px
+// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1150 px
 // (1040: its table outgrew the box there without scrolling the page), and on phones, where its table is folded until a
-// reader opens it.
-const FIT_WIDTHS = [1040, 1000, 960, 900, 390, 320];
+// reader opens it; and just past that (1160, where the box's wide layout starts with the least room) and 1280.
+const FIT_WIDTHS = [1280, 1160, 1040, 1000, 960, 900, 390, 320];
 // 1280 px, the narrowest width the top bar sticks (641), and the narrowest phone width, where it scrolls away.
 const WIDTHS = [1280, 641, 320];
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
@@ -36,18 +37,6 @@ const SNAP = 1;
 const MAX_PRESSES = 1000;
 
 const shared = useBrowser();
-
-// Calls fn until it returns something truthy, for up to five seconds; its last answer goes in the failure.
-async function eventually(fn, what) {
-  const end = Date.now() + 5000;
-  let last;
-  while (Date.now() < end) {
-    last = await fn();
-    if (last) return last;
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  assert.fail(`${what} (last seen: ${JSON.stringify(last)})`);
-}
 
 describe('search', () => {
   const tabs = useContext(shared);
@@ -85,19 +74,6 @@ describe('search', () => {
     }));
   }
 });
-
-// Lowers the first of the what-if's measures that reads above its floor to that floor, its input's minimum (lower is
-// better; a measure already at its floor would change nothing), and waits for the hypothetical score to change.
-async function lowerAMeasure(whatIf) {
-  const hypothetical = whatIf.locator('[data-wi="score"]');
-  const was = await hypothetical.textContent();
-  const inputs = whatIf.getByRole('spinbutton');
-  const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
-  const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
-  assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
-  await inputs.nth(at).fill(readings[at].min);
-  await eventually(async () => (await hypothetical.textContent()) !== was, 'the hypothetical score did not change');
-}
 
 describe('what-if', () => {
   const tabs = useContext(shared);

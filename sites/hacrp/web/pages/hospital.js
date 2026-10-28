@@ -73,6 +73,11 @@ function typeText({ teach, beds, own, urban, types }) {
   return parts.length ? parts.join(' · ') : null;
 }
 
+// How many of the measures CMS scored the hospital on: "on all 6 measures" reads better than "on 6 of the 6".
+const ledgerScored = (view) => (view.n === view.measures.length
+  ? fill('ledgerScoredAll', { all: String(view.measures.length) })
+  : fill('ledgerScored', { n: String(view.n), all: String(view.measures.length) }));
+
 // Care Compare's stars: the rating as filled and empty stars (hidden from screen readers, which hear "4 of 5 stars"),
 // or CMS's own words where it published no rating, with CMS's footnotes, as formField options. null when Care
 // Compare doesn't list the hospital.
@@ -260,7 +265,7 @@ ${small && html`<p class="note">${small}</p>`}
 ${section({
     id: 'measures', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
-<p>${fill('ledgerIntro', { n: String(view.n), all: String(view.measures.length) })}</p>
+<p>${fill('ledgerIntro', { scored: ledgerScored(view) })}</p>
 ${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}`,
     figure: ledger,
   })}

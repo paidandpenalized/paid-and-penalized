@@ -9,6 +9,10 @@ import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
+import { nationalContext } from '../../sites/hacrp/web/compare.js';
+import { loadHacrp } from '../../sites/hacrp/web/data.js';
+import { groupLabel } from '../../sites/hacrp/web/groups.js';
+import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
@@ -101,6 +105,27 @@ export function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub
   const found = [...hub.tdr.hospitals.values()].find((r) => test(r, byCcn.get(r.id) ?? null));
   if (!found) throw new Error(`hrrpHospitalSample: no hospital ${what} in the data`);
   return { type, name: type, path: hospitalPathOf('hrrp', found.id, { inTdr: true }), hospital: found };
+}
+
+// The HACRP hospital pages whose peer chart ("among hospitals like it": one row per group the hospital belongs to, over
+// a shared axis of scores) is hardest to fit, [{ type, name, path }], from the data alone: the one with the longest
+// group name, and the two whose marks sit furthest left and furthest right among those whose label the chart would
+// centre under the mark (web/whatif/marks.js labelAt), where a centred label reaches furthest past the drawing's
+// edge. Each is the first in the newest HACRP file's order among those that tie.
+export function peerChartSamples() {
+  const { hospitals, master, model, dollars } = loadHacrp();
+  const nat = nationalContext({ hospitals, master, model, dollars });
+  const [lo, hi] = [nat.edges[0], nat.edges[nat.edges.length - 1]];
+  const charted = hospitals.filter((h) => h.total !== null && nat.groupsOf(h.ccn).length >= 2);
+  const longest = (h) => Math.max(...nat.groupsOf(h.ccn).map((g) => groupLabel(g.kind, g.key, { metro: master.get(h.ccn)?.cbsaName }).length));
+  const centred = charted.filter((h) => labelAt((h.total - lo) / (hi - lo)).anchor === 'middle');
+  if (!centred.length) throw new Error('peerChartSamples: no hospital in the data has a peer chart with a centred label');
+  const pick = (type, h) => ({ type, name: type, path: hospitalPath(h.ccn) });
+  return [
+    pick('peers-long-name', charted.reduce((a, b) => (longest(b) > longest(a) ? b : a))),
+    pick('peers-mark-left', centred.reduce((a, b) => (b.total < a.total ? b : a))),
+    pick('peers-mark-right', centred.reduce((a, b) => (b.total > a.total ? b : a))),
+  ];
 }
 
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
