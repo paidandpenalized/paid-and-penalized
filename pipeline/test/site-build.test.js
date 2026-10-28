@@ -353,7 +353,7 @@ test("no file under web/ but tokens.css, and no site's or the hub's own styles o
 
 test('the bundled stylesheet puts each site\'s styles after the shared ones', () => {
   const css = stylesheet(['sites/hacrp/web/styles.css']);
-  assert.ok(css.indexOf('.home__mark') < css.indexOf('.hosp__top {'));
+  assert.ok(css.indexOf('.pol__top {') >= 0 && css.indexOf('.pol__top {') < css.indexOf('.hosp__top {'));
   assert.ok(!stylesheet().includes('.hero {'));
 });
 

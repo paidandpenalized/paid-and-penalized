@@ -29,8 +29,9 @@ const PHONE = { width: 390, height: 844 };
 
 // A hospital's page on a program site (one CMS cut): its header follows the hospital.
 const HOSPITAL = hospitalSample('hospital-cut').path;
-// A hub page that is plain text (the front page now), another hub page, a placeholder for a program without a site here,
-// the program page and a hospital's page there: each wears the same header, [the name a test's title gives it, path].
+// The front page (its story fetches the hub's asset to draw its dots), another hub page, a placeholder for a program
+// without a site here, the program page and a hospital's page there: each wears the same header, [the name a test's
+// title gives it, path].
 const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', SITE.programs.find((p) => p.id === 'hvbp').path], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
 
 // The hub's asset as the page's header names it, fetched in the page: its fiscal year and its rows as { ccn, name, net,
@@ -69,15 +70,16 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
 
   for (const [name, path] of PATHS) {
-    it(`${name}: the sticky header is at most ${MAX_STICKY} px tall, the bar one row, and the find button shows exactly when the bar holds a search, which every page's bar does; with no ?h= the hub's asset is not fetched`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    it(`${name}: the sticky header is at most ${MAX_STICKY} px tall, the bar one row, and the find button shows exactly when the bar holds a search, which every page's bar does; with no ?h= only the front page's story fetches the hub's asset`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
       const facts = await headerFacts(page);
       assert.ok(facts.header <= MAX_STICKY, `the header is ${facts.header} px tall`);
       assert.ok(facts.bar <= BAR, `the bar is ${facts.bar} px tall, not one row`);
       assert.equal(facts.barSearch, true, 'the bar holds a search');
       assert.equal(facts.find, facts.barSearch, 'the find button shows iff the bar holds a search form');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
-      // A hub page's family search loads its list on first focus, and only a ?h= makes the shell look a hospital up.
-      assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
+      // A hub page's family search loads its list on first focus, and only a ?h= makes the shell look a hospital up; the
+      // front page's story fetches the asset once, to draw.
+      assert.equal(await assetFetches(page), path === '/' ? 1 : 0, 'the hub asset fetched only by the story');
       await assertQuiet(seen, 'header');
     }));
   }

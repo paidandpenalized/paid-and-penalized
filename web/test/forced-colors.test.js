@@ -37,6 +37,9 @@ const MARKS = [
   '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
   // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
+  // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
+  '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
+  '.st--md', '.dkey__hatch', '.sb',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.
@@ -71,7 +74,7 @@ test('a state shown only by fill or shadow keeps a system-color cue under forced
 });
 
 test('a hatch drawn with a CSS gradient is redrawn under forced colors with its own system colors', () => {
-  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar']) {
+  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar', '.dkey__hatch']) {
     const rule = new RegExp(`${escape(mark)}[^{]*\\{[^}]*forced-color-adjust: none`);
     assert.match(forced, rule, `${mark} opts out of the adjustment`);
   }

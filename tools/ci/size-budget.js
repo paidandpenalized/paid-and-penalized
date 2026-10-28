@@ -40,7 +40,10 @@ export const BUDGETS = {
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
   methods: 100 * KB,
-  dictionary: 40 * KB,
+  // The data dictionary (/hacrp/data/): the stylesheet is one file for the whole family, so it carries the hub's page
+  // styles (hub/styles.css: the home page's story and the hospital page) until the hub gets a stylesheet of its own. Its
+  // weight on the FY2026 build of 2026-10-28 (42.0 KB) plus 15%, rounded up to 10 KB.
+  dictionary: 50 * KB,
   notFound: 40 * KB, // A hub page with the family search's script, as the placeholders are.
   // A hospital's page across the programs (hub/hospital/page.js), server-rendered, before its own script: the heaviest
   // of the 3,055 on the FY2026 build of 2026-10-28 (37.3 KB) plus 15%. ARCH-27's 150 KB for a hospital page holds.

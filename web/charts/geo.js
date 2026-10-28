@@ -165,9 +165,11 @@ export function stateMap({ shapes, code, point, label, width = WIDTH, dot = 1 })
     + `<circle class="chart-geo-halo" cx="${x}" cy="${y}" r="${r2(HALO_R * dot)}"/><circle class="chart-geo-dot" cx="${x}" cy="${y}" r="${r2(DOT_R * dot)}"/></svg>`);
 }
 
-// The US map's projection and each state's path at a width; remembered for the build.
+// The US map at a width, remembered for the build: { height, paths (each state's d by postal code, null where the shapes
+// have none), projection }. The hub's home map draws these at the hub asset's width, so its hospitals' x and y
+// (usProjected) land on the states.
 const US = new Map();
-function usPaths(shapes, width) {
+export function usPaths(shapes, width) {
   const key = String(width);
   if (US.get(key)?.shapes === shapes) return US.get(key);
   const height = usMapHeight(width);

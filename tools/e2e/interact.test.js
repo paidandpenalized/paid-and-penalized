@@ -266,11 +266,18 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
   const withJs = useContext(shared);
   const withoutJs = useContext(shared, { javaScript: false });
 
-  // The page's visible text, one entry per line, and what its footer, theme toggle and the bar's search show. No
-  // watcher: watch needs scripts.
+  // The page's visible text, one entry per line, and what its footer, theme toggle, the bar's search and the front page's
+  // story show. No watcher: watch needs scripts.
   const linesOf = (text) => text.split('\n').map((line) => line.trim()).filter(Boolean);
+  // What the story on the front page shows only with scripts: the search in its last step and the example card's hint
+  // that points at it (it shows with the search). Read first, then left out of the page's lines.
+  const STORY_ONLY = 'main form.omni, main .card__hint';
   const look = (tabs, path) => withPage(tabs, { path }, async (page) => ({
-    lines: linesOf(await page.locator('body').innerText()),
+    story: linesOf(await page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.checkVisibility()).map((el) => el.innerText).join('\n'), STORY_ONLY)),
+    lines: linesOf(await page.evaluate((sel) => {
+      for (const el of document.querySelectorAll(sel)) el.style.display = 'none';
+      return document.body.innerText;
+    }, STORY_ONLY)),
     footer: await page.locator('footer').isVisible(),
     feedback: await page.locator(FEEDBACK_LINK).count(),
     toggle: await page.evaluate(() => document.querySelector('.theme-toggle')?.innerText ?? null),
@@ -287,14 +294,16 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
       assert.equal(off.footer, true, 'the footer shows');
       assert.equal(off.feedback, 1, 'the footer\'s feedback link shows');
 
-      // The hub's own pages are plain text: reading them without scripts loses nothing. What scripts add is the theme
-      // toggle and the bar's search (its words, and the list it shows once a reader types), which are hidden in the
-      // markup because they do nothing without them.
+      // The hub's own pages lose no words without scripts. What scripts add is the theme toggle, the bar's search (its
+      // words, and the list it shows once a reader types) and, on the front page, the story's search and the hint that
+      // points at it, which are hidden in the markup because they do nothing without them.
       if (['hub', 'policy', 'coming', 'not-found'].includes(type)) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');
         assert.ok(on.search.length > 0, 'the bar\'s search shows with scripts');
         assert.deepEqual(off.search, [], 'and not without');
+        assert.equal(on.story.length > 0, path === '/', 'the story\'s search shows with scripts on the front page only');
+        assert.deepEqual(off.story, [], 'and not without');
         const added = new Set([on.toggle, ...on.search]);
         const offLines = new Set(off.lines);
         const lost = on.lines.filter((line) => !added.has(line) && !offLines.has(line));

@@ -1,12 +1,9 @@
-// The hub's words: the family's front page, the methods stub, the policy pages and the not-found page. No digit characters:
-// numbers never live in copy files.
+// The hub's words (the front page's are hub/home/copy.js): the methods stub, the policy pages and the not-found page.
+// No digit characters: numbers never live in copy files.
 import { typesetCopy } from '../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  homeTitle: 'Paid & Penalized',
-  homeDescription: 'Plain-language explainers for Medicare hospital payment programs, built from public CMS data.',
-  sitesHeading: 'Programs',
   // The placeholder at a program's folder until its own page is built (coming.js), before its link to the front page.
   comingNote: "This program's page is coming.",
 

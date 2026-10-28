@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
+import { EXAMPLE_CCN } from '../../../hub/model.js';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
@@ -42,7 +43,8 @@ const generate = (dir, env, options) => {
 };
 
 // A few pinned rows, one of each kind (scored Yes and No, Maryland, no score, Yes with no score), for the tests
-// that only check indexing; the production test keeps every hospital.
+// that only check indexing; the production test keeps every hospital. Then the hub's example hospital, whose page across
+// the programs (built for the slice's hospitals, slicedHub) the home page's example card links to.
 const SLICE = {
   ...DATA,
   hospitals: [
@@ -51,7 +53,8 @@ const SLICE = {
     (h) => h.paymentReduction === 'N/A',
     (h) => h.total === null && h.paymentReduction === 'No',
     (h) => h.total === null && h.paymentReduction === 'Yes',
-  ].map((pred, i) => pick(pred, `slice row ${i}`)),
+    (h) => h.ccn === EXAMPLE_CCN,
+  ].map((pred, i) => pick(pred, `slice row ${i}`)).filter((h, i, all) => all.indexOf(h) === i),
 };
 
 // The places a build of SLICE writes pages for.

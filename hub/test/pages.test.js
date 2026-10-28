@@ -20,22 +20,25 @@ import { hubSearchForm } from '../search/form.js';
 
 const NOINDEX = '<meta name="robots" content="noindex">';
 
-test('the hub writes the stub root, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
+test('the hub writes the home page, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
   withTemp('pp-hub-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     ctx.emit({ path: '/hacrp/', robots: null, text: 'a' });
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    // The three pages before, the stub root, /methods/, the 404 page, the five policy pages, a placeholder per program
+    // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
     // without a site here, and a page per hospital in the dollar file (none indexable while the hub is unreleased).
     assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
+    // The home page is the story (hub/test/home.test.js has its parts): the masthead, then the story's steps and stage.
     const home = read('index.html');
     assert.ok(home.includes('Public Medicare data, made visible.'));
-    assert.match(home, /href="\/hacrp\/">Hospital-Acquired Conditions <span class="short">\(HACRP\)<\/span>/);
+    assert.match(home, /<h1 class="hero__mark"/);
+    assert.match(home, /<div class="story" data-story>[\s\S]*<div class="stage" data-stage>/);
+    assert.ok(home.includes(`<title>${escapeHtml(SITE.name)}</title>`));
 
     const methods = read('methods/index.html');
     assert.match(methods, /id="estimate"/);
@@ -96,10 +99,11 @@ test('every hub page holds the family search in its bar, over the hub\'s asset, 
     for (const [path, file] of files) {
       const text = readFileSync(file, 'utf8');
       const header = headerOf(text);
-      // In the bar's end, between the phone's find button and the theme toggle; the only search on the page.
+      // In the bar's end, between the phone's find button and the theme toggle; the only search on the page but the front
+      // page, whose story's last step holds a second over the same asset (hub/test/home.test.js).
       assert.ok(header.includes(box), `${path}: the family search in the bar`);
       assert.ok(header.indexOf('class="fam__find"') < header.indexOf(box) && header.indexOf(box) < header.indexOf('class="theme-toggle"'), `${path}: search between the find button and the toggle`);
-      assert.equal(text.match(/role="search"/g).length, 1, `${path}: one search`);
+      assert.equal(text.match(/role="search"/g).length, path === '/' ? 2 : 1, `${path}: its searches`);
       assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hub-search']}"></script>`), `${path}: loads the family search's script`);
       assert.doesNotMatch(header, /data-hospital|<p class="chip" data-chip>/, `${path}: follows no hospital of its own`);
     }

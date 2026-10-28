@@ -1,8 +1,8 @@
-// The hub: the family's front page (a stub until the hub is built), the methods stub, the policy pages (Terms,
-// privacy, About, accessibility, and corrections with its log), a placeholder per program without a site here
-// (coming.js), every hospital's page across the programs (hospital/page.js), the not-found page, and the two files
-// crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the sites before it
-// emitted. The hub's own pages stay noindex until the hub is built.
+// The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
+// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder per program
+// without a site here (coming.js), every hospital's page across the programs (hospital/page.js), the not-found page, and
+// the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
+// sites before it emitted. The hub's own pages stay noindex until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
@@ -15,8 +15,9 @@ import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
 import { comingPage } from './coming.js';
 import { loadHub } from './data.js';
+import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
-import { hubHospitals, storyFacts } from './model.js';
+import { hubHospitals, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -29,18 +30,9 @@ function siteLink(id) {
 }
 const SITE_IDS = Object.keys(SITE.sites);
 
-function home(assets, robots) {
-  const body = html`<article class="wrap page home">
-<header class="page__head">
-<h1 class="home__mark">${SHARED.wordmarkLead} <span class="wordmark__pen">${SHARED.wordmarkPen}</span></h1>
-<p class="dek">${SHARED.tagline}</p>
-</header>
-<section class="block" aria-labelledby="sites-h">
-<h2 id="sites-h" class="h-sm">${COPY.sitesHeading}</h2>
-<ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
-</section>
-</article>`;
-  return hubPage({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, assets });
+// The front page (hub/home/page.js), from every hub hospital and the atlas's state shapes (data.js loadHub).
+function home({ hospitals, shapes, assets, robots }) {
+  return homePage({ hospitals, facts: storyFacts(hospitals), states: stateTotals(hospitals), shapes, assets, robots });
 }
 
 function methods(assets, robots) {
@@ -161,12 +153,15 @@ function hospitalPages(ctx, { hospitals, master, robots, never }) {
 
 // updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
 // corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
-// log); tests pass their own. hospitals and master: the hub's hospitals (model.js hubHospitals) and their master records
-// by CCN, read once from the newest files (data.js loadHub) unless a test passes its own (no hospitals: no hospital pages).
+// log); tests pass their own. hospitals and master: the hospitals that get a page (model.js hubHospitals) and their master
+// records by CCN, read once from the newest files (data.js loadHub) unless a test passes its own (no hospitals: no
+// hospital pages). The front page always tells the newest files' whole story.
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
-  ctx.emit({ path: '/', robots, text: home(assets, robots) });
+  const hub = loadHub();
+  const all = hubHospitals(hub);
+  ctx.emit({ path: '/', robots, text: home({ hospitals: all, shapes: hub.shapes, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
@@ -175,13 +170,13 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
-  const hub = hospitals ? null : loadHub();
-  hospitalPages(ctx, { hospitals: hospitals ?? hubHospitals(hub), master: master ?? hub?.master ?? new Map(), robots, never });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, master: master ?? hub.master, robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
-// entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box.
-// styles: the hub's own pages' styles (each page's rules under its root class).
-export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js' }, styles: ['hub/styles.css'], generate: generateHub };
+// entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box
+// (hubPage does, for every hub page), and the home page's story (hub/client/home.js). styles: the hub's own pages'
+// styles (each page's rules under its root class).
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js' }, styles: ['hub/styles.css'], generate: generateHub };
