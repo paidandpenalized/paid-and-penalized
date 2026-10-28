@@ -5,7 +5,7 @@
 // invented CCNs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { programDollars } from '../../engine/js/dollars/whatif.js';
+import { pctOf, programDollars } from '../../engine/js/dollars/whatif.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, footerOf } from '../../pipeline/test/helpers.js';
 import { HAC_TOP_SHARE, programDek } from '../../web/programs.js';
@@ -85,6 +85,14 @@ test('each card\'s takeaway is the data\'s: Readmissions\' share at $0, the HAC 
   assert.equal(vbp, 'One pool, two sides: the cuts on the left pay for the bonuses on the right.');
   // Value-based purchasing's dek already says budget-neutral; the takeaway does not say it again.
   assert.doesNotMatch(vbp, /budget-neutral/i);
+});
+
+test('programBins bins each hospital\'s percent of pay as its estimate carries it (est.pct, the engine\'s one rule)', () => {
+  // Synthetic rows (invented CCNs) that carry only their percents: the bins follow est.pct, not arithmetic of their own.
+  const row = (ccn, hrrp) => ({ ccn, est: { hrrpListed: true, vbpListed: true, pct: { hrrp, hac: 0, hvbp: 0, net: hrrp } } });
+  assert.deepEqual(programBins([row('990001', -0.5), row('990002', -0.45), row('990003', 0), { ccn: '990004', est: null }], 'hrrp'), {
+    n: 3, zero: 1, bins: [{ lo: -3 * BIN_POINTS, n: 2 }],
+  });
 });
 
 test('each card\'s histogram: bins of 0.2 points whose counts add to the program\'s hospitals, $0 apart, one path per ink, two labels', () => {
@@ -271,7 +279,12 @@ test('your turn: the dashed box, its words, the prefilled form in a new tab, "Op
 });
 
 test('the claims the directory\'s words make stop the build when the data no longer bear them out', () => {
-  const render = (change) => directory({ programs: SITE.programs, facts, fy, hospitals: hospitals.map((h) => (h.est ? { ...h, est: change({ ...h.est }) } : h)) });
+  // A changed estimate carries the percents of its changed dollars, as the model's do.
+  const changed = (change, est) => {
+    const e = change({ ...est });
+    return { ...e, pct: pctOf(e) };
+  };
+  const render = (change) => directory({ programs: SITE.programs, facts, fy, hospitals: hospitals.map((h) => (h.est ? { ...h, est: changed(change, h.est) } : h)) });
   // Most Readmissions cuts are small; the HAC program is one step (a cut or $0); value-based purchasing has both sides.
   assert.throws(() => render((e) => ({ ...e, hrrp: e.hrrp * 20 })), /no longer bear out/);
   assert.throws(() => render((e) => ({ ...e, hac: e.hac === 0 ? 1 : e.hac })), /no longer bear out/);

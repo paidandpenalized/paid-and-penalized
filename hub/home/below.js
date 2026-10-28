@@ -38,8 +38,9 @@ const SMALL_CUT = HRRP_CAP_PCT / 3 / 100;
 const RULE_SHARE_NEAR = 0.03;
 
 // The hospitals with an estimate in a program's file (a hospital-page row's id: hrrp, hacrp, hvbp), each one's dollars
-// there as a percent of its estimated pay, binned: { n } hospitals, { zero } of them at exactly $0, and the bins with any
-// hospital, { lo, n }, in order (lo: the bin's low end, in percentage points; a bin holds lo <= v < lo + BIN_POINTS).
+// there as a percent of its estimated pay (est.pct, the engine's pctOf), binned: { n } hospitals, { zero } of them at
+// exactly $0, and the bins with any hospital, { lo, n }, in order (lo: the bin's low end, in percentage points; a bin
+// holds lo <= v < lo + BIN_POINTS).
 export function programBins(hospitals, id) {
   const key = ROWS.find((r) => r.id === id)?.key;
   if (!key) throw new RangeError(`hub home: no dollars for the program "${id}"`);
@@ -49,7 +50,7 @@ export function programBins(hospitals, id) {
   for (const h of hospitals) {
     if (!h.est || !inProgram(h.est, id)) continue;
     n += 1;
-    const v = (h.est[key] * 100) / h.est.total;
+    const v = h.est.pct[key];
     if (v === 0) zero += 1;
     else {
       const i = Math.floor(v / BIN_POINTS);

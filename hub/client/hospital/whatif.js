@@ -13,6 +13,7 @@
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
 // step, Shift (or Page Up and Down) steps bigger, Home and End go to the ends it states; Escape anywhere in the what-if or
 // the banner resets the page.
+import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
@@ -179,7 +180,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       if (v === null) return;
       if (id === 'hacrp') {
         // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
-        const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
+        const cutAt = pctOf({ total: h.est.total, ...outcome({ ...state, hac: true }, h) }).hac;
         apply({ type: 'hac', cut: v < cutAt / 2 });
       } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
     };
@@ -238,7 +239,6 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   if (match) match.hidden = false;
 
   // ---------- drawing ----------
-  const pctOf = (d) => (d * 100) / h.est.total;
 
   // The dollar rows on one scale that holds the hypothetical figures too: each row's bar at its figure now, the actual's
   // bar as a ghost behind a changed one, the peers' median tick, the value and its word.
@@ -300,15 +300,16 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       }
     }
     // The charts: the figure of each row whose input moved or whose dollars print differently, and the net's, in percent
-    // of pay.
+    // of pay (the engine's pctOf).
+    const pct = pctOf({ total: h.est.total, ...out });
     const scenario = {};
     for (const { id, key } of ROWS) {
-      if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pctOf(out[key]);
+      if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pct[key];
     }
     const netMoved = out.net !== h.est.net;
-    if (netMoved) scenario.net = pctOf(out.net);
+    if (netMoved) scenario.net = pct.net;
     strips.setScenario(on ? scenario : null);
-    swarm.setHypothetical(on && netMoved ? pctOf(out.net) : null);
+    swarm.setHypothetical(on && netMoved ? pct.net : null);
 
     // The banner, the stamp, the net and its rows, the headline.
     bar?.classList.toggle('hh__peers--hyp', on);
@@ -324,7 +325,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     netTag.hidden = !on;
     paintSum(out);
     const head = $('[data-headline]');
-    const share = on ? out.net / h.est.total : h.est.share;
+    const share = on ? netShare(out.net, h.est.total) : h.est.share;
     if (head) head.textContent = comparison(fill, on ? 'headHyp' : 'head', { share, median: g.figures.net.median, n: g.peers.length, group: g.group });
     if (reset) reset.hidden = !on;
   }
