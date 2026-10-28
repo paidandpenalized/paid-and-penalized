@@ -161,4 +161,4 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
-export const HUB = { id: 'hub', entries: {}, styles: ['hub/styles.css'], generate: generateHub };
+export const HUB = { id: 'hub', entries: { 'hub-home': 'hub/client/home.js' }, styles: ['hub/styles.css'], generate: generateHub };

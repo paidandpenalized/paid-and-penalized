@@ -184,12 +184,29 @@ test('what only a script uses is hidden: the small states\' buttons, the peer to
   assert.match(smalls, /^<div class="smalls" hidden>/);
   assert.deepEqual([...smalls.matchAll(/data-st="([A-Z]{2})"/g)].map((m) => m[1]), ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC']);
   assert.match(element(out, '<div class="peers"', 'div'), /^<div class="peers" hidden>/);
-  assert.match(out, /<canvas class="stage__cv" hidden><\/canvas>/);
+  assert.match(out, /<canvas class="stage__cv" aria-hidden="true" hidden><\/canvas>/);
   const form = [...tags(out, { names: ['form'] })].find(({ attrs }) => attrs.class === 'omni omni--hero');
   assert.ok(form, 'the hero search');
   assert.equal(form.attrs['data-src'], assets.shell.hubUrl);
   assert.ok('data-hub' in form.attrs && 'hidden' in form.attrs);
   assert.ok(step(8).includes('class="omni omni--hero"'), 'the search is in the last step');
+});
+
+test('the live story\'s parts are in the markup, so its script adds no words: the step names "n/9", the progress line, the script', () => {
+  // Each step's name with its place, hidden (the script shows the current one where the rail is hidden), in rail order.
+  const now = element(out, '<ol class="nowstep"', 'ol');
+  assert.match(now, /^<ol class="nowstep" aria-hidden="true" hidden>/);
+  const rail = element(out, '<ol class="rail"', 'ol');
+  const railWords = [...rail.matchAll(/<a href="#[^"]+">([^<]*)<\/a>/g)].map((m) => m[1]);
+  const items = [...now.matchAll(/<li data-now="(\d)"><span class="nowstep__n">(\d)\/(\d)<\/span> <b>([^<]*)<\/b><\/li>/g)];
+  assert.deepEqual(items.map((m) => [m[1], m[2], m[3], m[4]]), railWords.map((w, i) => [String(i), String(i + 1), '9', w]));
+  // The progress line (no words) and the stage's canvas, inside the story; the story's script after the header's.
+  assert.match(out, /<div class="story__progress" aria-hidden="true"><\/div>/);
+  assert.ok(out.indexOf('class="nowstep"') > out.indexOf('<div class="stage" data-stage>'), 'the step names are on the stage');
+  const scripts = [...out.matchAll(/<script type="module" src="([^"]+)">/g)].map((m) => m[1]);
+  assert.deepEqual(scripts.slice(-2), [assets.js.topbar, assets.js['hub-home']]);
+  // The example card names its hospital by CCN for the script.
+  assert.match(element(out, '<div class="card"', 'div'), new RegExp(`^<div class="card" data-card data-ccn="${EXAMPLE_CCN}"`));
 });
 
 test('the example card: the example hospital, its place, size, teaching, net, three programs, its state\'s peers and its page', () => {

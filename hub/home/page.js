@@ -3,7 +3,8 @@
 // build time (the scale bar for the first six steps, the shaded states map for the last three), the canvas slot the
 // story's script draws in, and the parts only that script uses (hidden here). The last step finds a hospital among its
 // peers: the search the script mounts, and the example hospital's card. Without scripts the page is complete: the
-// charts stick beside the steps they belong to (hub/styles.css), or sit between them on a phone.
+// charts stick beside the steps they belong to (hub/styles.css), or sit between them on a phone. With them
+// (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step.
 import { PEER_MODES, median } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../web/charts/geo.js';
 import { COPY as SHARED } from '../../web/copy.js';
@@ -156,7 +157,7 @@ function exampleCard({ hospitals, fy }) {
   const peerLine = say('cardPeers', { cutN: count(peers.filter((x) => x.est.net < 0).length), median: pct(median(peers.map((x) => x.est.share)), 2) },
     { plain: { n: count(peers.length), group: STATE_NAMES[h.state] } });
   const row = (key, value, listed) => html`<div class="card__row"><dt>${COPY[key]}</dt>${programAmount(value, listed)}</div>`;
-  return html`<div class="card" data-card aria-live="polite">
+  return html`<div class="card" data-card data-ccn="${h.ccn}" aria-live="polite">
 <p class="card__ex">${COPY.cardExample} <span class="card__hint">${COPY.cardHint}</span></p>
 <p class="card__nm">${h.name}</p>
 <p class="card__loc">${place}</p>
@@ -181,7 +182,10 @@ export function homePage({ hospitals, facts, states, shapes, assets, robots }) {
   const search = searchForm({ id: 'find', src: hubUrl, label: COPY.findLabel, find: COPY.findWord, findRest: COPY.findRest, placeholder: COPY.findPlaceholder, hero: true, hub: true });
   const words = stepWords({ hospitals, facts, states, fy, search, card: exampleCard({ hospitals, fy }) });
   const zero = money(0);
-  const rail = html`<nav class="railbox" aria-label="${COPY.railLabel}"><ol class="rail">${STEPS.map((s) => html`<li><a href="#step-${s.slug}">${fill(s.rail, s.slug === 'start' ? { zero } : {})}</a></li>`)}</ol></nav>`;
+  const railWords = STEPS.map((s) => fill(s.rail, s.slug === 'start' ? { zero } : {}));
+  const rail = html`<nav class="railbox" aria-label="${COPY.railLabel}"><ol class="rail">${STEPS.map((s, i) => html`<li><a href="#step-${s.slug}">${railWords[i]}</a></li>`)}</ol></nav>`;
+  // Where the rail is hidden, the stage names the step being read ("3/9 Readmissions"); the script shows the current one.
+  const now = html`<ol class="nowstep" aria-hidden="true" hidden>${railWords.map((words, i) => html`<li data-now="${i}"><span class="nowstep__n">${count(i + 1)}/${count(STEPS.length)}</span> <b>${words}</b></li>`)}</ol>`;
   const steps = STEPS.map((s, i) => html`<section class="step" id="step-${s.slug}" data-step="${i}"><div class="step__in">
 ${words[i]}
 </div></section>
@@ -189,9 +193,11 @@ ${words[i]}
   const body = html`${hero()}
 <div class="story" data-story>
 ${rail}
-${steps}<div class="stage" data-stage>
+${steps}<div class="story__progress" aria-hidden="true"></div>
+<div class="stage" data-stage>
+${now}
 <div class="stage__panel stage__panel--bar"><div class="stage__pin">${barFigure({ hospitals, facts, fy })}</div></div>
-<canvas class="stage__cv" hidden></canvas>
+<canvas class="stage__cv" aria-hidden="true" hidden></canvas>
 <div class="stage__panel stage__panel--map"><div class="stage__pin smapfig">
 <p class="readout" aria-live="polite" hidden>${COPY.readout}</p>
 ${statesMap({ shapes, states })}
@@ -200,5 +206,5 @@ ${statesMap({ shapes, states })}
 ${peerToggle()}
 </div>
 </div>`;
-  return page({ title: SITE.name, description: COPY.description, path: '/', robots, body, scripts: [assets.js.topbar], assets });
+  return page({ title: SITE.name, description: COPY.description, path: '/', robots, body, scripts: [assets.js.topbar, assets.js['hub-home']], assets });
 }

@@ -156,6 +156,37 @@
 .card__go { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-h); padding: 10px 14px; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); font: 700 0.90625rem/1 var(--font-body); text-decoration: none; }
 .card__go:hover { background: var(--ink); color: var(--paper); }
 
+/* ---------- live: the story's script runs (hub/client/home.js sets .story--live, then .story--drawn) ---------- */
+/* One sticky stage beside the steps, as tall as the window under the header: its two drawings stacked in it, under the
+   canvas that moves the dots between them (the script fades each drawing in and out with its steps). The canvas fades
+   in over the server's dots in the bar once it has drawn them in the same places. */
+.story--live > .stage { display: block; position: sticky; top: var(--stage-top); grid-column: 3; grid-row: 1 / -1; align-self: start; height: calc(100vh - var(--stage-top)); }
+.story--live .stage__panel { position: absolute; inset: 0; }
+.story--live .stage__panel.is-off { pointer-events: none; }
+.story--live:not(.story--drawn) .stage__panel--map { opacity: 0; }
+.story--live .stage__pin { position: static; height: 100%; }
+.story--live .stage__cv { display: block; position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+.story--live .stage__cv[hidden] { display: none; }
+.story--drawn .stage__cv { opacity: 1; }
+.story--live .sbar .chart-dots { transition: opacity 0.5s; }
+.story--drawn .sbar .chart-dots { opacity: 0; }
+/* The map: before its states fill (--fill, from 0 to 1, set by the script), the land shows each state's outline. */
+.story--live .smap .st { fill-opacity: calc(var(--t) * var(--fill, 1)); stroke-opacity: var(--fill, 1); }
+.story--live .smap .st--md { fill-opacity: var(--fill, 1); }
+.story--live .smap__land { stroke: var(--line); stroke-width: 0.7px; stroke-linejoin: round; stroke-opacity: calc(0.75 * (1 - var(--fill, 1))); vector-effect: non-scaling-stroke; }
+/* The step's name where the rail is hidden ("3/9 Readmissions"), in the stage's top left. */
+.nowstep { display: none; }
+.nowstep li { display: none; max-width: none; line-height: 1; }
+.nowstep li.is-now { display: block; }
+.nowstep__n { color: var(--ink-3); font: 400 0.71875rem/1 var(--font-type); }
+.nowstep b { margin-left: 4px; color: var(--ink); font: 600 0.75rem/1 var(--font-body); }
+/* How far through the story: a line under the header while the story is on screen. */
+.story__progress { position: fixed; top: calc(var(--sticky-top, 0px) - 2px); left: 0; z-index: 21; width: 100%; height: 2px; background: var(--pen); opacity: 0; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+.story__progress.is-on { opacity: 1; }
+@media (max-width: 1079px) {
+  .story--live .nowstep:not([hidden]) { display: block; position: absolute; top: 9px; left: 14px; z-index: 2; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+}
+
 /* ---------- narrower: no rail; phones: one column, each chart between the steps ---------- */
 @media (max-width: 1079px) {
   .story { --railw: 0px; --textw: 360px; }
@@ -180,17 +211,39 @@
   .sbar__mv { font-size: 0.9375rem; }
   .smap { max-height: none; }
   .story .card { max-width: none; }
+
+  /* Live on a phone: the steps' words above, the chart pinned in the lower part of the window. Each step's words rise
+     from behind the chart, hold under the header while read, then leave as the next arrive; words taller than the room
+     (.step--tall) scroll with the page instead. At the story's end the chart takes its own room, under the last step. */
+  .story--live { --stage-h: 56svh; display: block; }
+  .story--live > .stage { position: sticky; top: auto; bottom: 0; z-index: 5; height: var(--stage-h); margin-inline: calc(-1 * var(--gutter)); border-top: 1px solid var(--line); background: var(--paper); box-shadow: 0 -22px 18px -6px var(--paper); }
+  .story--live .stage__pin { padding: 30px 12px 10px; }
+  .story--live .stage__panel--bar > .stage__pin { padding-bottom: 10px; }
+  .story--live > .step, .story--live > .step[data-step="0"] { min-height: calc(100svh - var(--stage-h) - var(--stage-top) + 200px); padding: 56px 0 0; }
+  .story--live > .step[data-step="0"] { padding-top: 40px; }
+  .story--live > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
+  .story--live .step__in { position: sticky; top: calc(var(--stage-top) + 12px); }
+  .story--live > .step--tall .step__in, .story--live > .step[data-step="8"] .step__in { position: static; }
+  .story--live .smap { max-height: calc(var(--stage-h) - 11rem); }
 }
 
 @media print {
-  .railbox { display: none; }
+  .railbox, .story__progress, .stage__cv, .nowstep { display: none !important; }
+  .story--live { display: block; }
+  .story--live > .stage, .story--live .stage__panel { position: static; height: auto; opacity: 1 !important; }
   .stage__pin { position: static; height: auto; }
   .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { min-height: 0; padding-top: 24px; }
+}
+
+/* Readers who ask for more contrast read every step's words in full ink. */
+@media (prefers-contrast: more) {
+  .story--live .step__in { opacity: 1 !important; }
 }
 
 /* Forced colors: the meaning inks and the hatch keep their colors (each state's sign is in its title and the key's
    words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
 @media (forced-colors: active) {
+  .story--live .step__in { opacity: 1 !important; }
   .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
   .sbar__frame, .sbar__mag, .smap__hatch { stroke: CanvasText; }
   .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }

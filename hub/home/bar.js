@@ -3,22 +3,20 @@
 // so the many small hospitals crowd the left and the few large ones spread to the right); the share the programs move
 // as a red sliver at the bar's right end; and that sliver magnified, split into what is not paid and what moves to other
 // hospitals as bonuses. The drawing is graphics only, in viewBox units; its words are the figure's HTML around it, so
-// they keep their size at every width. The story's script repaints the same layout on its canvas (barHash, barOrder).
+// they keep their size at every width. The story's script lays the same dots on its canvas (hub/client/story/bar-frame.js
+// holds the frame and the dots' places for both).
 import { dotsPath } from '../../web/charts/dots.js';
 import { fillCopy } from '../../web/render/components.js';
 import { count, money, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
+import { BAR, barDot, barHash, barOrder } from '../client/story/bar-frame.js';
 import { COPY } from './copy.js';
 
-// The drawing's frame, in viewBox units: its width, the bar's top and height, the dots' inset from its ends and edges
-// and their diameter, how far the sliver reaches past the bar, the gap the magnifier's lines cross, and the split bar's
-// height.
-const W = 600;
-const BAR_Y = 6;
-const BAR_H = 60;
-const INSET_X = 3;
-const INSET_Y = 4;
-const DOT = 2.1;
+export { barHash, barOrder };
+
+// The drawing's frame (BAR: its width, the bar's top and height, the dots' diameter), how far the sliver reaches past
+// the bar, the gap the magnifier's lines cross, and the split bar's height.
+const { W, Y: BAR_Y, H: BAR_H, DOT } = BAR;
 const SLIVER_OUT = 5;
 const SLIVER_MIN = 2;
 const GAP = 70;
@@ -32,30 +30,6 @@ const r1 = (v) => Math.round(v * 10) / 10;
 // A share of the drawing's width or height, to four places (a style property's number).
 const frac = (v) => Math.round(v * 1e4) / 1e4;
 const fill = (key, values) => fillCopy(COPY, key, values);
-
-// A stable spread in [0, 1) for a hospital's row in the hub asset (its index in the dollar file's order): the height of
-// its dot in the bar. An integer hash (multiply, xor-shift), the same in the build and the browser.
-export function barHash(i) {
-  let x = ((i + 1) * 2654435761) >>> 0;
-  x ^= x >>> 15;
-  x = Math.imul(x, 2246822519) >>> 0;
-  x ^= x >>> 13;
-  return (x >>> 0) / 4294967296;
-}
-
-// Each hospital with an estimate as { i, mid }: i its index in `hospitals` (the hub asset's row), mid the middle of its
-// slice of the total pay, from 0 to 1, in order of pay (smallest first, the dollar file's order on a tie).
-export function barOrder(hospitals) {
-  const rows = hospitals.map((h, i) => ({ i, pay: h.est?.total })).filter((r) => r.pay !== undefined)
-    .sort((a, b) => a.pay - b.pay || a.i - b.i);
-  const total = rows.reduce((sum, r) => sum + r.pay, 0);
-  let before = 0;
-  return rows.map(({ i, pay }) => {
-    const mid = (before + pay / 2) / total;
-    before += pay;
-    return { i, mid };
-  });
-}
 
 // The drawing, graphics only: the bar's frame, the dots, the sliver, the magnifier's dashed lines and the split bar.
 // dots: [[x, y]]; sliver: its width; mx0: the split's left edge; red: the not-paid part's width; label: its name.
@@ -80,7 +54,7 @@ function drawing({ dots, sliver, mx0, red, label }) {
 export function barFigure({ hospitals, facts, fy }) {
   const share = facts.gross / facts.pay;
   if (!(share > 0 && share * MAGNIFY <= 1)) throw new RangeError(`hub home: the programs move ${share} of pay, which the bar cannot magnify ${MAGNIFY} times`);
-  const dots = barOrder(hospitals).map(({ i, mid }) => [INSET_X + mid * (W - 2 * INSET_X), BAR_Y + INSET_Y + barHash(i) * (BAR_H - 2 * INSET_Y)]);
+  const dots = barOrder(hospitals).map(({ i, mid }) => barDot(mid, barHash(i)));
   const sliver = W * share;
   const mx0 = W - sliver * MAGNIFY;
   const red = sliver * MAGNIFY * (facts.notPaid / facts.gross);
