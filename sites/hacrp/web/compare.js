@@ -40,8 +40,9 @@ export function countBins(values, edges) {
   return counts;
 }
 
-// A bed count's band: the index of the first BED_BANDS edge above it (0 under the first edge), or null (the family's
-// one copy is in engine/js/peers.js).
+// A bed count's band: the index of the first edge above it (0 under the first edge), or null with no count. The edges
+// are BED_BAND_EDGES in engine/js/peers.js, the family's one copy (this site's constants.js re-exports them as
+// BED_BANDS); the function is re-exported here so this site's code and tests keep their import.
 export { bedBand };
 
 // Each group kind a hospital belongs to, in the order a page lists them: its key from the master (null: unknown, so
