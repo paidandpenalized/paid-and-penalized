@@ -11,6 +11,7 @@ import { decimal, dollars, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { loadHubAsset } from '../../../web/client/hub-asset.js';
 import { inProgram } from '../../hospital/peers.js';
+import { signOf } from '../../hospital/text.js';
 import { COPY } from './copy.js';
 
 // A payment factor as the dollar file has it (to ten places), never shorter than the four places CMS publishes
@@ -46,7 +47,7 @@ export function worksheetModel(h) {
       net: signed(d.net),
     },
     show: { hrrp: inProgram(est, 'hrrp'), vbp: inProgram(est, 'hvbp'), cut: est.cut, nocut: !est.cut },
-    sign: d.net < 0 ? 'cut' : d.net > 0 ? 'bonus' : 'zero',
+    sign: signOf(d.net),
     href: hospitalPathOf('hub', h.ccn),
   };
 }

@@ -8,7 +8,7 @@
 // them (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step. Below the story
 // (below.js): the program directory, the methods in brief with the example's worksheet, and the invitation.
 import { PEER_MODES, median } from '../../engine/js/peers.js';
-import { STATE_NAMES } from '../../web/charts/geo.js';
+import { STATE_NAMES } from '../../engine/js/states.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT, rulePercent } from '../../web/programs.js';
 import { fillAround, fillCopy } from '../../web/render/components.js';

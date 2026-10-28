@@ -13,6 +13,7 @@
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
 // step, Shift (or Page Up and Down) steps bigger, Home and End go to the range's ends; Escape anywhere in the what-if or
 // the banner resets the page.
+import { numberOrNaN } from '../../../engine/js/stats.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
@@ -137,9 +138,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       r.editing = true;
     });
     r.input?.addEventListener('change', () => {
-      const v = r.input.value.trim() === '' ? NaN : Number(r.input.value);
       r.editing = false;
-      apply({ type: 'set', id: ROW_KEY[id], value: v });
+      apply({ type: 'set', id: ROW_KEY[id], value: numberOrNaN(r.input.value) });
       r.input.value = factor(state[ROW_KEY[id]]);
     });
     r.input?.addEventListener('blur', () => {

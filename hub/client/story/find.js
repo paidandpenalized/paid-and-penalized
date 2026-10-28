@@ -12,7 +12,7 @@ import { capitalize, count, dollars, placeText } from '../../../web/render/forma
 import { hospitalPathOf } from '../../../web/site.js';
 import { COPY } from './copy.js';
 import { ROWS, groupName, inProgram, peersOf } from '../../hospital/peers.js';
-import { signedShareText } from '../../hospital/text.js';
+import { signOf, signedShareText } from '../../hospital/text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -53,7 +53,7 @@ export function cardModel(h, peers, mode, fy) {
   const teaching = fill(TEACHING[h.teach] ?? 'teachUnknown');
   const place = Number.isInteger(h.band) ? fill('cardPlace', { place: placeText(h), size: capitalize(sizeWords(h.band)), teaching })
     : fill('cardPlaceNoBeds', { place: placeText(h), teaching: capitalize(teaching) });
-  const sign = est.net < 0 ? 'Cut' : est.net > 0 ? 'Bonus' : 'Zero';
+  const sign = capitalize(signOf(est.net));
   return {
     ccn: h.ccn, name: h.name, place,
     pct: signedShareText(est.share), usd: dollars(est.net, { sign: true }), pen: est.net < 0,
