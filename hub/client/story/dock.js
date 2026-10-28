@@ -2,8 +2,9 @@
 // tagline strip under the masthead reaches the header) the hero's two words shrink, sweep left and rise into the bar,
 // where the header's own wordmark takes over. The hero's own spans move (CSS transforms); no copy of the wordmark is
 // added. The header's wordmark waits hidden while the trip is under way and shows once it ends; scrolling back reverses
-// it. The classes are the script's, so without it both wordmarks simply show. Reduced motion: no trip, the header's
-// wordmark shows at once. dockPath is pure; mountDock wires it to the page.
+// it. Until the script runs, the stylesheet keeps the header's wordmark hidden while the masthead is in view (hub/styles.css);
+// the script marks the root dock-ready as it takes over. Reduced motion: no trip, the header's wordmark shows at once.
+// dockPath is pure; mountDock wires it to the page.
 
 import { clamp } from '../../../engine/js/stats.js';
 import { ease, smooth } from '../paint.js';
@@ -93,8 +94,8 @@ const place = (r, top = r.top) => ({ left: r.left, top, width: r.width, right: r
 const fromHero = (h, at) => ({ left: h.left + at.dx, top: h.top + at.dy, width: at.width, right: h.left + at.dx + at.width, height: at.height });
 
 // Wires the trip to the front page: its masthead (.hero__mark's two spans) and the header's wordmark. html carries
-// dock-trip while the trip is not done (the header's wordmark hidden) and dock-moving while the words are away from
-// home (they draw over the header). The header's wordmark is never hidden while it has focus. Returns nothing; does
+// dock-ready once the script has taken over from the stylesheet's first state, dock-trip while the trip is not done (the
+// header's wordmark hidden) and dock-moving while the words are away from home (they draw over the header). The header's wordmark is never hidden while it has focus. Returns nothing; does
 // nothing on a page without both wordmarks.
 export function mountDock() {
   const hero = document.querySelector('.hero__mark');
@@ -184,4 +185,5 @@ export function mountDock() {
   head.addEventListener('focusout', frame);
   if (document.fonts) document.fonts.ready.then(again);
   again();
+  root.classList.add('dock-ready');
 }

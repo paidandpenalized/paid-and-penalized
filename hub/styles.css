@@ -31,13 +31,24 @@
    root makes a stacking context), haloed in the paper so the tabs they cross don't run into their letters (a box of
    paper would show against the page's grain), and take no pointer. */
 /* The header's side of the trip: while the masthead travels up into the bar, the bar's wordmark waits hidden and the
-   tagline steps back; both show once it docks. Only the script sets the class, so without it both show. Print shows the
-   wordmark as it rests (the script's inline styles win without !important). */
+   tagline steps back; both show once it docks. Print shows the wordmark as it rests (the script's inline styles win
+   without !important).
+   Before the script takes over (it marks the root .dock-ready), the page still shows one wordmark, the masthead's: with
+   scripts on, the bar's wordmark and tagline wait hidden from the first paint, as the trip's start has them. Where the
+   browser runs an animation on the page's scroll, they also show once the masthead has scrolled up under the header, so
+   with scripts off (or a reader scrolling before the script runs) the header is never without them; a browser that
+   can't, with scripts off, shows both wordmarks. */
 .fam__tag { transition: opacity 0.3s; }
 .dock-trip .fam .wordmark { visibility: hidden; }
 .dock-trip .fam__tag { opacity: 0; }
+@media (scripting: enabled) { html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { visibility: hidden; } }
+@supports (animation-timeline: scroll()) {
+  html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { animation: dock-show auto linear both; animation-timeline: scroll(root); animation-range: 100px 160px; }
+  @media (prefers-reduced-motion: reduce) { html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { animation-timing-function: steps(1, end); } }
+}
+@keyframes dock-show { from { visibility: hidden; opacity: 0; } to { visibility: visible; opacity: 1; } }
 @media print {
-  .dock-trip .fam .wordmark { visibility: visible !important; opacity: 1 !important; }
+  .dock-trip .fam .wordmark, html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { visibility: visible !important; opacity: 1 !important; animation: none; }
   .dock-trip .fam__tag { opacity: 1; }
 }
 .hero__mark > span { transform-origin: 0 0; }

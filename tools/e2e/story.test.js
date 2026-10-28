@@ -323,6 +323,7 @@ for (const width of [390, 1280]) {
         inSlot(opened, 'with the search row open');
         await page.keyboard.press('Escape');
       }
+      assert.equal(await page.evaluate(() => document.documentElement.classList.contains('dock-ready')), true, 'the script has taken over');
       assert.equal((await at(1.1)).shown, 'visible', 'docked, the header\'s wordmark shows');
       assert.equal((await at(0)).shown, 'hidden', 'at the top it waits hidden');
       await at(1.1);
@@ -331,6 +332,39 @@ for (const width of [390, 1280]) {
       await assertQuiet(seen, `the masthead's trip at ${width} px`);
     }));
   });
+}
+
+// Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
+// (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
+// header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.
+for (const width of [390, 1280]) {
+  for (const javaScript of [true, false]) {
+    describe(`one wordmark before the trip's script at ${width} px, scripts ${javaScript ? 'on (the script held back)' : 'off'}`, () => {
+      const tabs = useContext(shared, { width, javaScript });
+
+      it('at the top only the masthead\'s wordmark shows; scrolled past it, the header\'s does', () => withPage(tabs, { path: '/about/' }, async (page) => {
+        // The front page's own script never arrives (the shell's still runs), so the page stays as it was first painted.
+        if (javaScript) await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
+        await page.goto(new URL('/', page.url()).href, { waitUntil: 'load' });
+        const shown = async (y) => {
+          await page.evaluate((top) => window.scrollTo(0, top), y);
+          await page.waitForTimeout(150);
+          return page.evaluate(() => {
+            const seen = (el) => getComputedStyle(el).visibility === 'visible' && Number(getComputedStyle(el).opacity) > 0.99;
+            const tag = document.querySelector('.fam__tag');
+            return {
+              head: seen(document.querySelector('.fam a.wordmark')), tag: getComputedStyle(tag).display === 'none' ? null : seen(tag),
+              hero: seen(document.querySelector('.hero__mark')), ready: document.documentElement.classList.contains('dock-ready'),
+            };
+          });
+        };
+        const tag = (on) => (width >= 1100 ? on : null);
+        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'at the top: the masthead\'s wordmark only');
+        assert.deepEqual(await shown(400), { head: true, tag: tag(true), hero: true, ready: false }, 'past the masthead: the header\'s wordmark shows');
+        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'back at the top: hidden again');
+      }));
+    });
+  }
 }
 
 // Below the story, the directory's programs under consideration: at every layout each group's name sits on one line
