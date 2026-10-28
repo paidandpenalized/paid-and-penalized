@@ -505,11 +505,23 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     draw();
   }
 
+  // A tap anywhere outside the swarm puts its tooltip away: a touch screen has no pointer that leaves, and a tap on the
+  // page's words moves no focus in every browser (Safari's does not), so the canvas's blur alone would leave it showing.
+  function onOutside(e) {
+    if (tip.hidden || el.contains(e.target)) return;
+    tapped = -1;
+    hover = -1;
+    picked = -1;
+    tip.hidden = true;
+    if (!moving) draw();
+  }
+
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerleave', onLeave);
   canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);
+  document.addEventListener('pointerdown', onOutside);
 
   function resize() {
     if (el.clientWidth === W) return;

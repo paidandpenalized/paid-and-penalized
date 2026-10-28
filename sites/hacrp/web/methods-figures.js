@@ -279,10 +279,10 @@ const BACKTEST_SPAN = [0.5, 2];
 const times = (v) => `${String(Number(v.toFixed(2)))}×`;
 const ratioOf = (logRatio) => Math.exp(logRatio);
 
-// A stratum's words, from bands.strata: its bed band from the band's own numbers ("under 100 beds"), and the band and
-// its kind as the group's words ("under 100 beds, other hospitals"), its name (capitalized: "Under 100 beds, other
-// hospitals"), its short name (the phone's) and the group as a description of hospitals ("under 100 beds that are sole
-// community or Medicare-dependent").
+// A stratum's words, from bands.strata: its bed band from the band's own numbers ("fewer than 100 beds"), and the band
+// and its kind as the group's words ("fewer than 100 beds, other hospitals"), its name (capitalized: "Fewer than 100 beds,
+// other hospitals"), its short name (the phone's) and the group as a description of hospitals ("fewer than 100 beds that
+// are sole community or Medicare-dependent").
 export function stratumLabel(s) {
   const beds = s.bedsMin === 0 ? fill('btBedsUnder', { n: count(s.bedsMax + 1) })
     : s.bedsMax === null ? fill('btBedsOver', { n: count(s.bedsMin) }) : fill('btBedsBetween', { lo: count(s.bedsMin), hi: count(s.bedsMax) });

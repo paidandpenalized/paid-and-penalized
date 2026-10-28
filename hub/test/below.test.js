@@ -70,9 +70,11 @@ test('a card per program with data: name, abbreviation, dek, the national figure
     assert.ok(words(big).startsWith(figure), `${id}: ${words(big)}`);
     assert.match(big, /<a class="est-tag" href="\/methods\/#estimate" aria-label="[^"]+">Estimate<\/a>/, id);
     assert.equal(words(element(card, '<p class="pc__sub"', 'p')), sub, id);
-    assert.match(card, new RegExp(`<a class="go" href="${p.path}">Open ${p.name}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
+    // The way to its page: the program's short name, the same on every card (so the three read evenly on one line), with
+    // its name said to a screen reader after it.
+    assert.match(card, new RegExp(`<a class="go" href="${p.path}" aria-label="Open ${p.ab}, ${p.name}">Open ${p.ab}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
   });
-  assert.deepEqual(cards.map((c) => /href="([^"]+)">Open/.exec(c)[1]), ['/hrrp/', '/hacrp/', '/hvbp/']);
+  assert.deepEqual(cards.map((c) => /<a class="go" href="([^"]+)"/.exec(c)[1]), ['/hrrp/', '/hacrp/', '/hvbp/']);
 });
 
 test('each card\'s takeaway is the data\'s: Readmissions\' share at $0, the HAC step, value-based purchasing\'s two sides', () => {
@@ -117,6 +119,16 @@ test('each card\'s histogram: bins of 0.2 points whose counts add to the program
     assert.match(svg, /role="img" aria-label="[^"]+"/);
     const label = /aria-label="([^"]+)"/.exec(svg)[1];
     assert.ok(label.includes(count(members.length)), label);
+    // Natural words: the program's full name (no abbreviation to spell out), and only the groups it has (no "0 with a
+    // bonus" for a program that pays none, no "0 at $0").
+    const p = SITE.programs.find((x) => x.id === id);
+    assert.ok(label.startsWith(`${count(members.length)} hospitals in the ${p.long}, `), label);
+    assert.ok(!label.includes(p.ab), `${id}: the label spells out its abbreviation`);
+    assert.doesNotMatch(label, /(?:^|\D)0 (?:cut|at|with)/, `${id}: a group of none`);
+    const cutCount = members.filter((h) => h.est[PROGRAMS[id].key] < 0).length;
+    const bonusCount = members.filter((h) => h.est[PROGRAMS[id].key] > 0).length;
+    const parts = [cutCount && `${count(cutCount)} cut`, zero && `${count(zero)} at $0`, bonusCount && `${count(bonusCount)} with a bonus`].filter(Boolean);
+    assert.ok(label.endsWith(`: ${parts.join(', ')}.`), label);
     const bars = (ink) => [...tags(svg, { names: ['path'] })].filter(({ attrs }) => attrs.class === `st__d st__d--${ink}`);
     const subpaths = (ink) => bars(ink).reduce((total, { attrs }) => total + attrs.d.split('M').length - 1, 0);
     assert.ok(bars('pen').length <= 1 && bars('rew').length <= 1 && bars('neu').length <= 1, `${id}: one path per ink`);
@@ -165,6 +177,21 @@ test('methods in brief: its kicker, heading, a paragraph, three numbered points 
   assert.match(section, /<a class="more" href="\/methods\/">Read the methods<span class="ico ico--arrow" aria-hidden="true"><\/span><\/a>/);
 });
 
+// The worksheet says its table roles outright: on the narrowest phones its rows are laid out as a grid, and a browser
+// can drop a table's own semantics when its parts change display (WebKit does), so the roles keep it a table of six
+// rows, each a number, a row header and an amount.
+test('the worksheet keeps its table roles whatever its layout', () => {
+  const ws = element(out, '<div class="form wsx" data-worksheet', 'div');
+  assert.match(ws, /<table class="wst" role="table"><caption class="vh">[^<]+<\/caption><tbody role="rowgroup">/);
+  const rows = [...ws.matchAll(/<tr\b([^>]*)>(.*?)<\/tr>/gs)];
+  assert.equal(rows.length, 6);
+  for (const [, attrs, inside] of rows) {
+    assert.match(attrs, /role="row"/);
+    const cells = [...inside.matchAll(/<(td|th)\b([^>]*)>/g)].map((m) => `${m[1]} ${/role="([a-z]+)"/.exec(m[2])?.[1]}`);
+    assert.deepEqual(cells, ['td cell', 'th rowheader', 'td cell']);
+  }
+});
+
 // A worksheet amount as a number: "−$69,238" is -69238. "Not in this program" is null.
 const amount = (text) => (/^[−+]?\$[\d,]+$/.test(text) ? Number(text.replace('−', '-').replace(/[$,+]/g, '')) : null);
 const LINE_KEYS = ['total', 'base', 'hrrp', 'hac', 'hvbp', 'net'];
@@ -173,8 +200,8 @@ test('the worksheet adds up the example\'s estimate: line 6 = 3 + 4 + 5 = its ne
   const ws = element(out, '<div class="form wsx" data-worksheet', 'div');
   assert.match(ws, new RegExp(`^<div class="form wsx" data-worksheet data-src="${assets.shell.hubUrl}" data-ccn="${EXAMPLE_CCN}">`));
   // Lines 1 to 6, numbered in order, each amount in its own cell.
-  assert.deepEqual([...ws.matchAll(/<td><span class="field__no">(\d)<\/span><\/td>/g)].map((m) => m[1]), ['1', '2', '3', '4', '5', '6']);
-  const cells = Object.fromEntries([...ws.matchAll(/<td data-ws="([a-z]+)"( data-na)?>([^<]*)<\/td>/g)].map((m) => [m[1], m[3]]));
+  assert.deepEqual([...ws.matchAll(/<td role="cell"><span class="field__no">(\d)<\/span><\/td>/g)].map((m) => m[1]), ['1', '2', '3', '4', '5', '6']);
+  const cells = Object.fromEntries([...ws.matchAll(/<td role="cell" data-ws="([a-z]+)"( data-na)?>([^<]*)<\/td>/g)].map((m) => [m[1], m[3]]));
   assert.deepEqual(Object.keys(cells), LINE_KEYS);
   const d = programDollars(example.est);
   const v = Object.fromEntries(LINE_KEYS.map((k) => [k, amount(cells[k])]));
@@ -187,12 +214,19 @@ test('the worksheet adds up the example\'s estimate: line 6 = 3 + 4 + 5 = its ne
   const said = words(ws);
   assert.ok(said.startsWith(`Worksheet · FY${fy} · An example CCN ${EXAMPLE_CCN}`), said);
   assert.ok(ws.includes(`<b data-ws="name">${escapeHtml(example.name)}</b>, <span data-ws="place">${escapeHtml(`${example.city}, ${example.state}`)}</span>: estimated Medicare inpatient pay`), 'line 1 names the hospital');
-  assert.match(element(ws, '<tr class="wst__net"', 'tr'), /<a class="est-tag" href="\/methods\/#estimate"/);
+  assert.match(element(ws, '<tr role="row" class="wst__net"', 'tr'), /<a class="est-tag" href="\/methods\/#estimate"/);
   const sign = example.est.net < 0 ? 'cut' : example.est.net > 0 ? 'bonus' : 'zero';
   const stamps = [...ws.matchAll(/<p class="stamp[^"]*" data-sign="([a-z]+)"( hidden)?>([^<]*)<\/p>/g)].map((m) => [m[1], Boolean(m[2]), m[3]]);
   assert.deepEqual(stamps, [['cut', sign !== 'cut', 'Net cut'], ['bonus', sign !== 'bonus', 'Net bonus'], ['zero', sign !== 'zero', 'No net change']]);
   assert.ok(said.includes('Find your hospital above and this worksheet fills in for it.'));
   assert.ok(ws.includes(`<a data-ws="go" href="${hospitalPathOf('hub', EXAMPLE_CCN)}">Its hospital page</a>`));
+});
+
+test('the worksheet claims no more than its rounding allows: each line rounded on its own, so the arithmetic can be off by a dollar', () => {
+  const ws = words(element(out, '<div class="form wsx" data-worksheet', 'div'));
+  // Line 3 is the factor times the unrounded base, so worked from the printed line 2 it can be a dollar away.
+  assert.ok(ws.includes('each line rounded on its own, so the arithmetic can be off by a dollar'), ws);
+  assert.ok(!ws.includes('to the dollar'), 'no claim that the lines agree to the dollar');
 });
 
 test('worksheetModel: every hospital\'s lines add to its net; outside a program reads "Not in this program", never $0', () => {

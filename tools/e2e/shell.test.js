@@ -18,7 +18,7 @@ import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
-import { hospitalSample } from './site.js';
+import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
 
@@ -293,6 +293,48 @@ describe('the chip beside a program\'s search', () => {
       // On a wide screen the search keeps its full width beside the chip (the tagline steps aside).
       if (width >= 1200) assert.ok(f.search >= 360, `${width} px: the search is ${f.search} px wide`);
       assert.equal(f.sideways, false, `${width} px: no sideways scroll`);
+    }
+  }));
+});
+
+// The bar's search shows its whole placeholder ("Hospital, city or state", the family's and HACRP's alike) at every width
+// from a tablet's to a desktop's: on a hub page, a hospital's page across the programs (the followed hospital's chip
+// beside it), HACRP's program page and a HACRP hospital's page (its chip too).
+describe('the bar\'s family search', () => {
+  const tabs = useContext(shared, { width: 641 });
+  it('shows its whole placeholder from 641 to 1440 px', () => withPage(tabs, { path: SITE.pages.about }, async (page) => {
+    const PAGES = [['a hub page', SITE.pages.about], ['a hospital page', hubHospitalSample('hub-hospital-cut').path], ['HACRP\'s program page', PROGRAM_PATH], ['a HACRP hospital page', HOSPITAL]];
+    for (const [name, path] of PAGES) {
+      await visit(page, tabs.base, path);
+      for (const width of [641, 720, 800, 1024, 1100, 1199, 1200, 1440]) {
+        await page.setViewportSize({ width, height: 600 });
+        await settle(page);
+        const fit = await page.evaluate(() => {
+          const input = document.querySelector('.fam__end form#omni input');
+          const cs = getComputedStyle(input);
+          const ctx = document.createElement('canvas').getContext('2d');
+          ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          return { room: input.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), need: ctx.measureText(input.placeholder).width };
+        });
+        assert.ok(fit.need <= fit.room, `${name} at ${width} px: the placeholder needs ${Math.ceil(fit.need)} px of ${Math.floor(fit.room)}`);
+      }
+    }
+  }));
+});
+
+// The wordmark link's name starts with what it shows (WCAG 2.5.3, label in name): the compact P&P mark on a phone and
+// beside a followed hospital below 1100 px, the words elsewhere.
+describe('the wordmark\'s name', () => {
+  const tabs = useContext(shared, { width: 390 });
+  it('is "P&P, Paid & Penalized" where the P&P mark shows, and "Paid & Penalized" where the words do', () => withPage(tabs, { path: HOSPITAL }, async (page) => {
+    for (const [width, path, name] of [[390, SITE.pages.about, 'P&P, Paid & Penalized'], [390, HOSPITAL, 'P&P, Paid & Penalized'], [800, HOSPITAL, 'P&P, Paid & Penalized'], [800, SITE.pages.about, 'Paid & Penalized'], [1280, HOSPITAL, 'Paid & Penalized']]) {
+      await page.setViewportSize({ width, height: 600 });
+      await visit(page, tabs.base, path);
+      const shows = await page.locator('a.wordmark .wordmark__short').isVisible() ? 'mark' : 'words';
+      // The snapshot's first line only: the link's address can carry a followed hospital's CCN, which CI's logs never print.
+      // Engines differ in the spaces they put around the screen-reader-only parts; a reader hears none of them.
+      const line = (await page.locator('a.wordmark').ariaSnapshot()).split('\n')[0].replace(/\s+/g, ' ').replace(/ ,/g, ',');
+      assert.equal(line, `- link "${name}":`, `${width} px, the ${shows}: the link's name`);
     }
   }));
 });

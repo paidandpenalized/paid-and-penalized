@@ -360,7 +360,7 @@ test('kindsFigure: a panel per kind of hospital against the nation (solid gray),
   // Six panels: each says how many cut years it sat above the nation.
   const narrow = narrowOf(fig);
   assert.equal([...narrow.matchAll(/above in \d+ of 4/g)].length, 6);
-  // How many cut years each panel sat above the nation: major teaching, government, for-profit (FY2022 and FY2025), rural, under 100 beds, 500 and up.
+  // How many cut years each panel sat above the nation: major teaching, government, for-profit (FY2022 and FY2025), rural, fewer than 100 beds, 500 and up.
   const aboves = (f) => [...narrowOf(f).matchAll(/above in (\d+) of 4/g)].map((m) => Number(m[1]));
   assert.deepEqual(aboves(fig), [0, 0, 2, 0, 0, 0]);
   // A year the two shares print the same at one decimal is not above: for-profit hospitals' FY2025 share is 20.0%, and so

@@ -354,11 +354,13 @@ export const COPY = {
     claim: 'HACRP-13',
   },
   // The bar's search (pages/parts.js searchBox): its form's name, the visible "Find" and the rest of the box's
-  // name for screen readers, and the placeholder. What its list and status say is in search/copy.js.
+  // name for screen readers, and the placeholder: the family bar's own words (hub/search/copy.js), short enough to show
+  // whole in the bar's box from 641px (the box's name says more, and the hero search's placeholder names metro areas).
+  // What its list and status say is in search/copy.js.
   searchHeading: { text: 'Find a hospital', claim: null },
   searchFind: { text: 'Find', claim: null },
   searchFindRest: { text: 'a hospital or place by name, city, state, ZIP code or CCN', claim: null },
-  searchPlaceholder: { text: 'Hospital, city, state or metro', claim: null },
+  searchPlaceholder: { text: 'Hospital, city or state', claim: null },
   heroFindRest: { text: 'a hospital, state or metro area', claim: null },
   heroPlaceholder: { text: 'Look up a hospital, city, state or metro area', claim: null },
   sandboxLabel: { text: 'Sandbox: a hypothetical hospital at the national median on every measure', claim: null },
@@ -532,7 +534,7 @@ export const COPY = {
   groupTeachmajor: { text: 'Major teaching', claim: null },
   groupTeachminor: { text: 'Minor teaching', claim: null },
   groupTeachnone: { text: 'Not teaching', claim: null },
-  groupBedsUnder: { text: 'Under {beds} beds', claim: null },
+  groupBedsUnder: { text: 'Fewer than {beds} beds', claim: null },
   groupBedsRange: { text: '{low} to {high} beds', claim: null },
   groupBedsUp: { text: '{beds} beds and up', claim: null },
   groupOwnNonprofit: { text: 'Nonprofit', claim: null },

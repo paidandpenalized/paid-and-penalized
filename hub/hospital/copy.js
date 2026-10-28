@@ -1,6 +1,7 @@
 // The words of a hospital's page across the programs (/hospital/<ccn>/: hub/hospital/page.js). No digit characters:
 // numbers arrive through {placeholders}, the programs' rules through their named constants (web/programs.js).
 import { typesetCopy } from '../../web/render/components.js';
+import { GROUPS } from './group-copy.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
@@ -18,13 +19,8 @@ export const COPY = typesetCopy({
   peerState: 'Same state',
   peerSize: 'Same size',
   peerTeach: 'Same teaching',
-  groupState: '{state} hospitals',
-  groupSizeLow: 'hospitals with fewer than {beds} beds',
-  groupSizeMid: 'hospitals with {lo} to {hi} beds',
-  groupSizeHigh: 'hospitals with {beds} beds or more',
-  groupTeachMajor: 'major teaching hospitals',
-  groupTeachMinor: 'minor teaching hospitals',
-  groupTeachNone: 'non-teaching hospitals',
+  // The group's name (group-copy.js, shared with the front page's last step).
+  ...GROUPS,
   peerNoSize: 'Same size: no bed count on record for this hospital.',
   peerNoTeach: 'Same teaching: no teaching status on record for this hospital.',
 

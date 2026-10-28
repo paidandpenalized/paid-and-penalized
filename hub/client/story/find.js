@@ -4,9 +4,9 @@
 // step on the page: the card, the peer toggle and the chart follow the found hospital (or, until one is found, the
 // example), and a found hospital is announced to the page as a 'hub:select' event on the document ({ ccn }).
 //
-// Hospitals are the hub asset's rows (web/client/hub-asset.js) or hubHospitals': both carry state, band (the size band's
-// index, null without a bed count) and teach; only hospitals with an estimate are anyone's peers.
-import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../../engine/js/peers.js';
+// Hospitals are the hub asset's rows (web/client/hub-asset.js) or hubHospitals': both carry state, beds, band (the size
+// band's index, null without a bed count) and teach; only hospitals with an estimate are anyone's peers.
+import { PEER_MODES, median, peerKey } from '../../../engine/js/peers.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { capitalize, count, dollars, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
@@ -16,16 +16,8 @@ import { signOf, signedShareText } from '../../hospital/text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
-// A size band in words, from the bands' bed-count edges: "under 100 beds", "100 to 299 beds", "500 or more beds".
-export function sizeWords(band) {
-  const edges = BED_BAND_EDGES;
-  if (band === 0) return fill('sizeUnder', { hi: count(edges[0]) });
-  if (band === edges.length) return fill('sizeOver', { lo: count(edges[band - 1]) });
-  return fill('sizeBand', { lo: count(edges[band - 1]), hi: count(edges[band] - 1) });
-}
-
-// h's group under mode, named in the story's words (hub/hospital/peers.js groupName): "Ohio hospitals", "hospitals with
-// 100 to 299 beds", "major teaching hospitals".
+// h's group under mode, named in the hospital page's words (hub/hospital/peers.js groupName, group-copy.js): "Ohio
+// hospitals", "hospitals with 100 to 299 beds", "major teaching hospitals".
 const nameOf = (h, mode) => groupName(fill, h, mode);
 
 // The card's line about the group: "Of 117 Ohio hospitals, 81 take a net cut; the median is −0.47%." peers: peersOf's.
@@ -51,7 +43,7 @@ function programRow(est, { id, key }) {
 export function cardModel(h, peers, mode, fy) {
   const { est } = h;
   const teaching = fill(TEACHING[h.teach] ?? 'teachUnknown');
-  const place = Number.isInteger(h.band) ? fill('cardPlace', { place: placeText(h), size: capitalize(sizeWords(h.band)), teaching })
+  const place = Number.isInteger(h.beds) ? fill('cardPlace', { place: placeText(h), beds: count(h.beds), teaching })
     : fill('cardPlaceNoBeds', { place: placeText(h), teaching: capitalize(teaching) });
   const sign = capitalize(signOf(est.net));
   return {

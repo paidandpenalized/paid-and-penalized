@@ -52,7 +52,8 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .fam__end .omni { flex: 0 1 360px; width: 360px; min-width: 180px; }
 .fam__end .omni input { font-size: 0.9375rem; }
 .fam__end .omni__label { font: 600 var(--fs-cap)/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
-@media (max-width: 1199px) { .fam__end .omni { flex-basis: 280px; } }
+/* 300px: the family search's placeholder ("Hospital, city or state") whole in the box at every width from 641px. */
+@media (max-width: 1199px) { .fam__end .omni { flex-basis: 300px; } }
 .fam__find { display: none; }
 
 /* The theme toggle: a small round icon button with a 44px hit area, once its script shows it. The bar's shows from 641px,
@@ -63,6 +64,13 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .theme-toggle:hover { border-color: var(--ink); }
 .theme-toggle[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 @media (min-width: 641px) { .ft__base .theme-toggle { display: none; } }
+/* With scripts on, the bar's search and its theme toggle keep their places, unseen, until their scripts show them, so
+   nothing in the header moves or grows when they appear (a first visit's layout stays put). Scripts off, they take no
+   room. */
+@media (scripting: enabled) and (min-width: 641px) {
+  .fam__end > .omni[hidden] { display: block; visibility: hidden; }
+  .fam__end > .theme-toggle[hidden] { display: inline-grid; visibility: hidden; }
+}
 
 /* ---------- the program tabs: a ledger's raised paper tabs standing on the heavy rule ---------- */
 /* All programs, then a tab per program with dollar estimates. The row scrolls sideways when it outgrows the window,
@@ -140,7 +148,8 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .fam__bar { gap: 10px; min-height: 50px; padding-block: 3px; }
   /* The compact mark's link is a 44px target, centred on its box (the bar is 50px tall, so it costs no height). */
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
-  /* The wordmark's words stay for screen readers (the compact mark is hidden from them). */
+  /* The wordmark's words stay for screen readers, after the compact mark's own (the link's name: "P&P, Paid &
+     Penalized"). */
   .wordmark__lead, .wordmark > .wordmark__pen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .wordmark__short { display: inline-block; }
   .chip { flex: 1 1 0; min-height: 44px; max-width: none; border-left-width: 4px; }
@@ -151,6 +160,9 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .ft__base .theme-toggle { width: 44px; height: 44px; margin-top: 8px; }
   .ft__base .theme-toggle::after { content: none; }
   .fam__find:not([hidden]) { display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+  /* With scripts on, the find button keeps its place, unseen, until the shell's script shows it, so the followed
+     hospital's chip beside it does not narrow when it appears. */
+  @media (scripting: enabled) { .fam__find[hidden] { display: inline-grid; flex: none; width: 44px; height: 44px; visibility: hidden; } }
   .fam__find .ico { width: 18px; height: 18px; }
   .fam__find[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
   .fam__find[aria-expanded="true"] .ico--search { --ico: var(--icon-close); }

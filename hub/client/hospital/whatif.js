@@ -384,7 +384,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     if (next === state) return;
     state = next;
     if (action.type !== 'set') for (const r of Object.values(rows)) r.editing = false;
-    if (action.type === 'reset') linked = false;
+    // Any change the reader makes, a reset included, makes the scenario theirs: no longer the link's "Reader-made".
+    linked = false;
     page.classList.add('hh--used');
     draw();
     clearTimeout(timer);

@@ -122,9 +122,13 @@ export const COPY = typesetCopy({
   takeHrrpShare: 'Most cuts are small; {share} of its hospitals pay {zero}.',
   takeHac: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.',
   takeVbp: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.',
-  // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, its abbreviation; {bin} the bins'
-  // width in points; the counts cut, at {zero} and with a bonus) and its two labels.
-  histLabel: '{n} hospitals in {program}, each by its estimated FY{fy} change as a share of its Medicare inpatient pay, in bins of {bin} points: {cutN} cut, {zeroN} at {zero}, {bonusN} with a bonus.',
+  // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, the program's full name, so nothing
+  // is spelled out letter by letter; {bin} the bins' width in points; {parts} the groups it has, each from the three
+  // below, joined, so a program without bonuses never says "0 with a bonus") and its two labels.
+  histLabel: '{n} hospitals in the {program}, each by its estimated FY{fy} change as a share of its Medicare inpatient pay, in bins of {bin} points: {parts}.',
+  histPartCut: '{n} cut',
+  histPartZero: '{n} at {zero}',
+  histPartBonus: '{n} with a bonus',
   histCut: '{n} cut',
   histBonus: '{n} bonus',
   histZero: '{n} at {zero}',
@@ -133,7 +137,10 @@ export const COPY = typesetCopy({
   dirNotPaid: 'not paid to hospitals nationally, FY{fy}',
   dirMoved: '{amount} moved',
   dirNet: 'net {amount} nationally, FY{fy}',
-  dirOpen: 'Open {name}',
+  // The way to a program's page: its short name ({ab}), the same length on every card so the three read on one line; a
+  // screen reader hears the name after it ({name}).
+  dirOpen: 'Open {ab}',
+  dirOpenLabel: 'Open {ab}, {name}',
   // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
   // internal stage, soon), and the words in each slip's empty band. Each group's name and each band's words fit one line
   // in the narrowest group (hub/styles.css).
@@ -170,7 +177,9 @@ export const COPY = typesetCopy({
   wsVbp: 'Value-based purchasing',
   wsNet: '{net}, lines {a} + {b} + {c}',
   wsNetWord: 'Net',
-  wsNetNote: 'in dollars, each line rounded to the dollar; percentages don’t add across programs',
+  // Each line is rounded on its own (line 3 is the factor times the unrounded base), so worked from the printed lines the
+  // arithmetic can be a dollar off.
+  wsNetNote: 'in whole dollars, each line rounded on its own, so the arithmetic can be off by a dollar; percentages don’t add across programs',
   wsFind: 'Find your hospital above and this worksheet fills in for it.',
   wsGo: 'Its hospital page',
 

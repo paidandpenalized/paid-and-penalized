@@ -1,6 +1,8 @@
 // The story's states you can read (step 7, "By state"): pointing at a state, tapping it or tabbing to it (or to a small
 // state's button) writes its line to the readout over the map; a click, a tap, Enter or Space pins it, so the line stays
-// once the pointer leaves. The lines are the server's (hub/home/states.js stateLine): each state's title on the map and
+// once the pointer leaves. Each state is a toggle button, pressed while pinned (aria-pressed), from the moment the map
+// answers. The readout is for the eye; a quiet live region beside it ([data-said]) says a state's line when the state is
+// picked, never as the pointer passes over the map or the focus moves (a focused state's own name is its line). The lines are the server's (hub/home/states.js stateLine): each state's title on the map and
 // each button's name, so the readout says exactly what the map's tooltips and a screen reader say, Maryland's included
 // ("not in these programs"). An address's #state=<code> (the family search's state pick) names a state to pin.
 import { US_STATES } from '../../../engine/js/states.js';
@@ -24,6 +26,7 @@ export const lineOf = (el) => el.querySelector('title')?.textContent || el.getAt
 // is being read (the states take the keyboard's focus only then); pin a state by its code.
 export function mountMap(stageEl) {
   const readout = stageEl.querySelector('.readout');
+  const said = stageEl.querySelector('[data-said]');
   const smalls = stageEl.querySelector('.smalls');
   const svg = stageEl.querySelector('.smap');
   const paths = [...svg.querySelectorAll('.st[data-st]')];
@@ -37,6 +40,7 @@ export function mountMap(stageEl) {
     p.setAttribute('role', 'button');
     p.setAttribute('tabindex', '-1');
   }
+  for (const x of all) x.setAttribute('aria-pressed', 'false');
   readout.hidden = false;
   if (smalls) smalls.hidden = false;
 
@@ -49,8 +53,15 @@ export function mountMap(stageEl) {
     for (const x of all) {
       x.classList.toggle('is-on', x === on);
       x.classList.toggle('is-pin', x.dataset.st === pinned);
+      x.setAttribute('aria-pressed', String(x.dataset.st === pinned));
     }
   }
+  // Says a state's line to a screen reader (a pick); a pick that unpins says nothing more.
+  const say = (el) => {
+    const line = el ? lineOf(el) : null;
+    if (said && line) said.textContent = line;
+  };
+  const byCode = (code) => all.find((x) => x.dataset.st === code) ?? null;
   const stateOf = (target) => {
     const el = target?.closest?.('[data-st]') ?? null;
     return el && all.includes(el) ? el : null;
@@ -58,17 +69,20 @@ export function mountMap(stageEl) {
   const pin = (code) => {
     pinned = pinned === code ? null : code;
     write();
+    say(byCode(pinned));
   };
 
   // The listeners sit on the map's figure, an HTML element (an SVG element that listens for focus becomes a stop in the
   // tab order of its own).
   const box = svg.closest('.smapfig') ?? stageEl;
-  for (const type of ['pointerover', 'focusin']) {
-    box.addEventListener(type, (e) => {
-      on = stateOf(e.target);
-      write();
-    });
-  }
+  box.addEventListener('pointerover', (e) => {
+    on = stateOf(e.target);
+    write();
+  });
+  box.addEventListener('focusin', (e) => {
+    on = stateOf(e.target);
+    write();
+  });
   // Leaving a state (the next one's pointerover, if any, follows at once).
   for (const type of ['pointerout', 'focusout']) {
     box.addEventListener(type, () => {
@@ -100,6 +114,7 @@ export function mountMap(stageEl) {
     pin(code) {
       pinned = code;
       write();
+      say(byCode(code));
     },
   };
 }

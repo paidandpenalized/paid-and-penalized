@@ -9,7 +9,7 @@ import { BAR } from './bar-frame.js';
 // name sits there, when the rail is hidden), the room under the axis for its ticks and words, the gates' spacing, and the
 // space a gate's label needs above a pile.
 const WIDE = { x0: 40, right: 26, gutter: 24, top: 22, topLabel: 40, bottom: 62, pitch: 30, label: 24 };
-const NARROW = { x0: 12, right: 12, gutter: 12, top: 26, topLabel: 26, bottom: 34, pitch: 18, label: 14 };
+const NARROW = { x0: 12, right: 12, gutter: 12, top: 26, topLabel: 38, bottom: 34, pitch: 18, label: 14 };
 // The gates: the three programs, then the floor the last pile rests on.
 const GATES = 4;
 

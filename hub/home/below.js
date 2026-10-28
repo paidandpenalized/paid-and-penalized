@@ -61,8 +61,9 @@ export function programBins(hospitals, id) {
   return { n, zero, bins };
 }
 
-// The histogram's frame, in viewBox units: its width, the bars' top and base line, the drawing's height, the $0 gutter's
-// width, the gap between bars, the shortest bar.
+// The histogram's frame: its width in the bars' units (they stretch to the card's width), and in pixels (the drawing's
+// height is fixed, so the words keep their size at every width) the bars' top and base line, the drawing's height; then,
+// in the bars' units, the $0 gutter's width, the gap between bars, the shortest bar.
 const W = 400;
 const TOP = 18;
 const BASE = 86;
@@ -71,10 +72,14 @@ const GUTTER = 16;
 const GAP = 1;
 const MIN_BAR = 1.5;
 const r1 = (v) => Math.round(v * 10) / 10;
+// A place across the drawing (in the bars' units) as a share of its width, for the words, which are set in pixels.
+const across = (x) => `${Math.round((x / W) * 1e4) / 100}%`;
 
 // A program's histogram: the share axis the story's charts use (domain: shareDomain's), its $0 gutter, a bar per bin
 // (cuts in pen, bonuses in rew, $0 neutral; one path per ink), the whole percents ticked, and two labels: the cuts, then
-// the bonuses or, without any, the hospitals at $0. An image whose label is the takeaway.
+// the bonuses or, without any, the hospitals at $0. An image whose label is the takeaway. The marks are drawn in a
+// drawing of their own that stretches across the card (its lines keep their width); the words sit over it at a share of
+// the width and a fixed size, the site's chart labels', at every width.
 function histogram({ n, zero, bins }, { domain, label }) {
   const { zL, zR, zM, k } = shareScale({ x0: 0, x1: W, gutter: GUTTER, domain });
   const at = (v, side) => Math.min(W, Math.max(0, side + v * k));
@@ -98,21 +103,23 @@ function histogram({ n, zero, bins }, { domain, label }) {
   const bonusN = bonuses.reduce((s, b) => s + b.n, 0);
   if (cuts.length) {
     const b = peak(cuts);
-    labels.push(html`<text class="st__out" x="${r1(Math.max(60, span(b)[1]))}" y="${top(b.n)}" text-anchor="end">${fill('histCut', { n: count(cutN) })}</text>`);
+    labels.push(html`<text class="st__out" x="${across(Math.max(60, span(b)[1]))}" y="${top(b.n)}" text-anchor="end">${fill('histCut', { n: count(cutN) })}</text>`);
   }
   if (bonuses.length) {
     const b = peak(bonuses);
-    labels.push(html`<text class="st__out" x="${r1(Math.min(W - 70, span(b)[0]))}" y="${top(b.n)}">${fill('histBonus', { n: count(bonusN) })}</text>`);
+    labels.push(html`<text class="st__out" x="${across(Math.min(W - 70, span(b)[0]))}" y="${top(b.n)}">${fill('histBonus', { n: count(bonusN) })}</text>`);
   } else if (zero) {
-    labels.push(html`<text class="st__out" x="${r1(zR + 4)}" y="${top(zero)}">${fill('histZero', { n: count(zero), zero: money(0) })}</text>`);
+    labels.push(html`<text class="st__out" x="${across(zR + 4)}" y="${top(zero)}">${fill('histZero', { n: count(zero), zero: money(0) })}</text>`);
   }
   if (cutN + bonusN + zero !== n) throw new RangeError('hub home: a histogram\'s bars do not add to its hospitals');
-  return html`<svg class="st pc__hist" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}" focusable="false">
+  return html`<svg class="st pc__hist" width="100%" height="${H}" role="img" aria-label="${label}" focusable="false">
+<svg class="pc__marks" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}">
 <rect class="st__gut" x="${r1(zL)}" y="${TOP - 6}" width="${GUTTER}" height="${BASE - TOP + 6}"/>
 <path class="st__grid" d="${ticks.filter((t) => t !== 0).map((t) => `M${r1(tickX(t))} ${TOP - 6}V${BASE}`).join('')}"/>
 ${path('pen', cuts.map((b) => bar(...span(b), b.n)).join(''))}${path('rew', bonuses.map((b) => bar(...span(b), b.n)).join(''))}${path('neu', zero ? bar(zL + 3, zR - 3, zero) : '')}
 <path class="st__base" d="M0 ${BASE + 0.5}H${W}"/>
-${ticks.map((t) => html`<text class="st__tl" x="${r1(tickX(t))}" y="${BASE + 14}" text-anchor="middle">${t === 0 ? money(0) : pct(t / 100, 0, { sign: true })}</text>`)}
+</svg>
+${ticks.map((t) => html`<text class="st__tl" x="${across(tickX(t))}" y="${BASE + 14}" text-anchor="middle">${t === 0 ? money(0) : pct(t / 100, 0, { sign: true })}</text>`)}
 ${labels}
 </svg>`;
 }
@@ -154,17 +161,21 @@ function card(p, { hospitals, facts, fy, domain }) {
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
   const { big, sub } = FIGURES[p.id](facts, fy);
   const cutN = bins.bins.filter((b) => b.lo < 0).reduce((s, b) => s + b.n, 0);
-  const label = fill('histLabel', {
-    n: count(bins.n), program: p.ab, fy, bin: String(BIN_POINTS), cutN: count(cutN), zeroN: count(bins.zero), zero: money(0),
-    bonusN: count(bins.n - cutN - bins.zero),
-  });
+  const bonusN = bins.n - cutN - bins.zero;
+  // Only the groups the program has: a program without bonuses (or without a hospital at $0) says nothing of them.
+  const parts = [
+    cutN && fill('histPartCut', { n: count(cutN) }),
+    bins.zero && fill('histPartZero', { n: count(bins.zero), zero: money(0) }),
+    bonusN && fill('histPartBonus', { n: count(bonusN) }),
+  ].filter(Boolean);
+  const label = fill('histLabel', { n: count(bins.n), program: p.long, fy, bin: String(BIN_POINTS), parts: parts.join(', ') });
   return html`<article class="pc">
 <h3><span>${p.name}</span> <abbr class="ab" title="${p.long}">${p.ab}</abbr></h3>
 <p class="pc__dek">${programDek(p.id)}</p>
 <figure><figcaption>${TAKEAWAYS[p.id](members, bins)}</figcaption>${histogram(bins, { domain, label })}</figure>
 <p class="pc__big">${big}${estimateTag()}</p>
 <p class="pc__sub">${sub}</p>
-<a class="go" href="${p.path}">${fill('dirOpen', { name: p.name })}${arrow}</a>
+<a class="go" href="${p.path}" aria-label="${fill('dirOpenLabel', { ab: p.ab, name: p.name })}">${fill('dirOpen', { ab: p.ab })}${arrow}</a>
 </article>`;
 }
 
@@ -204,18 +215,20 @@ const STAMPS = [['cut', 'stampCut', ''], ['bonus', 'stampBonus', ' stamp--rew'],
 
 // The worksheet for a hospital with an estimate, h: the title (fiscal year, CCN), the six lines in a table (each line's
 // amount in a cell worksheet.js can rewrite, each formula a note), then the line to find another hospital, the way to
-// its page and its stamp. src: the hub asset's address, for the script that refills it.
+// its page and its stamp. src: the hub asset's address, for the script that refills it. The table states its roles
+// outright: on the narrowest phones its rows are laid out as a grid (hub/styles.css), and a browser can drop a table's
+// own semantics when its parts change display.
 function worksheet(h, { fy, src }) {
   const m = worksheetModel(h);
   const t = m.text;
-  const cell = (key) => html`<td data-ws="${key}"${key in OUTSIDE && !m.show[OUTSIDE[key]] ? html` data-na` : ''}>${t[key]}</td>`;
+  const cell = (key) => html`<td role="cell" data-ws="${key}"${key in OUTSIDE && !m.show[OUTSIDE[key]] ? html` data-na` : ''}>${t[key]}</td>`;
   const note = (words, flag = null) => html`<small${flag ? html` data-ws-if="${flag}"${m.show[flag] ? '' : html` hidden`}` : ''}>${words}</small>`;
-  const row = (n, head, key, cls = null) => html`<tr${cls ? html` class="${cls}"` : ''}><td>${no(n)}</td><th scope="row">${head}</th>${cell(key)}</tr>`;
+  const row = (n, head, key, cls = null) => html`<tr role="row"${cls ? html` class="${cls}"` : ''}><td role="cell">${no(n)}</td><th scope="row" role="rowheader">${head}</th>${cell(key)}</tr>`;
   const factor = (key) => sentence('wsFactor', { factor: html`<span data-ws="${key}">${t[key]}</span>` }, { one: count(1), base: count(LINE.base) });
   const cut = rulePercent(HAC_CUT_PCT);
   return html`<div class="form wsx" data-worksheet data-src="${src}" data-ccn="${t.ccn}">
 <p class="form__title"><span>${fill('wsTitle', { fy })}<span data-ws-ex> · ${COPY.wsExample}</span></span><span>${sentence('wsCcn', { ccn: html`<span data-ws="ccn">${t.ccn}</span>` })}</span></p>
-<table class="wst"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody>
+<table class="wst" role="table"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody role="rowgroup">
 ${row(LINE.pay, sentence('wsPay', { name: html`<b data-ws="name">${t.name}</b>`, place: html`<span data-ws="place">${t.place}</span>` }), 'total')}
 ${row(LINE.base, html`${COPY.wsBase}${note(COPY.wsBaseNote)}`, 'base')}
 ${row(LINE.hrrp, html`${COPY.wsHrrp}${note(factor('hrrpF'), 'hrrp')}`, 'hrrp')}

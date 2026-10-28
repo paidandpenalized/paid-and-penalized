@@ -381,7 +381,8 @@
 .prog { gap: 0; }
 .prog > * + * { margin-top: 0; }
 .page--prog .prog__top { padding-block: 16px 20px; }
-.prog__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
+/* 24.8em: 36 of Libre Franklin's zeros (36ch), in em so the column keeps its width while the face loads. */
+.prog__lede { max-width: 24.8em; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
 .prog__lede strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
 .prog__find { display: grid; gap: 8px; margin-top: 6px; max-width: 38rem; }
 .prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }

@@ -249,6 +249,71 @@ describe('states you can read, and Find yours', () => {
   }));
 });
 
+// The states as buttons: the picked one is pressed (aria-pressed), the others not, on the map and among the small states'
+// buttons, from the moment the map answers; the readout follows the pointer and the focus, but the quiet region a screen
+// reader hears speaks only when a state is picked (a focused state's own name already says its line), never as the
+// pointer passes over the map or the focus moves.
+describe('the states map speaks on a pick, not on a hover', () => {
+  const tabs = useContext(shared);
+  it('with nothing picked, every state is a toggle that is not pressed, before any pointer or key', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    const states = await page.evaluate(() => [...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].map((el) => el.getAttribute('aria-pressed')));
+    assert.ok(states.length > 50, `${states.length} states`);
+    assert.deepEqual([...new Set(states)], ['false'], 'every state carries aria-pressed="false"');
+    await assertQuiet(seen, 'the states map at rest');
+  }));
+
+  it('hovering or focusing writes the readout only; Enter or a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await settle(page);
+    const facts = () => page.evaluate(() => ({
+      readout: document.querySelector('.readout').textContent,
+      said: document.querySelector('[data-said]').textContent,
+      // A small state is pressed on the map and among the buttons alike: each code once.
+      pressed: [...new Set([...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].filter((el) => el.getAttribute('aria-pressed') === 'true').map((el) => el.dataset.st))],
+      unmarked: [...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].filter((el) => !['true', 'false'].includes(el.getAttribute('aria-pressed'))).length,
+      live: document.querySelector('.readout').getAttribute('aria-live'),
+    }));
+    const start = await facts();
+    assert.deepEqual([start.pressed, start.unmarked, start.live], [['OH'], 0, null], 'Ohio pinned from the address and pressed; every state a toggle; the readout itself is not live');
+    const said = start.said;
+    // Hover over another state: the readout follows, the region does not speak.
+    const texas = page.locator('.smap .st[data-st="TX"]');
+    await texas.hover();
+    await settle(page);
+    const hovered = await facts();
+    assert.match(hovered.readout, /^Texas: /);
+    assert.equal(hovered.said, said, 'a hover says nothing');
+    // Focus on another state: the readout follows, the region does not speak (the state's own name is its line).
+    const utah = page.locator('.smap .st[data-st="UT"]');
+    await utah.focus();
+    await settle(page);
+    const focused = await facts();
+    assert.match(focused.readout, /^Utah: /);
+    assert.equal(focused.said, said, 'a focus says nothing more');
+    // Enter pins Utah, a click pins Texas: pressed, and said.
+    await page.keyboard.press('Enter');
+    await settle(page);
+    const entered = await facts();
+    assert.deepEqual(entered.pressed, ['UT']);
+    assert.match(entered.said, /^Utah: /);
+    await texas.click();
+    await settle(page);
+    const picked = await facts();
+    assert.deepEqual(picked.pressed, ['TX']);
+    assert.match(picked.said, /^Texas: /);
+    // A small state's button: pressed and said on a click.
+    await page.locator('.smalls [data-st="RI"]').click();
+    await settle(page);
+    const small = await facts();
+    assert.deepEqual(small.pressed, ['RI']);
+    assert.match(small.said, /^Rhode Island: /);
+    await assertQuiet(seen, 'the states map');
+  }));
+});
+
 // On a phone the chart is pinned over the lower part of the window: a keyboard reader who tabs to the last step's search
 // and its card's link finds each in view, clear of the chart, and then reaches the peer toggle on the chart.
 for (const [width, height] of [[390, 844], [320, 640]]) {
@@ -323,6 +388,7 @@ for (const width of [390, 1280]) {
         inSlot(opened, 'with the search row open');
         await page.keyboard.press('Escape');
       }
+      assert.equal(await page.evaluate(() => document.documentElement.classList.contains('dock-ready')), true, 'the script has taken over');
       assert.equal((await at(1.1)).shown, 'visible', 'docked, the header\'s wordmark shows');
       assert.equal((await at(0)).shown, 'hidden', 'at the top it waits hidden');
       await at(1.1);
@@ -333,9 +399,160 @@ for (const width of [390, 1280]) {
   });
 }
 
-// Below the story, the directory's programs under consideration: at every layout each group's name sits on one line
-// inside its row, each slip's band holds its words on one line, and slips in one row are one height with their bands on
-// one bottom edge (from 1200 px the six share one row).
+// On a phone the story's first screen before its script runs is the one the script sets (the chart pinned under the
+// words, the story as tall), so nothing moves when it starts: the rules hub/styles.css copies from the live layout stay
+// in step with it.
+for (const width of [320, 390]) {
+  describe(`the phone story before its script at ${width} px`, () => {
+    const tabs = useContext(shared, { width, height: 844 });
+    it('lays out the chart, the first step and the story\'s height as the live story does', () => withPage(tabs, { path: '/about/' }, async (page) => {
+      const boxes = () => page.evaluate(() => {
+        const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return [r.top, r.height].map((v) => Math.round(v)); };
+        return { stage: box('.stage'), bar: box('.sbar'), first: box('#step-scale'), story: box('.story') };
+      });
+      await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
+      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await page.evaluate(() => document.fonts.ready);
+      const before = await boxes();
+      await page.unroute(/\/assets\/hub-home\.[^/]+\.js$/);
+      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await settle(page);
+      assert.deepEqual(before, await boxes(), 'the same boxes before the script and once it has drawn');
+    }));
+  });
+}
+
+// A front page missing a part its scripts need (here the masthead's strip and the stage's canvas, cut from the served page)
+// does not stay half taken over: the trip's script hands the header its wordmark back (dock-ready) and the story's
+// script marks the story static, so a phone shows the server's layout, not the pinned chart the stylesheet set up.
+describe('the front page without a part its scripts need', () => {
+  const tabs = useContext(shared, { width: 390 });
+  it('shows the header\'s wordmark and the server\'s story layout', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    await page.route((url) => url.pathname === '/', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace('class="hero__strip"', 'class="hero__band"').replace(/<canvas class="stage__cv"[^>]*><\/canvas>/, '');
+      await route.fulfill({ response, body });
+    });
+    await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+    await settle(page);
+    const f = await page.evaluate(() => ({
+      ready: document.documentElement.classList.contains('dock-ready'),
+      head: getComputedStyle(document.querySelector('.fam a.wordmark')).visibility,
+      story: [...document.querySelector('.story').classList].filter((c) => c !== 'story').sort(),
+      stage: getComputedStyle(document.querySelector('.stage')).display,
+    }));
+    assert.deepEqual(f, { ready: true, head: 'visible', story: ['story--static'], stage: 'contents' });
+  }));
+});
+
+// Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
+// (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
+// header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.
+for (const width of [390, 1280]) {
+  for (const javaScript of [true, false]) {
+    describe(`one wordmark before the trip's script at ${width} px, scripts ${javaScript ? 'on (the script held back)' : 'off'}`, () => {
+      const tabs = useContext(shared, { width, javaScript });
+
+      it('at the top only the masthead\'s wordmark shows; scrolled past it, the header\'s does', () => withPage(tabs, { path: '/about/' }, async (page) => {
+        // The front page's own script never arrives (the shell's still runs), so the page stays as it was first painted.
+        if (javaScript) await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
+        await page.goto(new URL('/', page.url()).href, { waitUntil: 'load' });
+        const shown = async (y) => {
+          await page.evaluate((top) => window.scrollTo(0, top), y);
+          await page.waitForTimeout(150);
+          return page.evaluate(() => {
+            const seen = (el) => getComputedStyle(el).visibility === 'visible' && Number(getComputedStyle(el).opacity) > 0.99;
+            const tag = document.querySelector('.fam__tag');
+            return {
+              head: seen(document.querySelector('.fam a.wordmark')), tag: getComputedStyle(tag).display === 'none' ? null : seen(tag),
+              hero: seen(document.querySelector('.hero__mark')), ready: document.documentElement.classList.contains('dock-ready'),
+            };
+          });
+        };
+        const tag = (on) => (width >= 1100 ? on : null);
+        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'at the top: the masthead\'s wordmark only');
+        assert.deepEqual(await shown(400), { head: true, tag: tag(true), hero: true, ready: false }, 'past the masthead: the header\'s wordmark shows');
+        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'back at the top: hidden again');
+      }));
+    });
+  }
+}
+
+// The front page's chart words at every width: the directory's histograms draw their tick labels and counts at a fixed
+// size (the site's chart labels: 11 px ticks, 12 px counts; the drawing stretches, the words do not), the states map's
+// key draws its scale (each swatch as tall as the scale), its words are in the 12 px of the page's smallest text, and its
+// "0%" sits under the middle of its scale.
+describe('the front page\'s chart words', () => {
+  const tabs = useContext(shared, { width: 1440 });
+  it('hold their size from 320 to 1440 px, and the key\'s 0% is centred on its scale', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [320, 390, 800, 1024, 1100, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        // A text's drawn size: its font size times its drawing's scale on screen.
+        const drawn = (t) => parseFloat(getComputedStyle(t).fontSize) * t.getScreenCTM().a;
+        const sizes = (sel) => [...document.querySelectorAll(sel)].map(drawn);
+        const box = (el) => el.getBoundingClientRect();
+        const scale = box(document.querySelector('.dkey__g'));
+        const zero = box(document.querySelector('.dkey__s > :nth-child(2)'));
+        return {
+          ticks: sizes('.pc__hist .st__tl'), counts: sizes('.pc__hist .st__out'),
+          key: parseFloat(getComputedStyle(document.querySelector('.dkey__s')).fontSize),
+          swatches: [...document.querySelectorAll('.dkey__g rect.st')].map((r) => Math.round(box(r).height)),
+          scaleH: Math.round(scale.height),
+          off: (zero.left + zero.width / 2) - (scale.left + scale.width / 2),
+        };
+      });
+      assert.ok(f.ticks.length >= 18 && f.ticks.every((v) => Math.abs(v - 11) < 0.01), `${width} px: tick labels drawn at ${[...new Set(f.ticks.map((v) => v.toFixed(1)))]} px, not 11`);
+      assert.ok(f.counts.length >= 6 && f.counts.every((v) => Math.abs(v - 12) < 0.01), `${width} px: counts drawn at ${[...new Set(f.counts.map((v) => v.toFixed(1)))]} px, not 12`);
+      assert.ok(f.key >= 12, `${width} px: the key's words are ${f.key} px`);
+      assert.ok(f.swatches.length > 1 && f.swatches.every((h) => h === f.scaleH && h > 0), `${width} px: the key's swatches are ${f.swatches} px tall on a ${f.scaleH} px scale`);
+      assert.ok(Math.abs(f.off) <= 1, `${width} px: the key's 0% is ${f.off.toFixed(1)} px off its scale's middle`);
+    }
+  }));
+});
+
+// The worksheet in "Methods, in brief" on the narrowest phones: each line's words and formula note take the line's width
+// (the amount sits under them, at the right), and nothing reaches past the form's edge. At 390 px the amounts stay beside
+// the words.
+describe('the worksheet on a narrow phone', () => {
+  const tabs = useContext(shared, { width: 320 });
+  it('gives its words the width at 320 px and keeps the amounts beside them at 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        const table = document.querySelector('.wst').getBoundingClientRect();
+        const rows = [...document.querySelectorAll('.wst tbody tr')].map((tr) => {
+          const words = tr.querySelector('th').getBoundingClientRect();
+          const amount = tr.lastElementChild.getBoundingClientRect();
+          return { share: words.width / table.width, under: amount.top >= words.bottom - 1, inside: amount.right <= table.right + 0.5 && words.right <= table.right + 0.5 };
+        });
+        return { rows, sideways: document.documentElement.scrollWidth - window.innerWidth };
+      });
+      assert.equal(f.rows.length, 6, `${width} px: six lines`);
+      for (const [i, r] of f.rows.entries()) {
+        assert.equal(r.inside, true, `${width} px, line ${i + 1}: inside the form`);
+        if (width === 320) assert.ok(r.share >= 0.8 && r.under, `${width} px, line ${i + 1}: its words take ${Math.round(r.share * 100)}% of the form, the amount ${r.under ? 'under' : 'beside'} them`);
+        else assert.equal(r.under, false, `${width} px, line ${i + 1}: the amount beside its words`);
+      }
+      assert.ok(f.sideways <= 0, `${width} px: no sideways scroll`);
+      // Still a table to a screen reader, its six lines rows, each a number, a row header and an amount.
+      const tree = await page.locator('.wst').ariaSnapshot();
+      // (A snapshot line is quoted when its name holds a character YAML would read, so each may start with a quote.)
+      assert.match(tree, /^- '?table "Worksheet/, `${width} px: a table`);
+      assert.equal((tree.match(/^ *- '?row /gm) ?? []).length, 6, `${width} px: six rows`);
+      assert.equal((tree.match(/^ *- '?rowheader /gm) ?? []).length, 6, `${width} px: each with its row header`);
+    }
+  }));
+});
+
+// Below the story, the directory: each live program's card ends in a way to its page whose words sit on one line, as its
+// neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
+// row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom
+// edge (from 1200 px the six share one row).
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
@@ -358,7 +575,14 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           row.bands.push(box(s.querySelector('.slip__none')).bottom);
         }
         const spread = (xs) => Math.max(...xs) - Math.min(...xs);
+        // The lines a card's way to its page takes: its words' boxes, one per line.
+        const lines = (a) => {
+          const range = document.createRange();
+          range.selectNodeContents(a.firstChild);
+          return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+        };
         return {
+          go: [...document.querySelectorAll('.pc .go')].map(lines),
           names: names.length,
           namesOk: names.every((n) => oneLine(n) && inside(n, n.parentElement)),
           bands: slips.length,
@@ -368,6 +592,7 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
+      assert.deepEqual(f.go, [1, 1, 1], `${width} px: each card's way to its page on one line`);
       assert.equal(f.names, 3, `${width} px: three groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
       assert.equal(f.bands, 6, `${width} px: six slips`);

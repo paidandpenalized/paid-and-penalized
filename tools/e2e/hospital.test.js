@@ -208,6 +208,20 @@ for (const width of [390, 1280]) {
       await assertQuiet(seen, 'the hospital page from a shared what-if link');
     }));
 
+    it('a linked what-if the reader then changes is their own: the banner stays, "Reader-made scenario" goes', () => withPage(tabs, { path: `${CUT.path}#whatif&hrrp=0.99`, watched: true }, async (page, { seen }) => {
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, true], 'opened from the link: reader-made');
+      const handle = page.locator('.st__h').first();
+      await handle.focus();
+      const start = await handle.getAttribute('aria-valuenow');
+      await page.keyboard.press('ArrowLeft');
+      if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, false], 'edited: still hypothetical, no longer the link\'s');
+      await assertQuiet(seen, 'a linked what-if, edited');
+    }));
+
     it('a focused handle stays clear of the sticky row when the Hypothetical banner makes it taller', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.waitForSelector('.st__h');
@@ -238,13 +252,61 @@ for (const width of [390, 1280]) {
       const s = await page.evaluate(() => ({
         error: document.querySelector('[data-load-error]').checkVisibility(),
         canvas: document.querySelectorAll('.hh__cv').length,
-        buttons: [...document.querySelectorAll('[data-peer]')].filter((b) => b.checkVisibility()).length,
+        // The toggle keeps its room unseen until the data arrives (the first visit holds still), so it is checked as seen.
+        buttons: [...document.querySelectorAll('[data-peer]')].filter((b) => b.checkVisibility({ visibilityProperty: true })).length,
         head: document.querySelector('[data-headline]').checkVisibility(),
       }));
       assert.deepEqual(s, { error: true, canvas: 0, buttons: 0, head: true });
     }));
   });
 }
+
+// The net is the page's hero number: at its full size (3.5rem) wherever the record and the money take the page's whole
+// width (641 to 1023 px), and well over the hospital's name beside the swarm from 1024 px.
+describe('the net figure', () => {
+  const tabs = useContext(shared, { width: 768 });
+  it('reads as the page\'s hero number at 768 and 1024 px', () => withPage(tabs, { path: CUT.path }, async (page) => {
+    for (const width of [700, 768, 1023, 1024, 1100]) {
+      await page.setViewportSize({ width, height: 900 });
+      await settle(page);
+      const [big, name] = await page.evaluate(() => ['.hh__big', '.hh__name'].map((s) => parseFloat(getComputedStyle(document.querySelector(s)).fontSize)));
+      if (width < 1024) assert.equal(big, 56, `${width} px: the net is ${big} px`);
+      assert.ok(big >= name * 1.3, `${width} px: the net (${big} px) against the name (${name} px)`);
+    }
+  }));
+});
+
+// On a touch screen a tap on a dot shows its tooltip (a second tap opens that hospital); a tap anywhere outside the
+// swarm puts the tooltip away, as a pointer leaving it does. The taps are the events a touch screen sends, dispatched in
+// the page, so the check is the same in every engine and does not lean on the tap moving focus (Safari's does not).
+describe('the swarm by touch', () => {
+  const tabs = useContext(shared, { width: 390 });
+  it('a tap outside the swarm hides the tooltip a tap on a dot showed', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
+    await page.waitForSelector('.hh__tip', { state: 'attached' });
+    await page.locator('.hh__cv').scrollIntoViewIfNeeded();
+    await settle(page);
+    const found = await page.evaluate(() => {
+      const canvas = document.querySelector('.hh__cv');
+      const tip = document.querySelector('.hh__tip');
+      const b = canvas.getBoundingClientRect();
+      // Tap across the swarm until a dot answers.
+      for (let y = b.top + b.height * 0.1; y < b.top + b.height * 0.9; y += 4) {
+        for (let x = b.left + b.width * 0.1; x < b.left + b.width * 0.9; x += 4) {
+          canvas.dispatchEvent(new PointerEvent('click', { bubbles: true, clientX: x, clientY: y, pointerType: 'touch' }));
+          if (!tip.hidden) return true;
+        }
+      }
+      return false;
+    });
+    assert.ok(found, 'a tap on a dot shows its tooltip');
+    await page.evaluate(() => {
+      const outside = document.querySelector('[data-headline]');
+      outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    });
+    assert.equal(await page.evaluate(() => document.querySelector('.hh__tip').hidden), true, 'a tap outside the swarm hides it');
+    await assertQuiet(seen, 'the swarm by touch');
+  }));
+});
 
 // The what-if's edges, at one width: Home and End go where the slider says its ends are; a drag reaches the range's ends
 // and every hypothetical stands on the share axis (none pinned at its end); a drag updates the page once a frame and

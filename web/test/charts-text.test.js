@@ -27,6 +27,17 @@ test('wrapText: lines fit the width, breaking after a space or a run of hyphens,
   assert.deepEqual(wrapText('Unbreakable', 10, 12), ['Unbreakable'], 'a piece wider than the width keeps its own line');
 });
 
+test('wrapText: a run of spaces stays on the line it ends, so no line is only spaces or starts with one', () => {
+  for (const text of ['Unbreakable  next', 'Unbreakable  ', 'Long name  with  doubled  spaces', 'a  b']) {
+    for (const max of [10, 40, 80]) {
+      const lines = wrapText(text, max, 12);
+      assert.equal(lines.join(''), text, `${JSON.stringify(text)} at ${max}: joined`);
+      assert.ok(lines.every((line) => line.trim() !== '' && !line.startsWith(' ')), `${JSON.stringify(text)} at ${max}: ${JSON.stringify(lines)}`);
+    }
+  }
+  assert.deepEqual(wrapText('a  b', 10, 12), ['a  ', 'b']);
+});
+
 test('wrapText: a last line of one word takes the word before it when the line above has more and the two fit', () => {
   // "Lake Charles, LA" fills the width and "area" would sit alone under it.
   const width = textWidth('Lake Charles, LA', 12) + 1;
