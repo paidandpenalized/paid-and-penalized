@@ -215,18 +215,20 @@ const STAMPS = [['cut', 'stampCut', ''], ['bonus', 'stampBonus', ' stamp--rew'],
 
 // The worksheet for a hospital with an estimate, h: the title (fiscal year, CCN), the six lines in a table (each line's
 // amount in a cell worksheet.js can rewrite, each formula a note), then the line to find another hospital, the way to
-// its page and its stamp. src: the hub asset's address, for the script that refills it.
+// its page and its stamp. src: the hub asset's address, for the script that refills it. The table states its roles
+// outright: on the narrowest phones its rows are laid out as a grid (hub/styles.css), and a browser can drop a table's
+// own semantics when its parts change display.
 function worksheet(h, { fy, src }) {
   const m = worksheetModel(h);
   const t = m.text;
-  const cell = (key) => html`<td data-ws="${key}"${key in OUTSIDE && !m.show[OUTSIDE[key]] ? html` data-na` : ''}>${t[key]}</td>`;
+  const cell = (key) => html`<td role="cell" data-ws="${key}"${key in OUTSIDE && !m.show[OUTSIDE[key]] ? html` data-na` : ''}>${t[key]}</td>`;
   const note = (words, flag = null) => html`<small${flag ? html` data-ws-if="${flag}"${m.show[flag] ? '' : html` hidden`}` : ''}>${words}</small>`;
-  const row = (n, head, key, cls = null) => html`<tr${cls ? html` class="${cls}"` : ''}><td>${no(n)}</td><th scope="row">${head}</th>${cell(key)}</tr>`;
+  const row = (n, head, key, cls = null) => html`<tr role="row"${cls ? html` class="${cls}"` : ''}><td role="cell">${no(n)}</td><th scope="row" role="rowheader">${head}</th>${cell(key)}</tr>`;
   const factor = (key) => sentence('wsFactor', { factor: html`<span data-ws="${key}">${t[key]}</span>` }, { one: count(1), base: count(LINE.base) });
   const cut = rulePercent(HAC_CUT_PCT);
   return html`<div class="form wsx" data-worksheet data-src="${src}" data-ccn="${t.ccn}">
 <p class="form__title"><span>${fill('wsTitle', { fy })}<span data-ws-ex> · ${COPY.wsExample}</span></span><span>${sentence('wsCcn', { ccn: html`<span data-ws="ccn">${t.ccn}</span>` })}</span></p>
-<table class="wst"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody>
+<table class="wst" role="table"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody role="rowgroup">
 ${row(LINE.pay, sentence('wsPay', { name: html`<b data-ws="name">${t.name}</b>`, place: html`<span data-ws="place">${t.place}</span>` }), 'total')}
 ${row(LINE.base, html`${COPY.wsBase}${note(COPY.wsBaseNote)}`, 'base')}
 ${row(LINE.hrrp, html`${COPY.wsHrrp}${note(factor('hrrpF'), 'hrrp')}`, 'hrrp')}

@@ -539,6 +539,12 @@ describe('the worksheet on a narrow phone', () => {
         else assert.equal(r.under, false, `${width} px, line ${i + 1}: the amount beside its words`);
       }
       assert.ok(f.sideways <= 0, `${width} px: no sideways scroll`);
+      // Still a table to a screen reader, its six lines rows, each a number, a row header and an amount.
+      const tree = await page.locator('.wst').ariaSnapshot();
+      // (A snapshot line is quoted when its name holds a character YAML would read, so each may start with a quote.)
+      assert.match(tree, /^- '?table "Worksheet/, `${width} px: a table`);
+      assert.equal((tree.match(/^ *- '?row /gm) ?? []).length, 6, `${width} px: six rows`);
+      assert.equal((tree.match(/^ *- '?rowheader /gm) ?? []).length, 6, `${width} px: each with its row header`);
     }
   }));
 });

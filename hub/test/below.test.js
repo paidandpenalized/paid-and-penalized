@@ -177,6 +177,21 @@ test('methods in brief: its kicker, heading, a paragraph, three numbered points 
   assert.match(section, /<a class="more" href="\/methods\/">Read the methods<span class="ico ico--arrow" aria-hidden="true"><\/span><\/a>/);
 });
 
+// The worksheet says its table roles outright: on the narrowest phones its rows are laid out as a grid, and a browser
+// can drop a table's own semantics when its parts change display (WebKit does), so the roles keep it a table of six
+// rows, each a number, a row header and an amount.
+test('the worksheet keeps its table roles whatever its layout', () => {
+  const ws = element(out, '<div class="form wsx" data-worksheet', 'div');
+  assert.match(ws, /<table class="wst" role="table"><caption class="vh">[^<]+<\/caption><tbody role="rowgroup">/);
+  const rows = [...ws.matchAll(/<tr\b([^>]*)>(.*?)<\/tr>/gs)];
+  assert.equal(rows.length, 6);
+  for (const [, attrs, inside] of rows) {
+    assert.match(attrs, /role="row"/);
+    const cells = [...inside.matchAll(/<(td|th)\b([^>]*)>/g)].map((m) => `${m[1]} ${/role="([a-z]+)"/.exec(m[2])?.[1]}`);
+    assert.deepEqual(cells, ['td cell', 'th rowheader', 'td cell']);
+  }
+});
+
 // A worksheet amount as a number: "−$69,238" is -69238. "Not in this program" is null.
 const amount = (text) => (/^[−+]?\$[\d,]+$/.test(text) ? Number(text.replace('−', '-').replace(/[$,+]/g, '')) : null);
 const LINE_KEYS = ['total', 'base', 'hrrp', 'hac', 'hvbp', 'net'];
@@ -185,8 +200,8 @@ test('the worksheet adds up the example\'s estimate: line 6 = 3 + 4 + 5 = its ne
   const ws = element(out, '<div class="form wsx" data-worksheet', 'div');
   assert.match(ws, new RegExp(`^<div class="form wsx" data-worksheet data-src="${assets.shell.hubUrl}" data-ccn="${EXAMPLE_CCN}">`));
   // Lines 1 to 6, numbered in order, each amount in its own cell.
-  assert.deepEqual([...ws.matchAll(/<td><span class="field__no">(\d)<\/span><\/td>/g)].map((m) => m[1]), ['1', '2', '3', '4', '5', '6']);
-  const cells = Object.fromEntries([...ws.matchAll(/<td data-ws="([a-z]+)"( data-na)?>([^<]*)<\/td>/g)].map((m) => [m[1], m[3]]));
+  assert.deepEqual([...ws.matchAll(/<td role="cell"><span class="field__no">(\d)<\/span><\/td>/g)].map((m) => m[1]), ['1', '2', '3', '4', '5', '6']);
+  const cells = Object.fromEntries([...ws.matchAll(/<td role="cell" data-ws="([a-z]+)"( data-na)?>([^<]*)<\/td>/g)].map((m) => [m[1], m[3]]));
   assert.deepEqual(Object.keys(cells), LINE_KEYS);
   const d = programDollars(example.est);
   const v = Object.fromEntries(LINE_KEYS.map((k) => [k, amount(cells[k])]));
@@ -199,7 +214,7 @@ test('the worksheet adds up the example\'s estimate: line 6 = 3 + 4 + 5 = its ne
   const said = words(ws);
   assert.ok(said.startsWith(`Worksheet · FY${fy} · An example CCN ${EXAMPLE_CCN}`), said);
   assert.ok(ws.includes(`<b data-ws="name">${escapeHtml(example.name)}</b>, <span data-ws="place">${escapeHtml(`${example.city}, ${example.state}`)}</span>: estimated Medicare inpatient pay`), 'line 1 names the hospital');
-  assert.match(element(ws, '<tr class="wst__net"', 'tr'), /<a class="est-tag" href="\/methods\/#estimate"/);
+  assert.match(element(ws, '<tr role="row" class="wst__net"', 'tr'), /<a class="est-tag" href="\/methods\/#estimate"/);
   const sign = example.est.net < 0 ? 'cut' : example.est.net > 0 ? 'bonus' : 'zero';
   const stamps = [...ws.matchAll(/<p class="stamp[^"]*" data-sign="([a-z]+)"( hidden)?>([^<]*)<\/p>/g)].map((m) => [m[1], Boolean(m[2]), m[3]]);
   assert.deepEqual(stamps, [['cut', sign !== 'cut', 'Net cut'], ['bonus', sign !== 'bonus', 'Net bonus'], ['zero', sign !== 'zero', 'No net change']]);
