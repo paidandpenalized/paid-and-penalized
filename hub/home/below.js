@@ -38,13 +38,12 @@ const SMALL_CUT = HRRP_CAP_PCT / 3 / 100;
 // How near the share of its hospitals the HAC program cuts must be to the rule's share (HAC_TOP_SHARE) for the words
 // "the quarter with the highest scores" (a hospital in the file without a score is never cut, so the two differ a little).
 const RULE_SHARE_NEAR = 0.03;
-const DOLLARS_OF = Object.fromEntries(ROWS.map((r) => [r.id, r.key]));
 
 // The hospitals with an estimate in a program's file (a hospital-page row's id: hrrp, hacrp, hvbp), each one's dollars
 // there as a percent of its estimated pay, binned: { n } hospitals, { zero } of them at exactly $0, and the bins with any
 // hospital, { lo, n }, in order (lo: the bin's low end, in percentage points; a bin holds lo <= v < lo + BIN_POINTS).
 export function programBins(hospitals, id) {
-  const key = DOLLARS_OF[id];
+  const key = ROWS.find((r) => r.id === id)?.key;
   if (!key) throw new RangeError(`hub home: no dollars for the program "${id}"`);
   let n = 0;
   let zero = 0;

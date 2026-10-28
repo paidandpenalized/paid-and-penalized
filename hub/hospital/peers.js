@@ -13,13 +13,19 @@ export const ROWS = Object.freeze([
   Object.freeze({ id: 'hvbp', key: 'hvbp' }),
 ]);
 
+// Each row's key in an estimate's dollars, its percents (est.pct) and the what-if's state: the programs' rows, then the
+// net. The one map from a row's id to its key.
+export const ROW_KEY = Object.freeze({ ...Object.fromEntries(ROWS.map(({ id, key }) => [id, key])), net: 'net' });
+// Every row's id, in the page's order: the programs' rows, then the net.
+export const ROW_IDS = Object.freeze(Object.keys(ROW_KEY));
+
 // Whether a hospital with this estimate is in a program's file: Readmissions and value-based purchasing list their
 // hospitals (an unlisted one has no dollars there, which is "not in this program", never $0); every hospital in the
 // dollar file is in the hospital-acquired conditions file, and the net covers all three.
 export const inProgram = (est, id) => (id === 'hrrp' ? est.hrrpListed : id === 'hvbp' ? est.vbpListed : true);
 
 // The dollars of a row ('hrrp', 'hacrp', 'hvbp' or 'net') in an estimate.
-const dollarsOf = (est, id) => (id === 'net' ? est.net : est[ROWS.find((r) => r.id === id).key]);
+const dollarsOf = (est, id) => est[ROW_KEY[id]];
 
 // The hospitals with an estimate in h's group under mode (engine/js/peers.js PEER_MODES), h among them, in the order
 // given; null when h has no group in that mode (no state, bed count or teaching status).
@@ -46,7 +52,7 @@ export function rowFigures(peers, id) {
 }
 
 // Every row's figures and the net's: { hrrp, hacrp, hvbp, net }, each as rowFigures has it.
-export const peerFigures = (peers) => Object.fromEntries([...ROWS.map((r) => r.id), 'net'].map((id) => [id, rowFigures(peers, id)]));
+export const peerFigures = (peers) => Object.fromEntries(ROW_IDS.map((id) => [id, rowFigures(peers, id)]));
 
 // The dollars a row shows for the hospital: its own, and its peers' median share scaled to its pay (null when the
 // hospital is not in the program, or no peer is).
@@ -91,8 +97,7 @@ export function sumScale(values) {
 // peers' median in every one of figureSets (peerFigures of each way it can be grouped), so switching the peer group moves
 // only the median ticks, never the hospital's own bars.
 export function sumValues(est, figureSets) {
-  const ids = [...ROWS.map((r) => r.id), 'net'];
-  return figureSets.flatMap((f) => ids.flatMap((id) => {
+  return figureSets.flatMap((f) => ROW_IDS.flatMap((id) => {
     const { own, median: med } = rowDollars(est, id, f);
     return [own, med];
   })).filter((v) => v !== null);

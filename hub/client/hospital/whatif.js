@@ -19,7 +19,7 @@ import { SITE } from '../../../web/site.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
-import { ROWS, rowDollars, sumScale } from '../../hospital/peers.js';
+import { ROWS, ROW_IDS, ROW_KEY, rowDollars, sumScale } from '../../hospital/peers.js';
 import { HAC_RATE, comparison, rowWord, signOf } from '../../hospital/text.js';
 import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
@@ -30,8 +30,6 @@ const frac = (x) => String(Math.round(x * 1e4) / 1e4);
 // The actual struck through beside a figure only where the two print differently (a cent of arithmetic is not news).
 const struck = (now, actual) => (usd(now) === usd(actual) ? null : actual);
 const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
-// Each page row's key in the state and in a dollar row.
-const KEY = { hrrp: 'hrrp', hacrp: 'hac', hvbp: 'hvbp', net: 'net' };
 const INK = { cut: 'pen', bonus: 'rew', zero: null };
 // How long the "What if? Adjust any program" button's jump takes before the first handle takes focus and wiggles.
 const JUMP_MS = 450;
@@ -92,7 +90,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   const actual = initial(h);
   // A factor's ends as the field and the slider state them: the range, widened to hold the hospital's own factor (the
   // highest value-based purchasing factor sits past the range's four-decimal end).
-  const ends = (id) => [Math.min(rng[id][0], actual[KEY[id]]), Math.max(rng[id][1], actual[KEY[id]])];
+  const ends = (id) => [Math.min(rng[id][0], actual[ROW_KEY[id]]), Math.max(rng[id][1], actual[ROW_KEY[id]])];
   let g = group;
   const ctx = () => ({ h, vbpMax, peers: g.peers });
   let state = actual;
@@ -110,7 +108,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     if (!row || !adjustable) continue;
     const program = PROGRAM[id].name;
     const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, cuts: [], editing: false };
-    const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': KEY[id] }, [fill('wiMedian')]);
+    const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': ROW_KEY[id] }, [fill('wiMedian')]);
     let kids;
     if (id === 'hacrp') {
       r.cuts = [
@@ -135,8 +133,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     rows[id] = r;
 
     for (const b of r.cuts) b.addEventListener('click', () => apply({ type: 'hac', cut: b.dataset.cut === '1' }));
-    median.addEventListener('click', () => apply({ type: 'median', id: KEY[id] }));
-    for (const b of ctl.querySelectorAll('[data-step]')) b.addEventListener('click', (e) => apply({ type: 'step', id: KEY[id], dir: Number(b.dataset.step), big: e.shiftKey }));
+    median.addEventListener('click', () => apply({ type: 'median', id: ROW_KEY[id] }));
+    for (const b of ctl.querySelectorAll('[data-step]')) b.addEventListener('click', (e) => apply({ type: 'step', id: ROW_KEY[id], dir: Number(b.dataset.step), big: e.shiftKey }));
     // Mid-edit (typed, not yet committed) the field keeps what the reader typed; any other change to the page, a reset
     // included, writes the field again.
     r.input?.addEventListener('input', () => {
@@ -145,8 +143,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     r.input?.addEventListener('change', () => {
       const v = r.input.value.trim() === '' ? NaN : Number(r.input.value);
       r.editing = false;
-      apply({ type: 'set', id: KEY[id], value: v });
-      r.input.value = factor(state[KEY[id]]);
+      apply({ type: 'set', id: ROW_KEY[id], value: v });
+      r.input.value = factor(state[ROW_KEY[id]]);
     });
     r.input?.addEventListener('blur', () => {
       r.editing = false;
@@ -158,7 +156,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
 
   // The handle: a slider over the factor's range (the cut's: 0, the cut, to 1, none), dragged along its strip.
   function bindHandle(id, el, program) {
-    const key = KEY[id];
+    const key = ROW_KEY[id];
     el.setAttribute('aria-label', fill('wiHandle', { program }));
     el.setAttribute('aria-valuemin', id === 'hacrp' ? '0' : String(ends(id)[0]));
     el.setAttribute('aria-valuemax', id === 'hacrp' ? '1' : String(ends(id)[1]));
@@ -234,9 +232,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   // The dollar rows on one scale that holds the hypothetical figures too: each row's bar at its figure now, the actual's
   // bar as a ghost behind a changed one, the peers' median tick, the value and its word.
   function paintSum(out) {
-    const now = (id) => (rowDollars(h.est, id, g.figures).own === null ? null : out[KEY[id]]);
-    const ids = [...ROWS.map((r) => r.id), 'net'];
-    const x = sumScale([...values, ...ids.map(now).filter((v) => v !== null)]);
+    const now = (id) => (rowDollars(h.est, id, g.figures).own === null ? null : out[ROW_KEY[id]]);
+    const x = sumScale([...values, ...ROW_IDS.map(now).filter((v) => v !== null)]);
     const list = $('.hh__sum');
     list?.style.setProperty('--z', frac(x(0)));
     $('.hh__ax')?.style.setProperty('--z', frac(x(0)));
@@ -275,7 +272,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     const on = changed(state, h);
     const out = outcome(state, h);
     for (const [id, r] of Object.entries(rows)) {
-      const key = KEY[id];
+      const key = ROW_KEY[id];
       const v = out[key];
       if (r.num) r.num.textContent = usd(v);
       if (r.pill) {
@@ -294,8 +291,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     // The charts: the figure of each row whose input moved or whose dollars print differently, and the net's, in percent
     // of pay.
     const scenario = {};
-    for (const id of ['hrrp', 'hacrp', 'hvbp']) {
-      const key = KEY[id];
+    for (const { id, key } of ROWS) {
       if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pctOf(out[key]);
     }
     const netMoved = out.net !== h.est.net;

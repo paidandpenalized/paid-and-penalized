@@ -10,15 +10,12 @@
 // (hub/client/hospital/whatif.js binds its keys and drag). The net's hypothetical is a hollow "What if" mark. The thread
 // shows where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
 import { count, pct } from '../../../web/client/format.js';
-import { inProgram, rowFigures } from '../../hospital/peers.js';
+import { ROW_IDS, ROW_KEY, inProgram, rowFigures } from '../../hospital/peers.js';
 import { pileLayout } from '../pile.js';
 import { shareScale } from '../scale.js';
 import { drawnDot } from '../story/geometry.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const IDS = ['hrrp', 'hacrp', 'hvbp', 'net'];
-// Each row's value in a hospital's percents (decoded asset est.pct).
-const PCT = { hrrp: 'hrrp', hacrp: 'hac', hvbp: 'hvbp', net: 'net' };
 // A strip narrower than this lays out as a phone's.
 const NARROW_BELOW = 520;
 // The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
@@ -59,7 +56,7 @@ export function stripLayout(group, { W, dpr, domain }) {
   const narrow = W < NARROW_BELOW;
   const px = 1 / dpr;
   const f = stripFrame(group.length, narrow);
-  const items = Object.fromEntries(IDS.map((id) => [id, group.filter((x) => inProgram(x.est, id)).map((x) => ({ id: x.ccn, v: x.est.pct[PCT[id]], key: hashOf(x.ccn) }))]));
+  const items = Object.fromEntries(ROW_IDS.map((id) => [id, group.filter((x) => inProgram(x.est, id)).map((x) => ({ id: x.ccn, v: x.est.pct[ROW_KEY[id]], key: hashOf(x.ccn) }))]));
   const opts = (n, floor) => ({
     base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(1, 2 * px, floor), gap: (d) => Math.max(px, d * 0.24),
     mirror: true, px, byValue: true,
@@ -76,7 +73,7 @@ export function stripLayout(group, { W, dpr, domain }) {
     const scale = shareScale({ x0: 4, x1: W - 4, gutter, domain, px });
     const rows = {};
     let need = gutter;
-    for (const id of IDS) {
+    for (const id of ROW_IDS) {
       const pile = pileOf(items[id], scale);
       rows[id] = { items: items[id], pile };
       if (pile.fits) continue;
@@ -141,7 +138,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
   const hidden = { 'aria-hidden': 'true' };
   // The first handle carries the hint.
   let hinted = false;
-  const strips = IDS.map((id) => {
+  const strips = ROW_IDS.map((id) => {
     const box = root.querySelector(`[data-row="${id}"] [data-strip]`);
     if (!box) return null;
     const adjustable = handles.includes(id) && inProgram(h.est, id);
@@ -284,7 +281,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
     if (st.handle) {
       st.handle.g.style.display = '';
       st.handle.g.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
-      st.handle.dot.setAttribute('class', `st__hd ${signClass(moved ? v : h.est.pct[PCT[st.id]])}`);
+      st.handle.dot.setAttribute('class', `st__hd ${signClass(moved ? v : h.est.pct[ROW_KEY[st.id]])}`);
       st.hyp.style.display = 'none';
       return;
     }

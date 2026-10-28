@@ -12,7 +12,7 @@ import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { stripLayout } from '../client/hospital/strips.js';
 import { shareDomain } from '../client/scale.js';
-import { ROWS, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
+import { ROWS, ROW_IDS, ROW_KEY, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { hubHospitals } from '../model.js';
 
@@ -58,6 +58,17 @@ test('a hospital with no teaching status has no teaching group, and its other gr
   // A group as the page and its script use it: the mode, the peers, what they show and the group's name.
   const g = peerGroup(fill, hospitals, h, 'state');
   assert.deepEqual(g, { mode: 'state', peers: peersOf(hospitals, h, 'state'), figures: peerFigures(g.peers), group: groupName(fill, h, 'state') });
+});
+
+test('each row\'s key names its dollars in a decoded estimate and in its percents, and the build\'s', () => {
+  assert.deepEqual(ROW_IDS, [...ROWS.map((r) => r.id), 'net']);
+  const h = estimated[0];
+  for (const id of ROW_IDS) {
+    const key = ROW_KEY[id];
+    assert.equal(typeof h.est[key], 'number', id);
+    assert.equal(typeof h.est.pct[key], 'number', id);
+    assert.equal(builtBy.get(h.ccn).est[key], h.est[key], id);
+  }
 });
 
 test('every group has a name, with the band\'s edges from the constants', () => {

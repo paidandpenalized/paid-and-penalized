@@ -4,15 +4,13 @@
 import { fillCopy } from '../../../web/render/components.js';
 import { decimal, money } from '../../../web/render/format.js';
 import { COPY } from '../../hospital/copy.js';
-import { rowFigures } from '../../hospital/peers.js';
+import { ROW_KEY, rowFigures } from '../../hospital/peers.js';
 import { HAC_RATE, comparison, rowWord, signedShareText } from '../../hospital/text.js';
 import { changed, initial, outcome } from './whatif-state.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const factor = (x) => decimal(x, 4);
 const usd = (x) => money(x, { sign: true });
-// Each page row's state key and dollars key.
-const KEY = { hrrp: 'hrrp', hacrp: 'hac', hvbp: 'hvbp' };
 
 // The changes from h's actual state, each a clause of the sentence, in the page's order.
 function clauses(state, h) {
@@ -41,7 +39,7 @@ export function sentence(state, h, peers, { fy, group }) {
 // A row's handle as a screen reader says it: the factor (or the cut) and its estimated dollars, then "hypothetical" once
 // the row differs from the actual. id: 'hrrp', 'hacrp' or 'hvbp'.
 export function valueText(id, state, h, { fy }) {
-  const key = KEY[id];
+  const key = ROW_KEY[id];
   const dollars = outcome(state, h)[key];
   const moved = state[key] !== initial(h)[key] || dollars !== h.est[key];
   const word = rowWord(fill, id, dollars);
