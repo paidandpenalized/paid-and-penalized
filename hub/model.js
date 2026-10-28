@@ -2,7 +2,8 @@
 // Readmissions file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
-import { SHOWN_STATUSES, netShare } from '../engine/js/dollars/whatif.js';
+import { SHOWN_STATUSES } from '../engine/js/dollars/status.js';
+import { netShare } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
 
 // The example hospital a page that opens on one uses, never another default. Chosen once by the rule in exampleRule

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SHOWN_STATUSES, programDollars } from '../../engine/js/dollars/whatif.js';
+import { SHOWN_STATUSES } from '../../engine/js/dollars/status.js';
+import { programDollars } from '../../engine/js/dollars/whatif.js';
 import { STATUS_CODES, decodeRows } from '../../web/client/hub-asset.js';
 import { loadHub } from '../data.js';
 import { MAP_WIDTH, hubAsset } from '../asset.js';

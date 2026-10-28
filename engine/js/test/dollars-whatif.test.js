@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, readJson } from '../../../pipeline/files.js';
-import { HAC_RATE, SHOWN_STATUSES, derivedDollars, netShare, programDollars, roundHalfEven } from '../dollars/whatif.js';
+import { HAC_RATE, derivedDollars, netShare, programDollars, roundHalfEven } from '../dollars/whatif.js';
 import { mulberry32 } from './prng.js';
 
 // The hub's common fiscal year.
@@ -157,9 +157,4 @@ test('netShare throws unless the pay is above zero', () => {
   assert.throws(() => netShare(1, 0), RangeError);
   assert.throws(() => netShare(1, -10), RangeError);
   assert.throws(() => netShare(1, NaN), RangeError);
-});
-
-test('the statuses a page has words for are the three a hospital has', () => {
-  assert.deepEqual([...SHOWN_STATUSES], ['estimated', 'maryland', 'no-inputs']);
-  for (const h of dollars.hospitals) assert.ok(SHOWN_STATUSES.includes(h.status), h.ccn);
 });

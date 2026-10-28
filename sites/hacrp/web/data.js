@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { CCN } from '../../../engine/js/ccn.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { builtOn } from '../../../engine/js/dates.js';
-import { SHOWN_STATUSES } from '../../../engine/js/dollars/whatif.js';
+import { SHOWN_STATUSES } from '../../../engine/js/dollars/status.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';

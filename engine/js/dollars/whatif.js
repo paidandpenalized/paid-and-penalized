@@ -7,10 +7,6 @@
 // (42 CFR 412.172; the Python twin's HAC_RATE).
 export const HAC_RATE = 0.01;
 
-// The statuses of a dollar row the pages have words for: the schema lists a fourth, `parhm`, which no hospital has. The
-// one list the HACRP loader, the hub model and the hub asset's status codes are checked against.
-export const SHOWN_STATUSES = Object.freeze(['estimated', 'maryland', 'no-inputs']);
-
 // Two factors closer than this are the same factor: the dollar file's are printed to ten decimal places.
 const SAME_FACTOR = 1e-9;
 
