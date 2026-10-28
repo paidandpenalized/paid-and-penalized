@@ -4,9 +4,6 @@ import { typesetCopy } from '../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  // The placeholder at a program's folder until its own page is built (coming.js), before its link to the front page.
-  comingNote: "This program's page is coming.",
-
   methodsDescription: 'How this site turns CMS public data into its pages, and what it calls an estimate.',
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',

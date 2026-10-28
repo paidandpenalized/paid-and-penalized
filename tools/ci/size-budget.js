@@ -34,8 +34,8 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27
-  // The placeholders of the programs still to come (hub/coming.js): a hub page with the family search's script.
-  coming: 50 * KB, // R26: hub CSS rides the one shared stylesheet (40.3 KB + 15%); the owner to OK, or give hub pages their own stylesheet.
+  // The coming-soon pages of the programs still to come (hub/coming.js): a hub page with the family search's script.
+  coming: 50 * KB, // R26: hub CSS rides the one shared stylesheet (40.8 KB on 2026-10-28, + 15%); the owner to OK, or give hub pages their own stylesheet.
   program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
@@ -44,7 +44,7 @@ export const BUDGETS = {
   // styles (hub/styles.css: the home page's story and the hospital page) until the hub gets a stylesheet of its own. Its
   // weight on the FY2026 build of 2026-10-28 (42.0 KB) plus 15%, rounded up to 10 KB.
   dictionary: 50 * KB,
-  notFound: 50 * KB, // A hub page with the family search's script, as the placeholders are. R26: 40.2 KB + 15%; the owner to OK.
+  notFound: 50 * KB, // A hub page with the family search's script, as the coming-soon pages are. R26: 40.2 KB + 15%; the owner to OK.
   // A hospital's page across the programs (hub/hospital/page.js) with its script (hub/client/hospital.js: the swarm, the
   // peer toggle, the strips and the peer table): the heaviest of the 3,055 on the FY2026 build of 2026-10-28 (56.9 KB)
   // plus 15%, rounded up to 10 KB. ARCH-27's 150 KB for a hospital page holds.

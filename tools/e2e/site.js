@@ -104,7 +104,7 @@ export function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub
 }
 
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
-// placeholder (value-based purchasing's), the program page, its Methods and dictionary, the three sample hospitals
+// coming-soon page (value-based purchasing's, the one with a figure), the program page, its Methods and dictionary, the three sample hospitals
 // (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
 // programs (hubHospitalSample), the interim Readmissions page and its three sample hospitals' pages (hrrpHospitalSample), and
 // a path no page has (the not-found page, served with status 404). name is the page's

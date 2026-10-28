@@ -621,8 +621,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
   /* The pressed peer toggle keeps its mark: the system's highlight, not a fill the mode would flatten. */
   .hh__pb[aria-pressed="true"] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
   .hh__bar, .hh__tick, .hh__key-tick, .hh__track::before { forced-color-adjust: none; background: CanvasText; }
-  html .hh__out, html .hh__nextbox { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; }
-  .hh__out span, .hh__nextbox span { forced-color-adjust: none; background: Canvas; color: CanvasText; }
+  html :is(.hh__out, .hh__nextbox, .cm__wait) { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; }
+  :is(.hh__out, .hh__nextbox) span, .cm__wait p { forced-color-adjust: none; background: Canvas; color: CanvasText; }
 }
 @media print {
   .hh__peers, .hh__wbtn, .hh__ctl, .hh__how, .st__h { display: none; }
@@ -656,6 +656,16 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
 .rd__yes { color: var(--pen-ink); font-weight: 700; }
 .rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+/* The coming-soon pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside the
+   summary card's flex form (.rd__sum), whose fields are boxes waiting to be filled; the band across it is hatched. */
+.cm__acts { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.cm__back { transform: scaleX(-1); }
+.cm__card { position: relative; margin-bottom: 26px; }
+.cm__card > .field { padding-bottom: 34px; }
+.cm__wait { flex: 1 0 100%; display: grid; place-items: center; min-height: 150px; padding: 18px; border: solid var(--pen); border-width: 0 var(--rule) var(--rule) 0; background: var(--hatch-fill); }
+.cm__wait p { padding: 8px 14px; background: var(--paper); font: 400 var(--fs-xl)/1.15 var(--font-display); text-align: center; text-wrap: balance; }
+.cm__stamp { position: absolute; right: 16px; bottom: -18px; }
+.cm__stamp .stamp { background: var(--paper); }
 @media (min-width: 960px) {
   .rd__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
 }

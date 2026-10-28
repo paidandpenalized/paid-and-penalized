@@ -1,5 +1,5 @@
 // The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
-// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder per program
+// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a coming-soon page per program
 // still to come (coming.js), every hospital's page across the programs (hospital/page.js), the interim Readmissions
 // pages (hrrp/page.js: /hrrp/ and a page per hospital in the pinned Thirty Day Readmissions file), the not-found page, and
 // the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
@@ -188,7 +188,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   }
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
-  for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, assets, robots: never }) });
+  const facts = storyFacts(all);
+  for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, master: master ?? hub.master, robots, never });
   hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });

@@ -14,7 +14,7 @@ export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 export const hospitalPath = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
 
 const POLICY = new Set(Object.values(SITE.pages));
-// The folders of the programs still to come, each holding a placeholder (hub/coming.js).
+// The folders of the programs still to come, each holding a coming-soon page (hub/coming.js).
 const PLACEHOLDERS = new Set(PLACEHOLDER_PROGRAMS.map((p) => p.path));
 // The one folder name under prefix that path is, or null ('/a/b/' under '/a/' is 'b').
 const folderUnder = (path, prefix) => {

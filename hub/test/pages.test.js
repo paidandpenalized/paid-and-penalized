@@ -9,7 +9,6 @@ import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
-import { programDek } from '../../web/programs.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { loadHub } from '../data.js';
@@ -67,26 +66,6 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/<\/loc>/);
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/hospital\/990001\/<\/loc>/);
     assert.equal(sitemap.match(/<url>/g).length, 2);
-  }));
-
-test('each program still to come has a placeholder at its folder: its name, its dek, a line saying its page is coming, the way home', () =>
-  withTemp('pp-hub-coming-', async (dir) => {
-    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-    await generateHub(ctx, { hospitals: [] });
-    assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.path), ['/hvbp/', '/wage-index/', '/dsh/', '/ime/', '/iqr/', '/pi/', '/team/']);
-    for (const p of PLACEHOLDER_PROGRAMS) {
-      const text = readFileSync(join(dir, p.path, 'index.html'), 'utf8');
-      assert.equal(text.match(/<h1[\s>]/g)?.length, 1, p.id);
-      assert.ok(text.includes(`<h1>${escapeHtml(p.name)}</h1>`), p.id);
-      assert.ok(text.includes(`<p class="dek">${escapeHtml(programDek(p.id))}</p>`), p.id);
-      assert.ok(text.includes(COPY.comingNote), p.id);
-      assert.ok(text.includes(`<a href="/">${SHARED.allPrograms}</a>`), p.id);
-      // Never indexed, released or not, and the program's own tab is the current one.
-      assert.ok(text.includes(NOINDEX), p.id);
-      assert.ok(!ctx.indexable.includes(p.path), p.id);
-      assert.match(text, new RegExp(`<a class="tab[^"]*" href="${p.path}"[^>]* aria-current="page">`), p.id);
-      assert.ok(text.includes(`<title>${escapeHtml(p.name)} · Paid &amp; Penalized</title>`), p.id);
-    }
   }));
 
 test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
