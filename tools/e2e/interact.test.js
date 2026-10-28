@@ -20,14 +20,15 @@ const CUT = PAGES.find((p) => p.type === 'hospital-cut');
 // The hospital pages with a what-if: the hospital CMS cut, the one with a score and no cut, and a Maryland hospital's (the
 // first scored one in the newest HACRP file: not subject to the cut, so its result table holds long words and no dollars).
 const MARYLAND = readNewestEmitted().hospitals.find((h) => h.state === 'MD' && h.total !== null);
+if (!MARYLAND) throw new Error('interact.test.js: no scored Maryland hospital in the newest HACRP file');
 const WHAT_IFS = [
   ...PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut'),
   { name: 'hospital-maryland', path: hospitalPath(MARYLAND.ccn) },
 ];
-// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1100 px
+// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1150 px
 // (1040: its table outgrew the box there without scrolling the page), and on phones, where its table is folded until a
-// reader opens it.
-const FIT_WIDTHS = [1040, 1000, 960, 900, 390, 320];
+// reader opens it; and just past that (1160, where the box's wide layout starts with the least room) and 1280.
+const FIT_WIDTHS = [1280, 1160, 1040, 1000, 960, 900, 390, 320];
 // 1280 px, the narrowest width the top bar sticks (641), and the narrowest phone width, where it scrolls away.
 const WIDTHS = [1280, 641, 320];
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
