@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, roundedDollars, signed } from '../render/format.js';
+import { capitalize, decimal, dollars, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, roundedDollars, signed, spelled } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -77,6 +77,20 @@ test('ordinal: st, nd, rd and th, with the teens all th', () => {
 
 test('cached formatters keep each call\'s style and decimals apart', () => {
   assert.deepEqual([decimal(0.5, 1), pct(0.5, 1), decimal(0.5, 2), pct(0.5, 0), signed(0.5, 1)], ['0.5', '50.0%', '0.50', '50%', '+0.5']);
+});
+
+test('spelled writes a whole number from 0 to 99 in words, for a rule\'s number in a sentence', () => {
+  assert.deepEqual([0, 1, 5, 11, 19, 20, 21, 30, 45, 99].map(spelled),
+    ['zero', 'one', 'five', 'eleven', 'nineteen', 'twenty', 'twenty-one', 'thirty', 'forty-five', 'ninety-nine']);
+  for (const bad of [-1, 100, 2.5, NaN, '30', null, undefined]) assert.throws(() => spelled(bad), RangeError, String(bad));
+});
+
+test('fractionWord writes a share as a quarter or three-quarters, with the determiner a singular fraction takes, and throws on a share it has no word for', () => {
+  assert.equal(fractionWord(0.25), 'a quarter');
+  assert.equal(fractionWord(0.25, 'the'), 'the quarter');
+  assert.equal(fractionWord(0.75), 'three-quarters');
+  assert.equal(fractionWord(0.75, 'the'), 'three-quarters', 'a plural fraction takes none');
+  for (const bad of [0, 0.3, 1, 25, NaN, '0.25', undefined]) assert.throws(() => fractionWord(bad), RangeError, String(bad));
 });
 
 test('numberWord spells a small count and leaves a larger one in digits', () => {

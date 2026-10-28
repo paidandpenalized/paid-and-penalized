@@ -23,6 +23,25 @@ export const listText = (xs) => LIST.format(xs);
 const NUMBER_WORDS = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 export const numberWord = (n) => NUMBER_WORDS[n] ?? count(n);
 
+// A whole number from 0 to 99 in words ("thirty", "forty-five"), for a rule's number in a sentence (web/programs.js);
+// anything else throws. Unlike numberWord, it never leaves digits.
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+export function spelled(n) {
+  if (!Number.isInteger(n) || n < 0 || n > 99) throw new RangeError(`spelled: ${String(n)} is not a whole number from 0 to 99`);
+  return n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
+}
+
+// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"), 0.75 is
+// "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
+const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.75, 'three-quarters']]);
+export function fractionWord(share, determiner = 'a') {
+  const word = FRACTION_WORDS.get(share);
+  if (word === undefined) throw new RangeError(`fractionWord: no words for the share ${String(share)}`);
+  return word.includes('-') ? word : `${determiner} ${word}`;
+}
+
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 

@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COPY } from '../copy.js';
-import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT, programDek } from '../programs.js';
+import { LINE_PERCENTILE } from '../../engine/js/hacrp/history.js';
+import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek } from '../programs.js';
 import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programOf, siteOf } from '../site.js';
 
 const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
@@ -81,6 +82,25 @@ test('Thirty Day Readmissions: its name, its address, and the link to one of its
 
 test('the method constants are the programs\' own rules: the 3% Readmissions cap, the 1% hospital-acquired conditions cut, the 2% withheld', () => {
   assert.deepEqual([HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT], [3, 1, 2]);
+});
+
+test('the other method constants the deks say in words: the 30-day window, the highest-scoring quarter, the quarter and three-quarters of a yearly increase, five surgeries', () => {
+  assert.deepEqual([HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES], [30, 0.25, 0.25, 0.75, 5]);
+  // The hospital-acquired conditions cut falls on the scores above the engine's 75th-percentile line: the top quarter.
+  assert.equal(HAC_TOP_SHARE, 1 - LINE_PERCENTILE);
+});
+
+test('the deks say the rules\' numbers in the words they read in (the copy holds no number word; the programs\' constants fill it)', () => {
+  const NUMBER_WORD = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|ninety|hundred|half|third|thirds|quarter|quarters|three-quarters)\b/i;
+  for (const id of IDS) {
+    const key = `dek${id.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
+    assert.doesNotMatch(COPY[key], NUMBER_WORD, key);
+  }
+  assert.equal(programDek('hrrp'), 'Cuts pay by up to 3% when more patients than expected return to the hospital in the thirty days after leaving.');
+  assert.equal(programDek('hacrp'), 'Cuts pay by a flat 1% for the quarter of hospitals with the highest infection and patient-safety scores.');
+  assert.equal(programDek('iqr'), 'Hospitals that don\u2019t report required quality data lose a quarter of their yearly payment increase.');
+  assert.equal(programDek('pi'), 'Hospitals that miss electronic health record requirements lose three-quarters of their yearly increase.');
+  assert.equal(programDek('team'), 'In selected areas, hospitals earn or owe money against a spending target for five surgeries.');
 });
 
 test('each dek is copy with no digit, and fills with the rule\'s percent and nothing left over', () => {
