@@ -246,3 +246,16 @@ test('layYou: the hospital among its peers (the copies) above everyone; the peer
   const mid = nets.length >> 1;
   assert.ok(Math.abs(L.info.median - (nets.length % 2 ? nets[mid] : (nets[mid - 1] + nets[mid]) / 2)) < 1e-9);
 });
+
+// On a phone the step's name ("3/9 Readmissions") sits in the stage's top left, over the gates the story has passed
+// (hub/styles.css .nowstep: 9px under the stage's top, 12px type set solid). A passed gate's words stand 6px above its
+// line in 11px type (stage.js gates), their capitals about three quarters of that tall. The first one's start at least
+// 12px under the name, at both phone widths.
+test('a phone: the step\'s name in the stage\'s top left clears the first passed gate\'s words', () => {
+  const NAME_BOTTOM = 9 + 12;
+  for (const W of [320, 390]) {
+    const g = stageGeometry({ W, H: 480, railHidden: true, domain });
+    const capTop = gateLines(g, 1)[0] - 6 - 11 * 0.75;
+    assert.ok(capTop - NAME_BOTTOM >= 12, `${W} px: ${(capTop - NAME_BOTTOM).toFixed(1)} px between the step's name and the gate's words`);
+  }
+});
