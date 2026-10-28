@@ -68,7 +68,9 @@ test('every mark class has a forced-colors rule, so no bar, mark or hatch vanish
 });
 
 test('a state shown only by fill or shadow keeps a system-color cue under forced colors', () => {
-  for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th']) {
+  // ... and the hub's toggles: a hospital page's peer toggle (and its what-if's cut / no cut), the story's peer toggle.
+  for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th',
+    '.hh__pb[aria-pressed="true"]', '.story .seg button[aria-pressed="true"]']) {
     assert.match(forced, new RegExp(`${escape(state)}\\s*\\{[^}]*(Highlight|GrayText|CanvasText)`), `${state} has no forced-colors cue`);
   }
 });

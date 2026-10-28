@@ -455,6 +455,9 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__netlab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; color: var(--ink-2); font: 600 13.5px/1.3 var(--font-body); }
 .hh__netline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
 .hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
+/* Where the record and the money take the page's whole width (one column, above a phone's), the net is at its full size:
+   the clamp above follows the two-column page's left column. */
+@media (min-width: 641px) and (max-width: 1023px) { .hh__big { font-size: 3.5rem; } }
 /* 24px: large text, so the bonus ink on paper meets its 3:1 (at 22px it would need 4.5:1). The worksheet's stamp too. */
 .hh__stamp .stamp, .wsx .stamp { font-size: 24px; padding: 5px 11px 2px; }
 .hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
