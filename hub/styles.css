@@ -283,6 +283,8 @@
 
 @media print {
   .railbox, .story__progress, .stage__cv, .nowstep { display: none !important; }
+  /* The masthead prints at rest, wherever its trip into the header was (the script's inline styles). */
+  .hero__mark > span { transform: none !important; opacity: 1 !important; text-shadow: none; }
   .story--live { display: block; }
   .story--live > .stage, .story--live .stage__panel { position: static; height: auto; opacity: 1 !important; }
   .stage__pin { position: static; height: auto; }

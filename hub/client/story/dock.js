@@ -90,10 +90,13 @@ export function dockPath(p, { big, small, from: { m1, m2 }, to, park, stacked, c
 
 // A box's place in window pixels, at the given top.
 const place = (r, top = r.top) => ({ left: r.left, top, width: r.width, right: r.right, height: r.height });
+// A word's place in window pixels, from its offset in the h1 (at) and the h1's box (h).
+const fromHero = (h, at) => ({ left: h.left + at.dx, top: h.top + at.dy, width: at.width, right: h.left + at.dx + at.width, height: at.height });
 
 // Wires the trip to the front page: its masthead (.hero__mark's two spans) and the header's wordmark. html carries
 // dock-trip while the trip is not done (the header's wordmark hidden) and dock-moving while the words are away from
-// home (they draw over the header). Returns nothing; does nothing on a page without both wordmarks.
+// home (they draw over the header). The header's wordmark is never hidden while it has focus. Returns nothing; does
+// nothing on a page without both wordmarks.
 export function mountDock() {
   const hero = document.querySelector('.hero__mark');
   const head = document.querySelector('.fam a.wordmark');
@@ -107,26 +110,29 @@ export function mountDock() {
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
   const root = document.documentElement;
 
-  // Measured at rest: the hero's words in page pixels, the font sizes, the trip's length.
+  // Measured at rest: each word's offset in the h1 (the h1 itself never moves, so its box is read on every frame and the
+  // words follow it when the header above changes height), the font sizes, the trip's length.
   let rest = null;
   function measure() {
     for (const w of words) w.style.transform = '';
-    const y = window.scrollY;
-    const [r1, r2] = words.map((w) => w.getBoundingClientRect());
+    const h = hero.getBoundingClientRect();
+    const [m1, m2] = words.map((w) => {
+      const r = w.getBoundingClientRect();
+      return { dx: r.left - h.left, dy: r.top - h.top, width: r.width, height: r.height };
+    });
+    const big = parseFloat(getComputedStyle(hero).fontSize);
     rest = {
-      m1: place(r1, r1.top + y), m2: place(r2, r2.top + y),
-      big: parseFloat(getComputedStyle(hero).fontSize), small: parseFloat(getComputedStyle(head).fontSize),
-      trip: clamp(strip.getBoundingClientRect().top + y - bar.getBoundingClientRect().bottom - TRIP_CLEAR, TRIP_MIN,
-        TRIP_MAX),
+      m1, m2, stacked: m2.dy - m1.dy > big / 2, big, small: parseFloat(getComputedStyle(head).fontSize),
+      trip: clamp(strip.getBoundingClientRect().top + window.scrollY - bar.getBoundingClientRect().bottom - TRIP_CLEAR,
+        TRIP_MIN, TRIP_MAX),
     };
-    rest.stacked = rest.m2.top - rest.m1.top > rest.big / 2;
   }
 
   function dock() {
-    const y = window.scrollY;
-    const p = clamp(y / rest.trip, 0, 1);
-    const moving = !still.matches && p > 0 && p < 1;
-    root.classList.toggle('dock-trip', !still.matches && p < 1);
+    const p = clamp(window.scrollY / rest.trip, 0, 1);
+    const motion = !still.matches && !head.contains(document.activeElement);
+    const moving = motion && p > 0 && p < 1;
+    root.classList.toggle('dock-trip', motion && p < 1);
     root.classList.toggle('dock-moving', moving);
     if (!moving) {
       // At home (the top of the page) or docked: the words rest in the hero. Docked, the trip ends with the hero's foot
@@ -144,7 +150,8 @@ export function mountDock() {
     const top = head.getBoundingClientRect().top;
     const to = compact ? { mark: place(mark.getBoundingClientRect()) }
       : { w1: place(lead.getBoundingClientRect(), top), w2: place(pen.getBoundingClientRect(), top) };
-    const from = { m1: { ...rest.m1, top: rest.m1.top - y }, m2: { ...rest.m2, top: rest.m2.top - y } };
+    const h = hero.getBoundingClientRect();
+    const from = { m1: fromHero(h, rest.m1), m2: fromHero(h, rest.m2) };
     const park = bar.getBoundingClientRect().bottom + PARK_GAP;
     const d = dockPath(p, { big: rest.big, small: rest.small, from, to, park, stacked: rest.stacked, compact });
     words[0].style.transform = `translate(${d.x1 - from.m1.left}px,${d.y1 - from.m1.top}px) scale(${d.sx1},${d.s})`;
@@ -172,6 +179,10 @@ export function mountDock() {
   window.addEventListener('scroll', frame, { passive: true });
   window.addEventListener('resize', again);
   still.addEventListener('change', again);
+  // The header changes height without a resize (the phone's search row, the bar's search sizing itself at load).
+  if ('ResizeObserver' in window) new ResizeObserver(again).observe(bar);
+  head.addEventListener('focusin', frame);
+  head.addEventListener('focusout', frame);
   if (document.fonts) document.fonts.ready.then(again);
   again();
 }

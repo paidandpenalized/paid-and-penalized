@@ -192,6 +192,9 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 @media print {
   .fam { position: static; }
   .tabs, .fam__sub, .fam__find, .chip__x, .ft__fb { display: none !important; }
+  /* The front page's docking wordmark prints as it rests (its script's inline styles win without !important). */
+  .dock-trip .fam .wordmark { visibility: visible !important; opacity: 1 !important; }
+  .dock-trip .fam__tag { opacity: 1; }
 }
 
 /* Forced colors: an icon is a background, which the theme would repaint as the page's own background, so the icons

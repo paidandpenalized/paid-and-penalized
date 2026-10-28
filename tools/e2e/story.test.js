@@ -232,3 +232,59 @@ for (const [width, height] of [[390, 844], [320, 640]]) {
     }));
   });
 }
+
+// The masthead's trip into the header (hub/client/story/dock.js): near its end the first word sits in the header's
+// wordmark slot (the compact P&P mark on a phone), also after the header grows (the phone's search row opens); docked,
+// the header's wordmark shows; back at the top it waits hidden, unless it has focus.
+for (const width of [390, 1280]) {
+  describe(`the masthead's trip at ${width} px`, () => {
+    const tabs = useContext(shared, { width });
+
+    it('ends in the header\'s wordmark slot, also after the header changes height; a focused wordmark stays shown', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.evaluate(() => document.fonts.ready);
+      // Scrolls to share p of the trip (the script's own measure) and reads the first word, the slot and the header.
+      const at = async (p) => {
+        await page.evaluate((share) => {
+          const bar = document.querySelector('.fam');
+          const strip = document.querySelector('.hero__strip');
+          const trip = Math.max(110, Math.min(260, strip.getBoundingClientRect().top + window.scrollY - bar.getBoundingClientRect().bottom - 30));
+          window.scrollTo(0, 0);
+          window.scrollTo(0, Math.ceil(trip * share));
+        }, p);
+        await settle(page);
+        await settle(page);
+        return page.evaluate(() => {
+          const head = document.querySelector('.fam a.wordmark');
+          const short = head.querySelector('.wordmark__short');
+          const slot = (getComputedStyle(short).display === 'none' ? head : short).getBoundingClientRect();
+          const word = document.querySelector('.hero__m1').getBoundingClientRect();
+          return {
+            word: { top: word.top, bottom: word.bottom }, slot: { top: slot.top, bottom: slot.bottom },
+            bar: document.querySelector('.fam').getBoundingClientRect().bottom, shown: getComputedStyle(head).visibility,
+          };
+        });
+      };
+      const inSlot = (s, what) => {
+        assert.ok(s.word.top >= s.slot.top - 4 && s.word.top <= s.slot.bottom, `${what}: the first word's top (${Math.round(s.word.top)} px) is in the slot (${Math.round(s.slot.top)} to ${Math.round(s.slot.bottom)} px)`);
+        assert.ok(s.word.bottom <= s.bar, `${what}: the first word ends inside the header`);
+      };
+      inSlot(await at(0.98), 'near the end');
+      const find = page.locator('.fam__find');
+      if (await find.isVisible()) {
+        const before = (await at(0)).bar;
+        await find.click();
+        const opened = await at(0.98);
+        assert.ok(opened.bar > before, 'the search row makes the header taller');
+        inSlot(opened, 'with the search row open');
+        await page.keyboard.press('Escape');
+      }
+      assert.equal((await at(1.1)).shown, 'visible', 'docked, the header\'s wordmark shows');
+      assert.equal((await at(0)).shown, 'hidden', 'at the top it waits hidden');
+      await at(1.1);
+      await page.focus('.fam a.wordmark');
+      assert.equal((await at(0)).shown, 'visible', 'focused, it stays shown at the top');
+      await assertQuiet(seen, `the masthead's trip at ${width} px`);
+    }));
+  });
+}
