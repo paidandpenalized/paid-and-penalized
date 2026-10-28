@@ -30,6 +30,16 @@
    words are away from home they draw over the sticky header (.fam, z-index 20; nothing between them and the page's
    root makes a stacking context), haloed in the paper so the tabs they cross don't run into their letters (a box of
    paper would show against the page's grain), and take no pointer. */
+/* The header's side of the trip: while the masthead travels up into the bar, the bar's wordmark waits hidden and the
+   tagline steps back; both show once it docks. Only the script sets the class, so without it both show. Print shows the
+   wordmark as it rests (the script's inline styles win without !important). */
+.fam__tag { transition: opacity 0.3s; }
+.dock-trip .fam .wordmark { visibility: hidden; }
+.dock-trip .fam__tag { opacity: 0; }
+@media print {
+  .dock-trip .fam .wordmark { visibility: visible !important; opacity: 1 !important; }
+  .dock-trip .fam__tag { opacity: 1; }
+}
 .hero__mark > span { transform-origin: 0 0; }
 .dock-moving .hero__mark { position: relative; z-index: 21; pointer-events: none; }
 .dock-moving .hero__mark > span { text-shadow: 0 0 0.03em var(--paper), 0 0 0.03em var(--paper), 0 0 0.03em var(--paper); will-change: transform, opacity; }
