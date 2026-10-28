@@ -70,6 +70,15 @@ test('a value that reads as the actual factor is the actual factor: unchanged', 
   assert.equal(changed(there, H), false);
 });
 
+test('the highest factor in the data, past the range\'s four-decimal end: typed as shown, it stays the actual', () => {
+  const top = make('990011', { vbpFactor: VBP_MAX });
+  const s0 = initial(top);
+  const tctx = { ...ctx, h: top };
+  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.0453 }, tctx), s0);
+  assert.equal(reduce(s0, { type: 'step', id: 'hvbp', dir: 1 }, tctx), s0, 'no step up past it');
+  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, 1.0452, 'past it clamps to the range');
+});
+
 test('step: a small step, a bigger one with Shift, clamped at the range\'s ends', () => {
   const s0 = initial(H);
   assert.equal(STEP, 0.0005);

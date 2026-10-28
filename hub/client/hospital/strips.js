@@ -96,6 +96,8 @@ const FADE = 450;
 // The handle's half height (a 24 px target at the least) and how far its capsule reaches past that each side.
 const HANDLE_R = 12;
 const HANDLE_REACH = 14;
+// The handle's one wiggle (hub/styles.css st-nudge), and a little after it, before its class comes off.
+const NUDGE_MS = 1300;
 
 function el(tag, attrs = {}, parent = null) {
   const node = document.createElementNS(NS, tag);
@@ -357,7 +359,7 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
       g.classList.remove('st__h--nudge');
       void g.getBBox();
       g.classList.add('st__h--nudge');
-      setTimeout(() => g.classList.remove('st__h--nudge'), 2400);
+      setTimeout(() => g.classList.remove('st__h--nudge'), NUDGE_MS);
     },
   };
 }

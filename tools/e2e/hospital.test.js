@@ -159,26 +159,68 @@ for (const width of [390, 1280]) {
       await page.locator('.hh__scen .hh__reset').click();
       await page.waitForTimeout(SETTLED_MS);
       assert.equal((await hypo(page)).banner, false, 'Reset to actual');
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.peer ?? null), 'state', 'focus moves to the pressed peer toggle, not the page\'s start');
+      // A typed factor, then Escape in the field: the page resets and the field shows the actual factor again.
+      const field = page.locator('.hh__fin').first();
+      if (await field.count()) {
+        const shown = await field.inputValue();
+        await field.fill(shown === '0.9800' ? '0.9900' : '0.9800');
+        await field.press('Enter');
+        await page.waitForTimeout(SETTLED_MS);
+        assert.equal((await hypo(page)).banner, true, 'a typed factor is a what-if');
+        await field.press('Escape');
+        await page.waitForTimeout(SETTLED_MS);
+        assert.equal((await hypo(page)).banner, false, 'Escape in the field resets');
+        assert.equal(await field.inputValue(), shown, 'the field shows the actual factor again');
+      }
       await audit(page, `the hospital page at ${width} px after a what-if`);
       await assertQuiet(seen, 'the hospital page\'s what-if');
     }));
 
-    it('a shared what-if link opens on its scenario, marked reader-made; one with junk opens on the actual figures', () => withPage(tabs, { path: `${CUT.path}#whatif&hac=0&hrrp=2&hvbp=abc`, watched: true }, async (page, { seen }) => {
+    // Review Focus 2's link: a value out of range before a valid one, a non-number, a cut that is neither 0 nor 1.
+    it('a shared what-if link opens on its valid parts, marked reader-made; one with only junk opens on the actual figures', () => withPage(tabs, { path: `${CUT.path}#whatif&hrrp=2&hrrp=0.99&hvbp=abc&hac=7`, watched: true }, async (page, { seen }) => {
+      assert.ok(CUT.hospital.est.hrrpListed && CUT.hospital.est.hrrpFactor !== 0.99, 'the sample is in Readmissions at a factor other than 0.99');
       await page.waitForSelector('.st__h');
       await page.waitForTimeout(SETTLED_MS);
       const linked = await hypo(page);
       assert.equal(linked.banner, true);
       assert.equal(linked.shared, true, 'Reader-made scenario, not CMS data.');
-      assert.equal(linked.hash, '#whatif&hac=0', 'the junk dropped from the address');
+      assert.equal(linked.hash, '#whatif&hrrp=0.99', 'the junk dropped from the address, the first valid value kept');
+      assert.match(linked.result, /readmissions factor were 0\.9900 /);
       await page.locator('.hh__shared a').click();
       await page.waitForTimeout(SETTLED_MS);
       assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared, s.hash]), [false, false, '']);
+      // A fresh page (not a same-document jump) from a link with only junk.
+      await page.goto(new URL('/about/', page.url()).href, { waitUntil: 'networkidle' });
       await page.goto(new URL(`${CUT.path}#whatif&hrrp=2&hvbp=abc&hac=7`, page.url()).href, { waitUntil: 'networkidle' });
       await page.waitForSelector('.st__h');
       await page.waitForTimeout(SETTLED_MS);
       const junk = await hypo(page);
       assert.deepEqual([junk.banner, junk.shared, junk.struck], [false, false, 0], 'junk changes nothing');
       await assertQuiet(seen, 'the hospital page from a shared what-if link');
+    }));
+
+    it('a focused handle stays clear of the sticky row when the Hypothetical banner makes it taller', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.st__h');
+      const handle = page.locator('.st__h').first();
+      await handle.focus();
+      // Park the handle just under the sticky row, as Shift+Tab up into it leaves it.
+      await page.evaluate(() => {
+        const box = document.activeElement.querySelector('.st__hb').getBoundingClientRect();
+        window.scrollBy(0, box.top - document.querySelector('[data-peers]').getBoundingClientRect().bottom - 2);
+      });
+      const start = await handle.getAttribute('aria-valuenow');
+      await page.keyboard.press('ArrowLeft');
+      if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(SETTLED_MS);
+      const covered = await page.evaluate(() => {
+        const box = document.activeElement.querySelector('.st__hb').getBoundingClientRect();
+        const bar = document.querySelector('[data-peers]').getBoundingClientRect();
+        return { banner: document.querySelector('[data-peers]').classList.contains('hh__peers--hyp'), px: Math.max(0, Math.min(box.bottom, bar.bottom) - Math.max(box.top, bar.top)), below: box.bottom <= innerHeight };
+      });
+      assert.deepEqual(covered, { banner: true, px: 0, below: true }, 'the handle in view, none of it under the banner');
+      await assertQuiet(seen, 'the hospital page\'s what-if, focus kept in view');
     }));
 
     it('without its data the page stays as the server wrote it, with one quiet line', () => withPage(tabs, { path: '/about/' }, async (page) => {

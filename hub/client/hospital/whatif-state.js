@@ -90,8 +90,12 @@ export function reduce(state, action, ctx) {
   const id = action?.id;
   const r = has(FACTOR, id) ? rng[id] : null;
   switch (action?.type) {
-    case 'set':
-      return r && Number.isFinite(action.value) ? put({ [id]: settle(clamp(action.value, r), initial(h)[id]) }) : state;
+    case 'set': {
+      if (!r || !Number.isFinite(action.value)) return state;
+      // A value that reads as the actual factor is the actual factor, even one past the range's four-decimal end.
+      const own = initial(h)[id];
+      return put({ [id]: round4(action.value) === round4(own) ? own : settle(clamp(action.value, r), own) });
+    }
     case 'step': {
       const dir = Math.sign(action.dir);
       if (!r || !dir) return state;
