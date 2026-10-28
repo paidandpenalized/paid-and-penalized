@@ -24,10 +24,18 @@ export function shareDomain(hospitals) {
   return [Math.floor((lo - PAD) * PER + 1e-9) / PER, Math.ceil((hi + PAD) * PER - 1e-9) / PER];
 }
 
-// The scale from x0 to x1 (pixels) with a gutter for exactly $0: { xs(v), zL, zR, zM, k } where k is pixels per
+// The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand.
+export function wholePercents([lo, hi]) {
+  const out = [];
+  for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) out.push(v);
+  return out;
+}
+
+// The scale from x0 to x1 (pixels) with a gutter for exactly $0: { xs(v), invert(x), zL, zR, zM, k } where k is pixels per
 // percentage point on both sides, the cuts end at zL, the bonuses start at zR and $0 sits at zM, mid-gutter. A value
-// outside the domain clamps to its end. px: a device pixel, in the same units, when the gutter's edges should land on
-// whole device pixels (so dot columns counted from them do too).
+// outside the domain clamps to its end; invert is the share at a pixel ($0 across the gutter), held to the domain. px: a
+// device pixel, in the same units, when the gutter's edges should land on whole device pixels (so dot columns counted
+// from them do too).
 export function shareScale({ x0, x1, gutter, domain: [lo, hi], px = 0 }) {
   const k = (x1 - x0 - gutter) / (hi - lo);
   const snap = (v) => (px ? Math.round(v / px) * px : v);
@@ -38,5 +46,6 @@ export function shareScale({ x0, x1, gutter, domain: [lo, hi], px = 0 }) {
     const c = v < lo ? lo : v > hi ? hi : v;
     return c < 0 ? zL + c * k : c > 0 ? zR + c * k : zM;
   };
-  return { xs, zL, zR, zM, k, x0, x1, domain: [lo, hi] };
+  const invert = (x) => Math.min(hi, Math.max(lo, x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0));
+  return { xs, invert, zL, zR, zM, k };
 }

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { shareDomain, shareScale } from '../client/scale.js';
+import { shareDomain, shareScale, wholePercents } from '../client/scale.js';
 
 // An invented estimated hospital with these percents of its pay (and one with no estimate, which the domain skips).
 const est = (hrrp, hac, hvbp) => ({ est: { pct: { hrrp, hac, hvbp, net: hrrp + hac + hvbp } } });
@@ -47,6 +47,16 @@ test('shareScale: $0 sits mid-gutter, cuts left of it and bonuses right, linear 
   // Beyond the domain clamps to its ends.
   assert.equal(s.xs(-9), 40);
   assert.equal(s.xs(9), 640);
+  // The inverse: each value back from its pixel, $0 anywhere in the gutter, the domain's ends past the plot.
+  for (const v of [-4, -1, -0.25, 0.5, 2]) assert.ok(Math.abs(s.invert(s.xs(v)) - v) < 1e-9, `${v}`);
+  for (const x of [s.zL, s.zM, s.zR]) assert.equal(s.invert(x), 0);
+  assert.deepEqual([s.invert(0), s.invert(700)], [-4, 2]);
+});
+
+test('wholePercents: the whole percents in the domain, in order', () => {
+  assert.deepEqual(wholePercents([-3.4, 3.2]), [-3, -2, -1, 0, 1, 2, 3]);
+  assert.deepEqual(wholePercents([-1, 0.6]), [-1, 0]);
+  assert.deepEqual(wholePercents([0.2, 0.8]), []);
 });
 
 test('shareScale with a device pixel: the gutter\'s edges land on whole device pixels, the slope unchanged', () => {

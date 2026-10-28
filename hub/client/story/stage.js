@@ -15,6 +15,7 @@ import { HAC_CUT_PCT, HRRP_CAP_PCT, rulePercent } from '../../../web/programs.js
 import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
 import { COPY } from './copy.js';
+import { wholePercents } from '../scale.js';
 import { fitBox, stageGeometry } from './geometry.js';
 import { createLayouts } from './layouts.js';
 
@@ -50,6 +51,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   const N = rows.length;
   const S = 2 * N;
   const indexOf = new Map(rows.map((r, i) => [r.h, i]));
+  const TICKS = wholePercents(domain);
   const CX = new Float32Array(S);
   const CY = new Float32Array(S);
   const CR = new Float32Array(S);
@@ -275,8 +277,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = a;
     ctx.fillStyle = colors.paper2;
     ctx.fillRect(scale.zL, top, scale.zR - scale.zL, g.bottom - top);
-    const [lo, hi] = domain;
-    for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) {
+    for (const v of TICKS) {
       if (v === 0) continue;
       ctx.globalAlpha = a * 0.3;
       vline(scale.xs(v), top, g.bottom + 4, colors.line);
@@ -284,7 +285,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = a;
     hline(g.x0, g.x1, g.bottom, colors.ink2);
     const tick = font(g.narrow ? 10 : 11, 400, true);
-    for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) text(percent(v), scale.xs(v), g.bottom + 16, tick, colors.ink3, 'center');
+    for (const v of TICKS) text(percent(v), scale.xs(v), g.bottom + 16, tick, colors.ink3, 'center');
     // The two sides' words under the ticks, either side of $0; a wide stage's axis words on a line of their own.
     const y = g.bottom + (g.narrow ? 30 : 34);
     if (!g.narrow) text(say('axis', { fy: String(fy) }), g.x0, g.bottom + 54, font(12), colors.ink3);
@@ -321,7 +322,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       const color = state === 'next' ? colors.ink : state === 'past' ? colors.ink2 : colors.ink3;
       hline(g.x0, g.x1, y, color, state === 'next' ? 1.5 : 1, state === 'waiting' ? [2, 4] : null);
       if (state === 'next') {
-        for (let v = Math.ceil(domain[0]); v <= Math.floor(domain[1]); v++) vline(g.scale.xs(v), y - 3, y + 4, color);
+        for (const v of TICKS) vline(g.scale.xs(v), y - 3, y + 4, color);
       }
       // A passed gate's words sit above its line; a waiting gate's below it.
       const ly = state === 'past' ? y - 6 : y + (g.narrow ? 13 : 19);

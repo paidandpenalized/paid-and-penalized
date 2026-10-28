@@ -16,7 +16,7 @@ import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
-import { shareScale } from '../scale.js';
+import { shareScale, wholePercents } from '../scale.js';
 // The move between two groups: its length (ms) and how much of it the dots' start times spread over.
 const MOVE = 700;
 const SPREAD = 0.2;
@@ -42,6 +42,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
   const S = 2 * N;
   const self = rows.indexOf(h);
   const V = Float32Array.from(rows, (x) => x.est.pct.net);
+  const TICKS = wholePercents(domain);
   const KEY = Float32Array.from(rows, (x) => hashOf(x.ccn));
   const C = Uint8Array.from(rows, (x) => signCode(x.est.net));
   // Where each dot is now, where it was when the move began, and where it is going.
@@ -212,9 +213,8 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     const base = m.aBot + 8;
     ctx.fillStyle = colors.paper2;
     ctx.fillRect(zL, m.pTop - 6, zR - zL, base - m.pTop + 6);
-    const [lo, hi] = domain;
     const tick = font(W < NARROW_BELOW ? 10 : 11, 400, true);
-    for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) {
+    for (const v of TICKS) {
       const x = scale.xs(v);
       if (v !== 0) {
         ctx.globalAlpha = 0.45;

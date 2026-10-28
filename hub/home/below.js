@@ -13,7 +13,7 @@ import { capitalize, count, fractionWord, money, numberWord, pct } from '../../w
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
-import { shareDomain, shareScale } from '../client/scale.js';
+import { shareDomain, shareScale, wholePercents } from '../client/scale.js';
 import { OUTSIDE, worksheetModel } from '../client/story/worksheet.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { ROWS, inProgram } from '../hospital/peers.js';
@@ -87,8 +87,7 @@ function histogram({ n, zero, bins }, { domain, label }) {
     return [at(b.lo, side) + GAP, at(b.lo + BIN_POINTS, side) - GAP];
   };
   const path = (ink, d) => (d ? html`<path class="st__d st__d--${ink}" d="${d}"/>` : '');
-  const ticks = [];
-  for (let t = Math.ceil(domain[0]); t <= Math.floor(domain[1]); t++) ticks.push(t);
+  const ticks = wholePercents(domain);
   const tickX = (t) => (t === 0 ? zM : at(t, t < 0 ? zL : zR));
   // The labels: over the tallest bin of a side, reaching away from $0, so the two never meet across the gutter.
   const top = (c) => r1(Math.max(11, BASE - height(c) - 4));

@@ -13,7 +13,7 @@ import { count, pct } from '../../../web/client/format.js';
 import { ROW_IDS, ROW_KEY, inProgram, rowFigures } from '../../hospital/peers.js';
 import { deviceRatio } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile.js';
-import { shareScale } from '../scale.js';
+import { shareScale, wholePercents } from '../scale.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 // The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
@@ -160,13 +160,13 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
 
   let group = peers;
   let scenario = null;
+  const ticks = wholePercents(domain);
 
   // The strip's scenery for its width: the $0 gutter, a faint line and a label at each whole percent, the baseline.
   function scenery(st, scale, f, W) {
     st.bg.textContent = '';
     el('rect', { class: 'st__gut', x: round(scale.zL), y: f.top - 4, width: round(scale.zR - scale.zL), height: f.base - f.top + 4 }, st.bg);
-    const [lo, hi] = domain;
-    for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) {
+    for (const v of ticks) {
       const x = round(scale.xs(v));
       if (v !== 0) el('line', { class: 'st__grid', x1: x, x2: x, y1: f.top - 4, y2: f.base + 3 }, st.bg);
       const t = el('text', { class: 'st__tl', x, y: f.H - 4, 'text-anchor': 'middle' }, st.bg);
@@ -319,14 +319,10 @@ export function mountStrips(root, { h, peers, domain, fill, still, handles = [] 
   }
   if (document.fonts) document.fonts.ready.then(drawThread);
 
-  // The share under a client x on a strip: the scale's inverse ($0 across the gutter), held to the axis's domain.
+  // The share under a client x on a strip (the scale's invert).
   function shareAt(id, clientX) {
     const st = strips.find((s) => s.id === id);
-    if (!st?.scale) return null;
-    const { zL, zR, k, domain: [lo, hi] } = st.scale;
-    const x = clientX - st.svg.getBoundingClientRect().left;
-    const v = x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0;
-    return Math.min(hi, Math.max(lo, v));
+    return st?.scale ? st.scale.invert(clientX - st.svg.getBoundingClientRect().left) : null;
   }
 
   const first = strips.find((st) => st.handle);
