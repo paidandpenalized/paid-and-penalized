@@ -171,7 +171,7 @@ function peerRow(h, { peers, group }) {
 <div class="wrap hh__pin">
 <span class="hh__plbl">${fill('peersLabel')}</span>
 <div class="hh__seg" role="group" aria-label="${fill('peersGroupLabel')}">${buttons}</div>
-<p class="hh__grp" data-peer-name aria-live="polite"><b>${count(peers.length)}</b> ${group}</p>
+<p class="hh__grp" data-peer-name><b>${count(peers.length)}</b> ${group}</p>
 </div>
 </div>
 ${missing.length ? html`<div class="wrap hh__pnotes">${missing.map(([mode, , note]) => html`<p class="hh__pnote" id="hh-no-${mode}" data-peer-note hidden>${fill(note)}</p>`)}</div>` : ''}`;

@@ -112,7 +112,7 @@ test('the headline compares the net share with the same-state median, as median(
     const want = `${lead(h.est.share)} ${of} Medicare inpatient pay, against ${medianWords(m)} at the median of ${peers.length.toLocaleString('en-US')} ${group}.`;
     const main = mainOf(render(h));
     assert.ok(main.includes(`<h2 class="hh__head" data-headline>${esc(want)}</h2>`), 'the headline');
-    assert.ok(main.includes(`<p class="hh__grp" data-peer-name aria-live="polite"><b>${peers.length.toLocaleString('en-US')}</b> ${esc(group)}</p>`), 'the peer row names the group');
+    assert.ok(main.includes(`<p class="hh__grp" data-peer-name><b>${peers.length.toLocaleString('en-US')}</b> ${esc(group)}</p>`), 'the peer row names the group');
     assert.ok(main.includes(esc(`(${peers.length.toLocaleString('en-US')} ${group}, alphabetical)`)), 'the peer table\'s summary counts the group');
   }
   // The stamps of a bonus and of no change.

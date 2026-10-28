@@ -26,6 +26,7 @@ const SPREAD = 0.2;
 // The two piles' opacity: the group, and everyone (quieter, so the group reads first).
 const PEER_A = 1;
 const ALL_A = 0.62;
+const ALL_A_SMALL = 0.8;
 // A stage narrower than this lays out as a phone's.
 const NARROW_BELOW = 520;
 // The frame, in CSS pixels, wide and narrow: the margins, the $0 gutter, and where each pile and the axis sit.
@@ -112,15 +113,19 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     const gap = (d) => Math.max(px, d * 0.24);
     const dMin = Math.max(1, 2 * px);
     const all = rows.map((x, i) => ({ id: i, v: V[i], key: KEY[i] }));
-    const allPile = pileLayout(all, scale, { base: m.aBot, top: m.aTop, dMax: m.allMax, dMin, gap, mirror: true, px });
+    // byValue: a widened bin's sub-columns are value slices, so the ringed dot stands at its own value (pile.js).
+    const allPile = pileLayout(all, scale, { base: m.aBot, top: m.aTop, dMax: m.allMax, dMin, gap, mirror: true, px, byValue: true });
     const mine = rows.flatMap((x, i) => (members.has(x) ? [{ id: N + i, v: V[i], key: KEY[i] }] : []));
-    const peerPile = pileLayout(mine, scale, { base: m.pBot, top: m.pTop, dMax: peerMax(m, mine.length), dMin, gap, mirror: true, px });
+    const peerPile = pileLayout(mine, scale, { base: m.pBot, top: m.pTop, dMax: peerMax(m, mine.length), dMin, gap, mirror: true, px, byValue: true });
+    // Everyone's pile is quieter than the group's, but a dot of a single device pixel at that quiet washes out: those keep
+    // more ink.
+    const allA = drawnDot(allPile.r, dpr).side <= 1 ? ALL_A_SMALL : ALL_A;
     for (let i = 0; i < N; i++) {
       const p = allPile.pos.get(i);
       TX[i] = p.x;
       TY[i] = p.y;
       TR[i] = allPile.r;
-      TA[i] = ALL_A;
+      TA[i] = allA;
       const q = peerPile.pos.get(N + i);
       TX[N + i] = q ? q.x : p.x;
       TY[N + i] = q ? q.y : p.y;

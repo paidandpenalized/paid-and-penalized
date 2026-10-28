@@ -4,13 +4,15 @@
 // scale the build and the script share (the group's name, the rows' one scale, the program row's sentence).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BED_BAND_EDGES, PEER_MODES } from '../../engine/js/peers.js';
+import { BED_BAND_EDGES, PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy } from '../../web/render/components.js';
 import { decodeRows } from '../../web/client/hub-asset.js';
 import { hubAsset } from '../asset.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
-import { ROWS, groupName, peerFigures, peersOf, rowDollars, sumScale, sumValues } from '../hospital/peers.js';
+import { stripLayout } from '../client/hospital/strips.js';
+import { shareDomain } from '../client/scale.js';
+import { ROWS, groupName, peerFigures, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { hubHospitals } from '../model.js';
 
@@ -90,4 +92,46 @@ test('a program row\'s sentence names the peers and never prints NaN or undefine
       assert.ok(!/NaN|undefined|Infinity/.test(text), text);
     }
   }
+});
+
+// The strips (hub/client/hospital/strips.js stripLayout) for every group the page can show, at a 320, 390 and 1440 screen's
+// strip width and one, two and three device pixels to a CSS pixel: every row's pile fits as separate dots (the $0 gutter
+// widens as it must), and every hospital stands at its own value: within its bin's width of it, on the right side of its
+// group's median whenever it is more than two pitches from it (exactly $0 anywhere in its gutter), and with bins at most three dots wide on any screen but a
+// 1x phone's (where the two largest groups' Readmissions spike needs more).
+test('every strip keeps separate dots, each at its own value', () => {
+  const domain = shareDomain(hospitals);
+  const groups = new Map();
+  for (const mode of PEER_MODES) {
+    for (const h of estimated) {
+      const key = peerKey(h, mode);
+      if (key === null) continue;
+      if (!groups.has(`${mode}:${key}`)) groups.set(`${mode}:${key}`, peersOf(hospitals, h, mode));
+    }
+  }
+  let checked = 0;
+  for (const [name, group] of groups) {
+    for (const W of [288, 358, 628]) {
+      for (const dpr of [1, 2, 3]) {
+        const { scale, rows } = stripLayout(group, { W, dpr, domain });
+        for (const [id, { items, pile }] of Object.entries(rows)) {
+          const where = `${name} ${id} at ${W}px, ${dpr}x`;
+          assert.equal(pile.fits, true, `${where}: fits`);
+          if (dpr > 1 || W >= 520) assert.ok(pile.m <= 3, `${where}: bins ${pile.m} dots wide`);
+          const median = rowFigures(group, id).median;
+          const mx = median === null ? null : scale.xs(median * 100);
+          for (const it of items) {
+            const x = pile.pos.get(it.id).x;
+            const tx = scale.xs(it.v);
+            // Exactly $0 stands anywhere in its own gutter; any other value within its bin's width of its place.
+            if (it.v === 0) assert.ok(x > scale.zL && x < scale.zR, `${where}: a $0 dot outside the gutter`);
+            else assert.ok(Math.abs(x - tx) <= pile.m * pile.d + 1e-6, `${where}: a dot ${Math.abs(x - tx)} px from its value`);
+            if (mx !== null && Math.abs(tx - mx) > 2 * pile.d) assert.equal(Math.sign(x - mx), Math.sign(tx - mx), `${where}: a dot on the wrong side of the median`);
+            checked += 1;
+          }
+        }
+      }
+    }
+  }
+  assert.ok(checked > 100000, `${checked} dots checked`);
 });

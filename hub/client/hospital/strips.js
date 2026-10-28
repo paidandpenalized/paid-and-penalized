@@ -8,7 +8,7 @@
 // where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
 import { count, pct } from '../../../web/client/format.js';
 import { inProgram, rowFigures } from '../../hospital/peers.js';
-import { R_MIN, pileLayout } from '../pile.js';
+import { pileLayout } from '../pile.js';
 import { shareScale } from '../scale.js';
 import { drawnDot } from '../story/geometry.js';
 
@@ -18,13 +18,77 @@ const IDS = ['hrrp', 'hacrp', 'hvbp', 'net'];
 const PCT = { hrrp: 'hrrp', hacrp: 'hac', hvbp: 'hvbp', net: 'net' };
 // A strip narrower than this lays out as a phone's.
 const NARROW_BELOW = 520;
-// The strip's height and its parts, in CSS pixels: the plot's top and bottom, and the axis's baseline.
-const FRAME = { wide: { H: 128, top: 8, bot: 98, base: 104 }, narrow: { H: 112, top: 6, bot: 82, base: 88 } };
+// The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
+// a size band's hospitals within a few hundredths of a percent of $0 in Readmissions) need the height to stay narrow
+// blocks of dots, so each dot stands near its own value.
+const PLOT = [[160, 90, 76], [700, 150, 130], [Infinity, 240, 200]];
+// The strip's frame for a group of n: { H, top, bot, base }, the plot's top and bottom, and the axis's baseline.
+export function stripFrame(n, narrow) {
+  const [, wide, slim] = PLOT.find(([below]) => n < below);
+  const top = narrow ? 6 : 8;
+  const bot = top + (narrow ? slim : wide);
+  return { H: bot + 30, top, bot, base: bot + 6 };
+}
 // A group's largest pitch by its size, wide and narrow; and the smallest it shrinks to before its bins widen instead (a
 // strip has room across, so a spike such as the hospital-acquired conditions cut stands as a block of readable dots
 // rather than a thread of tiny ones).
 const dMaxOf = (n, narrow) => (n < 160 ? (narrow ? 5 : 7) : n < 700 ? (narrow ? 3.4 : 4.6) : narrow ? 2.4 : 3.4);
 const dMinOf = (n, narrow) => (n < 160 ? (narrow ? 3.4 : 4.4) : n < 700 ? (narrow ? 2.4 : 3) : 0);
+// The usual $0 gutter, wide and narrow; and the most times the strips widen it for a $0 pile before they stop.
+const GUTTER = { wide: 20, narrow: 12 };
+const WIDEN = 8;
+// The most sub-columns a bin widens to by choice (for readable dots); past it the dots shrink instead.
+const MAX_M = 3;
+
+// A hospital's stable spread in [0, 1), by CCN: its place in a pile's stacking order.
+export function hashOf(text) {
+  let s = 2166136261;
+  for (let i = 0; i < text.length; i++) s = Math.imul(s ^ text.charCodeAt(i), 16777619);
+  return ((s >>> 0) % 100003) / 100003;
+}
+
+// Every strip's layout for a group at a strip width W (CSS pixels) on a screen of dpr device pixels to a CSS pixel, on the
+// share axis's domain: { f (stripFrame), narrow, gutter, scale, rows: { hrrp, hacrp, hvbp, net: { items, pile } } }. Only
+// the hospitals a program lists are in its row. The piles keep each dot within its value's slice of a bin (pileLayout's
+// byValue). The $0 gutter is one width for all four rows (so they share one scale), widened from the usual until every
+// row's $0 pile stands in it as separate dots at the pitch its row uses. Pure.
+export function stripLayout(group, { W, dpr, domain }) {
+  const narrow = W < NARROW_BELOW;
+  const px = 1 / dpr;
+  const f = stripFrame(group.length, narrow);
+  const items = Object.fromEntries(IDS.map((id) => [id, group.filter((x) => inProgram(x.est, id)).map((x) => ({ id: x.ccn, v: x.est.pct[PCT[id]], key: hashOf(x.ccn) }))]));
+  const opts = (n, floor) => ({
+    base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(1, 2 * px, floor), gap: (d) => Math.max(px, d * 0.24),
+    mirror: true, px, byValue: true,
+  });
+  // A row's pile: at the readable floor (dMinOf) when that widens its bins to at most MAX_M sub-columns, else at the
+  // device's floor, so a dot stays near its own value.
+  const pileOf = (list, scale) => {
+    const readable = pileLayout(list, scale, opts(list.length, dMinOf(list.length, narrow)));
+    return readable.m <= MAX_M ? readable : pileLayout(list, scale, opts(list.length, 0));
+  };
+  let gutter = GUTTER[narrow ? 'narrow' : 'wide'];
+  let out = null;
+  for (let tries = 0; tries <= WIDEN; tries++) {
+    const scale = shareScale({ x0: 4, x1: W - 4, gutter, domain, px });
+    const rows = {};
+    let need = gutter;
+    for (const id of IDS) {
+      const pile = pileOf(items[id], scale);
+      rows[id] = { items: items[id], pile };
+      if (pile.fits) continue;
+      // The $0 pile's columns at this pitch: as many mirrored rows as the plot holds (an odd count), and so the columns.
+      const fit = Math.floor((f.bot - f.top) / pile.d + 1e-9);
+      const usable = Math.max(1, fit % 2 ? fit : fit - 1);
+      need = Math.max(need, (Math.ceil(pile.zeroCount / usable) + 1) * pile.d);
+    }
+    out = { f, narrow, gutter, scale, rows };
+    if (need <= gutter) break;
+    gutter = need;
+  }
+  return out;
+}
+
 const FADE = 450;
 
 function el(tag, attrs = {}, parent = null) {
@@ -34,11 +98,6 @@ function el(tag, attrs = {}, parent = null) {
   return node;
 }
 const signClass = (v) => (v < 0 ? 'st__d st__d--pen' : v > 0 ? 'st__d st__d--rew' : 'st__d st__d--neu');
-function hashOf(text) {
-  let s = 2166136261;
-  for (let i = 0; i < text.length; i++) s = Math.imul(s ^ text.charCodeAt(i), 16777619);
-  return ((s >>> 0) % 100003) / 100003;
-}
 const round = (v) => Math.round(v * 100) / 100;
 
 // mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group), domain (the
@@ -59,7 +118,7 @@ export function mountStrips(root, { h, peers, domain, fill, still }) {
     const me = el('circle', { class: 'st__me', cx: 0, cy: 0 }, svg);
     const hyp = el('circle', { class: 'st__hyp', cx: 0, cy: 0 }, svg);
     const out = el('text', { class: 'st__out', x: 4, y: 14 }, svg);
-    return { id, box, svg, bg, dots, med, me, hyp, out, marks: new Map(), at: null, W: 0, gutter: 0 };
+    return { id, box, svg, bg, dots, med, me, hyp, out, marks: new Map(), at: null, W: 0, gutter: 0, H: 0 };
   }).filter(Boolean);
   const thread = el('svg', { class: 'hh__thread', 'aria-hidden': 'true', focusable: 'false' });
   const path = el('path', {}, thread);
@@ -82,31 +141,23 @@ export function mountStrips(root, { h, peers, domain, fill, still }) {
     el('line', { class: 'st__base', x1: 0, x2: W, y1: f.base + 0.5, y2: f.base + 0.5 }, st.bg);
   }
 
-  // The $0 gutter's width for a strip's frame: the usual, or wider when a row's hospitals at exactly $0 (the most of any
-  // row: often the hospital-acquired conditions row's "no cut") could not stand in it as separate dots of the smallest
-  // size. One width for every strip, so the rows keep one scale.
-  function gutterFor(f, narrow, px) {
-    let d = 2 * px;
-    while ((d - Math.max(px, d * 0.24)) / 2 < R_MIN - 1e-9) d += px;
-    const rows = Math.max(1, Math.floor((f.bot - f.top) / d) - 1);
-    let zeros = 0;
-    for (const id of IDS) zeros = Math.max(zeros, group.filter((x) => inProgram(x.est, id) && x.est.pct[PCT[id]] === 0).length);
-    return Math.max(narrow ? 12 : 20, Math.ceil(zeros / rows + 1) * d);
+  // The layout for the strips' width now (one width: they share a column), worked out once per group and width.
+  let layout = null;
+  function lay(W, dpr) {
+    if (!layout || layout.W !== W || layout.dpr !== dpr || layout.group !== group) layout = { W, dpr, group, ...stripLayout(group, { W, dpr, domain }) };
+    return layout;
   }
 
   function render(st, animate) {
     const W = st.box.clientWidth;
     if (!W) return;
-    const narrow = W < NARROW_BELOW;
-    const f = FRAME[narrow ? 'narrow' : 'wide'];
     const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
-    const px = 1 / dpr;
-    const gutter = gutterFor(f, narrow, px);
-    const scale = shareScale({ x0: 4, x1: W - 4, gutter, domain, px });
-    const resized = W !== st.W || gutter !== st.gutter;
+    const { f, gutter, scale, rows } = lay(W, dpr);
+    const resized = W !== st.W || gutter !== st.gutter || f.H !== st.H;
     if (resized) {
       st.W = W;
       st.gutter = gutter;
+      st.H = f.H;
       st.svg.setAttribute('viewBox', `0 0 ${W} ${f.H}`);
       st.svg.setAttribute('width', String(W));
       st.svg.setAttribute('height', String(f.H));
@@ -114,9 +165,7 @@ export function mountStrips(root, { h, peers, domain, fill, still }) {
     }
     // Moves glide only on a group change, not on a resize, nor before the first paint.
     st.svg.classList.toggle('st--live', animate && !still.matches);
-    const key = PCT[st.id];
-    const items = group.filter((x) => inProgram(x.est, st.id)).map((x) => ({ id: x.ccn, v: x.est.pct[key], key: hashOf(x.ccn) }));
-    const pile = pileLayout(items, scale, { base: f.bot, top: f.top, dMax: dMaxOf(items.length, narrow), dMin: Math.max(1, 2 * px, dMinOf(items.length, narrow)), gap: (d) => Math.max(px, d * 0.24), mirror: true, px });
+    const { items, pile } = rows[st.id];
     const { square, side } = drawnDot(pile.r, dpr);
     const s = side / dpr;
     const seen = new Set();

@@ -59,13 +59,16 @@ function binItems(items, scale, d, m, mirror) {
 //   gap         the space between neighbouring dots: a number, or a function of the pitch;
 //   mirror      bins centered on the middle line (a swarm) rather than standing on the base;
 //   px          a device pixel: the pitch is then a whole number of device pixels, so dots drawn on the device's grid
-//               keep equal gaps.
+//               keep equal gaps;
+//   byValue     a widened bin's sub-columns hold slices of its values, lowest on the left (each slice stacked in key
+//               order), so an item stands within its slice of the bin rather than anywhere across it: what a chart that
+//               rings one item at its value needs (the hospital page's strips). Off by default (the home story's look).
 // Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
 // below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
 // top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when $0's columns, which cannot
 // widen past the gutter, overflow even at the smallest pitch, or M_MAX sub-columns are not enough; the overfull bins are
 // then packed closer than a pitch so the pile stays inside. No input the story can reach does either.
-export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0 }) {
+export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0, byValue = false }) {
   const avail = base - top;
   const gapOf = (d) => (typeof gap === 'function' ? gap(d) : gap);
   // The pitches to try, largest first: whole device pixels (or tenths) from dMax down to dMin, while a dot keeps R_MIN.
@@ -113,10 +116,19 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
     const need = mirror ? 2 * Math.floor(rows / 2) + 1 : rows;
     // An overfull bin (only when nothing fits) packs its rows closer, keeping them inside.
     const sp = need * d <= avail + 1e-9 || need < 2 ? d : (avail - d) / (need - 1);
-    bin.list.sort((a, b) => a.key - b.key);
-    bin.list.forEach((it, k) => {
-      const row = Math.floor(k / bin.m);
-      const j = k % bin.m;
+    // Each item's row and sub-column: a row of m at a time in key order, or (byValue) a value slice per sub-column.
+    let at;
+    if (byValue && bin.m > 1) {
+      at = [];
+      const sorted = bin.list.slice().sort((a, b) => a.v - b.v || a.key - b.key);
+      for (let j = 0; j < bin.m; j++) {
+        sorted.slice(j * rows, (j + 1) * rows).sort((a, b) => a.key - b.key).forEach((it, row) => at.push([it, row, j]));
+      }
+    } else {
+      bin.list.sort((a, b) => a.key - b.key);
+      at = bin.list.map((it, k) => [it, Math.floor(k / bin.m), k % bin.m]);
+    }
+    at.forEach(([it, row, j]) => {
       const x = bin.x + (j - (bin.m - 1) / 2) * d;
       const y = mirror ? mid + (row % 2 ? (row + 1) / 2 : -row / 2) * sp : base - d / 2 - row * sp;
       pos.set(it.id, { x, y });

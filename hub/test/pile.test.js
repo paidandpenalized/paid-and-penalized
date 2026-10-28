@@ -193,3 +193,24 @@ test('pileLayout wraps $0 across the gutter\'s columns, dealt in key order', () 
   assert.equal(layout.pos.get(0).x, layout.pos.get(4).x);
   assert.ok(layout.pos.get(0).y > layout.pos.get(4).y);
 });
+
+// byValue (the hospital page's strips): a widened bin's sub-columns hold slices of its values, lowest on the left, so a
+// dot's place along the axis never runs against its value; its pitch, width and fit are the same, and every dot stays
+// separate and inside. Off, the layout is unchanged (the home story's; its tests above).
+test('pileLayout byValue: widened bins hold value slices left to right; the same pitch and fit', () => {
+  const px = 1;
+  // A phone-wide strip on a 1x screen, its gutter wide enough for the $0 pile: the cuts' spike widens its bins.
+  const scale = shareScale({ x0: 12, x1: 378, gutter: 40, domain: [-3.9, 3.2], px });
+  const opts = { base: 260, top: 60, dMax: 2.6, dMin: 2, gap: (d) => Math.max(px, d * 0.24), px, mirror: true };
+  const plain = pileLayout(ITEMS, scale, opts);
+  const sorted = pileLayout(ITEMS, scale, { ...opts, byValue: true });
+  assert.ok(plain.m > 1 && plain.fits, 'the bins widen in this room, and fit');
+  assert.deepEqual([sorted.d, sorted.m, sorted.fits], [plain.d, plain.m, plain.fits]);
+  check(sorted, ITEMS, { ...opts }, scale);
+  for (const side of [(v) => v < 0, (v) => v > 0]) {
+    const items = ITEMS.filter((it) => side(it.v)).sort((a, b) => a.v - b.v);
+    for (let i = 1; i < items.length; i++) {
+      assert.ok(sorted.pos.get(items[i].id).x >= sorted.pos.get(items[i - 1].id).x - 1e-9, `${items[i - 1].v} drawn right of ${items[i].v}`);
+    }
+  }
+});
