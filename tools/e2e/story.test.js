@@ -117,3 +117,174 @@ for (const width of [320, 390, 1280]) {
     }));
   });
 }
+
+// The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
+// the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
+// the 'hub:select' event name it), and a hospital without a teaching status has that peer toggle disabled with the
+// hospital page's note.
+describe('states you can read, and Find yours', () => {
+  const tabs = useContext(shared);
+
+  it('#state= pins a state on the map; a junk one is ignored', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await settle(page);
+    const s = await page.evaluate(() => ({
+      step: document.querySelector('.story').dataset.step, line: document.querySelector('.readout').textContent,
+      pinned: [...document.querySelectorAll('.smap .is-pin')].map((el) => el.dataset.st),
+      focusable: [...document.querySelectorAll('.smap .st')].every((el) => el.getAttribute('role') === 'button' && el.tabIndex === 0),
+    }));
+    assert.equal(s.step, '7');
+    assert.match(s.line, /^Ohio: [\d,]+ hospitals, net [−+]?\d\.\d\d% of pay, \d+% take a net cut$/);
+    assert.deepEqual(s.pinned, ['OH']);
+    assert.ok(s.focusable, 'the states are buttons in the tab order on step 7');
+    await page.goto(new URL('/about/', page.url()).href, { waitUntil: 'networkidle' });
+    await page.goto(new URL('/#state=%3Cimg%20src=x%3E', page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.smap .is-pin, img[src="x"]').length), 0, 'nothing pinned, no markup');
+    await assertQuiet(seen, 'state fragment');
+  }));
+
+  it('the last step\'s search follows a hospital in place, with its card, its event and its peer toggles', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    // A hospital with an estimate and no teaching status, from the page's own asset.
+    const ccn = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === null)[at('ccn')];
+    });
+    await page.evaluate(() => document.addEventListener('hub:select', (e) => { window.selected = e.detail.ccn; }));
+    // The reader groups the example by teaching status first.
+    await page.locator('#step-find').scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+    await page.locator('.peers [data-peer="teach"]').click();
+    const box = page.locator('main form#find').getByRole('combobox');
+    await box.pressSequentially(ccn.toLowerCase());
+    await page.locator('main form#find [role="option"]').first().waitFor();
+    await box.press('Enter');
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+    const s = await page.evaluate(() => ({
+      path: window.location.pathname, selected: window.selected, step: document.querySelector('.story').dataset.step,
+      teach: document.querySelector('.peers [data-peer="teach"]').getAttribute('aria-disabled'),
+      why: document.querySelector('#peers-no-teach').checkVisibility(), example: document.querySelector('.card__ex').hidden,
+    }));
+    assert.deepEqual(s, { path: '/', selected: ccn, step: '8', teach: 'true', why: true, example: true });
+    // Shown by state (it has no teaching group), "Same state" is still the reader's choice for the next hospital.
+    const pressed = () => page.evaluate(() => [...document.querySelectorAll('.peers [data-peer]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.peer));
+    await page.locator('.peers [data-peer="state"]').click();
+    const other = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === 'major')[at('ccn')];
+    });
+    await box.fill('');
+    await box.pressSequentially(other.toLowerCase());
+    await page.locator('main form#find [role="option"]').first().waitFor();
+    await box.press('Enter');
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, other);
+    assert.deepEqual(await pressed(), ['state']);
+    await page.locator('.peers [data-peer="teach"]').click();
+    assert.deepEqual(await pressed(), ['teach']);
+    await assertQuiet(seen, 'find yours');
+  }));
+
+  it('a state picked twice in the bar\'s search on the front page goes to it both times', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    const box = page.locator('.topbar form#omni').getByRole('combobox');
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await settle(page);
+      await box.fill('');
+      await box.pressSequentially('Ohio');
+      await page.locator('.topbar form#omni [role="option"]').filter({ hasText: 'Ohio' }).first().click();
+      await page.waitForFunction(() => document.querySelector('.story').dataset.step === '7' && document.querySelector('.readout').textContent.startsWith('Ohio:'));
+      assert.equal(new URL(page.url()).hash, '#state=OH', `pick ${i + 1}`);
+    }
+    await assertQuiet(seen, 'a state picked twice');
+  }));
+});
+
+// On a phone the chart is pinned over the lower part of the window: a keyboard reader who tabs to the last step's search
+// and its card's link finds each in view, clear of the chart, and then reaches the peer toggle on the chart.
+for (const [width, height] of [[390, 844], [320, 640]]) {
+  describe(`Find yours by keyboard at ${width} px`, () => {
+    const tabs = useContext(shared, { width, height });
+
+    it('Tab reaches the search and the card\'s link clear of the pinned chart, then the peer toggle', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      const reached = [];
+      for (let i = 0; i < 80 && !reached.some((f) => f.peer === 'teach'); i++) {
+        await page.keyboard.press('Tab');
+        await settle(page);
+        const f = await page.evaluate(() => {
+          const el = document.activeElement;
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { id: el.id || el.className, peer: el.dataset?.peer ?? null, clear: Boolean(hit) && (el.contains(hit) || hit.contains(el)) && !(hit.closest('[data-stage]') && !el.closest('[data-stage]')) };
+        });
+        if (f.id === 'find-q' || f.id === 'card__go' || f.peer) reached.push(f);
+      }
+      assert.deepEqual(reached.map((f) => f.id === 'find-q' || f.id === 'card__go' ? f.id : f.peer), ['find-q', 'card__go', 'state', 'size', 'teach']);
+      for (const f of reached) assert.ok(f.clear, `${f.id}${f.peer ? ` ${f.peer}` : ''} is in view, not under the chart`);
+      await assertQuiet(seen, `Find yours by keyboard at ${width} px`);
+    }));
+  });
+}
+
+// The masthead's trip into the header (hub/client/story/dock.js): near its end the first word sits in the header's
+// wordmark slot (the compact P&P mark on a phone), also after the header grows (the phone's search row opens); docked,
+// the header's wordmark shows; back at the top it waits hidden, unless it has focus.
+for (const width of [390, 1280]) {
+  describe(`the masthead's trip at ${width} px`, () => {
+    const tabs = useContext(shared, { width });
+
+    it('ends in the header\'s wordmark slot, also after the header changes height; a focused wordmark stays shown', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.evaluate(() => document.fonts.ready);
+      // Scrolls to share p of the trip (the script's own measure) and reads the first word, the slot and the header.
+      const at = async (p) => {
+        await page.evaluate((share) => {
+          const bar = document.querySelector('.fam');
+          const strip = document.querySelector('.hero__strip');
+          const trip = Math.max(110, Math.min(260, strip.getBoundingClientRect().top + window.scrollY - bar.getBoundingClientRect().bottom - 30));
+          window.scrollTo(0, 0);
+          window.scrollTo(0, Math.ceil(trip * share));
+        }, p);
+        await settle(page);
+        await settle(page);
+        return page.evaluate(() => {
+          const head = document.querySelector('.fam a.wordmark');
+          const short = head.querySelector('.wordmark__short');
+          const slot = (getComputedStyle(short).display === 'none' ? head : short).getBoundingClientRect();
+          const word = document.querySelector('.hero__m1').getBoundingClientRect();
+          return {
+            word: { top: word.top, bottom: word.bottom }, slot: { top: slot.top, bottom: slot.bottom },
+            bar: document.querySelector('.fam').getBoundingClientRect().bottom, shown: getComputedStyle(head).visibility,
+          };
+        });
+      };
+      const inSlot = (s, what) => {
+        assert.ok(s.word.top >= s.slot.top - 4 && s.word.top <= s.slot.bottom, `${what}: the first word's top (${Math.round(s.word.top)} px) is in the slot (${Math.round(s.slot.top)} to ${Math.round(s.slot.bottom)} px)`);
+        assert.ok(s.word.bottom <= s.bar, `${what}: the first word ends inside the header`);
+      };
+      inSlot(await at(0.98), 'near the end');
+      const find = page.locator('.fam__find');
+      if (await find.isVisible()) {
+        const before = (await at(0)).bar;
+        await find.click();
+        const opened = await at(0.98);
+        assert.ok(opened.bar > before, 'the search row makes the header taller');
+        inSlot(opened, 'with the search row open');
+        await page.keyboard.press('Escape');
+      }
+      assert.equal((await at(1.1)).shown, 'visible', 'docked, the header\'s wordmark shows');
+      assert.equal((await at(0)).shown, 'hidden', 'at the top it waits hidden');
+      await at(1.1);
+      await page.focus('.fam a.wordmark');
+      assert.equal((await at(0)).shown, 'visible', 'focused, it stays shown at the top');
+      await assertQuiet(seen, `the masthead's trip at ${width} px`);
+    }));
+  });
+}

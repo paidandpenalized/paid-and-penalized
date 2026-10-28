@@ -2,8 +2,8 @@
 // of their names beside them), every number from the data; on the right the stage, which holds the two charts drawn at
 // build time (the scale bar for the first six steps, the shaded states map for the last three), the canvas slot the
 // story's script draws in, and the parts only that script uses (hidden here). The last step finds a hospital among its
-// peers: a family search (hub/client/search.js mounts it, as it does the bar's), and the example hospital's card. The
-// page renders through hubPage (hub/parts.js), so its bar holds the family search too. Without scripts the page is
+// peers: a family search over the hospitals (hub/client/search.js mounts it; the story's script follows the hospital
+// found in place), and the example hospital's card. The page renders through hubPage (hub/parts.js), so its bar holds the family search too. Without scripts the page is
 // complete: the charts stick beside the steps they belong to (hub/styles.css), or sit between them on a phone. With
 // them (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step.
 import { PEER_MODES, median } from '../../engine/js/peers.js';
@@ -11,11 +11,13 @@ import { STATE_NAMES } from '../../web/charts/geo.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT } from '../../web/programs.js';
 import { fillAround, fillCopy } from '../../web/render/components.js';
-import { capitalize, count, dollars, listText, money, noun, numberWord, pct } from '../../web/render/format.js';
+import { capitalize, count, listText, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
+import { cardModel, peersIn } from '../client/story/find.js';
+import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { EXAMPLE_CCN } from '../model.js';
 import { hubPage } from '../parts.js';
 import { barFigure } from './bar.js';
@@ -65,7 +67,7 @@ export function simpleFraction(x) {
   return best.away <= FRACTION_NEAR ? { part: best.part, whole: best.whole } : null;
 }
 
-// The masthead: the wordmark across the page (two spans, which the header's script later moves into the bar), the
+// The masthead: the wordmark across the page (two spans, which the page's script moves into the bar as it scrolls), the
 // tagline and byline between rules, and a heavy rule before the story.
 const hero = () => html`<section class="hero"><div class="wrap hero__in">
 <h1 class="hero__mark"><span class="hero__m1">${SHARED.wordmarkLead}</span> <span class="hero__m2">${SHARED.wordmarkPen}</span></h1>
@@ -128,60 +130,48 @@ ${card}`,
   ];
 }
 
-// Teaching status in words, by the master's value (null: not reported).
-const TEACHING = { major: 'teachMajor', minor: 'teachMinor', none: 'teachNone' };
-const teachingOf = (teach) => COPY[TEACHING[teach] ?? 'teachUnknown'];
-
-// A program's dollars on the card: signed whole dollars and the word (cut, bonus, no change), or "Not in this program".
-function programAmount(value, listed) {
-  if (!listed) return html`<dd class="v v--na">${COPY.notInProgram}</dd>`;
-  const word = value < 0 ? COPY.wordCut : value > 0 ? COPY.wordBonus : COPY.wordNone;
-  return html`<dd class="v${value < 0 ? ' v--pen' : ''}">${dollars(value, { sign: true })} ${word}</dd>`;
-}
-
 // Where the example card's "Open its hospital page" goes: the hospital's page across the programs (hub/hospital/page.js).
 // The one place it is set.
 export const exampleHref = (ccn) => hospitalPathOf('hub', ccn);
 
-// The example hospital's card (EXAMPLE_CCN): its name, place, size and teaching status, its net as a share of its pay
-// and in dollars, each program's dollars, how its state's hospitals fare, and the way to its own page. The script swaps
-// in the reader's hospital and peer group.
+// The example hospital's card (EXAMPLE_CCN): its name, place, size band and teaching status, its net as a share of its pay
+// and in dollars, each program's dollars, how its state's hospitals fare, and the way to its own page. Its words are
+// cardModel's (hub/client/story/find.js), which the story's script uses to rewrite it for the reader's hospital and peer
+// group, so the two never differ.
 function exampleCard({ hospitals, fy }) {
   const h = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
   if (!h?.est) throw new RangeError(`hub home: the example hospital ${EXAMPLE_CCN} has no estimate`);
-  const { est } = h;
-  const fyText = String(fy);
-  const teaching = teachingOf(h.teach);
-  const place = h.beds === null ? fill('cardPlaceNoBeds', { city: h.city, state: h.state, teaching: capitalize(teaching) })
-    : fill('cardPlace', { city: h.city, state: h.state, beds: noun(h.beds, COPY.bed, COPY.beds), teaching });
-  const netWords = fill(est.net < 0 ? 'cardNetCut' : est.net > 0 ? 'cardNetBonus' : 'cardNetZero', { fy: fyText });
-  const peers = hospitals.filter((x) => x.est && x.state === h.state);
-  const peerLine = say('cardPeers', { cutN: count(peers.filter((x) => x.est.net < 0).length), median: pct(median(peers.map((x) => x.est.share)), 2) },
-    { plain: { n: count(peers.length), group: STATE_NAMES[h.state] } });
-  const row = (key, value, listed) => html`<div class="card__row"><dt>${COPY[key]}</dt>${programAmount(value, listed)}</div>`;
-  return html`<div class="card" data-card data-ccn="${h.ccn}" aria-live="polite">
+  const mode = PEER_MODES[0];
+  const m = cardModel(h, peersIn(hospitals, h, mode), mode, fy);
+  if (m.href !== exampleHref(h.ccn)) throw new RangeError('hub home: the example card links somewhere other than the hospital\'s page');
+  const row = (r) => html`<div class="card__row"><dt>${r.label}</dt><dd class="v${r.kind ? ` v--${r.kind}` : ''}">${r.text}</dd></div>`;
+  return html`<div class="card" data-card data-ccn="${m.ccn}" aria-live="polite">
 <p class="card__ex">${COPY.cardExample} <span class="card__hint">${COPY.cardHint}</span></p>
-<p class="card__nm">${h.name}</p>
-<p class="card__loc">${place}</p>
-<p class="card__net"><span class="card__pct${est.net < 0 ? ' v--pen' : ''}">${pct(est.share, 2, { sign: true })}</span> <span class="card__usd">${dollars(est.net, { sign: true })}</span></p>
-<p class="card__netl">${netWords}</p>
-<dl class="card__rows" aria-label="${fill('cardRowsLabel', { fy: fyText })}">${row('programHrrp', est.hrrp, est.hrrpListed)}${row('programHac', est.hac, true)}${row('programVbp', est.hvbp, est.vbpListed)}</dl>
-<p class="card__peer">${peerLine}</p>
+<p class="card__nm">${m.name}</p>
+<p class="card__loc">${m.place}</p>
+<p class="card__net"><span class="card__pct${m.pen ? ' v--pen' : ''}">${m.pct}</span> <span class="card__usd">${m.usd}</span></p>
+<p class="card__netl">${m.netWords}</p>
+<dl class="card__rows" aria-label="${fill('cardRowsLabel', { fy: String(fy) })}">${m.rows.map(row)}</dl>
+<p class="card__peer">${m.peer}</p>
 <p class="card__next">${COPY.cardNext}</p>
-<a class="card__go" href="${exampleHref(h.ccn)}">${COPY.cardGo}<span class="ico ico--arrow" aria-hidden="true"></span></a>
+<a class="card__go" href="${m.href}">${COPY.cardGo}<span class="ico ico--arrow" aria-hidden="true"></span></a>
 </div>`;
 }
 
-// The peer toggle the last step's chart wears (hidden: the script shows it and moves the dots).
+// The peer toggle the last step's chart wears (hidden: the script shows it and moves the dots), with the hospital page's
+// notes for a toggle the hospital has no group for (hidden: the script shows the one that applies).
 const PEER_WORDS = { state: 'peerState', size: 'peerSize', teach: 'peerTeach' };
-const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id="peers-l">${COPY.peersLabel}</p><div class="seg" role="group" aria-labelledby="peers-l">${PEER_MODES.map((mode, i) => html`<button type="button" data-peer="${mode}" aria-pressed="${i === 0 ? 'true' : 'false'}">${COPY[PEER_WORDS[mode]]}</button>`)}</div></div>`;
+const PEER_WHY = { size: 'peerNoSize', teach: 'peerNoTeach' };
+const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id="peers-l">${COPY.peersLabel}</p><div class="seg" role="group" aria-labelledby="peers-l">${PEER_MODES.map((mode, i) => html`<button type="button" data-peer="${mode}" aria-pressed="${i === 0 ? 'true' : 'false'}">${COPY[PEER_WORDS[mode]]}</button>`)}</div>${Object.entries(PEER_WHY).map(([mode, key]) => html`<p class="peers__why" id="peers-no-${mode}" data-why="${mode}" hidden>${HOSPITAL_COPY[key]}</p>`)}</div>`;
 
 // The page. hospitals: hubHospitals; facts: storyFacts of them; states: stateTotals of them; shapes: the atlas's state
 // shapes (loadHub); assets: the build's (assets.shell holds the fiscal year and the hub asset's address); robots: the
 // page's robots value.
 export function homePage({ hospitals, facts, states, shapes, assets, robots }) {
   const { fy, hubUrl } = assets.shell;
-  const search = searchForm({ id: 'find', src: hubUrl, label: COPY.findLabel, find: COPY.findWord, findRest: COPY.findRest, placeholder: COPY.findPlaceholder, hero: true, hub: true });
+  // The last step's search: a family search box (hub/client/search.js mounts it) over the hospitals only, whose pick the
+  // story's script takes and follows in place.
+  const search = searchForm({ id: 'find', src: hubUrl, label: COPY.findLabel, find: COPY.findWord, findRest: COPY.findRest, placeholder: COPY.findPlaceholder, hero: true, hub: true, only: 'hospital' });
   const words = stepWords({ hospitals, facts, states, fy, search, card: exampleCard({ hospitals, fy }) });
   const zero = money(0);
   const railWords = STEPS.map((s) => fill(s.rail, s.slug === 'start' ? { zero } : {}));

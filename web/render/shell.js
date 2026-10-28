@@ -82,8 +82,9 @@ ${sections ? sectionMenu(sections, current) : ''}</header>`;
 // without JavaScript. id: the box's own prefix and the form's id (the bar's box is "omni", which the phone's search
 // button controls; a page's larger box in its hero is another); the visible find word begins the box's name, findRest
 // goes on for screen readers; label names the form and its list; hero: the larger box's class; hub: the box searches the
-// family's hospitals and states (data-hub, which hub/client/search.js mounts).
-export const searchForm = ({ id, src, label, find, findRest, placeholder, hero = false, hub = false }) => html`<form class="omni${hero ? ' omni--hero' : ''}" id="${id}" role="search" aria-label="${label}" data-src="${src}"${hub ? html` data-hub` : ''} hidden>
+// family's hospitals and states (data-hub, which hub/client/search.js mounts); only: the one kind of entry it lists
+// (data-only, e.g. 'hospital'), or null for every kind.
+export const searchForm = ({ id, src, label, find, findRest, placeholder, hero = false, hub = false, only = null }) => html`<form class="omni${hero ? ' omni--hero' : ''}" id="${id}" role="search" aria-label="${label}" data-src="${src}"${hub ? html` data-hub` : ''}${only ? html` data-only="${only}"` : ''} hidden>
 <label class="omni__field" for="${id}-q"><span class="omni__label cap">${find}<span class="vh"> ${findRest}</span></span><input id="${id}-q" type="search" role="combobox" aria-expanded="false" aria-controls="${id}-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${placeholder}"></label>
 <ul class="omni__list" id="${id}-list" role="listbox" aria-label="${label}" hidden></ul>
 <p class="vh" role="status" aria-live="polite"></p>

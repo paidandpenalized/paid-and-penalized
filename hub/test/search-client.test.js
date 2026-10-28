@@ -124,6 +124,26 @@ test('mountHubSearch: Enter opens the first match — a hospital\'s page, or a s
   assert.deepEqual(s.opened, ['/hospital/990001/', '/#state=OH']);
 });
 
+test('mountHubSearch: a form with data-only lists that kind alone; a pick a page\'s script cancels (hub:pick) opens nothing', async (t) => {
+  const s = comboForm(t);
+  s.form.dataset.src = '/assets/hub-hospitals.test.json';
+  s.form.dataset.only = 'hospital';
+  const opened = [];
+  mountHubSearch([s.form], { loadAsset: async () => ({ hospitals: SAMPLE }), open: (href) => opened.push(href) });
+  await s.type('ohio');
+  assert.deepEqual(s.texts(), ['Ohio Valley Example|Troy, NY|Hospital'], 'no state');
+  const picked = [];
+  s.form.addEventListener('hub:pick', (e) => {
+    picked.push(e.detail.href);
+    if (e.detail.href === '/hospital/990003/') e.preventDefault();
+  });
+  await s.input.listeners.keydown({ key: 'Enter', preventDefault() {} });
+  await s.type('exampleton');
+  await s.input.listeners.keydown({ key: 'Enter', preventDefault() {} });
+  assert.deepEqual(picked, ['/hospital/990003/', '/hospital/990001/']);
+  assert.deepEqual(opened, ['/hospital/990001/'], 'the canceled pick stays on the page');
+});
+
 test('mountHubSearch: a failed load says so in the box\'s status', async (t) => {
   const s = stage(t, { load: async () => { throw new Error('down'); } });
   await s.type('ohio');

@@ -70,7 +70,8 @@ export const COPY = typesetCopy({
   findLabel: 'Find your hospital',
   findWord: 'Find',
   findRest: 'your hospital among its peers',
-  findPlaceholder: 'Hospital name, city or state',
+  // Short enough to show whole in the box at every width, down to 320.
+  findPlaceholder: 'Hospital or city',
 
   // The scale bar (bar.js). Its caption ({n} hospitals), the pay and what the programs move ({gross}, {share}, with the
   // words that say so), the magnification ({times}), the two parts, and the image's takeaway for a screen reader.
@@ -97,36 +98,19 @@ export const COPY = typesetCopy({
   keyMaryland: 'Maryland: not in these programs',
   smallStates: 'Small states',
 
-  // The peer toggle the story's last step shows (a script's).
+  // The peer toggle the story's last step shows (a script's; a toggle the hospital has no group for is disabled, and the
+  // hospital page's note says why). The groups' names are the story's (hub/client/story/copy.js).
   peersLabel: 'Compare with',
   peerState: 'Same state',
   peerSize: 'Same size',
   peerTeach: 'Same teaching',
 
-  // The example card: its lead (the hint shows with the search), the hospital's place and size ({beds} beds, its
-  // {teaching} status), its net, the three programs, its peers, its page.
+  // The example card's own words: its lead (the hint shows with the search), the label of its programs' rows, the
+  // pointer to the hospital's page. What it says about the hospital is the story's (hub/client/story/copy.js), so the script that
+  // rewrites the card for a found hospital says it the same way.
   cardExample: 'An example.',
   cardHint: 'Search above for yours.',
-  cardPlace: '{city}, {state}. {beds}, {teaching}.',
-  cardPlaceNoBeds: '{city}, {state}. {teaching}.',
-  bed: 'bed',
-  beds: 'beds',
-  teachMajor: 'major teaching',
-  teachMinor: 'minor teaching',
-  teachNone: 'non-teaching',
-  teachUnknown: 'teaching status not reported',
-  cardNetCut: 'Estimated FY{fy} net cut, share of Medicare inpatient pay',
-  cardNetBonus: 'Estimated FY{fy} net bonus, share of Medicare inpatient pay',
-  cardNetZero: 'Estimated FY{fy} net: no change',
   cardRowsLabel: 'Estimated FY{fy} dollars by program',
-  programHrrp: 'Readmissions',
-  programHac: 'Hospital-acquired conditions',
-  programVbp: 'Value-based purchasing',
-  wordCut: 'cut',
-  wordBonus: 'bonus',
-  wordNone: 'no change',
-  notInProgram: 'Not in this program',
-  cardPeers: 'Of {n} {group} hospitals, {cutN} take a net cut; the median is {median}.',
   cardNext: 'Its hospital page shows every program among its peers, with a what-if.',
   cardGo: 'Open its hospital page',
 });

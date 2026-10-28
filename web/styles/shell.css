@@ -24,7 +24,12 @@
 .wordmark__pen { color: var(--pen); }
 /* The compact P&P mark (a phone's, and the bar's beside a followed hospital below 1100px): hidden until a width calls it. */
 .wordmark__short { display: none; padding: 7px 7px 5px; border: var(--rule) solid var(--ink); font: 400 1.1875rem/1 var(--font-display); letter-spacing: 0.02em; }
-.fam__tag { flex: none; max-width: none; padding-left: 14px; border-left: 1px solid var(--line); color: var(--pen-ink); font: 600 0.6875rem/1.25 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.fam__tag { flex: none; max-width: none; padding-left: 14px; border-left: 1px solid var(--line); color: var(--pen-ink); font: 600 0.6875rem/1.25 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; transition: opacity 0.3s; }
+/* The front page's slot: while its masthead travels up into the bar (hub/client/story/dock.js), the bar's wordmark
+   waits hidden and the tagline steps back; both show once it docks. Only that script sets the class, so without it
+   both show. */
+.dock-trip .fam .wordmark { visibility: hidden; }
+.dock-trip .fam__tag { opacity: 0; }
 @media (max-width: 1099px) { .fam__tag { display: none; } }
 
 /* The followed hospital: a torn-off record tab in the form's red, its name cut short before its net. */
@@ -187,6 +192,9 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 @media print {
   .fam { position: static; }
   .tabs, .fam__sub, .fam__find, .chip__x, .ft__fb { display: none !important; }
+  /* The front page's docking wordmark prints as it rests (its script's inline styles win without !important). */
+  .dock-trip .fam .wordmark { visibility: visible !important; opacity: 1 !important; }
+  .dock-trip .fam__tag { opacity: 1; }
 }
 
 /* Forced colors: an icon is a background, which the theme would repaint as the page's own background, so the icons
