@@ -32,9 +32,10 @@ function siteLink(id) {
 }
 const SITE_IDS = Object.keys(SITE.sites);
 
-// The front page (hub/home/page.js), from every hub hospital and the atlas's state shapes (data.js loadHub).
-function home({ hospitals, shapes, assets, robots }) {
-  return homePage({ hospitals, facts: storyFacts(hospitals), states: stateTotals(hospitals), shapes, assets, robots });
+// The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
+// loadHub).
+function home({ hospitals, facts, shapes, assets, robots }) {
+  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, assets, robots });
 }
 
 function methods(assets, robots) {
@@ -143,10 +144,10 @@ export function sitemapXml(paths) {
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
 // Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
-// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures.
-function hospitalPages(ctx, { hospitals, master, robots, never }) {
+// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
+// hospitals' story facts (storyFacts).
+function hospitalPages(ctx, { hospitals, facts, master, robots, never }) {
   if (!hospitals.length) return;
-  const facts = storyFacts(hospitals);
   for (const h of hospitals) {
     const r = h.est ? robots : never;
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null }) });
@@ -180,7 +181,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
   const hub = loadHub();
   const all = hubHospitals(hub);
-  ctx.emit({ path: '/', robots, text: home({ hospitals: all, shapes: hub.shapes, assets, robots }) });
+  const facts = storyFacts(all);
+  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
@@ -188,9 +190,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   }
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
-  const facts = storyFacts(all);
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
-  hospitalPages(ctx, { hospitals: hospitals ?? all, master: master ?? hub.master, robots, never });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, robots, never });
   hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
