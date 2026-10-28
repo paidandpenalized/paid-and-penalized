@@ -1,6 +1,7 @@
 // The chart kit's text, measured at build time, where there is no browser to measure in: a string's width in viewBox
-// units, never less than the browser draws it, so a layout built on it never overlaps; lines that fit a width; and a
-// label placed under a mark so it stays inside the drawing.
+// units, an upper bound on what Chrome draws for the labels the site sets today (WebKit can draw a short string up to
+// about 1% wider, which has never changed a layout), so a layout built on it does not overlap; lines that fit a width;
+// and a label placed under a mark so it stays inside the drawing.
 //
 // FACES: each character's advance in thousandths of the type size (em), measured once in Chrome (canvas, each glyph
 // repeated, rounded up) at the chart labels' weight in the site's body face (Libre Franklin 600) and in its metric
@@ -35,15 +36,15 @@ export function textWidth(text, size, { mono = false } = {}) {
   return size * KERNING * Math.max(...FACES.map((table) => chars.reduce((w, c) => w + (table.get(c) ?? WIDEST), 0)));
 }
 
-// text in lines no wider than max at size (body face), broken after a space or a run of hyphens ("Nashville-Davidson--"
-// keeps both hyphens on its line); a piece wider than max keeps a line of its own. Each line but the last keeps the
+// text in lines no wider than max at size (body face), broken after a run of spaces or of hyphens ("Nashville-Davidson--"
+// keeps both hyphens on its line, a double space both spaces); a piece wider than max keeps a line of its own. Each line but the last keeps the
 // space it broke at, so the lines joined are the text (a line's width is measured without it). A last line of one
 // word (a lone "area") takes the word before it too, where the line above has more and the two fit. Returns at least
 // one line.
 export function wrapText(text, max, size) {
   const fits = (pieces) => textWidth(pieces.join('').trimEnd(), size) <= max;
   const lines = [[]];
-  for (const piece of String(text).split(/(?<=\s)|(?<=-)(?!-)/)) {
+  for (const piece of String(text).split(/(?<=\s)(?!\s)|(?<=-)(?!-)/)) {
     const line = lines[lines.length - 1];
     if (line.length && !fits([...line, piece])) lines.push([piece]);
     else line.push(piece);

@@ -545,7 +545,7 @@ export const COPY = {
   groupTip: { text: '{group}: CMS cut {yes} of {decided} ({share}); middle score {median}', claim: null },
   // Where the score sits against the middle of the groups it belongs to (hospital-figures.js peersPosition): above in
   // all, some or none of them; none above is below them all, or at or below when it sits on a group's middle. {all}:
-  // figPeersEvery ("all eight"), or figPeersBoth for two groups.
+  // figPeersEvery ("all {k}": every one of its groups, counted), or figPeersBoth for two groups.
   figPeersEvery: { text: 'all {k}', claim: null },
   figPeersBoth: { text: 'both', claim: null },
   figPeersAboveAll: { text: 'Its score is above the middle in {all} groups it belongs to', claim: null },
