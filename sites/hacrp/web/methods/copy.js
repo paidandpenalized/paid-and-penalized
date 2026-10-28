@@ -377,7 +377,7 @@ export const COPY = {
   backtestPlaces: { text: "A state's or metro area's range adds up its cut hospitals' ranges, as if every estimate there erred the same way, so it is wider than the nation's.", claim: null },
   backtestMeasures: { text: "The same check for {n} of the figures the method makes, over the hospitals each applies to (the HAC cut over the hospitals CMS cut, the rest over all of them):", claim: null },
   backtestLimits: { text: "Its limits: it is one year's check, and hospitals whose fiscal year doesn't start in October go unchecked. And it is not an independent test of the teaching payments on Medicare Advantage stays: this site added them to the method after the check first ran, on these same hospitals, whose cost reports showed the cut taken on those payments too.", claim: null },
-  btBedsUnder: { text: 'under {n} beds', claim: null },
+  btBedsUnder: { text: 'fewer than {n} beds', claim: null },
   btBedsBetween: { text: '{lo} to {hi} beds', claim: null },
   btBedsOver: { text: '{n} beds or more', claim: null },
   btKindSchMdh: { text: 'sole community or Medicare-dependent', claim: null },
