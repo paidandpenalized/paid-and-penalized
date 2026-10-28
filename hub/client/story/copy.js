@@ -31,6 +31,10 @@ export const COPY = Object.freeze({
   startOne: '{n} hospitals, all at {zero}',
   atZero: '{n} at {zero}',
   hacOnly: '{n} with only the {cut} HAC cut',
+  // What each ink means after a gate.
+  keyCut: 'cut',
+  keyNone: 'no change',
+  keyBonus: 'bonus',
   netCut: '{n} net cut',
   netBonus: '{n} net bonus',
 

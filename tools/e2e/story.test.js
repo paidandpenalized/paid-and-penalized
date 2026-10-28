@@ -4,7 +4,8 @@
 // the server wrote it. Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, withPage } from './lib.js';
+import { audit } from './axe.js';
+import { CONCURRENCY, SCHEMES, assertQuiet, settle, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 
@@ -55,6 +56,28 @@ for (const width of [320, 390, 1280]) {
       await assertQuiet(seen, `the story at ${width} px`);
     }));
 
+    // Mid-scroll, between two steps (the words of both on screen, one being read and one not): every word still meets
+    // contrast. Reduced motion, so the colors have finished turning when axe looks.
+    for (const scheme of SCHEMES) {
+      it(`mid-scroll between two steps, ${scheme}: axe finds nothing`, () => withPage(tabs, { path: '/', scheme }, async (page) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+        await page.evaluate(() => {
+          const [a, b] = [...document.querySelectorAll('.story .step')].slice(2, 4);
+          const top = (el) => el.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo(0, (top(a) + top(b)) / 2);
+        });
+        await settle(page);
+        await settle(page);
+        const shown = await page.evaluate(() => [...document.querySelectorAll('.story .step__in')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.bottom > 0 && r.top < window.innerHeight;
+        }).length);
+        assert.ok(shown >= 2, `two steps' words on screen (${shown})`);
+        await audit(page, `the story mid-scroll at ${width} px, ${scheme}`);
+      }));
+    }
+
     it('without its data the page stays as the server wrote it: both drawings, no canvas, no live layout', () => withPage(tabs, { path: '/about/' }, async (page) => {
       await page.route('**/assets/hub-hospitals.*.json', (route) => route.fulfill({ status: 503, body: '' }));
       await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
@@ -64,7 +87,7 @@ for (const width of [320, 390, 1280]) {
         return {
           live: story.classList.contains('story--live'), canvas: story.querySelector('.stage__cv').hidden,
           bar: getComputedStyle(story.querySelector('.stage__panel--bar')).opacity, map: getComputedStyle(story.querySelector('.stage__panel--map')).opacity,
-          faded: [...story.querySelectorAll('.step__in')].filter((el) => el.style.opacity).length,
+          faded: story.querySelectorAll('.step.is-current').length,
         };
       });
       assert.deepEqual(s, { live: false, canvas: true, bar: '1', map: '1', faded: 0 });

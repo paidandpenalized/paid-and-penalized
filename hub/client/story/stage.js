@@ -15,7 +15,7 @@ import { count, money, pct } from '../../../web/client/format.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT } from '../../../web/programs.js';
 import { onThemeChange, readColors } from '../colors.js';
 import { COPY } from './copy.js';
-import { fitBox, stageGeometry } from './geometry.js';
+import { drawnDot, fitBox, stageGeometry } from './geometry.js';
 import { INK, PEN, REW, createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
@@ -37,9 +37,6 @@ const sweepTime = (f, fc) => (f <= fc ? (CROSS * f) / fc : CROSS + (1 - CROSS) *
 // Scenes that stand on the share axis, and the two the map's drawing serves.
 const AXIS = new Set(['machine', 'net', 'you']);
 const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
-// A dot drawn smaller than this many device pixels across is a square on the device's grid, so the smallest piles keep
-// a clear device pixel between dots instead of blurring into a bar.
-const SQUARE_BELOW = 2.5;
 
 // The stage over `canvas` (inside the stage element, `stage`):
 //   rows       the story's hospitals (layouts.js storyRows); facts: storyFacts of the hospitals; fy: the fiscal year;
@@ -355,7 +352,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.font = f;
     const widths = entries.map(([words]) => ctx.measureText(words).width);
     const total = widths.reduce((sum, w) => sum + w + 13, 0) + (entries.length - 1) * 16;
-    let at = align === 'center' ? x - total / 2 : x;
+    let at = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
     entries.forEach(([words, ink], k) => {
       dot(at + 4, y - 4.5, 4, ink);
       text(words, at + 13, y, f, color);
@@ -414,6 +411,12 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     }
     if (info.zero) note(say('atZero', { n: count(info.zero.n), zero }), info.zero.x, info.zero.y);
     if (info.only) note(say('hacOnly', { n: count(info.only.n), cut: rules.cut }), info.only.x - 5, info.only.y, 'right');
+    // After a gate: what each ink means, under the passed gates at the right (where no pile reaches that high).
+    if (L.scene === 'machine' && info.s > 0) {
+      const entries = [[say('keyCut'), colors.pen], [say('keyNone'), colors.neutral]];
+      if (info.s === 3) entries.push([say('keyBonus'), colors.rew]);
+      key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
+    }
     if (L.scene === 'net') {
       const f = font(g.narrow ? 11.5 : 13, 400, true);
       key([[say('netCut', { n: count(info.cut) }), colors.pen], [say('netBonus', { n: count(info.bonus) }), colors.rew]], g.scale.zM, info.top - (g.narrow ? 12 : 16), f, colors.ink, 'center');
@@ -421,7 +424,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = 1;
   }
 
-  // The dots, batched by ink and opacity (tenths). A small dot is a square on the device's grid.
+  // The dots, batched by ink and opacity (tenths). A small dot is a square on the device's grid (geometry.js drawnDot).
   function dots() {
     const buckets = new Map();
     for (let s = 0; s < S; s++) {
@@ -438,9 +441,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       ctx.beginPath();
       for (const s of list) {
         const r = CR[s];
-        const across = 2 * r * dpr;
-        if (across < SQUARE_BELOW) {
-          const side = Math.max(1, Math.floor(across));
+        const { square, side } = drawnDot(r, dpr);
+        if (square) {
           ctx.rect(Math.round(CX[s] * dpr - side / 2) / dpr, Math.round(CY[s] * dpr - side / 2) / dpr, side / dpr, side / dpr);
         } else {
           ctx.moveTo(CX[s] + r, CY[s]);

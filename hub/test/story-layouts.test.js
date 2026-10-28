@@ -11,7 +11,7 @@ import { EXAMPLE_CCN, hubHospitals, storyFacts } from '../model.js';
 import { decodeRows } from '../../web/client/hub-asset.js';
 import { shareDomain } from '../client/scale.js';
 import { BAR } from '../client/story/bar-frame.js';
-import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
+import { drawnDot, fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
 import { INK, NEUTRAL, PEN, REW, createLayouts, storyRows } from '../client/story/layouts.js';
 
 const hub = loadHub();
@@ -24,24 +24,27 @@ const domain = shareDomain(asset.hospitals);
 const example = asset.byCcn.get(EXAMPLE_CCN);
 const statePeers = rows.map((r) => r.h).filter((h) => h.state === example.state);
 
-// The header's height on a desktop (the stage sits under it), and the share of a phone's window the stage takes.
-const HEADER = 100;
+// The header's height on a desktop (the stage sits under it), and the share of a phone's window the stage takes, as the
+// page lays them out (measured in Chrome).
+const HEADER = 101.4;
 const PHONE_SHARE = 0.56;
 // The stage for a window: its size, whether the rail is hidden (its step's name then sits in the stage) and the device
-// pixel ratios such a screen has.
+// pixel ratios such a screen has. On a desktop the story's grid is the page's width (1,180 at most) less its gutters, the
+// rail (wide windows only), the text column and the 24px between text and stage.
 function stageFor(vw, vh) {
-  if (vw <= 760) return { W: vw, H: Math.round(vh * PHONE_SHARE), railHidden: true, dprs: [2, 3] };
-  // The story's grid: the page's width less its gutters, the rail (wide windows only) and the text column.
-  const content = Math.min(vw - 32, 1148);
+  if (vw <= 760) return { W: vw, H: vh * PHONE_SHARE, railHidden: true, dprs: [2, 3] };
+  const content = Math.min(vw, 1180) - 32 - 24;
   return vw >= 1080 ? { W: content - 150 - 400, H: vh - HEADER, railHidden: false, dprs: [1, 2] } : { W: content - 360, H: vh - HEADER, railHidden: true, dprs: [1, 2] };
 }
 
+// The brief's windows (320, 390, 1024 and 1440 wide, 640 and 900 tall) and the common desktop windows whose short heights
+// make the steepest pile tightest (a laptop's 1366×657 and 1280×720, a 1440 window with its browser's bars, 1024×768).
+const WINDOWS = [[320, 640], [320, 900], [390, 640], [390, 900], [1024, 640], [1024, 900], [1440, 640], [1440, 900],
+  [1366, 657], [1440, 790], [1280, 720], [1024, 768]];
 const SIZES = [];
-for (const vw of [320, 390, 1024, 1440]) {
-  for (const vh of [640, 900]) {
-    const st = stageFor(vw, vh);
-    for (const dpr of st.dprs) SIZES.push({ name: `${vw}×${vh} at ${dpr}x`, vw, vh, ...st, px: 1 / dpr });
-  }
+for (const [vw, vh] of WINDOWS) {
+  const st = stageFor(vw, vh);
+  for (const dpr of st.dprs) SIZES.push({ name: `${vw}×${vh} at ${dpr}x`, vw, vh, ...st, px: 1 / dpr, dpr });
 }
 
 // Every layout of the story at a size, in the order the stage builds them.
@@ -57,23 +60,31 @@ function all(size) {
   return { g, layouts: { bar, start, g1, g2, g3, net, map: L.layMap(false), mapfill: L.layMap(true), you: L.layYou(example, statePeers) } };
 }
 
-// The visible dots of a layout among ids from..to, by column: no two in a column nearer than 2r, no two columns nearer
-// than a pitch (2r at the least).
-function assertSeparate(L, from, to, what) {
+// The visible dots of a layout among ids from..to, as the stage draws them on a screen of dpr (geometry.js drawnDot): by
+// column, a whole number of device pixels between neighbours where the dots are squares on the device's grid, and at
+// least one device pixel of paper between two dots side by side or one above the other.
+function assertSeparate(L, from, to, dpr, what) {
   const byX = new Map();
+  let side = 0;
+  let square = false;
   for (let i = from; i < to; i++) {
     if (L.A[i] <= 0) continue;
+    const dot = drawnDot(L.R[i], dpr);
+    side = Math.max(side, dot.side);
+    square = square || dot.square;
     if (!byX.has(L.X[i])) byX.set(L.X[i], []);
-    byX.get(L.X[i]).push([L.Y[i], L.R[i]]);
+    byX.get(L.X[i]).push(L.Y[i]);
   }
+  const apart = (a, b, where) => {
+    const dp = Math.abs(b - a) * dpr;
+    if (square) assert.ok(Math.abs(dp - Math.round(dp)) < 1e-4, `${what}: ${where} ${dp} device pixels apart, not whole`);
+    assert.ok(dp - side >= 1 - 1e-4, `${what}: ${where}: ${side} device-pixel dots ${dp} device pixels apart touch`);
+  };
   const xs = [...byX.keys()].sort((a, b) => a - b);
-  for (let k = 1; k < xs.length; k++) {
-    const r = Math.max(byX.get(xs[k])[0][1], byX.get(xs[k - 1])[0][1]);
-    assert.ok(xs[k] - xs[k - 1] >= 2 * r - 1e-6, `${what}: columns at ${xs[k - 1]} and ${xs[k]} overlap`);
-  }
+  for (let k = 1; k < xs.length; k++) apart(xs[k - 1], xs[k], `columns at ${xs[k - 1]} and ${xs[k]}`);
   for (const col of byX.values()) {
-    col.sort((a, b) => a[0] - b[0]);
-    for (let k = 1; k < col.length; k++) assert.ok(col[k][0] - col[k - 1][0] >= col[k][1] + col[k - 1][1] - 1e-6, `${what}: two dots overlap in a column`);
+    col.sort((a, b) => a - b);
+    for (let k = 1; k < col.length; k++) apart(col[k - 1], col[k], 'two dots in a column');
   }
 }
 
@@ -92,18 +103,18 @@ for (const size of SIZES) {
     }
     for (const name of ['g1', 'g2', 'g3', 'net']) {
       assert.equal(layouts[name].info.pile.fits, true, `${name} fits its room`);
-      assertSeparate(layouts[name], 0, N, name);
+      assertSeparate(layouts[name], 0, N, size.dpr, name);
     }
     assert.equal(layouts.you.info.allPile.fits, true, 'everyone\'s swarm fits');
     assert.equal(layouts.you.info.peerPile.fits, true, 'the peers\' swarm fits');
-    assertSeparate(layouts.you, 0, N, 'you, everyone');
-    assertSeparate(layouts.you, N, 2 * N, 'you, the peers');
+    assertSeparate(layouts.you, 0, N, size.dpr, 'you, everyone');
+    assertSeparate(layouts.you, N, 2 * N, size.dpr, 'you, the peers');
     // The start block is one block of separate dots.
-    assertSeparate(layouts.start, 0, N, 'start');
+    assertSeparate(layouts.start, 0, N, size.dpr, 'start');
   });
 }
 
-const SIZE = SIZES.find((s) => s.vw === 390 && s.vh === 900 && s.px === 1 / 3);
+const SIZE = SIZES.find((s) => s.vw === 390 && s.vh === 900 && s.dpr === 3);
 const { g, layouts } = all(SIZE);
 const { zL, zR } = g.scale;
 const sideOf = (L, i) => (L.X[i] + L.R[i] <= zL + 1e-6 ? -1 : L.X[i] - L.R[i] >= zR - 1e-6 ? 1 : 0);

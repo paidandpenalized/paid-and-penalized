@@ -4,7 +4,7 @@
 //
 // A layout is { scene, X, Y, R, A, C, info }: typed arrays of length 2N (N hospitals, then their copies) for each dot's
 // center, radius, opacity and color code, plus what the scene's painter needs (lines, piles, label anchors).
-import { pileLayout } from '../pile.js';
+import { R_MIN, pileLayout } from '../pile.js';
 import { barDot, barHash, barOrder } from './bar-frame.js';
 import { barGeometry, gateLines, gateTop, mapGeometry } from './geometry.js';
 
@@ -31,8 +31,8 @@ export function storyRows(hospitals) {
 }
 
 // The piles' sizes per scene, narrow and wide: the largest pitch, and the space between dots (at least a device pixel, so
-// even the smallest dots stay apart on the screen). The smallest pitch is a CSS pixel.
-const D_MIN = 1;
+// even the smallest dots stay apart on the screen). The smallest pitch is a CSS pixel and two device pixels (a dot and a
+// gap); pileLayout also never goes below a dot of R_MIN, and widens a pile's bins rather than shrink past that.
 const PILE = {
   gate: { narrow: 2.6, wide: 3.8 },
   net: { narrow: 3.2, wide: 5.6 },
@@ -41,6 +41,7 @@ const PILE = {
 // A peer group's largest pitch by its size: a small group's dots can be larger.
 const peerMax = (n, narrow) => (n < 160 ? (narrow ? 5 : 8.5) : n < 700 ? (narrow ? 3.4 : 5.6) : (narrow ? 2.6 : 4.2));
 const gapFor = (g) => (d) => Math.max(g.px || 0.25, d * 0.24);
+const dMinFor = (g) => Math.max(1, 2 * (g.px || 0));
 
 // The layouts over rows (storyRows) on a stage (geometry.js stageGeometry), with the map's projected size (mapW by mapH):
 // { N, layBar, layStart, layGate, layNet, layMap, layYou }.
@@ -48,7 +49,8 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   const N = rows.length;
   const S = 2 * N;
   const index = new Map(rows.map((r, i) => [r.h, i]));
-  const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin: D_MIN, gap: gapFor(g), px: g.px, ...extra });
+  const gap = gapFor(g);
+  const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin: dMinFor(g), gap, px: g.px, ...extra });
   const size = (kind) => PILE[kind][g.narrow ? 'narrow' : 'wide'];
 
   function blank(scene, info = {}) {
@@ -106,8 +108,12 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const cols = Math.ceil(Math.sqrt(N * 2.6));
     const per = Math.ceil(N / cols);
     let d = Math.min(g.narrow ? 3.4 : 6.2, ((g.x1 - g.x0) * 0.6) / cols, (base - g.top - 60) / per);
-    if (g.px) d = Math.max(g.px, Math.floor(d / g.px + 1e-9) * g.px);
-    const r = Math.max(0.5, (d - gapFor(g)(d)) / 2);
+    if (g.px) d = Math.floor(d / g.px + 1e-9) * g.px;
+    // Never smaller than the piles' smallest separate dot.
+    const unit = g.px || 0.1;
+    d = Math.max(d, dMinFor(g));
+    while ((d - gap(d)) / 2 < R_MIN - 1e-9) d += unit;
+    const r = (d - gap(d)) / 2;
     const left = g.scale.zM - (cols * d) / 2;
     const L = blank('machine');
     rows.map((row, i) => ({ i, mid: row.mid })).sort((a, b) => a.mid - b.mid).forEach(({ i }, k) => {

@@ -160,7 +160,7 @@
 /* One sticky stage beside the steps, as tall as the window under the header: its two drawings stacked in it, under the
    canvas that moves the dots between them (the script fades each drawing in and out with its steps). The canvas fades
    in over the server's dots in the bar once it has drawn them in the same places. */
-.story--live > .stage { display: block; position: sticky; top: var(--stage-top); grid-column: 3; grid-row: 1 / -1; align-self: start; height: calc(100vh - var(--stage-top)); }
+.story--live > .stage { display: block; position: sticky; top: var(--stage-top); grid-column: 3; grid-row: 1 / -1; align-self: start; height: calc(100vh - var(--stage-top)); height: calc(100svh - var(--stage-top)); }
 .story--live .stage__panel { position: absolute; inset: 0; }
 .story--live .stage__panel.is-off { pointer-events: none; }
 .story--live:not(.story--drawn) .stage__panel--map { opacity: 0; }
@@ -174,6 +174,17 @@
 .story--live .smap .st { fill-opacity: calc(var(--t) * var(--fill, 1)); stroke-opacity: var(--fill, 1); }
 .story--live .smap .st--md { fill-opacity: var(--fill, 1); }
 .story--live .smap__land { stroke: var(--line); stroke-width: 0.7px; stroke-linejoin: round; stroke-opacity: calc(0.75 * (1 - var(--fill, 1))); vector-effect: non-scaling-stroke; }
+/* The steps' words: the step being read in full ink, the others in the faintest text ink (which still reads at 4.5:1),
+   easing between as the reader arrives (at once with less motion). Readers who ask for more contrast read every step in
+   full ink. */
+.story--live .step__in > h2, .story--live .step__in > p, .story--live .step__in > p * { transition: color 0.35s ease; }
+.story--live .cue__line { transition: background-color 0.35s ease; }
+@media (prefers-contrast: no-preference) {
+  .story--live > .step:not(.is-current) .step__in > h2, .story--live > .step:not(.is-current) .step__in > p,
+  .story--live > .step:not(.is-current) .step__in > p * { color: var(--ink-3); }
+  .story--live > .step:not(.is-current) .cue__line { background: var(--ink-3); }
+  .story--live > .step:not(.is-current) .cue__line::after { border-top-color: var(--ink-3); }
+}
 /* The step's name where the rail is hidden ("3/9 Readmissions"), in the stage's top left. */
 .nowstep { display: none; }
 .nowstep li { display: none; max-width: none; line-height: 1; }
@@ -235,15 +246,9 @@
   .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { min-height: 0; padding-top: 24px; }
 }
 
-/* Readers who ask for more contrast read every step's words in full ink. */
-@media (prefers-contrast: more) {
-  .story--live .step__in { opacity: 1 !important; }
-}
-
 /* Forced colors: the meaning inks and the hatch keep their colors (each state's sign is in its title and the key's
    words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
 @media (forced-colors: active) {
-  .story--live .step__in { opacity: 1 !important; }
   .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
   .sbar__frame, .sbar__mag, .smap__hatch { stroke: CanvasText; }
   .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }

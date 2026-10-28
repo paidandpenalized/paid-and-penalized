@@ -31,6 +31,15 @@ export function stageGeometry({ W, H, narrow = W < NARROW_BELOW, railHidden = fa
   };
 }
 
+// A dot as the stage draws it on a screen of dpr device pixels to a CSS pixel: under SQUARE_BELOW device pixels across,
+// a square of whole device pixels (at least one) on the device's grid, so the smallest piles keep a clear device pixel
+// between dots instead of blurring into a bar; larger, a circle. side: its size across in device pixels.
+export const SQUARE_BELOW = 2.5;
+export function drawnDot(r, dpr) {
+  const across = 2 * r * dpr;
+  return across < SQUARE_BELOW ? { square: true, side: Math.max(1, Math.floor(across)) } : { square: false, side: across };
+}
+
 // A gate's line when passed (stacked at the top, in order) and when still waiting (stacked above the axis).
 export const gateTop = (g, k) => g.top + 16 + (k - 1) * g.pitch;
 export const gateBottom = (g, k) => g.bottom - (GATES - k) * g.pitch;

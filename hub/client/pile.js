@@ -1,83 +1,112 @@
 // The dot histogram the hub's charts share (the home story's piles, the hospital page's swarm): one dot per hospital,
-// stacked in columns one dot wide along the share axis (scale.js), so a dot never hides another and a pile never turns
-// into a solid bar. The dots shrink until the tallest column fits; exactly $0 has the axis's gutter to itself and wraps
-// across as many columns as the gutter holds. Pure.
+// stacked in bins along the share axis (scale.js), so a dot never hides another and a pile never turns into a solid bar.
+// The dots shrink until the tallest bin fits, but never below a dot a reader can still tell apart (R_MIN across, and a
+// gap of at least a device pixel). When even those dots cannot fit, the bins widen instead: each holds m dot-wide
+// sub-columns side by side (m = 1, 2, 3, ... the smallest that fits), filled a row at a time, so a spike stands as a
+// wider, shorter block of separate dots and no hospital is hidden or overlapped. Exactly $0 has the axis's gutter to
+// itself and wraps across as many columns as the gutter holds. Pure.
 
 // How much the pitch shrinks per try when no device pixel is given.
 const STEP = 0.1;
-// The smallest dot radius drawn, in pixels.
-const R_MIN = 0.4;
+// The smallest dot radius drawn, in pixels: a pitch whose dot would be smaller does not fit.
+export const R_MIN = 0.4;
+// The most sub-columns a bin widens to before the pile gives up on fitting (never reached by the story's piles).
+const M_MAX = 64;
 
-// Each item into its column at pitch d: { cols: Map(key -> { x, list, zero }), max: the tallest column's count in the
-// mode's terms (mirror: the rows the taller half needs), zeros }.
-function binCols(items, scale, d, mirror) {
-  const cols = new Map();
+// Each item into its bin at pitch d, m sub-columns a bin (so bins are m·d wide, and their centers are where a column of
+// that width would be): { bins: [{ x, m, list, zero }], height: the tallest bin's rows times d in the mode's terms
+// (mirror: the rows its taller half needs), zeros }. $0's columns stay one dot wide, wrapped across the gutter.
+function binItems(items, scale, d, m, mirror) {
+  const byKey = new Map();
   const zeros = [];
   const { zL, zR, zM } = scale;
+  const w = m * d;
   for (const it of items) {
     if (it.v === 0) {
       zeros.push(it);
       continue;
     }
     const x = scale.xs(it.v);
-    const c = Math.floor(((it.v < 0 ? zL - x : x - zR) / d) + 1e-9);
+    const c = Math.floor(((it.v < 0 ? zL - x : x - zR) / w) + 1e-9);
     const key = it.v < 0 ? -1 - c : 1 + c;
-    let col = cols.get(key);
-    if (!col) cols.set(key, (col = { x: it.v < 0 ? zL - (c + 0.5) * d : zR + (c + 0.5) * d, list: [], zero: false }));
-    col.list.push(it);
+    let bin = byKey.get(key);
+    if (!bin) byKey.set(key, (bin = { x: it.v < 0 ? zL - (c + 0.5) * w : zR + (c + 0.5) * w, m, list: [], zero: false }));
+    bin.list.push(it);
   }
+  const bins = [...byKey.values()];
   if (zeros.length) {
     const n = Math.max(1, Math.floor((zR - zL) / d + 1e-9));
+    const cols = Array.from({ length: n }, (_, j) => ({ x: zM + (j - (n - 1) / 2) * d, m: 1, list: [], zero: true }));
     zeros.sort((a, b) => a.key - b.key);
-    for (let j = 0; j < n; j++) cols.set(`z${j}`, { x: zM + (j - (n - 1) / 2) * d, list: [], zero: true });
-    zeros.forEach((it, k) => cols.get(`z${k % n}`).list.push(it));
+    zeros.forEach((it, k) => cols[k % n].list.push(it));
+    bins.push(...cols);
   }
-  let max = 0;
-  for (const col of cols.values()) max = Math.max(max, mirror ? 2 * Math.floor(col.list.length / 2) + 1 : col.list.length);
-  return { cols, max, zeros: zeros.length };
+  let rows = 0;
+  for (const bin of bins) {
+    const r = Math.ceil(bin.list.length / bin.m);
+    rows = Math.max(rows, mirror ? 2 * Math.floor(r / 2) + 1 : r);
+  }
+  return { bins, height: rows * d, rows, zeros: zeros.length };
 }
 
 // The pile of items ({ id, v: percent, key }) on the scale (shareScale), between `top` and `base` (pixels, base below):
-//   dMax, dMin  the pitch's range: the largest that fits the tallest column is used, never below dMin;
+//   dMax, dMin  the pitch's range: the largest that fits is used, never below dMin, nor where its dot would be under
+//               R_MIN across;
 //   gap         the space between neighbouring dots: a number, or a function of the pitch;
-//   mirror      columns centered on the middle line (a swarm) rather than standing on the base;
+//   mirror      bins centered on the middle line (a swarm) rather than standing on the base;
 //   px          a device pixel: the pitch is then a whole number of device pixels, so dots drawn on the device's grid
 //               keep equal gaps.
-// Within a column, items stack in key order (the lowest key at the base, or at the middle when mirrored, then
-// alternating below and above). Returns { d, r, pos: Map(id -> { x, y }), cols: [{ x, n, top, bottom, zero }],
-// zeroCount, fits }. When even dMin cannot fit the tallest column, fits is false and the overfull columns are packed
-// closer than a pitch (their dots overlap) so the pile stays inside; callers size their piles so that never happens.
+// Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
+// below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
+// top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when even M_MAX sub-columns at
+// the smallest pitch cannot fit (the overfull bins are then packed closer than a pitch so the pile stays inside).
 export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0 }) {
   const avail = base - top;
-  const step = px || STEP;
-  const steps = Math.floor(dMax / step + 1e-9);
+  const gapOf = (d) => (typeof gap === 'function' ? gap(d) : gap);
+  // The pitches to try, largest first: whole device pixels (or tenths) from dMax down to dMin, while a dot keeps R_MIN.
+  const pitches = [];
+  const steps = Math.floor(dMax / (px || STEP) + 1e-9);
+  for (let i = 0; ; i++) {
+    const d = px ? (steps - i) * px : Math.round((dMax - i * STEP) * 1e6) / 1e6;
+    if (d < dMin - 1e-9 || (d - gapOf(d)) / 2 < R_MIN - 1e-9) break;
+    pitches.push(d);
+  }
+  if (!pitches.length) throw new RangeError(`pileLayout: no pitch from ${dMax} down to ${dMin} gives a dot of ${R_MIN}`);
   let res = null;
   let d = 0;
-  for (let i = 0; ; i++) {
-    d = px ? (steps - i) * px : Math.round((dMax - i * STEP) * 1e6) / 1e6;
-    res = binCols(items, scale, d, mirror);
-    const next = px ? (steps - i - 1) * px : dMax - (i + 1) * STEP;
-    if (res.max * d <= avail + 1e-9 || next < dMin - 1e-9) break;
+  let m = 1;
+  search: for (; m <= M_MAX; m++) {
+    for (const pitch of pitches) {
+      d = pitch;
+      res = binItems(items, scale, d, m, mirror);
+      if (res.height <= avail + 1e-9) break search;
+    }
   }
-  const g = typeof gap === 'function' ? gap(d) : gap;
-  const r = Math.max(R_MIN, (d - g) / 2);
-  const fits = res.max * d <= avail + 1e-9;
+  if (m > M_MAX) m = M_MAX;
+  const fits = res.height <= avail + 1e-9;
+  const r = (d - gapOf(d)) / 2;
   const mid = (base + top) / 2;
   const pos = new Map();
-  const cols = [];
-  for (const col of res.cols.values()) {
-    const n = col.list.length;
-    const rows = mirror ? 2 * Math.floor(n / 2) + 1 : n;
-    // An overfull column (only when nothing fits) packs its dots closer, keeping them inside.
-    const sp = rows * d <= avail + 1e-9 || rows < 2 ? d : (avail - d) / (rows - 1);
-    col.list.sort((a, b) => a.key - b.key);
-    col.list.forEach((it, k) => {
-      const y = mirror ? mid + (k % 2 ? (k + 1) / 2 : -k / 2) * sp : base - d / 2 - k * sp;
-      pos.set(it.id, { x: col.x, y });
+  const cols = new Map();
+  for (const bin of res.bins) {
+    const rows = Math.ceil(bin.list.length / bin.m);
+    const need = mirror ? 2 * Math.floor(rows / 2) + 1 : rows;
+    // An overfull bin (only when nothing fits) packs its rows closer, keeping them inside.
+    const sp = need * d <= avail + 1e-9 || need < 2 ? d : (avail - d) / (need - 1);
+    bin.list.sort((a, b) => a.key - b.key);
+    bin.list.forEach((it, k) => {
+      const row = Math.floor(k / bin.m);
+      const j = k % bin.m;
+      const x = bin.x + (j - (bin.m - 1) / 2) * d;
+      const y = mirror ? mid + (row % 2 ? (row + 1) / 2 : -row / 2) * sp : base - d / 2 - row * sp;
+      pos.set(it.id, { x, y });
+      const col = cols.get(x);
+      if (col) {
+        col.n += 1;
+        col.top = Math.min(col.top, y - d / 2);
+        col.bottom = Math.max(col.bottom, y + d / 2);
+      } else cols.set(x, { x, n: 1, top: y - d / 2, bottom: y + d / 2, zero: bin.zero });
     });
-    cols.push(mirror
-      ? { x: col.x, n, top: mid - Math.floor((n - 1) / 2) * sp - d / 2, bottom: mid + Math.floor(n / 2) * sp + d / 2, zero: col.zero }
-      : { x: col.x, n, top: base - n * sp, bottom: base, zero: col.zero });
   }
-  return { d, r, pos, cols, zeroCount: res.zeros, fits };
+  return { d, r, m, pos, cols: [...cols.values()], zeroCount: res.zeros, fits };
 }
