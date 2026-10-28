@@ -67,15 +67,18 @@ function live(page, { hospitals, h, fy, still }) {
   for (const note of page.querySelectorAll('[data-peer-note]')) note.hidden = false;
   setBar();
 
-  // One share axis for the swarm and the strips, wide enough for every figure the what-if can show for this hospital, so a
-  // hypothetical never sits pinned at the axis's end and a drag reaches each factor's ends. It is fixed for the page: an
-  // axis that grew as a drag left it would move every dot, and the value, under the pointer.
-  const domain = shareDomain(hospitals, reach(h, { vbpMax: vbpMaxOf(hospitals) }));
+  // The share axis: the swarm's holds every hospital's actual figures (domain); the strips' also every figure the
+  // what-if can show for this hospital (wide), so a hypothetical never sits pinned at the axis's end and a drag reaches
+  // each factor's ends. The strips' is fixed for the page: an axis that grew as a drag left it would move every dot,
+  // and the value, under the pointer. The swarm, which no drag holds, keeps its finer axis and glides to the wide one only
+  // while a hypothetical net lies past its own.
+  const domain = shareDomain(hospitals);
+  const wide = shareDomain(hospitals, reach(h, { vbpMax: vbpMaxOf(hospitals) }));
   const swarmEl = $('[data-swarm]');
-  const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, fill, fy, group: first.group, still });
+  const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, wide, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');
   if (note) note.hidden = false;
-  const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain, fill, still, handles: ROWS.map((r) => r.id) });
+  const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain: wide, fill, still, handles: ROWS.map((r) => r.id) });
   const whatIf = mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group: first });
 
   const details = $('[data-peer-table]');

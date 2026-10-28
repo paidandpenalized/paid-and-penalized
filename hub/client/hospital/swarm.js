@@ -17,7 +17,7 @@ import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
-import { shareScale, wholePercents } from '../scale.js';
+import { shareScale, whatIfAxis, wholePercents } from '../scale.js';
 // The move between two groups: its length (ms) and how much of it the dots' start times spread over.
 const MOVE = 700;
 const SPREAD = 0.2;
@@ -35,15 +35,16 @@ const NARROW = { x: 4, gutter: 12, H: 376, pTop: 30, pBot: 166, aTop: 228, aBot:
 // mountSwarm(el, options): el is the page's empty [data-swarm]. Options:
 //   hospitals  every decoded hospital (web/client/hub-asset.js); those with an estimate are drawn
 //   h          this hospital (one with an estimate); peers: its group (h among them); domain: the share axis's [lo, hi]
+//   wide       the axis that also holds every net the what-if can show for h (the strips'), which the swarm glides to
+//              while a hypothetical net lies past its own (scale.js whatIfAxis)
 //   fill       the page's copy filler; fy: the fiscal year (a string); group: the group's name; still: reduced motion
 // Returns { setPeers(peers, group), setHypothetical(pct | null) }.
-export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, still }) {
+export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fill, fy, group, still }) {
   const rows = hospitals.filter((x) => x.est);
   const N = rows.length;
   const S = 2 * N;
   const self = rows.indexOf(h);
   const V = Float32Array.from(rows, (x) => x.est.pct.net);
-  const TICKS = wholePercents(domain);
   const KEY = Float32Array.from(rows, (x) => hashOf(x.ccn));
   const C = Uint8Array.from(rows, (x) => signCode(x.est.net));
   // Where each dot is now, where it was when the move began, and where it is going.
@@ -76,6 +77,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
   let picked = -1;
   let tapped = -1;
   let hypo = null;
+  // The axis drawn now (domain, or wide during a what-if past it) and its ticks.
+  let axisOf = domain;
+  let ticks = wholePercents(domain);
   let order = [];
   let colors = readColors();
   let fonts = readFonts();
@@ -129,8 +133,11 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(m.H * dpr);
     canvas.style.height = `${m.H}px`;
-    scale = shareScale({ x0: m.x, x1: W - m.x, gutter: m.gutter, domain, px: 1 / dpr });
+    rescale();
   }
+  const rescale = () => {
+    scale = shareScale({ x0: m.x, x1: W - m.x, gutter: m.gutter, domain: axisOf, px: 1 / dpr });
+  };
 
   function settle() {
     CX.set(TX);
@@ -215,7 +222,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     ctx.fillStyle = colors.paper2;
     ctx.fillRect(zL, m.pTop - 6, zR - zL, base - m.pTop + 6);
     const tick = font(W < NARROW_BELOW ? 10 : 11, 400, true);
-    for (const v of TICKS) {
+    for (const v of ticks) {
       const x = scale.xs(v);
       if (v !== 0) {
         ctx.globalAlpha = 0.45;
@@ -341,7 +348,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    text(fill('wiMark'), x, CY[N + self] + r + 20, font(12, 700), colors.ink, 'center', true);
+    // The label under it, held inside the canvas at the axis's ends (the deepest what-if sits near one).
+    const f = font(12, 700);
+    ctx.font = f;
+    const label = fill('wiMark');
+    const half = ctx.measureText(label).width / 2;
+    text(label, Math.min(Math.max(x, m.x + half), W - m.x - half), CY[N + self] + r + 20, f, colors.ink, 'center', true);
   }
 
   function draw() {
@@ -519,12 +531,23 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
       layout();
       move();
     },
-    // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand.
+    // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand. A net past the
+    // axis widens it to `wide` and the dots glide there; it narrows again when the what-if ends.
     setHypothetical(pct) {
       const next = Number.isFinite(pct) ? pct : null;
       if (next === hypo) return;
       hypo = next;
-      if (!moving) draw();
+      const want = whatIfAxis(next, { actual: domain, wide, now: axisOf });
+      if (want === axisOf) {
+        if (!moving) draw();
+        return;
+      }
+      axisOf = want;
+      ticks = wholePercents(want);
+      tip.hidden = true;
+      rescale();
+      layout();
+      move();
     },
   };
 }

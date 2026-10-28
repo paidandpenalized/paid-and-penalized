@@ -23,6 +23,11 @@ export function shareDomain(hospitals, extra = []) {
   return [Math.floor((lo - PAD) * PER + 1e-9) / PER, Math.ceil((hi + PAD) * PER - 1e-9) / PER];
 }
 
+// The axis a chart under a what-if draws (each a domain [lo, hi]): its own (actual) while there is no hypothetical value
+// (pct null) or the value lies on it; wide once a value lies past it, kept (now: the axis drawn so far) until the what-if
+// ends, so the axis changes at most twice in a what-if, never back and forth with each value.
+export const whatIfAxis = (pct, { actual, wide, now }) => (pct === null ? actual : pct < actual[0] || pct > actual[1] ? wide : now);
+
 // The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand.
 export function wholePercents([lo, hi]) {
   const out = [];
