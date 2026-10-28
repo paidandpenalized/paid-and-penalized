@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { netShare, programDollars } from '../../engine/js/dollars/whatif.js';
+import { LISTED_PROGRAMS } from '../../web/site.js';
 import { loadHub } from '../data.js';
 import { EXAMPLE_CCN, exampleRule, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
 
@@ -196,6 +197,11 @@ test('exampleRule on invented hospitals: the share nearest the median among the 
   // The same distance from the median on either side: the lower CCN.
   assert.equal(exampleRule([at('990010', -0.003), at('990009', -0.003)]), '990009');
   assert.equal(exampleRule([fake('990011', 'ZZ', null)]), null);
+});
+
+test('shellFacts has a figure for exactly the programs the registry lists (the footer reads one per listed program)', () => {
+  const { programs } = shellFacts({ facts, builtAt: hub.builtAt, fy: hub.fy });
+  assert.deepEqual(Object.keys(programs), LISTED_PROGRAMS.map((p) => p.id));
 });
 
 test('shellFacts: numbers for the footer and the tabs, and the day the estimates changed', () => {

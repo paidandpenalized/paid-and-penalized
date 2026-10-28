@@ -306,6 +306,15 @@ test('shell: the footer is one numbered form row (programs, the site, data as of
   assert.ok(foot.indexOf('class="ft__base"') > foot.indexOf('class="form ft"'));
 });
 
+test('shell: a listed program with no figure in the shell\'s facts stops the page with a message naming it (never a bare TypeError)', () => {
+  const { shell } = ASSETS;
+  for (const p of LISTED_PROGRAMS) {
+    const programs = Object.fromEntries(Object.entries(shell.programs).filter(([id]) => id !== p.id));
+    const bad = { ...ASSETS, shell: { ...shell, programs } };
+    assert.throws(() => page({ ...PAGE, assets: bad }), (e) => e instanceof RangeError && /^familyFooter: /.test(e.message) && e.message.includes(`"${p.id}"`), p.id);
+  }
+});
+
 test('shell: header and footer show no email address and promise no reply, fix or deletion', () => {
   // The house words' promise patterns (web/test/house-words.test.js), over what the shell shows.
   const PROMISES = [/\b(within|business days?|promptly|as soon as)\b/i, /\bwe will (reply|respond|fix|delete)\b/i, /\b(delete|remove) your\b/i];

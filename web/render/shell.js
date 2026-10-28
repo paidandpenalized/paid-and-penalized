@@ -104,6 +104,8 @@ const footField = (no, label, body, cls) => html`<div class="field ft__f ${cls}"
 // No email address and no promise of a reply, a fix or a deletion.
 export function familyFooter({ feedback, shell }) {
   const { fy, hospitals, changed, programs } = shell;
+  // A listed program with no figure is a registry edit the facts (hub/model.js shellFacts) did not follow: say which.
+  for (const p of LISTED_PROGRAMS) if (!Object.hasOwn(programs, p.id)) throw new RangeError(`familyFooter: the shell's facts have no figure for the listed program "${p.id}" (hub/model.js shellFacts)`);
   const fyText = String(fy);
   // Each figure is an estimate for the fiscal year, said to a screen reader beside it (field 3 says so on screen).
   const estimated = fill('footEstimated', { fy: fyText });
