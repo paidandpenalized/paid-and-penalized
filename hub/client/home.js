@@ -14,12 +14,15 @@ import { followedCcn } from '../../web/client/follow.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { storyFacts } from '../model.js';
 import { shareDomain } from './scale.js';
+import { mountDock } from './story/dock.js';
 import { mountFind } from './story/find.js';
 import { storyRows } from './story/layouts.js';
 import { mountMap, stateFromHash } from './story/map.js';
 import { createStage } from './story/stage.js';
 import { mountSteps } from './story/steps.js';
 
+// The masthead docks into the header as the page scrolls (story/dock.js); it needs nothing from the data.
+mountDock();
 const story = document.querySelector('[data-story]');
 if (story) start(story);
 

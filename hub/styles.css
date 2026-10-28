@@ -24,6 +24,13 @@
 .hero__by { color: var(--ink-2); font: 400 var(--fs-sm)/1.45 var(--font-type); }
 .hero__by a { color: var(--ink); text-decoration-color: var(--pen); }
 .hero__rule { margin: 22px 0 0; border: 0; border-top: 5px double var(--ink); }
+/* The masthead's trip into the header (hub/client/story/dock.js sets the classes and each word's transform). While the
+   words are away from home they draw over the sticky header (.fam, z-index 20; nothing between them and the page's
+   root makes a stacking context), haloed in the paper so the tabs they cross don't run into their letters (a box of
+   paper would show against the page's grain), and take no pointer. */
+.hero__mark > span { transform-origin: 0 0; }
+.dock-moving .hero__mark { position: relative; z-index: 21; pointer-events: none; }
+.dock-moving .hero__mark > span { text-shadow: 0 0 0.03em var(--paper), 0 0 0.03em var(--paper), 0 0 0.03em var(--paper); will-change: transform, opacity; }
 
 /* ---------- the story: the rail, the steps' column and the stage, on the page's grid ---------- */
 /* --stage-top: where the rail and the charts stick, under the sticky header (its height, from web/client/topbar.js, or

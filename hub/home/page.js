@@ -67,7 +67,7 @@ export function simpleFraction(x) {
   return best.away <= FRACTION_NEAR ? { part: best.part, whole: best.whole } : null;
 }
 
-// The masthead: the wordmark across the page (two spans, which the header's script later moves into the bar), the
+// The masthead: the wordmark across the page (two spans, which the page's script moves into the bar as it scrolls), the
 // tagline and byline between rules, and a heavy rule before the story.
 const hero = () => html`<section class="hero"><div class="wrap hero__in">
 <h1 class="hero__mark"><span class="hero__m1">${SHARED.wordmarkLead}</span> <span class="hero__m2">${SHARED.wordmarkPen}</span></h1>
