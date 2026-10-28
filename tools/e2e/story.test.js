@@ -37,6 +37,29 @@ async function readStep(page, i) {
   });
 }
 
+// A 1x screen zoomed out to 50% (devicePixelRatio 0.5): the story lays out as at 1x and runs every step without error.
+describe('the story zoomed out to 50%', () => {
+  it('every step draws, nothing throws', async () => {
+    const context = await shared.browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 0.5, reducedMotion: 'reduce' });
+    try {
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(e.message));
+      await page.goto(new URL('/', shared.site.base).href, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      assert.equal(await page.evaluate(() => window.devicePixelRatio), 0.5);
+      for (let i = 0; i < 9; i++) {
+        const s = await readStep(page, i);
+        assert.equal(s.step, i);
+        assert.ok(s.painted > 1000, `step ${i}: the canvas holds the dots`);
+      }
+      assert.deepEqual(errors, []);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
 for (const width of [320, 390, 1280]) {
   describe(`the story at ${width} px`, { concurrency: CONCURRENCY }, () => {
     const tabs = useContext(shared, { width });

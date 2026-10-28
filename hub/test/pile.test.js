@@ -150,15 +150,38 @@ test('pileLayout uses the largest pitch that fits, and dMax when every column fi
   assert.ok(fit.fits && fit.m === 1 && fit.d * 20 <= 50 + 1e-9 && (fit.d + 0.1) * 20 > 50, `pitch ${fit.d}`);
 });
 
-test('pileLayout never draws a dot under R_MIN: a pitch whose dot would be smaller is not tried', () => {
+test('pileLayout never draws a dot under R_MIN: a pitch whose dot would be smaller is not tried, and nothing throws', () => {
   const scale = shareScale({ x0: 0, x1: 600, gutter: 20, domain: [-2, 2], px: 1 });
   const tall = Array.from({ length: 200 }, (_, id) => ({ id, v: -1, key: id }));
   // At 1px a pitch of 1 leaves no dot beside a 1px gap: the smallest is 2, and the bin widens from there.
   const layout = pileLayout(tall, scale, { base: 100, top: 0, dMax: 3, dMin: 1, gap: 1, px: 1 });
   assert.equal(layout.d, 2);
   assert.ok(layout.r >= R_MIN && layout.m === 4 && layout.fits, `${layout.d} ${layout.r} ${layout.m}`);
-  assert.throws(() => pileLayout(tall, scale, { base: 100, top: 0, dMax: 1, dMin: 1, gap: 1, px: 1 }), RangeError);
+  // A range with no such pitch (dMax under it) does not throw: it takes the smallest pitch that keeps a dot, and widens.
+  const low = pileLayout(tall, scale, { base: 100, top: 0, dMax: 1, dMin: 1, gap: 1, px: 1 });
+  assert.deepEqual([low.d, low.r, low.fits], [2, 0.5, true]);
 });
+
+// A screen zoomed out below 1x: a device pixel of 2 (0.5x) or 3 CSS pixels (0.33x), so the smallest separate dot needs a
+// pitch above dMax. Nothing throws; every dot is placed, inside the room and separate as drawn.
+for (const px of [2, 3]) {
+  test(`pileLayout with a device pixel of ${px} CSS pixels: the smallest drawable pitch, bins widened, every dot separate`, () => {
+    const scale = shareScale({ x0: 40, x1: 548, gutter: 24, domain: [-3.9, 3.2], px });
+    // Room enough for $0's column, which cannot widen past the gutter.
+    const opts = { base: 62 + 340 * px, top: 62, dMax: 3.8, dMin: Math.max(1, 2 * px), gap: (d) => Math.max(px, d * 0.24), px };
+    for (const mirror of [false, true]) {
+      const layout = pileLayout(ITEMS, scale, { ...opts, mirror });
+      assert.equal(layout.fits, true);
+      assert.ok(layout.d >= opts.dMin && layout.r >= R_MIN);
+      check(layout, ITEMS, { ...opts, mirror }, scale);
+    }
+    // In a short room nothing throws either: the gutter's columns, which cannot widen, are packed closer and the pile
+    // stays inside.
+    const short = pileLayout(ITEMS, scale, { ...opts, base: 600 });
+    assert.equal(short.pos.size, ITEMS.length);
+    for (const { x, y } of short.pos.values()) assert.ok(y - short.r >= 62 - 1e-9 && y + short.r <= 600 + 1e-9 && Number.isFinite(x));
+  });
+}
 
 test('pileLayout wraps $0 across the gutter\'s columns, dealt in key order', () => {
   const scale = shareScale({ x0: 0, x1: 600, gutter: 20, domain: [-2, 2] });

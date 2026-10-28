@@ -113,7 +113,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     const r = stage.getBoundingClientRect();
     W = r.width;
     H = r.height;
-    dpr = Math.min(3, window.devicePixelRatio || 1);
+    // The device pixels to a CSS pixel, held between 1 and 3: a page zoomed out below 1 lays out and draws as at 1.
+    dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     const rel = (el) => {

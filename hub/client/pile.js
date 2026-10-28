@@ -42,24 +42,29 @@ function binItems(items, scale, d, m, mirror) {
     bins.push(...cols);
   }
   let rows = 0;
+  let rest = 0;
   for (const bin of bins) {
     const r = Math.ceil(bin.list.length / bin.m);
-    rows = Math.max(rows, mirror ? 2 * Math.floor(r / 2) + 1 : r);
+    const need = mirror ? 2 * Math.floor(r / 2) + 1 : r;
+    rows = Math.max(rows, need);
+    if (!bin.zero) rest = Math.max(rest, need);
   }
-  return { bins, height: rows * d, rows, zeros: zeros.length };
+  // height: the tallest bin's; rest: the tallest but $0's (which widening cannot shorten).
+  return { bins, height: rows * d, rest: rest * d, zeros: zeros.length };
 }
 
 // The pile of items ({ id, v: percent, key }) on the scale (shareScale), between `top` and `base` (pixels, base below):
 //   dMax, dMin  the pitch's range: the largest that fits is used, never below dMin, nor where its dot would be under
-//               R_MIN across;
+//               R_MIN across (when no pitch in the range keeps both, the smallest above it that does);
 //   gap         the space between neighbouring dots: a number, or a function of the pitch;
 //   mirror      bins centered on the middle line (a swarm) rather than standing on the base;
 //   px          a device pixel: the pitch is then a whole number of device pixels, so dots drawn on the device's grid
 //               keep equal gaps.
 // Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
 // below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
-// top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when even M_MAX sub-columns at
-// the smallest pitch cannot fit (the overfull bins are then packed closer than a pitch so the pile stays inside).
+// top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when $0's columns, which cannot
+// widen past the gutter, overflow even at the smallest pitch, or M_MAX sub-columns are not enough; the overfull bins are
+// then packed closer than a pitch so the pile stays inside. No input the story can reach does either.
 export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0 }) {
   const avail = base - top;
   const gapOf = (d) => (typeof gap === 'function' ? gap(d) : gap);
@@ -71,15 +76,30 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
     if (d < dMin - 1e-9 || (d - gapOf(d)) / 2 < R_MIN - 1e-9) break;
     pitches.push(d);
   }
-  if (!pitches.length) throw new RangeError(`pileLayout: no pitch from ${dMax} down to ${dMin} gives a dot of ${R_MIN}`);
+  // None in that range (a device pixel so large that dMin passes dMax, or a gap that leaves no dot): the smallest pitch at
+  // or above dMin, on the grid, whose dot keeps R_MIN; the bins widen from there as they need to.
+  if (!pitches.length) {
+    const unit = px || STEP;
+    let d = Math.max(unit, Math.ceil(dMin / unit - 1e-9) * unit);
+    while ((d - gapOf(d)) / 2 < R_MIN - 1e-9) d += unit;
+    pitches.push(d);
+  }
   let res = null;
   let d = 0;
   let m = 1;
+  // The first layout where everything but $0 fits: when $0's own columns overflow, widening further cannot help, so the
+  // search stops there.
+  let rest = null;
   search: for (; m <= M_MAX; m++) {
     for (const pitch of pitches) {
       d = pitch;
       res = binItems(items, scale, d, m, mirror);
       if (res.height <= avail + 1e-9) break search;
+      if (!rest && res.rest <= avail + 1e-9) rest = { res, d, m };
+    }
+    if (rest) {
+      ({ res, d, m } = rest);
+      break;
     }
   }
   if (m > M_MAX) m = M_MAX;

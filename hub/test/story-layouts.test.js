@@ -88,6 +88,18 @@ function assertSeparate(L, from, to, dpr, what) {
   }
 }
 
+// A desktop zoomed out to 50% (the stage clamps the device pixel it lays out with to 1, so this is belt and braces): the
+// layouts still build, every pile fits and stays separate as drawn.
+SIZES.push({ ...SIZES.find((s) => s.vw === 1440 && s.vh === 900), name: '1440×900 at 0.5x', px: 2, dpr: 0.5 });
+
+test('zoomed out to 33%, every layout still builds, every dot placed (nothing throws)', () => {
+  // The stage never lays out below 1x; here the layouts get a 3px device pixel anyway, and must not throw or lose a dot.
+  const { layouts } = all({ ...SIZES.find((s) => s.vw === 1440 && s.vh === 900), px: 3 });
+  for (const [name, L] of Object.entries(layouts)) {
+    for (let i = 0; i < 2 * N; i++) assert.ok(Number.isFinite(L.X[i]) && Number.isFinite(L.Y[i]) && L.R[i] > 0, `${name}: dot ${i} unplaced`);
+  }
+});
+
 for (const size of SIZES) {
   test(`at ${size.name}: every dot on the stage, at least 0.4px across, each pile separate dots`, () => {
     const { g, layouts } = all(size);

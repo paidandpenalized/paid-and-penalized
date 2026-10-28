@@ -105,15 +105,17 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   function layStart() {
     const lines = gateLines(g, 0);
     const base = lines[0] - 1;
-    const cols = Math.ceil(Math.sqrt(N * 2.6));
-    const per = Math.ceil(N / cols);
-    let d = Math.min(g.narrow ? 3.4 : 6.2, ((g.x1 - g.x0) * 0.6) / cols, (base - g.top - 60) / per);
+    const wide = Math.ceil(Math.sqrt(N * 2.6));
+    let d = Math.min(g.narrow ? 3.4 : 6.2, ((g.x1 - g.x0) * 0.6) / wide, (base - g.top - 60) / Math.ceil(N / wide));
     if (g.px) d = Math.floor(d / g.px + 1e-9) * g.px;
     // Never smaller than the piles' smallest separate dot.
     const unit = g.px || 0.1;
     d = Math.max(d, dMinFor(g));
     while ((d - gap(d)) / 2 < R_MIN - 1e-9) d += unit;
     const r = (d - gap(d)) / 2;
+    // A pitch raised to that floor may need fewer, taller columns to stay inside the plot.
+    const cols = Math.min(wide, Math.floor((g.x1 - g.x0) / d));
+    const per = Math.ceil(N / cols);
     const left = g.scale.zM - (cols * d) / 2;
     const L = blank('machine');
     rows.map((row, i) => ({ i, mid: row.mid })).sort((a, b) => a.mid - b.mid).forEach(({ i }, k) => {
