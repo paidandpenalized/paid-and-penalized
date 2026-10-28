@@ -1,0 +1,52 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { ATLAS_ID } from '../../web/charts/geo.js';
+import { checkHubInputs, loadHub } from '../data.js';
+
+test('the atlas id is exported from the map module and names a pinned input', async () => {
+  assert.equal(ATLAS_ID, 'us-atlas-counties-3.0.1');
+  const { readManifest } = await import('../../pipeline/files.js');
+  assert.ok(readManifest().some((e) => e.id === ATLAS_ID));
+});
+
+test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Readmissions file and the atlas, once', () => {
+  const hub = loadHub();
+  assert.equal(loadHub(), hub, 'memoized');
+  assert.equal(hub.fy, hub.dollars.fy);
+  assert.equal(hub.builtAt, hub.dollars.built_at);
+  assert.match(hub.builtAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.ok(hub.master instanceof Map && hub.master.size >= hub.dollars.hospitals.length);
+  for (const row of hub.dollars.hospitals) assert.ok(hub.master.has(row.ccn));
+  assert.ok(hub.tdr.hospitals instanceof Map && hub.tdr.hospitals.size > 0);
+  assert.equal(typeof hub.tdr.fy, 'number');
+  assert.ok(Array.isArray(hub.tdr.conditions) && hub.tdr.conditions.length > 0);
+  for (const [ccn, h] of hub.tdr.hospitals) assert.equal(h.id, ccn);
+  assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
+});
+
+// Invented inputs: one dollar file, its master and a TDR file.
+const inputs = (over = {}) => ({
+  dollars: { fy: 2026, hospitals: [{ ccn: '990001' }, { ccn: '990002' }] },
+  masterFile: { programYears: { hacrp: 2026, hrrp: 2027 }, hospitals: [{ ccn: '990001' }, { ccn: '990002' }, { ccn: '990003' }] },
+  tdrFy: 2027,
+  ...over,
+});
+
+test('checkHubInputs passes matching years and a master that holds every dollar CCN', () => {
+  assert.doesNotThrow(() => checkHubInputs(inputs()));
+});
+
+test('checkHubInputs stops when the dollar file is not for the master\'s HACRP year', () => {
+  assert.throws(() => checkHubInputs(inputs({ dollars: { fy: 2025, hospitals: [] } })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && /2025/.test(e.message) && /2026/.test(e.message));
+  // A master that names no program years cannot be matched either.
+  assert.throws(() => checkHubInputs(inputs({ masterFile: { hospitals: [] } })), (e) => e instanceof RangeError && /^hub: /.test(e.message));
+});
+
+test('checkHubInputs stops when a dollar CCN has no master record', () => {
+  const dollars = { fy: 2026, hospitals: [{ ccn: '990001' }, { ccn: '990009' }] };
+  assert.throws(() => checkHubInputs(inputs({ dollars })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'));
+});
+
+test('checkHubInputs stops when the Thirty Day Readmissions file is not for the master\'s HRRP year', () => {
+  assert.throws(() => checkHubInputs(inputs({ tdrFy: 2026 })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && /2026/.test(e.message) && /2027/.test(e.message));
+});

@@ -8,7 +8,7 @@ import { parseCsv } from '../../../engine/js/csv.js';
 import { isIsoDate } from '../../../engine/js/dates.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
-import { countyShapes, stateShapes } from '../../../web/charts/geo.js';
+import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
@@ -16,10 +16,9 @@ import { rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
-// Care Compare's Hospital General Information (each hospital's overall star rating) and the us-atlas topology (state
-// outlines for the locator maps and the US map).
+// Care Compare's Hospital General Information (each hospital's overall star rating); the us-atlas topology (state
+// outlines for the locator maps and the US map) is ATLAS_ID, from web/charts/geo.js.
 export const HGI_ID = 'hgi-2026-07';
-export const ATLAS_ID = 'us-atlas-counties-3.0.1';
 
 // CCN -> { rating, footnotes }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words when it
 // rates none) and its footnotes' text. A row without the columns fails the build.

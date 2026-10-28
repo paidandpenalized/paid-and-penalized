@@ -9,6 +9,10 @@ import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH 
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 
+// The pinned us-atlas topology (its `states` and `counties` objects) every map here is drawn from; a site reads it with
+// readPinned(ATLAS_ID) and hands it to stateShapes.
+export const ATLAS_ID = 'us-atlas-counties-3.0.1';
+
 // The states, DC and Puerto Rico: postal code, Census FIPS code (us-atlas's geometry id) and name, as
 // engine/py/pp_engine/geo.py lists them. A territory without a code here (AS, GU, MP, VI) is never drawn.
 export const STATES = Object.freeze([
@@ -57,7 +61,7 @@ const PARALLEL_INSET = 1 / 6;
 const DOT_R = 4;
 const HALO_R = 9;
 // The US map's height as a share of its width (geoAlbersUsa's frame with Alaska and Hawaii inset).
-const US_ASPECT = 0.62;
+export const US_ASPECT = 0.62;
 
 // Each state's GeoJSON feature by postal code, decoded once per topology.
 const SHAPES = new WeakMap();
