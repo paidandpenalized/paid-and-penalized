@@ -444,6 +444,35 @@ describe('the front page\'s chart words', () => {
   }));
 });
 
+// The worksheet in "Methods, in brief" on the narrowest phones: each line's words and formula note take the line's width
+// (the amount sits under them, at the right), and nothing reaches past the form's edge. At 390 px the amounts stay beside
+// the words.
+describe('the worksheet on a narrow phone', () => {
+  const tabs = useContext(shared, { width: 320 });
+  it('gives its words the width at 320 px and keeps the amounts beside them at 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      await settle(page);
+      const f = await page.evaluate(() => {
+        const table = document.querySelector('.wst').getBoundingClientRect();
+        const rows = [...document.querySelectorAll('.wst tbody tr')].map((tr) => {
+          const words = tr.querySelector('th').getBoundingClientRect();
+          const amount = tr.lastElementChild.getBoundingClientRect();
+          return { share: words.width / table.width, under: amount.top >= words.bottom - 1, inside: amount.right <= table.right + 0.5 && words.right <= table.right + 0.5 };
+        });
+        return { rows, sideways: document.documentElement.scrollWidth - window.innerWidth };
+      });
+      assert.equal(f.rows.length, 6, `${width} px: six lines`);
+      for (const [i, r] of f.rows.entries()) {
+        assert.equal(r.inside, true, `${width} px, line ${i + 1}: inside the form`);
+        if (width === 320) assert.ok(r.share >= 0.8 && r.under, `${width} px, line ${i + 1}: its words take ${Math.round(r.share * 100)}% of the form, the amount ${r.under ? 'under' : 'beside'} them`);
+        else assert.equal(r.under, false, `${width} px, line ${i + 1}: the amount beside its words`);
+      }
+      assert.ok(f.sideways <= 0, `${width} px: no sideways scroll`);
+    }
+  }));
+});
+
 // Below the story, the directory: each live program's card ends in a way to its page whose words sit on one line, as its
 // neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
 // row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom

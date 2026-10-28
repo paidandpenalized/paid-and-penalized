@@ -52,7 +52,8 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .fam__end .omni { flex: 0 1 360px; width: 360px; min-width: 180px; }
 .fam__end .omni input { font-size: 0.9375rem; }
 .fam__end .omni__label { font: 600 var(--fs-cap)/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
-@media (max-width: 1199px) { .fam__end .omni { flex-basis: 280px; } }
+/* 300px: the family search's placeholder ("Hospital, city or state") whole in the box at every width from 641px. */
+@media (max-width: 1199px) { .fam__end .omni { flex-basis: 300px; } }
 .fam__find { display: none; }
 
 /* The theme toggle: a small round icon button with a 44px hit area, once its script shows it. The bar's shows from 641px,

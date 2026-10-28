@@ -18,7 +18,7 @@ import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
-import { hospitalSample } from './site.js';
+import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
 
@@ -293,6 +293,29 @@ describe('the chip beside a program\'s search', () => {
       // On a wide screen the search keeps its full width beside the chip (the tagline steps aside).
       if (width >= 1200) assert.ok(f.search >= 360, `${width} px: the search is ${f.search} px wide`);
       assert.equal(f.sideways, false, `${width} px: no sideways scroll`);
+    }
+  }));
+});
+
+// The family search in the bar shows its whole placeholder ("Hospital, city or state") at every width from a tablet's to a
+// desktop's, on a hub page and on a hospital's page (the followed hospital's chip beside it).
+describe('the bar\'s family search', () => {
+  const tabs = useContext(shared, { width: 641 });
+  it('shows its whole placeholder from 641 to 1440 px', () => withPage(tabs, { path: SITE.pages.about }, async (page) => {
+    for (const path of [SITE.pages.about, hubHospitalSample('hub-hospital-cut').path]) {
+      await visit(page, tabs.base, path);
+      for (const width of [641, 720, 800, 1024, 1100, 1199, 1200, 1440]) {
+        await page.setViewportSize({ width, height: 600 });
+        await settle(page);
+        const fit = await page.evaluate(() => {
+          const input = document.querySelector('.fam__end form#omni input');
+          const cs = getComputedStyle(input);
+          const ctx = document.createElement('canvas').getContext('2d');
+          ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          return { room: input.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), need: ctx.measureText(input.placeholder).width };
+        });
+        assert.ok(fit.need <= fit.room, `${path === SITE.pages.about ? 'a hub page' : 'a hospital page'} at ${width} px: the placeholder needs ${Math.ceil(fit.need)} px of ${Math.floor(fit.room)}`);
+      }
     }
   }));
 });

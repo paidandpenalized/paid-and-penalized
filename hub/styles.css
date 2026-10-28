@@ -388,6 +388,16 @@
 .wst__net > * { border-top: var(--rule) solid var(--ink); }
 .wst__net td:last-child { font-size: clamp(16px, 5vw, var(--fs-lg)); font-weight: 700; }
 .wst td[data-na] { color: var(--ink-3); font: 400 var(--fs-sm)/1.35 var(--font-body); white-space: normal; }
+/* The narrowest phones: each line's amount sits under its words, at the right, so the words and their formula notes take
+   the line's whole width instead of a narrow column beside the amounts. */
+@media (max-width: 360px) {
+  .wst, .wst tbody { display: block; }
+  .wst tr { display: grid; grid-template-columns: auto minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .wst :is(th, td) { border-bottom: 0; }
+  .wst td:last-child { grid-column: 2; padding-top: 0; }
+  .wst__net { border-top: var(--rule) solid var(--ink); }
+  .wst__net > * { border-top: 0; }
+}
 .wsx__foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: var(--fs-sm); }
 .wsx__foot > p:first-child { flex: 1 1 15em; }
 /* The invitation, in its dashed box. */
