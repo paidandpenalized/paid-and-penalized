@@ -167,8 +167,10 @@ test('the states map: a path per state and DC with its title line, shaded by its
   assert.ok(textOf(key).includes(`${pct(-end, 1)} cut`));
   assert.ok(textOf(key).includes(`${pct(end, 1, { sign: true })} bonus`));
   assert.ok(textOf(key).includes('Maryland: not in these programs'));
-  // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing.
-  assert.match(out, /<p class="readout" aria-live="polite" hidden>Point at, tap or tab to a state for its numbers\.<\/p>/);
+  // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing. It
+  // is for the eye; a screen reader hears a state's line from the quiet region beside it, which the script fills when a
+  // state is focused or picked (never when the pointer only passes over one).
+  assert.match(out, /<p class="readout" hidden>Point at, tap or tab to a state for its numbers\.<\/p>\n<p class="vh" aria-live="polite" data-said><\/p>/);
 });
 
 test('what only a script uses is hidden: the small states\' buttons, the peer toggle, the canvas, the hero search, the readout', () => {

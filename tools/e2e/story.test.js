@@ -249,6 +249,49 @@ describe('states you can read, and Find yours', () => {
   }));
 });
 
+// The states as buttons: the picked one is pressed (aria-pressed), the others not, on the map and among the small states'
+// buttons; the readout follows the pointer, but the quiet region a screen reader hears speaks only when a state is focused
+// or picked, never as the pointer passes over the map.
+describe('the states map speaks on a pick, not on a hover', () => {
+  const tabs = useContext(shared);
+  it('hovering writes the readout only; a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await settle(page);
+    const facts = () => page.evaluate(() => ({
+      readout: document.querySelector('.readout').textContent,
+      said: document.querySelector('[data-said]').textContent,
+      // A small state is pressed on the map and among the buttons alike: each code once.
+      pressed: [...new Set([...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].filter((el) => el.getAttribute('aria-pressed') === 'true').map((el) => el.dataset.st))],
+      unmarked: [...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].filter((el) => !['true', 'false'].includes(el.getAttribute('aria-pressed'))).length,
+      live: document.querySelector('.readout').getAttribute('aria-live'),
+    }));
+    const start = await facts();
+    assert.deepEqual([start.pressed, start.unmarked, start.live], [['OH'], 0, null], 'Ohio pinned from the address and pressed; every state a toggle; the readout itself is not live');
+    const said = start.said;
+    // Hover over another state: the readout follows, the region does not speak.
+    const texas = page.locator('.smap .st[data-st="TX"]');
+    await texas.hover();
+    await settle(page);
+    const hovered = await facts();
+    assert.match(hovered.readout, /^Texas: /);
+    assert.equal(hovered.said, said, 'a hover says nothing');
+    // A click pins Texas: pressed, and said.
+    await texas.click();
+    await settle(page);
+    const picked = await facts();
+    assert.deepEqual(picked.pressed, ['TX']);
+    assert.match(picked.said, /^Texas: /);
+    // A small state's button: pressed and said on a click.
+    await page.locator('.smalls [data-st="RI"]').click();
+    await settle(page);
+    const small = await facts();
+    assert.deepEqual(small.pressed, ['RI']);
+    assert.match(small.said, /^Rhode Island: /);
+    await assertQuiet(seen, 'the states map');
+  }));
+});
+
 // On a phone the chart is pinned over the lower part of the window: a keyboard reader who tabs to the last step's search
 // and its card's link finds each in view, clear of the chart, and then reaches the peer toggle on the chart.
 for (const [width, height] of [[390, 844], [320, 640]]) {

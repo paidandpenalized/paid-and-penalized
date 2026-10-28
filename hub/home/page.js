@@ -169,7 +169,8 @@ ${now}
 <div class="stage__panel stage__panel--bar"><div class="stage__pin">${barFigure({ hospitals, facts, fy })}</div></div>
 <canvas class="stage__cv" aria-hidden="true" hidden></canvas>
 <div class="stage__panel stage__panel--map"><div class="stage__pin smapfig">
-<p class="readout" aria-live="polite" hidden>${COPY.readout}</p>
+<p class="readout" hidden>${COPY.readout}</p>
+<p class="vh" aria-live="polite" data-said></p>
 ${statesMap({ shapes, states })}
 <div class="mapfoot">${stateLegend({ states, fy })}${smallStates(states)}</div>
 </div></div>
