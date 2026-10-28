@@ -11,8 +11,9 @@ export const MAP_WIDTH = 975;
 // The asset: { fy, mapW, mapH, cols, rows }, one row per hospital in the order given, values in `cols` order. Status is
 // 'e', 'm' or 'n'; flags are 0 or 1; a number the hospital does not have is null (a hospital without an estimate has no
 // dollars, factors or flags; one without a location, no x and y). x and y are the hospital on the US map at MAP_WIDTH,
-// to a tenth. `after` and `atStake` are left out because they follow from the rest; a row where they do not stops the
-// build, since the browser could not derive them.
+// to a tenth. `after` and `atStake` are left out because they follow from the rest; a row where they do not, or where
+// `hac` and `net` do not follow from the cut flag and the other dollars, stops the build, since the browser could not
+// derive them or trust the ones it is given.
 export function hubAsset(hospitals, { shapes, fy }) {
   const places = usProjected(shapes, hospitals.map(pointOf), MAP_WIDTH);
   const rows = hospitals.map((h, i) => {
@@ -21,6 +22,11 @@ export function hubAsset(hospitals, { shapes, fy }) {
       const { after, atStake } = derivedDollars(e);
       if (e.after !== after || e.atStake !== atStake) {
         throw new RangeError(`hub: ${h.ccn}: the pay after Readmissions and value-based purchasing, or the dollars at stake, do not follow from the other dollars`);
+      }
+      // The browser carries hac and net as they are, so they must already be what the row's rule makes them: minus the
+      // dollars at stake for a hospital with the cut, a plain zero for one without, and the three programs added.
+      if (e.hac !== (e.cut ? -atStake : 0) || e.net !== e.hrrp + e.hvbp + e.hac) {
+        throw new RangeError(`hub: ${h.ccn}: the HAC dollars do not follow from the cut flag and the dollars at stake, or the net is not the three programs added`);
       }
     }
     const [x, y] = places[i] ?? [null, null];

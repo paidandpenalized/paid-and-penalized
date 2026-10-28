@@ -65,6 +65,21 @@ test('hubAsset refuses a row whose after-pay or dollars at stake the browser cou
   assert.throws(() => hubAsset([off], { shapes: hub.shapes, fy: hub.fy }), RangeError);
 });
 
+test('hubAsset refuses a row whose HAC dollars do not follow from the cut flag and the dollars at stake, or whose net is not the three added', () => {
+  const build = (est) => hubAsset([{ ...hospitals.find((x) => x.est), est }], { shapes: hub.shapes, fy: hub.fy });
+  const cut = hospitals.find((x) => x.est?.cut && x.est.atStake > 0).est;
+  const uncut = hospitals.find((x) => x.est && !x.est.cut && x.est.atStake > 0).est;
+  assert.doesNotThrow(() => build(cut));
+  assert.doesNotThrow(() => build(uncut));
+  const refuse = (est, what) => assert.throws(() => build(est), (e) => e instanceof RangeError && /^hub: /.test(e.message), what);
+  refuse({ ...cut, hac: cut.hac - 1, net: cut.net - 1 }, 'a cut hospital whose HAC dollars are not minus the dollars at stake');
+  refuse({ ...cut, hac: 0, net: cut.hrrp + cut.hvbp }, 'a cut hospital with no HAC dollars');
+  refuse({ ...uncut, hac: -uncut.atStake, net: uncut.net - uncut.atStake }, 'an uncut hospital that pays the HAC cut');
+  refuse({ ...uncut, hac: 1, net: uncut.net + 1 }, 'an uncut hospital with HAC dollars of any size');
+  refuse({ ...cut, net: cut.net + 1 }, 'a net that is not hrrp + hvbp + hac (cut)');
+  refuse({ ...uncut, net: uncut.net - 1 }, 'a net that is not hrrp + hvbp + hac (uncut)');
+});
+
 test('a hospital with no location gets no place on the map', () => {
   const h = hospitals.find((x) => x.est);
   const [out] = hubAsset([{ ...h, lat: null, lon: null }], { shapes: hub.shapes, fy: hub.fy }).rows;
