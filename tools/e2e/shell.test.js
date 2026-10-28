@@ -297,12 +297,14 @@ describe('the chip beside a program\'s search', () => {
   }));
 });
 
-// The family search in the bar shows its whole placeholder ("Hospital, city or state") at every width from a tablet's to a
-// desktop's, on a hub page and on a hospital's page (the followed hospital's chip beside it).
+// The bar's search shows its whole placeholder ("Hospital, city or state", the family's and HACRP's alike) at every width
+// from a tablet's to a desktop's: on a hub page, a hospital's page across the programs (the followed hospital's chip
+// beside it), HACRP's program page and a HACRP hospital's page (its chip too).
 describe('the bar\'s family search', () => {
   const tabs = useContext(shared, { width: 641 });
   it('shows its whole placeholder from 641 to 1440 px', () => withPage(tabs, { path: SITE.pages.about }, async (page) => {
-    for (const path of [SITE.pages.about, hubHospitalSample('hub-hospital-cut').path]) {
+    const PAGES = [['a hub page', SITE.pages.about], ['a hospital page', hubHospitalSample('hub-hospital-cut').path], ['HACRP\'s program page', PROGRAM_PATH], ['a HACRP hospital page', HOSPITAL]];
+    for (const [name, path] of PAGES) {
       await visit(page, tabs.base, path);
       for (const width of [641, 720, 800, 1024, 1100, 1199, 1200, 1440]) {
         await page.setViewportSize({ width, height: 600 });
@@ -314,7 +316,7 @@ describe('the bar\'s family search', () => {
           ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
           return { room: input.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), need: ctx.measureText(input.placeholder).width };
         });
-        assert.ok(fit.need <= fit.room, `${path === SITE.pages.about ? 'a hub page' : 'a hospital page'} at ${width} px: the placeholder needs ${Math.ceil(fit.need)} px of ${Math.floor(fit.room)}`);
+        assert.ok(fit.need <= fit.room, `${name} at ${width} px: the placeholder needs ${Math.ceil(fit.need)} px of ${Math.floor(fit.room)}`);
       }
     }
   }));
