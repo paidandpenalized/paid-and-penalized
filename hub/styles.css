@@ -301,6 +301,67 @@
   .story .rail a[aria-current="step"]::before { background: Highlight; }
 }
 
+/* ---------- below the story (hub/home/below.js): the program directory, the methods in brief, the invitation ----------
+   Most of the look is the family's parts: the form (.form, .field, the numbered box .field__no, .stamp, .est-tag) and,
+   from the hospital page below, the strip drawing (.st and its parts: each card's histogram) and the empty-program band
+   (.hh__nextbox: each coming program's slip). A script fills the worksheet in for a found hospital; [hidden] hides the
+   notes and stamps it does not need. */
+.bsec { margin-top: 96px; padding-top: 28px; border-top: 5px double var(--ink); }
+.below h2 { margin: 8px 0 14px; font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
+.bsec__head, .ests, .dir, .soon { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.bsec__head { align-items: end; }
+.bsec__lede { color: var(--ink-2); font-size: var(--fs-md); }
+.grp { display: flex; justify-content: space-between; gap: 12px; max-width: none; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--pen); }
+/* A program's card: name and tag, dek, takeaway over the histogram, the national figure, and a red bar to its page. */
+.pc { display: flex; flex-direction: column; border: 1.5px solid var(--pen); }
+.pc > * { margin: 8px 16px 0; }
+.pc h3 { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: var(--fs-md); }
+.ab { align-self: start; padding: 2px 5px 1px; border: 1px solid; color: var(--pen-ink); font: 400 var(--fs-cap)/1.2 var(--font-type); text-decoration: none; }
+.pc__dek, .slip { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.pc figure { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font: 600 13px/1.35 var(--font-body); }
+.pc__big { margin-top: 12px; font: 700 26px/1 var(--font-type); }
+.pc__sub { margin-bottom: 16px; color: var(--ink-2); font: 400 12.5px/1.4 var(--font-type); }
+.go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
+.go:hover, .ask__act > a:hover { background: var(--ink); color: var(--paper); }
+.pc .go { margin: auto 0 0; }
+/* A coming program's slip: dashed, quiet, an empty hatched band where its data will go. */
+.soon { margin-top: 40px; }
+.sg { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; align-content: start; }
+.sg .grp { grid-column: 1 / -1; align-items: end; min-height: 3.2em; margin: 0; }
+.slip { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px 12px; border: 1.5px dashed var(--line); text-decoration: none; }
+.slip b { color: var(--ink); }
+.slip .ab { color: var(--ink-3); }
+.slip__none { height: 22px; margin-top: auto; }
+/* Methods, in brief: three numbered points, and the worksheet as a ruled form whose amounts line up on the right. */
+.nsteps { display: grid; gap: 10px; margin: 18px 0; padding: 0; list-style: none; }
+.nsteps li { display: flex; align-items: baseline; gap: 10px; }
+.nsteps .field__no, .wst .field__no { color: var(--pen-ink); }
+.more { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; text-decoration-color: var(--pen); }
+.wsx [hidden] { display: none; }
+.wst { width: 100%; border-collapse: collapse; border: solid var(--pen); border-width: 0 var(--rule) var(--rule) 0; }
+.wst :is(th, td) { padding: 9px clamp(6px, 2vw, 10px); border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-body); text-align: left; vertical-align: baseline; }
+.wst small { display: block; margin-top: 2px; color: var(--ink-3); font: 400 12px/1.35 var(--font-type); }
+.wst td:last-child { font: 400 clamp(15px, 4vw, var(--fs-md))/1.35 var(--font-type); text-align: right; white-space: nowrap; }
+.wst__net > * { border-top: var(--rule) solid var(--ink); }
+.wst__net td:last-child { font-size: clamp(16px, 5vw, var(--fs-lg)); font-weight: 700; }
+.wst td[data-na] { color: var(--ink-3); font: 400 var(--fs-sm)/1.35 var(--font-body); white-space: normal; }
+.wsx__foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: var(--fs-sm); }
+.wsx__foot > p:first-child { flex: 1 1 15em; }
+/* The invitation, in its dashed box. */
+.ask { display: grid; gap: 16px 40px; margin-top: 64px; padding: 22px 20px; border: 2px dashed var(--pen); }
+.ask p { color: var(--ink-2); }
+.ask__act { display: grid; gap: 10px; justify-items: start; align-content: center; }
+@media (min-width: 760px) {
+  .ask { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); padding: 26px 32px; }
+  .ask__act { padding-left: 32px; border-left: 1px dashed var(--line); }
+}
+@media (min-width: 1024px) {
+  .bsec__head, .ests { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; }
+  .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+  .sg { grid-column: span var(--n); grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+}
+
 /* ---------- a hospital's page across the programs (hub/hospital/page.js), root .hh ----------
    An instrument: the red record card, large mono figures, hairline rules and room to breathe. Two columns from 1024px
    (the record and the money left, the peer swarm right); one column below, record, net, then the chart. */
@@ -339,7 +400,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
 /* The stamp at 24px is large text, so the bonus's green meets its contrast (3:1) as the cut's red and the ink do. */
 .hh__stamp .stamp { font-size: 24px; padding: 5px 11px 2px; }
-.hh__stamp--bonus .stamp { border-color: var(--rew); color: var(--rew); }
+.hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
 .hh__band:empty { display: none; }
 .hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
 

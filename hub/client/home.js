@@ -9,7 +9,8 @@
 // that state. Find yours (find.js): the step's own search (a family search box over the hospitals only, which
 // hub/client/search.js mounts) follows the hospital found in place, where the bar's opens its page; an address's
 // ?h=<CCN> (web/client/follow.js) follows that hospital from the start. A followed hospital is ringed at every step, and
-// the last step shows it among its peers, in the group the peer toggle picks, with its card.
+// the last step shows it among its peers, in the group the peer toggle picks, with its card. The worksheet in "Methods, in
+// brief" (story/worksheet.js) fills in for the same hospital.
 import { followedCcn } from '../../web/client/follow.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { storyFacts } from '../model.js';
@@ -20,9 +21,12 @@ import { storyRows } from './story/layouts.js';
 import { mountMap, stateFromHash } from './story/map.js';
 import { createStage } from './story/stage.js';
 import { mountSteps } from './story/steps.js';
+import { mountWorksheet } from './story/worksheet.js';
 
-// The masthead docks into the header as the page scrolls (story/dock.js); it needs nothing from the data.
+// The masthead docks into the header as the page scrolls (story/dock.js); it needs nothing from the data. The worksheet
+// below the story listens for a found hospital before the story can announce one (story/worksheet.js).
 mountDock();
+mountWorksheet(document.querySelector('[data-worksheet]'));
 const story = document.querySelector('[data-story]');
 if (story) start(story);
 

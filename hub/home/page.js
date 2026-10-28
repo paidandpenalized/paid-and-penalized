@@ -5,7 +5,8 @@
 // peers: a family search over the hospitals (hub/client/search.js mounts it; the story's script follows the hospital
 // found in place), and the example hospital's card. The page renders through hubPage (hub/parts.js), so its bar holds the family search too. Without scripts the page is
 // complete: the charts stick beside the steps they belong to (hub/styles.css), or sit between them on a phone. With
-// them (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step.
+// them (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step. Below the story
+// (below.js): the program directory, the methods in brief with the example's worksheet, and the invitation.
 import { PEER_MODES, median } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../web/charts/geo.js';
 import { COPY as SHARED } from '../../web/copy.js';
@@ -13,7 +14,7 @@ import { HAC_CUT_PCT, HRRP_CAP_PCT, VBP_WITHHOLD_PCT } from '../../web/programs.
 import { fillAround, fillCopy } from '../../web/render/components.js';
 import { capitalize, count, listText, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
-import { externalLink } from '../../web/render/layout.js';
+import { externalLink, feedbackFor } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
 import { cardModel, peersIn } from '../client/story/find.js';
@@ -21,6 +22,8 @@ import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { EXAMPLE_CCN } from '../model.js';
 import { hubPage } from '../parts.js';
 import { barFigure } from './bar.js';
+import { directory, methodsBrief, yourTurn } from './below.js';
+import { holds, simpleFraction } from './claims.js';
 import { COPY } from './copy.js';
 import { smallStates, stateLegend, statesMap } from './states.js';
 
@@ -30,10 +33,7 @@ export const STEPS = Object.freeze([
   ['net', 'railNet'], ['map', 'railMap'], ['states', 'railStates'], ['find', 'railFind'],
 ].map(([slug, rail]) => ({ slug, rail })));
 
-// How near a simple fraction (a half to four fifths) must be to the share of hospitals with a net cut for the heading to
-// say it in words ("Two of every three"); further off, it gives the share. And the share of states in which net cuts
-// must outnumber net bonuses for the words "almost everywhere".
-const FRACTION_NEAR = 0.02;
+// The share of states in which net cuts must outnumber net bonuses for the words "almost everywhere".
 const ALMOST_ALL = 0.8;
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -49,23 +49,9 @@ function say(key, nums = {}, { plain = {}, pen = [] } = {}) {
   return fillAround((marks) => fill(key, { ...plain, ...marks }), bold);
 }
 
-// A claim the words make about the data, checked on every build: the build stops rather than print a sentence the data
-// no longer bears out.
-function holds(ok, words) {
-  if (!ok) throw new RangeError(`hub home: the data no longer bear out "${words}"`);
-}
-
-// The simple fraction nearest x, as { part, whole }, within FRACTION_NEAR; null when none is that near.
-export function simpleFraction(x) {
-  let best = null;
-  for (let whole = 2; whole <= 5; whole++) {
-    for (let part = 1; part < whole; part++) {
-      const away = Math.abs(x - part / whole);
-      if (!best || away < best.away - 1e-12) best = { part, whole, away };
-    }
-  }
-  return best.away <= FRACTION_NEAR ? { part: best.part, whole: best.whole } : null;
-}
+// The heading says the share of hospitals with a net cut in words ("Two of every three") only near a simple fraction
+// (claims.js), and every claim the words make is checked on each build (holds).
+export { simpleFraction };
 
 // The masthead: the wordmark across the page (two spans, which the page's script moves into the bar as it scrolls), the
 // tagline and byline between rules, and a heavy rule before the story.
@@ -197,6 +183,11 @@ ${statesMap({ shapes, states })}
 </div></div>
 ${peerToggle()}
 </div>
+</div>
+<div class="wrap below">
+${directory({ programs: SITE.programs, facts, hospitals, fy })}
+${methodsBrief({ h: hospitals.find((x) => x.ccn === EXAMPLE_CCN), fy, src: hubUrl })}
+${yourTurn({ feedback: feedbackFor({ path: '/' }) })}
 </div>`;
   return hubPage({ title: SITE.name, description: COPY.description, path: '/', robots, body, scripts: [assets.js['hub-home']], assets });
 }
