@@ -7,12 +7,14 @@ import { typesetCopy } from './render/components.js';
 export const COPY = typesetCopy({
   skip: 'Skip to content',
   // The family bar (render/shell.js): the wordmark, and the compact mark a phone shows in its place ("P&" in ink, the
-  // last "P" in the penalty red, as the wordmark's "Penalized"); the tagline beside it; the phone's search button and
-  // the theme toggle, each named for screen readers (they show an icon).
+  // last "P" in the penalty red, as the wordmark's "Penalized"; a screen reader hears it, then markSep, then the words);
+  // the tagline beside it; the phone's search button and the theme toggle, each named for screen readers (they show an
+  // icon).
   wordmarkLead: 'Paid &',
   wordmarkPen: 'Penalized',
   markLead: 'P&',
   markPen: 'P',
+  markSep: ', ',
   tagline: 'Public Medicare data, made visible.',
   find: 'Find a hospital or state',
   themeToggle: 'Dark mode',

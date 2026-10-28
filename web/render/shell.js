@@ -54,7 +54,9 @@ function chip({ path, hospital, fy }) {
 // marked aria-current.
 const sectionMenu = (sections, current) => html`<div class="wrap fam__sub"><nav class="nav" aria-label="${COPY.navLabel}"><ol>${sections.map((s, i) => html`<li><a href="${s.href}" data-nav="${s.id}"${s.id === current ? html` aria-current="true"` : ''}><span class="nav__num">${String(i + 1)}</span>${s.label}</a></li>`)}</ol></nav></div>`;
 
-// The header every page wears. Row one, the family bar: the wordmark (to /), the tagline, the followed hospital's chip,
+// The header every page wears. Row one, the family bar: the wordmark (to /: the compact P&P mark first, shown on a phone
+// and beside a followed hospital, so that the link's name there starts with what it shows, then the two words, which
+// the stylesheet shows or keeps for screen readers alone), the tagline, the followed hospital's chip,
 // then the phone's search button, the page's search (markup, or '' for none) and the theme toggle. Row two: the program
 // tabs. Row three, on a program's pages: its section menu. Markup order is the visual and tab order at every width.
 // The header carries the hub asset's address (the shell's script checks a followed hospital against it) and, on a
@@ -70,7 +72,7 @@ export function familyHeader({ path, program = null, hospital = null, sections =
   if (sections !== null && (!Array.isArray(sections) || !sections.length)) throw new TypeError('familyHeader: sections must be a non-empty list or null');
   if (current !== null && !sections?.some((s) => s.id === current)) throw new RangeError(`familyHeader: no section "${current}"`);
   return html`<header class="topbar fam" data-hub-src="${shell.hubUrl}"${hospital ? html` data-hospital="${hospital.ccn}"` : ''}>
-<div class="wrap fam__bar"><a class="wordmark" href="/"><span class="wordmark__lead">${COPY.wordmarkLead}</span> <span class="wordmark__pen">${COPY.wordmarkPen}</span><span class="wordmark__short" aria-hidden="true">${COPY.markLead}<span class="wordmark__pen">${COPY.markPen}</span></span></a><p class="fam__tag">${COPY.tagline}</p>${chip({ path, hospital, fy: shell.fy })}<div class="fam__end"><button type="button" class="fam__find" aria-expanded="false" aria-controls="omni" hidden>${icon('search')}<span class="vh">${COPY.find}</span></button>${search}${themeToggle}</div></div>
+<div class="wrap fam__bar"><a class="wordmark" href="/"><span class="wordmark__short">${COPY.markLead}<span class="wordmark__pen">${COPY.markPen}</span><span class="vh">${COPY.markSep}</span></span><span class="wordmark__lead">${COPY.wordmarkLead}</span> <span class="wordmark__pen">${COPY.wordmarkPen}</span></a><p class="fam__tag">${COPY.tagline}</p>${chip({ path, hospital, fy: shell.fy })}<div class="fam__end"><button type="button" class="fam__find" aria-expanded="false" aria-controls="omni" hidden>${icon('search')}<span class="vh">${COPY.find}</span></button>${search}${themeToggle}</div></div>
 ${programTabs({ program, hospital })}
 ${sections ? sectionMenu(sections, current) : ''}</header>`;
 }

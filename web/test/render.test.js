@@ -143,9 +143,10 @@ test('shell: one header, the skip link before it; the family bar runs wordmark, 
   assert.ok(out.indexOf('<a class="skip" href="#main">') < out.indexOf('<header'));
   const header = headerOf(out);
   assert.match(header, /^<header class="topbar fam" data-hub-src="\/assets\/hub-hospitals\.test\.json">/);
-  // The wordmark: its two words, and the compact mark a phone shows instead (hidden from screen readers, which read
-  // the words at every width).
-  assert.ok(header.includes('<a class="wordmark" href="/"><span class="wordmark__lead">Paid &amp;</span> <span class="wordmark__pen">Penalized</span><span class="wordmark__short" aria-hidden="true">P&amp;<span class="wordmark__pen">P</span></span></a>'));
+  // The wordmark: the compact mark a phone shows instead of the words, then the two words. Where the mark shows, the
+  // link's name starts with what it shows ("P&P, Paid & Penalized": WCAG 2.5.3, label in name); where the words show,
+  // the mark is not displayed and the name is the words.
+  assert.ok(header.includes('<a class="wordmark" href="/"><span class="wordmark__short">P&amp;<span class="wordmark__pen">P</span><span class="vh">, </span></span><span class="wordmark__lead">Paid &amp;</span> <span class="wordmark__pen">Penalized</span></a>'));
   assert.ok(header.includes('<p class="fam__tag">Public Medicare data, made visible.</p>'));
   assert.ok(header.includes('<button type="button" class="fam__find" aria-expanded="false" aria-controls="omni" hidden><span class="ico ico--search" aria-hidden="true"></span><span class="vh">Find a hospital or state</span></button>'));
   assert.ok(header.includes('<button type="button" class="theme-toggle" aria-pressed="false" hidden><span class="ico ico--theme" aria-hidden="true"></span><span class="vh">Dark mode</span></button>'));

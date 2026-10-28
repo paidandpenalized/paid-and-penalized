@@ -297,6 +297,23 @@ describe('the chip beside a program\'s search', () => {
   }));
 });
 
+// The wordmark link's name starts with what it shows (WCAG 2.5.3, label in name): the compact P&P mark on a phone and
+// beside a followed hospital below 1100 px, the words elsewhere.
+describe('the wordmark\'s name', () => {
+  const tabs = useContext(shared, { width: 390 });
+  it('is "P&P, Paid & Penalized" where the P&P mark shows, and "Paid & Penalized" where the words do', () => withPage(tabs, { path: HOSPITAL }, async (page) => {
+    for (const [width, path, name] of [[390, SITE.pages.about, 'P&P, Paid & Penalized'], [390, HOSPITAL, 'P&P, Paid & Penalized'], [800, HOSPITAL, 'P&P, Paid & Penalized'], [800, SITE.pages.about, 'Paid & Penalized'], [1280, HOSPITAL, 'Paid & Penalized']]) {
+      await page.setViewportSize({ width, height: 600 });
+      await visit(page, tabs.base, path);
+      const shows = await page.locator('a.wordmark .wordmark__short').isVisible() ? 'mark' : 'words';
+      // The snapshot's first line only: the link's address can carry a followed hospital's CCN, which CI's logs never print.
+      // Engines differ in the spaces they put around the screen-reader-only parts; a reader hears none of them.
+      const line = (await page.locator('a.wordmark').ariaSnapshot()).split('\n')[0].replace(/\s+/g, ' ').replace(/ ,/g, ',');
+      assert.equal(line, `- link "${name}":`, `${width} px, the ${shows}: the link's name`);
+    }
+  }));
+});
+
 describe('the family search on a hub page', () => {
   const tabs = useContext(shared);
 

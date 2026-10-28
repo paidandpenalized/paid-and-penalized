@@ -147,7 +147,8 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .fam__bar { gap: 10px; min-height: 50px; padding-block: 3px; }
   /* The compact mark's link is a 44px target, centred on its box (the bar is 50px tall, so it costs no height). */
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
-  /* The wordmark's words stay for screen readers (the compact mark is hidden from them). */
+  /* The wordmark's words stay for screen readers, after the compact mark's own (the link's name: "P&P, Paid &
+     Penalized"). */
   .wordmark__lead, .wordmark > .wordmark__pen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .wordmark__short { display: inline-block; }
   .chip { flex: 1 1 0; min-height: 44px; max-width: none; border-left-width: 4px; }
