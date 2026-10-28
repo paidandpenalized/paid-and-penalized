@@ -48,14 +48,15 @@ export const asofBar = lastCall(({ fy, periods, source, typeFy = null, geocoded 
 // The program page's sections the section menu links to, by id (program.js gives each section its id), then Methods.
 export const SECTIONS = Object.freeze(['how', 'fy', 'money', 'map', 'history']);
 
-// The family shell's fields for a HACRP page (layout.js page(): program, sections, current, search, hospital): the
-// HACRP tab, the numbered section menu to the program page's sections and Methods, the item to mark (current: an id, or
+// The family shell's fields for a HACRP page (layout.js page(): sheets, program, sections, current, search, hospital):
+// HACRP's stylesheet (its manifest's styles, a sheet of their own), the HACRP tab, the numbered section menu to the program page's sections and Methods, the item to mark (current: an id, or
 // null), the bar's search (searchUrl: the hospitals asset, or null for none) and, on a hospital's page, the hospital
 // the header follows (followed). The parts every page of a build shares are built once for each current item.
 const shellParts = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current, searchUrl }) => {
   const { path } = SITE.sites.hacrp;
   const labels = { how: t('navHow'), fy: fill('navFy', { fy: String(fy) }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
   return {
+    sheets: ['hacrp'],
     program: 'hacrp',
     sections: [...SECTIONS.map((id) => ({ id, label: labels[id], href: `${path}#${id}` })), { id: 'methods', label: SHARED.methods, href: `${path}methods/` }],
     current,

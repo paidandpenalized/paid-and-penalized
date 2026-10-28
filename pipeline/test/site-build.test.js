@@ -84,27 +84,28 @@ test('buildAssets writes each named sheet (siteStyles) as its own minified CSS u
     }
   }));
 
-test('a site whose manifest says ownSheet gets a stylesheet of its own, named by its id; the other sites\' styles stay in the shared bundle', () =>
+test('each site\'s styles are a stylesheet of its own, named by its id; the shared bundle holds no site\'s, and a site with none has none', () =>
   withTemp(async (dir) => {
     const own = join(dir, 'own.css');
-    const shared = join(dir, 'shared.css');
+    const other = join(dir, 'other.css');
     writeFileSync(own, '.zz-own { margin: 1px; }\n');
-    writeFileSync(shared, '.zz-shared { margin: 2px; }\n');
+    writeFileSync(other, '.zz-other { margin: 2px; }\n');
     const seen = [];
     const sites = [
-      { id: 'plain', styles: [shared], generate: (ctx) => { seen.push(ctx.assets); } },
-      { id: 'mine', ownSheet: true, styles: [own], generate: () => {} },
+      { id: 'plain', styles: [other], generate: (ctx) => { seen.push(ctx.assets); } },
+      { id: 'mine', styles: [own], generate: () => {} },
+      { id: 'bare', generate: () => {} },
     ];
     const out = join(dir, 'dist');
     await build({ outDir: out, sites });
     const [{ css, sheets }] = seen;
     const text = (path) => readFileSync(join(out, path), 'utf8');
-    assert.deepEqual(Object.keys(sheets), ['mine']);
+    assert.deepEqual(Object.keys(sheets), ['plain', 'mine']);
     assert.match(sheets.mine, /^\/assets\/mine\.[0-9a-f]{8}\.css$/);
-    assert.match(text(css), /\.zz-shared\{/);
-    assert.doesNotMatch(text(css), /zz-own/);
+    assert.doesNotMatch(text(css), /zz-own|zz-other/);
     assert.equal(text(sheets.mine).trim(), '.zz-own{margin:1px}');
-    assert.equal(readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css')).length, 2);
+    assert.equal(text(sheets.plain).trim(), '.zz-other{margin:2px}');
+    assert.equal(readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css')).length, 3);
   }));
 
 // The bundles target ES2020 (assets.js), and esbuild lowers syntax but never adds a missing built-in, so a newer
@@ -279,43 +280,45 @@ test('HACRP gives the build its two dates, which /corrections/ shows', async () 
 // pages' (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
 const HUB_RULE = /\.(hh|story|rd)(__[\w-]+|--[\w-]+)?(?=[\s,{.:>+~[)])/;
 
-test('a HACRP page links the shared stylesheet alone, which holds no hub page\'s rules; a hub page links it and then the hub\'s', async () => {
+test('each page links the shared stylesheet and then its own site\'s alone: a HACRP page HACRP\'s, a hub page the hub\'s; the shared one holds neither\'s rules', async () => {
   const out = await builtSlice();
   const sheetsOf = (file) => [...tags(readFileSync(join(out, file), 'utf8'), { names: ['link'] })]
     .filter(({ attrs }) => attrs.rel === 'stylesheet').map(({ attrs }) => attrs.href);
   const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
   const seen = new Set();
   const shared = new Set();
-  const hub = new Set();
+  const own = { hacrp: new Set(), hub: new Set() };
   for (const file of htmlPages(out)) {
     const type = pageType(addressOf(file));
     const links = sheetsOf(file);
     seen.add(type);
+    assert.equal(links.length, 2, file);
     shared.add(links[0]);
-    if (PROGRAM_TYPES.includes(type)) {
-      assert.equal(links.length, 1, file);
-    } else {
-      assert.equal(links.length, 2, file);
-      hub.add(links[1]);
-    }
+    own[PROGRAM_TYPES.includes(type) ? 'hacrp' : 'hub'].add(links[1]);
   }
   for (const type of [...PROGRAM_TYPES, 'hub', 'policy', 'coming', 'hubHospital', 'notFound']) assert.ok(seen.has(type), `the slice built a ${type} page`);
   assert.equal(shared.size, 1, 'one shared stylesheet');
-  assert.equal(hub.size, 1, 'one hub stylesheet');
+  assert.deepEqual([own.hacrp.size, own.hub.size], [1, 1], 'one stylesheet for each site');
   const [site] = shared;
-  const [own] = hub;
+  const [[hacrp], [hub]] = [[...own.hacrp], [...own.hub]];
   assert.match(site, /^\/assets\/site\.[0-9a-f]{8}\.css$/);
-  assert.match(own, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
+  assert.match(hacrp, /^\/assets\/hacrp\.[0-9a-f]{8}\.css$/);
+  assert.match(hub, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
   // (Each check is a yes or no: a failing match would print the whole stylesheet.)
   const css = (href) => readFileSync(join(out, href), 'utf8');
   assert.equal(HUB_RULE.exec(css(site))?.[0] ?? null, null, 'the shared stylesheet holds no hub page\'s rule');
-  for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(own).includes(root), `the hub's stylesheet holds ${root}`);
+  assert.equal(HUB_RULE.exec(css(hacrp))?.[0] ?? null, null, 'HACRP\'s stylesheet holds no hub page\'s rule');
+  for (const root of ['.prog__lede', '.step__n']) {
+    assert.ok(css(hacrp).includes(root), `HACRP's stylesheet holds ${root}`);
+    assert.ok(!css(site).includes(root) && !css(hub).includes(root), `only HACRP's stylesheet holds ${root}`);
+  }
+  for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
   // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's
   // sheet reads the tokens and sets none of that, so the shared bundle's dark and print values reach its rules.
   assert.ok(/:root\[data-theme="?dark"?\]\{[^}]*--pen:/.test(css(site)), 'the shared stylesheet\'s copy of the dark tokens for the toggle');
   assert.ok(/@media print\{:root\{[^}]*--paper: ?#fff(fff)? ?!important/.test(css(site)), 'the shared stylesheet\'s print block');
-  assert.equal(/:root|prefers-color-scheme|data-theme/.exec(css(own))?.[0] ?? null, null, 'the hub\'s stylesheet sets no theme');
-  assert.ok(css(own).includes('var(--pen)'), 'the hub\'s stylesheet reads the tokens');
+  assert.equal(/:root|prefers-color-scheme|data-theme/.exec(css(hub))?.[0] ?? null, null, 'the hub\'s stylesheet sets no theme');
+  assert.ok(css(hub).includes('var(--pen)'), 'the hub\'s stylesheet reads the tokens');
   // The check sees what it is meant to.
   assert.match('.hh__card{margin:0}', HUB_RULE);
   assert.match('.story>.step{margin:0}', HUB_RULE);
@@ -446,10 +449,10 @@ test("no file under web/ but tokens.css, and no site's or the hub's own styles o
   assert.match('a { color: rgb(0 0 0); }', COLOR_FUNCTION);
 });
 
-test('the bundled stylesheet puts each site\'s styles after the shared ones', () => {
-  const css = stylesheet(['sites/hacrp/web/styles.css']);
-  assert.ok(css.indexOf('.pol__top {') >= 0 && css.indexOf('.pol__top {') < css.indexOf('.hosp__top {'));
-  assert.ok(!stylesheet().includes('.hero {'));
+test('the shared stylesheet holds web/styles/ alone: no site\'s styles', () => {
+  const css = stylesheet();
+  assert.ok(css.includes('.pol__top {'));
+  for (const rule of ['.hosp__top {', '.hero {']) assert.ok(!css.includes(rule), rule);
 });
 
 test('tokens.css keeps the dark block in the shape the build copies, and every token it sets in light it sets in dark', () => {

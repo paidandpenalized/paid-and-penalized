@@ -384,9 +384,6 @@
 .prog__lede { max-width: 36ch; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
 .prog__lede strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
 .prog__find { display: grid; gap: 8px; margin-top: 6px; max-width: 38rem; }
-.omni--hero .omni__field { min-height: 56px; border-color: var(--pen); }
-.omni--hero .omni__label { border-right-color: var(--pen); font-size: var(--fs-sm); padding-inline: 14px; }
-.omni--hero input { font-size: var(--fs-md); padding-inline: 14px; }
 .prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
 .prog__try a { color: var(--ink); text-decoration-color: var(--pen); }
 .page--prog .prog__summary > .field { flex: 1 1 210px; }

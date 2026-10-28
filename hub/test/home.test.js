@@ -5,7 +5,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { median } from '../../engine/js/peers.js';
-import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { build } from '../../pipeline/site/build.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
@@ -263,9 +262,8 @@ test('a claim the words make that the data no longer bear out stops the build; t
 
 test('the built home page stays within the hub page budget (HTML, CSS and scripts, brotli)', { timeout: 120_000 }, () =>
   withTemp('pp-home-', async (dir) => {
-    // The hub and a stand-in carrying the program site's styles and scripts, so the stylesheet is the full site's.
-    const styles = { id: 'styles-only', entries: HACRP.entries, styles: HACRP.styles, generate: () => {} };
-    await build({ outDir: join(dir, 'dist'), sites: [styles, HUB] });
+    // The hub alone: the front page links the shared stylesheet and the hub's, never a program site's.
+    await build({ outDir: join(dir, 'dist'), sites: [HUB] });
     const { total } = pageWeight(join(dir, 'dist'), 'index.html');
     assert.ok(total <= BUDGETS.hub, `${total} bytes > ${BUDGETS.hub}`);
   }));

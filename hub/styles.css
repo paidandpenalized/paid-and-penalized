@@ -1,10 +1,9 @@
-/* The hub's own pages (hub/), in a stylesheet of their own (/assets/hub.<hash>.css; the hub's manifest says ownSheet) that
-   every hub page links after the shared one (web/styles/ and the program sites' styles) and no program site's page
-   loads. Tokens only (tokens.css); no color is written here, and no theme: the dark tokens, their copy for the theme
-   button and the print block are the shared stylesheet's, and reach these rules through the custom properties. A hub
-   page carries the program sites' styles too, so each page's rules sit under its root: the home page's generic class
-   names (.step, .num, .card, .st, ...) are scoped to its story (and .story > .step undoes the program site's own .step),
-   the hospital page's under .hh, the interim Readmissions pages' under .rd.
+/* The hub's own pages (hub/), in a stylesheet of their own (/assets/hub.<hash>.css) that every hub page links after the
+   shared one (web/styles/) and no program site's page loads; nor does a hub page load a program site's. Tokens only
+   (tokens.css); no color is written here, and no theme: the dark tokens, their copy for the theme button and the print
+   block are the shared stylesheet's, and reach these rules through the custom properties. Each page's rules sit under
+   its root: the home page's generic class names (.step, .num, .card, .st, ...) are scoped to its story, the hospital
+   page's under .hh, the interim Readmissions pages' under .rd.
 
    The home page (hub/home/): the masthead hero, then the story. Without its script the story is complete: on a wide
    screen the steps' words scroll in a column between the rail and the stage, and each of the stage's two charts sticks
@@ -62,7 +61,7 @@
 .story .rail a[aria-current="step"]::before { background: var(--pen); }
 
 /* The steps: a heading in the display face over a short column of words, each step about a window tall. */
-.story > .step { display: block; grid-column: 2; min-height: 92vh; margin: 0; padding: 32vh 40px 0 0; border: 0; }
+.story > .step { grid-column: 2; min-height: 92vh; padding: 32vh 40px 0 0; }
 .story > .step[data-step="0"] { min-height: 70vh; padding-top: 44px; }
 .story > .step[data-step="8"] { min-height: calc(100vh - var(--stage-top)); padding-top: 9vh; padding-bottom: 12vh; }
 .step__in { max-width: 22em; }

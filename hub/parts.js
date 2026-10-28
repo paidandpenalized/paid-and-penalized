@@ -31,7 +31,7 @@ export const arrow = html`<span class="ico ico--arrow" aria-hidden="true"></span
 // The tag beside an estimated figure: "Estimate", linked to what the site calls an estimate (the methods' #estimate).
 export const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: COPY.estimateTagLabel, text: COPY.estimateTag });
 
-// A hub page (layout.js page(), with the same arguments): the hub's stylesheet after the shared one (the hub's styles are a
-// sheet of their own, by the manifest's id: HUB in pages.js says ownSheet, so the program sites' pages never carry them),
+// A hub page (layout.js page(), with the same arguments): the hub's stylesheet after the shared one (each site's styles are
+// a sheet of their own, by its manifest's id, HUB in pages.js, so the program sites' pages never carry them),
 // the family search in the shell's bar, over the hub's asset, and its script, before the page's own scripts.
 export const hubPage = ({ assets, scripts = [], ...rest }) => page({ ...rest, sheets: ['hub'], search: hubSearchForm(assets.shell.hubUrl), scripts: [assets.js['hub-search'], ...scripts], assets });

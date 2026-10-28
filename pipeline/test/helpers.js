@@ -9,10 +9,10 @@ import { createSiteServer, listen, stop } from '../site/serve.js';
 
 // The assets page() needs (web/render/layout.js), for a page rendered outside a build: the CSS and script paths, and the
 // shell's facts (what a build computes once and hands every page: ctx.assets.shell). Invented numbers and no hospital.
-// Pass css, sheets (the stylesheets of their own, by name: the hub's, which every hub page links), js (merged over the
+// Pass css, sheets (the sites' stylesheets of their own, by name: HACRP's and the hub's, which each site's pages link), js (merged over the
 // shell, sticky-header and family-search scripts a page can load, and the home page's story) or shell (merged over the
 // facts below) to change a part.
-export const testAssets = ({ css = '/assets/site.test.css', sheets = { hub: '/assets/hub.test.css' }, js = {}, shell = {} } = {}) => ({
+export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/assets/hacrp.test.css', hub: '/assets/hub.test.css' }, js = {}, shell = {} } = {}) => ({
   css,
   sheets,
   js: { shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', ...js },
