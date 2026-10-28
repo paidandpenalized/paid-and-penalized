@@ -41,6 +41,15 @@ export function comparison(fill, kind, { share, median, n, group }) {
 
 // The hospital-acquired conditions cut as the page writes it ("1%").
 export const HAC_RATE = pct(HAC_CUT_PCT / 100, 0);
+
+// The word beside a row's dollars: a cut (hospital-acquired conditions': its flat rate), a bonus, or none. id: 'hrrp',
+// 'hacrp', 'hvbp' or 'net'.
+export function rowWord(fill, id, dollars) {
+  const sign = signOf(dollars);
+  if (sign === 'cut') return id === 'hacrp' ? fill('wordHacCut', { rate: HAC_RATE }) : fill('wordCut');
+  if (sign === 'bonus') return fill('wordBonus');
+  return id === 'hrrp' || id === 'hacrp' ? fill('wordNoCut') : fill('wordNoChange');
+}
 const factor = (x) => decimal(x, 4);
 
 // A program row's sentences: why the hospital has its dollars, what its peers have (each count with its words; the counts

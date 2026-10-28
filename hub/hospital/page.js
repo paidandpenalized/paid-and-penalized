@@ -20,7 +20,7 @@ import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, groupName, inProgram, peerFigures, peersOf, rowDollars, sumScale, sumValues } from './peers.js';
-import { HAC_RATE, comparison, signOf, whyText } from './text.js';
+import { comparison, rowWord, signOf, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
@@ -97,13 +97,7 @@ const estimateTag = () => estTag({ href: `${SITE.pages.methods}#estimate`, label
 const signed = (dollars) => money(dollars, { sign: true });
 const inkOf = (dollars) => ({ cut: 'pen', bonus: 'rew', zero: null })[signOf(dollars)];
 
-// The word beside a row's dollars: a cut (hospital-acquired conditions': its flat rate), a bonus, or none.
-function word(id, dollars) {
-  const sign = signOf(dollars);
-  if (sign === 'cut') return id === 'hacrp' ? fill('wordHacCut', { rate: HAC_RATE }) : fill('wordCut');
-  if (sign === 'bonus') return fill('wordBonus');
-  return id === 'hrrp' || id === 'hacrp' ? fill('wordNoCut') : fill('wordNoChange');
-}
+const word = (id, dollars) => rowWord(fill, id, dollars);
 
 // A number for a style attribute (a custom property): a fraction to four places.
 const frac = (x) => String(Math.round(x * 1e4) / 1e4);

@@ -4,8 +4,11 @@
 // hospital's mark in each. A peer a program does not list is not in its strip (never a dot at $0); nor is the hospital,
 // whose strip then says so. Switching the group moves the same dots (CSS transitions on each dot's transform, off under
 // reduced motion): a hospital that stays glides to its new place, one that joins fades in, one that leaves fades out.
-// The strips are pictures of what each row's sentences say, so they are hidden from assistive technology. The thread shows
-// where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
+// The strips are pictures of what each row's sentences say, so their marks are hidden from assistive technology; the one
+// exception is the what-if's handle (handles), a capsule with arrows on each adjustable program's strip that sits on the
+// hospital's dot and, once the row is hypothetical, on the hypothetical value, with the actual's ring left as a ghost
+// (hub/client/hospital/whatif.js binds its keys and drag). The net's hypothetical is a hollow "What if" mark. The thread
+// shows where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
 import { count, pct } from '../../../web/client/format.js';
 import { inProgram, rowFigures } from '../../hospital/peers.js';
 import { pileLayout } from '../pile.js';
@@ -90,6 +93,9 @@ export function stripLayout(group, { W, dpr, domain }) {
 }
 
 const FADE = 450;
+// The handle's half height (a 24 px target at the least) and how far its capsule reaches past that each side.
+const HANDLE_R = 12;
+const HANDLE_REACH = 14;
 
 function el(tag, attrs = {}, parent = null) {
   const node = document.createElementNS(NS, tag);
@@ -100,25 +106,63 @@ function el(tag, attrs = {}, parent = null) {
 const signClass = (v) => (v < 0 ? 'st__d st__d--pen' : v > 0 ? 'st__d st__d--rew' : 'st__d st__d--neu');
 const round = (v) => Math.round(v * 100) / 100;
 
+// The what-if's handle: a capsule (with a dashed focus ring) around a dot in the row's ink, an arrow each side, and, on
+// the first handle, the hint over it. Its slider attributes are whatif.js's.
+function handleOf(svg, fill, hint) {
+  const g = el('g', { class: 'st__h', role: 'slider', tabindex: 0 }, svg);
+  const inner = el('g', { class: 'st__hin' }, g);
+  const R = HANDLE_R;
+  const w = R + HANDLE_REACH;
+  el('rect', { class: 'st__hf', x: -(w + 5), y: -(R + 5), width: 2 * (w + 5), height: 2 * (R + 5), rx: R + 5 }, inner);
+  el('rect', { class: 'st__hb', x: -w, y: -R, width: 2 * w, height: 2 * R, rx: R }, inner);
+  const dot = el('circle', { class: 'st__hd', r: 4 }, inner);
+  el('path', { class: 'st__hc', d: `M${-R - 2} -4 l-5 4 l5 4 M${R + 2} -4 l5 4 l-5 4` }, inner);
+  if (hint) {
+    const t = el('text', { class: 'st__hint', x: 0, y: -R - 9, 'text-anchor': 'middle', 'aria-hidden': 'true' }, inner);
+    t.textContent = fill('wiHint');
+  }
+  return { g, dot };
+}
+
 // mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group), domain (the
-// share axis's [lo, hi]), fill (the page's copy filler), still (reduced motion). Returns { update(peers, scenario) }:
-// scenario, when given, is { hrrp, hacrp, hvbp, net } in percent of pay (a what-if), each drawn as a dashed ring.
-export function mountStrips(root, { h, peers, domain, fill, still }) {
+// share axis's [lo, hi]), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if
+// handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
+//   update(peers)        another group: the same dots move
+//   setScenario(s)       a what-if: s is { hrrp, hacrp, hvbp, net } in percent of pay, a value only for each row that
+//                        differs from the actual (or null for none). A row's handle moves to its value, the net gets a
+//                        hollow mark, and the actual's ring stays as a ghost.
+//   handle(id)           the row's handle (an SVG <g role="slider">), or null
+//   shareAt(id, clientX) the share of pay (percent) under a point on the row's strip, or null before it is laid out
+//   nudge()              wiggles the first handle once (not under reduced motion)
+export function mountStrips(root, { h, peers, domain, fill, still, handles = [] }) {
   const list = root.querySelector('.hh__rows');
+  const hidden = { 'aria-hidden': 'true' };
+  // The first handle carries the hint.
+  let hinted = false;
   const strips = IDS.map((id) => {
     const box = root.querySelector(`[data-row="${id}"] [data-strip]`);
     if (!box) return null;
-    const svg = el('svg', { class: 'st', 'aria-hidden': 'true', focusable: 'false' }, box);
-    const bg = el('g', {}, svg);
-    const dots = el('g', {}, svg);
-    const med = el('g', { class: 'st__med' }, svg);
+    const adjustable = handles.includes(id) && inProgram(h.est, id);
+    // A strip with a handle keeps the handle reachable: its other marks are hidden from assistive technology one by one.
+    const svg = el('svg', adjustable ? { class: 'st', focusable: 'false' } : { class: 'st', 'aria-hidden': 'true', focusable: 'false' }, box);
+    const bg = el('g', hidden, svg);
+    const dots = el('g', hidden, svg);
+    const med = el('g', { class: 'st__med', ...hidden }, svg);
     el('path', { d: 'M0 -1 L-5 7 L5 7 Z' }, med);
     const medText = el('text', { x: 8, y: 7 }, med);
     medText.textContent = fill('stripMedian');
-    const me = el('circle', { class: 'st__me', cx: 0, cy: 0 }, svg);
-    const hyp = el('circle', { class: 'st__hyp', cx: 0, cy: 0 }, svg);
-    const out = el('text', { class: 'st__out', x: 4, y: 14 }, svg);
-    return { id, box, svg, bg, dots, med, me, hyp, out, marks: new Map(), at: null, W: 0, gutter: 0, H: 0 };
+    const me = el('circle', { class: 'st__me', cx: 0, cy: 0, ...hidden }, svg);
+    const ghost = el('text', { class: 'st__ghost', 'text-anchor': 'middle', ...hidden }, svg);
+    ghost.textContent = fill('wiActual');
+    const hyp = el('g', { class: 'st__hyp', ...hidden }, svg);
+    el('circle', { class: 'st__hyp-core', r: 3 }, hyp);
+    el('circle', { class: 'st__hyp-ring', r: 8 }, hyp);
+    const hypText = el('text', { class: 'st__hyp-t', x: 0, y: -14, 'text-anchor': 'middle' }, hyp);
+    hypText.textContent = fill('wiMark');
+    const out = el('text', { class: 'st__out', x: 4, y: 14, ...hidden }, svg);
+    const handle = adjustable ? handleOf(svg, fill, !hinted) : null;
+    if (handle) hinted = true;
+    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), at: null, W: 0, gutter: 0, H: 0, scale: null, f: null };
   }).filter(Boolean);
   const thread = el('svg', { class: 'hh__thread', 'aria-hidden': 'true', focusable: 'false' });
   const path = el('path', {}, thread);
@@ -210,15 +254,40 @@ export function mountStrips(root, { h, peers, domain, fill, still }) {
     const median = rowFigures(group, st.id).median;
     st.med.style.display = median === null ? 'none' : '';
     if (median !== null) st.med.style.transform = `translate(${round(scale.xs(median * 100))}px, ${f.base}px)`;
-    // A what-if's value: a dashed ring on the plot's middle line.
-    const v = scenario?.[st.id];
-    st.hyp.style.display = Number.isFinite(v) && listed ? '' : 'none';
-    if (Number.isFinite(v) && listed) {
-      st.hyp.setAttribute('r', String(round(Math.max(st.at?.r ?? 2, 1.5) + 3.5)));
-      st.hyp.setAttribute('cx', String(round(scale.xs(v))));
-      st.hyp.setAttribute('cy', String(round((f.top + f.bot) / 2)));
-    }
     st.svg.dataset.n = count(items.length);
+    st.scale = scale;
+    st.f = f;
+    whatIf(st);
+  }
+
+  // The what-if's marks on a strip: the handle on the hospital's dot, or on the row's hypothetical value on the plot's
+  // middle line with the actual's ring a ghost; the net's hypothetical a hollow "What if" mark.
+  function whatIf(st) {
+    if (!st.scale || !st.at) {
+      st.hyp.style.display = 'none';
+      st.ghost.style.display = 'none';
+      if (st.handle) st.handle.g.style.display = 'none';
+      return;
+    }
+    const v = scenario?.[st.id];
+    const moved = Number.isFinite(v);
+    const x = moved ? st.scale.xs(v) : st.at.x;
+    const y = moved ? (st.f.top + st.f.bot) / 2 : st.at.y;
+    st.me.classList.toggle('st__me--ghost', moved);
+    st.ghost.style.display = moved ? '' : 'none';
+    if (moved) {
+      st.ghost.setAttribute('x', String(round(st.at.x)));
+      st.ghost.setAttribute('y', String(round(st.at.y - st.at.r - 8)));
+    }
+    if (st.handle) {
+      st.handle.g.style.display = '';
+      st.handle.g.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
+      st.handle.dot.setAttribute('class', `st__hd ${signClass(moved ? v : h.est.pct[PCT[st.id]])}`);
+      st.hyp.style.display = 'none';
+      return;
+    }
+    st.hyp.style.display = moved ? '' : 'none';
+    if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
   }
 
   // The thread: one dashed line down the rows through the hospital's mark in each strip that has one.
@@ -260,11 +329,35 @@ export function mountStrips(root, { h, peers, domain, fill, still }) {
   }
   if (document.fonts) document.fonts.ready.then(drawThread);
 
+  // The share under a client x on a strip: the scale's inverse ($0 across the gutter), held to the axis's domain.
+  function shareAt(id, clientX) {
+    const st = strips.find((s) => s.id === id);
+    if (!st?.scale) return null;
+    const { zL, zR, k, domain: [lo, hi] } = st.scale;
+    const x = clientX - st.svg.getBoundingClientRect().left;
+    const v = x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0;
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  const first = strips.find((st) => st.handle);
   return {
-    update(next, nextScenario = null) {
+    update(next) {
       group = next;
-      scenario = nextScenario;
       all(true);
+    },
+    setScenario(next) {
+      scenario = next;
+      for (const st of strips) whatIf(st);
+    },
+    handle: (id) => strips.find((st) => st.id === id)?.handle?.g ?? null,
+    shareAt,
+    nudge() {
+      if (!first || still.matches) return;
+      const g = first.handle.g;
+      g.classList.remove('st__h--nudge');
+      void g.getBBox();
+      g.classList.add('st__h--nudge');
+      setTimeout(() => g.classList.remove('st__h--nudge'), 2400);
     },
   };
 }

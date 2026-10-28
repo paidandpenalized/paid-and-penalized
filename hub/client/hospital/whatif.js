@@ -1,0 +1,403 @@
+// A hospital page's factor what-if, live (hub/client/hospital.js mounts it once the hub's data arrives). Each program row
+// the hospital is in gets a capsule handle on its strip (strips.js draws it; this binds its drag and keys), a factor field
+// with − and + steppers and "Use peer median" (the hospital-acquired conditions row: a "1% cut" / "No cut" pair); the net
+// row's "Match the peer median on all three" and "Reset to actual" show. The state and its arithmetic are whatif-state.js's,
+// the words whatif-text.js's.
+//
+// Once anything changes, the page says so everywhere it shows a figure: the sticky peer row becomes a dashed
+// "Hypothetical" banner with the net and "Reset to actual"; the stamp reads "What if"; every changed figure shows the new
+// value with the actual struck through beside it, and each chart keeps the actual as a ghost (the dollar rows' bars, the
+// strips' rings, the swarm's rings) beside a hollow "What if" mark; the headline states the comparison for the
+// hypothetical net. The result box (a polite live region) updates SETTLE_MS after the last input, and so does the URL
+// fragment (#whatif&hrrp=…, history.replaceState). A page opened from a link with a valid changed scenario loads it and
+// says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
+// step, Shift (or Page Up and Down) steps bigger, Home and End go to the range's ends; Escape anywhere in the what-if or
+// the banner resets the page.
+import { factor, money } from '../../../web/client/format.js';
+import { fillCopy, pillClass } from '../../../web/render/components.js';
+import { SITE } from '../../../web/site.js';
+import { SETTLE_MS } from '../../../web/whatif/dom.js';
+import { isScenarioHash } from '../../../web/whatif/fragment.js';
+import { COPY } from '../../hospital/copy.js';
+import { ROWS, rowDollars, sumScale } from '../../hospital/peers.js';
+import { HAC_RATE, comparison, rowWord, signOf } from '../../hospital/text.js';
+import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { bannerText, sentence, valueText } from './whatif-text.js';
+
+const fill = (key, values) => fillCopy(COPY, key, values);
+const usd = (x) => money(x, { sign: true });
+const frac = (x) => String(Math.round(x * 1e4) / 1e4);
+// The actual struck through beside a figure only where the two print differently (a cent of arithmetic is not news).
+const struck = (now, actual) => (usd(now) === usd(actual) ? null : actual);
+const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
+// Each page row's key in the state and in a dollar row.
+const KEY = { hrrp: 'hrrp', hacrp: 'hac', hvbp: 'hvbp', net: 'net' };
+const INK = { cut: 'pen', bonus: 'rew', zero: null };
+// How long the "What if? Adjust any program" button's jump takes before the first handle takes focus and wiggles.
+const JUMP_MS = 450;
+
+function node(tag, attrs = {}, kids = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) n.setAttribute(k, String(v));
+  n.append(...kids);
+  return n;
+}
+
+// The struck-through actual beside a changed figure in parent (after `after`, or at its end), or none (amount null).
+function was(parent, amount, after = null, cls = 'hh__was') {
+  let s = parent.querySelector(':scope > .hh__was');
+  if (amount === null) {
+    s?.remove();
+    return;
+  }
+  if (!s) {
+    s = node('s', { class: cls });
+    if (after) after.after(s);
+    else parent.append(s);
+  }
+  s.replaceChildren(node('span', { class: 'vh' }, [`${fill('wiActual')} `]), usd(amount));
+}
+
+// A bar on a dollar row's track from its zero line (x: the rows' scale), or none for $0.
+function paintBar(track, sel, cls, dollars, x) {
+  let bar = track.querySelector(sel);
+  if (dollars === null || dollars === 0) {
+    bar?.remove();
+    return;
+  }
+  if (!bar) {
+    bar = node('span');
+    track.prepend(bar);
+  }
+  const [zero, end] = [x(0), x(dollars)];
+  bar.className = `${cls} hh__bar--${INK[signOf(dollars)]}`;
+  bar.style.setProperty('--a', frac(Math.min(zero, end)));
+  bar.style.setProperty('--w', frac(Math.abs(end - zero)));
+}
+
+// mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), hospitals (every decoded
+// row: value-based purchasing's highest factor is theirs), fy, still (reduced motion), strips (mountStrips' handle API),
+// swarm (mountSwarm's), values (the dollar rows' scale values for every group: hub/hospital/peers.js sumValues), group
+// ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for the peer toggle.
+export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group }) {
+  const $ = (sel) => page.querySelector(sel);
+  const vbpMax = Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
+  const rng = ranges(h, { vbpMax });
+  const actual = initial(h);
+  let g = group;
+  const ctx = () => ({ h, vbpMax, peers: g.peers });
+  let state = actual;
+  let linked = false;
+  let timer = 0;
+
+  // ---------- the controls ----------
+  const lede = $('.hh__lede');
+  lede?.after(node('p', { class: 'hh__how' }, [node('span', { class: 'ico ico--capsule', 'aria-hidden': 'true' }), fill('wiHow')]));
+
+  const rows = {};
+  for (const { id } of ROWS) {
+    const row = $(`[data-row="${id}"]`);
+    const adjustable = id === 'hacrp' || rng[id];
+    if (!row || !adjustable) continue;
+    const program = PROGRAM[id].name;
+    const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, cuts: [] };
+    const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': KEY[id] }, [fill('wiMedian')]);
+    let kids;
+    if (id === 'hacrp') {
+      r.cuts = [
+        node('button', { type: 'button', class: 'hh__pb', 'data-cut': '1' }, [fill('wiHacCut', { rate: HAC_RATE })]),
+        node('button', { type: 'button', class: 'hh__pb', 'data-cut': '0' }, [fill('wiHacNone')]),
+      ];
+      kids = [node('div', { class: 'hh__seg', role: 'group', 'aria-label': fill('wiHacGroup') }, r.cuts), median];
+    } else {
+      const fid = `wi-f-${id}`;
+      r.input = node('input', { id: fid, type: 'number', inputmode: 'decimal', min: rng[id][0], max: rng[id][1], step: '0.0005', class: 'hh__fin' });
+      const step = (dir, label) => node('button', { type: 'button', class: 'hh__stp', 'data-step': dir, 'aria-label': fill(label, { program }), 'aria-controls': fid }, [dir < 0 ? '−' : '+']);
+      kids = [
+        node('label', { for: fid }, [fill('wiFactor'), node('span', { class: 'vh' }, [`, ${fill('wiFactorFor', { program })}`])]),
+        step(-1, 'wiLower'), r.input, step(1, 'wiRaise'), median,
+      ];
+    }
+    const ctl = node('div', { class: 'hh__ctl' }, kids);
+    const deep = row.querySelector('.hh__deep');
+    if (deep) deep.before(ctl);
+    else row.querySelector('.hh__rt')?.append(ctl);
+    rows[id] = r;
+
+    for (const b of r.cuts) b.addEventListener('click', () => apply({ type: 'hac', cut: b.dataset.cut === '1' }));
+    median.addEventListener('click', () => apply({ type: 'median', id: KEY[id] }));
+    for (const b of ctl.querySelectorAll('[data-step]')) b.addEventListener('click', (e) => apply({ type: 'step', id: KEY[id], dir: Number(b.dataset.step), big: e.shiftKey }));
+    r.input?.addEventListener('change', () => {
+      const v = r.input.value.trim() === '' ? NaN : Number(r.input.value);
+      apply({ type: 'set', id: KEY[id], value: v });
+      r.input.value = factor(state[KEY[id]]);
+    });
+
+    const handle = strips.handle(id);
+    if (handle) bindHandle(id, handle, program);
+  }
+
+  // The handle: a slider over the factor's range (the cut's: 0, the cut, to 1, none), dragged along its strip.
+  function bindHandle(id, el, program) {
+    const key = KEY[id];
+    el.setAttribute('aria-label', fill('wiHandle', { program }));
+    el.setAttribute('aria-valuemin', id === 'hacrp' ? '0' : String(rng[id][0]));
+    el.setAttribute('aria-valuemax', id === 'hacrp' ? '1' : String(rng[id][1]));
+    el.addEventListener('keydown', (e) => {
+      const k = e.key;
+      const down = k === 'ArrowLeft' || k === 'ArrowDown' || k === 'PageDown';
+      const up = k === 'ArrowRight' || k === 'ArrowUp' || k === 'PageUp';
+      if (!down && !up && k !== 'Home' && k !== 'End') return;
+      e.preventDefault();
+      if (id === 'hacrp') apply({ type: 'hac', cut: down || k === 'Home' });
+      else if (k === 'Home' || k === 'End') apply({ type: 'set', id: key, value: rng[id][k === 'Home' ? 0 : 1] });
+      else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
+    });
+    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it.
+    let offset = null;
+    const valueAt = (e) => strips.shareAt(id, e.clientX + offset);
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const b = el.querySelector('.st__hb').getBoundingClientRect();
+      offset = b.left + b.width / 2 - e.clientX;
+      el.setPointerCapture?.(e.pointerId);
+      el.focus({ preventScroll: true });
+      page.classList.add('hh--used', 'hh--dragging');
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (offset === null) return;
+      const v = valueAt(e);
+      if (v === null) return;
+      if (id === 'hacrp') {
+        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
+        const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
+        apply({ type: 'hac', cut: v < cutAt / 2 });
+      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: 1 + ((v / 100) * h.est.total) / h.est.base });
+    });
+    const end = () => {
+      offset = null;
+      page.classList.remove('hh--dragging');
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  // ---------- the banner, the stamp, the net and the result: what they say before any change, kept to restore ----------
+  const bar = $('[data-peers]');
+  const pin = bar?.querySelector('.hh__pin');
+  const scenText = node('span', { class: 'hh__scentext' });
+  const topReset = node('button', { type: 'button', class: 'hh__reset' }, [fill('reset')]);
+  const scen = node('div', { class: 'hh__scen', hidden: '' }, [node('span', { class: 'hh__htag' }, [fill('wiTag')]), scenText, topReset]);
+  const sharedLink = node('a', { href: `${location.pathname}${location.search}` }, [fill('wiSharedReset')]);
+  const shared = node('p', { class: 'hh__shared', hidden: '' }, [`${fill('wiShared')} `, sharedLink]);
+  pin?.append(scen, shared);
+
+  const stampBox = $('.hh__stamp');
+  const stamp = stampBox?.querySelector('.stamp');
+  const stampText = stamp?.textContent;
+  const big = $('.hh__big');
+  const netlab = $('.hh__netlab');
+  const netTag = node('span', { class: 'hh__htag hh__htag--sm', hidden: '' }, [fill('wiTag')]);
+  netlab?.append(netTag);
+  const result = $('[data-result]');
+  const rhd = result?.querySelector('.hh__rhd');
+  const rhdActual = rhd ? [...rhd.childNodes].map((n) => n.cloneNode(true)) : [];
+  const rbig = result?.querySelector('.hh__rbig');
+  const rs = result?.querySelector('.hh__rs');
+  const match = $('[data-match]');
+  const reset = $('[data-reset]');
+  if (match) match.hidden = false;
+
+  // ---------- drawing ----------
+  const pctOf = (d) => (d * 100) / h.est.total;
+
+  // The dollar rows on one scale that holds the hypothetical figures too: each row's bar at its figure now, the actual's
+  // bar as a ghost behind a changed one, the peers' median tick, the value and its word.
+  function paintSum(out) {
+    const now = (id) => (rowDollars(h.est, id, g.figures).own === null ? null : out[KEY[id]]);
+    const ids = [...ROWS.map((r) => r.id), 'net'];
+    const x = sumScale([...values, ...ids.map(now).filter((v) => v !== null)]);
+    const list = $('.hh__sum');
+    list?.style.setProperty('--z', frac(x(0)));
+    $('.hh__ax')?.style.setProperty('--z', frac(x(0)));
+    for (const li of page.querySelectorAll('[data-sum]')) {
+      const id = li.dataset.sum;
+      const track = li.querySelector('.hh__track');
+      if (!track) continue;
+      const { own, median } = rowDollars(h.est, id, g.figures);
+      const v = now(id);
+      const moved = v !== own;
+      paintBar(track, '.hh__bar:not(.hh__bar--ghost)', 'hh__bar', v, x);
+      paintBar(track, '.hh__bar--ghost', 'hh__bar hh__bar--ghost', moved ? own : null, x);
+      let tick = track.querySelector('.hh__tick');
+      let said = li.querySelector('.hh__sw .vh');
+      if (median === null) {
+        tick?.remove();
+        said?.remove();
+      } else {
+        if (!tick) track.append((tick = node('span', { class: 'hh__tick' })));
+        tick.style.setProperty('--m', frac(x(median)));
+        if (!said) li.querySelector('.hh__sw')?.append((said = node('span', { class: 'vh' })));
+        said.textContent = `; ${fill('sumMedian', { amount: usd(median) })}`;
+      }
+      const sv = li.querySelector('.hh__sv');
+      if (sv) {
+        sv.textContent = usd(v);
+        was(sv, moved ? struck(v, own) : null);
+      }
+      const sw = li.querySelector('.hh__sw');
+      if (sw?.firstChild?.nodeType === Node.TEXT_NODE) sw.firstChild.nodeValue = rowWord(fill, id, v);
+    }
+  }
+
+  // Everything but the result box, at once.
+  function draw() {
+    const on = changed(state, h);
+    const out = outcome(state, h);
+    for (const [id, r] of Object.entries(rows)) {
+      const key = KEY[id];
+      const v = out[key];
+      if (r.num) r.num.textContent = usd(v);
+      if (r.pill) {
+        r.pill.className = pillClass(INK[signOf(v)]);
+        r.pill.textContent = rowWord(fill, id, v);
+      }
+      if (r.rv) was(r.rv, struck(v, h.est[key]));
+      if (r.input && document.activeElement !== r.input) r.input.value = factor(state[key]);
+      for (const b of r.cuts) b.setAttribute('aria-pressed', String((b.dataset.cut === '1') === state.hac));
+      const handle = strips.handle(id);
+      if (handle) {
+        handle.setAttribute('aria-valuenow', id === 'hacrp' ? (state.hac ? '0' : '1') : String(state[key]));
+        handle.setAttribute('aria-valuetext', valueText(id, state, h, { fy }));
+      }
+    }
+    // The charts: the figure of each row whose input moved or whose dollars print differently, and the net's, in percent
+    // of pay.
+    const scenario = {};
+    for (const id of ['hrrp', 'hacrp', 'hvbp']) {
+      const key = KEY[id];
+      if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pctOf(out[key]);
+    }
+    const netMoved = out.net !== h.est.net;
+    if (netMoved) scenario.net = pctOf(out.net);
+    strips.setScenario(on ? scenario : null);
+    swarm.setHypothetical(on && netMoved ? pctOf(out.net) : null);
+
+    // The banner, the stamp, the net and its rows, the headline.
+    bar?.classList.toggle('hh__peers--hyp', on);
+    scen.hidden = !on;
+    scenText.textContent = on ? bannerText(state, h, { fy }) : '';
+    shared.hidden = !(linked && on);
+    stampBox?.classList.toggle('hh__stamp--hyp', on);
+    if (stamp) stamp.textContent = on ? fill('wiStamp') : stampText;
+    if (big) {
+      big.textContent = usd(out.net);
+      was(big.parentElement, struck(out.net, h.est.net), big, 'hh__was hh__was--big');
+    }
+    netTag.hidden = !on;
+    paintSum(out);
+    const head = $('[data-headline]');
+    const share = on ? out.net / h.est.total : h.est.share;
+    if (head) head.textContent = comparison(fill, on ? 'headHyp' : 'head', { share, median: g.figures.net.median, n: g.peers.length, group: g.group });
+    if (reset) reset.hidden = !on;
+  }
+
+  // The result box (the live region) and the URL fragment, once the reader stops. The box is written only when what it
+  // says changes, so a screen reader hears each result once.
+  let shown = `false|${rs?.textContent ?? ''}`;
+  function settle() {
+    clearTimeout(timer);
+    writeHash();
+    const on = changed(state, h);
+    const out = outcome(state, h);
+    const text = sentence(state, h, g.peers, { fy, group: g.group });
+    if (`${on}|${text}` === shown) return;
+    shown = `${on}|${text}`;
+    result?.classList.toggle('hh__result--hyp', on);
+    if (rhd) rhd.replaceChildren(...(on ? [`${fill('resultHyp', { fy })} `, node('span', { class: 'hh__htag hh__htag--sm' }, [fill('wiTag')])] : rhdActual.map((n) => n.cloneNode(true))));
+    if (rbig) {
+      rbig.replaceChildren(usd(out.net));
+      if (on && struck(out.net, h.est.net) !== null) rbig.prepend(node('s', { class: 'hh__was' }, [node('span', { class: 'vh' }, [`${fill('wiActual')} `]), usd(h.est.net)]), ' → ');
+    }
+    if (rs) rs.textContent = text;
+  }
+
+  function writeHash() {
+    const next = toHash(state, h);
+    // Leave a fragment that isn't a scenario (#whatif, the skip link's #main) alone while there is nothing to write.
+    if (next === location.hash || (next === '' && !isScenarioHash(location.hash))) return;
+    try {
+      history.replaceState(null, '', `${location.pathname}${location.search}${next}`);
+    } catch {
+      // Some browsers rate-limit replaceState; the next change writes the fragment again.
+    }
+  }
+
+  function apply(action) {
+    const next = reduce(state, action, ctx());
+    if (next === state) return;
+    state = next;
+    if (action.type === 'reset') linked = false;
+    page.classList.add('hh--used');
+    draw();
+    clearTimeout(timer);
+    timer = setTimeout(settle, SETTLE_MS);
+  }
+
+  // A scenario from the address: on load, and when a link opens in this tab.
+  function load() {
+    const next = fromHash(location.hash, h, ctx()).state;
+    linked = changed(next, h);
+    state = next;
+    draw();
+    settle();
+  }
+
+  // ---------- the rest of the controls ----------
+  const resetAll = () => apply({ type: 'reset' });
+  match?.addEventListener('click', () => apply({ type: 'medianAll' }));
+  reset?.addEventListener('click', resetAll);
+  topReset.addEventListener('click', resetAll);
+  sharedLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetAll();
+  });
+  page.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !changed(state, h) || !e.target.closest?.('#whatif, [data-peers]')) return;
+    e.preventDefault();
+    resetAll();
+  });
+  window.addEventListener('hashchange', () => {
+    if (isScenarioHash(location.hash) && location.hash !== toHash(state, h)) load();
+  });
+
+  // The first handle: the button above jumps to it, and it wiggles once when the rows first come into view.
+  const first = ROWS.map((r) => strips.handle(r.id)).find(Boolean);
+  $('.hh__wbtn')?.addEventListener('click', () => {
+    setTimeout(() => {
+      // The jump's #whatif took the place of a scenario's fragment: put the scenario back.
+      writeHash();
+      first?.focus({ preventScroll: true });
+      strips.nudge();
+    }, still.matches ? 0 : JUMP_MS);
+  });
+  if (first && 'IntersectionObserver' in window) {
+    const seen = new IntersectionObserver((entries) => {
+      if (!entries.some((en) => en.isIntersecting)) return;
+      seen.disconnect();
+      strips.nudge();
+    }, { threshold: 0.5 });
+    seen.observe(first.closest('[data-row]') ?? first);
+  }
+
+  load();
+
+  return {
+    setGroup(next) {
+      g = next;
+      draw();
+      settle();
+    },
+  };
+}

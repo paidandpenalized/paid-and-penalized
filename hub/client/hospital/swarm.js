@@ -27,6 +27,8 @@ const SPREAD = 0.2;
 const PEER_A = 1;
 const ALL_A = 0.62;
 const ALL_A_SMALL = 0.8;
+// The actual's rings during a what-if: a ghost.
+const GHOST_A = 0.4;
 // A stage narrower than this lays out as a phone's.
 const NARROW_BELOW = 520;
 // The frame, in CSS pixels, wide and narrow: the margins, the $0 gutter, and where each pile and the axis sit.
@@ -316,14 +318,14 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     ctx.globalAlpha = 1;
   }
 
-  // A ring around dot s: paper inside so the dot stands clear, then the ink line.
-  function ring(s, width = 2, dash = null) {
+  // A ring around dot s: paper inside so the dot stands clear, then the ink line. alpha: a ghost's fainter ink.
+  function ring(s, width = 2, dash = null, alpha = 1) {
     const rr = Math.max(CR[s], 1.4) + 4.5;
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.75 * alpha;
     ctx.fillStyle = colors.paper;
     circle(CX[s], CY[s], rr);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = alpha;
     ctx.fillStyle = ink(C[s % N]);
     circle(CX[s], CY[s], Math.max(2.2, CR[s] + 0.6));
     ctx.fill();
@@ -333,13 +335,17 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     circle(CX[s], CY[s], rr);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
     return rr;
   }
 
-  // This hospital: ringed in both piles, joined by a dashed line, named beside the upper ring.
+  // This hospital: ringed in both piles, joined by a dashed line, named beside the upper ring. During a what-if its rings
+  // are the actual's ghost.
   function self_() {
     if (self < 0) return;
     const up = N + self;
+    const alpha = hypo === null ? 1 : GHOST_A;
+    ctx.globalAlpha = alpha;
     ctx.strokeStyle = colors.ink;
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 3]);
@@ -348,8 +354,8 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     ctx.lineTo(CX[self], CY[self]);
     ctx.stroke();
     ctx.setLineDash([]);
-    ring(self);
-    const rr = ring(up);
+    ring(self, 2, null, alpha);
+    const rr = ring(up, 2, null, alpha);
     // The name beside the upper ring, above its right (or its left, near the right edge), on a paper halo over the dots.
     const f = font(W < NARROW_BELOW ? 12 : 13, 700);
     ctx.font = f;
@@ -368,18 +374,26 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     text(name, x, Math.max(m.pTop + 2, CY[up] - rr - 3), f, colors.ink, align, true);
   }
 
-  // A what-if's net: a dashed ring on the group's middle line and on everyone's, where the hospital would stand.
+  // A what-if's net: a hollow mark (a paper core in an ink line, then a dashed ring) where the hospital would stand, at
+  // its rings' heights in the group and in everyone, labeled "What if" under the group's (the name is over its ring).
   function hypothetical() {
     if (hypo === null || self < 0) return;
     const x = scale.xs(hypo);
+    const r = Math.max(CR[N + self], 1.4);
     for (const y of [CY[N + self], CY[self]]) {
+      ctx.fillStyle = colors.paper;
       ctx.strokeStyle = colors.ink;
       ctx.lineWidth = 1.5;
-      ctx.setLineDash([3, 2]);
-      circle(x, y, Math.max(CR[N + self], 1.4) + 4.5);
+      circle(x, y, Math.max(2.5, r + 0.5));
+      ctx.fill();
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      circle(x, y, r + 6);
       ctx.stroke();
       ctx.setLineDash([]);
     }
+    text(fill('wiMark'), x, CY[N + self] + r + 20, font(12, 700), colors.ink, 'center', true);
   }
 
   function draw() {

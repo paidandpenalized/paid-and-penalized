@@ -2,7 +2,10 @@
 // toggle restates the page for each group (the headline, the group's name and count, the table) and moves the dollar
 // rows' median ticks, each program row gets its strip with the hospital ringed, the peer table fills alphabetically when
 // opened, a toggle the hospital has no group for is disabled with its reason, and nothing goes wrong on the page; without
-// the data the page stays as the server wrote it, with one quiet line. Runs against dist/ (make build) or any URL.
+// the data the page stays as the server wrote it, with one quiet line. The factor what-if: a handle stepped by keyboard
+// or dragged marks the page hypothetical everywhere (the banner, the stamp, the struck actuals, the ghost rings, the
+// fragment) and Escape or Reset puts it back; a shared link with a valid changed scenario opens on it under "Reader-made
+// scenario", one with junk opens on the actual figures. Runs against dist/ (make build) or any URL.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../../hub/data.js';
@@ -16,6 +19,23 @@ const shared = useBrowser();
 const CUT = samplePages().find((p) => p.type === 'hub-hospital-cut');
 // A hospital with an estimate and no teaching status on record, picked by property.
 const NO_TEACH = hubHospitals(loadHub()).find((h) => h.est && h.teach === null);
+
+// The what-if's marks: whether the page says it is hypothetical, and where.
+const hypo = (page) => page.evaluate(() => ({
+  banner: document.querySelector('.hh__scen')?.checkVisibility() ?? false,
+  dashed: document.querySelector('[data-peers]').classList.contains('hh__peers--hyp'),
+  shared: document.querySelector('.hh__shared')?.checkVisibility() ?? false,
+  stamp: document.querySelector('.hh__stamp .stamp').textContent,
+  struck: document.querySelectorAll('.hh__was').length,
+  ghosts: document.querySelectorAll('.st__me--ghost').length,
+  hash: location.hash,
+  result: document.querySelector('[data-result] .hh__rs').textContent,
+  head: document.querySelector('[data-headline]').textContent,
+  sideways: document.documentElement.scrollWidth - window.innerWidth,
+}));
+// Long enough for the result and the fragment to settle (web/whatif/dom.js SETTLE_MS, 400 ms).
+const SETTLED_MS = 700;
+const NEVER = /\bshould\b|\bfailed\b|could have avoided|NaN|undefined|Infinity/i;
 
 // The page's state: the pressed toggle, the group line, the headline, the ticks' places, whether the canvas has paint,
 // how many strips have a ring, and the sideways overflow.
@@ -90,6 +110,75 @@ for (const width of [390, 1280]) {
       assert.equal(teach.disabled, true);
       assert.match(teach.note ?? '', /no teaching status/);
       await assertQuiet(seen, 'the hospital page without a teaching status');
+    }));
+
+    it('the what-if: a stepped or dragged handle marks the page hypothetical, and Escape or Reset puts it back', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.st__h');
+      const before = await hypo(page);
+      assert.equal(before.banner, false);
+      assert.equal(before.struck, 0);
+      const handle = page.locator('.st__h').first();
+      await handle.focus();
+      const now = () => handle.getAttribute('aria-valuenow');
+      const start = await now();
+      await page.keyboard.press('Shift+ArrowRight');
+      if ((await now()) === start) await page.keyboard.press('Shift+ArrowLeft');
+      assert.notEqual(await now(), start, 'the handle steps');
+      await page.waitForTimeout(SETTLED_MS);
+      const on = await hypo(page);
+      assert.equal(on.banner, true, 'the Hypothetical banner shows');
+      assert.equal(on.dashed, true, 'the sticky row is dashed');
+      assert.equal(on.shared, false, 'no shared-link line for the reader\'s own change');
+      assert.match(on.stamp, /what if/i);
+      assert.ok(on.struck > 0, 'the actual figures struck through beside the new ones');
+      assert.ok(on.ghosts > 0, 'the actual\'s ring a ghost');
+      assert.match(on.hash, /^#whatif&/);
+      assert.match(on.result, /^If .* would be /);
+      assert.match(on.head, /^What if: /);
+      assert.doesNotMatch(on.result + on.head, NEVER);
+      assert.match(await handle.getAttribute('aria-valuetext'), /estimated FY\d{4} .*hypothetical$/);
+      assert.equal(on.sideways, 0);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(SETTLED_MS);
+      const off = await hypo(page);
+      assert.deepEqual([off.banner, off.dashed, off.struck, off.ghosts, off.hash], [false, false, 0, 0, ''], 'Escape resets');
+      assert.deepEqual([off.stamp, off.head, off.result], [before.stamp, before.head, before.result], 'the actual words back');
+      // A drag: the handle moves with the pointer.
+      await page.locator('#whatif').scrollIntoViewIfNeeded();
+      const box = await handle.locator('.st__hb').boundingBox();
+      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      for (const dx of [-20, -40, -60]) await page.mouse.move(x + dx, y);
+      if ((await now()) === start) for (const dx of [20, 40, 60]) await page.mouse.move(x + dx, y);
+      await page.mouse.up();
+      assert.notEqual(await now(), start, 'the drag moves the handle');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.equal((await hypo(page)).banner, true);
+      await page.locator('.hh__scen .hh__reset').click();
+      await page.waitForTimeout(SETTLED_MS);
+      assert.equal((await hypo(page)).banner, false, 'Reset to actual');
+      await audit(page, `the hospital page at ${width} px after a what-if`);
+      await assertQuiet(seen, 'the hospital page\'s what-if');
+    }));
+
+    it('a shared what-if link opens on its scenario, marked reader-made; one with junk opens on the actual figures', () => withPage(tabs, { path: `${CUT.path}#whatif&hac=0&hrrp=2&hvbp=abc`, watched: true }, async (page, { seen }) => {
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      const linked = await hypo(page);
+      assert.equal(linked.banner, true);
+      assert.equal(linked.shared, true, 'Reader-made scenario, not CMS data.');
+      assert.equal(linked.hash, '#whatif&hac=0', 'the junk dropped from the address');
+      await page.locator('.hh__shared a').click();
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared, s.hash]), [false, false, '']);
+      await page.goto(new URL(`${CUT.path}#whatif&hrrp=2&hvbp=abc&hac=7`, page.url()).href, { waitUntil: 'networkidle' });
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      const junk = await hypo(page);
+      assert.deepEqual([junk.banner, junk.shared, junk.struck], [false, false, 0], 'junk changes nothing');
+      await assertQuiet(seen, 'the hospital page from a shared what-if link');
     }));
 
     it('without its data the page stays as the server wrote it, with one quiet line', () => withPage(tabs, { path: '/about/' }, async (page) => {

@@ -3,23 +3,24 @@
 // group and among everyone; each program row gets its strip; the peer table fills when opened. Switching the group
 // restates every sentence that names it (the headline, the row sentences, the result, the captions) with the build's own
 // functions (hub/hospital/peers.js, text.js), so the page reads exactly as the build would have written it for that
-// group, and moves the dollar rows' median ticks, the swarm's dots and the strips' dots. Without the data the page stays
-// as the server wrote it, with one quiet line saying the chart couldn't load.
+// group, and moves the dollar rows' median ticks, the swarm's dots and the strips' dots. The factor what-if
+// (hospital/whatif.js) owns the figures that a scenario changes (the headline, the net, the dollar rows, the result) and
+// states them for the actual or the hypothetical figures. Without the data the page stays as the server wrote it, with one
+// quiet line saying the chart couldn't load.
 import { PEER_MODES } from '../../engine/js/peers.js';
-import { count, money } from '../../web/client/format.js';
+import { count } from '../../web/client/format.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { fillCopy } from '../../web/render/components.js';
 import { COPY } from '../hospital/copy.js';
-import { ROWS, groupName, peerFigures, peersOf, rowDollars, sumScale, sumValues } from '../hospital/peers.js';
-import { comparison, whyText } from '../hospital/text.js';
+import { ROWS, groupName, peerFigures, peersOf, sumValues } from '../hospital/peers.js';
+import { whyText } from '../hospital/text.js';
 import { mountStrips } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
 import { fillPeerTable } from './hospital/table.js';
+import { mountWhatIf } from './hospital/whatif.js';
 import { shareDomain } from './scale.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-// A number for a custom property: a fraction to four places (as the build writes the rows' bars and ticks).
-const frac = (x) => String(Math.round(x * 1e4) / 1e4);
 
 const root = document.querySelector('article.hh[data-ccn]');
 if (root && root.querySelector('[data-peers]')) start(root);
@@ -48,8 +49,9 @@ function live(page, { hospitals, h, fy, still }) {
     const peers = peersOf(hospitals, h, mode);
     return [mode, peers && peers.length ? { mode, peers, figures: peerFigures(peers), group: groupName(fill, h, mode) } : null];
   }));
-  // The dollar rows' scale, as the build drew it: every group's medians are on it, so only the ticks move.
-  const x = sumScale(sumValues(h.est, [...groups.values()].filter(Boolean).map((g) => g.figures)));
+  // The dollar rows' scale's values, as the build drew it: every group's medians are on it, so only the ticks move (the
+  // what-if adds its own figures).
+  const values = sumValues(h.est, [...groups.values()].filter(Boolean).map((g) => g.figures));
   const first = groups.get('state');
 
   // The sticky row's height (its content's and its border's: the row's own min-height is this value, so measuring the row
@@ -72,7 +74,8 @@ function live(page, { hospitals, h, fy, still }) {
   const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');
   if (note) note.hidden = false;
-  const strips = mountStrips($('#whatif'), { h, peers: first.peers, domain, fill, still });
+  const strips = mountStrips($('#whatif'), { h, peers: first.peers, domain, fill, still, handles: ROWS.map((r) => r.id) });
+  const whatIf = mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group: first });
 
   const details = $('[data-peer-table]');
   let current = first;
@@ -86,7 +89,8 @@ function live(page, { hospitals, h, fy, still }) {
     if (details.open) table();
   });
 
-  // Every sentence and mark that names the group, restated for g.
+  // Every sentence and mark that names the group, restated for g (the headline, the result and the dollar rows' median
+  // ticks are the what-if's, which states them for the actual or the hypothetical figures).
   function words(g) {
     const n = count(g.peers.length);
     const name = $('[data-peer-name]');
@@ -95,8 +99,6 @@ function live(page, { hospitals, h, fy, still }) {
       b.textContent = n;
       name.replaceChildren(b, ` ${g.group}`);
     }
-    const head = $('[data-headline]');
-    if (head) head.textContent = comparison(fill, 'head', { share: h.est.share, median: g.figures.net.median, n: g.peers.length, group: g.group });
     if (note) {
       const hint = document.createElement('span');
       hint.className = 'hh__hint';
@@ -109,35 +111,8 @@ function live(page, { hospitals, h, fy, still }) {
       const why = $(`[data-row="${id}"] .hh__why`);
       if (why) why.textContent = whyText(fill, h, id, g.figures[id], { fy, group: g.group }).join(' ');
     }
-    const result = $('[data-result] .hh__rs');
-    if (result) result.textContent = comparison(fill, 'result', { share: h.est.share, median: g.figures.net.median, n: g.peers.length, group: g.group });
     const tally = details?.querySelector('summary span');
     if (tally) tally.textContent = fill('tableCount', { n, group: g.group });
-    // The dollar rows' median ticks, and the words a screen reader has for them.
-    for (const li of page.querySelectorAll('[data-sum]')) {
-      const track = li.querySelector('.hh__track');
-      if (!track) continue;
-      const { median } = rowDollars(h.est, li.dataset.sum, g.figures);
-      let tick = track.querySelector('.hh__tick');
-      let said = li.querySelector('.hh__sw .vh');
-      if (median === null) {
-        tick?.remove();
-        said?.remove();
-        continue;
-      }
-      if (!tick) {
-        tick = document.createElement('span');
-        tick.className = 'hh__tick';
-        track.append(tick);
-      }
-      tick.style.setProperty('--m', frac(x(median)));
-      if (!said) {
-        said = document.createElement('span');
-        said.className = 'vh';
-        li.querySelector('.hh__sw')?.append(said);
-      }
-      said.textContent = `; ${fill('sumMedian', { amount: money(median, { sign: true }) })}`;
-    }
   }
 
   function choose(mode) {
@@ -148,6 +123,7 @@ function live(page, { hospitals, h, fy, still }) {
     words(g);
     swarm.setPeers(g.peers, g.group);
     strips.update(g.peers);
+    whatIf.setGroup(g);
     if (details?.open) table();
   }
   for (const b of buttons) b.addEventListener('click', () => choose(b.dataset.peer));

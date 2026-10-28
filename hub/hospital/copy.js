@@ -126,6 +126,46 @@ export const COPY = typesetCopy({
   matchAll: 'Match the peer median on all three',
   reset: 'Reset to actual',
 
+  // The what-if's controls (added by the page's script): how to use them, each row's handle, factor field, steppers and
+  // median, and the hospital-acquired conditions toggle. {program}: the program's name.
+  wiHow: 'Drag a handle along its row, type a factor, or tab to a handle and press the arrow keys (Shift for bigger steps; Escape resets). Everything on the page follows and is marked hypothetical; the actual figures stay as a ghost.',
+  wiHint: 'drag me ↔',
+  wiHandle: '{program}, what-if',
+  wiFactor: 'Payment factor',
+  wiFactorFor: '{program} payment factor, what-if',
+  wiLower: 'Lower the {program} factor',
+  wiRaise: 'Raise the {program} factor',
+  wiMedian: 'Use peer median',
+  wiHacGroup: 'Hospital-acquired conditions, what-if',
+  wiHacCut: '{rate} cut',
+  wiHacNone: 'No cut',
+  // The handle's aria-valuetext: the factor (or the cut) and the estimated dollars it gives; ", hypothetical" once moved.
+  wiValueFactor: 'factor {factor}: estimated FY{fy} {amount}, {word}',
+  wiValueHac: '{word}: estimated FY{fy} {amount}',
+  wiValueHyp: '{text}, hypothetical',
+  // Once anything changes: the banner in the sticky row, the stamp, the marks on the charts, the struck-through actual
+  // figures, the headline and the result. The headline keeps the comparison's words for the hypothetical net.
+  wiTag: 'Hypothetical',
+  wiBanner: 'Estimated FY{fy} net {net} instead of {actual}',
+  wiStamp: 'What if',
+  wiMark: 'What if',
+  wiActual: 'actual',
+  headHypCut: 'What if: a {share} net cut of Medicare inpatient pay, against {median} at the median of {n} {group}.',
+  headHypBonus: 'What if: a {share} net bonus of Medicare inpatient pay, against {median} at the median of {n} {group}.',
+  headHypZero: 'What if: no net change in Medicare inpatient pay, against {median} at the median of {n} {group}.',
+  resultHyp: 'What if, estimated FY{fy}',
+  // The result sentence once anything changes: each change as a clause (several join as a list), then the estimated net
+  // the hospital would have, its share of pay and its actual net, and the group's median net share.
+  wiIf: 'If {changes}, its estimated FY{fy} net would be {net} ({share} of Medicare inpatient pay) instead of {actual}. The group median is {median}.',
+  wiIfHrrp: 'its readmissions factor were {to} instead of {from}',
+  wiIfHvbp: 'its value-based purchasing factor were {to} instead of {from}',
+  wiIfHacOn: 'it had the {rate} hospital-acquired conditions cut',
+  wiIfHacOff: 'it had no hospital-acquired conditions cut',
+  wiAnd: '{list} and {last}',
+  // A page opened from a shared link with a changed scenario.
+  wiShared: 'Reader-made scenario, not CMS data.',
+  wiSharedReset: 'Show the actual figures',
+
   // The peer table the page's script fills when it is opened.
   tableSummary: 'Every peer as a table',
   tableCount: '({n} {group}, alphabetical)',
