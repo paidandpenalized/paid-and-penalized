@@ -293,6 +293,21 @@
   .story--live .card__peer { margin: 6px 0; }
 }
 
+/* Before the story's script runs (scripts on), a phone sets the story's first screen as the live layout above will
+   (the chart pinned under the words: only the rules that place it), so the page does not jump when the script starts.
+   The script's .story--live then takes over; .story--static (its data failed) and scripts off keep the server's
+   layout. Change these with the live rules they copy. */
+@media (scripting: enabled) and (max-width: 760px) {
+  .story:not(.story--live):not(.story--static) { --stage-h: 56svh; display: block; }
+  .story:not(.story--live):not(.story--static) > .stage { display: block; position: sticky; bottom: 0; z-index: 5; height: var(--stage-h); margin-inline: calc(-1 * var(--gutter)); border-top: 1px solid var(--line); background: var(--paper); box-shadow: 0 -22px 18px -6px var(--paper); }
+  .story:not(.story--live):not(.story--static) .stage__panel { position: absolute; inset: 0; }
+  .story:not(.story--live):not(.story--static) .stage__panel--map { opacity: 0; }
+  .story:not(.story--live):not(.story--static) .stage__pin { height: 100%; padding: 30px 12px 10px; }
+  .story:not(.story--live):not(.story--static) > .step { min-height: calc(100svh - var(--stage-h) - var(--stage-top) + 200px); padding: 56px 0 0; }
+  .story:not(.story--live):not(.story--static) > .step[data-step="0"] { padding-top: 40px; }
+  .story:not(.story--live):not(.story--static) > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
+}
+
 @media print {
   .railbox, .story__progress, .stage__cv, .nowstep { display: none !important; }
   /* The masthead prints at rest, wherever its trip into the header was (the script's inline styles). */
@@ -399,7 +414,15 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__pb:disabled { cursor: not-allowed; text-decoration: line-through; }
 .hh__grp { max-width: none; font-size: 15px; font-weight: 600; }
 .hh__pnotes { padding-top: 10px; }
-.hh__pnotes:not(:has(.hh__pnote:not([hidden]))) { display: none; }
+.hh__pnotes:where(:not(:has(.hh__pnote:not([hidden])))) { display: none; }
+/* With scripts on, the toggle and the notes under it keep their places, unseen, until the page's script shows them (on
+   a phone the label they replace steps aside from the start), so the row neither grows nor shifts when they appear.
+   Scripts off, they take no room. */
+@media (scripting: enabled) {
+  .hh__pb[hidden] { display: inline-block; visibility: hidden; }
+  .hh__pnotes { display: block; }
+  .hh__pnote[hidden] { display: block; visibility: hidden; }
+}
 .hh__pnote { max-width: none; color: var(--ink-2); font-size: var(--fs-xs); }
 .hh__pnote + .hh__pnote { margin-top: 2px; }
 
@@ -619,6 +642,12 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 @media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }
 @media (max-width: 640px) {
   .hh__pin:has(.hh__pb:not([hidden])) .hh__plbl { display: none; }
+}
+@media (scripting: enabled) and (max-width: 640px) { .hh__pin .hh__plbl { display: none; } }
+/* Below 360px a toggle's words may take two lines, in one face and not in another: the buttons are two lines tall either
+   way, so the row keeps its height when the page's face replaces the stand-in. */
+@media (max-width: 359px) { .hh__pb { min-height: 40px; } }
+@media (max-width: 640px) {
   .hh__pb { padding: 6px 10px; font-size: 13px; }
   .hh__hero { padding-top: 18px; }
   .hh__sum { grid-template-columns: minmax(6.6em, 7.4em) minmax(0, 1fr) auto 3.9em; column-gap: 8px; font-size: 13px; }

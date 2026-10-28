@@ -63,6 +63,13 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .theme-toggle:hover { border-color: var(--ink); }
 .theme-toggle[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 @media (min-width: 641px) { .ft__base .theme-toggle { display: none; } }
+/* With scripts on, the bar's search and its theme toggle keep their places, unseen, until their scripts show them, so
+   nothing in the header moves or grows when they appear (a first visit's layout stays put). Scripts off, they take no
+   room. */
+@media (scripting: enabled) and (min-width: 641px) {
+  .fam__end > .omni[hidden] { display: block; visibility: hidden; }
+  .fam__end > .theme-toggle[hidden] { display: inline-grid; visibility: hidden; }
+}
 
 /* ---------- the program tabs: a ledger's raised paper tabs standing on the heavy rule ---------- */
 /* All programs, then a tab per program with dollar estimates. The row scrolls sideways when it outgrows the window,
@@ -151,6 +158,9 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .ft__base .theme-toggle { width: 44px; height: 44px; margin-top: 8px; }
   .ft__base .theme-toggle::after { content: none; }
   .fam__find:not([hidden]) { display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+  /* With scripts on, the find button keeps its place, unseen, until the shell's script shows it, so the followed
+     hospital's chip beside it does not narrow when it appears. */
+  @media (scripting: enabled) { .fam__find[hidden] { display: inline-grid; flex: none; width: 44px; height: 44px; visibility: hidden; } }
   .fam__find .ico { width: 18px; height: 18px; }
   .fam__find[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
   .fam__find[aria-expanded="true"] .ico--search { --ico: var(--icon-close); }

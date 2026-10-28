@@ -12,6 +12,9 @@
 .omni--hero .omni__field { min-height: 56px; border-color: var(--pen); }
 .omni--hero .omni__label { border-right-color: var(--pen); font-size: var(--fs-sm); padding-inline: 14px; }
 .omni--hero input { font-size: var(--fs-md); padding-inline: 14px; }
+/* With scripts on, a hero's box keeps its place, unseen, until its script shows it, so the words under it don't jump
+   down when it appears. Scripts off, it takes no room. */
+@media (scripting: enabled) { .omni--hero[hidden] { display: block; visibility: hidden; } }
 .omni:focus-within .omni__field { outline: 2px solid var(--focus); outline-offset: 2px; }
 .omni__list { position: absolute; z-index: 30; top: calc(100% + 2px); right: 0; left: 0; max-height: 60vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; border: var(--rule) solid var(--ink); background: var(--paper); box-shadow: 4px 4px 0 var(--paper-2); }
 .omni__list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; max-width: none; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
