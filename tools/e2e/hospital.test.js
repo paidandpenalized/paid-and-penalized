@@ -432,6 +432,7 @@ describe('the what-if\'s edges', () => {
 // reset; a drag keeps the axis it began on until it ends; a link that opens on a scenario starts wide, with no glide.
 describe('the strips\' axis', () => {
   const tabs = useContext(shared);
+  const phone = useContext(shared, { width: 390 });
   const path = hospitalPathOf('hub', HIGH_BASE.ccn);
   // A strip's axis as it stands on the screen, read off its tick labels and its $0 gutter (strips.js: the plot runs 4 px
   // in from each side): k, pixels per percentage point between the two leftmost labels, and the span in points the plot
@@ -527,6 +528,141 @@ describe('the strips\' axis', () => {
     await assertQuiet(seen, 'the strips widening and narrowing');
   }));
 
+  // Half way through a glide (opening, then the reset back), on a desktop's and a phone's strips: each pile is still a pile
+  // (no stack folds through its middle line: every pile keeps at least 70% of its height at either end, and every dot
+  // off $0 stands at least half a dot clear of every other), the hint stands aside, and no tick's label shows cut or past
+  // its strip's sides at any moment.
+  for (const width of [1280, 390]) {
+    it(`mid-glide each strip stays a pile, the hint stands aside, and every label shows whole inside its strip (${width} px)`, () => withPage(width === 390 ? phone : tabs, { path, watched: true }, async (page, { seen }) => {
+      await page.waitForSelector('.st__h');
+      await page.locator('#whatif').scrollIntoViewIfNeeded();
+      await settle(page);
+      const glide = (how) => page.evaluate(async (trigger) => {
+        const handle = document.querySelector('[data-row="hrrp"] .st__h');
+        const place = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform);
+        const dots = (svg) => [...svg.querySelectorAll('.st__d')];
+        const height = (ys) => (ys.length ? Math.max(...ys) - Math.min(...ys) : 0);
+        const svgs = [...document.querySelectorAll('svg.st')];
+        const start = svgs.map((svg) => height(dots(svg).map((d) => place(d).f)));
+        if (trigger === 'open') handle.focus();
+        else handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        const moving = document.getAnimations().filter((a) => a.transitionProperty);
+        const at = (ms) => {
+          for (const a of moving) {
+            a.pause();
+            a.currentTime = ms;
+          }
+        };
+        // Every label at each moment of the glide: none past its strip's sides while it shows (12 px: an end label's
+        // reach at rest).
+        const stray = [];
+        for (let ms = 0; ms <= 700; ms += 35) {
+          at(ms);
+          for (const svg of svgs) {
+            const b = svg.getBoundingClientRect();
+            for (const t of svg.querySelectorAll('.st__tl')) {
+              if (Number(getComputedStyle(t).opacity) < 0.02) continue;
+              const r = t.getBoundingClientRect();
+              if (r.left < b.left - 12 || r.right > b.right + 12) stray.push(`${t.textContent} at ${ms} ms`);
+            }
+          }
+        }
+        at(350);
+        const rows = svgs.map((svg, i) => {
+          const all = dots(svg).map((d) => ({ d, m: place(d), s: Number(d.getAttribute('width')), zero: d.classList.contains('st__d--neu') }));
+          const end = height(dots(svg).map((d) => new DOMMatrixReadOnly(d.style.transform).f));
+          const off = all.filter((p) => !p.zero);
+          const clear = off.filter((p) => !all.some((o) => o !== p && Math.hypot(o.m.e - p.m.e, o.m.f - p.m.f) < p.s / 2)).length;
+          return { row: svg.closest('[data-row]').dataset.row, off: off.length, clear, height: height(all.map((p) => p.m.f)) / (Math.min(start[i], end) || 1) };
+        });
+        const hint = document.querySelector('.st__hint');
+        const out = { glides: moving.length, rows, stray, hint: hint ? Number(getComputedStyle(hint).opacity) : 0, clipped: document.querySelectorAll('svg.st [clip-path]').length };
+        for (const a of moving) a.finish();
+        return out;
+      }, how);
+      const check = (g, when) => {
+        assert.ok(g.glides > 50, `${when}: the strips glide`);
+        for (const { row, off, clear, height } of g.rows) {
+          assert.ok(clear >= 0.95 * off, `${when}, ${row}: ${clear} of ${off} dots off $0 stand clear half way`);
+          assert.ok(height >= 0.7, `${when}, ${row}: the pile keeps ${(height * 100).toFixed(0)}% of its height half way`);
+        }
+        assert.equal(g.hint, 0, `${when}: the hint stands aside while the strips glide`);
+        assert.deepEqual(g.stray, [], `${when}: no label shows past its strip`);
+        assert.equal(g.clipped, 0, `${when}: no label is clipped`);
+      };
+      check(await glide('open'), 'opening');
+      await page.waitForTimeout(900);
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(900);
+      check(await glide('reset'), 'resetting');
+      await page.waitForTimeout(900);
+      await assertQuiet(seen, 'a strip mid-glide');
+    }));
+  }
+
+  it('a reset and a reopening within one glide turn every part back from where it is drawn, with one label a tick', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    const handle = page.locator('[data-row="hrrp"] .st__h');
+    await handle.waitFor();
+    await page.locator('#whatif').scrollIntoViewIfNeeded();
+    await handle.focus();
+    await page.waitForTimeout(900);
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(900);
+    const s = await page.evaluate(() => {
+      const el = document.querySelector('[data-row="hrrp"] .st__h');
+      const place = (p) => new DOMMatrixReadOnly(getComputedStyle(p).transform);
+      const key = (code) => el.dispatchEvent(new KeyboardEvent('keydown', { key: code, bubbles: true }));
+      const pauseAt = (ms) => {
+        const moving = document.getAnimations().filter((a) => a.transitionProperty);
+        for (const a of moving) {
+          a.pause();
+          a.currentTime = ms;
+        }
+        return moving;
+      };
+      // Escape: the reset's glide back, caught at 300 ms; then a step: the what-if opens again from there.
+      key('Escape');
+      pauseAt(300);
+      const parts = [...document.querySelectorAll('svg.st :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut)')];
+      const from = new Map(parts.map((p) => [p, place(p)]));
+      key('ArrowLeft');
+      const moving = pauseAt(250);
+      const along = [];
+      for (const p of parts) {
+        if (!p.isConnected) continue;
+        const [a, now, end] = [from.get(p), place(p), new DOMMatrixReadOnly(p.style.transform || 'none')];
+        for (const [u, v, w] of [[a.e, now.e, end.e], [a.a, now.a, end.a]]) if (Math.abs(w - u) > 2) along.push((v - u) / (w - u));
+      }
+      const shown = new Map();
+      for (const t of document.querySelectorAll('[data-row="hrrp"] svg.st .st__tl')) {
+        if (Number(getComputedStyle(t).opacity) > 0.05) shown.set(t.textContent, (shown.get(t.textContent) ?? 0) + 1);
+      }
+      for (const a of moving) a.finish();
+      return { along, twice: [...shown].filter(([, n]) => n > 1).map(([v]) => v), labels: document.querySelectorAll('[data-row="hrrp"] svg.st .st__tl').length };
+    });
+    assert.ok(s.along.length > 50, `${s.along.length} parts turn back`);
+    const [lo, hi] = [Math.min(...s.along), Math.max(...s.along)];
+    assert.ok(lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `every part the same way along from where it was drawn (${lo}..${hi})`);
+    assert.deepEqual(s.twice, [], 'no tick shows two labels');
+    await page.waitForTimeout(900);
+    const ticks = await axisOf(page);
+    assert.equal(await page.locator('[data-row="hrrp"] svg.st .st__tl').count(), ticks.ticks.split(' ').length, 'no label left behind');
+    await assertQuiet(seen, 'a reset and a reopening within one glide');
+  }));
+
+  it('the hint stays inside its strip once the what-if opens', () => withPage(phone, { path, watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.st__hint');
+    await page.locator('[data-row="hrrp"] .st__h').focus();
+    const box = await page.evaluate(() => {
+      const t = document.querySelector('.st__hint').getBoundingClientRect();
+      const s = document.querySelector('.st__hint').closest('svg').getBoundingClientRect();
+      return { top: t.top - s.top, left: t.left - s.left, right: s.right - t.right, bottom: s.bottom - t.bottom };
+    });
+    for (const [side, px] of Object.entries(box)) assert.ok(px >= -1, `the hint's ${side} edge ${px} px inside the strip`);
+    await assertQuiet(seen, 'the hint inside its strip');
+  }));
+
   it('the "What if?" button opens it: the strips widen once the jump lands', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
     await page.waitForSelector('.st__h');
     const before = await axisOf(page);
@@ -559,6 +695,78 @@ describe('the strips\' axis', () => {
     const after = await axisOf(page);
     assert.ok(after.span > before.span + 0.5, `wide once released: ${before.span} → ${after.span}`);
     await assertQuiet(seen, 'a drag on the tight axis');
+  }));
+
+  it('a release after a drag from rest: the strips glide wide with the handle on its value, which stays as dragged', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    const handle = page.locator('[data-row="hrrp"] .st__h');
+    await handle.waitFor();
+    await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
+    const box = await handle.locator('.st__hb').boundingBox();
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    for (const dx of [-12, -24, -36]) await page.mouse.move(x + dx, y);
+    await settle(page);
+    const held = await handle.getAttribute('aria-valuenow');
+    assert.notEqual(held, String(HIGH_BASE.est.hrrpFactor), 'the drag moved the factor');
+    // Where every part of the strip stands as the pointer lets go; then, a frame into the glide, the way along.
+    await page.evaluate(() => {
+      window.stFrom = new Map([...document.querySelectorAll('[data-row="hrrp"] svg.st :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h)')]
+        .map((p) => [p, new DOMMatrixReadOnly(getComputedStyle(p).transform)]));
+    });
+    await page.mouse.up();
+    const along = await page.evaluate(() => {
+      const moving = document.getAnimations().filter((a) => a.transitionProperty);
+      for (const a of moving) {
+        a.pause();
+        a.currentTime = 300;
+      }
+      const out = [];
+      let hand = null;
+      for (const [p, a] of window.stFrom) {
+        const [now, end] = [new DOMMatrixReadOnly(getComputedStyle(p).transform), new DOMMatrixReadOnly(p.style.transform || 'none')];
+        if (Math.abs(end.e - a.e) > 2) out.push((now.e - a.e) / (end.e - a.e));
+        if (p.classList.contains('st__h')) hand = (now.e - a.e) / (end.e - a.e);
+      }
+      for (const a of moving) a.play();
+      return { out, hand };
+    });
+    const [lo, hi] = [Math.min(...along.out), Math.max(...along.out)];
+    assert.ok(along.out.length > 10 && lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `the whole strip glides as one (${lo}..${hi})`);
+    assert.ok(Math.abs(along.hand - lo) < 0.01, 'the handle with it');
+    await page.waitForTimeout(1000);
+    assert.equal(await handle.getAttribute('aria-valuenow'), held, 'the value stays as dragged');
+    // On the wide axis, the handle stands at that value's place: read off the ticks either side of it.
+    const share = ((Number(held) - 1) * HIGH_BASE.est.base * 100) / HIGH_BASE.est.total;
+    const at = await page.evaluate((v) => {
+      const svg = document.querySelector('[data-row="hrrp"] svg.st');
+      const x = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).e;
+      const ticks = new Map([...svg.querySelectorAll('.st__tl')].map((t) => [Number(t.textContent.replace('−', '-').replace('%', '')), x(t)]));
+      const [a, b] = [Math.floor(v), Math.floor(v) - 1];
+      return { want: ticks.get(a) + (v - a) * (ticks.get(a) - ticks.get(b)), got: x(svg.querySelector('.st__h')), wide: ticks.has(-5) };
+    }, share);
+    assert.ok(at.wide, 'the strips are wide');
+    assert.ok(Math.abs(at.got - at.want) < 1, `the handle at ${at.got} px, its value's place ${at.want} px`);
+    await assertQuiet(seen, 'a release after a drag from rest');
+  }));
+
+  it('a link to #whatif (no scenario) loads on the wide axis, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
+    await counting(page);
+    await page.goto(new URL(`${path}#whatif`, page.url()).href, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    await page.waitForTimeout(SETTLED_MS);
+    const linked = await axisOf(page);
+    assert.equal((await hypo(page)).banner, false, 'no scenario: the actual figures');
+    assert.equal(await glides(page), 0, 'no glide on load');
+    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.st__h');
+    const tight = await axisOf(page);
+    await page.locator('[data-row="hrrp"] .st__h').focus();
+    const wide = await axisOf(page);
+    assert.ok(linked.span > tight.span + 0.5, `the link's axis is the wide one (${linked.span} against ${tight.span})`);
+    assert.deepEqual([linked.ticks, near(linked.span, wide.span)], [wide.ticks, true]);
+    await assertQuiet(seen, 'a link to #whatif, on the wide axis');
   }));
 
   it('under reduced motion the axis changes at once, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {

@@ -9,6 +9,8 @@ import { fillCopy } from '../../web/render/components.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { stripLayout } from '../client/hospital/strips.js';
+import { drawnDot } from '../client/pile.js';
+import { reach, vbpMaxOf } from '../client/hospital/whatif-state.js';
 import { shareDomain } from '../client/scale.js';
 import { ROWS, ROW_IDS, ROW_KEY, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
@@ -148,4 +150,50 @@ test('every strip keeps separate dots, each at its own value', () => {
     }
   }
   assert.ok(checked > 100000, `${checked} dots checked`);
+});
+
+// A strip glides between its two axes (the actual figures', and the what-if's wider one: strips.js setWide) with every dot
+// on a straight line from its place on one to its place on the other. Half way, every row of every state's group, at a
+// phone's and a desktop's strip width, is still a pile: no stack folds through its middle line (a pile keeps at least 70%
+// of the height it has at either end), and every dot but those at exactly $0 stands at least half a dot from every other
+// (those are dealt across the gutter's columns, which a change of pitch re-deals, so they may pass one another inside it;
+// even so, at least 70% of a row's dots stand clear).
+test('half way between its two axes, every strip is still a pile of separate dots', () => {
+  const domain = shareDomain(hospitals);
+  const vbpMax = vbpMaxOf(hospitals);
+  const seen = new Set();
+  const worst = { moved: 1, all: 1, height: Infinity };
+  let rows = 0;
+  for (const h of estimated) {
+    if (seen.has(h.state)) continue;
+    seen.add(h.state);
+    const group = peersOf(hospitals, h, 'state');
+    const wide = shareDomain(hospitals, reach(h, { vbpMax }));
+    for (const [W, dpr] of [[358, 3], [628, 1]]) {
+      const a = stripLayout(group, { W, dpr, domain });
+      const b = stripLayout(group, { W, dpr, domain: wide });
+      for (const id of ROW_IDS) {
+        const { items } = a.rows[id];
+        if (items.length < 10) continue;
+        const s = Math.max(drawnDot(a.rows[id].pile.r, dpr).side, drawnDot(b.rows[id].pile.r, dpr).side) / dpr;
+        const at = (q) => items.map((it) => {
+          const [p, r] = [a.rows[id].pile.pos.get(it.id), b.rows[id].pile.pos.get(it.id)];
+          return { x: p.x + (r.x - p.x) * q, y: p.y + (r.y - p.y) * q, zero: it.v === 0 };
+        });
+        const mid = at(0.5);
+        const clear = (p) => !mid.some((o) => o !== p && Math.hypot(o.x - p.x, o.y - p.y) < s / 2);
+        const moved = mid.filter((p) => !p.zero);
+        const height = (pts) => Math.max(...pts.map((p) => p.y)) - Math.min(...pts.map((p) => p.y));
+        if (moved.length) worst.moved = Math.min(worst.moved, moved.filter(clear).length / moved.length);
+        worst.all = Math.min(worst.all, mid.filter(clear).length / mid.length);
+        const ends = Math.min(height(at(0)), height(at(1)));
+        if (ends > 0) worst.height = Math.min(worst.height, height(mid) / ends);
+        rows += 1;
+      }
+    }
+  }
+  assert.ok(rows > 100, `${rows} strips checked`);
+  assert.ok(worst.moved >= 0.95, `half way, ${(worst.moved * 100).toFixed(0)}% of a strip's dots off $0 stand clear`);
+  assert.ok(worst.height >= 0.7, `half way, a pile keeps ${(worst.height * 100).toFixed(0)}% of its height`);
+  assert.ok(worst.all >= 0.7, `half way, ${(worst.all * 100).toFixed(0)}% of a strip's dots stand clear`);
 });

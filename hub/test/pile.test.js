@@ -235,3 +235,29 @@ test('the piles\' shared rules: a dot\'s drawn shape, a CCN\'s stacking spread, 
   // The extent: the highest top and the lowest bottom of its columns.
   assert.deepEqual(pileExtent({ cols: [{ top: 5, bottom: 9 }, { top: 2, bottom: 7 }, { top: 6, bottom: 12 }] }), [2, 12]);
 });
+
+// ranked (the hospital page's strips): a mirrored column stacks top to bottom in key order over the very rows the
+// alternating order fills, so the pile looks the same, and an item keeps its place in its column's order on any scale.
+test('pileLayout ranked: the same places as the mirrored pile, each column in key order from its top', () => {
+  const px = 1;
+  const scale = shareScale({ x0: 12, x1: 378, gutter: 40, domain: [-3.9, 3.2], px });
+  const opts = { base: 260, top: 60, dMax: 2.6, dMin: 2, gap: (d) => Math.max(px, d * 0.24), px, mirror: true };
+  for (const byValue of [false, true]) {
+    const plain = pileLayout(ITEMS, scale, { ...opts, byValue });
+    const ranked = pileLayout(ITEMS, scale, { ...opts, byValue, ranked: true });
+    assert.deepEqual([ranked.d, ranked.m, ranked.fits], [plain.d, plain.m, plain.fits]);
+    const cells = (layout) => [...layout.pos.values()].map((p) => `${p.x.toFixed(6)} ${p.y.toFixed(6)}`).sort();
+    assert.deepEqual(cells(ranked), cells(plain), `byValue ${byValue}: the same places`);
+    check(ranked, ITEMS, opts, scale);
+    const byX = new Map();
+    for (const it of ITEMS) {
+      const p = ranked.pos.get(it.id);
+      if (!byX.has(p.x)) byX.set(p.x, []);
+      byX.get(p.x).push({ key: it.key, y: p.y });
+    }
+    for (const col of byX.values()) {
+      col.sort((a, b) => a.key - b.key);
+      for (let i = 1; i < col.length; i++) assert.ok(col[i].y > col[i - 1].y, `byValue ${byValue}: a column in key order from its top`);
+    }
+  }
+});

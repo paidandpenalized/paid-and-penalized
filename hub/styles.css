@@ -594,6 +594,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
    time (strips.js GLIDE_MS), so a dot never leaves its tick; the class comes off when it ends, so a handle then follows
    a drag at once. */
 .st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
+/* The hint stands aside while the strips glide (the piles restack under it), and comes back after. */
+.st--live .st__hint { opacity: 0; transition-duration: .15s; }
 /* The thread: one dashed line down the rows through the hospital's mark in each strip. */
 .hh__thread { position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none; }
 .hh__thread path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .7; }

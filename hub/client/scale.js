@@ -28,14 +28,15 @@ export function shareDomain(hospitals, extra = []) {
 // ends, so the axis changes at most twice in a what-if, never back and forth with each value.
 export const whatIfAxis = (pct, { actual, wide, now }) => (pct === null ? actual : pct < actual[0] || pct > actual[1] ? wide : now);
 
-// Which axis a hospital page's strips draw as the reader acts: s is { open, held, wide } (the what-if open, a handle held
-// in a drag, the strips on the wide axis: every figure the what-if can show), event one of 'open' (the "What if?" button,
-// a link to it, a control's focus or input), 'reset', 'press' (a drag begins) and 'release' (it ends). Tight (the actual
-// figures, the full width for the data) until the what-if opens, wide while it is open; a drag keeps the axis it began on,
-// so nothing moves under the pointer, and the change waits for its end.
+// Which axis a hospital page's strips draw as the reader acts: s is { open, held, wide } (the what-if open, how many
+// pointers hold a handle in a drag, the strips on the wide axis: every figure the what-if can show), event one of 'open'
+// (the "What if?" button, a link to it, a control's focus or input), 'reset', 'press' (a pointer takes a handle) and
+// 'release' (it lets go). Tight (the actual figures, the full width for the data) until the what-if opens, wide while it
+// is open; while any drag lasts the axis stays as it was, so nothing moves under a pointer, and the change waits for the
+// last to end.
 export function stripAxis(s, event) {
   const open = event === 'open' ? true : event === 'reset' ? false : s.open;
-  const held = event === 'press' ? true : event === 'release' ? false : s.held;
+  const held = Math.max(0, s.held + (event === 'press') - (event === 'release'));
   return { open, held, wide: held ? s.wide : open };
 }
 

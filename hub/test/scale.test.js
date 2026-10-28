@@ -142,9 +142,9 @@ test('ticksBetween: the ticks of an axis part way between two; those both show m
 });
 
 test('stripAxis: the strips stay tight until the what-if opens, widen once, and are tight again after a reset; never in a drag', () => {
-  const run = (events, s = { open: false, held: false, wide: false }) => events.map((e) => (s = stripAxis(s, e)).wide);
+  const run = (events, s = { open: false, held: 0, wide: false }) => events.map((e) => (s = stripAxis(s, e)).wide);
   assert.deepEqual(run([]), [], 'at rest: nothing asked');
-  assert.equal(stripAxis({ open: false, held: false, wide: false }, 'release').wide, false, 'tight before the what-if opens');
+  assert.equal(stripAxis({ open: false, held: 0, wide: false }, 'release').wide, false, 'tight before the what-if opens');
   assert.deepEqual(run(['open']), [true], 'wide once it opens (the button, a link to it, a control\'s focus or input)');
   assert.deepEqual(run(['open', 'open', 'open']), [true, true, true], 'more input while open changes nothing');
   assert.deepEqual(run(['open', 'reset']), [true, false], 'tight again after a reset');
@@ -155,7 +155,11 @@ test('stripAxis: the strips stay tight until the what-if opens, widen once, and 
   // A reset (Escape) during a drag waits for its end too.
   assert.deepEqual(run(['open', 'press', 'reset', 'open', 'reset', 'release']), [true, true, true, true, true, false]);
   assert.deepEqual(run(['open', 'press', 'release']), [true, true, true], 'a drag on the wide axis keeps it');
-  const s = stripAxis({ open: false, held: false, wide: false }, 'open');
-  assert.deepEqual(s, { open: true, held: false, wide: true });
+  // Two pointers on two handles: one letting go leaves the other's axis alone; the change waits for the last.
+  assert.deepEqual(run(['press', 'press', 'open', 'release', 'release']), [false, false, false, false, true]);
+  assert.deepEqual(run(['open', 'press', 'press', 'reset', 'release', 'release']), [true, true, true, true, true, false]);
+  assert.deepEqual(run(['release', 'release', 'press', 'open', 'release']), [false, false, false, false, true], 'a stray release counts nothing');
+  const s = stripAxis({ open: false, held: 0, wide: false }, 'open');
+  assert.deepEqual(s, { open: true, held: 0, wide: true });
   assert.deepEqual(stripAxis(s, 'unknown'), s, 'anything else changes nothing');
 });

@@ -93,12 +93,16 @@ function binItems(items, scale, d, m, mirror) {
 //   byValue     a widened bin's sub-columns hold slices of its values, lowest on the left (each slice stacked in key
 //               order), so an item stands within its slice of the bin rather than anywhere across it: what a chart that
 //               rings one item at its value needs (the hospital page's strips). Off by default (the home story's look).
+//   ranked      mirrored, each dot-wide column stacks top to bottom in key order, over the same rows the alternating
+//               order fills, so an item keeps its place in its column's order when the scale changes and two layouts'
+//               places can be glided between without the stacks folding through their middle line (the strips' change of
+//               axis). Off by default.
 // Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
 // below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
 // top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when $0's columns, which cannot
 // widen past the gutter, overflow even at the smallest pitch, or M_MAX sub-columns are not enough; the overfull bins are
 // then packed closer than a pitch so the pile stays inside. No input the story can reach does either.
-export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0, byValue = false }) {
+export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0, byValue = false, ranked = false }) {
   const avail = base - top;
   const gapOf = (d) => (typeof gap === 'function' ? gap(d) : gap);
   // The pitches to try, largest first: whole device pixels (or tenths) from dMax down to dMin, while a dot keeps R_MIN.
@@ -158,9 +162,14 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
       bin.list.sort((a, b) => a.key - b.key);
       at = bin.list.map((it, k) => [it, Math.floor(k / bin.m), k % bin.m]);
     }
+    // Mirrored, a row's place from the middle line: alternating below and above, or (ranked) the column's rows in order
+    // from its top, over the same places (a column of n stands from floor((n - 1) / 2) rows above the line).
+    const n = new Array(bin.m).fill(0);
+    for (const [, , j] of at) n[j] += 1;
+    const step = (row, j) => (ranked ? row - Math.floor((n[j] - 1) / 2) : row % 2 ? (row + 1) / 2 : -row / 2);
     at.forEach(([it, row, j]) => {
       const x = bin.x + (j - (bin.m - 1) / 2) * d;
-      const y = mirror ? mid + (row % 2 ? (row + 1) / 2 : -row / 2) * sp : base - d / 2 - row * sp;
+      const y = mirror ? mid + step(row, j) * sp : base - d / 2 - row * sp;
       pos.set(it.id, { x, y });
       const col = cols.get(x);
       if (col) {

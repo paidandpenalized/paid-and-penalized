@@ -101,7 +101,9 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   let timer = 0;
   // The strips' axis as the reader opens, resets and drags (scale.js stripAxis): event 'open', 'reset', 'press' or
   // 'release'; animate false to move at once (a page opened on the what-if).
-  let axis = { open: false, held: false, wide: false };
+  let axis = { open: false, held: 0, wide: false };
+  // The pointers holding a handle now: each counts once, from its press to its own release.
+  const holding = new Set();
   const axisOn = (event, animate = true) => {
     const next = stripAxis(axis, event);
     if (next.wide !== axis.wide) strips.setWide(next.wide, animate);
@@ -204,7 +206,10 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       const b = el.querySelector('.st__hb').getBoundingClientRect();
       offset = b.left + b.width / 2 - e.clientX;
       el.setPointerCapture?.(e.pointerId);
-      axisOn('press');
+      if (!holding.has(e.pointerId)) {
+        holding.add(e.pointerId);
+        axisOn('press');
+      }
       el.focus({ preventScroll: true });
       page.classList.add('hh--used', 'hh--dragging');
     });
@@ -215,14 +220,14 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       at = v;
       if (!frame) frame = requestAnimationFrame(drag);
     });
-    const end = () => {
+    const end = (e) => {
       if (frame) {
         cancelAnimationFrame(frame);
         drag();
       }
       offset = null;
       page.classList.remove('hh--dragging');
-      axisOn('release');
+      if (holding.delete(e.pointerId)) axisOn('release');
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
