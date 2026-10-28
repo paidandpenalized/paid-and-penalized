@@ -71,11 +71,15 @@ export function storyFacts(hospitals) {
 
 // Each state's totals over its hospitals with an estimate, by postal code in order: `n` hospitals, their pay (`total`),
 // their `net` dollars, `share` = net / total, and `cutN` the hospitals whose net is a cut. Maryland (all-payer model,
-// no estimates) is `{ state: 'MD', notInPrograms: true, n }` with the count of its hospitals.
+// no estimates) is `{ state: 'MD', notInPrograms: true, n }` with the count of its hospitals. A hospital that cannot be
+// filed stops the build: a Maryland-status one outside Maryland, one in Maryland with an estimate, or an estimated one
+// with no state.
 export function stateTotals(hospitals) {
   const states = new Map();
   let maryland = 0;
   for (const h of hospitals) {
+    if (h.status === 'maryland' && h.state !== 'MD') throw new RangeError(`hub: ${h.ccn} has the Maryland status but is in ${h.state ? `"${h.state}"` : 'no state'}`);
+    if (h.est && !h.state) throw new RangeError(`hub: ${h.ccn} has an estimate but no state`);
     if (h.state === 'MD') {
       if (h.est) throw new RangeError(`hub: ${h.ccn} is in Maryland (not in these programs) but has an estimate`);
       maryland += 1;
@@ -90,7 +94,7 @@ export function stateTotals(hospitals) {
   }
   const out = new Map([...states.values()].map(({ state, n, total, net, cutN }) => [state, { state, n, total, net, share: netShare(net, total), cutN }]));
   if (maryland) out.set('MD', { state: 'MD', notInPrograms: true, n: maryland });
-  return new Map([...out].sort(([a], [b]) => (a < b ? -1 : 1)));
+  return new Map([...out].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 
 // The CCN the example rule picks from these hospitals, or null when none qualifies. Among hospitals with an estimate that

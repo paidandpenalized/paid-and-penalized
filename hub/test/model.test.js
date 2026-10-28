@@ -156,6 +156,20 @@ test('stateTotals on invented hospitals; a Maryland hospital with an estimate st
   assert.throws(() => stateTotals([fake('990006', 'MD', { net: -1 })]), RangeError);
 });
 
+test('stateTotals stops on a Maryland-status hospital outside Maryland, and on an estimated hospital with no state, rather than drop or misfile it', () => {
+  const isHub = (e) => e instanceof RangeError && /^hub: /.test(e.message);
+  assert.throws(() => stateTotals([fake('990001', 'ZZ', null, { status: 'maryland' })]), (e) => isHub(e) && e.message.includes('990001'));
+  assert.throws(() => stateTotals([fake('990001', null, null, { status: 'maryland' })]), isHub);
+  for (const state of [null, undefined, '']) {
+    assert.throws(() => stateTotals([fake('990002', state, { total: 1000, net: -20 })]), (e) => isHub(e) && e.message.includes('990002'), `state ${JSON.stringify(state)}`);
+  }
+  // A hospital without an estimate may have no state: it has no row to file.
+  assert.deepEqual([...stateTotals([fake('990003', null, null)]).keys()], []);
+  // Postal codes sort whatever order the hospitals come in.
+  const list = ['ZB', 'ZA', 'MD', 'ZC'].map((s, i) => (s === 'MD' ? fake(`99010${i}`, 'MD', null, { status: 'maryland' }) : fake(`99010${i}`, s, {})));
+  assert.deepEqual([...stateTotals(list).keys()], ['MD', 'ZA', 'ZB', 'ZC']);
+});
+
 test('EXAMPLE_CCN is the hospital the rule picks, and meets the rule\'s conditions', () => {
   const h = hospitals.find((x) => x.ccn === EXAMPLE_CCN);
   assert.ok(h, 'in the dollar file');
