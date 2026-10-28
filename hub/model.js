@@ -19,13 +19,21 @@ function estimate(row) {
   return { base, total, hrrp, hvbp, hac, net, after, atStake, hrrpFactor, vbpFactor, cut, hrrpListed, vbpListed, share: netShare(net, total) };
 }
 
+// The master's record for a CCN with a dollar row. The inputs must agree before a page is built (checkHubInputs,
+// hub/data.js), and hubHospitals meets the same gap if it is called with others: both stop here, with one message.
+export function masterRecord(master, ccn) {
+  const record = master.get(ccn);
+  if (!record) throw new RangeError(`hub: CCN ${ccn} has a dollar row but no hospital master record`);
+  return record;
+}
+
 // Every hospital in the dollar file, in its order, joined to its master record and to whether Thirty Day Readmissions has
 // it. `est` holds the dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and
 // hospitals with no inputs to estimate from). A missing bed count, teaching status or location stays null, and a null
 // bed count has no size band.
 export function hubHospitals({ dollars, master, tdr }) {
   return dollars.hospitals.map((row) => {
-    const m = master.get(row.ccn); // every dollar CCN is in the master: checkHubInputs (hub/data.js) stops the build otherwise
+    const m = masterRecord(master, row.ccn);
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
     const beds = m.beds ?? null;
     return {

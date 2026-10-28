@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { netShare, programDollars } from '../../engine/js/dollars/whatif.js';
 import { LISTED_PROGRAMS } from '../../web/site.js';
-import { loadHub } from '../data.js';
+import { checkHubInputs, loadHub } from '../data.js';
 import { EXAMPLE_CCN, exampleRule, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
 
 const hub = loadHub();
@@ -72,6 +72,18 @@ test('hubHospitals stops on a status no page has words for', () => {
   assert.throws(() => hubHospitals({ dollars: { hospitals: [row] }, master, tdr }), /status "parhm"/);
   const [h] = hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr });
   assert.deepEqual([h.status, h.est, h.inTdr, h.band], ['maryland', null, false, 0]);
+});
+
+test('hubHospitals stops on a dollar CCN with no master record, in the hub RangeError checkHubInputs gives (never a TypeError)', () => {
+  const master = new Map([['990001', { ccn: '990001', name: 'Hospital 990001', city: 'Town', state: 'ZZ', beds: 10, teach: 'none', lat: 1, lon: 2 }]]);
+  const tdr = { hospitals: new Map() };
+  const rows = [{ ccn: '990001', status: 'maryland' }, { ccn: '990009', status: 'estimated' }];
+  const error = (fn) => { try { fn(); } catch (e) { return e; } return null; };
+  const e = error(() => hubHospitals({ dollars: { hospitals: rows }, master, tdr }));
+  assert.ok(e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'), String(e));
+  // One message from both places that can meet the gap.
+  const masterFile = { programYears: { hacrp: 2026, hrrp: 2027 }, hospitals: [{ ccn: '990001' }] };
+  assert.equal(error(() => checkHubInputs({ dollars: { fy: 2026, hospitals: rows }, masterFile, tdrFy: 2027 }))?.message, e.message);
 });
 
 test('storyFacts adds up to the dollar file', () => {

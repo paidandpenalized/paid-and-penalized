@@ -2,6 +2,7 @@
 // Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
+import { masterRecord } from './model.js';
 
 // The pinned copy of Thirty Day Readmissions' published data: its hospitals decide which hospitals have a Readmissions
 // page there.
@@ -9,15 +10,15 @@ export const TDR_ID = 'tdr-hrrp-fy2027';
 
 // The inputs must agree before any page is built from them: the dollar estimates are for the year the master calls its
 // HACRP year (the common fiscal year the hub shows), every dollar CCN is in the master, and the Thirty Day Readmissions
-// file is for the master's HRRP year. Throws a RangeError naming the mismatch. This is the one place a dollar CCN with no
-// master record is caught: hubHospitals and the pages that follow rely on it.
+// file is for the master's HRRP year. Throws a RangeError naming the mismatch. A dollar CCN with no master record is
+// caught by model.js's masterRecord, the check hubHospitals makes too, so the message is one.
 export function checkHubInputs({ dollars, masterFile, tdrFy }) {
   const years = masterFile.programYears;
   if (!Number.isInteger(years?.hacrp) || !Number.isInteger(years?.hrrp)) throw new RangeError('hub: the hospital master names no HACRP and HRRP program years');
   if (dollars.fy !== years.hacrp) throw new RangeError(`hub: the dollar estimates are FY${dollars.fy} but the hospital master's HACRP year is ${years.hacrp}`);
   if (tdrFy !== years.hrrp) throw new RangeError(`hub: the Thirty Day Readmissions file is FY${tdrFy} but the hospital master's HRRP year is ${years.hrrp}`);
-  const known = new Set(masterFile.hospitals.map((r) => r.ccn));
-  for (const row of dollars.hospitals) if (!known.has(row.ccn)) throw new RangeError(`hub: CCN ${row.ccn} has a dollar row but no hospital master record`);
+  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  for (const row of dollars.hospitals) masterRecord(master, row.ccn);
 }
 
 let loaded = null;
