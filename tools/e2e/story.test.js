@@ -120,8 +120,8 @@ for (const width of [320, 390, 1280]) {
 
 // The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
 // the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
-// the 'hub:select' event name it), and a hospital without a teaching status has that peer toggle disabled with the
-// hospital page's note.
+// the 'hub:select' event name it, the worksheet below fills in for it), and a hospital without a teaching status has that
+// peer toggle disabled with the hospital page's note.
 describe('states you can read, and Find yours', () => {
   const tabs = useContext(shared);
 
@@ -187,6 +187,49 @@ describe('states you can read, and Find yours', () => {
     assert.deepEqual(await pressed(), ['teach']);
     await assertQuiet(seen, 'find yours');
   }));
+
+  // The worksheet in "Methods, in brief" fills in for the hospital the last step finds: its CCN, lines that add up as
+  // printed (line 6 = 3 + 4 + 5, the hospital's net), the example's lead gone, the stamp for its sign. A hospital with a
+  // net bonus, so the bonus stamp shows, and axe judges its contrast in each scheme.
+  for (const scheme of SCHEMES) {
+    it(`the worksheet fills in for a hospital found with a net bonus, ${scheme}`, () => withPage(tabs, { path: '/', scheme, watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      const found = await page.evaluate(async () => {
+        const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+        const at = (c) => cols.indexOf(c);
+        const row = rows.find((r) => r[at('status')] === 'e' && r[at('net')] > 0);
+        return { ccn: row[at('ccn')], net: row[at('net')] };
+      });
+      await page.locator('#step-find').scrollIntoViewIfNeeded();
+      const box = page.locator('main form#find').getByRole('combobox');
+      await box.pressSequentially(found.ccn.toLowerCase());
+      await page.locator('main form#find [role="option"]').first().waitFor();
+      await box.press('Enter');
+      await page.waitForFunction((c) => document.querySelector('[data-worksheet]').dataset.ccn === c, found.ccn);
+      await page.locator('[data-worksheet]').scrollIntoViewIfNeeded();
+      await settle(page);
+      const ws = await page.evaluate(() => {
+        const root = document.querySelector('[data-worksheet]');
+        const text = (key) => root.querySelector(`[data-ws="${key}"]`).textContent;
+        return {
+          ccn: text('ccn'), lines: Object.fromEntries(['hrrp', 'hac', 'hvbp', 'net'].map((key) => [key, text(key)])),
+          example: root.querySelector('[data-ws-ex]').checkVisibility(),
+          stamps: [...root.querySelectorAll('[data-sign]')].filter((el) => el.checkVisibility()).map((el) => [el.dataset.sign, el.textContent]),
+        };
+      });
+      // An amount as printed ("−$1,234", "+$56", "$0"); a program the hospital is not in adds nothing.
+      const amount = (t) => (t === 'Not in this program' ? 0 : Number(t.replace('−', '-').replace(/[$,+]/g, '')));
+      assert.equal(ws.ccn, found.ccn);
+      assert.ok(Object.values(ws.lines).every((t) => t === 'Not in this program' || /^[−+]?\$[\d,]+$/.test(t)), JSON.stringify(ws.lines));
+      assert.equal(amount(ws.lines.hrrp) + amount(ws.lines.hac) + amount(ws.lines.hvbp), amount(ws.lines.net), 'line 6 = 3 + 4 + 5');
+      assert.equal(amount(ws.lines.net), found.net, 'line 6 is the hospital\'s net');
+      assert.equal(ws.example, false, '"An example" is gone');
+      assert.deepEqual(ws.stamps, [['bonus', 'Net bonus']]);
+      await audit(page, `the worksheet for a hospital with a net bonus, ${scheme}`);
+      await assertQuiet(seen, `the worksheet, ${scheme}`);
+    }));
+  }
 
   it('a state picked twice in the bar\'s search on the front page goes to it both times', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });

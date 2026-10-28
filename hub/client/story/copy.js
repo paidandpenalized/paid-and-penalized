@@ -11,7 +11,9 @@ export const COPY = Object.freeze({
   ruleHrrpShort: 'cut, up to {cap}',
   gateHac: 'Hospital-acquired conditions (HACRP)',
   gateHacShort: 'Hospital-acquired cond.',
-  ruleHac: 'top-scoring quarter: flat {cut} cut',
+  // "Highest scores", as step 3 says it (a higher HAC score is worse; never "top", which reads as the best hospitals). Short
+  // enough that the gate's name and rule fit side by side on the narrowest wide stage (520px).
+  ruleHac: 'highest scores: flat {cut} cut',
   ruleHacShort: 'flat {cut} cut',
   gateVbp: 'Value-based purchasing (HVBP)',
   gateVbpShort: 'Value-based purchasing',

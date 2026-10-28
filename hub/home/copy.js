@@ -113,4 +113,76 @@ export const COPY = typesetCopy({
   cardRowsLabel: 'Estimated FY{fy} dollars by program',
   cardNext: 'Its hospital page shows every program among its peers, with a what-if.',
   cardGo: 'Open its hospital page',
+
+  // ---------- below the story (below.js) ----------
+  // The program directory: its heading ({count}: the programs with data, in words), the lede ({gross}: what they move in
+  // FY{fy}), the group over the cards.
+  dirKicker: 'The programs',
+  dirHead: '{count} programs live. More as each site launches.',
+  dirLede: 'Each program gets its own site, with every hospital, built on the same look, search and way of counting. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
+  dirGroup: 'Quality programs',
+  dirGroupNote: 'Estimated FY{fy}',
+  // Each card's takeaway over its histogram. Readmissions: the share of its hospitals at {zero}, as one in {whole} when a
+  // simple fraction is near, else as {share}. Hospital-acquired conditions: {quarter} the rule's share ("the quarter"),
+  // {cut} its cut. Value-based purchasing: its two sides (its dek already says it is budget-neutral).
+  takeHrrp: 'Most cuts are small; about one hospital in {whole} pays {zero}.',
+  takeHrrpShare: 'Most cuts are small; {share} of its hospitals pay {zero}.',
+  takeHac: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.',
+  takeVbp: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.',
+  // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, its abbreviation; {bin} the bins'
+  // width in points; the counts cut, at {zero} and with a bonus) and its two labels.
+  histLabel: '{n} hospitals in {program}, each by its estimated FY{fy} change as a share of its Medicare inpatient pay, in bins of {bin} points: {cutN} cut, {zeroN} at {zero}, {bonusN} with a bonus.',
+  histCut: '{n} cut',
+  histBonus: '{n} bonus',
+  histZero: '{n} at {zero}',
+  // The card's national figure: what Readmissions and hospital-acquired conditions take ({fy}), what value-based
+  // purchasing moves ({amount}) and its net.
+  dirNotPaid: 'not paid to hospitals nationally, FY{fy}',
+  dirMoved: '{amount} moved',
+  dirNet: 'net {amount} nationally, FY{fy}',
+  dirOpen: 'Open {name}',
+  // The coming programs, by what they do to payment (web/site.js `group`), and each slip's empty band.
+  soonPrice: 'Price adjustments',
+  soonReporting: 'Reporting rules',
+  soonEpisode: 'Episode payment',
+  soonNote: 'coming',
+  soonNone: 'no data yet',
+
+  // Methods, in brief: the heading, a paragraph and three points ({fy}), then the worksheet (worksheet.js fills it for a
+  // found hospital). Its lines' numbers arrive as {pay}, {base}, {hrrp}, {vbp}, {a} {b} {c}; {one} is the factor's 1,
+  // {cut} the HAC cut.
+  estKicker: 'Methods, in brief',
+  estHead: 'Every dollar here is an estimate, and is labeled one.',
+  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it.',
+  estStepPay: 'Start from each hospital’s {b} for FY{fy}.',
+  estStepPayB: 'estimated Medicare inpatient pay',
+  estStepRule: 'Apply each program’s {b} to the part of pay it covers.',
+  estStepRuleB: 'published factor or rule',
+  estStepAdd: 'Add the programs {b}: each percentage applies to a different base.',
+  estStepAddB: 'in dollars, never in percent',
+  estMore: 'Read the methods',
+  wsLabel: 'Worksheet: one hospital’s estimated FY{fy} dollars, line by line',
+  wsTitle: 'Worksheet · FY{fy}',
+  wsExample: 'An example',
+  wsCcn: 'CCN {ccn}',
+  wsPay: '{name}, {place}: estimated Medicare inpatient pay',
+  wsBase: 'The part of pay the readmissions and value-based factors apply to',
+  wsBaseNote: 'base operating payments, estimated',
+  wsHrrp: 'Readmissions',
+  wsFactor: '(factor {factor} − {one}) × line {base}',
+  wsHac: 'Hospital-acquired conditions',
+  wsCut: 'in the {cut} cut: −{cut} × (line {pay} + line {hrrp} + line {vbp})',
+  wsNoCut: 'not in the {cut} cut',
+  wsVbp: 'Value-based purchasing',
+  wsNet: '{net}, lines {a} + {b} + {c}',
+  wsNetWord: 'Net',
+  wsNetNote: 'in dollars, each line rounded to the dollar; percentages don’t add across programs',
+  wsFind: 'Find your hospital above and this worksheet fills in for it.',
+  wsGo: 'Its hospital page',
+
+  // Your turn: the invitation (the form's note is the footer's, web/copy.js).
+  askKicker: 'Your turn',
+  askHead: 'What should I build next?',
+  askText: 'Which Medicare program, question or dataset would you want to see explained next? Spotted a number that looks wrong? Say so on the same form.',
+  askGo: 'Suggest an idea',
 });
