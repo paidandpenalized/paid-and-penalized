@@ -29,7 +29,7 @@ export const signedMoney = (dollars) => money(dollars, { sign: true });
 const KEY = { cut: 'Cut', bonus: 'Bonus', zero: 'Zero' };
 
 // The median's phrase: "a 0.57% cut", "a 0.10% bonus" or "no change".
-export function medianPhrase(fill, median) {
+function medianPhrase(fill, median) {
   const sign = signOf(median);
   return sign === 'zero' ? fill('medianZero') : fill(`median${KEY[sign]}`, { share: shareText(median) });
 }

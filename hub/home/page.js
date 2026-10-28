@@ -16,7 +16,7 @@ import { capitalize, count, listText, money, numberWord, pct } from '../../web/r
 import { html } from '../../web/render/html.js';
 import { externalLink, feedbackFor } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { SITE } from '../../web/site.js';
 import { cardModel } from '../client/story/find.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { peersOf } from '../hospital/peers.js';
@@ -47,10 +47,6 @@ function say(key, nums = {}, { plain = {}, pen = [] } = {}) {
   const bold = Object.fromEntries(Object.entries(nums).map(([name, v]) => [name, html`<b class="num${pen.includes(name) ? ' num--pen' : ''}">${v}</b>`]));
   return fillAround((marks) => fill(key, { ...plain, ...marks }), bold);
 }
-
-// The heading says the share of hospitals with a net cut in words ("Two of every three") only near a simple fraction
-// (claims.js), and every claim the words make is checked on each build (holds).
-export { simpleFraction };
 
 // The masthead: the wordmark across the page (two spans, which the page's script moves into the bar as it scrolls), the
 // tagline and byline between rules, and a heavy rule before the story.
@@ -115,10 +111,6 @@ ${card}`,
   ];
 }
 
-// Where the example card's "Open its hospital page" goes: the hospital's page across the programs (hub/hospital/page.js).
-// The one place it is set.
-export const exampleHref = (ccn) => hospitalPathOf('hub', ccn);
-
 // The example hospital's card (EXAMPLE_CCN): its name, place, size band and teaching status, its net as a share of its pay
 // and in dollars, each program's dollars, how its state's hospitals fare, and the way to its own page. Its words are
 // cardModel's (hub/client/story/find.js), which the story's script uses to rewrite it for the reader's hospital and peer
@@ -128,7 +120,6 @@ function exampleCard({ hospitals, fy }) {
   if (!h?.est) throw new RangeError(`hub home: the example hospital ${EXAMPLE_CCN} has no estimate`);
   const mode = PEER_MODES[0];
   const m = cardModel(h, peersOf(hospitals, h, mode), mode, fy);
-  if (m.href !== exampleHref(h.ccn)) throw new RangeError('hub home: the example card links somewhere other than the hospital\'s page');
   const row = (r) => html`<div class="card__row"><dt>${r.label}</dt><dd class="v${r.kind ? ` v--${r.kind}` : ''}">${r.text}</dd></div>`;
   return html`<div class="card" data-card data-ccn="${m.ccn}" aria-live="polite">
 <p class="card__ex">${COPY.cardExample} <span class="card__hint">${COPY.cardHint}</span></p>

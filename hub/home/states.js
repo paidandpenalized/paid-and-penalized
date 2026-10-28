@@ -12,10 +12,10 @@ import { html } from '../../web/render/html.js';
 import { COPY } from './copy.js';
 
 // The key's steps of ink on each side of zero, and what its end is rounded up to (a tenth of a percentage point of pay).
-export const KEY_STEPS = 6;
+const KEY_STEPS = 6;
 const KEY_ROUND = 0.001;
 // The states the map draws too small to point at, which the script lists as buttons beside it, north to south.
-export const SMALL_STATES = Object.freeze(['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC']);
+const SMALL_STATES = Object.freeze(['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC']);
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const hospitalsText = (n) => noun(n, COPY.hospital, COPY.hospitals);

@@ -12,8 +12,6 @@ import { html } from '../../web/render/html.js';
 import { BAR, barDot, barHash, barOrder } from '../client/story/bar-frame.js';
 import { COPY } from './copy.js';
 
-export { barHash, barOrder };
-
 // The drawing's frame (BAR: its width, the bar's top and height, the dots' diameter), how far the sliver reaches past
 // the bar, the gap the magnifier's lines cross, and the split bar's height.
 const { W, Y: BAR_Y, H: BAR_H, DOT } = BAR;

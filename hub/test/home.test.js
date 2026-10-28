@@ -15,8 +15,10 @@ import { count, dollars, money, pct } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
-import { MAGNIFY, barOrder } from '../home/bar.js';
-import { exampleHref, homePage, simpleFraction } from '../home/page.js';
+import { barOrder } from '../client/story/bar-frame.js';
+import { MAGNIFY } from '../home/bar.js';
+import { simpleFraction } from '../home/claims.js';
+import { homePage } from '../home/page.js';
 import { cardModel, sizeWords } from '../client/story/find.js';
 import { peersOf } from '../hospital/peers.js';
 import { stateKey } from '../home/states.js';
@@ -235,8 +237,7 @@ test('the example card: the example hospital, its place, size, teaching, net, th
   assert.ok(said.includes(pct(median(peers.map((x) => x.est.share)), 2)));
   assert.ok(said.includes(`FY${hub.fy}`));
   // Its page: the one place that sets it (a page the build emits: the link check holds it to one).
-  assert.ok(card.includes(`<a class="card__go" href="${exampleHref(EXAMPLE_CCN)}">Open its hospital page`));
-  assert.equal(exampleHref(EXAMPLE_CCN), hospitalPathOf('hub', EXAMPLE_CCN));
+  assert.ok(card.includes(`<a class="card__go" href="${hospitalPathOf('hub', EXAMPLE_CCN)}">Open its hospital page`));
   // Its words are the ones the story's script writes for a found hospital (cardModel), each in its element.
   const m = cardModel(h, peersOf(hospitals, h, 'state'), 'state', hub.fy);
   for (const [cls, text] of [['card__nm', m.name], ['card__loc', m.place], ['card__pct', m.pct], ['card__usd', m.usd], ['card__netl', m.netWords], ['card__peer', m.peer]]) {

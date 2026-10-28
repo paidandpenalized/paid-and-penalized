@@ -45,7 +45,7 @@ const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 //   example    the hospital the last step opens on; peersOf(h): its group as { peers (hospitals, h among them), label
 //              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js);
 //   railHidden () -> whether the step's name sits in the stage (no rail beside it); still: the reduced-motion query.
-// Returns { show(i, { instant }), select(h), regroup(), resize(), redraw() }.
+// Returns { show(i, { instant }), select(h), regroup(), resize() }.
 export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH, panels, example, peersOf, railHidden, still }) {
   const ctx = canvas.getContext('2d');
   const N = rows.length;
@@ -559,11 +559,5 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     // The group changed (another peer mode): the last step's peers rise anew out of everyone.
     regroup,
     resize,
-    redraw: () => {
-      if (!raf) draw();
-    },
-    get step() {
-      return step;
-    },
   };
 }

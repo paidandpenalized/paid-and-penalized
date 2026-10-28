@@ -19,7 +19,8 @@ import { factorText, paintWorksheet, worksheetModel } from '../client/story/work
 import { loadHub } from '../data.js';
 import { BIN_POINTS, directory, programBins } from '../home/below.js';
 import { COPY } from '../home/copy.js';
-import { homePage, simpleFraction } from '../home/page.js';
+import { simpleFraction } from '../home/claims.js';
+import { homePage } from '../home/page.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
 
 const hub = loadHub();

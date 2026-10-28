@@ -11,7 +11,7 @@ import { BAR } from './bar-frame.js';
 const WIDE = { x0: 40, right: 26, gutter: 24, top: 22, topLabel: 40, bottom: 62, pitch: 30, label: 24 };
 const NARROW = { x0: 12, right: 12, gutter: 12, top: 26, topLabel: 26, bottom: 34, pitch: 18, label: 14 };
 // The gates: the three programs, then the floor the last pile rests on.
-export const GATES = 4;
+const GATES = 4;
 
 // The stage's frame: { W, H, narrow, px, x0, x1, top, bottom, pitch, label, gutter, scale, boxes }.
 //   W, H        the stage's size; narrow: a phone's layout (W under pile.js NARROW_BELOW unless given)
@@ -32,7 +32,7 @@ export function stageGeometry({ W, H, narrow = W < NARROW_BELOW, railHidden = fa
 
 // A gate's line when passed (stacked at the top, in order) and when still waiting (stacked above the axis).
 export const gateTop = (g, k) => g.top + 16 + (k - 1) * g.pitch;
-export const gateBottom = (g, k) => g.bottom - (GATES - k) * g.pitch;
+const gateBottom = (g, k) => g.bottom - (GATES - k) * g.pitch;
 
 // The four lines' heights after the first s gates have been passed (s from 0 to 3): passed ones at the top, the rest at
 // the bottom. The pile rests on line s (index s, the next gate, or the floor after the third).

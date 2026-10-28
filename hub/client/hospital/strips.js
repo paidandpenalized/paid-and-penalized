@@ -21,7 +21,7 @@ const NS = 'http://www.w3.org/2000/svg';
 // blocks of dots, so each dot stands near its own value.
 const PLOT = [[160, 90, 76], [700, 150, 130], [Infinity, 240, 200]];
 // The strip's frame for a group of n: { H, top, bot, base }, the plot's top and bottom, and the axis's baseline.
-export function stripFrame(n, narrow) {
+function stripFrame(n, narrow) {
   const [, wide, slim] = PLOT.find(([below]) => n < below);
   const top = narrow ? 6 : 8;
   const bot = top + (narrow ? slim : wide);

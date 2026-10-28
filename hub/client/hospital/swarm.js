@@ -36,7 +36,7 @@ const NARROW = { x: 4, gutter: 12, H: 376, pTop: 30, pBot: 166, aTop: 228, aBot:
 //   hospitals  every decoded hospital (web/client/hub-asset.js); those with an estimate are drawn
 //   h          this hospital (one with an estimate); peers: its group (h among them); domain: the share axis's [lo, hi]
 //   fill       the page's copy filler; fy: the fiscal year (a string); group: the group's name; still: reduced motion
-// Returns { setPeers(peers, group), setHypothetical(pct | null), destroy() }.
+// Returns { setPeers(peers, group), setHypothetical(pct | null) }.
 export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, still }) {
   const rows = hospitals.filter((x) => x.est);
   const N = rows.length;
@@ -487,9 +487,8 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     settle();
     draw();
   }
-  const watch = 'ResizeObserver' in window ? new ResizeObserver(resize) : null;
-  watch?.observe(el);
-  const stopTheme = onThemeChange(() => {
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(el);
+  onThemeChange(() => {
     colors = readColors();
     fonts = readFonts();
     draw();
@@ -522,12 +521,6 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     setHypothetical(pct) {
       hypo = Number.isFinite(pct) ? pct : null;
       if (!moving) draw();
-    },
-    destroy() {
-      cancelAnimationFrame(raf);
-      watch?.disconnect();
-      stopTheme();
-      el.textContent = '';
     },
   };
 }
