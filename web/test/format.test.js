@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, roundedDollars, signed, spelled } from '../render/format.js';
+import { capitalize, decimal, dollars, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -97,6 +97,13 @@ test('numberWord spells a small count and leaves a larger one in digits', () => 
   assert.deepEqual([0, 1, 5, 10].map(numberWord), ['none', 'one', 'five', 'ten']);
   assert.equal(numberWord(11), '11');
   assert.equal(numberWord(1234), '1,234');
+});
+
+test('placeText: "City, ST", or as much of it as a record has', () => {
+  assert.equal(placeText({ city: 'Springfield', state: 'ZZ' }), 'Springfield, ZZ');
+  assert.equal(placeText({ city: null, state: 'ZZ' }), 'ZZ');
+  assert.equal(placeText({ city: 'Springfield', state: undefined }), 'Springfield');
+  assert.equal(placeText({}), '');
 });
 
 test('capitalize upper-cases the first letter only, and leaves an empty string empty', () => {

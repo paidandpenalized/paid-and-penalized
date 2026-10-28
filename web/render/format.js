@@ -45,6 +45,9 @@ export function fractionWord(share, determiner = 'a') {
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
+// A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).
+export const placeText = ({ city, state }) => [city, state].filter(Boolean).join(', ');
+
 // An English ordinal: 1st, 2nd, 3rd, 11th, 22nd, 75th.
 export function ordinal(n) {
   const v = n % 100;

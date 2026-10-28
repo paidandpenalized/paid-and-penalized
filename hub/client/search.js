@@ -5,6 +5,7 @@
 // case). The index loads on first focus from the asset the form names (data-src), decoded once.
 import { US_STATES } from '../../engine/js/states.js';
 import { count } from '../../web/client/format.js';
+import { placeText } from '../../web/render/format.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { mountOmnibox } from '../../web/client/omnibox.js';
 import { once } from '../../web/client/once.js';
@@ -19,7 +20,7 @@ export function hubEntries(hospitals) {
   const inState = new Map();
   const found = hospitals.map(({ ccn, name, city, state }) => {
     inState.set(state, (inState.get(state) ?? 0) + 1);
-    return { type: 'hospital', key: ccn, label: name, sub: [city, state].filter(Boolean).join(', '), extra: `${city ?? ''} ${state ?? ''}`.trim(), href: hospitalPathOf('hub', ccn) };
+    return { type: 'hospital', key: ccn, label: name, sub: placeText({ city, state }), extra: `${city ?? ''} ${state ?? ''}`.trim(), href: hospitalPathOf('hub', ccn) };
   });
   const kind = fill('searchKindState');
   const states = US_STATES.map(([code, , name]) => {

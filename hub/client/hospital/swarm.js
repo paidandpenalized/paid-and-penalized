@@ -11,6 +11,7 @@
 // Enter opens, Escape lets go. Colors come from the tokens (colors.js) and repaint when the theme changes.
 import { median } from '../../../engine/js/peers.js';
 import { count, pct } from '../../../web/client/format.js';
+import { placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
@@ -391,7 +392,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     name.textContent = rows[s % N].name;
     const rest = document.createElement('span');
     const x = rows[s % N];
-    rest.textContent = `${[x.city, x.state].filter(Boolean).join(', ')} · ${signedShareText(x.est.share)}`;
+    rest.textContent = `${placeText(x)} · ${signedShareText(x.est.share)}`;
     tip.append(name, rest);
     if (touch && s % N !== self) {
       const open = document.createElement('span');

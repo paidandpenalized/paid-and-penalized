@@ -14,7 +14,7 @@
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { estTag, fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, money } from '../../web/render/format.js';
+import { count, money, placeText } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { hubPage } from '../parts.js';
@@ -77,10 +77,9 @@ function typeText(h, master) {
 // Readmissions pages (hub/hrrp/page.js) add their own fields after these.
 export function recordSpecs(h, master) {
   const type = typeText(h, master);
-  const place = h.city && h.state ? fill('location', { city: h.city, state: h.state }) : h.state ?? h.city ?? '';
   return [
     { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },
-    { label: fill('fieldLocation'), value: place, wide: !type },
+    { label: fill('fieldLocation'), value: placeText(h), wide: !type },
     type && { label: fill('fieldType'), value: type, size: 'sm' },
   ].filter(Boolean);
 }

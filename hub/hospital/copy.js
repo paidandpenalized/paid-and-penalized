@@ -34,7 +34,6 @@ export const COPY = typesetCopy({
   fieldHospital: 'Hospital',
   fieldLocation: 'Location',
   fieldType: 'Type',
-  location: '{city}, {state}',
   typeTeachMajor: 'Major teaching',
   typeTeachMinor: 'Minor teaching',
   typeTeachNone: 'Not a teaching hospital',

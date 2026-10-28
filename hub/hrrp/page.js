@@ -7,7 +7,7 @@
 // (hub/coming.js), so retiring this page for Thirty Day Readmissions' fold-in must keep them.
 import { programDek } from '../../web/programs.js';
 import { estTag, fillCopy, formField, formTitle, pill } from '../../web/render/components.js';
-import { count, decimal, money, pct, shown } from '../../web/render/format.js';
+import { count, decimal, money, pct, placeText, shown } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { searchForm } from '../../web/render/shell.js';
@@ -177,7 +177,7 @@ export function hrrpHospitalPage({ record, tdr, master, h = null, assets, robots
   const fy = String(tdr.fy);
   const hubFy = String(assets.shell.fy);
   const view = { ccn: record.id, name: master.name, city: master.city, state: master.state, beds: master.beds ?? null, teach: master.teach ?? null };
-  const place = view.city && view.state ? `${view.city}, ${view.state}` : view.state ?? view.city ?? '';
+  const place = placeText(view);
   const body = html`<article class="hh rd rd--hospital">
 <div class="wrap hh__hero">
 <div class="hh__money">

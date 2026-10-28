@@ -8,7 +8,7 @@
 // index, null without a bed count) and teach; only hospitals with an estimate are anyone's peers.
 import { BED_BAND_EDGES, PEER_MODES, median, peerKey } from '../../../engine/js/peers.js';
 import { fillCopy } from '../../../web/render/components.js';
-import { capitalize, count, dollars } from '../../../web/render/format.js';
+import { capitalize, count, dollars, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { COPY } from './copy.js';
 import { ROWS, groupName, inProgram, peersOf } from '../../hospital/peers.js';
@@ -51,10 +51,8 @@ function programRow(est, { id, key }) {
 export function cardModel(h, peers, mode, fy) {
   const { est } = h;
   const teaching = fill(TEACHING[h.teach] ?? 'teachUnknown');
-  // Where it is, as much as the record has ("City, ST").
-  const where = [h.city, h.state].filter(Boolean).join(', ');
-  const place = Number.isInteger(h.band) ? fill('cardPlace', { place: where, size: capitalize(sizeWords(h.band)), teaching })
-    : fill('cardPlaceNoBeds', { place: where, teaching: capitalize(teaching) });
+  const place = Number.isInteger(h.band) ? fill('cardPlace', { place: placeText(h), size: capitalize(sizeWords(h.band)), teaching })
+    : fill('cardPlaceNoBeds', { place: placeText(h), teaching: capitalize(teaching) });
   const sign = est.net < 0 ? 'Cut' : est.net > 0 ? 'Bonus' : 'Zero';
   return {
     ccn: h.ccn, name: h.name, place,

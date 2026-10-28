@@ -7,7 +7,7 @@
 // lines add exactly.
 import { programDollars } from '../../../engine/js/dollars/whatif.js';
 import { fillCopy } from '../../../web/render/components.js';
-import { decimal, dollars } from '../../../web/render/format.js';
+import { decimal, dollars, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { loadHubAsset } from '../../../web/client/hub-asset.js';
 import { inProgram } from '../../hospital/peers.js';
@@ -38,7 +38,7 @@ export function worksheetModel(h) {
   const line = (id, v) => (inProgram(est, id) ? signed(v) : fillCopy(COPY, 'notInProgram'));
   return {
     text: {
-      ccn: h.ccn, name: h.name, place: [h.city, h.state].filter(Boolean).join(', '),
+      ccn: h.ccn, name: h.name, place: placeText(h),
       total: dollars(est.total), base: dollars(est.base),
       hrrp: line('hrrp', d.hrrp), hrrpF: factorText(est.hrrpFactor),
       hac: signed(d.hac),
