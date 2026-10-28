@@ -5,7 +5,8 @@
 // hospital's own page shows its chip from the server and its tabs carry it, the chip leaves the bar whole between a
 // phone's width and a desktop's, the family search on a hub page opens a state, a hospital's page across the programs
 // answers 200 from the family search's result and from the chip's name, the theme button flips the theme and
-// says so (and a hub page's own stylesheet, linked after the shared one, follows it and print), and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
+// says so (and a hub page's own stylesheet, linked after the shared one, follows it, the system's dark setting and
+// print), and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
 // desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
@@ -378,7 +379,7 @@ describe('the theme button', () => {
   // The hub's page styles are a stylesheet of their own (hub/styles.css), linked after the shared one, and read the tokens;
   // the tokens' dark values, their copy for this button and the print block are the shared stylesheet's. A placeholder
   // page's waiting band (.cm__wait: border var(--pen); its words on var(--paper)) is drawn by the hub's rules.
-  it('a hub page\'s own stylesheet follows the theme button and print, through the shared stylesheet\'s tokens', () => withPage(tabs, { path: PLACEHOLDER, watched: true }, async (page, { seen }) => {
+  it('a hub page\'s own stylesheet follows the theme button, the system\'s dark setting and print, through the shared stylesheet\'s tokens', () => withPage(tabs, { path: PLACEHOLDER, watched: true }, async (page, { seen }) => {
     const sheets = await page.evaluate(() => [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => new URL(l.href).pathname));
     assert.equal(sheets.length, 2, 'the shared stylesheet and the hub\'s');
     assert.match(sheets[0], /^\/assets\/site\.[0-9a-f]{8}\.css$/);
@@ -414,7 +415,13 @@ describe('the theme button', () => {
     same(print, 'print');
     assert.equal(print.border, light.border, 'print takes the light pen');
     assert.notEqual(print.words, dark.words, 'print leaves the dark paper');
-    await page.emulateMedia({ media: 'screen' });
+    // The system's dark setting, with no button pressed: the tokens' dark media block.
+    await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    await page.emulateMedia({ media: 'screen', colorScheme: 'dark' });
+    const system = await colors();
+    same(system, 'dark by the system');
+    assert.deepEqual(system, dark, 'the system\'s dark is the button\'s');
+    await page.emulateMedia({ colorScheme: 'light' });
     await assertQuiet(seen, 'hub stylesheet and theme');
   }));
 });

@@ -313,7 +313,7 @@ test('a HACRP page links the shared stylesheet alone, which holds no hub page\'s
   // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's
   // sheet reads the tokens and sets none of that, so the shared bundle's dark and print values reach its rules.
   assert.ok(/:root\[data-theme="?dark"?\]\{[^}]*--pen:/.test(css(site)), 'the shared stylesheet\'s copy of the dark tokens for the toggle');
-  assert.ok(/@media print\{:root\{--paper: ?#fff(fff)? ?!important/.test(css(site)), 'the shared stylesheet\'s print block');
+  assert.ok(/@media print\{:root\{[^}]*--paper: ?#fff(fff)? ?!important/.test(css(site)), 'the shared stylesheet\'s print block');
   assert.equal(/:root|prefers-color-scheme|data-theme/.exec(css(own))?.[0] ?? null, null, 'the hub\'s stylesheet sets no theme');
   assert.ok(css(own).includes('var(--pen)'), 'the hub\'s stylesheet reads the tokens');
   // The check sees what it is meant to.

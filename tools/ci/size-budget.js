@@ -33,7 +33,9 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 // always fine.
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
-  policy: 100 * KB, // ARCH-27
+  // ARCH-27's starting number, by the rule above for hub and policy pages (text pages, 42.6 KB on the FY2026 build of
+  // 2026-10-28), not the 15% formula; a test pins it.
+  policy: 100 * KB,
   // The placeholder pages (hub/coming.js) of the programs under consideration, not built yet: hub pages with the family
   // search's script and the hub's stylesheet. The heaviest on the FY2026 build of 2026-10-28 (41.7 KB) plus 15%, rounded
   // up to 10 KB.
@@ -49,11 +51,12 @@ export const BUDGETS = {
   // FY2026 build of 2026-10-28 plus 15%, rounded up to 10 KB.
   notFound: 50 * KB,
   // A hospital's page across the programs (hub/hospital/page.js) with its script (hub/client/hospital.js: the swarm, the
-  // peer toggle, the strips and the peer table): the heaviest of the 3,055 on the FY2026 build of 2026-10-28 (56.9 KB)
-  // plus 15%, rounded up to 10 KB. ARCH-27's 150 KB for a hospital page holds.
+  // peer toggle, the strips and the peer table): the heaviest of the 3,055 is 67.3 KB of its 70 KB on the FY2026 build of
+  // 2026-10-28, past what the 15% formula gives (80 KB). 70 KB is the owner's approved raise of 2026-10-28; it is not raised
+  // again. ARCH-27's 150 KB for a hospital page holds.
   hubHospital: 70 * KB,
   // The interim Readmissions pages (hub/hrrp/page.js): hub pages with the family search's script and no script of their own.
-  // The heaviest of each on the FY2026 build of 2026-10-28 (/hrrp/ 40.1 KB; the heaviest of the 2,912 hospital pages 41.0 KB)
+  // The heaviest of each on the FY2026 build of 2026-10-28 (/hrrp/ 41.9 KB; the heaviest of the 2,912 hospital pages 42.9 KB)
   // plus 15%, rounded up to 10 KB. ARCH-27's 100 KB for a hub page and 150 KB for a hospital page hold.
   hrrp: 50 * KB,
   hrrpHospital: 50 * KB,
