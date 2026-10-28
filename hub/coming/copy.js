@@ -5,11 +5,9 @@ import { typesetCopy } from '../../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  // The kicker: "<abbreviation> · <what the program does to payment> · <status>". The directory on the front page names
-  // three of the groups (hub/home/copy.js soonPrice, soonReporting, soonEpisode) and the page reads them from there; the
-  // quality programs are live cards there, so their name is only here. The status: a program the dollar estimates
-  // already include has only its page to build; the rest are under consideration, as the directory and the footer say.
-  groupQuality: 'Quality programs',
+  // The kicker: "<abbreviation> · <what the program does to payment> · <status>". What it does to payment is the
+  // directory's group words (hub/home/copy.js GROUP_WORDS). The status: a program the dollar estimates already include
+  // has only its page to build; the rest are under consideration, as the directory and the footer say.
   statusInData: 'Page not built yet',
   statusConsidered: 'Under consideration',
 

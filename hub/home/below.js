@@ -6,6 +6,7 @@
 //
 // The look reuses the family's parts: the form (.form, .field, the numbered boxes, the stamp, the estimate tag) and the
 // hospital page's strip drawing (.st: its gutter, grid, base line, inks and labels) and empty-program band.
+import { has } from '../../engine/js/has.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
 import { fillCopy, sentenceOf } from '../../web/render/components.js';
@@ -19,7 +20,7 @@ import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { ROWS, inProgram } from '../hospital/peers.js';
 import { arrow, estimateTag } from '../parts.js';
 import { holds, simpleFraction } from './claims.js';
-import { COPY } from './copy.js';
+import { COPY, GROUP_WORDS } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 // A sentence of copy with some placeholders filled with markup (parts) and the rest with words (values).
@@ -143,8 +144,6 @@ const FIGURES = {
   hvbp: (facts, fy) => ({ big: fill('dirMoved', { amount: money(facts.vbpBonus) }), sub: fill('dirNet', { amount: money(facts.vbpNet), fy }) }),
 };
 
-// The groups of the programs under consideration, in order: the registry's `group` and its words.
-const SOON_GROUPS = [['price', 'soonPrice'], ['reporting', 'soonReporting'], ['episode', 'soonEpisode']];
 
 // A program's card: its name and abbreviation, dek, takeaway and histogram, national figure (an estimate, for the year)
 // and the way to its page.
@@ -178,17 +177,17 @@ export function directory({ programs, facts, hospitals, fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
   const soon = programs.filter((p) => !p.inData);
-  for (const p of soon) if (!SOON_GROUPS.some(([g]) => g === p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
+  for (const p of soon) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
   const domain = shareDomain(hospitals);
-  const groups = SOON_GROUPS.map(([group, key]) => [key, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
+  const groups = Object.entries(GROUP_WORDS).map(([group, words]) => [words, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
 <div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${fill('dirHead', { count: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
-<p class="grp cap"><span>${COPY.dirGroup}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
+<p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, domain }))}</div>
-<div class="soon">${groups.map(([key, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${COPY[key]}</span></p>${members.map(slip)}</div>`)}</div>
+<div class="soon">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
 </section>`;
 }
 

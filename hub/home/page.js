@@ -143,11 +143,12 @@ function exampleCard({ hospitals, fy }) {
 </div>`;
 }
 
-// The peer toggle the last step's chart wears (hidden: the script shows it and moves the dots), with the hospital page's
-// notes for a toggle the hospital has no group for (hidden: the script shows the one that applies).
+// The peer toggle the last step's chart wears (hidden: the script shows it and moves the dots), in the hospital page's
+// words, with its notes for a toggle the hospital has no group for (hidden: the script shows the one that applies). The
+// groups' names are the story's (hub/client/story/copy.js).
 const PEER_WORDS = { state: 'peerState', size: 'peerSize', teach: 'peerTeach' };
 const PEER_WHY = { size: 'peerNoSize', teach: 'peerNoTeach' };
-const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id="peers-l">${COPY.peersLabel}</p><div class="seg" role="group" aria-labelledby="peers-l">${PEER_MODES.map((mode, i) => html`<button type="button" data-peer="${mode}" aria-pressed="${i === 0 ? 'true' : 'false'}">${COPY[PEER_WORDS[mode]]}</button>`)}</div>${Object.entries(PEER_WHY).map(([mode, key]) => html`<p class="peers__why" id="peers-no-${mode}" data-why="${mode}" hidden>${HOSPITAL_COPY[key]}</p>`)}</div>`;
+const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id="peers-l">${HOSPITAL_COPY.peersLabel}</p><div class="seg" role="group" aria-labelledby="peers-l">${PEER_MODES.map((mode, i) => html`<button type="button" data-peer="${mode}" aria-pressed="${i === 0 ? 'true' : 'false'}">${HOSPITAL_COPY[PEER_WORDS[mode]]}</button>`)}</div>${Object.entries(PEER_WHY).map(([mode, key]) => html`<p class="peers__why" id="peers-no-${mode}" data-why="${mode}" hidden>${HOSPITAL_COPY[key]}</p>`)}</div>`;
 
 // The page. hospitals: hubHospitals; facts: storyFacts of them; states: stateTotals of them; shapes: the atlas's state
 // shapes (loadHub); assets: the build's (assets.shell holds the fiscal year and the hub asset's address); robots: the

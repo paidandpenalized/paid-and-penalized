@@ -98,13 +98,6 @@ export const COPY = typesetCopy({
   keyMaryland: 'Maryland: not in these programs',
   smallStates: 'Small states',
 
-  // The peer toggle the story's last step shows (a script's; a toggle the hospital has no group for is disabled, and the
-  // hospital page's note says why). The groups' names are the story's (hub/client/story/copy.js).
-  peersLabel: 'Compare with',
-  peerState: 'Same state',
-  peerSize: 'Same size',
-  peerTeach: 'Same teaching',
-
   // The example card's own words: its lead (the hint shows with the search), the label of its programs' rows, the
   // pointer to the hospital's page. What it says about the hospital is the story's (hub/client/story/copy.js), so the script that
   // rewrites the card for a found hospital says it the same way.
@@ -187,3 +180,7 @@ export const COPY = typesetCopy({
   askText: 'Which Medicare program, question or dataset would you want to see explained next? Spotted a number that looks wrong? Say so on the same form.',
   askGo: 'Suggest an idea',
 });
+
+// What a program does to payment (web/site.js `group`), in words, in the order the directory shows the groups: the
+// directory's group headings and the placeholder pages' kickers (hub/coming.js).
+export const GROUP_WORDS = Object.freeze({ quality: COPY.dirGroup, price: COPY.soonPrice, reporting: COPY.soonReporting, episode: COPY.soonEpisode });

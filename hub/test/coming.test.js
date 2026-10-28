@@ -14,7 +14,7 @@ import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS } from '../../web/site.js';
 import { comingPage } from '../coming.js';
-import { COPY as HOME } from '../home/copy.js';
+import { GROUP_WORDS } from '../home/copy.js';
 import { loadHub } from '../data.js';
 import { hubHospitals, storyFacts } from '../model.js';
 import { generateHub } from '../pages.js';
@@ -40,7 +40,6 @@ function element(html, open, name) {
 }
 const cardOf = (page) => element(mainOf(page), '<div class="form rd__sum cm__card">', 'div');
 const render = (program, facts = FACTS) => comingPage({ program, facts, assets: ASSETS, robots: 'noindex' });
-const GROUP_NAMES = { quality: 'Quality programs', price: HOME.soonPrice, reporting: HOME.soonReporting, episode: HOME.soonEpisode };
 const HVBP = PLACEHOLDER_PROGRAMS.find((p) => p.id === 'hvbp');
 const OTHERS = PLACEHOLDER_PROGRAMS.filter((p) => !p.inData);
 
@@ -73,7 +72,7 @@ test('the page: kicker with the abbreviation, the group and the status ("Under c
   for (const p of PLACEHOLDER_PROGRAMS) {
     const main = mainOf(render(p));
     const status = p.inData ? 'Page not built yet' : 'Under consideration';
-    assert.ok(main.includes(`<p class="cap kicker rd__kicker">${esc(p.ab)} · ${esc(GROUP_NAMES[p.group])} · ${status}</p>`), `${p.id}: kicker`);
+    assert.ok(main.includes(`<p class="cap kicker rd__kicker">${esc(p.ab)} · ${esc(GROUP_WORDS[p.group])} · ${status}</p>`), `${p.id}: kicker`);
     assert.ok(main.includes(`<h1 class="rd__title">${esc(p.name)}</h1>`), `${p.id}: h1`);
     assert.ok(main.includes(`<p class="dek">${esc(programDek(p.id))}</p>`), `${p.id}: dek`);
     assert.ok(main.indexOf('class="cap kicker"') < main.indexOf('<h1'), `${p.id}: the kicker over the h1`);

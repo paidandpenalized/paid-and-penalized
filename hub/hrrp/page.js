@@ -134,7 +134,7 @@ function recordCard({ view, master, record, fy }) {
   const fields = [
     ...recordSpecs(view, master),
     { label: fill('factorLabel', { fy }), value: decimal(record.paf, FACTOR_DP), size: 'big', note: fill('factorNote') },
-    { label: fill('reductionLabel'), value: `${decimal(record.red, REDUCTION_DP)}%`, size: 'big', note: html`${pill({ kind: cut ? 'pen' : null, label: fill(cut ? 'wordCut' : 'wordNoCut') })} ${fill('reductionNote')}` },
+    { label: fill('reductionLabel'), value: `${decimal(record.red, REDUCTION_DP)}%`, size: 'big', note: html`${pill({ kind: cut ? 'pen' : null, label: HOSPITAL[cut ? 'wordCut' : 'wordNoCut'] })} ${fill('reductionNote')}` },
   ];
   return html`<div class="form hh__card">
 ${formTitle(fill('recordTitle', { fy }), fillCopy(HOSPITAL, 'recordCcn', { ccn: view.ccn }))}
@@ -153,7 +153,7 @@ function estimate({ h, hubFy, pinFy }) {
   let figure;
   if (figured) {
     const cut = h.est.hrrp < 0;
-    figure = html`<div class="hh__netline"><p class="hh__big">${money(h.est.hrrp)}</p>${pill({ kind: cut ? 'pen' : null, label: fill(cut ? 'wordCut' : 'wordNoCut') })}</div>
+    figure = html`<div class="hh__netline"><p class="hh__big">${money(h.est.hrrp)}</p>${pill({ kind: cut ? 'pen' : null, label: HOSPITAL[cut ? 'wordCut' : 'wordNoCut'] })}</div>
 <p class="hh__fy">${fill('estimateNote', { fy: hubFy, pinFy })}</p>`;
   } else if (h?.est) {
     figure = html`<div class="hh__netline">${pill({ kind: 'na', label: fill('estimateOutPill', { fy: hubFy }) })}</div>

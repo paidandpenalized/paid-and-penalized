@@ -48,8 +48,6 @@ export const COPY = typesetCopy({
   factorNote: "CMS's value. A factor below one is a cut.",
   reductionLabel: 'Reduction',
   reductionNote: 'One minus the factor, as a percent.',
-  wordCut: 'cut',
-  wordNoCut: 'no cut',
 
   // The conditions CMS measured for this hospital, in FY{fy}: the hospital's ratio, the median of its peer group (what CMS
   // compares the ratio with) and CMS's indicator that the condition counts toward the reduction.

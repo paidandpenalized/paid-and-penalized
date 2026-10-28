@@ -11,14 +11,12 @@ import { money } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
 import { SITE } from '../web/site.js';
 import { COPY } from './coming/copy.js';
-import { COPY as HOME } from './home/copy.js';
+import { GROUP_WORDS } from './home/copy.js';
 import { estimateTag, feedbackLink, hubPage } from './parts.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const sentence = sentenceOf(fill);
 
-// What a program does to payment (web/site.js `group`), in words: the kicker's middle.
-const GROUPS = { quality: COPY.groupQuality, price: HOME.soonPrice, reporting: HOME.soonReporting, episode: HOME.soonEpisode };
 // A program the dollar estimates include shows what they say about it, in dollars; by program id, from the story's facts.
 const MOVED = { hvbp: (facts) => facts.vbpBonus };
 
@@ -36,7 +34,7 @@ function figures(program, facts, fy) {
 // (the fiscal year is the shell's, at the card's title bar only when the card shows a figure); robots: the page's robots
 // value (noindex).
 export function comingPage({ program, facts, assets, robots }) {
-  if (!Object.hasOwn(GROUPS, program.group)) throw new RangeError(`hub coming: the page has no words for the group "${program.group}"`);
+  if (!Object.hasOwn(GROUP_WORDS, program.group)) throw new RangeError(`hub coming: the page has no words for the group "${program.group}"`);
   const dek = programDek(program.id);
   const fy = String(assets.shell.fy);
   const fields = [
@@ -46,7 +44,7 @@ export function comingPage({ program, facts, assets, robots }) {
   const body = html`<article class="wrap rd rd--program">
 <header class="rd__top">
 <div class="rd__intro stack">
-<p class="cap kicker rd__kicker">${program.ab} · ${GROUPS[program.group]} · ${program.inData ? COPY.statusInData : COPY.statusConsidered}</p>
+<p class="cap kicker rd__kicker">${program.ab} · ${GROUP_WORDS[program.group]} · ${program.inData ? COPY.statusInData : COPY.statusConsidered}</p>
 <h1 class="rd__title">${program.name}</h1>
 <p class="dek">${dek}</p>
 <p class="rd__go cm__acts"><a href="/">${arrow} ${SHARED.allPrograms}</a><a href="/#programs">${COPY.livePrograms}</a></p>
