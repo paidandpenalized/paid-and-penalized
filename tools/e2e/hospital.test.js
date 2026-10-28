@@ -200,6 +200,20 @@ for (const width of [390, 1280]) {
       await assertQuiet(seen, 'the hospital page from a shared what-if link');
     }));
 
+    it('a linked what-if the reader then changes is their own: the banner stays, "Reader-made scenario" goes', () => withPage(tabs, { path: `${CUT.path}#whatif&hrrp=0.99`, watched: true }, async (page, { seen }) => {
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, true], 'opened from the link: reader-made');
+      const handle = page.locator('.st__h').first();
+      await handle.focus();
+      const start = await handle.getAttribute('aria-valuenow');
+      await page.keyboard.press('ArrowLeft');
+      if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, false], 'edited: still hypothetical, no longer the link\'s');
+      await assertQuiet(seen, 'a linked what-if, edited');
+    }));
+
     it('a focused handle stays clear of the sticky row when the Hypothetical banner makes it taller', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.waitForSelector('.st__h');
