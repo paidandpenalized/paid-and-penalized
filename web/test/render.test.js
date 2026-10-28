@@ -8,8 +8,9 @@ import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
+import { testAssets } from '../../pipeline/test/helpers.js';
 
-const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
+const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } });
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
 
 test('html escapes every interpolation in text and in attributes', () => {
@@ -226,7 +227,11 @@ test('page: hostile title, description and path-free text render as text; a plai
 test('page rejects missing parts and a path without a leading slash', () => {
   assert.throws(() => page({ ...PAGE, path: 'hacrp/' }), RangeError);
   assert.throws(() => page({ ...PAGE, title: '' }), TypeError);
-  assert.throws(() => page({ ...PAGE, assets: { css: '/x.css', js: {} } }), TypeError);
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, js: {} } }), TypeError);
+  for (const shell of [undefined, null]) {
+    assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, shell } }), (err) => err instanceof TypeError && /shell/.test(err.message));
+  }
+  assert.ok(page(PAGE).includes('<h1>Hello</h1>'), 'with the shell\'s facts it renders');
   assert.throws(() => page({ ...PAGE, scripts: [undefined] }), /script/, 'a script path the assets lack');
 });
 

@@ -12,7 +12,7 @@ import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { htmlPages, tags } from '../site/html.js';
-import { get, withServer, withTemp as inTemp, writeTree } from './helpers.js';
+import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
@@ -104,6 +104,50 @@ test('build runs the sites in order with one context: assets, env, and what earl
     assert.equal(readFileSync(join(out, 'robots.txt'), 'utf8'), 'r');
   }));
 
+test('build writes the hub\'s asset once and hands every site the shell\'s facts, with hubUrl naming that file', () =>
+  withTemp(async (dir) => {
+    const seen = [];
+    const sites = ['first', 'second'].map((id) => ({ id, generate: (ctx) => { seen.push(ctx.assets.shell); } }));
+    const out = join(dir, 'dist');
+    await build({ outDir: out, sites });
+    const files = readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-hospitals.'));
+    assert.equal(files.length, 1);
+    assert.match(files[0], /^hub-hospitals\.[0-9a-f]{8}\.json$/);
+    const text = readFileSync(join(out, 'assets', files[0]), 'utf8');
+    assert.equal(files[0], `hub-hospitals.${hash8(text)}.json`);
+    // Computed once: every site gets the same facts, and the asset behind hubUrl is the one the facts describe.
+    assert.equal(seen.length, 2);
+    assert.equal(seen[0], seen[1]);
+    const shell = seen[0];
+    assert.equal(shell.hubUrl, `/assets/${files[0]}`);
+    const asset = JSON.parse(text);
+    assert.equal(shell.fy, asset.fy);
+    assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
+    assert.match(shell.changed, /^\d{4}-\d{2}-\d{2}$/);
+    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp']);
+    assert.ok(shell.programs.hrrp.dollars < 0 && shell.programs.hrrp.cutN > 0);
+    assert.ok(shell.programs.hacrp.dollars < 0 && shell.programs.hacrp.cutN > 0);
+    assert.ok(shell.programs.hvbp.moved > 0 && Number.isInteger(shell.programs.hvbp.net));
+  }));
+
+test('a build with no sites still writes the hub\'s asset, once', () =>
+  withTemp(async (dir) => {
+    const out = join(dir, 'dist');
+    await build({ outDir: out, sites: [] });
+    assert.equal(readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-hospitals.')).length, 1);
+  }));
+
+test('createContext puts the shell\'s facts on ctx.assets.shell without changing the assets it was given', () => {
+  const assets = testAssets();
+  const { shell } = assets;
+  const other = { ...shell, fy: 2099 };
+  assert.equal(createContext({ outDir: '/x', env: undefined, assets }).assets.shell, shell, 'the assets\' own shell stays');
+  const ctx = createContext({ outDir: '/x', env: undefined, assets, shell: other });
+  assert.equal(ctx.assets.shell, other);
+  assert.equal(assets.shell, shell, 'the caller\'s object is not edited');
+  assert.equal(ctx.assets.css, assets.css);
+});
+
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {
   assert.equal(SITES.at(-1), HUB);
   assert.equal(SITES.filter((s) => s === HUB).length, 1);
@@ -111,7 +155,7 @@ test('the hub runs last: its sitemap lists the indexable pages every other site 
 
 test('emit refuses a path outside the site; asset writes a content-hashed file', () =>
   withTemp(async (dir) => {
-    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
+    const ctx = createContext({ outDir: dir, env: undefined, assets: testAssets() });
     for (const path of ['a/', '/../x/', '/a/../../x/', '/A/', '/a b/', '//x/']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
     // Capitals only in a file that is not a page; a repeat is refused whatever its case.
     for (const path of ['/Page.html', '/a/Index.html']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
@@ -267,11 +311,14 @@ const cssValueWords = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"[^
 // A color an SVG or style attribute in a script names: fill="red", stroke: 'navy', color=white.
 const JS_COLOR_ATTR = /\b(?:fill|stroke|stop-color|flood-color|lighting-color|color)\s*[=:]\s*["'`]?\s*([a-z]+)/gi;
 
-test("no file under web/ but tokens.css, and no site's own styles or scripts, hold a color value (hex, a color function, a named color)", () => {
-  const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true })]
+test("no file under web/ but tokens.css, and no site's or the hub's own styles or scripts, hold a color value (hex, a color function, a named color)", () => {
+  const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true }), ...repoFiles('hub/', { untracked: true })]
     .filter((f) => /\.(css|js|mjs)$/.test(f) && f !== 'web/styles/tokens.css')
-    .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f));
+    .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f) || /^hub\/(?!test\/)/.test(f));
   assert.ok(files.includes('sites/hacrp/web/styles.css'));
+  // The hub's own files are checked too (its tests are not).
+  assert.ok(files.includes('hub/model.js'));
+  assert.ok(!files.some((f) => f.startsWith('hub/test/')));
   for (const f of files) {
     const text = readFileSync(REPO_ROOT + f, 'utf8');
     assert.doesNotMatch(text, /#[0-9a-fA-F]{3,8}\b/, f);

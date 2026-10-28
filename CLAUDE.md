@@ -19,12 +19,14 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   or clock) so the page build and the browser share one copy.
 - `sites/<program>/`, `hub/`: sites import the engine, never each other. `hub/` is the family landing page. A site's
   own CSS is `sites/<program>/web/styles.css` (bundled after `web/styles/`); its browser scripts are in `client/`.
-- `web/`: what every page shares: `site.js` (name, origin, the hub's release state, each site's path, names and release state), `render/`
+- `web/`: what every page shares: `site.js` (name, origin, the hub's release state, each site's path, names and release state,
+  and the registry of every program, live and coming), `programs.js` (the programs' method constants and deks), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
-  `styles/` (`tokens.css` is the only CSS or JS file under `web/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
+  `styles/` (`tokens.css` is the only CSS or JS file under `web/` or `hub/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
   licenses, the favicon.
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: one CSS file and
-  one ES module per JS entry, content-hashed), then runs each site in its `SITES` list (hub last). Each site exports
+  one ES module per JS entry, content-hashed), writes the hub's data asset once and computes the shell's facts that every
+  page shows (`ctx.assets.shell`), then runs each site in its `SITES` list (hub last). Each site exports
   a manifest `{ id, entries, styles, generate }` from its generator (`sites/<program>/web/generate.js`,
   `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
   hashed data, `robotsFor`, the one indexing rule). Last, the build writes Cloudflare's `dist/_headers`

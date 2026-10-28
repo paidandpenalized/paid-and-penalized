@@ -13,6 +13,7 @@ import { HUB } from '../../../hub/pages.js';
 import { readPinned } from '../../../pipeline/files.js';
 import { build } from '../../../pipeline/site/build.js';
 import { textOf } from '../../../pipeline/site/html.js';
+import { testAssets } from '../../../pipeline/test/helpers.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -21,8 +22,8 @@ export const FY = 2026;
 // The dollars of a page with no estimate (the impact file has no usable row for the hospital): what a synthetic
 // hospital's page takes, since no row of the dollar estimates covers it.
 export const NO_ESTIMATE = hospitalMoney({ status: 'no-inputs', cut: false });
-// Asset paths for rendering pages: the CSS, the shared scripts and both HACRP page scripts.
-export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', share: '/assets/share.test.js', topbar: '/assets/topbar.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-place': '/assets/hacrp-place.test.js','hacrp-hospital': '/assets/hacrp-hospital.test.js', 'hacrp-search': '/assets/hacrp-search.test.js' } };
+// Assets for rendering pages: the CSS, the shared scripts, both HACRP page scripts and the shell's facts.
+export const ASSETS = testAssets({ js: Object.fromEntries(['figure', 'cite', 'share', 'topbar', 'hacrp-program', 'hacrp-place', 'hacrp-hospital', 'hacrp-search'].map((name) => [name, `/assets/${name}.test.js`])) });
 export const PERIODS = SYNTH_PERIODS;
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
 // CMS's text for the two boundary scores, as boundaryText() reads it from the file.

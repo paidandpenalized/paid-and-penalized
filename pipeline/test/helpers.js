@@ -6,8 +6,26 @@ import { join } from 'node:path';
 import { repoFiles, writeFileMkdir } from '../files.js';
 import { createSiteServer, listen, stop } from '../site/serve.js';
 
-// The asset paths page() needs (web/render/layout.js), for a page rendered outside a build.
-export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js' } };
+// The assets page() needs (web/render/layout.js), for a page rendered outside a build: the CSS and script paths, and the
+// shell's facts (what a build computes once and hands every page: ctx.assets.shell). Invented numbers and no hospital.
+// Pass css, js (merged over the theme script) or shell (merged over the facts below) to change a part.
+export const testAssets = ({ css = '/assets/site.test.css', js = {}, shell = {} } = {}) => ({
+  css,
+  js: { theme: '/assets/theme.test.js', ...js },
+  shell: {
+    fy: 2026,
+    hospitals: 3,
+    changed: '2026-10-22',
+    programs: {
+      hrrp: { dollars: -2000000, cutN: 2 },
+      hacrp: { dollars: -1000000, cutN: 1 },
+      hvbp: { moved: 500000, net: -100000 },
+    },
+    hubUrl: '/assets/hub-hospitals.test.json',
+    ...shell,
+  },
+});
+export const ASSETS = testAssets();
 
 // Runs fn(dir) in a fresh folder under the system temp directory and removes it afterwards, pass or fail.
 export function withTemp(prefix, fn) {

@@ -1,9 +1,13 @@
 // make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
-// site's scripts and styles), runs each site's generator in order, then writes Cloudflare's _headers (headers.js).
+// site's scripts and styles), writes the hub's data asset and computes the shell's facts, runs each site's generator in
+// order, then writes Cloudflare's _headers (headers.js).
 // PP_ENV=production is the only build that may be indexed (robotsFor in context.js holds the rule for pages).
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
+import { hubAsset } from '../../hub/asset.js';
+import { loadHub } from '../../hub/data.js';
+import { hubHospitals, shellFacts, storyFacts } from '../../hub/model.js';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
@@ -49,6 +53,17 @@ export function mergeEntries(...sets) {
   return merged;
 }
 
+// The hub's one browser asset (every hospital's dollars and place, hub-hospitals.<hash>.json) and the facts every page's
+// shell shows (hub/model.js's shellFacts, and hubUrl: the asset's path), computed once for the whole build and handed to
+// every page as ctx.assets.shell. A change to the dollar estimates changes the facts on every page, the hub's and a
+// program site's alike.
+function hubShell(ctx) {
+  const hub = loadHub();
+  const hospitals = hubHospitals(hub);
+  const facts = shellFacts({ facts: storyFacts(hospitals), builtAt: hub.builtAt, fy: hub.fy });
+  return { ...facts, hubUrl: ctx.asset('hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub))) };
+}
+
 export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
@@ -59,6 +74,7 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
     styles: sites.flatMap((s) => s.styles ?? []),
   });
   const ctx = createContext({ outDir: dir, env, assets });
+  ctx.assets.shell = hubShell(ctx);
   const updated = new Map();
   for (const site of sites) {
     const result = await site.generate(ctx, { updated });

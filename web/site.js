@@ -1,6 +1,7 @@
 // Family-wide settings every page reads: the name, the canonical origin, the family's own pages, the licenses, the
-// byline's profile, the feedback form, the hub's state and each site (its path, names and state). The hub or a site
-// with released: false stays noindex and out of the sitemap even in a production build; go-live flips them here.
+// byline's profile, the feedback form, the hub's state, each site (its path, names and state) and the program registry.
+// The hub or a site with released: false stays noindex and out of the sitemap even in a production build; go-live
+// flips them here.
 // pages: the hub's policy pages and the family's Methods, by name, in the footer's order. The footer links Terms in
 // its text (web/copy.js's termsLink) and lists the rest, each labelled with web/copy.js's word of the same name.
 // feedback: the shared Google Form, and the names of its two prefilled questions (the site's name, the page's address).
@@ -22,8 +23,47 @@ export const SITE = {
   sites: {
     hacrp: { path: '/hacrp/', released: false, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
+  // Every program, live and coming, in the order the shell's tabs and the home page's directory show them. Separate from
+  // `sites` (the sites built in this repo): a program here may have no site yet.
+  //   name, ab, long   the tab's name, its short form, and CMS's name for the program
+  //   path             the program's folder (a coming program's is its coming-soon page)
+  //   stage            live (a site here), interim (a slim page here until Thirty Day Readmissions folds in), soon
+  //   group            what the program does to payment: quality (a cut or bonus for scores), price (an adjustment to
+  //                    the rate), reporting (a cut for not reporting), episode (a spending target)
+  //   inData           whether the dollar estimates (hub/) include the program
+  programs: [
+    { id: 'hrrp', name: 'Readmissions', ab: 'HRRP', long: 'Hospital Readmissions Reduction Program', path: '/hrrp/', stage: 'interim', group: 'quality', inData: true },
+    { id: 'hacrp', name: 'Hospital-acquired conditions', ab: 'HACRP', long: 'Hospital-Acquired Condition Reduction Program', path: '/hacrp/', stage: 'live', group: 'quality', inData: true },
+    { id: 'hvbp', name: 'Value-based purchasing', ab: 'HVBP', long: 'Hospital Value-Based Purchasing Program', path: '/hvbp/', stage: 'soon', group: 'quality', inData: true },
+    { id: 'wage-index', name: 'Local wages', ab: 'Wage index', long: 'Hospital Wage Index', path: '/wage-index/', stage: 'soon', group: 'price', inData: false },
+    { id: 'dsh', name: 'Low-income patients', ab: 'DSH + UC', long: 'Disproportionate Share Hospital and Uncompensated Care Payments', path: '/dsh/', stage: 'soon', group: 'price', inData: false },
+    { id: 'ime', name: 'Teaching', ab: 'IME', long: 'Indirect Medical Education Adjustment', path: '/ime/', stage: 'soon', group: 'price', inData: false },
+    { id: 'iqr', name: 'Quality reporting', ab: 'IQR', long: 'Hospital Inpatient Quality Reporting Program', path: '/iqr/', stage: 'soon', group: 'reporting', inData: false },
+    { id: 'pi', name: 'Electronic health records', ab: 'PI', long: 'Medicare Promoting Interoperability Program', path: '/pi/', stage: 'soon', group: 'reporting', inData: false },
+    { id: 'team', name: 'Surgical episodes', ab: 'TEAM', long: 'Transforming Episode Accountability Model', path: '/team/', stage: 'soon', group: 'episode', inData: false },
+  ],
+  // Thirty Day Readmissions, the sister site Readmissions lives on until it folds in; hospital(ccn) is the link to one
+  // of its hospitals.
+  tdr: {
+    name: 'Thirty Day Readmissions',
+    url: 'https://thirty-day-readmissions.vercel.app/',
+    hospital: (ccn) => `${SITE.tdr.url}#hospital-${ccn}`,
+  },
 };
 
 // The site a page belongs to, by its path: the entry in SITE.sites whose path starts the page's, or null for the
 // family's own pages (the hub).
 export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.startsWith(site.path)) ?? null;
+
+// The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).
+export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
+
+// The address of a hospital's page in a program, or null when the program has none for it. Folders are lowercase, so the
+// CCN is too. programId is 'hub' (the hospital page, every hospital), 'hacrp' (that site's hospital pages), or 'hrrp'
+// (the slim Readmissions page, only for a hospital Thirty Day Readmissions has: inTdr). No other program has one yet.
+export function hospitalPathOf(programId, ccn, { inTdr = false } = {}) {
+  const folder = ccn.toLowerCase();
+  if (programId === 'hub') return `/hospital/${folder}/`;
+  const program = SITE.programs.find((p) => p.id === programId);
+  return program && (programId === 'hacrp' || (programId === 'hrrp' && inTdr)) ? `${program.path}hospital/${folder}/` : null;
+}

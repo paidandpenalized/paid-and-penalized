@@ -1,7 +1,7 @@
-// What each site's generator gets from the build: the output folder, the build's env and asset paths, emit() (the
-// one way a page or file is written; it counts pages and collects the paths that may be indexed, which the hub's
-// sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds the indexing rule, and siteDates
-// the check on the two dates a program site gives back for the hub's corrections page.
+// What each site's generator gets from the build: the output folder, the build's env and assets (asset paths, and the
+// shell's facts as assets.shell), emit() (the one way a page or file is written; it counts pages and collects the paths
+// that may be indexed, which the hub's sitemap lists) and asset() for a site's own content-hashed data. robotsFor holds
+// the indexing rule, and siteDates the check on the two dates a program site gives back for the hub's corrections page.
 import { join } from 'node:path';
 import { isIsoDate } from '../../engine/js/dates.js';
 import { writeFileMkdir } from '../files.js';
@@ -33,12 +33,15 @@ export function siteDates(siteId, result) {
   return { cmsReleased, changed };
 }
 
-export function createContext({ outDir, env, assets }) {
+// shell: the facts the header and footer show on every page, computed once by the build (build.js); it becomes
+// ctx.assets.shell, beside the paths in `assets` (which the caller's object keeps unchanged). Leave it out when
+// `assets` already holds one.
+export function createContext({ outDir, env, assets, shell }) {
   const written = new Set();
   const ctx = {
     outDir,
     env,
-    assets,
+    assets: shell === undefined ? assets : { ...assets, shell },
     pages: 0,
     indexable: [],
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;

@@ -100,9 +100,11 @@ const socialTags = ({ title, description, url, type }) => html`<meta property="o
 ${url === null ? '' : html`<meta property="og:url" content="${url}">
 `}<meta name="twitter:card" content="summary">`;
 
-// body: Safe markup (a plain string is escaped, never trusted). scripts: the page's module URLs, loaded in order
-// after the theme script: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation
-// block (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS).
+// body: Safe markup (a plain string is escaped, never trusted). assets: the build's paths (css, js by entry name) and
+// the shell's facts (assets.shell: what the header and footer show on every page, computed once by the build). scripts:
+// the page's module URLs, loaded in order after the theme script: a page with a figure (web/charts/figure.js) lists
+// assets.js.figure, one with the citation block (components.js) assets.js.cite, then its own. preloadFonts: font file
+// names to preload (PRELOAD_FONTS).
 // topbar: a program site's header (programHeader), in place of the family's masthead. The page's site, from its path
 // (siteOf), names the site in the feedback link (feedbackFor).
 // address: the page's canonical address, by default the origin and its path; null for a page with none of its own
@@ -111,6 +113,7 @@ export function page({ title, description, path, address = SITE.origin + path, r
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme) throw new TypeError('page: assets must hold the CSS and theme script paths');
+  if (!assets.shell) throw new TypeError('page: assets must hold the shell facts (the build computes them once, as ctx.assets.shell)');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
   const modules = [assets.js.theme, ...scripts];
