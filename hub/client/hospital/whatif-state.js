@@ -51,6 +51,17 @@ export const initial = (h) => ({ hrrp: h.est.hrrpFactor, hvbp: h.est.vbpFactor, 
 // h's range for id (ranges'), or null for an id that is not a factor (the cut) or a program h is not in.
 const rangeOf = (rng, id) => (has(FACTOR, id) ? rng[id] : null);
 
+// A range widened to hold h's own factor (own): the highest value-based purchasing factor sits past the range's
+// four-decimal end.
+const widen = (r, own) => [Math.min(r[0], own), Math.max(r[1], own)];
+
+// A factor's ends as the field and the slider state them, and Home and End go to: h's range for id, widened to hold its
+// own factor; null for the cut or a program h is not in.
+export function extent(h, ctx, id) {
+  const r = rangeOf(ranges(h, ctx), id);
+  return r && widen(r, initial(h)[id]);
+}
+
 // A factor to four decimals, or the actual factor when it reads the same.
 const settle = (x, actual) => (round4(x) === round4(actual) ? actual : round4(x));
 
@@ -77,6 +88,7 @@ function medianPatch(id, h, rng, peers) {
 // The next state after action, given ctx { h, vbpMax, peers } (peers: h's group, for the medians). Actions:
 //   { type: 'set', id, value }   a factor, clamped to the range
 //   { type: 'step', id, dir, big } a step of STEP (BIG_STEP when big) down (dir < 0) or up, clamped
+//   { type: 'end', id, dir }     Home (dir < 0) or End: the factor's end that way (extent's)
 //   { type: 'hac', cut }         the cut on (true) or off
 //   { type: 'median', id }       the peers' median for id ('hrrp', 'hvbp' or 'hac'); { type: 'medianAll' } all three
 //   { type: 'reset' }            the actual state
@@ -104,6 +116,14 @@ export function reduce(state, action, ctx) {
       if (!r || !dir) return state;
       const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), r), initial(h)[id]);
       // Never a step the wrong way (an actual factor past the range's four-decimal end).
+      return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
+    }
+    case 'end': {
+      const dir = Math.sign(action.dir);
+      if (!r || !dir) return state;
+      const own = initial(h)[id];
+      const next = settle(widen(r, own)[dir < 0 ? 0 : 1], own);
+      // Never a move the wrong way, as step.
       return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
     }
     case 'hac':

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, fromHash, initial, outcome, ranges, reduce, toHash } from '../client/hospital/whatif-state.js';
+import { BIG_STEP, STEP, changed, extent, fromHash, initial, outcome, ranges, reduce, toHash } from '../client/hospital/whatif-state.js';
 import { makeHospital as make } from './helpers.js';
 
 
@@ -69,6 +69,37 @@ test('the highest factor in the data, past the range\'s four-decimal end: typed 
   assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.0453 }, tctx), s0);
   assert.equal(reduce(s0, { type: 'step', id: 'hvbp', dir: 1 }, tctx), s0, 'no step up past it');
   assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, 1.0452, 'past it clamps to the range');
+});
+
+test('Home and End go to the ends the slider states (extent), never the wrong way, even from the highest factor in the data', () => {
+  // The highest factor, past the range's four-decimal end: its own factor is the top the slider states.
+  const TOP = 1.00345678;
+  const top = make('990012', { vbpFactor: TOP });
+  const tctx = { h: top, vbpMax: TOP, peers: [top] };
+  assert.deepEqual(ranges(top, tctx).hvbp, [0.98, 1.0034]);
+  assert.deepEqual(extent(top, tctx, 'hvbp'), [0.98, TOP]);
+  const s0 = initial(top);
+  assert.equal(reduce(s0, { type: 'end', id: 'hvbp', dir: 1 }, tctx), s0, 'End at its own factor stays: no hypothetical cut');
+  const low = reduce(s0, { type: 'end', id: 'hvbp', dir: -1 }, tctx);
+  assert.equal(low.hvbp, 0.98, 'Home: the whole withhold kept');
+  assert.equal(reduce(low, { type: 'end', id: 'hvbp', dir: -1 }, tctx), low, 'Home at the bottom stays');
+  const back = reduce(low, { type: 'end', id: 'hvbp', dir: 1 }, tctx);
+  assert.equal(back.hvbp, TOP, 'End: back to its own factor, not the range\'s end below it');
+  assert.equal(changed(back, top), false);
+  // A factor inside its range: the range's ends.
+  const s1 = initial(H);
+  assert.deepEqual(extent(H, ctx, 'hrrp'), [0.97, 1]);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: -1 }, ctx).hrrp, 0.97);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: 1 }, ctx).hrrp, 1);
+  assert.equal(reduce(s1, { type: 'end', id: 'hvbp', dir: 1 }, ctx).hvbp, 1.0452);
+  // Nothing for the cut, no direction, or a program the hospital is not in.
+  const out = make('990013', { vbpListed: false });
+  assert.equal(extent(out, ctx, 'hvbp'), null);
+  assert.equal(extent(H, ctx, 'hac'), null);
+  const so = initial(out);
+  assert.equal(reduce(so, { type: 'end', id: 'hvbp', dir: 1 }, { ...ctx, h: out }), so);
+  assert.equal(reduce(s1, { type: 'end', id: 'hac', dir: 1 }, ctx), s1);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: 0 }, ctx), s1);
 });
 
 test('step: a small step, a bigger one with Shift, clamped at the range\'s ends', () => {

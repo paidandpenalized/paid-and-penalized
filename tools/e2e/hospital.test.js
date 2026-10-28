@@ -19,6 +19,13 @@ const shared = useBrowser();
 const CUT = samplePages().find((p) => p.type === 'hub-hospital-cut');
 // A hospital with an estimate and no teaching status on record, picked by property.
 const NO_TEACH = hubHospitals(loadHub()).find((h) => h.est && h.teach === null);
+// By property, for the what-if's edges: the hospital with the highest value-based purchasing factor in the data (its own
+// factor sits past the range's four-decimal end), and the one in both factor programs whose base is the largest share of
+// its pay (its hypothetical figures reach furthest past every actual one on the share axis).
+const ESTIMATED = hubHospitals(loadHub()).filter((h) => h.est);
+const most = (list, by) => list.reduce((a, b) => (by(b) > by(a) ? b : a));
+const TOP_VBP = most(ESTIMATED.filter((h) => h.est.vbpListed), (h) => h.est.vbpFactor);
+const HIGH_BASE = most(ESTIMATED.filter((h) => h.est.hrrpListed && h.est.vbpListed), (h) => h.est.base / h.est.total);
 
 // The what-if's marks: whether the page says it is hypothetical, and where.
 const hypo = (page) => page.evaluate(() => ({
@@ -237,3 +244,30 @@ for (const width of [390, 1280]) {
     }));
   });
 }
+
+// The what-if's edges, at one width: Home and End go where the slider says its ends are; a drag reaches the range's ends
+// and every hypothetical stands on the share axis (none pinned at its end); a drag updates the page once a frame and
+// lands its last place on release; the shared link's way back stays on this site.
+describe('the what-if\'s edges', () => {
+  const tabs = useContext(shared);
+  const at = (page, id) => page.locator(`[data-row="${id}"] .st__h`);
+  const value = (handle) => handle.getAttribute('aria-valuenow');
+
+  it('Home and End go to the ends the handle states: the highest factor in the data is its own top', () => withPage(tabs, { path: hospitalPathOf('hub', TOP_VBP.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hvbp');
+    await handle.waitFor();
+    await handle.focus();
+    const [own, min, max] = await Promise.all([value(handle), handle.getAttribute('aria-valuemin'), handle.getAttribute('aria-valuemax')]);
+    assert.equal(own, max, 'its own factor is the handle\'s top');
+    await page.keyboard.press('End');
+    assert.equal(await value(handle), own, 'End stays at its own factor');
+    await page.keyboard.press('Home');
+    assert.equal(await value(handle), min, 'Home: the bottom');
+    await page.keyboard.press('End');
+    assert.equal(await value(handle), max, 'End: the top it states');
+    await page.waitForTimeout(SETTLED_MS);
+    assert.equal((await hypo(page)).banner, false, 'back on the actual figures');
+    await assertQuiet(seen, 'Home and End on the highest factor');
+  }));
+});

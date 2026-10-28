@@ -11,7 +11,7 @@
 // hypothetical net. The result box (a polite live region) updates SETTLE_MS after the last input, and so does the URL
 // fragment (#whatif&hrrp=…, history.replaceState). A page opened from a link with a valid changed scenario loads it and
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
-// step, Shift (or Page Up and Down) steps bigger, Home and End go to the range's ends; Escape anywhere in the what-if or
+// step, Shift (or Page Up and Down) steps bigger, Home and End go to the ends it states; Escape anywhere in the what-if or
 // the banner resets the page.
 import { numberOrNaN } from '../../../engine/js/stats.js';
 import { factor } from '../../../web/client/format.js';
@@ -22,7 +22,7 @@ import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
-import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { changed, extent, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -85,9 +85,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   const vbpMax = Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
-  // A factor's ends as the field and the slider state them: the range, widened to hold the hospital's own factor (the
-  // highest value-based purchasing factor sits past the range's four-decimal end).
-  const ends = (id) => [Math.min(rng[id][0], actual[ROW_KEY[id]]), Math.max(rng[id][1], actual[ROW_KEY[id]])];
+  // A factor's ends as the field and the slider state them (whatif-state.js extent).
+  const ends = (id) => extent(h, { vbpMax }, ROW_KEY[id]);
   let g = group;
   const ctx = () => ({ h, vbpMax, peers: g.peers });
   let state = actual;
@@ -163,7 +162,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       if (!down && !up && k !== 'Home' && k !== 'End') return;
       e.preventDefault();
       if (id === 'hacrp') apply({ type: 'hac', cut: down || k === 'Home' });
-      else if (k === 'Home' || k === 'End') apply({ type: 'set', id: key, value: rng[id][k === 'Home' ? 0 : 1] });
+      else if (k === 'Home' || k === 'End') apply({ type: 'end', id: key, dir: k === 'Home' ? -1 : 1 });
       else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
     });
     // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it.
