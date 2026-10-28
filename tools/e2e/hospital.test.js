@@ -301,4 +301,52 @@ describe('the what-if\'s edges', () => {
     assert.ok(cut < none, `the net with the cut (${cut} px) left of the net without it (${none} px)`);
     await assertQuiet(seen, 'the what-if at its ends');
   }));
+
+  it('a drag updates the page once a frame, and lands its last place on release', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hrrp');
+    await handle.waitFor();
+    await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
+    const start = await value(handle);
+    const dir = start === (await handle.getAttribute('aria-valuemin')) ? 1 : -1;
+    const box = await handle.locator('.st__hb').boundingBox();
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // Ten moves in one task, a frame, four more and a release in one task, a frame: what the page shows after each, and
+    // how many times it wrote the net (each update writes it once).
+    const s = await page.evaluate(async ([x0, y0, d]) => {
+      const el = document.querySelector('[data-row="hrrp"] .st__h');
+      // The writes delivered to the observer (between a frame's callbacks) and those still queued.
+      let delivered = 0;
+      const writes = new MutationObserver((list) => { delivered += list.length; });
+      writes.observe(document.querySelector('.hh__big'), { childList: true, characterData: true, subtree: true });
+      const fire = (type, n) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x0 + d * 6 * n, clientY: y0, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+      const read = () => {
+        const out = { now: el.getAttribute('aria-valuenow'), writes: delivered + writes.takeRecords().length };
+        delivered = 0;
+        return out;
+      };
+      const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      for (let n = 1; n <= 10; n++) fire('pointermove', n);
+      const sync = read();
+      await frame();
+      const framed = read();
+      for (let n = 11; n <= 14; n++) fire('pointermove', n);
+      fire('pointerup', 14);
+      const up = read();
+      await frame();
+      const after = read();
+      writes.disconnect();
+      return { sync, framed, up, after };
+    }, [x, y, dir]);
+    await page.mouse.up();
+    assert.deepEqual(s.sync, { now: start, writes: 0 }, 'nothing yet within the moves\' own task');
+    assert.equal(s.framed.writes, 1, 'one update in the frame');
+    assert.notEqual(s.framed.now, start, 'to the last move\'s place');
+    assert.equal(s.up.writes, 1, 'the release lands the moves since at once');
+    assert.notEqual(s.up.now, s.framed.now);
+    assert.deepEqual(s.after, { now: s.up.now, writes: 0 }, 'and nothing is left for the next frame');
+    await assertQuiet(seen, 'a drag, once a frame');
+  }));
 });

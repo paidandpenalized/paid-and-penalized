@@ -165,9 +165,24 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       else if (k === 'Home' || k === 'End') apply({ type: 'end', id: key, dir: k === 'Home' ? -1 : 1 });
       else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
     });
-    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it.
+    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it. The page updates
+    // once a frame at most, to the last place the pointer reached (at), and a release lands that place at once; keys and
+    // the field update at once.
     let offset = null;
+    let at = null;
+    let frame = 0;
     const valueAt = (e) => strips.shareAt(id, e.clientX + offset);
+    const drag = () => {
+      frame = 0;
+      const v = at;
+      at = null;
+      if (v === null) return;
+      if (id === 'hacrp') {
+        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
+        const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
+        apply({ type: 'hac', cut: v < cutAt / 2 });
+      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
+    };
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -181,13 +196,14 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       if (offset === null) return;
       const v = valueAt(e);
       if (v === null) return;
-      if (id === 'hacrp') {
-        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
-        const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
-        apply({ type: 'hac', cut: v < cutAt / 2 });
-      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
+      at = v;
+      if (!frame) frame = requestAnimationFrame(drag);
     });
     const end = () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+        drag();
+      }
       offset = null;
       page.classList.remove('hh--dragging');
     };
