@@ -70,9 +70,11 @@ test('a card per program with data: name, abbreviation, dek, the national figure
     assert.ok(words(big).startsWith(figure), `${id}: ${words(big)}`);
     assert.match(big, /<a class="est-tag" href="\/methods\/#estimate" aria-label="[^"]+">Estimate<\/a>/, id);
     assert.equal(words(element(card, '<p class="pc__sub"', 'p')), sub, id);
-    assert.match(card, new RegExp(`<a class="go" href="${p.path}">Open ${p.name}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
+    // The way to its page: the program's short name, the same on every card (so the three read evenly on one line), with
+    // its name said to a screen reader after it.
+    assert.match(card, new RegExp(`<a class="go" href="${p.path}" aria-label="Open ${p.ab}, ${p.name}">Open ${p.ab}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
   });
-  assert.deepEqual(cards.map((c) => /href="([^"]+)">Open/.exec(c)[1]), ['/hrrp/', '/hacrp/', '/hvbp/']);
+  assert.deepEqual(cards.map((c) => /<a class="go" href="([^"]+)"/.exec(c)[1]), ['/hrrp/', '/hacrp/', '/hvbp/']);
 });
 
 test('each card\'s takeaway is the data\'s: Readmissions\' share at $0, the HAC step, value-based purchasing\'s two sides', () => {
@@ -109,6 +111,16 @@ test('each card\'s histogram: bins of 0.2 points whose counts add to the program
     assert.match(svg, /role="img" aria-label="[^"]+"/);
     const label = /aria-label="([^"]+)"/.exec(svg)[1];
     assert.ok(label.includes(count(members.length)), label);
+    // Natural words: the program's full name (no abbreviation to spell out), and only the groups it has (no "0 with a
+    // bonus" for a program that pays none, no "0 at $0").
+    const p = SITE.programs.find((x) => x.id === id);
+    assert.ok(label.startsWith(`${count(members.length)} hospitals in the ${p.long}, `), label);
+    assert.ok(!label.includes(p.ab), `${id}: the label spells out its abbreviation`);
+    assert.doesNotMatch(label, /(?:^|\D)0 (?:cut|at|with)/, `${id}: a group of none`);
+    const cutCount = members.filter((h) => h.est[PROGRAMS[id].key] < 0).length;
+    const bonusCount = members.filter((h) => h.est[PROGRAMS[id].key] > 0).length;
+    const parts = [cutCount && `${count(cutCount)} cut`, zero && `${count(zero)} at $0`, bonusCount && `${count(bonusCount)} with a bonus`].filter(Boolean);
+    assert.ok(label.endsWith(`: ${parts.join(', ')}.`), label);
     const bars = (ink) => [...tags(svg, { names: ['path'] })].filter(({ attrs }) => attrs.class === `st__d st__d--${ink}`);
     const subpaths = (ink) => bars(ink).reduce((total, { attrs }) => total + attrs.d.split('M').length - 1, 0);
     assert.ok(bars('pen').length <= 1 && bars('rew').length <= 1 && bars('neu').length <= 1, `${id}: one path per ink`);

@@ -410,9 +410,10 @@ for (const width of [390, 1280]) {
   }
 }
 
-// Below the story, the directory's programs under consideration: at every layout each group's name sits on one line
-// inside its row, each slip's band holds its words on one line, and slips in one row are one height with their bands on
-// one bottom edge (from 1200 px the six share one row).
+// Below the story, the directory: each live program's card ends in a way to its page whose words sit on one line, as its
+// neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
+// row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom
+// edge (from 1200 px the six share one row).
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
@@ -435,7 +436,14 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           row.bands.push(box(s.querySelector('.slip__none')).bottom);
         }
         const spread = (xs) => Math.max(...xs) - Math.min(...xs);
+        // The lines a card's way to its page takes: its words' boxes, one per line.
+        const lines = (a) => {
+          const range = document.createRange();
+          range.selectNodeContents(a.firstChild);
+          return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+        };
         return {
+          go: [...document.querySelectorAll('.pc .go')].map(lines),
           names: names.length,
           namesOk: names.every((n) => oneLine(n) && inside(n, n.parentElement)),
           bands: slips.length,
@@ -445,6 +453,7 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
+      assert.deepEqual(f.go, [1, 1, 1], `${width} px: each card's way to its page on one line`);
       assert.equal(f.names, 3, `${width} px: three groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
       assert.equal(f.bands, 6, `${width} px: six slips`);

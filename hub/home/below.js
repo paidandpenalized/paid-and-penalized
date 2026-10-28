@@ -153,17 +153,21 @@ function card(p, { hospitals, facts, fy, domain }) {
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
   const { big, sub } = FIGURES[p.id](facts, fy);
   const cutN = bins.bins.filter((b) => b.lo < 0).reduce((s, b) => s + b.n, 0);
-  const label = fill('histLabel', {
-    n: count(bins.n), program: p.ab, fy, bin: String(BIN_POINTS), cutN: count(cutN), zeroN: count(bins.zero), zero: money(0),
-    bonusN: count(bins.n - cutN - bins.zero),
-  });
+  const bonusN = bins.n - cutN - bins.zero;
+  // Only the groups the program has: a program without bonuses (or without a hospital at $0) says nothing of them.
+  const parts = [
+    cutN && fill('histPartCut', { n: count(cutN) }),
+    bins.zero && fill('histPartZero', { n: count(bins.zero), zero: money(0) }),
+    bonusN && fill('histPartBonus', { n: count(bonusN) }),
+  ].filter(Boolean);
+  const label = fill('histLabel', { n: count(bins.n), program: p.long, fy, bin: String(BIN_POINTS), parts: parts.join(', ') });
   return html`<article class="pc">
 <h3><span>${p.name}</span> <abbr class="ab" title="${p.long}">${p.ab}</abbr></h3>
 <p class="pc__dek">${programDek(p.id)}</p>
 <figure><figcaption>${TAKEAWAYS[p.id](members, bins)}</figcaption>${histogram(bins, { domain, label })}</figure>
 <p class="pc__big">${big}${estimateTag()}</p>
 <p class="pc__sub">${sub}</p>
-<a class="go" href="${p.path}">${fill('dirOpen', { name: p.name })}${arrow}</a>
+<a class="go" href="${p.path}" aria-label="${fill('dirOpenLabel', { ab: p.ab, name: p.name })}">${fill('dirOpen', { ab: p.ab })}${arrow}</a>
 </article>`;
 }
 
