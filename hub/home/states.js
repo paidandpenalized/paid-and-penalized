@@ -5,7 +5,8 @@
 // width (MAP_WIDTH), so the story's script can lay its dots on it and use the paths as its hit areas. Also the map's key
 // and the small states' buttons the script shows.
 import { MAP_WIDTH } from '../asset.js';
-import { STATE_NAMES, US_MAP_CODES, usPaths } from '../../web/charts/geo.js';
+import { STATE_NAMES } from '../../engine/js/states.js';
+import { US_MAP_CODES, usPaths } from '../../web/charts/geo.js';
 import { fillCopy } from '../../web/render/components.js';
 import { noun, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';

@@ -6,7 +6,7 @@
 // hospital-acquired conditions cut applies. A factor the reader sets keeps four decimals (CMS prints Readmissions' to
 // four); one that reads the same as the hospital's actual factor to four decimals is the actual factor, so stepping back
 // or typing the factor shown leaves the page unchanged. A program the hospital is not in cannot be adjusted.
-import { programDollars } from '../../../engine/js/dollars/whatif.js';
+import { pctOf, programDollars } from '../../../engine/js/dollars/whatif.js';
 import { has } from '../../../engine/js/has.js';
 import { median } from '../../../engine/js/peers.js';
 import { toUnit } from '../../../engine/js/stats.js';
@@ -32,6 +32,10 @@ const floor4 = (x) => Math.floor(x * 10 ** DP + SAME) / 10 ** DP;
 const clamp = (x, [lo, hi]) => (x < lo ? lo : x > hi ? hi : x);
 const same = (a, b) => Math.abs(a.hrrp - b.hrrp) < SAME && Math.abs(a.hvbp - b.hvbp) < SAME && a.hac === b.hac;
 
+// The highest value-based purchasing factor of any hospital the program lists (hospitals: every decoded row): the top of
+// ranges' value-based purchasing range.
+export const vbpMaxOf = (hospitals) => Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
+
 // What a reader may set for h: { hrrp: [0.97, 1], hvbp: [0.98, vbpMax] }, each null when h is not in the program.
 // Readmissions reaches its cap (HRRP_CAP_PCT); value-based purchasing runs from the whole withhold kept
 // (VBP_WITHHOLD_PCT) to vbpMax, the highest factor of any hospital in the data, floored to the four decimals a set factor
@@ -51,6 +55,17 @@ export const initial = (h) => ({ hrrp: h.est.hrrpFactor, hvbp: h.est.vbpFactor, 
 // h's range for id (ranges'), or null for an id that is not a factor (the cut) or a program h is not in.
 const rangeOf = (rng, id) => (has(FACTOR, id) ? rng[id] : null);
 
+// A range widened to hold h's own factor (own): the highest value-based purchasing factor sits past the range's
+// four-decimal end.
+const widen = (r, own) => [Math.min(r[0], own), Math.max(r[1], own)];
+
+// A factor's ends as the field and the slider state them, and Home and End go to: h's range for id, widened to hold its
+// own factor; null for the cut or a program h is not in.
+export function extent(h, ctx, id) {
+  const r = rangeOf(ranges(h, ctx), id);
+  return r && widen(r, initial(h)[id]);
+}
+
 // A factor to four decimals, or the actual factor when it reads the same.
 const settle = (x, actual) => (round4(x) === round4(actual) ? actual : round4(x));
 
@@ -65,18 +80,20 @@ function accept(id, value, h, rng) {
 }
 
 // The peers' median for id, as a patch of the state, or null when there is none: a factor among the peers the program
-// lists (h among them), clamped to h's range; the cut when most peers are cut.
+// lists (h among them), clamped to h's ends (extent's); the cut when most peers are cut.
 function medianPatch(id, h, rng, peers) {
   if (id === 'hac') return peers.length ? { hac: peers.filter((p) => p.est.cut).length > peers.length / 2 } : null;
   const f = has(FACTOR, id) ? FACTOR[id] : null;
   if (!f || !rng[id]) return null;
   const m = median(peers.filter((p) => inProgram(p.est, f.row)).map((p) => p.est[f.key]));
-  return m === null ? null : { [id]: settle(clamp(m, rng[id]), initial(h)[id]) };
+  const own = initial(h)[id];
+  return m === null ? null : { [id]: settle(clamp(m, widen(rng[id], own)), own) };
 }
 
 // The next state after action, given ctx { h, vbpMax, peers } (peers: h's group, for the medians). Actions:
-//   { type: 'set', id, value }   a factor, clamped to the range
+//   { type: 'set', id, value }   a factor, clamped to its ends (extent's: the range, widened to hold h's own factor)
 //   { type: 'step', id, dir, big } a step of STEP (BIG_STEP when big) down (dir < 0) or up, clamped
+//   { type: 'end', id, dir }     Home (dir < 0) or End: the factor's end that way
 //   { type: 'hac', cut }         the cut on (true) or off
 //   { type: 'median', id }       the peers' median for id ('hrrp', 'hvbp' or 'hac'); { type: 'medianAll' } all three
 //   { type: 'reset' }            the actual state
@@ -92,18 +109,25 @@ export function reduce(state, action, ctx) {
   };
   const id = action?.id;
   const r = rangeOf(rng, id);
+  // A factor's own value and its ends (extent's). Past the range's four-decimal end the highest factor in the data is
+  // its own top, so nothing lands between the two.
+  const own = r && initial(h)[id];
+  const span = r && widen(r, own);
   switch (action?.type) {
-    case 'set': {
-      if (!r || !Number.isFinite(action.value)) return state;
-      // A value that reads as the actual factor is the actual factor, even one past the range's four-decimal end.
-      const own = initial(h)[id];
-      return put({ [id]: round4(action.value) === round4(own) ? own : settle(clamp(action.value, r), own) });
-    }
+    case 'set':
+      // A value that reads as the actual factor is the actual factor (settle).
+      return r && Number.isFinite(action.value) ? put({ [id]: settle(clamp(action.value, span), own) }) : state;
     case 'step': {
       const dir = Math.sign(action.dir);
       if (!r || !dir) return state;
-      const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), r), initial(h)[id]);
-      // Never a step the wrong way (an actual factor past the range's four-decimal end).
+      const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), span), own);
+      // Never a step the wrong way.
+      return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
+    }
+    case 'end': {
+      const dir = Math.sign(action.dir);
+      if (!r || !dir) return state;
+      const next = settle(span[dir < 0 ? 0 : 1], own);
       return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
     }
     case 'hac':
@@ -165,3 +189,24 @@ export function fromHash(hash, h, ctx) {
 // The scenario's dollars for h (programDollars): { hrrp, hvbp, hac, net, after, atStake }. The actual state gives the
 // dollar file's own figures.
 export const outcome = (state, h) => programDollars(h.est, { hrrpFactor: state.hrrp, vbpFactor: state.hvbp, cut: state.hac });
+
+// The factor whose dollars are pct percent of h's pay: a factor's dollars are base x (factor - 1) (programDollars), as a
+// percent of pay (pctOf). A drag reads a share off the strip's axis and sets the factor at it.
+export const factorAt = (h, pct) => 1 + ((pct / 100) * h.est.total) / h.est.base;
+
+// Every percent of pay the what-if can show for h (pctOf: each program's and the net's), at each corner of what a reader
+// may set: each factor at either end (extent's; its own where h is not in the program), the cut on and off. Each
+// program's dollars and the net only grow with a factor, and the cut only takes, so the corners hold the lowest and
+// highest of each. The share axis holds them all (hub/client/scale.js shareDomain), so no hypothetical sits past its end
+// and a drag reaches every value.
+export function reach(h, ctx) {
+  const own = initial(h);
+  const ends = (id) => extent(h, ctx, id) ?? [own[id]];
+  const out = [];
+  for (const hrrp of ends('hrrp')) {
+    for (const hvbp of ends('hvbp')) {
+      for (const hac of [true, false]) out.push(...Object.values(pctOf({ total: h.est.total, ...outcome({ hrrp, hvbp, hac }, h) })));
+    }
+  }
+  return out;
+}

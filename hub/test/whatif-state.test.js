@@ -5,8 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, fromHash, initial, outcome, ranges, reduce, toHash } from '../client/hospital/whatif-state.js';
-import { makeHospital as make } from './helpers.js';
+import { BIG_STEP, STEP, changed, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { shareDomain, shareScale } from '../client/scale.js';
+import { BASE, TOTAL, makeHospital as make } from './helpers.js';
 
 
 const VBP_MAX = 1.0452822242;
@@ -68,7 +69,45 @@ test('the highest factor in the data, past the range\'s four-decimal end: typed 
   const tctx = { ...ctx, h: top };
   assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.0453 }, tctx), s0);
   assert.equal(reduce(s0, { type: 'step', id: 'hvbp', dir: 1 }, tctx), s0, 'no step up past it');
-  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, 1.0452, 'past it clamps to the range');
+  // Its own factor is the top: a value past it (a drag to the strip's end, a typed 1.05) is its own factor, never the
+  // range's end below it (a hypothetical cut).
+  assert.equal(reduce(s0, { type: 'set', id: 'hvbp', value: 1.05 }, tctx), s0, 'past it is its own factor');
+  const below = reduce(s0, { type: 'set', id: 'hvbp', value: 1.0452 }, tctx);
+  assert.equal(below.hvbp, 1.0452, 'the range\'s end below it is a value of its own');
+  assert.equal(reduce(below, { type: 'set', id: 'hvbp', value: 1.05 }, tctx).hvbp, VBP_MAX, 'and from there, past it is its own factor again');
+  assert.equal(reduce(below, { type: 'step', id: 'hvbp', dir: 1 }, tctx).hvbp, VBP_MAX, 'a step up reaches it');
+  assert.equal(reduce(below, { type: 'median', id: 'hvbp' }, { ...tctx, peers: [top] }).hvbp, VBP_MAX, 'a group\'s median at it is it');
+});
+
+test('Home and End go to the ends the slider states (extent), never the wrong way, even from the highest factor in the data', () => {
+  // The highest factor, past the range's four-decimal end: its own factor is the top the slider states.
+  const TOP = 1.00345678;
+  const top = make('990012', { vbpFactor: TOP });
+  const tctx = { h: top, vbpMax: TOP, peers: [top] };
+  assert.deepEqual(ranges(top, tctx).hvbp, [0.98, 1.0034]);
+  assert.deepEqual(extent(top, tctx, 'hvbp'), [0.98, TOP]);
+  const s0 = initial(top);
+  assert.equal(reduce(s0, { type: 'end', id: 'hvbp', dir: 1 }, tctx), s0, 'End at its own factor stays: no hypothetical cut');
+  const low = reduce(s0, { type: 'end', id: 'hvbp', dir: -1 }, tctx);
+  assert.equal(low.hvbp, 0.98, 'Home: the whole withhold kept');
+  assert.equal(reduce(low, { type: 'end', id: 'hvbp', dir: -1 }, tctx), low, 'Home at the bottom stays');
+  const back = reduce(low, { type: 'end', id: 'hvbp', dir: 1 }, tctx);
+  assert.equal(back.hvbp, TOP, 'End: back to its own factor, not the range\'s end below it');
+  assert.equal(changed(back, top), false);
+  // A factor inside its range: the range's ends.
+  const s1 = initial(H);
+  assert.deepEqual(extent(H, ctx, 'hrrp'), [0.97, 1]);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: -1 }, ctx).hrrp, 0.97);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: 1 }, ctx).hrrp, 1);
+  assert.equal(reduce(s1, { type: 'end', id: 'hvbp', dir: 1 }, ctx).hvbp, 1.0452);
+  // Nothing for the cut, no direction, or a program the hospital is not in.
+  const out = make('990013', { vbpListed: false });
+  assert.equal(extent(out, ctx, 'hvbp'), null);
+  assert.equal(extent(H, ctx, 'hac'), null);
+  const so = initial(out);
+  assert.equal(reduce(so, { type: 'end', id: 'hvbp', dir: 1 }, { ...ctx, h: out }), so);
+  assert.equal(reduce(s1, { type: 'end', id: 'hac', dir: 1 }, ctx), s1);
+  assert.equal(reduce(s1, { type: 'end', id: 'hrrp', dir: 0 }, ctx), s1);
 });
 
 test('step: a small step, a bigger one with Shift, clamped at the range\'s ends', () => {
@@ -151,4 +190,44 @@ test('load: what is valid loads; nothing valid returns the same state', () => {
   assert.equal(reduce(s0, { type: 'load', changes: { hrrp: 3, hac: 7 } }, ctx), s0);
   assert.equal(reduce(s0, { type: 'load', changes: {} }, ctx), s0);
   assert.equal(reduce(s0, { type: 'load', changes: { hrrp: 0.98, hac: 1 } }, ctx).hac, true);
+});
+
+test('reach: every percent of pay the what-if can show, at each corner of what a reader may set', () => {
+  const r = reach(H, ctx);
+  const pct = (d) => (d * 100) / TOTAL;
+  const lowest = outcome({ hrrp: 0.97, hvbp: 0.98, hac: true }, H);
+  const highest = outcome({ hrrp: 1, hvbp: 1.0452, hac: false }, H);
+  assert.equal(Math.min(...r), pct(lowest.net), 'the lowest: both factors at their bottoms, cut');
+  assert.equal(Math.max(...r), pct(highest.net), 'the highest: both at their tops, not cut');
+  for (const v of [lowest.hrrp, lowest.hvbp, lowest.hac, highest.hvbp]) assert.ok(r.includes(pct(v)), `${pct(v)} is in reach`);
+  // A program the hospital is not in keeps its own dollars at every corner.
+  const out = make('990014', { hrrpFactor: 0.99, hrrpListed: false });
+  assert.ok(reach(out, ctx).every((v) => v >= pct(outcome({ hrrp: 0.99, hvbp: 0.98, hac: true }, out).net)));
+  assert.equal(vbpMaxOf([H, ...peers, { est: null }]), 1.01, 'the highest factor among the hospitals the program lists');
+  assert.equal(factorAt(H, (BASE * -0.03 * 100) / TOTAL), 0.97, 'the factor at a share: the inverse of base x (factor - 1)');
+});
+
+test('on each hospital\'s page axis, a drag to a strip\'s end lands where Home or End does, and no what-if figure is past it', () => {
+  const all = hubHospitals(loadHub());
+  const est = all.filter((h) => h.est);
+  const vbpMax = vbpMaxOf(all);
+  let ends = 0;
+  for (const h of est) {
+    const shares = reach(h, { vbpMax });
+    const domain = shareDomain(est, shares);
+    for (const v of shares) assert.ok(v >= domain[0] && v <= domain[1], `${h.ccn}: ${v} on [${domain}]`);
+    if (!(h.est.base > 0)) continue;
+    const s = shareScale({ x0: 4, x1: 604, gutter: 20, domain });
+    const hctx = { h, vbpMax };
+    for (const id of ['hrrp', 'hvbp']) {
+      if (!extent(h, hctx, id)) continue;
+      for (const [x, dir] of [[0, -1], [608, 1]]) {
+        const dragged = reduce(initial(h), { type: 'set', id, value: factorAt(h, s.invert(x)) }, hctx);
+        const keyed = reduce(initial(h), { type: 'end', id, dir }, hctx);
+        assert.equal(dragged[id], keyed[id], `${h.ccn} ${id} ${dir > 0 ? 'End' : 'Home'}`);
+        ends += 1;
+      }
+    }
+  }
+  assert.ok(ends > 4000, `${ends} ends checked`);
 });

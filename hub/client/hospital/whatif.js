@@ -11,9 +11,11 @@
 // hypothetical net. The result box (a polite live region) updates SETTLE_MS after the last input, and so does the URL
 // fragment (#whatif&hrrp=…, history.replaceState). A page opened from a link with a valid changed scenario loads it and
 // says "Reader-made scenario, not CMS data.", with a link back to the actual figures. Keys on a handle: ← → (and ↑ ↓)
-// step, Shift (or Page Up and Down) steps bigger, Home and End go to the range's ends; Escape anywhere in the what-if or
+// step, Shift (or Page Up and Down) steps bigger, Home and End go to the ends it states; Escape anywhere in the what-if or
 // the banner resets the page.
+import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
+import { siteAddress } from '../../../web/client/follow.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
@@ -22,7 +24,7 @@ import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
-import { changed, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -82,12 +84,11 @@ function paintBar(track, sel, cls, dollars, x) {
 // ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for the peer toggle.
 export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group }) {
   const $ = (sel) => page.querySelector(sel);
-  const vbpMax = Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
+  const vbpMax = vbpMaxOf(hospitals);
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
-  // A factor's ends as the field and the slider state them: the range, widened to hold the hospital's own factor (the
-  // highest value-based purchasing factor sits past the range's four-decimal end).
-  const ends = (id) => [Math.min(rng[id][0], actual[ROW_KEY[id]]), Math.max(rng[id][1], actual[ROW_KEY[id]])];
+  // A factor's ends as the field and the slider state them (whatif-state.js extent).
+  const ends = (id) => extent(h, { vbpMax }, ROW_KEY[id]);
   let g = group;
   const ctx = () => ({ h, vbpMax, peers: g.peers });
   let state = actual;
@@ -163,12 +164,27 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       if (!down && !up && k !== 'Home' && k !== 'End') return;
       e.preventDefault();
       if (id === 'hacrp') apply({ type: 'hac', cut: down || k === 'Home' });
-      else if (k === 'Home' || k === 'End') apply({ type: 'set', id: key, value: rng[id][k === 'Home' ? 0 : 1] });
+      else if (k === 'Home' || k === 'End') apply({ type: 'end', id: key, dir: k === 'Home' ? -1 : 1 });
       else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
     });
-    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it.
+    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it. The page updates
+    // once a frame at most, to the last place the pointer reached (at), and a release lands that place at once; keys and
+    // the field update at once.
     let offset = null;
+    let at = null;
+    let frame = 0;
     const valueAt = (e) => strips.shareAt(id, e.clientX + offset);
+    const drag = () => {
+      frame = 0;
+      const v = at;
+      at = null;
+      if (v === null) return;
+      if (id === 'hacrp') {
+        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
+        const cutAt = pctOf({ total: h.est.total, ...outcome({ ...state, hac: true }, h) }).hac;
+        apply({ type: 'hac', cut: v < cutAt / 2 });
+      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
+    };
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -182,13 +198,14 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       if (offset === null) return;
       const v = valueAt(e);
       if (v === null) return;
-      if (id === 'hacrp') {
-        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
-        const cutAt = (-outcome({ ...state, hac: true }, h).atStake * 100) / h.est.total;
-        apply({ type: 'hac', cut: v < cutAt / 2 });
-      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: 1 + ((v / 100) * h.est.total) / h.est.base });
+      at = v;
+      if (!frame) frame = requestAnimationFrame(drag);
     });
     const end = () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+        drag();
+      }
       offset = null;
       page.classList.remove('hh--dragging');
     };
@@ -202,7 +219,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   const scenText = node('span', { class: 'hh__scentext' });
   const topReset = node('button', { type: 'button', class: 'hh__reset' }, [fill('reset')]);
   const scen = node('div', { class: 'hh__scen', hidden: '' }, [node('span', { class: 'hh__htag' }, [fill('wiTag')]), scenText, topReset]);
-  const sharedLink = node('a', { href: `${location.pathname}${location.search}` }, [fill('wiSharedReset')]);
+  // The page's own address without the scenario, as a link on this site (siteAddress folds a leading "//").
+  const sharedLink = node('a', { href: siteAddress({ pathname: location.pathname, search: location.search, hash: '' }) }, [fill('wiSharedReset')]);
   const shared = node('p', { class: 'hh__shared', hidden: '' }, [`${fill('wiShared')} `, sharedLink]);
   pin?.append(scen, shared);
 
@@ -223,7 +241,6 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   if (match) match.hidden = false;
 
   // ---------- drawing ----------
-  const pctOf = (d) => (d * 100) / h.est.total;
 
   // The dollar rows on one scale that holds the hypothetical figures too: each row's bar at its figure now, the actual's
   // bar as a ghost behind a changed one, the peers' median tick, the value and its word.
@@ -285,15 +302,16 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
       }
     }
     // The charts: the figure of each row whose input moved or whose dollars print differently, and the net's, in percent
-    // of pay.
+    // of pay (the engine's pctOf).
+    const pct = pctOf({ total: h.est.total, ...out });
     const scenario = {};
     for (const { id, key } of ROWS) {
-      if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pctOf(out[key]);
+      if (struck(out[key], h.est[key]) !== null || state[key] !== actual[key]) scenario[id] = pct[key];
     }
     const netMoved = out.net !== h.est.net;
-    if (netMoved) scenario.net = pctOf(out.net);
+    if (netMoved) scenario.net = pct.net;
     strips.setScenario(on ? scenario : null);
-    swarm.setHypothetical(on && netMoved ? pctOf(out.net) : null);
+    swarm.setHypothetical(on && netMoved ? pct.net : null);
 
     // The banner, the stamp, the net and its rows, the headline.
     bar?.classList.toggle('hh__peers--hyp', on);
@@ -309,7 +327,7 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
     netTag.hidden = !on;
     paintSum(out);
     const head = $('[data-headline]');
-    const share = on ? out.net / h.est.total : h.est.share;
+    const share = on ? netShare(out.net, h.est.total) : h.est.share;
     if (head) head.textContent = comparison(fill, on ? 'headHyp' : 'head', { share, median: g.figures.net.median, n: g.peers.length, group: g.group });
     if (reset) reset.hidden = !on;
   }

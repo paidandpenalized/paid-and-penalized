@@ -201,10 +201,12 @@ export function sumFigure({ view, n, source }) {
 
 
 // Where a score sits against the middle of each group's scores, in words for all, some or none of the k groups (none
-// above reads "below" in all of them, or "at or below" when the score sits on a group's middle; two groups are "both").
+// above reads "below" in all of them, or "at or below" when the score sits on a group's middle; two groups are "both",
+// one is "the one group").
 export function peersPosition(total, rows) {
+  if (!rows.length) throw new RangeError('peersPosition: no groups');
   const k = String(rows.length);
-  const all = rows.length === 2 ? t('figPeersBoth') : fill('figPeersEvery', { k });
+  const all = rows.length === 1 ? t('figPeersOne') : rows.length === 2 ? t('figPeersBoth') : fill('figPeersEvery', { k });
   const above = rows.filter((r) => total > r.g.median).length;
   if (above === rows.length) return fill('figPeersAboveAll', { all });
   if (above > 0) return fill('figPeersAboveSome', { above: String(above), k });

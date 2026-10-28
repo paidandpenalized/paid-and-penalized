@@ -19,6 +19,13 @@ const shared = useBrowser();
 const CUT = samplePages().find((p) => p.type === 'hub-hospital-cut');
 // A hospital with an estimate and no teaching status on record, picked by property.
 const NO_TEACH = hubHospitals(loadHub()).find((h) => h.est && h.teach === null);
+// By property, for the what-if's edges: the hospital with the highest value-based purchasing factor in the data (its own
+// factor sits past the range's four-decimal end), and the one in both factor programs whose base is the largest share of
+// its pay (its hypothetical figures reach furthest past every actual one on the share axis).
+const ESTIMATED = hubHospitals(loadHub()).filter((h) => h.est);
+const most = (list, by) => list.reduce((a, b) => (by(b) > by(a) ? b : a));
+const TOP_VBP = most(ESTIMATED.filter((h) => h.est.vbpListed), (h) => h.est.vbpFactor);
+const HIGH_BASE = most(ESTIMATED.filter((h) => h.est.hrrpListed && h.est.vbpListed), (h) => h.est.base / h.est.total);
 
 // The what-if's marks: whether the page says it is hypothetical, and where.
 const hypo = (page) => page.evaluate(() => ({
@@ -297,5 +304,122 @@ describe('the swarm by touch', () => {
     });
     assert.equal(await page.evaluate(() => document.querySelector('.hh__tip').hidden), true, 'a tap outside the swarm hides it');
     await assertQuiet(seen, 'the swarm by touch');
+  }));
+});
+
+// The what-if's edges, at one width: Home and End go where the slider says its ends are; a drag reaches the range's ends
+// and every hypothetical stands on the share axis (none pinned at its end); a drag updates the page once a frame and
+// lands its last place on release; the shared link's way back stays on this site.
+describe('the what-if\'s edges', () => {
+  const tabs = useContext(shared);
+  const at = (page, id) => page.locator(`[data-row="${id}"] .st__h`);
+  const value = (handle) => handle.getAttribute('aria-valuenow');
+
+  it('Home and End go to the ends the handle states: the highest factor in the data is its own top', () => withPage(tabs, { path: hospitalPathOf('hub', TOP_VBP.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hvbp');
+    await handle.waitFor();
+    await handle.focus();
+    const [own, min, max] = await Promise.all([value(handle), handle.getAttribute('aria-valuemin'), handle.getAttribute('aria-valuemax')]);
+    assert.equal(own, max, 'its own factor is the handle\'s top');
+    await page.keyboard.press('End');
+    assert.equal(await value(handle), own, 'End stays at its own factor');
+    await page.keyboard.press('Home');
+    assert.equal(await value(handle), min, 'Home: the bottom');
+    await page.keyboard.press('End');
+    assert.equal(await value(handle), max, 'End: the top it states');
+    await page.waitForTimeout(SETTLED_MS);
+    assert.equal((await hypo(page)).banner, false, 'back on the actual figures');
+    await assertQuiet(seen, 'Home and End on the highest factor');
+  }));
+
+  it('a handle dragged to its strip\'s ends reaches its range\'s ends; two hypothetical nets stand at two places', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hvbp');
+    await handle.waitFor();
+    await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
+    const drag = async (side) => {
+      const box = await handle.locator('.st__hb').boundingBox();
+      const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
+      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(side > 0 ? strip.x + strip.width - 1 : strip.x + 1, y, { steps: 8 });
+      await page.mouse.up();
+    };
+    await drag(1);
+    assert.equal(await value(handle), await handle.getAttribute('aria-valuemax'), 'the strip\'s right end: the range\'s top');
+    await drag(-1);
+    assert.equal(await value(handle), await handle.getAttribute('aria-valuemin'), 'its left end: the bottom');
+    // Both factors at their lowest, then the cut on and off: the hypothetical net moves, never pinned at the axis's end.
+    await at(page, 'hrrp').focus();
+    await page.keyboard.press('Home');
+    const net = () => page.evaluate(() => Number(/translate\(([-\d.]+)px/.exec(document.querySelector('[data-row="net"] .st__hyp').style.transform)?.[1]));
+    await at(page, 'hacrp').focus();
+    await page.keyboard.press('Home');
+    const cut = await net();
+    await page.keyboard.press('End');
+    const none = await net();
+    assert.ok(cut < none, `the net with the cut (${cut} px) left of the net without it (${none} px)`);
+    await assertQuiet(seen, 'the what-if at its ends');
+  }));
+
+  it('a drag updates the page once a frame, and lands its last place on release', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = at(page, 'hrrp');
+    await handle.waitFor();
+    await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
+    const start = await value(handle);
+    const dir = start === (await handle.getAttribute('aria-valuemin')) ? 1 : -1;
+    const box = await handle.locator('.st__hb').boundingBox();
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // Ten moves in one task, a frame, four more and a release in one task, a frame: what the page shows after each, and
+    // how many times it wrote the net (each update writes it once).
+    const s = await page.evaluate(async ([x0, y0, d]) => {
+      const el = document.querySelector('[data-row="hrrp"] .st__h');
+      // The writes delivered to the observer (between a frame's callbacks) and those still queued.
+      let delivered = 0;
+      const writes = new MutationObserver((list) => { delivered += list.length; });
+      writes.observe(document.querySelector('.hh__big'), { childList: true, characterData: true, subtree: true });
+      const fire = (type, n) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x0 + d * 6 * n, clientY: y0, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+      const read = () => {
+        const out = { now: el.getAttribute('aria-valuenow'), writes: delivered + writes.takeRecords().length };
+        delivered = 0;
+        return out;
+      };
+      const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      for (let n = 1; n <= 10; n++) fire('pointermove', n);
+      const sync = read();
+      await frame();
+      const framed = read();
+      for (let n = 11; n <= 14; n++) fire('pointermove', n);
+      fire('pointerup', 14);
+      const up = read();
+      await frame();
+      const after = read();
+      writes.disconnect();
+      return { sync, framed, up, after };
+    }, [x, y, dir]);
+    await page.mouse.up();
+    assert.deepEqual(s.sync, { now: start, writes: 0 }, 'nothing yet within the moves\' own task');
+    assert.equal(s.framed.writes, 1, 'one update in the frame');
+    assert.notEqual(s.framed.now, start, 'to the last move\'s place');
+    assert.equal(s.up.writes, 1, 'the release lands the moves since at once');
+    assert.notEqual(s.up.now, s.framed.now);
+    assert.deepEqual(s.after, { now: s.up.now, writes: 0 }, 'and nothing is left for the next frame');
+    await assertQuiet(seen, 'a drag, once a frame');
+  }));
+
+  it('the shared link\'s way back is a link on this site, even on a path that begins "//"', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    const path = hospitalPathOf('hub', HIGH_BASE.ccn);
+    const { origin } = new URL(page.url());
+    const body = await (await page.request.get(`${origin}${path}`)).text();
+    await page.route((url) => url.pathname.startsWith('//'), (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body }));
+    await page.goto(`${origin}/${path}`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    assert.equal(await page.evaluate(() => location.pathname), `/${path}`);
+    assert.equal(await page.locator('.hh__shared a').getAttribute('href'), path);
   }));
 });

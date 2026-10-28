@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { shareDomain, shareScale, wholePercents } from '../client/scale.js';
+import { shareDomain, shareScale, whatIfAxis, wholePercents } from '../client/scale.js';
 
 // An invented estimated hospital with these percents of its pay (and one with no estimate, which the domain skips).
 const est = (hrrp, hac, hvbp) => ({ est: { pct: { hrrp, hac, hvbp, net: hrrp + hac + hvbp } } });
@@ -16,6 +16,13 @@ test('shareDomain: the lowest and highest percent of any program or the net, pad
   // The domain always holds $0, even when every hospital is on one side.
   assert.deepEqual(shareDomain([est(-1, 0, 0)]), [-1.1, 0.1]);
   assert.deepEqual(shareDomain([est(0, 0, 0.42)]), [-0.1, 0.6]);
+});
+
+test('shareDomain holds extra values too (a hospital page\'s what-if figures), padded and rounded the same way', () => {
+  assert.deepEqual(shareDomain([est(-1, 0, 0.5)], [-4.95, 2.01]), [-5.1, 2.2]);
+  // Extra values inside the hospitals' own span change nothing.
+  assert.deepEqual(shareDomain([est(-2.78, -1, 0.5), est(0, 0, 3.09)], [-1, 1]), [-3.4, 3.2]);
+  assert.deepEqual(shareDomain([est(0, 0, 0.42)], []), [-0.1, 0.6]);
 });
 
 test('shareDomain on the real data holds every program\'s percent and the net of every estimated hospital', () => {
@@ -48,6 +55,19 @@ test('shareScale: $0 sits mid-gutter, cuts left of it and bonuses right, linear 
   for (const v of [-4, -1, -0.25, 0.5, 2]) assert.ok(Math.abs(s.invert(s.xs(v)) - v) < 1e-9, `${v}`);
   for (const x of [s.zL, s.zM, s.zR]) assert.equal(s.invert(x), 0);
   assert.deepEqual([s.invert(0), s.invert(700)], [-4, 2]);
+});
+
+test('whatIfAxis: a chart keeps its own axis until a hypothetical lies past it, then the wide one until the what-if ends', () => {
+  const actual = [-3.9, 3.2];
+  const wide = [-5.8, 4.4];
+  const at = (pct, now) => whatIfAxis(pct, { actual, wide, now });
+  assert.equal(at(null, actual), actual, 'no what-if');
+  assert.equal(at(-2, actual), actual, 'a value on its own axis');
+  assert.equal(at(-3.9, actual), actual, 'its end is on it');
+  assert.equal(at(-4.5, actual), wide, 'past its cut end');
+  assert.equal(at(4, actual), wide, 'past its bonus end');
+  assert.equal(at(-2, wide), wide, 'back on the own axis mid-what-if: still wide, no back and forth');
+  assert.equal(at(null, wide), actual, 'the what-if ends: its own again');
 });
 
 test('wholePercents: the whole percents in the domain, in order', () => {

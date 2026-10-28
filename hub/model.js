@@ -20,11 +20,12 @@ function estimate(row) {
   return { base, total, hrrp, hvbp, hac, net, after, atStake, hrrpFactor, vbpFactor, cut, hrrpListed, vbpListed, share: netShare(net, total), pct: pctOf(row) };
 }
 
-// The master's record for a CCN with a dollar row. The inputs must agree before a page is built (checkHubInputs,
-// hub/data.js), and hubHospitals meets the same gap if it is called with others: both stop here, with one message.
-export function masterRecord(master, ccn) {
+// The master's record for a CCN that has one in another file (from: what it has there, as the error names it; a row in
+// the dollar file by default). The inputs must agree before a page is built (checkHubInputs, hub/data.js), and
+// hubHospitals meets the same gap if it is called with others: both stop here, with one message.
+export function masterRecord(master, ccn, from = 'a dollar row') {
   const record = master.get(ccn);
-  if (!record) throw new RangeError(`hub: CCN ${ccn} has a dollar row but no hospital master record`);
+  if (!record) throw new RangeError(`hub: CCN ${ccn} has ${from} but no hospital master record`);
   return record;
 }
 

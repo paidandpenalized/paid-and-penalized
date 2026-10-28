@@ -545,13 +545,14 @@ export const COPY = {
   groupTip: { text: '{group}: CMS cut {yes} of {decided} ({share}); middle score {median}', claim: null },
   // Where the score sits against the middle of the groups it belongs to (hospital-figures.js peersPosition): above in
   // all, some or none of them; none above is below them all, or at or below when it sits on a group's middle. {all}:
-  // figPeersEvery ("all {k}": every one of its groups, counted), or figPeersBoth for two groups.
-  figPeersEvery: { text: 'all {k}', claim: null },
-  figPeersBoth: { text: 'both', claim: null },
-  figPeersAboveAll: { text: 'Its score is above the middle in {all} groups it belongs to', claim: null },
+  // the groups with their preposition, figPeersEvery ({k} groups, counted), figPeersBoth for two, figPeersOne for one.
+  figPeersEvery: { text: 'in all {k} groups', claim: null },
+  figPeersBoth: { text: 'in both groups', claim: null },
+  figPeersOne: { text: 'of the one group', claim: null },
+  figPeersAboveAll: { text: 'Its score is above the middle {all} it belongs to', claim: null },
   figPeersAboveSome: { text: 'Its score is above the middle in {above} of the {k} groups it belongs to', claim: null },
-  figPeersBelowAll: { text: 'Its score is below the middle in {all} groups it belongs to', claim: null },
-  figPeersAtOrBelowAll: { text: 'Its score is at or below the middle in {all} groups it belongs to', claim: null },
+  figPeersBelowAll: { text: 'Its score is below the middle {all} it belongs to', claim: null },
+  figPeersAtOrBelowAll: { text: 'Its score is at or below the middle {all} it belongs to', claim: null },
   figPeersTakeaway: { text: '{position}; the share cut runs from {low} ({lowGroup}) to {high} ({highGroup}).', claim: null },
   figPeersAlt: {
     text: "Small distributions of Total HAC Scores, one for each group this hospital belongs to, with CMS's line and this hospital's score drawn through all of them.",
