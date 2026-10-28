@@ -424,6 +424,29 @@ for (const width of [320, 390]) {
   });
 }
 
+// A front page missing a part its scripts need (here the masthead's strip and the stage's canvas, cut from the served page)
+// does not stay half taken over: the trip's script hands the header its wordmark back (dock-ready) and the story's
+// script marks the story static, so a phone shows the server's layout, not the pinned chart the stylesheet set up.
+describe('the front page without a part its scripts need', () => {
+  const tabs = useContext(shared, { width: 390 });
+  it('shows the header\'s wordmark and the server\'s story layout', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    await page.route((url) => url.pathname === '/', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace('class="hero__strip"', 'class="hero__band"').replace(/<canvas class="stage__cv"[^>]*><\/canvas>/, '');
+      await route.fulfill({ response, body });
+    });
+    await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+    await settle(page);
+    const f = await page.evaluate(() => ({
+      ready: document.documentElement.classList.contains('dock-ready'),
+      head: getComputedStyle(document.querySelector('.fam a.wordmark')).visibility,
+      story: [...document.querySelector('.story').classList].filter((c) => c !== 'story').sort(),
+      stage: getComputedStyle(document.querySelector('.stage')).display,
+    }));
+    assert.deepEqual(f, { ready: true, head: 'visible', story: ['story--static'], stage: 'contents' });
+  }));
+});
+
 // Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
 // (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
 // header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.

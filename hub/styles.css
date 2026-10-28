@@ -278,7 +278,9 @@
 
   /* Live on a phone: the steps' words above, the chart pinned in the lower part of the window. Each step's words rise
      from behind the chart, hold under the header while read, then leave as the next arrive; words taller than the room
-     (.step--tall) scroll with the page instead. At the story's end the chart takes its own room, under the last step. */
+     (.step--tall) scroll with the page instead. At the story's end the chart takes its own room, under the last step.
+     The rules that place the first screen and set the story's height are copied for the moment before the script runs
+     (the "(scripting: enabled) and (max-width: 760px)" block below): change them together. */
   .story--live { --stage-h: 56svh; display: block; }
   .story--live > .stage { position: sticky; top: auto; bottom: 0; z-index: 5; height: var(--stage-h); margin-inline: calc(-1 * var(--gutter)); border-top: 1px solid var(--line); background: var(--paper); box-shadow: 0 -22px 18px -6px var(--paper); }
   .story--live .stage__pin { padding: 30px 12px 10px; }

@@ -36,7 +36,12 @@ function start(root) {
   const card = root.querySelector('[data-card]');
   const form = root.querySelector('form.omni[data-src]');
   const src = form?.dataset.src ?? document.querySelector('[data-hub-src]')?.dataset.hubSrc;
-  if (!canvas || !card || !src || !canvas.getContext) return;
+  // Without a part it needs, the story stays as the server wrote it, marked so (the stylesheet's first-screen rules for a
+  // phone stand down).
+  if (!canvas || !card || !src || !canvas.getContext) {
+    root.classList.add('story--static');
+    return;
+  }
   const phone = window.matchMedia('(max-width: 760px)');
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
   const wide = window.matchMedia('(min-width: 1080px)');

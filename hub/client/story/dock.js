@@ -95,8 +95,9 @@ const fromHero = (h, at) => ({ left: h.left + at.dx, top: h.top + at.dy, width: 
 
 // Wires the trip to the front page: its masthead (.hero__mark's two spans) and the header's wordmark. html carries
 // dock-ready once the script has taken over from the stylesheet's first state, dock-trip while the trip is not done (the
-// header's wordmark hidden) and dock-moving while the words are away from home (they draw over the header). The header's wordmark is never hidden while it has focus. Returns nothing; does
-// nothing on a page without both wordmarks.
+// header's wordmark hidden) and dock-moving while the words are away from home (they draw over the header). The header's
+// wordmark is never hidden while it has focus. Returns nothing; on a page without both wordmarks it only marks the root
+// dock-ready, so the stylesheet's first state stands down and the header's wordmark shows.
 export function mountDock() {
   const hero = document.querySelector('.hero__mark');
   const head = document.querySelector('.fam a.wordmark');
@@ -106,9 +107,12 @@ export function mountDock() {
   const lead = head?.querySelector('.wordmark__lead');
   const pen = head?.querySelector(':scope > .wordmark__pen');
   const mark = head?.querySelector('.wordmark__short');
-  if (!bar || !strip || !lead || !pen || !mark || !words.every(Boolean)) return;
-  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
   const root = document.documentElement;
+  if (!bar || !strip || !lead || !pen || !mark || !words.every(Boolean)) {
+    root.classList.add('dock-ready');
+    return;
+  }
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   // Measured at rest: each word's offset in the h1 (the h1 itself never moves, so its box is read on every frame and the
   // words follow it when the header above changes height), the font sizes, the trip's length.
