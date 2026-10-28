@@ -15,6 +15,7 @@
 // the banner resets the page.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
+import { siteAddress } from '../../../web/client/follow.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
@@ -218,7 +219,8 @@ export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, valu
   const scenText = node('span', { class: 'hh__scentext' });
   const topReset = node('button', { type: 'button', class: 'hh__reset' }, [fill('reset')]);
   const scen = node('div', { class: 'hh__scen', hidden: '' }, [node('span', { class: 'hh__htag' }, [fill('wiTag')]), scenText, topReset]);
-  const sharedLink = node('a', { href: `${location.pathname}${location.search}` }, [fill('wiSharedReset')]);
+  // The page's own address without the scenario, as a link on this site (siteAddress folds a leading "//").
+  const sharedLink = node('a', { href: siteAddress({ pathname: location.pathname, search: location.search, hash: '' }) }, [fill('wiSharedReset')]);
   const shared = node('p', { class: 'hh__shared', hidden: '' }, [`${fill('wiShared')} `, sharedLink]);
   pin?.append(scen, shared);
 

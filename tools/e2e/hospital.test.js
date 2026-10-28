@@ -349,4 +349,15 @@ describe('the what-if\'s edges', () => {
     assert.deepEqual(s.after, { now: s.up.now, writes: 0 }, 'and nothing is left for the next frame');
     await assertQuiet(seen, 'a drag, once a frame');
   }));
+
+  it('the shared link\'s way back is a link on this site, even on a path that begins "//"', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    const path = hospitalPathOf('hub', HIGH_BASE.ccn);
+    const { origin } = new URL(page.url());
+    const body = await (await page.request.get(`${origin}${path}`)).text();
+    await page.route((url) => url.pathname.startsWith('//'), (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body }));
+    await page.goto(`${origin}/${path}`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.st__h');
+    assert.equal(await page.evaluate(() => location.pathname), `/${path}`);
+    assert.equal(await page.locator('.hh__shared a').getAttribute('href'), path);
+  }));
 });
