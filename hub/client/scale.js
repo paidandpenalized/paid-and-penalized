@@ -5,17 +5,15 @@
 // How far the domain reaches past the data either side, and the step its ends round out to (percentage points).
 const PAD = 0.1;
 const PER = 10;
-const KEYS = ['hrrp', 'hac', 'hvbp', 'net'];
 
 // [lo, hi] in percent: the lowest and highest percent of pay of any program or the net among the estimated hospitals
-// (decoded asset rows, est.pct), each padded PAD and rounded outward to a tenth. Always holds 0.
+// (est.pct: engine/js/dollars/whatif.js pctOf), each padded PAD and rounded outward to a tenth. Always holds 0.
 export function shareDomain(hospitals) {
   let lo = 0;
   let hi = 0;
   for (const h of hospitals) {
     if (!h.est) continue;
-    for (const key of KEYS) {
-      const v = h.est.pct[key];
+    for (const v of Object.values(h.est.pct)) {
       if (v < lo) lo = v;
       if (v > hi) hi = v;
     }

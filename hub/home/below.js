@@ -182,7 +182,7 @@ export function directory({ programs, facts, hospitals, fy }) {
   for (const p of soon) if (!SOON_GROUPS.some(([g]) => g === p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
-  const domain = shareDomain(hospitals.filter((h) => h.est).map(({ est }) => ({ est: { pct: Object.fromEntries(['hrrp', 'hac', 'hvbp', 'net'].map((k) => [k, (est[k] * 100) / est.total])) } })));
+  const domain = shareDomain(hospitals);
   const groups = SOON_GROUPS.map(([group, key]) => [key, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
 <div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${fill('dirHead', { count: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>

@@ -75,6 +75,10 @@ export function programDollars(row, scenario = null) {
   return { hrrp, hvbp, hac, net: hrrp + hvbp + hac, after: derived.after, atStake };
 }
 
+// Each program's dollars and the net as a percent of the hospital's estimated Medicare inpatient pay (`total`): { hrrp,
+// hac, hvbp, net }, the share axis's values. The one rule for the build's hospitals and the browser decoder's.
+export const pctOf = ({ total, hrrp, hac, hvbp, net }) => ({ hrrp: (hrrp * 100) / total, hac: (hac * 100) / total, hvbp: (hvbp * 100) / total, net: (net * 100) / total });
+
 // A hospital's net dollars as a fraction of its estimated Medicare inpatient pay (the dollar file's `total`), never a sum
 // of program percentages. A hospital with no pay has no share.
 export function netShare(net, total) {

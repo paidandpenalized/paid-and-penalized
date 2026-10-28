@@ -1,7 +1,7 @@
 // The hub's hospitals in the browser: fetch the build's hub asset (hub/asset.js writes it) and decode its rows into one
 // object per hospital. Pure apart from loadHubAsset's fetch. Shared (the shell, the home story and the hospital pages
 // read it), so it lives here, not under hub/.
-import { derivedDollars, netShare } from '../../engine/js/dollars/whatif.js';
+import { derivedDollars, netShare, pctOf } from '../../engine/js/dollars/whatif.js';
 import { once } from './once.js';
 
 // The columns of a row, in the order the build writes them. The decoder reads by name through the asset's own `cols`, so
@@ -25,7 +25,7 @@ function flag(ccn, name, value) {
 
 // An estimated row's figures, as hubHospitals' `est` has them. The asset leaves out `after` and `atStake`, which follow
 // from the rest (the build checks they do): the pay after Readmissions and value-based purchasing, and 1% of it. `pct`
-// is each program's dollars as a percent of the hospital's estimated pay.
+// is each program's dollars as a percent of the hospital's estimated pay (pctOf).
 function decodeEstimate(ccn, v) {
   for (const c of NUMBER_COLS) if (!Number.isFinite(v(c))) throw new RangeError(`hub asset: ${ccn} has no ${c}`);
   const [base, total, hrrp, hvbp, hac, net] = DOLLAR_COLS.map(v);
@@ -33,7 +33,7 @@ function decodeEstimate(ccn, v) {
     base, total, hrrp, hvbp, hac, net, ...derivedDollars({ total, hrrp, hvbp }),
     hrrpFactor: v('hrrpF'), vbpFactor: v('vbpF'), cut: flag(ccn, 'cut', v('cut')), hrrpListed: flag(ccn, 'hrrpL', v('hrrpL')), vbpListed: flag(ccn, 'vbpL', v('vbpL')),
     share: netShare(net, total),
-    pct: { hrrp: (hrrp * 100) / total, hac: (hac * 100) / total, hvbp: (hvbp * 100) / total, net: (net * 100) / total },
+    pct: pctOf({ total, hrrp, hac, hvbp, net }),
   };
 }
 

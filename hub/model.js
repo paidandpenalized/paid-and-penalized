@@ -3,7 +3,7 @@
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
 import { SHOWN_STATUSES } from '../engine/js/dollars/status.js';
-import { netShare } from '../engine/js/dollars/whatif.js';
+import { netShare, pctOf } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
 
 // The example hospital a page that opens on one uses, never another default. Chosen once by the rule in exampleRule
@@ -13,10 +13,11 @@ import { bedBand, median } from '../engine/js/peers.js';
 // new one with the owner before changing this.
 export const EXAMPLE_CCN = '360174';
 
-// An estimated row's dollars and factors, as the dollar file has them, with the hospital's net as a share of its pay.
+// An estimated row's dollars and factors, as the dollar file has them, with the hospital's net as a share of its pay and
+// each program's dollars as a percent of it (pct), the same shape the browser decodes (web/client/hub-asset.js).
 function estimate(row) {
   const { base, total, hrrp, hvbp, hac, net, after, atStake, hrrpFactor, vbpFactor, cut, hrrpListed, vbpListed } = row;
-  return { base, total, hrrp, hvbp, hac, net, after, atStake, hrrpFactor, vbpFactor, cut, hrrpListed, vbpListed, share: netShare(net, total) };
+  return { base, total, hrrp, hvbp, hac, net, after, atStake, hrrpFactor, vbpFactor, cut, hrrpListed, vbpListed, share: netShare(net, total), pct: pctOf(row) };
 }
 
 // The master's record for a CCN with a dollar row. The inputs must agree before a page is built (checkHubInputs,

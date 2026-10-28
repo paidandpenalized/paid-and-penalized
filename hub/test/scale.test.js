@@ -19,10 +19,7 @@ test('shareDomain: the lowest and highest percent of any program or the net, pad
 });
 
 test('shareDomain on the real data holds every program\'s percent and the net of every estimated hospital', () => {
-  const hospitals = hubHospitals(loadHub()).filter((h) => h.est).map((h) => {
-    const { hrrp, hac, hvbp, net, total } = h.est;
-    return { est: { pct: { hrrp: (hrrp * 100) / total, hac: (hac * 100) / total, hvbp: (hvbp * 100) / total, net: (net * 100) / total } } };
-  });
+  const hospitals = hubHospitals(loadHub()).filter((h) => h.est);
   const [lo, hi] = shareDomain(hospitals);
   for (const { est: { pct } } of hospitals) for (const v of Object.values(pct)) assert.ok(v >= lo && v <= hi, `${v} in [${lo}, ${hi}]`);
   assert.ok(lo < 0 && hi > 0);

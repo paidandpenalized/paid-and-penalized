@@ -122,12 +122,12 @@ test('every hospital decodes to what the build holds, and a decoded hospital can
       assert.equal(d.est, null, h.ccn);
       return;
     }
-    const { pct, ...est } = d.est;
-    assert.deepEqual(est, h.est, h.ccn);
-    assert.deepEqual(pct, {
+    // The same shape as the build's, percents of pay included.
+    assert.deepEqual(d.est, h.est, h.ccn);
+    assert.deepEqual(d.est.pct, {
       hrrp: h.est.hrrp * 100 / h.est.total, hac: h.est.hac * 100 / h.est.total,
       hvbp: h.est.hvbp * 100 / h.est.total, net: h.est.net * 100 / h.est.total,
     }, h.ccn);
-    assert.equal(programDollars(est).net, est.net, h.ccn);
+    assert.equal(programDollars(d.est).net, d.est.net, h.ccn);
   });
 });
