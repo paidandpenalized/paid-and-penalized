@@ -250,11 +250,21 @@ describe('states you can read, and Find yours', () => {
 });
 
 // The states as buttons: the picked one is pressed (aria-pressed), the others not, on the map and among the small states'
-// buttons; the readout follows the pointer, but the quiet region a screen reader hears speaks only when a state is focused
-// or picked, never as the pointer passes over the map.
+// buttons, from the moment the map answers; the readout follows the pointer and the focus, but the quiet region a screen
+// reader hears speaks only when a state is picked (a focused state's own name already says its line), never as the
+// pointer passes over the map or the focus moves.
 describe('the states map speaks on a pick, not on a hover', () => {
   const tabs = useContext(shared);
-  it('hovering writes the readout only; a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
+  it('with nothing picked, every state is a toggle that is not pressed, before any pointer or key', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    const states = await page.evaluate(() => [...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].map((el) => el.getAttribute('aria-pressed')));
+    assert.ok(states.length > 50, `${states.length} states`);
+    assert.deepEqual([...new Set(states)], ['false'], 'every state carries aria-pressed="false"');
+    await assertQuiet(seen, 'the states map at rest');
+  }));
+
+  it('hovering or focusing writes the readout only; Enter or a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
     await settle(page);
@@ -276,7 +286,19 @@ describe('the states map speaks on a pick, not on a hover', () => {
     const hovered = await facts();
     assert.match(hovered.readout, /^Texas: /);
     assert.equal(hovered.said, said, 'a hover says nothing');
-    // A click pins Texas: pressed, and said.
+    // Focus on another state: the readout follows, the region does not speak (the state's own name is its line).
+    const utah = page.locator('.smap .st[data-st="UT"]');
+    await utah.focus();
+    await settle(page);
+    const focused = await facts();
+    assert.match(focused.readout, /^Utah: /);
+    assert.equal(focused.said, said, 'a focus says nothing more');
+    // Enter pins Utah, a click pins Texas: pressed, and said.
+    await page.keyboard.press('Enter');
+    await settle(page);
+    const entered = await facts();
+    assert.deepEqual(entered.pressed, ['UT']);
+    assert.match(entered.said, /^Utah: /);
     await texas.click();
     await settle(page);
     const picked = await facts();

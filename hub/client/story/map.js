@@ -1,8 +1,8 @@
 // The story's states you can read (step 7, "By state"): pointing at a state, tapping it or tabbing to it (or to a small
 // state's button) writes its line to the readout over the map; a click, a tap, Enter or Space pins it, so the line stays
-// once the pointer leaves. Each state is a toggle button, pressed while pinned (aria-pressed). The readout is for the eye;
-// a quiet live region beside it ([data-said]) says a state's line when the state is focused or picked, never as the
-// pointer passes over the map. The lines are the server's (hub/home/states.js stateLine): each state's title on the map and
+// once the pointer leaves. Each state is a toggle button, pressed while pinned (aria-pressed), from the moment the map
+// answers. The readout is for the eye; a quiet live region beside it ([data-said]) says a state's line when the state is
+// picked, never as the pointer passes over the map or the focus moves (a focused state's own name is its line). The lines are the server's (hub/home/states.js stateLine): each state's title on the map and
 // each button's name, so the readout says exactly what the map's tooltips and a screen reader say, Maryland's included
 // ("not in these programs"). An address's #state=<code> (the family search's state pick) names a state to pin.
 import { US_STATES } from '../../../engine/js/states.js';
@@ -40,6 +40,7 @@ export function mountMap(stageEl) {
     p.setAttribute('role', 'button');
     p.setAttribute('tabindex', '-1');
   }
+  for (const x of all) x.setAttribute('aria-pressed', 'false');
   readout.hidden = false;
   if (smalls) smalls.hidden = false;
 
@@ -55,7 +56,7 @@ export function mountMap(stageEl) {
       x.setAttribute('aria-pressed', String(x.dataset.st === pinned));
     }
   }
-  // Says a state's line to a screen reader (a focus or a pick); a pick that unpins says nothing more.
+  // Says a state's line to a screen reader (a pick); a pick that unpins says nothing more.
   const say = (el) => {
     const line = el ? lineOf(el) : null;
     if (said && line) said.textContent = line;
@@ -81,7 +82,6 @@ export function mountMap(stageEl) {
   box.addEventListener('focusin', (e) => {
     on = stateOf(e.target);
     write();
-    say(on);
   });
   // Leaving a state (the next one's pointerover, if any, follows at once).
   for (const type of ['pointerout', 'focusout']) {
