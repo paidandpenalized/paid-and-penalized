@@ -177,6 +177,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
 }
 
 // entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box
-// (hubPage does, for every hub page), and the home page's story (hub/client/home.js). styles: the hub's own pages'
+// (hubPage does, for every hub page), the home page's story (hub/client/home.js), and a hospital page's swarm, peer
+// toggle, strips and peer table (hub/client/hospital.js; pages with an estimate only). styles: the hub's own pages'
 // styles (each page's rules under its root class).
-export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js' }, styles: ['hub/styles.css'], generate: generateHub };
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: ['hub/styles.css'], generate: generateHub };

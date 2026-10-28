@@ -3,30 +3,27 @@
 // program's dollars as rows adding to it, each beside its peers' median; the headline that compares the net with the
 // same-state peers' median, over the frame the page's script draws the peer swarm in; the what-if section's rows; the
 // peer table's fold; the source and fairness lines. Without one (Maryland's all-payer model, or no inputs): the record
-// card, the status and why, and the program pages it has. Everything a reader needs is in the HTML; the script (a later
-// entry, hub-hospital) adds the swarm, the peer toggle, the strips and the what-if, on these hooks:
-//   [data-peers]        the sticky peer row; its buttons and the disabled toggles' notes are hidden until the script
+// card, the status and why, and the program pages it has. Everything a reader needs is in the HTML; the script (entry
+// hub-hospital, hub/client/hospital.js) adds the swarm, the peer toggle, the strips and the peer table, on these hooks:
+//   [data-peers]        the sticky peer row; its buttons, and the disabled toggles' notes under it ([data-peer-note]), are
+//                       hidden until the script
 //   [data-headline]     the headline; [data-swarm], an empty <div> for the canvas (not displayed while empty), and
 //                       [data-swarm-note], its caption and hint (hidden until the script)
 //   #whatif [data-row]  hrrp, hacrp, hvbp and net, each with an empty [data-strip]; [data-result] (aria-live) in net's,
 //                       and its [data-match] and [data-reset] buttons (hidden until the script)
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
-import { peerKey } from '../../engine/js/peers.js';
-import { STATE_NAMES } from '../../engine/js/states.js';
-import { HAC_CUT_PCT } from '../../web/programs.js';
+import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { estTag, fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, decimal, money, pct } from '../../web/render/format.js';
+import { count, money } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubPage } from '../parts.js';
 import { COPY } from './copy.js';
-import { ROWS, inProgram, peerFigures, peersOf, rowDollars } from './peers.js';
-import { comparison, signOf, signedShareText } from './text.js';
+import { ROWS, groupName, inProgram, peerFigures, peersOf, rowDollars, sumScale, sumValues } from './peers.js';
+import { HAC_RATE, comparison, signOf, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const PROGRAM = Object.fromEntries(SITE.programs.map((p) => [p.id, p]));
-// The hospital-acquired conditions cut as the page writes it ("1%").
-const HAC_RATE = pct(HAC_CUT_PCT / 100, 0);
 
 // The fonts the first screen shows: the name in the display face, the body face, and IBM Plex Mono in both weights (the
 // record's fields and the net's large figure).
@@ -52,16 +49,18 @@ function deepLink(h, id) {
     : html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepComing', { name })}</a>`;
 }
 
-// The same-state peers of each state and what they show, worked out once per list of hospitals and state.
+// Each group (a mode and its key) and what its peers show, worked out once per list of hospitals: { peers, figures,
+// group }, or null for a hospital with no group in that mode.
 const GROUPS = new WeakMap();
-function stateGroup(hospitals, h) {
+function groupOf(hospitals, h, mode) {
   let groups = GROUPS.get(hospitals);
   if (!groups) GROUPS.set(hospitals, (groups = new Map()));
-  if (!groups.has(h.state)) {
-    const peers = peersOf(hospitals, h, 'state');
-    groups.set(h.state, peers && peers.length ? { peers, figures: peerFigures(peers), group: fill('groupState', { state: STATE_NAMES[h.state] ?? h.state }) } : null);
+  const id = `${mode}:${peerKey(h, mode)}`;
+  if (!groups.has(id)) {
+    const peers = peersOf(hospitals, h, mode);
+    groups.set(id, peers && peers.length ? { peers, figures: peerFigures(peers), group: groupName(fill, h, mode) } : null);
   }
-  return groups.get(h.state);
+  return groups.get(id);
 }
 
 // ---------- the record card ----------
@@ -109,16 +108,6 @@ function word(id, dollars) {
 // A number for a style attribute (a custom property): a fraction to four places.
 const frac = (x) => String(Math.round(x * 1e4) / 1e4);
 
-// The rows' one scale: every dollar figure they draw (the hospital's and its peers' medians) and zero, a little room
-// at each end, as a fraction of the track. All zero is a scale too (one dollar wide).
-function sumScale(values) {
-  const lo = Math.min(0, ...values);
-  const hi = Math.max(0, ...values);
-  const span = hi - lo || 1;
-  const pad = span * 0.04;
-  return (v) => (v - lo + pad) / (span + 2 * pad);
-}
-
 // A row's track: the signed bar from the zero line (none for $0) and the peers' median tick (none when it has no median).
 function track(x, own, median) {
   const zero = x(0);
@@ -129,10 +118,12 @@ function track(x, own, median) {
 }
 
 // The dollar rows: each program's dollars, then the net, on one scale from a zero line, with the peers' median ticks.
-function sumRows(h, figures, fy) {
+// The scale holds the medians of every way the hospital can be grouped (sets), so the page's peer toggle moves only the
+// ticks.
+function sumRows(h, figures, fy, sets) {
   const rows = [...ROWS.map((r) => ({ id: r.id, label: PROGRAM[r.id].name })), { id: 'net', label: fill('sumNet') }]
     .map((row) => ({ ...row, ...rowDollars(h.est, row.id, figures) }));
-  const x = sumScale(rows.flatMap((r) => [r.own, r.median]).filter((v) => v !== null));
+  const x = sumScale(sumValues(h.est, sets));
   const zero = x(0);
   const line = (row) => {
     const cls = `hh__sr${row.id === 'net' ? ' hh__sr--net' : ''}`;
@@ -151,7 +142,7 @@ ${axis}
 
 // The net block: its label and tag, the large figure and its stamp, the slot the estimate's band will fill, the common
 // fiscal year's note, the rows, and the button down to the what-if.
-function netBlock(h, figures, fy) {
+function netBlock(h, figures, fy, sets) {
   const { net } = h.est;
   const sign = signOf(net);
   const stampLabel = fill({ cut: 'stampCut', bonus: 'stampBonus', zero: 'stampZero' }[sign]);
@@ -163,7 +154,7 @@ function netBlock(h, figures, fy) {
 </div>
 <div class="hh__band" data-band></div>
 <p class="hh__fy">${fill('fyNote', { fy })}</p>
-${sumRows(h, figures, fy)}
+${sumRows(h, figures, fy, sets)}
 <a class="hh__wbtn" href="#whatif"><span class="ico ico--capsule" aria-hidden="true"></span>${fill('whatIfButton')}</a>
 </section>`;
 }
@@ -181,9 +172,9 @@ function peerRow(h, { peers, group }) {
 <span class="hh__plbl">${fill('peersLabel')}</span>
 <div class="hh__seg" role="group" aria-label="${fill('peersGroupLabel')}">${buttons}</div>
 <p class="hh__grp" data-peer-name aria-live="polite"><b>${count(peers.length)}</b> ${group}</p>
-${missing.map(([mode, , note]) => html`<p class="hh__pnote" id="hh-no-${mode}" data-peer-note hidden>${fill(note)}</p>`)}
 </div>
-</div>`;
+</div>
+${missing.length ? html`<div class="wrap hh__pnotes">${missing.map(([mode, , note]) => html`<p class="hh__pnote" id="hh-no-${mode}" data-peer-note hidden>${fill(note)}</p>`)}</div>` : ''}`;
 }
 
 function figure(h, { peers, figures, group }, { fy, all }) {
@@ -197,27 +188,6 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 }
 
 // ---------- the what-if section ----------
-const factor = (x) => decimal(x, 4);
-// A program row's sentence: why the hospital has its dollars, what its peers have (each count with its words; the
-// counts after the first two only when there are some) and, for a program that lists its hospitals, their median.
-function why(h, id, f, { fy, group }) {
-  const est = h.est;
-  const part = (key, n, values = {}) => ({ n, text: fill(key, { n: count(n), ...values }) });
-  const parts = {
-    hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part('partOut', f.out)],
-    hacrp: [part('partHacCut', f.cut, { rate: HAC_RATE }), part('partNoCut', f.none)],
-    hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part('partOut', f.out)],
-  }[id].filter((p, i) => i < 2 || p.n > 0);
-  const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
-  const median = id !== 'hacrp' && f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
-  const own = {
-    hrrp: () => (est.hrrpListed ? fill('whyFactor', { factor: factor(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
-    hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_RATE }) : fill('whyHacNone', { fy })),
-    hvbp: () => (est.vbpListed ? fill('whyFactor', { factor: factor(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
-  }[id]();
-  return [own, peers, ...median];
-}
-
 function programRow(h, id, figures, ctx) {
   const { name, ab } = PROGRAM[id];
   const listed = inProgram(h.est, id);
@@ -229,7 +199,7 @@ function programRow(h, id, figures, ctx) {
 <div class="hh__rt">
 <h3 class="hh__rh">${name} <span class="hh__ab">${ab}</span></h3>
 <p class="hh__rv">${value}</p>
-<p class="hh__why">${why(h, id, figures[id], ctx).join(' ')}</p>
+<p class="hh__why">${whyText(fill, h, id, figures[id], ctx).join(' ')}</p>
 ${deepLink(h, id)}
 </div>
 <div class="hh__strip" data-strip></div>
@@ -275,14 +245,14 @@ const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
 <p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
 ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
-function estimatedBody(h, master, group, { fy, all }) {
+function estimatedBody(h, master, group, { fy, all, sets }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
 ${peerRow(h, group)}
 <div class="wrap hh__hero">
 <div class="hh__money">
 ${recordCard(h, master, fy)}
-${netBlock(h, group.figures, fy)}
+${netBlock(h, group.figures, fy, sets)}
 </div>
 ${figure(h, group, { fy, all })}
 </div>
@@ -323,8 +293,11 @@ ${notes(fy, false)}
 export function hospitalPage({ h, hospitals, facts, assets, robots, master = null }) {
   const fy = String(assets.shell.fy);
   const place = { name: h.name, city: h.city ?? '', state: h.state ?? '' };
-  const group = h.est ? stateGroup(hospitals, h) : null;
+  // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
+  const groups = h.est ? PEER_MODES.map((mode) => groupOf(hospitals, h, mode)) : [];
+  const group = groups[0] ?? null;
   if (h.est && !group) throw new RangeError(`hub: ${h.ccn} has an estimate but no same-state peers`);
+  const sets = groups.filter(Boolean).map((g) => g.figures);
   const description = h.est
     ? fill('description', { ...place, fy, n: count(group.peers.length), group: group.group })
     : fill(h.status === 'maryland' ? 'descriptionMaryland' : 'descriptionNoInputs', h.status === 'maryland' ? place : { ...place, fy });
@@ -333,8 +306,9 @@ export function hospitalPage({ h, hospitals, facts, assets, robots, master = nul
     description,
     path: hospitalPathOf('hub', h.ccn),
     robots,
-    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n }) : variantBody(h, master, fy),
+    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets }) : variantBody(h, master, fy),
     assets,
+    scripts: h.est ? [assets.js['hub-hospital']] : [],
     preloadFonts: FONTS,
     hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inTdr: h.inTdr, pages: NOT_BUILT },
   });

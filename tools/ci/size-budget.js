@@ -45,9 +45,10 @@ export const BUDGETS = {
   // weight on the FY2026 build of 2026-10-28 (42.0 KB) plus 15%, rounded up to 10 KB.
   dictionary: 50 * KB,
   notFound: 40 * KB, // A hub page with the family search's script, as the placeholders are.
-  // A hospital's page across the programs (hub/hospital/page.js), server-rendered, before its own script: the heaviest
-  // of the 3,055 on the FY2026 build of 2026-10-28 (37.3 KB) plus 15%. ARCH-27's 150 KB for a hospital page holds.
-  hubHospital: 50 * KB,
+  // A hospital's page across the programs (hub/hospital/page.js) with its script (hub/client/hospital.js: the swarm, the
+  // peer toggle, the strips and the peer table): the heaviest of the 3,055 on the FY2026 build of 2026-10-28 (56.9 KB)
+  // plus 15%, rounded up to 10 KB. ARCH-27's 150 KB for a hospital page holds.
+  hubHospital: 70 * KB,
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;

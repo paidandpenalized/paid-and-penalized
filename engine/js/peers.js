@@ -13,13 +13,15 @@ export const PEER_MODES = Object.freeze(['state', 'size', 'teach']);
 
 const TEACHING = Object.freeze(['major', 'minor', 'none']);
 
-// The group a hospital `h` (`{ state, beds, teach }`) is in under `mode`, or null when it lacks the attribute.
+// The group a hospital `h` (`{ state, beds, teach }`) is in under `mode`, or null when it lacks the attribute. A hospital
+// that carries its size band instead of its bed count (`band`: bedBand's index or null, as the hub's browser asset has
+// it) is grouped by that.
 export function peerKey(h, mode) {
   switch (mode) {
     case 'state':
       return typeof h.state === 'string' && h.state !== '' ? h.state : null;
     case 'size': {
-      const band = bedBand(h.beds);
+      const band = 'band' in h ? (Number.isInteger(h.band) && h.band >= 0 && h.band <= BED_BAND_EDGES.length ? h.band : null) : bedBand(h.beds);
       return band === null ? null : `b${band}`;
     }
     case 'teach':

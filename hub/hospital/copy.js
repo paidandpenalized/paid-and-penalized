@@ -19,6 +19,12 @@ export const COPY = typesetCopy({
   peerSize: 'Same size',
   peerTeach: 'Same teaching',
   groupState: '{state} hospitals',
+  groupSizeLow: 'hospitals with fewer than {beds} beds',
+  groupSizeMid: 'hospitals with {lo} to {hi} beds',
+  groupSizeHigh: 'hospitals with {beds} beds or more',
+  groupTeachMajor: 'major teaching hospitals',
+  groupTeachMinor: 'minor teaching hospitals',
+  groupTeachNone: 'non-teaching hospitals',
   peerNoSize: 'Same size: no bed count on record for this hospital.',
   peerNoTeach: 'Same teaching: no teaching status on record for this hospital.',
 
@@ -70,6 +76,21 @@ export const COPY = typesetCopy({
   swarmCaption: 'Each dot is a hospital, placed by its estimated FY{fy} net as a share of its Medicare inpatient pay: above, the {n} {group}; below, all {all} hospitals with an estimate. This hospital is ringed in both.',
   swarmHint: 'Hover or tap a dot for its name; click it to open that hospital.',
   loadError: "Couldn't load the chart data. Reload to try again.",
+  // The swarm's own words (drawn on its canvas): the two piles' names, the peers' median, their cuts and bonuses, and
+  // what a dot says when hovered, tapped or reached by the arrow keys.
+  swarmAll: 'All {n} hospitals',
+  swarmMedian: 'median {share}',
+  swarmCut: '{n} net cut',
+  swarmBonus: '{n} net bonus',
+  swarmNone: '{n} no change',
+  swarmAxisCut: 'cut',
+  swarmAxisBonus: 'bonus',
+  swarmLabel: 'The {n} {group} and all {all} hospitals with an estimate, each a dot placed by its estimated FY{fy} net as a share of its Medicare inpatient pay; this hospital is ringed. Arrow keys step through the peers; Enter opens one.',
+  dotText: '{name}, {city}, {state}: {share} net, estimated FY{fy}',
+  dotThis: 'This hospital',
+  dotOpen: 'Tap again to open its page.',
+  stripMedian: 'median',
+  stripOut: 'This hospital: not in this program',
 
   // The what-if section (#whatif): one row per program, an empty row for the next one, then the net with its result.
   whatifKicker: 'Every program, among its peers',
@@ -108,6 +129,16 @@ export const COPY = typesetCopy({
   // The peer table the page's script fills when it is opened.
   tableSummary: 'Every peer as a table',
   tableCount: '({n} {group}, alphabetical)',
+  tableCaption: "Estimated FY{fy} dollars for each of the {n} {group}, alphabetical. Net % is the net as a share of each hospital's estimated Medicare inpatient pay.",
+  colHospital: 'Hospital',
+  colCity: 'City',
+  colState: 'State',
+  colHrrp: 'Readmissions',
+  colHac: 'HAC',
+  colVbp: 'VBP',
+  colNet: 'Net',
+  colNetPct: 'Net %',
+  tableThis: '(this hospital)',
 
   // The source and fairness lines.
   source: "Source: CMS FY{fy} program files (HRRP, HACRP, HVBP) and this site's dollar model.",

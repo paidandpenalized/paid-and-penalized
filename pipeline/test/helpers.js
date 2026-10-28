@@ -12,7 +12,7 @@ import { createSiteServer, listen, stop } from '../site/serve.js';
 // story) or shell (merged over the facts below) to change a part.
 export const testAssets = ({ css = '/assets/site.test.css', js = {}, shell = {} } = {}) => ({
   css,
-  js: { shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', ...js },
+  js: { shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', ...js },
   shell: {
     fy: 2026,
     hospitals: 3,

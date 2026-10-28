@@ -260,8 +260,9 @@
 /* ---------- a hospital's page across the programs (hub/hospital/page.js), root .hh ----------
    An instrument: the red record card, large mono figures, hairline rules and room to breathe. Two columns from 1024px
    (the record and the money left, the peer swarm right); one column below, record, net, then the chart. */
-.hh { --lc: 440px; --gap: 56px; --peers-h: 49px; }
-html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--peers-h)); }
+.hh { --lc: 440px; --gap: 56px; }
+/* --peers-h lives on the root, where scroll-padding reads it; the page's script sets it to the peer row's height. */
+html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-top, 0px) + var(--peers-h)); }
 
 /* The peer row: sticks under the header. Its toggle shows once the page's script runs. */
 .hh__peers { position: sticky; top: var(--sticky-top, 0px); z-index: 15; min-height: var(--peers-h); border-bottom: 1px solid var(--line); background: var(--paper); }
@@ -274,7 +275,10 @@ html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--p
 .hh__pb:hover:not([aria-pressed="true"]):not(:disabled) { background: var(--paper-2); color: var(--ink); }
 .hh__pb:disabled { cursor: not-allowed; text-decoration: line-through; }
 .hh__grp { max-width: none; font-size: 15px; font-weight: 600; }
-.hh__pnote { flex-basis: 100%; max-width: none; color: var(--ink-2); font-size: var(--fs-xs); }
+.hh__pnotes { padding-top: 10px; }
+.hh__pnotes:not(:has(.hh__pnote:not([hidden]))) { display: none; }
+.hh__pnote { max-width: none; color: var(--ink-2); font-size: var(--fs-xs); }
+.hh__pnote + .hh__pnote { margin-top: 2px; }
 
 /* The hero: the record card and the money left, the figure right. */
 .hh__hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; padding-block: 28px 26px; }
@@ -335,6 +339,13 @@ html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--p
 .hh__head { max-width: 30em; font: 600 var(--fs-lg)/1.3 var(--font-body); letter-spacing: -0.005em; }
 .hh__swarm { position: relative; margin-top: 12px; }
 .hh__swarm:empty { display: none; }
+.hh__cv { display: block; width: 100%; touch-action: manipulation; }
+.hh__cv:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 12.5px/1.35 var(--font-body); pointer-events: none; }
+.hh__tip b { display: block; font-weight: 700; }
+.hh__tip span { display: block; color: var(--ink-2); font: 400 12px/1.4 var(--font-type); }
+.hh__tip .hh__tip-open { color: var(--ink); font: 600 12px/1.4 var(--font-body); }
+.hh--live .hh__tick { transition: left .7s cubic-bezier(.65, 0, .35, 1); }
 .hh__cap { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
 .hh__hint { display: block; margin-top: 4px; }
 .hh__err { margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); }
@@ -357,8 +368,29 @@ html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--p
 .hh__deep { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 12px; padding: 5px 10px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 13.5px/1.2 var(--font-body); text-decoration: none; }
 .hh__deep:hover, .hh__deep:focus-visible { background: var(--ink); color: var(--paper); }
 .hh__deep--soon { border-style: dashed; border-color: var(--line); color: var(--ink-2); font-weight: 600; }
+.hh__rows { position: relative; }
 .hh__strip { min-width: 0; }
 .hh__strip:empty { display: none; }
+/* The strips (hub/client/hospital/strips.js): one SVG per row, the peers as dots, this hospital ringed, the median's ▲. */
+.st { display: block; width: 100%; height: auto; overflow: visible; }
+.st__gut { fill: var(--paper-2); }
+.st__grid { stroke: var(--line); stroke-width: 1; opacity: .55; }
+.st__base { stroke: var(--ink-3); stroke-width: 1; }
+.st__tl, .st__med text { fill: var(--ink-3); font: 400 10.5px var(--font-type); }
+.st__d--pen { fill: var(--pen); }
+.st__d--rew { fill: var(--rew); }
+.st__d--neu { fill: var(--neutral); }
+.st__d[rx="0"] { shape-rendering: crispEdges; }
+.st__me { fill: none; stroke: var(--ink); stroke-width: 2; }
+.st__hyp { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.st__med path { fill: var(--ink); }
+.st__out { fill: var(--ink-2); font: 600 12px var(--font-body); }
+.st--live .st__d, .st--live .st__me, .st--live .st__med { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
+/* The thread: one dashed line down the rows through the hospital's mark in each strip. */
+.hh__thread { position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none; }
+.hh__thread path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .7; }
+/* One column (text above each strip): the thread would cross every row's words, so the rings alone carry the hospital. */
+@media (max-width: 1023px) { .hh__thread { display: none; } }
 .hh__row--next { padding-block: 12px; border-top: 1px dashed var(--line); }
 .hh__row--next .hh__rh { color: var(--ink-3); font-size: 15px; font-weight: 600; }
 .hh__row--next .hh__why { margin-top: 3px; color: var(--ink-3); font-size: 13px; }
@@ -380,6 +412,18 @@ html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--p
 .hh__tbl { margin-top: 26px; padding-block: 28px 18px; border-top: 1px dotted var(--line); }
 .hh__det summary { width: fit-content; min-height: var(--target-min); cursor: pointer; font: 700 16px/1.5 var(--font-body); }
 .hh__det summary span { color: var(--ink-2); font-weight: 400; }
+/* The peer table (hub/client/hospital/table.js), alphabetical, this hospital's row marked; it scrolls sideways in its own box. */
+.hh__tw { max-height: 75vh; margin-top: 12px; overflow: auto; border-top: 1.5px solid var(--ink); }
+.hh__tw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.hh__pt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.hh__pt caption { padding: 10px 0 8px; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; text-align: left; }
+.hh__pt th, .hh__pt td { padding: 6px 10px; border-bottom: 1px dotted var(--line); text-align: left; white-space: nowrap; }
+.hh__pt thead th { position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--ink); background: var(--paper); font-size: 12.5px; font-weight: 700; }
+.hh__pt tbody th { min-width: 14em; font-weight: 400; white-space: normal; }
+.hh__pt .num { font-family: var(--font-type); text-align: right; }
+.hh__pt .hh__na { color: var(--ink-3); font: 400 12px var(--font-body); }
+.hh__pt .hh__me > * { background: var(--paper-2); }
+.hh__metag { color: var(--ink-2); font-size: 12px; }
 .hh__notes { margin-block: 18px 34px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
 .hh__notes p { max-width: 80em; margin-bottom: 6px; }
 
@@ -406,7 +450,12 @@ html:has(.hh__peers) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--p
   .hh__sv { font-size: 13px; }
   .hh__sw { font-size: 11.5px; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .hh--live .hh__tick, .st--live .st__d, .st--live .st__me, .st--live .st__med { transition: none; }
+}
 @media (forced-colors: active) {
+  /* The pressed peer toggle keeps its mark: the system's highlight, not a fill the mode would flatten. */
+  .hh__pb[aria-pressed="true"] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
   .hh__bar, .hh__tick, .hh__key-tick, .hh__track::before { forced-color-adjust: none; background: CanvasText; }
   html .hh__out, html .hh__nextbox { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; }
   .hh__out span, .hh__nextbox span { forced-color-adjust: none; background: Canvas; color: CanvasText; }
