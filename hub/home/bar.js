@@ -93,7 +93,7 @@ export function barFigure({ hospitals, facts, fy }) {
   const at = `--mx:${frac(mx0 / W)};--my:${frac((BAR_Y + BAR_H + GAP + SPLIT_H / 2) / H)}`;
   return html`<figure class="sbar">
 <figcaption class="sbar__cap">${fill('barCaption', { fy: words.fy, n: words.n })}</figcaption>
-<p class="sbar__top"><span class="sbar__pay">${words.pay}</span> <span class="sbar__moved">${fill('barMoved', { gross: words.gross, share: words.share })}</span></p>
+<p class="sbar__top"><span class="sbar__pay">${words.pay}</span> <span class="sbar__moved"><span class="sbar__mv">${fill('barMoved', { gross: words.gross, share: words.share })}</span> <span class="sbar__by">${COPY.barMovedBy}</span></span></p>
 <div class="sbar__draw" style="${at}">${drawing({ dots, sliver, mx0, red, label: fill('barLabel', words) })}<span class="sbar__x" aria-hidden="true">${fill('barTimes', { times: words.times })}</span></div>
 <div class="sbar__split" style="${at}"><p class="sbar__part"><b class="sbar__v sbar__v--pen">${words.notPaid}</b> ${COPY.barNotPaid}</p><p class="sbar__part sbar__part--end"><b class="sbar__v">${words.bonus}</b> ${COPY.barBonus}</p></div>
 </figure>`;

@@ -40,16 +40,16 @@ export const COPY = typesetCopy({
   hacText: 'The HAC program scores infections and other patient-safety events. The {cutN} hospitals in the quarter with the highest scores lose {cut} of their Medicare inpatient pay. The tall column: {onlyN} whose only cut is this one.',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
-  // {bonus} the bonuses.
+  // {bonus} the bonuses in FY{fy}.
   vbpHead: 'Value-based purchasing: some move right.',
-  vbpText: 'HVBP withholds {withhold} of each participant’s pay and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them.',
+  vbpText: 'HVBP withholds {withhold} of each participant’s pay and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them in FY{fy}, estimated.',
 
   // Step 5: the net. {part} and {whole}: the simple fraction nearest the share of hospitals with a net cut, in words
   // ("Two of every three").
   netHead: '{part} of every {whole} hospitals take a net cut.',
   // When no simple fraction is near the share: the share itself.
   netHeadShare: '{share} of hospitals take a net cut.',
-  netText: 'This is where the {programs} programs leave each hospital: its net change as a share of its Medicare inpatient pay. {cutN} take a net cut, {bonusN} a net bonus and {zeroN} come out at {zero}. Altogether about {notPaid} is not paid, estimated.',
+  netText: 'This is where the {programs} programs leave each hospital: its net change as a share of its Medicare inpatient pay. {cutN} take a net cut, {bonusN} a net bonus and {zeroN} come out at {zero}. Altogether about {notPaid} is not paid in FY{fy}, estimated.',
 
   // Step 6: the dots on the map.
   mapHead: 'Cuts reach every state.',
@@ -72,16 +72,18 @@ export const COPY = typesetCopy({
   findRest: 'your hospital among its peers',
   findPlaceholder: 'Hospital name, city or state',
 
-  // The scale bar (bar.js). Its caption ({n} hospitals), the pay and what the programs move ({gross}, {share}), the
-  // magnification ({times}), the two parts, and the image's takeaway for a screen reader.
+  // The scale bar (bar.js). Its caption ({n} hospitals), the pay and what the programs move ({gross}, {share}, with the
+  // words that say so), the magnification ({times}), the two parts, and the image's takeaway for a screen reader.
   barCaption: 'Estimated FY{fy} Medicare inpatient pay to {n} hospitals, one dot each',
   barMoved: '{gross}, {share}',
+  barMovedBy: 'moved by the programs',
   barTimes: '×{times}',
   barNotPaid: 'not paid',
   barBonus: 'moved to other hospitals as bonuses',
   barLabel: 'A bar of the {pay} Medicare will pay in FY{fy}, estimated, with one dot for each of the {n} hospitals, ordered by their pay. The {gross} the programs move is the red sliver at its right end, {share} of the bar. Magnified {times} times, it splits into {notPaid} not paid and {bonus} moved to other hospitals as bonuses.',
 
-  // The states map (states.js): its name, each state's line, the readout's default, the key, the small states.
+  // The states map (states.js): its name, each state's line, the readout's prompt (hidden until the story's script makes
+  // the states answer to it), the key, the small states.
   mapLabel: 'States, shaded by their hospitals’ combined net change. Each state’s numbers are its title.',
   stateLine: '{name}: {hospitals}, net {share} of pay, {cutShare} take a net cut',
   stateNone: '{name}: no hospital with an estimate',

@@ -112,9 +112,9 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
     html`<h2>${fill('hacHead', { cut: percent(HAC_CUT_PCT) })}</h2>
 <p>${say('hacText', { cutN: count(facts.hacCut), onlyN: count(facts.hacOnly) }, { plain: { cut: percent(HAC_CUT_PCT) } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>
-<p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: percent(VBP_WITHHOLD_PCT) } })}</p>`,
+<p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: percent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
     html`<h2>${netHead}</h2>
-<p>${say('netText', { cutN: count(facts.netCut), bonusN: count(facts.netBonus), zeroN: count(facts.netZero), notPaid: money(facts.notPaid) }, { plain: { programs, zero }, pen: ['cutN', 'notPaid'] })}</p>`,
+<p>${say('netText', { cutN: count(facts.netCut), bonusN: count(facts.netBonus), zeroN: count(facts.netZero), notPaid: money(facts.notPaid) }, { plain: { programs, zero, fy: fyText }, pen: ['cutN', 'notPaid'] })}</p>`,
     html`<h2>${COPY.mapHead}</h2>
 <p>${COPY.mapText}</p>`,
     html`<h2>${fill(high.share > 0 ? 'statesHead' : 'statesHeadLess', shares)}</h2>
@@ -193,7 +193,7 @@ ${steps}<div class="stage" data-stage>
 <div class="stage__panel stage__panel--bar"><div class="stage__pin">${barFigure({ hospitals, facts, fy })}</div></div>
 <canvas class="stage__cv" hidden></canvas>
 <div class="stage__panel stage__panel--map"><div class="stage__pin smapfig">
-<p class="readout" aria-live="polite">${COPY.readout}</p>
+<p class="readout" aria-live="polite" hidden>${COPY.readout}</p>
 ${statesMap({ shapes, states })}
 <div class="mapfoot">${stateLegend({ states, fy })}${smallStates(states)}</div>
 </div></div>

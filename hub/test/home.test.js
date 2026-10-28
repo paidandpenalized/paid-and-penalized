@@ -14,6 +14,7 @@ import { STATE_NAMES, US_MAP_CODES } from '../../web/charts/geo.js';
 import { count, dollars, money, pct } from '../../web/render/format.js';
 import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
+import { MAGNIFY, barOrder } from '../home/bar.js';
 import { exampleHref, homePage, simpleFraction } from '../home/page.js';
 import { stateKey } from '../home/states.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
@@ -78,8 +79,13 @@ test('every number in the steps\' words is the data\'s, as the page formats it',
   const [low, high] = [ranked[0], ranked[ranked.length - 1]];
   expect(7, STATE_NAMES[low.state], pct(-low.share, 2), STATE_NAMES[high.state], pct(Math.abs(high.share), 2));
   for (const s of ranked.filter((x) => x.share > 0)) expect(7, STATE_NAMES[s.state]);
-  // No number is typed into the words: every digit in a step's text is in a number the data gives.
   assert.doesNotMatch(out, /NaN|undefined|Infinity/);
+  // Every step that names dollars (other than $0) says they are estimated and gives the fiscal year.
+  for (let i = 0; i < STEP_IDS.length; i++) {
+    if (!/\$[1-9]/.test(words(i))) continue;
+    assert.match(words(i), /\bestimated\b/i, `step ${STEP_IDS[i]} says estimated`);
+    assert.ok(words(i).includes(`FY${hub.fy}`), `step ${STEP_IDS[i]} gives the fiscal year`);
+  }
 });
 
 test('the scale bar: one SVG image with a takeaway label, its 2,971 dots one path of zero-length segments, the sliver and its magnified split', () => {
@@ -98,6 +104,38 @@ test('the scale bar: one SVG image with a takeaway label, its 2,971 dots one pat
   for (const cls of ['sbar__frame', 'sbar__sliver', 'sbar__mag', 'sbar__np', 'sbar__bo']) assert.match(bar, new RegExp(`class="${cls}"`), cls);
   const said = textOf(bar);
   for (const v of [money(facts.pay), money(facts.notPaid), money(facts.vbpBonus), '×100', `FY${hub.fy}`, count(facts.n)]) assert.ok(said.includes(v), v);
+  // The red figure beside the sliver has its words with it: color never says it alone.
+  assert.ok(said.includes(`${money(facts.gross)}, ${pct(facts.share, 2)} moved by the programs`));
+});
+
+test('the scale bar\'s geometry is the data\'s: the sliver is the programs\' share of the bar, the split is not paid to bonuses, the dots run by pay', () => {
+  const bar = element(out, '<figure class="sbar"', 'figure');
+  const width = Number(/viewBox="0 0 (\d+) /.exec(bar)[1]);
+  const rect = (cls) => {
+    const found = [...tags(bar, { names: ['rect'] })].find(({ attrs }) => attrs.class === cls);
+    return { x: Number(found.attrs.x), width: Number(found.attrs.width) };
+  };
+  // Coordinates are to a tenth of a unit, and the split's two parts sit a unit either side of the line between them.
+  const near = (a, b, tol, what) => assert.ok(Math.abs(a - b) <= tol, `${what}: ${a} vs ${b}`);
+  const sliver = rect('sbar__sliver');
+  near(sliver.width / width, facts.gross / facts.pay, 0.05 / width, 'the sliver');
+  near(sliver.x + sliver.width, width, 0.1, 'the sliver ends at the bar\'s end');
+  const [np, bo] = [rect('sbar__np'), rect('sbar__bo')];
+  const split = np.width + bo.width + 2;
+  near(split / width, (facts.gross / facts.pay) * MAGNIFY, 0.2 / width, 'the split is the sliver magnified');
+  near((np.width + 1) / split, facts.notPaid / facts.gross, 0.1 / split, 'not paid, of the split');
+  near(np.x + split, width, 0.2, 'the split ends at the bar\'s end');
+  // The dots' order: every hospital with an estimate once, by pay, each at the middle of its own slice of the total.
+  const order = barOrder(hospitals);
+  assert.equal(order.length, facts.n);
+  assert.equal(new Set(order.map((o) => o.i)).size, facts.n);
+  const pays = order.map((o) => hospitals[o.i].est.total);
+  for (let k = 1; k < order.length; k++) {
+    assert.ok(pays[k] >= pays[k - 1], `ascending pay at ${k}`);
+    assert.ok(order[k].mid > order[k - 1].mid, `ascending middle at ${k}`);
+  }
+  near(order[0].mid, pays[0] / 2 / facts.pay, 1e-12, 'the first dot');
+  near(order[order.length - 1].mid, 1 - pays[pays.length - 1] / 2 / facts.pay, 1e-9, 'the last dot');
 });
 
 test('the states map: a path per state and DC with its title line, shaded by its share in two inks, Maryland hatched', () => {
@@ -118,7 +156,9 @@ test('the states map: a path per state and DC with its title line, shaded by its
     assert.equal(p.cls, `st st--${s.share < 0 ? 'pen' : 'rew'}`, p.code);
     assert.ok(p.t > 0 && p.t <= 1, `${p.code} --t ${p.t}`);
     const name = STATE_NAMES[p.code];
-    assert.equal(p.title, `${name}: ${count(s.n)} hospital${s.n === 1 ? '' : 's'}, net ${pct(s.share, 2)} of pay, ${pct(s.cutN / s.n, 0)} take a net cut`);
+    assert.equal(p.title, `${name}: ${count(s.n)} hospital${s.n === 1 ? '' : 's'}, net ${pct(s.share, 2, { sign: true })} of pay, ${pct(s.cutN / s.n, 0)} take a net cut`);
+    // A bonus state's share carries its sign.
+    if (s.share > 0) assert.ok(p.title.includes(`net +${pct(s.share, 2)}`), p.code);
   }
   // A deeper share is never a lighter step; the state furthest from zero takes the full ink.
   const est = paths.filter((p) => p.t !== null);
@@ -135,10 +175,11 @@ test('the states map: a path per state and DC with its title line, shaded by its
   assert.ok(textOf(key).includes(`${pct(-end, 1)} cut`));
   assert.ok(textOf(key).includes(`${pct(end, 1, { sign: true })} bonus`));
   assert.ok(textOf(key).includes('Maryland: not in these programs'));
-  assert.match(out, /<p class="readout" aria-live="polite">Point at, tap or tab to a state for its numbers\.<\/p>/);
+  // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing.
+  assert.match(out, /<p class="readout" aria-live="polite" hidden>Point at, tap or tab to a state for its numbers\.<\/p>/);
 });
 
-test('what only a script uses is hidden: the small states\' buttons, the peer toggle, the canvas, the hero search', () => {
+test('what only a script uses is hidden: the small states\' buttons, the peer toggle, the canvas, the hero search, the readout', () => {
   const smalls = element(out, '<div class="smalls"', 'div');
   assert.match(smalls, /^<div class="smalls" hidden>/);
   assert.deepEqual([...smalls.matchAll(/data-st="([A-Z]{2})"/g)].map((m) => m[1]), ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC']);

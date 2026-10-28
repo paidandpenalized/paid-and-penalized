@@ -39,12 +39,13 @@ export function stateKey(states) {
 const tStyle = (t) => `--t:${Math.round(t * 1000) / 1000}`;
 
 // One state's line (its title on the map, its button's name, the readout's words): its hospitals, its net as a share of
-// their pay, the share of them with a net cut; Maryland's says it is outside these programs.
+// their pay, signed (a bonus state's "+0.28%"), the share of them with a net cut; Maryland's says it is outside these
+// programs.
 export function stateLine(code, s) {
   const name = STATE_NAMES[code];
   if (!s) return fill('stateNone', { name });
   if (s.notInPrograms) return fill('stateMaryland', { name, hospitals: hospitalsText(s.n) });
-  return fill('stateLine', { name, hospitals: hospitalsText(s.n), share: pct(s.share, 2), cutShare: pct(s.cutN / s.n, 0) });
+  return fill('stateLine', { name, hospitals: hospitalsText(s.n), share: pct(s.share, 2, { sign: true }), cutShare: pct(s.cutN / s.n, 0) });
 }
 
 // A state's kind and style: 'md' (hatched) for Maryland, 'zero' (unshaded) with no estimate or a net of exactly zero,

@@ -78,7 +78,9 @@
 .sbar__cap { max-width: none; color: var(--ink-3); font: 400 0.8125rem/1.4 var(--font-body); }
 .sbar__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; max-width: none; margin-top: 4px; }
 .sbar__pay { color: var(--ink); font: 400 1.75rem/1.15 var(--font-type); }
-.sbar__moved { color: var(--pen-ink); font: 400 1.0625rem/1.2 var(--font-type); }
+.sbar__moved { text-align: right; }
+.sbar__mv { color: var(--pen-ink); font: 400 1.0625rem/1.2 var(--font-type); }
+.sbar__by { display: block; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
 .sbar__draw { position: relative; margin-top: 6px; }
 .sbar__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .sbar__frame { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
@@ -175,7 +177,7 @@
   .stage__panel--bar > .stage__pin { padding-bottom: 0; }
   .stage__panel--map { grid-row: 10; padding-top: 28px; }
   .sbar__pay { font-size: 1.375rem; }
-  .sbar__moved { font-size: 0.9375rem; }
+  .sbar__mv { font-size: 0.9375rem; }
   .smap { max-height: none; }
   .story .card { max-width: none; }
 }
