@@ -35,6 +35,9 @@ const sentence = (key, parts, values = {}) => fillAround((marks) => fill(key, { 
 export const BIN_POINTS = 0.2;
 // Readmissions' cuts are "small" when under a third of the cap (as a share of pay); most of them must be.
 const SMALL_CUT = HRRP_CAP_PCT / 3 / 100;
+// How near the share of its hospitals the HAC program cuts must be to the rule's share (HAC_TOP_SHARE) for the words
+// "the quarter with the highest scores" (a hospital in the file without a score is never cut, so the two differ a little).
+const RULE_SHARE_NEAR = 0.03;
 const DOLLARS_OF = Object.fromEntries(ROWS.map((r) => [r.id, r.key]));
 
 // The hospitals with an estimate in a program's file (a hospital-page row's id: hrrp, hacrp, hvbp), each one's dollars
@@ -127,9 +130,10 @@ const TAKEAWAYS = {
     return near?.part === 1 ? fill('takeHrrp', { whole: numberWord(near.whole), zero: money(0) })
       : fill('takeHrrpShare', { share: pct(zero / n, 0), zero: money(0) });
   },
-  hacrp(members, { bins }) {
+  hacrp(members, { n, zero, bins }) {
     holds(bins.every((b) => b.lo < 0), COPY.takeHac);
-    return fill('takeHac', { quarter: fractionWord(HAC_TOP_SHARE, 'the').replace(/^the /, ''), cut: percent(HAC_CUT_PCT), zero: money(0) });
+    holds(Math.abs((n - zero) / n - HAC_TOP_SHARE) <= RULE_SHARE_NEAR, COPY.takeHac);
+    return fill('takeHac', { quarter: fractionWord(HAC_TOP_SHARE, 'the'), cut: percent(HAC_CUT_PCT), zero: money(0) });
   },
   hvbp(members, { bins }) {
     holds(bins.some((b) => b.lo < 0) && bins.some((b) => b.lo >= 0), COPY.takeVbp);

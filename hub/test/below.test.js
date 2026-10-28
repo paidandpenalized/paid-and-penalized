@@ -104,8 +104,10 @@ test('each card\'s takeaway is the data\'s: Readmissions\' share at $0, the HAC 
   const near = simpleFraction(zero);
   assert.equal(hrrp, near?.part === 1 ? `Most cuts are small; about one hospital in ${numberWord(near.whole)} pays $0.` : hrrp);
   assert.match(hrrp, /^Most cuts are small; /);
-  assert.equal(hac, `One flat step: the top-scoring ${fractionWord(HAC_TOP_SHARE, 'the').replace(/^the /, '')} take the 1% cut; the rest pay $0.`);
-  assert.equal(vbp, 'Budget-neutral by design: the cuts on the left pay for the bonuses on the right.');
+  assert.equal(hac, `One flat step: ${fractionWord(HAC_TOP_SHARE, 'the')} with the highest scores take the 1% cut; the rest pay $0.`);
+  assert.equal(vbp, 'One pool, two sides: the cuts on the left pay for the bonuses on the right.');
+  // Value-based purchasing's dek already says budget-neutral; the takeaway does not say it again.
+  assert.doesNotMatch(vbp, /budget-neutral/i);
 });
 
 test('each card\'s histogram: bins of 0.2 points whose counts add to the program\'s hospitals, $0 apart, one path per ink, two labels', () => {
@@ -296,6 +298,8 @@ test('the claims the directory\'s words make stop the build when the data no lon
   // Most Readmissions cuts are small; the HAC program is one step (a cut or $0); value-based purchasing has both sides.
   assert.throws(() => render((e) => ({ ...e, hrrp: e.hrrp * 20 })), /no longer bear out/);
   assert.throws(() => render((e) => ({ ...e, hac: e.hac === 0 ? 1 : e.hac })), /no longer bear out/);
+  // "The quarter with the highest scores": the share the program cuts stays near the rule's quarter.
+  assert.throws(() => render((e) => ({ ...e, hac: e.hac === 0 ? -1 : e.hac })), /no longer bear out/);
   assert.throws(() => render((e) => ({ ...e, hvbp: -Math.abs(e.hvbp) })), /no longer bear out/);
   assert.doesNotThrow(() => render((e) => e));
 });

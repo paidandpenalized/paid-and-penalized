@@ -399,7 +399,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__netline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
 .hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
 /* The stamp at 24px is large text, so the bonus's green meets its contrast (3:1) as the cut's red and the ink do. */
-.hh__stamp .stamp { font-size: 24px; padding: 5px 11px 2px; }
+/* 24px: large text, so the bonus ink on paper meets its 3:1 (at 22px it would need 4.5:1). The worksheet's stamp too. */
+.hh__stamp .stamp, .wsx .stamp { font-size: 24px; padding: 5px 11px 2px; }
 .hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
 .hh__band:empty { display: none; }
 .hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }

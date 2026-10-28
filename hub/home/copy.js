@@ -123,11 +123,12 @@ export const COPY = typesetCopy({
   dirGroup: 'Quality programs',
   dirGroupNote: 'Estimated FY{fy}',
   // Each card's takeaway over its histogram. Readmissions: the share of its hospitals at {zero}, as one in {whole} when a
-  // simple fraction is near, else as {share}. Hospital-acquired conditions: {quarter} the rule's share, {cut} its cut.
+  // simple fraction is near, else as {share}. Hospital-acquired conditions: {quarter} the rule's share ("the quarter"),
+  // {cut} its cut. Value-based purchasing: its two sides (its dek already says it is budget-neutral).
   takeHrrp: 'Most cuts are small; about one hospital in {whole} pays {zero}.',
   takeHrrpShare: 'Most cuts are small; {share} of its hospitals pay {zero}.',
-  takeHac: 'One flat step: the top-scoring {quarter} take the {cut} cut; the rest pay {zero}.',
-  takeVbp: 'Budget-neutral by design: the cuts on the left pay for the bonuses on the right.',
+  takeHac: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.',
+  takeVbp: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.',
   // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, its abbreviation; {bin} the bins'
   // width in points; the counts cut, at {zero} and with a bonus) and its two labels.
   histLabel: '{n} hospitals in {program}, each by its estimated FY{fy} change as a share of its Medicare inpatient pay, in bins of {bin} points: {cutN} cut, {zeroN} at {zero}, {bonusN} with a bonus.',
