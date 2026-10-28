@@ -453,8 +453,10 @@ export const COPY = {
 
   // Figure: the ledger of measures.
   ledgerHeading: { text: 'Where the score came from', claim: null },
+  ledgerScored: { text: 'CMS scored this hospital on {n} of the {all} measures.', claim: null },
+  ledgerScoredAll: { text: 'CMS scored this hospital on all {all} measures.', claim: null },
   ledgerIntro: {
-    text: 'CMS scored this hospital on {n} of the {all} measures. On every measure a lower value is better. Each row puts the hospital among every hospital with a value: the gray columns are those hospitals, the tall tick is the national median, and the hatched ends score the same as CMS\'s floor or cap.',
+    text: '{scored} On every measure a lower value is better. Each row puts the hospital among every hospital with a value: the gray columns are those hospitals, the tall tick is the national median, and the hatched ends score the same as CMS\'s floor or cap.',
     claim: 'HACRP-03',
   },
   leverOne: {
@@ -541,10 +543,13 @@ export const COPY = {
   groupSub: { text: '{n} hospitals', claim: null },
   groupShare: { text: '{share} cut', claim: null },
   groupTip: { text: '{group}: CMS cut {yes} of {decided} ({share}); middle score {median}', claim: null },
-  figPeersTakeaway: {
-    text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut runs from {low} ({lowGroup}) to {high} ({highGroup}).',
-    claim: null,
-  },
+  // Where the score sits against the middle of the groups it belongs to (hospital-figures.js peersPosition): above in
+  // all, some or none of them; none above is below them all, or at or below when it sits on a group's middle.
+  figPeersAboveAll: { text: 'Its score is above the middle in all {k} groups it belongs to', claim: null },
+  figPeersAboveSome: { text: 'Its score is above the middle in {above} of the {k} groups it belongs to', claim: null },
+  figPeersBelowAll: { text: 'Its score is below the middle in all {k} groups it belongs to', claim: null },
+  figPeersAtOrBelowAll: { text: 'Its score is at or below the middle in all {k} groups it belongs to', claim: null },
+  figPeersTakeaway: { text: '{position}; the share cut runs from {low} ({lowGroup}) to {high} ({highGroup}).', claim: null },
   figPeersAlt: {
     text: "Small distributions of Total HAC Scores, one for each group this hospital belongs to, with CMS's line and this hospital's score drawn through all of them.",
     claim: null,
@@ -569,12 +574,14 @@ export const COPY = {
   nearbyThis: { text: 'This hospital', claim: null },
   nearbyRing: { text: '{miles} mi', claim: null },
   figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
+  figNearbyNone: { text: 'CMS cut none of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
+  figNearbyAll: { text: 'CMS cut all {k} nearest hospitals; the closest is {distance} away.', claim: null },
   // A distance in words (hospital-figures.js milesText): under a mile, a mile when rounded, else whole miles (a count and
   // its noun); in the table, under a mile in its column of miles.
   milesUnder: { text: 'less than a mile', claim: null },
   milesAbout: { text: 'about a mile', claim: null },
   nearbyUnderMile: { text: 'under {one}', claim: null },
-  figPeersSame: { text: 'Its score is above the middle of {above} of the {k} groups it belongs to; the share cut is {share} in every group.', claim: null },
+  figPeersSame: { text: '{position}; the share cut is {share} in every group.', claim: null },
   figNearbyAlt: { text: 'Map of the area around this hospital, with its nearest scored hospitals numbered as in the table.', claim: null },
   nearbyCut: { text: 'cut', claim: null },
   nearbyNotCut: { text: 'not cut', claim: null },

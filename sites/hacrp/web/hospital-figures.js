@@ -200,6 +200,16 @@ export function sumFigure({ view, n, source }) {
 // ---------- among hospitals like it ----------
 
 
+// Where a score sits against the middle of each group's scores, in words for all, some or none of the k groups (none
+// above reads "below" in all of them, or "at or below" when the score sits on a group's middle).
+export function peersPosition(total, rows) {
+  const k = String(rows.length);
+  const above = rows.filter((r) => total > r.g.median).length;
+  if (above === rows.length) return fill('figPeersAboveAll', { k });
+  if (above > 0) return fill('figPeersAboveSome', { above: String(above), k });
+  return fill(rows.every((r) => total < r.g.median) ? 'figPeersBelowAll' : 'figPeersAtOrBelowAll', { k });
+}
+
 export function peersFigure({ view, nat, master, n, source }) {
   if (!view.scored) return null;
   const groups = nat.groupsOf(view.ccn);
@@ -223,8 +233,8 @@ export function peersFigure({ view, nat, master, n, source }) {
   const fig = figure({
     n, source, alt: t('figPeersAlt'), csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-groups`,
     takeaway: low.r.share === high.r.share
-      ? fill('figPeersSame', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), share: low.r.share })
-      : fill('figPeersTakeaway', { above: String(rows.filter((r) => total > r.g.median).length), k: String(rows.length), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
+      ? fill('figPeersSame', { position: peersPosition(total, rows), share: low.r.share })
+      : fill('figPeersTakeaway', { position: peersPosition(total, rows), low: low.r.share, lowGroup: low.r.label, high: high.r.share, highGroup: high.r.label }),
     ...drawn(draw),
     table: {
       columns: [{ name: t('figColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }, { name: t('figColMiddle'), numeric: true }, { name: t('figColHigher'), numeric: true }],
@@ -239,6 +249,13 @@ export function peersFigure({ view, nat, master, n, source }) {
 }
 
 // ---------- the nearest hospitals ----------
+
+// The nearest hospitals' takeaway: how many of the k CMS cut, in words for none and all, and the closest one's distance.
+function nearbyTakeaway(yes, k, distance) {
+  if (yes === 0) return fill('figNearbyNone', { k: String(k), distance });
+  if (yes === k) return fill('figNearbyAll', { k: String(k), distance });
+  return fill('figNearbyTakeaway', { yes: String(yes), k: String(k), distance });
+}
 
 const DECISION = { Yes: 'nearbyCut', No: 'nearbyNotCut', 'N/A': 'nearbyNA' };
 const decisionWord = (d) => (DECISION[d] ? t(DECISION[d]) : d);
@@ -283,7 +300,7 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
-    takeaway: fill('figNearbyTakeaway', { yes: String(yes), k: String(near.length), distance: milesText(near[0].miles) }),
+    takeaway: nearbyTakeaway(yes, near.length, milesText(near[0].miles)),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
       rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),

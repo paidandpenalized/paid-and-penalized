@@ -14,9 +14,10 @@ const SAMPLES = samplePages().filter((p) => p.type === 'hospital-cut' || p.type 
 const PEERS = [...SAMPLES, ...peerChartSamples()];
 // The phone's drawing at two phone widths, and the wide drawing at a desktop width.
 const WIDTHS = [320, 390, 1440];
-// Units (of the drawing) two boxes may share, or a box may reach past the drawing, before it counts: a glyph's box is
-// a little taller than its ink.
-const SLACK = 0.5;
+// Units (of the drawing) two words' boxes may share across, or a box may reach past the drawing, before it counts; and
+// up and down: a glyph's box is taller than its ink, so two lines set the kit's 13 units apart share about 1.5 units
+// of box with no ink touching, while words on one line share nearly all of theirs.
+const SLACK = { x: 0.5, y: 3 };
 
 const shared = useBrowser();
 
@@ -34,15 +35,19 @@ function peerFacts(slack) {
     return { x0: Math.min(p.x, q.x), y0: Math.min(p.y, q.y), x1: Math.max(p.x, q.x), y1: Math.max(p.y, q.y) };
   };
   const vb = svg.viewBox.baseVal;
-  const named = (el) => `${el.getAttribute('class')} "${el.textContent.trim().slice(0, 12)}…"`;
-  const words = [...svg.querySelectorAll('text')].map((el) => ({ el, b: boxOf(el) })).filter(({ b }) => b.x1 > b.x0);
+  const named = (el) => `${el.getAttribute('class') ?? el.parentElement.getAttribute('class')} "${el.textContent.trim().slice(0, 12)}…"`;
+  // Each line of words: a text, or each of its lines (a tspan with its own x) when it has several.
+  const words = [...svg.querySelectorAll('text')].flatMap((el) => {
+    const parts = [...el.querySelectorAll(':scope > tspan[x]')];
+    return (parts.length ? parts : [el]).map((part) => ({ el: part, b: boxOf(part) }));
+  }).filter(({ b }) => b.x1 > b.x0);
   const overlaps = [];
   for (const [i, a] of words.entries()) {
     for (const c of words.slice(i + 1)) {
-      if (Math.min(a.b.x1, c.b.x1) - Math.max(a.b.x0, c.b.x0) > slack && Math.min(a.b.y1, c.b.y1) - Math.max(a.b.y0, c.b.y0) > slack) overlaps.push(`${named(a.el)} and ${named(c.el)}`);
+      if (Math.min(a.b.x1, c.b.x1) - Math.max(a.b.x0, c.b.x0) > slack.x && Math.min(a.b.y1, c.b.y1) - Math.max(a.b.y0, c.b.y0) > slack.y) overlaps.push(`${named(a.el)} and ${named(c.el)}`);
     }
   }
-  const outside = words.filter(({ b }) => b.x0 < vb.x - slack || b.y0 < vb.y - slack || b.x1 > vb.x + vb.width + slack || b.y1 > vb.y + vb.height + slack)
+  const outside = words.filter(({ b }) => b.x0 < vb.x - slack.x || b.y0 < vb.y - slack.x || b.x1 > vb.x + vb.width + slack.x || b.y1 > vb.y + vb.height + slack.x)
     .map(({ el, b }) => `${named(el)} (${Math.round(b.x0)} to ${Math.round(b.x1)} of ${vb.width})`);
   // A row: a group holding a baseline; its plot starts at the baseline's left end, which is past the words' column
   // only on the wide drawing.
@@ -53,7 +58,7 @@ function peerFacts(slack) {
     if (!base || plotLeft < vb.width / 5) continue;
     for (const el of g.querySelectorAll(':scope > text')) {
       const b = boxOf(el);
-      if (b.x0 < plotLeft && b.x1 > plotLeft - slack) onPlot.push(named(el));
+      if (b.x0 < plotLeft && b.x1 > plotLeft - slack.x) onPlot.push(named(el));
     }
   }
   return { fit: svg.dataset.fit, overlaps, outside, onPlot };
