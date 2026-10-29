@@ -452,6 +452,43 @@ describe('the front page without a part its scripts need', () => {
   }));
 });
 
+// A front page whose story fails after the map and the chart have been set up (here the card's lead is cut from the
+// served page, which only the last step's script needs): the story falls back to the server's page and nothing the
+// script set up is left running. The states are no buttons, the readout and its live region stay quiet, and a state
+// named in the address later pins nothing.
+describe('the front page when its story fails part way', () => {
+  const tabs = useContext(shared, { width: 1280 });
+  it('undoes the map and the chart it had set up', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.route((url) => url.pathname === '/', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace('class="card__ex"', 'class="card__lead"');
+      await route.fulfill({ response, body });
+    });
+    await visit(page, tabs.base, '/');
+    await page.waitForFunction(() => document.querySelector('.story').classList.contains('story--static'));
+    await settle(page);
+    const wired = () => page.evaluate(() => ({
+      story: [...document.querySelector('.story').classList].filter((c) => c !== 'story').sort(),
+      states: [...document.querySelectorAll('.smap .st[data-st]')].filter((el) => el.hasAttribute('role') || el.hasAttribute('tabindex') || el.hasAttribute('aria-pressed')).length,
+      buttons: [...document.querySelectorAll('.smalls [data-st]')].filter((el) => el.hasAttribute('aria-pressed')).length,
+      pinned: document.querySelectorAll('.smap .is-pin, .smap .is-on, .smalls .is-pin').length,
+      said: document.querySelector('[data-said]').textContent,
+      readout: document.querySelector('.readout').hidden,
+      canvas: document.querySelector('.stage__cv').hidden,
+    }));
+    const expected = { story: ['story--static'], states: 0, buttons: 0, pinned: 0, said: '', readout: true, canvas: true };
+    assert.deepEqual(await wired(), expected, 'nothing set up is left behind');
+    await page.evaluate(() => { window.location.hash = '#state=TX'; });
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+    await settle(page);
+    await settle(page);
+    assert.deepEqual(await wired(), expected, 'a state named later pins nothing and says nothing');
+    assert.deepEqual(errors, []);
+  }));
+});
+
 // Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
 // (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
 // header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.

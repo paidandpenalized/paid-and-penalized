@@ -95,6 +95,9 @@ function start(root) {
     });
   }
 
+  // What the data's arrival has set up so far, undone in reverse if a later part fails. The page's listeners above (the
+  // steps, the address's state, the searches) reach the map, the chart and the find step only once all of them are set up.
+  const undo = [];
   loadHubAsset(src).then(({ hospitals, fy, mapW, mapH, byCcn }) => {
     const rows = storyRows(hospitals);
     const panels = {
@@ -110,20 +113,28 @@ function start(root) {
     }
     canvas.hidden = false;
     // The map's readout and buttons take their room before the stage measures the drawings it registers to.
-    map = mountMap(stageEl);
-    stage = createStage(canvas, {
+    const m = mountMap(stageEl);
+    undo.push(m);
+    let f = null;
+    const s = createStage(canvas, {
       stage: stageEl, rows, facts: storyFacts(hospitals), fy, domain: shareDomain(hospitals), mapW, mapH, panels, example,
-      peersOf: (h) => find.groupOf(h),
+      peersOf: (h) => f.groupOf(h),
       railHidden: () => !wide.matches,
       still,
     });
-    find = mountFind({ story: root, hospitals, fy, example, stage });
+    undo.push(s);
+    f = mountFind({ story: root, hospitals, fy, example, stage: s });
+    undo.push(f);
     const followed = followedCcn(window.location.search, (ccn) => Boolean(byCcn.get(ccn)?.est));
-    if (followed) find.select(byCcn.get(followed));
-    stage.show(at, { instant: true });
-    map.active(at === 7);
+    if (followed) f.select(byCcn.get(followed));
+    s.show(at, { instant: true });
+    m.active(at === 7);
     const code = named();
-    if (code) map.pin(code);
+    if (code) m.pin(code);
+    // Everything is set up: the page's listeners may use it from here on.
+    map = m;
+    stage = s;
+    find = f;
     root.classList.add('story--drawn');
     const again = () => {
       stage.resize();
@@ -132,7 +143,10 @@ function start(root) {
     if ('ResizeObserver' in window) new ResizeObserver(again).observe(stageEl);
     if (document.fonts) document.fonts.ready.then(again);
   }).catch(() => {
-    // No data: the page as the server wrote it.
+    // No data, or a part of the page missing: the page as the server wrote it, with nothing set up left running.
+    for (const part of undo.reverse()) part.stop();
+    map = null;
+    stage = null;
     steps.stop();
     root.classList.remove('story--live', 'story--drawn');
     root.classList.add('story--static');

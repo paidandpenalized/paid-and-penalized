@@ -60,9 +60,9 @@ export function cardModel(h, peers, mode, fy) {
 
 // Wires the last step in story (the .story element). hospitals: the asset's; fy: its year; example: the example's row;
 // stage: the story's chart (stage.js), told when the hospital or its group changes. Returns { select(h), follow(href),
-// groupOf(h) }: follow a hospital with an estimate; follow the hospital whose page href is, when it has an estimate (true;
-// false for any other, whose page the search then opens); and the hospital's group as the chart draws it ({ peers,
-// label }).
+// groupOf(h), stop() }: follow a hospital with an estimate; follow the hospital whose page href is, when it has an
+// estimate (true; false for any other, whose page the search then opens); the hospital's group as the chart draws it
+// ({ peers, label }); and undo the wiring (the toggle hidden again, its buttons dead).
 export function mountFind({ story, hospitals, fy, example, stage }) {
   const card = story.querySelector('[data-card]');
   const toggle = story.querySelector('.peers');
@@ -119,6 +119,9 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
     }
   }
 
+  // The card first: a card the page is missing a part of stops here, before anything is wired.
+  paint();
+  const off = new AbortController();
   for (const b of buttons) {
     b.addEventListener('click', () => {
       if (b.getAttribute('aria-disabled') === 'true') return;
@@ -129,10 +132,9 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
       if (mode === was) return;
       paint();
       stage.regroup();
-    });
+    }, { signal: off.signal });
   }
   toggle.hidden = false;
-  paint();
 
   function select(h) {
     if (!h?.est || h === chosen) return;
@@ -145,6 +147,10 @@ export function mountFind({ story, hospitals, fy, example, stage }) {
   return {
     select,
     groupOf,
+    stop() {
+      off.abort();
+      toggle.hidden = true;
+    },
     follow(href) {
       const h = byHref.get(href);
       if (!h?.est) return false;

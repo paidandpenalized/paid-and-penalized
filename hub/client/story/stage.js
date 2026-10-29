@@ -45,7 +45,8 @@ const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 //   example    the hospital the last step opens on; peersOf(h): its group as { peers (hospitals, h among them), label
 //              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js);
 //   railHidden () -> whether the step's name sits in the stage (no rail beside it); still: the reduced-motion query.
-// Returns { show(i, { instant }), select(h), regroup(), resize() }.
+// Returns { show(i, { instant }), select(h), regroup(), resize(), stop() }: stop ends any motion and the repaint on a
+// change of theme, and clears the canvas.
 export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH, panels, example, peersOf, railHidden, still }) {
   const ctx = canvas.getContext('2d');
   const N = rows.length;
@@ -549,7 +550,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     draw();
   }
 
-  onThemeChange(() => {
+  const unwatch = onThemeChange(() => {
     colors = readColors();
     fonts = readFonts();
     draw();
@@ -557,6 +558,14 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
 
   measure();
   return {
+    stop() {
+      unwatch();
+      cancelAnimationFrame(raf);
+      raf = 0;
+      cur = null;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    },
     show,
     // Follow a hospital (a decoded asset row with an estimate), or stop (null): it is ringed with its name at every step,
     // and the last step shows it among its group.
