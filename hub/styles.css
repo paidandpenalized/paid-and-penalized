@@ -547,6 +547,16 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__sechead h2 { font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
 .hh__sechead .kicker { margin-bottom: 8px; }
 .hh__lede { color: var(--ink-2); font-size: 15px; }
+/* Scripts off, nothing offers what needs them: the button down to the what-if goes, the what-if's section is headed by
+   what it shows (its kicker's words, which then step aside), and a line says what needs JavaScript, here and under the
+   headline in place of the swarm. */
+.hh__nojs, .hh__noscript { display: none; }
+@media (scripting: none) {
+  .hh__wbtn, .hh__js, .hh__sechead .kicker { display: none; }
+  .hh__nojs { display: inline; }
+  .hh__noscript { display: block; max-width: 46em; margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+  .hh__sechead .hh__noscript { margin-top: 0; }
+}
 .hh__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 0; align-items: center; padding-block: 18px 16px; border-top: 1px dotted var(--line); }
 .hh__rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font: 700 18px/1.2 var(--font-body); }
 .hh__ab { color: var(--ink-3); font: 400 12px var(--font-type); }

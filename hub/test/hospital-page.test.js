@@ -182,6 +182,20 @@ test('the hooks the page\'s script uses, its script-only controls hidden, and th
   assert.ok(main.includes(esc('A cut is a program’s formula at work, not a verdict on a hospital’s care. Peers are listed alphabetically; nothing on this page ranks hospitals.')), 'the fairness line');
 });
 
+// Scripts off, nothing offers what needs them (hub/styles.css's (scripting: none) block hides the button and the what-if's
+// words): the section has a heading for what it shows, and a line says what needs JavaScript, here and under the headline.
+test('scripts off, the page offers no what-if it cannot run: the section headed by what it shows, and what needs JavaScript said', () => {
+  const main = mainOf(render(CUT));
+  assert.ok(main.includes('<h2 id="whatif-h"><span class="hh__js">What if? Adjust any program</span> <span class="hh__nojs">Every program, among its peers</span></h2>'), 'the what-if heading, or (scripts off) the kicker\'s words');
+  assert.ok(main.includes(`<p class="hh__noscript">${esc('The what-if needs JavaScript. Without it, the figures below stay as they are.')}</p>`), 'the what-if\'s line');
+  assert.ok(main.includes('<h2 class="hh__head" data-headline>') && main.includes(`<p class="hh__noscript">${esc('The chart of its peers needs JavaScript. The rows below compare this hospital with them in words.')}</p>\n<div class="hh__swarm" data-swarm>`), 'the chart\'s line, under the headline');
+  const css = readFileSync(join(import.meta.dirname, '..', 'styles.css'), 'utf8');
+  const off = /@media \(scripting: none\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(off, /\.hh__wbtn, \.hh__js, \.hh__sechead \.kicker \{ display: none; \}/, 'the button, the what-if\'s words and the kicker go');
+  assert.match(off, /\.hh__nojs \{ display: inline; \}/);
+  assert.match(css, /^\.hh__nojs, \.hh__noscript \{ display: none; \}$/m, 'and show only then');
+});
+
 // The record's Type field wraps between its items, each "·" at the end of a line, never at the start of one.
 test('the Type field holds each "·" to the item before it', () => {
   const h = pick((x) => x.est && x.teach && Number.isInteger(x.beds), 'an estimated hospital with a teaching status and a bed count');

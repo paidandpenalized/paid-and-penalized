@@ -165,6 +165,7 @@ function figure(h, { peers, figures, group }, { fy, all }) {
   const head = comparison(fill, 'head', { share: h.est.share, median: figures.net.median, n: peers.length, group });
   return html`<figure class="hh__fig">
 <h2 class="hh__head" data-headline>${head}</h2>
+<p class="hh__noscript">${fill('swarmNoScript')}</p>
 <div class="hh__swarm" data-swarm></div>
 <figcaption class="hh__cap" data-swarm-note hidden>${fill('swarmCaption', { fy, n: count(peers.length), group, all: count(all) })} <span class="hh__hint">${fill('swarmHint')}</span></figcaption>
 <p class="hh__err" data-load-error hidden>${fill('loadError')}</p>
@@ -197,8 +198,9 @@ function whatifSection(h, { peers, figures, group }, { fy }) {
   return html`<section class="hh__progs" id="whatif" aria-labelledby="whatif-h">
 <div class="wrap"><div class="hh__pi">
 <div class="hh__sechead">
-<div><p class="cap kicker">${fill('whatifKicker')}</p><h2 id="whatif-h">${fill('whatifHeading')}</h2></div>
+<div><p class="cap kicker">${fill('whatifKicker')}</p><h2 id="whatif-h"><span class="hh__js">${fill('whatifHeading')}</span> <span class="hh__nojs">${fill('whatifKicker')}</span></h2></div>
 <p class="hh__lede">${fill('whatifLede', { fy, n: count(n), group })}</p>
+<p class="hh__noscript">${fill('whatifNoScript')}</p>
 </div>
 <div class="hh__rows">
 ${ROWS.map((r) => programRow(h, r.id, figures, ctx))}

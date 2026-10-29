@@ -69,6 +69,8 @@ export const COPY = typesetCopy({
   swarmCaption: 'Each dot is a hospital, placed by its estimated FY{fy} net as a share of its Medicare inpatient pay: above, the {n} {group}; below, all {all} hospitals with an estimate. This hospital is ringed in both.',
   swarmHint: 'Hover or tap a dot for its name; click it to open that hospital.',
   loadError: "Couldn't load the chart data. Reload to try again.",
+  // Scripts off (shown only then): what the chart needs.
+  swarmNoScript: 'The chart of its peers needs JavaScript. The rows below compare this hospital with them in words.',
   // The swarm's own words (drawn on its canvas): the two piles' names, the peers' median, their cuts and bonuses, and
   // what a dot says when hovered, tapped or reached by the arrow keys.
   swarmAll: 'All {n} hospitals',
@@ -88,6 +90,8 @@ export const COPY = typesetCopy({
   // its result.
   whatifKicker: 'Every program, among its peers',
   whatifHeading: 'What if? Adjust any program',
+  // Scripts off, the section is headed by what it shows (the kicker's words) and says what the what-if needs.
+  whatifNoScript: 'The what-if needs JavaScript. Without it, the figures below stay as they are.',
   whatifLede: "This hospital's estimated FY{fy} dollars in each program, beside the same {n} {group}.",
   rowValue: 'Estimated FY{fy}:',
   whyFactor: 'Payment factor {factor}.',
