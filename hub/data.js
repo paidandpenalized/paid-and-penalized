@@ -2,6 +2,7 @@
 // Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
+import { nameText } from '../web/render/format.js';
 import { masterRecord } from './model.js';
 
 // The pinned copy of Thirty Day Readmissions' published data: its hospitals decide which hospitals have a Readmissions
@@ -26,7 +27,7 @@ let loaded = null;
 // Everything the hub's pages are built from, read once per build:
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
-//   master        the hospital master's records by CCN
+//   master        the hospital master's records by CCN, each name as the pages print it (nameText)
 //   tdr           { fy, conditions, peerMedians, hospitals: Map<ccn, record> } from the pinned Thirty Day Readmissions file
 //                 (peerMedians: each peer group's median ratio by condition, { '<group>': { <key>: median } }, which CMS compares
 //                 a hospital's ratios with)
@@ -41,7 +42,7 @@ export function loadHub() {
     fy: dollars.fy,
     builtAt: dollars.built_at,
     dollars,
-    master: new Map(masterFile.hospitals.map((r) => [r.ccn, r])),
+    master: new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }])),
     tdr: { fy: pinned.meta.fy, conditions: pinned.conditions, peerMedians: pinned.meta.peerMedians, hospitals: new Map(pinned.hospitals.map((r) => [r.id, r])) },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };

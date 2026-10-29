@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ATLAS_ID } from '../../web/charts/geo.js';
+import { nameText } from '../../web/render/format.js';
 import { checkHubInputs, loadHub } from '../data.js';
 
 test('the atlas id is exported from the map module and names a pinned input', async () => {
@@ -60,4 +61,11 @@ test('checkHubInputs stops when a dollar CCN has no master record', () => {
 
 test('checkHubInputs stops when the Thirty Day Readmissions file is not for the master\'s HRRP year', () => {
   assert.throws(() => checkHubInputs(inputs({ tdrFy: 2026 })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && /2026/.test(e.message) && /2027/.test(e.message));
+});
+
+// What every hub page, the chip, the search and the asset show: the master's names with each initialism in capitals.
+test('loadHub\'s master holds each name as the pages print it: no initialism left as a word ("Ihs" for IHS)', () => {
+  const { master } = loadHub();
+  const left = [...master.values()].filter((r) => nameText(r.name) !== r.name).length;
+  assert.equal(left, 0, `${left} names with an initialism left in lower case`);
 });

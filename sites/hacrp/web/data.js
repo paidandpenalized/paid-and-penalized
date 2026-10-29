@@ -11,6 +11,7 @@ import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { nameText } from '../../../web/render/format.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
 import { rangeOf, rangeShare } from './money.js';
@@ -137,7 +138,8 @@ export function loadHacrp() {
   checkMasterYear(masterFile, data.fy);
   const dollarsFile = readJson(REPO_ROOT + paths.dollars);
   checkDollarsYear(dollarsFile, data.fy);
-  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  // Each name as the pages print it (nameText: an initialism in capitals).
+  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }]));
   // The files this site's numbers come from. The hospital master is left out: it is shared, so a re-emit for another
   // program rebuilds it without changing a number here. The history is null in a build without one.
   const builtFiles = [[paths.data, data], [paths.history, history], [paths.dollars, dollarsFile]];

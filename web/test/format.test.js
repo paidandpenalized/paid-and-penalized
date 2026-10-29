@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, dotList, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
+import { capitalize, decimal, dollars, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -111,6 +111,14 @@ test('dotList joins items with middle dots, each held to the item before it, so 
   assert.equal(dotList(['Urban']), 'Urban');
   assert.doesNotMatch(dotList(['a', 'b', 'c']), / ·/, 'never a breakable space before a dot');
   assert.equal(unbroken('1,234 beds'), '1,234\u00a0beds', 'a count never parts from its noun');
+});
+
+test('nameText puts an initialism the casing turned into a word back in capitals, and leaves every other word as it is', () => {
+  assert.equal(nameText('Example Ihs Hospital - Cah'), 'Example IHS Hospital - CAH');
+  assert.equal(nameText('Uch-Example Health, Llc'), 'UCH-Example Health, LLC');
+  assert.equal(nameText('Uab Example Medical Center'), 'UAB Example Medical Center');
+  // A word that only starts like one, a word in capitals already, and ordinary words stay.
+  for (const name of ['Ihsan Memorial Hospital', 'UAB Example Center', 'Exampleton Regional Medical Center', 'St Example\'s Hospital']) assert.equal(nameText(name), name);
 });
 
 test('capitalize upper-cases the first letter only, and leaves an empty string empty', () => {

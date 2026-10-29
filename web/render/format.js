@@ -48,6 +48,13 @@ export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 // A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).
 export const placeText = ({ city, state }) => [city, state].filter(Boolean).join(', ');
 
+// A hospital's name as the pages print it: the hospital master's (CMS's casing, or its title-casing of CMS's capitals), with
+// each initialism the casing turned into a word ("Uab", "Ihs", "Cah") back in capitals. INITIALISMS is a reviewed list,
+// from the master's names: each is a word that names in title case spell this way and none is an ordinary word.
+const INITIALISMS = new Set(['ACMH', 'BCA', 'BSA', 'CAH', 'EAMC', 'FMOL', 'IHS', 'INTEGRIS', 'KMI', 'LECOM', 'LLC', 'LTCU', 'OSS', 'UAB', 'UCF',
+  'UCH', 'UCI', 'UHHS', 'UM', 'UMD', 'UPHS', 'UPR', 'USD', 'USMD', 'WCA']);
+export const nameText = (name) => name.replace(/\b[A-Z][a-z]+\b/g, (word) => (INITIALISMS.has(word.toUpperCase()) ? word.toUpperCase() : word));
+
 // Items joined by middle dots, each dot held to the item before it by a no-break space, so a line that wraps ends on a dot
 // and none starts with one: "Not a teaching hospital · 240 beds · Rural".
 export const dotList = (items) => items.join('\u00a0· ');
