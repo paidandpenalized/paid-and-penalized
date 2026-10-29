@@ -6,6 +6,7 @@
 // and the small states' buttons the script shows.
 import { MAP_WIDTH } from '../asset.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
+import { clamp } from '../../engine/js/stats.js';
 import { US_MAP_CODES, usPaths } from '../../web/charts/geo.js';
 import { fillCopy } from '../../web/render/components.js';
 import { noun, pct } from '../../web/render/format.js';
@@ -29,7 +30,7 @@ export function stateKey(states) {
   const largest = Math.max(...shares);
   if (!(largest > 0)) throw new RangeError('hub home: no state has a net change to shade');
   const end = Math.ceil(largest / KEY_ROUND - 1e-9) * KEY_ROUND;
-  const stepOf = (share) => Math.min(KEY_STEPS, Math.max(1, Math.ceil((Math.abs(share) / end) * KEY_STEPS - 1e-9)));
+  const stepOf = (share) => clamp(Math.ceil((Math.abs(share) / end) * KEY_STEPS - 1e-9), 1, KEY_STEPS);
   return {
     end,
     shade: (share) => (share === 0 ? { ink: null, t: null } : { ink: share < 0 ? 'pen' : 'rew', t: stepOf(share) / KEY_STEPS }),

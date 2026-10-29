@@ -6,13 +6,16 @@ import { drawnDot } from './pile.js';
 
 export const TAU = Math.PI * 2;
 export const clamp01 = (v) => clamp(v, 0, 1);
+// A glide's length (ms): the swarm's moves and the hospital page's strips' (hub/styles.css .st--live's transitions),
+// which move together on a what-if's change of axis.
+export const GLIDE_MS = 700;
 // From 0 to 1 over 0 to 1: in and out (cubic), smoothstep, and fast out (cubic).
 export const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 export const smooth = (x) => x * x * (3 - 2 * x);
 export const outCubic = (x) => 1 - (1 - x) ** 3;
 
 // Device pixels to a CSS pixel, held between 1 and 3: a page zoomed out below 1 lays out and draws as at 1.
-export const deviceRatio = () => Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+export const deviceRatio = () => clamp(window.devicePixelRatio || 1, 1, 3);
 
 // A canvas font: size in CSS pixels, its weight, and the mono face or the body face (fonts: colors.js readFonts).
 export const fontOf = (fonts, size, weight = 400, mono = false) => `${weight} ${size}px ${mono ? fonts.type : fonts.body}`;

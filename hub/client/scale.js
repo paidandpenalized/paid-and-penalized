@@ -1,6 +1,8 @@
 // The share axis the hub's dot charts share (the home story, the hospital page's swarm): a hospital's change as a percent
 // of its estimated Medicare inpatient pay, on one linear scale, with exactly $0 in a gutter of its own between the cuts
 // and the bonuses, so a hospital a program leaves untouched never sits beside one it moves a hair. Pure.
+import { clamp } from '../../engine/js/stats.js';
+import { pct } from '../../web/render/format.js';
 
 // How far the domain reaches past the data either side, and the step its ends round out to (percentage points).
 const PAD = 0.1;
@@ -40,12 +42,14 @@ export function stripAxis(s, event) {
   return { open, held, wide: held ? s.wide : open };
 }
 
-// The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand.
+// The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand; and a tick's label (v in
+// percent: "−2%", "0%", "+1%").
 export function wholePercents([lo, hi]) {
   const out = [];
   for (let v = Math.ceil(lo); v <= Math.floor(hi); v++) out.push(v);
   return out;
 }
+export const tickText = (v) => pct(v / 100, 0, { sign: true });
 
 // The scale from x0 to x1 (pixels) with a gutter for exactly $0: { xs(v), line(v), invert(x), zL, zR, zM, k, lo, hi }
 // where k is pixels per percentage point on both sides, the cuts end at zL, the bonuses start at zR and $0 sits at zM,
@@ -61,7 +65,7 @@ export function shareScale({ x0, x1, gutter, domain: [lo, hi], px = 0 }) {
   const zM = (zL + zR) / 2;
   const line = (v) => (v < 0 ? zL + v * k : v > 0 ? zR + v * k : zM);
   const xs = (v) => line(v < lo ? lo : v > hi ? hi : v);
-  const invert = (x) => Math.min(hi, Math.max(lo, x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0));
+  const invert = (x) => clamp(x <= zL ? (x - zL) / k : x >= zR ? (x - zR) / k : 0, lo, hi);
   return { xs, line, invert, zL, zR, zM, k, lo, hi };
 }
 

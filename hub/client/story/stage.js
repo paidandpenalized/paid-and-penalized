@@ -10,18 +10,18 @@
 //   else      every dot glides to its next place, a little staggered.
 // Old scenery leaves early and new scenery arrives late, so the moving dots are never drawn over two charts at once; a
 // pile's count arrives once its dots have settled. Reduced motion: every change is instant.
+import { clamp } from '../../../engine/js/stats.js';
 import { count, money, pct } from '../../../web/client/format.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, rulePercent } from '../../../web/programs.js';
 import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
 import { COPY } from './copy.js';
-import { wholePercents } from '../scale.js';
+import { tickText, wholePercents } from '../scale.js';
 import { fitBox, stageGeometry } from './geometry.js';
 import { createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
 const say = (key, values = {}) => COPY[key].replace(/\{(\w+)\}/g, (_, name) => values[name]);
-const percent = (v) => pct(v / 100, 0, { sign: true });
 // The gate sweep: it starts at SW0 of the transition and takes SW1 of it. It rises through the crowd at a steady pace
 // over the first CROSS of its time, so each hospital is seen to move as the gate reaches it, then speeds to the top.
 const SW0 = 0.04;
@@ -178,7 +178,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       const travel = Math.max(1, from - L.info.lines[sweepK]);
       let top = from;
       for (let s = 0; s < N; s++) if (A0[s] > 0.01 && Y0[s] < top) top = Y0[s];
-      crowd = Math.min(0.95, Math.max(0.05, (from - top) / travel));
+      crowd = clamp((from - top) / travel, 0.05, 0.95);
       for (let s = 0; s < S; s++) DL[s] = SW0 + SW1 * sweepTime(clamp01((from - Y0[s]) / travel), crowd);
     } else if (opts.delay) {
       for (let s = 0; s < S; s++) DL[s] = opts.delay(s);
@@ -294,7 +294,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = a;
     hline(g.x0, g.x1, g.bottom, colors.ink2);
     const tick = font(g.narrow ? 10 : 11, 400, true);
-    for (const v of TICKS) text(percent(v), scale.xs(v), g.bottom + 16, tick, colors.ink3, 'center');
+    for (const v of TICKS) text(tickText(v), scale.xs(v), g.bottom + 16, tick, colors.ink3, 'center');
     // The two sides' words under the ticks, either side of $0; a wide stage's axis words on a line of their own.
     const y = g.bottom + (g.narrow ? 30 : 34);
     if (!g.narrow) text(say('axis', { fy: String(fy) }), g.x0, g.bottom + 54, font(12), colors.ink3);
@@ -460,7 +460,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       x = CX[s] - rr - 5;
       align = 'right';
       if (x - w < 8) {
-        x = Math.min(Math.max(CX[s], w / 2 + 8), W - w / 2 - 8);
+        x = clamp(CX[s], w / 2 + 8, W - w / 2 - 8);
         align = 'center';
       }
     }

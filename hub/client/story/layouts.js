@@ -5,6 +5,7 @@
 // A layout is { scene, X, Y, R, A, C, info }: typed arrays of length 2N (N hospitals, then their copies) for each dot's
 // center, radius, opacity and color code, plus what the scene's painter needs (lines, label anchors) and whether its piles
 // fit their room (fits).
+import { pctOfPay } from '../../../engine/js/dollars/whatif.js';
 import { median } from '../../../engine/js/peers.js';
 import { INK, NEUTRAL, signCode } from '../colors.js';
 import { R_MIN, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
@@ -21,7 +22,7 @@ export function storyRows(hospitals) {
   hospitals.forEach((h, row) => {
     if (!h.est) return;
     const { hrrp, hac, total, pct } = h.est;
-    rows.push({ h, row, mid: mids.get(row), hash: barHash(row), c: [0, pct.hrrp, ((hrrp + hac) * 100) / total, pct.net] });
+    rows.push({ h, row, mid: mids.get(row), hash: barHash(row), c: [0, pct.hrrp, pctOfPay(hrrp + hac, total), pct.net] });
   });
   return rows;
 }

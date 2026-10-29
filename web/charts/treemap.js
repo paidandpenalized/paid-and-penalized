@@ -11,15 +11,13 @@
 //            on it.
 //   width    the viewBox's width; height: its height (default: taller across a page than on a phone)
 import { html } from '../render/html.js';
-import { frame, isNarrow, mark, r2, text } from './svg.js';
+import { frame, isNarrow, mark, r1, r2, text } from './svg.js';
 
 const HEAD = 30;
 // A group's box has a header, and its label, only if it is wider than LABEL_WIDTH and taller than the header plus
 // TILE_ROOM, the least that leaves its tiles anything under the header. Otherwise it is a sliver (see the groups).
 const LABEL_WIDTH = 70;
 const TILE_ROOM = 8;
-// Tile coordinates to a tenth of a unit: hundreds of tiles, each a hair at most off.
-const r1 = (x) => Math.round(x * 10) / 10;
 const GAP = 4;
 
 // Squarified layout (Bruls, Huizing and van Wijk, 2000): positive values into a rectangle { x, y, w, h }, largest

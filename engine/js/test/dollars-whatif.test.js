@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, dollarsPath, readJson } from '../../../pipeline/files.js';
-import { HAC_RATE, derivedDollars, netShare, pctOf, programDollars, roundHalfEven } from '../dollars/whatif.js';
+import { HAC_RATE, derivedDollars, netShare, pctOf, pctOfPay, programDollars, roundHalfEven } from '../dollars/whatif.js';
 import { mulberry32 } from './prng.js';
 
 // The hub's common fiscal year.
@@ -149,6 +149,8 @@ test('a changed factor must be a positive adjustment factor, as the Python twin\
 
 test('pctOf: each program\'s dollars and the net as a percent of the estimated pay', () => {
   assert.deepEqual(pctOf({ total: 1000, hrrp: -30, hac: -10, hvbp: 20, net: -20, base: 800 }), { hrrp: -3, hac: -1, hvbp: 2, net: -2 });
+  // pctOfPay: any dollars that way (a sum of two programs').
+  assert.equal(pctOfPay(-30 + -10, 1000), -4);
 });
 
 test('netShare is a fraction of the estimated Medicare inpatient pay', () => {

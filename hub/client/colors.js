@@ -8,18 +8,19 @@ const TOKENS = {
   neutral: '--neutral', paper: '--paper', paper2: '--paper-2',
 };
 
-// { ink, ink2, ink3, line, pen, penInk, rew, neutral, paper, paper2 }: each token's computed value on root (by default
-// the document's root element).
-export function readColors(root = document.documentElement) {
+// The body face's and the mono face's font-family.
+const FONTS = { body: '--font-body', type: '--font-type' };
+
+// Each name's custom property (props) as root has it now.
+function read(props, root) {
   const style = getComputedStyle(root);
-  return Object.fromEntries(Object.entries(TOKENS).map(([name, prop]) => [name, style.getPropertyValue(prop).trim()]));
+  return Object.fromEntries(Object.entries(props).map(([name, prop]) => [name, style.getPropertyValue(prop).trim()]));
 }
 
-// { body, type }: the body face's and the mono face's font-family, as root has them.
-export function readFonts(root = document.documentElement) {
-  const style = getComputedStyle(root);
-  return { body: style.getPropertyValue('--font-body').trim(), type: style.getPropertyValue('--font-type').trim() };
-}
+// { ink, ink2, ink3, line, pen, penInk, rew, neutral, paper, paper2 }: each token's computed value on root (by default
+// the document's root element); and { body, type }, the two faces, as root has them.
+export const readColors = (root = document.documentElement) => read(TOKENS, root);
+export const readFonts = (root = document.documentElement) => read(FONTS, root);
 
 // A dot's ink, as a code (a typed array holds it): no change, a cut, a bonus, the scale bar's ink; a value's code by its
 // sign; and a code's color among colors (readColors').

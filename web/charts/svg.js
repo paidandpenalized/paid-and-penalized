@@ -11,8 +11,9 @@ const RADIUS = 4;
 export const GAP = 2;
 export const MAX_THICKNESS = 24;
 
-// Coordinates to 0.01 unit, so the markup is short and stable.
+// Coordinates to 0.01 unit (or 0.1), so the markup is short and stable.
 export const r2 = (x) => Math.round(x * 100) / 100;
+export const r1 = (x) => Math.round(x * 10) / 10;
 
 // A drawing this narrow is the phone's (the kit's WIDTH, not a wide variant): it sets its labels and marks smaller.
 export const isNarrow = (width) => width < 400;

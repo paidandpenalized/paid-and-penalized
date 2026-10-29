@@ -6,6 +6,7 @@
 // they keep their size at every width. The story's script lays the same dots on its canvas (hub/client/story/bar-frame.js
 // holds the frame and the dots' places for both).
 import { dotsPath } from '../../web/charts/dots.js';
+import { r1 } from '../../web/charts/svg.js';
 import { fillCopy } from '../../web/render/components.js';
 import { count, money, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
@@ -24,7 +25,6 @@ const H = BAR_Y + BAR_H + GAP + SPLIT_H + 2;
 // How many times the sliver is magnified: the split bar is the sliver this many times wider.
 export const MAGNIFY = 100;
 
-const r1 = (v) => Math.round(v * 10) / 10;
 // A share of the drawing's width or height, to four places (a style property's number).
 const frac = (v) => Math.round(v * 1e4) / 1e4;
 const fill = (key, values) => fillCopy(COPY, key, values);

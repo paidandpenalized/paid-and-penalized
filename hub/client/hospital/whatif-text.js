@@ -1,6 +1,7 @@
 // The what-if's words on a hospital's page: the result sentence the live region says, the handles' aria-valuetext and
 // the hypothetical banner. Pure and browser-safe; every dollar says estimated and its fiscal year. The words are
 // hub/hospital/copy.js's: "would" and "hypothetical", never a verdict.
+import { netShare } from '../../../engine/js/dollars/whatif.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { factor } from '../../../web/render/format.js';
 import { COPY } from '../../hospital/copy.js';
@@ -29,7 +30,7 @@ export function sentence(state, h, peers, { fy, group }) {
   if (!changed(state, h)) return comparison(fill, 'result', { share: h.est.share, median, n: peers.length, group });
   const { net } = outcome(state, h);
   return fill('wiIf', {
-    changes: join(clauses(state, h)), fy, net: usd(net), share: signedShareText(net / h.est.total), actual: usd(h.est.net),
+    changes: join(clauses(state, h)), fy, net: usd(net), share: signedShareText(netShare(net, h.est.total)), actual: usd(h.est.net),
     median: signedShareText(median),
   });
 }

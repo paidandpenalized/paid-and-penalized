@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { mixScale, shareDomain, shareScale, stripAxis, ticksBetween, whatIfAxis, wholePercents } from '../client/scale.js';
+import { mixScale, shareDomain, shareScale, stripAxis, tickText, ticksBetween, whatIfAxis, wholePercents } from '../client/scale.js';
 
 // An invented estimated hospital with these percents of its pay (and one with no estimate, which the domain skips).
 const est = (hrrp, hac, hvbp) => ({ est: { pct: { hrrp, hac, hvbp, net: hrrp + hac + hvbp } } });
@@ -75,6 +75,10 @@ test('wholePercents: the whole percents in the domain, in order', () => {
   assert.deepEqual(wholePercents([-3.4, 3.2]), [-3, -2, -1, 0, 1, 2, 3]);
   assert.deepEqual(wholePercents([-1, 0.6]), [-1, 0]);
   assert.deepEqual(wholePercents([0.2, 0.8]), []);
+});
+
+test('tickText: a tick\'s label, a whole percent with its sign (none at 0)', () => {
+  assert.deepEqual([-2, 0, 1].map(tickText), ['−2%', '0%', '+1%']);
 });
 
 test('shareScale with a device pixel: the gutter\'s edges land on whole device pixels, the slope unchanged', () => {
