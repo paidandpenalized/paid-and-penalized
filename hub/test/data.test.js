@@ -69,3 +69,9 @@ test('loadHub\'s master holds each name as the pages print it: no initialism lef
   const left = [...master.values()].filter((r) => nameText(r.name) !== r.name).length;
   assert.equal(left, 0, `${left} names with an initialism left in lower case`);
 });
+
+// Three initialisms longer than most, each in one name in the pinned master, that the list once missed.
+test('the hub\'s names print SEARHC, CHSLI and LTACH in capitals, never as words', () => {
+  const left = [...loadHub().master.values()].filter((r) => /\b(Searhc|Chsli|Ltach)\b/.test(r.name)).length;
+  assert.equal(left, 0, `${left} names with one of them as a word`);
+});

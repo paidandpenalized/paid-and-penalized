@@ -901,8 +901,9 @@ describe('the hospital page\'s parts, at 1280 px', () => {
   }));
 
   // A part that fails to start (here the what-if's first step, after the swarm and the strips have mounted) leaves no
-  // control that does nothing: the page as the server wrote it, with the one quiet line.
-  it('a part that fails to start leaves the page as the server wrote it, with the quiet line', () => withPage(tabs, { path: '/about/' }, async (page) => {
+  // control that does nothing: the page as the server wrote it, with the one quiet line, and the scroll padding sized to
+  // its sticky row (no observer of the old page's rows writes their zero heights).
+  it('a part that fails to start leaves the page as the server wrote it, with the quiet line and its sticky row measured', () => withPage(tabs, { path: '/about/' }, async (page) => {
     await page.addInitScript(() => {
       const after = Element.prototype.after;
       Element.prototype.after = function (...nodes) {
@@ -912,13 +913,21 @@ describe('the hospital page\'s parts, at 1280 px', () => {
     });
     await visit(page, tabs.base, CUT.path);
     await settle(page);
-    const s = await page.evaluate(() => ({
-      error: document.querySelector('[data-load-error]').checkVisibility(),
-      buttons: [...document.querySelectorAll('[data-peer]')].filter((b) => b.checkVisibility({ visibilityProperty: true })).length,
-      handles: document.querySelectorAll('.st__h').length,
-      canvas: document.querySelectorAll('.hh__cv').length,
-    }));
-    assert.deepEqual(s, { error: true, buttons: 0, handles: 0, canvas: 0 });
+    await settle(page);
+    const s = await page.evaluate(() => {
+      const bar = document.querySelector('[data-peers]');
+      const row = Math.ceil(bar.firstElementChild.getBoundingClientRect().height + parseFloat(getComputedStyle(bar).borderBottomWidth));
+      const root = getComputedStyle(document.documentElement);
+      return {
+        error: document.querySelector('[data-load-error]').checkVisibility(),
+        buttons: [...document.querySelectorAll('[data-peer]')].filter((b) => b.checkVisibility({ visibilityProperty: true })).length,
+        handles: document.querySelectorAll('.st__h').length,
+        canvas: document.querySelectorAll('.hh__cv').length,
+        peersH: root.getPropertyValue('--peers-h').trim() === `${row}px`,
+        scenH: ['', '0px'].includes(root.getPropertyValue('--scen-h').trim()),
+      };
+    });
+    assert.deepEqual(s, { error: true, buttons: 0, handles: 0, canvas: 0, peersH: true, scenH: true });
   }));
 
   // On the what-if's wide axis the swarm's last tick can sit closer to the canvas's edge than half its label: each label

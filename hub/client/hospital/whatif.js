@@ -81,9 +81,10 @@ function paintBar(track, sel, cls, dollars, x) {
 // mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), vbpMax (value-based
 // purchasing's highest factor of any hospital: whatif-state.js vbpMaxOf), fy, still (reduced motion), strips
 // (mountStrips' handle API), swarm (mountSwarm's), values (the dollar rows' scale values for every group:
-// hub/hospital/peers.js sumValues), group ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for
+// hub/hospital/peers.js sumValues), group ({ peers, figures, group }, the page's first), observers (an array the
+// observers it starts that write to the page's root join, so the page can stop them). Returns { setGroup(group) } for
 // the peer toggle.
-export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group }) {
+export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group, observers = [] }) {
   const $ = (sel) => page.querySelector(sel);
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
@@ -442,11 +443,14 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     if (box.top < edge + CLEAR) window.scrollBy(0, box.top - edge - CLEAR);
   }
   if (bar && 'ResizeObserver' in window) {
-    new ResizeObserver(keepInView).observe(bar);
-    new ResizeObserver(() => {
+    const onBar = new ResizeObserver(keepInView);
+    const onScen = new ResizeObserver(() => {
       document.documentElement.style.setProperty('--scen-h', `${scen.hidden ? 0 : Math.ceil(scen.getBoundingClientRect().height)}px`);
       keepInView();
-    }).observe(scen);
+    });
+    onBar.observe(bar);
+    onScen.observe(scen);
+    observers.push(onBar, onScen);
   }
 
   // A control taking focus opens the what-if (the drag's own focus waits for its end: stripAxis).
