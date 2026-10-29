@@ -26,7 +26,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `styles/` (`tokens.css` is the only CSS or JS file under `web/` or `hub/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
   licenses, the favicon.
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: the shared stylesheet,
-  `tokens.css` then the rest of `web/styles/`; a stylesheet per site from its manifest's `styles`, named by its id, which
+  `tokens.css` then the rest of `web/styles/` but the program sites' chart and what-if kit (`KIT_STYLES`, which a program
+  site's own sheet carries); a stylesheet per site from its manifest's `styles`, named by its id, which
   its pages link after the shared one through `layout.js` `page({ sheets })`; one ES module per JS entry; all
   content-hashed), writes the hub's data asset once and computes the shell's facts that every
   page shows (`ctx.assets.shell`), then runs each site in its `SITES` list (hub last). Each site exports

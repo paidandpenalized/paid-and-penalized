@@ -31,9 +31,12 @@ export const COPY = typesetCopy({
   startText: 'Each dot is one hospital, poured out of that bar. Under them sit the {programs} programs as gates. As each gate rises through the crowd, every hospital it passes shifts by that program’s adjustment.',
 
   // Step 2: Readmissions. {cap} the program's cap, {cutN} hospitals cut, {median} the median cut as a share of a
-  // hospital's pay, {zeroN} hospitals at {zero}.
+  // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} it does not list (never counted at $0),
+  // when there are any.
   hrrpHead: 'Readmissions: most hospitals take a small cut.',
-  hrrpText: 'The readmissions program (HRRP) cuts pay, by up to {cap}, when a hospital’s readmissions run above expected. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay. {zeroN} pass through at {zero}.',
+  hrrpText: 'The readmissions program (HRRP) cuts pay, by up to {cap}, when a hospital’s readmissions run above expected. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.',
+  hrrpZero: '{zeroN} pass through at {zero}.',
+  hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut, {cutN} hospitals cut, {onlyN} cut by it alone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
@@ -93,6 +96,8 @@ export const COPY = typesetCopy({
   hospitals: 'hospitals',
   readout: 'Point at, tap or tab to a state for its numbers.',
   keyTitle: 'State net change, est. FY{fy}, % of Medicare inpatient pay',
+  // The title the narrowest phones show instead, on one line.
+  keyTitleShort: 'Net change, est. FY{fy}, % of pay',
   keyCut: '{end} cut',
   keyBonus: '{end} bonus',
   keyMaryland: 'Maryland: not in these programs',

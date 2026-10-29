@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
 import { BIG_STEP, STEP, changed, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { storyFacts, vbpMaxOf as modelVbpMax } from '../model.js';
 import { shareDomain, shareScale } from '../client/scale.js';
 import { BASE, TOTAL, makeHospital as make } from './helpers.js';
 
@@ -204,6 +205,11 @@ test('reach: every percent of pay the what-if can show, at each corner of what a
   const out = make('990014', { hrrpFactor: 0.99, hrrpListed: false });
   assert.ok(reach(out, ctx).every((v) => v >= pct(outcome({ hrrp: 0.99, hvbp: 0.98, hac: true }, out).net)));
   assert.equal(vbpMaxOf([H, ...peers, { est: null }]), 1.01, 'the highest factor among the hospitals the program lists');
+  // One rule for the highest factor, the story's facts' and the what-if's, with one empty case: none listed is null.
+  assert.equal(vbpMaxOf, modelVbpMax, 'the what-if reads the model\'s rule');
+  assert.equal(vbpMaxOf([make('990015', { vbpListed: false }), { est: null }]), null, 'no hospital in the program: no highest factor');
+  assert.equal(storyFacts([H, ...peers]).vbpMax, vbpMaxOf([H, ...peers]));
+  assert.deepEqual(ranges(H, { vbpMax: vbpMaxOf([]) }).hvbp, null, 'with no highest factor, nothing to adjust');
   assert.equal(factorAt(H, (BASE * -0.03 * 100) / TOTAL), 0.97, 'the factor at a share: the inverse of base x (factor - 1)');
 });
 

@@ -17,8 +17,8 @@ import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
 import { COPY } from './copy.js';
 import { tickText, wholePercents } from '../scale.js';
-import { fitBox, stageGeometry } from './geometry.js';
-import { createLayouts } from './layouts.js';
+import { clearOfKey, fitBox, stageGeometry } from './geometry.js';
+import { OUT_A, createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
 const say = (key, values = {}) => COPY[key].replace(/\{(\w+)\}/g, (_, name) => values[name]);
@@ -43,9 +43,11 @@ const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 //   domain     the share axis's [lo, hi]; mapW, mapH: the map's projected size;
 //   panels     the server's drawings: { bar (its panel), barSvg, map (its panel), mapSvg, mapFoot } (elements);
 //   example    the hospital the last step opens on; peersOf(h): its group as { peers (hospitals, h among them), label
-//              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js);
+//              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js); the last step
+//              shows everyone alone instead while the reader follows a hospital with no dot (none());
 //   railHidden () -> whether the step's name sits in the stage (no rail beside it); still: the reduced-motion query.
-// Returns { show(i, { instant }), select(h), regroup(), resize() }.
+// Returns { show(i, { instant }), select(h), none(), regroup(), resize(), stop() }: stop ends any motion and the repaint
+// on a change of theme, and clears the canvas.
 export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH, panels, example, peersOf, railHidden, still }) {
   const ctx = canvas.getContext('2d');
   const N = rows.length;
@@ -83,6 +85,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   let sweepK = -1;
   let crowd = 1;
   let selected = null;
+  // The reader follows a hospital without an estimate (none()): no dot to ring, no group to show.
+  let alone = false;
   let colors = readColors();
   let fonts = readFonts();
   let panelState = '';
@@ -102,8 +106,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       return cache[i];
     }
     if (i === 8) {
-      const h = selected ?? example;
-      const { peers, label } = peersOf(h);
+      const h = alone ? null : selected ?? example;
+      const { peers, label } = h ? peersOf(h) : { peers: [], label: '' };
       cache[8] = make.layYou(h, peers);
       cache[8].info.label = label;
     } else cache[i] = make.layMap(i === 7);
@@ -342,27 +346,44 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = 1;
   }
 
-  // A two-entry key: a dot in each ink with its words.
+  // A key: a dot in each ink (at its opacity, 1 unless given; a fainter one ringed in its full ink, so the key's mark
+  // stays visible) with its words. Returns its box ({ left, right, top, bottom }).
   function key(entries, x, y, f, color, align = 'left') {
     ctx.font = f;
     const widths = entries.map(([words]) => ctx.measureText(words).width);
     const total = widths.reduce((sum, w) => sum + w + 13, 0) + (entries.length - 1) * 16;
-    let at = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
-    entries.forEach(([words, ink], k) => {
+    const left = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+    let at = left;
+    const a = ctx.globalAlpha;
+    entries.forEach(([words, ink, alpha = 1], k) => {
+      ctx.globalAlpha = a * alpha;
       dot(at + 4, y - 4.5, 4, ink);
+      ctx.globalAlpha = a;
+      if (alpha < 1) {
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(at + 4, y - 4.5, 3.5, 0, TAU);
+        ctx.stroke();
+      }
       text(words, at + 13, y, f, color);
       at += widths[k] + 13 + 16;
     });
+    return { left, right: left + total, top: y - 12, bottom: y + 4 };
   }
 
-  // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it.
+  // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it (with
+  // no hospital to show, everyone's alone).
   function youWords(L, a) {
     const { info } = L;
-    if (!rows[info.h]) return;
     ctx.globalAlpha = a;
     const f = font(g.narrow ? 12 : 13.5, 600);
-    text(say('groupOf', { group: info.label, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
     text(say('everyone', { n: count(N) }), g.x0, info.all[0] - 10, f, colors.ink);
+    if (!rows[info.h]) {
+      ctx.globalAlpha = 1;
+      return;
+    }
+    text(say('groupOf', { group: info.label, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
     if (info.median !== null) {
       const x = g.scale.xs(info.median);
       ctx.strokeStyle = colors.ink;
@@ -389,6 +410,24 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     } else if (L.scene === 'you') youWords(L, a);
   }
 
+  // The $0 pile's count (and, at Readmissions' gate, the hospitals it does not list, on a line under it, beside the
+  // fainter dots at the pile's top), just right of the gutter. Kept clear of the key (box: key's) by moving down beside
+  // the pile, where nothing stands right of the gutter.
+  function zeroNote(z, box) {
+    const zero = money(0);
+    const lines = [say('atZero', { n: count(z.n), zero })];
+    if (z.out) lines.push(say('outHrrp', { n: count(z.out) }));
+    const f = font(g.narrow ? 10.5 : 11.5, 400, true);
+    ctx.font = f;
+    const w = Math.max(...lines.map((s) => ctx.measureText(s).width));
+    const step = g.narrow ? 13 : 15;
+    const across = z.x + w > g.x1 ? [g.x1 - w, g.x1] : [z.x, z.x + w];
+    const last = clearOfKey({ box, across, last: Math.max(g.top + 12 + (lines.length - 1) * step, z.y), lines: lines.length, step, floor: z.clear });
+    lines.forEach((s, k) => note(s, z.x, last - (lines.length - 1 - k) * step));
+    // Its box, for a label placed after it to keep clear of.
+    return { left: across[0], right: across[1], top: last - (lines.length - 1) * step - 12, bottom: last + 4 };
+  }
+
   // The counts a scene's piles carry, once its dots have settled.
   function counts(L, a) {
     if (a <= 0) return;
@@ -403,13 +442,24 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
         text(say('startZero', { zero }), left - 12, mid + 15, font(12, 400, true), colors.ink3, 'right');
       } else text(say('startOne', { n: count(info.n), zero }), g.scale.zM, top - 8, font(12, 600), colors.ink, 'center', true);
     }
-    if (info.zero) note(say('atZero', { n: count(info.zero.n), zero }), info.zero.x, info.zero.y);
-    if (info.only) note(say('hacOnly', { n: count(info.only.n), cut: rules.cut }), info.only.x - 5, info.only.y, 'right');
-    // After a gate: what each ink means, under the passed gates at the right (where no pile reaches that high).
+    // After a gate: what each ink means, under the passed gates at the right (where no pile reaches that high); at
+    // Readmissions' gate, the fainter dot of a hospital it does not list too.
+    let box = null;
     if (L.scene === 'machine' && info.s > 0) {
       const entries = [[say('keyCut'), colors.pen], [say('keyNone'), colors.neutral]];
+      if (info.zero?.out) entries.push([say('keyOutHrrp'), colors.neutral, OUT_A]);
       if (info.s === 3) entries.push([say('keyBonus'), colors.rew]);
-      key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
+      box = key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
+    }
+    const zeroBox = info.zero ? zeroNote(info.zero, box) : null;
+    if (info.only) {
+      // Left of the column's top, below the key (and the $0 pile's count) where a tall column would put it into them.
+      const words = say('hacOnly', { n: count(info.only.n), cut: rules.cut });
+      ctx.font = font(g.narrow ? 10.5 : 11.5, 400, true);
+      const w = ctx.measureText(words).width;
+      const right = Math.max(info.only.x - 5, g.x0 + w);
+      const place = (last, other) => clearOfKey({ box: other, across: [right - w, right], last, lines: 1, step: 0 });
+      note(words, info.only.x - 5, place(place(Math.max(g.top + 12, info.only.y), box), zeroBox), 'right');
     }
     if (L.scene === 'net') {
       const f = font(g.narrow ? 11.5 : 13, 400, true);
@@ -513,7 +563,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     // Counts: the old ones leave first, the new ones arrive once the dots have settled.
     if (moving && raw < 0.15) counts(prev, 1 - raw / 0.15);
     counts(cur, moving ? clamp01((raw - 0.8) / 0.2) : 1);
-    const followed = selected ?? (step === 8 ? example : null);
+    const followed = selected ?? (step === 8 && !alone ? example : null);
     if (followed && indexOf.has(followed)) ring(indexOf.get(followed));
   }
 
@@ -549,7 +599,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     draw();
   }
 
-  onThemeChange(() => {
+  const unwatch = onThemeChange(() => {
     colors = readColors();
     fonts = readFonts();
     draw();
@@ -557,11 +607,26 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
 
   measure();
   return {
+    stop() {
+      unwatch();
+      cancelAnimationFrame(raf);
+      raf = 0;
+      cur = null;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    },
     show,
     // Follow a hospital (a decoded asset row with an estimate), or stop (null): it is ringed with its name at every step,
     // and the last step shows it among its group.
     select(h) {
       selected = h;
+      alone = false;
+      regroup();
+    },
+    // Follow a hospital without an estimate: it has no dot, so nothing is ringed and the last step shows everyone alone.
+    none() {
+      selected = null;
+      alone = true;
       regroup();
     },
     // The group changed (another peer mode): the last step's peers rise anew out of everyone.

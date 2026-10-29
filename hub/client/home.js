@@ -49,10 +49,15 @@ function start(root) {
   const statesStep = root.querySelector('#step-states');
 
   // The last step's search (the family search mounts it): once the story is drawn, a hospital it finds is followed here
-  // instead of opened; until then, or for a hospital without an estimate, the pick opens its page as the bar's does.
+  // instead of opened, and the box then names it (not the words typed to find it); until then, or for a hospital without
+  // an estimate, the pick opens its page as the bar's does.
   let find = null;
   if (form) form.addEventListener('hub:pick', (e) => {
-    if (find && find.follow(e.detail.href)) e.preventDefault();
+    const h = find?.follow(e.detail.href);
+    if (!h) return;
+    e.preventDefault();
+    const box = form.querySelector('[role="combobox"]');
+    if (box) box.value = h.name;
   });
 
   // The live layout at once (one sticky stage), so the page does not shift again when the data arrives; until then the
@@ -95,6 +100,9 @@ function start(root) {
     });
   }
 
+  // What the data's arrival has set up so far, undone in reverse if a later part fails. The page's listeners above (the
+  // steps, the address's state, the searches) reach the map, the chart and the find step only once all of them are set up.
+  const undo = [];
   loadHubAsset(src).then(({ hospitals, fy, mapW, mapH, byCcn }) => {
     const rows = storyRows(hospitals);
     const panels = {
@@ -110,29 +118,44 @@ function start(root) {
     }
     canvas.hidden = false;
     // The map's readout and buttons take their room before the stage measures the drawings it registers to.
-    map = mountMap(stageEl);
-    stage = createStage(canvas, {
+    const m = mountMap(stageEl);
+    undo.push(m);
+    let f = null;
+    const s = createStage(canvas, {
       stage: stageEl, rows, facts: storyFacts(hospitals), fy, domain: shareDomain(hospitals), mapW, mapH, panels, example,
-      peersOf: (h) => find.groupOf(h),
+      peersOf: (h) => f.groupOf(h),
       railHidden: () => !wide.matches,
       still,
     });
-    find = mountFind({ story: root, hospitals, fy, example, stage });
-    const followed = followedCcn(window.location.search, (ccn) => Boolean(byCcn.get(ccn)?.est));
-    if (followed) find.select(byCcn.get(followed));
-    stage.show(at, { instant: true });
-    map.active(at === 7);
+    undo.push(s);
+    f = mountFind({ story: root, hospitals, fy, example, stage: s });
+    undo.push(f);
+    // A hospital the address follows: on the chart and the card, or, without an estimate, on the card with its status.
+    const followed = byCcn.get(followedCcn(window.location.search, (ccn) => byCcn.has(ccn)));
+    if (followed?.est) f.select(followed);
+    else if (followed) f.note(followed);
+    s.show(at, { instant: true });
+    m.active(at === 7);
     const code = named();
-    if (code) map.pin(code);
+    if (code) m.pin(code);
+    // Everything is set up: the page's listeners may use it from here on.
+    map = m;
+    stage = s;
+    find = f;
     root.classList.add('story--drawn');
+    // After a resize (or the fonts' arrival): the readout's height first, then the stage measures the map under it.
     const again = () => {
+      map.fit();
       stage.resize();
       steps.refresh();
     };
     if ('ResizeObserver' in window) new ResizeObserver(again).observe(stageEl);
     if (document.fonts) document.fonts.ready.then(again);
   }).catch(() => {
-    // No data: the page as the server wrote it.
+    // No data, or a part of the page missing: the page as the server wrote it, with nothing set up left running.
+    for (const part of undo.reverse()) part.stop();
+    map = null;
+    stage = null;
     steps.stop();
     root.classList.remove('story--live', 'story--drawn');
     root.classList.add('story--static');

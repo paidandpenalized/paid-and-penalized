@@ -190,6 +190,13 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .ft__asof .ft__note { padding-right: 0; }
   .ft__stamp { position: static; display: inline-block; margin-top: 8px; }
 }
+/* The narrowest phones (and a desktop zoomed to 400%): the chip's net steps under its name, so the name has the chip's
+   whole width before it is cut short. */
+@media (max-width: 400px) {
+  .chip__n { flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; padding-block: 3px; }
+  .chip__t { max-width: 100%; line-height: 1.15; }
+  .chip__v { font-size: 0.75rem; }
+}
 
 @media print {
   .fam { position: static; }

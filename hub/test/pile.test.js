@@ -4,7 +4,7 @@
 // (the Readmissions step: a tall spike just under $0), at a phone's and two desktops' widths and device pixels.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { R_MIN, SQUARE_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../client/pile.js';
+import { R_MIN, SPIKE_DOTS, SQUARE_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../client/pile.js';
 import { shareScale } from '../client/scale.js';
 
 // A fixed stream of numbers in [0, 1) (a linear congruential generator), so every run lays out the same values.
@@ -132,6 +132,41 @@ test('pileLayout widens the bins of a pile that cannot fit at its smallest separ
   assert.equal(s.pos.get(3).y, 210 - 3);
   // A wider bin never reaches into its neighbour or the gutter.
   for (const id of [0, 299]) assert.ok(s.pos.get(id).x + s.r <= flat.zL);
+});
+
+test('pileLayout spike: the bin with the most spike items stands about SPIKE_DOTS dots wide, its neighbours joined in, in value slices', () => {
+  // 150 values within a hair of -1 (the spike) among a smooth spread of cuts, on a 2x desktop's stage.
+  const r = stream(11);
+  const items = Array.from({ length: 1500 }, (_, id) => ({ id, v: id < 150 ? -1 + r() * 0.004 : -r() * 2.5 - 0.01, key: r() }));
+  const isSpike = (it) => it.id < 150;
+  const scale = shareScale({ x0: 40, x1: 572, gutter: 24, domain: [-3, 1], px: 0.5 });
+  const opts = { base: 700, top: 110, dMax: 3.8, dMin: 1.5, gap: (d) => Math.max(0.5, d * 0.24), px: 0.5 };
+  const plain = pileLayout(items, scale, opts);
+  const layout = pileLayout(items, scale, { ...opts, spike: isSpike });
+  assert.equal(plain.spike, null, 'no block unless asked');
+  assert.ok(layout.fits);
+  check(layout, items, opts, scale);
+  const { d, m } = layout;
+  const xs = (list) => new Set(list.map(({ id }) => layout.pos.get(id).x));
+  const spikeXs = xs(items.filter(isSpike));
+  assert.ok(m === 1 && spikeXs.size >= SPIKE_DOTS, `the spike spans ${spikeXs.size} dot columns`);
+  // The block: its dots' outer edges, and every item inside its span is in it (no neighbour bin overlaps it).
+  const { left, right, top } = layout.spike;
+  assert.ok(right - left >= (SPIKE_DOTS - 1) * d, 'the block is a few dots wide');
+  for (const it of items) {
+    const p = layout.pos.get(it.id);
+    if (isSpike(it)) assert.ok(p.x - layout.r >= left - 1e-9 && p.x + layout.r <= right + 1e-9 && p.y - layout.r >= top - 1e-9);
+  }
+  // Within the block, values run left to right (value slices).
+  const inBlock = items.filter((it) => { const { x } = layout.pos.get(it.id); return x >= left && x <= right; }).sort((a, b) => a.v - b.v);
+  for (let i = 1; i < inBlock.length; i++) assert.ok(layout.pos.get(inBlock[i].id).x >= layout.pos.get(inBlock[i - 1].id).x - 1e-9);
+  // Shorter than the one-dot thread it was.
+  const tall = (lay) => Math.max(...items.filter(isSpike).map((it) => lay.pos.get(it.id).y)) - Math.min(...items.filter(isSpike).map((it) => lay.pos.get(it.id).y));
+  assert.ok(tall(layout) < tall(plain), 'the spike stands as a block, not a thread');
+  // Bins already that wide (a pile that widened) stand as they are: the block is the spike's own bin.
+  const narrow = pileLayout(items, scale, { ...opts, base: 260, dMin: 3, spike: isSpike });
+  assert.ok(narrow.m >= 2 && narrow.spike, `bins of ${narrow.m}, a block`);
+  check(narrow, items, { ...opts, base: 260, dMin: 3 }, scale);
 });
 
 test('pileLayout uses the largest pitch that fits, and dMax when every column fits at once', () => {

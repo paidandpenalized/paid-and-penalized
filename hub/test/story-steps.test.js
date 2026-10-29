@@ -2,7 +2,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { standIn } from '../../web/test/dom.js';
-import { activeStep, mountSteps } from '../client/story/steps.js';
+import { PHONE_RISE, activeStep, mountSteps, phoneFocus } from '../client/story/steps.js';
+
+test('phoneFocus: a phone\'s step is read once its words have risen most of the way up the window above the chart', () => {
+  // A 246 px window between the header (100) and the chart (346): the step turns once its words' top is three
+  // quarters of the way up.
+  assert.ok(PHONE_RISE >= 0.7, 'most of the window');
+  assert.equal(phoneFocus(346, 100), 346 - 246 * PHONE_RISE);
+  // A tall window: no more than 200 px above the chart.
+  assert.equal(phoneFocus(700, 100), 500);
+  // Words that fit the window show nearly whole when their step turns: the longest step at 320 px (221 px), its top on
+  // the focus line.
+  assert.ok((346 - phoneFocus(346, 100)) / 221 > 0.8);
+});
 
 test('activeStep picks the last step whose top has passed the focus line, the first before any has', () => {
   assert.equal(activeStep([100, 900, 1700], 500), 0);

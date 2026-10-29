@@ -6,8 +6,8 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { hubAsset } from '../../hub/asset.js';
-import { loadHub } from '../../hub/data.js';
-import { hubHospitals, shellFacts, storyFacts } from '../../hub/model.js';
+import { hubModel } from '../../hub/data.js';
+import { shellFacts } from '../../hub/model.js';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
@@ -59,12 +59,12 @@ export function mergeEntries(...sets) {
 // The build's context for the sites. The hub's one browser asset (every hospital's dollars and place,
 // hub-hospitals.<hash>.json) is written once, and the facts every page's shell shows (hub/model.js's shellFacts, and
 // hubUrl: the asset's path) are computed once and handed to every page as ctx.assets.shell. A change to the dollar
-// estimates changes the facts on every page, the hub's and a program site's alike. `assets` (what buildAssets
-// returned) is not edited: createContext copies it with the shell added.
+// estimates changes the facts on every page, the hub's and a program site's alike. The hospitals and their story facts
+// are hub/data.js hubModel's, which the hub's pages read too. `assets` (what buildAssets returned) is not edited:
+// createContext copies it with the shell added.
 export function buildContext({ outDir, env, assets }) {
-  const hub = loadHub();
-  const hospitals = hubHospitals(hub);
-  const facts = shellFacts({ facts: storyFacts(hospitals), builtAt: hub.builtAt, fy: hub.fy });
+  const { hub, hospitals, facts: story } = hubModel();
+  const facts = shellFacts({ facts: story, builtAt: hub.builtAt, fy: hub.fy });
   const hubUrl = writeHashed(join(outDir, 'assets'), 'hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub)));
   return createContext({ outDir, env, assets, shell: { ...facts, hubUrl } });
 }

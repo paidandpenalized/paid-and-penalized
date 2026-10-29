@@ -46,16 +46,27 @@ export function hubHospitals({ dollars, master, tdr }) {
   });
 }
 
+// The highest value-based purchasing payment factor of any hospital the program lists (hospitals: hubHospitals', or the
+// browser asset's rows; a row without an estimate counts for nothing), or null when it lists none. The story's facts and
+// the hospital page's what-if (the top of its value-based purchasing range) both read it.
+export function vbpMaxOf(hospitals) {
+  let max = null;
+  for (const { est } of hospitals) if (est?.vbpListed && (max === null || est.vbpFactor > max)) max = est.vbpFactor;
+  return max;
+}
+
 // The story's facts, over the hospitals with an estimate (`n`). Dollars are whole dollars, negative when money is taken.
 //   pay       estimated Medicare inpatient pay, all of them added
 //   net       the three programs' dollars added; notPaid is its opposite (what hospitals are not paid)
 //   vbpBonus  the value-based purchasing bonuses (the positive HVBP dollars); gross = notPaid + vbpBonus is all the
 //             money the programs move, and share = gross / pay
-//   hrrp*     Readmissions: hospitals with a cut (hrrpCut) and with none (hrrpZero), and the dollars (hrrpSum)
+//   hrrp*     Readmissions: hospitals with a cut (hrrpCut), in the program at $0 (hrrpZero) and not in it (hrrpOut: a
+//             hospital the program does not list is never counted at $0), and the dollars (hrrpSum)
 //   hac*      hospital-acquired conditions: hospitals with a cut (hacCut), those cut by it alone (hacOnly: no Readmissions
 //             cut), and the dollars (hacSum)
-//   vbp*      value-based purchasing: hospitals with a bonus, a cut or $0 (which includes hospitals outside the program),
-//             the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax)
+//   vbp*      value-based purchasing: hospitals with a bonus, a cut, in the program at $0 (vbpZero) and not in it
+//             (vbpOut), the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax:
+//             vbpMaxOf)
 //   net*      hospitals whose three programs add to a cut, a bonus or $0
 export function storyFacts(hospitals) {
   const est = hospitals.filter((h) => h.est).map((h) => h.est);
@@ -67,14 +78,15 @@ export function storyFacts(hospitals) {
   const notPaid = -net;
   const vbpBonus = est.reduce((total, e) => total + Math.max(e.hvbp, 0), 0);
   const gross = notPaid + vbpBonus;
-  const listed = est.filter((e) => e.vbpListed);
   return {
     n: est.length, pay, net, notPaid, vbpBonus, gross, share: gross / pay,
-    hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrp === 0), hrrpSum: sum('hrrp'),
+    hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrpListed && e.hrrp === 0), hrrpOut: count((e) => !e.hrrpListed),
+    hrrpSum: sum('hrrp'),
     hacCut: count((e) => e.hac < 0), hacOnly: count((e) => e.hrrp === 0 && e.hac < 0), hacSum: sum('hac'),
-    vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.hvbp === 0), vbpNet: sum('hvbp'),
+    vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.vbpListed && e.hvbp === 0),
+    vbpOut: count((e) => !e.vbpListed), vbpNet: sum('hvbp'),
     netCut: count((e) => e.net < 0), netBonus: count((e) => e.net > 0), netZero: count((e) => e.net === 0),
-    vbpMax: listed.length ? Math.max(...listed.map((e) => e.vbpFactor)) : null,
+    vbpMax: vbpMaxOf(hospitals),
   };
 }
 

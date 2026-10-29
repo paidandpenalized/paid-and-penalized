@@ -31,9 +31,9 @@ const round4 = (x) => toUnit(x, DP);
 const floor4 = (x) => Math.floor(x * 10 ** DP + SAME) / 10 ** DP;
 const same = (a, b) => Math.abs(a.hrrp - b.hrrp) < SAME && Math.abs(a.hvbp - b.hvbp) < SAME && a.hac === b.hac;
 
-// The highest value-based purchasing factor of any hospital the program lists (hospitals: every decoded row): the top of
-// ranges' value-based purchasing range.
-export const vbpMaxOf = (hospitals) => Math.max(...hospitals.filter((x) => x.est?.vbpListed).map((x) => x.est.vbpFactor));
+// The highest value-based purchasing factor of any hospital the program lists (hospitals: every decoded row; null when
+// it lists none): the top of ranges' value-based purchasing range. The model's one rule, which the story's facts use too.
+export { vbpMaxOf } from '../../model.js';
 
 // What a reader may set for h: { hrrp: [0.97, 1], hvbp: [0.98, vbpMax] }, each null when h is not in the program.
 // Readmissions reaches its cap (HRRP_CAP_PCT); value-based purchasing runs from the whole withhold kept

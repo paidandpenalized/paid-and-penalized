@@ -103,9 +103,13 @@ test('storyFacts adds up to the dollar file', () => {
   assert.ok(facts.share > 0 && facts.share < 0.01, `share ${facts.share}`);
 });
 
-test('storyFacts counts each program\'s hospitals so they partition the estimated ones', () => {
-  assert.equal(facts.hrrpCut + facts.hrrpZero, facts.n);
-  assert.equal(facts.vbpBonusN + facts.vbpCutN + facts.vbpZero, facts.n);
+test('storyFacts counts each program\'s hospitals so they partition the estimated ones; one the program does not list is never $0 there', () => {
+  assert.equal(facts.hrrpCut + facts.hrrpZero + facts.hrrpOut, facts.n);
+  assert.equal(facts.vbpBonusN + facts.vbpCutN + facts.vbpZero + facts.vbpOut, facts.n);
+  assert.equal(facts.hrrpZero, estimated.filter((h) => h.est.hrrpListed && h.est.hrrp === 0).length, 'at $0: in the program');
+  assert.equal(facts.hrrpOut, estimated.filter((h) => !h.est.hrrpListed).length);
+  assert.equal(facts.vbpOut, estimated.filter((h) => !h.est.vbpListed).length);
+  assert.ok(facts.hrrpOut > 0 && facts.vbpOut > 0, 'some hospitals are in neither file');
   assert.ok(facts.hacOnly > 0 && facts.hacOnly <= facts.hacCut);
   assert.equal(facts.hacOnly, estimated.filter((h) => h.est.hrrp === 0 && h.est.hac < 0).length);
   const listed = estimated.filter((h) => h.est.vbpListed);
@@ -124,8 +128,8 @@ test('storyFacts on invented hospitals: a bonus, a cut, a HAC-only hospital, one
   ];
   assert.deepEqual(storyFacts(list), {
     n: 4, pay: 5000, net: -35, notPaid: 35, vbpBonus: 35, gross: 70, share: 70 / 5000,
-    hrrpCut: 2, hrrpZero: 2, hrrpSum: -35, hacCut: 1, hacOnly: 1, hacSum: -25,
-    vbpBonusN: 2, vbpCutN: 1, vbpZero: 1, vbpNet: 25, netCut: 3, netBonus: 1, netZero: 0, vbpMax: 1.004,
+    hrrpCut: 2, hrrpZero: 2, hrrpOut: 0, hrrpSum: -35, hacCut: 1, hacOnly: 1, hacSum: -25,
+    vbpBonusN: 2, vbpCutN: 1, vbpZero: 0, vbpOut: 1, vbpNet: 25, netCut: 3, netBonus: 1, netZero: 0, vbpMax: 1.004,
   });
   // No hospital in HVBP: no highest factor.
   assert.equal(storyFacts([fake('990006', 'ZZ', { vbpListed: false })]).vbpMax, null);

@@ -6,16 +6,16 @@ import assert from 'node:assert/strict';
 import { BED_BAND_EDGES, PEER_MODES, bedBand, median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { fillCopy } from '../../web/render/components.js';
-import { count, dollars } from '../../web/render/format.js';
+import { count } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { COPY as STORY_COPY } from '../client/story/copy.js';
-import { cardModel, peerLine } from '../client/story/find.js';
+import { cardModel, peerLine, statusModel } from '../client/story/find.js';
 import { lineOf, stateFromHash } from '../client/story/map.js';
 import { loadHub } from '../data.js';
 import { stateLine, statesMap } from '../home/states.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { groupName, peersOf } from '../hospital/peers.js';
-import { signedShareText } from '../hospital/text.js';
+import { signedMoney, signedShareText } from '../hospital/text.js';
 import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
 import { decodedHub } from './helpers.js';
 
@@ -87,8 +87,9 @@ test('cardModel: the hospital\'s place, net, programs and peers; a hospital outs
   const vbp = m.rows.find((r) => r.key === 'programVbp');
   assert.deepEqual(vbp, { key: 'programVbp', label: 'Value-based purchasing', text: 'Not in this program', kind: 'na' });
   const hrrp = m.rows.find((r) => r.key === 'programHrrp');
-  assert.equal(hrrp.text, `${dollars(out.est.hrrp, { sign: true })} ${out.est.hrrp < 0 ? 'cut' : out.est.hrrp > 0 ? 'bonus' : 'no change'}`);
-  assert.equal(m.usd, dollars(out.est.net, { sign: true }));
+  // Dollars as the hospital's own page prints them (−$3.2M), so the card and the page agree.
+  assert.equal(hrrp.text, `${signedMoney(out.est.hrrp)} ${out.est.hrrp < 0 ? 'cut' : out.est.hrrp > 0 ? 'bonus' : 'no change'}`);
+  assert.equal(m.usd, signedMoney(out.est.net));
   assert.equal(m.pct, signedShareText(out.est.share));
   assert.equal(m.pen, out.est.net < 0);
   assert.match(m.netWords, new RegExp(`^Estimated FY${fy} net `));
@@ -109,6 +110,25 @@ test('cardModel: the hospital\'s place, net, programs and peers; a hospital outs
   assert.equal(cardModel({ ...example, beds: null, teach: null }, [example], 'state', fy).place, `${example.city}, ${example.state}. Teaching status not reported.`);
   // A record without a city still has a place.
   assert.match(cardModel({ ...example, city: null }, [example], 'state', fy).place, new RegExp(`^${example.state}\\. `));
+});
+
+test('statusModel: a hospital without an estimate gets the card the hospital page gives it: its place, its status and why', () => {
+  const maryland = hospitals.find((h) => h.status === 'maryland');
+  const none = hospitals.find((h) => h.status === 'no-inputs');
+  assert.ok(maryland && none, 'a Maryland hospital and one with no inputs');
+  const md = statusModel(maryland, fy);
+  assert.deepEqual(
+    { ccn: md.ccn, name: md.name, status: md.status, why: md.why, href: md.href },
+    { ccn: maryland.ccn, name: maryland.name, status: HOSPITAL_COPY.statusMaryland, why: HOSPITAL_COPY.statusMarylandText, href: hospitalPathOf('hub', maryland.ccn) },
+  );
+  assert.match(md.place, new RegExp(`^${maryland.city}, MD\\. `));
+  const no = statusModel(none, fy);
+  assert.equal(no.status, HOSPITAL_COPY.statusNoInputs);
+  assert.equal(no.why, fillCopy(HOSPITAL_COPY, 'statusNoInputsText', { fy: String(fy) }));
+  for (const m of [md, no]) {
+    const said = JSON.stringify(m);
+    for (const bad of ['NaN', 'undefined', 'Infinity', 'null', '$0']) assert.ok(!said.includes(bad), `${m.ccn}: ${bad}`);
+  }
 });
 
 test('the states\' readout: each state\'s line as its title on the map (a normal state, and Maryland outside these programs)', () => {

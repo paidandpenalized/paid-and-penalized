@@ -124,6 +124,44 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
+// Phones of every height: each step's words fit the window between the header and the pinned chart, so none scrolls
+// behind the chart (the chart's share and the words' size follow the window's height on short phones), and By state
+// keeps its parts apart: the step's name, then the readout (as tall as its longest line, so the map never moves under
+// the dots when a long line shows), then the map and its key, all inside the chart.
+for (const [width, height] of [[320, 640], [375, 667], [390, 844], [414, 896]]) {
+  describe(`the phone story at ${width}×${height}`, () => {
+    const tabs = useContext(shared, { width, height });
+    it('every step\'s words fit above the chart, and By state\'s parts stand apart inside it', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await drawn(page);
+      const fit = await page.evaluate(() => {
+        const head = document.querySelector('.topbar').getBoundingClientRect().bottom;
+        const stage = document.querySelector('.stage').getBoundingClientRect().height;
+        const room = window.innerHeight - stage - head - 24;
+        return [...document.querySelectorAll('.story > .step')].slice(1, 8).map((s) => ({
+          id: s.id, tall: s.classList.contains('step--tall'), words: Math.round(s.querySelector('.step__in').getBoundingClientRect().height), room: Math.round(room),
+        }));
+      });
+      for (const f of fit) assert.ok(!f.tall && f.words <= f.room, `${f.id}: ${f.words} px of words in ${f.room} px`);
+      await readStep(page, 7);
+      const box = (sel) => page.evaluate((q) => { const r = document.querySelector(q).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height }; }, sel);
+      const parts = async () => ({ stage: await box('.stage'), name: await box('.nowstep li.is-now'), readout: await box('.readout'), map: await box('.smap'), foot: await box('.mapfoot') });
+      const p = await parts();
+      assert.ok(p.name.bottom <= p.readout.top + 0.5, 'the step\'s name above the readout');
+      assert.ok(p.readout.top >= p.stage.top && p.readout.bottom <= p.map.top + 0.5, 'the readout inside the chart, above the map');
+      assert.ok(p.map.bottom <= p.foot.top + 0.5 && p.foot.bottom <= p.stage.bottom + 0.5, 'the map, then its key, inside the chart');
+      assert.ok(p.map.height >= 60, `a map ${Math.round(p.map.height)} px tall`);
+      // The longest line the readout can show (Maryland's) leaves the map where it was.
+      await page.locator('.smalls [data-st="MD"]').focus();
+      await settle(page);
+      assert.match(await page.locator('.readout').textContent(), /^Maryland: not in these programs/);
+      const q = await parts();
+      assert.deepEqual([q.readout.height, q.map.top, q.map.height], [p.readout.height, p.map.top, p.map.height], 'the readout keeps its height; the map stays put');
+      await assertQuiet(seen, `the phone story at ${width}×${height}`);
+    }));
+  });
+}
+
 // The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
 // the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
 // the 'hub:select' event name it, the worksheet below fills in for it), and a hospital without a teaching status has that
@@ -169,6 +207,7 @@ describe('states you can read, and Find yours', () => {
     await page.locator('main form#find [role="option"]').first().waitFor();
     await box.press('Enter');
     await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+    assert.equal(await box.inputValue(), await page.locator('.card__nm').textContent(), 'the box names the hospital followed, not what was typed');
     const s = await page.evaluate(() => ({
       path: window.location.pathname, selected: window.selected, step: document.querySelector('.story').dataset.step,
       teach: document.querySelector('.peers [data-peer="teach"]').getAttribute('aria-disabled'),
@@ -192,6 +231,42 @@ describe('states you can read, and Find yours', () => {
     await page.locator('.peers [data-peer="teach"]').click();
     assert.deepEqual(await pressed(), ['teach']);
     await assertQuiet(seen, 'find yours');
+  }));
+
+  // A followed hospital without an estimate (Maryland's all-payer model, or no inputs): the card names it with its status
+  // and why, as its page does, and links to that page; it shows no figure, and the chart rings nothing for it.
+  it('a ?h= hospital without an estimate is on the card with its status and why, and no figure', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    const picks = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      const of = (status) => rows.find((r) => r[at('status')] === status);
+      return [['m', 'Not in these programs', of('m')[at('ccn')], of('m')[at('name')]], ['n', 'No estimate', of('n')[at('ccn')], of('n')[at('name')]]];
+    });
+    for (const [, status, ccn, name] of picks) {
+      await visit(page, tabs.base, `/?h=${ccn}`);
+      await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+      await page.locator('#step-find').scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+      await settle(page);
+      const c = await page.evaluate(() => {
+        const card = document.querySelector('[data-card]');
+        const shown = (sel) => card.querySelector(sel).checkVisibility();
+        return {
+          name: card.querySelector('.card__nm').textContent, status: card.querySelector('.card__pct').textContent,
+          why: card.querySelector('.card__netl').textContent, href: card.querySelector('.card__go').getAttribute('href'),
+          example: shown('.card__ex'), rows: shown('.card__rows'), peer: shown('.card__peer'), text: card.innerText,
+          toggle: document.querySelector('.story .peers').checkVisibility(),
+        };
+      });
+      assert.equal(c.toggle, false, 'no peer toggle: the chart has no dot for it to group');
+      assert.equal(c.name, name);
+      assert.equal(c.status, status);
+      assert.ok(c.why.length > 20, c.why);
+      assert.equal(c.href, `/hospital/${ccn.toLowerCase()}/`);
+      assert.deepEqual([c.example, c.rows, c.peer], [false, false, false], 'no example lead, no rows, no peers');
+      assert.doesNotMatch(c.text, /\$|NaN|undefined|null|Infinity/, 'no figure on the card');
+    }
+    await assertQuiet(seen, 'a followed hospital without an estimate');
   }));
 
   // The worksheet in "Methods, in brief" fills in for the hospital the last step finds: its CCN, lines that add up as
@@ -401,6 +476,32 @@ for (const width of [390, 1280]) {
       assert.equal((await at(0)).shown, 'visible', 'focused, it stays shown at the top');
       await assertQuiet(seen, `the masthead's trip at ${width} px`);
     }));
+
+    // Reduced motion: no trip, but still one wordmark at a time. At the top the masthead's shows and the header's waits
+    // hidden (with the tagline); once the masthead has gone under the header, the header's shows at once.
+    it('with reduced motion, one wordmark at a time: the masthead\'s at the top, the header\'s once it has scrolled under', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.evaluate(() => document.fonts.ready);
+      const at = async (y) => {
+        await page.evaluate((top) => window.scrollTo(0, top), y);
+        await settle(page);
+        await settle(page);
+        return page.evaluate(() => {
+          const seen = (el) => getComputedStyle(el).visibility === 'visible' && Number(getComputedStyle(el).opacity) > 0.99;
+          const tag = document.querySelector('.fam__tag');
+          return { head: seen(document.querySelector('.fam a.wordmark')), tag: getComputedStyle(tag).display === 'none' ? null : seen(tag), moved: document.querySelector('.hero__m1').style.transform !== '' };
+        });
+      };
+      const tag = (on) => (width >= 1100 ? on : null);
+      assert.equal(await page.evaluate(() => document.documentElement.classList.contains('dock-ready')), true, 'the script has taken over');
+      assert.deepEqual(await at(0), { head: false, tag: tag(false), moved: false }, 'at the top: the masthead\'s wordmark only');
+      assert.deepEqual(await at(600), { head: true, tag: tag(true), moved: false }, 'scrolled under: the header\'s');
+      assert.deepEqual(await at(0), { head: false, tag: tag(false), moved: false }, 'back at the top');
+      await at(600);
+      await page.focus('.fam a.wordmark');
+      assert.equal((await at(0)).head, true, 'focused, it stays shown at the top');
+      await assertQuiet(seen, `the masthead with reduced motion at ${width} px`);
+    }));
   });
 }
 
@@ -449,6 +550,43 @@ describe('the front page without a part its scripts need', () => {
       stage: getComputedStyle(document.querySelector('.stage')).display,
     }));
     assert.deepEqual(f, { ready: true, head: 'visible', story: ['story--static'], stage: 'contents' });
+  }));
+});
+
+// A front page whose story fails after the map and the chart have been set up (here the card's lead is cut from the
+// served page, which only the last step's script needs): the story falls back to the server's page and nothing the
+// script set up is left running. The states are no buttons, the readout and its live region stay quiet, and a state
+// named in the address later pins nothing.
+describe('the front page when its story fails part way', () => {
+  const tabs = useContext(shared, { width: 1280 });
+  it('undoes the map and the chart it had set up', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.route((url) => url.pathname === '/', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text()).replace('class="card__ex"', 'class="card__lead"');
+      await route.fulfill({ response, body });
+    });
+    await visit(page, tabs.base, '/');
+    await page.waitForFunction(() => document.querySelector('.story').classList.contains('story--static'));
+    await settle(page);
+    const wired = () => page.evaluate(() => ({
+      story: [...document.querySelector('.story').classList].filter((c) => c !== 'story').sort(),
+      states: [...document.querySelectorAll('.smap .st[data-st]')].filter((el) => el.hasAttribute('role') || el.hasAttribute('tabindex') || el.hasAttribute('aria-pressed')).length,
+      buttons: [...document.querySelectorAll('.smalls [data-st]')].filter((el) => el.hasAttribute('aria-pressed')).length,
+      pinned: document.querySelectorAll('.smap .is-pin, .smap .is-on, .smalls .is-pin').length,
+      said: document.querySelector('[data-said]').textContent,
+      readout: document.querySelector('.readout').hidden,
+      canvas: document.querySelector('.stage__cv').hidden,
+    }));
+    const expected = { story: ['story--static'], states: 0, buttons: 0, pinned: 0, said: '', readout: true, canvas: true };
+    assert.deepEqual(await wired(), expected, 'nothing set up is left behind');
+    await page.evaluate(() => { window.location.hash = '#state=TX'; });
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+    await settle(page);
+    await settle(page);
+    assert.deepEqual(await wired(), expected, 'a state named later pins nothing and says nothing');
+    assert.deepEqual(errors, []);
   }));
 });
 

@@ -42,15 +42,32 @@ const STEP = 0.1;
 export const R_MIN = 0.4;
 // The most sub-columns a bin widens to before the pile gives up on fitting (never reached by the story's piles).
 const M_MAX = 64;
+// About how many dots across a spike's block stands (pileLayout's spike): enough to read as a column, not a thread.
+export const SPIKE_DOTS = 3;
+
+// The rows a bin of n items in k dot-wide sub-columns needs, in the mode's terms (mirror: its taller half's, about the
+// middle row).
+const rowsFor = (n, k, mirror) => {
+  const r = Math.ceil(n / k);
+  return mirror ? 2 * Math.floor(r / 2) + 1 : r;
+};
 
 // Each item into its bin at pitch d, m sub-columns a bin (so bins are m·d wide, and their centers are where a column of
-// that width would be): { bins: [{ x, m, list, zero }], height: the tallest bin's rows times d in the mode's terms
-// (mirror: the rows its taller half needs), zeros }. $0's columns stay one dot wide, wrapped across the gutter.
-function binItems(items, scale, d, m, mirror) {
+// that width would be): { bins: [{ x, m, list, zero, spike, side, at, span }], height: the tallest bin's rows times d in
+// the mode's terms (mirror: the rows its taller half needs), rest: the same without $0's, zeros }. A bin's side is -1
+// (cuts) or 1 (bonuses), at its first place out from $0 and span how many places it covers, in bin widths. $0's columns
+// stay one dot wide, wrapped across the gutter. spike (a test of an item, or null): the bin holding the most such items
+// joins its neighbours on its side of $0 into one bin about SPIKE_DOTS dots wide (k bins of m, with every item of the k;
+// bins already that wide stand as they are), so a spike stands as a block of separate dots.
+function binItems(items, scale, d, m, mirror, spike) {
   const byKey = new Map();
   const zeros = [];
   const { zL, zR, zM } = scale;
   const w = m * d;
+  const binAt = (key) => {
+    const c = key < 0 ? -1 - key : key - 1;
+    return { x: key < 0 ? zL - (c + 0.5) * w : zR + (c + 0.5) * w, m, list: [], zero: false, spike: false, side: Math.sign(key), at: c, span: 1 };
+  };
   for (const it of items) {
     if (it.v === 0) {
       zeros.push(it);
@@ -60,8 +77,29 @@ function binItems(items, scale, d, m, mirror) {
     const c = Math.floor(((it.v < 0 ? zL - x : x - zR) / w) + 1e-9);
     const key = it.v < 0 ? -1 - c : 1 + c;
     let bin = byKey.get(key);
-    if (!bin) byKey.set(key, (bin = { x: it.v < 0 ? zL - (c + 0.5) * w : zR + (c + 0.5) * w, m, list: [], zero: false }));
+    if (!bin) byKey.set(key, (bin = binAt(key)));
     bin.list.push(it);
+  }
+  if (spike) {
+    let at = null;
+    let most = 0;
+    for (const [key, bin] of byKey) {
+      const n = bin.list.reduce((t, it) => t + (spike(it) ? 1 : 0), 0);
+      if (n > most) [at, most] = [key, n];
+    }
+    const k = Math.max(1, Math.round(SPIKE_DOTS / m));
+    // Bins already about that wide stand as they are; the block is that bin.
+    if (at !== null && k === 1) byKey.get(at).spike = true;
+    else if (at !== null) {
+      // The k bins around it, counted out from $0 on its side, never across the gutter.
+      const side = Math.sign(at);
+      const c0 = Math.max(0, Math.abs(at) - 1 - Math.floor((k - 1) / 2));
+      const keys = Array.from({ length: k }, (_, j) => side * (c0 + j + 1));
+      const parts = keys.map((key) => byKey.get(key) ?? binAt(key));
+      const block = { x: parts.reduce((t, b) => t + b.x, 0) / k, m: m * k, list: parts.flatMap((b) => b.list), zero: false, spike: true, side, at: c0, span: k };
+      for (const key of keys) byKey.delete(key);
+      byKey.set(side * (c0 + 1), block);
+    }
   }
   const bins = [...byKey.values()];
   if (zeros.length) {
@@ -71,16 +109,57 @@ function binItems(items, scale, d, m, mirror) {
     zeros.forEach((it, k) => cols[k % n].list.push(it));
     bins.push(...cols);
   }
+  return measured(bins, d, mirror, zeros.length);
+}
+
+// Bins with their heights: the tallest bin's (height) and the tallest but $0's (rest, which widening cannot shorten).
+function measured(bins, d, mirror, zeros) {
   let rows = 0;
   let rest = 0;
   for (const bin of bins) {
-    const r = Math.ceil(bin.list.length / bin.m);
-    const need = mirror ? 2 * Math.floor(r / 2) + 1 : r;
+    const need = rowsFor(bin.list.length, bin.m, mirror);
     rows = Math.max(rows, need);
     if (!bin.zero) rest = Math.max(rest, need);
   }
-  // height: the tallest bin's; rest: the tallest but $0's (which widening cannot shorten).
-  return { bins, height: rows * d, rest: rest * d, zeros: zeros.length };
+  return { bins, height: rows * d, rest: rest * d, zeros, m: bins.reduce((most, b) => Math.max(most, b.m), 1) };
+}
+
+// Dot-wide bins (binItems' at m = 1, pitch d) grouped where they are too tall for the room (avail): out from $0 on each
+// side, a bin whose rows do not fit joins the places beyond it (bins or empty places) into one group of k dot-wide
+// sub-columns until they do, at most M_MAX, never past the axis's end; a group's items stand in value slices, lowest on
+// the left. Only the tall parts of a pile widen, so where it is low each dot keeps its own column (pileLayout's
+// adaptive). A spike's block (binItems') stays whole inside its group.
+function adaptBins({ bins, zeros }, scale, d, mirror, avail) {
+  const R = Math.floor(avail / d + 1e-9);
+  const out = bins.filter((b) => b.zero);
+  for (const side of [-1, 1]) {
+    const byAt = new Map(bins.filter((b) => !b.zero && b.side === side).map((b) => [b.at, b]));
+    if (!byAt.size) continue;
+    // The places the axis has on this side: up to its end (lo on the cuts' side, hi on the bonuses').
+    const room = Math.floor((side < 0 ? scale.zL - scale.xs(scale.lo) : scale.xs(scale.hi) - scale.zR) / d + 1e-9);
+    const last = Math.max(...[...byAt.values()].map((b) => b.at + b.span - 1));
+    for (let c = 0; c <= last;) {
+      const first = byAt.get(c);
+      if (!first) {
+        c += 1;
+        continue;
+      }
+      let span = first.span;
+      const list = first.list.slice();
+      let spiked = first.spike;
+      while (rowsFor(list.length, span, mirror) > R && span < M_MAX && c + span < Math.max(room, last + 1)) {
+        const next = byAt.get(c + span);
+        if (next) {
+          list.push(...next.list);
+          spiked = spiked || next.spike;
+          span += next.span;
+        } else span += 1;
+      }
+      out.push({ x: side < 0 ? scale.zL - (c + span / 2) * d : scale.zR + (c + span / 2) * d, m: span, list, zero: false, spike: spiked, slice: span > 1, side, at: c, span });
+      c += span;
+    }
+  }
+  return measured(out, d, mirror, zeros);
 }
 
 // The pile of items ({ id, v: percent, key }) on the scale (shareScale), between `top` and `base` (pixels, base below):
@@ -97,12 +176,20 @@ function binItems(items, scale, d, m, mirror) {
 //               order fills, so an item keeps its place in its column's order when the scale changes and two layouts'
 //               places can be glided between without the stacks folding through their middle line (a change of axis on
 //               the hospital page's strips and swarm). Off by default.
+//   spike       a test of an item (the home story's: the hospitals a step's words point at): the bin holding the most
+//               such items stands about SPIKE_DOTS dots wide, joined with its neighbours (binItems), its sub-columns
+//               holding value slices left to right (as byValue), so the spike reads as a column. Off by default.
+//   adaptive    when no pitch fits with dot-wide bins, only the bins too tall for the room widen (adaptBins: each joins
+//               the places beyond it, at the smallest pitch), not every bin alike, so a pile with one steep spike keeps
+//               its shape elsewhere; when that cannot fit either, every bin widens alike. Off by default (the home
+//               story's piles use it).
 // Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
 // below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
-// top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when $0's columns, which cannot
+// top, bottom, zero }] (one per dot-wide column), zeroCount, fits, spike: { left, right, top } (the spike's block, its
+// dots' outer edges; null without one) }. fits is false only when $0's columns, which cannot
 // widen past the gutter, overflow even at the smallest pitch, or M_MAX sub-columns are not enough; the overfull bins are
 // then packed closer than a pitch so the pile stays inside. No input the story can reach does either.
-export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0, byValue = false, ranked = false }) {
+export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = false, px = 0, byValue = false, ranked = false, spike = null, adaptive = false }) {
   const avail = base - top;
   const gapOf = (d) => (typeof gap === 'function' ? gap(d) : gap);
   // The pitches to try, largest first: whole device pixels (or tenths) from dMax down to dMin, while a dot keeps R_MIN.
@@ -130,13 +217,24 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
   search: for (; m <= M_MAX; m++) {
     for (const pitch of pitches) {
       d = pitch;
-      res = binItems(items, scale, d, m, mirror);
+      res = binItems(items, scale, d, m, mirror, spike);
       if (res.height <= avail + 1e-9) break search;
       if (!rest && res.rest <= avail + 1e-9) rest = { res, d, m };
     }
     if (rest) {
       ({ res, d, m } = rest);
       break;
+    }
+    // No pitch fits with dot-wide bins: widen only the bins that are too tall, at the smallest pitch, if that fits.
+    if (adaptive && m === 1) {
+      const least = pitches[pitches.length - 1];
+      const grouped = adaptBins(binItems(items, scale, least, 1, mirror, spike), scale, least, mirror, avail);
+      if (grouped.height <= avail + 1e-9) {
+        ({ m } = grouped);
+        res = grouped;
+        d = least;
+        break;
+      }
     }
   }
   if (m > M_MAX) m = M_MAX;
@@ -145,6 +243,7 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
   const mid = (base + top) / 2;
   const pos = new Map();
   const cols = new Map();
+  let block = null;
   for (const bin of res.bins) {
     const rows = Math.ceil(bin.list.length / bin.m);
     const need = mirror ? 2 * Math.floor(rows / 2) + 1 : rows;
@@ -152,7 +251,7 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
     const sp = need * d <= avail + 1e-9 || need < 2 ? d : (avail - d) / (need - 1);
     // Each item's row and sub-column: a row of m at a time in key order, or (byValue) a value slice per sub-column.
     let at;
-    if (byValue && bin.m > 1) {
+    if ((byValue || bin.spike || bin.slice) && bin.m > 1) {
       at = [];
       const sorted = bin.list.slice().sort((a, b) => a.v - b.v || a.key - b.key);
       for (let j = 0; j < bin.m; j++) {
@@ -177,7 +276,13 @@ export function pileLayout(items, scale, { base, top, dMax, dMin, gap, mirror = 
         col.top = Math.min(col.top, y - d / 2);
         col.bottom = Math.max(col.bottom, y + d / 2);
       } else cols.set(x, { x, n: 1, top: y - d / 2, bottom: y + d / 2, zero: bin.zero });
+      if (bin.spike) {
+        block ??= { left: Infinity, right: -Infinity, top: Infinity };
+        block.left = Math.min(block.left, x - r);
+        block.right = Math.max(block.right, x + r);
+        block.top = Math.min(block.top, y - r);
+      }
     });
   }
-  return { d, r, m, pos, cols: [...cols.values()], zeroCount: res.zeros, fits };
+  return { d, r, m, pos, cols: [...cols.values()], zeroCount: res.zeros, fits, spike: block };
 }

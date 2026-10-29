@@ -143,6 +143,62 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
   });
 });
 
+// A keyboard in the rows that scroll sideways on a phone (the program tabs, a program's numbered section menu): each item
+// that takes the focus is scrolled whole into its row, so the ring and the words show (WCAG 2.4.11). At 390 and at 320 px
+// (a desktop zoomed to 400%).
+for (const width of [390, 320]) {
+  describe(`the header's sideways rows by keyboard at ${width} px`, () => {
+    const tabs = useContext(shared, { width, height: 844 });
+    it('every tab and section link the focus reaches is whole in its row', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+      const seenIn = { tabs: 0, nav: 0 };
+      let entered = false;
+      for (let k = 0; k < 40; k++) {
+        await page.keyboard.press('Tab');
+        const f = await page.evaluate(() => {
+          const a = document.activeElement;
+          const row = a?.closest('.tabs__scroll, .nav');
+          if (!row) return { inHeader: Boolean(a?.closest('header.fam')) };
+          const r = row.getBoundingClientRect();
+          const b = a.getBoundingClientRect();
+          return { inHeader: true, row: row.classList.contains('nav') ? 'nav' : 'tabs', name: a.textContent.trim(), left: b.left - r.left, right: r.right - b.right, scrolls: row.scrollWidth > row.clientWidth };
+        });
+        // From the skip link into the header, through it, and out into the page.
+        if (!f.inHeader && entered) break;
+        entered = entered || f.inHeader;
+        if (!f.row) continue;
+        seenIn[f.row] += 1;
+        assert.ok(f.left >= -0.5 && f.right >= -0.5, `"${f.name}" in the ${f.row} row: ${Math.round(f.left)} px from its left, ${Math.round(f.right)} px from its right`);
+      }
+      assert.ok(seenIn.tabs >= LISTED_PROGRAMS.length && seenIn.nav >= 4, `the focus went through both rows (${JSON.stringify(seenIn)})`);
+      await assertQuiet(seen, `the sideways rows at ${width} px`);
+    }));
+  });
+}
+
+// The narrowest phones (320 px, or a desktop zoomed to 400%): the chip gives the hospital's name the room, its net on a
+// line under it, so a long name still reads as more than a few letters, and the bar stays one row.
+describe('the chip on a 320 px phone', () => {
+  const tabs = useContext(shared, { width: 320, height: 640 });
+  it('names the hospital in more than a few letters, its net under the name, in a bar of one row', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { rows } = await hubRows(page);
+    const row = rows.find((r) => r.status === STATUS_CODES.estimated && r.name.length >= 30);
+    await visit(page, tabs.base, `${PROGRAM_PATH}?h=${row.ccn}`);
+    const chip = page.locator('[data-chip]');
+    await chip.waitFor({ state: 'visible' });
+    const f = await page.evaluate(() => {
+      const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+      const t = box('.chip__t');
+      const v = box('.chip__v');
+      return { name: t.width, nameBottom: t.bottom, netTop: v.top, chip: box('.chip').height, bar: box('.fam__bar').height };
+    });
+    assert.ok(f.name >= 90, `the name has ${Math.round(f.name)} px (some ten letters or more)`);
+    assert.ok(f.netTop >= f.nameBottom - 1, 'the net sits under the name');
+    assert.ok(f.chip <= 46 && f.bar <= BAR, `the chip (${Math.round(f.chip)} px) and the bar (${Math.round(f.bar)} px) stay one row`);
+    await assertNoSideways(page, 'the chip at 320 px');
+    await assertQuiet(seen, 'the chip at 320 px');
+  }));
+});
+
 // On a desktop the row holds All programs and the programs with dollar estimates whole: it neither scrolls nor fades. A
 // placeholder page for a program under consideration has no tab of its own, so none is current.
 describe('the tab row on a desktop', { concurrency: CONCURRENCY }, () => {

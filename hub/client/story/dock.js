@@ -3,8 +3,9 @@
 // where the header's own wordmark takes over. The hero's own spans move (CSS transforms); no copy of the wordmark is
 // added. The header's wordmark waits hidden while the trip is under way and shows once it ends; scrolling back reverses
 // it. Until the script runs, the stylesheet keeps the header's wordmark hidden while the masthead is in view (hub/styles.css);
-// the script marks the root dock-ready as it takes over. Reduced motion: no trip, the header's wordmark shows at once.
-// dockPath is pure; mountDock wires it to the page.
+// the script marks the root dock-ready as it takes over. Reduced motion: no trip, and still one wordmark at a time: the
+// header's waits hidden while the masthead is in view and shows at once when it has scrolled under the header. dockPath is
+// pure; mountDock wires it to the page.
 
 import { clamp } from '../../../engine/js/stats.js';
 import { ease, smooth } from '../paint.js';
@@ -95,8 +96,9 @@ const fromHero = (h, at) => ({ left: h.left + at.dx, top: h.top + at.dy, width: 
 
 // Wires the trip to the front page: its masthead (.hero__mark's two spans) and the header's wordmark. html carries
 // dock-ready once the script has taken over from the stylesheet's first state, dock-trip while the trip is not done (the
-// header's wordmark hidden) and dock-moving while the words are away from home (they draw over the header). The header's
-// wordmark is never hidden while it has focus. Returns nothing; on a page without both wordmarks it only marks the root
+// header's wordmark hidden; with reduced motion, while the masthead has not yet scrolled under the header) and
+// dock-moving while the words are away from home (they draw over the header). The header's wordmark is never hidden
+// while it has focus. Returns nothing; on a page without both wordmarks it only marks the root
 // dock-ready, so the stylesheet's first state stands down and the header's wordmark shows.
 export function mountDock() {
   const hero = document.querySelector('.hero__mark');
@@ -134,14 +136,15 @@ export function mountDock() {
 
   function dock() {
     const p = clamp(window.scrollY / rest.trip, 0, 1);
-    const motion = !still.matches && !head.contains(document.activeElement);
-    const moving = motion && p > 0 && p < 1;
-    root.classList.toggle('dock-trip', motion && p < 1);
+    const focused = head.contains(document.activeElement);
+    const moving = !still.matches && !focused && p > 0 && p < 1;
+    root.classList.toggle('dock-trip', !focused && p < 1);
     root.classList.toggle('dock-moving', moving);
     if (!moving) {
-      // At home (the top of the page) or docked: the words rest in the hero. Docked, the trip ends with the hero's foot
-      // still a few pixels under the header, so the words rest unseen (still read: opacity, not visibility).
-      const docked = !still.matches && p >= 1;
+      // At home (the top of the page), docked, or with reduced motion: the words rest in the hero. Docked (or scrolled as
+      // far), the hero's foot is still a few pixels under the header, so the words rest unseen (still read: opacity, not
+      // visibility).
+      const docked = p >= 1;
       head.style.visibility = head.style.opacity = '';
       for (const w of words) {
         w.style.transform = '';

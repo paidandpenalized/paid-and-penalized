@@ -83,7 +83,7 @@ const across = (x) => `${Math.round((x / W) * 1e4) / 100}%`;
 // the bonuses or, without any, the hospitals at $0. An image whose label is the takeaway. The marks are drawn in a
 // drawing of their own that stretches across the card (its lines keep their width); the words sit over it at a share of
 // the width and a fixed size, the site's chart labels', at every width.
-function histogram({ n, zero, cut, bonus, bins }, { domain, label }) {
+function histogram({ zero, cut, bonus, bins }, { domain, label }) {
   const { zL, zR, zM, k } = shareScale({ x0: 0, x1: W, gutter: GUTTER, domain });
   const at = (v, side) => clamp(side + v * k, 0, W);
   const tallest = Math.max(zero, ...bins.map((b) => b.n));
@@ -112,7 +112,10 @@ function histogram({ n, zero, cut, bonus, bins }, { domain, label }) {
   } else if (zero) {
     labels.push(html`<text class="st__out" x="${across(zR + 4)}" y="${top(zero)}">${fill('histZero', { n: count(zero), zero: money(0) })}</text>`);
   }
-  if (bins.reduce((s, b) => s + b.n, zero) !== n) throw new RangeError('hub home: a histogram\'s bars do not add to its hospitals');
+  // The labels (and the image's words) count the cuts and the bonuses from the hospitals; the bars draw the bins. A value
+  // no bin holds on its side would make them disagree.
+  const drawn = (side) => side.reduce((total, b) => total + b.n, 0);
+  if (drawn(cuts) !== cut || drawn(bonuses) !== bonus) throw new RangeError('hub home: a histogram\'s labels do not count its bars');
   return html`<svg class="st pc__hist" width="100%" height="${H}" role="img" aria-label="${label}" focusable="false">
 <svg class="pc__marks" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}">
 <rect class="st__gut" x="${r1(zL)}" y="${TOP - 6}" width="${GUTTER}" height="${BASE - TOP + 6}"/>

@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ATLAS_ID } from '../../web/charts/geo.js';
 import { nameText } from '../../web/render/format.js';
-import { checkHubInputs, loadHub } from '../data.js';
+import { checkHubInputs, hubModel, loadHub } from '../data.js';
+import { hubHospitals, storyFacts } from '../model.js';
 
 test('the atlas id is exported from the map module and names a pinned input', async () => {
   assert.equal(ATLAS_ID, 'us-atlas-counties-3.0.1');
@@ -25,6 +26,14 @@ test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Re
   for (const r of hub.tdr.hospitals.values()) for (const key of Object.keys(r.c)) assert.equal(typeof hub.tdr.peerMedians[String(r.peer)]?.[key], 'number', 'a peer median for each condition');
   for (const [ccn, h] of hub.tdr.hospitals) assert.equal(h.id, ccn);
   assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
+});
+
+test('hubModel works out the hub\'s hospitals and their story facts from loadHub\'s files once, for the build and the hub\'s pages', () => {
+  const model = hubModel();
+  assert.equal(hubModel(), model, 'memoized');
+  assert.equal(model.hub, loadHub());
+  assert.deepEqual(model.hospitals, hubHospitals(loadHub()));
+  assert.deepEqual(model.facts, storyFacts(model.hospitals));
 });
 
 // Invented inputs: one dollar file, its master and a TDR file.

@@ -11,7 +11,7 @@ import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { BUDGETS, pageWeight } from '../../tools/ci/size-budget.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { US_MAP_CODES } from '../../web/charts/geo.js';
-import { count, dollars, money, pct } from '../../web/render/format.js';
+import { count, money, pct } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
@@ -61,7 +61,9 @@ test('nine steps, each a section with its id, data-step 0 to 8 and a heading; th
 test('every number in the steps\' words is the data\'s, as the page formats it', () => {
   const expect = (i, ...values) => { for (const v of values) assert.ok(words(i).includes(v), `step ${STEP_IDS[i]} lacks ${v}: ${words(i)}`); };
   expect(0, count(facts.n), money(facts.pay), money(facts.gross), pct(facts.share, 2), money(facts.notPaid), money(facts.vbpBonus), `FY${hub.fy}`);
-  expect(2, count(facts.hrrpCut), count(facts.hrrpZero), '3%');
+  expect(2, count(facts.hrrpCut), count(facts.hrrpZero), count(facts.hrrpOut), '3%');
+  // At $0 counts only the hospitals in the program (as the program's card below does); the rest are said apart.
+  assert.match(words(2), new RegExp(`${count(facts.hrrpZero)} pass through at \\$0, and ${count(facts.hrrpOut)} are not in the program\\.`));
   const cuts = hospitals.filter((h) => h.est && h.est.hrrp < 0).map((h) => -h.est.hrrp / h.est.total);
   expect(2, pct(median(cuts), 2));
   expect(3, count(facts.hacCut), count(facts.hacOnly), '1%');
@@ -168,6 +170,8 @@ test('the states map: a path per state and DC with its title line, shaded by its
   assert.ok(textOf(key).includes(`${pct(-end, 1)} cut`));
   assert.ok(textOf(key).includes(`${pct(end, 1, { sign: true })} bonus`));
   assert.ok(textOf(key).includes('Maryland: not in these programs'));
+  // Its title in full, and a short one the narrowest phones show instead (one line at 320 px), each with the year.
+  assert.match(key, new RegExp(`<p class="dkey__t"><span class="dkey__long">State net change, est\\. FY${hub.fy}, % of Medicare inpatient pay</span><span class="dkey__short">Net change, est\\. FY${hub.fy}, % of pay</span></p>`));
   // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing. It
   // is for the eye; a screen reader hears a state's line from the quiet region beside it, which the script fills when a
   // state is focused or picked (never when the pointer only passes over one).
@@ -220,7 +224,7 @@ test('the example card: the example hospital, its place, beds, teaching, net, th
   assert.ok(said.includes(`${h.city}, ${h.state}`));
   assert.ok(said.includes(`${count(h.beds)} beds, non-teaching`), 'its bed count and teaching status');
   assert.ok(said.includes(pct(h.est.share, 2)));
-  assert.ok(said.includes(dollars(h.est.net)));
+  assert.ok(said.includes(money(h.est.net, { sign: true })), 'its net as its page prints it');
   for (const label of ['Readmissions', 'Hospital-acquired conditions', 'Value-based purchasing']) assert.ok(said.includes(label), label);
   const peers = hospitals.filter((x) => x.est && x.state === h.state);
   assert.ok(said.includes(`Of ${count(peers.length)} ${STATE_NAMES[h.state]} hospitals, ${count(peers.filter((x) => x.est.net < 0).length)} take a net cut`));

@@ -15,11 +15,11 @@ import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './cons
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
 import { comingPage } from './coming.js';
-import { loadHub } from './data.js';
+import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
 import { hrrpHospitalPage, hrrpProgramPage } from './hrrp/page.js';
-import { hubHospitals, masterRecord, stateTotals, storyFacts } from './model.js';
+import { masterRecord, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -33,7 +33,7 @@ function siteLink(id) {
 const SITE_IDS = Object.keys(SITE.sites);
 
 // The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
-// loadHub).
+// hubModel).
 function home({ hospitals, facts, shapes, assets, robots }) {
   return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, assets, robots });
 }
@@ -173,15 +173,13 @@ function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
 // updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
 // corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
 // log); tests pass their own. hospitals and master: the hospitals that get a page (model.js hubHospitals) and their master
-// records by CCN, read once from the newest files (data.js loadHub) unless a test passes its own (no hospitals: no
-// hospital pages and no interim Readmissions page for a hospital; /hrrp/ is always written). The front page always tells
-// the newest files' whole story.
+// records by CCN, read once from the newest files (data.js hubModel, which the build's context shares) unless a test
+// passes its own (no hospitals: no hospital pages and no interim Readmissions page for a hospital; /hrrp/ is always
+// written). The front page always tells the newest files' whole story.
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
-  const hub = loadHub();
-  const all = hubHospitals(hub);
-  const facts = storyFacts(all);
+  const { hub, hospitals: all, facts } = hubModel();
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
   const deps = { entries: readCorrections(correctionsDir), updated };

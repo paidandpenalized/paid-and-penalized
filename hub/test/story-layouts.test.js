@@ -11,8 +11,8 @@ import { shareDomain } from '../client/scale.js';
 import { BAR } from '../client/story/bar-frame.js';
 import { INK, NEUTRAL, PEN, REW } from '../client/colors.js';
 import { drawnDot } from '../client/pile.js';
-import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
-import { createLayouts, storyRows } from '../client/story/layouts.js';
+import { clearOfKey, fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
+import { WIDE_MAX, createLayouts, storyRows } from '../client/story/layouts.js';
 import { decodedHub } from './helpers.js';
 
 const hub = loadHub();
@@ -26,14 +26,18 @@ const example = asset.byCcn.get(EXAMPLE_CCN);
 const statePeers = rows.map((r) => r.h).filter((h) => h.state === example.state);
 
 // The header's height on a desktop (the stage sits under it), and the share of a phone's window the stage takes, as the
-// page lays them out (measured in Chrome).
+// page lays them out (measured in Chrome); on a short phone (740 px tall or less) the stage leaves the words SHORT_WORDS
+// under the phone's header, but is never under SHORT_LEAST, the least in which every pile fits (hub/styles.css).
 const HEADER = 101.4;
 const PHONE_SHARE = 0.56;
+const PHONE_HEADER = 100;
+const SHORT_WORDS = 246;
+const SHORT_LEAST = 290;
 // The stage for a window: its size, whether the rail is hidden (its step's name then sits in the stage) and the device
 // pixel ratios such a screen has. On a desktop the story's grid is the page's width (1,180 at most) less its gutters, the
 // rail (wide windows only), the text column and the 24px between text and stage.
 function stageFor(vw, vh) {
-  if (vw <= 760) return { W: vw, H: vh * PHONE_SHARE, railHidden: true, dprs: [2, 3] };
+  if (vw <= 760) return { W: vw, H: vh <= 740 ? Math.max(SHORT_LEAST, vh - PHONE_HEADER - SHORT_WORDS) : vh * PHONE_SHARE, railHidden: true, dprs: [2, 3] };
   const content = Math.min(vw, 1180) - 32 - 24;
   return vw >= 1080 ? { W: content - 150 - 400, H: vh - HEADER, railHidden: false, dprs: [1, 2] } : { W: content - 360, H: vh - HEADER, railHidden: true, dprs: [1, 2] };
 }
@@ -41,7 +45,7 @@ function stageFor(vw, vh) {
 // The brief's windows (320, 390, 1024 and 1440 wide, 640 and 900 tall) and the common desktop windows whose short heights
 // make the steepest pile tightest (a laptop's 1366×657 and 1280×720, a 1440 window with its browser's bars, 1024×768).
 const WINDOWS = [[320, 640], [320, 900], [390, 640], [390, 900], [1024, 640], [1024, 900], [1440, 640], [1440, 900],
-  [1366, 657], [1440, 790], [1280, 720], [1024, 768]];
+  [1366, 657], [1440, 790], [1280, 720], [1024, 768], [375, 667], [320, 568]];
 const SIZES = [];
 for (const [vw, vh] of WINDOWS) {
   const st = stageFor(vw, vh);
@@ -126,6 +130,51 @@ for (const size of SIZES) {
   });
 }
 
+// A 1x office monitor's piles must not read as hairline stipple: every dot of a step's pile is drawn at least two device
+// pixels across (with a device pixel between), at every size and device pixel ratio; the too-tall bins widen instead
+// (R24, adaptive). Only a pile whose widened bin would then stand more than WIDE_MAX of the axis across keeps the
+// device's own floor: a 1x window far shorter than any here.
+for (const size of SIZES.filter((s) => s.dpr >= 1)) {
+  test(`at ${size.name}: the piles' dots are at least two device pixels across`, () => {
+    const { layouts } = all(size);
+    for (const name of ['start', 'g1', 'g2', 'g3', 'net', 'you']) {
+      const L = layouts[name];
+      let least = Infinity;
+      for (let i = 0; i < 2 * N; i++) if (L.A[i] > 0) least = Math.min(least, drawnDot(L.R[i], size.dpr).side);
+      assert.ok(least >= 2 - 1e-9, `${name}: a dot ${least} device pixels across`);
+      assert.ok(!L.info.small, `${name}: no fallback`);
+    }
+  });
+}
+
+test('a 1x window far shorter than a laptop\'s keeps the device\'s floor where two-pixel dots would swallow a pile\'s shape', () => {
+  const g = stageGeometry({ W: 320, H: 358, railHidden: true, px: 1, domain });
+  const L = createLayouts({ rows, g, mapW: asset.mapW, mapH: asset.mapH });
+  const you = L.layYou(example, statePeers);
+  assert.equal(you.info.small, true);
+  assert.equal(you.info.fits, true);
+  assertSeparate(you, 0, N, 1, 'everyone at 320 px, 1x');
+  // Its widest bin at the device's floor stands within WIDE_MAX of the axis.
+  const xs = [...new Set(Array.from({ length: N }, (_, i) => you.X[i]))].sort((a, b) => a - b);
+  assert.ok(xs.length > (g.x1 - g.x0) / 4, `${xs.length} dot columns: the swarm keeps its shape`);
+  assert.ok(WIDE_MAX > 0 && WIDE_MAX < 0.25);
+});
+
+// The column step 3's words point at ("the tall column: 147 whose only cut is this one") stands a few dots wide, so it
+// reads as a column, not a thread, at every size; its count's anchor is its top left.
+for (const size of SIZES.filter((s) => s.dpr >= 1)) {
+  test(`at ${size.name}: the hospital-acquired conditions column is a few dots wide`, () => {
+    const { layouts } = all(size);
+    const L = layouts.g2;
+    const only = rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []));
+    const xs = new Set(only.map((i) => L.X[i]));
+    assert.ok(xs.size >= 3, `${xs.size} dot columns`);
+    const { block } = L.info.only;
+    assert.ok(block.right - block.left >= 2 * Math.min(...only.map((i) => 2 * L.R[i])), 'the block spans its columns');
+    assert.ok(L.info.only.x <= Math.min(...only.map((i) => L.X[i])), 'the count sits left of the column');
+  });
+}
+
 const SIZE = SIZES.find((s) => s.vw === 390 && s.vh === 900 && s.dpr === 3);
 const { g, layouts } = all(SIZE);
 const { zL, zR } = g.scale;
@@ -165,7 +214,25 @@ test('layGate(1) puts exactly the hospitals with a Readmissions cut left of $0, 
     if (cut) left += 1;
   }
   assert.equal(left, facts.hrrpCut);
+  // The $0 pile's count is the hospitals in the program at $0; those it does not list are counted apart, drawn fainter
+  // and stacked at the pile's top, beside their count.
   assert.equal(L.info.zero.n, facts.hrrpZero);
+  assert.equal(L.info.zero.out, facts.hrrpOut);
+  // (Y grows downward: the top of the pile is the least Y.)
+  let outLowest = -Infinity;
+  let inHighest = Infinity;
+  for (let i = 0; i < N; i++) {
+    const { hrrpListed, hrrp } = rows[i].h.est;
+    if (hrrp !== 0) continue;
+    if (hrrpListed) {
+      assert.equal(L.A[i], 1);
+      inHighest = Math.min(inHighest, L.Y[i]);
+    } else {
+      assert.ok(L.A[i] > 0.2 && L.A[i] < 0.6, `not in the program: drawn fainter (${L.A[i]})`);
+      outLowest = Math.max(outLowest, L.Y[i]);
+    }
+  }
+  assert.ok(outLowest <= inHighest + 1e-6, 'the hospitals not in the program sit on top');
 });
 
 test('layGate(2) adds hospital-acquired conditions: cut hospitals left, the rest at $0, the HAC-only column labeled with its count', () => {
@@ -245,6 +312,37 @@ test('layYou: the hospital among its peers (the copies) above everyone; the peer
   const nets = statePeers.map((h) => h.est.pct.net).sort((a, b) => a - b);
   const mid = nets.length >> 1;
   assert.ok(Math.abs(L.info.median - (nets.length % 2 ? nets[mid] : (nets[mid - 1] + nets[mid]) / 2)) < 1e-9);
+});
+
+test('layYou with no hospital (one followed without an estimate): everyone alone, in a taller room, no copy shown', () => {
+  for (const size of SIZES.filter((s) => s.dpr === 2 || s.dpr === 1)) {
+    const sg = stageGeometry({ W: size.W, H: size.H, railHidden: size.railHidden, px: size.px, domain });
+    const L = createLayouts({ rows, g: sg, mapW: asset.mapW, mapH: asset.mapH });
+    const alone = L.layYou(null, []);
+    const withGroup = L.layYou(example, statePeers);
+    assert.equal(alone.info.h, -1);
+    assert.equal(alone.info.n, 0);
+    assert.equal(alone.info.fits, true, size.name);
+    for (let i = 0; i < N; i++) assert.ok(alone.A[i] > 0, `${size.name}: hospital ${i} unseen`);
+    for (let i = N; i < 2 * N; i++) assert.equal(alone.A[i], 0);
+    assert.ok(alone.info.all[0] < withGroup.info.all[0] + 1e-6, `${size.name}: its room reaches at least as high`);
+    assert.ok(alone.info.all[0] >= sg.top, `${size.name}: inside the plot`);
+    assertSeparate(alone, 0, N, size.dpr, `${size.name}: everyone alone`);
+  }
+});
+
+test('clearOfKey: a pile\'s count that would run into the key moves down just under it, unless something stands there', () => {
+  // The key at the top right; a two-line count whose first line would sit on it.
+  const box = { left: 200, right: 300, top: 50, bottom: 66 };
+  const moved = clearOfKey({ box, across: [180, 260], last: 70, lines: 2, step: 13 });
+  assert.equal(moved, 66 + 15 + 13, 'its first line\'s ink starts under the key');
+  assert.ok(moved - 13 - 12 >= box.bottom + 3);
+  // Clear of the key already (lower, or to its left beyond the margin): it stays.
+  assert.equal(clearOfKey({ box, across: [180, 260], last: 120, lines: 2, step: 13 }), 120);
+  assert.equal(clearOfKey({ box, across: [60, 190], last: 70, lines: 1, step: 13 }), 70);
+  assert.equal(clearOfKey({ box: null, across: [180, 260], last: 70, lines: 2, step: 13 }), 70);
+  // Something stands under the key where it would go (floor): it stays where it was.
+  assert.equal(clearOfKey({ box, across: [180, 260], last: 70, lines: 2, step: 13, floor: 90 }), 70);
 });
 
 // On a phone the step's name ("3/9 Readmissions") sits in the stage's top left, over the gates the story has passed
