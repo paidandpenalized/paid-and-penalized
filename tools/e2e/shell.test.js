@@ -175,6 +175,30 @@ for (const width of [390, 320]) {
   });
 }
 
+// The narrowest phones (320 px, or a desktop zoomed to 400%): the chip gives the hospital's name the room, its net on a
+// line under it, so a long name still reads as more than a few letters, and the bar stays one row.
+describe('the chip on a 320 px phone', () => {
+  const tabs = useContext(shared, { width: 320, height: 640 });
+  it('names the hospital in more than a few letters, its net under the name, in a bar of one row', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const { rows } = await hubRows(page);
+    const row = rows.find((r) => r.status === STATUS_CODES.estimated && r.name.length >= 30);
+    await visit(page, tabs.base, `${PROGRAM_PATH}?h=${row.ccn}`);
+    const chip = page.locator('[data-chip]');
+    await chip.waitFor({ state: 'visible' });
+    const f = await page.evaluate(() => {
+      const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+      const t = box('.chip__t');
+      const v = box('.chip__v');
+      return { name: t.width, nameBottom: t.bottom, netTop: v.top, chip: box('.chip').height, bar: box('.fam__bar').height };
+    });
+    assert.ok(f.name >= 90, `the name has ${Math.round(f.name)} px (some ten letters or more)`);
+    assert.ok(f.netTop >= f.nameBottom - 1, 'the net sits under the name');
+    assert.ok(f.chip <= 46 && f.bar <= BAR, `the chip (${Math.round(f.chip)} px) and the bar (${Math.round(f.bar)} px) stay one row`);
+    await assertNoSideways(page, 'the chip at 320 px');
+    await assertQuiet(seen, 'the chip at 320 px');
+  }));
+});
+
 // On a desktop the row holds All programs and the programs with dollar estimates whole: it neither scrolls nor fades. A
 // placeholder page for a program under consideration has no tab of its own, so none is current.
 describe('the tab row on a desktop', { concurrency: CONCURRENCY }, () => {
