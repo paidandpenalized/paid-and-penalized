@@ -2,7 +2,7 @@
 // Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
-import { masterRecord } from './model.js';
+import { hubHospitals, masterRecord, storyFacts } from './model.js';
 
 // The pinned copy of Thirty Day Readmissions' published data: its hospitals decide which hospitals have a Readmissions
 // page there.
@@ -46,4 +46,17 @@ export function loadHub() {
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };
   return loaded;
+}
+
+let model = null;
+
+// The hub's hospitals (model.js hubHospitals) and their story facts (storyFacts), from loadHub's files, worked out once per
+// build: the build's context (the shell's facts and the hub's data asset, pipeline/site/build.js) and the hub's pages
+// (pages.js) share them. { hub: loadHub(), hospitals, facts }.
+export function hubModel() {
+  if (model) return model;
+  const hub = loadHub();
+  const hospitals = hubHospitals(hub);
+  model = { hub, hospitals, facts: storyFacts(hospitals) };
+  return model;
 }
