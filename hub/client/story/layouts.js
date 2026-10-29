@@ -38,6 +38,10 @@ const PILE = {
 
 // How much taller everyone's swarm stands on the last step with no group above it.
 const ALONE = 1.35;
+// A hospital the Readmissions program does not list, at its gate: not moved, but not "at $0" in a program it is not in.
+// It stacks at the $0 pile's top (its key sorts after every other), drawn at OUT_A, and is counted apart.
+const OUT_KEY = 1e9;
+export const OUT_A = 0.4;
 
 // The layouts over rows (storyRows) on a stage (geometry.js stageGeometry), with the map's projected size (mapW by mapH):
 // { N, layBar, layStart, layGate, layNet, layMap, layYou }.
@@ -74,11 +78,13 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   }
   // The highest top among a pile's columns between xa and xb (Infinity when none).
   const skyline = (pile, xa, xb) => pile.cols.reduce((t, c) => (c.x >= xa && c.x <= xb ? Math.min(t, c.top) : t), Infinity);
-  // Where the "n at $0" label goes: just right of the gutter, above whatever stands there.
-  function zeroLabel(pile) {
+  // Where the "n at $0" label goes: just right of the gutter, above whatever stands there. n: the pile's hospitals at $0
+  // in the programs passed, out: those at $0 the gate's program does not list (counted apart); clear: the top of
+  // anything right of the gutter (Infinity when nothing stands there), so the label can move down beside the pile.
+  function zeroLabel(pile, out = 0) {
     const { zM, zR } = g.scale;
     const zeroTop = pile.cols.reduce((t, c) => (c.zero ? Math.min(t, c.top) : t), Infinity);
-    return { n: pile.zeroCount, x: zR + 4, y: Math.min(zeroTop, skyline(pile, zM, zR + 70)) - 7 };
+    return { n: pile.zeroCount - out, out, x: zR + 4, y: Math.min(zeroTop, skyline(pile, zM, zR + 70)) - 7, clear: skyline(pile, zR + 0.01, g.x1 + 1) };
   }
 
   // Step 0: each hospital at its dot in the scale bar, in the bar's ink.
@@ -130,11 +136,16 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   // layout before, so the crowd does not shuffle as a gate passes.
   function layGate(s, prev) {
     const lines = gateLines(g, s);
-    const items = rows.map((r, i) => ({ id: i, v: r.c[s], key: -prev.Y[i] }));
+    // At Readmissions' gate, the hospitals it does not list (OUT_KEY, OUT_A).
+    const out = rows.map((r) => s === 1 && !r.h.est.hrrpListed && r.c[1] === 0);
+    const items = rows.map((r, i) => ({ id: i, v: r.c[s], key: (out[i] ? OUT_KEY : 0) - prev.Y[i] }));
     const pile = pileLayout(items, g.scale, pileOpts(lines[s] - 1, gateTop(g, s) + g.label, size('gate')));
     const L = blank('machine');
     place(L, pile, items, 1);
-    const info = { s, lines, fits: pile.fits, zero: zeroLabel(pile) };
+    out.forEach((o, i) => {
+      if (o) L.A[i] = OUT_A;
+    });
+    const info = { s, lines, fits: pile.fits, zero: zeroLabel(pile, out.filter(Boolean).length) };
     // After hospital-acquired conditions: the column of hospitals whose only cut is that one (no Readmissions cut).
     if (s === 2) {
       const only = rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []));

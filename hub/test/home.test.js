@@ -61,7 +61,9 @@ test('nine steps, each a section with its id, data-step 0 to 8 and a heading; th
 test('every number in the steps\' words is the data\'s, as the page formats it', () => {
   const expect = (i, ...values) => { for (const v of values) assert.ok(words(i).includes(v), `step ${STEP_IDS[i]} lacks ${v}: ${words(i)}`); };
   expect(0, count(facts.n), money(facts.pay), money(facts.gross), pct(facts.share, 2), money(facts.notPaid), money(facts.vbpBonus), `FY${hub.fy}`);
-  expect(2, count(facts.hrrpCut), count(facts.hrrpZero), '3%');
+  expect(2, count(facts.hrrpCut), count(facts.hrrpZero), count(facts.hrrpOut), '3%');
+  // At $0 counts only the hospitals in the program (as the program's card below does); the rest are said apart.
+  assert.match(words(2), new RegExp(`${count(facts.hrrpZero)} pass through at \\$0, and ${count(facts.hrrpOut)} are not in the program\\.`));
   const cuts = hospitals.filter((h) => h.est && h.est.hrrp < 0).map((h) => -h.est.hrrp / h.est.total);
   expect(2, pct(median(cuts), 2));
   expect(3, count(facts.hacCut), count(facts.hacOnly), '1%');

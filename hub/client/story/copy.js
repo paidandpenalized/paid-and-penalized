@@ -34,6 +34,9 @@ export const COPY = Object.freeze({
   startZero: 'all at {zero}',
   startOne: '{n} hospitals, all at {zero}',
   atZero: '{n} at {zero}',
+  // At Readmissions' gate, the hospitals the program does not list ({n}): beside the $0 pile, and in the key.
+  outHrrp: '{n} not in HRRP',
+  keyOutHrrp: 'not in HRRP',
   hacOnly: '{n} with only the {cut} HAC cut',
   // What each ink means after a gate.
   keyCut: 'cut',

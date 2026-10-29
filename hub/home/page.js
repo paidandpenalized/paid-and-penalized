@@ -95,7 +95,9 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
     html`<h2>${fill('startHead', { zero })}</h2>
 <p>${fill('startText', { programs })}</p>`,
     html`<h2>${COPY.hrrpHead}</h2>
-<p>${say('hrrpText', { cutN: count(facts.hrrpCut), median: pct(median(hrrpCuts), 2), zeroN: count(facts.hrrpZero) }, { plain: { cap: rulePercent(HRRP_CAP_PCT), zero } })}</p>`,
+<p>${say('hrrpText', { cutN: count(facts.hrrpCut), median: pct(median(hrrpCuts), 2) }, { plain: { cap: rulePercent(HRRP_CAP_PCT) } })} ${facts.hrrpOut
+  ? say('hrrpZeroOut', { zeroN: count(facts.hrrpZero), outN: count(facts.hrrpOut) }, { plain: { zero } })
+  : say('hrrpZero', { zeroN: count(facts.hrrpZero) }, { plain: { zero } })}</p>`,
     html`<h2>${fill('hacHead', { cut: rulePercent(HAC_CUT_PCT) })}</h2>
 <p>${say('hacText', { cutN: count(facts.hacCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>

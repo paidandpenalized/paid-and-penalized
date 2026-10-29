@@ -18,7 +18,7 @@ import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } 
 import { COPY } from './copy.js';
 import { tickText, wholePercents } from '../scale.js';
 import { fitBox, stageGeometry } from './geometry.js';
-import { createLayouts } from './layouts.js';
+import { OUT_A, createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
 const say = (key, values = {}) => COPY[key].replace(/\{(\w+)\}/g, (_, name) => values[name]);
@@ -346,17 +346,23 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = 1;
   }
 
-  // A two-entry key: a dot in each ink with its words.
+  // A key: a dot in each ink (at its opacity, 1 unless given) with its words. Returns its box ({ left, right, top,
+  // bottom }).
   function key(entries, x, y, f, color, align = 'left') {
     ctx.font = f;
     const widths = entries.map(([words]) => ctx.measureText(words).width);
     const total = widths.reduce((sum, w) => sum + w + 13, 0) + (entries.length - 1) * 16;
-    let at = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
-    entries.forEach(([words, ink], k) => {
+    const left = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+    let at = left;
+    const a = ctx.globalAlpha;
+    entries.forEach(([words, ink, alpha = 1], k) => {
+      ctx.globalAlpha = a * alpha;
       dot(at + 4, y - 4.5, 4, ink);
+      ctx.globalAlpha = a;
       text(words, at + 13, y, f, color);
       at += widths[k] + 13 + 16;
     });
+    return { left, right: left + total, top: y - 12, bottom: y + 4 };
   }
 
   // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it (with
@@ -397,6 +403,27 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     } else if (L.scene === 'you') youWords(L, a);
   }
 
+  // The $0 pile's count (and, at Readmissions' gate, the hospitals it does not list, on a line under it, beside the
+  // fainter dots at the pile's top), just right of the gutter. Kept clear of the key (box: key's) by moving down beside
+  // the pile, where nothing stands right of the gutter.
+  function zeroNote(z, box) {
+    const zero = money(0);
+    const lines = [say('atZero', { n: count(z.n), zero })];
+    if (z.out) lines.push(say('outHrrp', { n: count(z.out) }));
+    const f = font(g.narrow ? 10.5 : 11.5, 400, true);
+    ctx.font = f;
+    const w = Math.max(...lines.map((s) => ctx.measureText(s).width));
+    const step = g.narrow ? 13 : 15;
+    let last = Math.max(g.top + 12 + (lines.length - 1) * step, z.y);
+    const first = () => last - (lines.length - 1) * step;
+    const across = (z.x + w > g.x1 ? [g.x1 - w, g.x1] : [z.x, z.x + w]);
+    if (box && across[0] < box.right && across[1] > box.left && first() - 12 < box.bottom + 3 && last + 4 > box.top) {
+      const moved = box.bottom + 3 + 12 + (lines.length - 1) * step;
+      if (moved + 6 < z.clear) last = moved;
+    }
+    lines.forEach((s, k) => note(s, z.x, last - (lines.length - 1 - k) * step));
+  }
+
   // The counts a scene's piles carry, once its dots have settled.
   function counts(L, a) {
     if (a <= 0) return;
@@ -411,14 +438,17 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
         text(say('startZero', { zero }), left - 12, mid + 15, font(12, 400, true), colors.ink3, 'right');
       } else text(say('startOne', { n: count(info.n), zero }), g.scale.zM, top - 8, font(12, 600), colors.ink, 'center', true);
     }
-    if (info.zero) note(say('atZero', { n: count(info.zero.n), zero }), info.zero.x, info.zero.y);
-    if (info.only) note(say('hacOnly', { n: count(info.only.n), cut: rules.cut }), info.only.x - 5, info.only.y, 'right');
-    // After a gate: what each ink means, under the passed gates at the right (where no pile reaches that high).
+    // After a gate: what each ink means, under the passed gates at the right (where no pile reaches that high); at
+    // Readmissions' gate, the fainter dot of a hospital it does not list too.
+    let box = null;
     if (L.scene === 'machine' && info.s > 0) {
       const entries = [[say('keyCut'), colors.pen], [say('keyNone'), colors.neutral]];
+      if (info.zero?.out) entries.push([say('keyOutHrrp'), colors.neutral, OUT_A]);
       if (info.s === 3) entries.push([say('keyBonus'), colors.rew]);
-      key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
+      box = key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
     }
+    if (info.zero) zeroNote(info.zero, box);
+    if (info.only) note(say('hacOnly', { n: count(info.only.n), cut: rules.cut }), info.only.x - 5, info.only.y, 'right');
     if (L.scene === 'net') {
       const f = font(g.narrow ? 11.5 : 13, 400, true);
       key([[say('netCut', { n: count(info.cut) }), colors.pen], [say('netBonus', { n: count(info.bonus) }), colors.rew]], g.scale.zM, info.top - (g.narrow ? 12 : 16), f, colors.ink, 'center');

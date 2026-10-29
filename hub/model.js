@@ -60,11 +60,13 @@ export function vbpMaxOf(hospitals) {
 //   net       the three programs' dollars added; notPaid is its opposite (what hospitals are not paid)
 //   vbpBonus  the value-based purchasing bonuses (the positive HVBP dollars); gross = notPaid + vbpBonus is all the
 //             money the programs move, and share = gross / pay
-//   hrrp*     Readmissions: hospitals with a cut (hrrpCut) and with none (hrrpZero), and the dollars (hrrpSum)
+//   hrrp*     Readmissions: hospitals with a cut (hrrpCut), in the program at $0 (hrrpZero) and not in it (hrrpOut: a
+//             hospital the program does not list is never counted at $0), and the dollars (hrrpSum)
 //   hac*      hospital-acquired conditions: hospitals with a cut (hacCut), those cut by it alone (hacOnly: no Readmissions
 //             cut), and the dollars (hacSum)
-//   vbp*      value-based purchasing: hospitals with a bonus, a cut or $0 (which includes hospitals outside the program),
-//             the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax: vbpMaxOf)
+//   vbp*      value-based purchasing: hospitals with a bonus, a cut, in the program at $0 (vbpZero) and not in it
+//             (vbpOut), the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax:
+//             vbpMaxOf)
 //   net*      hospitals whose three programs add to a cut, a bonus or $0
 export function storyFacts(hospitals) {
   const est = hospitals.filter((h) => h.est).map((h) => h.est);
@@ -78,9 +80,11 @@ export function storyFacts(hospitals) {
   const gross = notPaid + vbpBonus;
   return {
     n: est.length, pay, net, notPaid, vbpBonus, gross, share: gross / pay,
-    hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrp === 0), hrrpSum: sum('hrrp'),
+    hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrpListed && e.hrrp === 0), hrrpOut: count((e) => !e.hrrpListed),
+    hrrpSum: sum('hrrp'),
     hacCut: count((e) => e.hac < 0), hacOnly: count((e) => e.hrrp === 0 && e.hac < 0), hacSum: sum('hac'),
-    vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.hvbp === 0), vbpNet: sum('hvbp'),
+    vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.vbpListed && e.hvbp === 0),
+    vbpOut: count((e) => !e.vbpListed), vbpNet: sum('hvbp'),
     netCut: count((e) => e.net < 0), netBonus: count((e) => e.net > 0), netZero: count((e) => e.net === 0),
     vbpMax: vbpMaxOf(hospitals),
   };

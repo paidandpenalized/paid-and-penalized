@@ -165,7 +165,25 @@ test('layGate(1) puts exactly the hospitals with a Readmissions cut left of $0, 
     if (cut) left += 1;
   }
   assert.equal(left, facts.hrrpCut);
+  // The $0 pile's count is the hospitals in the program at $0; those it does not list are counted apart, drawn fainter
+  // and stacked at the pile's top, beside their count.
   assert.equal(L.info.zero.n, facts.hrrpZero);
+  assert.equal(L.info.zero.out, facts.hrrpOut);
+  // (Y grows downward: the top of the pile is the least Y.)
+  let outLowest = -Infinity;
+  let inHighest = Infinity;
+  for (let i = 0; i < N; i++) {
+    const { hrrpListed, hrrp } = rows[i].h.est;
+    if (hrrp !== 0) continue;
+    if (hrrpListed) {
+      assert.equal(L.A[i], 1);
+      inHighest = Math.min(inHighest, L.Y[i]);
+    } else {
+      assert.ok(L.A[i] > 0.2 && L.A[i] < 0.6, `not in the program: drawn fainter (${L.A[i]})`);
+      outLowest = Math.max(outLowest, L.Y[i]);
+    }
+  }
+  assert.ok(outLowest <= inHighest + 1e-6, 'the hospitals not in the program sit on top');
 });
 
 test('layGate(2) adds hospital-acquired conditions: cut hospitals left, the rest at $0, the HAC-only column labeled with its count', () => {
