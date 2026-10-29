@@ -95,8 +95,8 @@ function binItems(items, scale, d, m, mirror) {
 //               rings one item at its value needs (the hospital page's strips). Off by default (the home story's look).
 //   ranked      mirrored, each dot-wide column stacks top to bottom in key order, over the same rows the alternating
 //               order fills, so an item keeps its place in its column's order when the scale changes and two layouts'
-//               places can be glided between without the stacks folding through their middle line (the strips' change of
-//               axis). Off by default.
+//               places can be glided between without the stacks folding through their middle line (a change of axis on
+//               the hospital page's strips and swarm). Off by default.
 // Within a bin, items stack in key order (the lowest key at the base, or at the middle when mirrored, then alternating
 // below and above), a row of m at a time, left to right. Returns { d, r, m, pos: Map(id -> { x, y }), cols: [{ x, n,
 // top, bottom, zero }] (one per dot-wide column), zeroCount, fits }. fits is false only when $0's columns, which cannot

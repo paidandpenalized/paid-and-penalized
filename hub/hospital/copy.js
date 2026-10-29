@@ -75,7 +75,6 @@ export const COPY = typesetCopy({
   swarmMedian: 'median {share}',
   swarmCut: '{n} net cut',
   swarmBonus: '{n} net bonus',
-  swarmNone: '{n} no change',
   swarmAxisCut: 'cut',
   swarmAxisBonus: 'bonus',
   swarmLabel: 'The {n} {group} and all {all} hospitals with an estimate, each a dot placed by its estimated FY{fy} net as a share of its Medicare inpatient pay; this hospital is ringed. Arrow keys step through the peers; Enter opens one.',

@@ -11,16 +11,16 @@
 // ← and → step through the group from left to right (Home and End to its ends), each step said in a polite live region,
 // Enter opens, Escape lets go. Colors come from the tokens (colors.js) and repaint when the theme changes.
 import { median } from '../../../engine/js/peers.js';
-import { count, pct } from '../../../web/client/format.js';
+import { clamp } from '../../../engine/js/stats.js';
+import { count } from '../../../web/client/format.js';
 import { placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
-import { TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
+import { GLIDE_MS, TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
-import { mixScale, shareScale, ticksBetween, whatIfAxis } from '../scale.js';
-// The move between two groups: its length (ms) and how much of it the dots' start times spread over.
-const MOVE = 700;
+import { mixScale, shareScale, tickText, ticksBetween, whatIfAxis } from '../scale.js';
+// How much of a move between two groups (paint.js GLIDE_MS long) the dots' start times spread over.
 const SPREAD = 0.2;
 // The two piles' opacity: the group, and everyone (quieter, so the group reads first).
 const PEER_A = 1;
@@ -103,10 +103,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     const px = 1 / dpr;
     const { gap, dMin } = pileSpacing(px);
     const all = rows.map((x, i) => ({ id: i, v: V[i], key: KEY[i] }));
-    // byValue: a widened bin's sub-columns are value slices, so the ringed dot stands at its own value (pile.js).
-    const allPile = pileLayout(all, scale, { base: m.aBot, top: m.aTop, dMax: m.allMax, dMin, gap, mirror: true, px, byValue: true });
+    // byValue: a widened bin's sub-columns are value slices, so the ringed dot stands at its own value; ranked: each column
+    // stacks in one order on any axis, so a glide between two axes keeps every pile a pile (pile.js).
+    const opts = { dMin, gap, mirror: true, px, byValue: true, ranked: true };
+    const allPile = pileLayout(all, scale, { base: m.aBot, top: m.aTop, dMax: m.allMax, ...opts });
     const mine = rows.flatMap((x, i) => (members.has(x) ? [{ id: N + i, v: V[i], key: KEY[i] }] : []));
-    const peerPile = pileLayout(mine, scale, { base: m.pBot, top: m.pTop, dMax: peerPitch(mine.length, m === NARROW), dMin, gap, mirror: true, px, byValue: true });
+    const peerPile = pileLayout(mine, scale, { base: m.pBot, top: m.pTop, dMax: peerPitch(mine.length, m === NARROW), ...opts });
     // Everyone's pile is quieter than the group's, but a dot of a single device pixel at that quiet washes out: those keep
     // more ink.
     const allA = drawnDot(allPile.r, dpr).side <= 1 ? ALL_A_SMALL : ALL_A;
@@ -125,7 +127,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     let cut = 0;
     let bonus = 0;
     for (const it of mine) if (it.v < 0) cut += 1; else if (it.v > 0) bonus += 1;
-    info = { peer: pileExtent(peerPile), all: pileExtent(allPile), median: median(mine.map((it) => it.v)), cut, bonus, none: mine.length - cut - bonus };
+    info = { peer: pileExtent(peerPile), all: pileExtent(allPile), median: median(mine.map((it) => it.v)), cut, bonus };
     // The arrow keys' order: the group from left to right as drawn (then by name, for hospitals at one place).
     order = mine.map((it) => it.id).sort((a, b) => TX[a] - TX[b] || TY[a] - TY[b] || rows[a - N].name.localeCompare(rows[b - N].name));
   }
@@ -175,7 +177,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   }
 
   function tick(now) {
-    const raw = Math.min(1, (now - t0) / MOVE);
+    const raw = Math.min(1, (now - t0) / GLIDE_MS);
     // A change of axis moves every dot at once, with the axis; a change of group spreads their starts.
     const spread = from ? 0 : SPREAD;
     if (from) qa = ease(raw);
@@ -242,7 +244,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
         vline(x, m.pTop - 6, base + 4, colors.line);
       }
       ctx.globalAlpha = alpha;
-      text(pct(v / 100, 0, { sign: true }), x, base + 17, tick, colors.ink3, 'center');
+      text(tickText(v), x, base + 17, tick, colors.ink3, 'center');
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = colors.ink2;
@@ -337,7 +339,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
       x = CX[up] - rr - 4;
       align = 'right';
       if (x - w < m.x) {
-        x = Math.min(Math.max(CX[up], m.x + w / 2), W - m.x - w / 2);
+        x = clamp(CX[up], m.x + w / 2, W - m.x - w / 2);
         align = 'center';
       }
     }
@@ -369,7 +371,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     ctx.font = f;
     const label = fill('wiMark');
     const half = ctx.measureText(label).width / 2;
-    text(label, Math.min(Math.max(x, m.x + half), W - m.x - half), CY[N + self] + r + 20, f, colors.ink, 'center', true);
+    text(label, clamp(x, m.x + half, W - m.x - half), CY[N + self] + r + 20, f, colors.ink, 'center', true);
   }
 
   function draw() {
@@ -432,7 +434,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     }
     tip.hidden = false;
     const tw = tip.offsetWidth;
-    const left = Math.min(Math.max(0, CX[s] - tw / 2), W - tw);
+    const left = clamp(CX[s] - tw / 2, 0, W - tw);
     tip.style.left = `${left}px`;
     tip.style.top = `${Math.max(0, CY[s] - tip.offsetHeight - Math.max(CR[s], 2) - 10)}px`;
   }
@@ -479,7 +481,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     let at = order.indexOf(picked);
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       if (at < 0) at = order.indexOf(N + self);
-      at = Math.min(order.length - 1, Math.max(0, at + (e.key === 'ArrowRight' ? 1 : -1)));
+      at = clamp(at + (e.key === 'ArrowRight' ? 1 : -1), 0, order.length - 1);
     } else if (e.key === 'Home') at = 0;
     else if (e.key === 'End') at = order.length - 1;
     else if (e.key === 'Enter') {
@@ -505,14 +507,17 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     draw();
   }
 
+  // Lets go of the dot shown or ringed under the pointer, a tap or the keys.
+  function letGo() {
+    tapped = hover = picked = -1;
+    tip.hidden = true;
+  }
+
   // A tap anywhere outside the swarm puts its tooltip away: a touch screen has no pointer that leaves, and a tap on the
   // page's words moves no focus in every browser (Safari's does not), so the canvas's blur alone would leave it showing.
   function onOutside(e) {
     if (tip.hidden || el.contains(e.target)) return;
-    tapped = -1;
-    hover = -1;
-    picked = -1;
-    tip.hidden = true;
+    letGo();
     if (!moving) draw();
   }
 
@@ -552,10 +557,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
     setPeers(next, name) {
       members = new Set(next);
       groupName = name;
-      picked = -1;
-      hover = -1;
-      tapped = -1;
-      tip.hidden = true;
+      letGo();
       label();
       layout();
       // Mid-way through a change of axis, the axis carries on from where it is drawn.
@@ -579,10 +581,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
       }
       const was = view();
       axisOf = want;
-      picked = -1;
-      hover = -1;
-      tapped = -1;
-      tip.hidden = true;
+      letGo();
       rescale();
       layout();
       from = was;
