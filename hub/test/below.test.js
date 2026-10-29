@@ -93,7 +93,7 @@ test('programBins bins each hospital\'s percent of pay as its estimate carries i
   // Synthetic rows (invented CCNs) that carry only their percents: the bins follow est.pct, not arithmetic of their own.
   const row = (ccn, hrrp) => ({ ccn, est: { hrrpListed: true, vbpListed: true, pct: { hrrp, hac: 0, hvbp: 0, net: hrrp } } });
   assert.deepEqual(programBins([row('990001', -0.5), row('990002', -0.45), row('990003', 0), { ccn: '990004', est: null }], 'hrrp'), {
-    n: 3, zero: 1, bins: [{ lo: -3 * BIN_POINTS, n: 2 }],
+    n: 3, zero: 1, cut: 2, bonus: 0, bins: [{ lo: -3 * BIN_POINTS, n: 2 }],
   });
 });
 

@@ -7,6 +7,8 @@
 // The look reuses the family's parts: the form (.form, .field, the numbered boxes, the stamp, the estimate tag) and the
 // hospital page's strip drawing (.st: its gutter, grid, base line, inks and labels) and empty-program band.
 import { has } from '../../engine/js/has.js';
+import { clamp } from '../../engine/js/stats.js';
+import { r1 } from '../../web/charts/svg.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
 import { fillCopy, sentenceOf } from '../../web/render/components.js';
@@ -14,7 +16,7 @@ import { capitalize, count, fractionWord, money, numberWord, pct } from '../../w
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
-import { shareDomain, shareScale, wholePercents } from '../client/scale.js';
+import { shareDomain, shareScale, tickText, wholePercents } from '../client/scale.js';
 import { OUTSIDE, worksheetModel } from '../client/story/worksheet.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { ROWS, inProgram } from '../hospital/peers.js';
@@ -39,13 +41,14 @@ const RULE_SHARE_NEAR = 0.03;
 
 // The hospitals with an estimate in a program's file (a hospital-page row's id: hrrp, hacrp, hvbp), each one's dollars
 // there as a percent of its estimated pay (est.pct, the engine's pctOf), binned: { n } hospitals, { zero } of them at
-// exactly $0, and the bins with any hospital, { lo, n }, in order (lo: the bin's low end, in percentage points; a bin
-// holds lo <= v < lo + BIN_POINTS).
+// exactly $0, { cut } below it and { bonus } above, and the bins with any hospital, { lo, n }, in order (lo: the bin's
+// low end, in percentage points; a bin holds lo <= v < lo + BIN_POINTS).
 export function programBins(hospitals, id) {
   const key = ROWS.find((r) => r.id === id)?.key;
   if (!key) throw new RangeError(`hub home: no dollars for the program "${id}"`);
   let n = 0;
   let zero = 0;
+  let cut = 0;
   const counts = new Map();
   for (const h of hospitals) {
     if (!h.est || !inProgram(h.est, id)) continue;
@@ -53,12 +56,13 @@ export function programBins(hospitals, id) {
     const v = h.est.pct[key];
     if (v === 0) zero += 1;
     else {
+      if (v < 0) cut += 1;
       const i = Math.floor(v / BIN_POINTS);
       counts.set(i, (counts.get(i) ?? 0) + 1);
     }
   }
   const bins = [...counts].sort((a, b) => a[0] - b[0]).map(([i, c]) => ({ lo: i * BIN_POINTS, n: c }));
-  return { n, zero, bins };
+  return { n, zero, cut, bonus: n - zero - cut, bins };
 }
 
 // The histogram's frame: its width in the bars' units (they stretch to the card's width), and in pixels (the drawing's
@@ -71,7 +75,6 @@ const H = 104;
 const GUTTER = 16;
 const GAP = 1;
 const MIN_BAR = 1.5;
-const r1 = (v) => Math.round(v * 10) / 10;
 // A place across the drawing (in the bars' units) as a share of its width, for the words, which are set in pixels.
 const across = (x) => `${Math.round((x / W) * 1e4) / 100}%`;
 
@@ -80,9 +83,9 @@ const across = (x) => `${Math.round((x / W) * 1e4) / 100}%`;
 // the bonuses or, without any, the hospitals at $0. An image whose label is the takeaway. The marks are drawn in a
 // drawing of their own that stretches across the card (its lines keep their width); the words sit over it at a share of
 // the width and a fixed size, the site's chart labels', at every width.
-function histogram({ n, zero, bins }, { domain, label }) {
+function histogram({ n, zero, cut, bonus, bins }, { domain, label }) {
   const { zL, zR, zM, k } = shareScale({ x0: 0, x1: W, gutter: GUTTER, domain });
-  const at = (v, side) => Math.min(W, Math.max(0, side + v * k));
+  const at = (v, side) => clamp(side + v * k, 0, W);
   const tallest = Math.max(zero, ...bins.map((b) => b.n));
   const height = (c) => Math.max(MIN_BAR, ((BASE - TOP) * c) / tallest);
   const bar = (x0, x1, c) => `M${r1(x0)} ${BASE}V${r1(BASE - height(c))}H${r1(x1)}V${BASE}Z`;
@@ -99,19 +102,17 @@ function histogram({ n, zero, bins }, { domain, label }) {
   const top = (c) => r1(Math.max(11, BASE - height(c) - 4));
   const peak = (side) => side.reduce((best, b) => (b.n > best.n ? b : best));
   const labels = [];
-  const cutN = cuts.reduce((s, b) => s + b.n, 0);
-  const bonusN = bonuses.reduce((s, b) => s + b.n, 0);
   if (cuts.length) {
     const b = peak(cuts);
-    labels.push(html`<text class="st__out" x="${across(Math.max(60, span(b)[1]))}" y="${top(b.n)}" text-anchor="end">${fill('histCut', { n: count(cutN) })}</text>`);
+    labels.push(html`<text class="st__out" x="${across(Math.max(60, span(b)[1]))}" y="${top(b.n)}" text-anchor="end">${fill('histCut', { n: count(cut) })}</text>`);
   }
   if (bonuses.length) {
     const b = peak(bonuses);
-    labels.push(html`<text class="st__out" x="${across(Math.min(W - 70, span(b)[0]))}" y="${top(b.n)}">${fill('histBonus', { n: count(bonusN) })}</text>`);
+    labels.push(html`<text class="st__out" x="${across(Math.min(W - 70, span(b)[0]))}" y="${top(b.n)}">${fill('histBonus', { n: count(bonus) })}</text>`);
   } else if (zero) {
     labels.push(html`<text class="st__out" x="${across(zR + 4)}" y="${top(zero)}">${fill('histZero', { n: count(zero), zero: money(0) })}</text>`);
   }
-  if (cutN + bonusN + zero !== n) throw new RangeError('hub home: a histogram\'s bars do not add to its hospitals');
+  if (bins.reduce((s, b) => s + b.n, zero) !== n) throw new RangeError('hub home: a histogram\'s bars do not add to its hospitals');
   return html`<svg class="st pc__hist" width="100%" height="${H}" role="img" aria-label="${label}" focusable="false">
 <svg class="pc__marks" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="${H}">
 <rect class="st__gut" x="${r1(zL)}" y="${TOP - 6}" width="${GUTTER}" height="${BASE - TOP + 6}"/>
@@ -119,7 +120,7 @@ function histogram({ n, zero, bins }, { domain, label }) {
 ${path('pen', cuts.map((b) => bar(...span(b), b.n)).join(''))}${path('rew', bonuses.map((b) => bar(...span(b), b.n)).join(''))}${path('neu', zero ? bar(zL + 3, zR - 3, zero) : '')}
 <path class="st__base" d="M0 ${BASE + 0.5}H${W}"/>
 </svg>
-${ticks.map((t) => html`<text class="st__tl" x="${across(tickX(t))}" y="${BASE + 14}" text-anchor="middle">${t === 0 ? money(0) : pct(t / 100, 0, { sign: true })}</text>`)}
+${ticks.map((t) => html`<text class="st__tl" x="${across(tickX(t))}" y="${BASE + 14}" text-anchor="middle">${t === 0 ? money(0) : tickText(t)}</text>`)}
 ${labels}
 </svg>`;
 }
@@ -160,13 +161,11 @@ function card(p, { hospitals, facts, fy, domain }) {
   const bins = programBins(hospitals, p.id);
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
   const { big, sub } = FIGURES[p.id](facts, fy);
-  const cutN = bins.bins.filter((b) => b.lo < 0).reduce((s, b) => s + b.n, 0);
-  const bonusN = bins.n - cutN - bins.zero;
   // Only the groups the program has: a program without bonuses (or without a hospital at $0) says nothing of them.
   const parts = [
-    cutN && fill('histPartCut', { n: count(cutN) }),
-    bins.zero && fill('histPartZero', { n: count(bins.zero), zero: money(0) }),
-    bonusN && fill('histPartBonus', { n: count(bonusN) }),
+    bins.cut && fill('histCut', { n: count(bins.cut) }),
+    bins.zero && fill('histZero', { n: count(bins.zero), zero: money(0) }),
+    bins.bonus && fill('histPartBonus', { n: count(bins.bonus) }),
   ].filter(Boolean);
   const label = fill('histLabel', { n: count(bins.n), program: p.long, fy, bin: String(BIN_POINTS), parts: parts.join(', ') });
   return html`<article class="pc">

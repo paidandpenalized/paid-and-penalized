@@ -123,11 +123,10 @@ export const COPY = typesetCopy({
   takeHac: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.',
   takeVbp: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.',
   // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, the program's full name, so nothing
-  // is spelled out letter by letter; {bin} the bins' width in points; {parts} the groups it has, each from the three
-  // below, joined, so a program without bonuses never says "0 with a bonus") and its two labels.
+  // is spelled out letter by letter; {bin} the bins' width in points; {parts} the groups it has, joined, so a program
+  // without bonuses never says "0 with a bonus": histCut, histZero and histPartBonus) and its two labels (histCut, then
+  // histBonus or histZero).
   histLabel: '{n} hospitals in the {program}, each by its estimated FY{fy} change as a share of its Medicare inpatient pay, in bins of {bin} points: {parts}.',
-  histPartCut: '{n} cut',
-  histPartZero: '{n} at {zero}',
   histPartBonus: '{n} with a bonus',
   histCut: '{n} cut',
   histBonus: '{n} bonus',
