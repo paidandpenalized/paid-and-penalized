@@ -19,7 +19,7 @@ import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
 import { GLIDE_MS, TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
-import { mixScale, shareScale, tickText, ticksBetween, whatIfAxis } from '../scale.js';
+import { mixScale, shareScale, tickText, ticksBetween } from '../scale.js';
 import { node } from './dom.js';
 // How much of a move between two groups (paint.js GLIDE_MS long) the dots' start times spread over.
 const SPREAD = 0.2;
@@ -37,11 +37,11 @@ const NARROW = { x: 4, gutter: 12, H: 376, pTop: 30, pBot: 166, aTop: 228, aBot:
 // mountSwarm(el, options): el is the page's empty [data-swarm]. Options:
 //   hospitals  every decoded hospital (web/client/hub-asset.js); those with an estimate are drawn
 //   h          this hospital (one with an estimate); peers: its group (h among them); domain: the share axis's [lo, hi]
-//   wide       the axis that also holds every net the what-if can show for h (the strips'), which the swarm glides to
-//              while a hypothetical net lies past its own (scale.js whatIfAxis)
+//              for the actual figures, the data's own
 //   fill       the page's copy filler; fy: the fiscal year (a string); group: the group's name; still: reduced motion
-// Returns { setPeers(peers, group), setHypothetical(pct | null) }.
-export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fill, fy, group, still }) {
+// Returns { setPeers(peers, group), setHypothetical(pct | null), setAxis(axis, animate) }: the what-if (whatif.js) widens
+// the axis just enough to hold a hypothetical net past it, and back (scale.js holdingAxis and stripAxis).
+export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, still }) {
   const rows = hospitals.filter((x) => x.est);
   const N = rows.length;
   const S = 2 * N;
@@ -72,7 +72,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   let picked = -1;
   let tapped = -1;
   let hypo = null;
-  // The axis (domain, or wide during a what-if past it), and during a move to it the scale the move began from and how
+  // The axis (domain, or one a what-if widened: setAxis), and during a move to it the scale the move began from and how
   // far along it is (eased): the axis is drawn part way between, as the dots are (view).
   let axisOf = domain;
   let from = null;
@@ -224,7 +224,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   }
 
   // The share axis under both piles (sc: as drawn now): the $0 gutter shaded, a faint line at each whole percent, the
-  // baseline, the ticks' values (an end one held inside the canvas: on the what-if's wide axis the last tick can sit
+  // baseline, the ticks' values (an end one held inside the canvas: on an axis a what-if widened the last tick can sit
   // closer to the edge than half its label) and which side is a cut and which a bonus (each word underlined in its ink).
   // Mid-move, a tick only one end of it shows fades (ticksBetween).
   function axis(sc) {
@@ -555,23 +555,30 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
       }
       move();
     },
-    // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand. A net past the
-    // axis widens it to `wide` and everything glides there together (the dots, the ticks, the gutter, the median, the
-    // marks); it narrows again when the what-if ends. A dot shown or ringed under the pointer or the keys lets go.
+    // A what-if's net share in percent (or null for none): a dashed ring where the hospital would stand.
     setHypothetical(pct) {
       const next = Number.isFinite(pct) ? pct : null;
       if (next === hypo) return;
       hypo = next;
-      const want = whatIfAxis(next, { actual: domain, wide, now: axisOf });
-      if (want === axisOf) {
-        if (!moving) draw();
-        return;
-      }
+      if (!moving) draw();
+    },
+    // The axis to draw ([lo, hi]): everything glides there together (the dots, the ticks, the gutter, the median, the
+    // marks), or moves at once (animate false, or reduced motion). A dot shown or ringed under the pointer or the keys
+    // lets go.
+    setAxis(next, animate = true) {
+      if (next[0] === axisOf[0] && next[1] === axisOf[1]) return;
       const was = view();
-      axisOf = want;
+      axisOf = next;
       letGo();
       rescale();
       layout();
+      if (!animate) {
+        cancelAnimationFrame(raf);
+        moving = false;
+        settle();
+        draw();
+        return;
+      }
       from = was;
       qa = 0;
       move();

@@ -5,9 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { BIG_STEP, STEP, changed, dragAction, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
 import { storyFacts, vbpMaxOf as modelVbpMax } from '../model.js';
-import { shareDomain, shareScale } from '../client/scale.js';
+import { holdingAxis, shareDomain } from '../client/scale.js';
 import { BASE, TOTAL, makeHospital as make } from './helpers.js';
 
 
@@ -213,22 +213,38 @@ test('reach: every percent of pay the what-if can show, at each corner of what a
   assert.equal(factorAt(H, (BASE * -0.03 * 100) / TOTAL), 0.97, 'the factor at a share: the inverse of base x (factor - 1)');
 });
 
-test('on each hospital\'s page axis, a drag to a strip\'s end lands where Home or End does, and no what-if figure is past it', () => {
+test('dragAction: the factor at the share under the pointer; past either end of the strip, that end of the range, as Home or End', () => {
+  const hctx = { h: H, vbpMax: VBP_MAX };
+  assert.deepEqual(dragAction(H, 'hrrp', { share: (BASE * -0.02 * 100) / TOTAL, past: 0 }), { type: 'set', id: 'hrrp', value: factorAt(H, (BASE * -0.02 * 100) / TOTAL) });
+  assert.deepEqual(dragAction(H, 'hvbp', { share: 1, past: 1 }), { type: 'end', id: 'hvbp', dir: 1 });
+  assert.deepEqual(dragAction(H, 'hrrp', { share: -1, past: -1 }), { type: 'end', id: 'hrrp', dir: -1 });
+  // Past the end reaches the range's end whatever the axis drawn: the same as End, beyond any share the strip shows.
+  const end = reduce(initial(H), dragAction(H, 'hvbp', { share: 0.5, past: 1 }), hctx);
+  assert.equal(end.hvbp, reduce(initial(H), { type: 'end', id: 'hvbp', dir: 1 }, hctx).hvbp);
+  assert.equal(end.hvbp, extent(H, hctx, 'hvbp')[1]);
+});
+
+// The strips start on the data's own axis and widen only to hold a hypothetical figure (scale.js holdingAxis); a drag
+// past a strip's end reaches its factor's end (dragAction), so no figure the what-if can show is out of reach or past the
+// axis drawn for it.
+test('on each hospital\'s page, a drag past a strip\'s end lands where Home or End does, and the axis holds every what-if figure', () => {
   const all = hubHospitals(loadHub());
   const est = all.filter((h) => h.est);
   const vbpMax = vbpMaxOf(all);
+  const tight = shareDomain(est);
   let ends = 0;
+  let wider = 0;
   for (const h of est) {
     const shares = reach(h, { vbpMax });
-    const domain = shareDomain(est, shares);
-    for (const v of shares) assert.ok(v >= domain[0] && v <= domain[1], `${h.ccn}: ${v} on [${domain}]`);
+    const axis = holdingAxis(tight, shares);
+    for (const v of shares) assert.ok(v >= axis[0] && v <= axis[1], `${h.ccn}: ${v} on [${axis}]`);
+    if (axis !== tight) wider += 1;
     if (!(h.est.base > 0)) continue;
-    const s = shareScale({ x0: 4, x1: 604, gutter: 20, domain });
     const hctx = { h, vbpMax };
     for (const id of ['hrrp', 'hvbp']) {
       if (!extent(h, hctx, id)) continue;
-      for (const [x, dir] of [[0, -1], [608, 1]]) {
-        const dragged = reduce(initial(h), { type: 'set', id, value: factorAt(h, s.invert(x)) }, hctx);
+      for (const dir of [-1, 1]) {
+        const dragged = reduce(initial(h), dragAction(h, id, { share: tight[dir < 0 ? 0 : 1], past: dir }), hctx);
         const keyed = reduce(initial(h), { type: 'end', id, dir }, hctx);
         assert.equal(dragged[id], keyed[id], `${h.ccn} ${id} ${dir > 0 ? 'End' : 'Home'}`);
         ends += 1;
@@ -236,4 +252,5 @@ test('on each hospital\'s page axis, a drag to a strip\'s end lands where Home o
     }
   }
   assert.ok(ends > 4000, `${ends} ends checked`);
+  assert.ok(wider > 0 && wider < est.length, `${wider} of ${est.length} pages can widen their axis`);
 });

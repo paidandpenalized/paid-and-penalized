@@ -4,10 +4,11 @@
 // hospital's mark in each. A peer a program does not list is not in its strip (never a dot at $0); nor is the hospital,
 // whose strip then says so. Switching the group moves the same dots (CSS transitions on each dot's transform, off under
 // reduced motion): a hospital that stays glides to its new place, one that joins fades in, one that leaves fades out.
-// The axis is the tight one (the actual figures, so the data has the full width) until the what-if opens, then the wide
-// one (every figure it can show: whatif.js asks for it, scale.js stripAxis). A change of axis glides the same way, and
+// The axis is the data's own (the actual figures, so the data has the full width), widened only as far as a hypothetical
+// figure needs (whatif.js asks for it: scale.js holdingAxis and stripAxis). A change of axis glides the same way, and
 // every part of a strip (the ticks, the gutter, the dots, the ring, the median, the handle, the marks) rides the one
-// transition, so a dot never leaves its tick; the thread follows the rings frame by frame.
+// transition, so a dot never leaves its tick; the thread follows the rings frame by frame. The handle a pointer holds is
+// the exception: it stays with its value at once (hub/styles.css .st__h--held).
 // The strips are pictures of what each row's sentences say, so their marks are hidden from assistive technology; the one
 // exception is the what-if's handle (handles), a capsule with arrows on each adjustable program's strip that sits on the
 // hospital's dot and, once the row is hypothetical, on the hypothetical value, with the actual's ring left as a ghost
@@ -66,6 +67,8 @@ function stripFrame(n, narrow) {
   const bot = top + sizeOf(n, narrow).plot;
   return { H: bot + 30, top, bot, base: bot + 6 };
 }
+// The plot's inset from each side of its strip (CSS pixels): past it, a drag is past the strip's end (grip).
+const INSET = 4;
 // The usual $0 gutter, wide and narrow; and the most times the strips widen it for a $0 pile before they stop.
 const GUTTER = { wide: 20, narrow: 12 };
 const WIDEN = 8;
@@ -96,7 +99,7 @@ export function stripLayout(group, { W, dpr, domain }) {
   let gutter = GUTTER[narrow ? 'narrow' : 'wide'];
   let out = null;
   for (let tries = 0; tries <= WIDEN; tries++) {
-    const scale = shareScale({ x0: 4, x1: W - 4, gutter, domain, px });
+    const scale = shareScale({ x0: INSET, x1: W - INSET, gutter, domain, px });
     const rows = {};
     let need = gutter;
     for (const id of ROW_IDS) {
@@ -179,21 +182,21 @@ function handleOf(svg, fill, hint) {
 
 // mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group) and figures
 // (what they show: hub/hospital/peers.js peerFigures), domain (the share axis's [lo, hi] for the actual figures: the
-// tight one), wide (the axis that also holds every figure the what-if can show for h), fill (the page's copy filler),
-// still (reduced motion), handles (the rows that get a what-if handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
+// data's own), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if handle:
+// 'hrrp', 'hacrp', 'hvbp'). Returns:
 //   update(peers, figures) another group: the same dots move
-//   setWide(on, animate)  the wide axis (on) or the tight one: every part glides there together (animate, and not under
-//                        reduced motion), or moves at once
+//   setAxis(axis, animate) the axis to draw ([lo, hi]): every part glides there together (animate, and not under reduced
+//                        motion), or moves at once
 //   setScenario(s)       a what-if: s is { hrrp, hacrp, hvbp, net } in percent of pay, a value only for each row that
 //                        differs from the actual (or null for none). A row's handle moves to its value, the net gets a
 //                        hollow mark, and the actual's ring stays as a ghost.
 //   handle(id)           the row's handle (an SVG <g role="slider">), or null
-//   shareAt(id, clientX) the share of pay (percent) under a point on the row's strip, or null before it is laid out
+//   grip(id)             a drag's reading of the row's strip, fixed on the axis drawn now (null before it is laid out):
+//                        a function of a client x giving { share, past }, the percent of pay there and -1 or 1 when the
+//                        point is past the strip's left or right end (else 0)
 //   nudge()              wiggles the first handle once (not under reduced motion), once any glide has ended
 // A press on a handle lands a glide at once, so the handle then stays where it is under the pointer.
-export function mountStrips(root, { h, peers, figures, domain: tight, wide: wideAxis = tight, fill, still, handles = [] }) {
-  // The wide axis, or the tight one itself when the what-if reaches no further.
-  const wide = wideAxis[0] === tight[0] && wideAxis[1] === tight[1] ? tight : wideAxis;
+export function mountStrips(root, { h, peers, figures, domain: tight, fill, still, handles = [] }) {
   const list = root.querySelector('.hh__rows');
   const hidden = { 'aria-hidden': 'true' };
   // The first handle carries the hint.
@@ -230,7 +233,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   let group = peers;
   let shows = figures;
   let scenario = null;
-  // The axis drawn: tight until the what-if opens (setWide).
+  // The axis drawn: the data's own until a hypothetical figure needs more (setAxis).
   let domain = tight;
 
   // The strip's frame for its size: the $0 gutter (a unit rect its transform stretches), the layers for the ticks' lines
@@ -577,10 +580,16 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     });
   }
 
-  // The share under a client x on a strip (the scale's invert).
-  function shareAt(id, clientX) {
+  // A drag's reading of a strip, on the scale drawn as the drag begins: the axis widening mid-drag (for a figure it moves
+  // past the end) never changes the value under a held pointer, so it never feeds back on itself.
+  function grip(id) {
     const st = strips.find((s) => s.id === id);
-    return st?.scale ? st.scale.invert(clientX - st.svg.getBoundingClientRect().left) : null;
+    const scale = st?.scale;
+    if (!scale) return null;
+    return (clientX) => {
+      const x = clientX - st.svg.getBoundingClientRect().left;
+      return { share: scale.invert(x), past: x < INSET ? -1 : x > st.W - INSET ? 1 : 0 };
+    };
   }
 
   const first = strips.find((st) => st.handle);
@@ -611,9 +620,8 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       shows = nextFigures;
       all(true);
     },
-    setWide(on, animate = true) {
-      const next = on ? wide : tight;
-      if (next === domain) return;
+    setAxis(next, animate = true) {
+      if (next[0] === domain[0] && next[1] === domain[1]) return;
       domain = next;
       all(animate);
     },
@@ -622,7 +630,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       for (const st of strips) whatIf(st);
     },
     handle: (id) => strips.find((st) => st.id === id)?.handle?.g ?? null,
-    shareAt,
+    grip,
     nudge,
   };
 }

@@ -19,7 +19,7 @@ import { node } from './hospital/dom.js';
 import { mountStrips, setGlide } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
 import { fillPeerTable } from './hospital/table.js';
-import { reach, vbpMaxOf } from './hospital/whatif-state.js';
+import { vbpMaxOf } from './hospital/whatif-state.js';
 import { mountWhatIf } from './hospital/whatif.js';
 import { shareDomain } from './scale.js';
 
@@ -90,21 +90,17 @@ function live(page, { hospitals, h, fy, still, observers }) {
   if (row) observers.push(row);
   const buttons = [...page.querySelectorAll('[data-peer]')];
 
-  // The share axis: every hospital's actual figures (domain), and the one that also holds every figure the what-if can
-  // show for this hospital (wide), so a hypothetical never sits pinned at the axis's end and a drag reaches each factor's
-  // ends. The strips draw the actual one (the full width for the data) until the reader opens the what-if, and the wide
-  // one, glided to once, while it is open (whatif.js; never during a drag: an axis that moved under a held pointer would
-  // move the value). The swarm, which no drag holds, keeps its finer axis and glides to the wide one only while a
-  // hypothetical net lies past its own.
+  // The share axis: every hospital's actual figures (domain), the full width for the data. The strips and the swarm draw
+  // it, and the what-if widens it only as far as a hypothetical figure past it needs, and back (whatif.js; while a drag
+  // lasts it only grows).
   const domain = shareDomain(hospitals);
   const vbpMax = vbpMaxOf(hospitals);
-  const wide = shareDomain(hospitals, reach(h, { vbpMax }));
   const swarmEl = $('[data-swarm]');
-  const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, wide, fill, fy, group: first.group, still });
+  const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');
   if (note) note.hidden = false;
-  const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain, wide, fill, still, handles: ROWS.map((r) => r.id) });
-  const whatIf = mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group: first, observers });
+  const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain, fill, still, handles: ROWS.map((r) => r.id) });
+  const whatIf = mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm, values, group: first, observers });
 
   const details = $('[data-peer-table]');
   let current = first;

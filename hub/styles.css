@@ -630,7 +630,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .st__h:focus-visible .st__hf { opacity: 1; }
 .st__h:focus-visible .st__hb { stroke-width: 3; }
 .st__hint { fill: var(--ink); font: 700 12.5px var(--font-body); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; transition: opacity .6s; }
-.hh--used .st__hint { opacity: 0; }
+/* Once the reader uses a control it goes, as quickly as it stands aside for a glide (the first use can start one). */
+.hh--used .st__hint { opacity: 0; transition-duration: .15s; }
 @keyframes st-nudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 45% { transform: translateX(7px); } 70% { transform: translateX(-3px); } }
 .st__h--nudge .st__hin { animation: st-nudge 1.1s ease-in-out 1; }
 .st__me--ghost { opacity: .4; }
@@ -645,6 +646,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
    at once. --glide (the length and curve) and --fade (a leaving dot's) are the page script's, which times the same
    moves (hub/client/hospital/strips.js setGlide). */
 .st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform var(--glide), opacity var(--fade); }
+/* The handle a pointer holds stays with its value at once, even while the strips glide to a wider axis around it. */
+.st--live .st__h.st__h--held { transition: none; }
 /* The hint stands aside while the strips glide (the piles restack under it), and comes back after. */
 .st--live .st__hint { opacity: 0; transition-duration: .15s; }
 /* The thread: one dashed line down the rows through the hospital's mark in each strip. */
