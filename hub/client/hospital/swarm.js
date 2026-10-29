@@ -20,6 +20,7 @@ import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../col
 import { GLIDE_MS, TAU, clamp01, deviceRatio, ease, fontOf, paintDots } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
 import { mixScale, shareScale, tickText, ticksBetween, whatIfAxis } from '../scale.js';
+import { node } from './dom.js';
 // How much of a move between two groups (paint.js GLIDE_MS long) the dots' start times spread over.
 const SPREAD = 0.2;
 // The two piles' opacity: the group, and everyone (quieter, so the group reads first).
@@ -51,16 +52,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   // Where each dot is now, where it was when the move began, and where it is going.
   const [CX, CY, CR, CA, X0, Y0, R0, A0, TX, TY, TR, TA] = Array.from({ length: 12 }, () => new Float32Array(S));
 
-  const canvas = document.createElement('canvas');
-  canvas.className = 'hh__cv';
-  canvas.tabIndex = 0;
-  canvas.setAttribute('role', 'img');
-  const tip = document.createElement('div');
-  tip.className = 'hh__tip';
-  tip.hidden = true;
-  const live = document.createElement('p');
-  live.className = 'vh';
-  live.setAttribute('aria-live', 'polite');
+  const canvas = node('canvas', { class: 'hh__cv', tabindex: 0, role: 'img' });
+  const tip = node('div', { class: 'hh__tip', hidden: '' });
+  const live = node('p', { class: 'vh', 'aria-live': 'polite' });
   el.append(canvas, tip, live);
   const ctx = canvas.getContext('2d');
 
@@ -419,19 +413,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
       tip.hidden = true;
       return;
     }
-    tip.textContent = '';
-    const name = document.createElement('b');
-    name.textContent = rows[s % N].name;
-    const rest = document.createElement('span');
     const x = rows[s % N];
-    rest.textContent = `${placeText(x)} · ${signedShareText(x.est.share)}`;
-    tip.append(name, rest);
-    if (touch && s % N !== self) {
-      const open = document.createElement('span');
-      open.className = 'hh__tip-open';
-      open.textContent = fill('dotOpen');
-      tip.append(open);
-    }
+    tip.replaceChildren(node('b', {}, [x.name]), node('span', {}, [`${placeText(x)} · ${signedShareText(x.est.share)}`]));
+    if (touch && s % N !== self) tip.append(node('span', { class: 'hh__tip-open' }, [fill('dotOpen')]));
     tip.hidden = false;
     const tw = tip.offsetWidth;
     const left = clamp(CX[s] - tw / 2, 0, W - tw);

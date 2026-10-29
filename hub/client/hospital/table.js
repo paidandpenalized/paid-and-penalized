@@ -6,6 +6,7 @@ import { count } from '../../../web/client/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { ROW_KEY, inProgram } from '../../hospital/peers.js';
 import { signedMoney, signedShareText } from '../../hospital/text.js';
+import { node } from './dom.js';
 
 const COLS = [
   { key: 'colHospital' }, { key: 'colCity' }, { key: 'colState' },
@@ -13,46 +14,24 @@ const COLS = [
   { key: 'colNet', id: 'net', num: true }, { key: 'colNetPct', num: true },
 ];
 
-function cell(tag, text, cls) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+// A cell (or any element) holding text, with a class or none.
+const cell = (tag, text, cls = null) => node(tag, { class: cls }, text ? [text] : []);
 
 // Fills details (the page's [data-peer-table]) with the table of peers, replacing any it holds. h: this hospital; fill:
 // the page's copy filler; fy: the fiscal year; group: the group's name.
 export function fillPeerTable(details, { peers, h, fill, fy, group }) {
   details.querySelector('.hh__tw')?.remove();
-  const wrap = cell('div', undefined, 'hh__tw');
-  wrap.tabIndex = 0;
-  wrap.setAttribute('role', 'region');
-  wrap.setAttribute('aria-label', fill('tableSummary'));
-  const table = cell('table', undefined, 'hh__pt');
-  table.append(cell('caption', fill('tableCaption', { fy, n: count(peers.length), group })));
-  const head = document.createElement('thead');
-  const hr = document.createElement('tr');
-  for (const col of COLS) {
-    const th = cell('th', fill(col.key), col.num ? 'num' : undefined);
-    th.scope = 'col';
-    hr.append(th);
-  }
-  head.append(hr);
-  const body = document.createElement('tbody');
+  const wrap = node('div', { class: 'hh__tw', tabindex: 0, role: 'region', 'aria-label': fill('tableSummary') });
+  const table = node('table', { class: 'hh__pt' }, [cell('caption', fill('tableCaption', { fy, n: count(peers.length), group }))]);
+  const head = node('thead', {}, [node('tr', {}, COLS.map((col) => node('th', { class: col.num ? 'num' : null, scope: 'col' }, [fill(col.key)])))]);
+  const body = node('tbody');
   const rows = [...peers].sort((a, b) => a.name.localeCompare(b.name, 'en-US') || a.ccn.localeCompare(b.ccn));
   for (const x of rows) {
-    const tr = document.createElement('tr');
-    const th = cell('th');
-    th.scope = 'row';
-    if (x === h) {
-      tr.className = 'hh__me';
-      th.append(cell('b', x.name), ' ', cell('span', fill('tableThis'), 'hh__metag'));
-    } else {
-      const a = cell('a', x.name);
-      a.href = hospitalPathOf('hub', x.ccn);
-      th.append(a);
-    }
-    tr.append(th, cell('td', x.city ?? ''), cell('td', x.state ?? ''));
+    const me = x === h;
+    const th = node('th', { scope: 'row' }, me
+      ? [cell('b', x.name), ' ', cell('span', fill('tableThis'), 'hh__metag')]
+      : [node('a', { href: hospitalPathOf('hub', x.ccn) }, [x.name])]);
+    const tr = node('tr', { class: me ? 'hh__me' : null }, [th, cell('td', x.city ?? ''), cell('td', x.state ?? '')]);
     for (const col of COLS.slice(3, 7)) {
       tr.append(inProgram(x.est, col.id) ? cell('td', signedMoney(x.est[ROW_KEY[col.id]]), 'num') : cell('td', fill('notInProgram'), 'num hh__na'));
     }

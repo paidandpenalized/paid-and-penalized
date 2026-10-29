@@ -30,6 +30,7 @@ import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { stripAxis } from '../scale.js';
 import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { node } from './dom.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -39,13 +40,6 @@ const struck = (now, actual) => (usd(now) === usd(actual) ? null : actual);
 const JUMP_MS = 450;
 // The room kept between the sticky row and a focused control it would otherwise cover (CSS pixels).
 const CLEAR = 8;
-
-function node(tag, attrs = {}, kids = []) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) n.setAttribute(k, String(v));
-  n.append(...kids);
-  return n;
-}
 
 // Text with each dollar figure in a span that never wraps, so a minus never parts from its number.
 const FIGURE = /([−+]?\$[\d.,]+[KMB]?)/;

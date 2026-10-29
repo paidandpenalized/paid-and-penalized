@@ -14,6 +14,7 @@ import { fillCopy } from '../../web/render/components.js';
 import { COPY } from '../hospital/copy.js';
 import { ROWS, peerGroup, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
+import { node } from './hospital/dom.js';
 import { mountStrips } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
 import { fillPeerTable } from './hospital/table.js';
@@ -100,17 +101,8 @@ function live(page, { hospitals, h, fy, still }) {
   function words(g) {
     const n = count(g.peers.length);
     const name = $('[data-peer-name]');
-    if (name) {
-      const b = document.createElement('b');
-      b.textContent = n;
-      name.replaceChildren(b, ` ${g.group}`);
-    }
-    if (note) {
-      const hint = document.createElement('span');
-      hint.className = 'hh__hint';
-      hint.textContent = fill('swarmHint');
-      note.replaceChildren(`${fill('swarmCaption', { fy, n, group: g.group, all })} `, hint);
-    }
+    name?.replaceChildren(node('b', {}, [n]), ` ${g.group}`);
+    note?.replaceChildren(`${fill('swarmCaption', { fy, n, group: g.group, all })} `, node('span', { class: 'hh__hint' }, [fill('swarmHint')]));
     const lede = $('.hh__lede');
     if (lede) lede.textContent = fill('whatifLede', { fy, n, group: g.group });
     for (const { id } of ROWS) {
