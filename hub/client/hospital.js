@@ -5,8 +5,9 @@
 // functions (hub/hospital/peers.js, text.js), so the page reads exactly as the build would have written it for that
 // group, and moves the dollar rows' median ticks, the swarm's dots and the strips' dots. The factor what-if
 // (hospital/whatif.js) owns the figures that a scenario changes (the headline, the net, the dollar rows, the result) and
-// states them for the actual or the hypothetical figures. Without the data the page stays as the server wrote it, with one
-// quiet line saying the chart couldn't load.
+// states them for the actual or the hypothetical figures. Without the data, or if any part fails to start, the page stays
+// (or is put back) as the server wrote it, with one quiet line saying the chart couldn't load: no control is left that does
+// nothing.
 import { PEER_MODES } from '../../engine/js/peers.js';
 import { count } from '../../web/client/format.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
@@ -28,18 +29,25 @@ const root = document.querySelector('article.hh[data-ccn]');
 if (root && root.querySelector('[data-peers]')) start(root);
 
 function start(page) {
-  const $ = (selector) => page.querySelector(selector);
   const src = document.querySelector('[data-hub-src]')?.dataset.hubSrc;
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // The page as the server wrote it, put back if the live page fails part way (a part started before the failure would
+  // leave controls with nothing behind them).
+  const written = page.cloneNode(true);
   const fail = () => {
-    const line = $('[data-load-error]');
+    const line = document.querySelector('article.hh [data-load-error]');
     if (line) line.hidden = false;
   };
   if (!src) return fail();
   loadHubAsset(src).then(({ hospitals, byCcn, fy }) => {
     const h = byCcn.get(page.dataset.ccn);
     if (!h?.est) throw new Error(`hub hospital: ${page.dataset.ccn} has no estimate in the data`);
-    live(page, { hospitals, h, fy: String(fy), still });
+    try {
+      live(page, { hospitals, h, fy: String(fy), still });
+    } catch (err) {
+      page.replaceWith(written);
+      throw err;
+    }
   }).catch(fail);
 }
 
@@ -65,8 +73,6 @@ function live(page, { hospitals, h, fy, still }) {
   if ('ResizeObserver' in window) new ResizeObserver(setBar).observe(pin);
 
   const buttons = [...page.querySelectorAll('[data-peer]')];
-  for (const b of buttons) b.hidden = false;
-  for (const note of page.querySelectorAll('[data-peer-note]')) note.hidden = false;
   setBar();
 
   // The share axis: every hospital's actual figures (domain), and the one that also holds every figure the what-if can
@@ -125,6 +131,11 @@ function live(page, { hospitals, h, fy, still }) {
     whatIf.setGroup(g);
     if (details?.open) table();
   }
-  for (const b of buttons) b.addEventListener('click', () => choose(b.dataset.peer));
+  // The toggle and its notes show once every part has started, with the toggle's handlers.
+  for (const b of buttons) {
+    b.addEventListener('click', () => choose(b.dataset.peer));
+    b.hidden = false;
+  }
+  for (const n of page.querySelectorAll('[data-peer-note]')) n.hidden = false;
   page.classList.add('hh--live');
 }

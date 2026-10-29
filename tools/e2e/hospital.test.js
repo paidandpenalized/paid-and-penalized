@@ -865,4 +865,25 @@ describe('the hospital page\'s parts, at 1280 px', () => {
     assert.deepEqual([s.end, s.cut], [0, 0], 'rested once every part arrived, none cut short');
     await assertQuiet(seen, 'a late glide');
   }));
+
+  // A part that fails to start (here the what-if's first step, after the swarm and the strips have mounted) leaves no
+  // control that does nothing: the page as the server wrote it, with the one quiet line.
+  it('a part that fails to start leaves the page as the server wrote it, with the quiet line', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    await page.addInitScript(() => {
+      const after = Element.prototype.after;
+      Element.prototype.after = function (...nodes) {
+        if (this.classList?.contains('hh__lede')) throw new Error('the what-if fails to start (a test)');
+        return after.apply(this, nodes);
+      };
+    });
+    await visit(page, tabs.base, CUT.path);
+    await settle(page);
+    const s = await page.evaluate(() => ({
+      error: document.querySelector('[data-load-error]').checkVisibility(),
+      buttons: [...document.querySelectorAll('[data-peer]')].filter((b) => b.checkVisibility({ visibilityProperty: true })).length,
+      handles: document.querySelectorAll('.st__h').length,
+      canvas: document.querySelectorAll('.hh__cv').length,
+    }));
+    assert.deepEqual(s, { error: true, buttons: 0, handles: 0, canvas: 0 });
+  }));
 });
