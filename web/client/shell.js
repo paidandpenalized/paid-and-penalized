@@ -1,9 +1,10 @@
 // The one script every page loads first (render/layout.js), for the shell around it (render/shell.js): the dark-mode
-// buttons, the hospital a reader follows from page to page, the phone's search button and the program tabs' scroll and
-// fade. Each part is a function of the elements it works on, so the wiring is tested on a stand-in DOM; start() at the
-// bottom finds those elements on a real page. Nothing is stored: the theme lasts for the visit, and the followed
-// hospital lives in the address (?h=), so the next visit starts clean. Everything a hospital's name touches is
-// textContent or an attribute, never markup. The pure parts of the follow are follow.js's, for any script to share.
+// buttons, the hospital a reader follows from page to page, the phone's search button, the program tabs' scroll and
+// fade, and a keyboard's focus kept in view in the header's rows that scroll sideways. Each part is a function of the
+// elements it works on, so the wiring is tested on a stand-in DOM; start() at the bottom finds those elements on a real
+// page. Nothing is stored: the theme lasts for the visit, and the followed hospital lives in the address (?h=), so the
+// next visit starts clean. Everything a hospital's name touches is textContent or an attribute, never markup. The pure
+// parts of the follow are follow.js's, for any script to share.
 import { CCN } from '../../engine/js/ccn.js';
 import { CHIP } from '../chip-copy.js';
 import { hospitalPathOf } from '../site.js';
@@ -150,6 +151,18 @@ export function tabScroll(row, tab) {
 // Whether more tabs lie to the right of what the row shows (a pixel's fraction is not more).
 export const moreTabs = ({ scrollLeft, clientWidth, scrollWidth }) => scrollLeft + clientWidth < scrollWidth - 1;
 
+// A row that scrolls sideways (the program tabs, a program's section menu): a keyboard's focus on an item the row shows
+// only in part scrolls the row just enough to show it whole, clear of the left edge and the right fade (tabScroll), since
+// a browser leaves a partly visible item where it is. A focus a pointer gave (no :focus-visible) leaves the row where it
+// is, so a press is never moved out from under the pointer before its click.
+export function keepFocusInRow(row) {
+  row.addEventListener('focusin', ({ target }) => {
+    if (row.scrollWidth <= row.clientWidth || !target.matches(':focus-visible')) return;
+    const by = tabScroll(row.getBoundingClientRect(), target.getBoundingClientRect());
+    if (by) row.scrollLeft += by;
+  });
+}
+
 // Scrolls the current tab into view (a row that fits needs nothing) and keeps .tabs--more on the nav while more tabs lie
 // to the right, as the row scrolls and the window resizes. fonts: a promise for the page's web fonts, which change the
 // tabs' widths when they arrive, so the fit is made again then (a tab already clear is left where the reader put it).
@@ -182,6 +195,7 @@ function start() {
   const nav = header.querySelector('nav.tabs');
   const row = nav?.querySelector('.tabs__scroll');
   if (nav && row) wireTabs({ nav, row, win: window, fonts: document.fonts?.ready ?? null });
+  for (const sideways of header.querySelectorAll('.tabs__scroll, .nav')) keepFocusInRow(sideways);
   const chip = header.querySelector('[data-chip]');
   if (chip) {
     follow({

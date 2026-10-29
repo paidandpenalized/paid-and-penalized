@@ -9,7 +9,7 @@ import { REPO_ROOT } from '../../pipeline/files.js';
 import { CHIP } from '../chip-copy.js';
 import { followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
 import * as shell from '../client/shell.js';
-import { follow, moreTabs, rewriteLinks, tabScroll, wireFind, wireTabs, wireTheme } from '../client/shell.js';
+import { follow, keepFocusInRow, moreTabs, rewriteLinks, tabScroll, wireFind, wireTabs, wireTheme } from '../client/shell.js';
 import { SITE, hospitalPathOf } from '../site.js';
 
 // ---------- the pure parts ----------
@@ -372,6 +372,28 @@ function tabRow({ scrollWidth = 900, clientWidth = 390, current = { left: 500, r
   const win = el('window');
   return { nav, row, win };
 }
+
+test('keepFocusInRow: a keyboard\'s focus on an item the row shows only in part scrolls it whole and clear of the edges; a click\'s focus stays put', () => {
+  const row = el('div', { scrollLeft: 0, scrollWidth: 900, clientWidth: 390, getBoundingClientRect: () => ({ left: 0, right: 390 }) });
+  // An item 300 to 420 px along the row (as the row scrolls, its box moves left).
+  const item = (left, right, keyboard = true) => el('a', {
+    getBoundingClientRect: () => ({ left: left - row.scrollLeft, right: right - row.scrollLeft }),
+    matches: (sel) => sel === ':focus-visible' && keyboard,
+  });
+  keepFocusInRow(row);
+  row.emit('focusin', { target: item(300, 420) });
+  assert.equal(row.scrollLeft, 420 + 48 - 390, 'whole and clear of the right fade');
+  row.emit('focusin', { target: item(20, 140) });
+  assert.equal(row.scrollLeft, 20 - 8, 'back, clear of the left edge');
+  row.emit('focusin', { target: item(100, 200) });
+  assert.equal(row.scrollLeft, 12, 'an item already whole: no scroll');
+  row.emit('focusin', { target: item(700, 820, false) });
+  assert.equal(row.scrollLeft, 12, 'a pointer\'s focus: the row stays under it');
+  const fits = el('div', { scrollLeft: 0, scrollWidth: 390, clientWidth: 390, getBoundingClientRect: () => ({ left: 0, right: 390 }) });
+  keepFocusInRow(fits);
+  fits.emit('focusin', { target: el('a', { getBoundingClientRect: () => ({ left: 360, right: 389 }), matches: () => true }) });
+  assert.equal(fits.scrollLeft, 0, 'a row that fits never scrolls');
+});
 
 test('wireTabs: the row scrolls the current tab into view and marks more to the right while there are, as it scrolls and as the window resizes', () => {
   const { nav, row, win } = tabRow();
