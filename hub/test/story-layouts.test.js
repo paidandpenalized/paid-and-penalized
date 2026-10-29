@@ -12,7 +12,7 @@ import { BAR } from '../client/story/bar-frame.js';
 import { INK, NEUTRAL, PEN, REW } from '../client/colors.js';
 import { drawnDot } from '../client/pile.js';
 import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
-import { createLayouts, storyRows } from '../client/story/layouts.js';
+import { WIDE_MAX, createLayouts, storyRows } from '../client/story/layouts.js';
 import { decodedHub } from './helpers.js';
 
 const hub = loadHub();
@@ -123,6 +123,51 @@ for (const size of SIZES) {
     assertSeparate(layouts.you, N, 2 * N, size.dpr, 'you, the peers');
     // The start block is one block of separate dots.
     assertSeparate(layouts.start, 0, N, size.dpr, 'start');
+  });
+}
+
+// A 1x office monitor's piles must not read as hairline stipple: every dot of a step's pile is drawn at least two device
+// pixels across (with a device pixel between), at every size and device pixel ratio; the too-tall bins widen instead
+// (R24, adaptive). Only a pile whose widened bin would then stand more than WIDE_MAX of the axis across keeps the
+// device's own floor: a 1x window far shorter than any here.
+for (const size of SIZES.filter((s) => s.dpr >= 1)) {
+  test(`at ${size.name}: the piles' dots are at least two device pixels across`, () => {
+    const { layouts } = all(size);
+    for (const name of ['start', 'g1', 'g2', 'g3', 'net', 'you']) {
+      const L = layouts[name];
+      let least = Infinity;
+      for (let i = 0; i < 2 * N; i++) if (L.A[i] > 0) least = Math.min(least, drawnDot(L.R[i], size.dpr).side);
+      assert.ok(least >= 2 - 1e-9, `${name}: a dot ${least} device pixels across`);
+      assert.ok(!L.info.small, `${name}: no fallback`);
+    }
+  });
+}
+
+test('a 1x window far shorter than a laptop\'s keeps the device\'s floor where two-pixel dots would swallow a pile\'s shape', () => {
+  const g = stageGeometry({ W: 320, H: 358, railHidden: true, px: 1, domain });
+  const L = createLayouts({ rows, g, mapW: asset.mapW, mapH: asset.mapH });
+  const you = L.layYou(example, statePeers);
+  assert.equal(you.info.small, true);
+  assert.equal(you.info.fits, true);
+  assertSeparate(you, 0, N, 1, 'everyone at 320 px, 1x');
+  // Its widest bin at the device's floor stands within WIDE_MAX of the axis.
+  const xs = [...new Set(Array.from({ length: N }, (_, i) => you.X[i]))].sort((a, b) => a - b);
+  assert.ok(xs.length > (g.x1 - g.x0) / 4, `${xs.length} dot columns: the swarm keeps its shape`);
+  assert.ok(WIDE_MAX > 0 && WIDE_MAX < 0.25);
+});
+
+// The column step 3's words point at ("the tall column: 147 whose only cut is this one") stands a few dots wide, so it
+// reads as a column, not a thread, at every size; its count's anchor is its top left.
+for (const size of SIZES.filter((s) => s.dpr >= 1)) {
+  test(`at ${size.name}: the hospital-acquired conditions column is a few dots wide`, () => {
+    const { layouts } = all(size);
+    const L = layouts.g2;
+    const only = rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []));
+    const xs = new Set(only.map((i) => L.X[i]));
+    assert.ok(xs.size >= 3, `${xs.size} dot columns`);
+    const { block } = L.info.only;
+    assert.ok(block.right - block.left >= 2 * Math.min(...only.map((i) => 2 * L.R[i])), 'the block spans its columns');
+    assert.ok(L.info.only.x <= Math.min(...only.map((i) => L.X[i])), 'the count sits left of the column');
   });
 }
 

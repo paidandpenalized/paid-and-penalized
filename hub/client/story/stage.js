@@ -346,8 +346,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.globalAlpha = 1;
   }
 
-  // A key: a dot in each ink (at its opacity, 1 unless given) with its words. Returns its box ({ left, right, top,
-  // bottom }).
+  // A key: a dot in each ink (at its opacity, 1 unless given; a fainter one ringed in its full ink, so the key's mark
+  // stays visible) with its words. Returns its box ({ left, right, top, bottom }).
   function key(entries, x, y, f, color, align = 'left') {
     ctx.font = f;
     const widths = entries.map(([words]) => ctx.measureText(words).width);
@@ -359,6 +359,13 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       ctx.globalAlpha = a * alpha;
       dot(at + 4, y - 4.5, 4, ink);
       ctx.globalAlpha = a;
+      if (alpha < 1) {
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(at + 4, y - 4.5, 3.5, 0, TAU);
+        ctx.stroke();
+      }
       text(words, at + 13, y, f, color);
       at += widths[k] + 13 + 16;
     });
@@ -417,7 +424,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     let last = Math.max(g.top + 12 + (lines.length - 1) * step, z.y);
     const first = () => last - (lines.length - 1) * step;
     const across = (z.x + w > g.x1 ? [g.x1 - w, g.x1] : [z.x, z.x + w]);
-    if (box && across[0] < box.right && across[1] > box.left && first() - 12 < box.bottom + 3 && last + 4 > box.top) {
+    if (box && across[0] < box.right + 8 && across[1] + 8 > box.left && first() - 12 < box.bottom + 3 && last + 4 > box.top) {
       const moved = box.bottom + 3 + 12 + (lines.length - 1) * step;
       if (moved + 6 < z.clear) last = moved;
     }
@@ -448,7 +455,16 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       box = key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
     }
     if (info.zero) zeroNote(info.zero, box);
-    if (info.only) note(say('hacOnly', { n: count(info.only.n), cut: rules.cut }), info.only.x - 5, info.only.y, 'right');
+    if (info.only) {
+      // Left of the column's top, below the key where a tall column would put it into the key.
+      const words = say('hacOnly', { n: count(info.only.n), cut: rules.cut });
+      ctx.font = font(g.narrow ? 10.5 : 11.5, 400, true);
+      const w = ctx.measureText(words).width;
+      const right = Math.max(info.only.x - 5, g.x0 + w);
+      const y = Math.max(g.top + 12, info.only.y);
+      const into = box && right - w < box.right + 8 && right + 8 > box.left && y - 12 < box.bottom + 3 && y + 4 > box.top;
+      note(words, info.only.x - 5, into ? box.bottom + 15 : y, 'right');
+    }
     if (L.scene === 'net') {
       const f = font(g.narrow ? 11.5 : 13, 400, true);
       key([[say('netCut', { n: count(info.cut) }), colors.pen], [say('netBonus', { n: count(info.bonus) }), colors.rew]], g.scale.zM, info.top - (g.narrow ? 12 : 16), f, colors.ink, 'center');
