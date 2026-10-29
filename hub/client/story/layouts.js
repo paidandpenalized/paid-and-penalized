@@ -59,11 +59,12 @@ export function createLayouts({ rows, g, mapW, mapH }) {
   const dMin = Math.max(least, 3 * Math.min(g.px, 1));
   // Every pile of the story widens only its too-tall bins when it must (pile.js pileLayout's adaptive).
   const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin, gap, px: g.px, adaptive: true, ...extra });
-  // A pile at the two-device-pixel floor, or at pileSpacing's when that would widen a bin past WIDE_MAX of the axis:
-  // { ...pileLayout's, small } (small: it fell back).
+  // A pile at the two-device-pixel floor, or at pileSpacing's when at that floor it would not fit (the $0 gutter, which
+  // cannot widen, overflows on a narrow stage) or would widen a bin past WIDE_MAX of the axis: { ...pileLayout's, small }
+  // (small: it fell back).
   function pileOf(items, opts) {
     const pile = pileLayout(items, g.scale, opts);
-    if (dMin <= least || pile.m * pile.d <= WIDE_MAX * (g.x1 - g.x0)) return { ...pile, small: false };
+    if (dMin <= least || (pile.fits && pile.m * pile.d <= WIDE_MAX * (g.x1 - g.x0))) return { ...pile, small: false };
     return { ...pileLayout(items, g.scale, { ...opts, dMin: least }), small: true };
   }
   const size = (kind) => PILE[kind][g.narrow ? 'narrow' : 'wide'];
@@ -216,9 +217,13 @@ export function createLayouts({ rows, g, mapW, mapH }) {
     const mine = peers.map((p) => index.get(p)).filter((i) => i !== undefined).map((i) => ({ id: N + i, v: rows[i].c[3], key: rows[i].hash }));
     const pTop = g.top + (g.narrow ? 44 : 70);
     const pBot = aTop - (g.narrow ? 34 : 54);
-    const peerPile = pileOf(mine, pileOpts(pBot, pTop, peerPitch(mine.length, g.narrow), { mirror: true }));
-    place(L, peerPile, mine, 1);
-    L.info = { h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: pileExtent(peerPile), all: pileExtent(allPile), fits: allPile.fits && peerPile.fits, small: allPile.small || peerPile.small };
+    // No peers (a hospital without an estimate): no group's pile, so no room above everyone's need be left for one.
+    const peerPile = mine.length ? pileOf(mine, pileOpts(pBot, pTop, peerPitch(mine.length, g.narrow), { mirror: true })) : null;
+    if (peerPile) place(L, peerPile, mine, 1);
+    L.info = {
+      h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: peerPile ? pileExtent(peerPile) : [Infinity, -Infinity],
+      all: pileExtent(allPile), fits: allPile.fits && (!peerPile || peerPile.fits), small: allPile.small || Boolean(peerPile?.small),
+    };
     return L;
   }
 

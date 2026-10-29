@@ -45,7 +45,10 @@ function stageFor(vw, vh) {
 // The brief's windows (320, 390, 1024 and 1440 wide, 640 and 900 tall) and the common desktop windows whose short heights
 // make the steepest pile tightest (a laptop's 1366×657 and 1280×720, a 1440 window with its browser's bars, 1024×768).
 const WINDOWS = [[320, 640], [320, 900], [390, 640], [390, 900], [1024, 640], [1024, 900], [1440, 640], [1440, 900],
-  [1366, 657], [1440, 790], [1280, 720], [1024, 768], [375, 667], [320, 568]];
+  [1366, 657], [1440, 790], [1280, 720], [1024, 768], [375, 667], [320, 568],
+  // The narrow desktop stages (the rail's first widths, and a window without it) on short 1x screens, where the $0
+  // gutter cannot hold step 2's pile at two-pixel dots.
+  [1100, 657], [1080, 720], [900, 657]];
 const SIZES = [];
 for (const [vw, vh] of WINDOWS) {
   const st = stageFor(vw, vh);
@@ -132,20 +135,34 @@ for (const size of SIZES) {
 
 // A 1x office monitor's piles must not read as hairline stipple: every dot of a step's pile is drawn at least two device
 // pixels across (with a device pixel between), at every size and device pixel ratio; the too-tall bins widen instead
-// (R24, adaptive). Only a pile whose widened bin would then stand more than WIDE_MAX of the axis across keeps the
-// device's own floor: a 1x window far shorter than any here.
+// (R24, adaptive). A pile that cannot fit at that floor (the $0 gutter overflows on a narrow stage) or whose widened bin
+// would stand more than WIDE_MAX of the axis across keeps the device's own floor: only on a 1x screen, and never on
+// a 1440 window 790 px tall or more.
+const WIDE_MONITORS = new Set(['1440×900 at 1x', '1440×790 at 1x']);
 for (const size of SIZES.filter((s) => s.dpr >= 1)) {
-  test(`at ${size.name}: the piles' dots are at least two device pixels across`, () => {
+  test(`at ${size.name}: the piles' dots are at least two device pixels across, or the device's floor where they cannot fit`, () => {
     const { layouts } = all(size);
     for (const name of ['start', 'g1', 'g2', 'g3', 'net', 'you']) {
       const L = layouts[name];
       let least = Infinity;
       for (let i = 0; i < 2 * N; i++) if (L.A[i] > 0) least = Math.min(least, drawnDot(L.R[i], size.dpr).side);
-      assert.ok(least >= 2 - 1e-9, `${name}: a dot ${least} device pixels across`);
-      assert.ok(!L.info.small, `${name}: no fallback`);
+      if (L.info.small) {
+        assert.equal(size.dpr, 1, `${name}: the device's floor only on a 1x screen`);
+        assert.ok(!WIDE_MONITORS.has(size.name), `${name}: a 1440 monitor keeps two-pixel dots`);
+        assert.ok(least >= 1 - 1e-9);
+      } else assert.ok(least >= 2 - 1e-9, `${name}: a dot ${least} device pixels across`);
     }
   });
 }
+
+test('layYou with no hospital fits on a short desktop window too (a 420 px stage, beside the rail), at 1x, 2x and 3x', () => {
+  for (const dpr of [1, 2, 3]) {
+    const sg = stageGeometry({ W: 574, H: 420, railHidden: false, px: 1 / dpr, domain });
+    const alone = createLayouts({ rows, g: sg, mapW: asset.mapW, mapH: asset.mapH }).layYou(null, []);
+    assert.equal(alone.info.fits, true, `${dpr}x`);
+    assertSeparate(alone, 0, N, dpr, `everyone alone at ${dpr}x`);
+  }
+});
 
 test('a 1x window far shorter than a laptop\'s keeps the device\'s floor where two-pixel dots would swallow a pile\'s shape', () => {
   const g = stageGeometry({ W: 320, H: 358, railHidden: true, px: 1, domain });
