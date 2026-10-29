@@ -2,9 +2,10 @@
 // state's button) writes its line to the readout over the map; a click, a tap, Enter or Space pins it, so the line stays
 // once the pointer leaves. Each state is a toggle button, pressed while pinned (aria-pressed), from the moment the map
 // answers. The readout is for the eye; a quiet live region beside it ([data-said]) says a state's line when the state is
-// picked, never as the pointer passes over the map or the focus moves (a focused state's own name is its line). The lines are the server's (hub/home/states.js stateLine): each state's title on the map and
-// each button's name, so the readout says exactly what the map's tooltips and a screen reader say, Maryland's included
-// ("not in these programs"). An address's #state=<code> (the family search's state pick) names a state to pin.
+// picked, never as the pointer passes over the map or the focus moves (a focused state's own name is its line). The
+// lines are the server's (hub/home/states.js stateLine): each state's title on the map and each button's name, so the
+// readout says exactly what the map's tooltips and a screen reader say, Maryland's included ("not in these programs").
+// An address's #state=<code> (the family search's state pick) names a state to pin.
 import { US_STATES } from '../../../engine/js/states.js';
 
 const CODES = new Set(US_STATES.map(([code]) => code));
@@ -44,45 +45,43 @@ export function mountMap(stageEl) {
   readout.hidden = false;
   if (smalls) smalls.hidden = false;
 
+  const byCode = (code) => all.find((x) => x.dataset.st === code) ?? null;
   // The readout: the state pointed at or focused, else the pinned one, else the prompt.
   function write() {
-    const el = on ?? (pinned ? all.find((x) => x.dataset.st === pinned) : null);
+    const el = on ?? byCode(pinned);
     const line = el ? lineOf(el) : null;
     readout.textContent = line || prompt;
     readout.classList.toggle('is-line', Boolean(line));
     for (const x of all) {
       x.classList.toggle('is-on', x === on);
       x.classList.toggle('is-pin', x.dataset.st === pinned);
-      x.setAttribute('aria-pressed', String(x.dataset.st === pinned));
     }
   }
-  // Says a state's line to a screen reader (a pick); a pick that unpins says nothing more.
-  const say = (el) => {
+  // Pins the state code (null: none): each state's pressed state, the readout, and its line said to a screen reader (an
+  // unpin says nothing more).
+  const setPin = (code) => {
+    pinned = code;
+    for (const x of all) x.setAttribute('aria-pressed', String(x.dataset.st === pinned));
+    write();
+    const el = byCode(pinned);
     const line = el ? lineOf(el) : null;
     if (said && line) said.textContent = line;
   };
-  const byCode = (code) => all.find((x) => x.dataset.st === code) ?? null;
   const stateOf = (target) => {
     const el = target?.closest?.('[data-st]') ?? null;
     return el && all.includes(el) ? el : null;
   };
-  const pin = (code) => {
-    pinned = pinned === code ? null : code;
-    write();
-    say(byCode(pinned));
-  };
+  const pin = (code) => setPin(pinned === code ? null : code);
 
   // The listeners sit on the map's figure, an HTML element (an SVG element that listens for focus becomes a stop in the
   // tab order of its own).
   const box = svg.closest('.smapfig') ?? stageEl;
-  box.addEventListener('pointerover', (e) => {
-    on = stateOf(e.target);
-    write();
-  });
-  box.addEventListener('focusin', (e) => {
-    on = stateOf(e.target);
-    write();
-  });
+  for (const type of ['pointerover', 'focusin']) {
+    box.addEventListener(type, (e) => {
+      on = stateOf(e.target);
+      write();
+    });
+  }
   // Leaving a state (the next one's pointerover, if any, follows at once).
   for (const type of ['pointerout', 'focusout']) {
     box.addEventListener(type, () => {
@@ -111,10 +110,6 @@ export function mountMap(stageEl) {
       }
     },
     // Pin the state (from an address), whatever was pinned before.
-    pin(code) {
-      pinned = code;
-      write();
-      say(byCode(code));
-    },
+    pin: setPin,
   };
 }

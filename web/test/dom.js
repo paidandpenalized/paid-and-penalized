@@ -17,20 +17,24 @@ export function el(tag) {
   return node;
 }
 
-// A search form as the build writes it (hidden), with its box, its list ("omni-list", hidden) and its status, for test t:
-// a document and a window stand in for the page's during the test, and the real ones (or none) come back after it.
-// type(value) types into the box and waits for the list; texts() reads the list's options, each option's parts joined
-// by "|".
-export function comboForm(t) {
-  const saved = { document: globalThis.document, window: globalThis.window };
-  globalThis.document = { createElement: el };
-  globalThis.window = { location: { assign() {} } };
+// Globals (name -> value: a document, a window) stand in for the page's during test t, and the real ones (or none) come
+// back after it.
+export function standIn(t, globals) {
+  const saved = Object.fromEntries(Object.keys(globals).map((k) => [k, globalThis[k]]));
+  Object.assign(globalThis, globals);
   t.after(() => {
     for (const [k, v] of Object.entries(saved)) {
       if (v === undefined) delete globalThis[k];
       else globalThis[k] = v;
     }
   });
+}
+
+// A search form as the build writes it (hidden), with its box, its list ("omni-list", hidden) and its status, for test t,
+// with a document and a window standing in (standIn). type(value) types into the box and waits for the list; texts()
+// reads the list's options, each option's parts joined by "|".
+export function comboForm(t) {
+  standIn(t, { document: { createElement: el }, window: { location: { assign() {} } } });
   const input = el('input');
   input.setAttribute('role', 'combobox');
   input.setAttribute('aria-expanded', 'false');

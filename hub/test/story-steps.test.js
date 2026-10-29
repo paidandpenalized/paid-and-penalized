@@ -1,6 +1,7 @@
 // The home story's scroll logic (hub/client/story/steps.js): which step is being read.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { standIn } from '../../web/test/dom.js';
 import { activeStep, mountSteps } from '../client/story/steps.js';
 
 test('activeStep picks the last step whose top has passed the focus line, the first before any has', () => {
@@ -14,28 +15,28 @@ test('activeStep picks the last step whose top has passed the focus line, the fi
   assert.equal(activeStep([], 500), 0);
 });
 
+// A listener added with an abort signal comes off when the signal aborts, as a browser's does (drop takes it off).
+const keep = (options, drop) => options?.signal?.addEventListener('abort', drop);
+
 // A stand-in story for mountSteps (no DOM in node:test): three steps whose tops the test sets, the rail's links (which
 // keep their click listeners), the phone label's items, the progress line and the stage, on a desktop-wide window whose
-// frames run only when the test says. The page's own window and document come back after the test.
+// frames run only when the test says. The page's own window and document come back after the test (standIn).
 function storyPage(t) {
-  const saved = { window: globalThis.window, document: globalThis.document };
-  t.after(() => {
-    for (const [k, v] of Object.entries(saved)) {
-      if (v === undefined) delete globalThis[k];
-      else globalThis[k] = v;
-    }
-  });
   const listeners = new Map();
   const frames = new Map();
   let id = 0;
-  globalThis.window = {
-    innerHeight: 800,
-    addEventListener: (type, fn) => listeners.set(type, fn),
-    removeEventListener: (type, fn) => listeners.get(type) === fn && listeners.delete(type),
-    requestAnimationFrame: (fn) => (frames.set(++id, fn), id),
-    cancelAnimationFrame: (n) => frames.delete(n),
-  };
-  globalThis.document = { querySelector: () => null, getElementById: () => null };
+  standIn(t, {
+    window: {
+      innerHeight: 800,
+      addEventListener: (type, fn, options) => {
+        listeners.set(type, fn);
+        keep(options, () => listeners.get(type) === fn && listeners.delete(type));
+      },
+      requestAnimationFrame: (fn) => (frames.set(++id, fn), id),
+      cancelAnimationFrame: (n) => frames.delete(n),
+    },
+    document: { querySelector: () => null, getElementById: () => null },
+  });
   const classes = () => {
     const on = new Set();
     return { toggle: (c, yes) => (yes ? on.add(c) : on.delete(c)), remove: (...cs) => cs.forEach((c) => on.delete(c)), contains: (c) => on.has(c) };
@@ -46,8 +47,11 @@ function storyPage(t) {
     const a = { hash: `#step-${i}`, attrs: {}, clicks: new Set() };
     a.setAttribute = (k, v) => { a.attrs[k] = v; };
     a.removeAttribute = (k) => { delete a.attrs[k]; };
-    a.addEventListener = (type, fn) => type === 'click' && a.clicks.add(fn);
-    a.removeEventListener = (type, fn) => type === 'click' && a.clicks.delete(fn);
+    a.addEventListener = (type, fn, options) => {
+      if (type !== 'click') return;
+      a.clicks.add(fn);
+      keep(options, () => a.clicks.delete(fn));
+    };
     return a;
   });
   const now = steps.map(() => ({ classList: classes() }));

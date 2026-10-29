@@ -1,6 +1,7 @@
 // The home story's scroll: which step is being read (its words in full ink, the others in the faintest text ink, which
 // still reads at 4.5:1; hub/styles.css), the rail marking the current step, the phone's "n/9 Step name" label, the thin
 // progress line under the header, and the call that moves the chart. activeStep is pure; mountSteps wires it to the page.
+import { clamp01 } from '../paint.js';
 
 // The step being read: the last whose top (stepTops, in window pixels, in order) has reached the focus line; the first
 // before any has.
@@ -52,7 +53,7 @@ export function mountSteps({ story, onStep, phone, still }) {
     const at = activeStep(tops, focus);
     const r = story.getBoundingClientRect();
     if (progress) {
-      progress.style.transform = `scaleX(${Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh))).toFixed(4)})`;
+      progress.style.transform = `scaleX(${clamp01(-r.top / Math.max(1, r.height - vh)).toFixed(4)})`;
       progress.classList.toggle('is-on', r.top < vh && r.bottom > top);
     }
     if (at !== current) {
@@ -68,26 +69,28 @@ export function mountSteps({ story, onStep, phone, still }) {
     if (!frame) frame = window.requestAnimationFrame(update);
   };
 
+  // Every listener here comes off at once (stop).
+  const off = new AbortController();
+  const { signal } = off;
+
   // A pointer's click on the rail glides to its step, so the chart moves through the steps between. A keyboard's (a click
   // with no pointer, detail 0) and any click when the reader asks for less motion keep the link's own jump, which also
   // moves the keyboard's place in the page to the step.
-  const glides = links.map((a) => {
-    const glide = (event) => {
+  for (const a of links) {
+    a.addEventListener('click', (event) => {
       const target = document.getElementById(a.hash.slice(1));
       if (!target || still.matches || event.detail === 0 || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    a.addEventListener('click', glide);
-    return glide;
-  });
+    }, { signal });
+  }
 
   const resized = () => {
     measure();
     queue();
   };
-  window.addEventListener('scroll', queue, { passive: true });
-  window.addEventListener('resize', resized, { passive: true });
+  window.addEventListener('scroll', queue, { passive: true, signal });
+  window.addEventListener('resize', resized, { passive: true, signal });
   measure();
   update();
   return {
@@ -95,11 +98,9 @@ export function mountSteps({ story, onStep, phone, still }) {
     // Back to the page as the server wrote it: no fading, no current step, no update still to come, the rail's links
     // their own jumps.
     stop() {
-      window.removeEventListener('scroll', queue);
-      window.removeEventListener('resize', resized);
+      off.abort();
       window.cancelAnimationFrame(frame);
       frame = 0;
-      links.forEach((a, i) => a.removeEventListener('click', glides[i]));
       for (const s of steps) s.classList.remove('step--tall', 'is-current');
       for (const a of links) a.removeAttribute('aria-current');
       for (const li of now) li.classList.remove('is-now');
