@@ -74,13 +74,14 @@ function live(page, { hospitals, h, fy, still }) {
   // move the value). The swarm, which no drag holds, keeps its finer axis and glides to the wide one only while a
   // hypothetical net lies past its own.
   const domain = shareDomain(hospitals);
-  const wide = shareDomain(hospitals, reach(h, { vbpMax: vbpMaxOf(hospitals) }));
+  const vbpMax = vbpMaxOf(hospitals);
+  const wide = shareDomain(hospitals, reach(h, { vbpMax }));
   const swarmEl = $('[data-swarm]');
   const swarm = mountSwarm(swarmEl, { hospitals, h, peers: first.peers, domain, wide, fill, fy, group: first.group, still });
   const note = $('[data-swarm-note]');
   if (note) note.hidden = false;
   const strips = mountStrips($('#whatif'), { h, peers: first.peers, figures: first.figures, domain, wide, fill, still, handles: ROWS.map((r) => r.id) });
-  const whatIf = mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group: first });
+  const whatIf = mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group: first });
 
   const details = $('[data-peer-table]');
   let current = first;

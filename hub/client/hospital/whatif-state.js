@@ -9,7 +9,7 @@
 import { pctOf, programDollars } from '../../../engine/js/dollars/whatif.js';
 import { has } from '../../../engine/js/has.js';
 import { median } from '../../../engine/js/peers.js';
-import { toUnit } from '../../../engine/js/stats.js';
+import { clamp, toUnit } from '../../../engine/js/stats.js';
 import { decode, encode, isScenarioHash } from '../../../web/whatif/fragment.js';
 import { HRRP_CAP_PCT, VBP_WITHHOLD_PCT } from '../../../web/programs.js';
 import { inProgram } from '../../hospital/peers.js';
@@ -29,7 +29,6 @@ const SAME = 1e-9;
 
 const round4 = (x) => toUnit(x, DP);
 const floor4 = (x) => Math.floor(x * 10 ** DP + SAME) / 10 ** DP;
-const clamp = (x, [lo, hi]) => (x < lo ? lo : x > hi ? hi : x);
 const same = (a, b) => Math.abs(a.hrrp - b.hrrp) < SAME && Math.abs(a.hvbp - b.hvbp) < SAME && a.hac === b.hac;
 
 // The highest value-based purchasing factor of any hospital the program lists (hospitals: every decoded row): the top of
@@ -55,16 +54,16 @@ export const initial = (h) => ({ hrrp: h.est.hrrpFactor, hvbp: h.est.vbpFactor, 
 // h's range for id (ranges'), or null for an id that is not a factor (the cut) or a program h is not in.
 const rangeOf = (rng, id) => (has(FACTOR, id) ? rng[id] : null);
 
-// A range widened to hold h's own factor (own): the highest value-based purchasing factor sits past the range's
-// four-decimal end.
-const widen = (r, own) => [Math.min(r[0], own), Math.max(r[1], own)];
-
-// A factor's ends as the field and the slider state them, and Home and End go to: h's range for id, widened to hold its
-// own factor; null for the cut or a program h is not in.
-export function extent(h, ctx, id) {
-  const r = rangeOf(ranges(h, ctx), id);
-  return r && widen(r, initial(h)[id]);
+// A factor's ends as the field and the slider state them, and Home and End go to: h's range for id (rng: ranges'),
+// widened to hold its own factor (the highest value-based purchasing factor sits past the range's four-decimal end);
+// null for the cut or a program h is not in.
+function spanOf(rng, h, id) {
+  const r = rangeOf(rng, id);
+  if (!r) return null;
+  const own = initial(h)[id];
+  return [Math.min(r[0], own), Math.max(r[1], own)];
 }
+export const extent = (h, ctx, id) => spanOf(ranges(h, ctx), h, id);
 
 // A factor to four decimals, or the actual factor when it reads the same.
 const settle = (x, actual) => (round4(x) === round4(actual) ? actual : round4(x));
@@ -86,8 +85,7 @@ function medianPatch(id, h, rng, peers) {
   const f = has(FACTOR, id) ? FACTOR[id] : null;
   if (!f || !rng[id]) return null;
   const m = median(peers.filter((p) => inProgram(p.est, f.row)).map((p) => p.est[f.key]));
-  const own = initial(h)[id];
-  return m === null ? null : { [id]: settle(clamp(m, widen(rng[id], own)), own) };
+  return m === null ? null : { [id]: settle(clamp(m, ...spanOf(rng, h, id)), initial(h)[id]) };
 }
 
 // The next state after action, given ctx { h, vbpMax, peers } (peers: h's group, for the medians). Actions:
@@ -108,26 +106,21 @@ export function reduce(state, action, ctx) {
     return same(next, state) ? state : next;
   };
   const id = action?.id;
-  const r = rangeOf(rng, id);
-  // A factor's own value and its ends (extent's). Past the range's four-decimal end the highest factor in the data is
-  // its own top, so nothing lands between the two.
-  const own = r && initial(h)[id];
-  const span = r && widen(r, own);
+  // A factor's ends (extent's) and its own value. Past the range's four-decimal end the highest factor in the data is its
+  // own top, so nothing lands between the two.
+  const span = spanOf(rng, h, id);
+  const own = span && initial(h)[id];
   switch (action?.type) {
     case 'set':
       // A value that reads as the actual factor is the actual factor (settle).
-      return r && Number.isFinite(action.value) ? put({ [id]: settle(clamp(action.value, span), own) }) : state;
-    case 'step': {
-      const dir = Math.sign(action.dir);
-      if (!r || !dir) return state;
-      const next = settle(clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), span), own);
-      // Never a step the wrong way.
-      return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
-    }
+      return span && Number.isFinite(action.value) ? put({ [id]: settle(clamp(action.value, ...span), own) }) : state;
+    case 'step':
     case 'end': {
       const dir = Math.sign(action.dir);
-      if (!r || !dir) return state;
-      const next = settle(span[dir < 0 ? 0 : 1], own);
+      if (!span || !dir) return state;
+      const to = action.type === 'end' ? span[dir < 0 ? 0 : 1] : clamp(state[id] + dir * (action.big ? BIG_STEP : STEP), ...span);
+      const next = settle(to, own);
+      // Never a step the wrong way.
       return (next - state[id]) * dir > 0 ? put({ [id]: next }) : state;
     }
     case 'hac':

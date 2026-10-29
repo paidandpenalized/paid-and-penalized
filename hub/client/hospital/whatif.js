@@ -29,7 +29,7 @@ import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { stripAxis } from '../scale.js';
-import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from './whatif-state.js';
+import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -83,13 +83,13 @@ function paintBar(track, sel, cls, dollars, x) {
   bar.style.setProperty('--w', w);
 }
 
-// mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), hospitals (every decoded
-// row: value-based purchasing's highest factor is theirs), fy, still (reduced motion), strips (mountStrips' handle API),
-// swarm (mountSwarm's), values (the dollar rows' scale values for every group: hub/hospital/peers.js sumValues), group
-// ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for the peer toggle.
-export function mountWhatIf(page, { h, hospitals, fy, still, strips, swarm, values, group }) {
+// mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), vbpMax (value-based
+// purchasing's highest factor of any hospital: whatif-state.js vbpMaxOf), fy, still (reduced motion), strips
+// (mountStrips' handle API), swarm (mountSwarm's), values (the dollar rows' scale values for every group:
+// hub/hospital/peers.js sumValues), group ({ peers, figures, group }, the page's first). Returns { setGroup(group) } for
+// the peer toggle.
+export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group }) {
   const $ = (sel) => page.querySelector(sel);
-  const vbpMax = vbpMaxOf(hospitals);
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
   // A factor's ends as the field and the slider state them (whatif-state.js extent).
