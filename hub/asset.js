@@ -10,11 +10,10 @@ export const MAP_WIDTH = 975;
 
 // The asset: { fy, mapW, mapH, cols, rows }, one row per hospital in the order given, values in `cols` order. Status is
 // 'e', 'm' or 'n'; flags are 0 or 1; beds is the bed count (the browser works out the size band from it); a number the
-// hospital does not have is null (a hospital without an estimate has no
-// dollars, factors or flags; one without a location, no x and y). x and y are the hospital on the US map at MAP_WIDTH,
-// to a tenth. `after` and `atStake` are left out because they follow from the rest; a row where they do not, or where
-// `hac` and `net` do not follow from the cut flag and the other dollars, stops the build, since the browser could not
-// derive them or trust the ones it is given.
+// hospital does not have is null (a hospital without an estimate has no dollars, factors or flags; one without a
+// location, no x and y). x and y are the hospital on the US map at MAP_WIDTH, to a tenth. `after` and `atStake` are left
+// out because they follow from the rest; a row where they do not, or where `hac` and `net` do not follow from the cut
+// flag and the other dollars, stops the build, since the browser could not derive them or trust the ones it is given.
 export function hubAsset(hospitals, { shapes, fy }) {
   const places = usProjected(shapes, hospitals.map(pointOf), MAP_WIDTH);
   const rows = hospitals.map((h, i) => {

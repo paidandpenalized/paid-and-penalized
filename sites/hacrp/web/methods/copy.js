@@ -385,7 +385,7 @@ export const COPY = {
   btKindSchMdhShort: { text: 'SCH or MDH', claim: null },
   btKindOtherShort: { text: 'others', claim: null },
   btGroup: { text: '{beds}, {kind}', claim: null },
-  // The same group as a description of hospitals ("under 100 beds that are sole community or Medicare-dependent").
+  // The same group as a description of hospitals ("fewer than 100 beds that are sole community or Medicare-dependent").
   btHospitalsSchMdh: { text: '{beds} that are sole community or Medicare-dependent', claim: null },
   btHospitalsOther: { text: '{beds} that are neither sole community nor Medicare-dependent', claim: null },
   btPoolOwn: { text: 'its own', claim: null },

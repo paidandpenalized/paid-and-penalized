@@ -1,6 +1,6 @@
 // The page build's shared assets: the shared stylesheet, a stylesheet of its own for each site, and one ES module per JS
-// entry, each named by a hash of its content so a changed file gets a new URL, plus the
-// fonts (fixed names), their licenses and the favicon.
+// entry, each named by a hash of its content so a changed file gets a new URL, plus the fonts (fixed names), their
+// licenses and the favicon.
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';

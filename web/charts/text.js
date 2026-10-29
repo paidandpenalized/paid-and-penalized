@@ -37,10 +37,10 @@ export function textWidth(text, size, { mono = false } = {}) {
 }
 
 // text in lines no wider than max at size (body face), broken after a run of spaces or of hyphens ("Nashville-Davidson--"
-// keeps both hyphens on its line, a double space both spaces); a piece wider than max keeps a line of its own. Each line but the last keeps the
-// space it broke at, so the lines joined are the text (a line's width is measured without it). A last line of one
-// word (a lone "area") takes the word before it too, where the line above has more and the two fit. Returns at least
-// one line.
+// keeps both hyphens on its line, a double space both spaces); a piece wider than max keeps a line of its own. Each
+// line but the last keeps the space it broke at, so the lines joined are the text (a line's width is measured without
+// it). A last line of one word (a lone "area") takes the word before it too, where the line above has more and the two
+// fit. Returns at least one line.
 export function wrapText(text, max, size) {
   const fits = (pieces) => textWidth(pieces.join('').trimEnd(), size) <= max;
   const lines = [[]];

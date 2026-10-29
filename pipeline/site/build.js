@@ -18,11 +18,11 @@ import { headersFile } from './headers.js';
 
 // Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx, { updated }) }: entries are
 // its browser JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files, a stylesheet of
-// their own named by its id (/assets/<id>.<hash>.css, ctx.assets.sheets[id]) that its pages link after the shared one,
-// web/styles/ (layout.js page()'s `sheets`), so no site's pages carry another's styles. A program site (one in web/site.js's SITE.sites)
-// returns its two dates for the corrections page, { updated: { cmsReleased, changed } }; updated is the dates of the
-// program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml, listing every
-// page an earlier site emitted as indexable.
+// their own named by its id (/assets/<id>.<hash>.css, ctx.assets.sheets[id]) that its pages link after the shared one
+// (layout.js page()'s `sheets`), so no site's pages carry another's styles. A program site (one in web/site.js's
+// SITE.sites) returns its two dates for the corrections page, { updated: { cmsReleased, changed } }; updated is the
+// dates of the program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml,
+// listing every page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
 // Shared by every site: the shell's script (the theme buttons, the followed hospital, the phone's search button, the
 // tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads first on

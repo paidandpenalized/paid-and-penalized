@@ -3,10 +3,11 @@
 // build time (the scale bar for the first six steps, the shaded states map for the last three), the canvas slot the
 // story's script draws in, and the parts only that script uses (hidden here). The last step finds a hospital among its
 // peers: a family search over the hospitals (hub/client/search.js mounts it; the story's script follows the hospital
-// found in place), and the example hospital's card. The page renders through hubPage (hub/parts.js), so its bar holds the family search too. Without scripts the page is
-// complete: the charts stick beside the steps they belong to (hub/styles.css), or sit between them on a phone. With
-// them (hub/client/home.js) the stage is one sticky chart whose canvas moves the dots from step to step. Below the story
-// (below.js): the program directory, the methods in brief with the example's worksheet, and the invitation.
+// found in place), and the example hospital's card. The page renders through hubPage (hub/parts.js), so its bar holds
+// the family search too. Without scripts the page is complete: the charts stick beside the steps they belong to
+// (hub/styles.css), or sit between them on a phone. With them (hub/client/home.js) the stage is one sticky chart whose
+// canvas moves the dots from step to step. Below the story (below.js): the program directory, the methods in brief with
+// the example's worksheet, and the invitation.
 import { PEER_MODES, median } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { COPY as SHARED } from '../../web/copy.js';

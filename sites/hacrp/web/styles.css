@@ -1,5 +1,6 @@
-/* The HACRP site's own styles, bundled after the shared ones in web/styles/: the hospital page's top (record card, stamp, map), the measure table, the
-   estimate tag and the measure lists. Colors come only from web/styles/tokens.css. */
+/* The HACRP site's own styles, a stylesheet of their own that its pages link after the shared one: the hospital page's
+   top (record card, stamp, map), the measure table, the estimate tag and the measure lists. Colors come only from
+   web/styles/tokens.css. */
 
 /* ---------- the hospital page (pages/hospital.js), after Thirty Day Readmissions' hospital record ----------
    The page runs the full width. The top: the record card and the verdict, 3fr and 2fr from 980px and the same
