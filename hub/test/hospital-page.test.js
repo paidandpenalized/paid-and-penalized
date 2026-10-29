@@ -130,7 +130,7 @@ test('a share too small for two decimals prints with more, never as 0.00% beside
   assert.equal(signedShareText(0), '0.00%');
 });
 
-test('the what-if section: a row per program with its value, pill, why and deep link, the next program\'s row, the net\'s result', () => {
+test('the what-if section: a row per program with its value, pill, why and deep link, then the net\'s result', () => {
   const main = mainOf(render(CUT));
   const whatif = block(main, 'id="whatif"', '</section>');
   assert.ok(whatif, 'the #whatif section');
@@ -151,9 +151,9 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(whatifRow(whatif, 'hacrp').includes(`<a class="hh__deep" href="${hospitalPathOf('hacrp', CUT.ccn)}">Hospital-acquired conditions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'HACRP: its hospital page');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`CMS’s FY${FY} decision: the flat ${pct(HAC_CUT_PCT / 100, 0)} cut.`), 'HACRP: CMS\'s decision');
   assert.ok(whatifRow(whatif, 'hvbp').includes('<a class="hh__deep hh__deep--soon" href="/hvbp/">Value-based purchasing: page not built yet</a>'), 'HVBP: its placeholder page');
-  // The empty row for another program, worded as a possibility, never a promise.
-  const next = block(whatif, 'class="hh__row hh__row--next"', '</div>\n</div>');
-  assert.ok(next && textOf(next).includes('Other programs Programs under consideration would add a row here, on the same scale.') && next.includes('<span>Room for another program</span>'), 'the empty row for another program');
+  // No empty row waits for another program: the net's row follows the last program's.
+  assert.ok(!whatif.includes('hh__row--next') && !whatif.includes('hh__nextbox'), 'no empty row for another program');
+  assert.match(whatif, /data-row="hvbp">[\s\S]*?<\/div>\n<\/div>\n<div class="hh__row hh__row--net" data-row="net">/, 'the net\'s row comes straight after the last program\'s');
   // The net's row: the result in a live region, the standing line, and the two buttons hidden until the script.
   const net = whatifRow(whatif, 'net');
   assert.ok(net.includes('<div class="hh__result" data-result aria-live="polite">'), 'the result is a polite live region');

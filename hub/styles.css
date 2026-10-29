@@ -391,9 +391,9 @@
 
 /* ---------- below the story (hub/home/below.js): the program directory, the methods in brief, the invitation ----------
    Most of the look is the family's parts: the form (.form, .field, the numbered box .field__no, .stamp, .est-tag) and,
-   from the hospital page below, the strip drawing (.st and its parts: each card's histogram) and the empty-program band
-   (.hh__nextbox: each slip for a program under consideration). A script fills the worksheet in for a found hospital;
-   [hidden] hides the notes and stamps it does not need. */
+   from the hospital page below, the strip drawing (.st and its parts: each card's histogram); the empty-program band
+   (.hh__nextbox, further down) closes each slip for a program under consideration. A script fills the worksheet in for
+   a found hospital; [hidden] hides the notes and stamps it does not need. */
 .bsec { margin-top: 96px; padding-top: 28px; border-top: 5px double var(--ink); }
 .below h2 { margin: 8px 0 14px; font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
 .bsec__head, .ests, .dir, .soon { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -652,9 +652,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__thread path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .7; }
 /* One column (text above each strip): the thread would cross every row's words, so the rings alone carry the hospital. */
 @media (max-width: 1023px) { .hh__thread { display: none; } }
-.hh__row--next { padding-block: 12px; border-top: 1px dashed var(--line); }
-.hh__row--next .hh__rh { color: var(--ink-3); font-size: 15px; font-weight: 600; }
-.hh__row--next .hh__why { margin-top: 3px; color: var(--ink-3); font-size: 13px; }
+/* The empty-program band at the foot of each directory slip (.slip__none). */
 .hh__nextbox { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px dashed var(--line); background: var(--hatch-fill); }
 .hh__nextbox span { padding: 2px 8px; background: var(--paper); color: var(--ink-3); font-size: 12.5px; }
 .hh__row--net { padding-top: 20px; border-top: 2px solid var(--ink); }
@@ -737,7 +735,6 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__hero { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); padding-top: 30px; }
   .hh__none { padding-top: 34px; }
   .hh__sechead, .hh__row { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
-  .hh__nextbox { grid-column: 2; }
 }
 @media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }
 @media (scripting: enabled) and (max-width: 640px) { .hh__pin .hh__plbl { display: none; } }

@@ -204,10 +204,6 @@ function whatifSection(h, { peers, figures, group }, { fy }) {
 </div>
 <div class="hh__rows">
 ${ROWS.map((r) => programRow(h, r.id, figures, ctx))}
-<div class="hh__row hh__row--next">
-<div class="hh__rt"><h3 class="hh__rh">${fill('nextHeading')}</h3><p class="hh__why">${fill('nextText')}</p></div>
-<div class="hh__nextbox" aria-hidden="true"><span>${fill('nextBox')}</span></div>
-</div>
 <div class="hh__row hh__row--net" data-row="net">
 <div class="hh__rt">
 <h3 class="hh__rh">${fill('netHeading')}</h3>
