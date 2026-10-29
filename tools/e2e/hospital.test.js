@@ -13,17 +13,17 @@ import { loadHub } from '../../hub/data.js';
 import { hubHospitals } from '../../hub/model.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { audit } from './axe.js';
-import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const shared = useBrowser();
 const CUT = samplePages().find((p) => p.type === 'hub-hospital-cut');
+const ESTIMATED = hubHospitals(loadHub()).filter((h) => h.est);
 // A hospital with an estimate and no teaching status on record, picked by property.
-const NO_TEACH = hubHospitals(loadHub()).find((h) => h.est && h.teach === null);
+const NO_TEACH = ESTIMATED.find((h) => h.teach === null);
 // By property, for the what-if's edges: the hospital with the highest value-based purchasing factor in the data (its own
 // factor sits past the range's four-decimal end), and the one in both factor programs whose base is the largest share of
 // its pay (its hypothetical figures reach furthest past every actual one on the share axis).
-const ESTIMATED = hubHospitals(loadHub()).filter((h) => h.est);
 const most = (list, by) => list.reduce((a, b) => (by(b) > by(a) ? b : a));
 const TOP_VBP = most(ESTIMATED.filter((h) => h.est.vbpListed), (h) => h.est.vbpFactor);
 const HIGH_BASE = most(ESTIMATED.filter((h) => h.est.hrrpListed && h.est.vbpListed), (h) => h.est.base / h.est.total);
@@ -43,6 +43,30 @@ const hypo = (page) => page.evaluate(() => ({
 }));
 // Long enough for the result and the fragment to settle (web/whatif/dom.js SETTLE_MS, 400 ms).
 const SETTLED_MS = 700;
+
+// A row's what-if handle.
+const handleAt = (page, id = 'hrrp') => page.locator(`[data-row="${id}"] .st__h`);
+// A press on a handle's capsule, in its middle: the pointer moves there and goes down. Returns the point.
+async function grab(page, handle) {
+  const box = await handle.locator('.st__hb').boundingBox();
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  return [x, y];
+}
+// A step of the focused handle: the first key, and the second where the first left its value as it was (an end).
+async function stepAway(page, handle, [first, second] = ['ArrowLeft', 'ArrowRight']) {
+  const start = await handle.getAttribute('aria-valuenow');
+  await page.keyboard.press(first);
+  if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press(second);
+}
+// Every part the same way along its move at one moment (along: each moving part's way along, 0 at its start and 1 at its
+// end), part way. Returns the least.
+function assertOneGlide(along, what) {
+  const [lo, hi] = [Math.min(...along), Math.max(...along)];
+  assert.ok(lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `${what} (${lo}..${hi})`);
+  return lo;
+}
 const NEVER = /\bshould\b|\bfailed\b|could have avoided|NaN|undefined|Infinity/i;
 
 // The page's state: the pressed toggle, the group line, the headline, the ticks' places, whether the canvas has paint,
@@ -130,8 +154,7 @@ for (const width of [390, 1280]) {
       await handle.focus();
       const now = () => handle.getAttribute('aria-valuenow');
       const start = await now();
-      await page.keyboard.press('Shift+ArrowRight');
-      if ((await now()) === start) await page.keyboard.press('Shift+ArrowLeft');
+      await stepAway(page, handle, ['Shift+ArrowRight', 'Shift+ArrowLeft']);
       assert.notEqual(await now(), start, 'the handle steps');
       await page.waitForTimeout(SETTLED_MS);
       const on = await hypo(page);
@@ -154,10 +177,7 @@ for (const width of [390, 1280]) {
       assert.deepEqual([off.stamp, off.head, off.result], [before.stamp, before.head, before.result], 'the actual words back');
       // A drag: the handle moves with the pointer.
       await page.locator('#whatif').scrollIntoViewIfNeeded();
-      const box = await handle.locator('.st__hb').boundingBox();
-      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
-      await page.mouse.move(x, y);
-      await page.mouse.down();
+      const [x, y] = await grab(page, handle);
       for (const dx of [-20, -40, -60]) await page.mouse.move(x + dx, y);
       if ((await now()) === start) for (const dx of [20, 40, 60]) await page.mouse.move(x + dx, y);
       await page.mouse.up();
@@ -199,8 +219,8 @@ for (const width of [390, 1280]) {
       await page.waitForTimeout(SETTLED_MS);
       assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared, s.hash]), [false, false, '']);
       // A fresh page (not a same-document jump) from a link with only junk.
-      await page.goto(new URL('/about/', page.url()).href, { waitUntil: 'networkidle' });
-      await page.goto(new URL(`${CUT.path}#whatif&hrrp=2&hvbp=abc&hac=7`, page.url()).href, { waitUntil: 'networkidle' });
+      await visit(page, tabs.base, '/about/');
+      await visit(page, tabs.base, `${CUT.path}#whatif&hrrp=2&hvbp=abc&hac=7`);
       await page.waitForSelector('.st__h');
       await page.waitForTimeout(SETTLED_MS);
       const junk = await hypo(page);
@@ -214,9 +234,7 @@ for (const width of [390, 1280]) {
       assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, true], 'opened from the link: reader-made');
       const handle = page.locator('.st__h').first();
       await handle.focus();
-      const start = await handle.getAttribute('aria-valuenow');
-      await page.keyboard.press('ArrowLeft');
-      if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press('ArrowRight');
+      await stepAway(page, handle);
       await page.waitForTimeout(SETTLED_MS);
       assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, false], 'edited: still hypothetical, no longer the link\'s');
       await assertQuiet(seen, 'a linked what-if, edited');
@@ -232,9 +250,7 @@ for (const width of [390, 1280]) {
         const box = document.activeElement.querySelector('.st__hb').getBoundingClientRect();
         window.scrollBy(0, box.top - document.querySelector('[data-peers]').getBoundingClientRect().bottom - 2);
       });
-      const start = await handle.getAttribute('aria-valuenow');
-      await page.keyboard.press('ArrowLeft');
-      if ((await handle.getAttribute('aria-valuenow')) === start) await page.keyboard.press('ArrowRight');
+      await stepAway(page, handle);
       await page.waitForTimeout(SETTLED_MS);
       const covered = await page.evaluate(() => {
         const box = document.activeElement.querySelector('.st__hb').getBoundingClientRect();
@@ -247,7 +263,7 @@ for (const width of [390, 1280]) {
 
     it('without its data the page stays as the server wrote it, with one quiet line', () => withPage(tabs, { path: '/about/' }, async (page) => {
       await page.route('**/assets/hub-hospitals.*.json', (route) => route.fulfill({ status: 503, body: '' }));
-      await page.goto(new URL(CUT.path, page.url()).href, { waitUntil: 'networkidle' });
+      await visit(page, tabs.base, CUT.path);
       await settle(page);
       const s = await page.evaluate(() => ({
         error: document.querySelector('[data-load-error]').checkVisibility(),
@@ -313,12 +329,11 @@ describe('the swarm by touch', () => {
 // lands its last place on release; the shared link's way back stays on this site.
 describe('the what-if\'s edges', () => {
   const tabs = useContext(shared);
-  const at = (page, id) => page.locator(`[data-row="${id}"] .st__h`);
   const value = (handle) => handle.getAttribute('aria-valuenow');
 
   it('Home and End go to the ends the handle states: the highest factor in the data is its own top', () => withPage(tabs, { path: hospitalPathOf('hub', TOP_VBP.ccn), watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const handle = at(page, 'hvbp');
+    const handle = handleAt(page, 'hvbp');
     await handle.waitFor();
     await handle.focus();
     const [own, min, max] = await Promise.all([value(handle), handle.getAttribute('aria-valuemin'), handle.getAttribute('aria-valuemax')]);
@@ -336,17 +351,14 @@ describe('the what-if\'s edges', () => {
 
   it('a handle dragged to its strip\'s ends reaches its range\'s ends; two hypothetical nets stand at two places', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const handle = at(page, 'hvbp');
+    const handle = handleAt(page, 'hvbp');
     await handle.waitFor();
     await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
     // The what-if open (a handle's focus): the strips on the axis that holds every figure it can show.
     await handle.focus();
     const drag = async (side) => {
-      const box = await handle.locator('.st__hb').boundingBox();
       const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
-      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
-      await page.mouse.move(x, y);
-      await page.mouse.down();
+      const [, y] = await grab(page, handle);
       await page.mouse.move(side > 0 ? strip.x + strip.width - 1 : strip.x + 1, y, { steps: 8 });
       await page.mouse.up();
     };
@@ -355,10 +367,10 @@ describe('the what-if\'s edges', () => {
     await drag(-1);
     assert.equal(await value(handle), await handle.getAttribute('aria-valuemin'), 'its left end: the bottom');
     // Both factors at their lowest, then the cut on and off: the hypothetical net moves, never pinned at the axis's end.
-    await at(page, 'hrrp').focus();
+    await handleAt(page, 'hrrp').focus();
     await page.keyboard.press('Home');
     const net = () => page.evaluate(() => Number(/translate\(([-\d.]+)px/.exec(document.querySelector('[data-row="net"] .st__hyp').style.transform)?.[1]));
-    await at(page, 'hacrp').focus();
+    await handleAt(page, 'hacrp').focus();
     await page.keyboard.press('Home');
     const cut = await net();
     await page.keyboard.press('End');
@@ -369,15 +381,12 @@ describe('the what-if\'s edges', () => {
 
   it('a drag updates the page once a frame, and lands its last place on release', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const handle = at(page, 'hrrp');
+    const handle = handleAt(page, 'hrrp');
     await handle.waitFor();
     await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
     const start = await value(handle);
     const dir = start === (await handle.getAttribute('aria-valuemin')) ? 1 : -1;
-    const box = await handle.locator('.st__hb').boundingBox();
-    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
-    await page.mouse.move(x, y);
-    await page.mouse.down();
+    const [x, y] = await grab(page, handle);
     // Ten moves in one task, a frame, four more and a release in one task, a frame: what the page shows after each, and
     // how many times it wrote the net (each update writes it once).
     const s = await page.evaluate(async ([x0, y0, d]) => {
@@ -459,7 +468,7 @@ describe('the strips\' axis', () => {
 
   it('tight until the what-if opens, wide once it does, every part of a strip on one glide (the thread too), tight again after Reset', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
     await counting(page);
-    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await visit(page, tabs.base, path);
     await page.waitForSelector('.st__h');
     await page.locator('#whatif').scrollIntoViewIfNeeded();
     await settle(page);
@@ -498,17 +507,15 @@ describe('the strips\' axis', () => {
     });
     assert.ok(mid.glides > 100, `the strips glide (${mid.glides} transitions)`);
     assert.ok(mid.along.length > 50, `${mid.along.length} parts move`);
-    const [lo, hi] = [Math.min(...mid.along), Math.max(...mid.along)];
-    assert.ok(lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `every part the same way along at one moment: dots and ticks move as one (${lo}..${hi})`);
+    assertOneGlide(mid.along, 'every part the same way along at one moment: dots and ticks move as one');
     assert.deepEqual(mid.thread, mid.rings, 'the thread goes through each ring where it stands mid-glide');
     await page.waitForTimeout(1200);
     const open = await axisOf(page);
     assert.ok(open.span > before.span + 0.5, `wider once open: ${before.span.toFixed(2)} → ${open.span.toFixed(2)} points (${before.ticks} → ${open.ticks})`);
     assert.ok(await page.evaluate(() => !document.querySelector('svg.st.st--live')), 'the glide\'s class comes off when it ends');
     // More input while open changes nothing; Reset to actual (the banner's) goes back.
-    const handle = page.locator('[data-row="hrrp"] .st__h');
-    await page.keyboard.press('ArrowLeft');
-    if ((await handle.getAttribute('aria-valuenow')) === String(HIGH_BASE.est.hrrpFactor)) await page.keyboard.press('ArrowRight');
+    const handle = handleAt(page);
+    await stepAway(page, handle);
     await settle(page);
     assert.ok(near((await axisOf(page)).span, open.span), 'a step keeps the wide axis');
     await page.locator('.hh__scen .hh__reset').click();
@@ -517,8 +524,7 @@ describe('the strips\' axis', () => {
     assert.deepEqual([reset.ticks, near(reset.span, before.span), near(reset.k, before.k)], [before.ticks, true, true], 'after Reset: the axis it had before');
     // Escape resets the same way.
     await handle.focus();
-    await page.keyboard.press('ArrowLeft');
-    if (!(await page.locator('.hh__scen').isVisible())) await page.keyboard.press('ArrowRight');
+    await stepAway(page, handle);
     await page.waitForTimeout(1200);
     assert.ok(near((await axisOf(page)).span, open.span), 'open again');
     await page.keyboard.press('Escape');
@@ -601,7 +607,7 @@ describe('the strips\' axis', () => {
   }
 
   it('a reset and a reopening within one glide turn every part back from where it is drawn, with one label a tick', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
-    const handle = page.locator('[data-row="hrrp"] .st__h');
+    const handle = handleAt(page);
     await handle.waitFor();
     await page.locator('#whatif').scrollIntoViewIfNeeded();
     await handle.focus();
@@ -641,8 +647,7 @@ describe('the strips\' axis', () => {
       return { along, twice: [...shown].filter(([, n]) => n > 1).map(([v]) => v), labels: document.querySelectorAll('[data-row="hrrp"] svg.st .st__tl').length };
     });
     assert.ok(s.along.length > 50, `${s.along.length} parts turn back`);
-    const [lo, hi] = [Math.min(...s.along), Math.max(...s.along)];
-    assert.ok(lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `every part the same way along from where it was drawn (${lo}..${hi})`);
+    assertOneGlide(s.along, 'every part the same way along from where it was drawn');
     assert.deepEqual(s.twice, [], 'no tick shows two labels');
     await page.waitForTimeout(900);
     const ticks = await axisOf(page);
@@ -653,7 +658,7 @@ describe('the strips\' axis', () => {
   it('the hint stays inside its strip once the what-if opens', () => withPage(phone, { path, watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForSelector('.st__hint');
-    await page.locator('[data-row="hrrp"] .st__h').focus();
+    await handleAt(page).focus();
     const box = await page.evaluate(() => {
       const t = document.querySelector('.st__hint').getBoundingClientRect();
       const s = document.querySelector('.st__hint').closest('svg').getBoundingClientRect();
@@ -676,14 +681,11 @@ describe('the strips\' axis', () => {
 
   it('a drag keeps the axis it began on; the strips widen once it ends', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const handle = page.locator('[data-row="hrrp"] .st__h');
+    const handle = handleAt(page);
     await handle.waitFor();
     await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
     const before = await axisOf(page);
-    const box = await handle.locator('.st__hb').boundingBox();
-    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
-    await page.mouse.move(x, y);
-    await page.mouse.down();
+    const [x, y] = await grab(page, handle);
     for (const dx of [-15, -30, -45, -60]) await page.mouse.move(x + dx, y);
     await settle(page);
     const held = await axisOf(page);
@@ -698,13 +700,10 @@ describe('the strips\' axis', () => {
   }));
 
   it('a release after a drag from rest: the strips glide wide with the handle on its value, which stays as dragged', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
-    const handle = page.locator('[data-row="hrrp"] .st__h');
+    const handle = handleAt(page);
     await handle.waitFor();
     await page.locator('[data-row="hrrp"]').scrollIntoViewIfNeeded();
-    const box = await handle.locator('.st__hb').boundingBox();
-    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
-    await page.mouse.move(x, y);
-    await page.mouse.down();
+    const [x, y] = await grab(page, handle);
     for (const dx of [-12, -24, -36]) await page.mouse.move(x + dx, y);
     await settle(page);
     const held = await handle.getAttribute('aria-valuenow');
@@ -731,8 +730,8 @@ describe('the strips\' axis', () => {
       for (const a of moving) a.play();
       return { out, hand };
     });
-    const [lo, hi] = [Math.min(...along.out), Math.max(...along.out)];
-    assert.ok(along.out.length > 10 && lo > 0.05 && hi < 0.95 && hi - lo < 0.01, `the whole strip glides as one (${lo}..${hi})`);
+    assert.ok(along.out.length > 10, `${along.out.length} parts move`);
+    const lo = assertOneGlide(along.out, 'the whole strip glides as one');
     assert.ok(Math.abs(along.hand - lo) < 0.01, 'the handle with it');
     await page.waitForTimeout(1000);
     assert.equal(await handle.getAttribute('aria-valuenow'), held, 'the value stays as dragged');
@@ -750,40 +749,43 @@ describe('the strips\' axis', () => {
     await assertQuiet(seen, 'a release after a drag from rest');
   }));
 
-  it('a link to #whatif (no scenario) loads on the wide axis, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
-    await counting(page);
-    await page.goto(new URL(`${path}#whatif`, page.url()).href, { waitUntil: 'networkidle' });
-    await page.waitForSelector('.st__h');
-    await page.waitForTimeout(SETTLED_MS);
-    const linked = await axisOf(page);
-    assert.equal((await hypo(page)).banner, false, 'no scenario: the actual figures');
-    assert.equal(await glides(page), 0, 'no glide on load');
-    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForSelector('.st__h');
-    const tight = await axisOf(page);
-    await page.locator('[data-row="hrrp"] .st__h').focus();
-    const wide = await axisOf(page);
-    assert.ok(linked.span > tight.span + 0.5, `the link's axis is the wide one (${linked.span} against ${tight.span})`);
-    assert.deepEqual([linked.ticks, near(linked.span, wide.span)], [wide.ticks, true]);
-    await assertQuiet(seen, 'a link to #whatif, on the wide axis');
-  }));
+  // A link to the what-if, with no scenario or with one: the page loads on the wide axis with no glide; the same page
+  // without the link is tight, and opens to the same wide axis.
+  for (const [what, hash, banner] of [['a link to #whatif (no scenario)', '#whatif', false], ['a shared link that opens on a scenario', '#whatif&hrrp=0.97', true]]) {
+    it(`${what} loads on the wide axis, with no glide`, () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
+      await counting(page);
+      await visit(page, tabs.base, `${path}${hash}`);
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      const linked = await axisOf(page);
+      assert.equal((await hypo(page)).banner, banner, banner ? 'the scenario loaded' : 'no scenario: the actual figures');
+      assert.equal(await glides(page), 0, 'no glide on load');
+      await visit(page, tabs.base, path);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.st__h');
+      const tight = await axisOf(page);
+      await handleAt(page).focus();
+      const wide = await axisOf(page);
+      assert.ok(linked.span > tight.span + 0.5, `the link's axis is the wide one (${linked.span} against ${tight.span})`);
+      assert.deepEqual([linked.ticks, near(linked.span, wide.span)], [wide.ticks, true]);
+      await assertQuiet(seen, `${what}, on the wide axis`);
+    }));
+  }
 
   it('under reduced motion the axis changes at once, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
     await counting(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
+    await visit(page, tabs.base, path);
     await page.waitForSelector('.st__h');
     const before = await axisOf(page);
-    const handle = page.locator('[data-row="hrrp"] .st__h');
+    const handle = handleAt(page);
     await handle.focus();
     // Read in the same task as the focus: already there.
     const now = await page.evaluate(() => document.getAnimations().filter((a) => a.transitionProperty === 'transform').length);
     const open = await axisOf(page);
     assert.equal(now, 0, 'no transition running');
     assert.ok(open.span > before.span + 0.5, `wide at once: ${before.span} → ${open.span}`);
-    await page.keyboard.press('ArrowLeft');
-    if (!(await page.locator('.hh__scen').isVisible())) await page.keyboard.press('ArrowRight');
+    await stepAway(page, handle);
     await page.keyboard.press('Escape');
     assert.ok(near((await axisOf(page)).span, before.span), 'tight at once after Escape');
     await settle(page);
@@ -831,23 +833,4 @@ describe('the strips\' axis', () => {
     await assertQuiet(seen, 'the swarm\'s change of axis');
   }));
 
-  it('a shared link that opens on a scenario loads on the wide axis, with no glide', () => withPage(tabs, { path: '/about/', watched: true }, async (page, { seen }) => {
-    await counting(page);
-    await page.goto(new URL(`${path}#whatif&hrrp=0.97`, page.url()).href, { waitUntil: 'networkidle' });
-    await page.waitForSelector('.st__h');
-    await page.waitForTimeout(SETTLED_MS);
-    const linked = await axisOf(page);
-    assert.equal((await hypo(page)).banner, true, 'the scenario loaded');
-    assert.equal(await glides(page), 0, 'no glide on load');
-    // The same page without the link: tight, and the same wide axis once opened.
-    await page.goto(new URL(path, page.url()).href, { waitUntil: 'networkidle' });
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForSelector('.st__h');
-    const tight = await axisOf(page);
-    await page.locator('[data-row="hrrp"] .st__h').focus();
-    const wide = await axisOf(page);
-    assert.ok(linked.span > tight.span + 0.5, `the link's axis is the wide one (${linked.span} against ${tight.span})`);
-    assert.deepEqual([linked.ticks, near(linked.span, wide.span)], [wide.ticks, true]);
-    await assertQuiet(seen, 'a shared what-if link, on the wide axis');
-  }));
 });

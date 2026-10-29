@@ -50,6 +50,17 @@ function firstPlaces() {
   return first;
 }
 
+// The sample of a type from table ([type, what it is, test(row, joined)]): the first of rows that passes its test, joined
+// (join(row)) to what the test also reads, as { type, name, path: pathOf(row), hospital: row }. label names the caller
+// in an error.
+function sampleOf(label, table, type, rows, pathOf, join = () => null) {
+  const [, what, test] = table.find(([t]) => t === type) ?? [];
+  if (!test) throw new RangeError(`${label}: no sample type "${type}"`);
+  const found = rows.find((row) => test(row, join(row)));
+  if (!found) throw new Error(`${label}: no hospital ${what} in the data`);
+  return { type, name: type, path: pathOf(found), hospital: found };
+}
+
 // The sample hospitals by type, each the first in the newest HACRP file (in the file's order) that CMS cut, that has no
 // score, and that has a score and was not cut: [type, what it is, the test].
 const HOSPITALS = [
@@ -60,13 +71,7 @@ const HOSPITALS = [
 
 // The sample hospital's page of a type (HOSPITALS), { type, name, path, hospital: its emitted record }, from the
 // emitted data alone (no walk of dist/). all: the newest HACRP file's hospitals, when the caller has read them.
-export function hospitalSample(type, all = readNewestEmitted().hospitals) {
-  const [, what, test] = HOSPITALS.find(([t]) => t === type) ?? [];
-  if (!test) throw new RangeError(`hospitalSample: no sample type "${type}"`);
-  const found = all.find(test);
-  if (!found) throw new Error(`hospitalSample: no hospital ${what} in the data`);
-  return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
-}
+export const hospitalSample = (type, all = readNewestEmitted().hospitals) => sampleOf('hospitalSample', HOSPITALS, type, all, (h) => hospitalPath(h.ccn));
 
 // The sample hospitals' pages across the programs (the hub's), by type, each the first in the dollar file's order that
 // has an estimate with a net cut and the hospital-acquired conditions cut, and that is in Maryland (no estimate: the
@@ -78,13 +83,7 @@ const HUB_HOSPITALS = [
 
 // The sample hospital's page across the programs of a type (HUB_HOSPITALS), { type, name, path, hospital: its hub
 // record }, from the emitted data alone.
-export function hubHospitalSample(type, all = hubHospitals(loadHub())) {
-  const [, what, test] = HUB_HOSPITALS.find(([t]) => t === type) ?? [];
-  if (!test) throw new RangeError(`hubHospitalSample: no sample type "${type}"`);
-  const found = all.find(test);
-  if (!found) throw new Error(`hubHospitalSample: no hospital ${what} in the data`);
-  return { type, name: type, path: hospitalPathOf('hub', found.ccn), hospital: found };
-}
+export const hubHospitalSample = (type, all = hubHospitals(loadHub())) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, all, (h) => hospitalPathOf('hub', h.ccn));
 
 // The sample interim Readmissions hospital pages (hub/hrrp/page.js), by type, each the first hospital in the pinned Thirty Day
 // Readmissions file with a payment cut and an estimate, with no cut, or that the dollar file does not have (no estimate, no
@@ -99,12 +98,8 @@ const HRRP_HOSPITALS = [
 // The sample interim Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its pinned
 // record }, from the pinned file and the emitted data alone.
 function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
-  const [, what, test] = HRRP_HOSPITALS.find(([t]) => t === type) ?? [];
-  if (!test) throw new RangeError(`hrrpHospitalSample: no sample type "${type}"`);
   const byCcn = new Map(all.map((h) => [h.ccn, h]));
-  const found = [...hub.tdr.hospitals.values()].find((r) => test(r, byCcn.get(r.id) ?? null));
-  if (!found) throw new Error(`hrrpHospitalSample: no hospital ${what} in the data`);
-  return { type, name: type, path: hospitalPathOf('hrrp', found.id, { inTdr: true }), hospital: found };
+  return sampleOf('hrrpHospitalSample', HRRP_HOSPITALS, type, [...hub.tdr.hospitals.values()], (r) => hospitalPathOf('hrrp', r.id, { inTdr: true }), (r) => byCcn.get(r.id) ?? null);
 }
 
 // The HACRP hospital pages whose peer chart ("among hospitals like it": one row per group the hospital belongs to, over

@@ -6,9 +6,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { audit } from './axe.js';
-import { CONCURRENCY, SCHEMES, assertQuiet, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, SCHEMES, assertNoSideways, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 
 const shared = useBrowser();
+// The story drawn (its script has laid out the chart and drawn it); the states' readout holding a state's line; the front
+// page's own script, which some tests hold back.
+const drawn = (page) => page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+const lined = (page) => page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+const HOME_SCRIPT = /\/assets\/hub-home\.[^/]+\.js$/;
 
 // The story's state after the reader has scrolled step i to where it is read: the step the page marks, the current
 // rail link or step name, the two drawings' opacities, whether the canvas has paint on it, and the sideways overflow.
@@ -46,8 +51,8 @@ describe('the story zoomed out to 50%', () => {
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
-      await page.goto(new URL('/', shared.site.base).href, { waitUntil: 'networkidle' });
-      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await visit(page, shared.site.base, '/');
+      await drawn(page);
       assert.equal(await page.evaluate(() => window.devicePixelRatio), 0.5);
       for (let i = 0; i < 9; i++) {
         const s = await readStep(page, i);
@@ -67,7 +72,7 @@ for (const width of [320, 390, 1280]) {
 
     it('with reduced motion, every step\'s end state at once: its chart drawn on its drawing, the step marked, nothing sideways', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await drawn(page);
       for (let i = 0; i < 9; i++) {
         const s = await readStep(page, i);
         assert.equal(s.step, i, `step ${i} is the one being read`);
@@ -85,7 +90,7 @@ for (const width of [320, 390, 1280]) {
     for (const scheme of SCHEMES) {
       it(`mid-scroll between two steps, ${scheme}: axe finds nothing`, () => withPage(tabs, { path: '/', scheme }, async (page) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
-        await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+        await drawn(page);
         await page.evaluate(() => {
           const [a, b] = [...document.querySelectorAll('.story .step')].slice(2, 4);
           const top = (el) => el.getBoundingClientRect().top + window.scrollY;
@@ -104,7 +109,7 @@ for (const width of [320, 390, 1280]) {
 
     it('without its data the page stays as the server wrote it: both drawings, no canvas, no live layout', () => withPage(tabs, { path: '/about/' }, async (page) => {
       await page.route('**/assets/hub-hospitals.*.json', (route) => route.fulfill({ status: 503, body: '' }));
-      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await visit(page, tabs.base, '/');
       await settle(page);
       const s = await page.evaluate(() => {
         const story = document.querySelector('.story');
@@ -128,7 +133,7 @@ describe('states you can read, and Find yours', () => {
 
   it('#state= pins a state on the map; a junk one is ignored', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await lined(page);
     await settle(page);
     const s = await page.evaluate(() => ({
       step: document.querySelector('.story').dataset.step, line: document.querySelector('.readout').textContent,
@@ -139,15 +144,15 @@ describe('states you can read, and Find yours', () => {
     assert.match(s.line, /^Ohio: [\d,]+ hospitals, net [−+]?\d\.\d\d% of pay, \d+% take a net cut$/);
     assert.deepEqual(s.pinned, ['OH']);
     assert.ok(s.focusable, 'the states are buttons in the tab order on step 7');
-    await page.goto(new URL('/about/', page.url()).href, { waitUntil: 'networkidle' });
-    await page.goto(new URL('/#state=%3Cimg%20src=x%3E', page.url()).href, { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    await visit(page, tabs.base, '/about/');
+    await visit(page, tabs.base, '/#state=%3Cimg%20src=x%3E');
+    await drawn(page);
     assert.equal(await page.evaluate(() => document.querySelectorAll('.smap .is-pin, img[src="x"]').length), 0, 'nothing pinned, no markup');
     await assertQuiet(seen, 'state fragment');
   }));
 
   it('the last step\'s search follows a hospital in place, with its card, its event and its peer toggles', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
-    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    await drawn(page);
     // A hospital with an estimate and no teaching status, from the page's own asset.
     const ccn = await page.evaluate(async () => {
       const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
@@ -195,7 +200,7 @@ describe('states you can read, and Find yours', () => {
   for (const scheme of SCHEMES) {
     it(`the worksheet fills in for a hospital found with a net bonus, ${scheme}`, () => withPage(tabs, { path: '/', scheme, watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await drawn(page);
       const found = await page.evaluate(async () => {
         const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
         const at = (c) => cols.indexOf(c);
@@ -234,7 +239,7 @@ describe('states you can read, and Find yours', () => {
 
   it('a state picked twice in the bar\'s search on the front page goes to it both times', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    await drawn(page);
     const box = page.locator('.topbar form#omni').getByRole('combobox');
     for (let i = 0; i < 2; i++) {
       await page.evaluate(() => window.scrollTo(0, 0));
@@ -257,7 +262,7 @@ describe('the states map speaks on a pick, not on a hover', () => {
   const tabs = useContext(shared);
   it('with nothing picked, every state is a toggle that is not pressed, before any pointer or key', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+    await drawn(page);
     const states = await page.evaluate(() => [...document.querySelectorAll('.smap .st[data-st], .smalls [data-st]')].map((el) => el.getAttribute('aria-pressed')));
     assert.ok(states.length > 50, `${states.length} states`);
     assert.deepEqual([...new Set(states)], ['false'], 'every state carries aria-pressed="false"');
@@ -266,7 +271,7 @@ describe('the states map speaks on a pick, not on a hover', () => {
 
   it('hovering or focusing writes the readout only; Enter or a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
+    await lined(page);
     await settle(page);
     const facts = () => page.evaluate(() => ({
       readout: document.querySelector('.readout').textContent,
@@ -322,7 +327,7 @@ for (const [width, height] of [[390, 844], [320, 640]]) {
 
     it('Tab reaches the search and the card\'s link clear of the pinned chart, then the peer toggle', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await drawn(page);
       const reached = [];
       for (let i = 0; i < 80 && !reached.some((f) => f.peer === 'teach'); i++) {
         await page.keyboard.press('Tab');
@@ -410,13 +415,13 @@ for (const width of [320, 390]) {
         const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return [r.top, r.height].map((v) => Math.round(v)); };
         return { stage: box('.stage'), bar: box('.sbar'), first: box('#step-scale'), story: box('.story') };
       });
-      await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
-      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+      await page.route(HOME_SCRIPT, (route) => route.abort());
+      await visit(page, tabs.base, '/');
       await page.evaluate(() => document.fonts.ready);
       const before = await boxes();
-      await page.unroute(/\/assets\/hub-home\.[^/]+\.js$/);
-      await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
-      await page.waitForFunction(() => document.querySelector('.story')?.classList.contains('story--drawn'));
+      await page.unroute(HOME_SCRIPT);
+      await visit(page, tabs.base, '/');
+      await drawn(page);
       await page.evaluate(() => window.scrollTo(0, 0));
       await settle(page);
       assert.deepEqual(before, await boxes(), 'the same boxes before the script and once it has drawn');
@@ -435,7 +440,7 @@ describe('the front page without a part its scripts need', () => {
       const body = (await response.text()).replace('class="hero__strip"', 'class="hero__band"').replace(/<canvas class="stage__cv"[^>]*><\/canvas>/, '');
       await route.fulfill({ response, body });
     });
-    await page.goto(new URL('/', page.url()).href, { waitUntil: 'networkidle' });
+    await visit(page, tabs.base, '/');
     await settle(page);
     const f = await page.evaluate(() => ({
       ready: document.documentElement.classList.contains('dock-ready'),
@@ -457,7 +462,7 @@ for (const width of [390, 1280]) {
 
       it('at the top only the masthead\'s wordmark shows; scrolled past it, the header\'s does', () => withPage(tabs, { path: '/about/' }, async (page) => {
         // The front page's own script never arrives (the shell's still runs), so the page stays as it was first painted.
-        if (javaScript) await page.route(/\/assets\/hub-home\.[^/]+\.js$/, (route) => route.abort());
+        if (javaScript) await page.route(HOME_SCRIPT, (route) => route.abort());
         await page.goto(new URL('/', page.url()).href, { waitUntil: 'load' });
         const shown = async (y) => {
           await page.evaluate((top) => window.scrollTo(0, top), y);
@@ -530,7 +535,7 @@ describe('the worksheet on a narrow phone', () => {
           const amount = tr.lastElementChild.getBoundingClientRect();
           return { share: words.width / table.width, under: amount.top >= words.bottom - 1, inside: amount.right <= table.right + 0.5 && words.right <= table.right + 0.5 };
         });
-        return { rows, sideways: document.documentElement.scrollWidth - window.innerWidth };
+        return { rows };
       });
       assert.equal(f.rows.length, 6, `${width} px: six lines`);
       for (const [i, r] of f.rows.entries()) {
@@ -538,7 +543,7 @@ describe('the worksheet on a narrow phone', () => {
         if (width === 320) assert.ok(r.share >= 0.8 && r.under, `${width} px, line ${i + 1}: its words take ${Math.round(r.share * 100)}% of the form, the amount ${r.under ? 'under' : 'beside'} them`);
         else assert.equal(r.under, false, `${width} px, line ${i + 1}: the amount beside its words`);
       }
-      assert.ok(f.sideways <= 0, `${width} px: no sideways scroll`);
+      await assertNoSideways(page, `${width} px`);
       // Still a table to a screen reader, its six lines rows, each a number, a row header and an amount.
       const tree = await page.locator('.wst').ariaSnapshot();
       // (A snapshot line is quoted when its name holds a character YAML would read, so each may start with a quote.)

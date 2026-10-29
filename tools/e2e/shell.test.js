@@ -17,7 +17,7 @@ import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, assertNoSideways, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -79,7 +79,7 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
       assert.ok(facts.bar <= BAR, `the bar is ${facts.bar} px tall, not one row`);
       assert.equal(facts.barSearch, true, 'the bar holds a search');
       assert.equal(facts.find, facts.barSearch, 'the find button shows iff the bar holds a search form');
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
+      await assertNoSideways(page, name);
       // A hub page's family search loads its list on first focus, and only a ?h= makes the shell look a hospital up; the
       // front page's story fetches the asset once, to draw.
       assert.equal(await assetFetches(page), path === '/' ? 1 : 0, 'the hub asset fetched only by the story');
@@ -179,7 +179,7 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
       assert.deepEqual(await hrefsOf(page), [tabHref(null, row.ccn), ...LISTED_PROGRAMS.map((p) => tabHref(p.id, row.ccn, { inTdr }))]);
       assert.equal(await page.locator('a.wordmark').getAttribute('href'), `/?h=${row.ccn}`);
       assert.ok((await headerFacts(page)).header <= MAX_STICKY, 'the header stays modest with the chip');
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll');
+      await assertNoSideways(page, 'the page with the chip');
     }
     // The × goes to the same page without ?h= and keeps the rest of the address.
     assert.equal(await page.locator('.chip__x').getAttribute('href'), `${PROGRAM_PATH}?x=1`);
