@@ -1,7 +1,8 @@
 // What the hub's tests share: a rendered page's <main>, one element's markup (nesting-aware), the noindex tag, the hub's
 // hospitals as the browser decodes them, and a synthetic hospital whose dollars follow from its factors and cut.
 import assert from 'node:assert/strict';
-import { programDollars } from '../../engine/js/dollars/whatif.js';
+import { pctOf, programDollars } from '../../engine/js/dollars/whatif.js';
+import { extent, initial, outcome } from '../client/hospital/whatif-state.js';
 import { decodeRows } from '../../web/client/hub-asset.js';
 import { hubAsset } from '../asset.js';
 import { hubHospitals } from '../model.js';
@@ -47,4 +48,20 @@ export function makeHospital(ccn, { hrrpFactor = 1, vbpFactor = 1, cut = false, 
   const row = { base: BASE, total: TOTAL, hrrpFactor: 1, vbpFactor: 1, cut: false, hrrp: 0, hvbp: 0, hac: 0, net: 0, after: TOTAL, atStake: TOTAL / 100 };
   const out = programDollars(row, { hrrpFactor, vbpFactor, cut });
   return { ccn, est: { ...row, hrrpFactor, vbpFactor, cut, ...out, hrrpListed, vbpListed, share: out.net / TOTAL } };
+}
+
+// Every percent of pay a hospital page's what-if can show for h (each program's and the net's), at each corner of what a
+// reader may set: each factor at either end (whatif-state.js extent; its own where h is not in the program), the cut on
+// and off. Each program's dollars and the net only grow with a factor and the cut only takes, so the corners hold the
+// lowest and highest of each: the farthest the page's axis (hub/client/scale.js holdingAxis) can ever widen to.
+export function whatIfCorners(h, ctx) {
+  const own = initial(h);
+  const ends = (id) => extent(h, ctx, id) ?? [own[id]];
+  const out = [];
+  for (const hrrp of ends('hrrp')) {
+    for (const hvbp of ends('hvbp')) {
+      for (const hac of [true, false]) out.push(...Object.values(pctOf({ total: h.est.total, ...outcome({ hrrp, hvbp, hac }, h) })));
+    }
+  }
+  return out;
 }

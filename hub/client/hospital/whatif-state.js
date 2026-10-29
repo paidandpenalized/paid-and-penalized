@@ -6,7 +6,7 @@
 // hospital-acquired conditions cut applies. A factor the reader sets keeps four decimals (CMS prints Readmissions' to
 // four); one that reads the same as the hospital's actual factor to four decimals is the actual factor, so stepping back
 // or typing the factor shown leaves the page unchanged. A program the hospital is not in cannot be adjusted.
-import { pctOf, programDollars } from '../../../engine/js/dollars/whatif.js';
+import { programDollars } from '../../../engine/js/dollars/whatif.js';
 import { has } from '../../../engine/js/has.js';
 import { median } from '../../../engine/js/peers.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
@@ -192,19 +192,3 @@ export const factorAt = (h, pct) => 1 + ((pct / 100) * h.est.total) / h.est.base
 // factor at that share, which reduce holds to the factor's ends; or, past an end, that end of the range, as Home or End
 // goes, so a drag reaches every factor the controls allow whatever axis the strips draw.
 export const dragAction = (h, id, { share, past }) => (past ? { type: 'end', id, dir: past } : { type: 'set', id, value: factorAt(h, share) });
-
-// Every percent of pay the what-if can show for h (pctOf: each program's and the net's), at each corner of what a reader
-// may set: each factor at either end (extent's; its own where h is not in the program), the cut on and off. Each
-// program's dollars and the net only grow with a factor, and the cut only takes, so the corners hold the lowest and
-// highest of each: the farthest the axis a page's what-if draws (hub/client/scale.js holdingAxis) can ever widen to.
-export function reach(h, ctx) {
-  const own = initial(h);
-  const ends = (id) => extent(h, ctx, id) ?? [own[id]];
-  const out = [];
-  for (const hrrp of ends('hrrp')) {
-    for (const hvbp of ends('hvbp')) {
-      for (const hac of [true, false]) out.push(...Object.values(pctOf({ total: h.est.total, ...outcome({ hrrp, hvbp, hac }, h) })));
-    }
-  }
-  return out;
-}

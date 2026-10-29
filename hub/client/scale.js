@@ -9,11 +9,10 @@ const PAD = 0.1;
 const PER = 10;
 
 // [lo, hi] in percent: the lowest and highest percent of pay of any program or the net among the estimated hospitals
-// (est.pct: engine/js/dollars/whatif.js pctOf) and of any extra value (a hospital page's: every percent its what-if can
-// show, hospital/whatif-state.js reach), each padded PAD and rounded outward to a tenth. Always holds 0.
-export function shareDomain(hospitals, extra = []) {
-  let lo = Math.min(0, ...extra);
-  let hi = Math.max(0, ...extra);
+// (est.pct: engine/js/dollars/whatif.js pctOf), each padded PAD and rounded outward to a tenth. Always holds 0.
+export function shareDomain(hospitals) {
+  let lo = 0;
+  let hi = 0;
   for (const h of hospitals) {
     if (!h.est) continue;
     for (const v of Object.values(h.est.pct)) {

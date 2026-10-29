@@ -10,12 +10,12 @@ import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { stripLayout } from '../client/hospital/strips.js';
 import { drawnDot } from '../client/pile.js';
-import { reach, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { vbpMaxOf } from '../client/hospital/whatif-state.js';
 import { holdingAxis, shareDomain } from '../client/scale.js';
 import { ROWS, ROW_IDS, ROW_KEY, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { hubHospitals } from '../model.js';
-import { decodedHub } from './helpers.js';
+import { decodedHub, whatIfCorners } from './helpers.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const hub = loadHub();
@@ -170,7 +170,7 @@ test('half way between its two axes, every strip is still a pile of separate dot
     if (seen.has(h.state)) continue;
     seen.add(h.state);
     const group = peersOf(hospitals, h, 'state');
-    const wide = holdingAxis(domain, reach(h, { vbpMax }));
+    const wide = holdingAxis(domain, whatIfCorners(h, { vbpMax }));
     for (const [W, dpr] of [[358, 3], [628, 1]]) {
       const a = stripLayout(group, { W, dpr, domain });
       const b = stripLayout(group, { W, dpr, domain: wide });

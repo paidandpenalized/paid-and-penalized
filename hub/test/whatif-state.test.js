@@ -5,10 +5,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, dragAction, extent, factorAt, fromHash, initial, outcome, ranges, reach, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { BIG_STEP, STEP, changed, dragAction, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
 import { storyFacts, vbpMaxOf as modelVbpMax } from '../model.js';
 import { holdingAxis, shareDomain } from '../client/scale.js';
-import { BASE, TOTAL, makeHospital as make } from './helpers.js';
+import { BASE, TOTAL, makeHospital as make, whatIfCorners } from './helpers.js';
 
 
 const VBP_MAX = 1.0452822242;
@@ -193,17 +193,7 @@ test('load: what is valid loads; nothing valid returns the same state', () => {
   assert.equal(reduce(s0, { type: 'load', changes: { hrrp: 0.98, hac: 1 } }, ctx).hac, true);
 });
 
-test('reach: every percent of pay the what-if can show, at each corner of what a reader may set', () => {
-  const r = reach(H, ctx);
-  const pct = (d) => (d * 100) / TOTAL;
-  const lowest = outcome({ hrrp: 0.97, hvbp: 0.98, hac: true }, H);
-  const highest = outcome({ hrrp: 1, hvbp: 1.0452, hac: false }, H);
-  assert.equal(Math.min(...r), pct(lowest.net), 'the lowest: both factors at their bottoms, cut');
-  assert.equal(Math.max(...r), pct(highest.net), 'the highest: both at their tops, not cut');
-  for (const v of [lowest.hrrp, lowest.hvbp, lowest.hac, highest.hvbp]) assert.ok(r.includes(pct(v)), `${pct(v)} is in reach`);
-  // A program the hospital is not in keeps its own dollars at every corner.
-  const out = make('990014', { hrrpFactor: 0.99, hrrpListed: false });
-  assert.ok(reach(out, ctx).every((v) => v >= pct(outcome({ hrrp: 0.99, hvbp: 0.98, hac: true }, out).net)));
+test('vbpMaxOf: the highest factor among the hospitals the program lists, the model\'s rule; ranges and factorAt follow it', () => {
   assert.equal(vbpMaxOf([H, ...peers, { est: null }]), 1.01, 'the highest factor among the hospitals the program lists');
   // One rule for the highest factor, the story's facts' and the what-if's, with one empty case: none listed is null.
   assert.equal(vbpMaxOf, modelVbpMax, 'the what-if reads the model\'s rule');
@@ -235,7 +225,7 @@ test('on each hospital\'s page, a drag past a strip\'s end lands where Home or E
   let ends = 0;
   let wider = 0;
   for (const h of est) {
-    const shares = reach(h, { vbpMax });
+    const shares = whatIfCorners(h, { vbpMax });
     const axis = holdingAxis(tight, shares);
     for (const v of shares) assert.ok(v >= axis[0] && v <= axis[1], `${h.ccn}: ${v} on [${axis}]`);
     if (axis !== tight) wider += 1;

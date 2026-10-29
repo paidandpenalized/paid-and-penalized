@@ -20,13 +20,6 @@ test('shareDomain: the lowest and highest percent of any program or the net, pad
   assert.deepEqual(shareDomain([est(0, 0, 0.42)]), [-0.1, 0.6]);
 });
 
-test('shareDomain holds extra values too (a hospital page\'s what-if figures), padded and rounded the same way', () => {
-  assert.deepEqual(shareDomain([est(-1, 0, 0.5)], [-4.95, 2.01]), [-5.1, 2.2]);
-  // Extra values inside the hospitals' own span change nothing.
-  assert.deepEqual(shareDomain([est(-2.78, -1, 0.5), est(0, 0, 3.09)], [-1, 1]), [-3.4, 3.2]);
-  assert.deepEqual(shareDomain([est(0, 0, 0.42)], []), [-0.1, 0.6]);
-});
-
 test('shareDomain on the real data holds every program\'s percent and the net of every estimated hospital', () => {
   const hospitals = hubHospitals(loadHub()).filter((h) => h.est);
   const [lo, hi] = shareDomain(hospitals);
