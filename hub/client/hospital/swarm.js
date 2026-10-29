@@ -224,8 +224,9 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
   }
 
   // The share axis under both piles (sc: as drawn now): the $0 gutter shaded, a faint line at each whole percent, the
-  // baseline, the ticks' values and which side is a cut and which a bonus (each word underlined in its ink). Mid-move, a
-  // tick only one end of it shows fades (ticksBetween).
+  // baseline, the ticks' values (an end one held inside the canvas: on the what-if's wide axis the last tick can sit
+  // closer to the edge than half its label) and which side is a cut and which a bonus (each word underlined in its ink).
+  // Mid-move, a tick only one end of it shows fades (ticksBetween).
   function axis(sc) {
     const { zL, zR } = sc;
     const base = m.aBot + 8;
@@ -238,7 +239,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, wide = domain, fil
         vline(x, m.pTop - 6, base + 4, colors.line);
       }
       ctx.globalAlpha = alpha;
-      text(tickText(v), x, base + 17, tick, colors.ink3, 'center');
+      const label = tickText(v);
+      ctx.font = tick;
+      const half = ctx.measureText(label).width / 2 + 1;
+      text(label, clamp(x, half, W - half), base + 17, tick, colors.ink3, 'center');
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = colors.ink2;

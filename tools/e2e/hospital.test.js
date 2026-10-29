@@ -10,7 +10,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../../hub/data.js';
-import { hubHospitals } from '../../hub/model.js';
+import { EXAMPLE_CCN, hubHospitals } from '../../hub/model.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
@@ -837,6 +837,7 @@ describe('the strips\' axis', () => {
 
 describe('the hospital page\'s parts, at 1280 px', () => {
   const tabs = useContext(shared);
+  const EXAMPLE = hospitalPathOf('hub', EXAMPLE_CCN);
 
   // A glide that runs late (a busy page) is never cut short: the strips rest once every part has arrived. Each glide the
   // toggle starts runs at 40% speed here, as if every part had started late.
@@ -885,5 +886,33 @@ describe('the hospital page\'s parts, at 1280 px', () => {
       canvas: document.querySelectorAll('.hh__cv').length,
     }));
     assert.deepEqual(s, { error: true, buttons: 0, handles: 0, canvas: 0 });
+  }));
+
+  // On the what-if's wide axis the swarm's last tick can sit closer to the canvas's edge than half its label: each label
+  // is held whole inside the canvas. Every tick label the swarm paints is recorded as painted.
+  it('the swarm\'s tick labels stay whole inside its canvas, on the actual axis and the what-if\'s wide one', () => withPage(tabs, { path: '/about/' }, async (page) => {
+    await page.addInitScript(() => {
+      window.tickLabels = [];
+      const fill = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (text, x, ...rest) {
+        if (this.canvas.classList.contains('hh__cv') && /^[−+]?\d+%$/.test(text)) {
+          const w = this.measureText(text).width;
+          const align = this.textAlign;
+          const left = align === 'center' ? x - w / 2 : align === 'right' || align === 'end' ? x - w : x;
+          window.tickLabels.push({ text, left, right: left + w, width: this.canvas.clientWidth });
+        }
+        return fill.call(this, text, x, ...rest);
+      };
+    });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const hash of ['', '#whatif&hrrp=0.97&hac=1&hvbp=0.98']) {
+      await visit(page, tabs.base, `${EXAMPLE}${hash}`);
+      await page.waitForSelector('.hh__cv');
+      await settle(page);
+      const labels = await page.evaluate(() => window.tickLabels);
+      assert.ok(labels.length > 0, 'the swarm paints its tick labels');
+      const cut = labels.filter((l) => l.left < -0.5 || l.right > l.width + 0.5);
+      assert.deepEqual(cut.map((l) => l.text), [], `${hash ? 'the wide axis' : 'the actual axis'}: every label whole`);
+    }
   }));
 });
