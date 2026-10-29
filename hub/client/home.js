@@ -143,7 +143,9 @@ function start(root) {
     stage = s;
     find = f;
     root.classList.add('story--drawn');
+    // After a resize (or the fonts' arrival): the readout's height first, then the stage measures the map under it.
     const again = () => {
+      map.fit();
       stage.resize();
       steps.refresh();
     };

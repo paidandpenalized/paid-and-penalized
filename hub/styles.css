@@ -146,6 +146,12 @@
 .mapfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
 .dkey { color: var(--ink-3); font-size: 0.75rem; line-height: 1.35; }
 .dkey__t { max-width: none; margin-bottom: 5px; color: var(--ink-2); }
+/* The key's short title stands in on the narrowest phones, where the full one takes two lines. */
+.dkey__short { display: none; }
+@media (max-width: 360px) {
+  .dkey__long { display: none; }
+  .dkey__short { display: inline; }
+}
 .dkey__g { display: block; width: 240px; height: 10px; }
 /* The scale's three words: the ends at its ends and "0%" centred under its middle, whatever the end words' widths. */
 .dkey__s { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); width: 240px; margin-top: 4px; font: 400 var(--fs-xs)/1.3 var(--font-type); white-space: nowrap; }
@@ -298,7 +304,12 @@
   .story--live > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
   .story--live .step__in { position: sticky; top: calc(var(--stage-top) + 12px); }
   .story--live > .step--tall .step__in, .story--live > .step[data-step="8"] .step__in { position: static; }
-  .story--live .smap { max-height: calc(var(--stage-h) - 11rem); }
+  /* By state: the readout right under the step's name (the script holds it to its longest line's height, so the map
+     never moves under the dots), the map taking what its key leaves; nothing overlaps or leaves the chart at any
+     height. */
+  .story--live .stage__panel--map { padding-top: 0; }
+  .story--live .smapfig { justify-content: flex-start; gap: 8px; }
+  .story--live .smap { flex: 1 1 0; min-height: 0; max-height: none; }
   /* A control in the steps' words (the last step's search and card link) that takes the keyboard's focus is scrolled
      clear of the pinned chart, never left under it; the chart's own controls (the states, the peer toggle) are not. */
   .story--live > .step :is(a, button, input) { scroll-margin-bottom: calc(var(--stage-h) + 8px); }
@@ -314,6 +325,23 @@
   .story--live .card__loc { margin-bottom: 6px; }
   .story--live .card__netl { margin-bottom: 6px; }
   .story--live .card__peer { margin: 6px 0; }
+}
+
+/* Short phones (740px tall and less): the chart's share shrinks so every step's words fit the window above it (down to
+   290px, the least in which every step's piles fit as separate dots: hub/test/story-layouts.test.js), the words step
+   down a size, and the map's key tightens (the small states' caption is said to a screen reader only). The chart's
+   height is copied for the moment before the script runs (below): change them together. */
+@media (max-width: 760px) and (max-height: 740px) {
+  .story--live { --stage-h: max(290px, calc(100svh - var(--stage-top) - 246px)); }
+  .step__in h2 { margin-bottom: 8px; font-size: 1.1875rem; }
+  .step__in > p { margin-bottom: 8px; font-size: 0.875rem; line-height: 1.5; }
+  .story--live .mapfoot { gap: 6px 12px; }
+  .story--live .dkey__t { margin-bottom: 3px; }
+  .story--live .dkey__md { margin-top: 4px; }
+  .story--live .smalls { justify-content: flex-start; gap: 3px; max-width: none; }
+  .story--live .smalls__cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .story--live .smapfig { gap: 6px; }
+  .story--live .sb { width: 30px; height: 30px; }
 }
 
 /* Before the story's script runs (scripts on), a phone sets the story's first screen as the live layout above will
@@ -336,6 +364,9 @@
   .story:not(.story--live):not(.story--static) :is(.card__rows, .card__next) { display: none; }
   .story:not(.story--live):not(.story--static) :is(.card__loc, .card__netl) { margin-bottom: 6px; }
   .story:not(.story--live):not(.story--static) .card__peer { margin: 6px 0; }
+}
+@media (scripting: enabled) and (max-width: 760px) and (max-height: 740px) {
+  .story:not(.story--live):not(.story--static) { --stage-h: max(290px, calc(100svh - var(--stage-top) - 246px)); }
 }
 
 @media print {

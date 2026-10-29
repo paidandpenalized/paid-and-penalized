@@ -26,14 +26,18 @@ const example = asset.byCcn.get(EXAMPLE_CCN);
 const statePeers = rows.map((r) => r.h).filter((h) => h.state === example.state);
 
 // The header's height on a desktop (the stage sits under it), and the share of a phone's window the stage takes, as the
-// page lays them out (measured in Chrome).
+// page lays them out (measured in Chrome); on a short phone (740 px tall or less) the stage leaves the words SHORT_WORDS
+// under the phone's header, but is never under SHORT_LEAST, the least in which every pile fits (hub/styles.css).
 const HEADER = 101.4;
 const PHONE_SHARE = 0.56;
+const PHONE_HEADER = 100;
+const SHORT_WORDS = 246;
+const SHORT_LEAST = 290;
 // The stage for a window: its size, whether the rail is hidden (its step's name then sits in the stage) and the device
 // pixel ratios such a screen has. On a desktop the story's grid is the page's width (1,180 at most) less its gutters, the
 // rail (wide windows only), the text column and the 24px between text and stage.
 function stageFor(vw, vh) {
-  if (vw <= 760) return { W: vw, H: vh * PHONE_SHARE, railHidden: true, dprs: [2, 3] };
+  if (vw <= 760) return { W: vw, H: vh <= 740 ? Math.max(SHORT_LEAST, vh - PHONE_HEADER - SHORT_WORDS) : vh * PHONE_SHARE, railHidden: true, dprs: [2, 3] };
   const content = Math.min(vw, 1180) - 32 - 24;
   return vw >= 1080 ? { W: content - 150 - 400, H: vh - HEADER, railHidden: false, dprs: [1, 2] } : { W: content - 360, H: vh - HEADER, railHidden: true, dprs: [1, 2] };
 }
@@ -41,7 +45,7 @@ function stageFor(vw, vh) {
 // The brief's windows (320, 390, 1024 and 1440 wide, 640 and 900 tall) and the common desktop windows whose short heights
 // make the steepest pile tightest (a laptop's 1366×657 and 1280×720, a 1440 window with its browser's bars, 1024×768).
 const WINDOWS = [[320, 640], [320, 900], [390, 640], [390, 900], [1024, 640], [1024, 900], [1440, 640], [1440, 900],
-  [1366, 657], [1440, 790], [1280, 720], [1024, 768]];
+  [1366, 657], [1440, 790], [1280, 720], [1024, 768], [375, 667], [320, 568]];
 const SIZES = [];
 for (const [vw, vh] of WINDOWS) {
   const st = stageFor(vw, vh);

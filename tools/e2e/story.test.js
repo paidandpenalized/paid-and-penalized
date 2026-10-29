@@ -124,6 +124,44 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
+// Phones of every height: each step's words fit the window between the header and the pinned chart, so none scrolls
+// behind the chart (the chart's share and the words' size follow the window's height on short phones), and By state
+// keeps its parts apart: the step's name, then the readout (as tall as its longest line, so the map never moves under
+// the dots when a long line shows), then the map and its key, all inside the chart.
+for (const [width, height] of [[320, 640], [375, 667], [390, 844], [414, 896]]) {
+  describe(`the phone story at ${width}×${height}`, () => {
+    const tabs = useContext(shared, { width, height });
+    it('every step\'s words fit above the chart, and By state\'s parts stand apart inside it', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await drawn(page);
+      const fit = await page.evaluate(() => {
+        const head = document.querySelector('.topbar').getBoundingClientRect().bottom;
+        const stage = document.querySelector('.stage').getBoundingClientRect().height;
+        const room = window.innerHeight - stage - head - 24;
+        return [...document.querySelectorAll('.story > .step')].slice(1, 8).map((s) => ({
+          id: s.id, tall: s.classList.contains('step--tall'), words: Math.round(s.querySelector('.step__in').getBoundingClientRect().height), room: Math.round(room),
+        }));
+      });
+      for (const f of fit) assert.ok(!f.tall && f.words <= f.room, `${f.id}: ${f.words} px of words in ${f.room} px`);
+      await readStep(page, 7);
+      const box = (sel) => page.evaluate((q) => { const r = document.querySelector(q).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height }; }, sel);
+      const parts = async () => ({ stage: await box('.stage'), name: await box('.nowstep li.is-now'), readout: await box('.readout'), map: await box('.smap'), foot: await box('.mapfoot') });
+      const p = await parts();
+      assert.ok(p.name.bottom <= p.readout.top + 0.5, 'the step\'s name above the readout');
+      assert.ok(p.readout.top >= p.stage.top && p.readout.bottom <= p.map.top + 0.5, 'the readout inside the chart, above the map');
+      assert.ok(p.map.bottom <= p.foot.top + 0.5 && p.foot.bottom <= p.stage.bottom + 0.5, 'the map, then its key, inside the chart');
+      assert.ok(p.map.height >= 60, `a map ${Math.round(p.map.height)} px tall`);
+      // The longest line the readout can show (Maryland's) leaves the map where it was.
+      await page.locator('.smalls [data-st="MD"]').focus();
+      await settle(page);
+      assert.match(await page.locator('.readout').textContent(), /^Maryland: not in these programs/);
+      const q = await parts();
+      assert.deepEqual([q.readout.height, q.map.top, q.map.height], [p.readout.height, p.map.top, p.map.height], 'the readout keeps its height; the map stays put');
+      await assertQuiet(seen, `the phone story at ${width}×${height}`);
+    }));
+  });
+}
+
 // The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
 // the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
 // the 'hub:select' event name it, the worksheet below fills in for it), and a hospital without a teaching status has that

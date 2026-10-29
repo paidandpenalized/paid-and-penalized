@@ -3,6 +3,13 @@
 // progress line under the header, and the call that moves the chart. activeStep is pure; mountSteps wires it to the page.
 import { clamp01 } from '../paint.js';
 
+// Where a phone's step becomes the one being read: its words' top risen PHONE_RISE of the way up the window between the
+// header (top) and the pinned chart (stageTop), at most PHONE_RISE_MAX pixels, so most of its words show before the
+// chart changes for them (the words that fit the window then rise whole into it while the step is read).
+export const PHONE_RISE = 0.75;
+const PHONE_RISE_MAX = 200;
+export const phoneFocus = (stageTop, top) => stageTop - Math.min(PHONE_RISE_MAX, (stageTop - top) * PHONE_RISE);
+
 // The step being read: the last whose top (stepTops, in window pixels, in order) has reached the focus line; the first
 // before any has.
 export function activeStep(stepTops, focusLine) {
@@ -48,8 +55,9 @@ export function mountSteps({ story, onStep, phone, still }) {
     const top = headerBottom();
     // A phone reads between the header and the pinned chart; a desktop a little above the window's middle.
     const stageTop = narrow ? stage.getBoundingClientRect().top : vh;
-    const focus = narrow ? stageTop - Math.min(110, (stageTop - top) * 0.4) : vh * 0.58;
-    const tops = steps.map((s) => s.getBoundingClientRect().top + (narrow ? 0 : vh * 0.2));
+    const focus = narrow ? phoneFocus(stageTop, top) : vh * 0.58;
+    // A phone reads by the words' own top (a step's room starts above them), a desktop by the step's.
+    const tops = steps.map((s, i) => (narrow ? words[i] : s).getBoundingClientRect().top + (narrow ? 0 : vh * 0.2));
     const at = activeStep(tops, focus);
     const r = story.getBoundingClientRect();
     if (progress) {

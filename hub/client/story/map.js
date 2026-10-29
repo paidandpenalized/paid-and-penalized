@@ -23,9 +23,11 @@ export function stateFromHash(hash) {
 export const lineOf = (el) => el.querySelector('title')?.textContent || el.getAttribute('aria-label') || null;
 
 // Wires the map in the stage (stageEl): its states (paths with data-st), the small states' buttons, the readout. Shows the
-// readout and the buttons (the story's CSS shows them on step 7 only). Returns { active(on), pin(code), stop() }: whether
-// step 7 is being read (the states take the keyboard's focus only then); pin a state by its code; undo it all (the map as
-// the server wrote it: no buttons, the readout's prompt hidden, nothing pinned or said).
+// readout and the buttons (the story's CSS shows them on step 7 only). Returns { active(on), pin(code), fit(), stop() }:
+// whether step 7 is being read (the states take the keyboard's focus only then); pin a state by its code; hold the
+// readout to its longest line's height at its width now (the map under it then never moves when a longer line shows;
+// again after a resize, before the stage measures the map); undo it all (the map as the server wrote it: no buttons, the
+// readout's prompt hidden, nothing pinned or said).
 export function mountMap(stageEl) {
   const readout = stageEl.querySelector('.readout');
   const said = stageEl.querySelector('[data-said]');
@@ -74,6 +76,25 @@ export function mountMap(stageEl) {
   };
   const pin = (code) => setPin(pinned === code ? null : code);
 
+  // The readout's height: its tallest line (each state's, as a line shows, and the prompt), measured at its width.
+  function fit() {
+    const shown = [readout.textContent, readout.classList.contains('is-line')];
+    readout.style.minHeight = '';
+    let tallest = 0;
+    readout.classList.add('is-line');
+    for (const line of new Set(all.map(lineOf).filter(Boolean))) {
+      readout.textContent = line;
+      tallest = Math.max(tallest, readout.getBoundingClientRect().height);
+    }
+    readout.classList.remove('is-line');
+    readout.textContent = prompt;
+    tallest = Math.max(tallest, readout.getBoundingClientRect().height);
+    readout.textContent = shown[0];
+    readout.classList.toggle('is-line', shown[1]);
+    readout.style.minHeight = `${Math.ceil(tallest)}px`;
+  }
+  fit();
+
   // The listeners sit on the map's figure, an HTML element (an SVG element that listens for focus becomes a stop in the
   // tab order of its own). Every one comes off at once (stop).
   const box = svg.closest('.smapfig') ?? stageEl;
@@ -114,8 +135,10 @@ export function mountMap(stageEl) {
     },
     // Pin the state (from an address), whatever was pinned before.
     pin: setPin,
+    fit,
     stop() {
       off.abort();
+      readout.style.minHeight = '';
       on = null;
       pinned = null;
       for (const p of paths) {

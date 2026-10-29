@@ -74,8 +74,8 @@ export function statesMap({ shapes, states }) {
   return html`<svg class="smap" viewBox="0 0 ${MAP_WIDTH} ${height}" role="group" aria-label="${COPY.mapLabel}" focusable="false"><defs><pattern id="smap-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect class="smap__hatch-bg" width="6" height="6"/><path class="smap__hatch" d="M1.5 0V6"/></pattern></defs><path class="smap__land" d="${land}"/>${marks}</svg>`;
 }
 
-// The map's key: its title, the steps from the deepest cut to the largest bonus with the signed ends and the words,
-// and Maryland's hatch. fy: the fiscal year.
+// The map's key: its title (and a short one the narrowest phones show instead), the steps from the deepest cut to the
+// largest bonus with the signed ends and the words, and Maryland's hatch. fy: the fiscal year.
 export function stateLegend({ states, fy }) {
   const { end } = stateKey(states);
   const sw = 20;
@@ -85,7 +85,7 @@ export function stateLegend({ states, fy }) {
   }));
   const width = 2 * KEY_STEPS * sw;
   return html`<div class="dkey">
-<p class="dkey__t">${fill('keyTitle', { fy: String(fy) })}</p>
+<p class="dkey__t"><span class="dkey__long">${fill('keyTitle', { fy: String(fy) })}</span><span class="dkey__short">${fill('keyTitleShort', { fy: String(fy) })}</span></p>
 <svg class="dkey__g" viewBox="0 0 ${width} 10" aria-hidden="true" focusable="false"><rect class="smap__land" width="${width}" height="10"/>${swatches.map((s) => html`<rect class="st st--${s.ink}" style="${tStyle(s.t)}" x="${s.x}" width="${sw}" height="10"/>`)}</svg>
 <p class="dkey__s"><span>${fill('keyCut', { end: pct(-end, 1) })}</span><span>${pct(0, 0)}</span><span>${fill('keyBonus', { end: pct(end, 1, { sign: true }) })}</span></p>
 <p class="dkey__md"><span class="dkey__hatch" aria-hidden="true"></span>${COPY.keyMaryland}</p>

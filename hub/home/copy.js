@@ -96,6 +96,8 @@ export const COPY = typesetCopy({
   hospitals: 'hospitals',
   readout: 'Point at, tap or tab to a state for its numbers.',
   keyTitle: 'State net change, est. FY{fy}, % of Medicare inpatient pay',
+  // The title the narrowest phones show instead, on one line.
+  keyTitleShort: 'Net change, est. FY{fy}, % of pay',
   keyCut: '{end} cut',
   keyBonus: '{end} bonus',
   keyMaryland: 'Maryland: not in these programs',

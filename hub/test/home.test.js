@@ -170,6 +170,8 @@ test('the states map: a path per state and DC with its title line, shaded by its
   assert.ok(textOf(key).includes(`${pct(-end, 1)} cut`));
   assert.ok(textOf(key).includes(`${pct(end, 1, { sign: true })} bonus`));
   assert.ok(textOf(key).includes('Maryland: not in these programs'));
+  // Its title in full, and a short one the narrowest phones show instead (one line at 320 px), each with the year.
+  assert.match(key, new RegExp(`<p class="dkey__t"><span class="dkey__long">State net change, est\\. FY${hub.fy}, % of Medicare inpatient pay</span><span class="dkey__short">Net change, est\\. FY${hub.fy}, % of pay</span></p>`));
   // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing. It
   // is for the eye; a screen reader hears a state's line from the quiet region beside it, which the script fills when a
   // state is focused or picked (never when the pointer only passes over one).
