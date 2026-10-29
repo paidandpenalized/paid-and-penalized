@@ -71,3 +71,19 @@ export function mapGeometry(g, mapW, mapH) {
   const k = Math.min((g.W - 2 * padX) / mapW, (g.H - padT - padB) / mapH);
   return { k, ox: (g.W - mapW * k) / 2, oy: padT + (g.H - padT - padB - mapH * k) / 2, w: mapW * k, h: mapH * k };
 }
+
+// How near a label may come to the key (pixels) before it moves.
+const KEY_PAD = 8;
+
+// A label kept clear of the key a stage paints under the passed gates (stage.js): the baseline of its last line. box:
+// the key's ({ left, right, top, bottom }), or null; across: the label's [left, right]; last: its last line's baseline
+// as placed; lines: how many it has, step: the space between their baselines; floor: the lowest its last baseline may
+// go (where something stands under the key; Infinity for nothing). A line's ink stands from 12px above its baseline to
+// 4px below. A label that would run into the key moves down to just under it, unless that passes floor.
+export function clearOfKey({ box, across, last, lines, step, floor = Infinity }) {
+  const first = last - (lines - 1) * step;
+  const into = box && across[0] < box.right + KEY_PAD && across[1] + KEY_PAD > box.left && first - 12 < box.bottom + 3 && last + 4 > box.top;
+  if (!into) return last;
+  const moved = box.bottom + 15 + (lines - 1) * step;
+  return moved + 6 < floor ? moved : last;
+}

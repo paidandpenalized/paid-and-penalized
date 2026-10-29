@@ -11,7 +11,7 @@ import { shareDomain } from '../client/scale.js';
 import { BAR } from '../client/story/bar-frame.js';
 import { INK, NEUTRAL, PEN, REW } from '../client/colors.js';
 import { drawnDot } from '../client/pile.js';
-import { fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
+import { clearOfKey, fitBox, gateLines, stageGeometry } from '../client/story/geometry.js';
 import { WIDE_MAX, createLayouts, storyRows } from '../client/story/layouts.js';
 import { decodedHub } from './helpers.js';
 
@@ -329,6 +329,20 @@ test('layYou with no hospital (one followed without an estimate): everyone alone
     assert.ok(alone.info.all[0] >= sg.top, `${size.name}: inside the plot`);
     assertSeparate(alone, 0, N, size.dpr, `${size.name}: everyone alone`);
   }
+});
+
+test('clearOfKey: a pile\'s count that would run into the key moves down just under it, unless something stands there', () => {
+  // The key at the top right; a two-line count whose first line would sit on it.
+  const box = { left: 200, right: 300, top: 50, bottom: 66 };
+  const moved = clearOfKey({ box, across: [180, 260], last: 70, lines: 2, step: 13 });
+  assert.equal(moved, 66 + 15 + 13, 'its first line\'s ink starts under the key');
+  assert.ok(moved - 13 - 12 >= box.bottom + 3);
+  // Clear of the key already (lower, or to its left beyond the margin): it stays.
+  assert.equal(clearOfKey({ box, across: [180, 260], last: 120, lines: 2, step: 13 }), 120);
+  assert.equal(clearOfKey({ box, across: [60, 190], last: 70, lines: 1, step: 13 }), 70);
+  assert.equal(clearOfKey({ box: null, across: [180, 260], last: 70, lines: 2, step: 13 }), 70);
+  // Something stands under the key where it would go (floor): it stays where it was.
+  assert.equal(clearOfKey({ box, across: [180, 260], last: 70, lines: 2, step: 13, floor: 90 }), 70);
 });
 
 // On a phone the step's name ("3/9 Readmissions") sits in the stage's top left, over the gates the story has passed

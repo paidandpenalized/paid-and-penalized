@@ -17,7 +17,7 @@ import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
 import { COPY } from './copy.js';
 import { tickText, wholePercents } from '../scale.js';
-import { fitBox, stageGeometry } from './geometry.js';
+import { clearOfKey, fitBox, stageGeometry } from './geometry.js';
 import { OUT_A, createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
@@ -421,14 +421,11 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     ctx.font = f;
     const w = Math.max(...lines.map((s) => ctx.measureText(s).width));
     const step = g.narrow ? 13 : 15;
-    let last = Math.max(g.top + 12 + (lines.length - 1) * step, z.y);
-    const first = () => last - (lines.length - 1) * step;
-    const across = (z.x + w > g.x1 ? [g.x1 - w, g.x1] : [z.x, z.x + w]);
-    if (box && across[0] < box.right + 8 && across[1] + 8 > box.left && first() - 12 < box.bottom + 3 && last + 4 > box.top) {
-      const moved = box.bottom + 3 + 12 + (lines.length - 1) * step;
-      if (moved + 6 < z.clear) last = moved;
-    }
+    const across = z.x + w > g.x1 ? [g.x1 - w, g.x1] : [z.x, z.x + w];
+    const last = clearOfKey({ box, across, last: Math.max(g.top + 12 + (lines.length - 1) * step, z.y), lines: lines.length, step, floor: z.clear });
     lines.forEach((s, k) => note(s, z.x, last - (lines.length - 1 - k) * step));
+    // Its box, for a label placed after it to keep clear of.
+    return { left: across[0], right: across[1], top: last - (lines.length - 1) * step - 12, bottom: last + 4 };
   }
 
   // The counts a scene's piles carry, once its dots have settled.
@@ -454,16 +451,15 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       if (info.s === 3) entries.push([say('keyBonus'), colors.rew]);
       box = key(entries, g.x1, info.lines[info.s - 1] + (g.narrow ? 13 : 17), font(g.narrow ? 10.5 : 11.5, 400, true), colors.ink2, 'right');
     }
-    if (info.zero) zeroNote(info.zero, box);
+    const zeroBox = info.zero ? zeroNote(info.zero, box) : null;
     if (info.only) {
-      // Left of the column's top, below the key where a tall column would put it into the key.
+      // Left of the column's top, below the key (and the $0 pile's count) where a tall column would put it into them.
       const words = say('hacOnly', { n: count(info.only.n), cut: rules.cut });
       ctx.font = font(g.narrow ? 10.5 : 11.5, 400, true);
       const w = ctx.measureText(words).width;
       const right = Math.max(info.only.x - 5, g.x0 + w);
-      const y = Math.max(g.top + 12, info.only.y);
-      const into = box && right - w < box.right + 8 && right + 8 > box.left && y - 12 < box.bottom + 3 && y + 4 > box.top;
-      note(words, info.only.x - 5, into ? box.bottom + 15 : y, 'right');
+      const place = (last, other) => clearOfKey({ box: other, across: [right - w, right], last, lines: 1, step: 0 });
+      note(words, info.only.x - 5, place(place(Math.max(g.top + 12, info.only.y), box), zeroBox), 'right');
     }
     if (L.scene === 'net') {
       const f = font(g.narrow ? 11.5 : 13, 400, true);
