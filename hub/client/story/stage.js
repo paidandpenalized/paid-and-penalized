@@ -43,10 +43,11 @@ const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
 //   domain     the share axis's [lo, hi]; mapW, mapH: the map's projected size;
 //   panels     the server's drawings: { bar (its panel), barSvg, map (its panel), mapSvg, mapFoot } (elements);
 //   example    the hospital the last step opens on; peersOf(h): its group as { peers (hospitals, h among them), label
-//              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js);
+//              (the group named: "Ohio hospitals") }, in the peer mode the reader has chosen (find.js); the last step
+//              shows everyone alone instead while the reader follows a hospital with no dot (none());
 //   railHidden () -> whether the step's name sits in the stage (no rail beside it); still: the reduced-motion query.
-// Returns { show(i, { instant }), select(h), regroup(), resize(), stop() }: stop ends any motion and the repaint on a
-// change of theme, and clears the canvas.
+// Returns { show(i, { instant }), select(h), none(), regroup(), resize(), stop() }: stop ends any motion and the repaint
+// on a change of theme, and clears the canvas.
 export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH, panels, example, peersOf, railHidden, still }) {
   const ctx = canvas.getContext('2d');
   const N = rows.length;
@@ -84,6 +85,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   let sweepK = -1;
   let crowd = 1;
   let selected = null;
+  // The reader follows a hospital without an estimate (none()): no dot to ring, no group to show.
+  let alone = false;
   let colors = readColors();
   let fonts = readFonts();
   let panelState = '';
@@ -103,8 +106,8 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       return cache[i];
     }
     if (i === 8) {
-      const h = selected ?? example;
-      const { peers, label } = peersOf(h);
+      const h = alone ? null : selected ?? example;
+      const { peers, label } = h ? peersOf(h) : { peers: [], label: '' };
       cache[8] = make.layYou(h, peers);
       cache[8].info.label = label;
     } else cache[i] = make.layMap(i === 7);
@@ -356,14 +359,18 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     });
   }
 
-  // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it.
+  // The last step's words: the group over its swarm, everyone over theirs, the group's median as a tick under it (with
+  // no hospital to show, everyone's alone).
   function youWords(L, a) {
     const { info } = L;
-    if (!rows[info.h]) return;
     ctx.globalAlpha = a;
     const f = font(g.narrow ? 12 : 13.5, 600);
-    text(say('groupOf', { group: info.label, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
     text(say('everyone', { n: count(N) }), g.x0, info.all[0] - 10, f, colors.ink);
+    if (!rows[info.h]) {
+      ctx.globalAlpha = 1;
+      return;
+    }
+    text(say('groupOf', { group: info.label, n: count(info.n) }), g.x0, info.peers[0] - 10, f, colors.ink);
     if (info.median !== null) {
       const x = g.scale.xs(info.median);
       ctx.strokeStyle = colors.ink;
@@ -514,7 +521,7 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     // Counts: the old ones leave first, the new ones arrive once the dots have settled.
     if (moving && raw < 0.15) counts(prev, 1 - raw / 0.15);
     counts(cur, moving ? clamp01((raw - 0.8) / 0.2) : 1);
-    const followed = selected ?? (step === 8 ? example : null);
+    const followed = selected ?? (step === 8 && !alone ? example : null);
     if (followed && indexOf.has(followed)) ring(indexOf.get(followed));
   }
 
@@ -571,6 +578,13 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     // and the last step shows it among its group.
     select(h) {
       selected = h;
+      alone = false;
+      regroup();
+    },
+    // Follow a hospital without an estimate: it has no dot, so nothing is ringed and the last step shows everyone alone.
+    none() {
+      selected = null;
+      alone = true;
       regroup();
     },
     // The group changed (another peer mode): the last step's peers rise anew out of everyone.

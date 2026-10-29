@@ -11,7 +11,7 @@ import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { BUDGETS, pageWeight } from '../../tools/ci/size-budget.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { US_MAP_CODES } from '../../web/charts/geo.js';
-import { count, dollars, money, pct } from '../../web/render/format.js';
+import { count, money, pct } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
@@ -220,7 +220,7 @@ test('the example card: the example hospital, its place, beds, teaching, net, th
   assert.ok(said.includes(`${h.city}, ${h.state}`));
   assert.ok(said.includes(`${count(h.beds)} beds, non-teaching`), 'its bed count and teaching status');
   assert.ok(said.includes(pct(h.est.share, 2)));
-  assert.ok(said.includes(dollars(h.est.net)));
+  assert.ok(said.includes(money(h.est.net, { sign: true })), 'its net as its page prints it');
   for (const label of ['Readmissions', 'Hospital-acquired conditions', 'Value-based purchasing']) assert.ok(said.includes(label), label);
   const peers = hospitals.filter((x) => x.est && x.state === h.state);
   assert.ok(said.includes(`Of ${count(peers.length)} ${STATE_NAMES[h.state]} hospitals, ${count(peers.filter((x) => x.est.net < 0).length)} take a net cut`));

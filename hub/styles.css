@@ -177,6 +177,10 @@
 .card__ex { margin-bottom: 6px; color: var(--ink-3); font-size: 0.78125rem; }
 /* The hint points at the search, so it shows only with it. */
 .story .omni[hidden] + .card .card__hint { display: none; }
+/* A followed hospital without an estimate (hub/client/story/find.js statusModel): its status stamped where the net goes and
+   why under it, as its own page has them; no figures, so no rows, no peers and no pointer to them. */
+.story .card--none :is(.card__rows, .card__peer, .card__next) { display: none; }
+.story .card__net .stamp { margin: 8px 0 12px 2px; font-size: 1rem; }
 .card__nm { color: var(--ink); font: 700 1.125rem/1.25 var(--font-body); }
 .card__loc { margin: 2px 0 10px; color: var(--ink-3); font-size: 0.8125rem; }
 .card__net { color: var(--ink); font: 400 1.5rem/1.1 var(--font-type); }

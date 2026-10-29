@@ -49,10 +49,15 @@ function start(root) {
   const statesStep = root.querySelector('#step-states');
 
   // The last step's search (the family search mounts it): once the story is drawn, a hospital it finds is followed here
-  // instead of opened; until then, or for a hospital without an estimate, the pick opens its page as the bar's does.
+  // instead of opened, and the box then names it (not the words typed to find it); until then, or for a hospital without
+  // an estimate, the pick opens its page as the bar's does.
   let find = null;
   if (form) form.addEventListener('hub:pick', (e) => {
-    if (find && find.follow(e.detail.href)) e.preventDefault();
+    const h = find?.follow(e.detail.href);
+    if (!h) return;
+    e.preventDefault();
+    const box = form.querySelector('[role="combobox"]');
+    if (box) box.value = h.name;
   });
 
   // The live layout at once (one sticky stage), so the page does not shift again when the data arrives; until then the
@@ -125,8 +130,10 @@ function start(root) {
     undo.push(s);
     f = mountFind({ story: root, hospitals, fy, example, stage: s });
     undo.push(f);
-    const followed = followedCcn(window.location.search, (ccn) => Boolean(byCcn.get(ccn)?.est));
-    if (followed) f.select(byCcn.get(followed));
+    // A hospital the address follows: on the chart and the card, or, without an estimate, on the card with its status.
+    const followed = byCcn.get(followedCcn(window.location.search, (ccn) => byCcn.has(ccn)));
+    if (followed?.est) f.select(followed);
+    else if (followed) f.note(followed);
     s.show(at, { instant: true });
     m.active(at === 7);
     const code = named();

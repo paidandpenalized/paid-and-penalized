@@ -247,6 +247,23 @@ test('layYou: the hospital among its peers (the copies) above everyone; the peer
   assert.ok(Math.abs(L.info.median - (nets.length % 2 ? nets[mid] : (nets[mid - 1] + nets[mid]) / 2)) < 1e-9);
 });
 
+test('layYou with no hospital (one followed without an estimate): everyone alone, in a taller room, no copy shown', () => {
+  for (const size of SIZES.filter((s) => s.dpr === 2 || s.dpr === 1)) {
+    const sg = stageGeometry({ W: size.W, H: size.H, railHidden: size.railHidden, px: size.px, domain });
+    const L = createLayouts({ rows, g: sg, mapW: asset.mapW, mapH: asset.mapH });
+    const alone = L.layYou(null, []);
+    const withGroup = L.layYou(example, statePeers);
+    assert.equal(alone.info.h, -1);
+    assert.equal(alone.info.n, 0);
+    assert.equal(alone.info.fits, true, size.name);
+    for (let i = 0; i < N; i++) assert.ok(alone.A[i] > 0, `${size.name}: hospital ${i} unseen`);
+    for (let i = N; i < 2 * N; i++) assert.equal(alone.A[i], 0);
+    assert.ok(alone.info.all[0] < withGroup.info.all[0] + 1e-6, `${size.name}: its room reaches at least as high`);
+    assert.ok(alone.info.all[0] >= sg.top, `${size.name}: inside the plot`);
+    assertSeparate(alone, 0, N, size.dpr, `${size.name}: everyone alone`);
+  }
+});
+
 // On a phone the step's name ("3/9 Readmissions") sits in the stage's top left, over the gates the story has passed
 // (hub/styles.css .nowstep: 9px under the stage's top, 12px type set solid). A passed gate's words stand 6px above its
 // line in 11px type (stage.js gates), their capitals about three quarters of that tall. The first one's start at least

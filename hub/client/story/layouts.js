@@ -36,6 +36,9 @@ const PILE = {
   all: { narrow: 2.6, wide: 4.2 },
 };
 
+// How much taller everyone's swarm stands on the last step with no group above it.
+const ALONE = 1.35;
+
 // The layouts over rows (storyRows) on a stage (geometry.js stageGeometry), with the map's projected size (mapW by mapH):
 // { N, layBar, layStart, layGate, layNet, layMap, layYou }.
 export function createLayouts({ rows, g, mapW, mapH }) {
@@ -175,9 +178,10 @@ export function createLayouts({ rows, g, mapW, mapH }) {
 
   // Step 8: one hospital (h) among its peers (peers: hospitals, h among them) and among all: every hospital in a swarm
   // along the bottom, and the peers again (the copies) in a swarm above it. The rest of the copies wait unseen on their
-  // hospitals, so a new peer group rises out of the swarm below.
+  // hospitals, so a new peer group rises out of the swarm below. With no hospital (h null, no peers), everyone alone, in a
+  // taller swarm.
   function layYou(h, peers) {
-    const aH = Math.min((g.bottom - g.top) * 0.46, g.narrow ? 170 : 330);
+    const aH = Math.min((g.bottom - g.top) * 0.46, g.narrow ? 170 : 330) * (peers.length ? 1 : ALONE);
     const aBot = g.bottom - 4;
     const aTop = aBot - aH;
     const all = rows.map((r, i) => ({ id: i, v: r.c[3], key: r.hash }));

@@ -169,6 +169,7 @@ describe('states you can read, and Find yours', () => {
     await page.locator('main form#find [role="option"]').first().waitFor();
     await box.press('Enter');
     await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+    assert.equal(await box.inputValue(), await page.locator('.card__nm').textContent(), 'the box names the hospital followed, not what was typed');
     const s = await page.evaluate(() => ({
       path: window.location.pathname, selected: window.selected, step: document.querySelector('.story').dataset.step,
       teach: document.querySelector('.peers [data-peer="teach"]').getAttribute('aria-disabled'),
@@ -192,6 +193,42 @@ describe('states you can read, and Find yours', () => {
     await page.locator('.peers [data-peer="teach"]').click();
     assert.deepEqual(await pressed(), ['teach']);
     await assertQuiet(seen, 'find yours');
+  }));
+
+  // A followed hospital without an estimate (Maryland's all-payer model, or no inputs): the card names it with its status
+  // and why, as its page does, and links to that page; it shows no figure, and the chart rings nothing for it.
+  it('a ?h= hospital without an estimate is on the card with its status and why, and no figure', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    const picks = await page.evaluate(async () => {
+      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+      const at = (c) => cols.indexOf(c);
+      const of = (status) => rows.find((r) => r[at('status')] === status);
+      return [['m', 'Not in these programs', of('m')[at('ccn')], of('m')[at('name')]], ['n', 'No estimate', of('n')[at('ccn')], of('n')[at('name')]]];
+    });
+    for (const [, status, ccn, name] of picks) {
+      await visit(page, tabs.base, `/?h=${ccn}`);
+      await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+      await page.locator('#step-find').scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+      await settle(page);
+      const c = await page.evaluate(() => {
+        const card = document.querySelector('[data-card]');
+        const shown = (sel) => card.querySelector(sel).checkVisibility();
+        return {
+          name: card.querySelector('.card__nm').textContent, status: card.querySelector('.card__pct').textContent,
+          why: card.querySelector('.card__netl').textContent, href: card.querySelector('.card__go').getAttribute('href'),
+          example: shown('.card__ex'), rows: shown('.card__rows'), peer: shown('.card__peer'), text: card.innerText,
+          toggle: document.querySelector('.story .peers').checkVisibility(),
+        };
+      });
+      assert.equal(c.toggle, false, 'no peer toggle: the chart has no dot for it to group');
+      assert.equal(c.name, name);
+      assert.equal(c.status, status);
+      assert.ok(c.why.length > 20, c.why);
+      assert.equal(c.href, `/hospital/${ccn.toLowerCase()}/`);
+      assert.deepEqual([c.example, c.rows, c.peer], [false, false, false], 'no example lead, no rows, no peers');
+      assert.doesNotMatch(c.text, /\$|NaN|undefined|null|Infinity/, 'no figure on the card');
+    }
+    await assertQuiet(seen, 'a followed hospital without an estimate');
   }));
 
   // The worksheet in "Methods, in brief" fills in for the hospital the last step finds: its CCN, lines that add up as
