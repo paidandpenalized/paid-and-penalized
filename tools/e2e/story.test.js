@@ -401,6 +401,32 @@ for (const width of [390, 1280]) {
       assert.equal((await at(0)).shown, 'visible', 'focused, it stays shown at the top');
       await assertQuiet(seen, `the masthead's trip at ${width} px`);
     }));
+
+    // Reduced motion: no trip, but still one wordmark at a time. At the top the masthead's shows and the header's waits
+    // hidden (with the tagline); once the masthead has gone under the header, the header's shows at once.
+    it('with reduced motion, one wordmark at a time: the masthead\'s at the top, the header\'s once it has scrolled under', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.evaluate(() => document.fonts.ready);
+      const at = async (y) => {
+        await page.evaluate((top) => window.scrollTo(0, top), y);
+        await settle(page);
+        await settle(page);
+        return page.evaluate(() => {
+          const seen = (el) => getComputedStyle(el).visibility === 'visible' && Number(getComputedStyle(el).opacity) > 0.99;
+          const tag = document.querySelector('.fam__tag');
+          return { head: seen(document.querySelector('.fam a.wordmark')), tag: getComputedStyle(tag).display === 'none' ? null : seen(tag), moved: document.querySelector('.hero__m1').style.transform !== '' };
+        });
+      };
+      const tag = (on) => (width >= 1100 ? on : null);
+      assert.equal(await page.evaluate(() => document.documentElement.classList.contains('dock-ready')), true, 'the script has taken over');
+      assert.deepEqual(await at(0), { head: false, tag: tag(false), moved: false }, 'at the top: the masthead\'s wordmark only');
+      assert.deepEqual(await at(600), { head: true, tag: tag(true), moved: false }, 'scrolled under: the header\'s');
+      assert.deepEqual(await at(0), { head: false, tag: tag(false), moved: false }, 'back at the top');
+      await at(600);
+      await page.focus('.fam a.wordmark');
+      assert.equal((await at(0)).head, true, 'focused, it stays shown at the top');
+      await assertQuiet(seen, `the masthead with reduced motion at ${width} px`);
+    }));
   });
 }
 
