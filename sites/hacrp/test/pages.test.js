@@ -674,7 +674,8 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
     source: DATA.source, robots: null, assets: ASSETS, shapes: DATA.shapes, careSource: DATA.careCompareSource, masterFy: 2027,
   });
   const text = page({}, { rating: '4', footnotes: [] });
-  assert.ok(text.includes('<p class="field__value field__value--sm">Major teaching · 1,234 beds · Government · Urban · Rural referral center · Sole community hospital</p>'));
+  // Each "·" held to the item before it (a no-break space), so a wrapped line never starts with one.
+  assert.ok(text.includes('<p class="field__value field__value--sm">Major teaching\u00a0· 1,234\u00a0beds\u00a0· Government\u00a0· Urban\u00a0· Rural referral center\u00a0· Sole community hospital</p>'));
   // The Type field reads just the facts; their sources are in the data list, with the field only.
   assert.match(text, /<p class="field__value field__value--sm">Major teaching[^<]*<\/p>\n<\/div>/);
   assert.doesNotMatch(text, /field__note">Teaching/);

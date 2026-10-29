@@ -182,6 +182,15 @@ test('the hooks the page\'s script uses, its script-only controls hidden, and th
   assert.ok(main.includes(esc('A cut is a program’s formula at work, not a verdict on a hospital’s care. Peers are listed alphabetically; nothing on this page ranks hospitals.')), 'the fairness line');
 });
 
+// The record's Type field wraps between its items, each "·" at the end of a line, never at the start of one.
+test('the Type field holds each "·" to the item before it', () => {
+  const h = pick((x) => x.est && x.teach && Number.isInteger(x.beds), 'an estimated hospital with a teaching status and a bed count');
+  const main = mainOf(render(h));
+  const type = /<p class="field__value field__value--sm">([^<]*)<\/p>/.exec(main)?.[1];
+  assert.ok(type && type.includes('\u00a0· '), 'the items joined, each dot after a no-break space');
+  assert.ok(!type.includes(' · '), 'never a breakable space before a dot');
+});
+
 // The strips' and the dollar rows' median ticks' glides take their length and curve from the page's script, which times
 // the same moves (strips.js setGlide): the stylesheet keeps no second copy that could drift from it.
 test('the stylesheet\'s glides read their length and curve from the page\'s script, never a copy of them', () => {

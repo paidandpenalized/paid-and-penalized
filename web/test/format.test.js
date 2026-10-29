@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled } from '../render/format.js';
+import { capitalize, decimal, dollars, dotList, fractionWord, money, moneyRange, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -104,6 +104,13 @@ test('placeText: "City, ST", or as much of it as a record has', () => {
   assert.equal(placeText({ city: null, state: 'ZZ' }), 'ZZ');
   assert.equal(placeText({ city: 'Springfield', state: undefined }), 'Springfield');
   assert.equal(placeText({}), '');
+});
+
+test('dotList joins items with middle dots, each held to the item before it, so no wrapped line starts with one; unbroken keeps words on one line', () => {
+  assert.equal(dotList(['Major teaching', '120 beds', 'Urban']), 'Major teaching\u00a0· 120 beds\u00a0· Urban');
+  assert.equal(dotList(['Urban']), 'Urban');
+  assert.doesNotMatch(dotList(['a', 'b', 'c']), / ·/, 'never a breakable space before a dot');
+  assert.equal(unbroken('1,234 beds'), '1,234\u00a0beds', 'a count never parts from its noun');
 });
 
 test('capitalize upper-cases the first letter only, and leaves an empty string empty', () => {

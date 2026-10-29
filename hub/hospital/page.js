@@ -14,7 +14,7 @@
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, money, placeText } from '../../web/render/format.js';
+import { count, dotList, money, placeText, unbroken } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
@@ -63,11 +63,11 @@ function typeText(h, master) {
   const own = master?.own && master.own !== 'Unknown' ? master.own : null;
   const parts = [
     TEACH[h.teach] && fill(TEACH[h.teach]),
-    Number.isInteger(h.beds) && fill('typeBeds', { beds: count(h.beds) }),
+    Number.isInteger(h.beds) && unbroken(fill('typeBeds', { beds: count(h.beds) })),
     own,
     typeof master?.urban === 'boolean' ? fill(master.urban ? 'typeUrban' : 'typeRural') : null,
   ].filter(Boolean);
-  return parts.length ? parts.join(' · ') : null;
+  return parts.length ? dotList(parts) : null;
 }
 
 // The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,

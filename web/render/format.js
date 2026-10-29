@@ -48,6 +48,13 @@ export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 // A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).
 export const placeText = ({ city, state }) => [city, state].filter(Boolean).join(', ');
 
+// Items joined by middle dots, each dot held to the item before it by a no-break space, so a line that wraps ends on a dot
+// and none starts with one: "Not a teaching hospital · 240 beds · Rural".
+export const dotList = (items) => items.join('\u00a0· ');
+
+// Words that never part across lines (each space a no-break space), as a count and its noun: "240 beds".
+export const unbroken = (text) => text.replace(/ /g, '\u00a0');
+
 // An English ordinal: 1st, 2nd, 3rd, 11th, 22nd, 75th.
 export function ordinal(n) {
   const v = n % 100;

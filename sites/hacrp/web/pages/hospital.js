@@ -9,7 +9,7 @@
 import { STATE_NAMES } from '../../../../engine/js/states.js';
 import { stateMap } from '../../../../web/charts/geo.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, dotList, isoDate, ordinal, unbroken } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -66,12 +66,12 @@ const TEACH = { major: 'typeTeachMajor', minor: 'typeTeachMinor', none: 'typeTea
 function typeText({ teach, beds, own, urban, types }) {
   const parts = [
     TEACH[teach] && t(TEACH[teach]),
-    Number.isInteger(beds) && fill('typeBeds', { beds: count(beds) }),
+    Number.isInteger(beds) && unbroken(fill('typeBeds', { beds: count(beds) })),
     own,
     urban === null ? null : t(urban ? 'typeUrban' : 'typeRural'),
     ...types.filter((code) => /^[A-Z]+$/.test(code)).map((code) => t(`type${code}`)),
   ].filter(Boolean);
-  return parts.length ? parts.join(' · ') : null;
+  return parts.length ? dotList(parts) : null;
 }
 
 // How many of the measures CMS scored the hospital on: "on all 6 measures" reads better than "on 6 of the 6".
