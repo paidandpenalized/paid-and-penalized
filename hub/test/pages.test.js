@@ -196,7 +196,8 @@ test('/privacy/ says the light/dark choice is the one thing kept in the browser,
   withHub((read) => {
     const reading = textOf(read('/privacy/').match(/<section[^>]*id="reading"[\s\S]*?<\/section>/)[0]).replace(/’/g, "'").trim();
     assert.ok(reading.includes('It sets no cookies, has no accounts and shows no ads.'), reading);
-    assert.ok(reading.endsWith("If you switch between light and dark, your browser remembers that choice for the rest of the visit, and it isn't sent anywhere."), reading);
+    // The owner's own words.
+    assert.ok(reading.endsWith('Your choice between light and dark mode is remembered by the browser for your visit; it is not shared beyond that visit.'), reading);
   }));
 
 test('/accessibility/ names the WCAG version from its constant', () =>
