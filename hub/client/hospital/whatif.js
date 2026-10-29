@@ -4,8 +4,9 @@
 // row's "Match the peer median on all three" and "Reset to actual" show. The state and its arithmetic are whatif-state.js's,
 // the words whatif-text.js's.
 //
-// Once anything changes, the page says so everywhere it shows a figure: the sticky peer row becomes a dashed
-// "Hypothetical" banner with the net and "Reset to actual"; the stamp reads "What if"; every changed figure shows the new
+// Once anything changes, the page says so everywhere it shows a figure: a dashed "Hypothetical" banner with the net and
+// "Reset to actual" sticks under the peer row (on a phone, in its place: hub/styles.css); the stamp reads "What if"; every
+// changed figure shows the new
 // value with the actual struck through beside it, and each chart keeps the actual as a ghost (the dollar rows' bars, the
 // strips' rings, the swarm's rings) beside a hollow "What if" mark; the headline states the comparison for the
 // hypothetical net. The result box (a polite live region) updates SETTLE_MS after the last input, and so does the URL
@@ -228,15 +229,17 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
   }
 
   // ---------- the banner, the stamp, the net and the result: what they say before any change, kept to restore ----------
+  // The banner is a sticky row of its own after the peer row (and the notes under it); the "Reader-made scenario" line
+  // follows it and scrolls with the page.
   const bar = $('[data-peers]');
-  const pin = bar?.querySelector('.hh__pin');
   const scenText = node('span', { class: 'hh__scentext' });
   const topReset = node('button', { type: 'button', class: 'hh__reset' }, [fill('reset')]);
-  const scen = node('div', { class: 'hh__scen', hidden: '' }, [node('span', { class: 'hh__htag' }, [fill('wiTag')]), scenText, topReset]);
+  const scen = node('div', { class: 'hh__scen', hidden: '' }, [node('div', { class: 'wrap hh__scenin' }, [node('span', { class: 'hh__htag' }, [fill('wiTag')]), scenText, topReset])]);
   // The page's own address without the scenario, as a link on this site (siteAddress folds a leading "//").
   const sharedLink = node('a', { href: siteAddress({ pathname: location.pathname, search: location.search, hash: '' }) }, [fill('wiSharedReset')]);
   const shared = node('p', { class: 'hh__shared', hidden: '' }, [`${fill('wiShared')} `, sharedLink]);
-  pin?.append(scen, shared);
+  const notes = bar?.nextElementSibling?.classList.contains('hh__pnotes') ? bar.nextElementSibling : bar;
+  notes?.after(scen, node('div', { class: 'wrap hh__sharedrow' }, [shared]));
 
   const stampBox = $('.hh__stamp');
   const stamp = stampBox?.querySelector('.stamp');
@@ -419,7 +422,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     resetAll();
   });
   page.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !changed(state, h) || !e.target.closest?.('#whatif, [data-peers]')) return;
+    if (e.key !== 'Escape' || !changed(state, h) || !e.target.closest?.('#whatif, [data-peers], .hh__scen')) return;
     e.preventDefault();
     resetAll();
   });
@@ -427,16 +430,24 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     if (isScenarioHash(location.hash) && location.hash !== toHash(state, h)) load();
   });
 
-  // The banner makes the sticky row taller: the focused control it would cover scrolls back into view under it (WCAG 2.2
-  // 2.4.11). Runs after the row's new height is laid out.
+  // The banner adds to the sticky rows: the focused control it would cover scrolls back into view under it (WCAG 2.2
+  // 2.4.11). Runs after the banner's height is laid out, which the page's scroll padding also takes (--scen-h:
+  // hub/styles.css), so a jump clears it too.
   function keepInView() {
     const a = document.activeElement;
-    if (!a || !bar || !page.contains(a) || bar.contains(a)) return;
+    if (!a || !bar || !page.contains(a) || bar.contains(a) || scen.contains(a) || shared.contains(a)) return;
     const box = (a.querySelector?.('.st__hb') ?? a).getBoundingClientRect();
-    const edge = bar.getBoundingClientRect().bottom;
+    // The lowest sticky row: the banner under the peer row (on a phone, the banner alone), else the peer row.
+    const edge = Math.max(bar.getBoundingClientRect().bottom, scen.hidden ? -Infinity : scen.getBoundingClientRect().bottom);
     if (box.top < edge + CLEAR) window.scrollBy(0, box.top - edge - CLEAR);
   }
-  if (bar && 'ResizeObserver' in window) new ResizeObserver(keepInView).observe(bar);
+  if (bar && 'ResizeObserver' in window) {
+    new ResizeObserver(keepInView).observe(bar);
+    new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--scen-h', `${scen.hidden ? 0 : Math.ceil(scen.getBoundingClientRect().height)}px`);
+      keepInView();
+    }).observe(scen);
+  }
 
   // A control taking focus opens the what-if (the drag's own focus waits for its end: stripAxis).
   page.addEventListener('focusin', (e) => {

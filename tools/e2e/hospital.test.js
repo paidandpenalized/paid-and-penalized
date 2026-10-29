@@ -240,7 +240,7 @@ for (const width of [390, 1280]) {
       await assertQuiet(seen, 'a linked what-if, edited');
     }));
 
-    it('a focused handle stays clear of the sticky row when the Hypothetical banner makes it taller', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
+    it('a focused handle stays clear of the sticky rows when the Hypothetical banner joins them', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.waitForSelector('.st__h');
       const handle = page.locator('.st__h').first();
@@ -254,7 +254,9 @@ for (const width of [390, 1280]) {
       await page.waitForTimeout(SETTLED_MS);
       const covered = await page.evaluate(() => {
         const box = document.activeElement.querySelector('.st__hb').getBoundingClientRect();
-        const bar = document.querySelector('[data-peers]').getBoundingClientRect();
+        // The sticky rows: the peer row and, under it (on a phone, in its place), the banner.
+        const rows = [...document.querySelectorAll('[data-peers], .hh__scen')].filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect());
+        const bar = { top: Math.min(...rows.map((r) => r.top)), bottom: Math.max(...rows.map((r) => r.bottom)) };
         return { banner: document.querySelector('[data-peers]').classList.contains('hh__peers--hyp'), px: Math.max(0, Math.min(box.bottom, bar.bottom) - Math.max(box.top, bar.top)), below: box.bottom <= innerHeight };
       });
       assert.deepEqual(covered, { banner: true, px: 0, below: true }, 'the handle in view, none of it under the banner');
@@ -834,6 +836,37 @@ describe('the strips\' axis', () => {
   }));
 
 });
+
+// The what-if's banner on a phone: it takes the peer row's place in the sticky stack while it shows (the peer row scrolls
+// with the page, its toggle still at the top), so the stack is no taller than without it; the "Reader-made scenario" line
+// scrolls with the page.
+for (const [width, height] of [[390, 844], [320, 640]]) {
+  describe(`a shared what-if link on a ${width} by ${height} phone`, () => {
+    const tabs = useContext(shared, { width, height });
+    // The lowest sticky row's bottom once the page is scrolled well down: the header, the peer row or the banner.
+    const stack = (page) => page.evaluate(() => {
+      window.scrollTo(0, 1600);
+      const bottoms = [...document.querySelectorAll('.topbar, [data-peers], .hh__scen')]
+        .filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect()).filter((r) => r.bottom > 0 && r.top < innerHeight / 2).map((r) => r.bottom);
+      return { bottom: Math.max(...bottoms), shared: document.querySelector('.hh__shared')?.getBoundingClientRect().bottom ?? null };
+    });
+
+    it('the banner replaces the peer row in the sticky stack, and the reader-made line scrolls away', () => withPage(tabs, { path: `${CUT.path}#whatif&hrrp=0.99`, watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.st__h');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.deepEqual(await hypo(page).then((s) => [s.banner, s.shared]), [true, true], 'opened on the scenario, reader-made');
+      const on = await stack(page);
+      assert.ok(on.shared !== null && on.shared <= 0, `the reader-made line scrolls away with the page (${on.shared})`);
+      await page.locator('.hh__scen .hh__reset').click();
+      await page.waitForTimeout(SETTLED_MS);
+      const off = await stack(page);
+      assert.ok(on.bottom <= off.bottom + 16, `the sticky stack with the banner (${on.bottom} px) no taller than without it (${off.bottom} px), give or take a line`);
+      assert.ok(on.bottom <= height * 0.3, `the sticky stack ${on.bottom} px of ${height}`);
+      await assertQuiet(seen, 'a shared what-if link on a phone');
+    }));
+  });
+}
 
 describe('the hospital page\'s parts, at 1280 px', () => {
   const tabs = useContext(shared);
