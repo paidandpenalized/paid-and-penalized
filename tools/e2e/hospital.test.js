@@ -915,4 +915,23 @@ describe('the hospital page\'s parts, at 1280 px', () => {
       assert.deepEqual(cut.map((l) => l.text), [], `${hash ? 'the wide axis' : 'the actual axis'}: every label whole`);
     }
   }));
+
+  // The "drag me" hint stands clear of its strip's dots (strips.js hintSpot).
+  it('the "drag me" hint covers none of its strip\'s dots', () => withPage(tabs, { path: EXAMPLE, watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.st__hint');
+    await page.locator('#whatif').scrollIntoViewIfNeeded();
+    await settle(page);
+    const s = await page.evaluate(() => {
+      const hint = document.querySelector('.st__hint');
+      const b = hint.getBoundingClientRect();
+      const dots = [...hint.closest('svg').querySelectorAll('.st__d')].filter((d) => {
+        const r = d.getBoundingClientRect();
+        return r.right > b.left && r.left < b.right && r.bottom > b.top && r.top < b.bottom;
+      });
+      return { shown: getComputedStyle(hint).opacity !== '0' && b.width > 0, covered: dots.length };
+    });
+    assert.deepEqual(s, { shown: true, covered: 0 });
+    await assertQuiet(seen, 'the drag hint');
+  }));
 });

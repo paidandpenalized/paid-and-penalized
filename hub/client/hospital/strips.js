@@ -41,9 +41,9 @@ function timeAt(p) {
   }
   return bez(0.65, 0.35, (lo + hi) / 2);
 }
-// The hint's height over its baseline, halo included (CSS pixels): it stands over the handle where that leaves it inside
-// the strip, else under it.
+// The hint's height over its baseline and under it, halo included (CSS pixels).
 const HINT_UP = 14;
+const HINT_DOWN = 4;
 // By a group's size (n under `below`), each [wide, narrow]: the strip's plot height in CSS pixels (a large group's spikes,
 // most of a state's or a size band's hospitals within a few hundredths of a percent of $0 in Readmissions, need the
 // height to stay narrow blocks of dots, so each dot stands near its own value); its largest pitch; and the smallest it
@@ -120,6 +120,34 @@ const HANDLE_R = 12;
 const HANDLE_REACH = 14;
 // The handle's one wiggle (hub/styles.css st-nudge), and a little after it, before its class comes off.
 const NUDGE_MS = 1300;
+
+// Where the "drag me" hint stands on its strip, clear of the dots where it can be. The spots by the handle at (x, y), in
+// the order they are preferred: just over it; beside it, left then right, level with it, then a step up or down (a row
+// of dots runs through the handle's own height); over the pile it stands in; under it. The first that covers the fewest
+// dots, never on the capsule, and inside the strip: across its width W, and down from its top to the axis (f:
+// stripFrame's). dots: the strip's dots' centers, s their side; half: the hint's half width. Returns the hint's middle
+// and baseline { x, y }. Pure.
+export function hintSpot({ x, y, half, W, f, dots, s }) {
+  const r = s / 2;
+  const side = HANDLE_R + HANDLE_REACH + 8 + half;
+  const above = y - HANDLE_R - 9;
+  const near = dots.filter((p) => Math.abs(p.x - x) < half + r);
+  const pileTop = Math.min(y, ...near.map((p) => p.y)) - r;
+  const spots = [[x, above]];
+  for (const dy of [0, -6, 6, -12, 12]) spots.push([x - side, y + 4 + dy], [x + side, y + 4 + dy]);
+  spots.push([x, Math.min(above, pileTop - 4 - HINT_DOWN)], [x, y + HANDLE_R + 9 + HINT_UP]);
+  let best = null;
+  for (const [sx, base] of spots) {
+    const cx = clamp(sx, half, W - half);
+    const [top, bottom] = [base - HINT_UP, base + HINT_DOWN];
+    if (top < 0 || bottom > f.base) continue;
+    if (Math.abs(cx - x) < HANDLE_R + HANDLE_REACH + 4 + half && top < y + HANDLE_R + 3 && bottom > y - HANDLE_R - 3) continue;
+    const covered = dots.filter((p) => Math.abs(p.x - cx) < half + r && p.y + r > top && p.y - r < bottom).length;
+    if (!best || covered < best.covered) best = { x: cx, y: base, covered };
+    if (covered === 0) break;
+  }
+  return best ? { x: best.x, y: best.y } : { x: clamp(x, half, W - half), y: above - HINT_UP < 0 ? y + HANDLE_R + 9 + HINT_UP : above };
+}
 
 function el(tag, attrs = {}, parent = null) {
   const node = document.createElementNS(NS, tag);
@@ -420,14 +448,16 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
   }
 
-  // The hint inside its strip: over the handle where it fits under the strip's top, else under it; across, held clear of
-  // the strip's sides (its half width measured once its face is in).
+  // The hint by the handle at (x, y), clear of the strip's dots where it can be (hintSpot; its half width measured once its
+  // face is in), placed in the handle's frame.
   let hintHalf = 0;
   function placeHint(st, t, x, y) {
     if (!hintHalf) hintHalf = t.getComputedTextLength() / 2 + 2;
-    const over = y - HANDLE_R - 9 - HINT_UP >= 0;
-    t.setAttribute('y', String(over ? -HANDLE_R - 9 : HANDLE_R + 9 + HINT_UP));
-    t.setAttribute('x', String(round(clamp(0, hintHalf - x, st.W - hintHalf - x))));
+    const { items, pile } = layout.rows[st.id];
+    const dots = items.map((it) => pile.pos.get(it.id));
+    const at = hintSpot({ x, y, half: hintHalf, W: st.W, f: st.f, dots, s: 2 * st.at.r });
+    t.setAttribute('x', String(round(at.x - x)));
+    t.setAttribute('y', String(round(at.y - y)));
   }
 
   // Where the hospital's ring stands now: mid-glide, where its transition has it this frame; else its place.
