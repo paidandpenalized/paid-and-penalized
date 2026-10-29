@@ -13,20 +13,18 @@ import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { labelAt, lineScore } from '../whatif/marks.js';
 import { axis } from './axis.js';
-import { frame, mark, r2, text, triangle } from './svg.js';
+import { LABEL_PX, NOTE_PX, frame, mark, r2, text, triangle } from './svg.js';
 import { fitLabel, textWidth, wrapText } from './text.js';
 
 const WIDE_FROM = 400;
 const PLOT_H = 26;
 const GAP = 10;
 // The narrow drawing's room over each plot for one line of words; a line's height; the room kept between a narrow row's
-// words and its share; the labels' and the sizes' type sizes (charts.css: 12px, notes 11px). A wide row's name may run
-// to its plot's start: its width is estimated over (text.js), so it ends short of the first column.
+// words and its share (the labels and the sizes at svg.js LABEL_PX and NOTE_PX). A wide row's name may run to its plot's
+// start: its width is estimated over (text.js), so it ends short of the first column.
 const HEAD = 20;
 const LINE = 13;
 const ROOM = 8;
-const LABEL_PX = 12;
-const NOTE_PX = 11;
 
 // A label's lines as one text, each line under the last.
 const lines = (x, y, cls, list) => html`<text class="${cls}" x="${x}" y="${r2(y)}">${list.map((line, i) => html`<tspan x="${x}"${i ? html` dy="${LINE}"` : ''}>${line}</tspan>`)}</text>`;

@@ -1,9 +1,22 @@
 // The chart kit's build-time text measure (charts/text.js): widths that never fall short (a figure's characters cost
 // the type face's 0.6em; a wide glyph costs more than a narrow one), lines that break after spaces and hyphen runs
-// and fit their width, and a mark's label kept inside the drawing.
+// and fit their width, and a mark's label kept inside the drawing; and the faces its tables were measured in.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT } from '../../pipeline/files.js';
 import { fitLabel, textWidth, wrapText } from '../charts/text.js';
+
+// text.js's advance tables were measured in Chrome against the body face at the labels' weight (this file) and its
+// metric fallback, Arial Bold at the fallback's size-adjust (web/styles/base.css). Either changing makes the tables stale
+// without any width test failing, so a change fails here until the tables are measured again and these move with them.
+test('text.js\'s tables match the faces they were measured in: Libre Franklin 600 and its fallback at 98.5%', () => {
+  const face = createHash('sha256').update(readFileSync(`${REPO_ROOT}web/fonts/libre-franklin-600.woff2`)).digest('hex');
+  assert.equal(face, 'aaa877781157fd03a54d6b0f27283e5b153a6d1b44a20c2d80c695f5e07d242b');
+  const base = readFileSync(`${REPO_ROOT}web/styles/base.css`, 'utf8');
+  assert.match(base, /@font-face \{ font-family: 'Libre Franklin Fallback'; src: local\('Arial Bold'\)[^}]*font-weight: 600; size-adjust: 98\.5%;/);
+});
 
 test('textWidth: the type face at 0.6em a character; in the body face a wide glyph costs more than a narrow one', () => {
   assert.ok(Math.abs(textWidth('25% cut', 12, { mono: true }) - 7 * 0.6 * 12) < 1e-9);

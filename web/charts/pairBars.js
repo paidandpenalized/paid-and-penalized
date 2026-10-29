@@ -4,12 +4,11 @@
 //   sections [{ heading, rows: [{ label, a, b, aText, bText, tipA, tipB }] }]: a and b are fractions (0 to 1)
 //   labels   { a, b }: what the two bars are (the key over the chart)
 import { html } from '../render/html.js';
-import { frame, isNarrow, mark, r2, text } from './svg.js';
+import { LABEL_PX, frame, isNarrow, mark, r2, text } from './svg.js';
 import { textWidth } from './text.js';
 
 const ROW = 30;
-// The names' type size (the chart's text, web/styles/charts.css .chart) and the gap between a name and its bars.
-const LABEL_PX = 12;
+// The gap between a name (at the labels' size, svg.js LABEL_PX) and its bars.
 const LABEL_GAP = 8;
 const BAR = 10;
 const HEAD = 26;

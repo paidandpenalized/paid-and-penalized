@@ -7,6 +7,10 @@ import { html } from '../render/html.js';
 // Charts are drawn narrower than a phone (300 units across a 288px column at 320 and 343px at 375), so their 12-unit
 // labels and 11-unit ticks read at about 11.5px and up on any phone (charts.css caps the drawn width at about 22rem).
 export const WIDTH = 300;
+// The labels' and the notes' type sizes (charts.css: .chart's 12px, its notes' 11px), for a chart that measures its words
+// (text.js).
+export const LABEL_PX = 12;
+export const NOTE_PX = 11;
 const RADIUS = 4;
 export const GAP = 2;
 export const MAX_THICKNESS = 24;
