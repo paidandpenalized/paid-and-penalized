@@ -116,8 +116,8 @@ test('every hospital decodes to what the build holds, and a decoded hospital can
     const d = decoded.hospitals[i];
     const row = asset.rows[i];
     assert.equal(decoded.byCcn.get(h.ccn), d, h.ccn);
-    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.beds, d.band, d.teach, d.inTdr, d.x, d.y],
-      [h.ccn, h.name, h.city, h.state, h.status, h.beds, h.band, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
+    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.beds, d.teach, d.inTdr, d.x, d.y],
+      [h.ccn, h.name, h.city, h.state, h.status, h.beds, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
     if (!h.est) {
       assert.equal(d.est, null, h.ccn);
       return;

@@ -48,13 +48,6 @@ test('peerKey is null where the attribute is missing, and the groups never merge
   assert.equal(peerKey({ teach: 'unknown' }, 'teach'), null);
 });
 
-test('peerKey groups by a size band a hospital carries instead of its bed count', () => {
-  assert.equal(peerKey({ band: 2 }, 'size'), 'b2');
-  assert.equal(peerKey({ band: 0, beds: 820 }, 'size'), 'b0', 'the band wins');
-  assert.equal(peerKey({ band: null, beds: 250 }, 'size'), null, 'a null band is no group');
-  assert.equal(peerKey({ band: 9 }, 'size'), null, 'a band past the edges is no group');
-  assert.equal(peerKey({ band: '1' }, 'size'), null);
-});
 
 test('peerKey refuses a mode it does not know', () => {
   assert.throws(() => peerKey({ state: 'ZZ' }, 'owner'), RangeError);

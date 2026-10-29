@@ -2,7 +2,6 @@
 // object per hospital. Pure apart from loadHubAsset's fetch. Shared (the shell, the home story and the hospital pages
 // read it), so it lives here, not under hub/.
 import { derivedDollars, netShare, pctOf } from '../../engine/js/dollars/whatif.js';
-import { bedBand } from '../../engine/js/peers.js';
 import { once } from './once.js';
 
 // The columns of a row, in the order the build writes them. The decoder reads by name through the asset's own `cols`, so
@@ -45,8 +44,8 @@ function bedsOf(ccn, value) {
 }
 
 // The asset as `{ fy, mapW, mapH, hospitals, byCcn }`: hospitals in the asset's order, each `{ ccn, name, city, state,
-// status, beds, band, teach, x, y, inTdr, est }` (status in words; band the size band of its bed count, engine/js/peers.js
-// bedBand, null without one; x and y a place on the map at mapW wide, or null; est null unless the status is
+// status, beds, teach, x, y, inTdr, est }` (status in words; beds the bed count, whose size band engine/js/peers.js
+// bedBand works out, or null; x and y a place on the map at mapW wide, or null; est null unless the status is
 // 'estimated'), and byCcn a Map. Throws on an asset it cannot read rather than guess.
 export function decodeRows(asset) {
   if (!asset || !Array.isArray(asset.cols) || !Array.isArray(asset.rows)) throw new TypeError('hub asset: expected { cols, rows }');
@@ -60,7 +59,7 @@ export function decodeRows(asset) {
     if (!status) throw new RangeError(`hub asset: ${v('ccn')} has the status "${v('status')}"`);
     const beds = bedsOf(v('ccn'), v('beds'));
     return {
-      ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, beds, band: bedBand(beds), teach: v('teach'),
+      ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, beds, teach: v('teach'),
       x: v('x'), y: v('y'), inTdr: flag(v('ccn'), 'tdr', v('tdr')), est: status === 'estimated' ? decodeEstimate(v('ccn'), v) : null,
     };
   });

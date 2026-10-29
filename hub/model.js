@@ -39,7 +39,7 @@ export function hubHospitals({ dollars, master, tdr }) {
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
     const beds = m.beds ?? null;
     return {
-      ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, band: bedBand(beds), teach: m.teach ?? null,
+      ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
       est: row.status === 'estimated' ? estimate(row) : null,
     };
@@ -115,7 +115,7 @@ export function exampleRule(hospitals) {
   if (!withEstimate.length) return null;
   const target = median(withEstimate.map((h) => h.est.share));
   const picks = withEstimate
-    .filter((h) => h.band === 1 && h.teach === 'none' && h.est.hrrp !== 0 && h.est.hvbp !== 0)
+    .filter((h) => bedBand(h.beds) === 1 && h.teach === 'none' && h.est.hrrp !== 0 && h.est.hvbp !== 0)
     .map((h) => ({ ccn: h.ccn, away: Math.abs(h.est.share - target) }))
     .sort((a, b) => a.away - b.away || (a.ccn < b.ccn ? -1 : 1));
   return picks.length ? picks[0].ccn : null;

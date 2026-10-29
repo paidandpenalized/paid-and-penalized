@@ -1,10 +1,10 @@
 // The hospital page's peer groups as its script makes them, from the browser asset (decoded rows carry a hospital's
-// size band, not its bed count): each mode's group equals a direct filter of the decoded rows, and matches the build's
+// bed count, whose size band engine/js/peers.js bedBand works out): each mode's group equals a direct filter of the decoded rows, and matches the build's
 // group for the same hospital; a hospital with no teaching status has no teaching group. Then the pure words and
 // scale the build and the script share (the group's name, the rows' one scale, the program row's sentence).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BED_BAND_EDGES, PEER_MODES, peerKey } from '../../engine/js/peers.js';
+import { BED_BAND_EDGES, PEER_MODES, bedBand, peerKey } from '../../engine/js/peers.js';
 import { fillCopy } from '../../web/render/components.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
@@ -26,16 +26,16 @@ const estimated = hospitals.filter((h) => h.est);
 
 // One hospital of each kind, picked by property.
 const sample = [
-  estimated.find((h) => h.teach === 'none' && h.band === 1),
+  estimated.find((h) => h.teach === 'none' && bedBand(h.beds) === 1),
   estimated.find((h) => h.teach === 'major'),
-  estimated.find((h) => h.band === 3),
-  estimated.find((h) => h.band === 0 && h.teach === 'minor'),
+  estimated.find((h) => bedBand(h.beds) === 3),
+  estimated.find((h) => bedBand(h.beds) === 0 && h.teach === 'minor'),
 ];
 
 test('each mode\'s peers from the decoded asset equal a direct filter, and the build\'s group', () => {
   const direct = {
     state: (h) => estimated.filter((x) => x.state === h.state),
-    size: (h) => estimated.filter((x) => x.band === h.band),
+    size: (h) => estimated.filter((x) => bedBand(x.beds) === bedBand(h.beds)),
     teach: (h) => estimated.filter((x) => x.teach === h.teach),
   };
   for (const h of sample) {
@@ -73,7 +73,7 @@ test('each row\'s key names its dollars in a decoded estimate and in its percent
 });
 
 test('every group has a name, with the band\'s edges from the constants', () => {
-  const at = (band) => estimated.find((h) => h.band === band);
+  const at = (band) => estimated.find((h) => bedBand(h.beds) === band);
   assert.equal(groupName(fill, { state: 'ZZ' }, 'state'), 'ZZ hospitals');
   assert.equal(groupName(fill, at(0), 'size'), `hospitals with fewer than ${BED_BAND_EDGES[0]} beds`);
   assert.equal(groupName(fill, at(1), 'size'), `hospitals with ${BED_BAND_EDGES[0]} to ${BED_BAND_EDGES[1] - 1} beds`);

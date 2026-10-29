@@ -4,8 +4,8 @@
 // step on the page: the card, the peer toggle and the chart follow the found hospital (or, until one is found, the
 // example), and a found hospital is announced to the page as a 'hub:select' event on the document ({ ccn }).
 //
-// Hospitals are the hub asset's rows (web/client/hub-asset.js) or hubHospitals': both carry state, beds, band (the size
-// band's index, null without a bed count) and teach; only hospitals with an estimate are anyone's peers.
+// Hospitals are the hub asset's rows (web/client/hub-asset.js) or hubHospitals': both carry state, beds (whose size band
+// engine/js/peers.js bedBand works out) and teach; only hospitals with an estimate are anyone's peers.
 import { PEER_MODES, median, peerKey } from '../../../engine/js/peers.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { capitalize, count, dollars, placeText } from '../../../web/render/format.js';

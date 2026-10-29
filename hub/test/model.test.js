@@ -14,7 +14,7 @@ const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 
 // A synthetic hospital: invented CCN, an estimated row unless `est: null`.
 const fake = (ccn, state, est, extra = {}) => ({
-  ccn, name: `Hospital ${ccn}`, city: 'Town', state, beds: 150, band: 1, teach: 'none', lat: 40, lon: -90,
+  ccn, name: `Hospital ${ccn}`, city: 'Town', state, beds: 150, teach: 'none', lat: 40, lon: -90,
   status: est ? 'estimated' : 'no-inputs', inTdr: true,
   est: est && {
     base: 0, total: 1000, hrrp: 0, hvbp: 0, hac: 0, net: 0, after: 1000, atStake: 10, hrrpFactor: 1, vbpFactor: 1,
@@ -55,9 +55,8 @@ test('a hub hospital joins the master record, the TDR file and the dollar row', 
   assert.ok(hospitals.some((h) => h.inTdr) && hospitals.some((h) => !h.inTdr));
 });
 
-test('a size band is set exactly when the hospital has beds, and a teaching key exactly when it has a teaching status', () => {
+test('a size group exactly when the hospital has beds, and a teaching key exactly when it has a teaching status', () => {
   for (const h of hospitals) {
-    assert.equal(h.band === null, h.beds === null, h.ccn);
     assert.equal(peerKey(h, 'teach') === null, h.teach === null, h.ccn);
     assert.equal(peerKey(h, 'size') === null, h.beds === null, h.ccn);
   }
@@ -71,7 +70,7 @@ test('hubHospitals stops on a status no page has words for', () => {
   const row = { ccn: '990001', status: 'parhm', cut: false, hrrpListed: false, vbpListed: false };
   assert.throws(() => hubHospitals({ dollars: { hospitals: [row] }, master, tdr }), /status "parhm"/);
   const [h] = hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr });
-  assert.deepEqual([h.status, h.est, h.inTdr, h.band], ['maryland', null, false, 0]);
+  assert.deepEqual([h.status, h.est, h.inTdr, peerKey(h, 'size')], ['maryland', null, false, 'b0']);
 });
 
 test('hubHospitals stops on a dollar CCN with no master record, in the hub RangeError checkHubInputs gives (never a TypeError)', () => {
@@ -199,7 +198,7 @@ test('exampleRule on invented hospitals: the share nearest the median among the 
     at('990001', -0.004), at('990002', -0.0025), at('990003', -0.002), at('990004', -0.0031),
     at('990005', -0.0030, { hrrpListed: false, vbpListed: false, hrrp: 0 }), // not in the programs: out
     at('990006', -0.0030, {}, { teach: 'minor' }), // teaching: out
-    at('990007', -0.0030, {}, { beds: 400, band: 2 }), // too big: out
+    at('990007', -0.0030, {}, { beds: 400 }), // too big: out
     at('990008', -0.0030, { hvbp: 0 }), // value-based dollars of $0: out
   ];
   // The median of the eight shares is -0.003 (the four that do not qualify sit on it); of the qualifying ones, -0.0031

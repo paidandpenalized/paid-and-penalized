@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { peerKey } from '../../engine/js/peers.js';
 import { HUB_COLS, decodeRows, loadHubAsset } from '../client/hub-asset.js';
 
 // An invented asset: one row of each status, a column order that is not the build's (the decoder reads by name).
@@ -25,7 +26,7 @@ test('decodeRows reads columns by name, so the order of the build\'s columns doe
 test('an estimated row decodes to its dollars, the derived after-pay and dollars at stake, the share and the percents of pay', () => {
   const [h] = decodeRows(asset([row({})])).hospitals;
   assert.deepEqual(h, {
-    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'estimated', beds: 150, band: 1, teach: 'none', x: 100.5, y: 200.1, inTdr: true,
+    ccn: '990001', name: 'Hospital A', city: 'Town', state: 'ZZ', status: 'estimated', beds: 150, teach: 'none', x: 100.5, y: 200.1, inTdr: true,
     est: {
       base: 800, total: 1000, hrrp: -30, hvbp: 20, hac: 0, net: -10, after: 990, atStake: 10, hrrpFactor: 0.99, vbpFactor: 1.002,
       cut: false, hrrpListed: true, vbpListed: true, share: -0.01,
@@ -100,7 +101,7 @@ test('loadHubAsset fetches and decodes once per url, and tries again after a fai
   }
 });
 
-test('a row carries its bed count; its size band follows from it, and none without one', () => {
-  const bands = decodeRows(asset([row({ beds: 99 }), row({ ccn: '990002', beds: 100 }), row({ ccn: '990003', beds: 500 }), row({ ccn: '990004', beds: null })])).hospitals.map((h) => [h.beds, h.band]);
-  assert.deepEqual(bands, [[99, 0], [100, 1], [500, 3], [null, null]]);
+test('a row carries its bed count; its size group follows from it, and none without one', () => {
+  const groups = decodeRows(asset([row({ beds: 99 }), row({ ccn: '990002', beds: 100 }), row({ ccn: '990003', beds: 500 }), row({ ccn: '990004', beds: null })])).hospitals.map((h) => [h.beds, peerKey(h, 'size')]);
+  assert.deepEqual(groups, [[99, 'b0'], [100, 'b1'], [500, 'b3'], [null, null]]);
 });
