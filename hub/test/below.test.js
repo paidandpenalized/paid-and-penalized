@@ -328,6 +328,20 @@ test('the claims the directory\'s words make stop the build when the data no lon
   assert.doesNotThrow(() => render((e) => e));
 });
 
+test('a histogram whose labels would count hospitals its bars do not draw stops the build', () => {
+  // A percent no bin can hold (not a number) is counted on the bonus side by the label's arithmetic but drawn in no bar:
+  // the labels and the aria words would claim a bonus hospital the drawing does not show.
+  let broken = false;
+  const changed = hospitals.map((h) => {
+    if (broken || !h.est?.hrrpListed || h.est.hrrp >= 0) return h;
+    broken = true;
+    return { ...h, est: { ...h.est, pct: { ...h.est.pct, hrrp: Number.NaN } } };
+  });
+  assert.ok(broken);
+  assert.throws(() => directory({ programs: SITE.programs, facts, fy, hospitals: changed }), /labels do not count its bars/);
+  assert.doesNotThrow(() => directory({ programs: SITE.programs, facts, fy, hospitals }));
+});
+
 test('the words below the story carry no digit: every number arrives through a placeholder', () => {
   for (const [key, text] of Object.entries(COPY)) assert.doesNotMatch(text, /\d/, key);
 });
