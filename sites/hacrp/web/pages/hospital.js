@@ -102,9 +102,10 @@ function locationText(view) {
 }
 
 // The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red); null
-// where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). The fields' words sit on
-// paper, and the record's script (client/record.js) moves the outline so the dot stands clear of them. How the dot was
-// placed is in Methods; the page's data list credits the geocoder for a geocoded address.
+// where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). The record's script
+// (client/record.js) places the outline, smaller if it must, so the dot and its halo stand clear of the fields' words;
+// without scripts the dot is left out (styles.css). How the dot was placed is in Methods; the page's data list credits
+// the geocoder for a geocoded address.
 const WATERMARK_DOT = 1.25;
 function locatorMap(view, shapes) {
   if (!shapes || !view.point) return null;

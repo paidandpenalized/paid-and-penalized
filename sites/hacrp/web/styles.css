@@ -37,8 +37,9 @@
 .stars { color: var(--ink); letter-spacing: 0.05em; }
 .stars__off { color: var(--ink-3); }
 /* The state's outline, faint behind the fields, its dot in the penalty red. The record's script (client/record.js)
-   moves the outline (--dx, --dy) so the dot and its halo stand clear of the fields' words (the dot of their rules too),
-   and shows it once placed. Without scripts it shows where it lies. */
+   places the outline (--dx, --dy, and --s to draw it smaller) so the dot and its halo stand clear of the fields' words
+   (the dot of their rules too), and shows it once placed. Without scripts the outline shows where it lies, without its
+   dot and halo, which nothing would keep off the words. */
 .hosp__wm { position: absolute; inset: 2.5rem 10px 10px; display: flex; justify-content: flex-end; align-items: center; overflow: hidden; pointer-events: none; }
 @media (scripting: enabled) {
   .hosp__wm:not([data-placed]) { opacity: 0; }
@@ -46,9 +47,10 @@
 }
 @media (prefers-reduced-motion: reduce) { .hosp__wm { transition: none; } }
 .hosp__wm[data-dotless] :is(.chart-geo-dot, .chart-geo-halo) { display: none; }
+@media (scripting: none) { .hosp__wm :is(.chart-geo-dot, .chart-geo-halo) { display: none; } }
 .geo { display: block; }
 .geo .chart { display: block; }
-.geo--j { height: 100%; transform: translate(var(--dx, 0px), var(--dy, 0px)); }
+.geo--j { height: 100%; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(var(--s, 1)); }
 .geo--j .chart { width: auto; height: 100%; max-width: 100%; }
 .geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.25; }
 .geo .chart-geo-dot, .geo .chart-geo-halo { fill: var(--pen); }
