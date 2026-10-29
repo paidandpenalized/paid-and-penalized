@@ -10,6 +10,7 @@ import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { ESTIMATE_THRESHOLD } from '../../../engine/js/hacrp/params.js';
 import { totalFromZ } from '../../../engine/js/hacrp/score.js';
 import { percentileSas5 } from '../../../engine/js/stats.js';
+import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { decimal, listText } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
@@ -219,6 +220,6 @@ function newestOnly(hospitals, fy) {
 export const HACRP = {
   id: 'hacrp',
   entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
-  styles: ['sites/hacrp/web/styles.css'],
+  styles: [...KIT_STYLES, 'sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };

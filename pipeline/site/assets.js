@@ -12,6 +12,10 @@ const STYLES = WEB + 'styles/';
 // Cascade order: these first, then any other shared stylesheet in name order; a page's sheets of their own (buildAssets'
 // siteStyles: its site's) link after the whole bundle (layout.js page()).
 const FIRST = ['tokens.css', 'base.css', 'components.css'];
+// The program sites' chart and what-if kit (what web/charts/ and web/whatif/ draw): in web/styles/, but out of the shared
+// bundle, since only a program site's pages draw them. A program site's own sheet carries them, first (its manifest's
+// styles: sites/hacrp/web/generate.js).
+export const KIT_STYLES = Object.freeze(['web/styles/charts.css', 'web/styles/whatif.css']);
 
 export const hash8 = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8);
 
@@ -34,9 +38,9 @@ const PRINT = /@media print \{\s*:root \{([^}]*)\}\s*\}/;
 
 // The shared stylesheet, every page's: tokens.css as the bundle carries it (its print block written out, printBlock;
 // the theme toggle reuses the dark media block's declarations verbatim under :root[data-theme="dark"], after it), then
-// the other shared stylesheets.
+// the other shared stylesheets (not the kit, KIT_STYLES).
 export function stylesheet() {
-  const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f)).sort();
+  const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f) && !KIT_STYLES.includes(`web/styles/${f}`)).sort();
   const [tokens, ...rest] = [...FIRST, ...files].map((f) => readFileSync(STYLES + f, 'utf8'));
   const light = /^:root \{([^}]*)\}/m.exec(tokens)?.[1];
   const dark = /:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/.exec(tokens)?.[1];

@@ -118,6 +118,10 @@
 .sbar__sliver, .sbar__np { fill: var(--pen); }
 .sbar__bo { fill: var(--rew); }
 .sbar__mag { fill: none; stroke: var(--pen); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+/* The bar's dots (web/charts/dots.js): the chart kit's rules for them, which the hub's pages do not load (the kit rides
+   in a program site's sheet: pipeline/site/assets.js KIT_STYLES). */
+.sbar .chart-dots { fill: none; stroke-linecap: round; }
+.sbar .chart-dots--ink { stroke: var(--ink-2); }
 .sbar__x { position: absolute; top: calc(var(--my) * 100%); right: calc((1 - var(--mx)) * 100% + 8px); color: var(--ink-3); font: 400 0.75rem/1 var(--font-type); transform: translateY(-50%); }
 .sbar__split { display: flex; justify-content: space-between; gap: 4px 16px; margin: 6px 0 0 calc(var(--mx) * 100%); }
 .sbar__part { max-width: none; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
@@ -344,7 +348,7 @@
    words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
 @media (forced-colors: active) {
   .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
-  .sbar__frame, .sbar__mag, .smap__hatch { stroke: CanvasText; }
+  .sbar__frame, .sbar__mag, .smap__hatch, .sbar .chart-dots--ink { stroke: CanvasText; }
   .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }
   .story .seg button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .story .rail a[aria-current="step"]::before { background: Highlight; }
