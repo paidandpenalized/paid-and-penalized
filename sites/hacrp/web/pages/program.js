@@ -17,7 +17,7 @@ import { fill, fillKeep, t } from '../program/copy.js';
 import { moneySourceText } from '../money-figures.js';
 import { LINKS, PROGRAM_PATH } from '../links.js';
 import { counter } from '../../../../web/charts/figure.js';
-import { browseList, mapFigure, part1, part2, psec, ruleFigure } from '../program-figures.js';
+import { browseList, mapFigure, part1, part2, ruleFigure } from '../program-figures.js';
 import { part4 } from '../history-figures.js';
 import { fill as hfill } from '../history/copy.js';
 import { asofBar, citation, dataLinks, hospitalTable, partHead, searchBox, shellOf } from './parts.js';

@@ -2,7 +2,7 @@
 // the states (with DC) and the metro areas (CBSAs), each with the hospitals in CMS's file it holds and their counts.
 // A metro that crosses a state line belongs to the state holding most of its hospitals (its breadcrumb) and is
 // listed under every state it reaches. Pure: data in, result out.
-import { STATE_NAMES } from '../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { median } from '../../../engine/js/stats.js';
 import { KINDS, placePath } from './place-paths.js';
 

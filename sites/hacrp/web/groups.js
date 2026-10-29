@@ -1,7 +1,7 @@
 // The names of the groups of hospitals the pages compare (compare.js on a hospital page; program-data.js on the
 // program page): the nation, a region, a state, a metro area, and the kinds of hospital by teaching, size, ownership,
 // location and special status. One place, so a group reads the same wherever it appears.
-import { STATE_NAMES } from '../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { count } from '../../../web/render/format.js';
 import { BED_BANDS } from './constants.js';
 import { fill, t } from './program/copy.js';

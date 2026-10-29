@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { geoCentroid, geoContains } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
-import { STATES, STATE_NAMES, US_MAP_CODES, countiesOf, countyShapes, placeMap, pointOf, stateMap, stateShapes, usMap, usMapHeight, usPoints, usProjected } from '../charts/geo.js';
+import { STATES, STATE_NAMES } from '../../engine/js/states.js';
+import { US_MAP_CODES, countiesOf, countyShapes, placeMap, pointOf, stateMap, stateShapes, usMap, usMapHeight, usPoints, usProjected } from '../charts/geo.js';
 
 const TOPO = JSON.parse(readPinned('us-atlas-counties-3.0.1'));
 const shapes = stateShapes(TOPO);

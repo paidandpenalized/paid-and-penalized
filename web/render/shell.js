@@ -31,7 +31,7 @@ const pageFor = (hospital, id) => hospitalPathOf(id, hospital.ccn, { inTdr: hosp
 // current); on an unlisted program's placeholder page no tab is current. hospital: the followed hospital, or null; with
 // one, every tab opens that program's page for it (pageFor), or the program's folder when it has none, and All programs
 // opens the hospital's own page (the front page for a hospital without one).
-export function programTabs({ program = null, hospital = null } = {}) {
+function programTabs({ program = null, hospital = null } = {}) {
   const hrefOf = (p) => (hospital && pageFor(hospital, p.id)) || p.path;
   const current = (id) => (id === program ? html` aria-current="page"` : '');
   return html`<nav class="wrap tabs" aria-label="${COPY.programs}"><div class="tabs__scroll"><a class="tab" href="${(hospital && pageFor(hospital, 'hub')) || '/'}"${current(null)}>${COPY.allPrograms}</a>${LISTED_PROGRAMS.map((p) => html`<a class="tab" href="${hrefOf(p)}"${current(p.id)}><span>${p.name}</span> <span class="tab__ab">${p.ab}</span></a>`)}</div></nav>`;

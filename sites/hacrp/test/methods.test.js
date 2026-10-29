@@ -21,7 +21,7 @@ import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } 
 import { ABOVE_BY, METHODS_PATH } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD, renderMethods } from './pinned.js';
-import { NO_SCORE_AT, SYNTH_FYS, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
+import { NO_SCORE_AT, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
 
 const quiet = () => {};
 const SRC = 'Source: test';

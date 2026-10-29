@@ -6,7 +6,8 @@
 // statement line by line) for an estimated hospital, the what-if, the groups the
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
 // show CMS's values and add no inference.
-import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../../engine/js/states.js';
+import { stateMap } from '../../../../web/charts/geo.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';

@@ -98,7 +98,7 @@ const HRRP_HOSPITALS = [
 
 // The sample interim Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its pinned
 // record }, from the pinned file and the emitted data alone.
-export function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
+function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
   const [, what, test] = HRRP_HOSPITALS.find(([t]) => t === type) ?? [];
   if (!test) throw new RangeError(`hrrpHospitalSample: no sample type "${type}"`);
   const byCcn = new Map(all.map((h) => [h.ccn, h]));

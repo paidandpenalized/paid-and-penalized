@@ -5,7 +5,7 @@
 import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
-import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH } from './svg.js';
+import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r1, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 import { STATES, STATE_NAMES, US_STATES } from '../../engine/js/states.js';
@@ -14,10 +14,9 @@ import { STATES, STATE_NAMES, US_STATES } from '../../engine/js/states.js';
 // readPinned(ATLAS_ID) and hands it to stateShapes.
 export const ATLAS_ID = 'us-atlas-counties-3.0.1';
 
-// The states, DC and Puerto Rico: postal code, Census FIPS code (us-atlas's geometry id) and name, as
-// engine/py/pp_engine/geo.py lists them (engine/js/states.js holds the table, which the browser's search reads too). A
-// territory without a code there (AS, GU, MP, VI) is never drawn.
-export { STATES, STATE_NAMES };
+// A state's postal code by its Census FIPS code (us-atlas's geometry id), from engine/js/states.js STATES (the states, DC
+// and Puerto Rico, as engine/py/pp_engine/geo.py lists them). A territory without a code there (AS, GU, MP, VI) is never
+// drawn.
 const CODE_OF_FIPS = new Map(STATES.map(([code, fips]) => [fips, code]));
 // A state's counties (us-atlas county ids begin with the state's FIPS code).
 export const countiesOf = (counties, code) => {
@@ -383,7 +382,7 @@ export function usProjected(shapes, points, width) {
   const { projection } = usPaths(shapes, width);
   return points.map((p) => {
     const at = Array.isArray(p) ? projection(p) : null;
-    return at ? at.map((v) => Math.round(v * 10) / 10) : null;
+    return at ? at.map(r1) : null;
   });
 }
 
