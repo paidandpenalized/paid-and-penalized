@@ -12,7 +12,7 @@ import { mountStatePicker } from '../client/roll-picker.js';
 import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
 import { fill, t } from '../web/explore/copy.js';
 import { fill as historyFill, t as historyText } from '../web/history/copy.js';
-import { STATE_NAMES } from '../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { count, pct } from '../../../web/render/format.js';
 import { historyData } from '../web/history-data.js';
 import { HIST_MAP_WIDE, placeMembers, placeYearsFigure, rollAsset, rollFigure, yearMapFigure } from '../web/history-figures.js';

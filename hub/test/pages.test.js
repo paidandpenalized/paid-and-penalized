@@ -4,33 +4,41 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
-import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
+import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
-import { SITE } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
+import { loadHub } from '../data.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
+import { hubSearchForm } from '../search/form.js';
 
 const NOINDEX = '<meta name="robots" content="noindex">';
 
-test('the hub writes the stub root, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
+test('the hub writes the home page, /methods/, the policy pages, the 404 page, robots.txt and a sitemap of the pages emitted indexable', () =>
   withTemp('pp-hub-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     ctx.emit({ path: '/hacrp/', robots: null, text: 'a' });
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx);
-    assert.equal(ctx.pages, 3 + 3 + 5);
+    // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
+    // still to come, a page per hospital in the dollar file, and the interim Readmissions pages (/hrrp/ and one per hospital
+    // in the pinned file); none indexable while the hub is unreleased, and the interim pages never.
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length + 1 + loadHub().tdr.hospitals.size);
     assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
+    // The home page is the story (hub/test/home.test.js has its parts): the masthead, then the story's steps and stage.
     const home = read('index.html');
     assert.ok(home.includes('Public Medicare data, made visible.'));
-    assert.match(home, /href="\/hacrp\/">Hospital-Acquired Conditions <span class="short">\(HACRP\)<\/span>/);
+    assert.match(home, /<h1 class="hero__mark"/);
+    assert.match(home, /<div class="story" data-story>[\s\S]*<div class="stage" data-stage>/);
+    assert.ok(home.includes(`<title>${escapeHtml(SITE.name)}</title>`));
 
     const methods = read('methods/index.html');
     assert.match(methods, /id="estimate"/);
@@ -60,6 +68,27 @@ test('the hub writes the stub root, /methods/, the policy pages, the 404 page, r
     assert.equal(sitemap.match(/<url>/g).length, 2);
   }));
 
+test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
+  withTemp('pp-hub-search-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
+    const paths = ['/', ...Object.values(SITE.pages), ...PLACEHOLDER_PROGRAMS.map((p) => p.path)];
+    const files = [...paths.map((path) => [path, join(dir, path, 'index.html')]), ['not found', join(dir, '404.html')]];
+    const box = String(hubSearchForm(ASSETS.shell.hubUrl));
+    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-hospitals\.test\.json" data-hub hidden>/);
+    for (const [path, file] of files) {
+      const text = readFileSync(file, 'utf8');
+      const header = headerOf(text);
+      // In the bar's end, between the phone's find button and the theme toggle; the only search on the page but the front
+      // page, whose story's last step holds a second over the same asset (hub/test/home.test.js).
+      assert.ok(header.includes(box), `${path}: the family search in the bar`);
+      assert.ok(header.indexOf('class="fam__find"') < header.indexOf(box) && header.indexOf(box) < header.indexOf('class="theme-toggle"'), `${path}: search between the find button and the toggle`);
+      assert.equal(text.match(/role="search"/g).length, path === '/' ? 2 : 1, `${path}: its searches`);
+      assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hub-search']}"></script>`), `${path}: loads the family search's script`);
+      assert.doesNotMatch(header, /data-hospital|<p class="chip" data-chip>/, `${path}: follows no hospital of its own`);
+    }
+  }));
+
 test('an empty sitemap is a valid empty urlset; a path that is not a plain site path is refused', () => {
   assert.doesNotMatch(sitemapXml([]), /<url>/);
   assert.match(sitemapXml([]), /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">\n<\/urlset>\n$/);
@@ -81,7 +110,7 @@ const POLICY = [
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
   const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]);
-  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections') });
+  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
 

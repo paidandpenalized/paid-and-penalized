@@ -1,14 +1,14 @@
 // One hospital's page, after Thirty Day Readmissions' hospital record and beyond it. The top: the record card (name,
-// place, type, CMS's score and decision, Care Compare's stars; the state's outline a watermark behind it) beside the
-// verdict (a stamp, the summary, CMS's line in plain words and the line bar), the two the same height over a bold
-// rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
+// place with the state's outline and the hospital's dot, type, CMS's score and decision, Care Compare's stars) beside the
+// verdict (a stamp, the summary, CMS's line in plain words and the line bar), over a bold rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
 // hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the money (the cliff, then the
 // statement line by line) for an estimated hospital, the what-if, the groups the
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
 // show CMS's values and add no inference.
-import { STATE_NAMES, stateMap } from '../../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../../engine/js/states.js';
+import { stateMap } from '../../../../web/charts/geo.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, isoDate, ordinal } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, dotList, isoDate, ordinal, unbroken } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -20,7 +20,7 @@ import { partsFigure } from '../figures.js';
 import { ledgerFigure, lineBarBlock, nearbyBlock, peersFigure, sumFigure, worksheet } from '../hospital-figures.js';
 import { stateHref } from '../hospital-table.js';
 import { careCompareHref } from '../links.js';
-import { asofBar, citation, dataLinks, decisionPill, pillShowsCmsValue, printLink, siteHeader } from './parts.js';
+import { asofBar, citation, dataLinks, decisionPill, followed, pillShowsCmsValue, printLink, shellOf } from './parts.js';
 import { whatIfSection } from './whatif.js';
 import { SCORE_DECIMALS as DP } from '../../../../engine/js/hacrp/score.js';
 import { MEASURE_IDS } from '../../../../engine/js/hacrp/measures.js';
@@ -65,13 +65,18 @@ const TEACH = { major: 'typeTeachMajor', minor: 'typeTeachMinor', none: 'typeTea
 function typeText({ teach, beds, own, urban, types }) {
   const parts = [
     TEACH[teach] && t(TEACH[teach]),
-    Number.isInteger(beds) && fill('typeBeds', { beds: count(beds) }),
+    Number.isInteger(beds) && unbroken(fill('typeBeds', { beds: count(beds) })),
     own,
     urban === null ? null : t(urban ? 'typeUrban' : 'typeRural'),
     ...types.filter((code) => /^[A-Z]+$/.test(code)).map((code) => t(`type${code}`)),
   ].filter(Boolean);
-  return parts.length ? parts.join(' · ') : null;
+  return parts.length ? dotList(parts) : null;
 }
+
+// How many of the measures CMS scored the hospital on: "on all 6 measures" reads better than "on 6 of the 6".
+const ledgerScored = (view) => (view.n === view.measures.length
+  ? fill('ledgerScoredAll', { all: String(view.measures.length) })
+  : fill('ledgerScored', { n: String(view.n), all: String(view.measures.length) }));
 
 // Care Compare's stars: the rating as filled and empty stars (hidden from screen readers, which hear "4 of 5 stars"),
 // or CMS's own words where it published no rating, with CMS's footnotes, as formField options. null when Care
@@ -95,25 +100,29 @@ function locationText(view) {
   return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 
-// The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red);
-// null where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). How the dot was placed
-// is in Methods; the page's data list credits the geocoder for a geocoded address.
-const WATERMARK_DOT = 1.25;
+// The state outline with the hospital's dot (in the penalty red), small, in the Location field beside or under the words
+// it shows, so the dot never sits on a field's words; drawn at the width it shows at (LOCATOR_W CSS pixels: the
+// stylesheet's .hosp__loc), so the dot keeps its size on any state. null where geo.js draws no map (a territory, no point,
+// or a point the outline doesn't hold). How the dot was placed is in Methods; the page's data list credits the geocoder
+// for a geocoded address.
+const LOCATOR_W = 84;
+const LOCATOR_DOT = 0.8;
 function locatorMap(view, shapes) {
   if (!shapes || !view.point) return null;
-  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot: WATERMARK_DOT });
+  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), width: LOCATOR_W, dot: LOCATOR_DOT });
 }
 
-// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
-// outline (map: its markup, or null): the hospital, then where and what it is, then CMS's score and decision beside
-// this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars.
+// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields: the hospital, then where
+// (with the state's outline and the hospital's dot, map: its markup, or null) and what it is, then CMS's score and
+// decision beside this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars.
+// Each row is as tall as its fields' words.
 function recordCard(view, { careSource, map, money }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
   // Each field's formField options, numbered in order once the fields with nothing to show are left out.
   const specs = [
     { label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true },
-    { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' },
+    { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc', extra: map && html`<div class="hosp__loc" aria-hidden="true">${map}</div>` },
     type && { label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' },
     starsSpec(view, careSource),
     view.scored
@@ -124,8 +133,7 @@ function recordCard(view, { careSource, map, money }) {
   ].filter(Boolean);
   const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
-${map && html`<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j">${map}</span></div>
-`}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
+${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
 ${name}
 <div class="hosp__fields">
 ${rest.map((markup) => html`${markup}
@@ -260,7 +268,7 @@ ${small && html`<p class="note">${small}</p>`}
 ${section({
     id: 'measures', wide: true,
     text: html`<h2 id="measures-h">${t('ledgerHeading')}</h2>
-<p>${fill('ledgerIntro', { n: String(view.n), all: String(view.measures.length) })}</p>
+<p>${fill('ledgerIntro', { scored: ledgerScored(view) })}</p>
 ${lever && html`<p class="hsec__lever${view.status === 'yes' ? '' : ' hsec__lever--ink'}">${lever}</p>`}`,
     figure: ledger,
   })}
@@ -337,9 +345,9 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.share, assets.js.topbar, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.share, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
     assets,
-    topbar: siteHeader({ fy: view.fy, current: 'map', searchUrl }),
+    ...shellOf({ fy: view.fy, current: 'map', searchUrl, hospital: followed({ view, money, master }) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },
     // The hero's number is IBM Plex Mono 700, the most important glyphs on the page, which would otherwise swap in late.
     preloadFonts: HERO_FONTS,

@@ -5,28 +5,18 @@
 import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
-import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r2, WIDTH } from './svg.js';
+import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r1, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
+import { STATES, STATE_NAMES, US_STATES } from '../../engine/js/states.js';
 
-// The states, DC and Puerto Rico: postal code, Census FIPS code (us-atlas's geometry id) and name, as
-// engine/py/pp_engine/geo.py lists them. A territory without a code here (AS, GU, MP, VI) is never drawn.
-export const STATES = Object.freeze([
-  ['AL', '01', 'Alabama'], ['AK', '02', 'Alaska'], ['AZ', '04', 'Arizona'], ['AR', '05', 'Arkansas'],
-  ['CA', '06', 'California'], ['CO', '08', 'Colorado'], ['CT', '09', 'Connecticut'], ['DE', '10', 'Delaware'],
-  ['DC', '11', 'District of Columbia'], ['FL', '12', 'Florida'], ['GA', '13', 'Georgia'], ['HI', '15', 'Hawaii'],
-  ['ID', '16', 'Idaho'], ['IL', '17', 'Illinois'], ['IN', '18', 'Indiana'], ['IA', '19', 'Iowa'],
-  ['KS', '20', 'Kansas'], ['KY', '21', 'Kentucky'], ['LA', '22', 'Louisiana'], ['ME', '23', 'Maine'],
-  ['MD', '24', 'Maryland'], ['MA', '25', 'Massachusetts'], ['MI', '26', 'Michigan'], ['MN', '27', 'Minnesota'],
-  ['MS', '28', 'Mississippi'], ['MO', '29', 'Missouri'], ['MT', '30', 'Montana'], ['NE', '31', 'Nebraska'],
-  ['NV', '32', 'Nevada'], ['NH', '33', 'New Hampshire'], ['NJ', '34', 'New Jersey'], ['NM', '35', 'New Mexico'],
-  ['NY', '36', 'New York'], ['NC', '37', 'North Carolina'], ['ND', '38', 'North Dakota'], ['OH', '39', 'Ohio'],
-  ['OK', '40', 'Oklahoma'], ['OR', '41', 'Oregon'], ['PA', '42', 'Pennsylvania'], ['RI', '44', 'Rhode Island'],
-  ['SC', '45', 'South Carolina'], ['SD', '46', 'South Dakota'], ['TN', '47', 'Tennessee'], ['TX', '48', 'Texas'],
-  ['UT', '49', 'Utah'], ['VT', '50', 'Vermont'], ['VA', '51', 'Virginia'], ['WA', '53', 'Washington'],
-  ['WV', '54', 'West Virginia'], ['WI', '55', 'Wisconsin'], ['WY', '56', 'Wyoming'], ['PR', '72', 'Puerto Rico'],
-]);
-export const STATE_NAMES = Object.freeze(Object.fromEntries(STATES.map(([code, , name]) => [code, name])));
+// The pinned us-atlas topology (its `states` and `counties` objects) every map here is drawn from; a site reads it with
+// readPinned(ATLAS_ID) and hands it to stateShapes.
+export const ATLAS_ID = 'us-atlas-counties-3.0.1';
+
+// A state's postal code by its Census FIPS code (us-atlas's geometry id), from engine/js/states.js STATES (the states, DC
+// and Puerto Rico, as engine/py/pp_engine/geo.py lists them). A territory without a code there (AS, GU, MP, VI) is never
+// drawn.
 const CODE_OF_FIPS = new Map(STATES.map(([code, fips]) => [fips, code]));
 // A state's counties (us-atlas county ids begin with the state's FIPS code).
 export const countiesOf = (counties, code) => {
@@ -35,7 +25,7 @@ export const countiesOf = (counties, code) => {
 };
 
 // The codes the US map draws: the states and DC (geoAlbersUsa has no place for Puerto Rico), in STATES order.
-export const US_MAP_CODES = Object.freeze(STATES.map(([code]) => code).filter((code) => code !== 'PR'));
+export const US_MAP_CODES = Object.freeze(US_STATES.map(([code]) => code));
 // The codes a locator map draws. A territory, Puerto Rico included, gets no map (pages say so by leaving it out).
 const LOCATOR_CODES = new Set(US_MAP_CODES);
 
@@ -58,6 +48,13 @@ const DOT_R = 4;
 const HALO_R = 9;
 // The US map's height as a share of its width (geoAlbersUsa's frame with Alaska and Hawaii inset).
 const US_ASPECT = 0.62;
+
+// The US map's height at a width: the frame usProjected and the US map's paths share.
+export const usMapHeight = (width) => Math.round(width * US_ASPECT);
+
+// Where a record with `lat` and `lon` (a hospital in the master) goes in usProjected's points: [lon, lat], longitude
+// first as the projection takes it, or null without both.
+export const pointOf = ({ lat, lon }) => (Number.isFinite(lat) && Number.isFinite(lon) ? [lon, lat] : null);
 
 // Each state's GeoJSON feature by postal code, decoded once per topology.
 const SHAPES = new WeakMap();
@@ -167,12 +164,14 @@ export function stateMap({ shapes, code, point, label, width = WIDTH, dot = 1 })
     + `<circle class="chart-geo-halo" cx="${x}" cy="${y}" r="${r2(HALO_R * dot)}"/><circle class="chart-geo-dot" cx="${x}" cy="${y}" r="${r2(DOT_R * dot)}"/></svg>`);
 }
 
-// The US map's projection and each state's path at a width; remembered for the build.
+// The US map at a width, remembered for the build: { height, paths (each state's d by postal code, null where the shapes
+// have none), projection }. The hub's home map draws these at the hub asset's width, so its hospitals' x and y
+// (usProjected) land on the states.
 const US = new Map();
-function usPaths(shapes, width) {
+export function usPaths(shapes, width) {
   const key = String(width);
   if (US.get(key)?.shapes === shapes) return US.get(key);
-  const height = Math.round(width * US_ASPECT);
+  const height = usMapHeight(width);
   const features = US_MAP_CODES.map((code) => shapes.get(code)).filter(Boolean);
   const projection = geoAlbersUsa().fitExtent([[2, 2], [width - 2, height - 2]], { type: 'FeatureCollection', features });
   // Wider than the wide variant, the outlines thin in proportion, so a map drawn across a page keeps the wide one's
@@ -383,7 +382,7 @@ export function usProjected(shapes, points, width) {
   const { projection } = usPaths(shapes, width);
   return points.map((p) => {
     const at = Array.isArray(p) ? projection(p) : null;
-    return at ? at.map((v) => Math.round(v * 10) / 10) : null;
+    return at ? at.map(r1) : null;
   });
 }
 

@@ -282,8 +282,8 @@ function swarmFigure(pd, model, { n, source }) {
   const nation = pct(pd.counts.yes / pd.counts.decided, 1);
   const picker = html`<div class="swarm__pick" hidden>
 <p class="swarm__lead cap">${t('swarmPick')}</p>
-<p class="swarm__kinds"><span class="swarm__kind"></span><span class="swarm__opts"><button type="button" class="chip" data-group="" aria-pressed="true">${t('swarmAll')}</button></span></p>
-${swarmGroups(pd).map((k) => html`<p class="swarm__kinds"><span class="swarm__kind">${kindLabel(k.kind)}</span><span class="swarm__opts">${k.groups.map((g) => html`<button type="button" class="chip" data-group="${k.kind}:${g.key}" aria-pressed="false">${g.label}</button>`)}</span></p>`)}
+<p class="swarm__kinds"><span class="swarm__kind"></span><span class="swarm__opts"><button type="button" class="swarm__chip" data-group="" aria-pressed="true">${t('swarmAll')}</button></span></p>
+${swarmGroups(pd).map((k) => html`<p class="swarm__kinds"><span class="swarm__kind">${kindLabel(k.kind)}</span><span class="swarm__opts">${k.groups.map((g) => html`<button type="button" class="swarm__chip" data-group="${k.kind}:${g.key}" aria-pressed="false">${g.label}</button>`)}</span></p>`)}
 <p class="swarm__readout" aria-live="polite" data-nation="${nation}"></p>
 </div>`;
   const chart = html`<div class="swarm" data-band="${JSON.stringify(band)}" data-cut="${t('nearbyCut')}" data-not-cut="${t('nearbyNotCut')}">

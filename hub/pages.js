@@ -1,18 +1,26 @@
-// The hub: the family's front page (a stub until the hub is built), the methods stub, the policy pages (Terms, privacy,
-// About, accessibility, and corrections with its log), the not-found page, and the two files crawlers read: robots.txt
-// and sitemap.xml. It runs last, so the sitemap lists every indexable page the sites before it emitted. The hub's own
-// pages stay noindex until the hub is built.
+// The hub: the family's front page (hub/home/: the masthead and the story, built from the dollar estimates), the methods
+// stub, the policy pages (Terms, privacy, About, accessibility, and corrections with its log), a placeholder page per program
+// with no page here (coming.js), every hospital's page across the programs (hospital/page.js), the interim Readmissions
+// pages (hrrp/page.js: /hrrp/ and a page per hospital in the pinned Thirty Day Readmissions file), the not-found page, and
+// the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
+// sites before it emitted. The hub's own pages stay noindex until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { escapeHtml, html } from '../web/render/html.js';
-import { externalLink, page } from '../web/render/layout.js';
-import { SITE } from '../web/site.js';
+import { externalLink } from '../web/render/layout.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
-import { LINKS, feedbackLink, para, section, sentence } from './parts.js';
+import { comingPage } from './coming.js';
+import { hubModel } from './data.js';
+import { homePage } from './home/page.js';
+import { hospitalPage } from './hospital/page.js';
+import { hrrpHospitalPage, hrrpProgramPage } from './hrrp/page.js';
+import { masterRecord, stateTotals, storyFacts } from './model.js';
+import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
 const PATH = /^\/[a-z0-9/-]*$/;
@@ -24,18 +32,10 @@ function siteLink(id) {
 }
 const SITE_IDS = Object.keys(SITE.sites);
 
-function home(assets, robots) {
-  const body = html`<article class="wrap page home">
-<header class="page__head">
-<h1 class="home__mark">${SHARED.wordmarkLead} <span class="wordmark__pen">${SHARED.wordmarkPen}</span></h1>
-<p class="dek">${COPY.tagline}</p>
-</header>
-<section class="block" aria-labelledby="sites-h">
-<h2 id="sites-h" class="h-sm">${COPY.sitesHeading}</h2>
-<ul class="links" role="list">${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>`)}</ul>
-</section>
-</article>`;
-  return page({ title: COPY.homeTitle, description: COPY.homeDescription, path: '/', robots, body, assets });
+// The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
+// hubModel).
+function home({ hospitals, facts, shapes, assets, robots }) {
+  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, assets, robots });
 }
 
 function methods(assets, robots) {
@@ -51,7 +51,7 @@ function methods(assets, robots) {
 <p>${COPY.estimateNot}</p>
 </section>
 ${para('methodsAiPointer', { about: LINKS.ai })}</article>`;
-  return page({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, assets });
+  return hubPage({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, assets });
 }
 
 // ---------- the policy pages: their words (copy.js) and the links they fill in (parts.js); the layout is policy.js's ----------
@@ -131,7 +131,7 @@ function notFound(assets, robots) {
 ${SITE_IDS.map((id) => html`<li>${siteLink(id)}</li>
 `)}</ul>
 </article>`;
-  return page({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, assets });
+  return hubPage({ title: `${COPY.notFoundTitle} · ${SITE.name}`, description: COPY.notFoundBody, path: NOT_FOUND_PATH, address: null, robots, body, assets });
 }
 
 // paths: site-relative paths that may be indexed ("/hacrp/", …); only these go in the sitemap.
@@ -143,23 +143,62 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
+// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
+// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
+// hospitals' story facts (storyFacts).
+function hospitalPages(ctx, { hospitals, facts, master, robots, never }) {
+  if (!hospitals.length) return;
+  for (const h of hospitals) {
+    const r = h.est ? robots : never;
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null }) });
+  }
+}
+
+// The interim Readmissions pages: /hrrp/ and a page for each hospital in the pinned Thirty Day Readmissions file, at
+// hospitalPathOf('hrrp', ccn, { inTdr: true }). A hospital the dollar file has is joined to its hub hospital (hospitals: its
+// estimate); one it lacks (the file has a few) is built from the master alone. With a list of hospitals given (a test's
+// slice), only the pinned hospitals in it get a page. Never indexed, released or not: these slim pages stand in for the
+// program's own site and say so, and the full explorer is the page to find. The sitemap leaves them out.
+function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
+  const { assets } = ctx;
+  ctx.emit({ path: programById('hrrp').path, robots: never, text: hrrpProgramPage({ tdr, assets, robots: never }) });
+  const byCcn = new Map(hospitals.map((h) => [h.ccn, h]));
+  for (const record of tdr.hospitals.values()) {
+    if (only && !only.has(record.id)) continue;
+    const text = hrrpHospitalPage({ record, tdr, master: masterRecord(master, record.id, 'a record in the pinned Thirty Day Readmissions file'), h: byCcn.get(record.id) ?? null, assets, robots: never });
+    ctx.emit({ path: hospitalPathOf('hrrp', record.id, { inTdr: true }), robots: never, text });
+  }
+}
+
 // updated: each program site's two dates, by id (build.js collects them from the sites run before the hub); the
 // corrections page lists them. correctionsDir: the folder of dated corrections entries (absent or empty is an empty
-// log); tests pass their own.
-export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/' } = {}) {
+// log); tests pass their own. hospitals and master: the hospitals that get a page (model.js hubHospitals) and their master
+// records by CCN, read once from the newest files (data.js hubModel, which the build's context shares) unless a test
+// passes its own (no hospitals: no hospital pages and no interim Readmissions page for a hospital; /hrrp/ is always
+// written). The front page always tells the newest files' whole story.
+export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
-  ctx.emit({ path: '/', robots, text: home(assets, robots) });
+  const { hub, hospitals: all, facts } = hubModel();
+  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
   }
-  // The not-found page is never indexed, released or not.
-  const notFoundRobots = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
-  ctx.emit({ path: NOT_FOUND_PATH, robots: notFoundRobots, text: notFound(assets, notFoundRobots) });
+  // The not-found page and the programs' placeholders are never indexed, released or not.
+  const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
+  for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, robots, never });
+  hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });
+  ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
 }
 
-export const HUB = { id: 'hub', entries: {}, styles: [], generate: generateHub };
+// entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box
+// (hubPage does, for every hub page), the home page's story (hub/client/home.js), and a hospital page's swarm, peer
+// toggle, strips and peer table (hub/client/hospital.js; pages with an estimate only). styles: the hub's own pages'
+// styles (each page's rules under its root class), in a stylesheet of their own (/assets/hub.<hash>.css), which hubPage
+// links after the shared one; the program sites' pages never load it.
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: ['hub/styles.css'], generate: generateHub };

@@ -55,6 +55,27 @@ test('ridges: a row per group with its share, the words beside the plot when wid
   assert.equal((wide.match(/chart-col chart-col--pen/g) ?? []).length, 2, 'columns at or past the line take the penalty ink');
 });
 
+test('ridges: a name too long for its place wraps and its row grows; a short one keeps its one line; the mark\'s label stays inside', () => {
+  const long = 'Montgomery County-Bucks County-Chester County, PA area';
+  const row = (label, median) => ({ label, sub: '20 hospitals', counts: [3, 4, 2], median, share: '15% cut', tip: label });
+  const args = (actual) => ({ edges: [0, 1, 2, 3], band: [1.4, 1.5], actual, labels: { actual: 'This hospital', actualValue: '−0.8115', line: 'Line', lineTip: 'Line' }, rows: [row('All hospitals', 1.1), row(long, 1.3)] });
+  const height = (svg) => Number(/viewBox="0 0 \d+ (\d+)"/.exec(svg)[1]);
+  const narrow = String(ridges({ ...args(1.2), width: 300 }));
+  assert.match(narrow, /All hospitals <tspan class="chart-note">20 hospitals<\/tspan>/, 'narrow: a short name keeps its size beside it');
+  assert.ok((narrow.match(/<tspan x="4"/g) ?? []).length >= 2, 'narrow: the long name in lines');
+  assert.match(narrow, /><tspan class="chart-note">20 hospitals<\/tspan><\/text><text class="chart-value chart-label--halo" x="296"/, 'narrow: its size on the share\'s line');
+  const wide = String(ridges({ ...args(1.2), width: 560 }));
+  assert.ok((wide.match(/<tspan x="0"/g) ?? []).length >= 2, 'wide: the long name in lines in the words\' column');
+  assert.match(wide, /<text class="chart-label" x="0" y="[\d.]+" text-anchor="start">All hospitals<\/text>/, 'wide: a short name as before');
+  const short = (width) => String(ridges({ ...args(1.2), rows: [row('All hospitals', 1.1), row('State', 1.3)], width }));
+  assert.ok(height(narrow) > height(short(300)) && height(wide) > height(short(560)), 'the long name\'s row is taller');
+  // A mark a fifth of the way in: a centred label would cross the narrow drawing's left end.
+  const left = String(ridges({ ...args(0.6), width: 300 }));
+  assert.match(left, /<text class="chart-label" x="[\d.]+" y="[\d.]+" dx="-6" text-anchor="start">This hospital/);
+  const right = String(ridges({ ...args(2.4), width: 300 }));
+  assert.match(right, /<text class="chart-label" x="[\d.]+" y="[\d.]+" dx="6" text-anchor="end">This hospital/);
+});
+
 test('areaMap: null without a center or two places; numbered pins otherwise', () => {
   const shapes = new Map();
   const pts = [{ point: [-86.5, 34.7], n: 1, cls: 'chart-pin--no', tip: 'one' }, { point: [-86.9, 34.8], n: 2, cls: 'chart-pin--yes', tip: 'two' }];

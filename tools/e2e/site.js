@@ -2,12 +2,18 @@
 // engines, and the pages to visit. The launch command (launch.js) reads it as the checks do; lib.js adds the browser.
 import { existsSync } from 'node:fs';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
+import { loadHub } from '../../hub/data.js';
+import { hubHospitals } from '../../hub/model.js';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
 import { createSiteServer, listen, stop } from '../../pipeline/site/serve.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
-import { SITE } from '../../web/site.js';
+import { nationalContext } from '../../sites/hacrp/web/compare.js';
+import { loadHacrp } from '../../sites/hacrp/web/data.js';
+import { groupLabel } from '../../sites/hacrp/web/groups.js';
+import { labelAt } from '../../web/whatif/marks.js';
+import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
 // The browser engines Playwright drives, by the name E2E_ENGINE takes.
@@ -44,32 +50,104 @@ function firstPlaces() {
   return first;
 }
 
-// One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, the program page, its
-// Methods and dictionary, three hospitals (the first in the data that CMS cut, that has no score, and that has a score
-// and was not cut; each with its emitted record as `hospital`), the first region, division, state and metro page in
-// dist/, and a path no page has (the not-found page, served with status 404). name is the page's name in a test's
-// title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the emitted data,
-// whichever site the browser visits.
+// The sample of a type from table ([type, what it is, test(row, joined)]): the first of rows that passes its test, joined
+// (join(row)) to what the test also reads, as { type, name, path: pathOf(row), hospital: row }. label names the caller
+// in an error.
+function sampleOf(label, table, type, rows, pathOf, join = () => null) {
+  const [, what, test] = table.find(([t]) => t === type) ?? [];
+  if (!test) throw new RangeError(`${label}: no sample type "${type}"`);
+  const found = rows.find((row) => test(row, join(row)));
+  if (!found) throw new Error(`${label}: no hospital ${what} in the data`);
+  return { type, name: type, path: pathOf(found), hospital: found };
+}
+
+// The sample hospitals by type, each the first in the newest HACRP file (in the file's order) that CMS cut, that has no
+// score, and that has a score and was not cut: [type, what it is, the test].
+const HOSPITALS = [
+  ['hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'],
+  ['hospital-unscored', 'with no score', (h) => h.total === null],
+  ['hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'],
+];
+
+// The sample hospital's page of a type (HOSPITALS), { type, name, path, hospital: its emitted record }, from the
+// emitted data alone (no walk of dist/). all: the newest HACRP file's hospitals, when the caller has read them.
+export const hospitalSample = (type, all = readNewestEmitted().hospitals) => sampleOf('hospitalSample', HOSPITALS, type, all, (h) => hospitalPath(h.ccn));
+
+// The sample hospitals' pages across the programs (the hub's), by type, each the first in the dollar file's order that
+// has an estimate with a net cut and the hospital-acquired conditions cut, and that is in Maryland (no estimate: the
+// variant page): [type, what it is, the test].
+const HUB_HOSPITALS = [
+  ['hub-hospital-cut', 'with a net cut and the HAC cut', (h) => h.est !== null && h.est.cut && h.est.net < 0],
+  ['hub-hospital-maryland', 'in Maryland', (h) => h.status === 'maryland'],
+];
+
+// The sample hospital's page across the programs of a type (HUB_HOSPITALS), { type, name, path, hospital: its hub
+// record }, from the emitted data alone.
+export const hubHospitalSample = (type, all = hubHospitals(loadHub())) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, all, (h) => hospitalPathOf('hub', h.ccn));
+
+// The sample interim Readmissions hospital pages (hub/hrrp/page.js), by type, each the first hospital in the pinned Thirty Day
+// Readmissions file with a payment cut and an estimate, with no cut, or that the dollar file does not have (no estimate, no
+// page across the programs): [type, what it is, the test]. test reads the pinned record and the hub hospital (null when the
+// dollar file does not have it).
+const HRRP_HOSPITALS = [
+  ['hrrp-hospital-cut', 'with a payment cut and an estimate', (r, h) => r.paf < 1 && h?.est?.hrrpListed === true],
+  ['hrrp-hospital-no-cut', 'with no payment cut', (r) => r.paf >= 1],
+  ['hrrp-hospital-no-estimate', 'the dollar file does not have', (r, h) => h === null],
+];
+
+// The sample interim Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its pinned
+// record }, from the pinned file and the emitted data alone.
+function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
+  const byCcn = new Map(all.map((h) => [h.ccn, h]));
+  return sampleOf('hrrpHospitalSample', HRRP_HOSPITALS, type, [...hub.tdr.hospitals.values()], (r) => hospitalPathOf('hrrp', r.id, { inTdr: true }), (r) => byCcn.get(r.id) ?? null);
+}
+
+// The HACRP hospital pages whose peer chart ("among hospitals like it": one row per group the hospital belongs to, over
+// a shared axis of scores) is hardest to fit, [{ type, name, path }], from the data alone: the one with the longest
+// group name, and the two whose marks sit furthest left and furthest right among those whose label the chart would
+// centre under the mark (web/whatif/marks.js labelAt), where a centred label reaches furthest past the drawing's
+// edge. Each is the first in the newest HACRP file's order among those that tie.
+export function peerChartSamples() {
+  const { hospitals, master, model, dollars } = loadHacrp();
+  const nat = nationalContext({ hospitals, master, model, dollars });
+  const [lo, hi] = [nat.edges[0], nat.edges[nat.edges.length - 1]];
+  const charted = hospitals.filter((h) => h.total !== null && nat.groupsOf(h.ccn).length >= 2);
+  const longest = (h) => Math.max(...nat.groupsOf(h.ccn).map((g) => groupLabel(g.kind, g.key, { metro: master.get(h.ccn)?.cbsaName }).length));
+  const centred = charted.filter((h) => labelAt((h.total - lo) / (hi - lo)).anchor === 'middle');
+  if (!centred.length) throw new Error('peerChartSamples: no hospital in the data has a peer chart with a centred label');
+  const pick = (type, h) => ({ type, name: type, path: hospitalPath(h.ccn) });
+  return [
+    pick('peers-long-name', charted.reduce((a, b) => (longest(b) > longest(a) ? b : a))),
+    pick('peers-mark-left', centred.reduce((a, b) => (b.total < a.total ? b : a))),
+    pick('peers-mark-right', centred.reduce((a, b) => (b.total > a.total ? b : a))),
+  ];
+}
+
+// One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
+// placeholder page (value-based purchasing's, the one with a figure), the program page, its Methods and dictionary, the three sample hospitals
+// (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
+// programs (hubHospitalSample), the interim Readmissions page and its three sample hospitals' pages (hrrpHospitalSample), and
+// a path no page has (the not-found page, served with status 404). name is the page's
+// name in a test's title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the
+// emitted data, whichever site the browser visits.
 export function samplePages() {
-  // The newest HACRP file's hospitals, in the file's order.
   const all = readNewestEmitted().hospitals;
-  const hospital = (type, what, test) => {
-    const found = all.find(test);
-    if (!found) throw new Error(`samplePages: no hospital ${what} in the data`);
-    return { type, name: type, path: hospitalPath(found.ccn), hospital: found };
-  };
+  const hubData = loadHub();
+  const hub = hubHospitals(hubData);
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
   return [
     page('hub', '/'),
     ...Object.values(SITE.pages).map((path) => ({ type: 'policy', name: `policy ${path}`, path })),
+    page('coming', programById('hvbp').path),
     page('program', PROGRAM_PATH),
-    hospital('hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'),
-    hospital('hospital-unscored', 'with no score', (h) => h.total === null),
-    hospital('hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'),
+    ...HOSPITALS.map(([type]) => hospitalSample(type, all)),
     ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
+    ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
+    page('hrrp', programById('hrrp').path),
+    ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hubData, hub)),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }

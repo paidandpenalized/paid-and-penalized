@@ -7,12 +7,17 @@ import { html } from '../render/html.js';
 // Charts are drawn narrower than a phone (300 units across a 288px column at 320 and 343px at 375), so their 12-unit
 // labels and 11-unit ticks read at about 11.5px and up on any phone (charts.css caps the drawn width at about 22rem).
 export const WIDTH = 300;
+// The labels' and the notes' type sizes (charts.css: .chart's 12px, its notes' 11px), for a chart that measures its words
+// (text.js).
+export const LABEL_PX = 12;
+export const NOTE_PX = 11;
 const RADIUS = 4;
 export const GAP = 2;
 export const MAX_THICKNESS = 24;
 
-// Coordinates to 0.01 unit, so the markup is short and stable.
+// Coordinates to 0.01 unit (or 0.1), so the markup is short and stable.
 export const r2 = (x) => Math.round(x * 100) / 100;
+export const r1 = (x) => Math.round(x * 10) / 10;
 
 // A drawing this narrow is the phone's (the kit's WIDTH, not a wide variant): it sets its labels and marks smaller.
 export const isNarrow = (width) => width < 400;

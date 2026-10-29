@@ -1,9 +1,9 @@
-// A program site's top bar in the browser (layout.js programHeader). While the bar sticks (641px and up), its height
-// is --sticky-top on <html>, so what sticks under it (the hospital table's head, the what-if's result) and an
-// in-page jump clear it; on a phone, where it scrolls away, 0. A keyboard-focused element the browser left under the
-// bar is brought down to the bar's edge (not one focused by a click or a touch). On a page holding the sections its
-// nav links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
-// words of its own.
+// The family's sticky header in the browser (render/shell.js familyHeader, class .topbar). While it sticks (at every
+// width), its height is --sticky-top on <html>, so what sticks under it (the hospital table's head, the what-if's
+// result) and an in-page jump clear it; 0 when it does not stick. A keyboard-focused element
+// the browser left under the bar is brought down to the bar's edge (not one focused by a click or a touch). On a page
+// holding the sections its section menu links to, the item for the section in view is marked aria-current as the
+// reader scrolls. Program-neutral; no words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
 // How long after a press's release with no click its mark is cleared (below).
 export const RELEASE_MS = 1000;

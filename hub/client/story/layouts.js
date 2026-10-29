@@ -1,0 +1,231 @@
+// Where every dot stands at each step of the home page's story: one target per hospital with an estimate (and a second
+// set, the copies, that only the last step shows: the hospitals of one peer group, drawn again above everyone). Pure:
+// the stage (stage.js) moves the dots between these and paints them.
+//
+// A layout is { scene, X, Y, R, A, C, info }: typed arrays of length 2N (N hospitals, then their copies) for each dot's
+// center, radius, opacity and color code, plus what the scene's painter needs (lines, label anchors) and whether its piles
+// fit their room (fits).
+import { pctOfPay } from '../../../engine/js/dollars/whatif.js';
+import { median } from '../../../engine/js/peers.js';
+import { INK, NEUTRAL, signCode } from '../colors.js';
+import { R_MIN, peerPitch, pileExtent, pileLayout, pileSpacing } from '../pile.js';
+import { barDot, barHash, barOrder } from './bar-frame.js';
+import { barGeometry, gateLines, gateTop, mapGeometry } from './geometry.js';
+
+// The story's hospitals: each one with an estimate, in the hub asset's order, as { h, row, mid, hash, c }: h the decoded
+// hospital, row its index in the asset (the scale bar's dot height hashes it, as the build's does), mid the middle of its
+// slice of all pay (its place along the bar), hash a stable spread in [0, 1), and c its change as a percent of its pay
+// after no gate, after Readmissions, after hospital-acquired conditions too, and after all three (its net).
+export function storyRows(hospitals) {
+  const mids = new Map(barOrder(hospitals).map(({ i, mid }) => [i, mid]));
+  const rows = [];
+  hospitals.forEach((h, row) => {
+    if (!h.est) return;
+    const { hrrp, hac, total, pct } = h.est;
+    rows.push({ h, row, mid: mids.get(row), hash: barHash(row), c: [0, pct.hrrp, pctOfPay(hrrp + hac, total), pct.net] });
+  });
+  return rows;
+}
+
+// The piles' largest pitch per scene, narrow and wide (a peer group's: pile.js peerPitch). The space between dots is
+// pile.js pileSpacing's; the smallest pitch is a dot two device pixels across and one between (pileSpacing's floor is
+// one: on a 1x screen a pile of one-pixel dots reads as faint hatching), never more than at 1x; pileLayout also never
+// goes below a dot of R_MIN, and widens a pile's too-tall bins rather than shrink past that (adaptive: a steep spike
+// stands as a flat-topped block of separate dots, each in its value's slice of the block). A pile whose widest bin would
+// then stand more than WIDE_MAX of the axis across (a 1x window far shorter than a laptop's: the block would swallow the
+// pile's shape) takes pileSpacing's floor instead.
+const PILE = {
+  gate: { narrow: 2.6, wide: 3.8 },
+  net: { narrow: 3.2, wide: 5.6 },
+  all: { narrow: 2.6, wide: 4.2 },
+};
+
+// How much taller everyone's swarm stands on the last step with no group above it.
+const ALONE = 1.35;
+// The widest a pile's widened bin may stand at the two-device-pixel floor, as a share of the axis's width (above).
+export const WIDE_MAX = 0.12;
+// A hospital the Readmissions program does not list, at its gate: not moved, but not "at $0" in a program it is not in.
+// It stacks at the $0 pile's top (its key sorts after every other), drawn at OUT_A, and is counted apart.
+const OUT_KEY = 1e9;
+export const OUT_A = 0.4;
+
+// The layouts over rows (storyRows) on a stage (geometry.js stageGeometry), with the map's projected size (mapW by mapH):
+// { N, layBar, layStart, layGate, layNet, layMap, layYou }.
+export function createLayouts({ rows, g, mapW, mapH }) {
+  const N = rows.length;
+  const S = 2 * N;
+  const index = new Map(rows.map((r, i) => [r.h, i]));
+  const { gap, dMin: least } = pileSpacing(g.px);
+  const dMin = Math.max(least, 3 * Math.min(g.px, 1));
+  // Every pile of the story widens only its too-tall bins when it must (pile.js pileLayout's adaptive).
+  const pileOpts = (base, top, dMax, extra = {}) => ({ base, top, dMax, dMin, gap, px: g.px, adaptive: true, ...extra });
+  // A pile at the two-device-pixel floor, or at pileSpacing's when at that floor it would not fit (the $0 gutter, which
+  // cannot widen, overflows on a narrow stage) or would widen a bin past WIDE_MAX of the axis: { ...pileLayout's, small }
+  // (small: it fell back).
+  function pileOf(items, opts) {
+    const pile = pileLayout(items, g.scale, opts);
+    if (dMin <= least || (pile.fits && pile.m * pile.d <= WIDE_MAX * (g.x1 - g.x0))) return { ...pile, small: false };
+    return { ...pileLayout(items, g.scale, { ...opts, dMin: least }), small: true };
+  }
+  const size = (kind) => PILE[kind][g.narrow ? 'narrow' : 'wide'];
+
+  function blank(scene, info = {}) {
+    return { scene, X: new Float32Array(S), Y: new Float32Array(S), R: new Float32Array(S), A: new Float32Array(S), C: new Uint8Array(S), info };
+  }
+  // The copies sit on their hospitals, unseen.
+  function hideCopies(L) {
+    L.X.copyWithin(N, 0, N);
+    L.Y.copyWithin(N, 0, N);
+    L.R.copyWithin(N, 0, N);
+    L.C.copyWithin(N, 0, N);
+    L.A.fill(0, N);
+    return L;
+  }
+  // Writes a pile (pileLayout over ids offset..offset+N) into L with opacity a, colored by each item's value.
+  function place(L, pile, items, a) {
+    for (const it of items) {
+      const p = pile.pos.get(it.id);
+      L.X[it.id] = p.x;
+      L.Y[it.id] = p.y;
+      L.R[it.id] = pile.r;
+      L.A[it.id] = a;
+      L.C[it.id] = signCode(it.v);
+    }
+  }
+  // The highest top among a pile's columns between xa and xb (Infinity when none).
+  const skyline = (pile, xa, xb) => pile.cols.reduce((t, c) => (c.x >= xa && c.x <= xb ? Math.min(t, c.top) : t), Infinity);
+  // Where the "n at $0" label goes: just right of the gutter, above whatever stands there. n: the pile's hospitals at $0
+  // in the programs passed, out: those at $0 the gate's program does not list (counted apart); clear: the top of
+  // anything right of the gutter (Infinity when nothing stands there), so the label can move down beside the pile.
+  function zeroLabel(pile, out = 0) {
+    const { zM, zR } = g.scale;
+    const zeroTop = pile.cols.reduce((t, c) => (c.zero ? Math.min(t, c.top) : t), Infinity);
+    return { n: pile.zeroCount - out, out, x: zR + 4, y: Math.min(zeroTop, skyline(pile, zM, zR + 70)) - 7, clear: skyline(pile, zR + 0.01, g.x1 + 1) };
+  }
+
+  // Step 0: each hospital at its dot in the scale bar, in the bar's ink.
+  function layBar() {
+    const L = blank('bar');
+    const b = barGeometry(g);
+    rows.forEach((r, i) => {
+      const [x, y] = b.point(...barDot(r.mid, r.hash));
+      L.X[i] = x;
+      L.Y[i] = y;
+      L.R[i] = b.r;
+      L.A[i] = 1;
+      L.C[i] = INK;
+    });
+    return hideCopies(L);
+  }
+
+  // Step 1: everyone at $0, one block resting on the first gate, filled a column at a time in the bar's order (the left of
+  // the bar pours into the left of the block).
+  function layStart() {
+    const lines = gateLines(g, 0);
+    const base = lines[0] - 1;
+    const wide = Math.ceil(Math.sqrt(N * 2.6));
+    let d = Math.min(g.narrow ? 3.4 : 6.2, ((g.x1 - g.x0) * 0.6) / wide, (base - g.top - 60) / Math.ceil(N / wide));
+    if (g.px) d = Math.floor(d / g.px + 1e-9) * g.px;
+    // Never smaller than the piles' smallest separate dot.
+    const unit = g.px || 0.1;
+    d = Math.max(d, dMin);
+    while ((d - gap(d)) / 2 < R_MIN - 1e-9) d += unit;
+    const r = (d - gap(d)) / 2;
+    // A pitch raised to that floor may need fewer, taller columns to stay inside the plot.
+    const cols = Math.min(wide, Math.floor((g.x1 - g.x0) / d));
+    const per = Math.ceil(N / cols);
+    const left = g.scale.zM - (cols * d) / 2;
+    const L = blank('machine');
+    rows.map((row, i) => ({ i, mid: row.mid })).sort((a, b) => a.mid - b.mid).forEach(({ i }, k) => {
+      L.X[i] = left + (Math.floor(k / per) + 0.5) * d;
+      L.Y[i] = base - d / 2 - (k % per) * d;
+      L.R[i] = r;
+      L.A[i] = 1;
+      L.C[i] = NEUTRAL;
+    });
+    L.info = { s: 0, lines, block: { left, right: left + cols * d, top: base - per * d, base }, n: N };
+    return hideCopies(L);
+  }
+
+  // Steps 2 to 4: after gate s (1 Readmissions, 2 hospital-acquired conditions, 3 value-based purchasing), each hospital at
+  // its change so far, the pile resting on the next gate. Within a column the dots keep the order they had in prev, the
+  // layout before, so the crowd does not shuffle as a gate passes.
+  function layGate(s, prev) {
+    const lines = gateLines(g, s);
+    // At Readmissions' gate, the hospitals it does not list (OUT_KEY, OUT_A).
+    const out = rows.map((r) => s === 1 && !r.h.est.hrrpListed && r.c[1] === 0);
+    const items = rows.map((r, i) => ({ id: i, v: r.c[s], key: (out[i] ? OUT_KEY : 0) - prev.Y[i] }));
+    // After hospital-acquired conditions: the column of hospitals whose only cut is that one (no Readmissions cut), which
+    // the step's words point at, stands a few dots wide (pileLayout's spike).
+    const only = s === 2 ? new Set(rows.flatMap((r, i) => (r.c[1] === 0 && r.c[2] < 0 ? [i] : []))) : null;
+    const spike = only?.size ? (it) => only.has(it.id) : null;
+    const pile = pileOf(items, pileOpts(lines[s] - 1, gateTop(g, s) + g.label, size('gate'), { spike }));
+    const L = blank('machine');
+    place(L, pile, items, 1);
+    out.forEach((o, i) => {
+      if (o) L.A[i] = OUT_A;
+    });
+    const info = { s, lines, fits: pile.fits, small: pile.small, zero: zeroLabel(pile, out.filter(Boolean).length) };
+    // Its count, to the left of its block's top.
+    if (pile.spike) info.only = { n: only.size, x: pile.spike.left, y: pile.spike.top - 7, block: pile.spike };
+    L.info = info;
+    return hideCopies(L);
+  }
+
+  // Step 5: the net, the gates gone and the pile the stage's full height.
+  function layNet(prev) {
+    const items = rows.map((r, i) => ({ id: i, v: r.c[3], key: -prev.Y[i] }));
+    const top = g.top + (g.narrow ? 30 : 44);
+    const pile = pileOf(items, pileOpts(g.bottom - 1, top, size('net')));
+    const L = blank('net');
+    place(L, pile, items, 1);
+    L.info = { fits: pile.fits, small: pile.small, top, zero: zeroLabel(pile), cut: rows.filter((r) => r.c[3] < 0).length, bonus: rows.filter((r) => r.c[3] > 0).length };
+    return hideCopies(L);
+  }
+
+  // Steps 6 and 7: each hospital at its place on the map, colored by its net; dimmed over the shaded states (fill). A
+  // hospital without a place (none today) waits unseen at the map's middle.
+  function layMap(fill) {
+    const m = mapGeometry(g, mapW, mapH);
+    const r = g.narrow ? 1.05 : Math.max(1.4, Math.min(2, m.k * 1.9));
+    const L = blank(fill ? 'mapfill' : 'map', { m });
+    rows.forEach((row, i) => {
+      const { x, y } = row.h;
+      const placed = Number.isFinite(x) && Number.isFinite(y);
+      L.X[i] = m.ox + (placed ? x : mapW / 2) * m.k;
+      L.Y[i] = m.oy + (placed ? y : mapH / 2) * m.k;
+      L.R[i] = r;
+      L.A[i] = placed ? (fill ? 0.3 : 0.9) : 0;
+      L.C[i] = signCode(row.c[3]);
+    });
+    return hideCopies(L);
+  }
+
+  // Step 8: one hospital (h) among its peers (peers: hospitals, h among them) and among all: every hospital in a swarm
+  // along the bottom, and the peers again (the copies) in a swarm above it. The rest of the copies wait unseen on their
+  // hospitals, so a new peer group rises out of the swarm below. With no hospital (h null, no peers), everyone alone, in a
+  // taller swarm.
+  function layYou(h, peers) {
+    const aH = Math.min((g.bottom - g.top) * 0.46, g.narrow ? 170 : 330) * (peers.length ? 1 : ALONE);
+    const aBot = g.bottom - 4;
+    const aTop = aBot - aH;
+    const all = rows.map((r, i) => ({ id: i, v: r.c[3], key: r.hash }));
+    const allPile = pileOf(all, pileOpts(aBot, aTop, size('all'), { mirror: true }));
+    const L = blank('you');
+    place(L, allPile, all, 0.85);
+    hideCopies(L);
+    const mine = peers.map((p) => index.get(p)).filter((i) => i !== undefined).map((i) => ({ id: N + i, v: rows[i].c[3], key: rows[i].hash }));
+    const pTop = g.top + (g.narrow ? 44 : 70);
+    const pBot = aTop - (g.narrow ? 34 : 54);
+    // No peers (a hospital without an estimate): no group's pile, so no room above everyone's need be left for one.
+    const peerPile = mine.length ? pileOf(mine, pileOpts(pBot, pTop, peerPitch(mine.length, g.narrow), { mirror: true })) : null;
+    if (peerPile) place(L, peerPile, mine, 1);
+    L.info = {
+      h: index.get(h) ?? -1, n: mine.length, median: median(mine.map((it) => it.v)), peers: peerPile ? pileExtent(peerPile) : [Infinity, -Infinity],
+      all: pileExtent(allPile), fits: allPile.fits && (!peerPile || peerPile.fits), small: allPile.small || Boolean(peerPile?.small),
+    };
+    return L;
+  }
+
+  return { N, layBar, layStart, layGate, layNet, layMap, layYou };
+}

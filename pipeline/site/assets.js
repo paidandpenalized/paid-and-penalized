@@ -1,5 +1,6 @@
-// The page build's shared assets: one stylesheet and one ES module per JS entry, each named by a hash of its
-// content so a changed file gets a new URL, plus the fonts (fixed names), their licenses and the favicon.
+// The page build's shared assets: the shared stylesheet, a stylesheet of its own for each site, and one ES module per JS
+// entry, each named by a hash of its content so a changed file gets a new URL, plus the fonts (fixed names), their
+// licenses and the favicon.
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
@@ -8,8 +9,13 @@ import { REPO_ROOT, writeFileMkdir } from '../files.js';
 
 const WEB = REPO_ROOT + 'web/';
 const STYLES = WEB + 'styles/';
-// Cascade order: these first, then any other shared stylesheet in name order, then each site's own.
+// Cascade order: these first, then any other shared stylesheet in name order; a page's sheets of their own (buildAssets'
+// siteStyles: its site's) link after the whole bundle (layout.js page()).
 const FIRST = ['tokens.css', 'base.css', 'components.css'];
+// The program sites' chart and what-if kit (what web/charts/ and web/whatif/ draw): in web/styles/, but out of the shared
+// bundle, since only a program site's pages draw them. A program site's own sheet carries them, first (its manifest's
+// styles: sites/hacrp/web/generate.js).
+export const KIT_STYLES = Object.freeze(['web/styles/charts.css', 'web/styles/whatif.css']);
 
 export const hash8 = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8);
 
@@ -30,13 +36,12 @@ export function printBlock(light, print) {
 
 const PRINT = /@media print \{\s*:root \{([^}]*)\}\s*\}/;
 
-// tokens.css as the bundle carries it: its print block written out (printBlock). The theme toggle reuses the dark
-// media block's declarations verbatim under :root[data-theme="dark"], after it. siteStyles: each site's stylesheet
-// (repo-relative), bundled after the shared ones.
-export function stylesheet(siteStyles = []) {
-  const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f)).sort();
-  const [tokens, ...rest] = [...[...FIRST, ...files].map((f) => STYLES + f), ...siteStyles.map(repoPath)]
-    .map((f) => readFileSync(f, 'utf8'));
+// The shared stylesheet, every page's: tokens.css as the bundle carries it (its print block written out, printBlock;
+// the theme toggle reuses the dark media block's declarations verbatim under :root[data-theme="dark"], after it), then
+// the other shared stylesheets (not the kit, KIT_STYLES).
+export function stylesheet() {
+  const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f) && !KIT_STYLES.includes(`web/styles/${f}`)).sort();
+  const [tokens, ...rest] = [...FIRST, ...files].map((f) => readFileSync(STYLES + f, 'utf8'));
   const light = /^:root \{([^}]*)\}/m.exec(tokens)?.[1];
   const dark = /:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/.exec(tokens)?.[1];
   const print = PRINT.exec(tokens);
@@ -51,14 +56,28 @@ export function writeHashed(dir, name, ext, text) {
   return `/assets/${file}`;
 }
 
-export async function buildAssets({ outDir, entries = {}, styles = [] }) {
+const minifyCss = async (text) => (await transform(text, { loader: 'css', minify: true })).code;
+// An entry's or a sheet's name, which becomes its file's: a plain lowercase name, never the shared bundle's ("site").
+const assetName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name) && name !== 'site';
+
+// The shared stylesheet (stylesheet()) is /assets/site.<hash>.css. siteStyles: the sheets of their own, { name:
+// [stylesheet paths] }, each its files in order as /assets/<name>.<hash>.css (returned as sheets[name]), for a page to
+// link after the shared one (layout.js page()'s `sheets`). A sheet of its own gets no dark copy or print block: those are
+// the tokens', in the shared bundle, and its rules read the tokens' custom properties.
+// entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]).
+export async function buildAssets({ outDir, entries = {}, siteStyles = {} }) {
   const dir = join(outDir, 'assets');
   mkdirSync(join(dir, 'fonts'), { recursive: true });
 
-  const css = (await transform(stylesheet(styles), { loader: 'css', minify: true })).code;
+  const css = await minifyCss(stylesheet());
+  const sheets = {};
+  for (const [name, files] of Object.entries(siteStyles)) {
+    if (!assetName(name)) throw new RangeError(`bad stylesheet name "${name}"`);
+    sheets[name] = writeHashed(dir, name, 'css', await minifyCss(files.map((f) => readFileSync(repoPath(f), 'utf8')).join('\n')));
+  }
   const js = {};
   for (const [name, path] of Object.entries(entries)) {
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || name === 'site') throw new RangeError(`bad JS entry name "${name}"`);
+    if (!assetName(name)) throw new RangeError(`bad JS entry name "${name}"`);
     const result = await esbuild({
       entryPoints: [repoPath(path)],
       bundle: true, format: 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent',
@@ -68,5 +87,5 @@ export async function buildAssets({ outDir, entries = {}, styles = [] }) {
 
   for (const f of readdirSync(WEB + 'fonts')) copyFileSync(WEB + 'fonts/' + f, join(dir, 'fonts', f));
   copyFileSync(WEB + 'favicon.svg', join(outDir, 'favicon.svg'));
-  return { css: writeHashed(dir, 'site', 'css', css), js };
+  return { css: writeHashed(dir, 'site', 'css', css), js, sheets };
 }

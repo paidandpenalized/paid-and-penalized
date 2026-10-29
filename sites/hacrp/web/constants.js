@@ -60,10 +60,10 @@ export const CARE_COMPARE_STARS = 5;
 // The program page's hospital table shows this many rows until the reader asks for all (or picks a state).
 export const TABLE_FIRST_ROWS = 50;
 // Hospital page comparisons (display constants). The size groups' bed-count edges (under the first, between each
-// pair, the last and up); a group drawn only with at least this many hospitals with a payment decision; the number
-// of nearest hospitals listed; about how many columns each group's distribution of scores takes; and about how many
-// a measure's distribution takes on its ruler.
-export const BED_BANDS = Object.freeze([100, 300, 500]);
+// pair, the last and up; the family's one copy is in engine/js/peers.js); a group drawn only with at least this many
+// hospitals with a payment decision; the number of nearest hospitals listed; about how many columns each group's
+// distribution of scores takes; and about how many a measure's distribution takes on its ruler.
+export { BED_BAND_EDGES as BED_BANDS } from '../../../engine/js/peers.js';
 export const FEW_IN_GROUP = 5;
 export const NEAREST = 8;
 export const RIDGE_BINS = 36;

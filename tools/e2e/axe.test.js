@@ -63,6 +63,9 @@ for (const scheme of SCHEMES) {
       for (const [where, container] of SEARCH_BOXES) {
         it(`in ${where}`, () => withPage(tabs, { path: PROGRAM_PATH, scheme }, async (page) => {
           const { box, list } = searchIn(page, container);
+          // On a phone the bar's search is behind the find button, which opens it as a row under the bar.
+          const find = page.locator(`${container} .fam__find`);
+          if (await find.isVisible()) await find.click();
           await box.pressSequentially('hosp');
           await list.first().waitFor();
           await box.press('ArrowDown');

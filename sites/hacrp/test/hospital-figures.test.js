@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { SHORT_NAMES } from '../web/constants.js';
-import { ledgerFigure, lineBarBlock, milesText, nearbyBlock, peersFigure, sumFigure, worksheet } from '../web/hospital-figures.js';
+import { ledgerFigure, lineBarBlock, milesText, nearbyBlock, peersFigure, peersPosition, sumFigure, worksheet } from '../web/hospital-figures.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, esc, hospital, inputs, master, measured } from './fixtures.js';
@@ -173,6 +173,45 @@ test('review: when every group has the same share cut, the takeaway says so once
   const [, takeaway] = /<span class="fig__n">Figure 4\.<\/span> ([^<]*)</.exec(String(peersFigure({ view, nat: same, master: master('990001'), n: 4, source: 's' }).fig));
   assert.doesNotMatch(takeaway, /runs from/);
   assert.match(takeaway, /0% in every group/);
+});
+
+test('the groups\' takeaway says where the score sits in words for all, some, one and none of the groups, never "0 of"', () => {
+  const groups = (...medians) => medians.map((median) => ({ g: { median } }));
+  assert.equal(peersPosition(1, groups(0, 0.5, 0.9)), 'Its score is above the middle in all 3 groups it belongs to');
+  assert.equal(peersPosition(1, groups(0, 2, 3)), 'Its score is above the middle in 1 of the 3 groups it belongs to');
+  assert.equal(peersPosition(1, groups(0, 0.5, 3)), 'Its score is above the middle in 2 of the 3 groups it belongs to');
+  assert.equal(peersPosition(-1, groups(0, 0.5, 3)), 'Its score is below the middle in all 3 groups it belongs to');
+  assert.equal(peersPosition(0, groups(0, 0.5, 3)), 'Its score is at or below the middle in all 3 groups it belongs to', 'on a group\'s middle is not below it');
+  assert.equal(peersPosition(1, groups(0, 0.5)), 'Its score is above the middle in both groups it belongs to');
+  assert.equal(peersPosition(-1, groups(0, 0.5)), 'Its score is below the middle in both groups it belongs to');
+  assert.equal(peersPosition(0.2, groups(0, 0.5)), 'Its score is above the middle in 1 of the 2 groups it belongs to');
+  // One group: named as one, never "all 1 groups".
+  assert.equal(peersPosition(1, groups(0)), 'Its score is above the middle of the one group it belongs to');
+  assert.equal(peersPosition(-1, groups(0)), 'Its score is below the middle of the one group it belongs to');
+  assert.equal(peersPosition(0, groups(0)), 'Its score is at or below the middle of the one group it belongs to');
+  assert.throws(() => peersPosition(1, []), RangeError, 'no groups: nothing to say');
+  // Every pinned hospital with the figure: the takeaway never counts zero groups.
+  for (const h of DATA.hospitals.filter((x) => x.total !== null).slice(0, 400)) {
+    const fig = peersFigure({ view: pinnedView(h), nat: NAT, master: DATA.master.get(h.ccn), n: 4, source: 's' });
+    if (fig) assert.doesNotMatch(String(fig.fig), /middle (?:of|in) 0 of|\b(\d+) of the \1 groups/, 'a pinned hospital\'s takeaway');
+  }
+});
+
+test('the nearest hospitals\' takeaway reads "none of" and "all" rather than "0 of" or "8 of the 8"', () => {
+  const h = DATA.hospitals.find((x) => x.total !== null && Number.isFinite(DATA.master.get(x.ccn).lat));
+  const view = pinnedView(h);
+  const near = NAT.nearest(h.ccn, view.point);
+  const takeaway = (decision) => String(nearbyBlock({ view, nat: { ...NAT, nearest: () => near.map((x) => ({ ...x, decision })) }, shapes: DATA.shapes, n: 5, source: 's' }).fig);
+  assert.match(takeaway('No'), new RegExp(`CMS cut none of the ${near.length} nearest hospitals;`));
+  assert.match(takeaway('Yes'), new RegExp(`CMS cut all ${near.length} nearest hospitals;`));
+});
+
+test('the ledger\'s first line reads "all" when CMS scored every measure', () => {
+  const all = DATA.hospitals.find((x) => x.total !== null && pinnedView(x).n === MEASURE_IDS.length);
+  const some = DATA.hospitals.find((x) => x.total !== null && pinnedView(x).n < MEASURE_IDS.length);
+  const page = (h) => hospitalPage({ ...PAGE_CTX, view: pinnedView(h), hospital: h, master: DATA.master.get(h.ccn), source: DATA.source, robots: null, assets: ASSETS, whatif: { hospital: h, model, estimate, range: RANGE } });
+  assert.match(page(all), new RegExp(`CMS scored this hospital on all ${MEASURE_IDS.length} measures\\.`));
+  assert.match(page(some), new RegExp(`CMS scored this hospital on ${pinnedView(some).n} of the ${MEASURE_IDS.length} measures\\.`));
 });
 
 test('review: a hospital less than a mile away reads "less than a mile", never 0 miles', () => {

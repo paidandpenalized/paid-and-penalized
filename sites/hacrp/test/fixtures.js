@@ -9,10 +9,13 @@ import { parseFootnotes } from '../../../engine/js/footnotes.js';
 import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURES } from '../../../engine/js/hacrp/measures.js';
 import { SYNTH_PERIODS, syntheticRow } from '../../../engine/js/test/hacrp/synthetic.js';
-import { HUB } from '../../../hub/pages.js';
+import { loadHub } from '../../../hub/data.js';
+import { hubHospitals } from '../../../hub/model.js';
+import { HUB, generateHub } from '../../../hub/pages.js';
 import { readPinned } from '../../../pipeline/files.js';
 import { build } from '../../../pipeline/site/build.js';
 import { textOf } from '../../../pipeline/site/html.js';
+import { testAssets } from '../../../pipeline/test/helpers.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -21,8 +24,8 @@ export const FY = 2026;
 // The dollars of a page with no estimate (the impact file has no usable row for the hospital): what a synthetic
 // hospital's page takes, since no row of the dollar estimates covers it.
 export const NO_ESTIMATE = hospitalMoney({ status: 'no-inputs', cut: false });
-// Asset paths for rendering pages: the CSS, the shared scripts and both HACRP page scripts.
-export const ASSETS = { css: '/assets/site.test.css', js: { theme: '/assets/theme.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', share: '/assets/share.test.js', topbar: '/assets/topbar.test.js', 'hacrp-program': '/assets/hacrp-program.test.js', 'hacrp-place': '/assets/hacrp-place.test.js','hacrp-hospital': '/assets/hacrp-hospital.test.js', 'hacrp-search': '/assets/hacrp-search.test.js' } };
+// Assets for rendering pages: the CSS, the shared scripts, both HACRP page scripts and the shell's facts.
+export const ASSETS = testAssets({ js: Object.fromEntries(['figure', 'cite', 'share', 'topbar', 'hacrp-program', 'hacrp-place', 'hacrp-hospital', 'hacrp-search'].map((name) => [name, `/assets/${name}.test.js`])) });
 export const PERIODS = SYNTH_PERIODS;
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
 // CMS's text for the two boundary scores, as boundaryText() reads it from the file.
@@ -150,8 +153,17 @@ export const esc = (s) => s.replaceAll('&', '&amp;').replaceAll("'", '&#39;').re
 // released: as generateHacrp takes it (by default, web/site.js's).
 export const slicedSite = (data, { released } = {}) => ({ ...HACRP, generate: (ctx) => generateHacrp(ctx, { released, data, log: () => {} }) });
 
-// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub, in production: for the tests that
-// read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
+// The hub for a build of a slice (data: a slice of loadHacrp()'s): its hospital pages only for the slice's hospitals, so
+// every page it writes links HACRP pages the slice built (each one's peers are the slice's).
+export function slicedHub(data) {
+  const hub = loadHub();
+  const ccns = new Set(data.hospitals.map((h) => h.ccn));
+  const hospitals = hubHospitals(hub).filter((h) => ccns.has(h.ccn));
+  return { ...HUB, generate: (ctx, options) => generateHub(ctx, { ...options, hospitals, master: hub.master }) };
+}
+
+// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub (slicedHub), in production: for the
+// tests that read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
 // file's tests, so call this once, at the top of the test file. The getter resolves to the output folder.
 export function sliceBuild(data) {
   let built = null;
@@ -160,7 +172,7 @@ export function sliceBuild(data) {
     if (!built) {
       const dir = mkdtempSync(join(tmpdir(), 'pp-slice-'));
       built = { dir, out: join(dir, 'dist') };
-      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), HUB] });
+      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), slicedHub(data)] });
     }
     return built.ready.then(() => built.out);
   };

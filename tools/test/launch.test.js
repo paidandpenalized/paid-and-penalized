@@ -27,7 +27,7 @@ const check = { label: 'a page', path: '/prog/', status: 200 };
 const diffs = (result) => result.rows.filter((row) => !row.ok);
 
 // A built site's files, as filesUnder lists them.
-const FILES = ['404.html', 'assets/site.0bfb0a2f.css', 'assets/theme.3ef483a0.js', 'index.html', 'prog/hospital/990001/index.html', 'prog/hospital/990002/index.html', 'prog/index.html'];
+const FILES = ['404.html', 'assets/site.0bfb0a2f.css', 'assets/topbar.3ef483a0.js', 'index.html', 'prog/hospital/990001/index.html', 'prog/hospital/990002/index.html', 'prog/index.html'];
 
 test('checksFor: the three pages, a request for each rule (a page it matches, else the first file), the unknown path and a missing asset', () => {
   assert.deepEqual(checksFor(RULES, PAGES, FILES), [

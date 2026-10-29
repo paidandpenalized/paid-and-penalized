@@ -44,13 +44,13 @@ export function useBrowser(start = startSite) {
   return shared;
 }
 
-// A browser context for the tests of the describe that calls it: a window width px wide (HEIGHT tall), with scripts on
-// or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before its first test, and
-// closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
-export function useContext(shared, { width = 1280, javaScript = true } = {}) {
+// A browser context for the tests of the describe that calls it: a window width px wide and height px tall (HEIGHT by
+// default), with scripts on or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before
+// its first test, and closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
+export function useContext(shared, { width = 1280, height = HEIGHT, javaScript = true } = {}) {
   const held = { javaScript };
   before(async () => {
-    held.context = await shared.browser.newContext({ viewport: { width, height: HEIGHT }, javaScriptEnabled: javaScript });
+    held.context = await shared.browser.newContext({ viewport: { width, height }, javaScriptEnabled: javaScript });
     held.base = shared.site.base;
   });
   after(() => held.context?.close());
@@ -77,25 +77,16 @@ export async function newPage(context, colorScheme, base) {
   return page;
 }
 
-// Whether the loaded page can fetch after its load: it runs a script besides the theme toggle's (THEME_SCRIPT, which
-// fetches nothing; a program site's pages all run more), or names a file a script fetches (data-src). A page that may
-// fetch is waited on until the network is quiet; any other (the hub's pages) is quiet once loaded and its fonts are in.
-const THEME_SCRIPT = /^\/assets\/theme\.[0-9a-f]{8}\.js$/;
-async function fetchesAfterLoad(page) {
-  const { scripts, dataSrc } = await page.evaluate(() => ({
-    scripts: [...document.querySelectorAll('script[src]')].map((s) => new URL(s.src).pathname),
-    dataSrc: document.querySelector('[data-src]') !== null,
-  }));
-  return dataSrc || scripts.some((path) => !THEME_SCRIPT.test(path));
-}
-
 // Opens path (from base, the site's origin) in the tab the way a reader meets it: loaded, and quiet (its scripts have
-// fetched what they fetch, and its fonts are in). javaScript: whether the tab runs scripts; without them nothing fetches
-// after the load, so there is no wait for the network. Returns the response.
+// fetched what they fetch, and its fonts are in). A page that runs a script may fetch after its load, so it is waited on
+// until the network is quiet: every page of the site (each runs the shell's and the sticky header's). A page with none
+// (the harness's own controls, watch.test.js, one of which never goes quiet) is quiet once loaded and its fonts are in.
+// javaScript: whether the tab runs scripts; without them nothing fetches after the load, so there is no wait. Returns
+// the response.
 export async function visit(page, base, path, { javaScript = true } = {}) {
   const response = await page.goto(new URL(path, base).href, { waitUntil: 'load' });
   if (!javaScript) return response;
-  if (await fetchesAfterLoad(page)) await page.waitForLoadState('networkidle');
+  if (await page.evaluate(() => document.querySelector('script[src]') !== null)) await page.waitForLoadState('networkidle');
   else await page.evaluate(() => document.fonts.ready.then(() => {}));
   return response;
 }
@@ -207,6 +198,54 @@ export async function assertQuiet(seen, what) {
   assert.deepEqual(seen.errors, [], `${what}: console and page errors`);
   assert.deepEqual(seen.cspViolations, [], `${what}: CSP violations`);
   assert.deepEqual(seen.foreignRequests, [], `${what}: requests to another origin`);
+}
+
+// Asserts the page does not scroll sideways (its content is no wider than the window). The failure names the first few
+// elements that reach past the window's right edge, by tag and class and how far they reach, never their text (a
+// hospital's name stays out of CI's public logs); an element inside a box that scrolls or clips within the window is
+// not one (a wide table in its sideways-scrolling frame).
+export async function assertNoSideways(page, what) {
+  const got = await page.evaluate(() => {
+    const edge = window.innerWidth + 0.5;
+    const held = (el) => {
+      for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+        if (getComputedStyle(up).overflowX !== 'visible' && up.getBoundingClientRect().right <= edge) return true;
+      }
+      return false;
+    };
+    const scrollWidth = document.documentElement.scrollWidth;
+    const pastEdge = scrollWidth > window.innerWidth
+      ? [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > edge && !held(el)).slice(0, 3)
+        .map((el) => `${el.localName}${[...el.classList].map((c) => `.${c}`).join('')} (to ${Math.round(el.getBoundingClientRect().right)} px)`)
+      : [];
+    return { scrollWidth, innerWidth: window.innerWidth, pastEdge };
+  });
+  assert.ok(got.scrollWidth <= got.innerWidth, `${what}: scrolls sideways (${got.scrollWidth} px of content in ${got.innerWidth}), past the edge: ${got.pastEdge.join(', ')}`);
+}
+
+// Calls fn until it returns something truthy, for up to five seconds; its last answer goes in the failure.
+export async function eventually(fn, what) {
+  const end = Date.now() + 5000;
+  let last;
+  while (Date.now() < end) {
+    last = await fn();
+    if (last) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.fail(`${what} (last seen: ${JSON.stringify(last)})`);
+}
+
+// Lowers the first of the what-if's measures that reads above its floor to that floor, its input's minimum (lower is
+// better; a measure already at its floor would change nothing), and waits for the hypothetical score to change.
+export async function lowerAMeasure(whatIf) {
+  const hypothetical = whatIf.locator('[data-wi="score"]');
+  const was = await hypothetical.textContent();
+  const inputs = whatIf.getByRole('spinbutton');
+  const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
+  const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
+  assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
+  await inputs.nth(at).fill(readings[at].min);
+  await eventually(async () => (await hypothetical.textContent()) !== was, 'the hypothetical score did not change');
 }
 
 // The footer's link to the feedback form, which every page has, as a selector for the page and for a locator.

@@ -4,7 +4,7 @@ import { asofBar as asofShell, citation as citationShell, keepWhole, lastCall, p
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { html } from '../../../../web/render/html.js';
 import { isoDate, longDate } from '../../../../web/render/format.js';
-import { programHeader } from '../../../../web/render/layout.js';
+import { searchForm } from '../../../../web/render/shell.js';
 import { SITE } from '../../../../web/site.js';
 import { SHORT_NAMES } from '../constants.js';
 import { fill, fillKeep, sourcePlain, t } from '../copy.js';
@@ -45,37 +45,45 @@ export const asofBar = lastCall(({ fy, periods, source, typeFy = null, geocoded 
   });
 });
 
-// The program page's sections the top bar's nav links to, by id (program.js gives each section its id), then Methods.
+// The program page's sections the section menu links to, by id (program.js gives each section its id), then Methods.
 export const SECTIONS = Object.freeze(['how', 'fy', 'money', 'map', 'history']);
 
-// The HACRP top bar (layout.js programHeader): the program's name and edition tag, the search (markup, or '') and
-// the numbered nav to the program page's sections and Methods. current: the nav item to mark (an id), or null.
-// Built once per build for each current item.
-export const siteHeader = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current = null, searchUrl = null }) => {
-  const { path, title, subtitle } = SITE.sites.hacrp;
-  const fyText = String(fy);
-  const labels = { how: t('navHow'), fy: fill('navFy', { fy: fyText }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
-  return programHeader({
-    name: title,
-    href: path,
-    tag: fill('edition', { subtitle, fy: fyText }),
-    nav: [...SECTIONS.map((id) => ({ id, label: labels[id], href: `${path}#${id}` })), { id: 'methods', label: SHARED.methods, href: `${path}methods/` }],
+// The family shell's fields for a HACRP page (layout.js page(): sheets, program, sections, current, search, hospital):
+// HACRP's stylesheet (its manifest's styles, a sheet of their own), the HACRP tab, the numbered section menu to the
+// program page's sections and Methods, the item to mark (current: an id, or null), the bar's search (searchUrl: the
+// hospitals asset, or null for none) and, on a hospital's page, the hospital the header follows (followed). The parts
+// every page of a build shares are built once for each current item.
+const shellParts = lastCall(({ fy, current, searchUrl }) => [fy, current, searchUrl], ({ fy, current, searchUrl }) => {
+  const { path } = SITE.sites.hacrp;
+  const labels = { how: t('navHow'), fy: fill('navFy', { fy: String(fy) }), money: t('navMoney'), map: t('navHospitals'), history: t('navHistory') };
+  return {
+    sheets: ['hacrp'],
+    program: 'hacrp',
+    sections: [...SECTIONS.map((id) => ({ id, label: labels[id], href: `${path}#${id}` })), { id: 'methods', label: SHARED.methods, href: `${path}methods/` }],
     current,
     search: searchUrl ? searchBox(searchUrl) : '',
-  });
+  };
+});
+export const shellOf = ({ fy, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ fy, current, searchUrl }), hospital });
+
+// The hospital a HACRP hospital page's header follows (render/shell.js familyHeader): its CCN and name, its estimated net
+// from the dollar estimates (money: money.js hospitalMoney; null without an estimate) and whether Thirty Day
+// Readmissions has it (master: its hospital master record, whose Readmissions membership is read from that site's
+// pinned file). The header's Readmissions tab opens the hospital's interim Readmissions page when it has one, else the
+// program's folder (which the shell's script points at the hospital); the chip's name and All programs open its page
+// across the programs.
+export const followed = ({ view, money, master }) => ({
+  ccn: view.ccn, name: view.name, net: money.estimated ? money.net : null, inTdr: master?.programs?.hrrp?.inProgram === true,
 });
 
-// A search box: a combobox over the hospitals asset (data-src), with the places the site has pages for, that
-// client/search.js mounts and shows; hidden without JavaScript, where the nav's "Every hospital" and the data links
-// stand in. The visible "Find" begins the box's name, which goes on for screen readers. id: the box's own prefix
-// (a page may hold the top bar's and a larger one in its hero); hero: the larger box's words and class.
-export function searchBox(searchUrl, { id = 'omni', hero = false } = {}) {
-  return html`<form class="omni${hero ? ' omni--hero' : ''}" role="search" aria-label="${t('searchHeading')}" data-src="${searchUrl}" hidden>
-<label class="omni__field" for="${id}-q"><span class="omni__label cap">${t('searchFind')}<span class="vh"> ${t(hero ? 'heroFindRest' : 'searchFindRest')}</span></span><input id="${id}-q" type="search" role="combobox" aria-expanded="false" aria-controls="${id}-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${t(hero ? 'heroPlaceholder' : 'searchPlaceholder')}"></label>
-<ul class="omni__list" id="${id}-list" role="listbox" aria-label="${t('searchHeading')}" hidden></ul>
-<p class="vh" role="status" aria-live="polite"></p>
-</form>`;
-}
+// HACRP's search box (render/shell.js searchForm) in its words: a combobox over the hospitals asset (searchUrl), with
+// the places the site has pages for, that client/search.js mounts and shows; hidden without JavaScript, where the
+// section menu's "Every hospital" and the data links stand in. id: the box's own prefix (the bar's is "omni"; the
+// program page's hero holds a larger one); hero: the larger box's words and class.
+export const searchBox = (searchUrl, { id = 'omni', hero = false } = {}) => searchForm({
+  id, hero, src: searchUrl, label: t('searchHeading'), find: t('searchFind'),
+  findRest: t(hero ? 'heroFindRest' : 'searchFindRest'), placeholder: t(hero ? 'heroPlaceholder' : 'searchPlaceholder'),
+});
 
 // The kicker over a HACRP page's heading, linked to the program page (the program page's own kicker is not a link).
 export const kicker = (fy) => html`<p class="cap kicker"><a href="${SITE.sites.hacrp.path}">${fill('kicker', { subtitle: SITE.sites.hacrp.subtitle, fy: String(fy) })}</a></p>`;

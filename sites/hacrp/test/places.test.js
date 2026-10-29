@@ -3,7 +3,7 @@
 // to a state it reaches) and on a handful of synthetic hospitals for the edge cases the pinned data may not hold.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STATE_NAMES } from '../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { KINDS, ancestors, buildPlaces, nameInText, placeCounts, placePath, slug } from '../web/places.js';
 import { DATA, PLACES } from './pinned.js';
 

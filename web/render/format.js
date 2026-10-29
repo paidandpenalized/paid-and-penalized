@@ -23,8 +23,44 @@ export const listText = (xs) => LIST.format(xs);
 const NUMBER_WORDS = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 export const numberWord = (n) => NUMBER_WORDS[n] ?? count(n);
 
+// A whole number from 0 to 99 in words ("thirty", "forty-five"), for a rule's number in a sentence (web/programs.js);
+// anything else throws. Unlike numberWord, it never leaves digits.
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+export function spelled(n) {
+  if (!Number.isInteger(n) || n < 0 || n > 99) throw new RangeError(`spelled: ${String(n)} is not a whole number from 0 to 99`);
+  return n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
+}
+
+// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"), 0.75 is
+// "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
+const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.75, 'three-quarters']]);
+export function fractionWord(share, determiner = 'a') {
+  const word = FRACTION_WORDS.get(share);
+  if (word === undefined) throw new RangeError(`fractionWord: no words for the share ${String(share)}`);
+  return word.includes('-') ? word : `${determiner} ${word}`;
+}
+
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+// A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).
+export const placeText = ({ city, state }) => [city, state].filter(Boolean).join(', ');
+
+// A hospital's name as the pages print it: the hospital master's (CMS's casing, or its title-casing of CMS's capitals), with
+// each initialism the casing turned into a word ("Uab", "Ihs", "Cah") back in capitals. INITIALISMS is a reviewed list,
+// from the master's names: each is a word that names in title case spell this way and none is an ordinary word.
+const INITIALISMS = new Set(['ACMH', 'BCA', 'BSA', 'CAH', 'CHSLI', 'EAMC', 'FMOL', 'IHS', 'INTEGRIS', 'KMI', 'LECOM', 'LLC', 'LTACH', 'LTCU', 'OSS',
+  'SEARHC', 'UAB', 'UCF', 'UCH', 'UCI', 'UHHS', 'UM', 'UMD', 'UPHS', 'UPR', 'USD', 'USMD', 'WCA']);
+export const nameText = (name) => name.replace(/\b[A-Z][a-z]+\b/g, (word) => (INITIALISMS.has(word.toUpperCase()) ? word.toUpperCase() : word));
+
+// Items joined by middle dots, each dot held to the item before it by a no-break space, so a line that wraps ends on a dot
+// and none starts with one: "Not a teaching hospital · 240 beds · Rural".
+export const dotList = (items) => items.join('\u00a0· ');
+
+// Words that never part across lines (each space a no-break space), as a count and its noun: "240 beds".
+export const unbroken = (text) => text.replace(/ /g, '\u00a0');
 
 // An English ordinal: 1st, 2nd, 3rd, 11th, 22nd, 75th.
 export function ordinal(n) {
@@ -40,10 +76,13 @@ function fixed(x, dp, style) {
   return FIXED.get(key).format(x);
 }
 
-// x is a fraction: 0.123 with dp 1 reads 12.3%. sign: + before a positive share (never before one that reads 0%).
+// x is a fraction: 0.123 with dp 1 reads 12.3%. A share that reads zero has no sign, however it got there (-0.00004 at
+// two decimals is "0.00%", not "−0.00%"); sign: + before a positive share that does not.
 export function pct(x, dp = 1, { sign = false } = {}) {
-  const text = fixed(x, dp, 'percent').replace(/^-(?=\d)/, MINUS);
-  return sign && x > 0 && /[1-9]/.test(text) ? `+${text}` : text;
+  const raw = fixed(x, dp, 'percent');
+  if (!/[1-9]/.test(raw)) return raw.replace(/^-/, '');
+  const text = raw.replace(/^-(?=\d)/, MINUS);
+  return sign && x > 0 ? `+${text}` : text;
 }
 
 // A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%
@@ -65,6 +104,9 @@ function withSign(x, dp, plus) {
 
 // A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
 export const decimal = (x, dp) => withSign(x, dp, '');
+
+// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
+export const factor = (x) => decimal(x, 4);
 
 // As decimal, with + for positives.
 export const signed = (x, dp = 1) => withSign(x, dp, '+');

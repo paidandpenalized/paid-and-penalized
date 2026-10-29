@@ -1,8 +1,8 @@
-// The top bar's search as an accessible combobox, ported from Thirty Day Readmissions (web/src/js/ui/omnibox.js) onto
-// markup the build writes (a site's searchBox): the input is role="combobox" over a listbox of options. Typing lists
+// A search box as an accessible combobox, ported from Thirty Day Readmissions (web/src/js/ui/omnibox.js) onto markup
+// the build writes (render/shell.js searchForm): the input is role="combobox" over a listbox of options. Typing lists
 // the best matches; the arrow keys move through them (aria-activedescendant), Enter or a click opens one, Escape
-// closes the list. The index loads on first focus (load() resolves to buildIndex's entries; a failure says so, and the
-// next focus tries again). A polite status says how many matched. Without JavaScript the form stays hidden.
+// closes the list. The index loads on first focus (load() resolves to buildIndex's entries; a failure says so, and
+// the next focus tries again). A polite status says how many matched. Without JavaScript the form stays hidden.
 // words: { empty, kind: { [type]: label }, count(n), failed, more(total) } — the site's own words (more: the label
 //        of a last option that hands every match on, or null; onMore(query) acts on it)
 import { LIMIT, search } from './search.js';

@@ -507,3 +507,18 @@ test('scoreRule: the average mark stands where the sorted scores cross zero, nam
   assert.doesNotMatch(String(scoreRule({ scores: [0.1, 0.2], cut: 1, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all above zero');
   assert.doesNotMatch(String(scoreRule({ scores: [-0.2, -0.1], cut: 0, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all below zero');
 });
+
+test('every "safe" alignment in the stylesheets has the plain one just before it, for a browser that does not know safe', () => {
+  const files = ['charts.css', 'components.css', 'pages.css', 'shell.css', 'whatif.css', 'base.css'].map((f) => new URL(`../styles/${f}`, import.meta.url));
+  files.push(new URL('../../hub/styles.css', import.meta.url), new URL('../../sites/hacrp/web/styles.css', import.meta.url));
+  let seen = 0;
+  for (const file of files) {
+    const css = readFileSync(file, 'utf8');
+    for (const m of css.matchAll(/([\w-]+):\s*safe\s+([\w-]+)\s*;/g)) {
+      seen += 1;
+      const before = css.slice(0, m.index).trimEnd();
+      assert.ok(before.endsWith(`${m[1]}: ${m[2]};`), `${file.pathname.split('/').slice(-2).join('/')}: "${m[0]}" has no "${m[1]}: ${m[2]};" before it`);
+    }
+  }
+  assert.ok(seen > 0, 'the stylesheets hold a safe alignment to check');
+});

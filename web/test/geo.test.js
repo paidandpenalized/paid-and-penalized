@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { geoCentroid, geoContains } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
-import { STATES, STATE_NAMES, US_MAP_CODES, countiesOf, countyShapes, placeMap, stateMap, stateShapes, usMap, usPoints } from '../charts/geo.js';
+import { STATES, STATE_NAMES } from '../../engine/js/states.js';
+import { US_MAP_CODES, countiesOf, countyShapes, placeMap, pointOf, stateMap, stateShapes, usMap, usMapHeight, usPoints, usProjected } from '../charts/geo.js';
 
 const TOPO = JSON.parse(readPinned('us-atlas-counties-3.0.1'));
 const shapes = stateShapes(TOPO);
@@ -173,6 +174,16 @@ test('usPoints: one path of dots per class, each class its own size; a point wit
   const [w, h] = viewBox(String(usMap(MAP(ENTRIES(), { width: 560 }))));
   for (const [, x, y] of svg.matchAll(/M([\d.-]+) ([\d.-]+)h0/g)) assert.ok(x > 0 && x < w && y > 0 && y < h, `${x}, ${y}`);
   assert.equal(String(usPoints({ shapes, points, sizes: { a: 3.2, b: 5.2 }, width: 560 })), String(usPoints({ shapes, points, sizes: { a: 3.2, b: 5.2 }, width: 560 })), 'the same call gives the same markup');
+});
+
+test('pointOf is [lon, lat] for a record with both, else null; usProjected places it inside usMapHeight, and gives null where the map has no place', () => {
+  assert.deepEqual(pointOf({ lat: 38.5, lon: -98 }), [-98, 38.5]);
+  for (const bad of [{}, { lat: 38.5 }, { lon: -98 }, { lat: null, lon: -98 }, { lat: NaN, lon: -98 }, { lat: 38.5, lon: '-98' }]) assert.equal(pointOf(bad), null, JSON.stringify(bad));
+  const placed = usProjected(shapes, [pointOf({ lat: 38.5, lon: -98 }), pointOf({}), [0, 0]], 975);
+  const [x, y] = placed[0];
+  assert.ok(x > 0 && x < 975 && y > 0 && y < usMapHeight(975), `${x}, ${y}`);
+  assert.deepEqual(placed.slice(1), [null, null]);
+  assert.equal(usMapHeight(975), 605);
 });
 
 const KS = { codes: ['KS'], label: 'Map of <Kansas> & its hospitals', width: 300, aspect: 0.8 };

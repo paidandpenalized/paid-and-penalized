@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, decimal, pct, pctFloor } from '../../../web/render/format.js';
-import { STATE_NAMES } from '../../../web/charts/geo.js';
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
 import { historyData } from '../web/history-data.js';
 import { everCut } from '../../../engine/js/hacrp/trends.js';
@@ -48,7 +48,6 @@ const attr = (markup, name) => {
 const everOf = (hd) => everCut([...hd.recs.values()]);
 const pct0 = (x) => pct(x, 0);
 const pct1 = (x) => pct(x, 1);
-const classes = (svgMarkup) => [...String(svgMarkup).matchAll(/class="([^"]+)"/g)].map((m) => m[1]);
 // The narrow drawing of a figure (the wide one follows it), and the text of each <text class="cls"> in a drawing.
 const narrowOf = (fig) => String(fig).slice(0, String(fig).indexOf('data-fit="wide"'));
 const textsOf = (svg, cls) => [...String(svg).matchAll(new RegExp(`<text class="${cls}"[^>]*>([^<]*)</text>`, 'g'))].map((m) => text(m[1]));
@@ -360,7 +359,7 @@ test('kindsFigure: a panel per kind of hospital against the nation (solid gray),
   // Six panels: each says how many cut years it sat above the nation.
   const narrow = narrowOf(fig);
   assert.equal([...narrow.matchAll(/above in \d+ of 4/g)].length, 6);
-  // How many cut years each panel sat above the nation: major teaching, government, for-profit (FY2022 and FY2025), rural, under 100 beds, 500 and up.
+  // How many cut years each panel sat above the nation: major teaching, government, for-profit (FY2022 and FY2025), rural, fewer than 100 beds, 500 and up.
   const aboves = (f) => [...narrowOf(f).matchAll(/above in (\d+) of 4/g)].map((m) => Number(m[1]));
   assert.deepEqual(aboves(fig), [0, 0, 2, 0, 0, 0]);
   // A year the two shares print the same at one decimal is not above: for-profit hospitals' FY2025 share is 20.0%, and so

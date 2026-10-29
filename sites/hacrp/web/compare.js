@@ -8,10 +8,11 @@ import { decidedHospitals, isAssigned, scoredHospitals } from '../../../engine/j
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
+import { bedBand } from '../../../engine/js/peers.js';
 import { median } from '../../../engine/js/stats.js';
 import { miles } from '../../../web/charts/geo.js';
 import { lineScore } from '../../../web/whatif/marks.js';
-import { BED_BANDS, CLIFF_NEAR, FEW_IN_GROUP, NEAREST, RIDGE_BINS, STRIP_BINS } from './constants.js';
+import { CLIFF_NEAR, FEW_IN_GROUP, NEAREST, RIDGE_BINS, STRIP_BINS } from './constants.js';
 import { cutDollars } from './money.js';
 
 // How many of a sorted list are below x, and how many above it.
@@ -39,8 +40,10 @@ export function countBins(values, edges) {
   return counts;
 }
 
-// A bed count's band: the index of the first BED_BANDS edge above it (0 under the first edge), or null.
-export const bedBand = (beds) => (Number.isInteger(beds) ? BED_BANDS.filter((edge) => beds >= edge).length : null);
+// A bed count's band: the index of the first edge above it (0 under the first edge), or null with no count. The edges
+// are BED_BAND_EDGES in engine/js/peers.js, the family's one copy (this site's constants.js re-exports them as
+// BED_BANDS); the function is re-exported here so this site's code and tests keep their import.
+export { bedBand };
 
 // Each group kind a hospital belongs to, in the order a page lists them: its key from the master (null: unknown, so
 // the hospital is in no group of that kind).

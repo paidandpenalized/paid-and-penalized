@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'sites/hacrp/web/styles.css'];
+const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'hub/styles.css'];
 const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
@@ -35,6 +35,11 @@ const MARKS = [
   '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
   '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
   '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
+  // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
+  '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
+  // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
+  '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
+  '.st--md', '.dkey__hatch', '.sb',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.
@@ -63,13 +68,15 @@ test('every mark class has a forced-colors rule, so no bar, mark or hatch vanish
 });
 
 test('a state shown only by fill or shadow keeps a system-color cue under forced colors', () => {
-  for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th']) {
+  // ... and the hub's toggles: a hospital page's peer toggle (and its what-if's cut / no cut), the story's peer toggle.
+  for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th',
+    '.hh__pb[aria-pressed="true"]', '.story .seg button[aria-pressed="true"]']) {
     assert.match(forced, new RegExp(`${escape(state)}\\s*\\{[^}]*(Highlight|GrayText|CanvasText)`), `${state} has no forced-colors cue`);
   }
 });
 
 test('a hatch drawn with a CSS gradient is redrawn under forced colors with its own system colors', () => {
-  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar']) {
+  for (const mark of ['.fig__swatch--same', '.pill--na', '.hosp__none', '.wi-bar', '.dkey__hatch']) {
     const rule = new RegExp(`${escape(mark)}[^{]*\\{[^}]*forced-color-adjust: none`);
     assert.match(forced, rule, `${mark} opts out of the adjustment`);
   }

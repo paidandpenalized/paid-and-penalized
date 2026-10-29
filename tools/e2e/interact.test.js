@@ -1,18 +1,34 @@
 // What a reader does on the pages, in a real browser: the hospital search finds a hospital and opens its page, the
-// what-if recomputes when a measure changes, the keyboard reaches every control without a focused element sliding under
-// the sticky top bar, and with JavaScript off every page keeps its footer (and the hub's pages lose nothing). Runs
-// against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
-// here prints a hospital's name, city, CCN or values, or a search list's options: they say counts, or the page type.
+// what-if recomputes when a measure changes and, opened and used, fits the window and its box where that box is narrow,
+// the keyboard reaches every control without a focused element sliding under the sticky top bar, and with JavaScript
+// off every page keeps its footer (the hub's pages lose nothing, and a hospital's page across the programs shows its
+// record, net, dollars and headline, with no empty frame). Runs against dist/ (make build) or any URL (E2E_BASE_URL);
+// see site.js. CI's logs are public, so no message or assertion here prints a hospital's name, city, CCN or values, or
+// a search list's options: they say counts, or the page type.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { RELEASE_MS } from '../../web/client/topbar.js';
-import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertQuiet, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
+import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
+import { openFolds } from './axe.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
 const CUT = PAGES.find((p) => p.type === 'hospital-cut');
+// The hospital pages with a what-if: the hospital CMS cut, the one with a score and no cut, and a Maryland hospital's (the
+// first scored one in the newest HACRP file: not subject to the cut, so its result table holds long words and no dollars).
+const MARYLAND = readNewestEmitted().hospitals.find((h) => h.state === 'MD' && h.total !== null);
+if (!MARYLAND) throw new Error('interact.test.js: no scored Maryland hospital in the newest HACRP file');
+const WHAT_IFS = [
+  ...PAGES.filter((p) => p.type === 'hospital-cut' || p.type === 'hospital-not-cut'),
+  { name: 'hospital-maryland', path: hospitalPath(MARYLAND.ccn) },
+];
+// Where the what-if's result box is narrow: from 900 px, where it turns a column beside the measures, to about 1150 px
+// (1040: its table outgrew the box there without scrolling the page), and on phones, where its table is folded until a
+// reader opens it; and just past that (1160, where the box's wide layout starts with the least room) and 1280.
+const FIT_WIDTHS = [1280, 1160, 1040, 1000, 960, 900, 390, 320];
 // 1280 px, the narrowest width the top bar sticks (641), and the narrowest phone width, where it scrolls away.
 const WIDTHS = [1280, 641, 320];
 // Pixels a focused element may sit under the top bar's edge before it counts as under it (see focusFacts).
@@ -21,18 +37,6 @@ const SNAP = 1;
 const MAX_PRESSES = 1000;
 
 const shared = useBrowser();
-
-// Calls fn until it returns something truthy, for up to five seconds; its last answer goes in the failure.
-async function eventually(fn, what) {
-  const end = Date.now() + 5000;
-  let last;
-  while (Date.now() < end) {
-    last = await fn();
-    if (last) return last;
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  assert.fail(`${what} (last seen: ${JSON.stringify(last)})`);
-}
 
 describe('search', () => {
   const tabs = useContext(shared);
@@ -82,14 +86,8 @@ describe('what-if', () => {
     const was = { head: await headScore.textContent(), hypothetical: await hypothetical.textContent(), sentence: await sentence.textContent() };
     assert.equal(await hypothetical.getAttribute('data-same'), '', 'the hypothetical starts as "same"');
 
-    // The best a measure can read (lower is better) is its input's minimum: a hospital CMS cut scores lower with it.
-    // Setting a measure already at its floor changes nothing, so the first one above it is the one to set.
-    const inputs = whatIf.getByRole('spinbutton');
-    const readings = await inputs.evaluateAll((els) => els.map((el) => ({ value: el.value, min: el.min })));
-    const at = readings.findIndex(({ value, min }) => value !== '' && min !== '' && Number(value) > Number(min));
-    assert.ok(at !== -1, `the hospital has a measure above its floor to lower (none of its ${readings.length} inputs is)`);
-    await inputs.nth(at).fill(readings[at].min);
-    await eventually(async () => (await hypothetical.textContent()) !== was.hypothetical, 'the hypothetical score did not change');
+    // A hospital CMS cut scores lower with a measure at its best.
+    await lowerAMeasure(whatIf);
     assert.equal(await hypothetical.getAttribute('data-same'), null, 'the hypothetical no longer reads "same"');
     const score = Number.parseFloat((await hypothetical.textContent()).replace('−', '-'));
     assert.ok(score < CUT.hospital.total, 'the score fell');
@@ -100,8 +98,36 @@ describe('what-if', () => {
   }));
 });
 
+// The what-if, opened (every fold, the result's table among them: a phone folds it) and used (a measure lowered), where
+// its result box is narrow: nothing scrolls sideways, and the result's table stays inside its box.
+describe('the what-if fits the window', { concurrency: CONCURRENCY }, () => {
+  for (const width of FIT_WIDTHS) {
+    describe(`${width} px wide`, { concurrency: CONCURRENCY }, () => {
+      const tabs = useContext(shared, { width });
+      for (const { name, path } of WHAT_IFS) {
+        it(`${name}: opened and used, it fits`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+          await openFolds(page);
+          await lowerAMeasure(page.locator('#whatif'));
+          await settle(page);
+          await assertNoSideways(page, `${name} at ${width} px, its what-if opened and used`);
+          // How far the table's right edge runs past the box's content edge (its border and padding inside).
+          const past = await page.evaluate(() => {
+            const box = document.querySelector('#whatif .wi-result');
+            const style = getComputedStyle(box);
+            const edge = box.getBoundingClientRect().right - Number.parseFloat(style.borderRightWidth) - Number.parseFloat(style.paddingRight);
+            return box.querySelector('.wi-table').getBoundingClientRect().right - edge;
+          });
+          assert.ok(past <= 0.5, `${name} at ${width} px: the what-if's result table runs ${Math.round(past)} px past its box`);
+          await assertQuiet(seen, name);
+        }));
+      }
+    });
+  }
+});
+
 // A focused element's part in the walk, and whether it sits under the top bar. In the page: the skip link, the top
-// bar's search, the theme toggle, a nav item (by position) or the footer's feedback link; its rect against the bar's.
+// bar's search (or, on a phone, the button that opens it), the theme toggle, a nav item (by position) or the footer's
+// feedback link; its rect against the bar's.
 // The skip link is left out of the rect check: it is placed over the top of the page on purpose, above the bar. The
 // browser scrolls to a whole device pixel, so an element focused at the bar's edge can land a fraction of a pixel under
 // it (an svg at 99.8 px under a bar ending at 100): only an overlap over SNAP counts. An element is described by its
@@ -114,7 +140,8 @@ async function focusFacts([feedbackLink, snap]) {
   const bar = document.querySelector('.topbar');
   const roleOf = () => {
     if (el.matches('.skip')) return 'skip';
-    if (bar?.contains(el) && el.matches('[role="combobox"]')) return 'search';
+    // On a phone the bar's search is behind the find button, which is a reader's way in: it stands for the search there.
+    if (bar?.contains(el) && el.matches('[role="combobox"], .fam__find')) return 'search';
     if (el.matches('.theme-toggle')) return 'theme';
     const nav = [...document.querySelectorAll('.nav a')].indexOf(el);
     if (nav >= 0) return `nav ${nav}`;
@@ -151,21 +178,21 @@ async function walk(page, key, done) {
 // and none is focused under the top bar.
 async function keyboardWalk(page, path) {
   // What the page offers, so a control a page lacks is a failure and not a skipped target. The theme toggle and the
-  // search appear when the page's scripts have run. A program page has the top bar: search and the nav.
-  const hasTopBar = path.startsWith(PROGRAM_PATH);
+  // search appear when the page's scripts have run. Every page's bar has a search (a program's, or the family's on the
+  // hub's pages); a program page also has its section menu.
+  const hasNav = path.startsWith(PROGRAM_PATH);
   const offered = await page.evaluate((feedbackLink) => ({
-    theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => !b.hidden).length,
+    // Two in the markup (the bar's and the footer's); the CSS shows one at any width.
+    theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => b.checkVisibility()).length,
     search: [...document.querySelectorAll('.topbar [role="combobox"]')].filter((b) => !b.closest('[hidden]')).length,
     nav: document.querySelectorAll('.nav a').length,
     feedback: document.querySelectorAll(feedbackLink).length,
   }), FEEDBACK_LINK);
   assert.equal(offered.theme, 1, 'one theme toggle');
   assert.equal(offered.feedback, 1, 'one feedback link in the footer');
-  if (hasTopBar) {
-    assert.equal(offered.search, 1, 'the top bar\'s search');
-    assert.ok(offered.nav > 0, 'the top bar\'s nav');
-  }
-  const wanted = ['theme', 'feedback', ...(hasTopBar ? ['search', ...Array.from({ length: offered.nav }, (_, i) => `nav ${i}`)] : [])];
+  assert.equal(offered.search, 1, 'the top bar\'s search');
+  if (hasNav) assert.ok(offered.nav > 0, 'the top bar\'s nav');
+  const wanted = ['theme', 'feedback', 'search', ...(hasNav ? Array.from({ length: offered.nav }, (_, i) => `nav ${i}`) : [])];
   const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
   const last = (steps) => steps.at(-1)?.desc;
 
@@ -263,13 +290,26 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
   const withJs = useContext(shared);
   const withoutJs = useContext(shared, { javaScript: false });
 
-  // The page's visible text, one entry per line, and what its footer and theme toggle show. No watcher: watch needs
-  // scripts.
+  // The page's visible text, one entry per line, and what its footer, theme toggle, the bar's search and the front page's
+  // story show. No watcher: watch needs scripts.
+  const linesOf = (text) => text.split('\n').map((line) => line.trim()).filter(Boolean);
+  // What the story on the front page shows only with scripts: the search in its last step and the example card's hint
+  // that points at it (it shows with the search). Read first, then left out of the page's lines.
+  const STORY_ONLY = 'main form.omni, main .card__hint';
   const look = (tabs, path) => withPage(tabs, { path }, async (page) => ({
-    lines: (await page.locator('body').innerText()).split('\n').map((line) => line.trim()).filter(Boolean),
+    story: linesOf(await page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.checkVisibility()).map((el) => el.innerText).join('\n'), STORY_ONLY)),
+    lines: linesOf(await page.evaluate((sel) => {
+      for (const el of document.querySelectorAll(sel)) el.style.display = 'none';
+      return document.body.innerText;
+    }, STORY_ONLY)),
     footer: await page.locator('footer').isVisible(),
     feedback: await page.locator(FEEDBACK_LINK).count(),
     toggle: await page.evaluate(() => document.querySelector('.theme-toggle')?.innerText ?? null),
+    // A hidden element's innerText is all its text, so a search that does not show has none.
+    search: linesOf(await page.evaluate(() => {
+      const form = document.querySelector('.topbar form.omni');
+      return form?.checkVisibility() ? form.innerText : '';
+    })),
   }));
 
   for (const { type, name, path } of PAGES) {
@@ -278,15 +318,41 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
       assert.equal(off.footer, true, 'the footer shows');
       assert.equal(off.feedback, 1, 'the footer\'s feedback link shows');
 
-      // The hub's own pages are plain text: reading them without scripts loses nothing. The one thing scripts add is
-      // the theme toggle, which is hidden in the markup because it does nothing without them.
-      if (['hub', 'policy', 'not-found'].includes(type)) {
+      // The hub's own pages lose no words without scripts. What scripts add is the theme toggle, the bar's search (its
+      // words, and the list it shows once a reader types) and, on the front page, the story's search and the hint that
+      // points at it, which are hidden in the markup because they do nothing without them (the Readmissions page's own search is
+      // the same hidden box).
+      if (['hub', 'policy', 'coming', 'not-found', 'hrrp'].includes(type) || type.startsWith('hrrp-hospital')) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');
+        assert.ok(on.search.length > 0, 'the bar\'s search shows with scripts');
+        assert.deepEqual(off.search, [], 'and not without');
+        assert.equal(on.story.length > 0, path === '/' || type === 'hrrp', 'the story\'s search shows with scripts on the front page and the Readmissions page only');
+        assert.deepEqual(off.story, [], 'and not without');
+        const added = new Set([on.toggle, ...on.search]);
         const offLines = new Set(off.lines);
-        const lost = on.lines.filter((line) => line !== on.toggle && !offLines.has(line));
+        const lost = on.lines.filter((line) => !added.has(line) && !offLines.has(line));
         assert.deepEqual(lost, [], 'text that shows with scripts and not without');
       }
     });
+  }
+
+  // A hospital's page across the programs without scripts: its record, the net, each program's dollars and the headline
+  // show, and nothing the script fills shows as an empty frame (the swarm's frame, its caption, the load error, the
+  // toggle and the what-if's buttons). The variant (Maryland's) shows its record and status.
+  for (const { type, name, path } of PAGES.filter((p) => p.type.startsWith('hub-hospital'))) {
+    it(`${name}: the server's page is whole without scripts`, () => withPage(withoutJs, { path }, async (page) => {
+      const shown = (selector) => page.evaluate((s) => [...document.querySelectorAll(s)].map((el) => el.checkVisibility()), selector);
+      assert.deepEqual(await shown('main h1'), [true], 'the record\'s name');
+      if (type === 'hub-hospital-maryland') {
+        assert.deepEqual(await shown('.hh__status'), [true], 'the status');
+        assert.deepEqual(await shown('[data-swarm], #whatif, [data-peers]'), [], 'no swarm, what-if or peer row');
+        return;
+      }
+      for (const selector of ['.hh__big', '[data-headline]', '[data-result]']) assert.deepEqual(await shown(selector), [true], `${selector} shows`);
+      assert.deepEqual(await shown('.hh__sr'), [true, true, true, true], 'each program\'s dollars and the net');
+      for (const selector of ['[data-swarm]', '[data-swarm-note]', '[data-load-error]', '[data-peers] button', '[data-match]', '[data-reset]', '[data-strip]'])
+        assert.ok((await shown(selector)).every((v) => v === false), `${selector} does not show`);
+    }));
   }
 });

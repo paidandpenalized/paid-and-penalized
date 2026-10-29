@@ -1,14 +1,9 @@
-// The hub's words: the family's front page, the methods stub, the policy pages and the not-found page. No digit characters:
-// numbers never live in copy files.
+// The hub's words (the front page's are hub/home/copy.js): the methods stub, the policy pages and the not-found page.
+// No digit characters: numbers never live in copy files.
 import { typesetCopy } from '../web/render/components.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  homeTitle: 'Paid & Penalized',
-  tagline: 'Public Medicare data, made visible.',
-  homeDescription: 'Plain-language explainers for Medicare hospital payment programs, built from public CMS data.',
-  sitesHeading: 'Programs',
-
   methodsDescription: 'How this site turns CMS public data into its pages, and what it calls an estimate.',
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
@@ -26,6 +21,9 @@ export const COPY = typesetCopy({
   indexLabel: 'On this page',
   feedbackForm: 'feedback form',
   estimateLink: 'estimate',
+  // The estimate tag beside an estimated figure on the hub's pages (parts.js estimateTag): its word, and its link's name.
+  estimateTag: 'Estimate',
+  estimateTagLabel: 'Estimate: how this site estimates the dollars',
   linkedinLink: 'His profile is on LinkedIn',
   cloudflarePolicy: 'Cloudflare’s privacy policy',
   googlePolicy: 'Google’s privacy policy',

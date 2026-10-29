@@ -2,14 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
-import { SITE } from '../site.js';
+import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
 import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
+import { searchForm } from '../render/shell.js';
+import { textOf } from '../../pipeline/site/html.js';
+import { FUTURE_WORDS, chipOf, footerOf, headerOf, readerWords, testAssets } from '../../pipeline/test/helpers.js';
 
-const ASSETS = { css: '/assets/site.aaaaaaaa.css', js: { theme: '/assets/theme.bbbbbbbb.js' } };
+const ASSETS = testAssets({ css: '/assets/site.aaaaaaaa.css', js: { shell: '/assets/shell.bbbbbbbb.js' } });
 const PAGE = { title: 'A title', description: 'A description', path: '/hacrp/', body: html`<h1>Hello</h1>`, assets: ASSETS };
 
 test('html escapes every interpolation in text and in attributes', () => {
@@ -98,7 +101,7 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.match(out, /^<!doctype html>\n<html lang="en">/);
   assert.equal(out.match(/<header[ >]/g).length, 1);
   assert.equal(out.match(/<main[ >]/g).length, 1);
-  const header = /<header[\s\S]*?<\/header>/.exec(out)[0];
+  const header = headerOf(out);
   assert.ok(!/<h1/.test(header));
   assert.equal(out.match(/<h1/g).length, 1);
   assert.ok(out.includes('<meta charset="utf-8">'));
@@ -122,8 +125,230 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`href="${SITE.feedback.url}?`));
   assert.ok(out.includes('href="https://creativecommons.org/licenses/by/4.0/"'));
   assert.ok(out.includes('href="/methods/"'));
-  assert.ok(out.includes('Paid &amp; <span class="wordmark__pen">Penalized</span>'));
-  assert.match(out, /<button type="button" class="theme-toggle" aria-pressed="false" hidden>Dark mode<\/button>/);
+  // No h1, no drawing and no inline style in the header or the footer: icons are CSS masks (tokens.css).
+  for (const part of [header, footerOf(out)]) assert.doesNotMatch(part, /<h1|<svg|\sstyle=/);
+});
+
+// ---------- the shell: the family bar, the program tabs, the section menu, the short footer (render/shell.js) ----------
+// The tabs' links, in order: [href, its words (tags dropped), aria-current or null, the class].
+const tabsOf = (out) => [...headerOf(out).matchAll(/<a class="(tab[^"]*)" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>([\s\S]*?)<\/a>/g)]
+  .map(([, cls, href, current, inner]) => [href, inner.replace(/<[^>]+>/g, ''), current ? 'page' : null, cls]);
+// An invented hospital the shell follows (no real name or CCN).
+const FOLLOWED = { ccn: '990001', name: 'Exampleton <General> & Sons', net: -58430, inTdr: true };
+const SECTIONS = [{ id: 'how', label: 'How it works', href: '/hacrp/#how' }, { id: 'list', label: 'Every <one>', href: '/hacrp/#list' }];
+
+test('shell: one header, the skip link before it; the family bar runs wordmark, tagline, chip, then search and the theme toggle', () => {
+  const out = page(PAGE);
+  assert.equal(out.match(/<header[ >]/g).length, 1);
+  assert.ok(out.indexOf('<a class="skip" href="#main">') < out.indexOf('<header'));
+  const header = headerOf(out);
+  assert.match(header, /^<header class="topbar fam" data-hub-src="\/assets\/hub-hospitals\.test\.json">/);
+  // The wordmark: the compact mark a phone shows instead of the words, then the two words. Where the mark shows, the
+  // link's name starts with what it shows ("P&P, Paid & Penalized": WCAG 2.5.3, label in name); where the words show,
+  // the mark is not displayed and the name is the words.
+  assert.ok(header.includes('<a class="wordmark" href="/"><span class="wordmark__short">P&amp;<span class="wordmark__pen">P</span><span class="vh">, </span></span><span class="wordmark__lead">Paid &amp;</span> <span class="wordmark__pen">Penalized</span></a>'));
+  assert.ok(header.includes('<p class="fam__tag">Public Medicare data, made visible.</p>'));
+  assert.ok(header.includes('<button type="button" class="fam__find" aria-expanded="false" aria-controls="omni" hidden><span class="ico ico--search" aria-hidden="true"></span><span class="vh">Find a hospital or state</span></button>'));
+  assert.ok(header.includes('<button type="button" class="theme-toggle" aria-pressed="false" hidden><span class="ico ico--theme" aria-hidden="true"></span><span class="vh">Dark mode</span></button>'));
+  const at = (s) => header.indexOf(s);
+  const order = ['class="wordmark"', 'class="fam__tag"', 'class="chip"', 'class="fam__end"', 'class="fam__find"', 'class="theme-toggle"', 'class="wrap tabs"'].map(at);
+  assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `bar order ${order}`);
+  // The search slot holds the page's own search, between the find button and the toggle.
+  const searched = headerOf(page({ ...PAGE, search: html`<form id="s"></form>` }));
+  assert.ok(searched.indexOf('class="fam__find"') < searched.indexOf('<form id="s">') && searched.indexOf('<form id="s">') < searched.indexOf('class="theme-toggle"'));
+  // DOM order = visual order = tab order at every width: no flex or grid `order` in the shared styles.
+  for (const file of ['components.css', 'shell.css']) {
+    const css = readFileSync(`${REPO_ROOT}/web/styles/${file}`, 'utf8');
+    assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /(^|[\s;{])order\s*:/, file);
+  }
+});
+
+test('shell: on a phone the compact wordmark is a 44px target, as every control in the bar is', () => {
+  const css = readFileSync(`${REPO_ROOT}/web/styles/shell.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const at = css.indexOf('@media (max-width: 640px)');
+  assert.ok(at >= 0, 'the phone block');
+  // The block's text, braces balanced.
+  let i = css.indexOf('{', at) + 1;
+  for (let depth = 1; depth > 0; i++) depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
+  const phone = css.slice(at, i);
+  const rule = /(?:^|[\s}])\.wordmark\s*\{([^}]*)\}/.exec(phone)?.[1] ?? '';
+  assert.match(rule, /display:\s*inline-flex/);
+  assert.match(rule, /align-items:\s*center/);
+  assert.match(rule, /min-height:\s*44px/);
+});
+
+test('shell: the program tabs are All programs and the programs with dollar estimates, in the registry\'s order, the current one marked', () => {
+  const hub = tabsOf(page({ ...PAGE, path: '/' }));
+  assert.deepEqual(hub, [
+    ['/', 'All programs', 'page', 'tab'],
+    ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
+  ]);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp']);
+  const header = headerOf(page(PAGE));
+  assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
+  assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a></div></nav>'), 'the row ends at the last program with estimates');
+  // The programs under consideration have no tab, and the row no gap or label before where they were.
+  for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
+  assert.doesNotMatch(header, /tab--soon|tabs__gap/);
+  // On a program's pages its tab is current, and only it; on the placeholder page of a program under consideration none
+  // is (nor All programs), and on one with estimates (HVBP) its tab is.
+  const hacrp = tabsOf(page({ ...PAGE, program: 'hacrp' }));
+  assert.deepEqual(hacrp.filter(([, , current]) => current).map(([href]) => href), ['/hacrp/']);
+  const team = page({ ...PAGE, path: '/team/', program: 'team' });
+  assert.deepEqual(tabsOf(team).filter(([, , current]) => current), []);
+  assert.doesNotMatch(headerOf(team), /aria-current="page"/);
+  const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
+  assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
+  assert.throws(() => page({ ...PAGE, program: 'nope' }), /nope/);
+});
+
+test('shell: with a followed hospital, each tab opens that program\'s page for it, or the program\'s folder when it has none', () => {
+  const tabs = tabsOf(page({ ...PAGE, path: '/hacrp/hospital/990001/', program: 'hacrp', hospital: FOLLOWED }));
+  const href = (ab) => tabs.find(([, words]) => words.endsWith(ab))[0];
+  assert.equal(tabs[0][0], '/hospital/990001/', 'All programs is the hospital\'s own page');
+  assert.equal(href('HRRP'), '/hrrp/hospital/990001/');
+  assert.equal(href('HACRP'), '/hacrp/hospital/990001/');
+  assert.equal(href('HVBP'), '/hvbp/');
+  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs and the programs with estimates');
+  // Not in Thirty Day Readmissions: the Readmissions folder.
+  const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inTdr: false } }));
+  assert.equal(notTdr[1][0], '/hrrp/');
+});
+
+test('shell: a hospital the dollar file lacks (inHub false) has no page across the programs or in HACRP, so none is linked: their tabs open the folder, the chip\'s name is plain text', () => {
+  const out = page({ ...PAGE, path: '/hrrp/hospital/990001/', program: 'hrrp', hospital: { ...FOLLOWED, inHub: false } });
+  const tabs = tabsOf(out);
+  const href = (ab) => tabs.find(([, words]) => words.endsWith(ab))[0];
+  assert.equal(tabs[0][0], '/', 'All programs is the front page for a hospital without its own page');
+  assert.equal(href('HACRP'), '/hacrp/', 'hospital-acquired conditions is its folder');
+  assert.equal(href('HRRP'), '/hrrp/hospital/990001/', 'its Readmissions page stays linked');
+  assert.equal(href('HVBP'), '/hvbp/');
+  const header = headerOf(out);
+  assert.doesNotMatch(header, /href="\/hospital\//, 'no link to a page across the programs');
+  assert.doesNotMatch(header, /href="\/hacrp\/hospital\//, 'no link to a HACRP page');
+  const chip = chipOf(header);
+  assert.ok(chip.includes('<span class="chip__n"><span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span> <span class="chip__v"><span class="vh">Estimated FY2026 net: </span>−$58K</span></span>'), 'the name and net, not a link');
+  assert.ok(chip.includes('<a class="chip__x" href="/hrrp/" aria-label="Stop following Exampleton &lt;General&gt; &amp; Sons">×</a>'), 'stopping still leaves for the program\'s page');
+  assert.match(header, /^<header class="topbar fam" data-hub-src="[^"]+" data-hospital="990001">/, 'the header still names the hospital');
+});
+
+test('shell: the chip is empty and hidden without a hospital; with one it names it, signs its net and links to stop following', () => {
+  const plain = headerOf(page(PAGE));
+  assert.ok(plain.includes('<p class="chip" data-chip hidden></p>'));
+  assert.doesNotMatch(plain, /data-hospital/);
+  const followed = headerOf(page({ ...PAGE, path: '/hacrp/hospital/990001/', program: 'hacrp', hospital: FOLLOWED }));
+  assert.match(followed, /^<header class="topbar fam" data-hub-src="[^"]+" data-hospital="990001">/);
+  const chip = chipOf(followed);
+  assert.ok(chip, 'a chip, not hidden');
+  assert.ok(chip.includes('<span class="chip__k">Hospital</span>'));
+  assert.ok(chip.includes('<a class="chip__n" href="/hospital/990001/"><span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span>'));
+  assert.match(chip, /<span class="chip__v"><span class="vh">Estimated FY2026 net: <\/span>−\$58K<\/span>/);
+  // Stopping leaves the hospital's page for the same program's page without one (its folder; the family's front page
+  // on the hub).
+  assert.ok(chip.includes('<a class="chip__x" href="/hacrp/" aria-label="Stop following Exampleton &lt;General&gt; &amp; Sons">×</a>'));
+  const hubChip = headerOf(page({ ...PAGE, path: '/hospital/990001/', hospital: FOLLOWED }));
+  assert.match(hubChip, /<a class="chip__x" href="\/"/);
+  // A positive net carries its plus; no estimate (null) shows no figure, never $0 or NaN.
+  assert.match(headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: 48000 } })), /<\/span>\+\$48K<\/span>/);
+  const none = headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: null } }));
+  assert.doesNotMatch(none, /chip__v|NaN|\$0/);
+});
+
+test('shell: the numbered section menu only when the page gives sections, the current one marked', () => {
+  assert.doesNotMatch(headerOf(page(PAGE)), /fam__sub|data-nav/);
+  const header = headerOf(page({ ...PAGE, program: 'hacrp', sections: SECTIONS, current: 'list' }));
+  assert.ok(header.includes('<div class="wrap fam__sub"><nav class="nav" aria-label="Sections"><ol>'));
+  assert.ok(header.includes('<li><a href="/hacrp/#how" data-nav="how"><span class="nav__num">1</span>How it works</a></li>'));
+  assert.ok(header.includes('<li><a href="/hacrp/#list" data-nav="list" aria-current="true"><span class="nav__num">2</span>Every &lt;one&gt;</a></li>'));
+  assert.ok(header.indexOf('class="wrap tabs"') < header.indexOf('class="wrap fam__sub"'), 'under the tabs');
+  assert.doesNotMatch(headerOf(page({ ...PAGE, sections: SECTIONS })), /aria-current="true"/, 'no current section given');
+  assert.throws(() => page({ ...PAGE, sections: SECTIONS, current: 'nope' }), /nope/);
+  assert.throws(() => page({ ...PAGE, sections: [] }), TypeError);
+});
+
+test('shell: two theme toggles, one in the bar and one in the footer (the CSS shows exactly one at any width)', () => {
+  const out = page(PAGE);
+  assert.equal(out.match(/<button type="button" class="theme-toggle" aria-pressed="false" hidden>/g).length, 2);
+  assert.equal(headerOf(out).match(/class="theme-toggle"/g).length, 1);
+  assert.equal(footerOf(out).match(/class="theme-toggle"/g).length, 1);
+});
+
+test('shell: the footer is one numbered form row (programs, the site, data as of, feedback), then the signature lines', () => {
+  const foot = footerOf(page(PAGE));
+  assert.match(foot, /^<footer class="foot">/);
+  assert.ok(foot.includes('<div class="form ft">'));
+  const labels = [...foot.matchAll(/<span class="field__no">(\d)<\/span>([^<]+)</g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(labels, [['1', 'Programs'], ['2', 'The site'], ['3', 'Data as of'], ['4', 'Feedback']]);
+  // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the ones under
+  // consideration, linked to their placeholder pages.
+  for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
+    assert.match(foot, new RegExp(`<a href="${href}">${name} <span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
+  }
+  const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
+  assert.ok(considered.startsWith('Under consideration: '));
+  assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
+    UNLISTED_PROGRAMS.map((p) => [p.path, p.ab]));
+  // Each "·" is held to the program after it (a no-wrap span), so a wrapped line never ends on one.
+  const held = considered.match(/<span class="nw">· <a href="[^"]+" title="[^"]+">[^<]+<\/a><\/span>/g) ?? [];
+  assert.equal(held.length, UNLISTED_PROGRAMS.length - 1);
+  assert.ok(!held.reduce((rest, part) => rest.replace(part, ''), considered).includes('·'), 'no separator outside a held pair');
+  // 2: the family's pages, Methods first, Terms last.
+  const site = [...foot.matchAll(/<li><a href="(\/[a-z]+\/)">([^<]+)<\/a><\/li>/g)].map((m) => m[1]);
+  assert.deepEqual(site, ['/methods/', '/about/', '/corrections/', '/accessibility/', '/privacy/', '/terms/']);
+  // 3: the fiscal year, the hospitals with an estimate, and the day the estimates last changed, with the corrections page.
+  const words = textOf(foot);
+  assert.ok(words.includes('FY2026 estimates from public CMS files, 3 hospitals.'));
+  assert.ok(words.includes('Estimates last changed October 22, 2026'));
+  assert.match(foot, /<a href="\/corrections\/">Dates and corrections<\/a>/);
+  // 4: the one feedback link, prefilled with the page, and what it opens.
+  assert.equal(foot.match(new RegExp(`<a href="${SITE.feedback.url.replace(/[.?]/g, '\\$&')}`, 'g')).length, 1);
+  assert.ok(words.includes('Opens a Google Form.'));
+  assert.doesNotMatch(words, /patient information\. Don|include any patient/i, 'the patient-information line stays dropped');
+  // The signature lines: the byline and the credit, the affiliation, the Terms line, the license, the form number.
+  assert.ok(foot.includes(`<p>Built by ${externalLink(SITE.linkedin, html`<span class="nw">Dalton Haslam, MD, MBA</span>`)} · Built with Claude Code</p>`));
+  assert.ok(foot.includes(`<p>${escapeHtml(COPY.affiliation)}</p>`));
+  assert.ok(foot.includes('<p>Nothing here is medical, legal or financial advice. <a href="/terms/">Terms of use</a></p>'));
+  assert.ok(foot.includes(`<p>Text licensed ${externalLink(SITE.license.content.url, 'CC BY 4.0', { rel: 'license noopener' })}</p>`));
+  assert.ok(foot.includes('<p class="ft__form">Form P&amp;P-26 · FY2026</p>'));
+  assert.ok(foot.indexOf('class="ft__base"') > foot.indexOf('class="form ft"'));
+});
+
+test('shell: a listed program with no figure in the shell\'s facts stops the page with a message naming it (never a bare TypeError)', () => {
+  const { shell } = ASSETS;
+  for (const p of LISTED_PROGRAMS) {
+    const programs = Object.fromEntries(Object.entries(shell.programs).filter(([id]) => id !== p.id));
+    const bad = { ...ASSETS, shell: { ...shell, programs } };
+    assert.throws(() => page({ ...PAGE, assets: bad }), (e) => e instanceof RangeError && /^familyFooter: /.test(e.message) && e.message.includes(`"${p.id}"`), p.id);
+  }
+});
+
+test('shell: header and footer show no email address and promise no reply, fix or deletion, and no program, page or date', () => {
+  // The house words' promise patterns (web/test/house-words.test.js), over what the shell shows and says.
+  const PROMISES = [/\b(within|business days?|promptly|as soon as)\b/i, /\bwe will (reply|respond|fix|delete)\b/i, /\b(delete|remove) your\b/i, FUTURE_WORDS];
+  for (const out of [page({ ...PAGE, program: 'hacrp', hospital: FOLLOWED, sections: SECTIONS }), page({ ...PAGE, path: '/team/', program: 'team' })]) {
+    for (const part of [headerOf(out), footerOf(out)]) {
+      const words = readerWords(part);
+      assert.doesNotMatch(words, /@/, 'no email address');
+      for (const re of PROMISES) assert.doesNotMatch(words, re);
+    }
+  }
+});
+
+test('searchForm: a combobox over a data asset, hidden until its script shows it; the hero\'s larger box has its own ids', () => {
+  const words = { src: '/assets/x.json', label: 'Find a <thing>', find: 'Find', findRest: 'a thing by name', placeholder: 'Thing or place' };
+  const bar = String(searchForm({ id: 'omni', ...words }));
+  assert.equal(bar, `<form class="omni" id="omni" role="search" aria-label="Find a &lt;thing&gt;" data-src="/assets/x.json" hidden>
+<label class="omni__field" for="omni-q"><span class="omni__label cap">Find<span class="vh"> a thing by name</span></span><input id="omni-q" type="search" role="combobox" aria-expanded="false" aria-controls="omni-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Thing or place"></label>
+<ul class="omni__list" id="omni-list" role="listbox" aria-label="Find a &lt;thing&gt;" hidden></ul>
+<p class="vh" role="status" aria-live="polite"></p>
+</form>`);
+  const hero = String(searchForm({ id: 'hero', hero: true, ...words }));
+  assert.match(hero, /^<form class="omni omni--hero" id="hero" role="search"/);
+  assert.match(hero, /for="hero-q"[\s\S]*id="hero-list"/);
+  // A search over the hub's hospitals and states is marked for the hub's search script; others are not.
+  assert.match(String(searchForm({ id: 'find', hero: true, hub: true, ...words })), /^<form class="omni omni--hero" id="find" role="search" aria-label="[^"]*" data-src="\/assets\/x\.json" data-hub hidden>/);
+  assert.doesNotMatch(bar + hero, /data-hub/);
 });
 
 // The feedback link's href as the browser reads it: the page's HTML attribute, unescaped, parsed as a URL.
@@ -165,7 +390,7 @@ test("page: the feedback link prefills the program's title and the page's canoni
   assert.ok(!missing.searchParams.has(PAGE_ENTRY));
   // The link is built at page-build time, so it works without scripts, and opens in a new tab as it did. The one test
   // that spells out an external link's markup (externalLink); every other test compares with the helper's output.
-  assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
+  assert.match(page(PAGE), /<a href="[^"]*" target="_blank" rel="noopener">Send feedback<span class="ico ico--arrow" aria-hidden="true"><\/span><span class="vh"> \(opens in a new tab\)<\/span><\/a>/);
 });
 
 test('feedbackFor: the one prefill, the page\'s site (the family\'s on the hub\'s pages) and its canonical address or none; the footer uses it', () => {
@@ -176,44 +401,38 @@ test('feedbackFor: the one prefill, the page\'s site (the family\'s on the hub\'
   assert.ok(page(PAGE).includes(`href="${escapeHtml(feedbackFor({ path: PAGE.path }))}"`));
 });
 
-test('page: the footer has the Terms line and the policy links', () => {
-  const foot = /<footer[\s\S]*?<\/footer>/.exec(page(PAGE))[0];
-  assert.ok(foot.includes(`${COPY.termsShort} <a href="/terms/">${COPY.termsLink}</a>`));
-  for (const [href, label] of [['/privacy/', COPY.privacy], ['/corrections/', COPY.corrections], ['/about/', COPY.about],
-    ['/accessibility/', COPY.accessibility], ['/methods/', COPY.methods]]) {
-    assert.ok(foot.includes(`<a href="${href}">${label}</a>`), href);
-  }
-  // The affiliation line, the credit and the license stay.
-  assert.ok(foot.includes(escapeHtml(COPY.affiliation)));
-  assert.ok(foot.includes(COPY.builtWith));
-  assert.ok(foot.includes('rel="license noopener"'));
-});
-
 test('page: the footer uses no inline style (a strict CSP forbids it)', () => {
   assert.doesNotMatch(page(PAGE), /\sstyle=/);
 });
 
-test('page: the header runs wordmark, byline, theme toggle in the markup, and the CSS never reorders it', () => {
-  const header = /<header[\s\S]*?<\/header>/.exec(page(PAGE))[0];
-  const at = (s) => header.indexOf(s);
-  assert.ok(at('class="wordmark"') < at('class="byline"') && at('class="byline"') < at('class="theme-toggle"'));
-  // DOM order = visual order = tab order at every width: no flex `order` anywhere in the shared styles.
-  const css = readFileSync(`${REPO_ROOT}/web/styles/components.css`, 'utf8');
-  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /(^|[\s;{])order\s*:/);
-});
-
-test('page: the theme script always loads, extra scripts follow, and robots and JSON-LD appear only when given', () => {
+test('page: the shell script and then the sticky header\'s always load first, extra scripts follow, and robots and JSON-LD appear only when given', () => {
   const plain = page(PAGE);
   assert.ok(!plain.includes('name="robots"'));
   assert.ok(!plain.includes('ld+json'));
-  assert.equal(plain.match(/<script /g).length, 1);
-  assert.ok(plain.includes('<script type="module" src="/assets/theme.bbbbbbbb.js"></script>'));
+  assert.deepEqual([...plain.matchAll(/<script type="module" src="([^"]+)"><\/script>/g)].map((m) => m[1]), ['/assets/shell.bbbbbbbb.js', ASSETS.js.topbar]);
+  assert.equal(plain.match(/<script /g).length, 2);
 
   const full = page({ ...PAGE, robots: 'noindex', scripts: ['/assets/hacrp.cccccccc.js'], jsonLd: { name: '</script>' } });
   assert.ok(full.includes('<meta name="robots" content="noindex">'));
-  assert.ok(full.indexOf('theme.bbbbbbbb.js') < full.indexOf('hacrp.cccccccc.js'));
+  assert.ok(full.indexOf('shell.bbbbbbbb.js') < full.indexOf(ASSETS.js.topbar) && full.indexOf(ASSETS.js.topbar) < full.indexOf('hacrp.cccccccc.js'));
+  // A page does not list them again.
+  for (const src of [ASSETS.js.shell, ASSETS.js.topbar]) assert.throws(() => page({ ...PAGE, scripts: [src] }), TypeError);
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(full)[1];
   assert.deepEqual(JSON.parse(ld), { name: '</script>' });
+});
+
+test('page: links the shared stylesheet alone, or it and then each named sheet in order; an unknown name throws', () => {
+  const links = (out) => [...out.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
+  assert.deepEqual(links(page(PAGE)), [ASSETS.css]);
+  assert.deepEqual(links(page({ ...PAGE, sheets: ['hub'] })), [ASSETS.css, ASSETS.sheets.hub]);
+  const assets = { ...ASSETS, sheets: { hub: '/assets/hub.dddddddd.css', more: '/assets/more.eeeeeeee.css' } };
+  assert.deepEqual(links(page({ ...PAGE, assets, sheets: ['more', 'hub'] })), [ASSETS.css, '/assets/more.eeeeeeee.css', '/assets/hub.dddddddd.css']);
+  // Both in the head, before the body's first element.
+  assert.ok(page({ ...PAGE, sheets: ['hub'] }).indexOf(ASSETS.sheets.hub) < page({ ...PAGE, sheets: ['hub'] }).indexOf('</head>'));
+  for (const name of ['nope', 'constructor', '__proto__', '']) {
+    assert.throws(() => page({ ...PAGE, sheets: [name] }), (err) => err instanceof TypeError && /stylesheet/.test(err.message), name);
+  }
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, sheets: undefined }, sheets: ['hub'] }), TypeError);
 });
 
 test('page: hostile title, description and path-free text render as text; a plain-string body is escaped', () => {
@@ -226,7 +445,11 @@ test('page: hostile title, description and path-free text render as text; a plai
 test('page rejects missing parts and a path without a leading slash', () => {
   assert.throws(() => page({ ...PAGE, path: 'hacrp/' }), RangeError);
   assert.throws(() => page({ ...PAGE, title: '' }), TypeError);
-  assert.throws(() => page({ ...PAGE, assets: { css: '/x.css', js: {} } }), TypeError);
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, js: {} } }), TypeError);
+  for (const shell of [undefined, null]) {
+    assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, shell } }), (err) => err instanceof TypeError && /shell/.test(err.message));
+  }
+  assert.ok(page(PAGE).includes('<h1>Hello</h1>'), 'with the shell\'s facts it renders');
   assert.throws(() => page({ ...PAGE, scripts: [undefined] }), /script/, 'a script path the assets lack');
 });
 
@@ -235,38 +458,6 @@ test('page preloads the default fonts unless the page names its own; a font name
   assert.deepEqual(preloads(page(PAGE)), ['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400']);
   assert.deepEqual(preloads(page({ ...PAGE, preloadFonts: ['ibm-plex-mono-700'] })), ['ibm-plex-mono-700']);
   assert.throws(() => page({ ...PAGE, preloadFonts: ['../x'] }), TypeError);
-});
-
-test('theme.js stores nothing and sets only data-theme', () => {
-  const src = readFileSync(REPO_ROOT + 'web/client/theme.js', 'utf8');
-  for (const word of ['localStorage', 'sessionStorage', 'cookie', 'indexedDB']) assert.ok(!src.includes(word), word);
-  assert.match(src, /dataset\.theme/);
-});
-
-test('theme.js flips data-theme from the device preference and keeps aria-pressed in step', async () => {
-  const attrs = {};
-  const clicks = [];
-  const button = { hidden: true, setAttribute: (k, v) => { attrs[k] = v; }, addEventListener: (_, fn) => clicks.push(fn) };
-  const root = { dataset: {} };
-  const query = { matches: true, addEventListener() {} };
-  const saved = { document: globalThis.document, window: globalThis.window };
-  globalThis.document = { documentElement: root, querySelector: (s) => (s === '.theme-toggle' ? button : null) };
-  globalThis.window = { matchMedia: () => query };
-  try {
-    await import('../client/theme.js');
-  } finally {
-    Object.assign(globalThis, saved);
-    if (saved.document === undefined) delete globalThis.document;
-    if (saved.window === undefined) delete globalThis.window;
-  }
-  assert.equal(button.hidden, false);
-  assert.equal(attrs['aria-pressed'], 'true');
-  clicks[0]();
-  assert.equal(root.dataset.theme, 'light');
-  assert.equal(attrs['aria-pressed'], 'false');
-  clicks[0]();
-  assert.equal(root.dataset.theme, 'dark');
-  assert.equal(attrs['aria-pressed'], 'true');
 });
 
 test('fillCopy fills plain-string and { text } entries and refuses a missing, unused or unformatted value', () => {
@@ -384,28 +575,6 @@ test('markdownSections: a second "# " title, two "## " headings with one id and 
   }
   // One title and headings that differ are fine.
   assert.deepEqual(markdownSections('# T\n\n## A b\n\n## A-c\n', { idPrefix: 'd' }).sections.map((x) => x.id), ['d-a-b', 'd-a-c']);
-});
-
-test('programHeader: the small mark to /, the name and edition tag, the search slot, the toggle, then the numbered nav and the byline', async () => {
-  const { programHeader } = await import('../render/layout.js');
-  const nav = [{ id: 'how', label: 'How it works', href: '/x/#how' }, { id: 'list', label: 'Every <one>', href: '/x/#list' }];
-  const header = String(programHeader({ name: 'A program', href: '/x/', tag: 'AP · FY2026', nav, current: 'list', search: html`<form id="s"></form>` }));
-  const at = (s) => header.indexOf(s);
-  assert.ok(at('class="pp-mark" href="/"') < at('class="program-mark" href="/x/"'));
-  assert.ok(at('program-mark') < at('<form id="s">') && at('<form id="s">') < at('class="theme-toggle"'));
-  assert.ok(at('class="theme-toggle"') < at('<nav class="nav" aria-label="Sections">') && at('<nav') < at('class="byline"'));
-  assert.ok(header.includes('P&amp;<span class="pp-mark__pen">P</span><span class="vh"> Paid &amp; Penalized home</span>'), 'the last P in the penalty red, P& in ink');
-  assert.ok(header.includes('<span class="wordmark__name">A program</span> <span class="wordmark__tag">AP · FY2026</span>'));
-  assert.ok(header.includes('<li><a href="/x/#how" data-nav="how"><span class="nav__num">1</span>How it works</a></li>'));
-  assert.ok(header.includes('<li><a href="/x/#list" data-nav="list" aria-current="true"><span class="nav__num">2</span>Every &lt;one&gt;</a></li>'));
-  assert.ok(!/<h1/.test(header));
-  assert.throws(() => programHeader({ name: 'A', href: '/x/', tag: 't', nav, current: 'nope' }), /nope/);
-  assert.throws(() => programHeader({ name: 'A', href: '/x/', tag: 't', nav: [] }), TypeError);
-  // In a page, it stands in for the family's masthead: still one header, the byline once.
-  const out = page({ ...PAGE, topbar: programHeader({ name: 'A', href: '/x/', tag: 't', nav }) });
-  assert.equal(out.match(/<header[ >]/g).length, 1);
-  assert.ok(!out.includes('class="masthead"'));
-  assert.equal(out.match(/class="byline"/g).length, 1);
 });
 
 test('topbar.js: the section in view is the last whose top has passed the line, else the first', async () => {

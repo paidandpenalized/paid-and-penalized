@@ -47,7 +47,7 @@ test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every li
 
 test('headersFor: hashed scripts, styles and data are immutable; fonts and the favicon are cached a week, not immutable', () => {
   const rules = parseHeaders(headersFile({ env: 'production' }));
-  for (const path of ['/assets/site.ab12cd34.css', '/assets/theme.0123abcd.js', '/assets/hacrp-hospitals.e1ebc9c2.json']) {
+  for (const path of ['/assets/site.ab12cd34.css', '/assets/shell.0123abcd.js', '/assets/hacrp-hospitals.e1ebc9c2.json']) {
     assert.equal(headersFor(rules, path)['cache-control'], IMMUTABLE, path);
   }
   for (const path of ['/assets/fonts/x.woff2', '/assets/fonts/OFL-x.txt', '/favicon.svg']) {

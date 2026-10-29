@@ -1,0 +1,835 @@
+/* The hub's own pages (hub/), in a stylesheet of their own (/assets/hub.<hash>.css) that every hub page links after the
+   shared one (web/styles/) and no program site's page loads; nor does a hub page load a program site's. Tokens only
+   (tokens.css); no color is written here, and no theme: the dark tokens, their copy for the theme button and the print
+   block are the shared stylesheet's, and reach these rules through the custom properties. Each page's rules sit under
+   its root: the home page's generic class names (.step, .num, .card, .st, ...) are scoped to its story, the hospital
+   page's under .hh, the interim Readmissions pages' under .rd.
+
+   The home page (hub/home/): the masthead hero, then the story. Without its script the story is complete: on a wide
+   screen the steps' words scroll in a column between the rail and the stage, and each of the stage's two charts sticks
+   beside the steps it belongs to (the scale bar beside steps 0 to 5, the states map beside 6 to 8: the stage's own box
+   is dropped, so its panels sit in the story's grid rows); on a phone the charts sit between the steps. */
+
+/* ---------- the hero: the wordmark across the page, the tagline and byline between rules, a heavy break rule ---------- */
+.hero { padding-top: 34px; }
+.hero__in { container-type: inline-size; }
+.hero__mark { margin: 0; color: var(--ink); font: 400 19.5cqi/1 var(--font-display); letter-spacing: -0.015em; }
+.hero__mark > span { display: block; width: max-content; }
+.hero__m2 { margin-top: -0.08em; color: var(--pen); }
+@media (min-width: 560px) {
+  .hero__mark { font-size: 11.5cqi; white-space: nowrap; }
+  .hero__mark > span { display: inline-block; }
+  .hero__m2 { margin-top: 0; }
+}
+.hero__strip { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 24px; margin-top: 18px; padding-block: 9px; border-block: 1px solid var(--ink); }
+.hero__tag { color: var(--pen-ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.hero__by { color: var(--ink-2); font: 400 var(--fs-sm)/1.45 var(--font-type); }
+.hero__by a { color: var(--ink); text-decoration-color: var(--pen); }
+.hero__rule { margin: 22px 0 0; border: 0; border-top: 5px double var(--ink); }
+/* The masthead's trip into the header (hub/client/story/dock.js sets the classes and each word's transform). While the
+   words are away from home they draw over the sticky header (.fam, z-index 20; nothing between them and the page's
+   root makes a stacking context), haloed in the paper so the tabs they cross don't run into their letters (a box of
+   paper would show against the page's grain), and take no pointer. */
+/* The header's side of the trip: while the masthead travels up into the bar, the bar's wordmark waits hidden and the
+   tagline steps back; both show once it docks. Print shows the wordmark as it rests (the script's inline styles win
+   without !important).
+   Before the script takes over (it marks the root .dock-ready), the page still shows one wordmark, the masthead's: with
+   scripts on, the bar's wordmark and tagline wait hidden from the first paint, as the trip's start has them. Where the
+   browser runs an animation on the page's scroll, they also show once the masthead has scrolled up under the header, so
+   with scripts off (or a reader scrolling before the script runs) the header is never without them; a browser that
+   can't, with scripts off, shows both wordmarks. */
+.fam__tag { transition: opacity 0.3s; }
+.dock-trip .fam .wordmark { visibility: hidden; }
+.dock-trip .fam__tag { opacity: 0; }
+@media (scripting: enabled) { html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { visibility: hidden; } }
+@supports (animation-timeline: scroll()) {
+  html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { animation: dock-show auto linear both; animation-timeline: scroll(root); animation-range: 100px 160px; }
+  @media (prefers-reduced-motion: reduce) { html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { animation-timing-function: steps(1, end); } }
+}
+@keyframes dock-show { from { visibility: hidden; opacity: 0; } to { visibility: visible; opacity: 1; } }
+@media print {
+  .dock-trip .fam .wordmark, html:not(.dock-ready):has(.hero__mark) :is(.fam .wordmark, .fam__tag) { visibility: visible !important; opacity: 1 !important; animation: none; }
+  .dock-trip .fam__tag { opacity: 1; }
+}
+.hero__mark > span { transform-origin: 0 0; }
+.dock-moving .hero__mark { position: relative; z-index: 21; pointer-events: none; }
+.dock-moving .hero__mark > span { text-shadow: 0 0 0.03em var(--paper), 0 0 0.03em var(--paper), 0 0 0.03em var(--paper); will-change: transform, opacity; }
+
+/* ---------- the story: the rail, the steps' column and the stage, on the page's grid ---------- */
+/* --stage-top: where the rail and the charts stick, under the sticky header (its height, from web/client/topbar.js, or
+   about the header's height without that script). */
+.story {
+  --stage-top: var(--sticky-top, 100px);
+  --railw: 150px;
+  --textw: 400px;
+  display: grid;
+  grid-template-columns: var(--railw) var(--textw) minmax(0, 1fr);
+  grid-template-rows: repeat(9, auto);
+  max-width: var(--page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.story > * { min-width: 0; }
+
+/* The rail: the steps by name, a link to each, centred in the window beside the steps. */
+.railbox { grid-column: 1; grid-row: 1 / -1; position: sticky; top: var(--stage-top); align-self: start; display: flex; align-items: center; height: calc(100vh - var(--stage-top)); }
+.story .rail { margin: 0; padding: 0; border-left: 1px solid var(--line); list-style: none; }
+.story .rail li { position: relative; max-width: none; }
+.story .rail a { display: block; min-height: var(--target-min); padding: 6px 12px 6px 14px; color: var(--ink-3); font: 400 0.8125rem/1.2 var(--font-body); text-decoration: none; white-space: nowrap; }
+.story .rail a::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: -1px; width: 2px; }
+.story .rail a:hover { color: var(--ink); }
+.story .rail a[aria-current="step"] { color: var(--ink); font-weight: 600; }
+.story .rail a[aria-current="step"]::before { background: var(--pen); }
+
+/* The steps: a heading in the display face over a short column of words, each step about a window tall. */
+.story > .step { grid-column: 2; min-height: 92vh; padding: 32vh 40px 0 0; }
+.story > .step[data-step="0"] { min-height: 70vh; padding-top: 44px; }
+.story > .step[data-step="8"] { min-height: calc(100vh - var(--stage-top)); padding-top: 9vh; padding-bottom: 12vh; }
+.step__in { max-width: 22em; }
+.step__in h2 { margin-bottom: 16px; font: 400 var(--fs-xl)/1.14 var(--font-display); letter-spacing: 0.003em; }
+.step__in > p { margin-bottom: 14px; color: var(--ink-2); }
+.step__in .num { color: var(--ink); font-weight: 700; }
+.step__in .num--pen { color: var(--pen-ink); }
+.step__in > .cue { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink); font: 600 0.875rem/1.3 var(--font-body); }
+.cue__line { position: relative; flex: none; width: 1px; height: 30px; background: var(--ink); }
+.cue__line::after { content: ""; position: absolute; bottom: 0; left: -3px; border: 3.5px solid transparent; border-top: 5px solid var(--ink); border-bottom: 0; }
+.step__in > .asof-line { margin-top: 20px; color: var(--ink-3); font: 400 0.78125rem/1.5 var(--font-type); }
+
+/* ---------- the stage: its charts, each sticking beside its steps ---------- */
+/* A panel fills its steps' rows; the chart in it (its pin) sticks within the panel, so it leaves with its last step. */
+.story > .stage { display: contents; }
+.stage__panel { grid-column: 3; min-width: 0; }
+.stage__panel--bar { grid-row: 1 / 7; }
+.stage__panel--map { grid-row: 7 / -1; }
+.stage__pin { position: sticky; top: var(--stage-top); display: flex; flex-direction: column; justify-content: center; height: calc(100vh - var(--stage-top)); }
+.stage__panel--bar > .stage__pin { padding-bottom: 8vh; }
+
+/* The scale bar (hub/home/bar.js): its words are HTML around a drawing that is graphics only. */
+.sbar { margin: 0; }
+.sbar__cap { max-width: none; color: var(--ink-3); font: 400 0.8125rem/1.4 var(--font-body); }
+.sbar__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; max-width: none; margin-top: 4px; }
+.sbar__pay { color: var(--ink); font: 400 1.75rem/1.15 var(--font-type); }
+.sbar__moved { text-align: right; }
+.sbar__mv { color: var(--pen-ink); font: 400 1.0625rem/1.2 var(--font-type); }
+.sbar__by { display: block; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
+.sbar__draw { position: relative; margin-top: 6px; }
+.sbar__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sbar__frame { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.sbar__sliver, .sbar__np { fill: var(--pen); }
+.sbar__bo { fill: var(--rew); }
+.sbar__mag { fill: none; stroke: var(--pen); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+/* The bar's dots (web/charts/dots.js): the chart kit's rules for them, which the hub's pages do not load (the kit rides
+   in a program site's sheet: pipeline/site/assets.js KIT_STYLES). */
+.sbar .chart-dots { fill: none; stroke-linecap: round; }
+.sbar .chart-dots--ink { stroke: var(--ink-2); }
+.sbar__x { position: absolute; top: calc(var(--my) * 100%); right: calc((1 - var(--mx)) * 100% + 8px); color: var(--ink-3); font: 400 0.75rem/1 var(--font-type); transform: translateY(-50%); }
+.sbar__split { display: flex; justify-content: space-between; gap: 4px 16px; margin: 6px 0 0 calc(var(--mx) * 100%); }
+.sbar__part { max-width: none; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
+.sbar__part:first-child { flex: none; }
+.sbar__part--end { text-align: right; }
+.sbar__v { display: block; color: var(--ink); font: 400 0.9375rem/1.3 var(--font-type); }
+.sbar__v--pen { color: var(--pen-ink); }
+
+/* The states map (hub/home/states.js): the land in --paper-2, each state over it in its meaning ink at its step's
+   opacity (--t), Maryland hatched; the readout over it, the key and the small states' buttons under it. */
+.smapfig { display: flex; flex-direction: column; gap: 10px; }
+.story .readout { max-width: none; min-height: 2.7em; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.35; }
+.smap { display: block; width: 100%; height: auto; max-height: calc(100vh - var(--stage-top) - 13rem); overflow: visible; }
+.smap__land { fill: var(--paper-2); }
+.story .st { fill-opacity: var(--t); stroke: var(--paper); stroke-width: 1px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.story .st--pen { fill: var(--pen); }
+.story .st--rew { fill: var(--rew); }
+.story .st--zero { fill: none; }
+.story .st--md { fill: url(#smap-hatch); }
+.smap__hatch-bg { fill: var(--paper-2); }
+.smap__hatch { stroke: var(--ink-3); stroke-width: 1.2px; }
+.mapfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
+.dkey { color: var(--ink-3); font-size: 0.75rem; line-height: 1.35; }
+.dkey__t { max-width: none; margin-bottom: 5px; color: var(--ink-2); }
+/* The key's short title stands in on the narrowest phones, where the full one takes two lines. */
+.dkey__short { display: none; }
+@media (max-width: 360px) {
+  .dkey__long { display: none; }
+  .dkey__short { display: inline; }
+}
+.dkey__g { display: block; width: 240px; height: 10px; }
+/* The scale's three words: the ends at its ends and "0%" centred under its middle, whatever the end words' widths. */
+.dkey__s { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); width: 240px; margin-top: 4px; font: 400 var(--fs-xs)/1.3 var(--font-type); white-space: nowrap; }
+.dkey__s > :last-child { justify-self: end; }
+.dkey__md { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+.dkey__hatch { flex: none; width: 14px; height: 10px; background: var(--hatch-fill), var(--paper-2); box-shadow: inset 0 0 0 1px var(--line); }
+.smalls { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; max-width: 330px; }
+.smalls[hidden] { display: none; }
+.smalls__cap { width: 100%; color: var(--ink-3); font-size: 0.75rem; text-align: right; }
+.story .sb { position: relative; width: 32px; height: var(--target-min); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 2px; background: var(--paper-2); color: var(--ink); font: 600 0.6875rem/1 var(--font-type); cursor: pointer; }
+.story .sb::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 4px; background: var(--pen); opacity: var(--t); }
+.story .sb--rew::after { background: var(--rew); }
+.story .sb--md::after { background: var(--hatch-fill); opacity: 1; }
+.story .sb--zero::after { content: none; }
+
+/* The peer toggle the last step's chart wears (the script shows it). */
+.story .peers { display: flex; align-items: center; gap: 10px; }
+.story .peers[hidden] { display: none; }
+.peers__lbl { color: var(--ink-3); font-size: 0.8125rem; }
+.story .seg { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: 2px; }
+.story .seg button { min-height: var(--target-min); padding: 6px 11px; border: 0; background: var(--paper); color: var(--ink-2); font: 600 0.78125rem/1 var(--font-body); cursor: pointer; }
+.story .seg button + button { border-left: 1px solid var(--line); }
+.story .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* ---------- the last step: the search over the hub's hospitals and the example card ---------- */
+.story .omni--hero { margin-top: 4px; }
+.story .omni--hero input { padding: 11px 14px; font-size: 1.0625rem; }
+.story .card { max-width: 380px; margin-top: 22px; padding-top: 12px; border-top: var(--rule) solid var(--ink); color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.card__ex { margin-bottom: 6px; color: var(--ink-3); font-size: 0.78125rem; }
+/* The hint points at the search, so it shows only with it. */
+.story .omni[hidden] + .card .card__hint { display: none; }
+/* A followed hospital without an estimate (hub/client/story/find.js statusModel): its status stamped where the net goes and
+   why under it, as its own page has them; no figures, so no rows, no peers and no pointer to them. */
+.story .card--none :is(.card__rows, .card__peer, .card__next) { display: none; }
+.story .card__net .stamp { margin: 8px 0 12px 2px; font-size: 1rem; }
+.card__nm { color: var(--ink); font: 700 1.125rem/1.25 var(--font-body); }
+.card__loc { margin: 2px 0 10px; color: var(--ink-3); font-size: 0.8125rem; }
+.card__net { color: var(--ink); font: 400 1.5rem/1.1 var(--font-type); }
+.card__pct.v--pen { color: var(--pen-ink); }
+.card__usd { font-size: 0.9375rem; }
+.card__netl { margin: 3px 0 10px; color: var(--ink-3); font-size: 0.78125rem; }
+.card__rows { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 14px; margin: 0; padding: 8px 0; border-block: 1px solid var(--line); }
+.card__row { display: contents; }
+.card__rows dd { max-width: none; margin: 0; color: var(--ink); font: 400 0.8125rem/1.45 var(--font-type); text-align: right; white-space: nowrap; }
+.card__rows .v--pen { color: var(--pen-ink); }
+.card__rows .v--na { color: var(--ink-3); font-family: var(--font-body); }
+.card__peer { margin: 10px 0 8px; }
+.card__next { margin-bottom: 12px; color: var(--ink-3); font-size: 0.78125rem; }
+.card__go { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-h); padding: 10px 14px; border: var(--rule) solid var(--ink); background: var(--paper); color: var(--ink); font: 700 0.90625rem/1 var(--font-body); text-decoration: none; }
+.card__go:hover { background: var(--ink); color: var(--paper); }
+
+/* ---------- live: the story's script runs (hub/client/home.js sets .story--live, then .story--drawn) ---------- */
+/* One sticky stage beside the steps, as tall as the window under the header: its two drawings stacked in it, under the
+   canvas that moves the dots between them (the script fades each drawing in and out with its steps). The canvas fades
+   in over the server's dots in the bar once it has drawn them in the same places. */
+.story--live > .stage { display: block; position: sticky; top: var(--stage-top); grid-column: 3; grid-row: 1 / -1; align-self: start; height: calc(100vh - var(--stage-top)); height: calc(100svh - var(--stage-top)); }
+.story--live .stage__panel { position: absolute; inset: 0; }
+.story--live .stage__panel.is-off { pointer-events: none; }
+.story--live:not(.story--drawn) .stage__panel--map { opacity: 0; }
+.story--live .stage__pin { position: static; height: 100%; }
+.story--live .stage__cv { display: block; position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+.story--live .stage__cv[hidden] { display: none; }
+.story--drawn .stage__cv { opacity: 1; }
+.story--live .sbar .chart-dots { transition: opacity 0.5s; }
+.story--drawn .sbar .chart-dots { opacity: 0; }
+/* The map: before its states fill (--fill, from 0 to 1, set by the script), the land shows each state's outline. */
+.story--live .smap .st { fill-opacity: calc(var(--t) * var(--fill, 1)); stroke-opacity: var(--fill, 1); }
+.story--live .smap .st--md { fill-opacity: var(--fill, 1); }
+.story--live .smap__land { stroke: var(--line); stroke-width: 0.7px; stroke-linejoin: round; stroke-opacity: calc(0.75 * (1 - var(--fill, 1))); vector-effect: non-scaling-stroke; }
+/* The steps' words: the step being read in full ink, the others in the faintest text ink (which still reads at 4.5:1),
+   easing between as the reader arrives (at once with less motion). Readers who ask for more contrast read every step in
+   full ink. */
+.story--live .step__in > h2, .story--live .step__in > p, .story--live .step__in > p * { transition: color 0.35s ease; }
+.story--live .cue__line { transition: background-color 0.35s ease; }
+@media (prefers-contrast: no-preference) {
+  .story--live > .step:not(.is-current) .step__in > h2, .story--live > .step:not(.is-current) .step__in > p,
+  .story--live > .step:not(.is-current) .step__in > p * { color: var(--ink-3); }
+  .story--live > .step:not(.is-current) .cue__line { background: var(--ink-3); }
+  .story--live > .step:not(.is-current) .cue__line::after { border-top-color: var(--ink-3); }
+}
+/* The step's name where the rail is hidden ("3/9 Readmissions"), in the stage's top left. */
+.nowstep { display: none; }
+.nowstep li { display: none; max-width: none; line-height: 1; }
+.nowstep li.is-now { display: block; }
+.nowstep__n { color: var(--ink-3); font: 400 0.71875rem/1 var(--font-type); }
+.nowstep b { margin-left: 4px; color: var(--ink); font: 600 0.75rem/1 var(--font-body); }
+/* How far through the story: a line under the header while the story is on screen. */
+.story__progress { position: fixed; top: calc(var(--sticky-top, 0px) - 2px); left: 0; z-index: 21; width: 100%; height: 2px; background: var(--pen); opacity: 0; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+.story__progress.is-on { opacity: 1; }
+/* By state, live (hub/client/story/map.js): the readout and the small states' buttons answer only while the states are
+   read (step 7), or while a button keeps the keyboard's focus. They keep their room at every step, so the map never
+   moves under the dots. A state pointed at or focused is outlined in ink; a pinned one more heavily, and its line stays
+   in the readout. */
+.story--drawn:not([data-step="7"]) .readout, .story--drawn:not([data-step="7"]) .smalls:not(:focus-within) { visibility: hidden; }
+.story .readout.is-line { color: var(--ink); font-weight: 600; }
+.story--live .smap .st[role="button"] { cursor: pointer; }
+.story .smap .st:focus { outline: none; }
+.story .smap .st.is-on, .story .smap .st:focus-visible { stroke: var(--ink); stroke-width: 2px; stroke-opacity: 1; }
+.story .smap .st.is-pin { stroke: var(--ink); stroke-width: 3px; stroke-opacity: 1; }
+.story .sb.is-on, .story .sb.is-pin { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+/* Find yours, live (hub/client/story/find.js): the peer toggle over the chart's top on step 8 only (or while it has the
+   keyboard's focus, which a scroll must not drop); a toggle the hospital has no group for is greyed, and the hospital
+   page's note says why under it. */
+.story--live .peers { position: absolute; top: 28px; right: 26px; left: 40px; z-index: 2; flex-wrap: wrap; gap: 4px 10px; }
+.story--drawn:not([data-step="8"]) .peers:not(:focus-within) { display: none; }
+.story .seg button[aria-disabled="true"] { color: var(--ink-3); cursor: not-allowed; }
+.story .seg button[aria-disabled="true"][aria-pressed="false"] { text-decoration: line-through; text-decoration-color: var(--ink-3); }
+.peers__why { width: 100%; max-width: none; color: var(--ink-3); font-size: 0.75rem; line-height: 1.3; }
+.story .peers__why[hidden] { display: none; }
+@media (max-width: 1079px) {
+  .story--live .nowstep:not([hidden]) { display: block; position: absolute; top: 9px; left: 14px; z-index: 2; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+}
+
+/* ---------- narrower: no rail; phones: one column, each chart between the steps ---------- */
+@media (max-width: 1079px) {
+  .story { --railw: 0px; --textw: 360px; }
+  .railbox { display: none; }
+  .story > .step { padding-right: 28px; }
+}
+@media (max-width: 760px) {
+  .hero { padding-top: 20px; }
+  .hero__rule { margin-top: 24px; }
+  .story { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  /* The bar first, then the steps, with the map after the step that names its states. */
+  .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { grid-column: 1; min-height: 0; padding: 36px 0 0; }
+  .step__in { max-width: none; }
+  .step__in h2 { margin-bottom: 10px; font-size: 1.375rem; }
+  .step__in > p { margin-bottom: 10px; font-size: 0.96875rem; line-height: 1.55; }
+  .stage__panel { grid-column: 1; }
+  .stage__pin { position: static; height: auto; }
+  .stage__panel--bar { grid-row: 1; padding-top: 28px; }
+  .stage__panel--bar > .stage__pin { padding-bottom: 0; }
+  .stage__panel--map { grid-row: 10; padding-top: 28px; }
+  .sbar__pay { font-size: 1.375rem; }
+  .sbar__mv { font-size: 0.9375rem; }
+  .smap { max-height: none; }
+  .story .card { max-width: none; }
+
+  /* Live on a phone: the steps' words above, the chart pinned in the lower part of the window. Each step's words rise
+     from behind the chart, hold under the header while read, then leave as the next arrive; words taller than the room
+     (.step--tall) scroll with the page instead. At the story's end the chart takes its own room, under the last step.
+     The rules that place the first screen and set the story's height are copied for the moment before the script runs
+     (the "(scripting: enabled) and (max-width: 760px)" block below): change them together. */
+  .story--live { --stage-h: 56svh; display: block; }
+  .story--live > .stage { position: sticky; top: auto; bottom: 0; z-index: 5; height: var(--stage-h); margin-inline: calc(-1 * var(--gutter)); border-top: 1px solid var(--line); background: var(--paper); box-shadow: 0 -22px 18px -6px var(--paper); }
+  .story--live .stage__pin { padding: 30px 12px 10px; }
+  .story--live .stage__panel--bar > .stage__pin { padding-bottom: 10px; }
+  .story--live > .step, .story--live > .step[data-step="0"] { min-height: calc(100svh - var(--stage-h) - var(--stage-top) + 200px); padding: 56px 0 0; }
+  .story--live > .step[data-step="0"] { padding-top: 40px; }
+  .story--live > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
+  .story--live .step__in { position: sticky; top: calc(var(--stage-top) + 12px); }
+  .story--live > .step--tall .step__in, .story--live > .step[data-step="8"] .step__in { position: static; }
+  /* By state: the readout right under the step's name (the script holds it to its longest line's height, so the map
+     never moves under the dots), the map taking what its key leaves; nothing overlaps or leaves the chart at any
+     height. */
+  .story--live .stage__panel--map { padding-top: 0; }
+  .story--live .smapfig { justify-content: flex-start; gap: 8px; }
+  .story--live .smap { flex: 1 1 0; min-height: 0; max-height: none; }
+  /* A control in the steps' words (the last step's search and card link) that takes the keyboard's focus is scrolled
+     clear of the pinned chart, never left under it; the chart's own controls (the states, the peer toggle) are not. */
+  .story--live > .step :is(a, button, input) { scroll-margin-bottom: calc(var(--stage-h) + 8px); }
+  /* The peer toggle in the stage's top right, beside the step's name; its label said to a screen reader only. */
+  .story--live .peers { top: 6px; right: 10px; left: auto; justify-content: flex-end; max-width: calc(100% - 120px); }
+  .story--live .peers__lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .story--live .seg button { padding: 6px 8px; font-size: 0.71875rem; }
+  .story--live .peers__why { text-align: right; }
+  /* Find yours, trimmed to fit above the pinned chart: the programs' rows and the pointer to the hospital page go (the
+     page the card links to has them). */
+  .story--live .card { margin-top: 14px; padding-top: 8px; }
+  .story--live .card__rows, .story--live .card__next { display: none; }
+  .story--live .card__loc { margin-bottom: 6px; }
+  .story--live .card__netl { margin-bottom: 6px; }
+  .story--live .card__peer { margin: 6px 0; }
+}
+
+/* Short phones (740px tall and less): the chart's share shrinks so every step's words fit the window above it (down to
+   290px, the least in which every step's piles fit as separate dots: hub/test/story-layouts.test.js), the words step
+   down a size, and the map's key tightens (the small states' caption is said to a screen reader only). The chart's
+   height is copied for the moment before the script runs (below): change them together. */
+@media (max-width: 760px) and (max-height: 740px) {
+  .story--live { --stage-h: max(290px, calc(100svh - var(--stage-top) - 246px)); }
+  .step__in h2 { margin-bottom: 8px; font-size: 1.1875rem; }
+  .step__in > p { margin-bottom: 8px; font-size: 0.875rem; line-height: 1.5; }
+  .story--live .mapfoot { gap: 6px 12px; }
+  .story--live .dkey__t { margin-bottom: 3px; }
+  .story--live .dkey__md { margin-top: 4px; }
+  .story--live .smalls { justify-content: flex-start; gap: 3px; max-width: none; }
+  .story--live .smalls__cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .story--live .smapfig { gap: 6px; }
+  .story--live .sb { width: 30px; height: 30px; }
+}
+
+/* Before the story's script runs (scripts on), a phone sets the story's first screen as the live layout above will
+   (the chart pinned under the words: only the rules that place it or set the story's height), so the page does not jump
+   when the script starts.
+   The script's .story--live then takes over; .story--static (its data failed) and scripts off keep the server's
+   layout. Change these with the live rules they copy. */
+@media (scripting: enabled) and (max-width: 760px) {
+  .story:not(.story--live):not(.story--static) { --stage-h: 56svh; display: block; }
+  .story:not(.story--live):not(.story--static) > .stage { display: block; position: sticky; bottom: 0; z-index: 5; height: var(--stage-h); margin-inline: calc(-1 * var(--gutter)); border-top: 1px solid var(--line); background: var(--paper); box-shadow: 0 -22px 18px -6px var(--paper); }
+  .story:not(.story--live):not(.story--static) .stage__panel { position: absolute; inset: 0; }
+  .story:not(.story--live):not(.story--static) .stage__panel--map { opacity: 0; }
+  .story:not(.story--live):not(.story--static) .stage__pin { height: 100%; padding: 30px 12px 10px; }
+  .story:not(.story--live):not(.story--static) > .step { min-height: calc(100svh - var(--stage-h) - var(--stage-top) + 200px); padding: 56px 0 0; }
+  .story:not(.story--live):not(.story--static) > .step[data-step="0"] { padding-top: 40px; }
+  .story:not(.story--live):not(.story--static) > .step[data-step="8"] { min-height: 0; padding: 0 0 24px; }
+  /* The last step's card, trimmed as the live layout trims it, so the story is the same height before and after (the
+     pinned chart's place follows the story's end). */
+  .story:not(.story--live):not(.story--static) .card { margin-top: 14px; padding-top: 8px; }
+  .story:not(.story--live):not(.story--static) :is(.card__rows, .card__next) { display: none; }
+  .story:not(.story--live):not(.story--static) :is(.card__loc, .card__netl) { margin-bottom: 6px; }
+  .story:not(.story--live):not(.story--static) .card__peer { margin: 6px 0; }
+}
+@media (scripting: enabled) and (max-width: 760px) and (max-height: 740px) {
+  .story:not(.story--live):not(.story--static) { --stage-h: max(290px, calc(100svh - var(--stage-top) - 246px)); }
+}
+
+@media print {
+  .railbox, .story__progress, .stage__cv, .nowstep { display: none !important; }
+  /* The masthead prints at rest, wherever its trip into the header was (the script's inline styles). */
+  .hero__mark > span { transform: none !important; opacity: 1 !important; text-shadow: none; }
+  .story--live { display: block; }
+  .story--live > .stage, .story--live .stage__panel { position: static; height: auto; opacity: 1 !important; }
+  .stage__pin { position: static; height: auto; }
+  .story > .step, .story > .step[data-step="0"], .story > .step[data-step="8"] { min-height: 0; padding-top: 24px; }
+}
+
+/* Forced colors: the meaning inks and the hatch keep their colors (each state's sign is in its title and the key's
+   words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
+@media (forced-colors: active) {
+  .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
+  .sbar__frame, .sbar__mag, .smap__hatch, .sbar .chart-dots--ink { stroke: CanvasText; }
+  .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }
+  .story .seg button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .story .rail a[aria-current="step"]::before { background: Highlight; }
+}
+
+/* ---------- below the story (hub/home/below.js): the program directory, the methods in brief, the invitation ----------
+   Most of the look is the family's parts: the form (.form, .field, the numbered box .field__no, .stamp, .est-tag) and,
+   from the hospital page below, the strip drawing (.st and its parts: each card's histogram) and the empty-program band
+   (.hh__nextbox: each slip for a program under consideration). A script fills the worksheet in for a found hospital;
+   [hidden] hides the notes and stamps it does not need. */
+.bsec { margin-top: 96px; padding-top: 28px; border-top: 5px double var(--ink); }
+.below h2 { margin: 8px 0 14px; font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
+.bsec__head, .ests, .dir, .soon { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.bsec__head { align-items: end; }
+.bsec__lede { color: var(--ink-2); font-size: var(--fs-md); }
+.grp { display: flex; justify-content: space-between; gap: 12px; max-width: none; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--pen); }
+/* A program's card: name and tag, dek, takeaway over the histogram, the national figure, and a red bar to its page. */
+.pc { display: flex; flex-direction: column; border: 1.5px solid var(--pen); }
+.pc > * { margin: 8px 16px 0; }
+.pc h3 { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: var(--fs-md); }
+.ab { align-self: start; padding: 2px 5px 1px; border: 1px solid; color: var(--pen-ink); font: 400 var(--fs-cap)/1.2 var(--font-type); text-decoration: none; }
+.pc__dek, .slip { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.pc figure { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font: 600 13px/1.35 var(--font-body); }
+/* The histogram's marks stretch across the card (hub/home/below.js); their lines keep their width. */
+.pc__marks { overflow: visible; }
+.pc__marks :is(.st__grid, .st__base) { vector-effect: non-scaling-stroke; }
+.pc__big { margin-top: 12px; font: 700 26px/1 var(--font-type); }
+.pc__sub { margin-bottom: 16px; color: var(--ink-2); font: 400 12.5px/1.4 var(--font-type); }
+.go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
+.go:hover, .ask__act > a:hover { background: var(--ink); color: var(--paper); }
+.pc .go { margin: auto 0 0; }
+/* A slip for a program under consideration: dashed, quiet, over an empty hatched band. Each group's name is one line. */
+.soon { margin-top: 40px; }
+.sg { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; align-content: start; }
+.sg .grp { grid-column: 1 / -1; margin: 0; white-space: nowrap; }
+.slip { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px 12px; border: 1.5px dashed var(--line); text-decoration: none; }
+.slip b { color: var(--ink); }
+.slip .ab { color: var(--ink-3); }
+.slip__none { height: 22px; margin-top: auto; }
+/* Methods, in brief: three numbered points, and the worksheet as a ruled form whose amounts line up on the right. */
+.nsteps { display: grid; gap: 10px; margin: 18px 0; padding: 0; list-style: none; }
+.nsteps li { display: flex; align-items: baseline; gap: 10px; }
+.nsteps .field__no, .wst .field__no { color: var(--pen-ink); }
+.more { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; text-decoration-color: var(--pen); }
+.wsx [hidden] { display: none; }
+.wst { width: 100%; border-collapse: collapse; border: solid var(--pen); border-width: 0 var(--rule) var(--rule) 0; }
+.wst :is(th, td) { padding: 9px clamp(6px, 2vw, 10px); border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-body); text-align: left; vertical-align: baseline; }
+.wst small { display: block; margin-top: 2px; color: var(--ink-3); font: 400 12px/1.35 var(--font-type); }
+.wst td:last-child { font: 400 clamp(15px, 4vw, var(--fs-md))/1.35 var(--font-type); text-align: right; white-space: nowrap; }
+.wst__net > * { border-top: var(--rule) solid var(--ink); }
+.wst__net td:last-child { font-size: clamp(16px, 5vw, var(--fs-lg)); font-weight: 700; }
+.wst td[data-na] { color: var(--ink-3); font: 400 var(--fs-sm)/1.35 var(--font-body); white-space: normal; }
+/* The narrowest phones: each line's amount sits under its words, at the right, so the words and their formula notes take
+   the line's whole width instead of a narrow column beside the amounts. */
+@media (max-width: 360px) {
+  .wst, .wst tbody { display: block; }
+  .wst tr { display: grid; grid-template-columns: auto minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .wst :is(th, td) { border-bottom: 0; }
+  .wst td:last-child { grid-column: 2; padding-top: 0; }
+  .wst__net { border-top: var(--rule) solid var(--ink); }
+  .wst__net > * { border-top: 0; }
+}
+.wsx__foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: var(--fs-sm); }
+.wsx__foot > p:first-child { flex: 1 1 15em; }
+/* The invitation, in its dashed box. */
+.ask { display: grid; gap: 16px 40px; margin-top: 64px; padding: 22px 20px; border: 2px dashed var(--pen); }
+.ask p { color: var(--ink-2); }
+.ask__act { display: grid; gap: 10px; justify-items: start; align-content: center; }
+@media (min-width: 760px) {
+  .ask { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); padding: 26px 32px; }
+  .ask__act { padding-left: 32px; border-left: 1px dashed var(--line); }
+}
+@media (min-width: 1024px) {
+  .bsec__head, .ests { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; }
+  .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The six slips side by side, a column each, once the page is at its full width (narrower, a column is too tight for a
+   slip's band words on one line and its dek; the groups stack, as on a tablet). Each group spans its columns and both
+   rows of one shared grid (subgrid), so the groups' names and rules line up, every slip is the height of the tallest,
+   and the bands share one bottom edge. */
+@media (min-width: 1200px) {
+  .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto; gap: 12px 16px; }
+  .sg { grid-column: span var(--n); grid-row: span 2; grid-template-columns: subgrid; grid-template-rows: subgrid; }
+}
+
+/* ---------- a hospital's page across the programs (hub/hospital/page.js), root .hh ----------
+   An instrument: the red record card, large mono figures, hairline rules and room to breathe. Two columns from 1024px
+   (the record and the money left, the peer swarm right); one column below, record, net, then the chart. */
+.hh { --lc: 440px; --gap: 56px; }
+/* --peers-h lives on the root, where scroll-padding reads it; the page's script sets it to the peer row's height, and
+   --scen-h to the Hypothetical banner's while it shows (0 otherwise). */
+html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-top, 0px) + var(--peers-h) + var(--scen-h, 0px)); }
+
+/* The peer row: sticks under the header. Its toggle shows once the page's script runs. */
+.hh__peers { position: sticky; top: var(--sticky-top, 0px); z-index: 15; min-height: var(--peers-h); border-bottom: 1px solid var(--line); background: var(--paper); }
+.hh__pin { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding-block: 8px; }
+.hh__plbl { color: var(--ink-2); font-size: var(--fs-sm); white-space: nowrap; }
+.hh__seg { display: inline-flex; }
+.hh__pb { min-height: 32px; padding: 6px 14px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 600 13.5px/1 var(--font-body); cursor: pointer; }
+.hh__pb + .hh__pb { margin-left: -1px; }
+.hh__pb[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.hh__pb:hover:not([aria-pressed="true"]):not(:disabled) { background: var(--paper-2); color: var(--ink); }
+.hh__pb:disabled { cursor: not-allowed; text-decoration: line-through; }
+.hh__grp { max-width: none; font-size: 15px; font-weight: 600; }
+.hh__pnotes { padding-top: 10px; }
+.hh__pnotes:where(:not(:has(.hh__pnote:not([hidden])))) { display: none; }
+/* With scripts on, the toggle and the notes under it keep their places, unseen, until the page's script shows them (on
+   a phone the label they replace steps aside from the start), so the row neither grows nor shifts when they appear.
+   Scripts off, they take no room. */
+@media (scripting: enabled) {
+  .hh__pb[hidden] { display: inline-block; visibility: hidden; }
+  .hh__pnotes { display: block; }
+  .hh__pnote[hidden] { display: block; visibility: hidden; }
+}
+.hh__pnote { max-width: none; color: var(--ink-2); font-size: var(--fs-xs); }
+.hh__pnote + .hh__pnote { margin-top: 2px; }
+
+/* The hero: the record card and the money left, the figure right. */
+.hh__hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; padding-block: 28px 26px; }
+.hh__card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-self: start; }
+.hh .hh__name { margin: 4px 0 3px; font: 400 clamp(1.75rem, 3.3vw, 2.625rem)/1.02 var(--font-display); letter-spacing: -0.005em; overflow-wrap: break-word; }
+.hh__card .field__value:not(.hh__name) { font-size: var(--fs-base); }
+.hh__card .field__value.field__value--sm { font-size: var(--fs-sm); line-height: 1.45; }
+
+/* The net: its label, the large figure beside its stamp, the band's slot (empty until the band is modeled), the
+   common fiscal year's note. */
+.hh__net { margin-top: 30px; }
+.hh__netlab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; color: var(--ink-2); font: 600 13.5px/1.3 var(--font-body); }
+.hh__netline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
+.hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
+/* Where the record and the money take the page's whole width (one column, above a phone's), the net is at its full size:
+   the clamp above follows the two-column page's left column. */
+@media (min-width: 641px) and (max-width: 1023px) { .hh__big { font-size: 3.5rem; } }
+/* 24px: large text, so the bonus ink on paper meets its 3:1 (at 22px it would need 4.5:1). The worksheet's stamp too. */
+.hh__stamp .stamp, .wsx .stamp { font-size: 24px; padding: 5px 11px 2px; }
+.hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
+.hh__band:empty { display: none; }
+.hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+
+/* Each program's dollars as rows adding to the net: a label, a track (the signed bar from the zero line, the peers'
+   median tick), the figure and its word. One grid, so every track lines up; the rows are its subgrids. --z is the zero
+   line's place on the track, --a and --w a bar's start and width, --m a tick's place, each a fraction of the track. */
+.hh__sum { display: grid; grid-template-columns: 11.25em minmax(0, 1fr) auto 4.2em; column-gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 13.5px; }
+.hh__sr, .hh__axis { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; max-width: none; min-height: 34px; }
+.hh__sl { color: var(--ink-2); line-height: 1.2; overflow-wrap: break-word; }
+.hh__track { position: relative; align-self: stretch; }
+.hh__track::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(var(--z) * 100%); width: 1px; background: var(--ink-3); }
+.hh__bar { position: absolute; top: 50%; height: 15px; min-width: 2px; margin-top: -7.5px; left: calc(var(--a) * 100%); width: calc(var(--w) * 100%); border-radius: 2px; }
+.hh__bar--pen { background: var(--pen); }
+.hh__bar--rew { background: var(--rew); }
+.hh__tick { position: absolute; top: 50%; height: 25px; width: 2px; margin: -12.5px 0 0 -1px; left: calc(var(--m) * 100%); background: var(--ink); }
+.hh__sv { font: 600 13.5px/1 var(--font-type); text-align: right; white-space: nowrap; }
+.hh__sw { color: var(--ink-2); font: 400 12px/1.2 var(--font-type); white-space: nowrap; }
+/* The net's row, under a rule: its words in ink, its figure larger. */
+.hh__sr--net { margin-top: 10px; padding-top: 6px; border-top: 1.5px solid var(--ink); }
+.hh__sr--net .hh__sl { color: var(--ink); font-weight: 700; font-size: 14.5px; }
+.hh__sr--net .hh__sv { font-size: 15px; font-weight: 700; }
+/* A program the hospital is not in: hatched across the track, the words on paper, never $0. */
+.hh__out { grid-column: 2 / -1; display: flex; align-items: center; justify-content: center; height: 24px; border: 1px dashed var(--line); background: var(--hatch-fill); }
+.hh__out span { padding: 1px 8px; background: var(--paper); color: var(--ink-2); font: 400 12px/1.3 var(--font-body); }
+/* The axis under the rows: $0 at the zero line, the side that is a cut and the side that is a bonus. */
+.hh__axis { min-height: 0; }
+.hh__ax { grid-column: 2; position: relative; height: 20px; color: var(--ink-3); font: 400 11px/20px var(--font-type); white-space: nowrap; }
+.hh__ax-0 { position: absolute; left: calc(var(--z) * 100%); transform: translateX(-50%); }
+.hh__ax-cut { position: absolute; right: calc((1 - var(--z)) * 100% + 20px); }
+.hh__ax-bonus { position: absolute; left: calc(var(--z) * 100% + 20px); }
+.hh__key { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--ink-3); font-size: 12.5px; }
+.hh__key-tick { flex: none; width: 2px; height: 13px; background: var(--ink); }
+
+/* The button down to the what-if: bold, outlined, the capsule handle as its glyph. */
+.hh__wbtn { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; padding: 10px 18px 10px 12px; border: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 15.5px/1.2 var(--font-body); text-decoration: none; }
+.hh__wbtn:hover, .hh__wbtn:focus-visible { background: var(--ink); color: var(--paper); }
+.ico--capsule { --ico: var(--icon-capsule); width: 2.6em; height: 1.05em; }
+
+/* The figure: the headline, the swarm's frame (shown once the script draws in it), its caption, the load error. */
+.hh__fig { min-width: 0; margin: 0; }
+.hh__head { max-width: 30em; font: 600 var(--fs-lg)/1.3 var(--font-body); letter-spacing: -0.005em; }
+.hh__swarm { position: relative; margin-top: 12px; }
+.hh__swarm:empty { display: none; }
+.hh__cv { display: block; width: 100%; touch-action: manipulation; }
+.hh__cv:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 12.5px/1.35 var(--font-body); pointer-events: none; }
+.hh__tip b { display: block; font-weight: 700; }
+.hh__tip span { display: block; color: var(--ink-2); font: 400 12px/1.4 var(--font-type); }
+.hh__tip .hh__tip-open { color: var(--ink); font: 600 12px/1.4 var(--font-body); }
+.hh--live .hh__tick { transition: left var(--glide); }
+.hh__cap { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__hint { display: block; margin-top: 4px; }
+.hh__err { margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* The what-if: under a heavy double rule, a heading beside its lede, then a row per program, the next program's empty
+   row and the net. A row's strip (the script's) sits beside its head. */
+.hh__progs { margin-top: 10px; }
+.hh__pi { padding-block: 28px 10px; border-top: 5px double var(--ink); }
+.hh__sechead { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: end; margin-bottom: 18px; }
+.hh__sechead h2 { font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
+.hh__sechead .kicker { margin-bottom: 8px; }
+.hh__lede { color: var(--ink-2); font-size: 15px; }
+/* Scripts off, nothing offers what needs them: the button down to the what-if goes, the what-if's section is headed by
+   what it shows (its kicker's words, which then step aside), and a line says what needs JavaScript, here and under the
+   headline in place of the swarm. */
+.hh__nojs, .hh__noscript { display: none; }
+@media (scripting: none) {
+  .hh__wbtn, .hh__js, .hh__sechead .kicker { display: none; }
+  .hh__nojs { display: inline; }
+  .hh__noscript { display: block; max-width: 46em; margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+  .hh__sechead .hh__noscript { margin-top: 0; }
+}
+.hh__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 0; align-items: center; padding-block: 18px 16px; border-top: 1px dotted var(--line); }
+.hh__rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font: 700 18px/1.2 var(--font-body); }
+.hh__ab { color: var(--ink-3); font: 400 12px var(--font-type); }
+.hh__rv { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.hh__num { font: 700 22px/1.1 var(--font-type); }
+.hh__rv .pill--na { font-size: var(--fs-sm); padding: 3px 9px 2px; }
+.hh__why { margin-top: 6px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.hh__deep { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 12px; padding: 5px 10px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 13.5px/1.2 var(--font-body); text-decoration: none; }
+.hh__deep:hover, .hh__deep:focus-visible { background: var(--ink); color: var(--paper); }
+.hh__deep--soon { border-style: dashed; border-color: var(--line); color: var(--ink-2); font-weight: 600; }
+.hh__rows { position: relative; }
+.hh__strip { min-width: 0; }
+.hh__strip:empty { display: none; }
+/* The strips (hub/client/hospital/strips.js): one SVG per row, the peers as dots, this hospital ringed, the median's ▲.
+   The drawing only (svg.st): the states map's shapes and its key's swatches carry .st too, and a swatch's box must keep
+   its own width and height. */
+svg.st { display: block; width: 100%; height: auto; overflow: visible; }
+.st__gut { fill: var(--paper-2); }
+.st__grid { stroke: var(--line); stroke-width: 1; opacity: .55; }
+.st__base { stroke: var(--ink-3); stroke-width: 1; }
+/* Tick labels at the site's chart size (HACRP's .chart-tick: 11px, in --ink-2, which keeps 4.5:1 on the grain). */
+.st__tl, .st__med text { fill: var(--ink-2); font: 400 11px var(--font-type); }
+.st__d--pen { fill: var(--pen); }
+.st__d--rew { fill: var(--rew); }
+.st__d--neu { fill: var(--neutral); }
+.st__d[rx="0"] { shape-rendering: crispEdges; }
+.st__me { fill: none; stroke: var(--ink); stroke-width: 2; }
+/* The what-if on the strips (hub/client/hospital/strips.js): the capsule handle (its dashed focus ring shows on keyboard
+   focus; the first handle carries the "drag me" hint until the reader uses any control, and wiggles once), the actual's
+   ring as a ghost with its label, and the net's hollow "What if" mark. */
+.st__h { cursor: ew-resize; outline: none; touch-action: none; }
+.st__hb { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+.st__hc { fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.st__hf { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 2 2; opacity: 0; }
+.st__h:hover .st__hb, .hh--dragging .st__h .st__hb { stroke-width: 3; }
+.st__h:focus-visible .st__hf { opacity: 1; }
+.st__h:focus-visible .st__hb { stroke-width: 3; }
+.st__hint { fill: var(--ink); font: 700 12.5px var(--font-body); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; transition: opacity .6s; }
+.hh--used .st__hint { opacity: 0; }
+@keyframes st-nudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 45% { transform: translateX(7px); } 70% { transform: translateX(-3px); } }
+.st__h--nudge .st__hin { animation: st-nudge 1.1s ease-in-out 1; }
+.st__me--ghost { opacity: .4; }
+.st__ghost { fill: var(--ink-3); font: 400 11px var(--font-type); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
+.st__hyp-core { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.st__hyp-ring { fill: none; stroke: var(--ink); stroke-width: 2; stroke-dasharray: 3 3; }
+.st__hyp-t { fill: var(--ink); font: 700 12px var(--font-body); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
+.st__med path { fill: var(--ink); }
+.st__out { fill: var(--ink-2); font: 600 12px var(--font-body); }
+/* A glide (a change of group, or of axis as the what-if opens or resets): every part of a strip moves on one curve in one
+   time, so a dot never leaves its tick; the class comes off once every part has arrived, so a handle then follows a drag
+   at once. --glide (the length and curve) and --fade (a leaving dot's) are the page script's, which times the same
+   moves (hub/client/hospital/strips.js setGlide). */
+.st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform var(--glide), opacity var(--fade); }
+/* The hint stands aside while the strips glide (the piles restack under it), and comes back after. */
+.st--live .st__hint { opacity: 0; transition-duration: .15s; }
+/* The thread: one dashed line down the rows through the hospital's mark in each strip. */
+.hh__thread { position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none; }
+.hh__thread path { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .7; }
+/* One column (text above each strip): the thread would cross every row's words, so the rings alone carry the hospital. */
+@media (max-width: 1023px) { .hh__thread { display: none; } }
+.hh__row--next { padding-block: 12px; border-top: 1px dashed var(--line); }
+.hh__row--next .hh__rh { color: var(--ink-3); font-size: 15px; font-weight: 600; }
+.hh__row--next .hh__why { margin-top: 3px; color: var(--ink-3); font-size: 13px; }
+.hh__nextbox { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px dashed var(--line); background: var(--hatch-fill); }
+.hh__nextbox span { padding: 2px 8px; background: var(--paper); color: var(--ink-3); font-size: 12.5px; }
+.hh__row--net { padding-top: 20px; border-top: 2px solid var(--ink); }
+.hh__row--net .hh__rh { font-size: 19px; }
+.hh__result { margin-top: 10px; padding: 12px 14px 13px; border: 1.5px solid var(--ink); background: var(--paper); }
+.hh__rhd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; font: 700 13px/1.3 var(--font-body); }
+.hh__rbig { margin-top: 6px; font: 700 21px/1.2 var(--font-type); }
+.hh__rs { margin-top: 7px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.hh__stand { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__actions { display: flex; flex-wrap: wrap; gap: 16px; max-width: none; margin-top: 10px; }
+.hh__actions:not(:has(button:not([hidden]))) { display: none; }
+.hh__lnk { min-height: var(--target-min); padding: 0 0 1px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: 600 13.5px/1.3 var(--font-body); cursor: pointer; }
+.hh__reset { min-height: 32px; padding: 7px 14px; border: 0; border-radius: 2px; background: var(--ink); color: var(--paper); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
+.hh__reset:hover, .hh__reset:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* The what-if's controls (hub/client/hospital/whatif.js): how to use them under the lede, then in each row the factor
+   field with its steppers and the peers' median, or the cut / no cut pair. */
+.hh__how { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; color: var(--ink); font-size: 14px; line-height: 1.45; }
+.hh__how .ico--capsule { flex: none; margin-top: 2px; }
+.hh__ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--ink-2); font-size: 13px; }
+.hh__ctl label { font-weight: 600; }
+.hh__fin { width: 6.6em; min-height: 32px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 400 14px var(--font-type); }
+.hh__stp { min-width: 32px; min-height: 32px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 700 16px/1 var(--font-type); cursor: pointer; }
+.hh__stp:hover { background: var(--paper-2); }
+.hh__fin:focus-visible, .hh__stp:focus-visible, .hh__lnk:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.hh__ctl .hh__lnk { margin-left: 6px; }
+
+/* Once anything changes: the dashed Hypothetical banner sticks under the peer row (a row of its own; on a phone it takes
+   the peer row's place, below), the "Reader-made scenario" line under it scrolls with the page, the stamp reads "What if"
+   in dashed ink, and every changed figure shows the actual struck through beside it (the dollar rows keep the actual's
+   bar as a dashed ghost). */
+.hh__scen { position: sticky; top: calc(var(--sticky-top, 0px) + var(--peers-h)); z-index: 14; border-bottom: 2px dashed var(--ink); background: var(--paper); }
+.hh__scen[hidden] { display: none; }
+.hh__scenin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-block: 8px; }
+.hh__scenin .hh__reset { margin-left: auto; }
+.hh__htag { display: inline-block; padding: 5px 8px 3px; border: 2px dashed var(--ink); color: var(--ink); font: 400 14px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; transform: rotate(-2deg); }
+.hh__htag--sm { margin-left: 6px; padding: 3px 6px 2px; border-width: 1.5px; font-size: 11.5px; }
+.hh__htag[hidden] { display: none; }
+.hh__scentext { font: 600 13.5px/1.3 var(--font-type); }
+.hh__nw { white-space: nowrap; }
+.hh__shared { max-width: none; padding-top: 10px; color: var(--ink-2); font-size: 13px; }
+.hh__shared a { color: var(--ink); font-weight: 600; }
+.hh__stamp--hyp .stamp { border-style: dashed; border-color: var(--ink); color: var(--ink); }
+.hh__was { color: var(--ink-3); font: 400 13px/1.2 var(--font-type); text-decoration: line-through; white-space: nowrap; }
+.hh__was--big { font-size: 18px; }
+.hh__sv .hh__was { margin-left: 6px; font-size: 12px; }
+.hh__bar--ghost { z-index: 0; background: transparent; outline: 1.5px dashed var(--ink-3); outline-offset: -1.5px; }
+.hh__result--hyp { border-style: dashed; }
+.hh__rbig .hh__was { font-size: 15px; }
+
+/* The peer table's fold, then the source and fairness lines. */
+.hh__tbl { margin-top: 26px; padding-block: 28px 18px; border-top: 1px dotted var(--line); }
+.hh__det summary { width: fit-content; min-height: var(--target-min); cursor: pointer; font: 700 16px/1.5 var(--font-body); }
+.hh__det summary span { color: var(--ink-2); font-weight: 400; }
+/* The peer table (hub/client/hospital/table.js), alphabetical, this hospital's row marked; it scrolls sideways in its own box. */
+.hh__tw { max-height: 75vh; margin-top: 12px; overflow: auto; border-top: 1.5px solid var(--ink); }
+.hh__tw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.hh__pt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.hh__pt caption { padding: 10px 0 8px; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; text-align: left; }
+.hh__pt th, .hh__pt td { padding: 6px 10px; border-bottom: 1px dotted var(--line); text-align: left; white-space: nowrap; }
+.hh__pt thead th { position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--ink); background: var(--paper); font-size: 12.5px; font-weight: 700; }
+.hh__pt tbody th { min-width: 14em; font-weight: 400; white-space: normal; }
+.hh__pt .num { font-family: var(--font-type); text-align: right; }
+.hh__pt .hh__na { color: var(--ink-3); font: 400 12px var(--font-body); }
+.hh__pt .hh__me > * { background: var(--paper-2); }
+.hh__metag { color: var(--ink-2); font-size: 12px; }
+.hh__notes { margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__notes p { max-width: 80em; }
+.hh__notes p + p { margin-top: 6px; }
+
+/* A hospital without an estimate: the record card, its status as an ink stamp, why, and its program pages. */
+.hh__status { display: grid; justify-items: start; gap: 14px; }
+.hh .hh__sh { font-size: 24px; padding: 6px 12px 3px; }
+.hh__st { font-size: var(--fs-md); line-height: 1.5; }
+.hh__pages { margin-top: 26px; }
+.hh__plist { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
+.hh__plist .hh__deep { margin-top: 0; }
+
+@media (min-width: 1024px) {
+  .hh__hero { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); padding-top: 30px; }
+  .hh__none { padding-top: 34px; }
+  .hh__sechead, .hh__row { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
+  .hh__nextbox { grid-column: 2; }
+}
+@media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }
+@media (scripting: enabled) and (max-width: 640px) { .hh__pin .hh__plbl { display: none; } }
+@media (max-width: 640px) {
+  /* On a phone the peer row's label steps aside for the toggle: from the start with scripts on (above), and in a browser
+     without the scripting media feature once the toggle shows. */
+  .hh__pin:has(.hh__pb:not([hidden])) .hh__plbl { display: none; }
+  .hh__pb { padding: 6px 10px; font-size: 13px; }
+  .hh__hero { padding-top: 18px; }
+  .hh__sum { grid-template-columns: minmax(6.6em, 7.4em) minmax(0, 1fr) auto 3.9em; column-gap: 8px; font-size: 13px; }
+  .hh__sv { font-size: 13px; }
+  .hh__sw { font-size: 11.5px; }
+  /* While the banner shows, it takes the peer row's place in the sticky stack (the peer row scrolls with the page, its
+     toggle still there at the top), so the stack never grows on a phone: the tag and Reset on one line, the net under
+     them. */
+  .hh__peers--hyp { position: static; }
+  .hh__scen { top: var(--sticky-top, 0px); }
+  html:has(.hh__peers--hyp) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--scen-h, 0px)); }
+  .hh__scenin { gap: 6px 10px; padding-block: 7px; }
+  .hh__scen .hh__htag { font-size: 12px; }
+  .hh__scentext { order: 3; flex-basis: 100%; font-size: 12px; }
+  .hh__scen .hh__reset { padding: 5px 12px; font-size: 13px; }
+}
+/* Below 360px a toggle's words may take two lines, in one face and not in another: the buttons are two lines tall either
+   way, so the row keeps its height when the page's face replaces the stand-in. */
+@media (max-width: 359px) { .hh__pb { min-height: 40px; } }
+/* The strips never glide under reduced motion (strips.js sets no .st--live). */
+@media (prefers-reduced-motion: reduce) {
+  .hh--live .hh__tick, .st__hint { transition: none; }
+  .st__h--nudge .st__hin { animation: none; }
+}
+@media (forced-colors: active) {
+  /* The pressed peer toggle keeps its mark: the system's highlight, not a fill the mode would flatten. */
+  .hh__pb[aria-pressed="true"] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
+  .hh__bar, .hh__tick, .hh__key-tick, .hh__track::before { forced-color-adjust: none; background: CanvasText; }
+  html :is(.hh__out, .hh__nextbox, .cm__wait) { forced-color-adjust: none; --hatch: CanvasText; background-color: Canvas; }
+  :is(.hh__out, .hh__nextbox) span, .cm__wait p { forced-color-adjust: none; background: Canvas; color: CanvasText; }
+}
+@media print {
+  .hh__peers, .hh__scen, .hh__sharedrow, .hh__wbtn, .hh__ctl, .hh__how, .st__h { display: none; }
+  .hh__progs { break-before: page; }
+}
+
+/* ---------- the interim Readmissions pages (hub/hrrp/page.js), root .rd ----------
+   /hrrp/ (.rd--program): the masthead and the year's summary card, side by side from 960px. A hospital's page (.hh.rd) is
+   the hospital page's record card and layout with the conditions table in the right column; on a phone each condition is a
+   short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways.
+   The masthead rules (.rd--program, .rd__top, .rd__intro, .rd__kicker, .rd__title, .rd__note, .rd__go, .rd__sum) are shared with
+   the placeholder pages (hub/coming.js): when Readmissions folds in, keep them or move them there. */
+.rd--program { padding-top: 28px; }
+.rd__top { display: grid; gap: 28px 48px; }
+.rd__intro { align-content: start; container-type: inline-size; }
+.rd__kicker, .rd__kicker a { color: var(--pen-ink); }
+.rd__title { font: 400 clamp(2.2rem, 11.5cqi, 5rem)/0.95 var(--font-display); letter-spacing: -0.01em; }
+.rd__pen { display: block; color: var(--pen); }
+.rd__note { max-width: 46ch; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+.rd__go a { display: inline-flex; align-items: center; gap: 10px; min-height: var(--target-min); padding: 10px 16px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 var(--fs-md)/1.25 var(--font-body); text-decoration: none; }
+.rd__go a:hover, .rd__go a:focus-visible { background: var(--ink); color: var(--paper); }
+.rd__sum { display: flex; flex-wrap: wrap; align-self: start; }
+.rd__sum > .field { flex: 1 1 170px; }
+.rd__sum > .form__title { flex-basis: 100%; }
+.rd .hh__card .field__value--big { font-size: var(--fs-xl); }
+/* The estimate's pill beside its figure, not across the column from it. */
+.rd .hh__netline { justify-content: flex-start; }
+.hh__money > .rd__kicker { margin-bottom: 8px; }
+.rd__main { display: grid; gap: 22px; align-content: start; }
+.rd__tbl thead th { position: static; white-space: normal; }
+.rd__tbl :is(thead, tbody) th, .rd__tbl td { padding-inline: 6px; }
+.rd__tbl tbody th { min-width: 8.5em; }
+.rd__tbl .num { vertical-align: top; white-space: normal; }
+.rd__r { font-weight: 700; }
+.rd__w { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.rd__yes { color: var(--pen-ink); font-weight: 700; }
+.rd__cnote { max-width: 60ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+/* The placeholder pages (hub/coming.js) take the masthead's layout above: the kicker, title, dek and buttons (.rd__go) beside
+   the summary card's flex form (.rd__sum), whose fields are boxes waiting to be filled; the band across it is hatched. */
+.cm__acts { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.cm__back { transform: scaleX(-1); }
+.cm__card { position: relative; margin-bottom: 26px; }
+.cm__card > .field { padding-bottom: 34px; }
+.cm__wait { flex: 1 0 100%; display: grid; place-items: center; min-height: 150px; padding: 18px; border: solid var(--pen); border-width: 0 var(--rule) var(--rule) 0; background: var(--hatch-fill); }
+.cm__wait p { padding: 8px 14px; background: var(--paper); font: 400 var(--fs-xl)/1.15 var(--font-display); text-align: center; text-wrap: balance; }
+.cm__stamp { position: absolute; right: 16px; bottom: -18px; }
+.cm__stamp .stamp { background: var(--paper); }
+@media (min-width: 960px) {
+  .rd__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
+}
+@media (max-width: 640px) {
+  .rd__tbl thead { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rd__tbl, .rd__tbl tbody { display: block; }
+  .rd__tbl tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding: 12px 0; }
+  .rd__tbl th[scope="row"] { grid-column: 1 / -1; padding: 0; }
+  .rd__tbl td, .rd__tbl td.num { padding: 0; text-align: left; white-space: normal; }
+  .rd__tbl td::before { content: attr(data-label); display: block; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+}

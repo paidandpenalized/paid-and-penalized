@@ -8,11 +8,13 @@ import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
-import { SHARED_ENTRIES, SITES, build, mergeEntries } from '../site/build.js';
+import { SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
-import { get, withServer, withTemp as inTemp, writeTree } from './helpers.js';
+import { pageType } from '../../tools/ci/page-types.js';
+import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
   'libre-franklin-600', 'libre-franklin-700'];
@@ -36,13 +38,13 @@ test('build writes hashed CSS holding the tokens and the dark copy, the six font
     assert.ok(existsSync(join(out, 'favicon.svg')));
   }));
 
-test('two sites (or a site and the shared theme script) naming one JS entry fail the build', () =>
+test('two sites (or a site and the shared shell script) naming one JS entry fail the build', () =>
   withTemp(async (dir) => {
-    assert.deepEqual(mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, {}), { theme: 'a.js', x: 'b.js' });
-    assert.throws(() => mergeEntries({ theme: 'a.js' }, { theme: 'b.js' }), /"theme" is defined twice/);
-    assert.throws(() => mergeEntries({ theme: 'a.js' }, { x: 'b.js' }, { x: 'c.js' }), /"x" is defined twice/);
-    const clash = { id: 'clash', entries: { theme: 'web/client/theme.js' }, generate: () => {} };
-    await assert.rejects(build({ outDir: join(dir, 'dist'), sites: [clash] }), /"theme" is defined twice/);
+    assert.deepEqual(mergeEntries({ shell: 'a.js' }, { x: 'b.js' }, {}), { shell: 'a.js', x: 'b.js' });
+    assert.throws(() => mergeEntries({ shell: 'a.js' }, { shell: 'b.js' }), /"shell" is defined twice/);
+    assert.throws(() => mergeEntries({ shell: 'a.js' }, { x: 'b.js' }, { x: 'c.js' }), /"x" is defined twice/);
+    const clash = { id: 'clash', entries: { shell: 'web/client/shell.js' }, generate: () => {} };
+    await assert.rejects(build({ outDir: join(dir, 'dist'), sites: [clash] }), /"shell" is defined twice/);
   }));
 
 test('buildAssets bundles each JS entry as minified ESM under a content hash and returns the public paths', () =>
@@ -58,6 +60,52 @@ test('buildAssets bundles each JS entry as minified ESM under a content hash and
     assert.match(js, /export\s*\{/);
     assert.deepEqual((await buildAssets({ outDir: out, entries: {} })).js, {});
     await assert.rejects(buildAssets({ outDir: out, entries: { '../x': entry } }), /entry name/);
+  }));
+
+test('buildAssets writes each named sheet (siteStyles) as its own minified CSS under a content hash, outside the shared bundle', () =>
+  withTemp(async (dir) => {
+    const own = join(dir, 'own.css');
+    const more = join(dir, 'more.css');
+    writeFileSync(own, '.zz-own {\n  margin: 1px;\n}\n');
+    writeFileSync(more, '.zz-more { margin: 2px; }\n');
+    const out = join(dir, 'dist');
+    const assets = await buildAssets({ outDir: out, siteStyles: { demo: [own, more] } });
+    assert.deepEqual(Object.keys(assets.sheets), ['demo']);
+    assert.match(assets.sheets.demo, /^\/assets\/demo\.[0-9a-f]{8}\.css$/);
+    const text = readFileSync(join(out, assets.sheets.demo), 'utf8');
+    assert.equal(assets.sheets.demo, `/assets/demo.${hash8(text)}.css`);
+    // Its files in order, minified; none of the shared bundle (the tokens, their dark copy and print block) in it.
+    assert.equal(text.trim(), '.zz-own{margin:1px}.zz-more{margin:2px}');
+    assert.doesNotMatch(readFileSync(join(out, assets.css), 'utf8'), /zz-own|zz-more/);
+    assert.deepEqual((await buildAssets({ outDir: out })).sheets, {});
+    // The shared bundle is site.<hash>.css, so no sheet takes that name; nor a name that isn't a plain file name.
+    for (const name of ['site', '../x', 'Hub', '']) {
+      await assert.rejects(buildAssets({ outDir: out, siteStyles: { [name]: [own] } }), /stylesheet name/, name);
+    }
+  }));
+
+test('each site\'s styles are a stylesheet of its own, named by its id; the shared bundle holds no site\'s, and a site with none has none', () =>
+  withTemp(async (dir) => {
+    const own = join(dir, 'own.css');
+    const other = join(dir, 'other.css');
+    writeFileSync(own, '.zz-own { margin: 1px; }\n');
+    writeFileSync(other, '.zz-other { margin: 2px; }\n');
+    const seen = [];
+    const sites = [
+      { id: 'plain', styles: [other], generate: (ctx) => { seen.push(ctx.assets); } },
+      { id: 'mine', styles: [own], generate: () => {} },
+      { id: 'bare', generate: () => {} },
+    ];
+    const out = join(dir, 'dist');
+    await build({ outDir: out, sites });
+    const [{ css, sheets }] = seen;
+    const text = (path) => readFileSync(join(out, path), 'utf8');
+    assert.deepEqual(Object.keys(sheets), ['plain', 'mine']);
+    assert.match(sheets.mine, /^\/assets\/mine\.[0-9a-f]{8}\.css$/);
+    assert.doesNotMatch(text(css), /zz-own|zz-other/);
+    assert.equal(text(sheets.mine).trim(), '.zz-own{margin:1px}');
+    assert.equal(text(sheets.plain).trim(), '.zz-other{margin:2px}');
+    assert.equal(readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css')).length, 3);
   }));
 
 // The bundles target ES2020 (assets.js), and esbuild lowers syntax but never adds a missing built-in, so a newer
@@ -104,6 +152,69 @@ test('build runs the sites in order with one context: assets, env, and what earl
     assert.equal(readFileSync(join(out, 'robots.txt'), 'utf8'), 'r');
   }));
 
+test('build writes the hub\'s asset once and hands every site the shell\'s facts, with hubUrl naming that file', () =>
+  withTemp(async (dir) => {
+    const seen = [];
+    const sites = ['first', 'second'].map((id) => ({ id, generate: (ctx) => { seen.push(ctx.assets.shell); } }));
+    const out = join(dir, 'dist');
+    await build({ outDir: out, sites });
+    const files = readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-hospitals.'));
+    assert.equal(files.length, 1);
+    assert.match(files[0], /^hub-hospitals\.[0-9a-f]{8}\.json$/);
+    const text = readFileSync(join(out, 'assets', files[0]), 'utf8');
+    assert.equal(files[0], `hub-hospitals.${hash8(text)}.json`);
+    // Computed once: every site gets the same facts, and the asset behind hubUrl is the one the facts describe.
+    assert.equal(seen.length, 2);
+    assert.equal(seen[0], seen[1]);
+    const shell = seen[0];
+    assert.equal(shell.hubUrl, `/assets/${files[0]}`);
+    const asset = JSON.parse(text);
+    assert.equal(shell.fy, asset.fy);
+    assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
+    assert.match(shell.changed, /^\d{4}-\d{2}-\d{2}$/);
+    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp']);
+    assert.ok(shell.programs.hrrp.dollars < 0 && shell.programs.hrrp.cutN > 0);
+    assert.ok(shell.programs.hacrp.dollars < 0 && shell.programs.hacrp.cutN > 0);
+    assert.ok(shell.programs.hvbp.moved > 0 && Number.isInteger(shell.programs.hvbp.net));
+    // The test helper's invented facts have the build's shape, so a page rendered in a test meets the same fields.
+    const shape = (facts) => ({ ...Object.fromEntries(Object.keys(facts).map((k) => [k, typeof facts[k]])),
+      programs: Object.fromEntries(Object.entries(facts.programs).map(([id, figures]) => [id, Object.keys(figures)])) });
+    assert.deepEqual(shape(testAssets().shell), shape(shell));
+  }));
+
+test('a build with no sites still writes the hub\'s asset, once', () =>
+  withTemp(async (dir) => {
+    const out = join(dir, 'dist');
+    await build({ outDir: out, sites: [] });
+    assert.equal(readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-hospitals.')).length, 1);
+  }));
+
+test('createContext puts the shell\'s facts on ctx.assets.shell without changing the assets it was given', () => {
+  const assets = testAssets();
+  const { shell } = assets;
+  const other = { ...shell, fy: 2099 };
+  assert.equal(createContext({ outDir: '/x', env: undefined, assets }).assets.shell, shell, 'the assets\' own shell stays');
+  const ctx = createContext({ outDir: '/x', env: undefined, assets, shell: other });
+  assert.equal(ctx.assets.shell, other);
+  assert.equal(assets.shell, shell, 'the caller\'s object is not edited');
+  assert.equal(ctx.assets.css, assets.css);
+});
+
+test('buildContext, the build\'s own path to a context, writes the hub\'s asset and passes the shell through createContext, leaving the assets it was given untouched', () =>
+  withTemp(async (dir) => {
+    const assets = Object.freeze({ css: '/assets/site.test.css', js: Object.freeze({ shell: '/assets/shell.test.js' }) });
+    const ctx = buildContext({ outDir: dir, env: 'preview', assets });
+    assert.notEqual(ctx.assets, assets);
+    assert.equal(assets.shell, undefined, 'the caller\'s object is not edited');
+    assert.equal(ctx.assets.css, assets.css);
+    assert.equal(ctx.assets.js, assets.js);
+    assert.equal(ctx.env, 'preview');
+    const { hubUrl, ...facts } = ctx.assets.shell;
+    assert.match(hubUrl, /^\/assets\/hub-hospitals\.[0-9a-f]{8}\.json$/);
+    assert.ok(existsSync(join(dir, hubUrl)), 'the asset the facts name is written');
+    assert.deepEqual(Object.keys(facts), ['fy', 'hospitals', 'changed', 'programs']);
+  }));
+
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {
   assert.equal(SITES.at(-1), HUB);
   assert.equal(SITES.filter((s) => s === HUB).length, 1);
@@ -111,7 +222,7 @@ test('the hub runs last: its sitemap lists the indexable pages every other site 
 
 test('emit refuses a path outside the site; asset writes a content-hashed file', () =>
   withTemp(async (dir) => {
-    const ctx = createContext({ outDir: dir, env: undefined, assets: {} });
+    const ctx = createContext({ outDir: dir, env: undefined, assets: testAssets() });
     for (const path of ['a/', '/../x/', '/a/../../x/', '/A/', '/a b/', '//x/']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
     // Capitals only in a file that is not a page; a repeat is refused whatever its case.
     for (const path of ['/Page.html', '/a/Index.html']) assert.throws(() => ctx.emit({ path, text: '' }), RangeError, path);
@@ -163,6 +274,61 @@ test('HACRP gives the build its two dates, which /corrections/ shows', async () 
   const text = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
   assert.ok(text.includes(`<time datetime="${DATA.source.pdcReleased}">`));
   assert.ok(text.includes(`<time datetime="${newestBuilt(DATA)}">`));
+});
+
+// A rule for a hub page's own parts: the hospital page's (.hh), the home page's story (.story) or the interim Readmissions
+// pages' (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
+const HUB_RULE = /\.(hh|story|rd)(__[\w-]+|--[\w-]+)?(?=[\s,{.:>+~[)])/;
+
+test('each page links the shared stylesheet and then its own site\'s alone: a HACRP page HACRP\'s, a hub page the hub\'s; the shared one holds neither\'s rules', async () => {
+  const out = await builtSlice();
+  const sheetsOf = (file) => [...tags(readFileSync(join(out, file), 'utf8'), { names: ['link'] })]
+    .filter(({ attrs }) => attrs.rel === 'stylesheet').map(({ attrs }) => attrs.href);
+  const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
+  const seen = new Set();
+  const shared = new Set();
+  const own = { hacrp: new Set(), hub: new Set() };
+  for (const file of htmlPages(out)) {
+    const type = pageType(addressOf(file));
+    const links = sheetsOf(file);
+    seen.add(type);
+    assert.equal(links.length, 2, file);
+    shared.add(links[0]);
+    own[PROGRAM_TYPES.includes(type) ? 'hacrp' : 'hub'].add(links[1]);
+  }
+  for (const type of [...PROGRAM_TYPES, 'hub', 'policy', 'coming', 'hubHospital', 'notFound']) assert.ok(seen.has(type), `the slice built a ${type} page`);
+  assert.equal(shared.size, 1, 'one shared stylesheet');
+  assert.deepEqual([own.hacrp.size, own.hub.size], [1, 1], 'one stylesheet for each site');
+  const [site] = shared;
+  const [[hacrp], [hub]] = [[...own.hacrp], [...own.hub]];
+  assert.match(site, /^\/assets\/site\.[0-9a-f]{8}\.css$/);
+  assert.match(hacrp, /^\/assets\/hacrp\.[0-9a-f]{8}\.css$/);
+  assert.match(hub, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
+  // (Each check is a yes or no: a failing match would print the whole stylesheet.)
+  const css = (href) => readFileSync(join(out, href), 'utf8');
+  assert.equal(HUB_RULE.exec(css(site))?.[0] ?? null, null, 'the shared stylesheet holds no hub page\'s rule');
+  assert.equal(HUB_RULE.exec(css(hacrp))?.[0] ?? null, null, 'HACRP\'s stylesheet holds no hub page\'s rule');
+  for (const root of ['.prog__lede', '.step__n']) {
+    assert.ok(css(hacrp).includes(root), `HACRP's stylesheet holds ${root}`);
+    assert.ok(!css(site).includes(root) && !css(hub).includes(root), `only HACRP's stylesheet holds ${root}`);
+  }
+  for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
+  // The chart and what-if kit (KIT_STYLES) rides in HACRP's sheet alone; the hub's keeps the scale bar's two dot rules.
+  for (const rule of ['.chart-tile', '.wi-cliff__pit', '.fig__key']) {
+    assert.ok(css(hacrp).includes(rule) && !css(site).includes(rule) && !css(hub).includes(rule), `only HACRP's stylesheet holds ${rule}`);
+  }
+  assert.ok(css(hub).includes('.sbar .chart-dots--ink'), 'the hub\'s stylesheet holds the scale bar\'s dots');
+  // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's
+  // sheet reads the tokens and sets none of that, so the shared bundle's dark and print values reach its rules.
+  assert.ok(/:root\[data-theme="?dark"?\]\{[^}]*--pen:/.test(css(site)), 'the shared stylesheet\'s copy of the dark tokens for the toggle');
+  assert.ok(/@media print\{:root\{[^}]*--paper: ?#fff(fff)? ?!important/.test(css(site)), 'the shared stylesheet\'s print block');
+  assert.equal(/:root|prefers-color-scheme|data-theme/.exec(css(hub))?.[0] ?? null, null, 'the hub\'s stylesheet sets no theme');
+  assert.ok(css(hub).includes('var(--pen)'), 'the hub\'s stylesheet reads the tokens');
+  // The check sees what it is meant to.
+  assert.match('.hh__card{margin:0}', HUB_RULE);
+  assert.match('.story>.step{margin:0}', HUB_RULE);
+  assert.match('.x,.rd .y{margin:0}', HUB_RULE);
+  assert.doesNotMatch('.hhx{margin:0}.history{margin:0}.rdx{margin:0}', HUB_RULE);
 });
 
 test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
@@ -267,11 +433,14 @@ const cssValueWords = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"[^
 // A color an SVG or style attribute in a script names: fill="red", stroke: 'navy', color=white.
 const JS_COLOR_ATTR = /\b(?:fill|stroke|stop-color|flood-color|lighting-color|color)\s*[=:]\s*["'`]?\s*([a-z]+)/gi;
 
-test("no file under web/ but tokens.css, and no site's own styles or scripts, hold a color value (hex, a color function, a named color)", () => {
-  const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true })]
+test("no file under web/ but tokens.css, and no site's or the hub's own styles or scripts, hold a color value (hex, a color function, a named color)", () => {
+  const files = [...repoFiles('web/', { untracked: true }), ...repoFiles('sites/', { untracked: true }), ...repoFiles('hub/', { untracked: true })]
     .filter((f) => /\.(css|js|mjs)$/.test(f) && f !== 'web/styles/tokens.css')
-    .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f));
+    .filter((f) => f.startsWith('web/') || /^sites\/[^/]+\/(web|client)\//.test(f) || /^hub\/(?!test\/)/.test(f));
   assert.ok(files.includes('sites/hacrp/web/styles.css'));
+  // The hub's own files are checked too (its tests are not).
+  assert.ok(files.includes('hub/model.js'));
+  assert.ok(!files.some((f) => f.startsWith('hub/test/')));
   for (const f of files) {
     const text = readFileSync(REPO_ROOT + f, 'utf8');
     assert.doesNotMatch(text, /#[0-9a-fA-F]{3,8}\b/, f);
@@ -285,10 +454,10 @@ test("no file under web/ but tokens.css, and no site's own styles or scripts, ho
   assert.match('a { color: rgb(0 0 0); }', COLOR_FUNCTION);
 });
 
-test('the bundled stylesheet puts each site\'s styles after the shared ones', () => {
-  const css = stylesheet(['sites/hacrp/web/styles.css']);
-  assert.ok(css.indexOf('.home__mark') < css.indexOf('.hosp__top {'));
-  assert.ok(!stylesheet().includes('.hero {'));
+test('the shared stylesheet holds web/styles/ alone: no site\'s styles', () => {
+  const css = stylesheet();
+  assert.ok(css.includes('.pol__top {'));
+  for (const rule of ['.hosp__top {', '.hero {']) assert.ok(!css.includes(rule), rule);
 });
 
 test('tokens.css keeps the dark block in the shape the build copies, and every token it sets in light it sets in dark', () => {

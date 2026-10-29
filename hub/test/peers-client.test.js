@@ -1,0 +1,199 @@
+// The hospital page's peer groups as its script makes them, from the browser asset (decoded rows carry a hospital's
+// bed count, whose size band engine/js/peers.js bedBand works out): each mode's group equals a direct filter of the decoded rows, and matches the build's
+// group for the same hospital; a hospital with no teaching status has no teaching group. Then the pure words and
+// scale the build and the script share (the group's name, the rows' one scale, the program row's sentence).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { BED_BAND_EDGES, PEER_MODES, bedBand, peerKey } from '../../engine/js/peers.js';
+import { fillCopy } from '../../web/render/components.js';
+import { loadHub } from '../data.js';
+import { COPY } from '../hospital/copy.js';
+import { stripLayout } from '../client/hospital/strips.js';
+import { drawnDot } from '../client/pile.js';
+import { reach, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { shareDomain } from '../client/scale.js';
+import { ROWS, ROW_IDS, ROW_KEY, groupName, peerFigures, peerGroup, peersOf, rowDollars, rowFigures, sumScale, sumValues } from '../hospital/peers.js';
+import { whyText } from '../hospital/text.js';
+import { hubHospitals } from '../model.js';
+import { decodedHub } from './helpers.js';
+
+const fill = (key, values) => fillCopy(COPY, key, values);
+const hub = loadHub();
+const built = hubHospitals(hub);
+const { hospitals } = decodedHub(hub);
+const builtBy = new Map(built.map((h) => [h.ccn, h]));
+const estimated = hospitals.filter((h) => h.est);
+
+// One hospital of each kind, picked by property.
+const sample = [
+  estimated.find((h) => h.teach === 'none' && bedBand(h.beds) === 1),
+  estimated.find((h) => h.teach === 'major'),
+  estimated.find((h) => bedBand(h.beds) === 3),
+  estimated.find((h) => bedBand(h.beds) === 0 && h.teach === 'minor'),
+];
+
+test('each mode\'s peers from the decoded asset equal a direct filter, and the build\'s group', () => {
+  const direct = {
+    state: (h) => estimated.filter((x) => x.state === h.state),
+    size: (h) => estimated.filter((x) => bedBand(x.beds) === bedBand(h.beds)),
+    teach: (h) => estimated.filter((x) => x.teach === h.teach),
+  };
+  for (const h of sample) {
+    assert.ok(h, 'a sample hospital of each kind');
+    for (const mode of PEER_MODES) {
+      const peers = peersOf(hospitals, h, mode);
+      assert.ok(peers.includes(h), `${mode}: the hospital is among its peers`);
+      assert.deepEqual(peers.map((x) => x.ccn), direct[mode](h).map((x) => x.ccn), `${mode}: a direct filter`);
+      assert.equal(peers.length, peersOf(built, builtBy.get(h.ccn), mode).length, `${mode}: the build's count`);
+    }
+  }
+});
+
+test('a hospital with no teaching status has no teaching group, and its other groups stand', () => {
+  const h = estimated.find((x) => x.teach === null);
+  assert.ok(h, 'a hospital with no teaching status');
+  assert.equal(peersOf(hospitals, h, 'teach'), null);
+  assert.equal(peerGroup(fill, hospitals, h, 'teach'), null);
+  assert.ok(peersOf(hospitals, h, 'state').length > 0);
+  assert.ok(peersOf(hospitals, h, 'size').length > 0);
+  // A group as the page and its script use it: the mode, the peers, what they show and the group's name.
+  const g = peerGroup(fill, hospitals, h, 'state');
+  assert.deepEqual(g, { mode: 'state', peers: peersOf(hospitals, h, 'state'), figures: peerFigures(g.peers), group: groupName(fill, h, 'state') });
+});
+
+test('each row\'s key names its dollars in a decoded estimate and in its percents, and the build\'s', () => {
+  assert.deepEqual(ROW_IDS, [...ROWS.map((r) => r.id), 'net']);
+  const h = estimated[0];
+  for (const id of ROW_IDS) {
+    const key = ROW_KEY[id];
+    assert.equal(typeof h.est[key], 'number', id);
+    assert.equal(typeof h.est.pct[key], 'number', id);
+    assert.equal(builtBy.get(h.ccn).est[key], h.est[key], id);
+  }
+});
+
+test('every group has a name, with the band\'s edges from the constants', () => {
+  const at = (band) => estimated.find((h) => bedBand(h.beds) === band);
+  assert.equal(groupName(fill, { state: 'ZZ' }, 'state'), 'ZZ hospitals');
+  assert.equal(groupName(fill, at(0), 'size'), `hospitals with fewer than ${BED_BAND_EDGES[0]} beds`);
+  assert.equal(groupName(fill, at(1), 'size'), `hospitals with ${BED_BAND_EDGES[0]} to ${BED_BAND_EDGES[1] - 1} beds`);
+  assert.equal(groupName(fill, at(3), 'size'), `hospitals with ${BED_BAND_EDGES[2]} beds or more`);
+  assert.equal(groupName(fill, { teach: 'major' }, 'teach'), 'major teaching hospitals');
+  assert.equal(groupName(fill, { teach: 'none' }, 'teach'), 'non-teaching hospitals');
+  assert.equal(groupName(fill, { teach: null }, 'teach'), null);
+});
+
+test('the dollar rows\' one scale holds every mode\'s medians, so a toggle moves only the ticks', () => {
+  const h = sample[0];
+  const sets = PEER_MODES.map((mode) => peerFigures(peersOf(hospitals, h, mode)));
+  const x = sumScale(sumValues(h.est, sets));
+  for (const f of sets) {
+    for (const id of [...ROWS.map((r) => r.id), 'net']) {
+      const { own, median } = rowDollars(h.est, id, f);
+      for (const v of [own, median, 0]) if (v !== null) assert.ok(x(v) > 0 && x(v) < 1, `${id}: ${v} inside the track`);
+    }
+  }
+  const zero = sumScale([0]);
+  assert.ok(Number.isFinite(zero(0)), 'all zero is a scale too');
+});
+
+test('a program row\'s sentence names the peers and never prints NaN or undefined', () => {
+  const h = sample[0];
+  for (const mode of PEER_MODES) {
+    const peers = peersOf(hospitals, h, mode);
+    const figures = peerFigures(peers);
+    for (const { id } of ROWS) {
+      const text = whyText(fill, h, id, figures[id], { fy: '2026', group: groupName(fill, h, mode) }).join(' ');
+      assert.ok(text.includes(`Of the ${peers.length.toLocaleString('en-US')} `), `${mode} ${id}: ${text}`);
+      assert.ok(!/NaN|undefined|Infinity/.test(text), text);
+    }
+  }
+});
+
+// The strips (hub/client/hospital/strips.js stripLayout) for every group the page can show, at a 320, 390 and 1440 screen's
+// strip width and one, two and three device pixels to a CSS pixel: every row's pile fits as separate dots (the $0 gutter
+// widens as it must), and every hospital stands at its own value: within its bin's width of it, on the right side of its
+// group's median whenever it is more than two pitches from it (exactly $0 anywhere in its gutter), and with bins at most three dots wide on any screen but a
+// 1x phone's (where the two largest groups' Readmissions spike needs more).
+test('every strip keeps separate dots, each at its own value', () => {
+  const domain = shareDomain(hospitals);
+  const groups = new Map();
+  for (const mode of PEER_MODES) {
+    for (const h of estimated) {
+      const key = peerKey(h, mode);
+      if (key === null) continue;
+      if (!groups.has(`${mode}:${key}`)) groups.set(`${mode}:${key}`, peersOf(hospitals, h, mode));
+    }
+  }
+  let checked = 0;
+  for (const [name, group] of groups) {
+    for (const W of [288, 358, 628]) {
+      for (const dpr of [1, 2, 3]) {
+        const { scale, rows } = stripLayout(group, { W, dpr, domain });
+        for (const [id, { items, pile }] of Object.entries(rows)) {
+          const where = `${name} ${id} at ${W}px, ${dpr}x`;
+          assert.equal(pile.fits, true, `${where}: fits`);
+          if (dpr > 1 || W >= 520) assert.ok(pile.m <= 3, `${where}: bins ${pile.m} dots wide`);
+          const median = rowFigures(group, id).median;
+          const mx = median === null ? null : scale.xs(median * 100);
+          for (const it of items) {
+            const x = pile.pos.get(it.id).x;
+            const tx = scale.xs(it.v);
+            // Exactly $0 stands anywhere in its own gutter; any other value within its bin's width of its place.
+            if (it.v === 0) assert.ok(x > scale.zL && x < scale.zR, `${where}: a $0 dot outside the gutter`);
+            else assert.ok(Math.abs(x - tx) <= pile.m * pile.d + 1e-6, `${where}: a dot ${Math.abs(x - tx)} px from its value`);
+            if (mx !== null && Math.abs(tx - mx) > 2 * pile.d) assert.equal(Math.sign(x - mx), Math.sign(tx - mx), `${where}: a dot on the wrong side of the median`);
+            checked += 1;
+          }
+        }
+      }
+    }
+  }
+  assert.ok(checked > 100000, `${checked} dots checked`);
+});
+
+// A strip glides between its two axes (the actual figures', and the what-if's wider one: strips.js setWide) with every dot
+// on a straight line from its place on one to its place on the other. Half way, every row of every state's group, at a
+// phone's and a desktop's strip width, is still a pile: no stack folds through its middle line (a pile keeps at least 70%
+// of the height it has at either end), and every dot but those at exactly $0 stands at least half a dot from every other
+// (those are dealt across the gutter's columns, which a change of pitch re-deals, so they may pass one another inside it;
+// even so, at least 70% of a row's dots stand clear).
+test('half way between its two axes, every strip is still a pile of separate dots', () => {
+  const domain = shareDomain(hospitals);
+  const vbpMax = vbpMaxOf(hospitals);
+  const seen = new Set();
+  const worst = { moved: 1, all: 1, height: Infinity };
+  let rows = 0;
+  for (const h of estimated) {
+    if (seen.has(h.state)) continue;
+    seen.add(h.state);
+    const group = peersOf(hospitals, h, 'state');
+    const wide = shareDomain(hospitals, reach(h, { vbpMax }));
+    for (const [W, dpr] of [[358, 3], [628, 1]]) {
+      const a = stripLayout(group, { W, dpr, domain });
+      const b = stripLayout(group, { W, dpr, domain: wide });
+      for (const id of ROW_IDS) {
+        const { items } = a.rows[id];
+        if (items.length < 10) continue;
+        const s = Math.max(drawnDot(a.rows[id].pile.r, dpr).side, drawnDot(b.rows[id].pile.r, dpr).side) / dpr;
+        const at = (q) => items.map((it) => {
+          const [p, r] = [a.rows[id].pile.pos.get(it.id), b.rows[id].pile.pos.get(it.id)];
+          return { x: p.x + (r.x - p.x) * q, y: p.y + (r.y - p.y) * q, zero: it.v === 0 };
+        });
+        const mid = at(0.5);
+        const clear = (p) => !mid.some((o) => o !== p && Math.hypot(o.x - p.x, o.y - p.y) < s / 2);
+        const moved = mid.filter((p) => !p.zero);
+        const height = (pts) => Math.max(...pts.map((p) => p.y)) - Math.min(...pts.map((p) => p.y));
+        if (moved.length) worst.moved = Math.min(worst.moved, moved.filter(clear).length / moved.length);
+        worst.all = Math.min(worst.all, mid.filter(clear).length / mid.length);
+        const ends = Math.min(height(at(0)), height(at(1)));
+        if (ends > 0) worst.height = Math.min(worst.height, height(mid) / ends);
+        rows += 1;
+      }
+    }
+  }
+  assert.ok(rows > 100, `${rows} strips checked`);
+  assert.ok(worst.moved >= 0.95, `half way, ${(worst.moved * 100).toFixed(0)}% of a strip's dots off $0 stand clear`);
+  assert.ok(worst.height >= 0.7, `half way, a pile keeps ${(worst.height * 100).toFixed(0)}% of its height`);
+  assert.ok(worst.all >= 0.7, `half way, ${(worst.all * 100).toFixed(0)}% of a strip's dots stand clear`);
+});

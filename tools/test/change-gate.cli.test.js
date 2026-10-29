@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, writeFileMkdir } from '../../pipeline/files.js';
@@ -10,9 +10,15 @@ import { sourceManifestHash } from '../../pipeline/contract.js';
 
 const GATE = join(REPO_ROOT, 'tools/ci/change-gate.js');
 
+// The environment the throwaway repo's git and the gate run in: the caller's, less every GIT_ variable, so one that points
+// git at another repository (GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, ...) can never make `git init` or `git config` here
+// write that repository.
+const ownEnv = () => Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
+
 function repo() {
   const dir = mkdtempSync(join(tmpdir(), 'gate-'));
-  const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+  const env = ownEnv();
+  const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', env }).trim();
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 'test@example.test');
   git('config', 'user.name', 'test');
@@ -27,7 +33,7 @@ function repo() {
     git('commit', '-q', '-m', msg);
     return git('rev-parse', 'HEAD');
   };
-  const gate = (base) => spawnSync('node', [GATE], { cwd: dir, encoding: 'utf8', env: { ...process.env, GATE_BASE: base } });
+  const gate = (base) => spawnSync('node', [GATE], { cwd: dir, encoding: 'utf8', env: { ...env, GATE_BASE: base } });
   return { dir, write, mv, rm, symlink, commit, gate };
 }
 
@@ -39,6 +45,33 @@ const FILE = 'data/emitted/hacrp/fy2026/hacrp.json';
 const OLDER = 'data/emitted/hacrp/fy2025/hacrp.json';
 const LOG_V1 = '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- first\n';
 const LOG_V2 = LOG_V1 + '\n## hacrp methods_version 2 (2026-11-02)\n- why\n';
+
+// A stray GIT_DIR or GIT_WORK_TREE in the caller's environment (another throwaway repo stands for the one it would name)
+// never takes the throwaway repo's init, config or commits.
+test('the throwaway repo is its own, whatever GIT_DIR or GIT_WORK_TREE the caller has set', (t) => {
+  const other = mkdtempSync(join(tmpdir(), 'gate-other-'));
+  t.after(() => rmSync(other, { recursive: true, force: true }));
+  execFileSync('git', ['init', '-q'], { cwd: other, env: ownEnv() });
+  const before = readFileSync(join(other, '.git', 'config'), 'utf8');
+  const saved = { GIT_DIR: process.env.GIT_DIR, GIT_WORK_TREE: process.env.GIT_WORK_TREE };
+  process.env.GIT_DIR = join(other, '.git');
+  process.env.GIT_WORK_TREE = other;
+  let r;
+  try {
+    r = repo();
+    r.write('a.txt', 'a\n');
+    r.commit('one');
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    if (r) t.after(() => rmSync(r.dir, { recursive: true, force: true }));
+  }
+  assert.equal(readFileSync(join(other, '.git', 'config'), 'utf8'), before, 'the other repo\'s config untouched');
+  assert.equal(existsSync(join(other, '.git', 'refs', 'heads', 'main')) || existsSync(join(other, '.git', 'refs', 'heads', 'master')), false, 'and no commit made there');
+  assert.ok(existsSync(join(r.dir, '.git')), 'the throwaway repo has its own git directory');
+});
 
 test('CLI: the gate reads git correctly for each reason, and fails without one', (t) => {
   const r = repo();
