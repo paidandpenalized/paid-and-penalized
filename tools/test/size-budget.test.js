@@ -9,7 +9,7 @@ import { randomBytes } from 'node:crypto';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
-import { BUDGETS, JS_BUDGET, measure, overBudget, pageWeight } from '../ci/size-budget.js';
+import { BLOCKING_JS_BUDGET, BUDGETS, JS_BUDGET, measure, overBudget, pageWeight } from '../ci/size-budget.js';
 
 // Brotli's size of the text; quality 5 is the one the budget counts.
 const br = (text, quality = 5) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
@@ -32,11 +32,11 @@ test('pageWeight: brotli of the HTML, each stylesheet and each script, a script 
       'hacrp/hospital/990001/index.html': hospital, 'hacrp/hospital/990002/index.html': other,
     });
     assert.deepEqual(pageWeight(dir, 'hacrp/hospital/990001/index.html'), {
-      html: br(hospital), css: br(site), js: br(a) + br(shared), total: br(hospital) + br(site) + br(a) + br(shared),
+      html: br(hospital), css: br(site), js: br(a) + br(shared), blocking: 0, total: br(hospital) + br(site) + br(a) + br(shared),
     });
     // Each page counts its own references: the second page's one script is the shared file, once.
     assert.deepEqual(pageWeight(dir, 'hacrp/hospital/990002/index.html'), {
-      html: br(other), css: br(site), js: br(shared), total: br(other) + br(site) + br(shared),
+      html: br(other), css: br(site), js: br(shared), blocking: 0, total: br(other) + br(site) + br(shared),
     });
   }));
 
@@ -45,12 +45,36 @@ test('pageWeight: a script with a src counts, module or not; a data script, a fo
     const classic = noise(120);
     writeTree(dir, { 'assets/classic.1.js': classic, 'classic/index.html': page('<script src="/assets/classic.1.js" defer></script>') });
     assert.equal(pageWeight(dir, 'classic/index.html').js, br(classic));
+    assert.equal(pageWeight(dir, 'classic/index.html').blocking, 0, 'a deferred script does not hold the page');
 
     const text = '<link rel="preload" href="/assets/fonts/a.woff2" as="font"><link rel="icon" href="/favicon.svg">'
       + '<a href="/assets/other.1.js">x</a><script type="application/json" id="d">{"a":1}</script><script>var x = 1;</script>';
     const body = page(text);
     writeTree(dir, { 'index.html': body });
-    assert.deepEqual(pageWeight(dir, 'index.html'), { html: br(body), css: 0, js: 0, total: br(body) });
+    assert.deepEqual(pageWeight(dir, 'index.html'), { html: br(body), css: 0, js: 0, blocking: 0, total: br(body) });
+  }));
+
+// A plain script (no module, defer or async) stops the page's parser until it has run, so it delays the first paint:
+// its weight counts in the page's scripts and, on its own, against the much smaller blocking budget.
+test('pageWeight: a script the parser waits for (no module, defer or async) also counts as blocking', () =>
+  withTemp('size-', (dir) => {
+    const early = noise(90);
+    const late = noise(200);
+    const tags = '<script src="/assets/early.1.js"></script><script type="module" src="/assets/late.1.js"></script>'
+      + '<script async src="/assets/late.1.js"></script>';
+    writeTree(dir, { 'assets/early.1.js': early, 'assets/late.1.js': late, 'index.html': page(tags) });
+    const w = pageWeight(dir, 'index.html');
+    assert.equal(w.blocking, br(early));
+    assert.equal(w.js, br(early) + br(late));
+  }));
+
+test('overBudget: a page whose blocking scripts pass the blocking budget (1 KB) is reported', () =>
+  withTemp('size-', (dir) => {
+    assert.equal(BLOCKING_JS_BUDGET, 1024);
+    const heavy = noise(2000);
+    writeTree(dir, { 'assets/early.1.js': heavy, 'index.html': page('<script src="/assets/early.1.js"></script>') });
+    assert.deepEqual(overBudget(measure(dir)), [{ path: '/', type: 'hub', part: 'blocking', bytes: br(heavy), budget: BLOCKING_JS_BUDGET }]);
+    assert.deepEqual(overBudget(measure(dir), { blocking: 50000 }), []);
   }));
 
 test('pageWeight: a referenced file that is not in dist throws, and so does a script that imports another file', () =>

@@ -2,8 +2,9 @@
 // buttons, the hospital a reader follows from page to page, the phone's search button, the program tabs' scroll and
 // fade, and a keyboard's focus kept in view in the header's rows that scroll sideways. Each part is a function of the
 // elements it works on, so the wiring is tested on a stand-in DOM; start() at the bottom finds those elements on a real
-// page. Nothing is stored: the theme lasts for the visit, and the followed hospital lives in the address (?h=), so the
-// next visit starts clean. Everything a hospital's name touches is textContent or an attribute, never markup. The pure
+// page. The light/dark choice is kept for the visit in the tab's session storage (theme-store.js; the head's script,
+// theme.js, puts it back before each page paints), and the followed hospital lives in the address (?h=), so the next
+// visit starts clean. Everything a hospital's name touches is textContent or an attribute, never markup. The pure
 // parts of the follow are follow.js's, for any script to share.
 import { CCN } from '../../engine/js/ccn.js';
 import { CHIP } from '../chip-copy.js';
@@ -11,16 +12,18 @@ import { hospitalPathOf } from '../site.js';
 import { money } from './format.js';
 import { followedCcn, siteAddress, tabHref, tabProgram, withFollow, withoutFollow } from './follow.js';
 import { loadHubAsset } from './hub-asset.js';
+import { saveTheme, sessionStore } from './theme-store.js';
 
 export { followedCcn, tabHref, tabProgram, withoutFollow };
 
 // ---------- dark mode ----------
 
 // The theme buttons (one in the bar, one in the footer; the CSS shows one at a time), hidden in the markup since they do
-// nothing without this script. Either flips data-theme on <html> for this visit only and says so on the document
-// ('pp-theme', detail { dark }), so a canvas reads its colors again; both buttons keep aria-pressed in step. The device
-// changing its scheme says so too, while the visitor has made no choice.
-export function wireTheme({ buttons, root, query, doc }) {
+// nothing without this script. Either flips data-theme on <html>, keeps the choice for the visit in store (the tab's
+// session storage, or null; theme-store.js) and says so on the document ('pp-theme', detail { dark }), so a canvas
+// reads its colors again; both buttons keep aria-pressed in step. A choice kept earlier in the visit is already on
+// <html> (the head's script). The device changing its scheme says so too, while the visitor has made no choice.
+export function wireTheme({ buttons, root, query, doc, store = null }) {
   if (!buttons.length) return;
   const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : query.matches);
   const sync = () => { for (const button of buttons) button.setAttribute('aria-pressed', String(isDark())); };
@@ -28,6 +31,7 @@ export function wireTheme({ buttons, root, query, doc }) {
   for (const button of buttons) {
     button.addEventListener('click', () => {
       root.dataset.theme = isDark() ? 'light' : 'dark';
+      saveTheme(store, root.dataset.theme);
       sync();
       announce();
     });
@@ -185,7 +189,7 @@ export function wireTabs({ nav, row, win, fonts = null }) {
 // ---------- a page ----------
 
 function start() {
-  wireTheme({ buttons: [...document.querySelectorAll('.theme-toggle')], root: document.documentElement, query: window.matchMedia('(prefers-color-scheme: dark)'), doc: document });
+  wireTheme({ buttons: [...document.querySelectorAll('.theme-toggle')], root: document.documentElement, query: window.matchMedia('(prefers-color-scheme: dark)'), doc: document, store: sessionStore(window) });
   const header = document.querySelector('header.fam');
   if (!header) return;
   // The find button is shown only when the bar holds a search form for it to open (a page without one keeps it hidden).

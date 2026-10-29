@@ -410,15 +410,29 @@ test('page: the shell script and then the sticky header\'s always load first, ex
   assert.ok(!plain.includes('name="robots"'));
   assert.ok(!plain.includes('ld+json'));
   assert.deepEqual([...plain.matchAll(/<script type="module" src="([^"]+)"><\/script>/g)].map((m) => m[1]), ['/assets/shell.bbbbbbbb.js', ASSETS.js.topbar]);
-  assert.equal(plain.match(/<script /g).length, 2);
+  assert.equal(plain.match(/<script /g).length, 3, 'the two modules and the theme\'s script in the head');
 
   const full = page({ ...PAGE, robots: 'noindex', scripts: ['/assets/hacrp.cccccccc.js'], jsonLd: { name: '</script>' } });
   assert.ok(full.includes('<meta name="robots" content="noindex">'));
   assert.ok(full.indexOf('shell.bbbbbbbb.js') < full.indexOf(ASSETS.js.topbar) && full.indexOf(ASSETS.js.topbar) < full.indexOf('hacrp.cccccccc.js'));
   // A page does not list them again.
-  for (const src of [ASSETS.js.shell, ASSETS.js.topbar]) assert.throws(() => page({ ...PAGE, scripts: [src] }), TypeError);
+  for (const src of [ASSETS.js.shell, ASSETS.js.topbar, ASSETS.js.theme]) assert.throws(() => page({ ...PAGE, scripts: [src] }), TypeError);
   const ld = /<script type="application\/ld\+json">(.*?)<\/script>/s.exec(full)[1];
   assert.deepEqual(JSON.parse(ld), { name: '</script>' });
+});
+
+// The reader's light/dark choice for the visit goes on <html> before the first paint: a classic script (no module, no
+// defer, no async, so the parser runs it at once), in the head, before the stylesheets and every other script.
+test('page: the theme\'s script runs first, in the head, as a classic script, before the stylesheets; a page needs it', () => {
+  const out = page({ ...PAGE, sheets: ['hub'], jsonLd: { name: 'x' } });
+  const head = out.slice(0, out.indexOf('</head>'));
+  assert.equal(ASSETS.js.theme, '/assets/theme.test.js');
+  assert.ok(head.includes(`<script src="${ASSETS.js.theme}"></script>`), 'a plain script tag in the head');
+  assert.equal(out.split(ASSETS.js.theme).length, 2, 'once');
+  assert.ok(head.indexOf(ASSETS.js.theme) < head.indexOf('<link rel="stylesheet"'), 'before the stylesheets');
+  assert.ok(head.indexOf(ASSETS.js.theme) < head.indexOf('<script type="application/ld+json">'), 'the first script');
+  const { theme, ...rest } = ASSETS.js;
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, js: rest } }), /theme/);
 });
 
 test('page: links the shared stylesheet alone, or it and then each named sheet in order; an unknown name throws', () => {

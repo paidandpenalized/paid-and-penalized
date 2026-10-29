@@ -190,6 +190,15 @@ test('/privacy/ links the two services\' policies and names no retention period'
     assert.doesNotMatch(words, /\d|\b(retain|retained|retention|delete|deleted|deletion|erase|erased)\b|\b(days?|weeks?|months?|years?)\b/i);
   }));
 
+// The one thing a page keeps in the browser is the light/dark choice, for the visit (web/client/theme-store.js), and the
+// privacy page says so, beside its words on cookies.
+test('/privacy/ says the light/dark choice is the one thing kept in the browser, for the visit, and is sent nowhere', () =>
+  withHub((read) => {
+    const reading = textOf(read('/privacy/').match(/<section[^>]*id="reading"[\s\S]*?<\/section>/)[0]).replace(/’/g, "'").trim();
+    assert.ok(reading.includes('It sets no cookies, has no accounts and shows no ads.'), reading);
+    assert.ok(reading.endsWith("If you switch between light and dark, your browser remembers that choice for the rest of the visit, and it isn't sent anywhere."), reading);
+  }));
+
 test('/accessibility/ names the WCAG version from its constant', () =>
   withHub((read) => {
     const a11y = textOf(read('/accessibility/'));

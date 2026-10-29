@@ -1,6 +1,6 @@
-// The page build's shared assets: the shared stylesheet, a stylesheet of its own for each site, and one ES module per JS
-// entry, each named by a hash of its content so a changed file gets a new URL, plus the fonts (fixed names), their
-// licenses and the favicon.
+// The page build's shared assets: the shared stylesheet, a stylesheet of its own for each site, and one script per JS
+// entry (an ES module, or a classic script for the head's theme), each named by a hash of its content so a changed file
+// gets a new URL, plus the fonts (fixed names), their licenses and the favicon.
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
@@ -64,8 +64,10 @@ const assetName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name) && name !== 'site'
 // [stylesheet paths] }, each its files in order as /assets/<name>.<hash>.css (returned as sheets[name]), for a page to
 // link after the shared one (layout.js page()'s `sheets`). A sheet of its own gets no dark copy or print block: those are
 // the tokens', in the shared bundle, and its rules read the tokens' custom properties.
-// entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]).
-export async function buildAssets({ outDir, entries = {}, siteStyles = {} }) {
+// entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]): an ES module, or, for
+// a name in classic, a classic script, bundled as one self-contained function call (no import, export or global name).
+export async function buildAssets({ outDir, entries = {}, classic = [], siteStyles = {} }) {
+  for (const name of classic) if (!Object.hasOwn(entries, name)) throw new RangeError(`no classic entry "${name}" in entries`);
   const dir = join(outDir, 'assets');
   mkdirSync(join(dir, 'fonts'), { recursive: true });
 
@@ -80,7 +82,7 @@ export async function buildAssets({ outDir, entries = {}, siteStyles = {} }) {
     if (!assetName(name)) throw new RangeError(`bad JS entry name "${name}"`);
     const result = await esbuild({
       entryPoints: [repoPath(path)],
-      bundle: true, format: 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent',
+      bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent',
     });
     js[name] = writeHashed(dir, name, 'js', result.outputFiles[0].text);
   }

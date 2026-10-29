@@ -43,12 +43,14 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 
 // body: Safe markup (a plain string is escaped, never trusted). assets: the build's paths (css, the shared stylesheet;
 // sheets, the stylesheets of their own by name; js by entry name) and the shell's facts (assets.shell: what the header
-// and footer show on every page, computed once by the build). Every page loads the shell's script first, then the sticky
-// header's (topbar.js), since every page wears that header. scripts: the page's own module URLs, loaded in order after
-// those two: a page with a figure (web/charts/figure.js) lists assets.js.figure, one with the citation block
-// (components.js) assets.js.cite, then its own. preloadFonts: font file names to preload (PRELOAD_FONTS). sheets: the
-// names of the stylesheets of their own the page links after the shared one, in order (a hub page's: ['hub']);
-// render-blocking, as the shared one is, so the page never paints without them.
+// and footer show on every page, computed once by the build). Every page runs the theme's classic script in its head,
+// before the stylesheets (web/client/theme.js: the reader's light/dark choice for the visit, on <html> before the first
+// paint). Its modules start with the shell's script, then the sticky header's (topbar.js), since every page wears that
+// header. scripts: the page's own module URLs, loaded in order after those two: a page with a figure
+// (web/charts/figure.js) lists assets.js.figure, one with the citation block (components.js) assets.js.cite, then its
+// own. preloadFonts: font file names to preload (PRELOAD_FONTS). sheets: the names of the stylesheets of their own the
+// page links after the shared one, in order (a hub page's: ['hub']); render-blocking, as the shared one is, so the page
+// never paints without them.
 // The shell's parts (render/shell.js familyHeader): program, the current program's id (null on the family's own pages);
 // hospital, the followed hospital ({ ccn, name, net, inTdr }) on a hospital's page, else null; sections, a program's
 // section menu ([{ id, label, href }], or null for none) and current, the section to mark (an id, or null); search, the
@@ -59,10 +61,10 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], sheets = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, program = null, hospital = null, sections = null, current = null, search = '' }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
-  if (!assets?.css || !assets.js?.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, shell and sticky-header script paths');
+  if (!assets?.css || !assets.js?.theme || !assets.js.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, and the theme, shell and sticky-header script paths');
   if (!assets.shell) throw new TypeError('page: assets must hold the shell facts (the build computes them once, as ctx.assets.shell)');
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
-  if (scripts.includes(assets.js.shell) || scripts.includes(assets.js.topbar)) throw new TypeError('page: every page loads the shell and sticky-header scripts; leave them out of scripts');
+  if ([assets.js.theme, assets.js.shell, assets.js.topbar].some((src) => scripts.includes(src))) throw new TypeError('page: every page loads the theme, shell and sticky-header scripts; leave them out of scripts');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
   const stylesheets = [assets.css, ...sheets.map((name) => {
     if (!Object.hasOwn(assets.sheets ?? {}, name)) throw new TypeError(`page: no stylesheet "${name}" in assets.sheets`);
@@ -80,6 +82,7 @@ ${address === null ? '' : html`<link rel="canonical" href="${address}">
 `}${robots ? html`<meta name="robots" content="${robots}">` : ''}
 ${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article' })}
 <meta name="color-scheme" content="light dark">
+<script src="${assets.js.theme}"></script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>
 `)}${stylesheets.map((href) => html`<link rel="stylesheet" href="${href}">

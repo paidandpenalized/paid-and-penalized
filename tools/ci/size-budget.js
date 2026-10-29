@@ -1,7 +1,8 @@
 // CI size budget: no page may weigh more than its page type's budget. A page's weight is what a first visit loads,
 // brotli-compressed at quality 5: the page's HTML (its inline data scripts included), each stylesheet it links and
 // each script it loads (module or not), every file counted once per page. Not counted: fonts (already compressed
-// WOFF2), the favicon, and the JSON data files that scripts fetch later.
+// WOFF2), the favicon, and the JSON data files that scripts fetch later. Two more limits on every page: its scripts
+// (JS_BUDGET), and the scripts its parser stops for (BLOCKING_JS_BUDGET).
 //
 // One quality, 5, for every page: deterministic, no assumption about the encoder, and closer to what a CDN
 // compresses on the fly than the smallest possible output (quality 11 is about 15% to 20% smaller and 50 times
@@ -51,6 +52,9 @@ export const BUDGETS = {
 };
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;
+// The scripts a page's parser stops for (a plain <script src>: no module, defer or async), brotli-compressed. They hold
+// the first paint until they have run, so they stay tiny: today the head's theme script alone (web/client/theme.js).
+export const BLOCKING_JS_BUDGET = 1 * KB;
 
 // A script that pulls in another file by a relative or site path (static or dynamic import).
 const IMPORTS = /\b(?:from|import)\s*\(?\s*["'](?:\.{1,2}\/|\/)[^"']*\.m?js["']/;
@@ -73,20 +77,28 @@ function assetSize(distDir, ref, cache) {
   return cache.get(ref);
 }
 
-// The brotli weight in bytes of one page, htmlPath being its file from distDir ('hacrp/index.html').
+// Whether the parser stops for a script tag's attrs until it has run: a plain script, not a module, deferred or async.
+const blocks = (attrs) => attrs.type?.trim().toLowerCase() !== 'module' && !('defer' in attrs) && !('async' in attrs);
+
+// The brotli weight in bytes of one page, htmlPath being its file from distDir ('hacrp/index.html'): { html, css, js,
+// blocking (the part of js the parser stops for), total }.
 export function pageWeight(distDir, htmlPath, cache = new Map()) {
   const bytes = readFileSync(join(distDir, htmlPath));
   const css = new Set();
   const js = new Set();
+  const blocking = new Set();
   for (const { name, attrs } of tags(bytes.toString('utf8'), { names: ['link', 'script'] })) {
     if (name === 'link' && attrs.href && attrs.rel?.toLowerCase().split(/\s+/).includes('stylesheet')) css.add(attrs.href);
-    else if (name === 'script' && attrs.src) js.add(attrs.src);
+    else if (name === 'script' && attrs.src) {
+      js.add(attrs.src);
+      if (blocks(attrs)) blocking.add(attrs.src);
+    }
   }
   const sum = (refs) => [...refs].reduce((total, ref) => total + assetSize(distDir, ref, cache), 0);
   const html = brotliSize(bytes);
   const cssBytes = sum(css);
   const jsBytes = sum(js);
-  return { html, css: cssBytes, js: jsBytes, total: html + cssBytes + jsBytes };
+  return { html, css: cssBytes, js: jsBytes, blocking: sum(blocking), total: html + cssBytes + jsBytes };
 }
 
 // Every page in distDir: { path, type, html, css, js, total }, in path order. Throws on a page of no known type
@@ -102,15 +114,17 @@ export function measure(distDir) {
   return pages.map(({ htmlPath, path, type }) => ({ path, type, ...pageWeight(distDir, htmlPath, cache) }));
 }
 
-// The rows over a limit: a page over its type's budget (part 'total') and a page whose scripts alone pass the
-// script budget (part 'js'), each with the measured bytes of that part.
-export function overBudget(rows, { budgets = BUDGETS, js = JS_BUDGET } = {}) {
+// The rows over a limit: a page over its type's budget (part 'total'), a page whose scripts alone pass the script
+// budget (part 'js') and a page whose blocking scripts pass theirs (part 'blocking'), each with the measured bytes of
+// that part.
+export function overBudget(rows, { budgets = BUDGETS, js = JS_BUDGET, blocking = BLOCKING_JS_BUDGET } = {}) {
   const over = [];
   for (const row of rows) {
     const budget = budgets[row.type];
     if (budget === undefined) throw new RangeError(`no budget for page type "${row.type}"`);
     if (row.total > budget) over.push({ path: row.path, type: row.type, part: 'total', bytes: row.total, budget });
     if (row.js > js) over.push({ path: row.path, type: row.type, part: 'js', bytes: row.js, budget: js });
+    if (row.blocking > blocking) over.push({ path: row.path, type: row.type, part: 'blocking', bytes: row.blocking, budget: blocking });
   }
   return over;
 }
@@ -125,9 +139,12 @@ if (isMain(import.meta.url)) {
     const heaviest = ofType.reduce((a, b) => (b.total > a.total ? b : a));
     console.log(`${type.padEnd(10)} ${String(ofType.length).padStart(5)} pages  heaviest ${kb(heaviest.total).padStart(9)} of ${kb(BUDGETS[type])}  (scripts ${kb(heaviest.js)} of ${kb(JS_BUDGET)})  ${heaviest.path}`);
   }
+  const blocking = rows.reduce((a, b) => (b.blocking > a.blocking ? b : a));
+  console.log(`blocking scripts: heaviest ${kb(blocking.blocking)} of ${kb(BLOCKING_JS_BUDGET)}  ${blocking.path}`);
   const over = overBudget(rows);
+  const PARTS = { total: '', js: ', scripts', blocking: ', blocking scripts' };
   for (const { path, type, part, bytes, budget } of over)
-    console.error(`OVER BUDGET ${path} (${type}${part === 'js' ? ', scripts' : ''}): ${kb(bytes)} > ${kb(budget)}`);
+    console.error(`OVER BUDGET ${path} (${type}${PARTS[part]}): ${kb(bytes)} > ${kb(budget)}`);
   if (over.length > 0) process.exit(1);
   console.log(`size budget: ${rows.length} pages within budget`);
 }
