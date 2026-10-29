@@ -182,6 +182,19 @@ test('the hooks the page\'s script uses, its script-only controls hidden, and th
   assert.ok(main.includes(esc('A cut is a program’s formula at work, not a verdict on a hospital’s care. Peers are listed alphabetically; nothing on this page ranks hospitals.')), 'the fairness line');
 });
 
+// The strips' and the dollar rows' median ticks' glides take their length and curve from the page's script, which times
+// the same moves (strips.js setGlide): the stylesheet keeps no second copy that could drift from it.
+test('the stylesheet\'s glides read their length and curve from the page\'s script, never a copy of them', () => {
+  const css = readFileSync(join(import.meta.dirname, '..', 'styles.css'), 'utf8');
+  const glides = css.split('\n').filter((line) => /^\.(st--live :is|hh--live \.hh__tick)\b/.test(line));
+  assert.equal(glides.length, 2, 'the strips\' glide and the ticks\'');
+  for (const line of glides) {
+    const transition = /transition: ([^;]+);/.exec(line)?.[1] ?? '';
+    assert.match(transition, /var\(--glide\)/, line);
+    assert.doesNotMatch(transition, /\d(ms|s)\b|cubic-bezier/, `${line}: no length or curve written here`);
+  }
+});
+
 test('a program a hospital is not in reads "Not in this program", hatched, never $0', () => {
   for (const [h, id] of [[NO_VBP, 'hvbp'], [NO_HRRP, 'hrrp']]) {
     const main = mainOf(render(h));

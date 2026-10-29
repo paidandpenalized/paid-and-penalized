@@ -834,3 +834,35 @@ describe('the strips\' axis', () => {
   }));
 
 });
+
+describe('the hospital page\'s parts, at 1280 px', () => {
+  const tabs = useContext(shared);
+
+  // A glide that runs late (a busy page) is never cut short: the strips rest once every part has arrived. Each glide the
+  // toggle starts runs at 40% speed here, as if every part had started late.
+  it('the strips\' glide rests only once every part has arrived, however late it runs', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {
+    await page.waitForSelector('[data-strip] svg');
+    await page.locator('#whatif').scrollIntoViewIfNeeded();
+    await settle(page);
+    const s = await page.evaluate(async () => {
+      const cut = [];
+      document.addEventListener('transitioncancel', (e) => {
+        if (e.propertyName === 'transform' && e.target.isConnected && e.target.closest?.('svg.st')) cut.push(e.target.getAttribute('class'));
+      }, true);
+      const toggle = [...document.querySelectorAll('[data-peer]')].find((b) => !b.disabled && b.getAttribute('aria-pressed') === 'false');
+      toggle.click();
+      const glides = document.getAnimations().filter((a) => a.effect?.target?.closest?.('svg.st'));
+      for (const a of glides) a.playbackRate = 0.4;
+      const live = () => document.querySelectorAll('svg.st.st--live').length;
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      await wait(1100);
+      const mid = live();
+      await wait(1800);
+      return { glides: glides.length, mid, end: live(), cut: cut.length };
+    });
+    assert.ok(s.glides > 0, 'the toggle starts glides');
+    assert.ok(s.mid > 0, 'still gliding past the usual length');
+    assert.deepEqual([s.end, s.cut], [0, 0], 'rested once every part arrived, none cut short');
+    await assertQuiet(seen, 'a late glide');
+  }));
+});

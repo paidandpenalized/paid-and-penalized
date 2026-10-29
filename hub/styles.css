@@ -533,7 +533,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__tip b { display: block; font-weight: 700; }
 .hh__tip span { display: block; color: var(--ink-2); font: 400 12px/1.4 var(--font-type); }
 .hh__tip .hh__tip-open { color: var(--ink); font: 600 12px/1.4 var(--font-body); }
-.hh--live .hh__tick { transition: left .7s cubic-bezier(.65, 0, .35, 1); }
+.hh--live .hh__tick { transition: left var(--glide); }
 .hh__cap { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
 .hh__hint { display: block; margin-top: 4px; }
 .hh__err { margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); }
@@ -595,9 +595,10 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .st__med path { fill: var(--ink); }
 .st__out { fill: var(--ink-2); font: 600 12px var(--font-body); }
 /* A glide (a change of group, or of axis as the what-if opens or resets): every part of a strip moves on one curve in one
-   time (paint.js GLIDE_MS), so a dot never leaves its tick; the class comes off when it ends, so a handle then follows
-   a drag at once. */
-.st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
+   time, so a dot never leaves its tick; the class comes off once every part has arrived, so a handle then follows a drag
+   at once. --glide (the length and curve) and --fade (a leaving dot's) are the page script's, which times the same
+   moves (hub/client/hospital/strips.js setGlide). */
+.st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform var(--glide), opacity var(--fade); }
 /* The hint stands aside while the strips glide (the piles restack under it), and comes back after. */
 .st--live .st__hint { opacity: 0; transition-duration: .15s; }
 /* The thread: one dashed line down the rows through the hospital's mark in each strip. */

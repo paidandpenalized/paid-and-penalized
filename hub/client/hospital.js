@@ -15,7 +15,7 @@ import { COPY } from '../hospital/copy.js';
 import { ROWS, peerGroup, sumValues } from '../hospital/peers.js';
 import { whyText } from '../hospital/text.js';
 import { node } from './hospital/dom.js';
-import { mountStrips } from './hospital/strips.js';
+import { mountStrips, setGlide } from './hospital/strips.js';
 import { mountSwarm } from './hospital/swarm.js';
 import { fillPeerTable } from './hospital/table.js';
 import { reach, vbpMaxOf } from './hospital/whatif-state.js';
@@ -45,6 +45,7 @@ function start(page) {
 
 function live(page, { hospitals, h, fy, still }) {
   const $ = (selector) => page.querySelector(selector);
+  setGlide(page);
   const all = count(hospitals.filter((x) => x.est).length);
   // Every way the hospital can be grouped, worked out once (peers.js peerGroup).
   const groups = new Map(PEER_MODES.map((mode) => [mode, peerGroup(fill, hospitals, h, mode)]));

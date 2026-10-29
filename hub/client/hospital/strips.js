@@ -21,8 +21,15 @@ import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile
 import { shareScale, tickText, wholePercents } from '../scale.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-// A glide's curve (its length is paint.js GLIDE_MS): hub/styles.css .st--live's transitions.
+// A glide's curve (its length is paint.js GLIDE_MS), and how long a dot that leaves takes to fade.
 const GLIDE = 'cubic-bezier(.65, 0, .35, 1)';
+const FADE_MS = 450;
+// The glides' length and curve, and a leaving dot's fade, for the stylesheet's transitions on the page el (hub/styles.css
+// reads --glide and --fade): the script that times the same moves is their one source.
+export function setGlide(el) {
+  el.style.setProperty('--glide', `${GLIDE_MS}ms ${GLIDE}`);
+  el.style.setProperty('--fade', `${FADE_MS}ms`);
+}
 // The time (0 to 1) at which a glide on that curve has come p of the way (bisection on the curve's parameter).
 const bez = (a, b, u) => 3 * a * u * (1 - u) ** 2 + 3 * b * u * u * (1 - u) + u ** 3;
 function timeAt(p) {
@@ -108,7 +115,6 @@ export function stripLayout(group, { W, dpr, domain }) {
   return out;
 }
 
-const FADE = 450;
 // The handle's half height (a 24 px target at the least) and how far its capsule reaches past that each side.
 const HANDLE_R = 12;
 const HANDLE_REACH = 14;
@@ -187,7 +193,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     const out = el('text', { class: 'st__out', x: 4, y: 14, ...hidden }, svg);
     const handle = adjustable ? handleOf(svg, fill, !hinted) : null;
     if (handle) hinted = true;
-    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), ticks: new Map(), leaving: new Map(), gut: null, lines: null, labels: null, at: null, W: 0, H: 0, scale: null, f: null, dot: '' };
+    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), ticks: new Map(), leaving: new Map(), fading: new Set(), gut: null, lines: null, labels: null, at: null, W: 0, H: 0, scale: null, f: null, dot: '' };
   }).filter(Boolean);
   const thread = el('svg', { class: 'hh__thread', 'aria-hidden': 'true', focusable: 'false' });
   const path = el('path', {}, thread);
@@ -361,9 +367,10 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     for (const [ccn, mark] of st.marks) {
       if (seen.has(ccn)) continue;
       st.marks.delete(ccn);
+      // One that leaves in a glide fades out and goes once the glide has rested.
       if (glide) {
         mark.style.opacity = '0';
-        setTimeout(() => mark.remove(), FADE);
+        st.fading.add(mark);
       } else mark.remove();
     }
     // This hospital: ringed where it stands, or a line saying it is not in the program.
@@ -478,8 +485,8 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   }
 
   // A glide under way: each frame the thread goes through the rings where they are; once every part of a strip has
-  // arrived, the glide's class comes off (a handle then follows a drag at once), the ticks gone out are removed, and a
-  // nudge asked for meanwhile runs.
+  // arrived, the glide's class comes off (a handle then follows a drag at once), the ticks gone out and the dots faded out
+  // are removed, and a nudge asked for meanwhile runs.
   let gliding = 0;
   let nudgeAfter = false;
   function rest() {
@@ -489,6 +496,8 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       st.svg.classList.remove('st--live');
       for (const { parts } of st.leaving.values()) for (const p of parts) p.remove();
       st.leaving.clear();
+      for (const mark of st.fading) mark.remove();
+      st.fading.clear();
       for (const parts of st.ticks.values()) for (const p of parts) p.style.transition = '';
     }
     drawThread();
@@ -497,15 +506,18 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       nudge();
     }
   }
-  // The transitions start with the style change, on the first frame at the latest, so every one has ended GLIDE_MS
-  // after that frame's time (a little more, to be sure).
+  // Whether any part of a strip is still on its way (its transition running).
+  const moving = () => strips.some((st) => st.svg.getAnimations?.({ subtree: true }).some((a) => a.playState === 'running' && a.effect?.target?.matches?.(MOVERS)));
+  // The transitions start with the style change, on the first frame at the latest, so each has ended GLIDE_MS after that
+  // frame's time unless it started late (a long frame, a busy page): the glide rests only once no part is still on its
+  // way, so a late part is never cut short at its end.
   function follow() {
     cancelAnimationFrame(gliding);
     let until = 0;
     const step = (now) => {
-      if (!until) until = now + GLIDE_MS + 50;
+      if (!until) until = now + GLIDE_MS;
       drawThread();
-      if (now < until) gliding = requestAnimationFrame(step);
+      if (now < until || moving()) gliding = requestAnimationFrame(step);
       else rest();
     };
     gliding = requestAnimationFrame(step);
