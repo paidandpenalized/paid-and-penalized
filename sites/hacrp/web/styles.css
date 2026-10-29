@@ -3,27 +3,25 @@
    web/styles/tokens.css. */
 
 /* ---------- the hospital page (pages/hospital.js), after Thirty Day Readmissions' hospital record ----------
-   The page runs the full width. The top: the record card and the verdict, 3fr and 2fr from 980px and the same
-   height, over a bold rule; stacked under 980px, the record first. */
+   The page runs the full width. The top: the record card and the verdict, 3fr and 2fr from 980px, over a bold rule;
+   stacked under 980px, the record first. The card is as tall as its fields' words. */
 .hosp { gap: 0; }
 .hosp > * + * { margin-top: 56px; }
 .hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; padding: 4px 0 32px; border-bottom: 5px solid var(--ink); }
 @media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: stretch; } }
 .hosp__top > * { min-width: 0; }
-/* The record's fields wrap as boxes about 190px and up, each row's boxes growing to fill it, so the form never ends
-   on an empty box; the title and the name take whole rows. The rows stretch to the verdict's height. */
-.hosp__id { position: relative; display: flex; flex-direction: column; }
-.hosp__id > :not(.hosp__wm) { position: relative; }
+/* The record: the title and the name take whole rows, then the fields. */
+.hosp__id { display: flex; flex-direction: column; align-self: start; }
 /* The fields on a six-column grid, a third each: where and what the hospital is (Location, Type, the stars), then the
-   row that reads score, decision, dollars. A missing field's neighbors take its room. The rows stretch to the verdict's
-   height. One column on a phone. */
-.hosp__fields { flex: 1 1 auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 1fr; }
+   row that reads score, decision, dollars. A missing field's neighbors take its room. Each row as tall as its fields'
+   words. One column on a phone. */
+.hosp__fields { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .hosp__fields > .field { grid-column: span 2; }
 .hosp__fields:not(:has(> .f-stars)) > .f-type, .hosp__fields:not(:has(> .f-type)) > .f-loc { grid-column: span 4; }
 .hosp__fields:not(:has(> .f-type)):not(:has(> .f-stars)) > .f-loc { grid-column: span 6; }
 .hosp__fields:not(:has(> .f-money)) > :is(.f-score, .f-pay) { grid-column: span 3; }
 @media (max-width: 600px) {
-  .hosp__fields { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+  .hosp__fields { grid-template-columns: minmax(0, 1fr); }
   .hosp__fields > .field, .hosp__fields:not(:has(> .f-stars)) > .f-type, .hosp__fields:not(:has(> .f-type)) > .f-loc,
   .hosp__fields:not(:has(> .f-type)):not(:has(> .f-stars)) > .f-loc, .hosp__fields:not(:has(> .f-money)) > :is(.f-score, .f-pay) { grid-column: 1 / -1; }
 }
@@ -37,17 +35,18 @@
 .hero__pill .pill { padding: 5px 12px 4px; font-size: var(--fs-lg); }
 .stars { color: var(--ink); letter-spacing: 0.05em; }
 .stars__off { color: var(--ink-3); }
-/* The state's outline, faint behind the fields, its dot still red. Letters over it keep a thin paper halo. */
-.hosp__wm { position: absolute; inset: 2.5rem 10px 10px; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
-.geo { display: block; }
-.geo .chart { display: block; }
-.geo--j { height: 100%; }
-.geo--j .chart { width: auto; height: 100%; max-width: 100%; }
-.geo--j .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.25; }
-.geo .chart-geo-dot, .geo .chart-geo-halo { fill: var(--pen); }
-.geo--j .chart-geo-halo { fill-opacity: 0.14; }
-.hosp__id .field__value, .hosp__id .field__note, .hosp__id .field__label { text-shadow: 0 0 2px var(--paper), 0 0 2px var(--paper), 0 0 1px var(--paper); }
-.hosp__id .field__value .pill { text-shadow: none; }
+/* The Location field's locator: the state's outline, small and faint, its dot in the penalty red, under the field's words
+   (pages/hospital.js draws it at the width it shows at, so its dot keeps one size); on a phone, beside them. */
+.hosp__loc { margin-top: 10px; }
+.hosp__loc .chart { width: 84px; max-width: 100%; }
+.hosp__loc .chart-geo-state { fill: var(--paper-2); stroke: var(--ink-3); stroke-opacity: 0.6; }
+.hosp__loc :is(.chart-geo-dot, .chart-geo-halo) { fill: var(--pen); }
+.hosp__loc .chart-geo-halo { fill-opacity: 0.18; }
+@media (max-width: 600px) {
+  .hosp__fields > .f-loc:has(.hosp__loc) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; align-content: start; }
+  .f-loc > :not(.hosp__loc) { grid-column: 1; }
+  .f-loc > .hosp__loc { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-top: 0; }
+}
 /* The verdict: the stamp, the summary, CMS's line in words, the line bar and the rank. */
 .hosp__verdict { display: flex; flex-direction: column; gap: 10px; }
 .hosp__verdict .stamp { align-self: flex-start; margin: 2px 0 2px; font-size: clamp(1.6rem, 3.2vw, 2.2rem); }
@@ -278,8 +277,8 @@
   .stmt__part, .stmt__sw--part { forced-color-adjust: none; background: GrayText; }
   .stmt__row--sum .stmt__part { background: CanvasText; }
   .stmt__cut, .stmt__add, .stmt__sw--cut { forced-color-adjust: none; background: Highlight; }
-  .geo .chart-geo-dot { fill: CanvasText; }
-  .geo .chart-geo-halo { fill: none; }
+  .hosp__loc .chart-geo-dot { fill: CanvasText; }
+  .hosp__loc .chart-geo-halo { fill: none; }
   .stars__off { color: GrayText; }
   .ledger__row.is-top { border-left: 4px solid Highlight; }
   .mg > span, .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }

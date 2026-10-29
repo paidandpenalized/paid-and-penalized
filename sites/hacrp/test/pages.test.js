@@ -507,7 +507,7 @@ test('the ledger: one row per measure, CMS\'s value and z-score (a dash where CM
   }
 });
 
-test('the top: the record card (title bar, numbered fields from the name) beside the verdict (stamp, summary), the state map a watermark', () => {
+test('the top: the record card (title bar, numbered fields from the name) beside the verdict (stamp, summary)', () => {
   for (const h of Object.values(CASES)) {
     const text = render(h);
     assert.match(text, /<article class="wrap page page--hosp hosp">\n<div class="hosp__top">\n<div class="form hosp__id">\n<p class="form__title"><span>Hospital record · FY2026<\/span><span>CCN 99\d{4}<\/span><\/p>/, h.ccn);
@@ -666,7 +666,7 @@ test('a hospital page with no estimate (Maryland\'s, or no inputs) shows its chi
   }
 });
 
-test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map, its geocoder credited in the data list', () => {
+test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map in the Location field, its geocoder credited in the data list', () => {
   const profile = { zip: '35000', lat: 32.4, lon: -86.3, geo: 'zip', teach: 'major', beds: 1234, own: 'Government', urban: true, types: ['RRC', 'SCH'] };
   const page = (overrides, careCompare = null, state = 'AL') => hospitalPage({
     ...PAGE_CTX,
@@ -680,11 +680,14 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<p class="field__value field__value--sm">Major teaching[^<]*<\/p>\n<\/div>/);
   assert.doesNotMatch(text, /field__note">Teaching/);
   assert.match(text, /<div><dt>Teaching, urban and special status<\/dt><dd>CMS’s FY2027 IPPS impact file<\/dd><\/div><div><dt>Beds<\/dt><dd>CMS’s Provider of Services file<\/dd><\/div>/);
-  assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div>/);
+  assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div>\n<div class="hosp__loc"/);
   assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
   assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002', 'Open on Care Compare'))));
-  assert.match(text, /<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j"><svg class="chart chart--state-map"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
+  // The state's outline and the dot in the Location field, after its words (never behind another field's words), drawn at
+  // the width it shows at.
+  assert.match(text, /<div class="field f-loc">[^]*?<div class="field__note">Example County<\/div>\n<div class="hosp__loc" aria-hidden="true"><svg class="chart chart--state-map" viewBox="0 0 84 \d+"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
+  assert.doesNotMatch(text, /hosp__wm/, 'no map behind the fields');
   // No caption on how the dot was placed; the data list credits the geocoder once, for a geocoded address only.
   assert.doesNotMatch(text, /Placed /);
   assert.doesNotMatch(text, /Geocoder/, 'a ZIP-centered dot');
