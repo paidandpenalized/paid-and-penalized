@@ -1,9 +1,11 @@
 // Layout facts a reader sees at a glance, in a real browser at 1280 px (light): the HACRP hospital page's record card
 // (each row as tall as its fields' words, the state's outline and its dot in the Location field, clear of every field's
-// words); and a hospital page with scripts off, which offers no what-if it cannot run.
-// Pages are picked by type (site.js), never named. Runs against dist/ (make build) or any URL; see site.js.
+// words); the end of the placeholder and interim Readmissions pages (no wide empty band before the footer) and the interim
+// page's pill beside its figure; and a hospital page with scripts off, which offers no what-if it cannot run. Pages are
+// picked by type (site.js), never named. Runs against dist/ (make build) or any URL; see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { programById } from '../../web/site.js';
 import { CONCURRENCY, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
@@ -11,6 +13,9 @@ const shared = useBrowser();
 const PAGES = samplePages();
 const ofType = (type) => PAGES.find((p) => p.type === type);
 const HACRP_PAGES = PAGES.filter((p) => p.type.startsWith('hospital-'));
+// The footer's own room above its rule (web/styles/shell.css .foot's margin), and what a page may add to it.
+const FOOT_ROOM = 88;
+const SLACK = 24;
 
 describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared);
@@ -43,6 +48,28 @@ describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
     }));
   }
 
+  // The space between a page's last words and the footer's rule: the footer's own room, give or take.
+  const endBand = (page) => page.evaluate(() => {
+    const leaves = [...document.querySelector('main').querySelectorAll('*')]
+      .filter((el) => el.children.length === 0 && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+    const last = Math.max(...leaves.map((el) => el.getBoundingClientRect().bottom));
+    return Math.round(document.querySelector('.foot > .wrap').getBoundingClientRect().top - last);
+  });
+  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['an interim Readmissions page', ofType('hrrp-hospital-cut').path], ['a hospital page', ofType('hub-hospital-cut').path]]) {
+    it(`${what} ends without a wide empty band before the footer`, () => withPage(tabs, { path }, async (page) => {
+      const band = await endBand(page);
+      assert.ok(band <= FOOT_ROOM + SLACK, `${band} px between its last words and the footer's rule`);
+    }));
+  }
+
+  it('the interim Readmissions page\'s pill sits beside its figure', () => withPage(tabs, { path: ofType('hrrp-hospital-cut').path }, async (page) => {
+    const gap = await page.evaluate(() => {
+      const big = document.querySelector('.hh__netline .hh__big').getBoundingClientRect();
+      const pill = document.querySelector('.hh__netline .pill').getBoundingClientRect();
+      return Math.round(pill.left - big.right);
+    });
+    assert.ok(gap >= 0 && gap <= 24, `the pill ${gap} px from the figure`);
+  }));
 });
 
 describe('a hospital page with scripts off', () => {

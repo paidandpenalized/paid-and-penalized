@@ -686,8 +686,9 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__pt .hh__na { color: var(--ink-3); font: 400 12px var(--font-body); }
 .hh__pt .hh__me > * { background: var(--paper-2); }
 .hh__metag { color: var(--ink-2); font-size: 12px; }
-.hh__notes { margin-block: 18px 34px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
-.hh__notes p { max-width: 80em; margin-bottom: 6px; }
+.hh__notes { margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__notes p { max-width: 80em; }
+.hh__notes p + p { margin-top: 6px; }
 
 /* A hospital without an estimate: the record card, its status as an ink stamp, why, and its program pages. */
 .hh__status { display: grid; justify-items: start; gap: 14px; }
@@ -751,7 +752,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
    short block (its label, then the three figures with their own labels) rather than a table that scrolls sideways.
    The masthead rules (.rd--program, .rd__top, .rd__intro, .rd__kicker, .rd__title, .rd__note, .rd__go, .rd__sum) are shared with
    the placeholder pages (hub/coming.js): when Readmissions folds in, keep them or move them there. */
-.rd--program { padding-block: 28px 44px; }
+.rd--program { padding-top: 28px; }
 .rd__top { display: grid; gap: 28px 48px; }
 .rd__intro { align-content: start; container-type: inline-size; }
 .rd__kicker, .rd__kicker a { color: var(--pen-ink); }
@@ -764,6 +765,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .rd__sum > .field { flex: 1 1 170px; }
 .rd__sum > .form__title { flex-basis: 100%; }
 .rd .hh__card .field__value--big { font-size: var(--fs-xl); }
+/* The estimate's pill beside its figure, not across the column from it. */
+.rd .hh__netline { justify-content: flex-start; }
 .hh__money > .rd__kicker { margin-bottom: 8px; }
 .rd__main { display: grid; gap: 22px; align-content: start; }
 .rd__tbl thead th { position: static; white-space: normal; }
