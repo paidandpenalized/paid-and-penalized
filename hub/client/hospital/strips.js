@@ -13,15 +13,15 @@
 // hospital's dot and, once the row is hypothetical, on the hypothetical value, with the actual's ring left as a ghost
 // (hub/client/hospital/whatif.js binds its keys and drag). The net's hypothetical is a hollow "What if" mark. The thread
 // shows where the rows stand in two columns (hub/styles.css); on one column it would cross every row's words.
-import { count, pct } from '../../../web/client/format.js';
+import { clamp } from '../../../engine/js/stats.js';
+import { count } from '../../../web/client/format.js';
 import { ROW_IDS, ROW_KEY, inProgram } from '../../hospital/peers.js';
-import { deviceRatio } from '../paint.js';
+import { GLIDE_MS, clamp01, deviceRatio } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile.js';
-import { shareScale, wholePercents } from '../scale.js';
+import { shareScale, tickText, wholePercents } from '../scale.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-// A glide's length (ms) and curve: hub/styles.css .st--live's transitions.
-const GLIDE_MS = 700;
+// A glide's curve (its length is paint.js GLIDE_MS): hub/styles.css .st--live's transitions.
 const GLIDE = 'cubic-bezier(.65, 0, .35, 1)';
 // The time (0 to 1) at which a glide on that curve has come p of the way (bisection on the curve's parameter).
 const bez = (a, b, u) => 3 * a * u * (1 - u) ** 2 + 3 * b * u * u * (1 - u) + u ** 3;
@@ -37,22 +37,28 @@ function timeAt(p) {
 // The hint's height over its baseline, halo included (CSS pixels): it stands over the handle where that leaves it inside
 // the strip, else under it.
 const HINT_UP = 14;
-// The strip's plot height in CSS pixels by its group's size, wide and narrow: a large group's spikes (most of a state's or
-// a size band's hospitals within a few hundredths of a percent of $0 in Readmissions) need the height to stay narrow
-// blocks of dots, so each dot stands near its own value.
-const PLOT = [[160, 90, 76], [700, 150, 130], [Infinity, 240, 200]];
+// By a group's size (n under `below`), each [wide, narrow]: the strip's plot height in CSS pixels (a large group's spikes,
+// most of a state's or a size band's hospitals within a few hundredths of a percent of $0 in Readmissions, need the
+// height to stay narrow blocks of dots, so each dot stands near its own value); its largest pitch; and the smallest it
+// shrinks to before its bins widen instead (a strip has room across, so a spike such as the hospital-acquired conditions
+// cut stands as a block of readable dots rather than a thread of tiny ones).
+const SIZES = [
+  { below: 160, plot: [90, 76], dMax: [7, 5], dMin: [4.4, 3.4] },
+  { below: 700, plot: [150, 130], dMax: [4.6, 3.4], dMin: [3, 2.4] },
+  { below: Infinity, plot: [240, 200], dMax: [3.4, 2.4], dMin: [0, 0] },
+];
+// A group of n's sizes, wide or narrow: { plot, dMax, dMin }.
+function sizeOf(n, narrow) {
+  const { plot, dMax, dMin } = SIZES.find((s) => n < s.below);
+  const i = Number(narrow);
+  return { plot: plot[i], dMax: dMax[i], dMin: dMin[i] };
+}
 // The strip's frame for a group of n: { H, top, bot, base }, the plot's top and bottom, and the axis's baseline.
 function stripFrame(n, narrow) {
-  const [, wide, slim] = PLOT.find(([below]) => n < below);
   const top = narrow ? 6 : 8;
-  const bot = top + (narrow ? slim : wide);
+  const bot = top + sizeOf(n, narrow).plot;
   return { H: bot + 30, top, bot, base: bot + 6 };
 }
-// A group's largest pitch by its size, wide and narrow; and the smallest it shrinks to before its bins widen instead (a
-// strip has room across, so a spike such as the hospital-acquired conditions cut stands as a block of readable dots
-// rather than a thread of tiny ones).
-const dMaxOf = (n, narrow) => (n < 160 ? (narrow ? 5 : 7) : n < 700 ? (narrow ? 3.4 : 4.6) : narrow ? 2.4 : 3.4);
-const dMinOf = (n, narrow) => (n < 160 ? (narrow ? 3.4 : 4.4) : n < 700 ? (narrow ? 2.4 : 3) : 0);
 // The usual $0 gutter, wide and narrow; and the most times the strips widen it for a $0 pile before they stop.
 const GUTTER = { wide: 20, narrow: 12 };
 const WIDEN = 8;
@@ -71,16 +77,14 @@ export function stripLayout(group, { W, dpr, domain }) {
   const f = stripFrame(group.length, narrow);
   const { gap, dMin } = pileSpacing(px);
   const items = Object.fromEntries(ROW_IDS.map((id) => [id, group.filter((x) => inProgram(x.est, id)).map((x) => ({ id: x.ccn, v: x.est.pct[ROW_KEY[id]], key: hashOf(x.ccn) }))]));
-  const opts = (n, floor) => ({
-    base: f.bot, top: f.top, dMax: dMaxOf(n, narrow), dMin: Math.max(dMin, floor), gap, mirror: true, px, byValue: true, ranked: true,
-  });
-  // A row's pile: at the readable floor (dMinOf) when that widens its bins to at most MAX_M sub-columns, else at the
-  // device's floor, so a dot stays near its own value (a row whose readable floor is already the device's has nothing
+  const opts = (dMax, floor) => ({ base: f.bot, top: f.top, dMax, dMin: Math.max(dMin, floor), gap, mirror: true, px, byValue: true, ranked: true });
+  // A row's pile: at the readable floor (sizeOf's dMin) when that widens its bins to at most MAX_M sub-columns, else at
+  // the device's floor, so a dot stays near its own value (a row whose readable floor is already the device's has nothing
   // lower to try).
   const pileOf = (list, scale) => {
-    const floor = dMinOf(list.length, narrow);
-    const readable = pileLayout(list, scale, opts(list.length, floor));
-    return readable.m <= MAX_M || floor === 0 ? readable : pileLayout(list, scale, opts(list.length, 0));
+    const { dMax, dMin: floor } = sizeOf(list.length, narrow);
+    const readable = pileLayout(list, scale, opts(dMax, floor));
+    return readable.m <= MAX_M || floor === 0 ? readable : pileLayout(list, scale, opts(dMax, 0));
   };
   let gutter = GUTTER[narrow ? 'narrow' : 'wide'];
   let out = null;
@@ -183,7 +187,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     const out = el('text', { class: 'st__out', x: 4, y: 14, ...hidden }, svg);
     const handle = adjustable ? handleOf(svg, fill, !hinted) : null;
     if (handle) hinted = true;
-    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), ticks: new Map(), leaving: new Map(), gut: null, lines: null, labels: null, at: null, W: 0, H: 0, scale: null, f: null };
+    return { id, box, svg, bg, dots, med, me, ghost, hyp, out, handle, marks: new Map(), ticks: new Map(), leaving: new Map(), gut: null, lines: null, labels: null, at: null, W: 0, H: 0, scale: null, f: null, dot: '' };
   }).filter(Boolean);
   const thread = el('svg', { class: 'hh__thread', 'aria-hidden': 'true', focusable: 'false' });
   const path = el('path', {}, thread);
@@ -200,7 +204,6 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   function frame(st, f, W) {
     st.bg.textContent = '';
     st.ticks.clear();
-    for (const { timer } of st.leaving.values()) clearTimeout(timer);
     st.leaving.clear();
     st.gut = el('rect', { class: 'st__gut', x: 0, y: f.top - 4, width: 1, height: f.base - f.top + 4 }, st.bg);
     st.lines = el('g', {}, st.bg);
@@ -210,8 +213,9 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
 
   // A tick: its label and a faint line (none at $0), each stood at x by its transform.
   function tickAt(st, v, f, x) {
-    const parts = [el('text', { class: 'st__tl', x: 0, y: f.H - 4, 'text-anchor': 'middle' }, st.labels)];
-    parts[0].textContent = pct(v / 100, 0, { sign: true });
+    const label = el('text', { class: 'st__tl', x: 0, y: f.H - 4, 'text-anchor': 'middle' }, st.labels);
+    label.textContent = tickText(v);
+    const parts = [label];
     if (v !== 0) parts.push(el('line', { class: 'st__grid', x1: 0, x2: 0, y1: f.top - 4, y2: f.base + 3 }, st.lines));
     for (const p of parts) p.style.transform = `translate(${round(x)}px, 0px)`;
     st.ticks.set(v, parts);
@@ -232,7 +236,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     // The way along (0 to 1) at which the part's edge meets the strip's: where it comes in, or goes out. (One that never
     // moves is in from the start, or until the end.)
     const edge = x1 < x0 === coming ? (x0 + half - hi) / (x0 - x1) : (lo + half - x0) / (x1 - x0);
-    const at = Number.isNaN(edge) ? Number(!coming) : Math.min(1, Math.max(0, edge));
+    const at = Number.isNaN(edge) ? Number(!coming) : clamp01(edge);
     const t = Math.round(timeAt(at) * GLIDE_MS);
     p.style.transition = coming ? `transform ${GLIDE_MS}ms ${GLIDE}, opacity ${GLIDE_MS - t}ms linear ${t}ms` : `transform ${GLIDE_MS}ms ${GLIDE}, opacity ${t}ms linear`;
     p.style.transform = `translate(${round(x1)}px, 0px)`;
@@ -248,19 +252,20 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   function scenery(st, scale, f, from) {
     const want = new Set(wholePercents(domain));
     const coming = [];
+    // A tick's parts, on in from where they are drawn.
+    const resume = (parts, v) => coming.push(...parts.map((p) => [p, drawnX(p), v]));
     for (const v of want) {
       const parts = st.ticks.get(v);
       if (parts) {
         // Mid-way in (its fade held where it was): on in from there.
-        if (from && parts.some((p) => p.style.opacity !== '')) coming.push(...parts.map((p) => [p, drawnX(p), v]));
+        if (from && parts.some((p) => p.style.opacity !== '')) resume(parts, v);
         continue;
       }
       const back = st.leaving.get(v);
       if (back) {
-        clearTimeout(back.timer);
         st.leaving.delete(v);
         st.ticks.set(v, back.parts);
-        coming.push(...back.parts.map((p) => [p, drawnX(p), v]));
+        resume(back.parts, v);
         continue;
       }
       const made = tickAt(st, v, f, from ? from.line(v) : scale.xs(v));
@@ -272,10 +277,11 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     // The new ticks' start, styled before they move, so they glide from it.
     for (const [p] of coming) void getComputedStyle(p).transform;
     for (const [p, x0, v] of coming) crossing(st, p, x0, scale.xs(v), true);
+    const incoming = new Set(coming.map(([p]) => p));
     st.gut.style.transform = `translate(${round(scale.zL)}px, 0px) scaleX(${round(scale.zR - scale.zL)})`;
     for (const [v, parts] of st.ticks) {
       if (want.has(v)) {
-        for (const p of parts) if (!coming.some(([c]) => c === p)) p.style.transform = `translate(${round(scale.xs(v))}px, 0px)`;
+        for (const p of parts) if (!incoming.has(p)) p.style.transform = `translate(${round(scale.xs(v))}px, 0px)`;
         continue;
       }
       st.ticks.delete(v);
@@ -289,20 +295,10 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     if (from) for (const [v, { parts, to }] of st.leaving) if (!want.has(v)) leave(st, v, parts, to);
   }
 
-  // A tick going out to x (past the strip's side), removed once there.
+  // A tick going out to `to` (past the strip's side), removed once the glide ends (rest).
   function leave(st, v, parts, to) {
-    clearTimeout(st.leaving.get(v)?.timer);
     for (const p of parts) crossing(st, p, drawnX(p), to, false);
-    st.leaving.set(v, { parts, to, timer: setTimeout(() => drop(st, v), GLIDE_MS) });
-  }
-
-  // A tick gone out: removed.
-  function drop(st, v) {
-    const gone = st.leaving.get(v);
-    if (!gone) return;
-    clearTimeout(gone.timer);
-    st.leaving.delete(v);
-    for (const p of gone.parts) p.remove();
+    st.leaving.set(v, { parts, to });
   }
 
   // The layout for the strips' width and axis now (one width: they share a column), worked out once per group, width and
@@ -335,6 +331,10 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     const { items, pile } = rows[st.id];
     const { square, side } = drawnDot(pile.r, dpr);
     const s = side / dpr;
+    // A strip's dots are all one size, written to a dot when it is new or the size changes.
+    const dot = `${s} ${square}`;
+    const sized = dot !== st.dot;
+    st.dot = dot;
     const seen = new Set();
     for (const it of items) {
       const p = pile.pos.get(it.id);
@@ -349,9 +349,11 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
         st.marks.set(it.id, mark);
         if (glide) mark.style.opacity = '0';
       }
-      mark.setAttribute('width', String(s));
-      mark.setAttribute('height', String(s));
-      mark.setAttribute('rx', square ? '0' : String(s / 2));
+      if (fresh || sized) {
+        mark.setAttribute('width', String(s));
+        mark.setAttribute('height', String(s));
+        mark.setAttribute('rx', square ? '0' : String(s / 2));
+      }
       mark.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
       if (fresh && glide) requestAnimationFrame(() => requestAnimationFrame(() => { mark.style.opacity = ''; }));
       if (it.id === h.ccn) st.at = { x: p.x, y: p.y, r: s / 2 };
@@ -418,7 +420,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     if (!hintHalf) hintHalf = t.getComputedTextLength() / 2 + 2;
     const over = y - HANDLE_R - 9 - HINT_UP >= 0;
     t.setAttribute('y', String(over ? -HANDLE_R - 9 : HANDLE_R + 9 + HINT_UP));
-    t.setAttribute('x', String(round(Math.min(st.W - hintHalf - x, Math.max(hintHalf - x, 0)))));
+    t.setAttribute('x', String(round(clamp(0, hintHalf - x, st.W - hintHalf - x))));
   }
 
   // Where the hospital's ring stands now: mid-glide, where its transition has it this frame; else its place.
@@ -475,17 +477,18 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     for (const [p] of now) p.style.transition = '';
   }
 
-  // A glide under way: each frame the thread goes through the rings where they are; once no part of a strip is still
-  // moving, the glide's class comes off (a handle then follows a drag at once), and a nudge asked for meanwhile runs.
+  // A glide under way: each frame the thread goes through the rings where they are; once every part of a strip has
+  // arrived, the glide's class comes off (a handle then follows a drag at once), the ticks gone out are removed, and a
+  // nudge asked for meanwhile runs.
   let gliding = 0;
   let nudgeAfter = false;
-  const busy = () => strips.some((st) => (st.svg.getAnimations?.({ subtree: true }) ?? []).some((a) => a.transitionProperty === 'transform'));
   function rest() {
     cancelAnimationFrame(gliding);
     gliding = 0;
     for (const st of strips) {
       st.svg.classList.remove('st--live');
-      for (const v of [...st.leaving.keys()]) drop(st, v);
+      for (const { parts } of st.leaving.values()) for (const p of parts) p.remove();
+      st.leaving.clear();
       for (const parts of st.ticks.values()) for (const p of parts) p.style.transition = '';
     }
     drawThread();
@@ -494,12 +497,15 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       nudge();
     }
   }
+  // The transitions start with the style change, on the first frame at the latest, so every one has ended GLIDE_MS
+  // after that frame's time (a little more, to be sure).
   function follow() {
     cancelAnimationFrame(gliding);
-    const until = performance.now() + GLIDE_MS + 50;
+    let until = 0;
     const step = (now) => {
+      if (!until) until = now + GLIDE_MS + 50;
       drawThread();
-      if (now < until || busy()) gliding = requestAnimationFrame(step);
+      if (now < until) gliding = requestAnimationFrame(step);
       else rest();
     };
     gliding = requestAnimationFrame(step);

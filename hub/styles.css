@@ -591,7 +591,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .st__med path { fill: var(--ink); }
 .st__out { fill: var(--ink-2); font: 600 12px var(--font-body); }
 /* A glide (a change of group, or of axis as the what-if opens or resets): every part of a strip moves on one curve in one
-   time (strips.js GLIDE_MS), so a dot never leaves its tick; the class comes off when it ends, so a handle then follows
+   time (paint.js GLIDE_MS), so a dot never leaves its tick; the class comes off when it ends, so a handle then follows
    a drag at once. */
 .st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost) { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .45s; }
 /* The hint stands aside while the strips glide (the piles restack under it), and comes back after. */
@@ -686,14 +686,11 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__nextbox { grid-column: 2; }
 }
 @media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }
-@media (max-width: 640px) {
-  .hh__pin:has(.hh__pb:not([hidden])) .hh__plbl { display: none; }
-}
 @media (scripting: enabled) and (max-width: 640px) { .hh__pin .hh__plbl { display: none; } }
-/* Below 360px a toggle's words may take two lines, in one face and not in another: the buttons are two lines tall either
-   way, so the row keeps its height when the page's face replaces the stand-in. */
-@media (max-width: 359px) { .hh__pb { min-height: 40px; } }
 @media (max-width: 640px) {
+  /* On a phone the peer row's label steps aside for the toggle: from the start with scripts on (above), and in a browser
+     without the scripting media feature once the toggle shows. */
+  .hh__pin:has(.hh__pb:not([hidden])) .hh__plbl { display: none; }
   .hh__pb { padding: 6px 10px; font-size: 13px; }
   .hh__hero { padding-top: 18px; }
   .hh__sum { grid-template-columns: minmax(6.6em, 7.4em) minmax(0, 1fr) auto 3.9em; column-gap: 8px; font-size: 13px; }
@@ -705,8 +702,12 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__scentext { order: 3; flex-basis: 100%; font-size: 12px; }
   .hh__scen .hh__reset { margin-left: auto; padding: 5px 12px; font-size: 13px; }
 }
+/* Below 360px a toggle's words may take two lines, in one face and not in another: the buttons are two lines tall either
+   way, so the row keeps its height when the page's face replaces the stand-in. */
+@media (max-width: 359px) { .hh__pb { min-height: 40px; } }
+/* The strips never glide under reduced motion (strips.js sets no .st--live). */
 @media (prefers-reduced-motion: reduce) {
-  .hh--live .hh__tick, .st--live :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h, .st__hyp, .st__ghost), .st__hint { transition: none; }
+  .hh--live .hh__tick, .st__hint { transition: none; }
   .st__h--nudge .st__hin { animation: none; }
 }
 @media (forced-colors: active) {
