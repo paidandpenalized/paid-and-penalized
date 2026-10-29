@@ -219,7 +219,7 @@ function newestOnly(hospitals, fy) {
 // The HACRP site's build manifest (pipeline/site/build.js lists it).
 export const HACRP = {
   id: 'hacrp',
-  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
+  entries: { 'hacrp-program': 'sites/hacrp/client/program.js', 'hacrp-place': 'sites/hacrp/client/place.js', 'hacrp-hospital': 'sites/hacrp/client/hospital.js', 'hacrp-record': 'sites/hacrp/client/record.js', 'hacrp-search': 'sites/hacrp/client/search.js' },
   styles: [...KIT_STYLES, 'sites/hacrp/web/styles.css'],
   generate: (ctx) => generateHacrp(ctx),
 };
