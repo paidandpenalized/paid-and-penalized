@@ -1,4 +1,4 @@
-// The deploy config: a static-assets Worker for dist/ at its custom domain only (workers.dev off; preview URLs on),
+// The deploy config: a static-assets Worker for dist/ at its custom domain only (workers.dev and preview URLs off),
 // and the Node version Workers Builds uses. Its build command is npm run build, which make
 // build runs too.
 import { test } from 'node:test';
@@ -26,9 +26,10 @@ test('a path with no file gets the not-found page the build writes: "404-page" s
   assert.equal(fileFor(NOT_FOUND_PATH), '404.html');
 });
 
-test('it serves at paidandpenalized.org only: the custom domain, no workers.dev address; previews keep preview URLs', () => {
+test('it serves at paidandpenalized.org only: the custom domain, no workers.dev address, no preview URLs', () => {
   assert.equal(config.workers_dev, false);
-  assert.equal(config.preview_urls, true);
+  // Off, so no version (main's indexable build included) gets a second address on workers.dev.
+  assert.equal(config.preview_urls, false);
   // `wrangler preview` stops without a previews block; an empty one makes previews take the top-level settings.
   assert.deepEqual(config.previews, {});
   assert.deepEqual(config.routes, [{ pattern: new URL(SITE.origin).hostname, custom_domain: true }]);

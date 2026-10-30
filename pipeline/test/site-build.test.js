@@ -23,7 +23,7 @@ const withTemp = (fn) => inTemp('pp-site-', fn);
 test('build writes hashed CSS holding the tokens and the dark copy, the six fonts, their licenses and the favicon', () =>
   withTemp(async (dir) => {
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, sites: [] }), { pages: 0 });
+    assert.deepEqual(await build({ outDir: out, sites: [] }), { pages: 0, env: buildEnv(process.env) });
     const css = readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css'));
     assert.equal(css.length, 1);
     assert.match(css[0], /^site\.[0-9a-f]{8}\.css$/);
@@ -166,7 +166,7 @@ test('build runs the sites in order with one context: assets, env, and what earl
       } },
     ];
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, env: 'preview', sites }), { pages: 2 });
+    assert.deepEqual(await build({ outDir: out, env: 'preview', sites }), { pages: 2, env: 'preview' });
     assert.equal(seen[0][0], 'first');
     assert.match(seen[0][1], /^\/assets\/site\./);
     assert.equal(seen[0][2], 'preview');
@@ -427,12 +427,14 @@ test('robotsFor: only a production build of a released site indexes, and only el
   for (const [input, want] of cases) assert.equal(robotsFor(input), want, JSON.stringify(input));
 });
 
-test('buildEnv: PP_ENV when set; otherwise production only for Workers Builds\' build of main', () => {
+test('buildEnv: PP_ENV when set and not empty; otherwise production only for Workers Builds\' build of main', () => {
   const cases = [
     [{}, undefined],
     [{ PP_ENV: 'production' }, 'production'],
     [{ PP_ENV: 'preview', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'preview'],
-    [{ PP_ENV: '', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, ''],
+    // An empty PP_ENV (a blank build variable) counts as unset, so it can't turn main's build into noindex.
+    [{ PP_ENV: '', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'production'],
+    [{ PP_ENV: '' }, undefined],
     [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'production'],
     [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'go-live' }, undefined],
     [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'Main' }, undefined],

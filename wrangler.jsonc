@@ -1,15 +1,17 @@
 // The Cloudflare Worker that serves dist/, the built site, as static assets. It has no Worker script.
 // Workers Builds runs `npm ci --ignore-scripts && npm run build`, then `npx wrangler@4.151.0 deploy` on main (and
-// `npx wrangler@4.151.0 preview` on another branch, when preview builds are turned on). The site is served at its
-// custom domain, paidandpenalized.org, and nowhere else: the workers.dev address is off, so there is no second copy;
-// a preview keeps its own preview URL. Its build of main is the production build (buildEnv in
+// `npx wrangler@4.151.0 preview` on another branch, were preview builds turned on in the dashboard; they are off, and
+// preview URLs with them, so every version, main's indexable build included, is served at its custom domain,
+// paidandpenalized.org, and nowhere else: no workers.dev address. Turning previews back on means preview_urls: true
+// here too. Its build of main is the production build (buildEnv in
 // pipeline/site/context.js), the only one search engines may index; every other build carries noindex.
 {
   "name": "paid-and-penalized",
   "compatibility_date": "2026-09-01",
   "workers_dev": false,
-  "preview_urls": true,
-  // `wrangler preview` requires this block; an empty one means previews use the top-level settings.
+  "preview_urls": false,
+  // `wrangler preview` requires this block (kept for when previews return); an empty one means previews use the
+  // top-level settings.
   "previews": {},
   // The domain is the zone's apex; Cloudflare manages its DNS record and certificate. The .com and www redirects are
   // the zone's own rules, not this Worker's.

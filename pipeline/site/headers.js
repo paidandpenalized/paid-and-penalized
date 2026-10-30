@@ -8,13 +8,13 @@ const DAY = 24 * 60 * 60;
 const IMMUTABLE = `public, max-age=${365 * DAY}, immutable`;
 const WEEK = `public, max-age=${7 * DAY}`;
 
-// Cloudflare Web Analytics, set up automatically on the live domain: Cloudflare adds its beacon script, served from
-// this origin, to each page, and the beacon reports to the site's own /cdn-cgi/rum (connect-src 'self'). It counts
-// page views and sets no cookies (the privacy page says so).
+// Cloudflare Web Analytics, set up automatically on the live domain: Cloudflare adds a <script> for its beacon, which
+// loads from this origin, to each page, and the beacon reports to the site's own /cdn-cgi/rum (Cloudflare's Web
+// Analytics FAQ; connect-src 'self'). It counts page views and sets no cookies (the privacy page says so).
 export const ANALYTICS_ORIGIN = 'https://static.cloudflareinsights.com';
 
-// The policy for a build: nothing loads from another origin, no script runs inline, no page can be framed. A
-// production build also lets the analytics beacon load; no other build's pages get one.
+// The policy for a build: nothing loads from another origin but a production build's analytics beacon (no other
+// build's pages get one), no script runs inline, no page can be framed.
 export const cspFor = (env) => [
   "default-src 'none'",
   isProduction(env) ? `script-src 'self' ${ANALYTICS_ORIGIN}` : "script-src 'self'",

@@ -92,11 +92,10 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
   }
   // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
   writeFileMkdir(join(dir, '_headers'), headersFile({ env }));
-  return { pages: ctx.pages };
+  return { pages: ctx.pages, env };
 }
 
 if (isMain(import.meta.url)) {
-  const env = buildEnv(process.env);
-  const { pages } = await build({ env });
+  const { pages, env } = await build();
   console.log(`dist/: ${pages} pages (env ${env ?? 'unset'})`);
 }

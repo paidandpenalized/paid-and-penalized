@@ -157,7 +157,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
 //                    addresses are not requests to a host; nor is the live site's analytics beacon, a script from
-//                    ANALYTICS_ORIGIN that Cloudflare adds to each page and the production CSP allows)
+//                    ANALYTICS_ORIGIN's /beacon.min.js that Cloudflare adds to each page and the production CSP
+//                    allows)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
 //                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
@@ -214,7 +215,8 @@ async function watch(page, base) {
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
     const foreign = /^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin;
-    if (foreign && !(url.origin === ANALYTICS_ORIGIN && request.resourceType() === 'script')) foreignRequests.push(request.url());
+    const beacon = url.origin === ANALYTICS_ORIGIN && url.pathname.startsWith('/beacon.min.js') && request.resourceType() === 'script';
+    if (foreign && !beacon) foreignRequests.push(request.url());
   });
   await page.exposeFunction('reportCspViolation', (violation) => cspViolations.push(violation));
   await page.addInitScript(() => {
