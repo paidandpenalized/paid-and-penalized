@@ -65,11 +65,18 @@ test('clearOffset: where prefer is given, only a place it holds of; keep 1 keeps
   assert.equal(clearOffset({ dot: at(450, 104), obstacles: words, bounds: BOUNDS, shape: SHAPE, gap: 4, step: 4, keep: 1 }), null);
 });
 
-test('movesWithin: nearest first; at one distance sideways before up or down, and down before up; made once for each reach and step', () => {
+test('movesWithin: nearest first; at one distance sideways before up or down, and down before up; the latest list kept, no other', () => {
   const moves = movesWithin(3, 4);
   assert.equal(moves.length, 49);
   assert.deepEqual(moves.slice(0, 5), [[0, 0], [-4, 0], [4, 0], [0, 4], [0, -4]]);
   assert.equal(movesWithin(3, 4), moves, 'the same list, not made again');
+  // Only the latest list is kept: a card resized to another reach makes its own, and the first is not held on to.
+  const other = movesWithin(5, 4);
+  assert.equal(other.length, 121);
+  assert.equal(movesWithin(5, 4), other);
+  const again = movesWithin(3, 4);
+  assert.notEqual(again, moves, 'made again: the earlier list was let go');
+  assert.deepEqual(again, moves);
 });
 
 // A stand-in page: a card whose watermark (wm) holds the map (its box mapBox, scaled about its middle), its words and

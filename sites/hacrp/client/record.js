@@ -36,17 +36,18 @@ const REACH = 0.4;
 const overlap = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 
 // Every move [dx, dy] on a grid of step px within n steps each way, nearest first; at one distance, the smaller rise or
-// fall first, and down before up (a field's empty part is its lower part). Made once for each n and step.
-const MOVES = new Map();
+// fall first, and down before up (a field's empty part is its lower part). The latest list is kept for the next
+// placement (one card, one reach, until a resize changes it) and no other, so resizing never piles lists up.
+let kept = { key: '', moves: [] };
 export function movesWithin(n, step) {
   const key = `${n}:${step}`;
-  if (!MOVES.has(key)) {
+  if (kept.key !== key) {
     const moves = [];
     for (let i = -n; i <= n; i += 1) for (let j = -n; j <= n; j += 1) moves.push([i * step, j * step]);
     moves.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]) || Math.abs(a[1]) - Math.abs(b[1]) || b[1] - a[1]);
-    MOVES.set(key, moves);
+    kept = { key, moves };
   }
-  return MOVES.get(key);
+  return kept.moves;
 }
 
 // The smallest move { dx, dy } (movesWithin's order) that puts the dot (a circle { x, y, r }) clear of every obstacle
