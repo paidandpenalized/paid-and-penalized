@@ -13,7 +13,7 @@
   --pen-ink: #a5222c;       /* penalty-colored text on paper */
   --pen-tint: #f7e1e2;
   --pen-scar: #e8a2a2;      /* a mark cut in an earlier year: lighter than the pen, darker than the tint */
-  --rew: #00876f;           /* money paid to hospitals: marks, bars, pills */
+  --rew: #00846d;           /* money paid to hospitals: marks, bars, pills */
   --neutral: #9a999f;
   --on-mark: #ffffff;       /* text on a filled meaning-ink pill */
   --focus: var(--ink);      /* the focus ring: ink, never a meaning ink */
