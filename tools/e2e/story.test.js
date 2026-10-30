@@ -162,6 +162,19 @@ for (const [width, height] of [[320, 640], [375, 667], [390, 844], [414, 896]]) 
   });
 }
 
+// The CCN of the first hospital in the find box's asset whose columns equal where's values ({ status: 'e', teach: null }).
+const ccnWhere = (page, where) => page.evaluate(async (w) => {
+  const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
+  const at = (c) => cols.indexOf(c);
+  return rows.find((r) => Object.entries(w).every(([c, v]) => r[at(c)] === v))[at('ccn')];
+}, where);
+
+// Scrolls the story to its last step, Find yours, and waits until the story is there.
+async function atFind(page) {
+  await page.locator('#step-find').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+}
+
 // The last two steps answer to the reader: an address's #state= (either case) scrolls to the states and pins that one in
 // the readout, a junk one does nothing; the last step's search follows a hospital in place (the page stays, the card and
 // the 'hub:select' event name it, the worksheet below fills in for it), and a hospital without a teaching status has that
@@ -192,15 +205,10 @@ describe('states you can read, and Find yours', () => {
   it('the last step\'s search follows a hospital in place, with its card, its event and its peer toggles', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await drawn(page);
     // A hospital with an estimate and no teaching status, from the page's own asset.
-    const ccn = await page.evaluate(async () => {
-      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
-      const at = (c) => cols.indexOf(c);
-      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === null)[at('ccn')];
-    });
+    const ccn = await ccnWhere(page, { status: 'e', teach: null });
     await page.evaluate(() => document.addEventListener('hub:select', (e) => { window.selected = e.detail.ccn; }));
     // The reader groups the example by teaching status first.
-    await page.locator('#step-find').scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+    await atFind(page);
     await page.locator('.peers [data-peer="teach"]').click();
     const box = page.locator('main form#find').getByRole('combobox');
     await box.pressSequentially(ccn.toLowerCase());
@@ -217,11 +225,7 @@ describe('states you can read, and Find yours', () => {
     // Shown by state (it has no teaching group), "Same state" is still the reader's choice for the next hospital.
     const pressed = () => page.evaluate(() => [...document.querySelectorAll('.peers [data-peer]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.peer));
     await page.locator('.peers [data-peer="state"]').click();
-    const other = await page.evaluate(async () => {
-      const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
-      const at = (c) => cols.indexOf(c);
-      return rows.find((r) => r[at('status')] === 'e' && r[at('teach')] === 'major')[at('ccn')];
-    });
+    const other = await ccnWhere(page, { status: 'e', teach: 'major' });
     await box.fill('');
     await box.pressSequentially(other.toLowerCase());
     await page.locator('main form#find [role="option"]').first().waitFor();
@@ -231,6 +235,36 @@ describe('states you can read, and Find yours', () => {
     await page.locator('.peers [data-peer="teach"]').click();
     assert.deepEqual(await pressed(), ['teach']);
     await assertQuiet(seen, 'find yours');
+  }));
+
+  // Straight back into the box after leaving it (a toggle pressed, then the box): what the reader types stays listed past
+  // the moment the list closes after a blur, and Enter follows it. The list is up first (so the index has loaded), then
+  // leaving, coming back and typing happen in one task, always inside that moment; the next search above raced it and
+  // timed out now and then.
+  it('back in the search box at once, the list of what was typed stays, and Enter follows it', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await drawn(page);
+    const ccn = await ccnWhere(page, { status: 'e' });
+    await atFind(page);
+    const box = page.locator('main form#find').getByRole('combobox');
+    await box.fill(ccn.slice(0, 3));
+    await page.locator('main form#find [role="option"]').first().waitFor();
+    const left = await page.evaluate((c) => {
+      const input = document.querySelector('main form#find [role="combobox"]');
+      const toggle = document.querySelector('.peers [data-peer="state"]');
+      toggle.focus();
+      const away = document.activeElement === toggle;
+      input.focus();
+      input.value = c.toLowerCase();
+      input.dispatchEvent(new Event('input'));
+      return away;
+    }, ccn);
+    assert.ok(left, 'the toggle took the focus, so the box was left');
+    await page.waitForTimeout(400);
+    assert.equal(await page.locator('main form#find [role="listbox"]').isVisible(), true, 'the list outlives the blur');
+    assert.equal(await page.locator('main form#find [role="option"]').count(), 1, 'it lists what was typed on return: the one hospital');
+    await box.press('Enter');
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
+    await assertQuiet(seen, 'back in the box');
   }));
 
   // A followed hospital without an estimate (Maryland's all-payer model, or no inputs): the card names it with its status
@@ -245,8 +279,7 @@ describe('states you can read, and Find yours', () => {
     for (const [, status, ccn, name] of picks) {
       await visit(page, tabs.base, `/?h=${ccn}`);
       await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
-      await page.locator('#step-find').scrollIntoViewIfNeeded();
-      await page.waitForFunction(() => document.querySelector('.story').dataset.step === '8');
+      await atFind(page);
       await settle(page);
       const c = await page.evaluate(() => {
         const card = document.querySelector('[data-card]');

@@ -86,7 +86,10 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     paint();
   }
 
-  input.addEventListener('focus', () => { ready(); });
+  // Leaving the box closes the list a moment later (so a press on an option lands first); coming back before then keeps
+  // it, with whatever the reader types next.
+  let closing = null;
+  input.addEventListener('focus', () => { clearTimeout(closing); ready(); });
   input.addEventListener('input', update);
   input.addEventListener('keydown', (e) => {
     const n = count();
@@ -113,7 +116,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     e.preventDefault();
     pick([...list.children].indexOf(li));
   });
-  input.addEventListener('blur', () => setTimeout(close, 120));
+  input.addEventListener('blur', () => { closing = setTimeout(close, 120); });
   // The form never submits: Enter picks, and a pick opens a page.
   form.addEventListener('submit', (e) => e.preventDefault());
   form.hidden = false;
