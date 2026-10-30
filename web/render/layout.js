@@ -2,6 +2,7 @@
 // <main>, scripts. The body supplies the page's one <h1>; the header and footer have none.
 import { COPY } from '../copy.js';
 import { SITE, siteOf } from '../site.js';
+import { CARD_SIZE, SHARE_CARDS, shareCardOf } from '../share-card.js';
 import { html, jsonText, raw } from './html.js';
 import { familyFooter, familyHeader } from './shell.js';
 
@@ -30,22 +31,30 @@ export function feedbackHref({ siteName: name, pageUrl = null } = {}) {
 // its path; null for a page with none of its own).
 export const feedbackFor = ({ path, address = SITE.origin + path }) => feedbackHref({ siteName: siteOf(path)?.title ?? SITE.name, pageUrl: address });
 
-// A link's card where it is shared (Open Graph, and X's summary card, which falls back to Open Graph): the page's
-// title, description and canonical URL, as text only (no image). Harmless on a noindex page. The family's front page
-// and each program's hub page are a website; every other page is an article.
+// A link's card where it is shared (Open Graph, and X's large-image card, which falls back to Open Graph for all but
+// its own card type and image): the page's title, description and canonical URL, and its share card (web/share-card.js:
+// its site's own, else the family's), an absolute URL to the build's content-hashed copy, with its size and alt text.
+// Harmless on a noindex page. The family's front page and each program's hub page are a website; every other page is
+// an article.
 const WEBSITES = new Set(['/', ...Object.values(SITE.sites).map((s) => s.path)]);
-const socialTags = ({ title, description, url, type }) => html`<meta property="og:type" content="${type}">
+const socialTags = ({ title, description, url, type, card, image }) => html`<meta property="og:type" content="${type}">
 <meta property="og:site_name" content="${SITE.name}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
 ${url === null ? '' : html`<meta property="og:url" content="${url}">
-`}<meta name="twitter:card" content="summary">`;
+`}<meta property="og:image" content="${image}">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="${CARD_SIZE.width}">
+<meta property="og:image:height" content="${CARD_SIZE.height}">
+<meta property="og:image:alt" content="${SHARE_CARDS[card]}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${image}">`;
 
 // body: Safe markup (a plain string is escaped, never trusted). assets: the build's paths (css, the shared stylesheet;
-// sheets, the stylesheets of their own by name; js by entry name) and the shell's facts (assets.shell: what the header
-// and footer show on every page, computed once by the build). Every page runs the theme's classic script in its head,
-// before the stylesheets (web/client/theme.js: the reader's light/dark choice for the visit, on <html> before the first
-// paint). Its modules start with the shell's script, then the sticky header's (topbar.js), since every page wears that
+// sheets, the stylesheets of their own by name; js by entry name; cards, the share cards by id, web/share-card.js) and
+// the shell's facts (assets.shell: what the header and footer show on every page, computed once by the build). Every
+// page runs the theme's classic script in its head, before the stylesheets (web/client/theme.js: the reader's
+// light/dark choice for the visit, on <html> before the first paint). Its modules start with the shell's script, then the sticky header's (topbar.js), since every page wears that
 // header. scripts: the page's own module URLs, loaded in order after those two: a page with a figure
 // (web/charts/figure.js) lists assets.js.figure, one with the citation block (components.js) assets.js.cite, then its
 // own. preloadFonts: font file names to preload (PRELOAD_FONTS). sheets: the names of the stylesheets of their own the
@@ -63,6 +72,8 @@ export function page({ title, description, path, address = SITE.origin + path, r
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme || !assets.js.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, and the theme, shell and sticky-header script paths');
   if (!assets.shell) throw new TypeError('page: assets must hold the shell facts (the build computes them once, as ctx.assets.shell)');
+  const card = shareCardOf(path);
+  if (typeof assets.cards?.[card] !== 'string' || !assets.cards[card].startsWith('/assets/')) throw new TypeError(`page: assets.cards must hold the "${card}" share card's path`);
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if ([assets.js.theme, assets.js.shell, assets.js.topbar].some((src) => scripts.includes(src))) throw new TypeError('page: every page loads the theme, shell and sticky-header scripts; leave them out of scripts');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
@@ -80,7 +91,7 @@ export function page({ title, description, path, address = SITE.origin + path, r
 <meta name="description" content="${description}">
 ${address === null ? '' : html`<link rel="canonical" href="${address}">
 `}${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article' })}
+${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article', card, image: SITE.origin + assets.cards[card] })}
 <meta name="color-scheme" content="light dark">
 <script src="${assets.js.theme}"></script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">

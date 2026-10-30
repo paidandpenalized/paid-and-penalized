@@ -1,11 +1,12 @@
 // The page build's shared assets: the shared stylesheet, a stylesheet of its own for each site, and one script per JS
 // entry (an ES module, or a classic script for the head's theme), each named by a hash of its content so a changed file
-// gets a new URL, plus the fonts (fixed names), their licenses and the favicon.
+// gets a new URL, plus the share cards (content-hashed too), the fonts (fixed names), their licenses and the favicon.
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { build as esbuild, transform } from 'esbuild';
 import { REPO_ROOT, writeFileMkdir } from '../files.js';
+import { SHARE_CARDS, cardFile } from '../../web/share-card.js';
 
 const WEB = REPO_ROOT + 'web/';
 const STYLES = WEB + 'styles/';
@@ -49,7 +50,8 @@ export function stylesheet() {
   return [tokens.replace(PRINT, () => printBlock(light, print[1])), `:root[data-theme="dark"] {${dark}}`, ...rest].join('\n');
 }
 
-// Writes <dir>/<name>.<hash>.<ext> and returns its public path under /assets/.
+// Writes <dir>/<name>.<hash>.<ext> (text: a string, or a Buffer for a binary file) and returns its public path under
+// /assets/.
 export function writeHashed(dir, name, ext, text) {
   const file = `${name}.${hash8(text)}.${ext}`;
   writeFileMkdir(join(dir, file), text);
@@ -66,6 +68,7 @@ const assetName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name) && name !== 'site'
 // the tokens', in the shared bundle, and its rules read the tokens' custom properties.
 // entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]): an ES module, or, for
 // a name in classic, a classic script, bundled as one self-contained function call (no import, export or global name).
+// The share cards (web/share-card.js), each committed PNG web/og/<id>.png, are /assets/og-<id>.<hash>.png (cards[id]).
 export async function buildAssets({ outDir, entries = {}, classic = [], siteStyles = {} }) {
   for (const name of classic) if (!Object.hasOwn(entries, name)) throw new RangeError(`no classic entry "${name}" in entries`);
   const dir = join(outDir, 'assets');
@@ -87,7 +90,9 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     js[name] = writeHashed(dir, name, 'js', result.outputFiles[0].text);
   }
 
+  const cards = Object.fromEntries(Object.keys(SHARE_CARDS).map((id) => [id, writeHashed(dir, `og-${id}`, 'png', readFileSync(REPO_ROOT + cardFile(id)))]));
+
   for (const f of readdirSync(WEB + 'fonts')) copyFileSync(WEB + 'fonts/' + f, join(dir, 'fonts', f));
   copyFileSync(WEB + 'favicon.svg', join(outDir, 'favicon.svg'));
-  return { css: writeHashed(dir, 'site', 'css', css), js, sheets };
+  return { css: writeHashed(dir, 'site', 'css', css), js, sheets, cards };
 }

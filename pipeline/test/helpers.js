@@ -15,6 +15,7 @@ import { createSiteServer, listen, stop } from '../site/serve.js';
 export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/assets/hacrp.test.css', hub: '/assets/hub.test.css' }, js = {}, shell = {} } = {}) => ({
   css,
   sheets,
+  cards: { family: '/assets/og-family.test.png', hacrp: '/assets/og-hacrp.test.png' },
   js: { theme: '/assets/theme.test.js', shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', ...js },
   shell: {
     fy: 2026,

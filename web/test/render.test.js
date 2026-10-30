@@ -8,6 +8,7 @@ import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
+import { CARD_SIZE, SHARE_CARDS, shareCardOf } from '../share-card.js';
 import { searchForm } from '../render/shell.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { FUTURE_WORDS, chipOf, footerOf, headerOf, readerWords, testAssets } from '../../pipeline/test/helpers.js';
@@ -109,11 +110,11 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
   assert.ok(out.includes(`<link rel="canonical" href="${SITE.origin}/hacrp/">`));
   assert.ok(out.includes('<title>A title</title>'));
   assert.ok(out.includes('<meta name="description" content="A description">'));
-  // The share card: the same title, description and canonical URL, text only; a program's hub page is a website.
+  // The share card: the same title, description and canonical URL, and the page's card image (shareCard tests below);
+  // a program's hub page is a website.
   for (const tag of ['<meta property="og:type" content="website">', `<meta property="og:site_name" content="${SITE.name.replace('&', '&amp;')}">`,
     '<meta property="og:title" content="A title">', '<meta property="og:description" content="A description">',
-    `<meta property="og:url" content="${SITE.origin}/hacrp/">`, '<meta name="twitter:card" content="summary">']) assert.ok(out.includes(tag), tag);
-  assert.doesNotMatch(out, /og:image|twitter:image/);
+    `<meta property="og:url" content="${SITE.origin}/hacrp/">`, '<meta name="twitter:card" content="summary_large_image">']) assert.ok(out.includes(tag), tag);
   assert.ok(out.includes('<link rel="icon" href="/favicon.svg"'));
   assert.ok(out.includes(`<link rel="stylesheet" href="${ASSETS.css}">`));
   assert.ok(out.indexOf('class="skip" href="#main"') < out.indexOf('<header'));
@@ -596,4 +597,44 @@ test('topbar.js: the section in view is the last whose top has passed the line, 
   assert.equal(sectionInView([300, 900, 1500], 100), 0);
   assert.equal(sectionInView([-50, 90, 1500], 100), 1);
   assert.equal(sectionInView([-900, -400, -10], 100), 2);
+});
+
+// The share card's tags on a page: { name or property: content }.
+const cardTags = (out) => Object.fromEntries([...out.matchAll(/<meta (?:property|name)="((?:og:image|twitter:)[^"]*)" content="([^"]*)">/g)].map(([, k, v]) => [k, v]));
+
+test('page: the share card is an absolute https URL to the build\'s hashed card on the canonical origin, with its type, size and alt text, for X too', () => {
+  const tags = cardTags(page(PAGE));
+  const image = `${SITE.origin}${ASSETS.cards.hacrp}`;
+  assert.match(image, /^https:\/\/paidandpenalized\.org\/assets\//);
+  assert.deepEqual(tags, {
+    'og:image': image, 'og:image:type': 'image/png', 'og:image:width': String(CARD_SIZE.width), 'og:image:height': String(CARD_SIZE.height),
+    'og:image:alt': escapeHtml(SHARE_CARDS.hacrp), 'twitter:card': 'summary_large_image', 'twitter:image': image,
+  });
+  assert.deepEqual(CARD_SIZE, { width: 1200, height: 630 });
+  // The not-found page, with no address of its own, still has its card.
+  assert.equal(cardTags(page({ ...PAGE, path: '/404.html', address: null }))['og:image'], `${SITE.origin}${ASSETS.cards.family}`);
+});
+
+test('page: a page under a program site with a card of its own shows that card; every other page the family\'s', () => {
+  const cardOf = (path) => cardTags(page({ ...PAGE, path }))['og:image'];
+  for (const path of ['/hacrp/', '/hacrp/hospital/990001/', '/hacrp/methods/', '/hacrp/state/zz/']) {
+    assert.equal(shareCardOf(path), 'hacrp', path);
+    assert.equal(cardOf(path), SITE.origin + ASSETS.cards.hacrp, path);
+  }
+  for (const path of ['/', '/hospital/990001/', '/hrrp/', '/hvbp/', '/methods/', '/about/', '/404.html']) {
+    assert.equal(shareCardOf(path), 'family', path);
+    assert.equal(cardOf(path), SITE.origin + ASSETS.cards.family, path);
+  }
+  // Every site's card has alt text with no digits (the card holds no numbers), and the family's card is always there.
+  assert.ok(Object.hasOwn(SHARE_CARDS, 'family'));
+  for (const [id, alt] of Object.entries(SHARE_CARDS)) {
+    assert.ok(alt.length > 40, id);
+    assert.doesNotMatch(alt, /\d/, id);
+  }
+});
+
+test('page: assets without the page\'s share card throw', () => {
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: undefined } }), /share card/);
+  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: { family: ASSETS.cards.family } } }), /"hacrp" share card/);
+  assert.throws(() => page({ ...PAGE, path: '/', assets: { ...ASSETS, cards: { family: 'https://elsewhere.example/x.png' } } }), /share card/);
 });

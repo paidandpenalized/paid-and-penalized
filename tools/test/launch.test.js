@@ -123,7 +123,7 @@ test('compareResponse: on a 404 each header is the file\'s value (the deployed W
 test('compareResponse on the real file: a response that is exactly what headersFor gives (and lookup\'s Location), plus Cloudflare\'s own headers, differs nowhere', () => {
   for (const env of ['production', 'preview']) {
     const rules = parseHeaders(headersFile({ env }));
-    for (const c of checksFor(rules, PAGES, [...FILES, 'assets/fonts/a.woff2', 'assets/x.1.json', 'favicon.svg'])) {
+    for (const c of checksFor(rules, PAGES, [...FILES, 'assets/fonts/a.woff2', 'assets/x.1.json', 'assets/og-x.1.png', 'favicon.svg'])) {
       const headers = { ...headersFor(rules, c.path), date: 'now', server: 'cloudflare', etag: '"1"', 'content-type': 'text/html', ...(c.location && { location: c.location }) };
       assert.equal(compareResponse(rules, c, { status: c.status, headers }).ok, true, `${env} ${c.path}`);
     }
