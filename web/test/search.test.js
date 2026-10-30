@@ -122,6 +122,25 @@ test('the combobox: a press on an option opens it; no match says so in the list;
   assert.equal(s.status.textContent, '');
 });
 
+// Leaving the box closes the list a moment later (so a press on an option lands first). A reader who comes straight back
+// and types keeps the list: the late close sees the box focused and stays its hand.
+test('the combobox: leaving closes the list a moment later, unless the reader is back in the box by then', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const s = setup(t);
+  await s.type('exam');
+  globalThis.document.activeElement = null;
+  s.input.listeners.blur();
+  t.mock.timers.tick(500);
+  assert.equal(s.list.hidden, true, 'closed once the box has lost the focus');
+  s.input.listeners.blur();
+  globalThis.document.activeElement = s.input;
+  await s.type('sample');
+  t.mock.timers.tick(500);
+  assert.equal(s.list.hidden, false, 'back in the box and typing: the list stays');
+  s.key('Enter');
+  assert.deepEqual(s.opened, ['/h/99000a/']);
+});
+
 test('the combobox: a list cut short offers every match as a last option, where the site hands them on', async (t) => {
   const many = buildIndex(Array.from({ length: 12 }, (_, i) => ({ type: 'hospital', key: `9900${10 + i}`, label: `Example ${i}`, href: `/h/${i}/` })));
   const handed = [];

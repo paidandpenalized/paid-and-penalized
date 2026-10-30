@@ -113,7 +113,8 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     e.preventDefault();
     pick([...list.children].indexOf(li));
   });
-  input.addEventListener('blur', () => setTimeout(close, 120));
+  // Not if the reader is back in the box by then: the list may already hold what they typed since.
+  input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
   // The form never submits: Enter picks, and a pick opens a page.
   form.addEventListener('submit', (e) => e.preventDefault());
   form.hidden = false;
