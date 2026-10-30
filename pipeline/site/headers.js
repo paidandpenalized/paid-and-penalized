@@ -17,8 +17,13 @@ export const ANALYTICS_ORIGIN = 'https://static.cloudflareinsights.com';
 // Whether a URL (a URL object or an absolute address) is the beacon script: /beacon.min.js on ANALYTICS_ORIGIN, or a
 // versioned copy under it. Anything that does not parse as an absolute URL is not.
 export function isAnalyticsBeacon(address) {
-  const url = URL.parse(address);
-  return url !== null && url.origin === ANALYTICS_ORIGIN && (url.pathname === '/beacon.min.js' || url.pathname.startsWith('/beacon.min.js/'));
+  let url;
+  try {
+    url = new URL(address);
+  } catch {
+    return false;
+  }
+  return url.origin === ANALYTICS_ORIGIN && (url.pathname === '/beacon.min.js' || url.pathname.startsWith('/beacon.min.js/'));
 }
 
 // The policy for a build: nothing loads from another origin but a production build's analytics beacon (no other
