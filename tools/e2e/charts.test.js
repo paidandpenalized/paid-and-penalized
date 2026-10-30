@@ -28,10 +28,10 @@ function peerFacts(slack) {
   const svg = [...document.querySelectorAll('svg.chart--ridges')].find((el) => el.checkVisibility());
   if (!svg) return null;
   const toSvg = svg.getScreenCTM().inverse();
+  // Each line of words' box in the drawing's units, from its box on screen by its characters (window.svgBox: lib.js).
   const boxOf = (el) => {
-    const b = el.getBBox();
-    const m = toSvg.multiply(el.getScreenCTM());
-    const [p, q] = [new DOMPoint(b.x, b.y).matrixTransform(m), new DOMPoint(b.x + b.width, b.y + b.height).matrixTransform(m)];
+    const b = window.svgBox(el);
+    const [p, q] = [new DOMPoint(b.left, b.top).matrixTransform(toSvg), new DOMPoint(b.right, b.bottom).matrixTransform(toSvg)];
     return { x0: Math.min(p.x, q.x), y0: Math.min(p.y, q.y), x1: Math.max(p.x, q.x), y1: Math.max(p.y, q.y) };
   };
   const vb = svg.viewBox.baseVal;

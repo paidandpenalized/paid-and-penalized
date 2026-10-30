@@ -1,9 +1,10 @@
 // Positive controls for the harness (lib.js): a watcher that silently stops catching things makes every page check
 // pass for the wrong reason, so these serve a deliberately bad page from a throwaway server and require watch() to
 // report each fault (one a script causes after the load too, which the visit must wait for, and one still in flight
-// when the visit ends, or across a redirect, which the checks must wait for), and a clean page (and one that aborts its own request) it must
-// report nothing for. They also pin prime's and newPage's contracts: a primed tab is handed over only once its page's
-// requests have settled, and a new tab follows the scheme. No dist/ needed.
+// when the visit ends, or across a redirect, which the checks must wait for), and clean pages (one that aborts its own
+// request, one opened at a fragment with the site's opener policy) it must report nothing for. They also pin prime's
+// and newPage's contracts: a primed tab is handed over only once its page's requests have settled, and a new tab
+// follows the scheme. No dist/ needed.
 import { createServer } from 'node:http';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,6 +24,9 @@ const STUCK_IMAGE = '/stuck-image/';
 // A page whose image is still in flight when the visit ends and is then redirected, after SLOW_MS, to an image answered
 // 404 after SLOW_MS: between the two hops no request is in flight.
 const REDIRECTED_IMAGE = '/redirected-image/';
+// A clean page sent with the site's Cross-Origin-Opener-Policy (same-origin), which WebKit reports, opened at an
+// address with a #fragment, as two navigation requests, finishing one.
+const ISOLATED = '/isolated/';
 const SLOW_MS = 300;
 const OFFSITE = 'https://example.invalid/x.png';
 // The CSP forbids inline scripts (not images or off-site loads: those must reach the network for the foreign-request
@@ -63,6 +67,7 @@ async function startControls() {
       return reply(200, 'text/javascript', "const c = new AbortController(); fetch('/hang', { signal: c.signal }).catch(() => {}); setTimeout(() => c.abort(), 50);");
     }
     if (pathname === '/gone/') return reply(404, 'text/html', page('', '<p>gone</p>'));
+    if (pathname === ISOLATED) return reply(200, 'text/html', page('', '<p>clean</p>'), { 'cross-origin-opener-policy': 'same-origin' });
     reply(200, 'text/html', PAGES[pathname] ?? page('', '<p>clean</p>'), pathname === BAD ? { 'content-security-policy': CSP } : {});
   });
   return { base: `http://127.0.0.1:${await listen(server)}`, close: () => stop(server) };
@@ -121,6 +126,8 @@ describe('watch reports what is wrong with a page', () => {
   it('nothing on a clean page, and nothing for a document\'s own error status', async () => {
     for (const path of ['/clean/', '/gone/']) await quietOn(path);
   });
+
+  it('nothing on an isolated page opened at a #fragment: the page settles', () => quietOn(`${ISOLATED}#part`));
 
   it('nothing for a request the page aborted itself', () => quietOn(ABORTS));
 });

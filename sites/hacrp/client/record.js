@@ -4,7 +4,7 @@
 // the least distance, to where they stand clear, preferring the empty lower part of a field to a place beside a line,
 // and keeping the whole outline inside the card; where that finds no place it draws the outline smaller and tries again,
 // and only then lets a little of it past the card's edge. It shows the outline once placed, and places it again whenever
-// the card changes size (a new width, the fonts arriving). Without scripts the outline shows unmoved, without its dot.
+// the card or the map's drawing changes size (a new width, the fonts arriving). Without scripts the outline shows unmoved, without its dot.
 
 // The text the halo keeps clear of: the title bar and each field's label, value and note, line by line.
 export const WORDS = ':is(.form__title, .field__label, .field__value, .field__note)';
@@ -155,7 +155,12 @@ function start() {
     if (!queued) queued = requestAnimationFrame(place);
   };
   place();
-  new ResizeObserver(later).observe(card);
+  // The card, and the map's drawing within it: WebKit can lay the drawing out narrower at first and widen it later
+  // without the card changing size.
+  const resized = new ResizeObserver(later);
+  resized.observe(card);
+  const drawing = card.querySelector('.hosp__wm svg');
+  if (drawing) resized.observe(drawing);
   if (document.fonts) document.fonts.ready.then(later, () => {});
 }
 

@@ -225,7 +225,11 @@ export function startTable(hospitals) {
       retry.replaceChildren(fill('tableFailed'), ' ', button);
     },
   );
-  button.addEventListener('click', load);
+  // A click gives the button the focus, as Safari's doesn't, so the table it loads takes the focus from it.
+  button.addEventListener('click', () => {
+    button.focus({ preventScroll: true });
+    load();
+  });
   if (!linked && 'IntersectionObserver' in window) {
     observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) load(); }, { rootMargin: '600px 0px' });
     observer.observe(table.closest('section'));

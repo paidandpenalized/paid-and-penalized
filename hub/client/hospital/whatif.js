@@ -492,19 +492,19 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
 
   // ---------- the rest of the controls ----------
   // A reset hides the banner and the row's Reset: focus on either moves to what stays beside it (the pressed peer toggle,
-  // or Match the peer median), never to the page's start.
-  const resetAll = () => {
-    const a = document.activeElement;
+  // or Match the peer median), never to the page's start. from: the control used (a click's; Safari doesn't focus a
+  // clicked button or link), else the focused one (Escape).
+  const resetAll = (from = document.activeElement) => {
     apply({ type: 'reset' });
-    if (a && (scen.contains(a) || shared.contains(a))) bar?.querySelector('[data-peer][aria-pressed="true"]')?.focus({ preventScroll: true });
-    else if (a && a === reset) match?.focus({ preventScroll: true });
+    if (from && (scen.contains(from) || shared.contains(from))) bar?.querySelector('[data-peer][aria-pressed="true"]')?.focus({ preventScroll: true });
+    else if (from && from === reset) match?.focus({ preventScroll: true });
   };
   match?.addEventListener('click', () => apply({ type: 'medianAll' }));
-  reset?.addEventListener('click', resetAll);
-  topReset.addEventListener('click', resetAll);
+  reset?.addEventListener('click', (e) => resetAll(e.currentTarget));
+  topReset.addEventListener('click', (e) => resetAll(e.currentTarget));
   sharedLink.addEventListener('click', (e) => {
     e.preventDefault();
-    resetAll();
+    resetAll(e.currentTarget);
   });
   page.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !changed(state, h) || !e.target.closest?.('#whatif, [data-peers], .hh__scen')) return;

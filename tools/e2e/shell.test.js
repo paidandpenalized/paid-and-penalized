@@ -18,7 +18,7 @@ import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, assertNoSideways, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -154,7 +154,7 @@ for (const width of [390, 320]) {
       const seenIn = { tabs: 0, nav: 0 };
       let entered = false;
       for (let k = 0; k < 40; k++) {
-        await page.keyboard.press('Tab');
+        await page.keyboard.press(TAB_KEYS.next);
         const f = await page.evaluate(() => {
           const a = document.activeElement;
           const row = a?.closest('.tabs__scroll, .nav');
@@ -371,7 +371,10 @@ describe('the bar\'s family search', () => {
           const cs = getComputedStyle(input);
           const ctx = document.createElement('canvas').getContext('2d');
           ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-          return { room: input.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), need: ctx.measureText(input.placeholder).width };
+          // The box's own width (Firefox's clientWidth leaves out room it keeps for the clear button, which an empty box
+          // doesn't show).
+          const inner = input.getBoundingClientRect().width - ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, k) => sum + parseFloat(cs[k]), 0);
+          return { room: inner, need: ctx.measureText(input.placeholder).width };
         });
         assert.ok(fit.need <= fit.room, `${name} at ${width} px: the placeholder needs ${Math.ceil(fit.need)} px of ${Math.floor(fit.room)}`);
       }
@@ -431,7 +434,7 @@ describe('a hospital\'s page across the programs, from the search and the chip',
         page.waitForResponse((r) => r.request().isNavigationRequest() && new URL(r.url()).pathname === hospitalPathOf('hub', row.ccn)),
         option.click(),
       ]);
-      assert.equal(response.status(), 200, `result ${i + 1}: the page answers 200`);
+      assertAnswered(response, `result ${i + 1}: the page`);
       await page.waitForURL((url) => url.pathname === hospitalPathOf('hub', row.ccn));
       await page.waitForLoadState('networkidle');
       assert.ok((await page.locator('main h1').innerText()).trim() === row.name, `result ${i + 1}: the page is the hospital's`);
@@ -439,7 +442,7 @@ describe('a hospital\'s page across the programs, from the search and the chip',
     await assertQuiet(seen, 'search to a hospital page');
   }));
 
-  it('the ?h= chip\'s name opens the hospital\'s page, which answers 200', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+  it('the ?h= chip\'s name opens the hospital\'s page, which answers 200 (or 304, unchanged)', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
     const { rows } = await hubRows(page);
     for (const [i, row] of picks(rows).entries()) {
       await visit(page, tabs.base, `${PROGRAM_PATH}?h=${row.ccn}`);
@@ -447,7 +450,7 @@ describe('a hospital\'s page across the programs, from the search and the chip',
       await name.waitFor({ state: 'visible' });
       assert.ok(await name.getAttribute('href') === hospitalPathOf('hub', row.ccn), `chip ${i + 1}: the name links the hospital's page`);
       const [response] = await Promise.all([page.waitForResponse((r) => r.request().isNavigationRequest()), name.click()]);
-      assert.equal(response.status(), 200, `chip ${i + 1}: the page answers 200`);
+      assertAnswered(response, `chip ${i + 1}: the page`);
       await page.waitForLoadState('networkidle');
     }
     await assertQuiet(seen, 'chip to a hospital page');
@@ -507,9 +510,8 @@ describe('the theme button', () => {
         assert.equal(await page.locator('.theme-toggle:visible').getAttribute('aria-pressed'), String(other === 'dark'), `${path}: the button shows the choice`);
       }
       // A new tab starts from the device's setting: the choice was this tab's, for this visit.
-      const fresh = await tabs.context.newPage();
+      const fresh = await newPage(tabs.context, scheme, tabs.base);
       try {
-        await fresh.emulateMedia({ colorScheme: scheme });
         await visit(fresh, tabs.base, SITE.pages.privacy);
         assert.deepEqual(await fresh.evaluate(() => [document.documentElement.dataset.theme ?? null, sessionStorage.length]), [null, 0], 'a new tab: no choice');
         assert.equal(await fresh.evaluate(() => getComputedStyle(document.body).backgroundColor), devicePaper, 'a new tab: the device\'s paper');

@@ -6,7 +6,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { audit } from './axe.js';
-import { CONCURRENCY, SCHEMES, assertNoSideways, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, ENGINE, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, clickInPlace, fetchDecoded, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 
 const shared = useBrowser();
 // The story drawn (its script has laid out the chart and drawn it); the states' readout holding a state's line; the front
@@ -45,7 +45,9 @@ async function readStep(page, i) {
 
 // A 1x screen zoomed out to 50% (devicePixelRatio 0.5): the story lays out as at 1x and runs every step without error.
 describe('the story zoomed out to 50%', () => {
-  it('every step draws, nothing throws', async () => {
+  // Firefox's Playwright build emulates no device scale below 1 (its devicePixelRatio stays 1), so there is nothing to
+  // check there.
+  it('every step draws, nothing throws', { skip: ENGINE === 'firefox' && 'Firefox emulates no device scale below 1' }, async () => {
     const context = await shared.browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 0.5, reducedMotion: 'reduce' });
     try {
       const page = await context.newPage();
@@ -438,7 +440,7 @@ for (const [width, height] of [[390, 844], [320, 640]]) {
       await drawn(page);
       const reached = [];
       for (let i = 0; i < 80 && !reached.some((f) => f.peer === 'teach'); i++) {
-        await page.keyboard.press('Tab');
+        await page.keyboard.press(TAB_KEYS.next);
         await settle(page);
         const f = await page.evaluate(() => {
           const el = document.activeElement;
@@ -495,7 +497,15 @@ for (const width of [390, 1280]) {
       const find = page.locator('.fam__find');
       if (await find.isVisible()) {
         const before = (await at(0)).bar;
-        await find.click();
+        await clickInPlace(find);
+        // Opening the row focuses its box, which WebKit scrolls to a little later: wait until the page has stayed still
+        // for a frame (the predicate runs once a frame and keeps the last scroll it saw).
+        await page.evaluate(() => { window.lastY = null; });
+        await page.waitForFunction(() => {
+          const still = window.lastY === window.scrollY;
+          window.lastY = window.scrollY;
+          return still;
+        });
         const opened = await at(0.98);
         assert.ok(opened.bar > before, 'the search row makes the header taller');
         inSlot(opened, 'with the search row open');
@@ -570,7 +580,7 @@ describe('the front page without a part its scripts need', () => {
   const tabs = useContext(shared, { width: 390 });
   it('shows the header\'s wordmark and the server\'s story layout', () => withPage(tabs, { path: '/about/' }, async (page) => {
     await page.route((url) => url.pathname === '/', async (route) => {
-      const response = await route.fetch();
+      const response = await fetchDecoded(route);
       const body = (await response.text()).replace('class="hero__strip"', 'class="hero__band"').replace(/<canvas class="stage__cv"[^>]*><\/canvas>/, '');
       await route.fulfill({ response, body });
     });
@@ -596,7 +606,7 @@ describe('the front page when its story fails part way', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.route((url) => url.pathname === '/', async (route) => {
-      const response = await route.fetch();
+      const response = await fetchDecoded(route);
       const body = (await response.text()).replace('class="card__ex"', 'class="card__lead"');
       await route.fulfill({ response, body });
     });
@@ -605,7 +615,7 @@ describe('the front page when its story fails part way', () => {
     await settle(page);
     const wired = () => page.evaluate(() => ({
       story: [...document.querySelector('.story').classList].filter((c) => c !== 'story').sort(),
-      states: [...document.querySelectorAll('.smap .st[data-st]')].filter((el) => el.hasAttribute('role') || el.hasAttribute('tabindex') || el.hasAttribute('aria-pressed')).length,
+      states: [...document.querySelectorAll('.smap .st[data-st]')].filter((el) => el.hasAttribute('role') || el.hasAttribute('tabindex') || el.hasAttribute('aria-pressed') || el.hasAttribute('aria-labelledby')).length,
       buttons: [...document.querySelectorAll('.smalls [data-st]')].filter((el) => el.hasAttribute('aria-pressed')).length,
       pinned: document.querySelectorAll('.smap .is-pin, .smap .is-on, .smalls .is-pin').length,
       said: document.querySelector('[data-said]').textContent,
@@ -625,7 +635,8 @@ describe('the front page when its story fails part way', () => {
 
 // Before the trip's script runs, or with scripts off, the front page shows one wordmark: the masthead's, with the header's
 // (and its tagline, where the bar shows one) hidden from the first paint; once the masthead has scrolled up under the
-// header, they show (the browser runs that by scroll; Chrome does). With the script, it takes over and marks the root.
+// header, they show (the browser runs that by scroll; Chrome and Safari do, Firefox can't). With the script, it takes
+// over and marks the root.
 for (const width of [390, 1280]) {
   for (const javaScript of [true, false]) {
     describe(`one wordmark before the trip's script at ${width} px, scripts ${javaScript ? 'on (the script held back)' : 'off'}`, () => {
@@ -648,9 +659,14 @@ for (const width of [390, 1280]) {
           });
         };
         const tag = (on) => (width >= 1100 ? on : null);
-        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'at the top: the masthead\'s wordmark only');
-        assert.deepEqual(await shown(400), { head: true, tag: tag(true), hero: true, ready: false }, 'past the masthead: the header\'s wordmark shows');
-        assert.deepEqual(await shown(0), { head: false, tag: tag(false), hero: true, ready: false }, 'back at the top: hidden again');
+        // A browser that can't run an animation on the page's scroll (Firefox) has the stylesheet's fallback
+        // (hub/styles.css): with scripts held back, the header's wordmark waits hidden throughout; with scripts off,
+        // both wordmarks show.
+        const byScroll = await page.evaluate(() => CSS.supports('animation-timeline: scroll()'));
+        const [atTop, past] = byScroll ? [false, true] : [!javaScript, !javaScript];
+        assert.deepEqual(await shown(0), { head: atTop, tag: tag(atTop), hero: true, ready: false }, 'at the top');
+        assert.deepEqual(await shown(400), { head: past, tag: tag(past), hero: true, ready: false }, 'past the masthead');
+        assert.deepEqual(await shown(0), { head: atTop, tag: tag(atTop), hero: true, ready: false }, 'back at the top');
       }));
     });
   }
@@ -676,7 +692,7 @@ describe('the front page\'s chart words', () => {
         return {
           ticks: sizes('.pc__hist .st__tl'), counts: sizes('.pc__hist .st__out'),
           key: parseFloat(getComputedStyle(document.querySelector('.dkey__s')).fontSize),
-          swatches: [...document.querySelectorAll('.dkey__g rect.st')].map((r) => Math.round(box(r).height)),
+          swatches: [...document.querySelectorAll('.dkey__g rect.st')].map((r) => { const b = window.svgBox(r); return Math.round(b.bottom - b.top); }),
           scaleH: Math.round(scale.height),
           off: (zero.left + zero.width / 2) - (scale.left + scale.width / 2),
         };

@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../../web/site.js';
 import { AXE_WIDTHS, audit, openFolds } from './axe.js';
-import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertNoSideways, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SCHEMES, assertAnswered, assertNoSideways, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 // A desktop width, a narrow laptop's (where the program page's columns are tightest), three just over 900 px (where a
@@ -32,10 +32,8 @@ const factsOf = (page) => page.evaluate((feedbackLink) => ({
 async function loadsClean(page, { response, seen }, { type, name, path }) {
   const got = await factsOf(page);
   const notFound = type === 'not-found';
-  // A page the browser already holds may come back 304 (unchanged) from a host that sends ETags, as Cloudflare does;
-  // Firefox revalidates that way on navigation. The local server sends none.
   if (notFound) assert.equal(response.status(), 404, `${name}: status`);
-  else assert.ok([200, 304].includes(response.status()), `${name}: status ${response.status()}, not 200 or 304`);
+  else assertAnswered(response, name);
   await assertQuiet(seen, name);
   await assertNoSideways(page, name);
 

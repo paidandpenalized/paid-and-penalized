@@ -12,20 +12,23 @@ import { ENGINES, startSite } from './site.js';
 
 export const SCHEMES = ['light', 'dark'];
 // How many tests a describe runs at once: one core fewer than the machine has, up to four (CI's 2-core runner gets 1,
-// so four tabs never load the heaviest page together there; a laptop gets up to 4).
+// so four tabs never load the heaviest page together there; a laptop gets up to 4). npm run e2e (run.js) runs as many
+// test files at once, for the same reason: one per core, with each file's tabs, left Firefox's checks timing out.
 export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
 // Every context's window height.
 const HEIGHT = 800;
 // How long a watched page's requests in flight may take to end once its checks begin (watch's settled).
 const SETTLE_TIMEOUT_MS = 5_000;
 
-// A browser for E2E_ENGINE: chromium (when it is unset), firefox or webkit. Chromium is the Google Chrome installed on
-// this machine (channel 'chrome', so no browser is downloaded) unless CI is set, where the workflow installs
-// Playwright's own Chromium. The other engines are Playwright's builds.
+// The browser engine the checks run in: E2E_ENGINE, chromium when it is unset.
+export const ENGINE = process.env.E2E_ENGINE || 'chromium';
+
+// A browser for ENGINE: chromium, firefox or webkit. Chromium is the Google Chrome installed on this machine (channel
+// 'chrome', so no browser is downloaded) unless CI is set, where the workflow installs Playwright's own Chromium. The
+// other engines are Playwright's builds.
 function launch() {
-  const engine = process.env.E2E_ENGINE || 'chromium';
-  if (!ENGINES.includes(engine)) throw new RangeError(`unknown browser engine "${engine}": use ${ENGINES.join(', ')}`);
-  return playwright[engine].launch(engine === 'chromium' && !process.env.CI ? { channel: 'chrome' } : {});
+  if (!ENGINES.includes(ENGINE)) throw new RangeError(`unknown browser engine "${ENGINE}": use ${ENGINES.join(', ')}`);
+  return playwright[ENGINE].launch(ENGINE === 'chromium' && !process.env.CI ? { channel: 'chrome' } : {});
 }
 
 // The site under test and a browser, for the tests of the file that calls it (once, at its top): { site, browser },
@@ -66,12 +69,39 @@ export async function prime(page, colorScheme, base) {
   await page.waitForLoadState('networkidle');
 }
 
+// Every tab's pages get window.svgBox(el) (newPage), the way the checks measure an SVG part: its box on screen
+// ({ left, right, top, bottom }) by its geometry, not its paint, which the engines agree on: a text's (or tspan's)
+// characters, a shape's getBBox, through its screen CTM. getBoundingClientRect differs: Firefox's takes in a stroke (a
+// text's halo among them) and adds about 2 px each side of a text; WebKit's gives a tspan its whole text's box.
+function defineSvgBox() {
+  window.svgBox = (el) => {
+    let b = el.getBBox();
+    if (el instanceof SVGTextContentElement) {
+      let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+      // A text that isn't drawn has no characters' extents (an engine may throw for them): an empty box.
+      try {
+        for (let i = 0; i < el.getNumberOfChars(); i++) {
+          const c = el.getExtentOfChar(i);
+          [x0, y0, x1, y1] = [Math.min(x0, c.x), Math.min(y0, c.y), Math.max(x1, c.x + c.width), Math.max(y1, c.y + c.height)];
+        }
+      } catch {
+        x1 = x0;
+      }
+      b = x1 > x0 ? { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } : { x: 0, y: 0, width: 0, height: 0 };
+    }
+    const m = el.getScreenCTM();
+    const [p, q] = [new DOMPoint(b.x, b.y).matrixTransform(m), new DOMPoint(b.x + b.width, b.y + b.height).matrixTransform(m)];
+    return { left: Math.min(p.x, q.x), right: Math.max(p.x, q.x), top: Math.min(p.y, q.y), bottom: Math.max(p.y, q.y) };
+  };
+}
+
 // A new tab in the context, in the colour scheme, checked. Chromium and WebKit take the scheme as the tab opens. Firefox
 // takes it only once the tab has loaded a page from the network, and each tab for itself (it ignores the context's
 // colorScheme option, and emulateMedia on a fresh tab), so there the tab is primed first (prime). Call it before watch.
 export async function newPage(context, colorScheme, base) {
   const page = await context.newPage();
-  if (context.browser()?.browserType().name() === 'firefox') await prime(page, colorScheme, base);
+  await page.addInitScript(defineSvgBox);
+  if (ENGINE === 'firefox') await prime(page, colorScheme, base);
   else await page.emulateMedia({ colorScheme });
   assert.equal(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches), colorScheme === 'dark', `the tab follows the ${colorScheme} scheme`);
   return page;
@@ -159,7 +189,15 @@ async function watch(page, base) {
     redirected.delete(request);
     ended(request);
   });
-  page.on('requestfinished', ended);
+  // WebKit reports a page sent with Cross-Origin-Opener-Policy (as the site's are) and opened at an address with a
+  // #fragment as two navigation requests, and finishes only one: a finished navigation ends any other in flight to the
+  // same address.
+  page.on('requestfinished', (request) => {
+    ended(request);
+    if (!request.isNavigationRequest()) return;
+    const address = request.url().split('#')[0];
+    for (const other of inFlight) if (other.isNavigationRequest() && other.url().split('#')[0] === address) ended(other);
+  });
   page.on('response', (response) => {
     if (response.status() >= 400 && !response.request().isNavigationRequest()) errors.push(`HTTP ${response.status()}: ${response.url()}`);
     if (REDIRECTS.has(response.status()) && response.headers().location) redirected.add(response.request());
@@ -260,4 +298,30 @@ export const SEARCH_BOXES = [['the top bar', '.topbar'], ['the hero', 'main']];
 export function searchIn(page, container) {
   const search = page.locator(container).getByRole('search');
   return { box: search.getByRole('combobox'), list: search.getByRole('option') };
+}
+
+// The keys that move focus forward and back in ENGINE. Safari's, on macOS, tabs only through form controls unless
+// Option is held (its "Press Tab to highlight each item" setting is off), so a walk there holds it.
+export const TAB_KEYS = ENGINE === 'webkit' && process.platform === 'darwin'
+  ? { next: 'Alt+Tab', back: 'Alt+Shift+Tab' }
+  : { next: 'Tab', back: 'Shift+Tab' };
+
+// Clicks the middle of what locator finds, where it is, with a pointer's real events: Playwright's own click first
+// scrolls its target "into view", which moves the page under a sticky one.
+export async function clickInPlace(locator) {
+  await locator.waitFor({ state: 'visible' });
+  const box = await locator.boundingBox();
+  assert.ok(box, 'clickInPlace: the element has a box to click');
+  await locator.page().mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+// A route's response, fetched for a rewrite in an encoding Playwright's fetch can read: Firefox asks for zstd, which
+// Cloudflare sends and Playwright can't decode.
+export const fetchDecoded = (route) => route.fetch({ headers: { ...route.request().headers(), 'accept-encoding': 'gzip, br' } });
+
+// Asserts a page's response (to a navigation) is 200, or 304: a page the browser already holds may come back unchanged
+// from a host that sends ETags, as Cloudflare does; Firefox revalidates that way on navigation. The local server sends
+// none.
+export function assertAnswered(response, what) {
+  assert.ok([200, 304].includes(response.status()), `${what}: status ${response.status()}, not 200 or 304`);
 }

@@ -135,7 +135,7 @@ test('the scale bar\'s geometry is the data\'s: the sliver is the programs\' sha
 
 test('the states map: a path per state and DC with its title line, shaded by its share in two inks, Maryland hatched', () => {
   const map = element(out, '<svg class="smap"', 'svg');
-  const paths = [...map.matchAll(/<path class="(st[^"]*)" data-st="([A-Z]{2})"(?: style="--t:([0-9.]+)")? d="[^"]+"><title>([^<]+)<\/title><\/path>/g)]
+  const paths = [...map.matchAll(/<path class="(st[^"]*)" data-st="([A-Z]{2})"(?: style="--t:([0-9.]+)")? d="[^"]+"><title id="smap-name-\2">([^<]+)<\/title><\/path>/g)]
     .map(([, cls, code, t, title]) => ({ cls, code, t: t === undefined ? null : Number(t), title }));
   assert.equal(paths.length, US_MAP_CODES.length);
   assert.equal(paths.length, 51);
