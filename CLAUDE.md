@@ -24,7 +24,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   and the registry of every program, live and under consideration), `programs.js` (the programs' method constants and deks), `render/`
   (escaping, formatting, the page shell, and `components.js`: page parts a site fills with its own words),
   `styles/` (`tokens.css` is the only CSS or JS file under `web/` or `hub/` that may hold a color value (hex, rgb/hsl, or a named color); `transparent`, `currentColor` and forced-colors system colors are allowed anywhere; `favicon.svg` is the one other file with colors, since an icon can't read CSS variables), self-hosted fonts with their
-  licenses, the favicon.
+  licenses, the favicon, and the share cards (`share-card.js`: each page's link-preview image; the PNGs and their stamp
+  in `og/`, drawn by `tools/og/`).
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: the shared stylesheet,
   `tokens.css` then the rest of `web/styles/` but the program sites' chart and what-if kit (`KIT_STYLES`, which a program
   site's own sheet carries); a stylesheet per site from its manifest's `styles`, named by its id, which
@@ -71,7 +72,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - **Dependencies: build time only.** The engine, the pipeline's data code and their tests use none; tests run on
   Node's built-in `node:test` (`npm test`, which needs no browser). The page build uses four pinned dev dependencies:
   esbuild, d3-scale, d3-array, d3-format; the browser checks (`npm run e2e`, `tools/e2e/`) use two more, playwright
-  and axe-core (`package-lock.json`; CI runs `npm ci`). Flag anything more, and any other install or download
+  and axe-core (`package-lock.json`; CI runs `npm ci`); the share cards' generator (`npm run og`) uses playwright too. Flag anything more, and any other install or download
   (including a Playwright browser), to Dalton before running it. Pin exact versions.
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
@@ -114,6 +115,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `main` is production too: `buildEnv` in `pipeline/site/context.js`). `PP_ENV` is `production`, `preview` or unset;
   any other value stops the build.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
+- `npm run og`: redraw the share cards (`web/og/<id>.png`, 1200×630) in the installed Google Chrome and rewrite
+  `web/og/stamp.json`. A test fails when a card is stale (its data, the tokens, the fonts or its design changed): run it
+  and commit the PNGs and the stamp. The build only copies them (it runs with no browser). Not part of `make test`.
 - `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`; a test that takes over 3 minutes fails. Chromium runs the
   installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks
   another engine; `E2E_BASE_URL=<url>` tests a running site instead of serving `dist/` (the build still picks the pages). Not part of
