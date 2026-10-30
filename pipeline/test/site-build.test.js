@@ -427,7 +427,7 @@ test('robotsFor: only a production build of a released site indexes, and only el
   for (const [input, want] of cases) assert.equal(robotsFor(input), want, JSON.stringify(input));
 });
 
-test('buildEnv: PP_ENV when set and not empty; otherwise production only for Workers Builds\' build of main', () => {
+test('buildEnv: PP_ENV (production or preview; any other value stops the build) when set and not blank; otherwise production only for Workers Builds\' build of main', () => {
   const cases = [
     [{}, undefined],
     [{ PP_ENV: 'production' }, 'production'],
@@ -443,7 +443,9 @@ test('buildEnv: PP_ENV when set and not empty; otherwise production only for Wor
     [{ WORKERS_CI_BRANCH: 'main' }, undefined],
   ];
   for (const [env, want] of cases) assert.equal(buildEnv(env), want, JSON.stringify(env));
-  for (const PP_ENV of ['Production', 'production ', ' ', 'prod']) assert.throws(() => buildEnv({ PP_ENV, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), RangeError, JSON.stringify(PP_ENV));
+  assert.equal(buildEnv({ PP_ENV: ' ', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), 'production');
+  assert.equal(buildEnv({ PP_ENV: ' production ' }), 'production');
+  for (const PP_ENV of ['Production', 'prod', 'staging']) assert.throws(() => buildEnv({ PP_ENV, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), RangeError, JSON.stringify(PP_ENV));
 });
 
 test('build refuses to empty a directory that is not dist/ or under the temp directory', async () => {

@@ -111,7 +111,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `make emit`: rebuild `data/emitted/` from the pins (both emitters).
 - `make hooks`: point git at `.githooks/`.
 - `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production` (Workers Builds' build of
-  `main` is production too: `buildEnv` in `pipeline/site/context.js`).
+  `main` is production too: `buildEnv` in `pipeline/site/context.js`). `PP_ENV` is `production`, `preview` or unset;
+  any other value stops the build.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
 - `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`; a test that takes over 3 minutes fails. Chromium runs the
   installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks

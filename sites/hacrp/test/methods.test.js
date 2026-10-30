@@ -413,6 +413,8 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   // The sources section links the public repository.
   const sources = page.match(/<section[^>]* id="sources"[\s\S]*?<\/section>/)?.[0] ?? '';
   assert.ok(sources.includes(`<a href="${SITE.repo}" target="_blank" rel="noopener">`), 'the sources section links the repository');
+  // The address is the one the citation file names.
+  assert.ok(readFileSync(join(REPO_ROOT, 'CITATION.cff'), 'utf8').includes(`repository-code: "${SITE.repo}"`), 'SITE.repo matches CITATION.cff');
   // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
   assert.doesNotMatch(page, /id="dollars"/);
   assert.doesNotMatch(page, /href="#dollars"/);

@@ -156,9 +156,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 //   cspViolations    each Content Security Policy violation, { directive, blocked, source, line, sample }, from a
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
-//                    addresses are not requests to a host; nor is the live site's analytics beacon, a script from
-//                    beacon script (isAnalyticsBeacon) that Cloudflare adds to each page and the production CSP
-//                    allows)
+//                    addresses are not requests to a host; nor is the live site's analytics beacon, the script
+//                    (isAnalyticsBeacon) that Cloudflare adds to each page and the production CSP allows)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
 //                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
@@ -168,6 +167,7 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 // abort it, and an aborted request is not reported, so it would never be judged. Await settled before reading the
 // arrays (assertQuiet does).
 async function watch(page, base) {
+  const siteOrigin = new URL(base).origin;
   const errors = [];
   const cspViolations = [];
   const foreignRequests = [];
@@ -214,8 +214,8 @@ async function watch(page, base) {
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
-    const foreign = /^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin;
-    if (foreign && !(isAnalyticsBeacon(request.url()) && request.resourceType() === 'script')) foreignRequests.push(request.url());
+    const foreign = /^(?:https?|wss?):$/.test(url.protocol) && url.origin !== siteOrigin;
+    if (foreign && !(isAnalyticsBeacon(url) && request.resourceType() === 'script')) foreignRequests.push(request.url());
   });
   await page.exposeFunction('reportCspViolation', (violation) => cspViolations.push(violation));
   await page.addInitScript(() => {

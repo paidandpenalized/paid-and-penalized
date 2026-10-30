@@ -57,8 +57,9 @@ test('cspFor: only a production build lets a script load from the analytics orig
 test('isAnalyticsBeacon: the beacon script and its versioned copies on the analytics origin, nothing else', () => {
   for (const ok of ['/beacon.min.js', '/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516', '/beacon.min.js?token=x']) {
     assert.ok(isAnalyticsBeacon(ANALYTICS_ORIGIN + ok), ok);
+    assert.ok(isAnalyticsBeacon(new URL(ANALYTICS_ORIGIN + ok)), `${ok} as a URL`);
   }
-  for (const no of [ANALYTICS_ORIGIN + '/beacon.min.json', ANALYTICS_ORIGIN + '/beacon.min.js.map', ANALYTICS_ORIGIN + '/other.js', 'https://example.org/beacon.min.js', 'http://static.cloudflareinsights.com/beacon.min.js']) {
+  for (const no of [ANALYTICS_ORIGIN + '/beacon.min.json', ANALYTICS_ORIGIN + '/beacon.min.js.map', ANALYTICS_ORIGIN + '/other.js', 'https://example.org/beacon.min.js', 'http://static.cloudflareinsights.com/beacon.min.js', '/beacon.min.js', 'not a url']) {
     assert.ok(!isAnalyticsBeacon(no), no);
   }
 });
