@@ -395,6 +395,36 @@ describe('the what-if\'s edges', () => {
     await assertQuiet(seen, 'the what-if at its ends');
   }));
 
+  // However close the hypothetical comes to the actual, the "actual" label by the hospital's ring stays clear of what
+  // marks the what-if: the net's "What if" mark and its label, and a program row's handle.
+  it('the "actual" label never meets the "What if" mark, its label or the handle, however close the two figures', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = handleAt(page, 'hvbp');
+    await handle.waitFor();
+    await handle.focus();
+    const meets = () => page.evaluate(() => {
+      const box = (el) => el.getBoundingClientRect();
+      const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const out = [];
+      for (const row of ['net', 'hvbp']) {
+        const svg = document.querySelector(`[data-row="${row}"] svg.st`);
+        const ghost = svg.querySelector('.st__ghost');
+        if (getComputedStyle(ghost).display === 'none') continue;
+        const marks = row === 'net' ? [svg.querySelector('.st__hyp-t'), svg.querySelector('.st__hyp-ring')] : [svg.querySelector('.st__hb')];
+        for (const m of marks) if (hit(box(ghost), box(m))) out.push(`${row}: ${m.getAttribute('class')}`);
+      }
+      return out;
+    });
+    const seenSteps = [];
+    for (let i = 1; i <= 30; i++) {
+      await page.keyboard.press('ArrowLeft');
+      const hits = await meets();
+      if (hits.length) seenSteps.push(`step ${i}: ${hits.join(', ')}`);
+    }
+    assert.deepEqual(seenSteps, []);
+    await assertQuiet(seen, 'the actual label');
+  }));
+
   it('a drag updates the page once a frame, and lands its last place on release', () => withPage(tabs, { path: hospitalPathOf('hub', HIGH_BASE.ccn), watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const handle = handleAt(page, 'hrrp');

@@ -152,6 +152,39 @@ export function hintSpot({ x, y, half, W, f, dots, s }) {
   return best ? { x: best.x, y: best.y } : { x: clamp(x, half, W - half), y: above - HINT_UP < 0 ? y + HANDLE_R + 9 + HINT_UP : above };
 }
 
+// The "actual" label's box at spot ({ x, y, anchor }: y its baseline; anchor 'middle', 'start' or 'end'), half its width
+// across (CSS pixels; 11 px type: 9 over the baseline, 3 under).
+export function labelBox({ x, y, anchor }, half) {
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - 2 * half : x - half;
+  return { left, right: left + 2 * half, top: y - 9, bottom: y + 3 };
+}
+
+// Where the "actual" label stands by the hospital's ring ({ x, y, r }) once the row is hypothetical: over the ring, as
+// it always has, unless that would meet what marks the what-if (avoid: boxes, the net's "What if" mark and its label or a
+// handle's capsule, kept 2 px clear); then beside the ring level with it, on the side away from the mark (markX) and
+// then the other, a step further out at a time (up to GHOST_OUT px); then under the ring. Each inside the strip, across
+// its width W and above its axis (f: stripFrame's). With nowhere clear, over the ring. half: the label's half width.
+// Returns { x, y, anchor }. Pure.
+const GHOST_STEP = 6;
+const GHOST_OUT = 36;
+export function ghostSpot({ ring, half, avoid, W, f, markX }) {
+  const mid = clamp(ring.x, half, W - half);
+  const over = { x: mid, y: ring.y - ring.r - 8, anchor: 'middle' };
+  const side = (dir) => {
+    const out = [];
+    for (let k = 0; k <= GHOST_OUT; k += GHOST_STEP) out.push({ x: ring.x + dir * (ring.r + 5 + k), y: ring.y + 4, anchor: dir < 0 ? 'end' : 'start' });
+    return out;
+  };
+  const sides = markX >= ring.x ? [...side(-1), ...side(1)] : [...side(1), ...side(-1)];
+  const under = [0, GHOST_STEP, 2 * GHOST_STEP].map((k) => ({ x: mid, y: ring.y + ring.r + 13 + k, anchor: 'middle' }));
+  const fits = (spot) => {
+    const b = labelBox(spot, half);
+    if (b.left < 0 || b.right > W || b.top < 0 || b.bottom > f.base) return false;
+    return !avoid.some((a) => b.left < a.right + 2 && b.right > a.left - 2 && b.top < a.bottom + 2 && b.bottom > a.top - 2);
+  };
+  return [over, ...sides, ...under].find(fits) ?? over;
+}
+
 function el(tag, attrs = {}, parent = null) {
   const node = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
@@ -438,17 +471,35 @@ export function mountStrips(root, { h, peers, figures, domain: tight, fill, stil
     const y = moved ? (st.f.top + st.f.bot) / 2 : st.at.y;
     st.me.classList.toggle('st__me--ghost', moved);
     st.ghost.style.display = moved ? '' : 'none';
-    if (moved) st.ghost.style.transform = `translate(${round(st.at.x)}px, ${round(st.at.y - st.at.r - 8)}px)`;
     if (st.handle) {
       st.handle.g.style.display = '';
       st.handle.g.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
       if (st.handle.hint) placeHint(st, st.handle.hint, x, y);
       st.handle.dot.setAttribute('class', `st__hd ${signClass(moved ? v : h.est.pct[ROW_KEY[st.id]])}`);
       st.hyp.style.display = 'none';
-      return;
+    } else {
+      st.hyp.style.display = moved ? '' : 'none';
+      if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
     }
-    st.hyp.style.display = moved ? '' : 'none';
-    if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
+    if (moved) placeGhost(st, x, y);
+  }
+
+  // The "actual" label by the hospital's ring, clear of what marks the what-if at (x, y): the handle's capsule, or the
+  // net's "What if" mark and its label (ghostSpot; the labels' half widths measured once their face is in).
+  let ghostHalf = 0;
+  let markHalf = 0;
+  function placeGhost(st, x, y) {
+    if (!ghostHalf) ghostHalf = st.ghost.getComputedTextLength() / 2 + 1;
+    const w = HANDLE_R + HANDLE_REACH + 5;
+    let avoid;
+    if (st.handle) avoid = [{ left: x - w, right: x + w, top: y - HANDLE_R - 5, bottom: y + HANDLE_R + 5 }];
+    else {
+      if (!markHalf) markHalf = st.hyp.querySelector('text').getComputedTextLength() / 2 + 1;
+      avoid = [{ left: x - 10, right: x + 10, top: y - 10, bottom: y + 10 }, { left: x - markHalf, right: x + markHalf, top: y - 14 - 10, bottom: y - 14 + 4 }];
+    }
+    const spot = ghostSpot({ ring: { x: st.at.x, y: st.at.y, r: Number(st.me.getAttribute('r')) || st.at.r + 3.5 }, half: ghostHalf, avoid, W: st.W, f: st.f, markX: x });
+    st.ghost.setAttribute('text-anchor', spot.anchor);
+    st.ghost.style.transform = `translate(${round(spot.x)}px, ${round(spot.y)}px)`;
   }
 
   // The hint by the handle at (x, y), clear of the strip's dots where it can be (hintSpot; its half width measured once its
@@ -575,6 +626,8 @@ export function mountStrips(root, { h, peers, figures, domain: tight, fill, stil
   if (document.fonts) {
     document.fonts.ready.then(() => {
       hintHalf = 0;
+      ghostHalf = 0;
+      markHalf = 0;
       for (const st of strips) whatIf(st);
       drawThread();
     });
