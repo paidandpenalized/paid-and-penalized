@@ -18,10 +18,12 @@
 // The strips and the swarm draw the data's own axis; a hypothetical figure past it (a program's on its strip, the net on
 // the net's strip and the swarm) widens it just enough to hold it, and it narrows again when no figure needs the room
 // (scale.js holdingAxis), gliding each time. Opening the what-if changes nothing. While a pointer holds a handle the
-// axes only grow, and the drag reads its strip on the axis drawn when it began (strips.js grip), so a widening never
-// moves the value under the pointer; a drag past a strip's end goes to that end of the factor's range. On release the
-// axes settle to what the figures need: narrower again if the drag came back inside. A link that opens on a scenario
-// starts on the axis it needs, with no glide.
+// axes only grow; when they widen under a drag, the drag reads its strip again from where the handle now stands, so the
+// value never jumps and the handle moves one for one with the pointer; a drag past a strip's end goes to that end of the
+// factor's range. On release the axes settle to what the figures need, narrower again if the drag came back inside;
+// a mouse that lets go while resting over the strip holds that until it leaves the strip (or the reader changes the
+// what-if another way), so the settling never pulls the handle from under it. A link that opens on a scenario starts
+// on the axis it needs, with no glide.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
 import { siteAddress } from '../../../web/client/follow.js';
@@ -104,14 +106,61 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   // (want: the axis each needs now), 'press' or 'release'; animate false to move at once (a page opened on a scenario).
   const atRest = { held: 0, want: domain, axis: domain };
   let axes = { strips: atRest, swarm: atRest };
-  // The pointers holding a handle now: each counts once, from its press to its own release.
+  // The pointers holding a handle now: each counts once, from its press to its own release (or, for a mouse that lets go
+  // while resting over the strip, until it leaves the strip: resting).
   const holding = new Set();
+  // Each drag under way: what re-reads its strip when the axis changes under it (bindHandle's regrip).
+  const grips = new Set();
   const axisOn = (type, want = {}, animate = true) => {
     const next = { strips: stripAxis(axes.strips, { type, want: want.strips }), swarm: stripAxis(axes.swarm, { type, want: want.swarm }) };
-    if (next.strips.axis !== axes.strips.axis) strips.setAxis(next.strips.axis, animate);
+    const moved = next.strips.axis !== axes.strips.axis;
+    if (moved) strips.setAxis(next.strips.axis, animate);
     if (next.swarm.axis !== axes.swarm.axis) swarm.setAxis(next.swarm.axis, animate);
     axes = next;
+    if (moved) for (const regrip of grips) regrip();
   };
+  // A mouse that lets go of a handle while it rests over the handle's strip: the release waits until the pointer leaves
+  // the strip (or the window), the page scrolls it away, or the reader changes the what-if another way, so the axis
+  // settling never pulls the handle out from under a resting pointer. pointerId -> stop (the listeners' remover).
+  const resting = new Map();
+  const over = (box, x, y) => {
+    const b = box.getBoundingClientRect();
+    return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom;
+  };
+  function letGo(id) {
+    resting.get(id)?.();
+    resting.delete(id);
+    if (holding.delete(id)) axisOn('release');
+  }
+  const letGoAll = () => {
+    for (const id of [...resting.keys()]) letGo(id);
+  };
+  function rest(id, box, x, y) {
+    resting.get(id)?.();
+    let [px, py] = [x, y];
+    const check = () => {
+      if (!over(box, px, py)) letGo(id);
+    };
+    const move = (e) => {
+      if (e.pointerId !== id) return;
+      [px, py] = [e.clientX, e.clientY];
+      check();
+    };
+    const out = (e) => {
+      if (e.pointerId === id && !e.relatedTarget) letGo(id);
+    };
+    const away = () => letGo(id);
+    document.addEventListener('pointermove', move, { passive: true });
+    document.addEventListener('pointerout', out);
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('blur', away);
+    resting.set(id, () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerout', out);
+      window.removeEventListener('scroll', check);
+      window.removeEventListener('blur', away);
+    });
+  }
 
   // ---------- the controls ----------
   const lede = $('.hh__lede');
@@ -185,14 +234,23 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       else if (k === 'Home' || k === 'End') apply({ type: 'end', id: key, dir: k === 'Home' ? -1 : 1 });
       else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
     });
-    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it (until the axis
-    // widens under it: the drag reads the strip as drawn when it began, grip). The page updates once a frame at most, to
-    // the last place the pointer reached (at), and a release lands that place at once; keys and the field update at once.
+    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it, and the strip is
+    // read on the axis drawn (grip). When the axis widens under the drag, the strip is read again on the new axis from
+    // where the handle now stands (regrip): the value under the pointer stays the value it had, the handle moves one for
+    // one with the pointer from there, and nothing feeds back. The page updates once a frame at most, to the last place
+    // the pointer reached (at), and a release lands that place at once; keys and the field update at once.
     let offset = null;
     let read = null;
     let at = null;
     let frame = 0;
+    let lastX = 0;
     const valueAt = (e) => (read ? read(e.clientX + offset) : null);
+    const regrip = () => {
+      if (offset === null) return;
+      const b = el.querySelector('.st__hb').getBoundingClientRect();
+      offset = b.left + b.width / 2 - lastX;
+      read = strips.grip(id);
+    };
     const drag = () => {
       frame = 0;
       const v = at;
@@ -202,16 +260,21 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
         // The cut's place on the strip is its share of pay; past half way to it reads as the cut (past the strip's left
         // end, the cut; past its right, none).
         const cutAt = pctOf({ total: h.est.total, ...outcome({ ...state, hac: true }, h) }).hac;
-        apply({ type: 'hac', cut: v.past ? v.past < 0 : v.share < cutAt / 2 });
-      } else if (h.est.base > 0) apply(dragAction(h, key, v));
+        apply({ type: 'hac', cut: v.past ? v.past < 0 : v.share < cutAt / 2 }, { drag: true });
+      } else if (h.est.base > 0) apply(dragAction(h, key, v), { drag: true });
     };
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const b = el.querySelector('.st__hb').getBoundingClientRect();
+      lastX = e.clientX;
       offset = b.left + b.width / 2 - e.clientX;
       read = strips.grip(id);
+      grips.add(regrip);
       el.setPointerCapture?.(e.pointerId);
+      // A pointer resting after a release presses again: it holds on, and its next release decides.
+      resting.get(e.pointerId)?.();
+      resting.delete(e.pointerId);
       if (!holding.has(e.pointerId)) {
         holding.add(e.pointerId);
         axisOn('press');
@@ -224,6 +287,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       if (offset === null) return;
       const v = valueAt(e);
       if (v === null) return;
+      lastX = e.clientX;
       at = v;
       if (!frame) frame = requestAnimationFrame(drag);
     });
@@ -234,9 +298,13 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       }
       offset = null;
       read = null;
+      grips.delete(regrip);
       el.classList.remove('st__h--held');
       page.classList.remove('hh--dragging');
-      if (holding.delete(e.pointerId)) axisOn('release');
+      if (!holding.has(e.pointerId)) return;
+      const box = el.closest('[data-strip]');
+      if (e.type === 'pointerup' && e.pointerType === 'mouse' && box && over(box, e.clientX, e.clientY)) rest(e.pointerId, box, e.clientX, e.clientY);
+      else letGo(e.pointerId);
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
@@ -395,22 +463,26 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     }
   }
 
-  function apply(action) {
+  // An action on the what-if; drag: from a drag (the only kind that leaves a resting mouse's hold alone).
+  function apply(action, { drag = false } = {}) {
     const next = reduce(state, action, ctx());
-    if (next === state) return;
-    state = next;
-    if (action.type !== 'set') for (const r of Object.values(rows)) r.editing = false;
-    // Any change the reader makes, a reset included, makes the scenario theirs: no longer the link's "Reader-made".
-    linked = false;
-    page.classList.add('hh--used');
-    draw();
-    clearTimeout(timer);
-    timer = setTimeout(settle, SETTLE_MS);
+    if (next !== state) {
+      state = next;
+      if (action.type !== 'set') for (const r of Object.values(rows)) r.editing = false;
+      // Any change the reader makes, a reset included, makes the scenario theirs: no longer the link's "Reader-made".
+      linked = false;
+      page.classList.add('hh--used');
+      draw();
+      clearTimeout(timer);
+      timer = setTimeout(settle, SETTLE_MS);
+    }
+    if (!drag) letGoAll();
   }
 
   // A scenario from the address: on load (animate false: the strips start on the axis the scenario needs), and when a
   // link opens in this tab.
   function load(animate = true) {
+    letGoAll();
     const next = fromHash(location.hash, h, ctx()).state;
     linked = changed(next, h);
     state = next;

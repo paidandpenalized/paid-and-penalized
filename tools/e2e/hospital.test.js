@@ -456,7 +456,9 @@ describe('the what-if\'s edges', () => {
 // needs, on that side, to a whole percent, and back when nothing needs the room; each change one glide with every part
 // of each strip on one transition. Opening the what-if changes nothing. While a drag lasts the axis only grows, a drag
 // past a strip's end reaches its factor's end, and on release the axis settles to what the figures need. A link that
-// opens on a scenario starts on the axis it needs, with no glide.
+// opens on a scenario starts on the axis it needs, with no glide. When the axis widens under a drag, the handle moves
+// one for one with the pointer from where it then stands; a mouse that lets go resting on the strip holds the axis until
+// it leaves.
 describe('the strips\' axis', () => {
   const tabs = useContext(shared);
   const phone = useContext(shared, { width: 390 });
@@ -737,54 +739,115 @@ describe('the strips\' axis', () => {
     await assertQuiet(seen, 'a drag inside the axis');
   }));
 
-  it('a drag past a strip\'s end reaches the range\'s end, the strips widening while held; back inside, they wait for the release, then settle', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+  // The middle of a handle's capsule, across (client x).
+  const middle = async (handle) => {
+    const b = await handle.locator('.st__hb').boundingBox();
+    return b.x + b.width / 2;
+  };
+
+  it('a drag past a strip\'s end reaches the range\'s end and widens the strips; from there the handle moves one for one with the pointer; resting, the release waits for the pointer to leave', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const handle = vbp(page);
     await handle.waitFor();
     await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
     const before = await axisOf(page);
-    const actual = await handle.getAttribute('aria-valuenow');
     const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
-    const [x, y] = await grab(page, handle);
-    await page.mouse.move(strip.x + strip.width - 1, y, { steps: 8 });
+    const [, y] = await grab(page, handle);
+    const end = strip.x + strip.width - 1;
+    await page.mouse.move(end, y, { steps: 8 });
     await settle(page);
     assert.equal(await handle.getAttribute('aria-valuenow'), await handle.getAttribute('aria-valuemax'), 'past the end: the range\'s top');
-    const wide = await axisOf(page);
-    assert.equal(wide.ticks, TOP, 'wider while held, just enough to hold it');
-    // Back where it started: the factor as it was, and the axis as wide as it grew while the pointer holds the handle.
-    await page.mouse.move(x, y, { steps: 8 });
-    await settle(page);
-    const value = await handle.getAttribute('aria-valuenow');
-    assert.ok(Math.abs(Number(value) - Number(actual)) < 0.002, `back near its own factor (${value} against ${actual})`);
+    assert.equal((await axisOf(page)).ticks, TOP, 'wider while held, just enough to hold it');
+    // From where the widening left the handle, it moves with the pointer one for one, and its value with it (except at
+    // the hospital's own factor, where the handle sits on its dot in the pile).
+    const from = await middle(handle);
+    const own = String(HIGH_BASE.est.vbpFactor);
+    let last = await handle.getAttribute('aria-valuenow');
+    for (const dx of [40, 80, 160, 240]) {
+      await page.mouse.move(end - dx, y, { steps: 4 });
+      await settle(page);
+      const now = await handle.getAttribute('aria-valuenow');
+      assert.ok(Number(now) < Number(last), `the factor down with it (${now} after ${last})`);
+      last = now;
+      if (now === own) continue;
+      const moved = from - (await middle(handle));
+      assert.ok(Math.abs(moved - dx) <= 2, `the pointer ${dx} px left, the handle ${moved.toFixed(1)} px`);
+    }
     const held = await axisOf(page);
-    assert.deepEqual([held.ticks, near(held.span, wide.span)], [wide.ticks, true], 'never narrower while held');
+    assert.equal(held.ticks, TOP, 'back inside, never narrower while held');
+    // Let go where it rests: nothing moves.
+    const at = await middle(handle);
     await page.mouse.up();
+    await settle(page);
+    assert.ok(Math.abs((await middle(handle)) - at) < 1, 'the handle stays under the resting pointer');
+    assert.equal((await axisOf(page)).ticks, TOP, 'the axis waits while the pointer rests on the strip');
+    // The pointer leaves the strip: the axis settles to the data's own; the value is as dragged.
+    await page.mouse.move(strip.x + strip.width / 2, strip.y - 120, { steps: 4 });
+    await settle(page);
     const after = await axisOf(page);
-    assert.deepEqual([after.ticks, near(after.span, before.span)], [before.ticks, true], 'released: the data\'s axis, all the figures needing no more');
-    assert.equal(await handle.getAttribute('aria-valuenow'), value, 'the value as dragged');
+    assert.deepEqual([after.ticks, near(after.span, before.span)], [before.ticks, true], 'the data\'s axis, the figures needing no more');
+    assert.equal(await handle.getAttribute('aria-valuenow'), last, 'the value as dragged');
     await assertQuiet(seen, 'a drag past the end');
   }));
 
-  it('a release after a drag that widened the strips: they glide back as one, the handle on its value, which stays as dragged', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+  it('a drag that begins on a widened axis and ends inside the data\'s: the release leaves the handle under the resting pointer; a key or the pointer leaving settles the axis', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const handle = vbp(page);
+    await handle.waitFor();
+    await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
+    const before = await axisOf(page);
+    for (const leave of ['the pointer', 'a key']) {
+      await handle.focus();
+      await page.keyboard.press('End');
+      assert.equal((await axisOf(page)).ticks, TOP, `${leave}: End widens the axis`);
+      const [x, y] = await grab(page, handle);
+      await page.mouse.move(x - 200, y, { steps: 6 });
+      await settle(page);
+      const at = await middle(handle);
+      assert.ok(Math.abs(at - (x - 200)) < 2, `${leave}: on an axis that does not change, the handle under the pointer`);
+      await page.mouse.up();
+      await settle(page);
+      assert.ok(Math.abs((await middle(handle)) - at) < 1, `${leave}: released and resting, the handle stays`);
+      assert.equal((await axisOf(page)).ticks, TOP, `${leave}: the axis waits`);
+      if (leave === 'the pointer') await page.mouse.move(x - 200, y - 150, { steps: 4 });
+      else await page.keyboard.press('ArrowLeft');
+      await settle(page);
+      assert.equal((await axisOf(page)).ticks, before.ticks, `${leave}: the axis settles to the data's own`);
+      await page.keyboard.press('Escape');
+      await page.mouse.move(0, 0);
+    }
+    await assertQuiet(seen, 'a drag from a widened axis');
+  }));
+
+  it('the strips widening under a drag glide around the held handle, which keeps moving with the pointer; leaving the strip after the release, they glide back as one, the handle on its value', () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
     const handle = vbp(page);
     await handle.waitFor();
     await page.locator('[data-row="hvbp"]').scrollIntoViewIfNeeded();
     const strip = await page.locator('[data-row="hvbp"] [data-strip] svg').boundingBox();
-    const [x, y] = await grab(page, handle);
-    await page.mouse.move(strip.x + strip.width - 1, y, { steps: 8 });
+    const [, y] = await grab(page, handle);
+    const end = strip.x + strip.width - 1;
+    await page.mouse.move(end, y, { steps: 8 });
+    // Mid-glide (the strips widening), the held handle has no transition and follows the pointer at once.
+    await page.waitForTimeout(150);
+    assert.ok(await page.evaluate(() => document.querySelector('svg.st.st--live') !== null), 'the strips glide');
+    const from = await middle(handle);
+    await page.mouse.move(end - 30, y);
+    await settle(page);
+    assert.ok(Math.abs(from - (await middle(handle)) - 30) <= 2, 'mid-glide, one for one with the pointer');
+    assert.ok(await page.evaluate(() => document.querySelector('[data-row="hvbp"] .st__h').getAnimations().length === 0), 'no transition on the held handle');
     await page.waitForTimeout(1000);
-    assert.equal((await axisOf(page, 'hvbp')).ticks, TOP, 'wide while held');
-    // The held handle follows the pointer at once, mid-glide or not.
-    await page.mouse.move(x - 40, y, { steps: 4 });
+    await page.mouse.move(end - 260, y, { steps: 6 });
     await settle(page);
     const held = await handle.getAttribute('aria-valuenow');
-    assert.ok(await page.evaluate(() => document.querySelector('[data-row="hvbp"] .st__h').getAnimations().length === 0), 'no transition on the held handle');
-    // Where every part of the strip stands as the pointer lets go; then, 300 ms into the glide, the way along.
+    assert.notEqual(held, String(HIGH_BASE.est.vbpFactor), 'a factor of its own, not the hospital\'s');
+    await page.mouse.up();
+    // Resting: nothing glides. Then the pointer leaves, and every part of the strip glides back on one transition.
+    assert.ok(await page.evaluate(() => !document.querySelector('svg.st.st--live')), 'no glide while the pointer rests');
     await page.evaluate(() => {
       window.stFrom = new Map([...document.querySelectorAll('[data-row="hvbp"] svg.st :is(.st__d, .st__me, .st__med, .st__grid, .st__tl, .st__gut, .st__h)')]
         .map((p) => [p, new DOMMatrixReadOnly(getComputedStyle(p).transform)]));
     });
-    await page.mouse.up();
+    await page.mouse.move(strip.x + strip.width / 2, strip.y - 120);
     const along = await page.evaluate(() => {
       const moving = document.getAnimations().filter((a) => a.transitionProperty);
       for (const a of moving) {
@@ -812,8 +875,10 @@ describe('the strips\' axis', () => {
       const svg = document.querySelector('[data-row="hvbp"] svg.st');
       const x = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).e;
       const ticks = new Map([...svg.querySelectorAll('.st__tl')].map((t) => [Number(t.textContent.replace('−', '-').replace('%', '')), x(t)]));
-      const [a, b] = [Math.floor(v), Math.floor(v) + 1];
-      return { want: ticks.get(a) + (v - a) * (ticks.get(b) - ticks.get(a)), got: x(svg.querySelector('.st__h')), ticks: [...ticks.keys()].sort((p, q) => p - q).join(' ') };
+      // Two ticks on the value's own side of the $0 gutter (the side's line runs on through them).
+      const a = v >= 0 ? Math.max(1, Math.floor(v)) : Math.min(-1, Math.ceil(v));
+      const b = v >= 0 ? a + 1 : a - 1;
+      return { want: ticks.get(a) + ((v - a) * (ticks.get(b) - ticks.get(a))) / (b - a), got: x(svg.querySelector('.st__h')), ticks: [...ticks.keys()].sort((p, q) => p - q).join(' ') };
     }, share);
     assert.equal(at.ticks, TIGHT, 'the strips back on the data\'s axis');
     assert.ok(Math.abs(at.got - at.want) < 1, `the handle at ${at.got} px, its value's place ${at.want} px`);
