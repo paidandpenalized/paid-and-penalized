@@ -48,7 +48,8 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 <meta property="og:image:height" content="${CARD_SIZE.height}">
 <meta property="og:image:alt" content="${alt}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${image}">`;
+<meta name="twitter:image" content="${image}">
+<meta name="twitter:image:alt" content="${alt}">`;
 
 // body: Safe markup (a plain string is escaped, never trusted). assets: the build's paths (css, the shared stylesheet;
 // sheets, the stylesheets of their own by name; js by entry name; cards, the share cards by id, web/share-card.js) and

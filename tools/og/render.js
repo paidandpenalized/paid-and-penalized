@@ -1,14 +1,14 @@
-// npm run og: draws each share card (web/share-card.js) from its HTML (card.js) in the installed Google Chrome at
-// CARD_SIZE and one device pixel per CSS pixel, and writes web/og/<id>.png and web/og/stamp.json: each card's sha256 of
-// its HTML and of its PNG. A test fails when a card's HTML no longer matches its stamp (the data, the tokens, the fonts
-// or the design changed) or the PNG is not the one drawn. Commit the PNGs and the stamp: the build copies the PNGs and
+// npm run og: draws each share card (web/share-card.js) from its HTML (card.js) in the installed Google Chrome as
+// card.js's RENDER says (CARD_SIZE, one device pixel per CSS pixel), and writes web/og/<id>.png and web/og/stamp.json: each card's sha256 of
+// its HTML and of its PNG. A test fails when a card's HTML no longer matches its stamp (the data, the tokens it reads, the
+// fonts, the design or RENDER changed) or the PNG is not the one drawn. Commit the PNGs and the stamp: the build copies the PNGs and
 // runs with no browser. Refuses to write anything if a font fails to load or any line runs past its box.
 import { writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { REPO_ROOT, isMain } from '../../pipeline/files.js';
-import { CARD_SIZE, CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
+import { CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
 import { sha256 } from '../../pipeline/site/assets.js';
-import { CARD_FONTS, cardHtml, cardInputs } from './card.js';
+import { CARD_FONTS, RENDER, cardHtml, cardInputs } from './card.js';
 
 // The problems with a drawn card, as strings (none: []): a face that did not load, and a line of words (each as wide
 // as its text) that runs into the map's gutter or the bottom rule's.
@@ -36,13 +36,13 @@ export async function renderCards() {
   const browser = await chromium.launch({ channel: 'chrome' });
   const drawn = [];
   try {
-    const page = await browser.newPage({ viewport: CARD_SIZE, deviceScaleFactor: 1, colorScheme: 'light' });
+    const page = await browser.newPage({ viewport: RENDER.viewport, deviceScaleFactor: RENDER.deviceScaleFactor, colorScheme: RENDER.colorScheme });
     for (const id of Object.keys(SHARE_CARDS)) {
       const html = cardHtml(id, inputs);
       await page.setContent(html, { waitUntil: 'load' });
       const problems = await problemsOf(page);
       if (problems.length) throw new Error(`share card "${id}": ${problems.join('; ')}; nothing written`);
-      drawn.push({ id, html, png: await page.screenshot({ type: 'png', clip: { x: 0, y: 0, ...CARD_SIZE } }) });
+      drawn.push({ id, html, png: await page.screenshot({ type: 'png', clip: RENDER.clip }) });
     }
   } finally {
     await browser.close();

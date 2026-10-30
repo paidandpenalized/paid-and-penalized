@@ -26,7 +26,7 @@ export const LIGHT_BLOCK = /^:root \{([^}]*)\}/m;
 const repoPath = (path) => (isAbsolute(path) ? path : REPO_ROOT + path);
 
 // A CSS block's declarations, [name, value], in order, its comments left out.
-const declarations = (block) => [...block.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([\w-]+)\s*:\s*([^;]+?)\s*;/g)].map(([, name, value]) => [name, value]);
+export const declarations = (block) => [...block.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([\w-]+)\s*:\s*([^;]+?)\s*;/g)].map(([, name, value]) => [name, value]);
 // A color value: hex, rgb() or rgba(), the forms tokens.css writes.
 const COLOR = /^(?:#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i;
 // The print block: every color custom property the light block sets, then the print block's own declarations (what

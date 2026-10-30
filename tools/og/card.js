@@ -5,14 +5,15 @@
 // Every card: the paper and its grain, a double rule across the top and its mirror at the bottom, words on the left
 // and, on the right, every hospital in the hub's data asset as a dot at its place on the US map (the asset's x and y
 // on its mapW by mapH projection). The family's card: the wordmark, the tagline and the address; its dots red for a
-// net cut, green for a net bonus, gray for none or no estimate. A program's card: the family and the program as a
-// kicker, the program's title, its address; its dots red where that program cut the hospital, gray otherwise. No
-// numbers and no byline on any card.
+// net cut, green for a net bonus, gray for no net change or no estimate. HACRP's card: the family and the program as a
+// kicker, the program's title, its address; its dots red where CMS's HACRP file says it cut the hospital (payment
+// reduction "Yes", the newest emitted year), gray otherwise. No numbers and no byline on any card.
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { REPO_ROOT } from '../../pipeline/files.js';
-import { LIGHT_BLOCK } from '../../pipeline/site/assets.js';
+import { LIGHT_BLOCK, declarations } from '../../pipeline/site/assets.js';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { COPY } from '../../web/copy.js';
 import { html, raw } from '../../web/render/html.js';
 import { CARD_SIZE, SHARE_CARDS } from '../../web/share-card.js';
@@ -26,7 +27,14 @@ export const CARD_FONTS = Object.freeze({
   'ibm-plex-mono-400': ['IBM Plex Mono', '400'],
 });
 
-// What the stamp records of a card's HTML and its PNG (render.js; the stale-card test).
+// How render.js draws a card: the page's viewport, one device pixel per CSS pixel, the light scheme, and the card's
+// box. cardHtml writes these into each card's HTML, so the stamp (a hash of the HTML) goes stale when they change.
+export const RENDER = Object.freeze({
+  viewport: CARD_SIZE,
+  deviceScaleFactor: 1,
+  colorScheme: 'light',
+  clip: Object.freeze({ x: 0, y: 0, ...CARD_SIZE }),
+});
 
 // The map's box on the card (right of the words) and a dot's radius at the map's scale.
 const MAP_BOX = Object.freeze({ width: 450, height: 420 });
@@ -37,8 +45,8 @@ const host = new URL(SITE.origin).host;
 const titleLines = (title) => title.split(' ').flatMap((word) => word.split(/(?<=-)/));
 
 // Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red; size its font
-// size and top the words' top edge, in px. tone(value): a dot's ink, 'pen', 'rew' or null (gray), from the hospital's
-// value in the hub asset's `column`.
+// size and top the words' top edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
+// the hospital's net dollars in the hub asset or its CCN among HACRP's cut hospitals (cut, a Set).
 const CARDS = {
   family: {
     kicker: null,
@@ -47,8 +55,7 @@ const CARDS = {
     top: 118,
     tagline: COPY.tagline,
     address: host,
-    tone: (net) => (net === null || net === 0 ? null : net < 0 ? 'pen' : 'rew'),
-    column: 'net',
+    tone: ({ net }) => (net === null || net === 0 ? null : net < 0 ? 'pen' : 'rew'),
   },
   hacrp: {
     kicker: `${SITE.name} · ${SITE.sites.hacrp.subtitle}`,
@@ -57,25 +64,40 @@ const CARDS = {
     top: 92,
     tagline: null,
     address: host + SITE.sites.hacrp.path.replace(/\/$/, ''),
-    // The HAC column is the hospital's HACRP dollars: a cut is below zero, every other hospital's is zero or none.
-    tone: (hac) => (hac !== null && hac !== 0 ? 'pen' : null),
-    column: 'hac',
+    // CMS's own flag, not the dollar estimates: a hospital CMS cut but the hub has no estimate for is still red.
+    tone: ({ ccn }, { cut }) => (cut.has(ccn) ? 'pen' : null),
   },
 };
 for (const id of Object.keys(SHARE_CARDS)) if (!Object.hasOwn(CARDS, id)) throw new Error(`tools/og/card.js: no card design for "${id}"`);
 
-// A card's dots from the hub asset ({ mapW, mapH, cols, rows }): [x, y, tone] on the map, the gray ones first so the
-// colored ones sit on top; a hospital with no place on the map is left out.
-export function cardDots(id, { cols, rows }) {
-  const { tone, column } = CARDS[id];
+// A card's dots from the hub asset (hub: { mapW, mapH, cols, rows }) and HACRP's cut hospitals (cut: a Set of CCNs):
+// [x, y, tone] on the map, the gray ones first so the colored ones sit on top; a hospital with no place on the map is
+// left out.
+export function cardDots(id, { hub: { cols, rows }, cut }) {
   const at = (name) => {
     const i = cols.indexOf(name);
     if (i < 0) throw new RangeError(`share card: the hub asset has no "${name}" column`);
     return i;
   };
-  const [x, y, v] = [at('x'), at('y'), at(column)];
-  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], tone(r[v])]);
+  const [ccn, x, y, net] = [at('ccn'), at('x'), at('y'), at('net')];
+  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut })]);
   return [...dots.filter((d) => d[2] === null), ...dots.filter((d) => d[2] !== null)];
+}
+
+// The custom properties a stylesheet reads (var(--name)), with those their values read in turn, from tokens (a Map of
+// name to value); the declarations, in tokens' order. A property tokens lacks throws.
+function tokensFor(css, tokens) {
+  const used = new Set();
+  const read = (text) => {
+    for (const [, name] of text.matchAll(/var\((--[\w-]+)/g)) {
+      if (used.has(name)) continue;
+      if (!tokens.has(name)) throw new RangeError(`share card: no token ${name} in tokens.css's light block`);
+      used.add(name);
+      read(tokens.get(name));
+    }
+  };
+  read(css);
+  return [...tokens].filter(([name]) => used.has(name)).map(([name, value]) => `  ${name}: ${value};`).join('\n');
 }
 
 // The dots as an SVG filling the map's box, the map centered in it at the largest scale that fits.
@@ -88,9 +110,11 @@ function mapSvg(dots, { mapW, mapH }) {
   return raw(`<svg class="map" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${circles.join('')}</svg>`);
 }
 
-// A card's HTML. tokens: the light :root block of web/styles/tokens.css; fonts: each CARD_FONTS file as base64; hub:
-// the hub's data asset (hub/asset.js hubAsset). Everything is inline, so the HTML alone decides the picture.
-export function cardHtml(id, { tokens, fonts, hub }) {
+// A card's HTML. tokens: the light block's custom properties (a Map of name to value), of which the card carries only
+// those it reads, so an edit to another token leaves it current; fonts: each CARD_FONTS file as base64; hub: the hub's
+// data asset (hub/asset.js hubAsset); cut: HACRP's cut hospitals (a Set of CCNs). Everything is inline, so the HTML
+// alone decides the picture, with RENDER in a comment.
+export function cardHtml(id, { tokens, fonts, hub, cut }) {
   if (!Object.hasOwn(CARDS, id)) throw new RangeError(`share card: no card "${id}"`);
   const card = CARDS[id];
   const faces = Object.entries(CARD_FONTS).map(([file, [family, weight]]) => {
@@ -98,12 +122,7 @@ export function cardHtml(id, { tokens, fonts, hub }) {
     return `@font-face { font-family: '${family}'; font-weight: ${weight}; font-style: normal; src: url(data:font/woff2;base64,${fonts[file]}) format('woff2'); }`;
   });
   const last = card.lines.length - 1;
-  return html`<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<style>
-${raw(faces.join('\n'))}
-${raw(tokens)}
-* { box-sizing: border-box; margin: 0; }
+  const css = `* { box-sizing: border-box; margin: 0; }
 html, body { width: ${CARD_SIZE.width}px; height: ${CARD_SIZE.height}px; overflow: hidden; }
 body { position: relative; background: var(--grain) repeat, var(--paper); color: var(--ink); font-family: var(--font-body); }
 .dbl { position: absolute; left: 56px; right: 56px; border-top: 6px solid var(--ink); }
@@ -121,7 +140,16 @@ body { position: relative; background: var(--grain) repeat, var(--paper); color:
 .kick + .addr { margin-top: 14px; }
 .mapbox { position: absolute; right: 70px; top: 96px; width: ${MAP_BOX.width}px; height: ${MAP_BOX.height}px; }
 .map circle { fill-opacity: .85; }
-.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }
+.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }`;
+  return html`<!doctype html>
+<!-- drawn with ${raw(JSON.stringify(RENDER))} -->
+<html lang="en"><head><meta charset="utf-8">
+<style>
+${raw(faces.join('\n'))}
+:root {
+${raw(tokensFor(css, tokens))}
+}
+${raw(css)}
 </style></head>
 <body>
 <div class="dbl dbl--top"></div>
@@ -130,18 +158,22 @@ ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 ` : ''}<div class="big">${card.lines.map((line, i) => html`<span${i === last ? raw(' class="pen"') : ''} data-fit>${line}</span>`)}</div>
 <div class="rule">${card.tagline ? html`<div class="kick" data-fit>${card.tagline}</div>` : ''}<div class="addr" data-fit>${card.address}</div></div>
 </div>
-<div class="mapbox">${mapSvg(cardDots(id, hub), hub)}</div>
+<div class="mapbox">${mapSvg(cardDots(id, { hub, cut }), hub)}</div>
 <div class="dbl dbl--bottom"></div>
 </body></html>
 `.toString();
 }
 
-// What the cards are drawn from, read from the repo: the light tokens, the fonts, and the hub's data asset as the build
-// writes it (hub/data.js hubModel, hub/asset.js hubAsset).
+// What the cards are drawn from, read from the repo: the light tokens, the fonts, the hub's data asset as the build
+// writes it (hub/data.js hubModel, hub/asset.js hubAsset), and the hospitals CMS's HACRP file cut (the newest emitted
+// year, which must be the hub's).
 export function cardInputs() {
-  const tokens = LIGHT_BLOCK.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[0];
-  if (!tokens) throw new Error('web/styles/tokens.css: the light block not found');
+  const block = LIGHT_BLOCK.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[1];
+  if (!block) throw new Error('web/styles/tokens.css: the light block not found');
   const fonts = Object.fromEntries(Object.keys(CARD_FONTS).map((f) => [f, readFileSync(`${REPO_ROOT}web/fonts/${f}.woff2`).toString('base64')]));
   const { hub, hospitals } = hubModel();
-  return { tokens, fonts, hub: hubAsset(hospitals, hub) };
+  const hacrp = readNewestEmitted();
+  if (hacrp.fy !== hub.fy) throw new RangeError(`share card: HACRP's newest emitted year is FY${hacrp.fy}, the hub's FY${hub.fy}`);
+  const cut = new Set(hacrp.hospitals.filter((h) => h.paymentReduction === 'Yes').map((h) => h.ccn));
+  return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut };
 }

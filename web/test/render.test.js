@@ -609,6 +609,7 @@ test('page: the share card is an absolute https URL to the build\'s hashed card 
   assert.deepEqual(tags, {
     'og:image': image, 'og:image:type': 'image/png', 'og:image:width': String(CARD_SIZE.width), 'og:image:height': String(CARD_SIZE.height),
     'og:image:alt': escapeHtml(SHARE_CARDS.hacrp), 'twitter:card': 'summary_large_image', 'twitter:image': image,
+    'twitter:image:alt': escapeHtml(SHARE_CARDS.hacrp),
   });
   assert.deepEqual(CARD_SIZE, { width: 1200, height: 630 });
   // The not-found page, with no address of its own, still has its card.
@@ -634,6 +635,6 @@ test('page: a page under a program site with a card of its own shows that card; 
 });
 
 test('page: assets without the page\'s share card throw', () => {
-  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: undefined } }), /share card/);
-  assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: { family: ASSETS.cards.family } } }), /"hacrp" share card/);
+  assert.throws(() => page({ ...PAGE, assets: testAssets({ cards: {} }) }), /share card/);
+  assert.throws(() => page({ ...PAGE, assets: testAssets({ cards: { family: ASSETS.cards.family } }) }), /"hacrp" share card/);
 });
