@@ -11,6 +11,8 @@ export const SITE = {
   pages: { methods: '/methods/', about: '/about/', corrections: '/corrections/', accessibility: '/accessibility/', privacy: '/privacy/', terms: '/terms/' },
   // The site's text, charts and derived data, and its code.
   license: { content: { name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' }, code: { name: 'MIT' } },
+  // This repository: the code that builds the site, its tests and its pinned inputs (a program's Methods page links it).
+  repo: 'https://github.com/paidandpenalized/paid-and-penalized',
   // The byline's profile (the About page links it too).
   linkedin: 'https://www.linkedin.com/in/dalton-haslam',
   feedback: {
@@ -18,10 +20,10 @@ export const SITE = {
     siteEntry: 'entry.2047320042',
     pageEntry: 'entry.1326474028',
   },
-  // The family's own pages (the hub's): noindex in every build until the hub is built.
-  hub: { released: false },
+  // The family's own pages (the hub's).
+  hub: { released: true },
   sites: {
-    hacrp: { path: '/hacrp/', released: false, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
+    hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.

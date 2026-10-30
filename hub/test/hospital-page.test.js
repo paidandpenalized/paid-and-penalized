@@ -295,6 +295,8 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     }
     assert.equal(bad, 0, 'pages with NaN, undefined or Infinity');
     assert.equal(wrongCanonical, 0, 'pages without their canonical address');
-    // The hub is not released, so none is indexed, and the sitemap lists none.
-    assert.ok(!ctx.indexable.some((p) => p.startsWith('/hospital/')), 'no hospital page indexable while the hub is unreleased');
+    // Indexed, and in the sitemap, only once the hub is released, and only a page with an estimate (one without has no
+    // figures: Maryland's, or no inputs).
+    const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
+    assert.equal(indexed, SITE.hub.released ? HOSPITALS.filter((h) => h.est).length : 0, 'hospital pages with an estimate indexable only when the hub is released');
   }));

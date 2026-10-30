@@ -1,7 +1,8 @@
 // make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
 // site's scripts and styles), writes the hub's data asset and computes the shell's facts, runs each site's generator in
 // order, then writes Cloudflare's _headers (headers.js).
-// PP_ENV=production is the only build that may be indexed (robotsFor in context.js holds the rule for pages).
+// A production build (PP_ENV=production, or Workers Builds' build of main: buildEnv in context.js) is the only one that
+// may be indexed (robotsFor in context.js holds the rule for pages).
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
@@ -13,7 +14,7 @@ import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
 import { SITE } from '../../web/site.js';
 import { buildAssets, writeHashed } from './assets.js';
-import { createContext, siteDates } from './context.js';
+import { buildEnv, createContext, siteDates } from './context.js';
 import { headersFile } from './headers.js';
 
 // Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx, { updated }) }: entries are
@@ -73,7 +74,7 @@ export function buildContext({ outDir, env, assets }) {
   return createContext({ outDir, env, assets, shell: { ...facts, hubUrl } });
 }
 
-export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites = SITES } = {}) {
+export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), sites = SITES } = {}) {
   const dir = checkOutDir(outDir);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -95,6 +96,7 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
 }
 
 if (isMain(import.meta.url)) {
-  const { pages } = await build();
-  console.log(`dist/: ${pages} pages (PP_ENV=${process.env.PP_ENV ?? 'unset'})`);
+  const env = buildEnv(process.env);
+  const { pages } = await build({ env });
+  console.log(`dist/: ${pages} pages (env ${env ?? 'unset'})`);
 }

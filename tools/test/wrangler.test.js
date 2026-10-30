@@ -1,11 +1,12 @@
-// The deploy config: a static-assets Worker for dist/ on workers.dev and preview URLs, with no route or custom domain
-// (that is a go-live step), and the Node version Workers Builds uses. Its build command is npm run build, which make
+// The deploy config: a static-assets Worker for dist/ at its custom domain only (workers.dev off; preview URLs on),
+// and the Node version Workers Builds uses. Its build command is npm run build, which make
 // build runs too.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { NOT_FOUND_PATH, fileFor } from '../../pipeline/site/address.js';
+import { SITE } from '../../web/site.js';
 
 const read = (path) => readFileSync(REPO_ROOT + path, 'utf8');
 // JSONC to JSON: drop the comments, keeping any "//" inside a string.
@@ -25,14 +26,15 @@ test('a path with no file gets the not-found page the build writes: "404-page" s
   assert.equal(fileFor(NOT_FOUND_PATH), '404.html');
 });
 
-test('it serves on workers.dev and preview URLs, with no route or custom domain', () => {
-  assert.equal(config.workers_dev, true);
+test('it serves at paidandpenalized.org only: the custom domain, no workers.dev address; previews keep preview URLs', () => {
+  assert.equal(config.workers_dev, false);
   assert.equal(config.preview_urls, true);
   // `wrangler preview` stops without a previews block; an empty one makes previews take the top-level settings.
   assert.deepEqual(config.previews, {});
-  // Every key, so a route, a custom domain, a trigger or any other setting cannot arrive unnoticed.
-  assert.deepEqual(Object.keys(config).sort(), ['assets', 'compatibility_date', 'name', 'preview_urls', 'previews', 'workers_dev']);
-  assert.doesNotMatch(configText, /routes?"|custom_domain|zone_(id|name)/);
+  assert.deepEqual(config.routes, [{ pattern: new URL(SITE.origin).hostname, custom_domain: true }]);
+  // Every key, so another route, a trigger or any other setting cannot arrive unnoticed.
+  assert.deepEqual(Object.keys(config).sort(), ['assets', 'compatibility_date', 'name', 'preview_urls', 'previews', 'routes', 'workers_dev']);
+  assert.doesNotMatch(configText, /"route"|zone_(id|name)/);
 });
 
 test('the Node version Workers Builds reads is pinned to the one CI uses', () => {

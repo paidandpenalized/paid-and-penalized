@@ -11,6 +11,15 @@ import { writeHashed } from './assets.js';
 // Whether a build's env (PP_ENV) is production, the one build search engines may index (_headers' X-Robots-Tag too).
 export const isProduction = (env) => env === 'production';
 
+// A build's env from its process environment: PP_ENV when it is set; otherwise production only for Workers Builds'
+// build of main (WORKERS_CI_BRANCH, set from the push), so every other branch's preview stays noindex. Cloudflare's
+// build variables apply to every branch, so PP_ENV is not set there.
+export const PRODUCTION_BRANCH = 'main';
+export function buildEnv({ PP_ENV, WORKERS_CI, WORKERS_CI_BRANCH } = {}) {
+  if (PP_ENV !== undefined) return PP_ENV;
+  return WORKERS_CI === '1' && WORKERS_CI_BRANCH === PRODUCTION_BRANCH ? 'production' : undefined;
+}
+
 // The meta robots value for a page, or null when it may be indexed (ARCH-13, ARCH-22): only a production build, only
 // a released site, and only a page its site counts as eligible (HACRP: a hospital with a score).
 export function robotsFor({ env, released, eligible = true }) {

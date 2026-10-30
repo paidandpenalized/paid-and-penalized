@@ -12,6 +12,7 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { loadHub } from '../data.js';
+import { hubHospitals } from '../model.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
@@ -28,9 +29,18 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     await generateHub(ctx);
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
     // still to come, a page per hospital in the dollar file, and the interim Readmissions pages (/hrrp/ and one per hospital
-    // in the pinned file); none indexable while the hub is unreleased, and the interim pages never.
+    // in the pinned file). Once the hub is released, its home page, Methods, policy pages and hospital pages are
+    // indexable; the 404 page, the placeholders and the interim pages never are.
     assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length + 1 + loadHub().tdr.hospitals.size);
-    assert.deepEqual(ctx.indexable, ['/hacrp/', '/hacrp/hospital/990001/']);
+    assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
+    const hubIndexable = ctx.indexable.slice(2);
+    if (SITE.hub.released) {
+      // A hospital page only with an estimate (one without has no figures).
+      assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(loadHub()).filter((h) => h.est).length);
+      assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
+    } else {
+      assert.deepEqual(hubIndexable, []);
+    }
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
     // The home page is the story (hub/test/home.test.js has its parts): the masthead, then the story's steps and stage.
@@ -56,8 +66,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));
 
+    assert.ok(notFound.includes(NOINDEX), 'the 404 page is never indexed');
     for (const text of [home, methods, notFound]) {
-      assert.ok(text.includes(NOINDEX), 'hub pages stay noindex until the hub is built');
+      if (text !== notFound) assert.equal(text.includes(NOINDEX), !SITE.hub.released, 'hub pages are noindex until the hub is released');
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1);
     }
 
@@ -65,7 +76,7 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     const sitemap = read('sitemap.xml');
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/<\/loc>/);
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/hospital\/990001\/<\/loc>/);
-    assert.equal(sitemap.match(/<url>/g).length, 2);
+    assert.equal(sitemap.match(/<url>/g).length, ctx.indexable.length);
   }));
 
 test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
@@ -119,13 +130,13 @@ const briefKeys = (prefix) => Object.keys(COPY).filter((k) => new RegExp(`^${pre
 const sectionIds = (page) => [...tags(page, { names: ['section'] })].filter(({ attrs }) => attrs.class === 'doc__sec').map(({ attrs }) => attrs.id);
 const indexLinks = (page) => [...tags(page.match(/<nav class="doc__toc"[\s\S]*?<\/nav>/)[0], { names: ['a'] })].map(({ attrs }) => attrs.href.replace(/^#/, ''));
 
-test('each policy page has one h1, the brief as a record card, an index of its sections and the hub\'s noindex', () =>
+test('each policy page has one h1, the brief as a record card, an index of its sections and the hub\'s robots', () =>
   withHub((read) => {
     for (const { path, title, stem } of POLICY) {
       const text = read(path);
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, path);
       assert.match(text, new RegExp(`<h1[^>]*>${escapeHtml(title)}</h1>`), path);
-      assert.ok(text.includes(NOINDEX), `${path} stays noindex until the hub is built`);
+      assert.equal(text.includes(NOINDEX), !SITE.hub.released, `${path} is noindex until the hub is released`);
       assert.match(text, /<link rel="canonical" href="https:\/\/paidandpenalized\.org\/[a-z]+\/">/, path);
       // The card: the record's title bar, then one field per brief line, in order.
       const card = text.match(/<div class="form pol__brief"[^>]*>[\s\S]*?<\/div>\s*<\/header>/)?.[0];

@@ -4,12 +4,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CSP, headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { ANALYTICS_ORIGIN, cspFor, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withServer, withTemp, writeTree } from './helpers.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
+// Every build but production: production's policy differs only in letting the analytics beacon load.
+const CSP = cspFor(undefined);
 const EVERY_PATH = {
   'content-security-policy': CSP,
   'x-content-type-options': 'nosniff',
@@ -24,7 +26,7 @@ test('headersFile: every path gets the CSP and the security headers; noindex on 
     const rules = parseHeaders(headersFile({ env }));
     const all = rules.find((r) => r.path === '/*');
     assert.ok(all, env);
-    const want = { ...EVERY_PATH, ...(env === 'production' ? {} : { 'x-robots-tag': 'noindex' }) };
+    const want = { ...EVERY_PATH, 'content-security-policy': cspFor(env), ...(env === 'production' ? {} : { 'x-robots-tag': 'noindex' }) };
     assert.deepEqual(Object.fromEntries(all.set.map(([k, v]) => [k.toLowerCase(), v])), want, env);
     for (const path of ['/', '/hacrp/', '/hacrp/hospital/990001/', '/nope/', '/assets/site.ab12cd34.css']) {
       const got = headersFor(rules, path);
@@ -35,6 +37,22 @@ test('headersFile: every path gets the CSP and the security headers; noindex on 
   assert.ok(headersFile({ env: undefined }).includes(`Content-Security-Policy: ${CSP}\n`));
   assert.ok(headersFile({ env: undefined }).includes('X-Robots-Tag: noindex\n'));
   assert.ok(!headersFile({ env: 'production' }).includes('X-Robots-Tag'));
+});
+
+test('cspFor: only a production build lets a script load from the analytics origin, and nothing else changes', () => {
+  const directives = (csp) => new Map(csp.split('; ').map((d) => [d.split(' ')[0], d]));
+  const prod = directives(cspFor('production'));
+  for (const env of [undefined, 'preview']) {
+    const other = directives(cspFor(env));
+    assert.equal(other.get('script-src'), "script-src 'self'", env);
+    assert.ok(!cspFor(env).includes(ANALYTICS_ORIGIN), env);
+    for (const [name, value] of other) if (name !== 'script-src') assert.equal(prod.get(name), value, name);
+    assert.equal(prod.size, other.size);
+  }
+  assert.equal(prod.get('script-src'), `script-src 'self' ${ANALYTICS_ORIGIN}`);
+  // The beacon reports to the site's own /cdn-cgi/rum, so connect-src stays 'self'.
+  assert.equal(prod.get('connect-src'), "connect-src 'self'");
+  assert.equal(ANALYTICS_ORIGIN, 'https://static.cloudflareinsights.com');
 });
 
 test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters', () => {
@@ -146,7 +164,7 @@ test('the local server reads _headers again when a rebuild changes it, sends non
       writeFileSync(join(root, '_headers'), headersFile({ env: 'production' }));
       const after = await get(port, '/');
       assert.equal(after.headers['x-robots-tag'], undefined);
-      assert.equal(after.headers['content-security-policy'], CSP);
+      assert.equal(after.headers['content-security-policy'], cspFor('production'));
       rmSync(join(root, '_headers'));
       assert.equal((await get(port, '/')).headers['content-security-policy'], undefined);
       // A malformed file: a 500 that names it, and a server that won't start on one.

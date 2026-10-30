@@ -7,6 +7,7 @@ import { availableParallelism } from 'node:os';
 import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as playwright from 'playwright';
+import { ANALYTICS_ORIGIN } from '../../pipeline/site/headers.js';
 import { SITE } from '../../web/site.js';
 import { ENGINES, startSite } from './site.js';
 
@@ -155,7 +156,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 //   cspViolations    each Content Security Policy violation, { directive, blocked, source, line, sample }, from a
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
-//                    addresses are not requests to a host)
+//                    addresses are not requests to a host; nor is the live site's analytics beacon, a script from
+//                    ANALYTICS_ORIGIN that Cloudflare adds to each page and the production CSP allows)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
 //                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
@@ -211,7 +213,8 @@ async function watch(page, base) {
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
-    if (/^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin) foreignRequests.push(request.url());
+    const beacon = url.origin === ANALYTICS_ORIGIN && request.resourceType() === 'script';
+    if (/^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin && !beacon) foreignRequests.push(request.url());
   });
   await page.exposeFunction('reportCspViolation', (violation) => cspViolations.push(violation));
   await page.addInitScript(() => {

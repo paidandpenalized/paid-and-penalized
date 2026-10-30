@@ -192,7 +192,8 @@ export const COPY = {
   sourcesColBytes: { text: 'Bytes', claim: null },
   sourcesColHash: { text: 'Fingerprint ({algo})', claim: null },
   sourcesColGot: { text: 'Retrieved', claim: null },
-  sourcesCode: { text: 'The code that builds these pages will be public when the site launches.', claim: null },
+  sourcesCode: { text: 'The code that builds these pages, the tests that check them and these pinned files are public in {repo}.', claim: null },
+  sourcesCodeLink: { text: 'the site’s repository on GitHub', claim: null },
 
   // §10, what changed.
   changedHeading: { text: 'What changed', claim: null },
