@@ -1,5 +1,6 @@
 // The share cards' HTML (web/share-card.js): cardHtml is pure, so a test can hash it and tell when a committed card is
-// stale; cardInputs reads what it is drawn from (the light tokens, the fonts, the hub's hospitals). render.js (npm run
+// stale; cardInputs reads what it is drawn from (the light tokens, the fonts, the hub's hospitals, and HACRP's emitted
+// file for the hub's year, whose payment-reduction flags color the HACRP card). render.js (npm run
 // og) draws each card in Chrome and writes web/og/<id>.png and the stamp.
 //
 // Every card: the paper and its grain, a double rule across the top and its mirror at the bottom, words on the left
@@ -11,9 +12,9 @@
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
-import { REPO_ROOT } from '../../pipeline/files.js';
+import { REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { LIGHT_BLOCK, declarations } from '../../pipeline/site/assets.js';
-import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
+import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
 import { COPY } from '../../web/copy.js';
 import { html, raw } from '../../web/render/html.js';
 import { CARD_SIZE, SHARE_CARDS } from '../../web/share-card.js';
@@ -89,7 +90,7 @@ export function cardDots(id, { hub: { cols, rows }, cut }) {
 function tokensFor(css, tokens) {
   const used = new Set();
   const read = (text) => {
-    for (const [, name] of text.matchAll(/var\((--[\w-]+)/g)) {
+    for (const [, name] of text.matchAll(/var\(\s*(--[\w-]+)/g)) {
       if (used.has(name)) continue;
       if (!tokens.has(name)) throw new RangeError(`share card: no token ${name} in tokens.css's light block`);
       used.add(name);
@@ -165,15 +166,13 @@ ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 }
 
 // What the cards are drawn from, read from the repo: the light tokens, the fonts, the hub's data asset as the build
-// writes it (hub/data.js hubModel, hub/asset.js hubAsset), and the hospitals CMS's HACRP file cut (the newest emitted
-// year, which must be the hub's).
+// writes it (hub/data.js hubModel, hub/asset.js hubAsset), and the hospitals CMS's HACRP file for the hub's year cut.
 export function cardInputs() {
   const block = LIGHT_BLOCK.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[1];
   if (!block) throw new Error('web/styles/tokens.css: the light block not found');
   const fonts = Object.fromEntries(Object.keys(CARD_FONTS).map((f) => [f, readFileSync(`${REPO_ROOT}web/fonts/${f}.woff2`).toString('base64')]));
   const { hub, hospitals } = hubModel();
-  const hacrp = readNewestEmitted();
-  if (hacrp.fy !== hub.fy) throw new RangeError(`share card: HACRP's newest emitted year is FY${hacrp.fy}, the hub's FY${hub.fy}`);
+  const hacrp = readJson(REPO_ROOT + emittedPath(hub.fy));
   const cut = new Set(hacrp.hospitals.filter((h) => h.paymentReduction === 'Yes').map((h) => h.ccn));
   return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut };
 }
