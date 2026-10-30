@@ -67,12 +67,14 @@ is the engine's, not the page's. Every change below was traced to its cause firs
 
 ## Tasks
 
-- [ ] Task 1: site fixes 2–4, each with a check that fails before and passes after (unit test where the module has one:
+- [x] Task 1: site fixes 2–4, each with a check that fails before and passes after (unit test where the module has one:
   `sites/hacrp/test/record-client.test.js`; a browser check otherwise).
-- [ ] Task 2: harness fixes 6–10.
-- [ ] Task 3: `make test`; `npm run e2e` on Chromium, Firefox and WebKit over a local build; fix until all three pass.
-- [ ] **Checkpoint (milestone):** `/simplify` on the branch diff, then tests again; `/code-review` on the result; fix
+- [x] Task 2: harness fixes 6–10.
+- [x] Task 3: `make test`; `npm run e2e` on Chromium, Firefox and WebKit over a local build; fix until all three pass.
+- [x] **Checkpoint (milestone):** `/simplify` on the branch diff, then tests again; `/code-review` on the result; fix
   Critical/Important findings. (`/security-review` not needed: no credentials, external input or data handling change.)
 - [ ] **Final gate:** `/code-review` clean on the full diff; `/verify`: `E2E_BASE_URL=<branch preview> npm run e2e:launch`
-  READY on all three engines (pushing the branch makes the preview: owner's OK first).
+  READY on all three engines (pushing the branch makes the preview: owner's OK first). Locally, 2026-10-30:
+  `E2E_BASE_URL=http://127.0.0.1:8080 npm run e2e:launch` READY (Chromium 1,035, Firefox 1,034, WebKit 1,035, every
+  header matching).
 - [ ] Owner's OK, then merge.
