@@ -238,14 +238,16 @@ describe('states you can read, and Find yours', () => {
   }));
 
   // Straight back into the box after leaving it (a toggle pressed, then the box): what the reader types stays listed past
-  // the moment the list closes after a blur, and Enter follows it. Done in one task, so the typing always beats that
-  // moment; the next search above raced it and timed out now and then.
+  // the moment the list closes after a blur, and Enter follows it. The list is up first (so the index has loaded), then
+  // leaving, coming back and typing happen in one task, always inside that moment; the next search above raced it and
+  // timed out now and then.
   it('back in the search box at once, the list of what was typed stays, and Enter follows it', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await drawn(page);
     const ccn = await ccnWhere(page, { status: 'e' });
     await atFind(page);
     const box = page.locator('main form#find').getByRole('combobox');
-    await box.focus(); // so that the toggle's focus below is a blur of the box
+    await box.fill(ccn.toLowerCase());
+    await page.locator('main form#find [role="option"]').first().waitFor();
     await page.evaluate((c) => {
       const input = document.querySelector('main form#find [role="combobox"]');
       document.querySelector('.peers [data-peer="state"]').focus();
