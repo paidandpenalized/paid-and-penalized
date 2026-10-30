@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node pipeline/site/build.js",
     "test": "node --test \"engine/js/test/**/*.test.js\" \"pipeline/test/**/*.test.js\" \"sites/*/test/**/*.test.js\" \"tools/test/**/*.test.js\" \"web/test/**/*.test.js\" \"hub/test/**/*.test.js\"",
-    "e2e": "node --test --test-timeout=180000 tools/e2e/*.test.js",
+    "e2e": "node tools/e2e/run.js",
     "e2e:launch": "node tools/e2e/launch.js"
   },
   "devDependencies": {

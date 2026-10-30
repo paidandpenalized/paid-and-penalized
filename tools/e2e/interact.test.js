@@ -12,7 +12,7 @@ import { RELEASE_MS } from '../../web/client/topbar.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
 import { openFolds } from './axe.js';
-import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const PAGES = samplePages();
@@ -157,12 +157,6 @@ async function focusFacts([feedbackLink, snap]) {
   return { role, under, desc: `<${el.localName}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(/\s+/)[0]}` : ''}> (${words} words)`, box: [box.top, box.bottom].map(Math.round), bar: barBox && [barBox.top, barBox.bottom].map(Math.round) };
 }
 
-// The keys that move focus forward and back. Safari's engine, on macOS, tabs only through form controls unless Option is
-// held (its "Press Tab to highlight each item" setting is off), so a walk there holds it.
-const keys = () => (shared.browser.browserType().name() === 'webkit' && process.platform === 'darwin'
-  ? { next: 'Alt+Tab', back: 'Alt+Shift+Tab' }
-  : { next: 'Tab', back: 'Shift+Tab' });
-
 // Presses `key` until `done(steps)` says so, at most MAX_PRESSES times; each step is the focused element's facts.
 async function walk(page, key, done) {
   const steps = [];
@@ -197,13 +191,13 @@ async function keyboardWalk(page, path) {
   const last = (steps) => steps.at(-1)?.desc;
 
   // Forward from the top: the first stop is the skip link, then each control is reached.
-  const forward = await walk(page, keys().next, reached);
+  const forward = await walk(page, TAB_KEYS.next, reached);
   assert.equal(forward[0].role, 'skip', `the first Tab stop is the skip link, not ${forward[0].desc}`);
   const missed = wanted.filter((role) => !forward.some((s) => s.role === role));
   assert.deepEqual(missed, [], `Tab never reached ${missed.join(', ')} in ${forward.length} presses; the last focus was ${last(forward)}`);
 
   // And back up from the footer: a focus that moves up lands at the top edge, where the bar is.
-  const backward = await walk(page, keys().back, (steps) => steps.at(-1).role === 'skip');
+  const backward = await walk(page, TAB_KEYS.back, (steps) => steps.at(-1).role === 'skip');
   assert.equal(backward.at(-1).role, 'skip', `Shift+Tab never came back to the skip link in ${backward.length} presses; the last focus was ${last(backward)}`);
 
   const hidden = [...forward, ...backward].filter((s) => s.under).map((s) => `${s.desc} at ${s.box} under the bar at ${s.bar}`);
@@ -283,6 +277,27 @@ describe('the top bar', () => {
     assert.ok(now.focused, 'the script focused the field');
     assert.ok(now.top >= now.edge - SNAP, `the field is brought clear of the bar (its top at ${Math.round(now.top)} px, the bar's edge at ${Math.round(now.edge)} px)`);
     await assertQuiet(seen, 'top bar');
+  }));
+});
+
+// The program page's table when its data fails to load: Try again loads it, and the focus the button had goes into the
+// table (by a click too, which Safari doesn't focus a button for).
+describe('the table\'s Try again', () => {
+  const tabs = useContext(shared);
+
+  it('loads the table, and a click on it takes the focus into the table', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+    const src = await page.locator('.ht[data-src]').getAttribute('data-src');
+    const data = (url) => url.pathname === src;
+    const failing = (route) => route.fulfill({ status: 503, body: '' });
+    await page.route(data, failing);
+    await visit(page, tabs.base, PROGRAM_PATH);
+    await page.evaluate(() => document.querySelector('.ht').closest('section').scrollIntoView());
+    const retry = page.locator('.ht-retry button');
+    await retry.waitFor();
+    await page.unroute(data, failing);
+    await retry.click();
+    await page.waitForFunction(() => document.activeElement?.matches('#ht-state, #ht-name'));
+    assert.equal(await retry.count(), 0, 'the button is gone once the table is in');
   }));
 });
 

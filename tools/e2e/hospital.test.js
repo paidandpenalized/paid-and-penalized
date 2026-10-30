@@ -119,6 +119,8 @@ for (const width of [390, 1280]) {
       }
       await page.click('[data-peer="size"]');
       await page.click('[data-peer-table] summary');
+      // The table fills on the details' toggle event, a task after the click (in Firefox, later than two frames).
+      await page.waitForFunction(() => document.querySelector('.hh__pt tbody tr') !== null);
       await settle(page);
       const table = await page.evaluate(() => {
         const rows = [...document.querySelectorAll('.hh__pt tbody tr')];
@@ -403,7 +405,7 @@ describe('the what-if\'s edges', () => {
     await handle.waitFor();
     await handle.focus();
     const meets = () => page.evaluate(() => {
-      const box = (el) => el.getBoundingClientRect();
+      const box = window.svgBox;
       const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       const out = [];
       for (const row of ['net', 'hvbp']) {
@@ -1132,13 +1134,14 @@ describe('the hospital page\'s parts, at 1280 px', () => {
     await page.locator('#whatif').scrollIntoViewIfNeeded();
     await settle(page);
     const s = await page.evaluate(() => {
+      const box = window.svgBox;
       const hint = document.querySelector('.st__hint');
-      const b = hint.getBoundingClientRect();
+      const b = box(hint);
       const dots = [...hint.closest('svg').querySelectorAll('.st__d')].filter((d) => {
-        const r = d.getBoundingClientRect();
+        const r = box(d);
         return r.right > b.left && r.left < b.right && r.bottom > b.top && r.top < b.bottom;
       });
-      return { shown: getComputedStyle(hint).opacity !== '0' && b.width > 0, covered: dots.length };
+      return { shown: getComputedStyle(hint).opacity !== '0' && b.right > b.left, covered: dots.length };
     });
     assert.deepEqual(s, { shown: true, covered: 0 });
     await assertQuiet(seen, 'the drag hint');

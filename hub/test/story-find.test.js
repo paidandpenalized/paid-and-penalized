@@ -134,7 +134,7 @@ test('statusModel: a hospital without an estimate gets the card the hospital pag
 test('the states\' readout: each state\'s line as its title on the map (a normal state, and Maryland outside these programs)', () => {
   const states = stateTotals(server);
   const map = statesMap({ shapes: hub.shapes, states });
-  const titleOf = (code) => new RegExp(`<path class="st[^"]*" data-st="${code}"[^>]*><title>([^<]*)</title>`).exec(map)?.[1];
+  const titleOf = (code) => new RegExp(`<path class="st[^"]*" data-st="${code}"[^>]*><title id="smap-name-${code}">([^<]*)</title>`).exec(map)?.[1];
   const normal = [...states.values()].find((s) => !s.notInPrograms && s.n > 10).state;
   // A stand-in path as the page has it (its title's text), and a small state's button (its name).
   const path = (code) => ({ querySelector: (sel) => (sel === 'title' ? { textContent: titleOf(code) } : null), getAttribute: () => null });

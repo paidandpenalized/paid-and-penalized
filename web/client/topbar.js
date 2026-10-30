@@ -1,9 +1,10 @@
 // The family's sticky header in the browser (render/shell.js familyHeader, class .topbar). While it sticks (at every
 // width), its height is --sticky-top on <html>, so what sticks under it (the hospital table's head, the what-if's
-// result) and an in-page jump clear it; 0 when it does not stick. A keyboard-focused element
-// the browser left under the bar is brought down to the bar's edge (not one focused by a click or a touch). On a page
-// holding the sections its section menu links to, the item for the section in view is marked aria-current as the
-// reader scrolls. Program-neutral; no words of its own.
+// result) and an in-page jump clear it; 0 when it does not stick. A keyboard-focused element the browser left under the
+// bar is brought down to the bar's edge, and one whose scroll margin keeps it clear of something pinned at the window's
+// foot is brought up clear of it (not one focused by a click or a touch). On a page holding the sections its section
+// menu links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
+// words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
 // How long after a press's release with no click its mark is cleared (below).
 export const RELEASE_MS = 1000;
@@ -51,13 +52,21 @@ if (bar) {
   listen(['click', 'contextmenu', 'pointercancel'], release(0));
   listen(['pointerup'], release(RELEASE_MS));
   listen(['keydown'], () => { pressed = false; });
+  // The same goes for the window's foot, where something stays pinned (the front page's chart on a phone): a control
+  // the stylesheet gives a scroll-margin-bottom to clear it (Chrome honors that margin; Safari doesn't) is brought up
+  // until the margin is in view.
   document.addEventListener('focusin', ({ target }) => {
     const byPress = pressed;
     pressed = false;
-    if (height <= 0 || byPress || bar.contains(target) || !target.matches(':focus-visible')) return;
+    if (byPress || bar.contains(target) || !target.matches(':focus-visible')) return;
     requestAnimationFrame(() => {
-      const under = height - target.getBoundingClientRect().top;
-      if (under > 1) window.scrollBy(0, -under);
+      const box = target.getBoundingClientRect();
+      const under = height - box.top;
+      const margin = parseFloat(getComputedStyle(target).scrollMarginBottom) || 0;
+      const below = box.bottom + margin - window.innerHeight;
+      if (height > 0 && under > 1) window.scrollBy(0, -under);
+      // Never past the bar's edge: a control taller than the room between the two stops there.
+      else if (margin > 0 && below > 1) window.scrollBy(0, Math.min(below, box.top - Math.max(height, 0)));
     });
   });
 

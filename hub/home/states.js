@@ -69,7 +69,7 @@ export function statesMap({ shapes, states }) {
   const marks = drawn.map((code) => {
     const s = states.get(code);
     const { kind, style } = shading(s, key);
-    return html`<path class="st st--${kind}" data-st="${code}"${styleAttr(style)} d="${paths.get(code)}"><title>${stateLine(code, s)}</title></path>`;
+    return html`<path class="st st--${kind}" data-st="${code}"${styleAttr(style)} d="${paths.get(code)}"><title id="smap-name-${code}">${stateLine(code, s)}</title></path>`;
   });
   return html`<svg class="smap" viewBox="0 0 ${MAP_WIDTH} ${height}" role="group" aria-label="${COPY.mapLabel}" focusable="false"><defs><pattern id="smap-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect class="smap__hatch-bg" width="6" height="6"/><path class="smap__hatch" d="M1.5 0V6"/></pattern></defs><path class="smap__land" d="${land}"/>${marks}</svg>`;
 }

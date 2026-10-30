@@ -40,9 +40,13 @@ export function mountMap(stageEl) {
   let on = null;
   let pinned = null;
 
+  // Each state's button is named by its title, by reference: WebKit computes an SVG title as not displayed, so a name
+  // taken from the path's content alone counts as hidden there.
   for (const p of paths) {
     p.setAttribute('role', 'button');
     p.setAttribute('tabindex', '-1');
+    const title = p.querySelector('title[id]');
+    if (title) p.setAttribute('aria-labelledby', title.id);
   }
   for (const x of all) x.setAttribute('aria-pressed', 'false');
   readout.hidden = false;
@@ -144,6 +148,7 @@ export function mountMap(stageEl) {
       for (const p of paths) {
         p.removeAttribute('role');
         p.removeAttribute('tabindex');
+        p.removeAttribute('aria-labelledby');
       }
       for (const x of all) {
         x.removeAttribute('aria-pressed');
