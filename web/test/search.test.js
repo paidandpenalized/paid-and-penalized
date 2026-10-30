@@ -128,6 +128,8 @@ test('the combobox: leaving closes the list a moment later, unless the reader is
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const s = setup(t);
   await s.type('exam');
+  // The window losing the focus leaves the box the document's focused element; the list still closes.
+  globalThis.document.activeElement = s.input;
   s.input.listeners.blur();
   t.mock.timers.tick(500);
   assert.equal(s.list.hidden, true, 'closed once the box has lost the focus');
@@ -138,6 +140,10 @@ test('the combobox: leaving closes the list a moment later, unless the reader is
   assert.equal(s.list.hidden, false, 'back in the box and typing: the list stays');
   s.key('Enter');
   assert.deepEqual(s.opened, ['/h/99000a/']);
+  await s.type('exam');
+  s.input.listeners.blur();
+  t.mock.timers.tick(500);
+  assert.equal(s.list.hidden, true, 'leaving again closes it again');
 });
 
 test('the combobox: a list cut short offers every match as a last option, where the site hands them on', async (t) => {

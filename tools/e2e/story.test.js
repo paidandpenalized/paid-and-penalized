@@ -246,17 +246,22 @@ describe('states you can read, and Find yours', () => {
     const ccn = await ccnWhere(page, { status: 'e' });
     await atFind(page);
     const box = page.locator('main form#find').getByRole('combobox');
-    await box.fill(ccn.toLowerCase());
+    await box.fill(ccn.slice(0, 3));
     await page.locator('main form#find [role="option"]').first().waitFor();
-    await page.evaluate((c) => {
+    const left = await page.evaluate((c) => {
       const input = document.querySelector('main form#find [role="combobox"]');
-      document.querySelector('.peers [data-peer="state"]').focus();
+      const toggle = document.querySelector('.peers [data-peer="state"]');
+      toggle.focus();
+      const away = document.activeElement === toggle;
       input.focus();
       input.value = c.toLowerCase();
       input.dispatchEvent(new Event('input'));
+      return away;
     }, ccn);
+    assert.ok(left, 'the toggle took the focus, so the box was left');
     await page.waitForTimeout(400);
     assert.equal(await page.locator('main form#find [role="listbox"]').isVisible(), true, 'the list outlives the blur');
+    assert.equal(await page.locator('main form#find [role="option"]').count(), 1, 'it lists what was typed on return: the one hospital');
     await box.press('Enter');
     await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, ccn);
     await assertQuiet(seen, 'back in the box');
