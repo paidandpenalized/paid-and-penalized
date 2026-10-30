@@ -7,14 +7,15 @@ import { availableParallelism } from 'node:os';
 import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as playwright from 'playwright';
+import { isAnalyticsBeacon } from '../../pipeline/site/headers.js';
+import { e2eConcurrency } from './concurrency.js';
 import { SITE } from '../../web/site.js';
 import { ENGINES, startSite } from './site.js';
 
 export const SCHEMES = ['light', 'dark'];
-// How many tests a describe runs at once: one core fewer than the machine has, up to four (CI's 2-core runner gets 1,
-// so four tabs never load the heaviest page together there; a laptop gets up to 4). npm run e2e (run.js) runs as many
-// test files at once, for the same reason: one per core, with each file's tabs, left Firefox's checks timing out.
-export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
+// How many tests a describe runs at once (e2eConcurrency, concurrency.js: CI pins it to 1; a laptop gets up to 4).
+// npm run e2e (run.js) runs as many test files at once.
+export const CONCURRENCY = e2eConcurrency(process.env, availableParallelism());
 // Every context's window height.
 const HEIGHT = 800;
 // How long a watched page's requests in flight may take to end once its checks begin (watch's settled).
@@ -155,7 +156,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 //   cspViolations    each Content Security Policy violation, { directive, blocked, source, line, sample }, from a
 //                    securitypolicyviolation listener (Playwright's own scripts are not subject to the page's policy)
 //   foreignRequests  the address of every network request to an origin other than the site's (data: and blob:
-//                    addresses are not requests to a host)
+//                    addresses are not requests to a host; nor is the live site's analytics beacon, the script
+//                    (isAnalyticsBeacon) that Cloudflare adds to each page and the production CSP allows)
 //   settled          ({ timeoutMs }) resolves once the page has rendered twice (a load the page starts only then, as
 //                    WebKit does a lazy image in view, is under way) and every request it has made has finished or
 //                    failed, each hop of a redirect included; it rejects after timeoutMs (SETTLE_TIMEOUT_MS), naming
@@ -165,6 +167,7 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 // abort it, and an aborted request is not reported, so it would never be judged. Await settled before reading the
 // arrays (assertQuiet does).
 async function watch(page, base) {
+  const siteOrigin = new URL(base).origin;
   const errors = [];
   const cspViolations = [];
   const foreignRequests = [];
@@ -211,7 +214,8 @@ async function watch(page, base) {
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
-    if (/^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin) foreignRequests.push(request.url());
+    const foreign = /^(?:https?|wss?):$/.test(url.protocol) && url.origin !== siteOrigin;
+    if (foreign && !(isAnalyticsBeacon(url) && request.resourceType() === 'script')) foreignRequests.push(request.url());
   });
   await page.exposeFunction('reportCspViolation', (violation) => cspViolations.push(violation));
   await page.addInitScript(() => {

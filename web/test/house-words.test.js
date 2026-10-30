@@ -7,7 +7,6 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT, repoFiles } from '../../pipeline/files.js';
 import { FUTURE_WORDS, copyFiles } from '../../pipeline/test/helpers.js';
-import { SITE } from '../site.js';
 
 const LABELS = [
   /\b(caught|cheat(s|ed|ing)?|dodg(e|es|ed|ing))\b/i,
@@ -28,9 +27,6 @@ const FUTURE = [FUTURE_WORDS];
 const FUTURE_OK = [
   // The accessibility page's testing practice: "launch" is a site going public, the moment the cross-browser check runs.
   { file: 'hub/copy.js', key: 'a11yTested', phrase: 'Before each launch', expired: false },
-  // HACRP's Methods: the site's own source code, which is published with the site (a statement about this repository,
-  // not a program or a page to come). Once the HACRP site is released the code is public and the sentence is stale.
-  { file: 'sites/hacrp/web/methods/copy.js', key: 'sourcesCode', phrase: 'will be public when the site launches', expired: SITE.sites.hacrp.released },
 ];
 
 const texts = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? v : v.text]);

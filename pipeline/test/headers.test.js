@@ -4,14 +4,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CSP, headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { ANALYTICS_ORIGIN, cspFor, isAnalyticsBeacon, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withServer, withTemp, writeTree } from './helpers.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
+// Every build but production: production's policy differs only in letting the analytics beacon load.
+const CSP_DEFAULT = cspFor(undefined);
 const EVERY_PATH = {
-  'content-security-policy': CSP,
+  'content-security-policy': CSP_DEFAULT,
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=()',
@@ -24,7 +26,7 @@ test('headersFile: every path gets the CSP and the security headers; noindex on 
     const rules = parseHeaders(headersFile({ env }));
     const all = rules.find((r) => r.path === '/*');
     assert.ok(all, env);
-    const want = { ...EVERY_PATH, ...(env === 'production' ? {} : { 'x-robots-tag': 'noindex' }) };
+    const want = { ...EVERY_PATH, 'content-security-policy': cspFor(env), ...(env === 'production' ? {} : { 'x-robots-tag': 'noindex' }) };
     assert.deepEqual(Object.fromEntries(all.set.map(([k, v]) => [k.toLowerCase(), v])), want, env);
     for (const path of ['/', '/hacrp/', '/hacrp/hospital/990001/', '/nope/', '/assets/site.ab12cd34.css']) {
       const got = headersFor(rules, path);
@@ -32,9 +34,34 @@ test('headersFile: every path gets the CSP and the security headers; noindex on 
       if (env === 'production') assert.equal(got['x-robots-tag'], undefined, path);
     }
   }
-  assert.ok(headersFile({ env: undefined }).includes(`Content-Security-Policy: ${CSP}\n`));
+  assert.ok(headersFile({ env: undefined }).includes(`Content-Security-Policy: ${CSP_DEFAULT}\n`));
   assert.ok(headersFile({ env: undefined }).includes('X-Robots-Tag: noindex\n'));
   assert.ok(!headersFile({ env: 'production' }).includes('X-Robots-Tag'));
+});
+
+test('cspFor: only a production build lets a script load from the analytics origin, and nothing else changes', () => {
+  const directives = (csp) => new Map(csp.split('; ').map((d) => [d.split(' ')[0], d]));
+  const prod = directives(cspFor('production'));
+  for (const env of [undefined, 'preview']) {
+    const other = directives(cspFor(env));
+    assert.equal(other.get('script-src'), "script-src 'self'", env);
+    assert.ok(!cspFor(env).includes(ANALYTICS_ORIGIN), env);
+    for (const [name, value] of other) if (name !== 'script-src') assert.equal(prod.get(name), value, name);
+    assert.equal(prod.size, other.size);
+  }
+  assert.equal(prod.get('script-src'), `script-src 'self' ${ANALYTICS_ORIGIN}`);
+  // The beacon reports to the site's own /cdn-cgi/rum, so connect-src stays 'self'.
+  assert.equal(prod.get('connect-src'), "connect-src 'self'");
+});
+
+test('isAnalyticsBeacon: the beacon script and its versioned copies on the analytics origin, nothing else', () => {
+  for (const ok of ['/beacon.min.js', '/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516', '/beacon.min.js?token=x']) {
+    assert.ok(isAnalyticsBeacon(ANALYTICS_ORIGIN + ok), ok);
+    assert.ok(isAnalyticsBeacon(new URL(ANALYTICS_ORIGIN + ok)), `${ok} as a URL`);
+  }
+  for (const no of [ANALYTICS_ORIGIN + '/beacon.min.json', ANALYTICS_ORIGIN + '/beacon.min.js.map', ANALYTICS_ORIGIN + '/other.js', 'https://example.org/beacon.min.js', 'http://static.cloudflareinsights.com/beacon.min.js', '/beacon.min.js', 'not a url']) {
+    assert.ok(!isAnalyticsBeacon(no), no);
+  }
 });
 
 test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters', () => {
@@ -108,7 +135,7 @@ test('the local server sends the headers _headers gives each path, on a 404 and 
       }
       const missing = await get(port, '/nope/');
       assert.equal(missing.body, 'not here');
-      assert.equal(missing.headers['content-security-policy'], CSP);
+      assert.equal(missing.headers['content-security-policy'], CSP_DEFAULT);
       for (const path of ['/_headers', '/_HEADERS', '/_Headers', '/%5Fheaders']) {
         const own = await get(port, path);
         assert.equal(own.status, 404, path);
@@ -127,7 +154,7 @@ test('the local server sends a missing hashed file\'s 404 with the file\'s year-
         const res = await get(port, p);
         assert.equal(res.status, status, p);
         assert.equal(res.headers['cache-control'], IMMUTABLE, p);
-        assert.equal(res.headers['content-security-policy'], CSP, p);
+        assert.equal(res.headers['content-security-policy'], CSP_DEFAULT, p);
       }
       // No 404.html: the plain-text 404 carries them too.
       rmSync(join(root, '404.html'));
@@ -146,7 +173,7 @@ test('the local server reads _headers again when a rebuild changes it, sends non
       writeFileSync(join(root, '_headers'), headersFile({ env: 'production' }));
       const after = await get(port, '/');
       assert.equal(after.headers['x-robots-tag'], undefined);
-      assert.equal(after.headers['content-security-policy'], CSP);
+      assert.equal(after.headers['content-security-policy'], cspFor('production'));
       rmSync(join(root, '_headers'));
       assert.equal((await get(port, '/')).headers['content-security-policy'], undefined);
       // A malformed file: a 500 that names it, and a server that won't start on one.

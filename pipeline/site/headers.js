@@ -8,10 +8,29 @@ const DAY = 24 * 60 * 60;
 const IMMUTABLE = `public, max-age=${365 * DAY}, immutable`;
 const WEEK = `public, max-age=${7 * DAY}`;
 
-// One policy for every response: nothing loads from another origin, no script runs inline, no page can be framed.
-export const CSP = [
+// Cloudflare Web Analytics, set up automatically on the live domain: Cloudflare adds a <script> to each page that
+// loads its beacon from static.cloudflareinsights.com (ANALYTICS_ORIGIN, another origin, so script-src lists it), and
+// the beacon reports to the site's own /cdn-cgi/rum (Cloudflare's Web Analytics FAQ; connect-src 'self'). It counts
+// page views and sets no cookies (the privacy page says so).
+export const ANALYTICS_ORIGIN = 'https://static.cloudflareinsights.com';
+
+// Whether a URL (a URL object or an absolute address) is the beacon script: /beacon.min.js on ANALYTICS_ORIGIN, or a
+// versioned copy under it. Anything that does not parse as an absolute URL is not.
+export function isAnalyticsBeacon(address) {
+  let url;
+  try {
+    url = new URL(address);
+  } catch {
+    return false;
+  }
+  return url.origin === ANALYTICS_ORIGIN && (url.pathname === '/beacon.min.js' || url.pathname.startsWith('/beacon.min.js/'));
+}
+
+// The policy for a build: nothing loads from another origin but a production build's analytics beacon (no other
+// build's pages get one), no script runs inline, no page can be framed.
+export const cspFor = (env) => [
   "default-src 'none'",
-  "script-src 'self'",
+  isProduction(env) ? `script-src 'self' ${ANALYTICS_ORIGIN}` : "script-src 'self'",
   // Inline style attributes are allowed, <style> elements and inline stylesheets are not. The server-rendered charts
   // (web/charts/, the sites' figure modules) set their data-driven custom properties in style="" so they draw without
   // JavaScript, and every such value is a number the build formats and escapes. A browser with CSP Level 3's style
@@ -35,13 +54,13 @@ export const CSP = [
 // The rules in file order, each [pattern, [[name, value]]]. A request gets every matching rule's headers.
 const rulesFor = (env) => [
   ['/*', [
-    ['Content-Security-Policy', CSP],
+    ['Content-Security-Policy', cspFor(env)],
     ['X-Content-Type-Options', 'nosniff'],
     ['Referrer-Policy', 'strict-origin-when-cross-origin'],
     ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
     ['Cross-Origin-Opener-Policy', 'same-origin'],
     ['Strict-Transport-Security', `max-age=${365 * DAY}`],
-    // Every build but production stays out of search results (a preview on workers.dev, a local build), on top of
+    // Every build but production stays out of search results (a preview URL, a local build), on top of
     // each page's meta robots (robotsFor, context.js).
     ...(isProduction(env) ? [] : [['X-Robots-Tag', 'noindex']]),
   ]],

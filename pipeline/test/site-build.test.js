@@ -9,7 +9,7 @@ import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
-import { createContext, robotsFor, siteDates } from '../site/context.js';
+import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
@@ -23,7 +23,7 @@ const withTemp = (fn) => inTemp('pp-site-', fn);
 test('build writes hashed CSS holding the tokens and the dark copy, the six fonts, their licenses and the favicon', () =>
   withTemp(async (dir) => {
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, sites: [] }), { pages: 0 });
+    assert.deepEqual(await build({ outDir: out, env: 'preview', sites: [] }), { pages: 0, env: 'preview' });
     const css = readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css'));
     assert.equal(css.length, 1);
     assert.match(css[0], /^site\.[0-9a-f]{8}\.css$/);
@@ -166,7 +166,7 @@ test('build runs the sites in order with one context: assets, env, and what earl
       } },
     ];
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, env: 'preview', sites }), { pages: 2 });
+    assert.deepEqual(await build({ outDir: out, env: 'preview', sites }), { pages: 2, env: 'preview' });
     assert.equal(seen[0][0], 'first');
     assert.match(seen[0][1], /^\/assets\/site\./);
     assert.equal(seen[0][2], 'preview');
@@ -425,6 +425,27 @@ test('robotsFor: only a production build of a released site indexes, and only el
     [{ env: 'preview', released: true }, 'noindex'],
   ];
   for (const [input, want] of cases) assert.equal(robotsFor(input), want, JSON.stringify(input));
+});
+
+test('buildEnv: PP_ENV (production or preview; any other value stops the build) when set and not blank; otherwise production only for Workers Builds\' build of main', () => {
+  const cases = [
+    [{}, undefined],
+    [{ PP_ENV: 'production' }, 'production'],
+    [{ PP_ENV: 'preview', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'preview'],
+    // An empty PP_ENV (a blank build variable) counts as unset, so it can't turn main's build into noindex.
+    [{ PP_ENV: '', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'production'],
+    [{ PP_ENV: '' }, undefined],
+    [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }, 'production'],
+    [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'go-live' }, undefined],
+    [{ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'Main' }, undefined],
+    [{ WORKERS_CI: '1' }, undefined],
+    // Only on Workers Builds: a branch name alone, elsewhere, is not a production build.
+    [{ WORKERS_CI_BRANCH: 'main' }, undefined],
+  ];
+  for (const [env, want] of cases) assert.equal(buildEnv(env), want, JSON.stringify(env));
+  assert.equal(buildEnv({ PP_ENV: ' ', WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), 'production');
+  assert.equal(buildEnv({ PP_ENV: ' production ' }), 'production');
+  for (const PP_ENV of ['Production', 'prod', 'staging']) assert.throws(() => buildEnv({ PP_ENV, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), RangeError, JSON.stringify(PP_ENV));
 });
 
 test('build refuses to empty a directory that is not dist/ or under the temp directory', async () => {

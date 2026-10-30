@@ -23,8 +23,9 @@ const SLACK = 24;
 // The HACRP record card's checks, read in the page: whether the card is as tall as the verdict beside it (two columns),
 // the state's outline behind the fields (the watermark spanning the card below its title, the map at least 0.45 of its
 // size there, and the whole outline inside it), and the dot inside the watermark and well clear of every line of the
-// fields' words (its edge 16 px and its halo's 12 px at the least) and clear of the rules, shown once placed.
-const recordCard = (page) => page.evaluate(() => {
+// fields' words (its edge 16 px and its halo's 12 px at the least) and clear of the rules, shown once placed: read after
+// the outline's fade-in (a 0.25 s opacity transition from data-placed) has finished, since mid-fade it reads below 1.
+const recordCard = (page) => page.evaluate(async () => {
   const card = document.querySelector('.hosp__id');
   const verdict = document.querySelector('.hosp__verdict');
   const wm = card.querySelector('.hosp__wm');
@@ -32,6 +33,7 @@ const recordCard = (page) => page.evaluate(() => {
   const c = box(card);
   const out = { stretched: Math.abs(c.bottom - box(verdict).bottom) <= 1, map: Boolean(wm) };
   if (!wm) return out;
+  await Promise.all(wm.getAnimations().map((a) => a.finished));
   const w = box(wm);
   const s = box(wm.querySelector('svg'));
   const o = box(wm.querySelector('.chart-geo-state'));

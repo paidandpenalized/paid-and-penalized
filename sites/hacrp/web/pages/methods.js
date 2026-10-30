@@ -8,7 +8,7 @@
 import { fillAround, printout, sentenceOf, stamp, typeset } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { page } from '../../../../web/render/layout.js';
+import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
@@ -230,7 +230,7 @@ ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estima
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
     { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },
     { id: 'reading', heading: t('readHeading'), body: html`<ol class="reading">${['read1', 'read2', 'read3', 'read4', ['read5', { short: SHORT_NAMES.PSI90 }], ['read6', { pct: REDUCTION_TEXT }], 'read7'].map((k) => html`<li>${Array.isArray(k) ? fill(k[0], k[1]) : t(k)}</li>`)}</ol>` },
-    { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(t('sourcesCode'))}` },
+    { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(sentence('sourcesCode', { repo: externalLink(SITE.repo, t('sourcesCodeLink')) }))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}
 <ol class="changes" role="list">${changes.map((c) => html`<li><p class="changes__date">${isoDate(c.date)}</p><ul>${c.items.map((i) => html`<li>${typeset(i)}</li>`)}</ul></li>`)}</ol>
 ${para(sentence('changedCorrections', { log: html`<a href="${SITE.pages.corrections}">${t('changedLogLink')}</a>` }))}` },

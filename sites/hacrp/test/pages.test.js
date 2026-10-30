@@ -222,14 +222,14 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.ok(program.includes(`<strong>For fiscal year ${DATA.fy}, that was ${count(cut)} of the ${count(decided.length)} scored hospitals</strong> with a payment decision.`));
   }));
 
-test('released: false: every page is noindex in production and the sitemap lists none', () =>
+test('released: false: every HACRP page is noindex in production and the sitemap lists none of them', () =>
   temp(async (dir) => {
     const out = join(dir, 'dist');
     await build({ outDir: out, env: 'production', sites: [slicedSite(SLICE, { released: false }), slicedHub(SLICE)] });
     for (const h of SLICE.hospitals) assert.ok(read(out, hospitalPath(h)).includes(NOINDEX), hospitalPath(h));
     for (const p of SLICE_PLACES.list) assert.ok(read(out, p.path).includes(NOINDEX), p.path);
-    for (const path of ['/hacrp/', '/hacrp/data/', '/', '/methods/']) assert.ok(read(out, path).includes(NOINDEX), path);
-    assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /<url>/);
+    for (const path of ['/hacrp/', '/hacrp/data/']) assert.ok(read(out, path).includes(NOINDEX), path);
+    assert.doesNotMatch(readFileSync(join(out, 'sitemap.xml'), 'utf8'), /\/hacrp\//);
   }));
 
 // SLICE released, with the hub, built once for the tests that read the whole build.

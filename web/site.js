@@ -1,7 +1,6 @@
 // Family-wide settings every page reads: the name, the canonical origin, the family's own pages, the licenses, the
 // byline's profile, the feedback form, the hub's state, each site (its path, names and state) and the program registry.
-// The hub or a site with released: false stays noindex and out of the sitemap even in a production build; go-live
-// flips them here.
+// The hub or a site with released: false stays noindex and out of the sitemap even in a production build.
 // pages: the hub's policy pages and the family's Methods, by name, in the order the footer's second field lists them,
 // each labelled with web/copy.js's word of the same name (Terms: termsLink, which the footer's Terms line links too).
 // feedback: the shared Google Form, and the names of its two prefilled questions (the site's name, the page's address).
@@ -11,6 +10,8 @@ export const SITE = {
   pages: { methods: '/methods/', about: '/about/', corrections: '/corrections/', accessibility: '/accessibility/', privacy: '/privacy/', terms: '/terms/' },
   // The site's text, charts and derived data, and its code.
   license: { content: { name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' }, code: { name: 'MIT' } },
+  // This repository: the code that builds the site, its tests and its pinned inputs (a program's Methods page links it).
+  repo: 'https://github.com/paidandpenalized/paid-and-penalized',
   // The byline's profile (the About page links it too).
   linkedin: 'https://www.linkedin.com/in/dalton-haslam',
   feedback: {
@@ -18,10 +19,10 @@ export const SITE = {
     siteEntry: 'entry.2047320042',
     pageEntry: 'entry.1326474028',
   },
-  // The family's own pages (the hub's): noindex in every build until the hub is built.
-  hub: { released: false },
+  // The family's own pages (the hub's).
+  hub: { released: true },
   sites: {
-    hacrp: { path: '/hacrp/', released: false, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
+    hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
