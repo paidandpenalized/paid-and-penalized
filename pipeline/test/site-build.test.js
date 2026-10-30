@@ -14,6 +14,8 @@ import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
 import { pageType } from '../../tools/ci/page-types.js';
+import { cardFile } from '../../web/share-card.js';
+import { SITE } from '../../web/site.js';
 import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
 const FONTS = ['alfa-slab-one-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700', 'libre-franklin-400',
@@ -354,6 +356,29 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   assert.doesNotMatch('.hhx{margin:0}.history{margin:0}.rdx{margin:0}', HUB_RULE);
 });
 
+test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, every other page the family\'s, each a copy of its committed PNG', async () => {
+  const out = await builtSlice();
+  const shown = { hacrp: new Set(), family: new Set() };
+  for (const file of htmlPages(out)) {
+    const metas = [...tags(readFileSync(join(out, file), 'utf8'), { names: ['meta'] })].map(({ attrs }) => attrs);
+    const content = (key) => metas.filter((a) => (a.property ?? a.name) === key).map((a) => a.content);
+    const [image, ...more] = content('og:image');
+    assert.equal(more.length, 0, file);
+    assert.deepEqual(content('twitter:image'), [image], file);
+    assert.ok(image.startsWith(`${SITE.origin}/assets/`), file);
+    const path = image.slice(SITE.origin.length);
+    assert.ok(existsSync(join(out, path)), `${file}: ${path} is not in dist/`);
+    const id = addressOf(file).startsWith(SITE.sites.hacrp.path) ? 'hacrp' : 'family';
+    assert.match(path, new RegExp(`^/assets/og-${id}\\.[0-9a-f]{8}\\.png$`), file);
+    shown[id].add(path);
+  }
+  for (const [id, paths] of Object.entries(shown)) {
+    assert.equal(paths.size, 1, `one ${id} card`);
+    const [path] = paths;
+    assert.ok(readFileSync(join(out, path)).equals(readFileSync(REPO_ROOT + cardFile(id))), `${path} is ${cardFile(id)}`);
+  }
+});
+
 test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
   withTemp(async (dir) => {
     for (const env of ['preview', 'production']) {
@@ -412,7 +437,7 @@ test('the immutable rule matches the content-hashed files under /assets/ and not
     assert.equal(cache.includes('immutable'), hashed, path);
     if (hashed) seen.add(path.split('.').at(-1));
   }
-  assert.deepEqual([...seen].sort(), ['css', 'js', 'json']);
+  assert.deepEqual([...seen].sort(), ['css', 'js', 'json', 'png']);
 });
 
 test('robotsFor: only a production build of a released site indexes, and only eligible pages', () => {

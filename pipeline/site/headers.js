@@ -65,9 +65,10 @@ const rulesFor = (env) => [
     ...(isProduction(env) ? [] : [['X-Robots-Tag', 'noindex']]),
   ]],
   // Content-hashed files (assets.js writeHashed): a changed file gets a new name, so a browser may keep one for good.
-  // A splat matches slashes too, so these would also take a .js, .css or .json file under /assets/fonts/; that folder
-  // holds only fonts and their licenses, and a test checks every built file against the rule.
-  ...['js', 'css', 'json'].map((ext) => [`/assets/*.${ext}`, [['Cache-Control', IMMUTABLE]]]),
+  // The share cards (.png) too: a link preview's cache fetches a changed card by its new name. A splat matches slashes
+  // too, so these would also take a .js, .css, .json or .png file under /assets/fonts/; that folder holds only fonts
+  // and their licenses, and a test checks every built file against the rule.
+  ...['js', 'css', 'json', 'png'].map((ext) => [`/assets/*.${ext}`, [['Cache-Control', IMMUTABLE]]]),
   // Fixed names whose content can change in place: kept a week, then checked again.
   ['/assets/fonts/*', [['Cache-Control', WEEK]]],
   ['/favicon.svg', [['Cache-Control', WEEK]]],
