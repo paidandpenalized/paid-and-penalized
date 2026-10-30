@@ -8,14 +8,14 @@ import { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as playwright from 'playwright';
 import { isAnalyticsBeacon } from '../../pipeline/site/headers.js';
+import { e2eConcurrency } from './concurrency.js';
 import { SITE } from '../../web/site.js';
 import { ENGINES, startSite } from './site.js';
 
 export const SCHEMES = ['light', 'dark'];
-// How many tests a describe runs at once: one core fewer than the machine has, up to four (CI's 2-core runner gets 1,
-// so four tabs never load the heaviest page together there; a laptop gets up to 4). npm run e2e (run.js) runs as many
-// test files at once, for the same reason: one per core, with each file's tabs, left Firefox's checks timing out.
-export const CONCURRENCY = Math.max(1, Math.min(4, availableParallelism() - 1));
+// How many tests a describe runs at once (e2eConcurrency, concurrency.js: CI pins it to 1; a laptop gets up to 4).
+// npm run e2e (run.js) runs as many test files at once.
+export const CONCURRENCY = e2eConcurrency(process.env, availableParallelism());
 // Every context's window height.
 const HEIGHT = 800;
 // How long a watched page's requests in flight may take to end once its checks begin (watch's settled).

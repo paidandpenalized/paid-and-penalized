@@ -74,7 +74,9 @@ const commandsOf = (job) => job.split('\n').filter((l) => /^\s+run: /.test(l)).m
 test('the browser job runs on a pinned runner with a time limit: Chromium only, built site, then the e2e suite', () => {
   const job = jobText('browser');
   assert.match(job, /^ {4}runs-on: ubuntu-24\.04$/m);
-  assert.match(job, /^ {4}timeout-minutes: 20$/m);
+  assert.match(job, /^ {4}timeout-minutes: 30$/m);
+  // One file and one tab at a time (tools/e2e/concurrency.js): more at once timed out the heaviest pages on CI.
+  assert.match(job, /^ {8}env:\n {10}E2E_CONCURRENCY: '1'\n {8}run: npm run e2e$/m);
   // The commands in order: the browser is installed before the checks run, and the site is built before they read it.
   // Chromium alone: Firefox and WebKit run in the launch command on a machine that has them, not on every push.
   assert.deepEqual(commandsOf(job), ['npm ci', 'npx playwright install --with-deps chromium', 'make build', 'npm run e2e']);
