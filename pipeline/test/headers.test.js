@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ANALYTICS_ORIGIN, cspFor, headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { ANALYTICS_ORIGIN, cspFor, isAnalyticsBeacon, headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withServer, withTemp, writeTree } from './helpers.js';
 
@@ -52,6 +52,15 @@ test('cspFor: only a production build lets a script load from the analytics orig
   assert.equal(prod.get('script-src'), `script-src 'self' ${ANALYTICS_ORIGIN}`);
   // The beacon reports to the site's own /cdn-cgi/rum, so connect-src stays 'self'.
   assert.equal(prod.get('connect-src'), "connect-src 'self'");
+});
+
+test('isAnalyticsBeacon: the beacon script and its versioned copies on the analytics origin, nothing else', () => {
+  for (const ok of ['/beacon.min.js', '/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516', '/beacon.min.js?token=x']) {
+    assert.ok(isAnalyticsBeacon(ANALYTICS_ORIGIN + ok), ok);
+  }
+  for (const no of [ANALYTICS_ORIGIN + '/beacon.min.json', ANALYTICS_ORIGIN + '/beacon.min.js.map', ANALYTICS_ORIGIN + '/other.js', 'https://example.org/beacon.min.js', 'http://static.cloudflareinsights.com/beacon.min.js']) {
+    assert.ok(!isAnalyticsBeacon(no), no);
+  }
 });
 
 test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters', () => {

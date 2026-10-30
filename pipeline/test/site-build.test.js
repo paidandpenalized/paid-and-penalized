@@ -23,7 +23,7 @@ const withTemp = (fn) => inTemp('pp-site-', fn);
 test('build writes hashed CSS holding the tokens and the dark copy, the six fonts, their licenses and the favicon', () =>
   withTemp(async (dir) => {
     const out = join(dir, 'dist');
-    assert.deepEqual(await build({ outDir: out, sites: [] }), { pages: 0, env: buildEnv(process.env) });
+    assert.deepEqual(await build({ outDir: out, env: 'preview', sites: [] }), { pages: 0, env: 'preview' });
     const css = readdirSync(join(out, 'assets')).filter((f) => f.endsWith('.css'));
     assert.equal(css.length, 1);
     assert.match(css[0], /^site\.[0-9a-f]{8}\.css$/);
@@ -443,6 +443,7 @@ test('buildEnv: PP_ENV when set and not empty; otherwise production only for Wor
     [{ WORKERS_CI_BRANCH: 'main' }, undefined],
   ];
   for (const [env, want] of cases) assert.equal(buildEnv(env), want, JSON.stringify(env));
+  for (const PP_ENV of ['Production', 'production ', ' ', 'prod']) assert.throws(() => buildEnv({ PP_ENV, WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' }), RangeError, JSON.stringify(PP_ENV));
 });
 
 test('build refuses to empty a directory that is not dist/ or under the temp directory', async () => {

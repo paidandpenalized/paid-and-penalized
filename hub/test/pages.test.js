@@ -33,8 +33,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     // (one without has no figures) are indexable; the 404 page, the placeholders and the interim pages never are.
     const hub = loadHub();
     assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + 1 + hub.tdr.hospitals.size);
-    assert.deepEqual(ctx.indexable.filter((p) => p.startsWith('/hacrp/')), ['/hacrp/', '/hacrp/hospital/990001/']);
-    const hubIndexable = ctx.indexable.filter((p) => !p.startsWith('/hacrp/'));
+    // The program site's pages first (the sitemap's order), then the hub's.
+    assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
+    const hubIndexable = ctx.indexable.slice(2);
     assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.est).length);
     assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
     const read = (f) => readFileSync(join(dir, f), 'utf8');

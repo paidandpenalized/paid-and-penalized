@@ -411,8 +411,8 @@ test('methodsPage direct: the same page from the synthetic history, with the tot
   assert.ok(page.includes('<dt>Part withheld by CMS</dt><dd>1</dd>'));
   assert.match(page, /<section class="doc__sec msec" id="estimate"/);
   // The sources section links the public repository.
-  assert.ok(page.includes(`<a href="${SITE.repo}" target="_blank" rel="noopener">`), 'the repository link');
-  assert.equal(SITE.repo, 'https://github.com/paidandpenalized/paid-and-penalized');
+  const sources = page.match(/<section[^>]* id="sources"[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.ok(sources.includes(`<a href="${SITE.repo}" target="_blank" rel="noopener">`), 'the sources section links the repository');
   // Without the dollar estimates there is no dollars section, and no sentence pointing at one.
   assert.doesNotMatch(page, /id="dollars"/);
   assert.doesNotMatch(page, /href="#dollars"/);

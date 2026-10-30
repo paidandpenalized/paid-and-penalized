@@ -11,12 +11,17 @@ import { writeHashed } from './assets.js';
 // Whether a build's env (PP_ENV) is production, the one build search engines may index (_headers' X-Robots-Tag too).
 export const isProduction = (env) => env === 'production';
 
-// A build's env from its process environment: PP_ENV when it is set and not empty; otherwise production only for Workers Builds'
-// build of main (WORKERS_CI_BRANCH, set from the push), so every other branch's preview stays noindex. Cloudflare's
-// build variables apply to every branch, so PP_ENV is not set there.
+// A build's env from its process environment: PP_ENV when it is set (blank counts as unset); otherwise production only
+// for Workers Builds' build of main (WORKERS_CI_BRANCH, set from the push), so every other branch's preview stays
+// noindex. Cloudflare's build variables apply to every branch, so PP_ENV is not set there. A PP_ENV that is not one of
+// ENVS (a typo, a stray space) stops the build rather than quietly building a noindex site.
 const PRODUCTION_BRANCH = 'main';
+export const ENVS = ['production', 'preview'];
 export function buildEnv({ PP_ENV, WORKERS_CI, WORKERS_CI_BRANCH } = {}) {
-  if (PP_ENV) return PP_ENV;
+  if (PP_ENV) {
+    if (!ENVS.includes(PP_ENV)) throw new RangeError(`PP_ENV must be one of ${ENVS.join(', ')} or unset, not ${JSON.stringify(PP_ENV)}`);
+    return PP_ENV;
+  }
   return WORKERS_CI === '1' && WORKERS_CI_BRANCH === PRODUCTION_BRANCH ? 'production' : undefined;
 }
 

@@ -8,10 +8,17 @@ const DAY = 24 * 60 * 60;
 const IMMUTABLE = `public, max-age=${365 * DAY}, immutable`;
 const WEEK = `public, max-age=${7 * DAY}`;
 
-// Cloudflare Web Analytics, set up automatically on the live domain: Cloudflare adds a <script> for its beacon, which
-// loads from this origin, to each page, and the beacon reports to the site's own /cdn-cgi/rum (Cloudflare's Web
-// Analytics FAQ; connect-src 'self'). It counts page views and sets no cookies (the privacy page says so).
+// Cloudflare Web Analytics, set up automatically on the live domain: Cloudflare adds a <script> to each page that
+// loads its beacon from static.cloudflareinsights.com (ANALYTICS_ORIGIN, another origin, so script-src lists it), and
+// the beacon reports to the site's own /cdn-cgi/rum (Cloudflare's Web Analytics FAQ; connect-src 'self'). It counts
+// page views and sets no cookies (the privacy page says so).
 export const ANALYTICS_ORIGIN = 'https://static.cloudflareinsights.com';
+
+// Whether an address is the beacon script: /beacon.min.js on ANALYTICS_ORIGIN, or a versioned copy under it.
+export function isAnalyticsBeacon(address) {
+  const url = new URL(address);
+  return url.origin === ANALYTICS_ORIGIN && (url.pathname === '/beacon.min.js' || url.pathname.startsWith('/beacon.min.js/'));
+}
 
 // The policy for a build: nothing loads from another origin but a production build's analytics beacon (no other
 // build's pages get one), no script runs inline, no page can be framed.

@@ -121,4 +121,5 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   Compares the site's live response headers with `dist/_headers` first (home, program and hospital pages, a request for
   each `_headers` rule, an unknown path, a missing hashed asset, and two redirects with their Location: the program
   page without its "/" and `/404.html`), then runs `npm run e2e` on Chromium, Firefox and WebKit
-  against the site. Needs a `dist/` built from the deployed commit with the deployed `PP_ENV`. CI's `browser` job runs `npm run e2e` on Chromium only.
+  against the site. Needs a `dist/` built from the deployed commit the way it was deployed (`PP_ENV=production make build` for the live
+  site). CI's `browser` job runs `npm run e2e` on Chromium only.

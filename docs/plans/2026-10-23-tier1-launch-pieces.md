@@ -454,8 +454,8 @@ wording, then commits. It is not dispatched.
 - [ ] A phone-readable launch checklist: each P3 Tier-1 item's state. The owner's own items are named: email routing
   (needed before go-live, since `corrections@` is on the corrections page), the hospital-network check, the one place
   to call, the GitHub passkey, the hub front-page design, and approving the copy.
-- [ ] Go-live steps: the custom domain moves from the landing-page Worker, `PP_ENV=production` for `main` builds,
+- [x] Go-live steps: the custom domain moves from the landing-page Worker, `PP_ENV=production` for `main` builds,
   `released: true`, the workers.dev route off, and the Web Analytics CSP change. (Done at go-live, 2026-10-30, with
-  one change: no `PP_ENV` build variable, since Cloudflare's apply to every branch; `buildEnv` in
+  one change: no `PP_ENV` build variable, since Cloudflare's build variables apply to every branch; `buildEnv` in
   `pipeline/site/context.js` makes `main`'s Workers Builds build production instead.)
 - [ ] Push the branch; open the PR; ask the owner before any merge.
