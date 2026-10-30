@@ -283,7 +283,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     const base = createContext({ outDir: join(dir, 'a'), env: 'production', assets: ASSETS });
     await generateHub(base, { hospitals: [], master: new Map() });
     const ctx = createContext({ outDir: join(dir, 'b'), env: 'production', assets: ASSETS });
-    await generateHub(ctx);
+    await generateHub(ctx, { released: true });
     assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + HUB.tdr.hospitals.size, 'one page per hospital in the dollar file, and one interim Readmissions page per hospital in the pinned file');
     let bad = 0;
     let wrongCanonical = 0;
@@ -295,8 +295,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     }
     assert.equal(bad, 0, 'pages with NaN, undefined or Infinity');
     assert.equal(wrongCanonical, 0, 'pages without their canonical address');
-    // Indexed, and in the sitemap, only once the hub is released, and only a page with an estimate (one without has no
-    // figures: Maryland's, or no inputs).
+    // The hub released: a page with an estimate is indexed (one without has no figures: Maryland's, or no inputs).
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
-    assert.equal(indexed, SITE.hub.released ? HOSPITALS.filter((h) => h.est).length : 0, 'hospital pages with an estimate indexable only when the hub is released');
+    assert.equal(indexed, HOSPITALS.filter((h) => h.est).length, 'hospital pages with an estimate indexable');
   }));

@@ -1,7 +1,6 @@
 // Family-wide settings every page reads: the name, the canonical origin, the family's own pages, the licenses, the
 // byline's profile, the feedback form, the hub's state, each site (its path, names and state) and the program registry.
-// The hub or a site with released: false stays noindex and out of the sitemap even in a production build; go-live
-// flips them here.
+// The hub or a site with released: false stays noindex and out of the sitemap even in a production build.
 // pages: the hub's policy pages and the family's Methods, by name, in the order the footer's second field lists them,
 // each labelled with web/copy.js's word of the same name (Terms: termsLink, which the footer's Terms line links too).
 // feedback: the shared Google Form, and the names of its two prefilled questions (the site's name, the page's address).

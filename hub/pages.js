@@ -175,10 +175,11 @@ function hrrpPages(ctx, { tdr, hospitals, only, master, never }) {
 // log); tests pass their own. hospitals and master: the hospitals that get a page (model.js hubHospitals) and their master
 // records by CCN, read once from the newest files (data.js hubModel, which the build's context shares) unless a test
 // passes its own (no hospitals: no hospital pages and no interim Readmissions page for a hospital; /hrrp/ is always
-// written). The front page always tells the newest files' whole story.
-export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null } = {}) {
+// written). The front page always tells the newest files' whole story. released: whether the hub's pages may be
+// indexed in a production build (web/site.js); tests pass it.
+export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null, released = SITE.hub.released } = {}) {
   const { assets } = ctx;
-  const robots = robotsFor({ env: ctx.env, released: SITE.hub.released });
+  const robots = robotsFor({ env: ctx.env, released });
   const { hub, hospitals: all, facts } = hubModel();
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
@@ -187,7 +188,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
   }
   // The not-found page and the programs' placeholders are never indexed, released or not.
-  const never = robotsFor({ env: ctx.env, released: SITE.hub.released, eligible: false });
+  const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, robots, never });
   hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });

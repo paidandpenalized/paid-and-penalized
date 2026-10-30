@@ -47,7 +47,7 @@ const rulesFor = (env) => [
     ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
     ['Cross-Origin-Opener-Policy', 'same-origin'],
     ['Strict-Transport-Security', `max-age=${365 * DAY}`],
-    // Every build but production stays out of search results (a preview on workers.dev, a local build), on top of
+    // Every build but production stays out of search results (a preview URL, a local build), on top of
     // each page's meta robots (robotsFor, context.js).
     ...(isProduction(env) ? [] : [['X-Robots-Tag', 'noindex']]),
   ]],

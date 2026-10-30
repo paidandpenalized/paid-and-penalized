@@ -26,21 +26,17 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/', robots: null, text: 'a' });
     ctx.emit({ path: '/hacrp/hospital/990001/', robots: null, text: 'b' });
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
-    await generateHub(ctx);
+    await generateHub(ctx, { released: true });
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
     // still to come, a page per hospital in the dollar file, and the interim Readmissions pages (/hrrp/ and one per hospital
-    // in the pinned file). Once the hub is released, its home page, Methods, policy pages and hospital pages are
-    // indexable; the 404 page, the placeholders and the interim pages never are.
-    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + loadHub().dollars.hospitals.length + 1 + loadHub().tdr.hospitals.size);
+    // in the pinned file). The hub released: its home page, Methods, policy pages and hospital pages with an estimate
+    // (one without has no figures) are indexable; the 404 page, the placeholders and the interim pages never are.
+    const hub = loadHub();
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + 1 + hub.tdr.hospitals.size);
     assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
     const hubIndexable = ctx.indexable.slice(2);
-    if (SITE.hub.released) {
-      // A hospital page only with an estimate (one without has no figures).
-      assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(loadHub()).filter((h) => h.est).length);
-      assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
-    } else {
-      assert.deepEqual(hubIndexable, []);
-    }
+    assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.est).length);
+    assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
     // The home page is the story (hub/test/home.test.js has its parts): the masthead, then the story's steps and stage.
@@ -67,8 +63,8 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));
 
     assert.ok(notFound.includes(NOINDEX), 'the 404 page is never indexed');
+    for (const text of [home, methods]) assert.ok(!text.includes(NOINDEX), 'a released hub\'s pages may be indexed');
     for (const text of [home, methods, notFound]) {
-      if (text !== notFound) assert.equal(text.includes(NOINDEX), !SITE.hub.released, 'hub pages are noindex until the hub is released');
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1);
     }
 
@@ -77,6 +73,15 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/<\/loc>/);
     assert.match(sitemap, /<loc>https:\/\/paidandpenalized\.org\/hacrp\/hospital\/990001\/<\/loc>/);
     assert.equal(sitemap.match(/<url>/g).length, ctx.indexable.length);
+  }));
+
+test('released: false: no hub page is indexable in production, and the sitemap lists none', () =>
+  withTemp('pp-hub-unreleased-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), released: false });
+    assert.deepEqual(ctx.indexable, []);
+    for (const f of ['index.html', 'methods/index.html', 'terms/index.html']) assert.ok(readFileSync(join(dir, f), 'utf8').includes(NOINDEX), f);
+    assert.doesNotMatch(readFileSync(join(dir, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
 test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
@@ -121,7 +126,7 @@ const POLICY = [
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
   const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]);
-  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
+  await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [], released: true });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
 
@@ -136,7 +141,7 @@ test('each policy page has one h1, the brief as a record card, an index of its s
       const text = read(path);
       assert.equal(text.match(/<h1[\s>]/g)?.length, 1, path);
       assert.match(text, new RegExp(`<h1[^>]*>${escapeHtml(title)}</h1>`), path);
-      assert.equal(text.includes(NOINDEX), !SITE.hub.released, `${path} is noindex until the hub is released`);
+      assert.ok(!text.includes(NOINDEX), `${path}: a released hub's policy page may be indexed`);
       assert.match(text, /<link rel="canonical" href="https:\/\/paidandpenalized\.org\/[a-z]+\/">/, path);
       // The card: the record's title bar, then one field per brief line, in order.
       const card = text.match(/<div class="form pol__brief"[^>]*>[\s\S]*?<\/div>\s*<\/header>/)?.[0];

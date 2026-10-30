@@ -100,17 +100,18 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   in, quoted, or echoed; hits report only an entry number. Tests use invented names.
 - **CI** (`.github/workflows/ci.yml`): actions pinned by full SHA, a read-only token, no `pull_request_target`,
   no `${{ }}` inside `run:` (pass values through `env`). `tools/test/workflow.test.js` enforces these.
-- **Deploy** (`wrangler.jsonc`): a static-assets Cloudflare Worker serving `dist/` on workers.dev and preview URLs;
-  no custom domain until go-live. Once Workers Builds is connected, a merge to `main` deploys.
+- **Deploy** (`wrangler.jsonc`): a static-assets Cloudflare Worker serving `dist/` at paidandpenalized.org only
+  (workers.dev off). Workers Builds deploys each merge to `main` as the production build; preview builds are off.
 - **Outward actions need Dalton's explicit OK in the session:** pushing to a public remote, changing repo
-  visibility, deploys, DNS, GitHub Releases. The repo stays private until the first public launch.
+  visibility, deploys, DNS, GitHub Releases.
 
 ## Commands
 - `npm ci`: once per clone, installs the pinned build dependencies (`make build` and its tests need them).
 - `make test`: all tests (`npm test`, then `python3 -I pipeline/py/run.py test`), including the golden checks.
 - `make emit`: rebuild `data/emitted/` from the pins (both emitters).
 - `make hooks`: point git at `.githooks/`.
-- `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production`.
+- `make build`: write the site to `dist/`. Every build is `noindex` unless `PP_ENV=production` (Workers Builds' build of
+  `main` is production too: `buildEnv` in `pipeline/site/context.js`).
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
 - `npm run e2e`: browser checks over `dist/` (run `make build` first), served with its real `_headers`; a test that takes over 3 minutes fails. Chromium runs the
   installed Google Chrome (the Chromium Playwright installs when `CI` is set); `E2E_ENGINE=firefox` or `webkit` picks

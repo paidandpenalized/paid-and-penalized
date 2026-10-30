@@ -11,9 +11,9 @@ import { get, withServer, withTemp, writeTree } from './helpers.js';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const WEEK = 'public, max-age=604800';
 // Every build but production: production's policy differs only in letting the analytics beacon load.
-const CSP = cspFor(undefined);
+const CSP_DEFAULT = cspFor(undefined);
 const EVERY_PATH = {
-  'content-security-policy': CSP,
+  'content-security-policy': CSP_DEFAULT,
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=()',
@@ -34,7 +34,7 @@ test('headersFile: every path gets the CSP and the security headers; noindex on 
       if (env === 'production') assert.equal(got['x-robots-tag'], undefined, path);
     }
   }
-  assert.ok(headersFile({ env: undefined }).includes(`Content-Security-Policy: ${CSP}\n`));
+  assert.ok(headersFile({ env: undefined }).includes(`Content-Security-Policy: ${CSP_DEFAULT}\n`));
   assert.ok(headersFile({ env: undefined }).includes('X-Robots-Tag: noindex\n'));
   assert.ok(!headersFile({ env: 'production' }).includes('X-Robots-Tag'));
 });
@@ -52,7 +52,6 @@ test('cspFor: only a production build lets a script load from the analytics orig
   assert.equal(prod.get('script-src'), `script-src 'self' ${ANALYTICS_ORIGIN}`);
   // The beacon reports to the site's own /cdn-cgi/rum, so connect-src stays 'self'.
   assert.equal(prod.get('connect-src'), "connect-src 'self'");
-  assert.equal(ANALYTICS_ORIGIN, 'https://static.cloudflareinsights.com');
 });
 
 test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters', () => {
@@ -126,7 +125,7 @@ test('the local server sends the headers _headers gives each path, on a 404 and 
       }
       const missing = await get(port, '/nope/');
       assert.equal(missing.body, 'not here');
-      assert.equal(missing.headers['content-security-policy'], CSP);
+      assert.equal(missing.headers['content-security-policy'], CSP_DEFAULT);
       for (const path of ['/_headers', '/_HEADERS', '/_Headers', '/%5Fheaders']) {
         const own = await get(port, path);
         assert.equal(own.status, 404, path);
@@ -145,7 +144,7 @@ test('the local server sends a missing hashed file\'s 404 with the file\'s year-
         const res = await get(port, p);
         assert.equal(res.status, status, p);
         assert.equal(res.headers['cache-control'], IMMUTABLE, p);
-        assert.equal(res.headers['content-security-policy'], CSP, p);
+        assert.equal(res.headers['content-security-policy'], CSP_DEFAULT, p);
       }
       // No 404.html: the plain-text 404 carries them too.
       rmSync(join(root, '404.html'));

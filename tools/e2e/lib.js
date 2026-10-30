@@ -213,8 +213,8 @@ async function watch(page, base) {
     inFlight.add(request);
     if (request.isNavigationRequest()) documents.add(request.url());
     const url = new URL(request.url());
-    const beacon = url.origin === ANALYTICS_ORIGIN && request.resourceType() === 'script';
-    if (/^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin && !beacon) foreignRequests.push(request.url());
+    const foreign = /^(?:https?|wss?):$/.test(url.protocol) && url.origin !== new URL(base).origin;
+    if (foreign && !(url.origin === ANALYTICS_ORIGIN && request.resourceType() === 'script')) foreignRequests.push(request.url());
   });
   await page.exposeFunction('reportCspViolation', (violation) => cspViolations.push(violation));
   await page.addInitScript(() => {
