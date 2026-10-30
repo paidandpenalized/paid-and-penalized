@@ -15,9 +15,15 @@
 // step, Shift (or Page Up and Down) steps bigger, Home and End go to the ends it states; Escape anywhere in the what-if or
 // the banner resets the page.
 //
-// The strips draw the actual figures' axis until the reader opens the what-if (the "What if?" button, a link to #whatif,
-// a control's focus or input), then glide once to the wide one, and back on a reset; a drag keeps the axis it began on
-// until it ends (scale.js stripAxis). A link that opens on the what-if starts wide, with no glide.
+// The strips and the swarm draw the data's own axis; a hypothetical figure past it (a program's on its strip, the net on
+// the net's strip and the swarm) widens it just enough to hold it, and it narrows again when no figure needs the room
+// (scale.js holdingAxis), gliding each time. Opening the what-if changes nothing. While a pointer holds a handle the
+// axes only grow; when they widen under a drag, the drag reads its strip again from where the handle now stands, so the
+// value never jumps and the handle moves one for one with the pointer; a drag past a strip's end goes to that end of the
+// factor's range. On release the axes settle to what the figures need, narrower again if the drag came back inside;
+// a mouse that lets go while resting over the strip holds that until it leaves the strip (or the reader changes the
+// what-if another way), so the settling never pulls the handle from under it. A link that opens on a scenario starts
+// on the axis it needs, with no glide.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
 import { siteAddress } from '../../../web/client/follow.js';
@@ -25,12 +31,12 @@ import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
 import { SETTLE_MS } from '../../../web/whatif/dom.js';
-import { isScenarioHash, isWhatIfHash } from '../../../web/whatif/fragment.js';
+import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
-import { stripAxis } from '../scale.js';
-import { changed, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { holdingAxis, stripAxis } from '../scale.js';
+import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
 import { node } from './dom.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
@@ -79,12 +85,13 @@ function paintBar(track, sel, cls, dollars, x) {
 }
 
 // mountWhatIf(page, options): page is the article. Options: h (this hospital, with an estimate), vbpMax (value-based
-// purchasing's highest factor of any hospital: whatif-state.js vbpMaxOf), fy, still (reduced motion), strips
-// (mountStrips' handle API), swarm (mountSwarm's), values (the dollar rows' scale values for every group:
+// purchasing's highest factor of any hospital: whatif-state.js vbpMaxOf), fy, still (reduced motion), domain (the share
+// axis of the actual figures, the data's own: the strips' and the swarm's), strips (mountStrips' handle API), swarm
+// (mountSwarm's), values (the dollar rows' scale values for every group:
 // hub/hospital/peers.js sumValues), group ({ peers, figures, group }, the page's first), observers (an array the
 // observers it starts that write to the page's root join, so the page can stop them). Returns { setGroup(group) } for
 // the peer toggle.
-export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values, group, observers = [] }) {
+export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm, values, group, observers = [] }) {
   const $ = (sel) => page.querySelector(sel);
   const rng = ranges(h, { vbpMax });
   const actual = initial(h);
@@ -95,16 +102,65 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
   let state = actual;
   let linked = false;
   let timer = 0;
-  // The strips' axis as the reader opens, resets and drags (scale.js stripAxis): event 'open', 'reset', 'press' or
-  // 'release'; animate false to move at once (a page opened on the what-if).
-  let axis = { open: false, held: 0, wide: false };
-  // The pointers holding a handle now: each counts once, from its press to its own release.
+  // The strips' axis and the swarm's as the figures change and the reader drags (scale.js stripAxis): type 'values'
+  // (want: the axis each needs now), 'press' or 'release'; animate false to move at once (a page opened on a scenario).
+  const atRest = { held: 0, want: domain, axis: domain };
+  let axes = { strips: atRest, swarm: atRest };
+  // The pointers holding a handle now: each counts once, from its press to its own release (or, for a mouse that lets go
+  // while resting over the strip, until it leaves the strip: resting).
   const holding = new Set();
-  const axisOn = (event, animate = true) => {
-    const next = stripAxis(axis, event);
-    if (next.wide !== axis.wide) strips.setWide(next.wide, animate);
-    axis = next;
+  // Each drag under way: what re-reads its strip when the axis changes under it (bindHandle's regrip).
+  const grips = new Set();
+  const axisOn = (type, want = {}, animate = true) => {
+    const next = { strips: stripAxis(axes.strips, { type, want: want.strips }), swarm: stripAxis(axes.swarm, { type, want: want.swarm }) };
+    const moved = next.strips.axis !== axes.strips.axis;
+    if (moved) strips.setAxis(next.strips.axis, animate);
+    if (next.swarm.axis !== axes.swarm.axis) swarm.setAxis(next.swarm.axis, animate);
+    axes = next;
+    if (moved) for (const regrip of grips) regrip();
   };
+  // A mouse that lets go of a handle while it rests over the handle's strip: the release waits until the pointer leaves
+  // the strip (or the window), the page scrolls it away, or the reader changes the what-if another way, so the axis
+  // settling never pulls the handle out from under a resting pointer. pointerId -> stop (the listeners' remover).
+  const resting = new Map();
+  const over = (box, x, y) => {
+    const b = box.getBoundingClientRect();
+    return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom;
+  };
+  function letGo(id) {
+    resting.get(id)?.();
+    resting.delete(id);
+    if (holding.delete(id)) axisOn('release');
+  }
+  const letGoAll = () => {
+    for (const id of [...resting.keys()]) letGo(id);
+  };
+  function rest(id, box, x, y) {
+    resting.get(id)?.();
+    let [px, py] = [x, y];
+    const check = () => {
+      if (!over(box, px, py)) letGo(id);
+    };
+    const move = (e) => {
+      if (e.pointerId !== id) return;
+      [px, py] = [e.clientX, e.clientY];
+      check();
+    };
+    const out = (e) => {
+      if (e.pointerId === id && !e.relatedTarget) letGo(id);
+    };
+    const away = () => letGo(id);
+    document.addEventListener('pointermove', move, { passive: true });
+    document.addEventListener('pointerout', out);
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('blur', away);
+    resting.set(id, () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerout', out);
+      window.removeEventListener('scroll', check);
+      window.removeEventListener('blur', away);
+    });
+  }
 
   // ---------- the controls ----------
   const lede = $('.hh__lede');
@@ -178,34 +234,52 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
       else if (k === 'Home' || k === 'End') apply({ type: 'end', id: key, dir: k === 'Home' ? -1 : 1 });
       else apply({ type: 'step', id: key, dir: down ? -1 : 1, big: e.shiftKey || k.startsWith('Page') });
     });
-    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it. The page updates
-    // once a frame at most, to the last place the pointer reached (at), and a release lands that place at once; keys and
-    // the field update at once.
+    // A drag: the pointer's offset from the handle's middle is kept, so the handle never jumps under it, and the strip is
+    // read on the axis drawn (grip). When the axis widens under the drag, the strip is read again on the new axis from
+    // where the handle now stands (regrip): the value under the pointer stays the value it had, the handle moves one for
+    // one with the pointer from there, and nothing feeds back. The page updates once a frame at most, to the last place
+    // the pointer reached (at), and a release lands that place at once; keys and the field update at once.
     let offset = null;
+    let read = null;
     let at = null;
     let frame = 0;
-    const valueAt = (e) => strips.shareAt(id, e.clientX + offset);
+    let lastX = 0;
+    const valueAt = (e) => (read ? read(e.clientX + offset) : null);
+    const regrip = () => {
+      if (offset === null) return;
+      const b = el.querySelector('.st__hb').getBoundingClientRect();
+      offset = b.left + b.width / 2 - lastX;
+      read = strips.grip(id);
+    };
     const drag = () => {
       frame = 0;
       const v = at;
       at = null;
       if (v === null) return;
       if (id === 'hacrp') {
-        // The cut's place on the strip is its share of pay; past half way to it reads as the cut.
+        // The cut's place on the strip is its share of pay; past half way to it reads as the cut (past the strip's left
+        // end, the cut; past its right, none).
         const cutAt = pctOf({ total: h.est.total, ...outcome({ ...state, hac: true }, h) }).hac;
-        apply({ type: 'hac', cut: v < cutAt / 2 });
-      } else if (h.est.base > 0) apply({ type: 'set', id: key, value: factorAt(h, v) });
+        apply({ type: 'hac', cut: v.past ? v.past < 0 : v.share < cutAt / 2 }, { drag: true });
+      } else if (h.est.base > 0) apply(dragAction(h, key, v), { drag: true });
     };
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const b = el.querySelector('.st__hb').getBoundingClientRect();
+      lastX = e.clientX;
       offset = b.left + b.width / 2 - e.clientX;
+      read = strips.grip(id);
+      grips.add(regrip);
       el.setPointerCapture?.(e.pointerId);
+      // A pointer resting after a release presses again: it holds on, and its next release decides.
+      resting.get(e.pointerId)?.();
+      resting.delete(e.pointerId);
       if (!holding.has(e.pointerId)) {
         holding.add(e.pointerId);
         axisOn('press');
       }
+      el.classList.add('st__h--held');
       el.focus({ preventScroll: true });
       page.classList.add('hh--used', 'hh--dragging');
     });
@@ -213,6 +287,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
       if (offset === null) return;
       const v = valueAt(e);
       if (v === null) return;
+      lastX = e.clientX;
       at = v;
       if (!frame) frame = requestAnimationFrame(drag);
     });
@@ -222,8 +297,14 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
         drag();
       }
       offset = null;
+      read = null;
+      grips.delete(regrip);
+      el.classList.remove('st__h--held');
       page.classList.remove('hh--dragging');
-      if (holding.delete(e.pointerId)) axisOn('release');
+      if (!holding.has(e.pointerId)) return;
+      const box = el.closest('[data-strip]');
+      if (e.type === 'pointerup' && e.pointerType === 'mouse' && box && over(box, e.clientX, e.clientY)) rest(e.pointerId, box, e.clientX, e.clientY);
+      else letGo(e.pointerId);
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
@@ -298,8 +379,8 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     }
   }
 
-  // Everything but the result box, at once.
-  function draw() {
+  // Everything but the result box, at once; the axes the figures need, gliding there (animate) or at once.
+  function draw(animate = true) {
     const on = changed(state, h);
     const out = outcome(state, h);
     for (const [id, r] of Object.entries(rows)) {
@@ -330,6 +411,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     if (netMoved) scenario.net = pct.net;
     strips.setScenario(on ? scenario : null);
     swarm.setHypothetical(on && netMoved ? pct.net : null);
+    axisOn('values', { strips: holdingAxis(domain, on ? Object.values(scenario) : []), swarm: holdingAxis(domain, on && netMoved ? [pct.net] : []) }, animate);
 
     // The banner, the stamp, the net and its rows, the headline.
     bar?.classList.toggle('hh__peers--hyp', on);
@@ -381,28 +463,30 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     }
   }
 
-  function apply(action) {
-    axisOn(action.type === 'reset' ? 'reset' : 'open');
+  // An action on the what-if; drag: from a drag (the only kind that leaves a resting mouse's hold alone).
+  function apply(action, { drag = false } = {}) {
     const next = reduce(state, action, ctx());
-    if (next === state) return;
-    state = next;
-    if (action.type !== 'set') for (const r of Object.values(rows)) r.editing = false;
-    // Any change the reader makes, a reset included, makes the scenario theirs: no longer the link's "Reader-made".
-    linked = false;
-    page.classList.add('hh--used');
-    draw();
-    clearTimeout(timer);
-    timer = setTimeout(settle, SETTLE_MS);
+    if (next !== state) {
+      state = next;
+      if (action.type !== 'set') for (const r of Object.values(rows)) r.editing = false;
+      // Any change the reader makes, a reset included, makes the scenario theirs: no longer the link's "Reader-made".
+      linked = false;
+      page.classList.add('hh--used');
+      draw();
+      clearTimeout(timer);
+      timer = setTimeout(settle, SETTLE_MS);
+    }
+    if (!drag) letGoAll();
   }
 
-  // A scenario from the address: on load (animate false: the strips start on the axis the link asks for), and when a
+  // A scenario from the address: on load (animate false: the strips start on the axis the scenario needs), and when a
   // link opens in this tab.
   function load(animate = true) {
-    if (isWhatIfHash(location.hash)) axisOn('open', animate);
+    letGoAll();
     const next = fromHash(location.hash, h, ctx()).state;
     linked = changed(next, h);
     state = next;
-    draw();
+    draw(animate);
     settle();
   }
 
@@ -453,19 +537,13 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, strips, swarm, values,
     observers.push(onBar, onScen);
   }
 
-  // A control taking focus opens the what-if (the drag's own focus waits for its end: stripAxis).
-  page.addEventListener('focusin', (e) => {
-    if (e.target.closest?.('.st__h, .hh__ctl')) axisOn('open');
-  });
-
-  // The first handle: the button above jumps to it (the strips widen once the jump has landed, then it wiggles), and it
+  // The first handle: the button above jumps to it (it takes focus once the jump has landed, then wiggles), and it
   // wiggles once when the rows first come into view.
   const first = ROWS.map((r) => strips.handle(r.id)).find(Boolean);
   $('.hh__wbtn')?.addEventListener('click', () => {
     setTimeout(() => {
       // The jump's #whatif took the place of a scenario's fragment: put the scenario back.
       writeHash();
-      axisOn('open');
       first?.focus({ preventScroll: true });
       strips.nudge();
     }, still.matches ? 0 : JUMP_MS);

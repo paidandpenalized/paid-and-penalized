@@ -666,7 +666,7 @@ test('a hospital page with no estimate (Maryland\'s, or no inputs) shows its chi
   }
 });
 
-test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and a state map in the Location field, its geocoder credited in the data list', () => {
+test('the record card: Type from the master in the site\'s words, Care Compare\'s stars or CMS\'s words, and the state\'s outline behind the fields, its geocoder credited in the data list', () => {
   const profile = { zip: '35000', lat: 32.4, lon: -86.3, geo: 'zip', teach: 'major', beds: 1234, own: 'Government', urban: true, types: ['RRC', 'SCH'] };
   const page = (overrides, careCompare = null, state = 'AL') => hospitalPage({
     ...PAGE_CTX,
@@ -680,14 +680,16 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<p class="field__value field__value--sm">Major teaching[^<]*<\/p>\n<\/div>/);
   assert.doesNotMatch(text, /field__note">Teaching/);
   assert.match(text, /<div><dt>Teaching, urban and special status<\/dt><dd>CMS’s FY2027 IPPS impact file<\/dd><\/div><div><dt>Beds<\/dt><dd>CMS’s Provider of Services file<\/dd><\/div>/);
-  assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div>\n<div class="hosp__loc"/);
+  assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div><\/div>/);
   assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
   assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002', 'Open on Care Compare'))));
-  // The state's outline and the dot in the Location field, after its words (never behind another field's words), drawn at
-  // the width it shows at.
-  assert.match(text, /<div class="field f-loc">[^]*?<div class="field__note">Example County<\/div>\n<div class="hosp__loc" aria-hidden="true"><svg class="chart chart--state-map" viewBox="0 0 84 \d+"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
-  assert.doesNotMatch(text, /hosp__wm/, 'no map behind the fields');
+  // The state's outline and the dot behind the whole card, first in it (so the fields paint over it), at the locator's
+  // standard width; the record's own script (hacrp-record) keeps the dot clear of the fields' words.
+  assert.match(text, /<div class="form hosp__id">\n<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j"><svg class="chart chart--state-map" viewBox="0 0 300 \d+"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
+  assert.doesNotMatch(text, /hosp__loc/, 'no map in the Location field');
+  assert.ok(text.includes(`<script type="module" src="${ASSETS.js['hacrp-record']}"></script>`), 'the record\'s script');
+  assert.ok(!page({ lat: null }).includes(ASSETS.js['hacrp-record']), 'no map, no script');
   // No caption on how the dot was placed; the data list credits the geocoder once, for a geocoded address only.
   assert.doesNotMatch(text, /Placed /);
   assert.doesNotMatch(text, /Geocoder/, 'a ZIP-centered dot');
@@ -775,13 +777,13 @@ test("the program page's top: the name with its last word in the penalty ink, th
   assert.match(renderProgram(), /<div class="usmap" data-mode="share">/);
 });
 
-test('the HACRP manifest bundles one script per kind of page (program, place, hospital) and the search; every script a page loads is one it bundles', () => {
+test('the HACRP manifest bundles one script per kind of page (program, place, hospital), the search and the record card\'s map; every script a page loads is one it bundles', () => {
   assert.equal(HACRP.id, 'hacrp');
-  assert.deepEqual(Object.keys(HACRP.entries).sort(), ['hacrp-hospital', 'hacrp-place', 'hacrp-program', 'hacrp-search']);
+  assert.deepEqual(Object.keys(HACRP.entries).sort(), ['hacrp-hospital', 'hacrp-place', 'hacrp-program', 'hacrp-record', 'hacrp-search']);
   for (const file of Object.values(HACRP.entries)) assert.ok(existsSync(REPO_ROOT + file), file);
   const bundled = new Set(Object.keys(mergeEntries(SHARED_ENTRIES, HACRP.entries)));
   const loads = (text) => [...text.matchAll(/<script type="module" src="\/assets\/([\w-]+)\.test\.js"><\/script>/g)].map((m) => m[1]);
-  const own = (text) => loads(text).filter((name) => Object.hasOwn(HACRP.entries, name) && name !== 'hacrp-search');
+  const own = (text) => loads(text).filter((name) => Object.hasOwn(HACRP.entries, name) && name !== 'hacrp-search' && name !== 'hacrp-record');
   const hospital = hospitalPage({
     ...PAGE_CTX, view: hospitalView(inputs(CASES.yes)), hospital: CASES.yes, source: DATA.source, robots: null, assets: ASSETS, searchUrl: '/assets/hacrp-hospitals.0000abcd.json',
     whatif: { hospital: CASES.yes, model: DATA.model, estimate: DATA.estimate, range: scoreRange(DATA.hospitals) },

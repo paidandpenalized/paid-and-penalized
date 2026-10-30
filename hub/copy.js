@@ -60,7 +60,7 @@ export const COPY = typesetCopy({
   privacyBrief4: 'Searches stay in your browser.',
   privacyBrief5: 'Feedback goes through a Google Form. Leave out patient information.',
   privacyReadingHeading: 'When you read the site',
-  privacyReading: "The site is a set of static pages. It sets no cookies, has no accounts and shows no ads. Cloudflare hosts it, and like any web host it receives your IP address, your browser's details and the addresses of the pages you open, which it keeps in its logs under {cloudflarePolicy}.",
+  privacyReading: "The site is a set of static pages. It sets no cookies, has no accounts and shows no ads. Cloudflare hosts it, and like any web host it receives your IP address, your browser's details and the addresses of the pages you open, which it keeps in its logs under {cloudflarePolicy}. Your choice between light and dark mode is remembered by the browser for your visit; it is not shared beyond that visit.",
   privacyCountingHeading: 'Counting visits',
   privacyCounting: 'This site uses Cloudflare Web Analytics to count page views. It sets no cookies. The counts show which pages are read, not who read them.',
   privacySearchHeading: 'Searching and sharing',

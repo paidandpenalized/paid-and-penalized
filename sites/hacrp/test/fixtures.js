@@ -25,7 +25,7 @@ export const FY = 2026;
 // hospital's page takes, since no row of the dollar estimates covers it.
 export const NO_ESTIMATE = hospitalMoney({ status: 'no-inputs', cut: false });
 // Assets for rendering pages: the CSS, the shared scripts, both HACRP page scripts and the shell's facts.
-export const ASSETS = testAssets({ js: Object.fromEntries(['figure', 'cite', 'share', 'topbar', 'hacrp-program', 'hacrp-place', 'hacrp-hospital', 'hacrp-search'].map((name) => [name, `/assets/${name}.test.js`])) });
+export const ASSETS = testAssets({ js: Object.fromEntries(['figure', 'cite', 'share', 'topbar', 'hacrp-program', 'hacrp-place', 'hacrp-hospital', 'hacrp-record', 'hacrp-search'].map((name) => [name, `/assets/${name}.test.js`])) });
 export const PERIODS = SYNTH_PERIODS;
 export const MODEL = { boundary: { highestNo: 0.25, lowestYes: 0.2507 } };
 // CMS's text for the two boundary scores, as boundaryText() reads it from the file.

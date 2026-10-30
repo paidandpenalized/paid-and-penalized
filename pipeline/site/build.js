@@ -24,11 +24,15 @@ import { headersFile } from './headers.js';
 // dates of the program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml,
 // listing every page an earlier site emitted as indexable.
 export const SITES = [HACRP, HUB];
-// Shared by every site: the shell's script (the theme buttons, the followed hospital, the phone's search button, the
-// tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads first on
-// every page; then the figure layer (pages with a figure), the citation Copy button (pages with a citation block) and
-// the share control (pages with one), which a page lists when it needs them.
-export const SHARED_ENTRIES = { shell: 'web/client/shell.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
+// Shared by every site: the head's theme script (the reader's light/dark choice for the visit, put back before the
+// page paints), then the shell's script (the theme buttons, the followed hospital, the phone's search button, the
+// tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads on every
+// page; then the figure layer (pages with a figure), the citation Copy button (pages with a citation block) and the
+// share control (pages with one), which a page lists when it needs them.
+export const SHARED_ENTRIES = { theme: 'web/client/theme.js', shell: 'web/client/shell.js', figure: 'web/client/figure.js', cite: 'web/client/cite.js', share: 'web/client/share.js', topbar: 'web/client/topbar.js' };
+// The entries built as classic scripts, not modules (assets.js): the head's theme script alone, which must run as the
+// parser meets it, before the first paint.
+export const CLASSIC_ENTRIES = ['theme'];
 
 const DIST = resolve(DIST_DIR);
 const inside = (dir, parent) => {
@@ -76,6 +80,7 @@ export async function build({ outDir = DIST_DIR, env = process.env.PP_ENV, sites
   const assets = await buildAssets({
     outDir: dir,
     entries: mergeEntries(SHARED_ENTRIES, ...sites.map((s) => s.entries ?? {})),
+    classic: CLASSIC_ENTRIES,
     siteStyles: Object.fromEntries(sites.filter((s) => s.styles?.length).map((s) => [s.id, s.styles])),
   });
   const ctx = buildContext({ outDir: dir, env, assets });

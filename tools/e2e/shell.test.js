@@ -6,7 +6,8 @@
 // phone's width and a desktop's, the family search on a hub page opens a state, a hospital's page across the programs
 // answers 200 from the family search's result and from the chip's name, the theme button flips the theme and
 // says so (and a hub page's own stylesheet, linked after the shared one, follows it, the system's dark setting and
-// print), and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
+// print), the choice carries to the tab's next pages from their first frame (a new tab, or a browser that blocks
+// storage, follows the device), and the tab row scrolls its current tab into view and fades while more lie to the right (on a phone; on a
 // desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
@@ -456,7 +457,7 @@ describe('a hospital\'s page across the programs, from the search and the chip',
 describe('the theme button', () => {
   const tabs = useContext(shared);
 
-  it('flips the theme for the visit, keeps aria-pressed in step, says so on the document, and stores nothing', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+  it('flips the theme, keeps aria-pressed in step, says so on the document, and keeps only the choice, in the tab\'s session storage', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
     await page.evaluate(() => {
       window.themeEvents = [];
       document.addEventListener('pp-theme', (e) => window.themeEvents.push(e.detail.dark));
@@ -470,8 +471,69 @@ describe('the theme button', () => {
     await toggle.click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), dark ? 'dark' : 'light');
     assert.deepEqual(await page.evaluate(() => window.themeEvents), [!dark, dark]);
-    assert.deepEqual(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie]), [0, 0, '']);
+    assert.deepEqual(await page.evaluate(() => [localStorage.length, sessionStorage.length, sessionStorage.getItem('pp-theme'), document.cookie]), [0, 1, dark ? 'dark' : 'light', '']);
     await assertQuiet(seen, 'theme');
+  }));
+
+  // The choice made with the button lasts for the visit: the next page in the tab wears it from its first frame (the
+  // head's classic script puts it on <html> before the body is parsed), and its buttons show it pressed. A recorder
+  // installed before the next page's own scripts reads the theme when the body appears and at the first animation
+  // frame, which runs before the first paint, and the paper's color there.
+  for (const scheme of ['light', 'dark']) {
+    const other = scheme === 'light' ? 'dark' : 'light';
+    it(`a ${other} choice made on a ${scheme} device carries to the next pages, with no ${scheme} frame first`, () => withPage(tabs, { path: SITE.pages.about, scheme, watched: true }, async (page, { seen }) => {
+      const paper = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      const devicePaper = await paper();
+      await page.locator('.theme-toggle:visible').click();
+      assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), other);
+      const chosenPaper = await paper();
+      assert.notEqual(chosenPaper, devicePaper, 'the two themes\' papers differ');
+      await page.addInitScript(() => {
+        const looks = (window.firstLooks = []);
+        const look = (when) => looks.push({ when, theme: document.documentElement?.getAttribute('data-theme') ?? null, paper: when === 'frame' ? getComputedStyle(document.body).backgroundColor : null });
+        new MutationObserver((_, observer) => {
+          if (!document.body) return;
+          look('body');
+          observer.disconnect();
+        }).observe(document, { childList: true, subtree: true });
+        requestAnimationFrame(() => look('frame'));
+      });
+      for (const path of [SITE.pages.privacy, '/', PROGRAM_PATH]) {
+        await visit(page, tabs.base, path);
+        const looks = await page.evaluate(() => window.firstLooks);
+        assert.deepEqual(looks.map((l) => [l.when, l.theme]), [['body', other], ['frame', other]], `${path}: ${other} before the body and at the first frame`);
+        assert.equal(looks[1].paper, chosenPaper, `${path}: the first frame's paper is the ${other} one`);
+        assert.equal(await paper(), chosenPaper, `${path}: and stays so`);
+        assert.equal(await page.locator('.theme-toggle:visible').getAttribute('aria-pressed'), String(other === 'dark'), `${path}: the button shows the choice`);
+      }
+      // A new tab starts from the device's setting: the choice was this tab's, for this visit.
+      const fresh = await tabs.context.newPage();
+      try {
+        await fresh.emulateMedia({ colorScheme: scheme });
+        await visit(fresh, tabs.base, SITE.pages.privacy);
+        assert.deepEqual(await fresh.evaluate(() => [document.documentElement.dataset.theme ?? null, sessionStorage.length]), [null, 0], 'a new tab: no choice');
+        assert.equal(await fresh.evaluate(() => getComputedStyle(document.body).backgroundColor), devicePaper, 'a new tab: the device\'s paper');
+        assert.equal(await fresh.locator('.theme-toggle:visible').getAttribute('aria-pressed'), String(scheme === 'dark'));
+      } finally {
+        await fresh.close();
+      }
+      await assertQuiet(seen, `a ${other} choice across pages`);
+    }));
+  }
+
+  // A browser that blocks site data throws on reading window.sessionStorage: the button still flips the page it is on,
+  // the next page follows the device, and nothing errors.
+  it('with storage blocked, the button still flips the page, the next page follows the device, and nothing errors', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'sessionStorage', { configurable: true, get() { throw new DOMException('blocked', 'SecurityError'); } });
+    });
+    await visit(page, tabs.base, SITE.pages.about);
+    assert.equal(await page.evaluate(() => { try { return sessionStorage.length; } catch (e) { return e.name; } }), 'SecurityError', 'storage is blocked');
+    await page.locator('.theme-toggle:visible').click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    await visit(page, tabs.base, SITE.pages.privacy);
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme ?? null), null, 'the next page: the device decides');
+    await assertQuiet(seen, 'theme with storage blocked');
   }));
 
   // The hub's page styles are a stylesheet of their own (hub/styles.css), linked after the shared one, and read the tokens;

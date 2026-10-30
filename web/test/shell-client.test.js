@@ -4,12 +4,13 @@
 // data ever reaches the page as markup. Synthetic hospitals only (invented CCNs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { CHIP } from '../chip-copy.js';
 import { followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
 import * as shell from '../client/shell.js';
 import { follow, keepFocusInRow, moreTabs, rewriteLinks, tabScroll, wireFind, wireTabs, wireTheme } from '../client/shell.js';
+import { THEME_KEY, applySavedTheme, saveTheme, savedTheme, sessionStore } from '../client/theme-store.js';
 import { SITE, hospitalPathOf } from '../site.js';
 
 // ---------- the pure parts ----------
@@ -150,6 +151,79 @@ test('wireTheme: every toggle shows, flips data-theme for this visit, keeps aria
   query.listeners[0]();
   assert.equal(d.events.length, 3, 'a chosen theme ignores the device');
   assert.deepEqual(pressed(), ['true', 'true']);
+});
+
+// A stand-in for the tab's session storage: a Map behind getItem and setItem.
+const memoryStore = () => {
+  const map = new Map();
+  return { map, getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, String(v)) };
+};
+
+test('wireTheme keeps each choice for the visit (pp-theme in the tab\'s session storage); the device changing writes nothing', () => {
+  const buttons = [el('button', { hidden: true }), el('button', { hidden: true })];
+  const root = { dataset: {} };
+  const query = { matches: false, listeners: [], addEventListener(_, fn) { query.listeners.push(fn); } };
+  const store = memoryStore();
+  wireTheme({ buttons, root, query, doc: doc(), store });
+  assert.equal(store.map.size, 0, 'nothing is kept before a choice');
+  query.matches = true;
+  query.listeners[0]();
+  assert.equal(store.map.size, 0, 'the device\'s own change is not a choice');
+  buttons[0].emit('click');
+  assert.deepEqual([...store.map], [['pp-theme', 'light']]);
+  buttons[1].emit('click');
+  assert.deepEqual([...store.map], [['pp-theme', 'dark']], 'the latest choice, under the one key');
+  // A page with a choice already applied (the head's script, applySavedTheme) shows it pressed.
+  const next = [el('button', { hidden: true })];
+  wireTheme({ buttons: next, root: { dataset: { theme: 'dark' } }, query: { matches: false, addEventListener() {} }, doc: doc(), store });
+  assert.equal(next[0].getAttribute('aria-pressed'), 'true');
+});
+
+test('the theme for the visit: light or dark under pp-theme, read before the page paints; anything else stored is nothing', () => {
+  assert.equal(THEME_KEY, 'pp-theme');
+  const store = memoryStore();
+  assert.equal(savedTheme(store), null, 'no choice yet');
+  saveTheme(store, 'dark');
+  assert.equal(savedTheme(store), 'dark');
+  saveTheme(store, 'light');
+  assert.equal(savedTheme(store), 'light');
+  saveTheme(store, 'sepia');
+  assert.equal(savedTheme(store), 'light', 'only light or dark is ever written');
+  assert.deepEqual([...store.map.keys()], ['pp-theme'], 'one key, nothing else');
+  for (const odd of ['<b>dark</b>', 'Dark', '', 'undefined']) {
+    store.map.set('pp-theme', odd);
+    assert.equal(savedTheme(store), null, `a stored ${JSON.stringify(odd)} is ignored`);
+  }
+  // applySavedTheme: the head's script. A saved choice goes on <html> as data-theme; with none, the device decides.
+  const root = { dataset: {} };
+  applySavedTheme(root, store);
+  assert.equal(root.dataset.theme, undefined);
+  store.map.set('pp-theme', 'dark');
+  applySavedTheme(root, store);
+  assert.equal(root.dataset.theme, 'dark');
+  const win = { sessionStorage: memoryStore() };
+  assert.equal(sessionStore(win), win.sessionStorage, 'the window\'s session storage');
+});
+
+test('the theme for the visit: a browser that blocks or refuses storage leaves the theme to the device, with no error', () => {
+  // Reading window.sessionStorage itself throws where a browser blocks site data.
+  const blocked = { get sessionStorage() { throw new DOMException('blocked', 'SecurityError'); } };
+  assert.equal(sessionStore(blocked), null);
+  assert.equal(sessionStore({}), null, 'a browser without it');
+  assert.equal(savedTheme(null), null);
+  assert.doesNotThrow(() => saveTheme(null, 'dark'));
+  const refusing = { getItem() { throw new Error('denied'); }, setItem() { throw new DOMException('full', 'QuotaExceededError'); } };
+  assert.equal(savedTheme(refusing), null);
+  assert.doesNotThrow(() => saveTheme(refusing, 'dark'));
+  const root = { dataset: {} };
+  assert.doesNotThrow(() => applySavedTheme(root, sessionStore(blocked)));
+  assert.equal(root.dataset.theme, undefined, 'the device decides');
+  // The toggle still flips the page it is on.
+  const buttons = [el('button', { hidden: true })];
+  const page = { dataset: {} };
+  wireTheme({ buttons, root: page, query: { matches: false, addEventListener() {} }, doc: doc(), store: refusing });
+  assert.doesNotThrow(() => buttons[0].emit('click'));
+  assert.equal(page.dataset.theme, 'dark');
 });
 
 test('wireTheme does nothing on a page with no toggle', () => {
@@ -455,12 +529,26 @@ test('wireTabs: a row that fits is left alone, and a page with no current tab st
 
 // ---------- the source ----------
 
-test('shell.js and follow.js store nothing and build no markup from data', () => {
+test('shell.js and follow.js build no markup from data and reach no storage of their own', () => {
   for (const file of ['web/client/shell.js', 'web/client/follow.js']) {
     const src = readFileSync(REPO_ROOT + file, 'utf8').replace(/\/\/.*$/gm, '');
     for (const word of ['localStorage', 'sessionStorage', 'cookie', 'indexedDB', 'innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'eval(']) assert.ok(!src.includes(word), `${file}: ${word}`);
   }
   assert.match(readFileSync(REPO_ROOT + 'web/client/shell.js', 'utf8'), /dataset\.theme/);
+});
+
+// The privacy page says the one thing the browser keeps is the light/dark choice, for the visit: theme-store.js is the
+// only browser code that reaches storage, and it reaches only the tab's session storage.
+test('the only browser storage any page uses is the theme\'s, in the tab\'s session storage', () => {
+  const files = ['web/client', 'hub/client', 'sites/hacrp/client'].flatMap(function walk(dir) {
+    return readdirSync(REPO_ROOT + dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : d.name.endsWith('.js') ? [`${dir}/${d.name}`] : []));
+  });
+  assert.ok(files.includes('web/client/theme-store.js') && files.length > 20, 'the walk finds the client code');
+  for (const file of files) {
+    const src = readFileSync(REPO_ROOT + file, 'utf8').replace(/\/\/.*$/gm, '');
+    for (const word of ['localStorage', 'indexedDB', 'cookie', 'caches.open']) assert.ok(!src.includes(word), `${file}: ${word}`);
+    assert.equal(src.includes('sessionStorage'), file === 'web/client/theme-store.js', `${file}: sessionStorage`);
+  }
 });
 
 test('the chip\'s words are the render\'s own: COPY holds the very strings the script prints', async () => {

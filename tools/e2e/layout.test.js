@@ -1,12 +1,15 @@
-// Layout facts a reader sees at a glance, in a real browser at 1280 px (light): the HACRP hospital page's record card
-// (each row as tall as its fields' words, the state's outline and its dot in the Location field, clear of every field's
-// words); the end of the placeholder and interim Readmissions pages (no wide empty band before the footer) and the interim
-// page's pill beside its figure; and a hospital page with scripts off, which offers no what-if it cannot run. Pages are
-// picked by type (site.js), never named. Runs against dist/ (make build) or any URL; see site.js.
+// Layout facts a reader sees at a glance, in a real browser (light): the HACRP hospital page's record card at 1280, 390
+// and 320 px (as tall as the verdict beside it, the whole state's outline behind its fields, the dot well clear of every
+// line of their words and of every rule); at 1280 px, the end of the placeholder and interim Readmissions pages (no
+// wide empty band before the footer) and the interim page's pill beside its figure; and with scripts off, a hospital
+// page that offers no what-if it cannot run and an HACRP record card that shows the state without its dot. Pages are
+// picked by type (site.js) or by state, never named. Runs against dist/ (make build) or any URL; see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { programById } from '../../web/site.js';
-import { CONCURRENCY, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
+import { hospitalPath } from '../ci/page-types.js';
+import { CONCURRENCY, assertNoSideways, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const shared = useBrowser();
@@ -17,36 +20,78 @@ const HACRP_PAGES = PAGES.filter((p) => p.type.startsWith('hospital-'));
 const FOOT_ROOM = 88;
 const SLACK = 24;
 
+// The HACRP record card's checks, read in the page: whether the card is as tall as the verdict beside it (two columns),
+// the state's outline behind the fields (the watermark spanning the card below its title, the map at least 0.45 of its
+// size there, and the whole outline inside it), and the dot inside the watermark and well clear of every line of the
+// fields' words (its edge 16 px and its halo's 12 px at the least) and clear of the rules, shown once placed.
+const recordCard = (page) => page.evaluate(() => {
+  const card = document.querySelector('.hosp__id');
+  const verdict = document.querySelector('.hosp__verdict');
+  const wm = card.querySelector('.hosp__wm');
+  const box = (el) => el.getBoundingClientRect();
+  const c = box(card);
+  const out = { stretched: Math.abs(c.bottom - box(verdict).bottom) <= 1, map: Boolean(wm) };
+  if (!wm) return out;
+  const w = box(wm);
+  const s = box(wm.querySelector('svg'));
+  const o = box(wm.querySelector('.chart-geo-state'));
+  const d = box(wm.querySelector('.chart-geo-dot'));
+  const halo = box(wm.querySelector('.chart-geo-halo')).width / 2;
+  const dot = { x: (d.left + d.right) / 2, y: (d.top + d.bottom) / 2, r: d.width / 2 };
+  const within = (r, room) => Math.hypot(dot.x - Math.max(r.left, Math.min(dot.x, r.right)), dot.y - Math.max(r.top, Math.min(dot.y, r.bottom))) < room;
+  const range = document.createRange();
+  const lines = [...card.querySelectorAll(':is(.form__title, .field__label, .field__value, .field__note)')].flatMap((el) => {
+    range.selectNodeContents(el);
+    return [...range.getClientRects()].filter((r) => r.width > 0).map((r) => ({ r, el: el.className }));
+  });
+  const rules = [...card.querySelectorAll('.field')].flatMap((f) => {
+    const r = box(f);
+    return [{ left: r.right - 2, right: r.right, top: r.top, bottom: r.bottom }, { left: r.left, right: r.right, top: r.bottom - 2, bottom: r.bottom }];
+  });
+  Object.assign(out, {
+    behind: wm === card.firstElementChild && w.top - c.top < 48 && c.bottom - w.bottom < 16 && (s.height >= 0.45 * w.height - 1 || s.width >= 0.45 * w.width - 1),
+    whole: o.left >= w.left - 1 && o.right <= w.right + 1 && o.top >= w.top - 1 && o.bottom <= w.bottom + 1,
+    inside: dot.x - dot.r >= w.left && dot.x + dot.r <= w.right && dot.y - dot.r >= w.top && dot.y + dot.r <= w.bottom,
+    onWords: [...new Set(lines.filter(({ r }) => within(r, halo + 12) || within(r, dot.r + 16)).map(({ el }) => el))],
+    onRules: rules.filter((r) => within(r, dot.r + 2)).length,
+    shown: getComputedStyle(wm).opacity === '1',
+  });
+  return out;
+});
+
+// The record card's samples: the three sample hospitals (site.js), and the first hospital in the file in a small state,
+// a wide one, a tall one, a large one and Alaska, so the dot lands in different places on the card.
+const HACRP_ALL = readNewestEmitted().hospitals;
+const RECORD_PAGES = [
+  ...HACRP_PAGES.map((p) => [p.name, p.path]),
+  ...['RI', 'TN', 'CA', 'TX', 'AK'].map((st) => [`the first hospital in ${st}`, hospitalPath(HACRP_ALL.find((h) => h.state === st).ccn)]),
+];
+
+for (const [width, two] of [[1280, true], [390, false], [320, false]]) {
+  describe(`the HACRP record card at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width, height: width < 600 ? 844 : 900 });
+    for (const [name, path] of RECORD_PAGES) {
+      it(`${name}: ${two ? 'as tall as the verdict, ' : ''}the whole state behind the fields, the dot well clear of every line of words and of every rule`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+        await page.waitForFunction(() => !document.querySelector('.hosp__wm') || document.querySelector('.hosp__wm').hasAttribute('data-placed'));
+        const s = await recordCard(page);
+        if (two) assert.equal(s.stretched, true, 'the card as tall as the verdict beside it: no space under it');
+        if (s.map) {
+          assert.equal(s.behind, true, 'the outline behind the whole card, below its title');
+          assert.equal(s.whole, true, 'the whole outline inside the card');
+          assert.equal(s.inside, true, 'the dot inside the card');
+          assert.deepEqual(s.onWords, [], 'the dot well clear of every line of the fields\' words');
+          assert.equal(s.onRules, 0, 'the dot clear of the rules');
+          assert.equal(s.shown, true, 'the outline shows once placed');
+        }
+        await assertNoSideways(page, name);
+        await assertQuiet(seen, name);
+      }));
+    }
+  });
+}
+
 describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared);
-
-  for (const sample of HACRP_PAGES) {
-    it(`the HACRP record card (${sample.name}): rows as tall as their words, the map in the Location field and clear of every field's words`, () => withPage(tabs, { path: sample.path, watched: true }, async (page, { seen }) => {
-      const s = await page.evaluate(() => {
-        const fields = [...document.querySelectorAll('.hosp__fields > .field')];
-        // Each row's fields (by their top), and the least room any of them leaves under its own content.
-        const rows = new Map();
-        for (const f of fields) {
-          const box = f.getBoundingClientRect();
-          const last = [...f.children].filter((c) => c.getClientRects().length).at(-1).getBoundingClientRect();
-          const room = box.bottom - parseFloat(getComputedStyle(f).paddingBottom) - last.bottom;
-          const key = Math.round(box.top);
-          rows.set(key, Math.min(rows.get(key) ?? Infinity, room));
-        }
-        const dot = document.querySelector('.hosp__id .chart-geo-dot');
-        const d = dot?.getBoundingClientRect();
-        const words = [...document.querySelectorAll('.hosp__id :is(.field__label, .field__value, .field__note, .form__title)')].map((el) => el.getBoundingClientRect());
-        const under = d ? words.filter((w) => w.right > d.left && w.left < d.right && w.bottom > d.top && w.top < d.bottom).length : null;
-        return { rooms: [...rows.values()].map(Math.round), inLocation: dot ? dot.closest('.f-loc') !== null : null, under };
-      });
-      assert.ok(s.rooms.every((room) => room <= 2), `each row as tall as its tallest field's words (room left under it: ${s.rooms.join(', ')} px)`);
-      if (s.inLocation !== null) {
-        assert.equal(s.inLocation, true, 'the map in the Location field');
-        assert.equal(s.under, 0, 'the dot clear of every field\'s words');
-      }
-      await assertQuiet(seen, sample.name);
-    }));
-  }
 
   // The space between a page's last words and the footer's rule: the footer's own room, give or take.
   const endBand = (page) => page.evaluate(() => {
@@ -83,4 +128,17 @@ describe('a hospital page with scripts off', () => {
     }));
     assert.deepEqual(s, { button: false, heading: 'Every program, among its peers', kicker: false, lines: 2 });
   }));
+
+  // With scripts off nothing moves the state's outline clear of the words (sites/hacrp/client/record.js), so the HACRP
+  // record card shows the outline and leaves out the dot and its halo rather than let them sit on a field's words.
+  for (const sample of HACRP_PAGES) {
+    it(`the HACRP record card (${sample.name}) shows the state's outline without its dot`, () => withPage(tabs, { path: sample.path }, async (page) => {
+      const s = await page.evaluate(() => {
+        const wm = document.querySelector('.hosp__wm');
+        const shown = (el) => el !== null && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+        return wm && { outline: shown(wm.querySelector('.chart-geo-state')), dot: shown(wm.querySelector('.chart-geo-dot')), halo: shown(wm.querySelector('.chart-geo-halo')), seen: getComputedStyle(wm).opacity };
+      });
+      if (s) assert.deepEqual(s, { outline: true, dot: false, halo: false, seen: '1' });
+    }));
+  }
 });

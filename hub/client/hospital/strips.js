@@ -4,10 +4,11 @@
 // hospital's mark in each. A peer a program does not list is not in its strip (never a dot at $0); nor is the hospital,
 // whose strip then says so. Switching the group moves the same dots (CSS transitions on each dot's transform, off under
 // reduced motion): a hospital that stays glides to its new place, one that joins fades in, one that leaves fades out.
-// The axis is the tight one (the actual figures, so the data has the full width) until the what-if opens, then the wide
-// one (every figure it can show: whatif.js asks for it, scale.js stripAxis). A change of axis glides the same way, and
+// The axis is the data's own (the actual figures, so the data has the full width), widened only as far as a hypothetical
+// figure needs (whatif.js asks for it: scale.js holdingAxis and stripAxis). A change of axis glides the same way, and
 // every part of a strip (the ticks, the gutter, the dots, the ring, the median, the handle, the marks) rides the one
-// transition, so a dot never leaves its tick; the thread follows the rings frame by frame.
+// transition, so a dot never leaves its tick; the thread follows the rings frame by frame. The handle a pointer holds is
+// the exception: it stays with its value at once (hub/styles.css .st__h--held).
 // The strips are pictures of what each row's sentences say, so their marks are hidden from assistive technology; the one
 // exception is the what-if's handle (handles), a capsule with arrows on each adjustable program's strip that sits on the
 // hospital's dot and, once the row is hypothetical, on the hypothetical value, with the actual's ring left as a ghost
@@ -66,6 +67,8 @@ function stripFrame(n, narrow) {
   const bot = top + sizeOf(n, narrow).plot;
   return { H: bot + 30, top, bot, base: bot + 6 };
 }
+// The plot's inset from each side of its strip (CSS pixels): past it, a drag is past the strip's end (grip).
+const INSET = 4;
 // The usual $0 gutter, wide and narrow; and the most times the strips widen it for a $0 pile before they stop.
 const GUTTER = { wide: 20, narrow: 12 };
 const WIDEN = 8;
@@ -96,7 +99,7 @@ export function stripLayout(group, { W, dpr, domain }) {
   let gutter = GUTTER[narrow ? 'narrow' : 'wide'];
   let out = null;
   for (let tries = 0; tries <= WIDEN; tries++) {
-    const scale = shareScale({ x0: 4, x1: W - 4, gutter, domain, px });
+    const scale = shareScale({ x0: INSET, x1: W - INSET, gutter, domain, px });
     const rows = {};
     let need = gutter;
     for (const id of ROW_IDS) {
@@ -149,6 +152,39 @@ export function hintSpot({ x, y, half, W, f, dots, s }) {
   return best ? { x: best.x, y: best.y } : { x: clamp(x, half, W - half), y: above - HINT_UP < 0 ? y + HANDLE_R + 9 + HINT_UP : above };
 }
 
+// The "actual" label's box at spot ({ x, y, anchor }: y its baseline; anchor 'middle', 'start' or 'end'), half its width
+// across (CSS pixels; 11 px type: 9 over the baseline, 3 under).
+export function labelBox({ x, y, anchor }, half) {
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - 2 * half : x - half;
+  return { left, right: left + 2 * half, top: y - 9, bottom: y + 3 };
+}
+
+// Where the "actual" label stands by the hospital's ring ({ x, y, r }) once the row is hypothetical: over the ring, as
+// it always has, unless that would meet what marks the what-if (avoid: boxes, the net's "What if" mark and its label or a
+// handle's capsule, kept 2 px clear); then beside the ring level with it, on the side away from the mark (markX) and
+// then the other, a step further out at a time (up to GHOST_OUT px); then under the ring. Each inside the strip, across
+// its width W and above its axis (f: stripFrame's). With nowhere clear, over the ring. half: the label's half width.
+// Returns { x, y, anchor }. Pure.
+const GHOST_STEP = 6;
+const GHOST_OUT = 36;
+export function ghostSpot({ ring, half, avoid, W, f, markX }) {
+  const mid = clamp(ring.x, half, W - half);
+  const over = { x: mid, y: ring.y - ring.r - 8, anchor: 'middle' };
+  const side = (dir) => {
+    const out = [];
+    for (let k = 0; k <= GHOST_OUT; k += GHOST_STEP) out.push({ x: ring.x + dir * (ring.r + 5 + k), y: ring.y + 4, anchor: dir < 0 ? 'end' : 'start' });
+    return out;
+  };
+  const sides = markX >= ring.x ? [...side(-1), ...side(1)] : [...side(1), ...side(-1)];
+  const under = [0, GHOST_STEP, 2 * GHOST_STEP].map((k) => ({ x: mid, y: ring.y + ring.r + 13 + k, anchor: 'middle' }));
+  const fits = (spot) => {
+    const b = labelBox(spot, half);
+    if (b.left < 0 || b.right > W || b.top < 0 || b.bottom > f.base) return false;
+    return !avoid.some((a) => b.left < a.right + 2 && b.right > a.left - 2 && b.top < a.bottom + 2 && b.bottom > a.top - 2);
+  };
+  return [over, ...sides, ...under].find(fits) ?? over;
+}
+
 function el(tag, attrs = {}, parent = null) {
   const node = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
@@ -179,21 +215,21 @@ function handleOf(svg, fill, hint) {
 
 // mountStrips(root, options): root is the #whatif section. Options: h (this hospital), peers (its group) and figures
 // (what they show: hub/hospital/peers.js peerFigures), domain (the share axis's [lo, hi] for the actual figures: the
-// tight one), wide (the axis that also holds every figure the what-if can show for h), fill (the page's copy filler),
-// still (reduced motion), handles (the rows that get a what-if handle: 'hrrp', 'hacrp', 'hvbp'). Returns:
+// data's own), fill (the page's copy filler), still (reduced motion), handles (the rows that get a what-if handle:
+// 'hrrp', 'hacrp', 'hvbp'). Returns:
 //   update(peers, figures) another group: the same dots move
-//   setWide(on, animate)  the wide axis (on) or the tight one: every part glides there together (animate, and not under
-//                        reduced motion), or moves at once
+//   setAxis(axis, animate) the axis to draw ([lo, hi]): every part glides there together (animate, and not under reduced
+//                        motion), or moves at once
 //   setScenario(s)       a what-if: s is { hrrp, hacrp, hvbp, net } in percent of pay, a value only for each row that
 //                        differs from the actual (or null for none). A row's handle moves to its value, the net gets a
 //                        hollow mark, and the actual's ring stays as a ghost.
 //   handle(id)           the row's handle (an SVG <g role="slider">), or null
-//   shareAt(id, clientX) the share of pay (percent) under a point on the row's strip, or null before it is laid out
+//   grip(id)             a drag's reading of the row's strip, fixed on the axis drawn now (null before it is laid out):
+//                        a function of a client x giving { share, past }, the percent of pay there and -1 or 1 when the
+//                        point is past the strip's left or right end (else 0)
 //   nudge()              wiggles the first handle once (not under reduced motion), once any glide has ended
 // A press on a handle lands a glide at once, so the handle then stays where it is under the pointer.
-export function mountStrips(root, { h, peers, figures, domain: tight, wide: wideAxis = tight, fill, still, handles = [] }) {
-  // The wide axis, or the tight one itself when the what-if reaches no further.
-  const wide = wideAxis[0] === tight[0] && wideAxis[1] === tight[1] ? tight : wideAxis;
+export function mountStrips(root, { h, peers, figures, domain: tight, fill, still, handles = [] }) {
   const list = root.querySelector('.hh__rows');
   const hidden = { 'aria-hidden': 'true' };
   // The first handle carries the hint.
@@ -230,7 +266,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   let group = peers;
   let shows = figures;
   let scenario = null;
-  // The axis drawn: tight until the what-if opens (setWide).
+  // The axis drawn: the data's own until a hypothetical figure needs more (setAxis).
   let domain = tight;
 
   // The strip's frame for its size: the $0 gutter (a unit rect its transform stretches), the layers for the ticks' lines
@@ -435,17 +471,35 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
     const y = moved ? (st.f.top + st.f.bot) / 2 : st.at.y;
     st.me.classList.toggle('st__me--ghost', moved);
     st.ghost.style.display = moved ? '' : 'none';
-    if (moved) st.ghost.style.transform = `translate(${round(st.at.x)}px, ${round(st.at.y - st.at.r - 8)}px)`;
     if (st.handle) {
       st.handle.g.style.display = '';
       st.handle.g.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
       if (st.handle.hint) placeHint(st, st.handle.hint, x, y);
       st.handle.dot.setAttribute('class', `st__hd ${signClass(moved ? v : h.est.pct[ROW_KEY[st.id]])}`);
       st.hyp.style.display = 'none';
-      return;
+    } else {
+      st.hyp.style.display = moved ? '' : 'none';
+      if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
     }
-    st.hyp.style.display = moved ? '' : 'none';
-    if (moved) st.hyp.style.transform = `translate(${round(x)}px, ${round(y)}px)`;
+    if (moved) placeGhost(st, x, y);
+  }
+
+  // The "actual" label by the hospital's ring, clear of what marks the what-if at (x, y): the handle's capsule, or the
+  // net's "What if" mark and its label (ghostSpot; the labels' half widths measured once their face is in).
+  let ghostHalf = 0;
+  let markHalf = 0;
+  function placeGhost(st, x, y) {
+    if (!ghostHalf) ghostHalf = st.ghost.getComputedTextLength() / 2 + 1;
+    const w = HANDLE_R + HANDLE_REACH + 5;
+    let avoid;
+    if (st.handle) avoid = [{ left: x - w, right: x + w, top: y - HANDLE_R - 5, bottom: y + HANDLE_R + 5 }];
+    else {
+      if (!markHalf) markHalf = st.hyp.querySelector('text').getComputedTextLength() / 2 + 1;
+      avoid = [{ left: x - 10, right: x + 10, top: y - 10, bottom: y + 10 }, { left: x - markHalf, right: x + markHalf, top: y - 14 - 10, bottom: y - 14 + 4 }];
+    }
+    const spot = ghostSpot({ ring: { x: st.at.x, y: st.at.y, r: Number(st.me.getAttribute('r')) || st.at.r + 3.5 }, half: ghostHalf, avoid, W: st.W, f: st.f, markX: x });
+    st.ghost.setAttribute('text-anchor', spot.anchor);
+    st.ghost.style.transform = `translate(${round(spot.x)}px, ${round(spot.y)}px)`;
   }
 
   // The hint by the handle at (x, y), clear of the strip's dots where it can be (hintSpot; its half width measured once its
@@ -572,15 +626,23 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
   if (document.fonts) {
     document.fonts.ready.then(() => {
       hintHalf = 0;
+      ghostHalf = 0;
+      markHalf = 0;
       for (const st of strips) whatIf(st);
       drawThread();
     });
   }
 
-  // The share under a client x on a strip (the scale's invert).
-  function shareAt(id, clientX) {
+  // A drag's reading of a strip, on the scale drawn as the drag begins: the axis widening mid-drag (for a figure it moves
+  // past the end) never changes the value under a held pointer, so it never feeds back on itself.
+  function grip(id) {
     const st = strips.find((s) => s.id === id);
-    return st?.scale ? st.scale.invert(clientX - st.svg.getBoundingClientRect().left) : null;
+    const scale = st?.scale;
+    if (!scale) return null;
+    return (clientX) => {
+      const x = clientX - st.svg.getBoundingClientRect().left;
+      return { share: scale.invert(x), past: x < INSET ? -1 : x > st.W - INSET ? 1 : 0 };
+    };
   }
 
   const first = strips.find((st) => st.handle);
@@ -611,9 +673,8 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       shows = nextFigures;
       all(true);
     },
-    setWide(on, animate = true) {
-      const next = on ? wide : tight;
-      if (next === domain) return;
+    setAxis(next, animate = true) {
+      if (next[0] === domain[0] && next[1] === domain[1]) return;
       domain = next;
       all(animate);
     },
@@ -622,7 +683,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, wide: wide
       for (const st of strips) whatIf(st);
     },
     handle: (id) => strips.find((st) => st.id === id)?.handle?.g ?? null,
-    shareAt,
+    grip,
     nudge,
   };
 }

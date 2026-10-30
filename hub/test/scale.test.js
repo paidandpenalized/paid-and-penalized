@@ -1,11 +1,12 @@
 // The share axis the hub's dot charts share (hub/client/scale.js): the domain every hospital's percents fit in, the split
-// scale that keeps exactly $0 in a gutter of its own, an axis part way through a move, and which axis a hospital page's
-// strips draw as the reader opens and resets the what-if. Synthetic hospitals, plus one check on the real data.
+// scale that keeps exactly $0 in a gutter of its own, an axis part way through a move, the axis that holds a what-if's
+// figures, and which axis a hospital page's strips and swarm draw as the reader changes, drags and resets the what-if.
+// Synthetic hospitals, plus one check on the real data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { mixScale, shareDomain, shareScale, stripAxis, tickText, ticksBetween, whatIfAxis, wholePercents } from '../client/scale.js';
+import { holdingAxis, mixScale, shareDomain, shareScale, stripAxis, tickText, ticksBetween, wholePercents } from '../client/scale.js';
 
 // An invented estimated hospital with these percents of its pay (and one with no estimate, which the domain skips).
 const est = (hrrp, hac, hvbp) => ({ est: { pct: { hrrp, hac, hvbp, net: hrrp + hac + hvbp } } });
@@ -17,13 +18,6 @@ test('shareDomain: the lowest and highest percent of any program or the net, pad
   // The domain always holds $0, even when every hospital is on one side.
   assert.deepEqual(shareDomain([est(-1, 0, 0)]), [-1.1, 0.1]);
   assert.deepEqual(shareDomain([est(0, 0, 0.42)]), [-0.1, 0.6]);
-});
-
-test('shareDomain holds extra values too (a hospital page\'s what-if figures), padded and rounded the same way', () => {
-  assert.deepEqual(shareDomain([est(-1, 0, 0.5)], [-4.95, 2.01]), [-5.1, 2.2]);
-  // Extra values inside the hospitals' own span change nothing.
-  assert.deepEqual(shareDomain([est(-2.78, -1, 0.5), est(0, 0, 3.09)], [-1, 1]), [-3.4, 3.2]);
-  assert.deepEqual(shareDomain([est(0, 0, 0.42)], []), [-0.1, 0.6]);
 });
 
 test('shareDomain on the real data holds every program\'s percent and the net of every estimated hospital', () => {
@@ -58,17 +52,45 @@ test('shareScale: $0 sits mid-gutter, cuts left of it and bonuses right, linear 
   assert.deepEqual([s.invert(0), s.invert(700)], [-4, 2]);
 });
 
-test('whatIfAxis: a chart keeps its own axis until a hypothetical lies past it, then the wide one until the what-if ends', () => {
-  const actual = [-3.9, 3.2];
-  const wide = [-5.8, 4.4];
-  const at = (pct, now) => whatIfAxis(pct, { actual, wide, now });
-  assert.equal(at(null, actual), actual, 'no what-if');
-  assert.equal(at(-2, actual), actual, 'a value on its own axis');
-  assert.equal(at(-3.9, actual), actual, 'its end is on it');
-  assert.equal(at(-4.5, actual), wide, 'past its cut end');
-  assert.equal(at(4, actual), wide, 'past its bonus end');
-  assert.equal(at(-2, wide), wide, 'back on the own axis mid-what-if: still wide, no back and forth');
-  assert.equal(at(null, wide), actual, 'the what-if ends: its own again');
+test('holdingAxis: the data\'s own axis while every value lies on it; past it, widened just enough on that side to a whole percent', () => {
+  const tight = [-3.9, 3.2];
+  assert.equal(holdingAxis(tight, []), tight, 'no value: the same axis');
+  assert.equal(holdingAxis(tight, [-2, 0, 3.2, -3.9]), tight, 'values on it, its ends included: the same axis');
+  assert.equal(holdingAxis(tight, [NaN, null, undefined, Infinity]), tight, 'nothing that is not a number moves it');
+  // Past an end: out to the first whole percent a tenth of a point beyond the value, on that side alone.
+  assert.deepEqual(holdingAxis(tight, [4.26]), [-3.9, 5]);
+  assert.deepEqual(holdingAxis(tight, [3.85]), [-3.9, 4], 'just enough: the next whole percent past it and its margin');
+  assert.deepEqual(holdingAxis(tight, [3.95]), [-3.9, 5], 'a value within the margin of a whole percent goes one further');
+  assert.deepEqual(holdingAxis(tight, [-5.67]), [-6, 3.2]);
+  assert.deepEqual(holdingAxis(tight, [-4.2, 3.4, -1]), [-5, 4], 'both sides at once, each for its own farthest value');
+  assert.deepEqual(holdingAxis(tight, [-4.2, -5.1]), [-6, 3.2], 'the farthest value on a side sets it');
+  // Every value it was given lies on what it returns, with its margin.
+  for (const v of [-7.31, -4.0, -3.91, 3.21, 4, 6.99]) {
+    const [lo, hi] = holdingAxis(tight, [v]);
+    assert.ok(v - 0.1 >= lo - 1e-9 && v + 0.1 <= hi + 1e-9 && Number.isInteger(v < 0 ? lo : hi), `${v} on [${lo}, ${hi}]`);
+  }
+});
+
+test('stripAxis: what the values need while no pointer holds a handle; while one does, it only grows, and settles on release', () => {
+  const tight = [-3.9, 3.2];
+  const start = { held: 0, want: tight, axis: tight };
+  // events: 'press', 'release', or the axis the values need ('values').
+  const run = (events, s = start) => events.map((e) => (s = stripAxis(s, Array.isArray(e) ? { type: 'values', want: e } : { type: e })).axis);
+  assert.deepEqual(run([]), [], 'at rest: nothing asked');
+  assert.deepEqual(run([tight]), [tight], 'values on the data\'s axis (a what-if opened, a step inside it): no change');
+  assert.equal(stripAxis(start, { type: 'values', want: [-3.9, 3.2] }).axis, tight, 'the same axis, as the same array');
+  assert.deepEqual(run([[-3.9, 5], tight]), [[-3.9, 5], tight], 'with nothing held: wider for a value past it, and back');
+  // A drag: wider while held as values pass the end, never narrower; on release, what the values need then.
+  assert.deepEqual(run(['press', [-3.9, 4], [-3.9, 5], tight, [-3.9, 4], 'release']), [tight, [-3.9, 4], [-3.9, 5], [-3.9, 5], [-3.9, 5], [-3.9, 4]]);
+  assert.deepEqual(run(['press', [-5, 3.2], [-3.9, 4], 'release']), [tight, [-5, 3.2], [-5, 4], [-3.9, 4]], 'each side grows for itself');
+  // A reset (Escape) during a drag: the axis waits for the release.
+  assert.deepEqual(run([[-3.9, 5], 'press', tight, 'release']), [[-3.9, 5], [-3.9, 5], [-3.9, 5], tight]);
+  // Two pointers on two handles: one letting go leaves the axis as held; it settles when the last does.
+  assert.deepEqual(run(['press', 'press', [-3.9, 5], tight, 'release', 'release']), [tight, tight, [-3.9, 5], [-3.9, 5], [-3.9, 5], tight]);
+  assert.deepEqual(run(['release', 'release', 'press', [-3.9, 5], tight, 'release']), [tight, tight, tight, [-3.9, 5], [-3.9, 5], tight], 'a stray release counts nothing');
+  const s = stripAxis(start, { type: 'press' });
+  assert.deepEqual(s, { held: 1, want: tight, axis: tight });
+  assert.deepEqual(stripAxis(s, { type: 'unknown' }), s, 'anything else changes nothing');
 });
 
 test('wholePercents: the whole percents in the domain, in order', () => {
@@ -143,27 +165,4 @@ test('ticksBetween: the ticks of an axis part way between two; those both show m
     const xs = at(q).map((t) => t.x);
     assert.deepEqual(xs, [...xs].sort((p, r) => p - r), `in order at ${q}`);
   }
-});
-
-test('stripAxis: the strips stay tight until the what-if opens, widen once, and are tight again after a reset; never in a drag', () => {
-  const run = (events, s = { open: false, held: 0, wide: false }) => events.map((e) => (s = stripAxis(s, e)).wide);
-  assert.deepEqual(run([]), [], 'at rest: nothing asked');
-  assert.equal(stripAxis({ open: false, held: 0, wide: false }, 'release').wide, false, 'tight before the what-if opens');
-  assert.deepEqual(run(['open']), [true], 'wide once it opens (the button, a link to it, a control\'s focus or input)');
-  assert.deepEqual(run(['open', 'open', 'open']), [true, true, true], 'more input while open changes nothing');
-  assert.deepEqual(run(['open', 'reset']), [true, false], 'tight again after a reset');
-  assert.deepEqual(run(['open', 'reset', 'open']), [true, false, true], 'and wide when the reader opens it again');
-  // A drag begun on the tight axis keeps it while held (the handle's focus and the drag's input open the what-if), and
-  // the strips widen once it ends.
-  assert.deepEqual(run(['press', 'open', 'open', 'release']), [false, false, false, true], 'a first drag: tight until released');
-  // A reset (Escape) during a drag waits for its end too.
-  assert.deepEqual(run(['open', 'press', 'reset', 'open', 'reset', 'release']), [true, true, true, true, true, false]);
-  assert.deepEqual(run(['open', 'press', 'release']), [true, true, true], 'a drag on the wide axis keeps it');
-  // Two pointers on two handles: one letting go leaves the other's axis alone; the change waits for the last.
-  assert.deepEqual(run(['press', 'press', 'open', 'release', 'release']), [false, false, false, false, true]);
-  assert.deepEqual(run(['open', 'press', 'press', 'reset', 'release', 'release']), [true, true, true, true, true, false]);
-  assert.deepEqual(run(['release', 'release', 'press', 'open', 'release']), [false, false, false, false, true], 'a stray release counts nothing');
-  const s = stripAxis({ open: false, held: 0, wide: false }, 'open');
-  assert.deepEqual(s, { open: true, held: 0, wide: true });
-  assert.deepEqual(stripAxis(s, 'unknown'), s, 'anything else changes nothing');
 });

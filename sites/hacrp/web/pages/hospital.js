@@ -1,6 +1,7 @@
 // One hospital's page, after Thirty Day Readmissions' hospital record and beyond it. The top: the record card (name,
-// place with the state's outline and the hospital's dot, type, CMS's score and decision, Care Compare's stars) beside the
-// verdict (a stamp, the summary, CMS's line in plain words and the line bar), over a bold rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
+// place, type, CMS's score and decision, Care Compare's stars; the state's outline and the hospital's dot behind it)
+// beside the verdict (a stamp, the summary, CMS's line in plain words and the line bar), the two the same height over a
+// bold rule. Then numbered figures, each beside its words: where the score came from (each measure's value among every
 // hospital's), how the parts add up (the worksheet and a waterfall to CMS's line), the money (the cliff, then the
 // statement line by line) for an estimated hospital, the what-if, the groups the
 // hospital belongs to, and its nearest hospitals. The foot: the data facts and downloads beside the citation. Odd rows
@@ -100,29 +101,35 @@ function locationText(view) {
   return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
 }
 
-// The state outline with the hospital's dot (in the penalty red), small, in the Location field beside or under the words
-// it shows, so the dot never sits on a field's words; drawn at the width it shows at (LOCATOR_W CSS pixels: the
-// stylesheet's .hosp__loc), so the dot keeps its size on any state. null where geo.js draws no map (a territory, no point,
-// or a point the outline doesn't hold). How the dot was placed is in Methods; the page's data list credits the geocoder
-// for a geocoded address.
-const LOCATOR_W = 84;
-const LOCATOR_DOT = 0.8;
+// The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red); null
+// where geo.js draws no map (a territory, no point, or a point the outline doesn't hold). The record's script
+// (client/record.js) places the outline, smaller if it must, so the dot and its halo stand clear of the fields' words;
+// without scripts the dot is left out (styles.css). How the dot was placed is in Methods; the page's data list credits
+// the geocoder for a geocoded address.
+const WATERMARK_DOT = 1.25;
 function locatorMap(view, shapes) {
   if (!shapes || !view.point) return null;
-  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), width: LOCATOR_W, dot: LOCATOR_DOT });
+  return stateMap({ shapes, code: view.state, point: view.point, label: fill('mapLabel', { state: STATE_NAMES[view.state] ?? view.state }), dot: WATERMARK_DOT });
 }
 
-// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields: the hospital, then where
-// (with the state's outline and the hospital's dot, map: its markup, or null) and what it is, then CMS's score and
-// decision beside this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars.
-// Each row is as tall as its fields' words.
+// The record card's own script (client/record.js), on a page whose card has the state's outline.
+function recordScript(assets) {
+  const script = assets.js['hacrp-record'];
+  if (!script) throw new TypeError('hospitalPage: assets.js must hold the hacrp-record module for the record card\'s map');
+  return script;
+}
+
+// The record card, Thirty Day Readmissions' red-ruled form: a title bar, then numbered fields over the state's
+// outline (map: its markup, or null): the hospital, then where and what it is, then CMS's score and decision beside
+// this site's estimate of the money (money: hospitalMoney()), a row that reads score, decision, dollars. The card is as
+// tall as the verdict beside it.
 function recordCard(view, { careSource, map, money }) {
   const fy = String(view.fy);
   const type = typeText(view.profile);
   // Each field's formField options, numbered in order once the fields with nothing to show are left out.
   const specs = [
     { label: t('fieldHospital'), value: view.name, as: 'h1', cls: 'hosp__name', wide: true },
-    { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc', extra: map && html`<div class="hosp__loc" aria-hidden="true">${map}</div>` },
+    { label: t('fieldLocation'), value: locationText(view), note: view.county, fieldCls: 'f-loc' },
     type && { label: t('fieldType'), value: type, size: 'sm', fieldCls: 'f-type' },
     starsSpec(view, careSource),
     view.scored
@@ -133,7 +140,8 @@ function recordCard(view, { careSource, map, money }) {
   ].filter(Boolean);
   const [name, ...rest] = specs.map((spec, i) => formField({ no: i + 1, ...spec }));
   return html`<div class="form hosp__id">
-${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
+${map && html`<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j">${map}</span></div>
+`}${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: view.ccn }))}
 ${name}
 <div class="hosp__fields">
 ${rest.map((markup) => html`${markup}
@@ -345,7 +353,7 @@ ${citation({ fy: view.fy, title: heading, path: view.path, source })}
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js.cite, assets.js.share, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(what ? [what.script] : [])],
+    scripts: [assets.js.figure, assets.js.cite, assets.js.share, ...(searchUrl ? [assets.js['hacrp-search']] : []), ...(map ? [recordScript(assets)] : []), ...(what ? [what.script] : [])],
     assets,
     ...shellOf({ fy: view.fy, current: 'map', searchUrl, hospital: followed({ view, money, master }) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + view.path, isBasedOn: source.landingPage },

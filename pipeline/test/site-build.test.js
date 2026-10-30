@@ -8,7 +8,7 @@ import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
-import { SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
+import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
 import { createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
@@ -61,6 +61,29 @@ test('buildAssets bundles each JS entry as minified ESM under a content hash and
     assert.deepEqual((await buildAssets({ outDir: out, entries: {} })).js, {});
     await assert.rejects(buildAssets({ outDir: out, entries: { '../x': entry } }), /entry name/);
   }));
+
+// A classic entry (the head's theme script) runs as a plain script: one self-contained function call, so nothing it
+// bundles becomes a global name, and no import or export, which a classic script can't parse.
+test('buildAssets bundles a classic entry as one function call with no import, export or top-level name; an unknown name throws', () =>
+  withTemp(async (dir) => {
+    const helper = join(dir, 'helper.js');
+    writeFileSync(helper, 'export const mark = (root, v) => { root.dataset.zz = v; };\nexport const unused = 1;\n');
+    const entry = join(dir, 'early.js');
+    writeFileSync(entry, "import { mark } from './helper.js';\nconst value = 'zz';\nmark(document.documentElement, value);\n");
+    const out = join(dir, 'dist');
+    const { js } = await buildAssets({ outDir: out, entries: { early: entry, demo: helper }, classic: ['early'] });
+    assert.match(js.early, /^\/assets\/early\.[0-9a-f]{8}\.js$/);
+    const text = readFileSync(join(out, js.early), 'utf8').trim();
+    assert.match(text, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one arrow function, called');
+    assert.doesNotMatch(text, /\b(import|export)\b/);
+    assert.match(readFileSync(join(out, js.demo), 'utf8'), /export\s*\{/, 'the other entries stay modules');
+    await assert.rejects(buildAssets({ outDir: out, entries: { demo: helper }, classic: ['nope'] }), /classic entry "nope"/);
+  }));
+
+test('the build\'s one classic entry is the head\'s theme script', () => {
+  assert.deepEqual(CLASSIC_ENTRIES, ['theme']);
+  assert.equal(SHARED_ENTRIES.theme, 'web/client/theme.js');
+});
 
 test('buildAssets writes each named sheet (siteStyles) as its own minified CSS under a content hash, outside the shared bundle', () =>
   withTemp(async (dir) => {

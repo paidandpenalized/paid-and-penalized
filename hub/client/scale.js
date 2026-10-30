@@ -9,11 +9,10 @@ const PAD = 0.1;
 const PER = 10;
 
 // [lo, hi] in percent: the lowest and highest percent of pay of any program or the net among the estimated hospitals
-// (est.pct: engine/js/dollars/whatif.js pctOf) and of any extra value (a hospital page's: every percent its what-if can
-// show, hospital/whatif-state.js reach), each padded PAD and rounded outward to a tenth. Always holds 0.
-export function shareDomain(hospitals, extra = []) {
-  let lo = Math.min(0, ...extra);
-  let hi = Math.max(0, ...extra);
+// (est.pct: engine/js/dollars/whatif.js pctOf), each padded PAD and rounded outward to a tenth. Always holds 0.
+export function shareDomain(hospitals) {
+  let lo = 0;
+  let hi = 0;
   for (const h of hospitals) {
     if (!h.est) continue;
     for (const v of Object.values(h.est.pct)) {
@@ -25,21 +24,38 @@ export function shareDomain(hospitals, extra = []) {
   return [Math.floor((lo - PAD) * PER + 1e-9) / PER, Math.ceil((hi + PAD) * PER - 1e-9) / PER];
 }
 
-// The axis a chart under a what-if draws (each a domain [lo, hi]): its own (actual) while there is no hypothetical value
-// (pct null) or the value lies on it; wide once a value lies past it, kept (now: the axis drawn so far) until the what-if
-// ends, so the axis changes at most twice in a what-if, never back and forth with each value.
-export const whatIfAxis = (pct, { actual, wide, now }) => (pct === null ? actual : pct < actual[0] || pct > actual[1] ? wide : now);
+// How far past a hypothetical value an axis widened for it reaches before its end rounds out to a whole percent
+// (percentage points), so its mark never sits on the axis's very end.
+const HOLD = 0.1;
 
-// Which axis a hospital page's strips draw as the reader acts: s is { open, held, wide } (the what-if open, how many
-// pointers hold a handle in a drag, the strips on the wide axis: every figure the what-if can show), event one of 'open'
-// (the "What if?" button, a link to it, a control's focus or input), 'reset', 'press' (a pointer takes a handle) and
-// 'release' (it lets go). Tight (the actual figures, the full width for the data) until the what-if opens, wide while it
-// is open; while any drag lasts the axis stays as it was, so nothing moves under a pointer, and the change waits for the
-// last to end.
-export function stripAxis(s, event) {
-  const open = event === 'open' ? true : event === 'reset' ? false : s.open;
-  const held = Math.max(0, s.held + (event === 'press') - (event === 'release'));
-  return { open, held, wide: held ? s.wide : open };
+// The axis a chart draws to show a what-if's figures (values, percent of pay): its own (axis, [lo, hi]: the data's)
+// while every value lies on it, the same array; else widened only on the side a value lies past, just enough to hold
+// the farthest one with HOLD to spare, out to a whole percent (a tick). Anything not a finite number is no value.
+export function holdingAxis(axis, values) {
+  let [lo, hi] = axis;
+  for (const v of values) {
+    if (!Number.isFinite(v)) continue;
+    // The epsilons keep a value whose margin lands on a whole percent from rounding a whole percent further on error.
+    if (v < axis[0]) lo = Math.min(lo, Math.floor(v - HOLD + 1e-9));
+    if (v > axis[1]) hi = Math.max(hi, Math.ceil(v + HOLD - 1e-9));
+  }
+  return lo === axis[0] && hi === axis[1] ? axis : [lo, hi];
+}
+
+const span = (a, b) => [Math.min(a[0], b[0]), Math.max(a[1], b[1])];
+const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+
+// Which axis a hospital page's strips (or its swarm) draw as the reader acts: s is { held, want, axis } (how many
+// pointers hold a handle in a drag, the axis the what-if's figures need now: holdingAxis, and the axis drawn), event
+// { type, want }: 'values' (the figures changed; want: the axis they need), 'press' (a pointer takes a handle) or
+// 'release' (it lets go). With nothing held the axis is what the figures need, so opening the what-if changes nothing
+// and a reset goes back to the data's own. While a drag lasts it only grows, so a figure is never drawn past its end and
+// the axis never goes back and forth under a held pointer; once the last pointer lets go it settles to what the figures
+// need then (a reset made during the drag included). The axis keeps its array while its ends stay the same.
+export function stripAxis(s, { type, want = s.want }) {
+  const held = Math.max(0, s.held + (type === 'press') - (type === 'release'));
+  const next = held ? span(s.axis, want) : want;
+  return { held, want, axis: same(next, s.axis) ? s.axis : next };
 }
 
 // The whole percents in a domain [lo, hi], in order: where an axis's ticks and lines stand; and a tick's label (v in

@@ -6,7 +6,7 @@
 // hospital-acquired conditions cut applies. A factor the reader sets keeps four decimals (CMS prints Readmissions' to
 // four); one that reads the same as the hospital's actual factor to four decimals is the actual factor, so stepping back
 // or typing the factor shown leaves the page unchanged. A program the hospital is not in cannot be adjusted.
-import { pctOf, programDollars } from '../../../engine/js/dollars/whatif.js';
+import { programDollars } from '../../../engine/js/dollars/whatif.js';
 import { has } from '../../../engine/js/has.js';
 import { median } from '../../../engine/js/peers.js';
 import { clamp, toUnit } from '../../../engine/js/stats.js';
@@ -187,19 +187,8 @@ export const outcome = (state, h) => programDollars(h.est, { hrrpFactor: state.h
 // percent of pay (pctOf). A drag reads a share off the strip's axis and sets the factor at it.
 export const factorAt = (h, pct) => 1 + ((pct / 100) * h.est.total) / h.est.base;
 
-// Every percent of pay the what-if can show for h (pctOf: each program's and the net's), at each corner of what a reader
-// may set: each factor at either end (extent's; its own where h is not in the program), the cut on and off. Each
-// program's dollars and the net only grow with a factor, and the cut only takes, so the corners hold the lowest and
-// highest of each. The share axis holds them all (hub/client/scale.js shareDomain), so no hypothetical sits past its end
-// and a drag reaches every value.
-export function reach(h, ctx) {
-  const own = initial(h);
-  const ends = (id) => extent(h, ctx, id) ?? [own[id]];
-  const out = [];
-  for (const hrrp of ends('hrrp')) {
-    for (const hvbp of ends('hvbp')) {
-      for (const hac of [true, false]) out.push(...Object.values(pctOf({ total: h.est.total, ...outcome({ hrrp, hvbp, hac }, h) })));
-    }
-  }
-  return out;
-}
+// The action a drag on a factor's strip makes (id 'hrrp' or 'hvbp'), from what the strip reads under the pointer
+// (strips.js grip: share, the percent of pay there; past, -1 or 1 past the left or right end of the strip, else 0): the
+// factor at that share, which reduce holds to the factor's ends; or, past an end, that end of the range, as Home or End
+// goes, so a drag reaches every factor the controls allow whatever axis the strips draw.
+export const dragAction = (h, id, { share, past }) => (past ? { type: 'end', id, dir: past } : { type: 'set', id, value: factorAt(h, share) });

@@ -204,17 +204,15 @@ export function footnoteLegend({ heading, lists }) {
 // null), the value (text or Safe; `as` sets its element, e.g. 'h1' for a record's name) and an optional note under
 // it. Fields sit in a .form grid, whose red rules box them. size: 'big' or 'sm' for the value, or 'text' for a sentence
 // in the body face; wide: the full row.
-// fieldCls: classes on the field's box (a page's layout hook); extra: markup after the note, in the field's box (a small
-// figure that belongs to the field, such as a locator map).
-export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null, fieldCls = '', extra = null }) {
+// fieldCls: classes on the field's box (a page's layout hook).
+export function formField({ no = null, label, value, note = null, size = null, wide = false, as = 'p', cls = '', id = null, fieldCls = '' }) {
   const valueClass = `field__value${size ? ` field__value--${size}` : ''}${cls ? ` ${cls}` : ''}`;
   const tag = /^(p|h1|div)$/.test(as) ? as : 'p';
   const shown = html`${raw(`<${tag} class="${escapeHtml(valueClass)}"${id ? ` id="${escapeHtml(id)}"` : ''}>`)}${value}${raw(`</${tag}>`)}`;
   return html`<div class="field${wide ? ' field--wide' : ''}${fieldCls ? ` ${fieldCls}` : ''}">
 <p class="field__label">${no === null ? '' : html`<span class="field__no">${String(no)}</span>`}${label}</p>
 ${shown}
-${note && html`<div class="field__note">${note}</div>`}${extra && html`
-${extra}`}</div>`;
+${note && html`<div class="field__note">${note}</div>`}</div>`;
 }
 
 // The record's title bar across the top of a .form: two runs of words, left and right (null: the left alone).

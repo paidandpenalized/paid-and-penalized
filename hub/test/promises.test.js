@@ -47,7 +47,7 @@ test('the front page, its directory\'s slips and its footer promise nothing', ()
   assertNoPromise(homePage({ hospitals: HOSPITALS, facts: FACTS, states: stateTotals(HOSPITALS), shapes: HUB.shapes, assets, robots: 'noindex' }), 'front page');
 });
 
-test('a hospital\'s page, with an estimate and in each variant, promises nothing (its empty row for another program included)', () => {
+test('a hospital\'s page, with an estimate and in each variant, promises nothing', () => {
   const kinds = [
     [(h) => h.est && h.est.vbpListed, 'a hospital with an estimate'],
     [(h) => h.status === 'maryland', 'a Maryland hospital'],
