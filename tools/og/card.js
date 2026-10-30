@@ -8,11 +8,11 @@
 // net cut, green for a net bonus, gray for none or no estimate. A program's card: the family and the program as a
 // kicker, the program's title, its address; its dots red where that program cut the hospital, gray otherwise. No
 // numbers and no byline on any card.
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { REPO_ROOT } from '../../pipeline/files.js';
+import { LIGHT_BLOCK } from '../../pipeline/site/assets.js';
 import { COPY } from '../../web/copy.js';
 import { html, raw } from '../../web/render/html.js';
 import { CARD_SIZE, SHARE_CARDS } from '../../web/share-card.js';
@@ -27,7 +27,6 @@ export const CARD_FONTS = Object.freeze({
 });
 
 // What the stamp records of a card's HTML and its PNG (render.js; the stale-card test).
-export const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
 // The map's box on the card (right of the words) and a dot's radius at the map's scale.
 const MAP_BOX = Object.freeze({ width: 450, height: 420 });
@@ -140,7 +139,7 @@ ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 // What the cards are drawn from, read from the repo: the light tokens, the fonts, and the hub's data asset as the build
 // writes it (hub/data.js hubModel, hub/asset.js hubAsset).
 export function cardInputs() {
-  const tokens = /^:root \{[^}]*\}/m.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[0];
+  const tokens = LIGHT_BLOCK.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[0];
   if (!tokens) throw new Error('web/styles/tokens.css: the light block not found');
   const fonts = Object.fromEntries(Object.keys(CARD_FONTS).map((f) => [f, readFileSync(`${REPO_ROOT}web/fonts/${f}.woff2`).toString('base64')]));
   const { hub, hospitals } = hubModel();

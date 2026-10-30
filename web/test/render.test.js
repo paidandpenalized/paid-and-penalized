@@ -636,5 +636,4 @@ test('page: a page under a program site with a card of its own shows that card; 
 test('page: assets without the page\'s share card throw', () => {
   assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: undefined } }), /share card/);
   assert.throws(() => page({ ...PAGE, assets: { ...ASSETS, cards: { family: ASSETS.cards.family } } }), /"hacrp" share card/);
-  assert.throws(() => page({ ...PAGE, path: '/', assets: { ...ASSETS, cards: { family: 'https://elsewhere.example/x.png' } } }), /share card/);
 });

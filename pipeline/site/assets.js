@@ -18,7 +18,10 @@ const FIRST = ['tokens.css', 'base.css', 'components.css'];
 // styles: sites/hacrp/web/generate.js).
 export const KIT_STYLES = Object.freeze(['web/styles/charts.css', 'web/styles/whatif.css']);
 
-export const hash8 = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8);
+export const sha256 = (data) => createHash('sha256').update(data).digest('hex');
+export const hash8 = (text) => sha256(text).slice(0, 8);
+// tokens.css's light block, `:root { ... }` at the start of a line; [1] holds its declarations.
+export const LIGHT_BLOCK = /^:root \{([^}]*)\}/m;
 
 const repoPath = (path) => (isAbsolute(path) ? path : REPO_ROOT + path);
 
@@ -43,7 +46,7 @@ const PRINT = /@media print \{\s*:root \{([^}]*)\}\s*\}/;
 export function stylesheet() {
   const files = readdirSync(STYLES).filter((f) => f.endsWith('.css') && !FIRST.includes(f) && !KIT_STYLES.includes(`web/styles/${f}`)).sort();
   const [tokens, ...rest] = [...FIRST, ...files].map((f) => readFileSync(STYLES + f, 'utf8'));
-  const light = /^:root \{([^}]*)\}/m.exec(tokens)?.[1];
+  const light = LIGHT_BLOCK.exec(tokens)?.[1];
   const dark = /:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/.exec(tokens)?.[1];
   const print = PRINT.exec(tokens);
   if (!light || !dark || !print) throw new Error('web/styles/tokens.css: the light block, the dark media block or the print block not found');

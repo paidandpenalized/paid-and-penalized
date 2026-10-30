@@ -37,7 +37,7 @@ export const feedbackFor = ({ path, address = SITE.origin + path }) => feedbackH
 // Harmless on a noindex page. The family's front page and each program's hub page are a website; every other page is
 // an article.
 const WEBSITES = new Set(['/', ...Object.values(SITE.sites).map((s) => s.path)]);
-const socialTags = ({ title, description, url, type, card, image }) => html`<meta property="og:type" content="${type}">
+const socialTags = ({ title, description, url, type, image, alt }) => html`<meta property="og:type" content="${type}">
 <meta property="og:site_name" content="${SITE.name}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
@@ -46,7 +46,7 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="${CARD_SIZE.width}">
 <meta property="og:image:height" content="${CARD_SIZE.height}">
-<meta property="og:image:alt" content="${SHARE_CARDS[card]}">
+<meta property="og:image:alt" content="${alt}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${image}">`;
 
@@ -54,8 +54,8 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 // sheets, the stylesheets of their own by name; js by entry name; cards, the share cards by id, web/share-card.js) and
 // the shell's facts (assets.shell: what the header and footer show on every page, computed once by the build). Every
 // page runs the theme's classic script in its head, before the stylesheets (web/client/theme.js: the reader's
-// light/dark choice for the visit, on <html> before the first paint). Its modules start with the shell's script, then the sticky header's (topbar.js), since every page wears that
-// header. scripts: the page's own module URLs, loaded in order after those two: a page with a figure
+// light/dark choice for the visit, on <html> before the first paint). Its modules start with the shell's script, then
+// the sticky header's (topbar.js), since every page wears that header. scripts: the page's own module URLs, loaded in order after those two: a page with a figure
 // (web/charts/figure.js) lists assets.js.figure, one with the citation block (components.js) assets.js.cite, then its
 // own. preloadFonts: font file names to preload (PRELOAD_FONTS). sheets: the names of the stylesheets of their own the
 // page links after the shared one, in order (a hub page's: ['hub']); render-blocking, as the shared one is, so the page
@@ -73,7 +73,7 @@ export function page({ title, description, path, address = SITE.origin + path, r
   if (!assets?.css || !assets.js?.theme || !assets.js.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, and the theme, shell and sticky-header script paths');
   if (!assets.shell) throw new TypeError('page: assets must hold the shell facts (the build computes them once, as ctx.assets.shell)');
   const card = shareCardOf(path);
-  if (typeof assets.cards?.[card] !== 'string' || !assets.cards[card].startsWith('/assets/')) throw new TypeError(`page: assets.cards must hold the "${card}" share card's path`);
+  if (!assets.cards?.[card]) throw new TypeError(`page: assets.cards must hold the "${card}" share card's path`);
   if (!scripts.every((src) => typeof src === 'string' && src)) throw new TypeError('page: every script must be a path');
   if ([assets.js.theme, assets.js.shell, assets.js.topbar].some((src) => scripts.includes(src))) throw new TypeError('page: every page loads the theme, shell and sticky-header scripts; leave them out of scripts');
   if (!preloadFonts.every((f) => typeof f === 'string' && FONT_NAME.test(f))) throw new TypeError('page: every preloaded font must be a font file name');
@@ -91,7 +91,7 @@ export function page({ title, description, path, address = SITE.origin + path, r
 <meta name="description" content="${description}">
 ${address === null ? '' : html`<link rel="canonical" href="${address}">
 `}${robots ? html`<meta name="robots" content="${robots}">` : ''}
-${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article', card, image: SITE.origin + assets.cards[card] })}
+${socialTags({ title, description, url: address, type: WEBSITES.has(path) ? 'website' : 'article', image: SITE.origin + assets.cards[card], alt: SHARE_CARDS[card] })}
 <meta name="color-scheme" content="light dark">
 <script src="${assets.js.theme}"></script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">

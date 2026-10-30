@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { CARD_SIZE, CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
-import { cardDots, cardHtml, cardInputs, sha256 } from '../og/card.js';
+import { sha256 } from '../../pipeline/site/assets.js';
+import { cardDots, cardHtml, cardInputs } from '../og/card.js';
 
 const INPUTS = cardInputs();
 const STAMP = readJson(REPO_ROOT + CARD_STAMP);

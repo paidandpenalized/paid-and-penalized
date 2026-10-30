@@ -7,7 +7,8 @@ import { writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { REPO_ROOT, isMain } from '../../pipeline/files.js';
 import { CARD_SIZE, CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
-import { CARD_FONTS, cardHtml, cardInputs, sha256 } from './card.js';
+import { sha256 } from '../../pipeline/site/assets.js';
+import { CARD_FONTS, cardHtml, cardInputs } from './card.js';
 
 // The problems with a drawn card, as strings (none: []): a face that did not load, and a line of words (each as wide
 // as its text) that runs into the map's gutter or the bottom rule's.
@@ -32,12 +33,12 @@ async function problemsOf(page) {
 
 export async function renderCards() {
   const inputs = cardInputs();
-  const cards = Object.keys(SHARE_CARDS).map((id) => ({ id, html: cardHtml(id, inputs) }));
   const browser = await chromium.launch({ channel: 'chrome' });
   const drawn = [];
   try {
     const page = await browser.newPage({ viewport: CARD_SIZE, deviceScaleFactor: 1, colorScheme: 'light' });
-    for (const { id, html } of cards) {
+    for (const id of Object.keys(SHARE_CARDS)) {
+      const html = cardHtml(id, inputs);
       await page.setContent(html, { waitUntil: 'load' });
       const problems = await problemsOf(page);
       if (problems.length) throw new Error(`share card "${id}": ${problems.join('; ')}; nothing written`);
@@ -53,10 +54,10 @@ export async function renderCards() {
     stamp[id] = { html: sha256(html), png: sha256(png) };
   }
   writeFileSync(REPO_ROOT + CARD_STAMP, `${JSON.stringify(stamp, null, 2)}\n`);
-  return drawn.map(({ id, png }) => ({ id, bytes: png.length }));
+  return drawn;
 }
 
 if (isMain(import.meta.url)) {
-  for (const { id, bytes } of await renderCards()) console.log(`${cardFile(id)}: ${bytes} bytes`);
+  for (const { id, png } of await renderCards()) console.log(`${cardFile(id)}: ${png.length} bytes`);
   console.log(`and ${CARD_STAMP}; commit them with the change that moved them`);
 }
