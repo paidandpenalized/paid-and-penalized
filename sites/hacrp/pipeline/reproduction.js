@@ -21,7 +21,7 @@ export function reproductionReport(data) {
   const missed = checks.filter((c) => !c.check.ok);
   const failedDollars = dollars.checks.filter((c) => !c.pass);
   const lines = [
-    `**HACRP FY${fy}**: CMS's file \`${source.id}\` (released ${source.pdcReleased}), ${count(hospitals.length)} hospitals; `
+    `**HACRP FY${fy}**: CMS's file \`${source.id}\` (released ${source.pdcReleased ?? 'on a date CMS did not give'}), ${count(hospitals.length)} hospitals; `
       + `${count(a1.b.n)} scored with a decision, ${count(a1.b.yes)} of them cut.`,
     '',
     'Acceptance A1 (the page build stops unless it holds):',

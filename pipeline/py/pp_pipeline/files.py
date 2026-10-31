@@ -66,7 +66,7 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     `note` is added to the line that reports a write. `root` is the pinned directory (a test's own). Returns the exit
     code: 0 written, 1 refused."""
     sha = hashlib.sha256(data).hexdigest()
-    if (len(data), sha) != (entry["bytes"], entry["sha256"]):
+    if not pin_matches(entry, data):
         print(f"derived {len(data)} bytes, sha256 {sha}; the manifest entry {entry['id']} records {entry['bytes']} "
               f"bytes, sha256 {entry['sha256']}: nothing written, {entry['path']} left as it was")
         return 1

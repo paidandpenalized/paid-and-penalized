@@ -250,6 +250,22 @@ class PullRequest(Repo):
         self.assertIn("data/pinned/manifest.json", self.git("status", "--porcelain"))
         self.assertEqual(self.called(["git", "commit"]) + self.called(["git", "push"]) + self.called(["gh", "pr"]), [])
 
+    def test_a_failure_with_nothing_changed_stays_on_main_and_says_whose_it_is(self):
+        self.emit_fails = True
+        self.serve(demo_csv(2026), "FY_2026_Demo.csv")
+        code, printed, _ = self.refresh(pr=True)
+        self.assertEqual(code, 1)
+        self.assertIn("the failure is main's own", printed)
+        self.assertEqual(self.git("branch", "--show-current").strip(), "main")
+
+    def test_pr_from_main_refuses_when_todays_refresh_branch_exists(self):
+        self.git("branch", f"refresh-demo-{TODAY}")
+        self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
+        with self.assertRaises(rs.RefreshError) as caught:
+            self.refresh(pr=True)
+        self.assertIn("already exists", str(caught.exception))
+        self.assertEqual([c for c in self.calls if c[0] == "fetch"], [])
+
     def test_a_change_gate_refusal_stops_before_the_push(self):
         self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
         fake = self.run_fake
@@ -279,6 +295,10 @@ class TestSummary(unittest.TestCase):
     def test_the_reporters_heading_is_not_a_failing_test(self):
         _, failing = refresh.test_summary("✖ a check (1ms)\nℹ fail 1\n✖ failing tests:\n\n✖ a check (1ms)\n")
         self.assertEqual(failing, ["a check"])
+
+    def test_tap_output_is_read_too(self):
+        line, failing = refresh.test_summary("not ok 3 - a check\n# pass 8\n# fail 1\nRan 2 tests in 0.1s\n\nOK\n")
+        self.assertEqual((line, failing), ("Node: 8 passed, 1 failed. Python: 2 tests, OK.", ["a check"]))
 
     def test_python_tests_that_never_ran_say_so(self):
         line, _ = refresh.test_summary("ℹ pass 9\nℹ fail 1\nmake: *** [test] Error 1\n")

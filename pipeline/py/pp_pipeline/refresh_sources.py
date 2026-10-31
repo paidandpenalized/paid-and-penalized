@@ -153,11 +153,12 @@ def _table(source, data):
     return header, rows
 
 
-def file_year(source, data):
-    """The one four-digit fiscal year in a source's file (bytes); None for a source without a year column."""
+def file_year(source, data, table=None):
+    """The one four-digit fiscal year in a source's file (bytes, or its _table when already read); None for a source
+    without a year column."""
     if source.fy_column is None:
         return None
-    header, rows = _table(source, data)
+    header, rows = table or _table(source, data)
     if source.fy_column not in header:
         raise RefreshError(f"{source.dataset}: the header lacks {source.fy_column!r}")
     col = header.index(source.fy_column)
@@ -171,11 +172,11 @@ def check_csv(source, data, name_fy=None):
     """The fiscal year of a source's file (bytes), None for a source without one. Raises unless it is UTF-8 CSV whose
     header has the source's columns, with at least one row and, with a year column, one four-digit year that agrees
     with the year in the file name (name_fy), when that is given."""
-    header, _ = _table(source, data)
-    missing = [c for c in source.columns if c not in header]
+    table = _table(source, data)
+    missing = [c for c in source.columns if c not in table[0]]
     if missing:
         raise RefreshError(f"{source.dataset}: the header lacks {missing}")
-    fy = file_year(source, data)
+    fy = file_year(source, data, table)
     label = source.dataset
     if name_fy is not None and fy != name_fy:
         raise RefreshError(f"{label}: the file is named for FY{name_fy} but holds FY{fy}")

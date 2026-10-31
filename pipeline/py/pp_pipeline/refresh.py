@@ -92,6 +92,9 @@ def preflight(env, site_name):
     if branch != BASE and not branch.startswith(f"refresh-{site_name}-"):
         raise rs.RefreshError(f"on branch {branch!r}: run PR=1 from {BASE}, or from the refresh-{site_name}-<date> "
                               "branch an earlier run made, so the pull request holds only the refresh")
+    if branch == BASE and git(env, "branch", "--list", f"refresh-{site_name}-{env.today}").strip():
+        raise rs.RefreshError(f"refresh-{site_name}-{env.today} already exists: switch to it (git switch "
+                              f"refresh-{site_name}-{env.today}) and run again there, or delete it first")
     git(env, "fetch", "-q", "origin", BASE)
     if git(env, "rev-parse", BASE) != git(env, "rev-parse", f"origin/{BASE}"):
         raise rs.RefreshError(f"the local {BASE} is not origin's: update it (git pull --ff-only on {BASE}) first, so "
@@ -155,7 +158,7 @@ def pins_markdown(rows):
 
 def test_summary(output):
     """`make test`'s counts in a line, and the names of failing tests (at most 15)."""
-    node = dict(re.findall(r"^ℹ (pass|fail) (\d+)$", output, re.M))
+    node = dict(re.findall(r"^[ℹ#] (pass|fail) (\d+)$", output, re.M))  # spec reporter, or TAP when piped (Node 22)
     ran = re.search(r"^Ran (\d+) tests?", output, re.M)
     verdict = re.search(r"^(OK|FAILED)\b.*$", output, re.M)
     python = (f"{ran.group(1)} tests, {verdict.group(0) if verdict else 'no verdict'}" if ran
@@ -163,6 +166,7 @@ def test_summary(output):
     line = f"Node: {node.get('pass', '?')} passed, {node.get('fail', '?')} failed. Python: {python}."
     failing = [re.sub(r" \([\d.]+m?s\)$", "", m) for m in re.findall(r"^\s*✖ (.+)$", output, re.M)
                if m != "failing tests:"]  # the reporter's heading over its repeat of the failures
+    failing += re.findall(r"^not ok \d+ - (.+)$", output, re.M)
     failing += re.findall(r"^(?:FAIL|ERROR): (.+)$", output, re.M)
     return line, list(dict.fromkeys(failing))[:15]
 
@@ -198,8 +202,9 @@ def body(site_name, site, env, base, pinned, rows, steps, now, diffs, checked):
     fetched_ids = {s.dataset for s in site.sources}
     others = sorted({i for d in now.values() for i in d.get("sources", [])} - fetched_ids)
     if others:
-        out += ["", "<details><summary>The emitted data's other inputs, which make refresh does not fetch (re-pinned by "
-                "hand when CMS moves them)</summary>", "", ", ".join(f"`{i}`" for i in others), "", "</details>"]
+        out += ["", "<details><summary>The emitted data's other inputs, which make refresh does not fetch (archived "
+                "years and extracts stay as pinned; a current file among them is re-pinned by hand when the watcher "
+                "flags it)</summary>", "", ", ".join(f"`{i}`" for i in others), "", "</details>"]
     return "\n".join(out) + "\n"
 
 
@@ -229,8 +234,8 @@ def open_pr(env, site_name, base, title, body_path):
     if code:
         raise rs.RefreshError(f"CI's change gate refuses the commit, so nothing was pushed: {out.strip()}")
     git(env, "push", "-u", "origin", branch)
-    code, url = env.run(["gh", "pr", "view", branch, "--json", "url", "--jq", ".url"])
-    if code == 0 and url.strip():  # a rerun: the branch's pull request gets this run's text
+    code, url = env.run(["gh", "pr", "view", branch, "--json", "url,state", "--jq", 'select(.state == "OPEN") | .url'])
+    if code == 0 and url.strip():  # a rerun: the branch's open pull request gets this run's text
         argv = ["gh", "pr", "edit", branch, "--title", title, "--body-file", str(body_path)]
     else:
         argv = ["gh", "pr", "create", "--draft", "--base", BASE, "--head", branch, "--title", title,
@@ -284,8 +289,12 @@ def refresh(site_name, env, pr=False, sites=SITES):
         say(f"dry run: no branch, commit, push or pull request. {'Every step passed.' if ok else 'A step FAILED (above).'} "
             + where)
         return 0 if ok else 1
+    if not ok and not changed:
+        say(f"not committed: a step failed with nothing differing from {BASE}, so the failure is {BASE}'s own: fix it "
+            "through an ordinary pull request first.")
+        return 1
     if not ok:
-        branch = refresh_branch(env, site_name) if changed else git(env, "rev-parse", "--abbrev-ref", "HEAD").strip()
+        branch = refresh_branch(env, site_name)
         say(f"not committed: a step failed. On {branch}: fix it there and commit the fix (only data/pinned/ and "
             f"data/emitted/ may stay uncommitted), then run make refresh SITE={site_name} PR=1 again; it finds the pins "
             "already current and goes on from the rebuild.")
