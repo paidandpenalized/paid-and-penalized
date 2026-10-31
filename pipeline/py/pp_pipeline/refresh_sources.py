@@ -17,6 +17,7 @@ import hashlib
 import http.client
 import json
 import re
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -253,3 +254,12 @@ def apply_pin(manifest, source, found, data, today, pinned_dir):
     if not archived and before["path"] != path and before["path"] not in taken:
         _inside(root, before["path"]).unlink()  # replaced under a new name; the old bytes stay in git history
     return out, Pinned("new-year" if archived else "replaced", before, entry, archived)
+
+
+def refresh_source(manifest, source, get, today, pinned_dir, downloads):
+    """Fetch one source's current file and pin it: (the new manifest, Pinned). get: fetch, or a test's fake. Each
+    download is also kept, untouched, in its own new folder under `downloads`, for a person to look at."""
+    found = locate(source, get(METASTORE.format(source.dataset), MAX_RECORD))
+    data = get(found.url, MAX_PIN)
+    (Path(tempfile.mkdtemp(prefix=f"download-{source.dataset}-", dir=downloads)) / found.name).write_bytes(data)
+    return apply_pin(manifest, source, found, data, today, pinned_dir)
