@@ -29,9 +29,9 @@ before the FY2027 HACRP file posts.
    - Each download goes into its own new empty folder outside the repo, is capped below the 10 MiB pin limit (a
      bigger file needs the Release or R2 path, not git) and at a total time, and is checked before it is pinned: the
      file name matches the source's pattern exactly (it becomes a path under `data/pinned/`), the text is UTF-8 CSV
-     with the columns the site reads and at least one row, and, for a source with a fiscal-year column, one year that
-     agrees with the year in the file name. Nothing from a download is run; the Python that reads one runs under
-     `python3 -I`.
+     with the key columns the site reads (its own reader checks the rest at `make emit`) and at least one row, and,
+     for a source with a fiscal-year column, one year that agrees with the year in the file name. Nothing from a
+     download is run; the Python that reads one runs under `python3 -I`.
 3. **Pin.** Same bytes as the pin: nothing changes (CMS's URL or dates moving with the bytes unchanged is reported,
    not written). New bytes for the same year (a correction): the file and its manifest entry are replaced in place
    (path, bytes, SHA-256, download URL, CMS's dates, retrieved). New bytes for a new year: the current pin's entry is
@@ -49,7 +49,7 @@ before the FY2027 HACRP file posts.
    SHA-256 re-verified; the reproduction report; test results; the golden diff; the inputs `make refresh` does not
    fetch for the site (re-pinned by hand when they move); and the steps a person must still do: the site's list for
    every refresh, plus its new-year list when the year changed.
-7. **Other sites plug in.** A site is one entry in `pp_pipeline/refresh_sources.py`: its sources, its reproduction
+7. **Other sites plug in.** A site is one entry in `pp_pipeline/refresh_sites.py`: its sources, its reproduction
    report command and its two checklists. HVBP's Provider Data Catalog datasets fit the `pdc` kind as they are.
 
 ## Scope of v1
@@ -83,5 +83,8 @@ before the FY2027 HACRP file posts.
 - Values copied into the manifest: the download URL only after the host and path checks, CMS's dates only when they
   are `YYYY-MM-DD`.
 - Commands run as argument lists, never through a shell. `PR=1` commits only `data/pinned/` and `data/emitted/`, and
-  refuses to start with other uncommitted changes, so the pull request is exactly what was tested. It stops before the
-  push when emit, the reproduction report or the tests fail, or when the CI change gate refuses the commit.
+  refuses to start with other uncommitted changes, so the pull request is exactly what was tested. It starts only on
+  `main`, after checking it is origin's, or on the `refresh-<site>-<date>` branch it makes, so the pull request holds
+  the refresh and nothing else. It stops before the push when emit, the reproduction report or the tests fail (and
+  moves to that branch, where the fix is made and committed before running it again), or when the CI change gate
+  refuses the commit. A rerun on a branch that already has a pull request updates that pull request's text.

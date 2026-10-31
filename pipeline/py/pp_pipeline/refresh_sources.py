@@ -9,8 +9,8 @@ is downloaded, checked and compared with the pin:
     already use, e.g. hacrp-fy2025) and keeps its file, and the new year's file is pinned under the dataset id in its
     own year folder.
 Everything a download says is untrusted: requests go to https://data.cms.gov only (redirects too); the file name must
-fully match the source's pattern before it becomes a path; the text must be UTF-8 CSV with the columns the site reads;
-dates are copied only as YYYY-MM-DD. Nothing from a download is run.
+fully match the source's pattern before it becomes a path; the text must be UTF-8 CSV with the key columns the site
+reads; dates are copied only as YYYY-MM-DD. Nothing from a download is run.
 """
 import csv
 import hashlib

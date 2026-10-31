@@ -9,6 +9,10 @@ import { loadHacrp } from '../web/data.js';
 import { a1Summary } from '../web/generate.js';
 import { historyData } from '../web/history-data.js';
 
+// A check's value for the table: whole numbers as they are, others to six significant digits; a check with nothing to
+// divide by has none.
+const shownValue = (v) => (v === null ? 'none' : Number.isInteger(v) ? v : Number(v.toPrecision(6)));
+
 // data: loadHacrp()'s result. -> { ok, text }.
 export function reproductionReport(data) {
   const { fy, hospitals, model, history, master, dollars, source } = data;
@@ -35,7 +39,7 @@ export function reproductionReport(data) {
     '',
     '| Check | Value | Range | Result |',
     '|---|---|---|---|',
-    ...dollars.checks.map((c) => `| \`${c.id}\` | ${Number.isInteger(c.value) ? c.value : Number(c.value.toPrecision(6))} | ${c.low} to ${c.high} | ${c.pass ? 'pass' : '**FAIL**'} |`),
+    ...dollars.checks.map((c) => `| \`${c.id}\` | ${shownValue(c.value)} | ${c.low} to ${c.high} | ${c.pass ? 'pass' : '**FAIL**'} |`),
   ];
   return { ok: a1.ok && !missed.length && !failedDollars.length, text: lines.join('\n') };
 }

@@ -16,44 +16,44 @@ rebuild, check, diff against `main`, write the pull request's text; a dry run by
 **Constraints:** Python standard library only (3.9), no new dependency; downloads are untrusted; no push, pull request
 or deploy while building this.
 
-## Milestone 1: fetch and pin (`pipeline/py/pp_pipeline/refresh_sources.py`)
+## Milestone 1: fetch and pin (`pipeline/py/pp_pipeline/refresh_sources.py`; the sites in `refresh_sites.py`)
 
-- [ ] Registry: `Site` (sources, report command, `always` and `new_year` checklists) and `PdcSource` (pin id, dataset,
+- [x] Registry: `Site` (sources, report command, `always` and `new_year` checklists) and `PdcSource` (pin id, dataset,
       file-name pattern, pinned folder template, required columns, optional fiscal-year column, title template,
       archive id template). `SITES["hacrp"]`: `yq43-i98g` (archive id `hacrp-fy{fy}`) and `y9us-9xdf`.
-- [ ] `fetch(url, cap)`: https to `data.cms.gov` only (redirects too), urllib's User-Agent, a deadline in all, a byte
+- [x] `fetch(url, cap)`: https to `data.cms.gov` only (redirects too), urllib's User-Agent, a deadline in all, a byte
       cap.
-- [ ] `locate(source, record)`: the metastore record → download URL, file name (pattern, fully matched), CMS's dates
+- [x] `locate(source, record)`: the metastore record → download URL, file name (pattern, fully matched), CMS's dates
       (`YYYY-MM-DD` or none).
-- [ ] `check_csv(source, data)`: UTF-8, header has the columns, at least one row, one fiscal year agreeing with the
+- [x] `check_csv(source, data)`: UTF-8, header has the columns, at least one row, one fiscal year agreeing with the
       file name's.
-- [ ] `apply_pin(manifest, source, found, data, today, pinned_dir)`: unchanged / replaced / new year (archive the old
+- [x] `apply_pin(manifest, source, found, data, today, pinned_dir)`: unchanged / replaced / new year (archive the old
       entry under its archive id, refuse an id or path already taken); writes the file and returns the new manifest.
-- [ ] `write_manifest`: `json.dumps(indent=2, ensure_ascii=False)` + newline (round-trips today's file exactly).
-- [ ] Tests (`tests/test_refresh_sources.py`): synthetic metastore records and CSVs; a refused host, redirect,
+- [x] `write_manifest`: `json.dumps(indent=2, ensure_ascii=False)` + newline (round-trips today's file exactly).
+- [x] Tests (`tests/test_refresh_sources.py`): synthetic metastore records and CSVs; a refused host, redirect,
       pattern, size, column set and year mismatch; unchanged, replaced and new-year pins; the manifest layout.
-- [ ] **Checkpoint 1:** `/simplify` on the diff, then `make test`; `/code-review`; `/security-review` (external
+- [x] **Checkpoint 1:** `/simplify` on the diff, then `make test`; `/code-review`; `/security-review` (external
       input). Fix Critical/Important findings before Milestone 2.
 
 ## Milestone 2: rebuild, diff, report, pull request
 
-- [ ] `pp_pipeline/golden_diff.py`: pure diff of two `{path: parsed file}` maps and its Markdown.
-- [ ] `sites/hacrp/pipeline/reproduction.js`: A1, every history year's self-check and the dollar checks, as Markdown,
+- [x] `pp_pipeline/golden_diff.py`: pure diff of two `{path: parsed file}` maps and its Markdown.
+- [x] `sites/hacrp/pipeline/reproduction.js`: A1, every history year's self-check and the dollar checks, as Markdown,
       from the emitted files (`loadHacrp`); exit 1 when any fails. `a1Summary` exported from `generate.js` (no output
       change).
-- [ ] `pp_pipeline/refresh.py`: preflight (`PR=1`: no other uncommitted changes), local SHA-256 check of every pin,
+- [x] `pp_pipeline/refresh.py`: preflight (`PR=1`: no other uncommitted changes), local SHA-256 check of every pin,
       fetch and pin each source, `make emit`, the report command, `make test`, the golden diff against the merge base
       with `main`, the pull request's text (pins changed, reproduction, tests, diff, inputs not fetched, checklists),
       written to a new temporary folder and printed. `PR=1`: stop on any failure; commit `data/pinned` and
       `data/emitted` on `refresh-<site>-<date>` (or the current branch, if not `main`), run the change gate, push,
       `gh pr create --draft`.
-- [ ] `run.py refresh <site> [--pr]`; `Makefile` `refresh` target (`SITE`, `PR=1`); `CLAUDE.md` Commands and the
+- [x] `run.py refresh <site> [--pr]`; `Makefile` `refresh` target (`SITE`, `PR=1`); `CLAUDE.md` Commands and the
       network line.
-- [ ] Tests (`tests/test_golden_diff.py`, `tests/test_refresh.py`): a temporary git repo with a synthetic site, a fake
+- [x] Tests (`tests/test_golden_diff.py`, `tests/test_refresh.py`): a temporary git repo with a synthetic site, a fake
       CMS and fake commands: the changed path (new pin, non-empty diff, rendered text, nothing committed), the new-year
       path, a failed emit, nothing to refresh, and `PR=1` (only data committed; push and a draft `gh` call recorded;
       refused with other changes in the tree).
-- [ ] **Checkpoint 2:** `/simplify`, then `make test`; `/code-review`; `/security-review`. Fix Critical/Important.
+- [x] **Checkpoint 2:** `/simplify`, then `make test`; `/code-review`; `/security-review`. Fix Critical/Important.
 
 ## Final gate
 

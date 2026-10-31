@@ -120,10 +120,11 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   CMS datasets in `refresh_sites.py`). Fetches each dataset's current file from data.cms.gov, pins what changed (a new
   year keeps the old year's pin under its archive id), runs `make emit`, the site's reproduction report and `make test`,
   diffs `data/emitted/` against `main`, and writes the pull request's text (pins, checks, golden diff, the steps left
-  by hand) to a temporary folder. Only `data/pinned/` and `data/emitted/` change; nothing is committed. `PR=1` also
-  commits those two folders on a branch, runs the change gate, pushes and opens a draft pull request: a push to this
-  public repo, so it needs Dalton's OK in the session. A new year also needs code (the run's list says which); after
-  it, run `make refresh` again: the pins are already current and it goes on from the rebuild.
+  by hand) to a temporary folder. Only `data/pinned/` and `data/emitted/` change; nothing is committed. `PR=1` (from
+  an up-to-date `main`, or the `refresh-<site>-<date>` branch it makes) also commits those two folders on that branch,
+  runs the change gate, pushes and opens a draft pull request: a push to this public repo, so it needs Dalton's OK in
+  the session. When a step fails (a new year also needs code; the run's list says which), it stops on that branch: fix
+  and commit there, then run it again; the pins are already current and it goes on from the rebuild.
 - `npm run og`: redraw the share cards (`web/og/<id>.png`, 1200×630) in the installed Google Chrome and rewrite
   `web/og/stamp.json`. A test fails when a card is stale (its data, the tokens, the fonts or its design changed): run it
   and commit the PNGs and the stamp. The build only copies them (it runs with no browser). Not part of `make test`.

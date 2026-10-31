@@ -63,11 +63,12 @@ class Repo(unittest.TestCase):
         emit(self.root)
         for args in (["init", "-q", "-b", "main"], ["config", "user.email", "test@example.invalid"],
                      ["config", "user.name", "Test"], ["config", "core.hooksPath", str(Path(tmp.name) / "nohooks")],
-                     ["add", "-A"], ["commit", "-q", "-m", "FY2026"]):
+                     ["add", "-A"], ["commit", "-q", "-m", "FY2026"], ["update-ref", "refs/remotes/origin/main", "HEAD"]):
             self.git(*args)
         self.cms = {}
         self.calls = []
         self.emit_fails = False
+        self.open_pr = None  # the URL of a pull request the refresh branch already has
 
     def git(self, *args):
         return subprocess.run(["git", *args], cwd=self.root, check=True, capture_output=True, text=True).stdout
@@ -84,7 +85,7 @@ class Repo(unittest.TestCase):
     def run_fake(self, argv, extra_env=None):
         argv = list(argv)
         self.calls.append((argv, extra_env))
-        if argv[0] == "git" and argv[1] != "push":
+        if argv[0] == "git" and argv[1] not in ("push", "fetch"):
             p = subprocess.run(argv, cwd=self.root, capture_output=True, text=True)
             return p.returncode, p.stdout + p.stderr
         if argv == ["make", "emit"]:
@@ -98,7 +99,9 @@ class Repo(unittest.TestCase):
             return 0, "**Demo** reproduces CMS's published values."
         if argv[:3] == ["gh", "pr", "create"]:
             return 0, "https://github.com/example/demo/pull/7\n"
-        return 0, ""  # gh auth status, git push, the change gate
+        if argv[:3] == ["gh", "pr", "view"]:
+            return (0, self.open_pr + "\n") if self.open_pr else (1, "no pull requests found\n")
+        return 0, ""  # gh auth status, gh pr edit, git fetch and push, the change gate
 
     def refresh(self, pr=False):
         env = refresh.Env(self.root, self.run_fake, self.fetch, TODAY, self.out)
@@ -156,6 +159,7 @@ class DryRun(Repo):
         self.assertEqual([(e["id"], e["path"]) for e in self.manifest()],
                          [(DATASET, "demo-fy2027/FY_2027_Demo.csv"), ("demo-fy2026", "demo-fy2026/FY_2026_Demo.csv")])
         self.assertIn("| `demo-fy2026` | archived (was `demo-0001`) |", body)
+        self.assertIn("Every pinned file (1) matched", body)  # counted before the run added one
         self.assertIn("| `data/emitted/demo/fy2027/demo.json` | added (a first emission) |", body)
         self.assertIn("- [ ] Move the year.", body)
 
@@ -196,8 +200,33 @@ class PullRequest(Repo):
         self.assertEqual(create[create.index("--title") + 1], f"Refresh demo: new CMS data for {DATASET}")
         self.assertTrue(Path(create[create.index("--body-file") + 1]).is_file())
         self.assertIn("draft pull request: https://github.com/example/demo/pull/7", printed)
-        order = [c[0][:2] for c in self.calls if isinstance(c[0], list) and c[0][0] in ("node", "gh")]
-        self.assertEqual(order, [["gh", "auth"], ["node", "tools/ci/change-gate.js"], ["gh", "pr"]])
+        order = [c[0][:3] for c in self.calls if isinstance(c[0], list) and c[0][0] in ("node", "gh")]
+        self.assertEqual(order, [["gh", "auth", "status"], ["node", "tools/ci/change-gate.js"], ["gh", "pr", "view"],
+                                 ["gh", "pr", "create"]])
+
+    def test_a_rerun_on_the_refresh_branch_updates_its_pull_request(self):
+        self.git("switch", "-q", "-c", f"refresh-demo-{TODAY}")
+        self.open_pr = "https://github.com/example/demo/pull/7"
+        self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
+        code, printed, _ = self.refresh(pr=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(self.called(["gh", "pr", "create"]), [])
+        edit = self.called(["gh", "pr", "edit"])[0][0]
+        self.assertEqual(edit[:4], ["gh", "pr", "edit", f"refresh-demo-{TODAY}"])
+        self.assertIn("draft pull request: https://github.com/example/demo/pull/7", printed)
+
+    def test_pr_refuses_another_branch_or_a_main_that_isnt_origins(self):
+        self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
+        self.git("switch", "-q", "-c", "some-feature")
+        with self.assertRaises(rs.RefreshError) as caught:
+            self.refresh(pr=True)
+        self.assertIn("'some-feature'", str(caught.exception))
+        self.git("switch", "-q", "main")
+        self.git("commit", "-q", "--allow-empty", "-m", "not on origin")
+        with self.assertRaises(rs.RefreshError) as caught:
+            self.refresh(pr=True)
+        self.assertIn("not origin's", str(caught.exception))
+        self.assertEqual([c for c in self.calls if c[0] == "fetch"], [])
 
     def test_pr_refuses_other_uncommitted_changes_before_fetching(self):
         (self.root / "notes.txt").write_text("a session's own edit\n")
@@ -216,8 +245,9 @@ class PullRequest(Repo):
         self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
         code, printed, _ = self.refresh(pr=True)
         self.assertEqual(code, 1)
-        self.assertIn("not committed: a step failed", printed)
-        self.assertEqual(self.git("branch", "--show-current").strip(), "main")
+        self.assertIn(f"not committed: a step failed. On refresh-demo-{TODAY}", printed)
+        self.assertEqual(self.git("branch", "--show-current").strip(), f"refresh-demo-{TODAY}")  # where the fix goes
+        self.assertIn("data/pinned/manifest.json", self.git("status", "--porcelain"))
         self.assertEqual(self.called(["git", "commit"]) + self.called(["git", "push"]) + self.called(["gh", "pr"]), [])
 
     def test_a_change_gate_refusal_stops_before_the_push(self):
@@ -245,6 +275,14 @@ class TestSummary(unittest.TestCase):
         self.assertEqual(line, "Node: 10 passed, 1 failed. Python: 4 tests, FAILED (failures=1).")
         self.assertEqual(failing, ["golden: a fresh build equals the committed file",
                                    "test_every_manifest_entry_matches_its_file (pp_pipeline.tests.test_pins.Pins)"])
+
+    def test_the_reporters_heading_is_not_a_failing_test(self):
+        _, failing = refresh.test_summary("✖ a check (1ms)\nℹ fail 1\n✖ failing tests:\n\n✖ a check (1ms)\n")
+        self.assertEqual(failing, ["a check"])
+
+    def test_python_tests_that_never_ran_say_so(self):
+        line, _ = refresh.test_summary("ℹ pass 9\nℹ fail 1\nmake: *** [test] Error 1\n")
+        self.assertEqual(line, "Node: 9 passed, 1 failed. Python: not run (make stops at the first failing command).")
 
 
 if __name__ == "__main__":

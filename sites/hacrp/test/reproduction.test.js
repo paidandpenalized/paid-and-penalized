@@ -21,6 +21,15 @@ test('reproduction: a failing dollar check fails the report and is marked in its
   assert.match(text, new RegExp(`\\| \`${first.id}\` \\|.*\\*\\*FAIL\\*\\* \\|`));
 });
 
+test('reproduction: a check with no value (nothing to divide by) shows none and fails, without stopping the report', () => {
+  const [first, ...rest] = DATA.dollars.checks;
+  const dollars = { ...DATA.dollars, checks: [{ ...first, value: null, pass: false }, ...rest] };
+  const { ok, text } = reproductionReport({ ...DATA, dollars });
+  assert.equal(ok, false);
+  assert.match(text, /^A1 ok$/m);
+  assert.match(text, new RegExp(`\\| \`${first.id}\` \\| none \\|.*\\*\\*FAIL\\*\\* \\|`));
+});
+
 test('reproduction: a build without a history says so', () => {
   const { ok, text } = reproductionReport({ ...DATA, history: null });
   assert.equal(ok, true);
