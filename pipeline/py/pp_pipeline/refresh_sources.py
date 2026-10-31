@@ -14,6 +14,7 @@ dates are copied only as YYYY-MM-DD. Nothing from a download is run.
 """
 import csv
 import hashlib
+import http.client
 import json
 import re
 import time
@@ -32,8 +33,8 @@ RESOURCES = "/provider-data/sites/default/files/resources/"  # where the catalog
 MAX_RECORD = 1_000_000  # a metastore record is about 2 KB
 MAX_PIN = 10 * 1024 * 1024 - 1  # a pin of 10 MiB or more never goes in git: the pre-commit hook and a test refuse it
 TIMEOUT = 30  # seconds per request, in all: a server dripping bytes can't stretch it
-DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-YEAR = re.compile(r"\d{4}")
+DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")  # ASCII digits: Python's \d matches any script's
+YEAR = re.compile(r"[0-9]{4}")
 
 
 class RefreshError(Exception):
@@ -45,7 +46,7 @@ class PdcSource(NamedTuple):
     dataset: str
     file: str  # a pattern CMS's file name must fully match; a group named fy, when the name carries the year
     folder: str  # its folder under data/pinned/; "{fy}" is the file's fiscal year
-    columns: Tuple[str, ...]  # the header must have these
+    columns: Tuple[str, ...]  # the header must have these (the key ones; the site's reader checks the rest at emit)
     fy_column: Optional[str] = None  # the column holding the file's one fiscal year
     title: Optional[str] = None  # the manifest title, "{fy}" filled; None keeps the entry's own
     archive: Optional[str] = None  # the pinned entry's id when a later year replaces it, "{fy}" its year
@@ -82,21 +83,24 @@ def fetch(url, cap, timeout=TIMEOUT):
     User-Agent is set, so urllib's own goes out: data.cms.gov's CDN refuses browser-like and custom agents."""
     check_url(url)
     deadline = time.monotonic() + timeout
-    with _OPENER.open(urllib.request.Request(url), timeout=timeout) as r:
-        check_url(r.geturl())
-        if r.status != 200:
-            raise RefreshError(f"{url}: HTTP {r.status}")
-        chunks, size = [], 0
-        while True:
-            chunk = r.read(65536)
-            if not chunk:
-                return b"".join(chunks)
-            size += len(chunk)
-            if size > cap:
-                raise RefreshError(f"{url}: more than {cap:,} bytes")
-            if time.monotonic() > deadline:
-                raise RefreshError(f"{url}: over {timeout} s")
-            chunks.append(chunk)
+    try:
+        with _OPENER.open(urllib.request.Request(url), timeout=timeout) as r:
+            check_url(r.geturl())
+            if r.status != 200:
+                raise RefreshError(f"{url}: HTTP {r.status}")
+            chunks, size = [], 0
+            while True:
+                chunk = r.read1(65536)  # what one receive brings, so the deadline is checked as bytes arrive
+                if not chunk:
+                    return b"".join(chunks)
+                size += len(chunk)
+                if size > cap:
+                    raise RefreshError(f"{url}: more than {cap:,} bytes")
+                if time.monotonic() > deadline:
+                    raise RefreshError(f"{url}: over {timeout} s")
+                chunks.append(chunk)
+    except (OSError, http.client.HTTPException) as e:  # urllib's HTTP, network and timeout errors
+        raise RefreshError(f"{url}: {e}") from None
 
 
 def _date(value):
@@ -118,10 +122,11 @@ def locate(source, record):
         raise RefreshError(f"{source.dataset}: the metastore record names no download URL")
     check_url(url)
     parts = urllib.parse.urlsplit(url)
-    if not parts.path.startswith(RESOURCES) or parts.query or parts.fragment:
+    segments = urllib.parse.unquote(parts.path).split("/")
+    if not parts.path.startswith(RESOURCES) or parts.query or parts.fragment or {".", ".."} & set(segments):
         raise RefreshError(f"{source.dataset}: the download URL {url!r} is not a catalog file")
     name = urllib.parse.unquote(parts.path.rsplit("/", 1)[1])
-    m = re.fullmatch(source.file, name)
+    m = re.fullmatch(source.file, name, re.ASCII)
     if not m:
         raise RefreshError(f"{source.dataset}: CMS's file name {name!r} doesn't match {source.file!r}; if CMS renamed "
                            "the file, update its entry in pp_pipeline/refresh_sites.py")
@@ -129,10 +134,8 @@ def locate(source, record):
     return Found(url, name, fy, _date(meta.get("modified")), _date(meta.get("released")))
 
 
-def check_csv(source, data, name_fy=None):
-    """The fiscal year of a source's file (bytes), None for a source without one. Raises unless it is UTF-8 CSV whose
-    header has the source's columns, with at least one row and, with a year column, one four-digit year that agrees
-    with the year in the file name (name_fy), when that is given."""
+def _table(source, data):
+    """(header, non-empty rows) of a source's file (bytes); raises unless it is UTF-8 CSV with a row."""
     label = source.dataset
     try:
         text = data.decode("utf-8")
@@ -144,18 +147,35 @@ def check_csv(source, data, name_fy=None):
         rows = [r for r in reader if r]
     except csv.Error as e:
         raise RefreshError(f"{label}: not readable as CSV ({e})") from None
-    missing = [c for c in source.columns if c not in header]
-    if missing:
-        raise RefreshError(f"{label}: the header lacks {missing}")
     if not rows:
         raise RefreshError(f"{label}: no rows")
+    return header, rows
+
+
+def file_year(source, data):
+    """The one four-digit fiscal year in a source's file (bytes); None for a source without a year column."""
     if source.fy_column is None:
         return None
+    header, rows = _table(source, data)
+    if source.fy_column not in header:
+        raise RefreshError(f"{source.dataset}: the header lacks {source.fy_column!r}")
     col = header.index(source.fy_column)
     years = {r[col] if col < len(r) else "" for r in rows}
     if len(years) != 1 or not YEAR.fullmatch(next(iter(years))):
-        raise RefreshError(f"{label}: expected one fiscal year in {source.fy_column!r}, found {sorted(years)[:5]}")
-    fy = int(years.pop())
+        raise RefreshError(f"{source.dataset}: expected one fiscal year in {source.fy_column!r}, found {sorted(years)[:5]}")
+    return int(years.pop())
+
+
+def check_csv(source, data, name_fy=None):
+    """The fiscal year of a source's file (bytes), None for a source without one. Raises unless it is UTF-8 CSV whose
+    header has the source's columns, with at least one row and, with a year column, one four-digit year that agrees
+    with the year in the file name (name_fy), when that is given."""
+    header, _ = _table(source, data)
+    missing = [c for c in source.columns if c not in header]
+    if missing:
+        raise RefreshError(f"{source.dataset}: the header lacks {missing}")
+    fy = file_year(source, data)
+    label = source.dataset
     if name_fy is not None and fy != name_fy:
         raise RefreshError(f"{label}: the file is named for FY{name_fy} but holds FY{fy}")
     return fy
@@ -181,7 +201,8 @@ def _inside(root, path):
 
 def apply_pin(manifest, source, found, data, today, pinned_dir):
     """Pin a checked download: (the new manifest, Pinned). Writes the file when it is new; the caller writes the
-    manifest. data: the file's bytes; today: YYYY-MM-DD, the entry's `retrieved`."""
+    manifest. data: the file's bytes; today: YYYY-MM-DD, the entry's `retrieved`. A new entry is built afresh from
+    CMS's record: anything else the old one carried (a note, an archive copy's URL) described the old bytes."""
     index = next((i for i, e in enumerate(manifest) if e["id"] == source.dataset), None)
     if index is None:
         raise RefreshError(f"{source.dataset}: no manifest entry to refresh (a first pin is made by hand)")
@@ -194,7 +215,7 @@ def apply_pin(manifest, source, found, data, today, pinned_dir):
 
     root = Path(pinned_dir).resolve()
     fy = check_csv(source, data, found.fy)
-    pinned_fy = check_csv(source, _inside(root, before["path"]).read_bytes()) if source.fy_column else None
+    pinned_fy = file_year(source, _inside(root, before["path"]).read_bytes())  # only its year: columns may have moved
     path = f"{source.folder.format(fy=fy)}/{found.name}"
     target = _inside(root, path)
     entry = {
@@ -227,8 +248,8 @@ def apply_pin(manifest, source, found, data, today, pinned_dir):
         if path == before["path"]:
             raise RefreshError(f"{source.dataset}: FY{fy}'s file would overwrite FY{pinned_fy}'s at {path}")
         out.insert(index + 1, archived)
-    elif before["path"] != path and before["path"] not in taken:
-        _inside(root, before["path"]).unlink()  # replaced under a new name; the old bytes stay in git history
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
+    if not archived and before["path"] != path and before["path"] not in taken:
+        _inside(root, before["path"]).unlink()  # replaced under a new name; the old bytes stay in git history
     return out, Pinned("new-year" if archived else "replaced", before, entry, archived)

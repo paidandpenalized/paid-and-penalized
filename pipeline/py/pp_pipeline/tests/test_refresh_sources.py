@@ -5,6 +5,7 @@ import http.server
 import json
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -41,8 +42,10 @@ class Locate(unittest.TestCase):
         self.assertIsNone(got.fy)
 
     def test_dates_are_copied_only_as_iso_days(self):
-        got = rs.locate(SOURCE, record("FY_2027_HAC_Reduction_Program_Hospital.csv", released="<b>soon</b>"))
+        got = rs.locate(SOURCE, record("FY_2027_HAC_Reduction_Program_Hospital.csv", released="<b>soon</b>",
+                                       modified="\u0662\u0660\u0662\u0667-01-20"))  # Arabic-Indic digits
         self.assertIsNone(got.released)
+        self.assertIsNone(got.modified)
 
     def test_untrusted_records_are_refused(self):
         name = "FY_2027_HAC_Reduction_Program_Hospital.csv"
@@ -56,6 +59,9 @@ class Locate(unittest.TestCase):
             "a query": record(name + "?x=1"),
             "a path in the name": record("..%2FFY_2027_HAC_Reduction_Program_Hospital.csv"),
             "another name": record("FY_2027_HAC_Reduction_Program_Hospital.csv.exe"),
+            "another script's digits": record("FY_%D9%A2%D9%A0%D9%A2%D9%A7_HAC_Reduction_Program_Hospital.csv"),
+            "a dot-dot segment": record(name).replace(b"/resources/", b"/resources/../../other/"),
+            "an encoded dot-dot segment": record(name).replace(b"/resources/", b"/resources/%2e%2e/other/"),
             "credentials": record(name).replace(b"https://data", b"https://user@data"),
         }
         for why, rec in bad.items():
@@ -83,6 +89,9 @@ class CheckCsv(unittest.TestCase):
         for why, data in bad.items():
             with self.subTest(why), self.assertRaises(rs.RefreshError):
                 rs.check_csv(SOURCE, data, 2027)
+
+    def test_the_pinned_files_year_is_read_without_its_other_columns(self):
+        self.assertEqual(rs.file_year(SOURCE._replace(columns=("A column CMS added",)), hacrp_csv(2026)), 2026)
 
     def test_the_name_and_the_contents_must_agree_on_the_year(self):
         with self.assertRaises(rs.RefreshError):
@@ -181,11 +190,29 @@ class Manifest(unittest.TestCase):
                     self.assertRegex(entry["path"].rsplit("/", 1)[1], f"^{source.file}$")
                     fy = rs.check_csv(source, (PINNED_DIR / entry["path"]).read_bytes())
                     self.assertEqual(entry["path"].rsplit("/", 1)[0], source.folder.format(fy=fy))
+                    if source.fy_column:  # a new year needs its own title and an id for the year it replaces
+                        self.assertIn("{fy}", source.title)
+                        self.assertIn("{fy}", source.archive)
 
 
 class _Server(http.server.BaseHTTPRequestHandler):
-    """Answers /big with more bytes than the cap and /away with a redirect off the host."""
+    """Answers /away with a redirect off the host, /down with a 503, /drip with a byte every 0.3 s, and anything else
+    with 5,000 bytes."""
     def do_GET(self):
+        if self.path == "/down":
+            self.send_error(503)
+            return
+        if self.path == "/drip":
+            self.send_response(200)
+            self.end_headers()
+            try:
+                for _ in range(20):
+                    self.wfile.write(b"x")
+                    self.wfile.flush()
+                    time.sleep(0.3)
+            except (BrokenPipeError, ConnectionResetError):  # the client gave up, as it should
+                pass
+            return
         if self.path == "/away":
             self.send_response(302)
             self.send_header("Location", "https://example.org/")
@@ -220,6 +247,12 @@ class Fetch(unittest.TestCase):
         with self.assertRaises(rs.RefreshError):
             rs.fetch(base + "/big", 100)
         self.assertEqual(len(rs.fetch(base + "/big", 5000)), 5000)
+        with self.assertRaises(rs.RefreshError):  # urllib's own error, as a RefreshError
+            rs.fetch(base + "/down", 100)
+        started = time.monotonic()
+        with self.assertRaises(rs.RefreshError):  # the deadline holds against a server dripping bytes
+            rs.fetch(base + "/drip", 100, timeout=1)
+        self.assertLess(time.monotonic() - started, 3)
 
 
 if __name__ == "__main__":

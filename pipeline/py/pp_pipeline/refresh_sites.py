@@ -16,7 +16,7 @@ class Site(NamedTuple):
 
 HACRP_FILE = PdcSource(
     dataset="yq43-i98g",
-    file=r"FY_(?P<fy>\d{4})_HAC_Reduction_Program_Hospital\.csv",
+    file=r"FY_(?P<fy>[0-9]{4})_HAC_Reduction_Program_Hospital\.csv",
     folder="hacrp-fy{fy}",
     columns=("Facility Name", "Facility ID", "State", "Fiscal Year", "Payment Reduction", "Total HAC Score"),
     fy_column="Fiscal Year",
