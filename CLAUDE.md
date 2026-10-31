@@ -52,8 +52,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   the IPPS impact file or any program file, with per-program `inProgram` and a reason code (rules and order in
   `pp_engine/master.py` and `docs/METHODS-LOG.md`) and a location (point, county, CBSA, region; rules in
   `pp_engine/location.py`). Sites join on it by CCN. Until Thirty Day Readmissions folds in, a test requires its
-  hospitals' names and locations to equal the master's. `run.py geocode` is the one command that uses the network
-  (the Census Geocoder); it is run by hand, and its output is a pinned input.
+  hospitals' names and locations to equal the master's. Two commands use the network, both run by hand and never by
+  the build or the tests: `run.py geocode` (the Census Geocoder; its output is a pinned input) and `make refresh`
+  (CMS's files from data.cms.gov; below).
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
   validated by `engine/js/schema.js`, which throws on any keyword it doesn't support. `schemas/conformance/`
   holds language-neutral test cases; `engine/py/pp_engine/schema.py`, the Python twin, passes the same set.
@@ -115,6 +116,15 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `main` is production too: `buildEnv` in `pipeline/site/context.js`). `PP_ENV` is `production`, `preview` or unset;
   any other value stops the build.
 - `make serve`: preview `dist/` at http://127.0.0.1:8080/.
+- `make refresh SITE=<site>`: a dry run of a site's data refresh (`pipeline/py/pp_pipeline/refresh.py`; sites and their
+  CMS datasets in `refresh_sites.py`). Fetches each dataset's current file from data.cms.gov, pins what changed (a new
+  year keeps the old year's pin under its archive id), runs `make emit`, the site's reproduction report and `make test`,
+  diffs `data/emitted/` against `main`, and writes the pull request's text (pins, checks, golden diff, the steps left
+  by hand) to a temporary folder. Only `data/pinned/` and `data/emitted/` change; nothing is committed. `PR=1` (from
+  an up-to-date `main`, or the `refresh-<site>-<date>` branch it makes) also commits those two folders on that branch,
+  runs the change gate, pushes and opens a draft pull request: a push to this public repo, so it needs Dalton's OK in
+  the session. When a step fails (a new year also needs code; the run's list says which), it stops on that branch: fix
+  and commit there, then run it again; the pins are already current and it goes on from the rebuild.
 - `npm run og`: redraw the share cards (`web/og/<id>.png`, 1200×630) in the installed Google Chrome and rewrite
   `web/og/stamp.json`. A test fails when a card is stale (its data, the tokens, the fonts or its design changed): run it
   and commit the PNGs and the stamp. The build only copies them (it runs with no browser). Not part of `make test`.

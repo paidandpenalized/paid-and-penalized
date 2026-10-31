@@ -37,7 +37,8 @@ import { HOSPITALS_PATH, hospitalView } from './view.js';
 
 const dp5 = (x) => (x === null ? 'none' : decimal(x, 5));
 
-function a1Summary({ ok, a, b, info }) {
+// A1 as the build prints it (and make refresh's reproduction report, sites/hacrp/pipeline/reproduction.js).
+export function a1Summary({ ok, a, b, info }) {
   return [
     `A1 ${ok ? 'ok' : 'FAILED'}`,
     `(a) ${a.within} of ${a.n} scored hospitals: mean published z equals the Total HAC Score; max error ${dp5(a.maxError)}`,

@@ -4,8 +4,10 @@ Isolated mode (-I) keeps the working directory and user site-packages off sys.pa
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, then the dollar
 estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
 pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
-pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and `geocode`, which
-calls the U.S. Census Bureau Geocoder over the network (run by hand only; see pp_pipeline/geocode.py).
+pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and two that call the
+network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
+`refresh <site> [--pr]` (`make refresh SITE=<site> [PR=1]`), which fetches the site's CMS files from data.cms.gov, pins
+them, rebuilds and checks, and with --pr opens a draft pull request (see pp_pipeline/refresh.py).
 """
 import sys
 import unittest
@@ -50,6 +52,9 @@ def main(argv):
     if command == "extract-hcris" and len(args) == 1:
         from pp_pipeline import hcris_extract
         return hcris_extract.main(args[0])
+    if command == "refresh" and len(args) in (1, 2) and args[1:] in ([], ["--pr"]):
+        from pp_pipeline import refresh
+        return refresh.main(args[0], pr=len(args) == 2)
     if command == "extract-hai" and len(args) == 2:
         from pp_pipeline import hai_extract
         return hai_extract.main(args[0], args[1])

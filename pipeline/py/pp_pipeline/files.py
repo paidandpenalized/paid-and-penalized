@@ -21,8 +21,25 @@ def read_json(path):
         return json.load(f)
 
 
-def read_manifest():
-    return read_json(PINNED_DIR / "manifest.json")
+def read_manifest(root=PINNED_DIR):
+    return read_json(Path(root) / "manifest.json")
+
+
+def write_manifest(manifest, root=PINNED_DIR):
+    """The manifest in its committed layout: two-space indent, UTF-8 as written, a final newline."""
+    (Path(root) / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+                                              encoding="utf-8")
+
+
+def pin_matches(entry, data):
+    """Whether a pinned file's bytes are its manifest entry's: the size, then the SHA-256."""
+    return len(data) == entry["bytes"] and hashlib.sha256(data).hexdigest() == entry["sha256"]
+
+
+def mismatched_pins(manifest, root=PINNED_DIR):
+    """The ids of manifest entries whose file is missing or isn't the entry's bytes, in manifest order."""
+    return [e["id"] for e in manifest
+            if not (Path(root) / e["path"]).is_file() or not pin_matches(e, (Path(root) / e["path"]).read_bytes())]
 
 
 def manifest_entry(pin_id, manifest=None):
@@ -37,7 +54,7 @@ def read_pinned_bytes(pin_id):
     """A pinned file's bytes, refused unless its size and SHA-256 match the manifest."""
     entry = manifest_entry(pin_id)
     data = (PINNED_DIR / entry["path"]).read_bytes()
-    if len(data) != entry["bytes"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
+    if not pin_matches(entry, data):
         raise ValueError(f"pinned input {pin_id} does not match its manifest entry")
     return data
 
@@ -49,7 +66,7 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     `note` is added to the line that reports a write. `root` is the pinned directory (a test's own). Returns the exit
     code: 0 written, 1 refused."""
     sha = hashlib.sha256(data).hexdigest()
-    if (len(data), sha) != (entry["bytes"], entry["sha256"]):
+    if not pin_matches(entry, data):
         print(f"derived {len(data)} bytes, sha256 {sha}; the manifest entry {entry['id']} records {entry['bytes']} "
               f"bytes, sha256 {entry['sha256']}: nothing written, {entry['path']} left as it was")
         return 1
