@@ -92,9 +92,11 @@ def preflight(env, site_name):
     if branch != BASE and not branch.startswith(f"refresh-{site_name}-"):
         raise rs.RefreshError(f"on branch {branch!r}: run PR=1 from {BASE}, or from the refresh-{site_name}-<date> "
                               "branch an earlier run made, so the pull request holds only the refresh")
-    if branch == BASE and git(env, "branch", "--list", f"refresh-{site_name}-{env.today}").strip():
-        raise rs.RefreshError(f"refresh-{site_name}-{env.today} already exists: switch to it (git switch "
-                              f"refresh-{site_name}-{env.today}) and run again there, or delete it first")
+    today = f"refresh-{site_name}-{env.today}"
+    if branch == BASE and (git(env, "branch", "--list", today).strip()
+                           or git(env, "ls-remote", "--heads", "origin", today).strip()):
+        raise rs.RefreshError(f"{today} already exists here or on GitHub: switch to it (git switch {today}) and run "
+                              "again there if its pull request is still open, or delete it in both places first")
     git(env, "fetch", "-q", "origin", BASE)
     if git(env, "rev-parse", BASE) != git(env, "rev-parse", f"origin/{BASE}"):
         raise rs.RefreshError(f"the local {BASE} is not origin's: update it (git pull --ff-only on {BASE}) first, so "
@@ -290,8 +292,10 @@ def refresh(site_name, env, pr=False, sites=SITES):
             + where)
         return 0 if ok else 1
     if not ok and not changed:
-        say(f"not committed: a step failed with nothing differing from {BASE}, so the failure is {BASE}'s own: fix it "
-            "through an ordinary pull request first.")
+        branch = git(env, "rev-parse", "--abbrev-ref", "HEAD").strip()
+        say(f"not committed: a step failed with nothing differing from {BASE}, so the failure is {branch}'s own: "
+            + ("fix it through an ordinary pull request first." if branch == BASE else
+               "fix it here and commit the fix, then run make refresh again."))
         return 1
     if not ok:
         branch = refresh_branch(env, site_name)

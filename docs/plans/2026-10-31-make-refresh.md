@@ -57,8 +57,8 @@ or deploy while building this.
 
 ## Final gate
 
-- [ ] `/simplify` on the full branch diff, then `make test`.
-- [ ] `/code-review` and `/security-review` on the full branch diff; fix and re-run until clean.
-- [ ] Drive it: `make refresh SITE=hacrp` (dry run) against CMS's live files: every pin verified, no pin changed, no
+- [x] `/simplify` on the full branch diff, then `make test`.
+- [x] `/code-review` and `/security-review` on the full branch diff; fix and re-run until clean.
+- [x] Drive it: `make refresh SITE=hacrp` (dry run) against CMS's live files: every pin verified, no pin changed, no
       emitted file changed, `make test` passing inside the run; the working tree clean afterwards.
-- [ ] `make build` on this branch: `dist/` byte-identical to `main`'s.
+- [x] `make build` on this branch: `dist/` byte-identical to `main`'s.

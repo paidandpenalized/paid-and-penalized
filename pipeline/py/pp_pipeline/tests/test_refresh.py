@@ -69,6 +69,7 @@ class Repo(unittest.TestCase):
         self.calls = []
         self.emit_fails = False
         self.open_pr = None  # the URL of a pull request the refresh branch already has
+        self.remote_branches = ""  # what git ls-remote --heads origin answers
 
     def git(self, *args):
         return subprocess.run(["git", *args], cwd=self.root, check=True, capture_output=True, text=True).stdout
@@ -85,7 +86,7 @@ class Repo(unittest.TestCase):
     def run_fake(self, argv, extra_env=None):
         argv = list(argv)
         self.calls.append((argv, extra_env))
-        if argv[0] == "git" and argv[1] not in ("push", "fetch"):
+        if argv[0] == "git" and argv[1] not in ("push", "fetch", "ls-remote"):
             p = subprocess.run(argv, cwd=self.root, capture_output=True, text=True)
             return p.returncode, p.stdout + p.stderr
         if argv == ["make", "emit"]:
@@ -101,6 +102,8 @@ class Repo(unittest.TestCase):
             return 0, "https://github.com/example/demo/pull/7\n"
         if argv[:3] == ["gh", "pr", "view"]:
             return (0, self.open_pr + "\n") if self.open_pr else (1, "no pull requests found\n")
+        if argv[:2] == ["git", "ls-remote"]:
+            return 0, self.remote_branches
         return 0, ""  # gh auth status, gh pr edit, git fetch and push, the change gate
 
     def refresh(self, pr=False):
@@ -258,12 +261,16 @@ class PullRequest(Repo):
         self.assertIn("the failure is main's own", printed)
         self.assertEqual(self.git("branch", "--show-current").strip(), "main")
 
-    def test_pr_from_main_refuses_when_todays_refresh_branch_exists(self):
-        self.git("branch", f"refresh-demo-{TODAY}")
+    def test_pr_from_main_refuses_when_todays_refresh_branch_exists_here_or_on_github(self):
         self.serve(demo_csv(2026, second="0.7"), "FY_2026_Demo.csv")
+        self.remote_branches = f"0123abcd\trefs/heads/refresh-demo-{TODAY}\n"
         with self.assertRaises(rs.RefreshError) as caught:
             self.refresh(pr=True)
-        self.assertIn("already exists", str(caught.exception))
+        self.assertIn("already exists here or on GitHub", str(caught.exception))
+        self.remote_branches = ""
+        self.git("branch", f"refresh-demo-{TODAY}")
+        with self.assertRaises(rs.RefreshError):
+            self.refresh(pr=True)
         self.assertEqual([c for c in self.calls if c[0] == "fetch"], [])
 
     def test_a_change_gate_refusal_stops_before_the_push(self):
