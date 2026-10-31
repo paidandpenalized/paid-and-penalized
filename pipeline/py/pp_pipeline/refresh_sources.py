@@ -183,12 +183,12 @@ def check_csv(source, data, name_fy=None):
 
 
 class Pinned(NamedTuple):
-    """What pinning one source did: status unchanged, replaced or new-year; the dataset's entry before and after; the
-    archived entry (new-year only); and CMS's record moving with the bytes unchanged (`drift`, not written)."""
+    """What pinning one source did: status unchanged, replaced or new-year (the archived entry is in the manifest, right
+    after the new one); the dataset's entry before and after; and CMS's record moving with the bytes unchanged (`drift`,
+    not written)."""
     status: str
     before: dict
     after: dict
-    archived: Optional[dict] = None
     drift: Tuple[str, ...] = ()
 
 
@@ -253,7 +253,7 @@ def apply_pin(manifest, source, found, data, today, pinned_dir):
     target.write_bytes(data)
     if not archived and before["path"] != path and before["path"] not in taken:
         _inside(root, before["path"]).unlink()  # replaced under a new name; the old bytes stay in git history
-    return out, Pinned("new-year" if archived else "replaced", before, entry, archived)
+    return out, Pinned("new-year" if archived else "replaced", before, entry)
 
 
 def refresh_source(manifest, source, get, today, pinned_dir, downloads):
