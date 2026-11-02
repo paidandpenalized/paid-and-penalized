@@ -382,25 +382,29 @@ describe('the states map speaks on a pick, not on a hover', () => {
     await assertQuiet(seen, 'the states map at rest');
   }));
 
-  // The map takes the pointer from the moment its step begins, while it is still fading in: the panel fading out never
-  // holds it. (An address's #state= pins a state as the map fades in; WebKit's checks then pointed at a map that took no
+  // The map takes the pointer once it shows, while it is still fading in (not only once half in): the panel fading out
+  // never holds it. (An address's #state= pins a state as the map fades in; WebKit's checks then pointed at a map that took no
   // pointer until half faded in, and the click went to the page, which scrolled.)
-  it('the map takes the pointer as soon as its step begins, mid-fade', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+  it('the map takes the pointer as soon as it shows, mid-fade', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await drawn(page);
     await scrollToStep(page, 5);
-    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '5');
-    await page.waitForTimeout(1500);
-    // The first frame of the step's change, read the moment the story marks step 6 (the map's).
+    // Step 5's scenes are the canvas's: both panels at rest out of sight.
+    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '5'
+      && ['bar', 'map'].every((p) => Number(document.querySelector(`.stage__panel--${p}`).style.opacity) === 0));
+    // The first frame of the map's fade in that shows it (a tenth or more), read once the story marks step 6.
     const first = page.evaluate(() => new Promise((resolve) => {
       const story = document.querySelector('.story');
+      const map = document.querySelector('.stage__panel--map');
+      const bar = document.querySelector('.stage__panel--bar');
+      const look = () => {
+        const opacity = Number(map.style.opacity);
+        if (opacity < 0.1) { requestAnimationFrame(look); return; }
+        resolve({ opacity, mapOff: map.classList.contains('is-off'), barOff: bar.classList.contains('is-off') });
+      };
       new MutationObserver((_, obs) => {
         if (story.dataset.step !== '6') return;
         obs.disconnect();
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          const map = document.querySelector('.stage__panel--map');
-          const bar = document.querySelector('.stage__panel--bar');
-          resolve({ opacity: Number(map.style.opacity), mapOff: map.classList.contains('is-off'), barOff: bar.classList.contains('is-off') });
-        }));
+        requestAnimationFrame(look);
       }).observe(story, { attributes: true, attributeFilter: ['data-step'] });
     }));
     await scrollToStep(page, 6);

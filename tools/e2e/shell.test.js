@@ -453,7 +453,7 @@ describe('the family search on a hub page', () => {
 // A tap on an option picks it with no delay to wait on: the tap's own mousedown keeps the box's focus, as a click's does.
 // Touch is emulated in Chromium and WebKit (Playwright's Firefox has no touch).
 describe('the family search under touch', { skip: ENGINE === 'firefox' && 'no touch in Firefox' }, () => {
-  const held = useContext(shared, { width: 390, height: 800, options: { hasTouch: true, isMobile: ENGINE === 'chromium' } });
+  const held = useContext(shared, { width: 390, height: 800, options: { hasTouch: true, isMobile: true } });
   it('a tap on an option opens it', () => withPage(held, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
     const form = page.locator('.topbar form#omni[data-hub]');
     const box = form.getByRole('combobox');

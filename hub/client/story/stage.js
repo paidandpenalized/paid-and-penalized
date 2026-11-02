@@ -37,6 +37,8 @@ const AXIS = new Set(['machine', 'net', 'you']);
 // late; back into it, up early and across late. Every other move eases both ways at once.
 const CURVES = { pour: [outCubic, smooth], gather: [smooth, outCubic] };
 const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
+// How much of a panel must show before it takes the pointer (setPanels): enough to see what a press would reach.
+const SEEN = 0.1;
 
 // The stage over `canvas` (inside the stage element, `stage`):
 //   rows       the story's hospitals (layouts.js storyRows); facts: storyFacts of the hospitals; fy: the fiscal year;
@@ -518,9 +520,10 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   }
 
   // The server's drawings under the canvas: each panel's opacity, the states' fill, the map's key; written only when
-  // they change. The pointer goes to the panel of the step being read (live: 'bar', 'map' or null), from the moment
-  // that step begins, not once its panel has faded half in: an address's #state= pins a state as the map fades in, and
-  // a reader (or a check) pointing at the map then must reach it, not the panel fading out.
+  // they change. The pointer goes to the panel of the step being read (live: 'bar', 'map' or null) once it shows at all
+  // (SEEN), not once it has faded half in: an address's #state= pins a state as the map fades in, and a reader (or a
+  // check) pointing at the map then must reach it, not the panel fading out. A panel the reader has scrolled past takes
+  // no pointer, however much of it still shows.
   function setPanels(bar, map, fill, live) {
     const state = `${bar.toFixed(3)}|${map.toFixed(3)}|${fill.toFixed(3)}|${live}`;
     if (state === panelState) return;
@@ -529,10 +532,10 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
       el.style.opacity = a.toFixed(3);
       el.classList.toggle('is-off', !on);
     };
-    show(panels.bar, bar, live === 'bar');
-    show(panels.map, map, live === 'map');
+    show(panels.bar, bar, live === 'bar' && bar >= SEEN);
+    show(panels.map, map, live === 'map' && map >= SEEN);
     panels.mapSvg.style.setProperty('--fill', fill.toFixed(3));
-    show(panels.mapFoot, fill, live === 'map' && cur.scene === 'mapfill');
+    show(panels.mapFoot, fill, fill >= 0.5);
   }
 
   function draw() {

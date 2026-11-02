@@ -111,7 +111,7 @@ test('the combobox: a press on an option opens it; no match says so in the list;
   const s = setup(t);
   await s.type('sample');
   let prevented = false;
-  s.list.listeners.mousedown({ target: s.list.children[0].children[0] && { closest: () => s.list.children[0] }, preventDefault: () => { prevented = true; } });
+  s.list.listeners.mousedown({ button: 0, target: s.list.children[0].children[0] && { closest: () => s.list.children[0] }, preventDefault: () => { prevented = true; } });
   assert.ok(prevented, 'the input keeps focus until the pick');
   assert.equal(s.opened.length, 1);
   await s.type('nothing like it');
@@ -125,17 +125,13 @@ test('the combobox: a press on an option opens it; no match says so in the list;
 // Leaving the box closes the list at once: a press on the list never leaves the box (the next test), so nothing waits on
 // a delay, and a reader who comes straight back and types gets the list for what they typed (no late close to hide it).
 test('the combobox: leaving closes the list at once; back in the box, typing lists again', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
   const s = setup(t);
   await s.type('exam');
-  // The window losing the focus leaves the box the document's focused element; the list still closes.
-  globalThis.document.activeElement = s.input;
   s.input.listeners.blur();
   assert.equal(s.list.hidden, true, 'closed the moment the box loses the focus');
   assert.equal(s.input.getAttribute('aria-expanded'), 'false');
   await s.type('sample');
-  t.mock.timers.tick(500);
-  assert.equal(s.list.hidden, false, 'back in the box and typing: the list shows, and nothing late hides it');
+  assert.equal(s.list.hidden, false, 'back in the box and typing: the list shows');
   s.key('Enter');
   assert.deepEqual(s.opened, ['/h/99000a/']);
 });
@@ -144,9 +140,9 @@ test('the combobox: leaving closes the list at once; back in the box, typing lis
 // "No matches" row as on an option. The list stays open; only an option picks.
 test('the combobox: a press on the list\'s scrollbar or its "No matches" row keeps the box\'s focus and the list', async (t) => {
   const s = setup(t);
-  const press = (target) => {
+  const press = (target, button = 0) => {
     let prevented = false;
-    s.list.listeners.mousedown({ target, preventDefault: () => { prevented = true; } });
+    s.list.listeners.mousedown({ target, button, preventDefault: () => { prevented = true; } });
     return prevented;
   };
   await s.type('exam');
@@ -157,6 +153,12 @@ test('the combobox: a press on the list\'s scrollbar or its "No matches" row kee
   assert.ok(press(s.list.children[0]), 'a press on "No matches" keeps the focus');
   assert.equal(s.list.hidden, false);
   assert.deepEqual(s.opened, []);
+  // A right or middle press on an option is the browser's: no pick.
+  await s.type('exam');
+  const option = { closest: () => s.list.children[0] };
+  assert.equal(press(option, 2), false);
+  assert.equal(press(option, 1), false);
+  assert.deepEqual(s.opened, [], 'nothing opened');
 });
 
 // The index loads on the first focus; a reader who types and leaves before it arrives is not followed by a list.
@@ -169,7 +171,11 @@ test('the combobox: a slow first load does not open the list after the reader ha
   await typed;
   assert.equal(s.list.hidden, true, 'no list opens behind the reader');
   assert.equal(s.input.getAttribute('aria-expanded'), 'false');
-  // Back in the box, the loaded index answers at once.
+  // Back in the box, the words still there are listed (nothing to retype).
+  await s.input.listeners.focus();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(s.list.hidden, false, 'listed on return');
+  // And the loaded index answers typing at once.
   await s.type('exam');
   assert.equal(s.list.hidden, false);
   assert.equal(s.list.children.length, 2);

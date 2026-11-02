@@ -19,8 +19,9 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   let results = [];
   let total = 0;
   let active = -1;
-  // Whether the reader is in the box: a list typed for while the index loaded opens only then.
-  let focused = false;
+  // Whether the reader is in the box: a list typed for while the index loaded opens only then. A box that already has
+  // the focus when this mounts is in it.
+  let focused = document.activeElement === input;
 
   const ready = () => (loading ??= load().then((entries) => { index = entries; return true; }, () => {
     loading = null;
@@ -91,7 +92,12 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     paint();
   }
 
-  input.addEventListener('focus', () => { focused = true; ready(); });
+  // Back in the box with words a load left unlisted (the reader had left), the list follows them.
+  input.addEventListener('focus', () => {
+    focused = true;
+    ready();
+    if (index && input.value.trim() && list.hidden) update();
+  });
   input.addEventListener('input', update);
   input.addEventListener('keydown', (e) => {
     const n = count();
@@ -112,8 +118,10 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     }
   });
   // A press anywhere on the list keeps the focus in the box (a mousedown's default would move it), so the list stays for
-  // a drag on its scrollbar or a press on its "No matches" row; a press on an option picks it.
+  // a press on its edge (where a scrollbar beside the options takes it) or on its "No matches" row; a press on an option
+  // picks it.
   list.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return; // a right or middle press is the browser's (its menu), never a pick
     e.preventDefault();
     const li = e.target.closest?.('[role="option"]');
     if (li) pick([...list.children].indexOf(li));
