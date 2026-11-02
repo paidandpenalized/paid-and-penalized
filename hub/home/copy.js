@@ -167,7 +167,7 @@ export const COPY = typesetCopy({
   // found hospital). Its lines' numbers arrive as {pay}, {base}, {hrrp}, {vbp}, {a} {b} {c}; {one} is the factor's 1,
   // {cut} the HAC cut.
   estKicker: 'Methods, in brief',
-  estHead: 'Every dollar here is an estimate, labeled one and tested against hospitals’ cost reports.',
+  estHead: 'Every dollar here is an estimate, and is labeled one.',
   // {n}: the cut hospitals the back-test compared, in FY{bfy}; {miss}: how far its middle estimate ran from their cost
   // reports, and {direction} which way (estAbove, estBelow).
   estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} {direction} what they recorded.',

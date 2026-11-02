@@ -173,7 +173,7 @@ test('the programs under consideration: six dashed slips in three named groups, 
 test('methods in brief: its kicker, heading, a paragraph with the back-test from the data, three numbered points and the way to the methods', () => {
   const section = element(out, '<section class="bsec ests" id="estimate"', 'section');
   assert.ok(words(section).startsWith('Methods, in brief'));
-  assert.equal(words(element(section, '<h2 id="estimate-h"', 'h2')), 'Every dollar here is an estimate, labeled one and tested against hospitals’ cost reports.');
+  assert.equal(words(element(section, '<h2 id="estimate-h"', 'h2')), 'Every dollar here is an estimate, and is labeled one.');
   // The back-test's count and its median miss, as the HACRP Methods page reads it (exp of the log ratio, less one).
   const { n, median } = hub.dollars.bands.measures.hac.overall;
   const para = words(element(section, '<p>', 'p'));
