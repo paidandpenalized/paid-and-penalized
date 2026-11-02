@@ -38,12 +38,13 @@ export const COPY = typesetCopy({
   hrrpZero: '{zeroN} pass through at {zero}.',
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
-  // Step 3: hospital-acquired conditions. {cut} the flat cut; {estN} of the {cmsN} scored hospitals CMS cut have an
-  // estimate (the HACRP pages' count); hacTextMore when the chart also holds hospitals CMS cut without a score ({more},
-  // counted: "one"); {onlyN} on the chart cut by it alone. Short enough to fit above the chart on a phone.
+  // Step 3: hospital-acquired conditions. {cut} the flat cut; CMS cut {cmsN} scored hospitals (the HACRP pages' count),
+  // {estN} of them with an estimate here; {more}: hacMore when the chart also holds hospitals with an estimate CMS cut
+  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart cut by it alone. Short enough to fit above
+  // the chart on a phone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other harms. The quarter with the highest scores lose {cut} of their pay: {estN} of the {cmsN} scored hospitals CMS cut have an estimate here. The tall column: {onlyN} whose only cut is this one.',
-  hacTextMore: 'The HAC program scores infections and other harms. The quarter with the highest scores lose {cut} of their pay: {estN} of the {cmsN} scored hospitals CMS cut have an estimate here, and {more} cut without a score. The tall column: {onlyN} whose only cut is this one.',
+  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
+  hacMore: ', and {n} without a score',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.

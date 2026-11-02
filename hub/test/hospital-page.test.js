@@ -172,8 +172,8 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(oddFig.unscoredCut >= 1);
   assert.ok(whatifRow(block(mainOf(render(odd)), 'id="whatif"', '</section>'), 'hacrp').includes(`${oddFig.unscoredCut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut but no score`), 'said as cut');
   // A hospital with a Readmissions page that FY's file did not list: its own words for the other year's factor.
-  const out = HOSPITALS.find((h) => h.est && h.inTdr && !h.est.hrrpListed && Number.isFinite(HUB.tdr.hospitals.get(h.ccn)?.paf));
-  if (out) assert.ok(whatifRow(block(mainOf(render(out)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`This page uses FY${FY}, the latest year all three programs share, whose file did not list it.`)), 'the unlisted hospital\'s year line');
+  const out = pick((h) => h.est && h.inTdr && !h.est.hrrpListed && Number.isFinite(HUB.tdr.hospitals.get(h.ccn)?.paf), 'a hospital with a Readmissions page that this year\'s file did not list');
+  assert.ok(whatifRow(block(mainOf(render(out)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`This page uses FY${FY}, the latest year all three programs share, whose file did not list it.`)), 'the unlisted hospital\'s year line');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');

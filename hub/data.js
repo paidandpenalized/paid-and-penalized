@@ -50,8 +50,6 @@ export function loadHub() {
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
   const pinned = JSON.parse(readPinned(TDR_ID));
   checkHubInputs({ dollars, masterFile, tdrFy: pinned.meta.fy });
-  const hacrpFy = newestYear('data/emitted/hacrp');
-  if (hacrpFy !== dollars.fy) throw new RangeError(`hub: the HACRP pages are FY${hacrpFy} but the dollar estimates are FY${dollars.fy}: their counts would differ (make emit)`);
   const hacrpFile = hacrpPath(dollars.fy);
   if (!existsSync(REPO_ROOT + hacrpFile)) throw new RangeError(`hub: the dollar estimates are FY${dollars.fy} but there is no ${hacrpFile}: emit the HACRP site's year first (make emit)`);
   const hacrp = readJson(REPO_ROOT + hacrpFile);

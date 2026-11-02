@@ -207,6 +207,11 @@ test('the combobox: a failed load says so, and the next try loads again', async 
   assert.equal(s.status.textContent, 'Did not load.');
   assert.equal(s.list.hidden, true);
   ok = true;
+  // Back in the box, the load is tried again and the words already there are listed, with nothing retyped.
+  s.input.listeners.blur();
+  s.input.listeners.focus();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(s.list.hidden, false, 'listed on the retry');
   await s.type('exam');
   assert.equal(s.loads.n, 2);
   assert.equal(s.list.children.length, 2);

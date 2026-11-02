@@ -102,9 +102,7 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
   ? say('hrrpZeroOut', { zeroN: count(facts.hrrpZero), outN: count(facts.hrrpOut) }, { plain: { zero } })
   : say('hrrpZero', { zeroN: count(facts.hrrpZero) }, { plain: { zero } })}</p>`,
     html`<h2>${fill('hacHead', { cut: rulePercent(HAC_CUT_PCT) })}</h2>
-<p>${hac.unscoredCut
-  ? say('hacTextMore', { estN: count(hac.priced), cmsN: count(hac.decidedYes), more: numberWord(hac.unscoredCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })
-  : say('hacText', { estN: count(hac.priced), cmsN: count(hac.decidedYes), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
+<p>${say('hacText', { estN: count(hac.priced), cmsN: count(hac.decidedYes), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT), more: hac.unscoredCut ? fill('hacMore', { n: numberWord(hac.unscoredCut) }) : '' } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>
 <p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: rulePercent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
     html`<h2>${netHead}</h2>

@@ -113,6 +113,7 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     const result = await esbuild({
       entryPoints: [repoPath(path)],
       bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
+      absWorkingDir: REPO_ROOT, // the metafile's input paths (licenseNotice) are then the repository's
     });
     js[name] = writeHashed(dir, name, 'js', licenseNotice(result.metafile) + result.outputFiles[0].text);
   }
