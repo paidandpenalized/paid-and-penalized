@@ -28,7 +28,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
 
   const ready = () => (loading ??= load().then((entries) => { index = entries; return true; }, () => {
     loading = null;
-    pending = true; // the words typed wait for the next try
+    if (input.value.trim()) pending = true; // the words typed wait for the next try
     status.textContent = words.failed;
     return false;
   }));
@@ -79,6 +79,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   };
 
   async function update() {
+    pending = false;
     const query = input.value;
     if (!query.trim()) {
       results = [];
@@ -93,7 +94,6 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
       pending = true;
       return;
     }
-    pending = false;
     ({ results, total } = search(query, index, { limit: LIMIT }));
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);

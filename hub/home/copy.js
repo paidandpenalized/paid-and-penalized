@@ -43,8 +43,8 @@ export const COPY = typesetCopy({
   // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart cut by it alone. Short enough to fit above
   // the chart on a phone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
-  hacMore: ', and {n} without a score',
+  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
+  hacMore: '; it also cut {n} it didn’t score',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.

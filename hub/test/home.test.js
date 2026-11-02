@@ -69,10 +69,10 @@ test('every number in the steps\' words is the data\'s, as the page formats it',
   // The HAC step counts as the HACRP pages do: the scored hospitals CMS cut, and those of them with an estimate, which
   // are the dollar file's headline counts.
   const hac = hacCounts(hospitals);
-  expect(3, `CMS cut ${count(hac.decidedYes)} scored hospitals, ${count(hac.priced)} with an estimate here`, 'of their Medicare inpatient pay', count(facts.hacOnly), '1%');
+  expect(3, `CMS cut ${count(hac.decidedYes)} scored hospitals, ${count(hac.priced)} of them with an estimate here`, 'of their Medicare inpatient pay', count(facts.hacOnly), '1%');
   // The chart holds every cut hospital with an estimate: the step says how many of them CMS cut without a score.
   assert.equal(hac.priced + hac.unscoredCut, facts.hacCut, 'the chart\'s cut hospitals: the decided ones and the rest');
-  if (hac.unscoredCut) expect(3, `with an estimate here, and ${numberWord(hac.unscoredCut)} without a score.`);
+  if (hac.unscoredCut) expect(3, `with an estimate here; it also cut ${numberWord(hac.unscoredCut)} it didn’t score.`);
   assert.deepEqual([hac.priced, hac.decidedYes], [hub.dollars.headline.cut, hub.dollars.headline.yes]);
   // The scale line says what this site does: it estimates the pay.
   assert.ok(words(0).trim().startsWith(`This site estimates Medicare’s FY${hub.fy} inpatient pay to ${count(facts.n)} hospitals`), words(0));
