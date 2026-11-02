@@ -1,5 +1,6 @@
 // What the hub reads at build time: the newest dollar estimates, the newest hospital master, the HACRP site's emitted
-// file for the same year (which hospitals CMS scored and decided), the pinned Thirty Day Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
+// file for the same year (which hospitals CMS scored and decided), the pinned Thirty Day Readmissions file and the US
+// atlas. File reads live here; the model, the asset and the pages stay pure.
 import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';

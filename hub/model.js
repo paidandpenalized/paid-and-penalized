@@ -38,10 +38,9 @@ function netRange(bands, row) {
 }
 
 // Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
-// it and to whether the HACRP pages count it (decided: the Set loadHub reads, the CCNs CMS scored and gave a Yes or No). `est` holds the
-// dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no
-// inputs to estimate from); `cut` is CMS's HAC decision (Yes) for every one of them, `decided` whether CMS scored it and
-// decided Yes or No. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
+// it and to whether the HACRP pages count it (`decided`, from loadHub's Set: hub/data.js). `est` holds the dollars of a
+// hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no inputs to
+// estimate from); `cut` is CMS's HAC decision (Yes) for every one of them. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
 // netRange: an estimated hospital's likely range of its net, [low, high] dollars (the back-test's net band for its group,
 // engine/js/dollars/ranges.js rangeOf, as the HACRP pages give it), null for a net of $0 and for one without an estimate.
 export function hubHospitals({ dollars, master, tdr, decided }) {
