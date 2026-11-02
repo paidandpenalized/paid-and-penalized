@@ -17,7 +17,8 @@ Spec: `docs/specs/2026-11-02-svg-path-weight-design.md`. Branch `hacrp-table-laz
 - [x] Checkpoint: `/simplify`, then `npm test`; `/code-review`. Fixed: an absolute point every 64 segments (the
       browser's single-precision sums no longer drift along a long run), paths with more than six decimal places left as
       they are, two tests that read only the first moveto, the number-joining rule shared with `dots.js`.
-- [ ] `/security-review` (the change touches no external input, credentials or fetches; run for the record).
+- [x] `/security-review`, run once for the whole branch at the final gate (the change touches no external input,
+      credentials or fetches).
 
 ## Milestone 2: the budget
 
@@ -27,8 +28,16 @@ Spec: `docs/specs/2026-11-02-svg-path-weight-design.md`. Branch `hacrp-table-laz
 
 ## Final gate (full branch diff)
 
-- [ ] `/simplify`, then `make test`.
-- [ ] `/code-review` and `/security-review`.
-- [ ] `make build`; `npm run e2e` on Chromium, Firefox and WebKit (`E2E_ENGINE`), against the local build.
-- [ ] Screenshot comparison on Firefox and WebKit too.
-- [ ] Fix every finding and re-run until clean. Then commit.
+- [x] `/simplify`, then `make test`. Applied: anchors by index, one pass over the tokens, a test that bounds the
+      browser's single-precision error.
+- [x] `/code-review` and `/security-review`. Fixed: a close is never the anchor, misplaced commas are refused,
+      `pathNumbers` allocates no arrays, `absoluteD`'s doc. Security: no findings (every path is built from numbers;
+      `html` escapes each interpolation). Left for later: the dots' own relative writer has no anchors (its drift,
+      0.0125 units, predates this branch), and writing relative commands directly (a d3-geo path context, a small
+      writer for the kit) instead of re-reading absolute text would save build and redraw time.
+- [x] `make build`; `npm run e2e` on Chromium, Firefox and WebKit (`E2E_ENGINE`), against the local build: 1,036
+      checks each, all pass (Firefox skips its one standing skip).
+- [x] Screenshot comparison on all three engines, against each engine's own before-against-before noise: 476 chart
+      shots each; past the noise, 53 (Chromium), 52 (Firefox) and 32 (WebKit) shots differ, at most 0.44% of a chart's
+      pixels, each an anti-aliasing step on an edge.
+- [x] Fix every finding and re-run until clean. Then commit.
