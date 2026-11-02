@@ -16,7 +16,7 @@ import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, dotList, factor, money, placeText, unbroken } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
-import { SITE, hospitalPathOf, programById } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
@@ -37,10 +37,11 @@ const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
 // one).
 function deepLink(h, id) {
-  const { name, path, stage } = programById(id);
+  const program = programById(id);
+  const { name, path } = program;
   const own = pageOf(h, id);
   if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
-  return stage === 'soon'
+  return underConstruction(program)
     ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepNotBuilt', { name })}</a>`
     : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
 }
@@ -191,7 +192,7 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 // The Readmissions row's second line, for a hospital with a Readmissions page here: that page shows CMS's newer file's
 // factor (tdr: loadHub().tdr), so the row says which and why this page's differs; '' otherwise.
 function hrrpYearLine(h, { fy, tdr }) {
-  const record = h.inTdr && h.est.hrrpListed ? tdr?.hospitals.get(h.ccn) : null;
+  const record = h.inTdr ? tdr?.hospitals.get(h.ccn) : null;
   if (!record || String(tdr.fy) === fy) return '';
   return html`<p class="hh__why">${fill('whyHrrpYear', { next: String(tdr.fy), factor: factor(record.paf), fy })}</p>`;
 }

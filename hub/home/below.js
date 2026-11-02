@@ -15,7 +15,7 @@ import { fillCopy, sentenceOf } from '../../web/render/components.js';
 import { absLogPct, capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
-import { SITE } from '../../web/site.js';
+import { SITE, underConstruction } from '../../web/site.js';
 import { shareDomain, shareScale, tickText, wholePercents } from '../client/scale.js';
 import { OUTSIDE, worksheetModel } from '../client/story/worksheet.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
@@ -165,7 +165,7 @@ function card(p, { hospitals, facts, fy, domain }) {
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
   const { big, sub } = FIGURES[p.id](facts, fy);
   // The way to its page: a program whose page here is under construction (stage soon) says so.
-  const link = p.stage === 'soon' ? 'dirBuilding' : 'dirOpen';
+  const link = underConstruction(p) ? 'dirBuilding' : 'dirOpen';
   // Only the groups the program has: a program without bonuses (or without a hospital at $0) says nothing of them.
   const parts = [
     bins.cut && fill('histCut', { n: count(bins.cut) }),
@@ -195,14 +195,14 @@ export function directory({ programs, facts, hospitals, fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
   const soon = programs.filter((p) => !p.inData);
-  const building = live.filter((p) => p.stage === 'soon').length;
+  const building = live.filter(underConstruction).length;
   for (const p of soon) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
   const domain = shareDomain(hospitals);
   const groups = Object.entries(GROUP_WORDS).map(([group, words]) => [words, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
-<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${fill('dirHead', { live: capitalize(numberWord(live.length - building)), building: numberWord(building), more: numberWord(soon.length) })}</h2></div>
+<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(live.length - building)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, domain }))}</div>
@@ -249,15 +249,15 @@ ${row(LINE.net, html`${sentence('wsNet', { net: html`<b>${COPY.wsNetWord}</b>` }
 
 // "Methods, in brief": what an estimate is and how it is checked, how the dollars are made in three points, the way to the
 // methods, and the worksheet for h (the example hospital). fy: the fiscal year; src: the hub asset's address; bands: the
-// dollar file's back-test, whose HAC cut comparison with cost reports gives how many hospitals it compared and its
-// median miss (a log ratio, read as a percent as the HACRP Methods page reads it).
+// dollar file's back-test (its year, bands.fy), whose HAC cut comparison with cost reports gives how many hospitals it
+// compared and its median miss (a log ratio, read as a percent and a direction as the HACRP Methods page reads it).
 export function methodsBrief({ h, fy, src, bands }) {
   if (!h?.est) throw new RangeError(`hub home: the worksheet's hospital ${h?.ccn} has no estimate`);
   const fyText = String(fy);
   const { n, median } = bands.measures.hac.overall;
   return html`<section class="bsec ests" id="estimate" aria-labelledby="estimate-h">
 <div><p class="cap kicker">${COPY.estKicker}</p><h2 id="estimate-h">${COPY.estHead}</h2>
-<p>${fill('estText', { n: count(n), miss: absLogPct(median, 1) })}</p>
+<p>${fill(median >= 0 ? 'estText' : 'estTextLow', { n: count(n), bfy: String(bands.fy), miss: absLogPct(median, 1) })}</p>
 <ol class="nsteps">${POINTS.map((key, i) => html`<li>${no(i + 1)}<span>${sentence(key, { b: html`<b>${COPY[`${key}B`]}</b>` }, key === 'estStepPay' ? { fy: fyText } : {})}</span></li>`)}</ol>
 <a class="more" href="${SITE.pages.methods}">${COPY.estMore}${arrow}</a></div>
 ${worksheet(h, { fy: fyText, src })}

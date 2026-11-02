@@ -31,14 +31,14 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
 }
 
 // Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
-// it and to whether CMS scored it (scored: the Set loadHub reads, the CCNs with a Total HAC Score). `est` holds the
+// it and to whether the HACRP pages count it (decided: the Set loadHub reads, the CCNs CMS scored and gave a Yes or No). `est` holds the
 // dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no
-// inputs to estimate from); `cut` is CMS's HAC decision (Yes) for every one of them, `scored` whether CMS gave it a
-// Total HAC Score. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
+// inputs to estimate from); `cut` is CMS's HAC decision (Yes) for every one of them, `decided` whether CMS scored it and
+// decided Yes or No. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
 // netRange: an estimated hospital's likely range of its net, [low, high] dollars (the back-test's net band for its group,
 // engine/js/dollars/ranges.js rangeOf, as the HACRP pages give it), null for a net of $0 and for one without an estimate.
-export function hubHospitals({ dollars, master, tdr, scored }) {
-  if (!(scored instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of scored CCNs (loadHub().scored)');
+export function hubHospitals({ dollars, master, tdr, decided }) {
+  if (!(decided instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of decided CCNs (loadHub().decided)');
   return dollars.hospitals.map((row) => {
     const m = masterRecord(master, row.ccn);
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
@@ -46,7 +46,7 @@ export function hubHospitals({ dollars, master, tdr, scored }) {
     return {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
-      cut: row.cut, scored: scored.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
+      cut: row.cut, decided: decided.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
       netRange: row.status === 'estimated' ? rangeOf(dollars.bands, 'net', row.stratum, row.net) : null,
     };
   });
@@ -97,19 +97,19 @@ export function storyFacts(hospitals) {
 }
 
 // The hospital-acquired conditions program's counts over every hub hospital (every hospital in that program's file), as the
-// pages that state them count: CMS's cut (yes); the scored hospitals it cut (scoredYes, the HACRP pages' count) and those
-// of them with an estimate here (priced); the scored hospitals with a payment decision (decided: scored, outside
-// Maryland); the hospitals with an estimate (est) and the scored ones among them (headline, whose dollars the HACRP pages
-// add up); Maryland's and those with no inputs.
+// pages that state them count: CMS's cut (yes); the decided hospitals (scored, with a Yes or No: the HACRP pages'
+// population), those it cut (decidedYes, the HACRP pages' count) and those of them with an estimate here (priced); the
+// hospitals with an estimate (est) and the decided ones among them (headline, whose dollars the HACRP pages add up);
+// Maryland's and those with no inputs.
 export function hacCounts(hospitals) {
-  const c = { yes: 0, scoredYes: 0, priced: 0, decided: 0, est: 0, headline: 0, maryland: 0, noInputs: 0 };
+  const c = { yes: 0, decidedYes: 0, priced: 0, decided: 0, est: 0, headline: 0, maryland: 0, noInputs: 0 };
   for (const h of hospitals) {
     if (h.cut) c.yes += 1;
-    if (h.scored && h.cut) c.scoredYes += 1;
-    if (h.scored && h.cut && h.est) c.priced += 1;
-    if (h.scored && h.status !== 'maryland') c.decided += 1;
+    if (h.decided && h.cut) c.decidedYes += 1;
+    if (h.decided && h.cut && h.est) c.priced += 1;
+    if (h.decided) c.decided += 1;
     if (h.est) c.est += 1;
-    if (h.scored && h.est) c.headline += 1;
+    if (h.decided && h.est) c.headline += 1;
     if (h.status === 'maryland') c.maryland += 1;
     if (h.status === 'no-inputs') c.noInputs += 1;
   }

@@ -155,10 +155,11 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   // Its Readmissions page shows CMS's newer file's factor: the row names it, its year, and why this page's differs.
   const record = HUB.tdr.hospitals.get(CUT.ccn);
   assert.ok(hrrp.includes(esc(`Its Readmissions page shows CMS’s FY${HUB.tdr.fy} factor, ${decimal(record.paf, 4)}. This page uses FY${FY}’s, the latest year all three programs share.`)), 'Readmissions: the other year\'s factor and why');
-  // The HAC row counts the peers CMS didn't score apart, so its counts add up to the HACRP pages' (scored) ones.
+  // The HAC row counts the peers CMS didn't score and decide apart (cut or not), so its counts are the HACRP pages' own.
   const hac = whatifRow(whatif, 'hacrp');
+  assert.equal(fig.hacrp.cut, peers.filter((x) => x.decided && x.est.cut).length, 'cut: the decided peers CMS cut, as the HACRP pages count them');
   assert.equal(fig.hacrp.cut + fig.hacrp.none + fig.hacrp.unscored, peers.length, 'the HAC counts add to the group');
-  assert.equal(fig.hacrp.unscored, peers.filter((x) => !x.scored && !x.est.cut).length, 'unscored: the peers CMS gave no score, none of them cut');
+  assert.equal(fig.hacrp.unscored, peers.filter((x) => !x.decided).length, 'unscored: the peers CMS did not score and decide, cut or not');
   assert.ok(hac.includes(`${fig.hacrp.cut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut, ${fig.hacrp.none} with no cut`), 'HACRP: the peer counts');
   if (fig.hacrp.unscored) assert.ok(hac.includes(esc(`, ${fig.hacrp.unscored} that CMS didn’t score.`)), 'HACRP: the unscored peers');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');

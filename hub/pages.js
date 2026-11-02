@@ -58,7 +58,7 @@ function methods({ hospitals, fy, assets, robots }) {
 </section>
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
-${para('countsCms', {}, { ...of('yes', 'scoredYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'scoredYes'))}${para('countsTotals', {}, of('est', 'headline'))}</section>
+${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}</section>
 <section class="block" id="ccn" aria-labelledby="ccn-h">
 <h2 id="ccn-h">${COPY.ccnHeading}</h2>
 ${para('ccnText')}</section>

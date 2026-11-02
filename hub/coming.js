@@ -10,7 +10,7 @@ import { programDek } from '../web/programs.js';
 import { fillCopy, formField, formTitle, sentenceOf, stamp } from '../web/render/components.js';
 import { money } from '../web/render/format.js';
 import { html } from '../web/render/html.js';
-import { SITE } from '../web/site.js';
+import { SITE, underConstruction } from '../web/site.js';
 import { COPY } from './coming/copy.js';
 import { GROUP_WORDS } from './home/copy.js';
 import { estimateTag, feedbackLink, hubPage } from './parts.js';
@@ -38,6 +38,7 @@ export function comingPage({ program, facts, assets, robots }) {
   if (!Object.hasOwn(GROUP_WORDS, program.group)) throw new RangeError(`hub coming: the page has no words for the group "${program.group}"`);
   const dek = programDek(program.id);
   const fy = String(assets.shell.fy);
+  const building = underConstruction(program);
   const fields = [
     { label: fill('programLabel'), value: program.long },
     { label: fill('figuresLabel'), value: figures(program, facts, fy) },
@@ -45,15 +46,15 @@ export function comingPage({ program, facts, assets, robots }) {
   const body = html`<article class="wrap rd rd--program">
 <header class="rd__top">
 <div class="rd__intro stack">
-<p class="cap kicker rd__kicker">${program.ab} · ${GROUP_WORDS[program.group]} · ${program.inData ? COPY.statusInData : COPY.statusConsidered}</p>
+<p class="cap kicker rd__kicker">${program.ab} · ${GROUP_WORDS[program.group]} · ${building ? COPY.statusInData : COPY.statusConsidered}</p>
 <h1 class="rd__title">${program.name}</h1>
 <p class="dek">${dek}</p>
 <p class="rd__go cm__acts"><a href="/">${arrow} ${SHARED.allPrograms}</a><a href="/#programs">${COPY.livePrograms}</a></p>
 </div>
 <div class="form rd__sum cm__card">
 ${formTitle(fill('cardTitle', { ab: program.ab }), program.inData ? `FY${fy}` : null)}
-<div class="cm__wait"><p>${program.inData ? COPY.bandInData : COPY.band}</p></div>
-${fields.map((field, i) => formField({ no: i + 1, size: 'text', ...field }))}<div class="cm__stamp" aria-hidden="true">${stamp({ label: program.inData ? COPY.stampInData : COPY.stamp, ink: true })}</div>
+<div class="cm__wait"><p>${building ? COPY.bandInData : COPY.band}</p></div>
+${fields.map((field, i) => formField({ no: i + 1, size: 'text', ...field }))}<div class="cm__stamp" aria-hidden="true">${stamp({ label: building ? COPY.stampInData : COPY.stamp, ink: true })}</div>
 </div>
 </header>
 <p class="rd__note">${sentence('ask', { feedback: feedbackLink(program.path) })}</p>

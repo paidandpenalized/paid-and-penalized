@@ -14,7 +14,8 @@ import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup } from '../web/pages/methods.js';
-import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
+import { absLogPct } from '../../../web/render/format.js';
+import { assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, MD, PD, PLACES, renderMethods, renderPlace, renderProgram } from './pinned.js';
 import { strippedText as strip } from './fixtures.js';
 

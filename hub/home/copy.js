@@ -39,9 +39,12 @@ export const COPY = typesetCopy({
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut; {estN} of the {cmsN} scored hospitals CMS cut have an
-  // estimate (the HACRP pages' count); {onlyN} on the chart cut by it alone.
+  // estimate (the HACRP pages' count); {more}: the hospitals with an estimate CMS cut without a score, counted ("one
+  // hospital"), which the chart holds too (hacUnscored, when there are any); {onlyN} on the chart cut by it alone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other patient-safety events, and the quarter of hospitals with the highest scores lose {cut} of their Medicare inpatient pay. {estN} of the {cmsN} hospitals CMS cut have an estimate here. The tall column: {onlyN} whose only cut is this one.',
+  hacUnscored: 'The chart also holds {more} CMS cut without a score.',
+  hacText: 'The HAC program scores infections and other patient-safety events, and the quarter of hospitals with the highest scores lose {cut} of their Medicare inpatient pay. {estN} of the {cmsN} scored hospitals CMS cut have an estimate here.',
+  hacTall: 'The tall column: {onlyN} whose only cut is this one.',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.
@@ -119,6 +122,8 @@ export const COPY = typesetCopy({
   // ({count}: the programs with data; {gross}: what they move in FY{fy}), the group over the cards.
   dirKicker: 'The programs',
   dirHead: '{live} live, {building} under construction, {more} under consideration.',
+  // With none under construction.
+  dirHeadAll: '{live} live, {more} under consideration.',
   dirLede: 'Each card puts its program’s hospitals on one shared scale. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
   dirGroup: 'Quality programs',
   dirGroupNote: 'Estimated FY{fy}',
@@ -162,9 +167,11 @@ export const COPY = typesetCopy({
   // found hospital). Its lines' numbers arrive as {pay}, {base}, {hrrp}, {vbp}, {a} {b} {c}; {one} is the factor's 1,
   // {cut} the HAC cut.
   estKicker: 'Methods, in brief',
-  estHead: 'Every dollar here is an estimate, labeled one and checked against CMS’s figures.',
-  // {n}: the cut hospitals the back-test compared; {miss}: how far its middle estimate ran from their cost reports.
-  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build checks the national sums against figures CMS publishes. Against {n} cut hospitals’ own cost reports, the middle estimate of their HAC cut landed {miss} from what the reports recorded.',
+  estHead: 'Every dollar here is an estimate, labeled one and tested against hospitals’ cost reports.',
+  // {n}: the cut hospitals the back-test compared, in FY{bfy}; {miss}: how far its middle estimate ran above (estTextLow:
+  // below) their cost reports.
+  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} above what they recorded.',
+  estTextLow: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} below what they recorded.',
   estStepPay: 'Start from each hospital’s {b} for FY{fy}.',
   estStepPayB: 'estimated Medicare inpatient pay',
   estStepRule: 'Apply each program’s {b} to the part of pay it covers.',

@@ -11,7 +11,7 @@ const hub = loadHub();
 const hospitals = hubHospitals(hub);
 const asset = hubAsset(hospitals, { shapes: hub.shapes, fy: hub.fy });
 const COLS = ['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total', 'hrrp', 'hvbp', 'hac', 'net',
-  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr', 'scored'];
+  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr', 'decided'];
 
 test('the asset is one row per hospital in the column order the browser reads', () => {
   assert.equal(MAP_WIDTH, 975);
@@ -28,7 +28,7 @@ test('the asset is one row per hospital in the column order the browser reads', 
     assert.equal(row[COLS.indexOf('status')], STATUS_CODES[h.status]);
     assert.equal(row[COLS.indexOf('tdr')], h.inTdr ? 1 : 0);
     assert.equal(row[COLS.indexOf('cut')], h.cut ? 1 : 0);
-    assert.equal(row[COLS.indexOf('scored')], h.scored ? 1 : 0);
+    assert.equal(row[COLS.indexOf('decided')], h.decided ? 1 : 0);
     assert.equal(row[COLS.indexOf('beds')], h.beds);
     assert.equal(row[COLS.indexOf('teach')], h.teach);
   });

@@ -233,7 +233,6 @@ export function assumptionsTable({ fy, assumptions, backtestFy }) {
 // A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22% (absLogPct, web/render/format.js: without the sign,
 // 0.25 and -0.25 both 22%).
 const logPct = (x, dp) => pct(Math.exp(x) - 1, dp, { sign: true });
-export { absLogPct };
 
 // How a dollar check's value and range read on the tape, by check.
 const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };

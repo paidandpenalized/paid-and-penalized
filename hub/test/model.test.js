@@ -15,7 +15,7 @@ const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 // A synthetic hospital: invented CCN, an estimated row unless `est: null`.
 const fake = (ccn, state, est, extra = {}) => ({
   ccn, name: `Hospital ${ccn}`, city: 'Town', state, beds: 150, teach: 'none', lat: 40, lon: -90,
-  status: est ? 'estimated' : 'no-inputs', inTdr: true, cut: est?.cut ?? false, scored: true,
+  status: est ? 'estimated' : 'no-inputs', inTdr: true, cut: est?.cut ?? false, decided: true,
   est: est && {
     base: 0, total: 1000, hrrp: 0, hvbp: 0, hac: 0, net: 0, after: 1000, atStake: 10, hrrpFactor: 1, vbpFactor: 1,
     cut: false, hrrpListed: true, vbpListed: true, share: 0, ...est,
@@ -68,12 +68,12 @@ test('hubHospitals stops on a status no page has words for', () => {
   const master = new Map([['990001', { ccn: '990001', name: 'Hospital 990001', city: 'Town', state: 'ZZ', beds: 10, teach: 'none', lat: 1, lon: 2 }]]);
   const tdr = { hospitals: new Map() };
   const row = { ccn: '990001', status: 'parhm', cut: false, hrrpListed: false, vbpListed: false };
-  const scored = new Set(['990001']);
-  assert.throws(() => hubHospitals({ dollars: { hospitals: [row] }, master, tdr, scored }), /status "parhm"/);
-  const [h] = hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr, scored });
-  assert.deepEqual([h.status, h.est, h.inTdr, peerKey(h, 'size'), h.cut, h.scored], ['maryland', null, false, 'b0', false, true]);
-  // The scored CCNs are required: without them the hub could not count as the HACRP pages do.
-  assert.throws(() => hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr }), /Set of scored CCNs/);
+  const decided = new Set(['990001']);
+  assert.throws(() => hubHospitals({ dollars: { hospitals: [row] }, master, tdr, decided }), /status "parhm"/);
+  const [h] = hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr, decided });
+  assert.deepEqual([h.status, h.est, h.inTdr, peerKey(h, 'size'), h.cut, h.decided], ['maryland', null, false, 'b0', false, true], 'decided as the Set says');
+  // The decided CCNs are required: without them the hub could not count as the HACRP pages do.
+  assert.throws(() => hubHospitals({ dollars: { hospitals: [{ ...row, status: 'maryland' }] }, master, tdr }), /Set of decided CCNs/);
 });
 
 test('hubHospitals stops on a dollar CCN with no master record, in the hub RangeError checkHubInputs gives (never a TypeError)', () => {
@@ -81,7 +81,7 @@ test('hubHospitals stops on a dollar CCN with no master record, in the hub Range
   const tdr = { hospitals: new Map() };
   const rows = [{ ccn: '990001', status: 'maryland' }, { ccn: '990009', status: 'estimated' }];
   const error = (fn) => { try { fn(); } catch (e) { return e; } return null; };
-  const e = error(() => hubHospitals({ dollars: { hospitals: rows }, master, tdr, scored: new Set() }));
+  const e = error(() => hubHospitals({ dollars: { hospitals: rows }, master, tdr, decided: new Set() }));
   assert.ok(e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'), String(e));
   // One message from both places that can meet the gap.
   const masterFile = { programYears: { hacrp: 2026, hrrp: 2027 }, hospitals: [{ ccn: '990001' }] };
@@ -128,15 +128,15 @@ test('storyFacts on invented hospitals: a bonus, a cut, a HAC-only hospital, one
     fake('990003', 'ZY', { total: 500, hrrp: -5, hvbp: 0, hac: 0, net: -5, vbpListed: false, vbpFactor: 1 }),
     fake('990004', 'ZY', { total: 500, hrrp: 0, hvbp: 15, hac: 0, net: 15, vbpFactor: 1.004 }),
     fake('990005', 'ZY', null, { cut: true }),
-    fake('990007', 'ZY', { total: 1000, hac: -10, net: -10, cut: true }, { scored: false }),
+    fake('990007', 'ZY', { total: 1000, hac: -10, net: -10, cut: true }, { decided: false }),
   ];
   assert.deepEqual(storyFacts(list), {
     n: 5, pay: 6000, net: -45, notPaid: 45, vbpBonus: 35, gross: 80, share: 80 / 6000,
     hrrpCut: 2, hrrpZero: 3, hrrpOut: 0, hrrpSum: -35, hacCut: 2, hacOnly: 2, hacSum: -35,
     vbpBonusN: 2, vbpCutN: 1, vbpZero: 1, vbpOut: 1, vbpNet: 25, netCut: 4, netBonus: 1, netZero: 0, vbpMax: 1.004,
   });
-  // As the HACRP pages count: CMS cut three, two of them scored (one with an estimate, one without).
-  assert.deepEqual(hacCounts(list), { yes: 3, scoredYes: 2, priced: 1, decided: 5, est: 5, headline: 4, maryland: 0, noInputs: 1 });
+  // As the HACRP pages count: CMS cut three, two of them decided (one with an estimate, one without).
+  assert.deepEqual(hacCounts(list), { yes: 3, decidedYes: 2, priced: 1, decided: 5, est: 5, headline: 4, maryland: 0, noInputs: 1 });
   // No hospital in HVBP: no highest factor.
   assert.equal(storyFacts([fake('990006', 'ZZ', { vbpListed: false })]).vbpMax, null);
 });

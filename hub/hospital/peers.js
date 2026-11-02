@@ -35,8 +35,9 @@ export function peersOf(hospitals, h, mode) {
 }
 
 // What the peers show for one row: `n` peers, `in` of them in the program, and of those `cut` with money taken, `bonus`
-// with money paid, `none` with neither; `unscored`, hospital-acquired conditions' peers without a cut that CMS gave no
-// Total HAC Score (counted apart from `none`, as the HACRP pages leave them out of their counts; 0 in the other rows);
+// with money paid, `none` with neither; `unscored`, hospital-acquired conditions' peers CMS did not score and decide
+// (cut or not: counted apart from `cut` and `none`, as the HACRP pages leave them out of their counts; 0 in the other
+// rows);
 // `out` not in it; `median`, the median share of pay (dollars / estimated pay) among those in the program, or null when
 // none is.
 export function rowFigures(peers, id) {
@@ -44,12 +45,12 @@ export function rowFigures(peers, id) {
   let cut = 0;
   let bonus = 0;
   let unscored = 0;
-  for (const { est, scored } of peers) {
+  for (const { est, decided } of peers) {
     if (!inProgram(est, id)) continue;
     const dollars = dollarsOf(est, id);
-    if (dollars < 0) cut += 1;
+    if (id === 'hacrp' && !decided) unscored += 1;
+    else if (dollars < 0) cut += 1;
     else if (dollars > 0) bonus += 1;
-    else if (id === 'hacrp' && !scored) unscored += 1;
     shares.push(dollars / est.total);
   }
   return { n: peers.length, in: shares.length, cut, bonus, none: shares.length - cut - bonus - unscored, unscored, out: peers.length - shares.length, median: median(shares) };
