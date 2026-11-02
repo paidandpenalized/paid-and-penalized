@@ -39,11 +39,15 @@ const TOKEN = /[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g;
 function readPath(d) {
   const tokens = d.match(TOKEN);
   if (!tokens || !/^[Mm]$/.test(tokens[0])) return null;
-  // Nothing but tokens, commas and spaces; every letter a command.
-  const stray = d.replace(TOKEN, '').replace(/[\s,]/g, '') !== '';
-  if (stray || tokens.some((t) => /[A-Za-z]/.test(t) && !COMMAND.test(t))) return null;
+  // Nothing but tokens, commas and spaces; every letter a command. One pass over the tokens checks the letters and finds
+  // the most decimal places.
+  if (d.replace(TOKEN, '').replace(/[\s,]/g, '') !== '') return null;
   let places = 0;
   for (const t of tokens) {
+    if (t.length === 1 && /[A-Za-z]/.test(t)) {
+      if (!COMMAND.test(t)) return null;
+      continue;
+    }
     const point = t.indexOf('.');
     if (point >= 0) places = Math.max(places, t.length - point - 1);
   }
@@ -113,17 +117,17 @@ export function relativeD(d) {
   };
   let x = 0;
   let y = 0;
-  // Segments written since the last absolute one: every ANCHOR-th is absolute, so the browser's error can't grow.
-  let run = 0;
   segments.forEach(([c, nx, ny], i) => {
-    const absolute = i === 0 || run >= ANCHOR;
-    run = absolute ? 0 : run + 1;
+    // Every ANCHOR-th segment, the first among them, is absolute (measured from 0, 0), so the browser's error can't grow.
+    const absolute = i % ANCHOR === 0;
+    const [px, py] = absolute ? [0, 0] : [x, y];
+    const as = (letter) => (absolute ? letter : letter.toLowerCase());
     if (c === 'Z') put('z');
-    else if (c === 'M') put(absolute ? 'M' : 'm', ...(absolute ? [nx, ny] : [nx - x, ny - y]));
+    else if (c === 'M') put(as('M'), nx - px, ny - py);
     // A line along x as h (a line of no length too, as h0: a dot, with round caps), along y as v.
-    else if (ny === y) put(absolute ? 'H' : 'h', absolute ? nx : nx - x);
-    else if (nx === x) put(absolute ? 'V' : 'v', absolute ? ny : ny - y);
-    else put(absolute ? 'L' : 'l', ...(absolute ? [nx, ny] : [nx - x, ny - y]));
+    else if (ny === y) put(as('H'), nx - px);
+    else if (nx === x) put(as('V'), ny - py);
+    else put(as('L'), nx - px, ny - py);
     [x, y] = [nx, ny];
   });
   return out;

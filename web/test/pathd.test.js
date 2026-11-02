@@ -104,9 +104,36 @@ test('a long path restarts from an absolute point every 64 segments; the points 
   const runs = Array.from({ length: 200 }, (_, k) => `M${(k * 0.37).toFixed(2)} 10.5H${(k * 0.37 + 0.2).toFixed(2)}`).join('');
   const out = relativeD(runs);
   same(runs, out, 100);
-  // The first moveto, then the 65th segment and every 65th after it (the 64 between each pair relative).
-  assert.equal((out.match(/[MLHV]/g) ?? []).length, Math.ceil(400 / 65));
+  // The first moveto, then every 64th segment after it.
+  assert.equal((out.match(/[MLHV]/g) ?? []).length, Math.ceil(400 / 64));
   assert.ok(out.length < runs.length * 0.75, `${out.length} of ${runs.length}`);
+});
+
+test('a browser adding the relative steps in single precision stays within a few thousandths of a unit, however long the path', () => {
+  // A roll call's row at the wide width: 6,000 runs across 1,180 units, each a move and a line.
+  const runs = Array.from({ length: 6000 }, (_, k) => `M${(40 + k * 0.19).toFixed(2)} 198.5H${(40 + k * 0.19 + 0.12).toFixed(2)}`).join('');
+  const out = relativeD(runs);
+  const exact = points(runs, 100).filter((p) => p !== 'Z').map((p) => p.replace(/^M/, '').split(',').map((v) => v / 100));
+  // The browser's sum: each absolute number read as a float32, each relative one added to the point in float32.
+  const f = Math.fround;
+  const tokens = out.match(/[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g);
+  const seen = [];
+  let [x, y] = [0, 0];
+  let cmd = null;
+  for (let i = 0; i < tokens.length;) {
+    if (/[A-Za-z]/.test(tokens[i])) cmd = tokens[i++];
+    const n = () => f(Number(tokens[i++]));
+    if (cmd === 'M' || cmd === 'L') [x, y] = [n(), n()];
+    else if (cmd === 'm' || cmd === 'l') [x, y] = [f(x + n()), f(y + n())];
+    else if (cmd === 'H') x = n();
+    else if (cmd === 'h') x = f(x + n());
+    seen.push([x, y]);
+    if (cmd === 'M') cmd = 'L';
+    if (cmd === 'm') cmd = 'l';
+  }
+  assert.equal(seen.length, exact.length);
+  const worst = Math.max(...seen.map(([sx, sy], k) => Math.max(Math.abs(sx - exact[k][0]), Math.abs(sy - exact[k][1]))));
+  assert.ok(worst < 0.005, `${worst}`);
 });
 
 test('a coordinate with more than six decimal places, or too large to add exactly, is left as it was', () => {
