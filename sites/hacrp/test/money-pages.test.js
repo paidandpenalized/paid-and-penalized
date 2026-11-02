@@ -14,7 +14,8 @@ import { BACKTEST_HREF, DOLLARS_HREF } from '../web/links.js';
 import { cutCounts, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { HEADLINE_MIN, MAJOR_TEACHING_RATIO, PARHM_THROUGH_YEAR, REDUCTION_PCT } from '../web/constants.js';
 import { furthestGroup } from '../web/pages/methods.js';
-import { absLogPct, assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
+import { absLogPct } from '../../../web/render/format.js';
+import { assumptionsTable, insideCounts, stratumLabel } from '../web/methods-figures.js';
 import { DATA, MD, PD, PLACES, renderMethods, renderPlace, renderProgram } from './pinned.js';
 import { strippedText as strip } from './fixtures.js';
 
@@ -120,6 +121,11 @@ test('the Part on the money: at least five figures, each beside its words, each 
   // Three programs: each total.
   const three = captionOf(part, 'three');
   for (const x of [money(-MD.headline.hrrp), money(MD.headline.hvbp), money(MD.headline.money)]) assert.ok(three.includes(x), `${x} in "${three}"`);
+  // Its note says whose dollars the totals add up (this program's scored hospitals with an estimate), and why the family's
+  // front page, which adds up every hospital with an estimate, shows slightly different totals.
+  const threeSection = part.slice(part.indexOf('<section class="psec psec--wide" id="three"'));
+  assert.ok(threeSection.includes(`The totals add up the ${MD.headline.hospitals.toLocaleString('en-US')} hospitals this program scored that this site estimates. The front page adds up all ${MD.allEstimated.toLocaleString('en-US')} hospitals this site estimates, so its totals differ slightly.`), 'the three programs\' note');
+  assert.ok(MD.allEstimated > MD.headline.hospitals);
   // Every figure's words sit beside it (or over it).
   for (const id of ['bill', 'across', 'shares', 'states', 'three']) assert.match(part, new RegExp(`<section class="psec[^"]*" id="${id}"[\\s\\S]*?<div class="psec__text">[\\s\\S]*?<div class="psec__fig">\\n<figure`), id);
 });

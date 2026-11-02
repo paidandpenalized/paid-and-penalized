@@ -1,8 +1,10 @@
 // A search box as an accessible combobox, ported from Thirty Day Readmissions (web/src/js/ui/omnibox.js) onto markup
 // the build writes (render/shell.js searchForm): the input is role="combobox" over a listbox of options. Typing lists
 // the best matches; the arrow keys move through them (aria-activedescendant), Enter or a click opens one, Escape
-// closes the list. The index loads on first focus (load() resolves to buildIndex's entries; a failure says so, and
-// the next focus tries again). A polite status says how many matched. Without JavaScript the form stays hidden.
+// closes the list, and leaving the box closes it. The index loads on first focus (load() resolves to buildIndex's
+// entries; a failure says so, and the next focus tries again); a list it was typed for while loading opens only if the
+// reader is still in the box. A press anywhere on the list (an option, its scrollbar, its "No matches" row) keeps the
+// focus in the box. A polite status says how many matched. Without JavaScript the form stays hidden.
 // words: { empty, kind: { [type]: label }, count(n), failed, more(total) } — the site's own words (more: the label
 //        of a last option that hands every match on, or null; onMore(query) acts on it)
 import { LIMIT, search } from './search.js';
@@ -17,9 +19,16 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   let results = [];
   let total = 0;
   let active = -1;
+  // Whether the reader is in the box: a list typed for while the index loaded opens only then. A box that already has
+  // the focus when this mounts is in it.
+  let focused = document.activeElement === input;
+  // Words typed while the index loaded, left unlisted because the reader had left the box or the load failed: listed once
+  // the reader is back and the index is in.
+  let pending = false;
 
   const ready = () => (loading ??= load().then((entries) => { index = entries; return true; }, () => {
     loading = null;
+    if (input.value.trim()) pending = true; // the words typed wait for the next try
     status.textContent = words.failed;
     return false;
   }));
@@ -70,6 +79,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   };
 
   async function update() {
+    pending = false;
     const query = input.value;
     if (!query.trim()) {
       results = [];
@@ -80,16 +90,22 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     }
     if (!index && !(await ready())) return;
     if (input.value !== query) return; // the reader typed on while the index loaded
+    if (!focused) { // or left the box: the list would open with no one in it, so it waits for their return
+      pending = true;
+      return;
+    }
     ({ results, total } = search(query, index, { limit: LIMIT }));
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);
     paint();
   }
 
-  // Leaving the box closes the list a moment later (so a press on an option lands first); coming back before then keeps
-  // it, with whatever the reader types next.
-  let closing = null;
-  input.addEventListener('focus', () => { clearTimeout(closing); ready(); });
+  // Back in the box with words a load left unlisted, the list follows them once the index is in (a failed load is tried
+  // again here).
+  input.addEventListener('focus', () => {
+    focused = true;
+    ready().then((ok) => { if (ok && pending && focused) update(); });
+  });
   input.addEventListener('input', update);
   input.addEventListener('keydown', (e) => {
     const n = count();
@@ -109,14 +125,20 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
       close();
     }
   });
-  // A press on an option picks it before the input's blur closes the list.
+  // A press anywhere on the list keeps the focus in the box (a mousedown's default would move it), so the list stays for
+  // a press on its edge (where a scrollbar beside the options takes it) or on its "No matches" row; a press on an option
+  // picks it.
   list.addEventListener('mousedown', (e) => {
-    const li = e.target.closest?.('[role="option"]');
-    if (!li) return;
+    if (e.button !== 0) return; // a right or middle press is the browser's (its menu), never a pick
     e.preventDefault();
-    pick([...list.children].indexOf(li));
+    const li = e.target.closest?.('[role="option"]');
+    if (li) pick([...list.children].indexOf(li));
   });
-  input.addEventListener('blur', () => { closing = setTimeout(close, 120); });
+  // Leaving the box closes the list at once. A press on the list never leaves it (above), so nothing waits on a delay.
+  input.addEventListener('blur', () => {
+    focused = false;
+    close();
+  });
   // The form never submits: Enter picks, and a pick opens a page.
   form.addEventListener('submit', (e) => e.preventDefault());
   form.hidden = false;

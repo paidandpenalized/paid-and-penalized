@@ -12,7 +12,7 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { loadHub } from '../data.js';
-import { hubHospitals } from '../model.js';
+import { hacCounts, hubHospitals } from '../model.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
@@ -55,6 +55,20 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(methods, /href="\/about\/#ai"/);
     // Its description says what the page covers now that the AI paragraph is on /about/.
     assert.ok(methods.includes(`<meta name="description" content="${escapeHtml(COPY.methodsDescription)}">`));
+    // How the hospital-acquired conditions counts differ from page to page, each count the dollar file's own, and the CCN
+    // a figure belongs to.
+    const c = hacCounts(hubHospitals(hub));
+    const { national, headline } = hub.dollars;
+    assert.deepEqual([c.yes, c.decidedYes, c.priced, c.est, c.headline, c.maryland, c.noInputs],
+      [national.yes, headline.yes, headline.cut, national.hospitals, headline.hospitals, national.byStatus.maryland, national.byStatus['no-inputs']]);
+    const text = textOf(methods).replace(/\s+/g, ' ');
+    const n = (k) => c[k].toLocaleString('en-US');
+    for (const s of [`In FY${hub.fy}, CMS cut ${n('yes')} hospitals`, `CMS gave ${n('decidedYes')} of them a Total HAC Score`, `among the ${n('decided')} scored hospitals`,
+      `This site estimates dollars for ${n('est')} hospitals`, `except Maryland’s ${n('maryland')}`, `and ${n('noInputs')} with no usable row`,
+      `So ${n('priced')} of the ${n('decidedYes')} scored hospitals CMS cut have an estimate here.`, `add up all ${n('est')} hospitals`, `add up the ${n('headline')} of them`,
+      'as CMS listed it in that year’s files. A hospital that has since closed or merged keeps the figures']) assert.ok(text.includes(s), s);
+    assert.match(methods, /<section class="block" id="counts" aria-labelledby="counts-h">\n<h2 id="counts-h">How the counts differ<\/h2>/);
+    assert.match(methods, /<section class="block" id="ccn" aria-labelledby="ccn-h">\n<h2 id="ccn-h">Hospitals as CMS listed them<\/h2>/);
 
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);

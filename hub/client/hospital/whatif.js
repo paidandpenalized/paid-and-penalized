@@ -327,6 +327,8 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   const stamp = stampBox?.querySelector('.stamp');
   const stampText = stamp?.textContent;
   const big = $('.hh__big');
+  // The net's likely range is the actual net's: a scenario that moves the net hides it.
+  const band = $('[data-band]');
   const netlab = $('.hh__netlab');
   const netTag = node('span', { class: 'hh__htag hh__htag--sm', hidden: '' }, [fill('wiTag')]);
   netlab?.append(netTag);
@@ -425,6 +427,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       was(big.parentElement, struck(out.net, h.est.net), big, 'hh__was hh__was--big');
     }
     netTag.hidden = !on;
+    if (band) band.hidden = on && netMoved;
     paintSum(out);
     const head = $('[data-headline]');
     const share = on ? netShare(out.net, h.est.total) : h.est.share;

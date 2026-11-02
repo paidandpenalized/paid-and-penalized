@@ -137,6 +137,11 @@ export const COPY = {
   whatifRowCut: { text: 'Payment cut', claim: 'HACRP-01' },
   whatifResultLabel: { text: 'Result of the what-if', claim: null },
   whatifRampLine: { text: "CMS's line", claim: null },
+  // The ramp's faint ticks: CMS's line in earlier years scored the same way (equal weights: HACRP-59).
+  whatifRampPast: { text: "CMS's line in FY{fy}", claim: null },
+  // {low} and {high}: the lowest and highest earlier line, each midway between CMS's highest No and lowest Yes that year.
+  whatifRampPastNote: { text: "The faint ticks are CMS's line in earlier years under the same formula, from about {low} (FY{lowFy}) to about {high} (FY{highFy}). The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
+  whatifRampPastOne: { text: "The faint tick is CMS's line in FY{fy} under the same formula, about {score}. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
   whatifEstimate: {
     text: "Estimate: a changed measure's z-score is this site's recompute, which can differ slightly from CMS's.",
     claim: null,
@@ -419,8 +424,9 @@ export const COPY = {
     text: 'Map of the states, each shaded by the share of its hospitals with a payment decision that CMS cut; hatched and plain states have no share to show.',
     claim: null,
   },
-  // Said as the map's description once it takes focus; Enter (or a click) lists a state's hospitals in the table.
-  figStatesKeys: { text: "Arrow keys step through the states; Enter lists the state's hospitals in the table below.", claim: null },
+  // Said as the map's description once it takes focus; Enter (or a click) opens the state's page (client/explore.js
+  // mountUsMap).
+  figStatesKeys: { text: "Arrow keys step through the states; Enter opens the state's page.", claim: null },
   figStatesTile: { text: '{yes} of {decided} cut ({share})', claim: null },
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },

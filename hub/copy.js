@@ -10,6 +10,14 @@ export const COPY = typesetCopy({
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
   estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
+  // How the hospital-acquired conditions counts differ from page to page (hub/pages.js hacCounts fills them).
+  countsHeading: 'How the counts differ',
+  countsCms: "In FY{fy}, CMS cut {yes} hospitals under the hospital-acquired conditions program. CMS gave {decidedYes} of them a Total HAC Score, and the program's own pages here count those, among the {decided} scored hospitals with a payment decision.",
+  countsEstimated: "This site estimates dollars for {est} hospitals: every hospital in that program's file except Maryland's {maryland}, paid under the state's own all-payer model, and {noInputs} with no usable row in CMS's payment file. So {priced} of the {decidedYes} scored hospitals CMS cut have an estimate here.",
+  countsTotals: "The front page's charts and totals add up all {est} hospitals with an estimate. The hospital-acquired conditions pages add up the {headline} of them that program scored, so a program's total can differ slightly between the two.",
+  // Which hospital a figure belongs to.
+  ccnHeading: 'Hospitals as CMS listed them',
+  ccnText: "Every figure is for a hospital's CCN, its Medicare provider number, as CMS listed it in that year's files. A hospital that has since closed or merged keeps the figures CMS's files gave its CCN for that year.",
 
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
   // Each page: a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading and its

@@ -1,6 +1,7 @@
 // The HACRP page generator: checks acceptance A1 on the emitted data (the build fails if it doesn't hold), then
 // emits the program page, one page per hospital, and the dataset CSV with its data dictionary through the build
 // context.
+import { lineScore } from '../../../web/whatif/marks.js';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
@@ -71,6 +72,17 @@ export function scoreRange(hospitals) {
   return { low: percentileSas5(totals, RAMP_LOW_PCT / 100), high: percentileSas5(totals, RAMP_HIGH_PCT / 100) };
 }
 
+// CMS's line in each year before fy scored by today's formula (equal weights, the history's rule 'equal'), where CMS cut
+// some hospitals and not others: [{ fy, score }], the score midway between the highest it didn't cut and the lowest it
+// did, as the ramp draws this year's (lineScore). The what-if's ramp marks them faintly: the line
+// moves from year to year. hd: historyData(), or null without the history (none).
+export function pastLines(hd, fy) {
+  if (!hd) return [];
+  return hd.checks
+    .filter((c) => c.fy < fy && c.rule.rule === 'equal' && c.check.highestNo !== null && c.check.lowestYes !== null)
+    .map((c) => ({ fy: c.fy, score: lineScore(c.check) }));
+}
+
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass
 // data from loadHacrp() to read the files once. Returns the site's two dates for the hub's corrections page
 // (build.js): the CMS file's release and the day its numbers last changed.
@@ -104,7 +116,8 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     ctx.emit(p);
   };
 
-  const range = scoreRange(hospitals);
+  // The ramp's national span, with CMS's earlier lines on the same scale.
+  const range = { ...scoreRange(hospitals), past: pastLines(hd, fy) };
   const programRobots = robotsFor({ env, released });
   // What the program page and the place pages draw, computed once.
   const pd = programData({ hospitals, master, model });

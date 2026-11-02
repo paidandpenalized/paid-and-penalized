@@ -12,15 +12,16 @@
 //   #whatif [data-row]  hrrp, hacrp, hvbp and net, each with an empty [data-strip]; [data-result] (aria-live) in net's,
 //                       and its [data-match] and [data-reset] buttons (hidden until the script)
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
+import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, dotList, money, placeText, unbroken } from '../../web/render/format.js';
+import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
-import { SITE, hospitalPathOf, programById } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
-import { comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
+import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -37,10 +38,11 @@ const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
 // one).
 function deepLink(h, id) {
-  const { name, path, stage } = programById(id);
+  const program = programById(id);
+  const { name, path } = program;
   const own = pageOf(h, id);
   if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
-  return stage === 'soon'
+  return underConstruction(program)
     ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepNotBuilt', { name })}</a>`
     : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
 }
@@ -124,8 +126,24 @@ ${axis}
 <p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>`;
 }
 
-// The net block: its label and tag, the large figure and its stamp, the slot the estimate's band will fill, the common
-// fiscal year's note, the rows, and the button down to the what-if.
+// Where the likely ranges come from: the HACRP Methods page's back-test (its id there is the site's BACKTEST_ID), which
+// compared the same estimates with hospitals' cost reports. The build's link check holds the address to a real id.
+const BACKTEST_HREF = `${SITE.sites.hacrp.path}methods/#backtest`;
+
+// The net's likely range (h.netRange), as the HACRP pages draw one: its key (to the back-test), the two ends as they print
+// a range (moneyRange; in whole dollars when rounding would print both ends alike), and a small bar with the estimate's
+// place on it; '' for none (a net of $0).
+function band(h) {
+  if (!h.netRange) return '';
+  const [lo, hi] = h.netRange;
+  const places = rangeBar(h.netRange, h.est.net);
+  const bar = places ? html`<span class="hh__rng-bar" style="--lo:${places.lo};--hi:${places.hi};--at:${places.at}" aria-hidden="true"></span>` : '';
+  const text = money(lo) === money(hi) ? fill('bandRange', { lo: dollars(lo), hi: dollars(hi) }) : moneyRange(lo, hi);
+  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${text}</span>${bar}</p>`;
+}
+
+// The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a
+// scenario shows), the common fiscal year's note, the rows, and the button down to the what-if.
 function netBlock(h, figures, fy, sets) {
   const { net } = h.est;
   const sign = signOf(net);
@@ -136,7 +154,7 @@ function netBlock(h, figures, fy, sets) {
 <p class="hh__big">${signedMoney(net)}</p>
 <div class="hh__stamp hh__stamp--${sign}">${stamp({ label: stampLabel, ink: sign === 'zero' })}</div>
 </div>
-<div class="hh__band" data-band></div>
+<div class="hh__band" data-band>${band(h)}</div>
 <p class="hh__fy">${fill('fyNote', { fy })}</p>
 ${sumRows(h, figures, fy, sets)}
 <a class="hh__wbtn" href="#whatif"><span class="ico ico--capsule" aria-hidden="true"></span>${fill('whatIfButton')}</a>
@@ -173,6 +191,14 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 }
 
 // ---------- the what-if section ----------
+// The Readmissions row's second line, for a hospital with a Readmissions page here: that page shows CMS's newer file's
+// factor (tdr: loadHub().tdr), so the row says which and why this page's differs; '' otherwise.
+function hrrpYearLine(h, { fy, tdr }) {
+  const record = h.inTdr ? tdr?.hospitals.get(h.ccn) : null;
+  if (!record || !Number.isFinite(record.paf) || String(tdr.fy) === fy) return '';
+  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(tdr.fy), factor: factor(record.paf), fy })}</p>`;
+}
+
 function programRow(h, id, figures, ctx) {
   const { name, ab } = programById(id);
   const listed = inProgram(h.est, id);
@@ -185,14 +211,14 @@ function programRow(h, id, figures, ctx) {
 <h3 class="hh__rh">${name} <span class="hh__ab">${ab}</span></h3>
 <p class="hh__rv">${value}</p>
 <p class="hh__why">${whyText(fill, h, id, figures[id], ctx).join(' ')}</p>
-${deepLink(h, id)}
+${id === 'hrrp' ? hrrpYearLine(h, ctx) : ''}${deepLink(h, id)}
 </div>
 <div class="hh__strip" data-strip></div>
 </div>`;
 }
 
-function whatifSection(h, { peers, figures, group }, { fy }) {
-  const ctx = { fy, group };
+function whatifSection(h, { peers, figures, group }, { fy, tdr }) {
+  const ctx = { fy, group, tdr };
   const n = peers.length;
   const result = comparison(fill, 'result', { share: h.est.share, median: figures.net.median, n, group });
   return html`<section class="hh__progs" id="whatif" aria-labelledby="whatif-h">
@@ -227,7 +253,7 @@ const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
 <p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
 ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
-function estimatedBody(h, master, group, { fy, all, sets }) {
+function estimatedBody(h, master, group, { fy, all, sets, tdr }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
 ${peerRow(h, group)}
@@ -238,7 +264,7 @@ ${netBlock(h, group.figures, fy, sets)}
 </div>
 ${figure(h, group, { fy, all })}
 </div>
-${whatifSection(h, group, { fy })}
+${whatifSection(h, group, { fy, tdr })}
 <div class="wrap"><div class="hh__tbl">
 <details class="hh__det" data-peer-table><summary>${fill('tableSummary')} <span>${fill('tableCount', { n: count(peers.length), group: group.group })}</span></summary></details>
 </div></div>
@@ -257,6 +283,7 @@ ${recordCard(h, master, fy)}
 <section class="hh__status" aria-labelledby="hh-status-h">
 <h2 class="stamp stamp--ink hh__sh" id="hh-status-h">${fill(maryland ? 'statusMaryland' : 'statusNoInputs')}</h2>
 <p class="hh__st">${maryland ? fill('statusMarylandText') : fill('statusNoInputsText', { fy })}</p>
+${maryland ? '' : html`<p class="hh__st">${h.cut ? fill('statusHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('statusHacNone', { fy })}</p>`}
 </section>
 ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 <h2 class="h-sm" id="hh-pages-h">${fill('pagesHeading')}</h2>
@@ -271,8 +298,8 @@ ${notes(fy, false)}
 // The page at hospitalPathOf('hub', h.ccn). h: the hospital (hub/model.js hubHospitals); hospitals: every one of them (its
 // peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital master
 // record (the Type field's ownership and urban or rural); assets: the build's (the fiscal year is the shell's); robots:
-// the page's robots value.
-export function hospitalPage({ h, hospitals, facts, assets, robots, master = null }) {
+// the page's robots value; tdr: loadHub().tdr, for the Readmissions row's note on its page's newer factor (none: no note).
+export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, tdr = null }) {
   const fy = String(assets.shell.fy);
   const place = { name: h.name, city: h.city ?? '', state: h.state ?? '' };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
@@ -288,7 +315,7 @@ export function hospitalPage({ h, hospitals, facts, assets, robots, master = nul
     description,
     path: hospitalPathOf('hub', h.ccn),
     robots,
-    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets }) : variantBody(h, master, fy),
+    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, tdr }) : variantBody(h, master, fy),
     assets,
     scripts: h.est ? [assets.js['hub-hospital']] : [],
     preloadFonts: FONTS,

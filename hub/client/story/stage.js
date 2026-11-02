@@ -37,6 +37,8 @@ const AXIS = new Set(['machine', 'net', 'you']);
 // late; back into it, up early and across late. Every other move eases both ways at once.
 const CURVES = { pour: [outCubic, smooth], gather: [smooth, outCubic] };
 const isMap = (L) => L.scene === 'map' || L.scene === 'mapfill';
+// How much of a panel must show before it takes the pointer (setPanels): enough to see what a press would reach.
+const SEEN = 0.1;
 
 // The stage over `canvas` (inside the stage element, `stage`):
 //   rows       the story's hospitals (layouts.js storyRows); facts: storyFacts of the hospitals; fy: the fiscal year;
@@ -518,19 +520,22 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
   }
 
   // The server's drawings under the canvas: each panel's opacity, the states' fill, the map's key; written only when
-  // they change.
-  function setPanels(bar, map, fill) {
-    const state = `${bar.toFixed(3)}|${map.toFixed(3)}|${fill.toFixed(3)}`;
+  // they change. The pointer goes to the panel of the step being read (live: 'bar', 'map' or null) once it shows at all
+  // (SEEN), not once it has faded half in: an address's #state= pins a state as the map fades in, and a reader (or a
+  // check) pointing at the map then must reach it, not the panel fading out. A panel the reader has scrolled past takes
+  // no pointer, however much of it still shows.
+  function setPanels(bar, map, fill, live) {
+    const state = `${bar.toFixed(3)}|${map.toFixed(3)}|${fill.toFixed(3)}|${live}`;
     if (state === panelState) return;
     panelState = state;
-    const show = (el, a) => {
+    const show = (el, a, on) => {
       el.style.opacity = a.toFixed(3);
-      el.classList.toggle('is-off', a < 0.5);
+      el.classList.toggle('is-off', !on);
     };
-    show(panels.bar, bar);
-    show(panels.map, map);
+    show(panels.bar, bar, live === 'bar' && bar >= SEEN);
+    show(panels.map, map, live === 'map' && map >= SEEN);
     panels.mapSvg.style.setProperty('--fill', fill.toFixed(3));
-    show(panels.mapFoot, fill);
+    show(panels.mapFoot, fill, fill >= 0.5);
   }
 
   function draw() {
@@ -543,12 +548,13 @@ export function createStage(canvas, { stage, rows, facts, fy, domain, mapW, mapH
     // The server's drawings. The bar's and the map's panels cross like any scenery; between the two map steps the map
     // stays and only its fill (and its key) turns.
     const sceneA = (scene) => (cur.scene === scene ? into : 0) + (moving && prev.scene === scene ? out : 0);
+    const live = isMap(cur) ? 'map' : cur.scene === 'bar' ? 'bar' : null;
     if (moving && isMap(prev) && isMap(cur)) {
       const f0 = prev.scene === 'mapfill' ? 1 : 0;
       const f1 = cur.scene === 'mapfill' ? 1 : 0;
-      setPanels(0, 1, f0 + (f1 - f0) * ease(raw));
+      setPanels(0, 1, f0 + (f1 - f0) * ease(raw), live);
     } else {
-      setPanels(sceneA('bar'), sceneA('map') + sceneA('mapfill'), sceneA('mapfill'));
+      setPanels(sceneA('bar'), sceneA('map') + sceneA('mapfill'), sceneA('mapfill'), live);
     }
     // The axis, steady when both scenes stand on it; the scenes' own scenery crossing.
     const both = moving && AXIS.has(prev.scene) && AXIS.has(cur.scene);

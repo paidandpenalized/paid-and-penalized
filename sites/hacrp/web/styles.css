@@ -311,7 +311,7 @@
 .prog__summary > .form__title { flex-basis: 100%; }
 /* The stamp: one line at every width, sized to the card (container units) so it never outgrows it, at most 1.55rem. */
 .prog__card .stamp { justify-self: end; margin: 4px 6px 0 0; white-space: nowrap; font-size: min(4.5cqi, 1.55rem); }
-/* The US map's states take a pointer: a click lists the state's hospitals in the table (client/program.js). */
+/* The US map's states take a pointer: a click opens the state's page (client/explore.js mountUsMap). */
 .chart--us-map .chart-mark[data-state] { cursor: pointer; }
 
 /* The estimate tag: the plain word, dotted underline, no box (it is a note to open, not a state). */

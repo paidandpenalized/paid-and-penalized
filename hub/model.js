@@ -2,6 +2,7 @@
 // Readmissions file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
+import { rangeOf } from '../engine/js/dollars/ranges.js';
 import { SHOWN_STATUSES } from '../engine/js/dollars/status.js';
 import { netShare, pctOf } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
@@ -29,11 +30,21 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
   return record;
 }
 
-// Every hospital in the dollar file, in its order, joined to its master record and to whether Thirty Day Readmissions has
-// it. `est` holds the dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and
-// hospitals with no inputs to estimate from). A missing bed count, teaching status or location stays null, and a null
-// bed count has no size band.
-export function hubHospitals({ dollars, master, tdr }) {
+// An estimated row's likely range of its net (rangeOf, the back-test's net band for its group). bands: the dollar file's,
+// which must hold the net's bands; a file without them stops the build with a message that says so.
+function netRange(bands, row) {
+  if (!Array.isArray(bands?.measures?.net?.strata)) throw new RangeError('hub: the dollar estimates have no back-test net band (bands.measures.net), which the hospital pages\' likely ranges need');
+  return rangeOf(bands, 'net', row.stratum, row.net);
+}
+
+// Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
+// it and to whether the HACRP pages count it (`decided`, from loadHub's Set: hub/data.js). `est` holds the dollars of a
+// hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no inputs to
+// estimate from); `cut` is CMS's HAC decision (Yes) for every one of them. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
+// netRange: an estimated hospital's likely range of its net, [low, high] dollars (the back-test's net band for its group,
+// engine/js/dollars/ranges.js rangeOf, as the HACRP pages give it), null for a net of $0 and for one without an estimate.
+export function hubHospitals({ dollars, master, tdr, decided }) {
+  if (!(decided instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of decided CCNs (loadHub().decided)');
   return dollars.hospitals.map((row) => {
     const m = masterRecord(master, row.ccn);
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
@@ -41,7 +52,8 @@ export function hubHospitals({ dollars, master, tdr }) {
     return {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
-      est: row.status === 'estimated' ? estimate(row) : null,
+      cut: row.cut, decided: decided.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
+      netRange: row.status === 'estimated' ? netRange(dollars.bands, row) : null,
     };
   });
 }
@@ -88,6 +100,28 @@ export function storyFacts(hospitals) {
     netCut: count((e) => e.net < 0), netBonus: count((e) => e.net > 0), netZero: count((e) => e.net === 0),
     vbpMax: vbpMaxOf(hospitals),
   };
+}
+
+// The hospital-acquired conditions program's counts over every hub hospital (every hospital in that program's file), as the
+// pages that state them count: CMS's cut (yes); the decided hospitals (scored, with a Yes or No: the HACRP pages'
+// population), those it cut (decidedYes, the HACRP pages' count) and those of them with an estimate here (priced); the
+// hospitals with an estimate (est) and the decided ones among them (headline, whose dollars the HACRP pages add up);
+// those with an estimate CMS cut without a score (unscoredCut, on the front page's chart but not the HACRP pages'
+// counts); Maryland's and those with no inputs.
+export function hacCounts(hospitals) {
+  const c = { yes: 0, decidedYes: 0, priced: 0, decided: 0, est: 0, headline: 0, unscoredCut: 0, maryland: 0, noInputs: 0 };
+  for (const h of hospitals) {
+    if (h.cut) c.yes += 1;
+    if (h.decided && h.cut) c.decidedYes += 1;
+    if (h.decided && h.cut && h.est) c.priced += 1;
+    if (h.decided) c.decided += 1;
+    if (h.est) c.est += 1;
+    if (h.decided && h.est) c.headline += 1;
+    if (!h.decided && h.cut && h.est) c.unscoredCut += 1;
+    if (h.status === 'maryland') c.maryland += 1;
+    if (h.status === 'no-inputs') c.noInputs += 1;
+  }
+  return c;
 }
 
 // Each state's totals over its hospitals with an estimate, by postal code in order: `n` hospitals, their pay (`total`),

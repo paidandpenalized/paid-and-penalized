@@ -19,9 +19,9 @@ export const COPY = typesetCopy({
   railStates: 'By state',
   railFind: 'Find yours',
 
-  // Step 0: the scale. {n} hospitals, {pay} their pay, {gross} what the programs move ({share} of the pay), {notPaid}
+  // Step 0: the scale. {n} hospitals (those with an estimate), {pay} their pay, {gross} what the programs move ({share} of the pay), {notPaid}
   // what is not paid and {bonus} what moves as bonuses; {programs} how many programs ("Three").
-  scaleHead: 'Medicare will pay {n} hospitals about {pay} for inpatient care in FY{fy}.',
+  scaleHead: 'This site estimates Medicare’s FY{fy} inpatient pay to {n} hospitals: about {pay}.',
   scaleText: '{programs} quality programs adjust that pay by about {gross}, {share} of it: the red sliver magnified under the bar. {notPaid} is not paid at all, and {bonus} moves between hospitals as bonuses.',
   scaleCue: 'Scroll to follow the money',
   scaleAsOf: 'Estimated from public CMS files, FY{fy}',
@@ -38,9 +38,13 @@ export const COPY = typesetCopy({
   hrrpZero: '{zeroN} pass through at {zero}.',
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
-  // Step 3: hospital-acquired conditions. {cut} the flat cut, {cutN} hospitals cut, {onlyN} cut by it alone.
+  // Step 3: hospital-acquired conditions. {cut} the flat cut; CMS cut {cmsN} scored hospitals (the HACRP pages' count),
+  // {estN} of them with an estimate here; {more}: hacMore when the chart also holds hospitals with an estimate CMS cut
+  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart cut by it alone. Short enough to fit above
+  // the chart on a phone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other patient-safety events. The {cutN} hospitals in the quarter with the highest scores lose {cut} of their Medicare inpatient pay. The tall column: {onlyN} whose only cut is this one.',
+  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
+  hacMore: '; it also cut {n} it didn’t score',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.
@@ -113,10 +117,13 @@ export const COPY = typesetCopy({
   cardGo: 'Open its hospital page',
 
   // ---------- below the story (below.js) ----------
-  // The program directory: its heading ({count}: the programs with data, {more}: the programs under consideration, in
-  // words; it promises no site and no date), the lede ({gross}: what they move in FY{fy}), the group over the cards.
+  // The program directory: its heading ({live}: the programs with pages here, {building}: those with data whose pages
+  // are not built, {more}: the programs under consideration, in words; it promises no site and no date), the lede
+  // ({count}: the programs with data; {gross}: what they move in FY{fy}), the group over the cards.
   dirKicker: 'The programs',
-  dirHead: '{count} programs live, {more} under consideration.',
+  dirHead: '{live} live, {building} under construction, {more} under consideration.',
+  // With none under construction.
+  dirHeadAll: '{live} live, {more} under consideration.',
   dirLede: 'Each card puts its program’s hospitals on one shared scale. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
   dirGroup: 'Quality programs',
   dirGroupNote: 'Estimated FY{fy}',
@@ -145,6 +152,9 @@ export const COPY = typesetCopy({
   // screen reader hears the name after it ({name}).
   dirOpen: 'Open {ab}',
   dirOpenLabel: 'Open {ab}, {name}',
+  // A program whose page here is under construction: its card's link (to the placeholder page) says so.
+  dirBuilding: '{ab}: under construction',
+  dirBuildingLabel: '{ab}: under construction, {name}',
   // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
   // internal stage, soon), and the words in each slip's empty band. Each group's name and each band's words fit one line
   // in the narrowest group (hub/styles.css).
@@ -158,7 +168,12 @@ export const COPY = typesetCopy({
   // {cut} the HAC cut.
   estKicker: 'Methods, in brief',
   estHead: 'Every dollar here is an estimate, and is labeled one.',
-  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it.',
+  // {n}: the cut hospitals the back-test compared, in FY{bfy}; {miss}: how far its middle estimate ran from their cost
+  // reports, and {direction} which way (estAbove, estBelow).
+  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} {direction} what they recorded.',
+  // The back-test's direction: its middle estimate ran above or below the cost reports.
+  estAbove: 'above',
+  estBelow: 'below',
   estStepPay: 'Start from each hospital’s {b} for FY{fy}.',
   estStepPayB: 'estimated Medicare inpatient pay',
   estStepRule: 'Apply each program’s {b} to the part of pay it covers.',

@@ -29,8 +29,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: the shared stylesheet,
   `tokens.css` then the rest of `web/styles/` but the program sites' chart and what-if kit (`KIT_STYLES`, which a program
   site's own sheet carries); a stylesheet per site from its manifest's `styles`, named by its id, which
-  its pages link after the shared one through `layout.js` `page({ sheets })`; one ES module per JS entry; all
-  content-hashed), writes the hub's data asset once and computes the shell's facts that every
+  its pages link after the shared one through `layout.js` `page({ sheets })`; one ES module per JS entry, led by the
+  license notices of any package code it bundles; all content-hashed), writes the hub's data asset once and computes the shell's facts that every
   page shows (`ctx.assets.shell`), then runs each site in its `SITES` list (hub last). Each site exports
   a manifest `{ id, entries, styles, generate }` from its generator (`sites/<program>/web/generate.js`,
   `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
@@ -70,11 +70,14 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   (e.g., the 5th/95th percentiles) and documented tolerances.
 - **Test fixtures name no hospital.** Pick rows by property ("a row with an assigned measure"), or use synthetic
   rows.
-- **Dependencies: build time only.** The engine, the pipeline's data code and their tests use none; tests run on
-  Node's built-in `node:test` (`npm test`, which needs no browser). The page build uses four pinned dev dependencies:
-  esbuild, d3-scale, d3-array, d3-format; the browser checks (`npm run e2e`, `tools/e2e/`) use two more, playwright
-  and axe-core (`package-lock.json`; CI runs `npm ci`); the share cards' generator (`npm run og`) uses playwright too. Flag anything more, and any other install or download
-  (including a Playwright browser), to Dalton before running it. Pin exact versions.
+- **Dependencies: few, pinned, flagged.** The engine, the pipeline's data code and their tests use none; tests run on
+  Node's built-in `node:test` (`npm test`, which needs no browser). The page build uses esbuild, d3-scale, d3-array and
+  d3-format (dev dependencies) and d3-geo and topojson-client (dependencies: the maps); parts of d3 reach the HACRP
+  program page's script, which carries their license notices (`pipeline/site/assets.js` `licenseNotice`; `NOTICE`).
+  The browser checks (`npm run e2e`, `tools/e2e/`) use playwright and axe-core, and the share cards' generator
+  (`npm run og`) uses playwright too (`package-lock.json`; CI runs `npm ci`). The README's Dependencies section lists
+  them. Flag anything more, and any other install or download (including a Playwright browser), to Dalton before
+  running it. Pin exact versions.
 - **Commit identity:** `275741810+daltonhaslam@users.noreply.github.com` (repo-local `user.email`).
 - **Review gates** at each milestone: `/simplify` → tests → `/code-review` → `/security-review`
   (the last when a change touches external input or credentials).

@@ -9,10 +9,10 @@ import { pctOf, programDollars } from '../../engine/js/dollars/whatif.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, footerOf } from '../../pipeline/test/helpers.js';
 import { HAC_TOP_SHARE, programDek } from '../../web/programs.js';
-import { count, fractionWord, money, numberWord } from '../../web/render/format.js';
+import { count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
-import { SITE, hospitalPathOf } from '../../web/site.js';
+import { SITE, hospitalPathOf, underConstruction } from '../../web/site.js';
 import { factorText, paintWorksheet, worksheetModel } from '../client/story/worksheet.js';
 import { loadHub } from '../data.js';
 import { BIN_POINTS, directory, programBins } from '../home/below.js';
@@ -27,7 +27,7 @@ const hospitals = hubHospitals(hub);
 const facts = storyFacts(hospitals);
 const fy = hub.fy;
 const assets = { ...ASSETS, shell: { ...ASSETS.shell, fy } };
-const out = homePage({ hospitals, facts, states: stateTotals(hospitals), shapes: hub.shapes, assets, robots: 'noindex' });
+const out = homePage({ hospitals, facts, states: stateTotals(hospitals), shapes: hub.shapes, bands: hub.dollars.bands, assets, robots: 'noindex' });
 const estimated = hospitals.filter((h) => h.est);
 const example = hospitals.find((h) => h.ccn === EXAMPLE_CCN);
 
@@ -38,13 +38,15 @@ const PROGRAMS = { hrrp: { key: 'hrrp', listed: 'hrrpListed' }, hacrp: { key: 'h
 const inProgram = (id) => estimated.filter((h) => !PROGRAMS[id].listed || h.est[PROGRAMS[id].listed]);
 const percentOf = (h, id) => (h.est[PROGRAMS[id].key] * 100) / h.est.total;
 
-test('the directory: #programs with its kicker, a heading that counts the programs with data and those under consideration, and the gross figure in its lede', () => {
+test('the directory: #programs with its kicker, a heading that counts the programs live, under construction (with data, no page here) and under consideration, and the gross figure in its lede', () => {
   const section = element(out, '<section class="bsec" id="programs"', 'section');
   assert.match(section, /^<section class="bsec" id="programs" aria-labelledby="programs-h">/);
   assert.ok(words(section).startsWith('The programs'), 'the kicker');
-  const withData = SITE.programs.filter((p) => p.inData).length;
-  const considered = SITE.programs.length - withData;
-  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData).replace(/^./, (c) => c.toUpperCase())} programs live, ${numberWord(considered)} under consideration.`);
+  const withData = SITE.programs.filter((p) => p.inData);
+  const building = withData.filter(underConstruction).length;
+  assert.ok(building > 0, 'the heading\'s under-construction clause shows (none: dirHeadAll)');
+  const considered = SITE.programs.length - withData.length;
+  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData.length - building).replace(/^./, (c) => c.toUpperCase())} live, ${numberWord(building)} under construction, ${numberWord(considered)} under consideration.`);
   const lede = words(element(section, '<p class="bsec__lede"', 'p'));
   assert.ok(lede.includes(money(facts.gross)), lede);
   assert.ok(lede.includes(`FY${fy}`) && lede.includes('estimated'), lede);
@@ -71,8 +73,11 @@ test('a card per program with data: name, abbreviation, dek, the national figure
     assert.match(big, /<a class="est-tag" href="\/methods\/#estimate" aria-label="[^"]+">Estimate<\/a>/, id);
     assert.equal(words(element(card, '<p class="pc__sub"', 'p')), sub, id);
     // The way to its page: the program's short name, the same on every card (so the three read evenly on one line), with
-    // its name said to a screen reader after it.
-    assert.match(card, new RegExp(`<a class="go" href="${p.path}" aria-label="Open ${p.ab}, ${p.name}">Open ${p.ab}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
+    // its name said to a screen reader after it; a program whose page is under construction says so.
+    const link = underConstruction(p)
+      ? `<a class="go" href="${p.path}" aria-label="${p.ab}: under construction, ${p.name}">${p.ab}: under construction`
+      : `<a class="go" href="${p.path}" aria-label="Open ${p.ab}, ${p.name}">Open ${p.ab}`;
+    assert.ok(card.includes(`${link}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
   });
   assert.deepEqual(cards.map((c) => /<a class="go" href="([^"]+)"/.exec(c)[1]), ['/hrrp/', '/hacrp/', '/hvbp/']);
 });
@@ -165,10 +170,16 @@ test('the programs under consideration: six dashed slips in three named groups, 
   assert.equal(slips.length, 6);
 });
 
-test('methods in brief: its kicker, heading, a paragraph, three numbered points and the way to the methods', () => {
+test('methods in brief: its kicker, heading, a paragraph with the back-test from the data, three numbered points and the way to the methods', () => {
   const section = element(out, '<section class="bsec ests" id="estimate"', 'section');
   assert.ok(words(section).startsWith('Methods, in brief'));
   assert.equal(words(element(section, '<h2 id="estimate-h"', 'h2')), 'Every dollar here is an estimate, and is labeled one.');
+  // The back-test's count and its median miss, as the HACRP Methods page reads it (exp of the log ratio, less one).
+  const { n, median } = hub.dollars.bands.measures.hac.overall;
+  const para = words(element(section, '<p>', 'p'));
+  assert.ok(para.includes(`Tested against ${count(n)} cut hospitals’ FY${hub.dollars.bands.fy} cost reports`), para);
+  assert.ok(para.includes(`ran ${pct(Math.abs(Math.exp(median) - 1), 1)} ${median >= 0 ? 'above' : 'below'} what they recorded`), para);
+  assert.ok(para.includes('ranges set from CMS’s published figures'), para);
   const steps = element(section, '<ol class="nsteps"', 'ol');
   const items = elements(steps, '<li', 'li');
   assert.equal(items.length, 3);

@@ -8,6 +8,7 @@ import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
+import { count } from '../web/render/format.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink } from '../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../web/site.js';
@@ -19,7 +20,7 @@ import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
 import { hrrpHospitalPage, hrrpProgramPage } from './hrrp/page.js';
-import { masterRecord, stateTotals, storyFacts } from './model.js';
+import { hacCounts, masterRecord, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -34,11 +35,16 @@ const SITE_IDS = Object.keys(SITE.sites);
 
 // The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
 // hubModel).
-function home({ hospitals, facts, shapes, assets, robots }) {
-  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, assets, robots });
+function home({ hospitals, facts, shapes, bands, assets, robots }) {
+  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, bands, assets, robots });
 }
 
-function methods(assets, robots) {
+// The family Methods page: what an estimate is, how the hospital-acquired conditions counts differ from page to page
+// (model.js hacCounts, over every hub hospital), and which hospital a figure belongs to.
+function methods({ hospitals, fy, assets, robots }) {
+  const counts = hacCounts(hospitals);
+  // The counts a paragraph names, formatted.
+  const of = (...keys) => Object.fromEntries(keys.map((k) => [k, count(counts[k])]));
   const body = html`<article class="wrap page">
 <header class="page__head">
 <h1>${SHARED.methods}</h1>
@@ -50,6 +56,12 @@ function methods(assets, robots) {
 <p>${COPY.estimateHow}</p>
 <p>${COPY.estimateNot}</p>
 </section>
+<section class="block" id="counts" aria-labelledby="counts-h">
+<h2 id="counts-h">${COPY.countsHeading}</h2>
+${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}</section>
+<section class="block" id="ccn" aria-labelledby="ccn-h">
+<h2 id="ccn-h">${COPY.ccnHeading}</h2>
+${para('ccnText')}</section>
 ${para('methodsAiPointer', { about: LINKS.ai })}</article>`;
   return hubPage({ title: `${SHARED.methods} · ${SITE.name}`, description: COPY.methodsDescription, path: SITE.pages.methods, robots, body, assets });
 }
@@ -145,12 +157,12 @@ export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origi
 
 // Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
 // robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
-// hospitals' story facts (storyFacts).
-function hospitalPages(ctx, { hospitals, facts, master, robots, never }) {
+// hospitals' story facts (storyFacts); tdr: loadHub().tdr (a hospital's Readmissions page shows its factor).
+function hospitalPages(ctx, { hospitals, facts, master, tdr, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
     const r = h.est ? robots : never;
-    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null }) });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, tdr }) });
   }
 }
 
@@ -181,8 +193,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released });
   const { hub, hospitals: all, facts } = hubModel();
-  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, assets, robots }) });
-  ctx.emit({ path: SITE.pages.methods, robots, text: methods(assets, robots) });
+  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, assets, robots }) });
+  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
@@ -190,7 +202,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
-  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, robots, never });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, tdr: hub.tdr, robots, never });
   hrrpPages(ctx, { tdr: hub.tdr, hospitals: hospitals ?? all, only: hospitals && new Set(hospitals.map((h) => h.ccn)), master: master ?? hub.master, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });

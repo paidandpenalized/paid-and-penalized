@@ -6,7 +6,7 @@
 // glossary, and links to the family's pages for feedback, privacy, AI and corrections; the as-of bar closes the page,
 // as it does the program page.
 import { fillAround, printout, sentenceOf, stamp, typeset } from '../../../../web/render/components.js';
-import { count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
+import { absLogPct, count, decimal, isoDate, listText, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -14,7 +14,7 @@ import { counter } from '../../../../web/charts/figure.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
-import { MEASURES_LEAD_ID, MEASURE_WORDS, absLogPct, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
+import { MEASURES_LEAD_ID, MEASURE_WORDS, assumptionsTable, backtestFigure, backtestMeasures, checkTotals, dollarChecks, dollarsOrderFigure, dollarsPipeline, exclusionsText, insideCounts, limitText, notComparedText, periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure, stratumLabel } from '../methods-figures.js';
 import { moneySourceText } from '../money-figures.js';
 import { cutCounts, rangeShare } from '../money.js';
 import { BACKTEST_ID, COUNT_NOTE, DOLLARS_HREF, METHODS_PATH } from '../links.js';

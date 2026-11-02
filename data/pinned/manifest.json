@@ -147,7 +147,7 @@
       "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-10-23, and a later download of the same URL will differ. No archive copy is published."
     },
     "derivedBy": "pipeline/py/pp_pipeline/hcris_extract.py",
-    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2010-form",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/cost-reports-fiscal-year/hospital-2010-fy-2024",
     "retrieved": "2026-10-23"
   },
   {

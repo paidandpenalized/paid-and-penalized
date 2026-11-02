@@ -15,15 +15,18 @@ const drawn = (page) => page.waitForFunction(() => document.querySelector('.stor
 const lined = (page) => page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
 const HOME_SCRIPT = /\/assets\/hub-home\.[^/]+\.js$/;
 
+// Scrolls step i to where the reader reads it (under the bar on a phone, a tenth down the window elsewhere).
+const scrollToStep = (page, i) => page.evaluate((k) => {
+  const el = document.querySelectorAll('.story .step')[k];
+  const phone = window.innerWidth <= 760;
+  const head = document.querySelector('.topbar').getBoundingClientRect().height;
+  window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - (phone ? head - 44 : window.innerHeight * 0.1));
+}, i);
+
 // The story's state after the reader has scrolled step i to where it is read: the step the page marks, the current
 // rail link or step name, the two drawings' opacities, whether the canvas has paint on it, and the sideways overflow.
 async function readStep(page, i) {
-  await page.evaluate((k) => {
-    const el = document.querySelectorAll('.story .step')[k];
-    const phone = window.innerWidth <= 760;
-    const head = document.querySelector('.topbar').getBoundingClientRect().height;
-    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - (phone ? head - 44 : window.innerHeight * 0.1));
-  }, i);
+  await scrollToStep(page, i);
   await settle(page);
   await settle(page);
   return page.evaluate(() => {
@@ -379,9 +382,44 @@ describe('the states map speaks on a pick, not on a hover', () => {
     await assertQuiet(seen, 'the states map at rest');
   }));
 
+  // The map takes the pointer once it shows, while it is still fading in (not only once half in): the panel fading out
+  // never holds it. (An address's #state= pins a state as the map fades in; WebKit's checks then pointed at a map that took no
+  // pointer until half faded in, and the click went to the page, which scrolled.)
+  it('the map takes the pointer as soon as it shows, mid-fade', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await drawn(page);
+    await scrollToStep(page, 5);
+    // Step 5's scenes are the canvas's: both panels at rest out of sight.
+    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '5'
+      && ['bar', 'map'].every((p) => Number(document.querySelector(`.stage__panel--${p}`).style.opacity) === 0));
+    // The first frame of the map's fade in that shows it (a tenth or more), read once the story marks step 6.
+    const first = page.evaluate(() => new Promise((resolve) => {
+      const story = document.querySelector('.story');
+      const map = document.querySelector('.stage__panel--map');
+      const bar = document.querySelector('.stage__panel--bar');
+      const look = () => {
+        const opacity = Number(map.style.opacity);
+        if (opacity < 0.1) { requestAnimationFrame(look); return; }
+        resolve({ opacity, mapOff: map.classList.contains('is-off'), barOff: bar.classList.contains('is-off') });
+      };
+      new MutationObserver((_, obs) => {
+        if (story.dataset.step !== '6') return;
+        obs.disconnect();
+        requestAnimationFrame(look);
+      }).observe(story, { attributes: true, attributeFilter: ['data-step'] });
+    }));
+    await scrollToStep(page, 6);
+    const f = await first;
+    assert.ok(f.opacity < 0.5, `the map is still fading in (opacity ${f.opacity})`);
+    assert.equal(f.mapOff, false, 'the map takes the pointer');
+    assert.equal(f.barOff, true, 'the bar (at rest out of sight) does not');
+    await assertQuiet(seen, 'the map mid-fade');
+  }));
+
   it('hovering or focusing writes the readout only; Enter or a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await lined(page);
+    // The map takes the pointer (its step is the one being read) before anything points at it.
+    await page.waitForFunction(() => !document.querySelector('.stage__panel--map').classList.contains('is-off'));
     await settle(page);
     const facts = () => page.evaluate(() => ({
       readout: document.querySelector('.readout').textContent,

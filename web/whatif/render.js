@@ -26,6 +26,9 @@
 //   rampRef                                a short line under the ramp naming the line's two scores, or null for none
 //   rampLegend                             the line in a sentence, said once under the what-if (outside the result)
 //   rampZone                               the shaded side's label (e.g. its cut), or null for none
+//   rampPast(fy), rampPastNote(low, high)  an earlier year's line's name (its tick's tooltip) and the line under the ramp
+//                                          that says what the faint ticks are, from the lowest and highest of them
+//                                          ({ fy, score }); rampPastNote null: no ticks (range.past)
 //   scores(vm) -> { before, after }        score texts
 //   flag(flag), cut(flag)                  decision and cut texts (cut: null where there is no cut)
 //   sentence(vm), slide(vm)                the result in words; plain text for "Copy for a slide"
@@ -61,11 +64,18 @@ const hiddenIf = (condition) => (condition ? html` hidden` : '');
 const rampText = ({ t, anchor, dx }, y, text, cls, name = null) =>
   html`<text class="${cls}"${name && html` data-wi="${name}"`} x="${rampX(t)}" y="${y}" dx="${dx}" text-anchor="${anchor}">${text}</text>`;
 
-// The score's ramp over the national middle of scores (range): CMS's line with the side above it shaded and named, a
-// solid mark for the starting score and a hollow one for the hypothetical (at an edge, with an arrow, when it runs
-// past the range; hidden, with its label, while it equals the start), each label under its mark (stacked when they
-// would touch). Decorative: the table and the sentence say the same.
-function ramp(vm, range, texts) {
+// CMS's earlier lines (range.past: [{ fy, score }]) that fall on the ramp's scale, in year order; none where the texts
+// have no words for them.
+function pastOn(range, domain, texts) {
+  if (!texts.rampPastNote) return [];
+  return (range.past ?? []).filter((p) => rampSide(p.score, domain) === 0).sort((a, b) => a.fy - b.fy);
+}
+
+// The score's ramp over the national middle of scores (range): CMS's line with the side above it shaded and named,
+// CMS's earlier lines as faint ticks (pastOn), a solid mark for the starting score and a hollow one for the hypothetical
+// (at an edge, with an arrow, when it runs past the range; hidden, with its label, while it equals the start), each label
+// under its mark (stacked when they would touch). Decorative: the table and the sentence say the same.
+function ramp(vm, range, texts, past) {
   const underCliff = Boolean(vm.money && texts.money);
   const domain = rampDomain(range, vm.ramp);
   const at = (score) => rampAt(score, domain);
@@ -87,6 +97,7 @@ function ramp(vm, range, texts) {
 <rect class="wi-ramp__zone" x="${rampX(line)}" y="${Y.zoneTop}" width="${rampWidthFrom(line)}" height="${Y.axis - Y.zoneTop}"/>
 ${texts.rampZone && rampText(zoneLabelAt(line), Y.zoneLabel, texts.rampZone, 'wi-ramp__zone-label')}
 ${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="${Y.axis}" y2="${Y.axis + RAMP_TICK}"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="${Y.tickLabel}" text-anchor="middle">${fmt(x)}</text>`)}
+${past.map((p) => html`<line class="wi-ramp__past" x1="${rampX(at(p.score))}" x2="${rampX(at(p.score))}" y1="${Y.zoneLabel + 4}" y2="${Y.axis}"><title>${texts.rampPast(p.fy)}</title></line>`)}
 <line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="${Y.axis}" y2="${Y.axis}"/>
 <line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="${Y.zoneTop - 2}" y2="${Y.axis + RAMP_TICK}"/>
 ${rampText(labelAt(line), Y.lineLabel, texts.rampLine, 'wi-ramp__label')}
@@ -96,6 +107,14 @@ ${rampText(edge, Y.edge, edge.text, 'wi-ramp__edge', 'hyp-edge')}
 ${rampText(labels.start, Y.label, texts.start, 'wi-ramp__label', 'start-label')}
 ${html`<text class="wi-ramp__label" data-wi="hyp-label" x="${rampX(labels.hyp.t)}" y="${stacked ? Y.label2 : Y.label}" dx="${labels.hyp.dx}" text-anchor="${labels.hyp.anchor}"${same}>${texts.hypothetical}</text>`}
 </svg>`;
+}
+
+// Under the ramp, what its faint ticks (past: pastOn's) are, in words: the lowest and the highest of CMS's earlier lines
+// drawn, each with its year (near this year's line, ticks can draw on top of each other or under it); '' with none.
+function pastNote(past, texts) {
+  if (!past.length) return '';
+  const byScore = [...past].sort((a, b) => a.score - b.score);
+  return html`<p class="wi-ramp-ref">${texts.rampPastNote(byScore[0], byScore.at(-1))}</p>`;
 }
 
 // The cliff over the ramp, on the ramp's own x (its margins and places): the money a flat cut takes at any score.
@@ -141,6 +160,8 @@ function result(vm, range, texts) {
   const r = vm.result;
   const s = texts.scores(vm);
   const cutBefore = texts.cut(r.before.flag);
+  // CMS's earlier lines the ramp draws, and the line under it says.
+  const past = pastOn(range, rampDomain(range, vm.ramp), texts);
   // The dollars, where the site has them for this what-if.
   const money = vm.money && texts.money;
   return html`<div class="wi-result" data-wi="result" role="group" aria-label="${texts.resultLabel}">
@@ -157,8 +178,9 @@ ${money && html`<tr class="wi-table__money"><th scope="row">${money.row} ${estTa
 </table>
 </details>
 ${money && cliff(vm, range, texts)}
-${ramp(vm, range, texts)}
+${ramp(vm, range, texts, past)}
 ${texts.rampRef && html`<p class="wi-ramp-ref">${texts.rampRef}</p>`}
+${pastNote(past, texts)}
 <p class="wi-sentence" data-wi="live" aria-live="polite"><span data-wi="sentence">${texts.sentence(vm)}</span><span class="vh" data-wi="sentence-est">${estimateNote(vm, texts)}</span></p>
 <p class="small wi-est" data-wi="estimate"${hiddenIf(!vm.estimated)}>${texts.estimate.text} <a href="${texts.estimate.href}">${texts.estimate.linkText}</a></p>
 <p class="wi-copy"><button type="button" class="wi-btn" data-wi="copy" hidden>${texts.copy}</button> <span class="small" data-wi="copy-status" role="status"></span></p>

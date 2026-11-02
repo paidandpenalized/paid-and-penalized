@@ -72,6 +72,9 @@ export const programOf = (path) => SITE.programs.find((program) => path.startsWi
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
 export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));
+// A program under construction: one the dollar estimates include whose page here is not built (its placeholder page, the
+// front page's directory and a hospital page's link say so).
+export const underConstruction = (p) => p.stage === 'soon' && p.inData;
 
 // The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' (that site's
 // hospital pages) or 'hrrp' (the slim Readmissions pages), each under its program's folder; null for any other program,

@@ -31,7 +31,7 @@ export function standIn(t, globals) {
 }
 
 // A search form as the build writes it (hidden), with its box, its list ("omni-list", hidden) and its status, for test t,
-// with a document and a window standing in (standIn). type(value) types into the box and waits for the list; texts()
+// with a document and a window standing in (standIn). type(value) focuses the box, types into it and waits for the list; texts()
 // reads the list's options, each option's parts joined by "|".
 export function comboForm(t) {
   standIn(t, { document: { createElement: el }, window: { location: { assign() {} } } });
@@ -45,7 +45,12 @@ export function comboForm(t) {
   const form = el('form');
   form.hidden = true;
   form.querySelector = (s) => ({ '[role="combobox"]': input, '[role="listbox"]': list, '[role="status"]': status })[s];
-  const type = async (value) => { input.value = value; await input.listeners.input(); };
+  // Typing happens in the box: it takes the focus first (a focus event, as a reader's click or tab gives it).
+  const type = async (value) => {
+    input.listeners.focus?.();
+    input.value = value;
+    await input.listeners.input();
+  };
   const texts = () => list.children.map((li) => li.children.map((c) => c.textContent).join('|') || li.textContent);
   return { form, input, list, status, type, texts };
 }

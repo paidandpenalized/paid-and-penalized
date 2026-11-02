@@ -54,10 +54,10 @@ test('the build writes a placeholder page at each program\'s folder: noindex, on
     }
   }));
 
-test('the page: kicker with the abbreviation, the group and the status ("Under consideration", or "Page not built yet" for HVBP, which the estimates include); the name as the display-face h1; the dek', () => {
+test('the page: kicker with the abbreviation, the group and the status ("Under consideration", or "Under construction" for HVBP, which the estimates include); the name as the display-face h1; the dek', () => {
   for (const p of PLACEHOLDER_PROGRAMS) {
     const main = mainOf(render(p));
-    const status = p.inData ? 'Page not built yet' : 'Under consideration';
+    const status = p.inData ? 'Under construction' : 'Under consideration';
     assert.ok(main.includes(`<p class="cap kicker rd__kicker">${esc(p.ab)} · ${esc(GROUP_WORDS[p.group])} · ${status}</p>`), `${p.id}: kicker`);
     assert.ok(main.includes(`<h1 class="rd__title">${esc(p.name)}</h1>`), `${p.id}: h1`);
     assert.ok(main.includes(`<p class="dek">${esc(programDek(p.id))}</p>`), `${p.id}: dek`);
@@ -72,17 +72,19 @@ test('two buttons: back to all programs, and to the live programs on the front p
   }
 });
 
-test('the status card: a title bar (with the year only beside a figure), a hatched band, the CMS name, the figures, the stamp', () => {
+test('the status card: a title bar (with the year only beside a figure), a hatched band, the CMS name, the figures, the stamp (HVBP, with data: under construction)', () => {
   for (const p of PLACEHOLDER_PROGRAMS) {
     const main = mainOf(render(p));
     const year = p.inData ? `<span>FY${FY}</span>` : '';
     assert.ok(main.includes(`<p class="form__title"><span>${esc(p.ab)} · Page status</span>${year}</p>`), `${p.id}: title bar`);
-    assert.ok(main.includes('<div class="cm__wait"><p>This program’s page isn’t built yet.</p></div>'), `${p.id}: the hatched band`);
+    const band = p.inData ? 'This program’s page is under construction.' : 'This program’s page isn’t built yet.';
+    assert.ok(main.includes(`<div class="cm__wait"><p>${band}</p></div>`), `${p.id}: the hatched band`);
     assert.ok(main.includes(`<p class="field__label"><span class="field__no">1</span>Program</p>`), `${p.id}: field 1`);
     assert.ok(main.includes(`<p class="field__value field__value--text">${esc(p.long)}</p>`), `${p.id}: CMS's name`);
     assert.ok(main.includes(`<p class="field__label"><span class="field__no">2</span>Figures</p>`), `${p.id}: field 2`);
     // The stamp is decoration (the band and the kicker say it), so a screen reader skips it.
-    assert.ok(main.includes('<div class="cm__stamp" aria-hidden="true"><p class="stamp stamp--ink">Not built</p></div>'), `${p.id}: the stamp`);
+    const stamp = p.inData ? 'Under construction' : 'Not built';
+    assert.ok(main.includes(`<div class="cm__stamp" aria-hidden="true"><p class="stamp stamp--ink">${stamp}</p></div>`), `${p.id}: the stamp`);
   }
 });
 

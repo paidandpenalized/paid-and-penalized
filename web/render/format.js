@@ -85,6 +85,9 @@ export function pct(x, dp = 1, { sign = false } = {}) {
   return sign && x > 0 ? `+${text}` : text;
 }
 
+// A log ratio as the size of the change it makes, unsigned: 0.0509 reads 5.2%, -0.25 reads 22% (exp(x) - 1, to dp).
+export const absLogPct = (x, dp) => pct(Math.abs(Math.exp(x) - 1), dp);
+
 // A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%
 // reads 74%, never 75%). A float a hair under a whole step (0.75 computed as 0.7499…) still reads the step.
 export function pctFloor(x, dp = 0) {

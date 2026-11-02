@@ -3,6 +3,19 @@
 Changes to how this site computes or shows HACRP's numbers, newest first. Corrections of errors go in the public
 corrections log.
 
+## 2026-11-02
+- The what-if's ramp marks CMS's line in earlier years scored by the same formula as faint ticks, and a line under it
+  gives their span: the line moves every year, so a hospital can cross it without changing anything.
+- The program page's "Three programs" figure says whose dollars its totals add up (the hospitals this program scored
+  that this site estimates), and why the family's front page, which adds up every hospital it estimates, shows slightly
+  different totals.
+- The states map's keyboard note says what Enter does: it opens the state's page, as a click does.
+- Methods links the current CMS page for the FY2024 hospital cost report file.
+- The program page's script, which bundles parts of the d3 charting packages, carries their license notices.
+- The charts' drawings are written in shorter path data, the same shapes: the program page is 18% lighter compressed
+  (230 KB gzip, from 281 KB), hospital, place and methods pages 20–40%; the program page's size budget is re-set to
+  330 KB.
+
 ## 2026-10-24
 - Every page links the family's Terms of use, privacy, corrections, About and accessibility pages, and its feedback
   link fills in the page you're on. Methods points to the family's corrections log.

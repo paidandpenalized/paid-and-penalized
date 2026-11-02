@@ -268,7 +268,8 @@ ${panel({ key: 'threeHvbp', total: hh.hvbp, shape: 'threeHvbpShape', sub: fill('
 ${panel({ key: 'threeHac', total: -hh.money, shape: 'threeHacShape', bins: hacBins, domain: hac.domain, axisKey: 'threeHacAxis', ticks: hac.ticks })}
 </div>`;
   return figure({
-    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-three-programs', note: t('threeNote'),
+    n, source, claimLevel: 'estimate', chart, csvName: 'hacrp-dollars-three-programs',
+    note: `${t('threeNote')} ${fill('threeWho', { n: count(hh.hospitals), all: count(md.allEstimated) })}`,
     takeaway: fill('threeTakeaway', { hrrpLow: pct(0, 0), hrrpHigh: pctText(hrrpHigh), hrrp: money(-hh.hrrp), vbpLow: pctText(vbpLow), vbpHigh: pct(vbpHigh, 1, { sign: true }), hvbp: money(hh.hvbp), zero: pct(0, 0), pct: REDUCTION_TEXT, hac: money(hh.money) }),
     table: {
       columns: [{ name: t('threeColProgram') }, { name: t('threeColHospitals'), numeric: true }, { name: t('threeColMoney'), numeric: true }],

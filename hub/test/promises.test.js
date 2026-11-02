@@ -1,5 +1,5 @@
 // The hub's pages promise no program, page or date to come (pipeline/test/helpers.js FUTURE_WORDS): a program without a
-// page here is "under consideration" and its page "not built yet". The copy files are guarded word by word
+// page here is "under consideration" and its page "not built yet" (or, for one the estimates include, "under construction"). The copy files are guarded word by word
 // (web/test/house-words.test.js); this reads what the rendered pages show and say, shell included: each placeholder page,
 // the front page, a hospital's page (with an estimate, and each variant) and the Readmissions summary pages. Rows are
 // picked by property. The data's own words (a hospital's or a place's name, which may hold such a word as a proper name)
@@ -29,7 +29,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const hospital = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets, robots: 'noindex', master: HUB.master.get(h.ccn) ?? null });
+const hospital = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets, robots: 'noindex', master: HUB.master.get(h.ccn) ?? null, tdr: HUB.tdr });
 
 // The page's words, the data's names taken out, hold no future word; a hit names the page's kind and the word only.
 function assertNoPromise(page, what) {
@@ -44,7 +44,7 @@ test('each placeholder page says "under consideration" or "not built yet" and pr
 });
 
 test('the front page, its directory\'s slips and its footer promise nothing', () => {
-  assertNoPromise(homePage({ hospitals: HOSPITALS, facts: FACTS, states: stateTotals(HOSPITALS), shapes: HUB.shapes, assets, robots: 'noindex' }), 'front page');
+  assertNoPromise(homePage({ hospitals: HOSPITALS, facts: FACTS, states: stateTotals(HOSPITALS), shapes: HUB.shapes, bands: HUB.dollars.bands, assets, robots: 'noindex' }), 'front page');
 });
 
 test('a hospital\'s page, with an estimate and in each variant, promises nothing', () => {
