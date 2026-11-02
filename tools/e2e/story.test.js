@@ -379,9 +379,43 @@ describe('the states map speaks on a pick, not on a hover', () => {
     await assertQuiet(seen, 'the states map at rest');
   }));
 
+  // The map takes the pointer from the moment its step begins, while it is still fading in: the panel fading out never
+  // holds it. (An address's #state= pins a state as the map fades in; WebKit's checks then pointed at a map that took no
+  // pointer until half faded in, and the click went to the page, which scrolled.)
+  it('the map takes the pointer as soon as its step begins, mid-fade', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
+    await drawn(page);
+    const at = (i) => page.evaluate((k) => {
+      const el = document.querySelectorAll('.story .step')[k];
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.1);
+    }, i);
+    await at(5);
+    await page.waitForFunction(() => document.querySelector('.story').dataset.step === '5');
+    await page.waitForTimeout(1500);
+    // The first frame of the step's change, read the moment the story marks step 6 (the map's).
+    const first = page.evaluate(() => new Promise((resolve) => {
+      const story = document.querySelector('.story');
+      new MutationObserver((_, obs) => {
+        if (story.dataset.step !== '6') return;
+        obs.disconnect();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const map = document.querySelector('.stage__panel--map');
+          const bar = document.querySelector('.stage__panel--bar');
+          resolve({ opacity: Number(map.style.opacity), mapOff: map.classList.contains('is-off'), barOff: bar.classList.contains('is-off') });
+        }));
+      }).observe(story, { attributes: true, attributeFilter: ['data-step'] });
+    }));
+    await at(6);
+    const f = await first;
+    assert.ok(f.opacity < 0.5, `the map is still fading in (opacity ${f.opacity})`);
+    assert.deepEqual([f.mapOff, f.barOff], [false, true], 'the map takes the pointer; the bar, fading out, does not');
+    await assertQuiet(seen, 'the map mid-fade');
+  }));
+
   it('hovering or focusing writes the readout only; Enter or a click pins the state, pressed, and is said; a small state\'s button too', () => withPage(tabs, { path: '/#state=oh', watched: true }, async (page, { seen }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await lined(page);
+    // The map takes the pointer (its step is the one being read) before anything points at it.
+    await page.waitForFunction(() => !document.querySelector('.stage__panel--map').classList.contains('is-off'));
     await settle(page);
     const facts = () => page.evaluate(() => ({
       readout: document.querySelector('.readout').textContent,

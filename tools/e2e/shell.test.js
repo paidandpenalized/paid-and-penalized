@@ -11,14 +11,14 @@
 // desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
-import { describe, it } from 'node:test';
+import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { STATUS_CODES } from '../../web/client/hub-asset.js';
 import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, ENGINE, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -412,6 +412,65 @@ describe('the family search on a hub page', () => {
     await option.click();
     await page.waitForURL((url) => url.pathname === '/' && url.hash === '#state=OH');
     await assertQuiet(seen, 'family search');
+  }));
+
+  // A press anywhere on the list keeps the box's focus and the list (web/client/omnibox.js): its edge, where a scrollbar
+  // would take the press, and its "No matches" row, pressed with the real mouse, in every engine. So leaving the box can close the list at once: a
+  // press on the list never leaves it.
+  it('a press on the list\'s edge or its "No matches" row keeps the list and the box\'s focus; leaving the box closes it at once', () => withPage(tabs, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+    const form = page.locator('.topbar form#omni[data-hub]');
+    const box = form.getByRole('combobox');
+    const list = form.getByRole('listbox');
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('role') === 'combobox');
+    const press = async (x, y) => { await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+    await box.pressSequentially('Ohio');
+    await form.locator('[role="option"]').first().waitFor();
+    // The list's own edge (its border: the list itself is the target, as on a scrollbar, which macOS overlays on the
+    // options instead of beside them).
+    const edge = await list.boundingBox();
+    const [x, y] = [edge.x + 1, edge.y + edge.height / 2];
+    assert.equal(await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.getAttribute('role'), [x, y]), 'listbox', 'the press lands on the list itself');
+    await press(x, y);
+    await settle(page);
+    assert.deepEqual([await list.isVisible(), await focused()], [true, true], 'the list\'s edge');
+    await box.fill('zzqxv');
+    const empty = form.locator('.omni__empty');
+    await empty.waitFor();
+    const row = await empty.boundingBox();
+    await press(row.x + row.width / 2, row.y + row.height / 2);
+    await settle(page);
+    assert.deepEqual([await list.isVisible(), await focused()], [true, true], '"No matches"');
+    // Leaving the box: the list goes in the same frame.
+    const gone = await page.evaluate(() => {
+      document.activeElement.blur();
+      return document.querySelector('.topbar form#omni [role="listbox"]').hidden;
+    });
+    assert.equal(gone, true, 'closed at once on leaving');
+    await assertQuiet(seen, 'the list kept by a press');
+  }));
+});
+
+// A tap on an option picks it with no delay to wait on: the tap's own mousedown keeps the box's focus, as a click's does.
+// Touch is emulated in Chromium and WebKit (Playwright's Firefox has no touch).
+describe('the family search under touch', () => {
+  const held = {};
+  before(async () => {
+    held.context = ENGINE === 'firefox' ? null : await shared.browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: ENGINE === 'chromium' });
+    held.base = shared.site.base;
+    held.javaScript = true;
+  });
+  after(() => held.context?.close());
+  it('a tap on an option opens it', { skip: ENGINE === 'firefox' && 'no touch in Firefox' }, () => withPage(held, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+    const form = page.locator('.topbar form#omni[data-hub]');
+    const box = form.getByRole('combobox');
+    if (!(await box.isVisible())) await page.locator('.fam__find').tap();
+    await box.tap();
+    await box.pressSequentially('Ohio');
+    const option = form.locator('[role="option"]').filter({ hasText: 'Ohio' }).first();
+    await option.waitFor();
+    await option.tap();
+    await page.waitForURL((url) => url.pathname === '/' && url.hash === '#state=OH');
+    await assertQuiet(seen, 'a tap on an option');
   }));
 });
 
