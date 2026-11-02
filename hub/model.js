@@ -30,6 +30,13 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
   return record;
 }
 
+// An estimated row's likely range of its net (rangeOf, the back-test's net band for its group). bands: the dollar file's,
+// which must hold the net's bands; a file without them stops the build with a message that says so.
+function netRange(bands, row) {
+  if (!Array.isArray(bands?.measures?.net?.strata)) throw new RangeError('hub: the dollar estimates have no back-test net band (bands.measures.net), which the hospital pages\' likely ranges need');
+  return rangeOf(bands, 'net', row.stratum, row.net);
+}
+
 // Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
 // it and to whether the HACRP pages count it (decided: the Set loadHub reads, the CCNs CMS scored and gave a Yes or No). `est` holds the
 // dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no
@@ -47,7 +54,7 @@ export function hubHospitals({ dollars, master, tdr, decided }) {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
       cut: row.cut, decided: decided.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
-      netRange: row.status === 'estimated' ? rangeOf(dollars.bands, 'net', row.stratum, row.net) : null,
+      netRange: row.status === 'estimated' ? netRange(dollars.bands, row) : null,
     };
   });
 }

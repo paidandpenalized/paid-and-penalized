@@ -13,7 +13,7 @@ import { toUnit } from '../../../engine/js/stats.js';
 import { MAX_FACTOR, encode } from '../../../web/whatif/fragment.js';
 import { NARROW_PX, labelSpan, rampAt, rampDomain, rampLabels, rampSide, rampX } from '../../../web/whatif/marks.js';
 import { renderWhatIf } from '../../../web/whatif/render.js';
-import { HACRP } from '../web/generate.js';
+import { HACRP, pastLines } from '../web/generate.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { changesOf, initialState, reduce, solverOf, viewModel } from '../web/whatif-state.js';
@@ -423,3 +423,35 @@ test('the median hospital never gets NHSN fields, even with periods', () => {
   const text = render(m, initialState(m, model), false, sandbox);
   assert.doesNotMatch(text, /data-wi="predicted"|than at CMS/);
 });
+
+// CMS's earlier lines on the ramp (range.past): a faint tick each where the ramp's scale reaches it, named for its year,
+// below the zone's label; one line under the ramp gives their span in words. None for Maryland (its ramp names no cut).
+test('the ramp\'s past lines: a tick each on the scale, below the zone\'s label, and their span said under the ramp', () => {
+  const [lo, hi] = rampDomain(RANGE, viewModel(initialState(H.no, model), H.no, model, estimate).ramp);
+  const past = [{ fy: 2021, score: lo + (hi - lo) * 0.4 }, { fy: 2020, score: lo + (hi - lo) * 0.3 }, { fy: 2019, score: hi + 1 }];
+  const text = String(renderWhatIf({ vm: viewModel(initialState(H.no, model), H.no, model, estimate), texts: textsFor(D, H.no), share: true, range: { ...RANGE, past }, solver: solverOf(H.no, model) }));
+  const ticks = all(text, /<line class="wi-ramp__past" x1="([^"]+)" x2="[^"]+" y1="(\d+)" y2="(\d+)"><title>([^<]+)<\/title><\/line>/g);
+  assert.deepEqual(ticks.map((m) => m[4]), ['CMS’s line in FY2020', 'CMS’s line in FY2021'], 'one tick per line on the scale, in year order; the one off it is not drawn');
+  for (const m of ticks) assert.ok(Number(m[2]) > 27 && Number(m[3]) === 40, 'from under the zone\'s label to the axis');
+  const note = /<p class="wi-ramp-ref">(The faint ticks[^<]*)<\/p>/.exec(text)?.[1];
+  assert.ok(note && note.includes('(FY2020) to about') && note.includes('(FY2021).'), `lowest to highest drawn: ${note}`);
+  // None drawn: no note. Maryland's: none at all.
+  const none = String(renderWhatIf({ vm: viewModel(initialState(H.no, model), H.no, model, estimate), texts: textsFor(D, H.no), share: true, range: { ...RANGE, past: [] }, solver: solverOf(H.no, model) }));
+  assert.ok(!none.includes('wi-ramp__past') && !none.includes('The faint tick'));
+  const md = String(renderWhatIf({ vm: viewModel(initialState(H.maryland, model), H.maryland, model, estimate), texts: textsFor(D, H.maryland), share: true, range: { ...RANGE, past }, solver: solverOf(H.maryland, model) }));
+  assert.ok(!md.includes('wi-ramp__past') && !md.includes('The faint tick'), 'Maryland: no past lines');
+});
+
+test('pastLines: each earlier year under today\'s formula where CMS cut some and not others, at the midpoint of its gap', () => {
+  const check = (highestNo, lowestYes) => ({ highestNo, lowestYes });
+  const hd = { checks: [
+    { fy: 2019, rule: { rule: 'domains' }, check: check(0.3, 0.31) },
+    { fy: 2020, rule: { rule: 'equal' }, check: check(0.32, 0.34) },
+    { fy: 2023, rule: { rule: 'equal' }, check: check(null, null) },
+    { fy: 2025, rule: { rule: 'equal' }, check: check(0.36, 0.37) },
+    { fy: 2026, rule: { rule: 'equal' }, check: check(0.38, 0.39) },
+  ] };
+  assert.deepEqual(pastLines(hd, 2026), [{ fy: 2020, score: 0.33 }, { fy: 2025, score: 0.365 }]);
+  assert.deepEqual(pastLines(null, 2026), []);
+});
+

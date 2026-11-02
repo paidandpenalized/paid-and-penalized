@@ -37,7 +37,8 @@ function whatIfData({ hospital, model, estimate, range }, page) {
     model: browserModel(model),
     estimate: browserEstimate(estimate),
     page: { ...page, source },
-    range,
+    // The browser reads the span only (dom.js); the earlier lines are drawn at build time.
+    range: { low: range.low, high: range.high },
   };
 }
 

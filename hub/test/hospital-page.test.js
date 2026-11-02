@@ -10,7 +10,7 @@ import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { HAC_CUT_PCT } from '../../web/programs.js';
-import { decimal, money, pct } from '../../web/render/format.js';
+import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { loadHub } from '../data.js';
@@ -82,7 +82,10 @@ test('an estimated cut hospital: its record, the net with its tag, stamp and fis
   assert.deepEqual(CUT.netRange, ends, 'the net times its group\'s two multipliers, low end first');
   assert.ok(ends[0] <= CUT.est.net && CUT.est.net <= ends[1], 'the estimate inside its range');
   const rng = block(main, 'class="hh__rng"', '</p>');
-  assert.ok(rng.includes(`<a class="hh__rng-k" href="/hacrp/methods/#backtest">Likely range</a> <span class="hh__rng-v">${esc(`${signed(ends[0])} to ${signed(ends[1])}`)}</span>`), 'the range, linked to the back-test');
+  assert.ok(rng.includes(`<a class="hh__rng-k" href="/hacrp/methods/#backtest">Likely range</a> <span class="hh__rng-v">${esc(moneyRange(...ends))}</span>`), 'the range as the HACRP pages print one, linked to the back-test');
+  // A range so narrow that rounding would print both ends alike is printed in whole dollars.
+  const narrow = pick((h) => h.netRange && money(h.netRange[0]) === money(h.netRange[1]), 'a hospital whose range rounds to one figure');
+  assert.ok(mainOf(render(narrow)).includes(`<span class="hh__rng-v">${esc(`${dollars(narrow.netRange[0])} to ${dollars(narrow.netRange[1])}`)}</span>`), 'whole dollars');
   assert.ok(main.includes('<div class="hh__band" data-band><p class="hh__rng">'), 'in the band\'s slot');
   assert.ok(!/±|%/.test(rng), 'dollars only: no ± and no percent');
   // A net of $0 has no range to show: the slot stays empty.

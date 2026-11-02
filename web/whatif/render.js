@@ -26,8 +26,9 @@
 //   rampRef                                a short line under the ramp naming the line's two scores, or null for none
 //   rampLegend                             the line in a sentence, said once under the what-if (outside the result)
 //   rampZone                               the shaded side's label (e.g. its cut), or null for none
-//   rampPast(fy), rampPastNote(first, last) an earlier year's line's name (its tick's tooltip) and the line under the ramp
-//                                          that says what the faint ticks are; rampPastNote null: no ticks (range.past)
+//   rampPast(fy), rampPastNote(low, high)  an earlier year's line's name (its tick's tooltip) and the line under the ramp
+//                                          that says what the faint ticks are, from the lowest and highest of them
+//                                          ({ fy, score }); rampPastNote null: no ticks (range.past)
 //   scores(vm) -> { before, after }        score texts
 //   flag(flag), cut(flag)                  decision and cut texts (cut: null where there is no cut)
 //   sentence(vm), slide(vm)                the result in words; plain text for "Copy for a slide"
@@ -96,7 +97,7 @@ function ramp(vm, range, texts, past) {
 <rect class="wi-ramp__zone" x="${rampX(line)}" y="${Y.zoneTop}" width="${rampWidthFrom(line)}" height="${Y.axis - Y.zoneTop}"/>
 ${texts.rampZone && rampText(zoneLabelAt(line), Y.zoneLabel, texts.rampZone, 'wi-ramp__zone-label')}
 ${ticks.map((x) => html`<line class="wi-ramp__tick" x1="${rampX(at(x))}" x2="${rampX(at(x))}" y1="${Y.axis}" y2="${Y.axis + RAMP_TICK}"/><text class="wi-ramp__tick-label" x="${rampX(at(x))}" y="${Y.tickLabel}" text-anchor="middle">${fmt(x)}</text>`)}
-${past.map((p) => html`<line class="wi-ramp__past" x1="${rampX(at(p.score))}" x2="${rampX(at(p.score))}" y1="${Y.zoneTop + 6}" y2="${Y.axis}"><title>${texts.rampPast(p.fy)}</title></line>`)}
+${past.map((p) => html`<line class="wi-ramp__past" x1="${rampX(at(p.score))}" x2="${rampX(at(p.score))}" y1="${Y.zoneLabel + 4}" y2="${Y.axis}"><title>${texts.rampPast(p.fy)}</title></line>`)}
 <line class="wi-ramp__axis" x1="${rampX(0)}" x2="${rampX(1)}" y1="${Y.axis}" y2="${Y.axis}"/>
 <line class="wi-ramp__line" x1="${rampX(line)}" x2="${rampX(line)}" y1="${Y.zoneTop - 2}" y2="${Y.axis + RAMP_TICK}"/>
 ${rampText(labelAt(line), Y.lineLabel, texts.rampLine, 'wi-ramp__label')}
@@ -108,9 +109,13 @@ ${html`<text class="wi-ramp__label" data-wi="hyp-label" x="${rampX(labels.hyp.t)
 </svg>`;
 }
 
-// Under the ramp, what its faint ticks (past: pastOn's) are: CMS's lines from the first year drawn to the last; '' with
-// none drawn.
-const pastNote = (past, texts) => (past.length ? html`<p class="wi-ramp-ref">${texts.rampPastNote(past[0].fy, past.at(-1).fy)}</p>` : '');
+// Under the ramp, what its faint ticks (past: pastOn's) are, in words: the lowest and the highest of CMS's earlier lines
+// drawn, each with its year (near this year's line, ticks can draw on top of each other or under it); '' with none.
+function pastNote(past, texts) {
+  if (!past.length) return '';
+  const byScore = [...past].sort((a, b) => a.score - b.score);
+  return html`<p class="wi-ramp-ref">${texts.rampPastNote(byScore[0], byScore.at(-1))}</p>`;
+}
 
 // The cliff over the ramp, on the ramp's own x (its margins and places): the money a flat cut takes at any score.
 // A ledge at $0 up to CMS's line, a drop, a floor at the whole cut out to the right; the hypothetical a dot riding

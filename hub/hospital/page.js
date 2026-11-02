@@ -15,7 +15,7 @@
 import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, dotList, factor, money, placeText, unbroken } from '../../web/render/format.js';
+import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
@@ -130,14 +130,16 @@ ${axis}
 // compared the same estimates with hospitals' cost reports. The build's link check holds the address to a real id.
 const BACKTEST_HREF = `${SITE.sites.hacrp.path}methods/#backtest`;
 
-// The net's likely range (h.netRange), as the HACRP pages draw one: its key (to the back-test), the two ends with their
-// signs, and a small bar with the estimate's place on it; '' for none (a net of $0).
+// The net's likely range (h.netRange), as the HACRP pages draw one: its key (to the back-test), the two ends as they print
+// a range (moneyRange; in whole dollars when rounding would print both ends alike), and a small bar with the estimate's
+// place on it; '' for none (a net of $0).
 function band(h) {
   if (!h.netRange) return '';
   const [lo, hi] = h.netRange;
   const places = rangeBar(h.netRange, h.est.net);
   const bar = places ? html`<span class="hh__rng-bar" style="--lo:${places.lo};--hi:${places.hi};--at:${places.at}" aria-hidden="true"></span>` : '';
-  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${fill('bandRange', { lo: signedMoney(lo), hi: signedMoney(hi) })}</span>${bar}</p>`;
+  const text = money(lo) === money(hi) ? fill('bandRange', { lo: dollars(lo), hi: dollars(hi) }) : moneyRange(lo, hi);
+  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${text}</span>${bar}</p>`;
 }
 
 // The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a

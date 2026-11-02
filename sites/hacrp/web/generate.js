@@ -78,9 +78,8 @@ export function scoreRange(hospitals) {
 // moves from year to year. hd: historyData(), or null without the history (none).
 export function pastLines(hd, fy) {
   if (!hd) return [];
-  const rule = new Map(hd.years.map((y) => [y.fy, y.rule]));
   return hd.checks
-    .filter((c) => c.fy < fy && rule.get(c.fy) === 'equal' && c.check.highestNo !== null && c.check.lowestYes !== null)
+    .filter((c) => c.fy < fy && c.rule.rule === 'equal' && c.check.highestNo !== null && c.check.lowestYes !== null)
     .map((c) => ({ fy: c.fy, score: lineScore(c.check) }));
 }
 

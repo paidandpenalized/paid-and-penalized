@@ -139,8 +139,9 @@ export const COPY = {
   whatifRampLine: { text: "CMS's line", claim: null },
   // The ramp's faint ticks: CMS's line in earlier years scored the same way (equal weights: HACRP-59).
   whatifRampPast: { text: "CMS's line in FY{fy}", claim: null },
-  whatifRampPastNote: { text: "The faint ticks are CMS's line in FY{first} to FY{last}, under the same formula. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
-  whatifRampPastOne: { text: "The faint tick is CMS's line in FY{first}, under the same formula. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
+  // {low} and {high}: the lowest and highest earlier line, each midway between CMS's highest No and lowest Yes that year.
+  whatifRampPastNote: { text: "The faint ticks are CMS's line in earlier years under the same formula, from about {low} (FY{lowFy}) to about {high} (FY{highFy}). The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
+  whatifRampPastOne: { text: "The faint tick is CMS's line in FY{fy} under the same formula, about {score}. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
   whatifEstimate: {
     text: "Estimate: a changed measure's z-score is this site's recompute, which can differ slightly from CMS's.",
     claim: null,
