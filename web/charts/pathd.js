@@ -2,10 +2,10 @@
 // outlines, the roll call's rows, the treemap's tiles), where each point repeats its full coordinates. relativeD writes
 // the same path with relative commands, which are shorter and repeat more (so they compress better), and the browser
 // draws the same shape: the differences are taken in whole units of the path's own last decimal place, so every point
-// adds back to exactly the coordinates it had. (A browser adds them in single precision, so a point can land a few
-// thousandths of a unit off after a long run, as the dots' paths (dots.js) always have: far under a pixel; an edge pixel
-// here and there anti-aliases a step differently.) absoluteD reads a path back as absolute commands (the tests read the
-// roll call's runs that way). Shared by the build and the browser.
+// adds back to exactly the coordinates it had. (A browser adds them in single precision, so a point can land a hair off:
+// every ANCHOR-th segment is written absolutely to keep that to a few thousandths of a unit, far under a pixel; an edge
+// pixel here and there anti-aliases a step differently.) absoluteD reads a path back as absolute commands (the tests
+// read the roll call's runs that way). Shared by the build and the browser.
 
 // A number as path data writes it: JavaScript's shortest digits without the leading zero ("0.5" -> ".5", "-0.5" ->
 // "-.5").
@@ -19,6 +19,14 @@ const gap = (last, text) => (text.startsWith('-') || (text.startsWith('.') && la
 export const pathNumbers = (...values) => values.map(pathNumber).reduce((out, text, i, all) => out + (i ? gap(all[i - 1], text) : '') + text, '');
 
 const COMMAND = /^[MLHVZmlhvz]$/;
+// The most decimal places a path may have (the kit writes one or two), and the largest coordinate in whole units, so
+// every sum stays exact in a double; anything past them is left as it is.
+const MAX_PLACES = 6;
+const MAX_UNITS = 2 ** 40;
+// Every ANCHOR-th segment is written absolutely. A browser adds relative coordinates in single precision; restarting from
+// an absolute point keeps that error to a few thousandths of a unit however long the path (a roll call's row of runs, a
+// thousand hospitals' pull lines).
+const ANCHOR = 64;
 // A command letter (any letter, so one that isn't a command is caught) or a number; "1.5.5" is two numbers, as the path
 // grammar reads it.
 const TOKEN = /[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g;
@@ -39,6 +47,8 @@ function readPath(d) {
     const point = t.indexOf('.');
     if (point >= 0) places = Math.max(places, t.length - point - 1);
   }
+  // An unrounded coordinate: its whole units could pass what a double holds exactly, so the path is left as it is.
+  if (places > MAX_PLACES) return null;
   const scale = 10 ** places;
   const segments = [];
   let x = 0;
@@ -49,7 +59,8 @@ function readPath(d) {
   let i = 0;
   const next = () => {
     const t = tokens[i++];
-    return t === undefined || COMMAND.test(t) ? NaN : Math.round(Number(t) * scale);
+    const units = t === undefined || COMMAND.test(t) ? NaN : Math.round(Number(t) * scale);
+    return Math.abs(units) <= MAX_UNITS ? units : NaN;
   };
   while (i < tokens.length) {
     if (COMMAND.test(tokens[i])) command = tokens[i++];
@@ -73,7 +84,8 @@ function readPath(d) {
 }
 
 // The same path in relative commands: an absolute M to start, so two paths' data joined end to end still draw both, then
-// l, h, v (a line along one axis takes the shorter h or v; a line of no length, h0), m for each later moveto, and z.
+// l, h, v (a line along one axis takes the shorter h or v; a line of no length, h0), m for each later moveto, and z;
+// every ANCHOR-th segment in its absolute form.
 // Bare numbers continue the command before them, and numbers join where the grammar lets them (no space before a minus,
 // or before a decimal point that follows a number that has one). Anything readPath can't read is returned as it was, as
 // are null and ''.
@@ -101,13 +113,17 @@ export function relativeD(d) {
   };
   let x = 0;
   let y = 0;
+  // Segments written since the last absolute one: every ANCHOR-th is absolute, so the browser's error can't grow.
+  let run = 0;
   segments.forEach(([c, nx, ny], i) => {
+    const absolute = i === 0 || run >= ANCHOR;
+    run = absolute ? 0 : run + 1;
     if (c === 'Z') put('z');
-    else if (c === 'M') put(i === 0 ? 'M' : 'm', nx - x, ny - y);
+    else if (c === 'M') put(absolute ? 'M' : 'm', ...(absolute ? [nx, ny] : [nx - x, ny - y]));
     // A line along x as h (a line of no length too, as h0: a dot, with round caps), along y as v.
-    else if (ny === y) put('h', nx - x);
-    else if (nx === x) put('v', ny - y);
-    else put('l', nx - x, ny - y);
+    else if (ny === y) put(absolute ? 'H' : 'h', absolute ? nx : nx - x);
+    else if (nx === x) put(absolute ? 'V' : 'v', absolute ? ny : ny - y);
+    else put(absolute ? 'L' : 'l', ...(absolute ? [nx, ny] : [nx - x, ny - y]));
     [x, y] = [nx, ny];
   });
   return out;

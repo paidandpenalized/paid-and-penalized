@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { geoCentroid, geoContains } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
+import { absoluteD } from '../charts/pathd.js';
 import { STATES, STATE_NAMES } from '../../engine/js/states.js';
 import { US_MAP_CODES, countiesOf, countyShapes, placeMap, pointOf, stateMap, stateShapes, usMap, usMapHeight, usPoints, usProjected } from '../charts/geo.js';
 
@@ -172,7 +173,10 @@ test('usPoints: one path of dots per class, each class its own size; a point wit
   assert.doesNotMatch(svg, HEX);
   // Dots sit inside the frame the choropleth draws at the same width.
   const [w, h] = viewBox(String(usMap(MAP(ENTRIES(), { width: 560 }))));
-  for (const [, x, y] of svg.matchAll(/M([\d.-]+) ([\d.-]+)h0/g)) assert.ok(x > 0 && x < w && y > 0 && y < h, `${x}, ${y}`);
+  // Every dot, each path read back as absolute commands (pathd.js): a dot is a moveto.
+  const placed = [...svg.matchAll(/ d="([^"]*)"/g)].flatMap(([, d]) => [...absoluteD(d).matchAll(/M([\d.-]+) ([\d.-]+)/g)].map((m) => [Number(m[1]), Number(m[2])]));
+  assert.ok(placed.length > 0);
+  for (const [x, y] of placed) assert.ok(x > 0 && x < w && y > 0 && y < h, `${x}, ${y}`);
   assert.equal(String(usPoints({ shapes, points, sizes: { a: 3.2, b: 5.2 }, width: 560 })), String(usPoints({ shapes, points, sizes: { a: 3.2, b: 5.2 }, width: 560 })), 'the same call gives the same markup');
 });
 

@@ -21,7 +21,8 @@ that needs JavaScript to draw (server-drawn charts that work without JavaScript 
   commands. It starts with an absolute M (so paths joined end to end still draw), then uses `l`, `h`/`v` for lines
   along one axis, `m` for later movetos and `z`. Bare numbers continue a command, and the leading zero is dropped
   (`.5`). The differences are taken in whole units of the path's own last decimal place, so every point adds back to
-  exactly the coordinate it had. Anything else (curves, arcs, exponents) is returned unchanged.
+  exactly the coordinate it had. Anything else (curves, arcs, exponents, more than six decimal places) is returned
+  unchanged.
 - Applied where the weight is: d3-geo outlines (`geo.js`: every map), the roll call's rows, the treemap's tiles,
   `lineD`, the silhouettes (`svg.js`, `measureDots.js`) and the pull lines. The dots (`dots.js`) were already relative
   and now drop leading zeros.
@@ -29,11 +30,12 @@ that needs JavaScript to draw (server-drawn charts that work without JavaScript 
 
 ## What a reader sees
 
-The same pixels, with one caveat. A browser adds relative coordinates in single precision, so a point can land a few
-thousandths of a viewBox unit off after a long run. The dots' paths have always worked this way. On the program page
-the largest such gap in the new paths is about 0.004 units, against 0.0125 in the dots that were already relative. An
-edge pixel here and there anti-aliases one step differently. Screenshot comparison, before against after, light and
-dark, phone and desktop widths, three engines: the counts are in the change's notes.
+The same pixels, with one caveat. A browser adds relative coordinates in single precision, so a point can land a hair
+off, and the error grows along an unbroken run. `relativeD` writes every 64th segment in its absolute form, which bounds
+that error. On the program page the largest gap in the new paths is 0.0007 units; the dots, relative all along, reach
+0.0125. Writing absolute points that often costs about 1.7 KB gzipped. An edge pixel here and there anti-aliases one
+step differently. Screenshot comparison, before against after, light and dark, phone and desktop widths, three
+engines: the counts are in the change's notes.
 
 ## Budget
 

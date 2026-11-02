@@ -100,6 +100,20 @@ test('relative input: the treemap\'s tiles, and a path that starts with a relati
   same('m5 5 1 1h2', relativeD('m5 5 1 1h2'), 1);
 });
 
+test('a long path restarts from an absolute point every 64 segments; the points stay the same', () => {
+  const runs = Array.from({ length: 200 }, (_, k) => `M${(k * 0.37).toFixed(2)} 10.5H${(k * 0.37 + 0.2).toFixed(2)}`).join('');
+  const out = relativeD(runs);
+  same(runs, out, 100);
+  // The first moveto, then the 65th segment and every 65th after it (the 64 between each pair relative).
+  assert.equal((out.match(/[MLHV]/g) ?? []).length, Math.ceil(400 / 65));
+  assert.ok(out.length < runs.length * 0.75, `${out.length} of ${runs.length}`);
+});
+
+test('a coordinate with more than six decimal places, or too large to add exactly, is left as it was', () => {
+  for (const d of ['M1000.1234567890123 5L0.30000000000000004 2', 'M0 0L0.0000001 0', 'M1e3 1L2 2', `M${2 ** 41} 0L1 1`]) assert.equal(relativeD(d), d, d);
+  assert.equal(relativeD('M0 0L0.000001 0'), 'M0 0h.000001');
+});
+
 test('anything else comes back as it was', () => {
   for (const d of [null, '', 'M1 1A2 2 0 0 1 3 3', 'M1 1C1 2 3 4 5 6', 'M1e3 1L2 2', 'L1 1', 'M1 1Z1 1', 'M1']) assert.equal(relativeD(d), d, String(d));
 });
@@ -110,7 +124,9 @@ test('the US map draws its outlines in relative commands at both widths', () => 
     for (const [code, d] of usPaths(shapes, width).paths) {
       if (d === null) continue;
       assert.match(d, /^M[\d.]/, code);
-      assert.doesNotMatch(d, /[LHV]/, `${code}: relative`);
+      // Relative, but for the absolute point every 64 segments.
+      const numbers = d.match(/-?(?:\d+\.?\d*|\.\d+)/g).length;
+      assert.ok((d.match(/[LHV]/g) ?? []).length <= numbers / 64 + 1, `${code}: relative`);
     }
   }
 });
