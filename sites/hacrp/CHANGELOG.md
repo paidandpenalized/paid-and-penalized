@@ -12,6 +12,9 @@ corrections log.
 - The states map's keyboard note says what Enter does: it opens the state's page, as a click does.
 - Methods links the current CMS page for the FY2024 hospital cost report file.
 - The program page's script, which bundles parts of the d3 charting packages, carries their license notices.
+- The charts' drawings are written in shorter path data, the same shapes: the program page is 18% lighter compressed
+  (230 KB gzip, from 281 KB), hospital, place and methods pages 20–40%; the program page's size budget is re-set to
+  330 KB.
 
 ## 2026-10-24
 - Every page links the family's Terms of use, privacy, corrections, About and accessibility pages, and its feedback
