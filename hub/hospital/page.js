@@ -124,8 +124,23 @@ ${axis}
 <p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>`;
 }
 
-// The net block: its label and tag, the large figure and its stamp, the slot the estimate's band will fill, the common
-// fiscal year's note, the rows, and the button down to the what-if.
+// Where the likely ranges come from: the HACRP Methods page's back-test (its id there is the site's BACKTEST_ID), which
+// compared the same estimates with hospitals' cost reports. The build's link check holds the address to a real id.
+const BACKTEST_HREF = `${SITE.sites.hacrp.path}methods/#backtest`;
+
+// The net's likely range (h.netRange), as the HACRP pages draw one: its key (to the back-test), the two ends with their
+// signs, and a small bar with the estimate's place on it; '' for none (a net of $0).
+function band(h) {
+  if (!h.netRange) return '';
+  const [lo, hi] = h.netRange;
+  const from = Math.min(lo, h.est.net);
+  const to = Math.max(hi, h.est.net);
+  const at = (x) => (to === from ? 0.5 : (x - from) / (to - from)).toFixed(3);
+  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${fill('bandRange', { lo: signedMoney(lo), hi: signedMoney(hi) })}</span><span class="hh__rng-bar" style="--lo:${at(lo)};--hi:${at(hi)};--at:${at(h.est.net)}" aria-hidden="true"></span></p>`;
+}
+
+// The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a
+// scenario shows), the common fiscal year's note, the rows, and the button down to the what-if.
 function netBlock(h, figures, fy, sets) {
   const { net } = h.est;
   const sign = signOf(net);
@@ -136,7 +151,7 @@ function netBlock(h, figures, fy, sets) {
 <p class="hh__big">${signedMoney(net)}</p>
 <div class="hh__stamp hh__stamp--${sign}">${stamp({ label: stampLabel, ink: sign === 'zero' })}</div>
 </div>
-<div class="hh__band" data-band></div>
+<div class="hh__band" data-band>${band(h)}</div>
 <p class="hh__fy">${fill('fyNote', { fy })}</p>
 ${sumRows(h, figures, fy, sets)}
 <a class="hh__wbtn" href="#whatif"><span class="ico ico--capsule" aria-hidden="true"></span>${fill('whatIfButton')}</a>

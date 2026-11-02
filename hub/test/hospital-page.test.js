@@ -70,12 +70,23 @@ test('an estimated cut hospital: its record, the net with its tag, stamp and fis
   assert.ok(main.includes(`<span>Hospital record · FY${FY}</span>`), 'the record card\'s title');
   assert.ok(main.includes(`<p class="field__value">${esc(CUT.city)}, ${CUT.state}</p>`), 'the location');
   assert.ok(main.includes(`<article class="hh" data-ccn="${CUT.ccn}">`), 'the page root names the CCN');
-  // The net: its label and the estimate tag, the large figure, the stamp, the band's empty slot and the note.
+  // The net: its label and the estimate tag, the large figure, the stamp, its likely range and the note.
   assert.ok(main.includes(`Net, three programs, FY${FY} <a class="est-tag" href="/methods/#estimate"`), 'the net\'s label carries the estimate tag');
   assert.ok(main.includes(`<p class="hh__big">${signed(CUT.est.net)}</p>`), 'the net, signed');
   assert.ok(main.includes('<p class="stamp">Net cut</p>'), 'the stamp');
-  assert.ok(main.includes('<div class="hh__band" data-band></div>'), 'the band\'s slot, empty at launch');
-  assert.ok(!/±/.test(main), 'no ± band');
+  // The likely range is the back-test's net band for the hospital's group (as the HACRP pages give it), in dollars, the
+  // estimate inside it, with its key linked to the back-test.
+  const row = HUB.dollars.hospitals.find((r) => r.ccn === CUT.ccn);
+  const band = row.stratum === 'all' ? HUB.dollars.bands.measures.net.overall : HUB.dollars.bands.measures.net.strata.find((s) => s.stratum === row.stratum);
+  const ends = [Math.round(CUT.est.net * band.high), Math.round(CUT.est.net * band.low)];
+  assert.deepEqual(CUT.netRange, ends, 'the net times its group\'s two multipliers, low end first');
+  assert.ok(ends[0] <= CUT.est.net && CUT.est.net <= ends[1], 'the estimate inside its range');
+  const rng = block(main, 'class="hh__rng"', '</p>');
+  assert.ok(rng.includes(`<a class="hh__rng-k" href="/hacrp/methods/#backtest">Likely range</a> <span class="hh__rng-v">${esc(`${signed(ends[0])} to ${signed(ends[1])}`)}</span>`), 'the range, linked to the back-test');
+  assert.ok(main.includes('<div class="hh__band" data-band><p class="hh__rng">'), 'in the band\'s slot');
+  assert.ok(!/±|%/.test(rng), 'dollars only: no ± and no percent');
+  // A net of $0 has no range to show: the slot stays empty.
+  assert.ok(mainOf(render(ZERO)).includes('<div class="hh__band" data-band></div>'), 'no range for a net of $0');
   assert.ok(main.includes(esc(`All three programs’ FY${FY} figures, the latest year they share. A program’s own pages may show a newer year.`)), 'the common fiscal year note');
   // Three program rows and the net, each signed as money() writes it, with its word and a median tick.
   const rate = pct(HAC_CUT_PCT / 100, 0);

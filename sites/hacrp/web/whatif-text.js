@@ -268,6 +268,9 @@ export function whatIfTexts({ hospital, model, name, fy, path, source, boundaryT
     // itself is said once, under the what-if.
     rampRef: hospital.paymentReduction === 'N/A' ? null : heroLineText(boundaryText),
     rampLegend: `${fill('line', boundaryText)} ${fill('lineMaryland')}`,
+    // CMS's earlier lines on the ramp (not for Maryland, whose ramp names no cut): each tick's name, and what they are.
+    rampPast: (year) => fill('whatifRampPast', { fy: String(year) }),
+    rampPastNote: hospital.paymentReduction === 'N/A' ? null : (first, last) => (first === last ? fill('whatifRampPastOne', { first: String(first) }) : fill('whatifRampPastNote', { first: String(first), last: String(last) })),
     scores: (vm) => scores(vm.result, hospital),
     flag: flagText,
     cut: cutText,

@@ -44,6 +44,9 @@ export const COPY = typesetCopy({
   stampBonus: 'Net bonus',
   stampZero: 'No net change',
   fyNote: "All three programs' FY{fy} figures, the latest year they share. A program's own pages may show a newer year.",
+  // The net's likely range under it (its key links to the back-test that made it): {lo} to {hi}, dollars with their signs.
+  bandLikely: 'Likely range',
+  bandRange: '{lo} to {hi}',
   sumLabel: "Each program's estimated FY{fy} dollars, adding to the net",
   sumNet: 'Net, estimated',
   sumMedian: "median of its peers, scaled to this hospital's pay: {amount}",

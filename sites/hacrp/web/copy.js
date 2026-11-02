@@ -137,6 +137,10 @@ export const COPY = {
   whatifRowCut: { text: 'Payment cut', claim: 'HACRP-01' },
   whatifResultLabel: { text: 'Result of the what-if', claim: null },
   whatifRampLine: { text: "CMS's line", claim: null },
+  // The ramp's faint ticks: CMS's line in earlier years scored the same way (equal weights: HACRP-59).
+  whatifRampPast: { text: "CMS's line in FY{fy}", claim: null },
+  whatifRampPastNote: { text: "The faint ticks are CMS's line in FY{first} to FY{last}, under the same formula. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
+  whatifRampPastOne: { text: "The faint tick is CMS's line in FY{first}, under the same formula. The line moves every year, so a hospital can cross it without changing anything.", claim: 'HACRP-59' },
   whatifEstimate: {
     text: "Estimate: a changed measure's z-score is this site's recompute, which can differ slightly from CMS's.",
     claim: null,

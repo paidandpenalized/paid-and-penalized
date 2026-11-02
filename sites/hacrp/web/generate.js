@@ -71,6 +71,18 @@ export function scoreRange(hospitals) {
   return { low: percentileSas5(totals, RAMP_LOW_PCT / 100), high: percentileSas5(totals, RAMP_HIGH_PCT / 100) };
 }
 
+// CMS's line in each year before fy scored by today's formula (equal weights, the history's rule 'equal'), where CMS cut
+// some hospitals and not others: [{ fy, score }], the score midway between the highest it didn't cut and the lowest it
+// did, as the ramp draws this year's (web/whatif/marks.js lineScore). The what-if's ramp marks them faintly: the line
+// moves from year to year. hd: historyData(), or null without the history (none).
+export function pastLines(hd, fy) {
+  if (!hd) return [];
+  const rule = new Map(hd.years.map((y) => [y.fy, y.rule]));
+  return hd.checks
+    .filter((c) => c.fy < fy && rule.get(c.fy) === 'equal' && c.check.highestNo !== null && c.check.lowestYes !== null)
+    .map((c) => ({ fy: c.fy, score: (c.check.highestNo + c.check.lowestYes) / 2 }));
+}
+
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass
 // data from loadHacrp() to read the files once. Returns the site's two dates for the hub's corrections page
 // (build.js): the CMS file's release and the day its numbers last changed.
@@ -104,7 +116,8 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
     ctx.emit(p);
   };
 
-  const range = scoreRange(hospitals);
+  // The ramp's national span, with CMS's earlier lines on the same scale.
+  const range = { ...scoreRange(hospitals), past: pastLines(hd, fy) };
   const programRobots = robotsFor({ env, released });
   // What the program page and the place pages draw, computed once.
   const pd = programData({ hospitals, master, model });

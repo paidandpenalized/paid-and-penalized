@@ -54,6 +54,8 @@
 .wi-ramp__zone { fill: var(--pen-tint); }
 .wi-ramp__axis, .wi-ramp__tick { stroke: var(--ink-3); stroke-width: 1; }
 .wi-ramp__line { stroke: var(--pen); stroke-width: 2; }
+/* CMS's earlier lines: faint, short and dashed, under this year's. */
+.wi-ramp__past { stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 2 2; }
 .wi-ramp__zone-label { fill: var(--ink); font-family: var(--font-body); font-size: 11px; font-weight: 600; }
 .wi-ramp__tick-label { fill: var(--ink-2); }
 .wi-ramp__label { fill: var(--ink); font-family: var(--font-body); font-weight: 600; }
@@ -164,7 +166,7 @@
   .wi-bars__row--assigned .wi-bar { background: Canvas; outline: 1px dashed CanvasText; }
   .wi-tri--cms { fill: CanvasText; }
   .wi-tri--hyp { fill: Canvas; stroke: CanvasText; }
-  .wi-ramp__axis, .wi-ramp__tick { stroke: CanvasText; }
+  .wi-ramp__axis, .wi-ramp__tick, .wi-ramp__past { stroke: CanvasText; }
   .wi-ramp__line { stroke: Highlight; }
   .wi-ramp__zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
   .wi-cliff__pit { outline: 1px dashed GrayText; outline-offset: -1px; }

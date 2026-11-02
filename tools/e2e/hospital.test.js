@@ -39,6 +39,7 @@ const hypo = (page) => page.evaluate(() => ({
   stamp: document.querySelector('.hh__stamp .stamp').textContent,
   struck: document.querySelectorAll('.hh__was').length,
   ghosts: document.querySelectorAll('.st__me--ghost').length,
+  band: document.querySelector('[data-band] .hh__rng')?.checkVisibility() ?? false,
   hash: location.hash,
   result: document.querySelector('[data-result] .hh__rs').textContent,
   head: document.querySelector('[data-headline]').textContent,
@@ -155,6 +156,7 @@ for (const width of [390, 1280]) {
       const before = await hypo(page);
       assert.equal(before.banner, false);
       assert.equal(before.struck, 0);
+      assert.equal(before.band, true, 'the net\'s likely range shows');
       const handle = page.locator('.st__h').first();
       await handle.focus();
       const now = () => handle.getAttribute('aria-valuenow');
@@ -175,10 +177,11 @@ for (const width of [390, 1280]) {
       assert.doesNotMatch(on.result + on.head, NEVER);
       assert.match(await handle.getAttribute('aria-valuetext'), /estimated FY\d{4} .*hypothetical$/);
       assert.equal(on.sideways, 0);
+      assert.equal(on.band, false, 'the actual net\'s likely range hides under a scenario');
       await page.keyboard.press('Escape');
       await page.waitForTimeout(SETTLED_MS);
       const off = await hypo(page);
-      assert.deepEqual([off.banner, off.dashed, off.struck, off.ghosts, off.hash], [false, false, 0, 0, ''], 'Escape resets');
+      assert.deepEqual([off.banner, off.dashed, off.struck, off.ghosts, off.hash, off.band], [false, false, 0, 0, '', true], 'Escape resets');
       assert.deepEqual([off.stamp, off.head, off.result], [before.stamp, before.head, before.result], 'the actual words back');
       // A drag: the handle moves with the pointer.
       await page.locator('#whatif').scrollIntoViewIfNeeded();

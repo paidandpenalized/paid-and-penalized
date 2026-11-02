@@ -2,6 +2,7 @@
 // Readmissions file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
+import { rangeOf } from '../engine/js/dollars/ranges.js';
 import { SHOWN_STATUSES } from '../engine/js/dollars/status.js';
 import { netShare, pctOf } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
@@ -34,6 +35,8 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
 // dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no
 // inputs to estimate from); `cut` is CMS's HAC decision (Yes) for every one of them, `scored` whether CMS gave it a
 // Total HAC Score. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
+// netRange: an estimated hospital's likely range of its net, [low, high] dollars (the back-test's net band for its group,
+// engine/js/dollars/ranges.js rangeOf, as the HACRP pages give it), null for a net of $0 and for one without an estimate.
 export function hubHospitals({ dollars, master, tdr, scored }) {
   if (!(scored instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of scored CCNs (loadHub().scored)');
   return dollars.hospitals.map((row) => {
@@ -44,6 +47,7 @@ export function hubHospitals({ dollars, master, tdr, scored }) {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
       cut: row.cut, scored: scored.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
+      netRange: row.status === 'estimated' ? rangeOf(dollars.bands, 'net', row.stratum, row.net) : null,
     };
   });
 }
