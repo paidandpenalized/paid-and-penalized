@@ -107,6 +107,11 @@ test('a long path restarts from an absolute point every 64 segments; the points 
   // The first moveto, then every 64th segment after it.
   assert.equal((out.match(/[MLHV]/g) ?? []).length, Math.ceil(400 / 64));
   assert.ok(out.length < runs.length * 0.75, `${out.length} of ${runs.length}`);
+  // A close carries no point, so it is never the anchor: 200 tiles of four points and a close anchor every 64 points.
+  const tiles = Array.from({ length: 200 }, (_, k) => `M${k} 0h1v1h-1z`).join('');
+  const closed = relativeD(tiles);
+  same(tiles, closed, 1);
+  assert.equal((closed.match(/[MLHV]/g) ?? []).length, Math.ceil(800 / 64));
 });
 
 test('a browser adding the relative steps in single precision stays within a few thousandths of a unit, however long the path', () => {
@@ -142,7 +147,7 @@ test('a coordinate with more than six decimal places, or too large to add exactl
 });
 
 test('anything else comes back as it was', () => {
-  for (const d of [null, '', 'M1 1A2 2 0 0 1 3 3', 'M1 1C1 2 3 4 5 6', 'M1e3 1L2 2', 'L1 1', 'M1 1Z1 1', 'M1']) assert.equal(relativeD(d), d, String(d));
+  for (const d of [null, '', 'M1,,2L3 4', ',M1 2L3 4', 'M1 2L3 4,', 'M,1 2', 'M1 2,L3 4', 'M1 1A2 2 0 0 1 3 3', 'M1 1C1 2 3 4 5 6', 'M1e3 1L2 2', 'L1 1', 'M1 1Z1 1', 'M1']) assert.equal(relativeD(d), d, String(d));
 });
 
 test('the US map draws its outlines in relative commands at both widths', () => {
@@ -153,7 +158,7 @@ test('the US map draws its outlines in relative commands at both widths', () => 
       assert.match(d, /^M[\d.]/, code);
       // Relative, but for the absolute point every 64 segments.
       const numbers = d.match(/-?(?:\d+\.?\d*|\.\d+)/g).length;
-      assert.ok((d.match(/[LHV]/g) ?? []).length <= numbers / 64 + 1, `${code}: relative`);
+      assert.ok((d.match(/[MLHV]/g) ?? []).length <= numbers / 64 + 1, `${code}: relative`);
     }
   }
 });

@@ -16,7 +16,16 @@ export const pathNumber = (x) => String(x).replace(/^(-?)0\./, '$1.');
 const gap = (last, text) => (text.startsWith('-') || (text.startsWith('.') && last.includes('.')) ? '' : ' ');
 
 // Numbers as path data writes them (pathNumber), joined as tightly as the grammar allows.
-export const pathNumbers = (...values) => values.map(pathNumber).reduce((out, text, i, all) => out + (i ? gap(all[i - 1], text) : '') + text, '');
+export function pathNumbers(...values) {
+  let out = '';
+  let last = '';
+  for (const v of values) {
+    const text = pathNumber(v);
+    out += (last ? gap(last, text) : '') + text;
+    last = text;
+  }
+  return out;
+}
 
 const COMMAND = /^[MLHVZmlhvz]$/;
 // The most decimal places a path may have (the kit writes one or two), and the largest coordinate in whole units, so
@@ -30,6 +39,8 @@ const ANCHOR = 64;
 // A command letter (any letter, so one that isn't a command is caught) or a number; "1.5.5" is two numbers, as the path
 // grammar reads it.
 const TOKEN = /[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g;
+// A comma the grammar refuses: first or last, two in a row, or next to a command letter.
+const MISPLACED_COMMA = /^[\s,]*,|,\s*$|,\s*,|[A-Za-z]\s*,|,\s*[A-Za-z]/;
 
 // A path's d (M, L, H, V and Z, absolute or relative, numbers in plain decimals, separated by commas or spaces) as
 // { scale, segments }: each segment [command, x, y], the command as written in capitals (M, L, H, V or Z) and the point
@@ -39,9 +50,9 @@ const TOKEN = /[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)/g;
 function readPath(d) {
   const tokens = d.match(TOKEN);
   if (!tokens || !/^[Mm]$/.test(tokens[0])) return null;
-  // Nothing but tokens, commas and spaces; every letter a command. One pass over the tokens checks the letters and finds
-  // the most decimal places.
-  if (d.replace(TOKEN, '').replace(/[\s,]/g, '') !== '') return null;
+  // Nothing but tokens, commas and spaces, a comma only between two numbers; every letter a command. One pass over the
+  // tokens checks the letters and finds the most decimal places.
+  if (d.replace(TOKEN, '').replace(/[\s,]/g, '') !== '' || MISPLACED_COMMA.test(d)) return null;
   let places = 0;
   for (const t of tokens) {
     if (t.length === 1 && /[A-Za-z]/.test(t)) {
@@ -117,13 +128,20 @@ export function relativeD(d) {
   };
   let x = 0;
   let y = 0;
-  segments.forEach(([c, nx, ny], i) => {
-    // Every ANCHOR-th segment, the first among them, is absolute (measured from 0, 0), so the browser's error can't grow.
-    const absolute = i % ANCHOR === 0;
+  // Segments with a point written since the last absolute one (a close has none): the first, and then every ANCHOR-th,
+  // is absolute (measured from 0, 0), so the browser's error can't grow.
+  let since = ANCHOR;
+  segments.forEach(([c, nx, ny]) => {
+    if (c === 'Z') {
+      put('z');
+      [x, y] = [nx, ny];
+      return;
+    }
+    const absolute = since >= ANCHOR;
+    since = absolute ? 1 : since + 1;
     const [px, py] = absolute ? [0, 0] : [x, y];
     const as = (letter) => (absolute ? letter : letter.toLowerCase());
-    if (c === 'Z') put('z');
-    else if (c === 'M') put(as('M'), nx - px, ny - py);
+    if (c === 'M') put(as('M'), nx - px, ny - py);
     // A line along x as h (a line of no length too, as h0: a dot, with round caps), along y as v.
     else if (ny === y) put(as('H'), nx - px);
     else if (nx === x) put(as('V'), ny - py);
@@ -134,8 +152,9 @@ export function relativeD(d) {
 }
 
 // The same path in absolute commands, each segment its own command as it was written (M, L, H, V or Z), numbers in
-// JavaScript's own digits: relativeD's output reads back as the absolute path it was made from, where that path wrote
-// h and v as H and V. Anything readPath can't read is returned as it was.
+// JavaScript's own digits. relativeD's output reads back as the same points, with every line along one axis (a line of
+// no length too) as H or V, never L: a test that reads points back reads all four. Anything readPath can't read is
+// returned as it was.
 export function absoluteD(d) {
   const path = d ? readPath(d) : null;
   if (!path) return d;

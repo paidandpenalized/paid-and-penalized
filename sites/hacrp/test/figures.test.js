@@ -271,8 +271,9 @@ test('the hospital table section: the controls for client/table.js, the asset, a
   // The weight of the page that ships: the program page as the build writes it, with every program year (HISTORY_ARGS),
   // measured in bytes. Measured on 2026-11-02, after the drawings' paths went to relative commands (web/charts/pathd.js), at
   // 1,060,552 bytes of inline SVG (the money's Part, its treemap of every cut hospital the largest), 234,846 besides them
-  // (words, tables and the page's data), and 229,754 gzipped (level 9). Each budget is the measure plus about 5%: a change
-  // that adds weight raises it on purpose, with a reason.
+  // (words, tables and the page's data), and 229,754 gzipped (level 9). The drawings' and the gzipped limits are the
+  // measure plus about 5%; the limit besides the drawings is as it was (242,000). A change that adds weight raises a limit
+  // on purpose, with a reason.
   const shipped = renderProgram(HISTORY_ARGS);
   const bytes = Buffer.byteLength(shipped);
   const svg = drawingBytes(shipped);
