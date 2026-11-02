@@ -1,5 +1,6 @@
 // What the hub reads at build time: the newest dollar estimates, the newest hospital master, the HACRP site's emitted
 // file for the same year (which hospitals CMS scored), the pinned Thirty Day Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
+import { scoredHospitals } from '../engine/js/hacrp/hospital.js';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hacrpPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
 import { nameText } from '../web/render/format.js';
@@ -22,11 +23,11 @@ export function checkHubInputs({ dollars, masterFile, tdrFy }) {
   for (const row of dollars.hospitals) masterRecord(master, row.ccn);
 }
 
-// The CCNs of the hospitals the HACRP site's emitted file gives a Total HAC Score (a number; CMS's "Not Available" is
-// none), refused unless the file is for the fiscal year fy.
+// The CCNs of the hospitals the HACRP site's emitted file gives a Total HAC Score (the engine's scoredHospitals), refused
+// unless the file is for the fiscal year fy.
 export function scoredCcns(hacrp, fy) {
   if (hacrp.fy !== fy) throw new RangeError(`hub: the HACRP site's emitted file is FY${hacrp.fy} but the dollar estimates are FY${fy}`);
-  return new Set(hacrp.hospitals.filter((h) => typeof h.total === 'number').map((h) => h.ccn));
+  return new Set(scoredHospitals(hacrp.hospitals).map((h) => h.ccn));
 }
 
 let loaded = null;

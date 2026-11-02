@@ -22,7 +22,7 @@ import { homePage } from '../home/page.js';
 import { cardModel } from '../client/story/find.js';
 import { peersOf } from '../hospital/peers.js';
 import { stateKey } from '../home/states.js';
-import { EXAMPLE_CCN, hubHospitals, stateTotals, storyFacts } from '../model.js';
+import { EXAMPLE_CCN, hacCounts, hubHospitals, stateTotals, storyFacts } from '../model.js';
 import { element } from './helpers.js';
 
 const hub = loadHub();
@@ -68,8 +68,9 @@ test('every number in the steps\' words is the data\'s, as the page formats it',
   expect(2, pct(median(cuts), 2));
   // The HAC step counts as the HACRP pages do: the scored hospitals CMS cut, and those of them with an estimate, which
   // are the dollar file's headline counts.
-  expect(3, `${count(facts.hacScoredCutEst)} of the ${count(facts.hacScoredCut)} hospitals CMS cut have an estimate here`, count(facts.hacOnly), '1%');
-  assert.deepEqual([facts.hacScoredCutEst, facts.hacScoredCut], [hub.dollars.headline.cut, hub.dollars.headline.yes]);
+  const hac = hacCounts(hospitals);
+  expect(3, `${count(hac.priced)} of the ${count(hac.scoredYes)} hospitals CMS cut have an estimate here`, count(facts.hacOnly), '1%');
+  assert.deepEqual([hac.priced, hac.scoredYes], [hub.dollars.headline.cut, hub.dollars.headline.yes]);
   // The scale line says what this site does: it estimates the pay.
   assert.ok(words(0).trim().startsWith(`This site estimates Medicare’s FY${hub.fy} inpatient pay to ${count(facts.n)} hospitals`), words(0));
   expect(4, count(facts.vbpBonusN), count(facts.vbpCutN), money(facts.vbpBonus), '2%');

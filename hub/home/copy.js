@@ -149,7 +149,7 @@ export const COPY = typesetCopy({
   dirOpenLabel: 'Open {ab}, {name}',
   // A program whose page here is under construction: its card's link (to the placeholder page) says so.
   dirBuilding: '{ab}: under construction',
-  dirBuildingLabel: '{name}: page under construction',
+  dirBuildingLabel: '{ab}, {name}: page under construction',
   // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
   // internal stage, soon), and the words in each slip's empty band. Each group's name and each band's words fit one line
   // in the narrowest group (hub/styles.css).

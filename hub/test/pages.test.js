@@ -12,9 +12,9 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { loadHub } from '../data.js';
-import { hubHospitals, storyFacts } from '../model.js';
+import { hacCounts, hubHospitals } from '../model.js';
 import { COPY } from '../copy.js';
-import { generateHub, hacCounts, sitemapXml } from '../pages.js';
+import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
 import { hubSearchForm } from '../search/form.js';
 
@@ -57,7 +57,7 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.ok(methods.includes(`<meta name="description" content="${escapeHtml(COPY.methodsDescription)}">`));
     // How the hospital-acquired conditions counts differ from page to page, each count the dollar file's own, and the CCN
     // a figure belongs to.
-    const c = hacCounts(hubHospitals(hub), storyFacts(hubHospitals(hub)));
+    const c = hacCounts(hubHospitals(hub));
     const { national, headline } = hub.dollars;
     assert.deepEqual([c.yes, c.scoredYes, c.priced, c.est, c.headline, c.maryland, c.noInputs],
       [national.yes, headline.yes, headline.cut, national.hospitals, headline.hospitals, national.byStatus.maryland, national.byStatus['no-inputs']]);

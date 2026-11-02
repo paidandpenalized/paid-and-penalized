@@ -12,7 +12,7 @@ import { r1 } from '../../web/charts/svg.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
 import { fillCopy, sentenceOf } from '../../web/render/components.js';
-import { capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
+import { absLogPct, capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
 import { SITE } from '../../web/site.js';
@@ -164,6 +164,8 @@ function card(p, { hospitals, facts, fy, domain }) {
   const bins = programBins(hospitals, p.id);
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
   const { big, sub } = FIGURES[p.id](facts, fy);
+  // The way to its page: a program whose page here is under construction (stage soon) says so.
+  const link = p.stage === 'soon' ? 'dirBuilding' : 'dirOpen';
   // Only the groups the program has: a program without bonuses (or without a hospital at $0) says nothing of them.
   const parts = [
     bins.cut && fill('histCut', { n: count(bins.cut) }),
@@ -177,9 +179,7 @@ function card(p, { hospitals, facts, fy, domain }) {
 <figure><figcaption>${TAKEAWAYS[p.id](members, bins)}</figcaption>${histogram(bins, { domain, label })}</figure>
 <p class="pc__big">${big}${estimateTag()}</p>
 <p class="pc__sub">${sub}</p>
-${p.stage === 'soon'
-    ? html`<a class="go" href="${p.path}" aria-label="${fill('dirBuildingLabel', { name: p.name })}">${fill('dirBuilding', { ab: p.ab })}${arrow}</a>`
-    : html`<a class="go" href="${p.path}" aria-label="${fill('dirOpenLabel', { ab: p.ab, name: p.name })}">${fill('dirOpen', { ab: p.ab })}${arrow}</a>`}
+<a class="go" href="${p.path}" aria-label="${fill(`${link}Label`, { ab: p.ab, name: p.name })}">${fill(link, { ab: p.ab })}${arrow}</a>
 </article>`;
 }
 
@@ -257,7 +257,7 @@ export function methodsBrief({ h, fy, src, bands }) {
   const { n, median } = bands.measures.hac.overall;
   return html`<section class="bsec ests" id="estimate" aria-labelledby="estimate-h">
 <div><p class="cap kicker">${COPY.estKicker}</p><h2 id="estimate-h">${COPY.estHead}</h2>
-<p>${fill('estText', { n: count(n), miss: pct(Math.abs(Math.exp(median) - 1), 1) })}</p>
+<p>${fill('estText', { n: count(n), miss: absLogPct(median, 1) })}</p>
 <ol class="nsteps">${POINTS.map((key, i) => html`<li>${no(i + 1)}<span>${sentence(key, { b: html`<b>${COPY[`${key}B`]}</b>` }, key === 'estStepPay' ? { fy: fyText } : {})}</span></li>`)}</ol>
 <a class="more" href="${SITE.pages.methods}">${COPY.estMore}${arrow}</a></div>
 ${worksheet(h, { fy: fyText, src })}

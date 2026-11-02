@@ -7,7 +7,7 @@ import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
+import { absLogPct, capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -230,10 +230,10 @@ export function assumptionsTable({ fy, assumptions, backtestFy }) {
 </table>`);
 }
 
-// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22% (absLogPct: without the sign,
+// A log ratio as the percentage it moves a figure: 0.0233 reads +2.4%, -0.25 reads −22% (absLogPct, web/render/format.js: without the sign,
 // 0.25 and -0.25 both 22%).
 const logPct = (x, dp) => pct(Math.exp(x) - 1, dp, { sign: true });
-export const absLogPct = (x, dp) => pct(Math.abs(Math.exp(x) - 1), dp);
+export { absLogPct };
 
 // How a dollar check's value and range read on the tape, by check.
 const SHARE = { value: (v) => pct(v, 2), range: (c) => fill('dcheckRange', { low: pct(c.low, 2), high: pct(c.high, 2) }) };

@@ -77,7 +77,7 @@ test('a card per program with data: name, abbreviation, dek, the national figure
     // The way to its page: the program's short name, the same on every card (so the three read evenly on one line), with
     // its name said to a screen reader after it; a program whose page is under construction says so.
     const link = p.stage === 'soon'
-      ? `<a class="go" href="${p.path}" aria-label="${p.name}: page under construction">${p.ab}: under construction`
+      ? `<a class="go" href="${p.path}" aria-label="${p.ab}, ${p.name}: page under construction">${p.ab}: under construction`
       : `<a class="go" href="${p.path}" aria-label="Open ${p.ab}, ${p.name}">Open ${p.ab}`;
     assert.ok(card.includes(`${link}<span class="ico ico--arrow" aria-hidden="true"></span></a>`), id);
   });

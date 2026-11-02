@@ -65,8 +65,7 @@ export function vbpMaxOf(hospitals) {
 //   hrrp*     Readmissions: hospitals with a cut (hrrpCut), in the program at $0 (hrrpZero) and not in it (hrrpOut: a
 //             hospital the program does not list is never counted at $0), and the dollars (hrrpSum)
 //   hac*      hospital-acquired conditions: hospitals with a cut (hacCut), those cut by it alone (hacOnly: no Readmissions
-//             cut), and the dollars (hacSum); and, over every hospital in the file, as the HACRP pages count them: the
-//             scored hospitals CMS cut (hacScoredCut) and those of them with an estimate (hacScoredCutEst)
+//             cut), and the dollars (hacSum)
 //   vbp*      value-based purchasing: hospitals with a bonus, a cut, in the program at $0 (vbpZero) and not in it
 //             (vbpOut), the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax:
 //             vbpMaxOf)
@@ -86,12 +85,31 @@ export function storyFacts(hospitals) {
     hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrpListed && e.hrrp === 0), hrrpOut: count((e) => !e.hrrpListed),
     hrrpSum: sum('hrrp'),
     hacCut: count((e) => e.hac < 0), hacOnly: count((e) => e.hrrp === 0 && e.hac < 0), hacSum: sum('hac'),
-    hacScoredCut: hospitals.filter((h) => h.scored && h.cut).length, hacScoredCutEst: hospitals.filter((h) => h.scored && h.cut && h.est).length,
     vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.vbpListed && e.hvbp === 0),
     vbpOut: count((e) => !e.vbpListed), vbpNet: sum('hvbp'),
     netCut: count((e) => e.net < 0), netBonus: count((e) => e.net > 0), netZero: count((e) => e.net === 0),
     vbpMax: vbpMaxOf(hospitals),
   };
+}
+
+// The hospital-acquired conditions program's counts over every hub hospital (every hospital in that program's file), as the
+// pages that state them count: CMS's cut (yes); the scored hospitals it cut (scoredYes, the HACRP pages' count) and those
+// of them with an estimate here (priced); the scored hospitals with a payment decision (decided: scored, outside
+// Maryland); the hospitals with an estimate (est) and the scored ones among them (headline, whose dollars the HACRP pages
+// add up); Maryland's and those with no inputs.
+export function hacCounts(hospitals) {
+  const c = { yes: 0, scoredYes: 0, priced: 0, decided: 0, est: 0, headline: 0, maryland: 0, noInputs: 0 };
+  for (const h of hospitals) {
+    if (h.cut) c.yes += 1;
+    if (h.scored && h.cut) c.scoredYes += 1;
+    if (h.scored && h.cut && h.est) c.priced += 1;
+    if (h.scored && h.status !== 'maryland') c.decided += 1;
+    if (h.est) c.est += 1;
+    if (h.scored && h.est) c.headline += 1;
+    if (h.status === 'maryland') c.maryland += 1;
+    if (h.status === 'no-inputs') c.noInputs += 1;
+  }
+  return c;
 }
 
 // Each state's totals over its hospitals with an estimate, by postal code in order: `n` hospitals, their pay (`total`),

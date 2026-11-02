@@ -4,7 +4,7 @@ import { median, peerKey } from '../../engine/js/peers.js';
 import { netShare, programDollars } from '../../engine/js/dollars/whatif.js';
 import { LISTED_PROGRAMS } from '../../web/site.js';
 import { checkHubInputs, loadHub } from '../data.js';
-import { EXAMPLE_CCN, exampleRule, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
+import { EXAMPLE_CCN, exampleRule, hacCounts, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
 
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
@@ -133,10 +133,10 @@ test('storyFacts on invented hospitals: a bonus, a cut, a HAC-only hospital, one
   assert.deepEqual(storyFacts(list), {
     n: 5, pay: 6000, net: -45, notPaid: 45, vbpBonus: 35, gross: 80, share: 80 / 6000,
     hrrpCut: 2, hrrpZero: 3, hrrpOut: 0, hrrpSum: -35, hacCut: 2, hacOnly: 2, hacSum: -35,
-    // As the HACRP pages count: the scored hospitals CMS cut (one with an estimate, one without), not the unscored one.
-    hacScoredCut: 2, hacScoredCutEst: 1,
     vbpBonusN: 2, vbpCutN: 1, vbpZero: 1, vbpOut: 1, vbpNet: 25, netCut: 4, netBonus: 1, netZero: 0, vbpMax: 1.004,
   });
+  // As the HACRP pages count: CMS cut three, two of them scored (one with an estimate, one without).
+  assert.deepEqual(hacCounts(list), { yes: 3, scoredYes: 2, priced: 1, decided: 5, est: 5, headline: 4, maryland: 0, noInputs: 1 });
   // No hospital in HVBP: no highest factor.
   assert.equal(storyFacts([fake('990006', 'ZZ', { vbpListed: false })]).vbpMax, null);
 });

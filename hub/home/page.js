@@ -21,7 +21,7 @@ import { SITE } from '../../web/site.js';
 import { cardModel } from '../client/story/find.js';
 import { COPY as HOSPITAL_COPY } from '../hospital/copy.js';
 import { peersOf } from '../hospital/peers.js';
-import { EXAMPLE_CCN } from '../model.js';
+import { EXAMPLE_CCN, hacCounts } from '../model.js';
 import { arrow, hubPage } from '../parts.js';
 import { barFigure } from './bar.js';
 import { directory, methodsBrief, yourTurn } from './below.js';
@@ -65,6 +65,8 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
   holds(IN_DATA.every((p) => p.group === 'quality'), 'quality programs');
 
   const hrrpCuts = hospitals.filter((h) => h.est && h.est.hrrp < 0).map((h) => -h.est.hrrp / h.est.total);
+  // The HAC step counts as the HACRP pages do (model.js hacCounts).
+  const hac = hacCounts(hospitals);
   holds(facts.hrrpCut * 2 > facts.n, COPY.hrrpHead);
   holds(facts.vbpBonusN > 0, COPY.vbpHead);
 
@@ -99,7 +101,7 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
   ? say('hrrpZeroOut', { zeroN: count(facts.hrrpZero), outN: count(facts.hrrpOut) }, { plain: { zero } })
   : say('hrrpZero', { zeroN: count(facts.hrrpZero) }, { plain: { zero } })}</p>`,
     html`<h2>${fill('hacHead', { cut: rulePercent(HAC_CUT_PCT) })}</h2>
-<p>${say('hacText', { estN: count(facts.hacScoredCutEst), cmsN: count(facts.hacScoredCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
+<p>${say('hacText', { estN: count(hac.priced), cmsN: count(hac.scoredYes), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>
 <p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: rulePercent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
     html`<h2>${netHead}</h2>

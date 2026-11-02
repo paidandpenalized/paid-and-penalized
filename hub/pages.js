@@ -20,7 +20,7 @@ import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
 import { hrrpHospitalPage, hrrpProgramPage } from './hrrp/page.js';
-import { masterRecord, stateTotals, storyFacts } from './model.js';
+import { hacCounts, masterRecord, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -39,21 +39,10 @@ function home({ hospitals, facts, shapes, bands, assets, robots }) {
   return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, bands, assets, robots });
 }
 
-// The hospital-acquired conditions program's counts, as the family Methods page reconciles them, from every hub hospital
-// (every hospital in that program's file) and their story facts: CMS's cut (yes), the scored ones it cut (the HACRP pages'
-// count) and those with an estimate here, the scored hospitals with a payment decision, the hospitals with an estimate
-// (est) and the scored ones among them (the HACRP pages' totals), Maryland's and those with no inputs.
-export function hacCounts(hospitals, facts) {
-  const n = (test) => hospitals.filter(test).length;
-  return {
-    yes: n((h) => h.cut), scoredYes: facts.hacScoredCut, priced: facts.hacScoredCutEst,
-    decided: n((h) => h.scored && h.status !== 'maryland'), est: facts.n, headline: n((h) => h.scored && h.est),
-    maryland: n((h) => h.status === 'maryland'), noInputs: n((h) => h.status === 'no-inputs'),
-  };
-}
-
-function methods({ hospitals, facts, fy, assets, robots }) {
-  const counts = hacCounts(hospitals, facts);
+// The family Methods page: what an estimate is, how the hospital-acquired conditions counts differ from page to page
+// (model.js hacCounts, over every hub hospital), and which hospital a figure belongs to.
+function methods({ hospitals, fy, assets, robots }) {
+  const counts = hacCounts(hospitals);
   // The counts a paragraph names, formatted.
   const of = (...keys) => Object.fromEntries(keys.map((k) => [k, count(counts[k])]));
   const body = html`<article class="wrap page">
@@ -205,7 +194,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const robots = robotsFor({ env: ctx.env, released });
   const { hub, hospitals: all, facts } = hubModel();
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, assets, robots }) });
-  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, facts, fy: hub.fy, assets, robots }) });
+  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
