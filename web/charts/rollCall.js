@@ -12,6 +12,7 @@
 // page; rollCall frames it.
 import { html } from '../render/html.js';
 import { capsWidth, frame, r2, text } from './svg.js';
+import { relativeD } from './pathd.js';
 
 const TOP = 4;
 const GAP = 2;
@@ -82,8 +83,8 @@ ${bracketLabel(b, { mid, label, width, y: bracketY + 14 })}`;
   const height = gridBottom + (brackets.length ? 30 : 6);
   return {
     width, height, body: html`${years.map((yr, i) => text({ x: 0, y: yOf(i) + rowH - GAP - 3, anchor: 'start', cls: 'chart-roll__year', body: yr }))}
-<path class="chart-roll__no" stroke-width="${band}" d="${kept.join('')}"/>
-<path class="chart-roll__yes" stroke-width="${band}" d="${cut.join('')}"/>
+<path class="chart-roll__no" stroke-width="${band}" d="${relativeD(kept.join(''))}"/>
+<path class="chart-roll__yes" stroke-width="${band}" d="${relativeD(cut.join(''))}"/>
 ${blank ? years.map((_, i) => (records.every((r) => r[i] === '.') ? text({ x: (label + width - right) / 2, y: yOf(i) + rowH - GAP - 3, cls: 'chart-roll__blank', body: blank }) : '')) : ''}
 ${notes ? notes.map((note, i) => text({ x: width, y: yOf(i) + rowH - GAP - 3, anchor: 'end', cls: 'chart-roll__note', body: note })) : ''}
 ${marks}`,

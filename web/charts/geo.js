@@ -7,6 +7,7 @@ import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r1, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
+import { relativeD } from './pathd.js';
 import { DARK_FROM, checkLegend, stepLegend, stepScale } from './tileMap.js';
 import { STATES, STATE_NAMES, US_STATES } from '../../engine/js/states.js';
 
@@ -123,7 +124,9 @@ function thinned(projection, thin = THIN) {
     },
   };
 }
-const outlinePath = (projection, thin = THIN, digits = DIGITS) => geoPath(thinned(projection, thin)).digits(digits);
+// A path generator whose outlines come out in relative commands (pathd.js relativeD): the same points, in less markup.
+const relativePath = (path) => (f) => relativeD(path(f));
+const outlinePath = (projection, thin = THIN, digits = DIGITS) => relativePath(geoPath(thinned(projection, thin)).digits(digits));
 
 // One state's projection and outline at a width, fitted to its own shape; remembered, since every hospital in a state
 // shares them.
@@ -178,7 +181,7 @@ export function usPaths(shapes, width) {
   // detail per state, not twice its markup.
   const path = outlinePath(projection, THIN_US * Math.max(1, width / US_THIN_WIDTH));
   // A state the thinning would leave with no ring (DC, on the phone variant) keeps its full outline.
-  const full = geoPath(projection).digits(DIGITS);
+  const full = relativePath(geoPath(projection).digits(DIGITS));
   const paths = new Map(US_MAP_CODES.map((code) => [code, shapes.has(code) ? path(shapes.get(code)) || full(shapes.get(code)) : null]));
   const entry = { shapes, height, paths, projection };
   US.set(key, entry);
@@ -273,7 +276,7 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
   const land = [...shapes.values()].filter(meets).map((f) => path(f)).filter(Boolean);
   const inner = counties.filter(meets).map((f) => path(f)).filter(Boolean);
   // Distance rings about the center: each { miles, label }, a circle of that great-circle radius.
-  const ringPath = geoPath(projection).digits(DIGITS);
+  const ringPath = relativePath(geoPath(projection).digits(DIGITS));
   const ringsDrawn = rings.map((r) => {
     const d = ringPath(geoCircle().center(center.point).radius(r.miles / MILES_PER_DEGREE).precision(3)());
     if (!d) return '';

@@ -47,7 +47,7 @@ test("the state table's FIPS codes agree with the hospital master's county codes
 test('stateMap: the outline and a dot with its halo inside the frame, as an image named by the label (escaped)', () => {
   const svg = String(stateMap({ shapes, code: 'KS', point: [-98.0, 38.5], label: 'Map of <Kansas> & a dot' }));
   assert.match(svg, /^<svg class="chart chart--state-map" viewBox="0 0 300 \d+" width="100%" role="img" aria-label="Map of &lt;Kansas&gt; &amp; a dot"/);
-  assert.match(svg, /<path class="chart-geo-state" d="M[^"]+Z"\/>/);
+  assert.match(svg, /<path class="chart-geo-state" d="M[^"]+z"\/>/);
   assert.match(svg, /<circle class="chart-geo-halo" cx="[\d.]+" cy="[\d.]+" r="9"\/><circle class="chart-geo-dot"/);
   const [w, h] = viewBox(svg);
   const [x, y] = dot(svg);

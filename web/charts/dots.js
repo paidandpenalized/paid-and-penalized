@@ -2,10 +2,12 @@
 // thousands of hospitals is a few kilobytes and its dots take one class's ink. The stroke's width is the dot's
 // diameter (the caller sets it on the path). Shared by the build and the browser (a page script redraws a set).
 import { html } from '../render/html.js';
+import { pathNumbers } from './pathd.js';
 
 // [[x, y], ...] -> the path's d: the dots in x then y order, the first placed absolutely and each next one by a
 // relative move from the last (a dot's h0 ends where it starts), so a path of thousands stays short. Coordinates are
-// rounded to a tenth before the differences are taken, so the moves add up exactly.
+// rounded to a tenth before the differences are taken, so the moves add up exactly. Each pair is written as tightly as
+// path data allows (pathd.js pathNumbers).
 const tenth = (v) => Math.round(v * 10);
 const step = (d) => (d / 10).toString();
 export function dotsD(points) {
@@ -13,11 +15,7 @@ export function dotsD(points) {
   let out = '';
   let last = null;
   for (const [x, y] of pts) {
-    if (!last) out += `M${step(x)} ${step(y)}h0`;
-    else {
-      const dy = step(y - last[1]);
-      out += `m${step(x - last[0])}${dy.startsWith('-') ? '' : ' '}${dy}h0`;
-    }
+    out += last ? `m${pathNumbers((x - last[0]) / 10, (y - last[1]) / 10)}h0` : `M${pathNumbers(x / 10, y / 10)}h0`;
     last = [x, y];
   }
   return out;

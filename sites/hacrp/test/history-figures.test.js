@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
+import { absoluteD } from '../../../web/charts/pathd.js';
 import { count, decimal, pct, pctFloor } from '../../../web/render/format.js';
 import { STATE_NAMES } from '../../../engine/js/states.js';
 import { FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from '../web/constants.js';
@@ -126,7 +127,9 @@ test('rollFigure: the roll call with the numbers of ever cut, hospitals and neve
       const [, , rowH, top] = geom[String(width)];
       assert.equal(height, top + hd.fys.length * rowH + 30, `width ${width}`);
       // Each run is a stroke along its row's band: the band's middle, a row of the geometry down, as wide as the band.
-      const ys = new Set([...svg.matchAll(/M[\d.]+ ([\d.]+)H/g)].map((m) => Number(m[1])));
+      // (The runs' paths are written relative, pathd.js: read back as absolute.)
+      const runs = [...svg.matchAll(/class="chart-roll__(?:yes|no)" stroke-width="[\d.]+" d="([^"]*)"/g)].map((m) => absoluteD(m[1])).join('');
+      const ys = new Set([...runs.matchAll(/M[\d.]+ ([\d.]+)H/g)].map((m) => Number(m[1])));
       const rows = hd.fys.map((_, i) => top + i * rowH + (rowH - 2) / 2);
       assert.ok(ys.size > 0 && [...ys].every((y) => rows.includes(y)), `width ${width}: every run lies along a row of the geometry`);
       assert.deepEqual([...svg.matchAll(/class="chart-roll__(?:yes|no)" stroke-width="([\d.]+)"/g)].map((m) => Number(m[1])), [rowH - 2, rowH - 2]);
