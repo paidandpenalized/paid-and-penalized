@@ -71,6 +71,8 @@ export function moneyData({ pd, dollars, model }) {
     // dollars over the estimated ones (money, the HAC cut's size) and the other two programs' (hrrp, hvbp); the
     // money's likely range (range: the back-test's national ratio, money.js nationalRange).
     headline: { ...dollars.headline, money: -dollars.headline.hac, range: nationalRange(dollars.bands, -dollars.headline.hac) },
+    // Every hospital the dollar file estimates, scored here or not: the family's front page adds up all of them.
+    allEstimated: dollars.national.hospitals,
     tenth: { n: tenth, money: sorted.slice(0, tenth).reduce((a, b) => a + b, 0) },
     byKind,
     byState,

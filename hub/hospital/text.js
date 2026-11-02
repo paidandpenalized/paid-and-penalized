@@ -56,22 +56,23 @@ export function rowWord(fill, id, dollars) {
 }
 
 // A program row's sentences: why the hospital has its dollars, what its peers have (each count with its words; the counts
-// after the first two only when there are some) and, for a program that lists its hospitals, their median. id: 'hrrp',
+// after the first two only when there are some) and, for a program that lists its hospitals, their median (for
+// hospital-acquired conditions, instead, whom the HACRP pages' counts take in). id: 'hrrp',
 // 'hacrp' or 'hvbp'; f: the row's figures (peers.js rowFigures); group: the peers' name.
 export function whyText(fill, h, id, f, { fy, group }) {
   const est = h.est;
   const part = (key, n, values = {}) => ({ n, text: fill(key, { n: count(n), ...values }) });
   const parts = {
     hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part('partOut', f.out)],
-    hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none)],
+    hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none), part('partUnscored', f.unscored)],
     hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part('partOut', f.out)],
   }[id].filter((p, i) => i < 2 || p.n > 0);
   const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
-  const median = id !== 'hacrp' && f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
+  const median = id === 'hacrp' ? [fill('whyHacCount')] : f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
   const own = {
-    hrrp: () => (est.hrrpListed ? fill('whyFactor', { factor: factor(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
+    hrrp: () => (est.hrrpListed ? fill('whyFactor', { fy, factor: factor(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
     hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('whyHacNone', { fy })),
-    hvbp: () => (est.vbpListed ? fill('whyFactor', { factor: factor(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
+    hvbp: () => (est.vbpListed ? fill('whyFactor', { fy, factor: factor(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
   }[id]();
   return [own, peers, ...median];
 }

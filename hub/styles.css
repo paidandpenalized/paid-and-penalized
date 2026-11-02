@@ -458,6 +458,8 @@
 }
 @media (min-width: 1024px) {
   .bsec__head, .ests { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 48px; }
+  /* The worksheet keeps its own height beside a taller column of words (its form's rows would otherwise stretch). */
+  .ests > .wsx { align-self: start; }
   .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* The six slips side by side, a column each, once the page is at its full width (narrower, a column is too tight for a

@@ -94,7 +94,9 @@ export const COPY = typesetCopy({
   whatifNoScript: 'The what-if needs JavaScript. Without it, the figures below stay as they are.',
   whatifLede: "This hospital's estimated FY{fy} dollars in each program, beside the same {n} {group}.",
   rowValue: 'Estimated FY{fy}:',
-  whyFactor: 'Payment factor {factor}.',
+  whyFactor: 'FY{fy} payment factor {factor}.',
+  // A hospital with a Readmissions page here (hub/hrrp/page.js), which shows CMS's newer file: why the factor there differs.
+  whyHrrpYear: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.",
   whyHrrpOut: "Not in CMS's FY{fy} Readmissions file.",
   whyVbpOut: "Not in CMS's FY{fy} value-based purchasing file.",
   whyHacCut: "CMS's FY{fy} decision: the flat {rate} cut.",
@@ -106,11 +108,16 @@ export const COPY = typesetCopy({
   partHacCut: '{n} with the {rate} cut',
   partBonus: '{n} with a bonus',
   partNoCut: '{n} with no cut',
+  // Hospital-acquired conditions' peers CMS gave no Total HAC Score (and so no cut), which the HACRP pages leave out of
+  // their counts.
+  partUnscored: "{n} that CMS didn't score",
   partNoChange: '{n} with no change',
   partOut: '{n} not in the program',
   whyMedian: 'Peer median, among those in the program: {median} of pay.',
+  // Under the hospital-acquired conditions row's counts: why the HACRP pages' counts of the same group can differ.
+  whyHacCount: "The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.",
   deepHospital: '{name} for this hospital',
-  deepNotBuilt: '{name}: page not built yet',
+  deepNotBuilt: '{name}: page under construction',
   deepProgram: '{name}: program page',
   netHeading: 'Net, all three programs',
   resultHead: "Estimated FY{fy}, from CMS's factors",
@@ -178,12 +185,15 @@ export const COPY = typesetCopy({
   // The source and fairness lines.
   source: "Source: CMS FY{fy} program files (HRRP, HACRP, HVBP) and this site's dollar model.",
   sourceDollars: "Dollars are estimates of FY{fy} effects on Medicare inpatient pay; percentages are each hospital's estimated change divided by its estimated Medicare inpatient pay.",
-  fairness: "A cut is a program's formula at work, not a verdict on a hospital's care. Peers are listed alphabetically; nothing on this page ranks hospitals.",
+  fairness: "A cut is a program's formula at work, not a verdict on a hospital's care.",
 
   // A hospital without an estimate: its status and why, and the program pages it has.
   statusMaryland: 'Not in these programs',
   statusMarylandText: "Maryland's hospitals are paid under the state's all-payer model, outside these three programs.",
   statusNoInputs: 'No estimate',
   statusNoInputsText: "CMS's FY{fy} payment file has no usable row for this hospital, so this site can't price it.",
+  // What CMS decided for it all the same, in the hospital-acquired conditions program (every hospital here is in its file).
+  statusHacCut: "CMS's FY{fy} hospital-acquired conditions decision: the flat {rate} cut. This site has no dollar estimate of it.",
+  statusHacNone: "CMS's FY{fy} hospital-acquired conditions decision: no cut.",
   pagesHeading: "This hospital's program pages",
 });

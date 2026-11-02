@@ -419,8 +419,9 @@ export const COPY = {
     text: 'Map of the states, each shaded by the share of its hospitals with a payment decision that CMS cut; hatched and plain states have no share to show.',
     claim: null,
   },
-  // Said as the map's description once it takes focus; Enter (or a click) lists a state's hospitals in the table.
-  figStatesKeys: { text: "Arrow keys step through the states; Enter lists the state's hospitals in the table below.", claim: null },
+  // Said as the map's description once it takes focus; Enter (or a click) opens the state's page (client/explore.js
+  // mountUsMap).
+  figStatesKeys: { text: "Arrow keys step through the states; Enter opens the state's page.", claim: null },
   figStatesTile: { text: '{yes} of {decided} cut ({share})', claim: null },
   figStatesNA: { text: 'not subject to the reduction', claim: 'HACRP-13' },
   figStatesNone: { text: "no hospitals in CMS's file", claim: null },

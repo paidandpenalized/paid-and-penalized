@@ -29,11 +29,13 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
   return record;
 }
 
-// Every hospital in the dollar file, in its order, joined to its master record and to whether Thirty Day Readmissions has
-// it. `est` holds the dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and
-// hospitals with no inputs to estimate from). A missing bed count, teaching status or location stays null, and a null
-// bed count has no size band.
-export function hubHospitals({ dollars, master, tdr }) {
+// Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
+// it and to whether CMS scored it (scored: the Set loadHub reads, the CCNs with a Total HAC Score). `est` holds the
+// dollars of a hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no
+// inputs to estimate from); `cut` is CMS's HAC decision (Yes) for every one of them, `scored` whether CMS gave it a
+// Total HAC Score. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
+export function hubHospitals({ dollars, master, tdr, scored }) {
+  if (!(scored instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of scored CCNs (loadHub().scored)');
   return dollars.hospitals.map((row) => {
     const m = masterRecord(master, row.ccn);
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
@@ -41,7 +43,7 @@ export function hubHospitals({ dollars, master, tdr }) {
     return {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
-      est: row.status === 'estimated' ? estimate(row) : null,
+      cut: row.cut, scored: scored.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
     };
   });
 }
@@ -63,7 +65,8 @@ export function vbpMaxOf(hospitals) {
 //   hrrp*     Readmissions: hospitals with a cut (hrrpCut), in the program at $0 (hrrpZero) and not in it (hrrpOut: a
 //             hospital the program does not list is never counted at $0), and the dollars (hrrpSum)
 //   hac*      hospital-acquired conditions: hospitals with a cut (hacCut), those cut by it alone (hacOnly: no Readmissions
-//             cut), and the dollars (hacSum)
+//             cut), and the dollars (hacSum); and, over every hospital in the file, as the HACRP pages count them: the
+//             scored hospitals CMS cut (hacScoredCut) and those of them with an estimate (hacScoredCutEst)
 //   vbp*      value-based purchasing: hospitals with a bonus, a cut, in the program at $0 (vbpZero) and not in it
 //             (vbpOut), the net dollars (vbpNet), and the highest payment factor of a hospital in the program (vbpMax:
 //             vbpMaxOf)
@@ -83,6 +86,7 @@ export function storyFacts(hospitals) {
     hrrpCut: count((e) => e.hrrp < 0), hrrpZero: count((e) => e.hrrpListed && e.hrrp === 0), hrrpOut: count((e) => !e.hrrpListed),
     hrrpSum: sum('hrrp'),
     hacCut: count((e) => e.hac < 0), hacOnly: count((e) => e.hrrp === 0 && e.hac < 0), hacSum: sum('hac'),
+    hacScoredCut: hospitals.filter((h) => h.scored && h.cut).length, hacScoredCutEst: hospitals.filter((h) => h.scored && h.cut && h.est).length,
     vbpBonusN: count((e) => e.hvbp > 0), vbpCutN: count((e) => e.hvbp < 0), vbpZero: count((e) => e.vbpListed && e.hvbp === 0),
     vbpOut: count((e) => !e.vbpListed), vbpNet: sum('hvbp'),
     netCut: count((e) => e.net < 0), netBonus: count((e) => e.net > 0), netZero: count((e) => e.net === 0),

@@ -44,7 +44,7 @@ test('each placeholder page says "under consideration" or "not built yet" and pr
 });
 
 test('the front page, its directory\'s slips and its footer promise nothing', () => {
-  assertNoPromise(homePage({ hospitals: HOSPITALS, facts: FACTS, states: stateTotals(HOSPITALS), shapes: HUB.shapes, assets, robots: 'noindex' }), 'front page');
+  assertNoPromise(homePage({ hospitals: HOSPITALS, facts: FACTS, states: stateTotals(HOSPITALS), shapes: HUB.shapes, bands: HUB.dollars.bands, assets, robots: 'noindex' }), 'front page');
 });
 
 test('a hospital\'s page, with an estimate and in each variant, promises nothing', () => {

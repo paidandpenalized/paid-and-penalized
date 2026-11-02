@@ -30,7 +30,7 @@ const hospitals = hubHospitals(hub);
 const facts = storyFacts(hospitals);
 const states = stateTotals(hospitals);
 const assets = { ...ASSETS, shell: { ...ASSETS.shell, fy: hub.fy } };
-const out = homePage({ hospitals, facts, states, shapes: hub.shapes, assets, robots: 'noindex' });
+const out = homePage({ hospitals, facts, states, shapes: hub.shapes, bands: hub.dollars.bands, assets, robots: 'noindex' });
 
 const STEP_IDS = ['scale', 'start', 'readmissions', 'hac', 'vbp', 'net', 'map', 'states', 'find'];
 const step = (i) => element(out, `<section class="step" id="step-${STEP_IDS[i]}"`, 'section');
@@ -66,7 +66,12 @@ test('every number in the steps\' words is the data\'s, as the page formats it',
   assert.match(words(2), new RegExp(`${count(facts.hrrpZero)} pass through at \\$0, and ${count(facts.hrrpOut)} are not in the program\\.`));
   const cuts = hospitals.filter((h) => h.est && h.est.hrrp < 0).map((h) => -h.est.hrrp / h.est.total);
   expect(2, pct(median(cuts), 2));
-  expect(3, count(facts.hacCut), count(facts.hacOnly), '1%');
+  // The HAC step counts as the HACRP pages do: the scored hospitals CMS cut, and those of them with an estimate, which
+  // are the dollar file's headline counts.
+  expect(3, `${count(facts.hacScoredCutEst)} of the ${count(facts.hacScoredCut)} hospitals CMS cut have an estimate here`, count(facts.hacOnly), '1%');
+  assert.deepEqual([facts.hacScoredCutEst, facts.hacScoredCut], [hub.dollars.headline.cut, hub.dollars.headline.yes]);
+  // The scale line says what this site does: it estimates the pay.
+  assert.ok(words(0).trim().startsWith(`This site estimates Medicare’s FY${hub.fy} inpatient pay to ${count(facts.n)} hospitals`), words(0));
   expect(4, count(facts.vbpBonusN), count(facts.vbpCutN), money(facts.vbpBonus), '2%');
   expect(5, count(facts.netCut), count(facts.netBonus), count(facts.netZero), money(facts.notPaid));
   // By state: the lowest and highest state by share, and the states whose hospitals come out ahead.
@@ -242,7 +247,7 @@ test('the example card: the example hospital, its place, beds, teaching, net, th
 });
 
 test('a claim the words make that the data no longer bear out stops the build; the net heading says a share in words only near a simple fraction', () => {
-  const render = (over) => homePage({ hospitals, facts: { ...facts, ...over }, states, shapes: hub.shapes, assets, robots: 'noindex' });
+  const render = (over) => homePage({ hospitals, facts: { ...facts, ...over }, states, shapes: hub.shapes, bands: hub.dollars.bands, assets, robots: 'noindex' });
   // "most hospitals take a small cut" and "some move right".
   assert.throws(() => render({ hrrpCut: Math.floor(facts.n / 2) }), /no longer bear out/);
   assert.throws(() => render({ vbpBonusN: 0 }), /no longer bear out/);

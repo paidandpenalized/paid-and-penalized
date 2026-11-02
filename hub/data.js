@@ -1,7 +1,7 @@
-// What the hub reads at build time: the newest dollar estimates, the newest hospital master, the pinned Thirty Day
-// Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
+// What the hub reads at build time: the newest dollar estimates, the newest hospital master, the HACRP site's emitted
+// file for the same year (which hospitals CMS scored), the pinned Thirty Day Readmissions file and the US atlas. File reads live here; the model, the asset and the pages stay pure.
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
-import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, hacrpPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
 import { nameText } from '../web/render/format.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
 
@@ -22,12 +22,21 @@ export function checkHubInputs({ dollars, masterFile, tdrFy }) {
   for (const row of dollars.hospitals) masterRecord(master, row.ccn);
 }
 
+// The CCNs of the hospitals the HACRP site's emitted file gives a Total HAC Score (a number; CMS's "Not Available" is
+// none), refused unless the file is for the fiscal year fy.
+export function scoredCcns(hacrp, fy) {
+  if (hacrp.fy !== fy) throw new RangeError(`hub: the HACRP site's emitted file is FY${hacrp.fy} but the dollar estimates are FY${fy}`);
+  return new Set(hacrp.hospitals.filter((h) => typeof h.total === 'number').map((h) => h.ccn));
+}
+
 let loaded = null;
 
 // Everything the hub's pages are built from, read once per build:
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
 //   master        the hospital master's records by CCN, each name as the pages print it (nameText)
+//   scored        the CCNs of the hospitals CMS gave a Total HAC Score in the dollar estimates' year (a Set), from the
+//                 HACRP site's emitted file: the HACRP pages count only these, so the hub's words can too
 //   tdr           { fy, conditions, peerMedians, hospitals: Map<ccn, record> } from the pinned Thirty Day Readmissions file
 //                 (peerMedians: each peer group's median ratio by condition, { '<group>': { <key>: median } }, which CMS compares
 //                 a hospital's ratios with)
@@ -38,11 +47,13 @@ export function loadHub() {
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
   const pinned = JSON.parse(readPinned(TDR_ID));
   checkHubInputs({ dollars, masterFile, tdrFy: pinned.meta.fy });
+  const hacrp = readJson(REPO_ROOT + hacrpPath(dollars.fy));
   loaded = {
     fy: dollars.fy,
     builtAt: dollars.built_at,
     dollars,
     master: new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }])),
+    scored: scoredCcns(hacrp, dollars.fy),
     tdr: { fy: pinned.meta.fy, conditions: pinned.conditions, peerMedians: pinned.meta.peerMedians, hospitals: new Map(pinned.hospitals.map((r) => [r.id, r])) },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };

@@ -11,7 +11,7 @@ const hub = loadHub();
 const hospitals = hubHospitals(hub);
 const asset = hubAsset(hospitals, { shapes: hub.shapes, fy: hub.fy });
 const COLS = ['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total', 'hrrp', 'hvbp', 'hac', 'net',
-  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr'];
+  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr', 'scored'];
 
 test('the asset is one row per hospital in the column order the browser reads', () => {
   assert.equal(MAP_WIDTH, 975);
@@ -27,12 +27,14 @@ test('the asset is one row per hospital in the column order the browser reads', 
     assert.ok(row.every((v) => v !== undefined), `${h.ccn} has an undefined value`);
     assert.equal(row[COLS.indexOf('status')], STATUS_CODES[h.status]);
     assert.equal(row[COLS.indexOf('tdr')], h.inTdr ? 1 : 0);
+    assert.equal(row[COLS.indexOf('cut')], h.cut ? 1 : 0);
+    assert.equal(row[COLS.indexOf('scored')], h.scored ? 1 : 0);
     assert.equal(row[COLS.indexOf('beds')], h.beds);
     assert.equal(row[COLS.indexOf('teach')], h.teach);
   });
 });
 
-test('an estimated hospital has a place on the map inside its frame; the others have no dollars', () => {
+test('an estimated hospital has a place on the map inside its frame; the others have no dollars (but CMS\'s HAC decision)', () => {
   const at = (row, col) => row[COLS.indexOf(col)];
   let estimated = 0;
   asset.rows.forEach((row, i) => {
@@ -46,7 +48,8 @@ test('an estimated hospital has a place on the map inside its frame; the others 
       for (const col of ['base', 'total', 'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF']) assert.ok(Number.isFinite(at(row, col)), `${h.ccn} ${col}`);
       for (const col of ['cut', 'hrrpL', 'vbpL']) assert.ok([0, 1].includes(at(row, col)), `${h.ccn} ${col}`);
     } else {
-      for (const col of ['base', 'total', 'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL']) assert.equal(at(row, col), null, `${h.ccn} ${col}`);
+      for (const col of ['base', 'total', 'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'hrrpL', 'vbpL']) assert.equal(at(row, col), null, `${h.ccn} ${col}`);
+      assert.ok([0, 1].includes(at(row, 'cut')), `${h.ccn} cut`);
     }
   });
   assert.equal(estimated, hospitals.filter((h) => h.est).length);

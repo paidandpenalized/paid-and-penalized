@@ -7,13 +7,14 @@ import { toHospital } from '../../../engine/js/hacrp/hospital.js';
 import { buildModel } from '../../../engine/js/hacrp/model.js';
 import { estimateTagged } from '../../../engine/js/hacrp/params.js';
 import { envelope } from '../../../pipeline/contract.js';
-import { REPO_ROOT, newestYear, readJson } from '../../../pipeline/files.js';
+import { REPO_ROOT, hacrpPath, newestYear, readJson } from '../../../pipeline/files.js';
 
 export const SCHEMA_VERSION = 1;
 export const METHODS_VERSION = 2;
 export const SOURCES = ['yq43-i98g'];
 
-export const emittedPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;
+// Where a year's file is written (pipeline/files.js, which the hub reads it through too).
+export const emittedPath = hacrpPath;
 // The newest year's file, repo-relative: the one the pages, the link check and the browser checks read; and that file,
 // read.
 export const newestEmittedPath = () => emittedPath(newestYear('data/emitted/hacrp'));

@@ -99,7 +99,7 @@ function stepWords({ hospitals, facts, states, fy, search, card }) {
   ? say('hrrpZeroOut', { zeroN: count(facts.hrrpZero), outN: count(facts.hrrpOut) }, { plain: { zero } })
   : say('hrrpZero', { zeroN: count(facts.hrrpZero) }, { plain: { zero } })}</p>`,
     html`<h2>${fill('hacHead', { cut: rulePercent(HAC_CUT_PCT) })}</h2>
-<p>${say('hacText', { cutN: count(facts.hacCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
+<p>${say('hacText', { estN: count(facts.hacScoredCutEst), cmsN: count(facts.hacScoredCut), onlyN: count(facts.hacOnly) }, { plain: { cut: rulePercent(HAC_CUT_PCT) } })}</p>`,
     html`<h2>${COPY.vbpHead}</h2>
 <p>${say('vbpText', { bonusN: count(facts.vbpBonusN), cutN: count(facts.vbpCutN), bonus: money(facts.vbpBonus) }, { plain: { withhold: rulePercent(VBP_WITHHOLD_PCT), fy: fyText } })}</p>`,
     html`<h2>${netHead}</h2>
@@ -145,7 +145,7 @@ const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id
 // The page. hospitals: hubHospitals; facts: storyFacts of them; states: stateTotals of them; shapes: the atlas's state
 // shapes (loadHub); assets: the build's (assets.shell holds the fiscal year and the hub asset's address); robots: the
 // page's robots value.
-export function homePage({ hospitals, facts, states, shapes, assets, robots }) {
+export function homePage({ hospitals, facts, states, shapes, bands, assets, robots }) {
   const { fy, hubUrl } = assets.shell;
   // The last step's search: a family search box (hub/client/search.js mounts it) over the hospitals only, whose pick the
   // story's script takes and follows in place.
@@ -182,7 +182,7 @@ ${peerToggle()}
 </div>
 <div class="wrap below">
 ${directory({ programs: SITE.programs, facts, hospitals, fy })}
-${methodsBrief({ h: example, fy, src: hubUrl })}
+${methodsBrief({ h: example, fy, src: hubUrl, bands })}
 ${yourTurn({ feedback: feedbackFor({ path: '/' }) })}
 </div>`;
   return hubPage({ title: SITE.name, description: COPY.description, path: '/', robots, body, scripts: [assets.js['hub-home']], assets });

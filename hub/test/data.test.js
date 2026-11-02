@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ATLAS_ID } from '../../web/charts/geo.js';
 import { nameText } from '../../web/render/format.js';
-import { checkHubInputs, hubModel, loadHub } from '../data.js';
+import { checkHubInputs, hubModel, loadHub, scoredCcns } from '../data.js';
 import { hubHospitals, storyFacts } from '../model.js';
 
 test('the atlas id is exported from the map module and names a pinned input', async () => {
@@ -26,6 +26,19 @@ test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Re
   for (const r of hub.tdr.hospitals.values()) for (const key of Object.keys(r.c)) assert.equal(typeof hub.tdr.peerMedians[String(r.peer)]?.[key], 'number', 'a peer median for each condition');
   for (const [ccn, h] of hub.tdr.hospitals) assert.equal(h.id, ccn);
   assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
+  // The scored CCNs, from the HACRP site's file for the same year: every one is in the dollar file, and they are the
+  // hospitals the dollar file's headline counts (scored, decided) plus Maryland's (scored, not subject to the cut).
+  assert.ok(hub.scored instanceof Set && hub.scored.size > 0);
+  const ccns = new Set(hub.dollars.hospitals.map((r) => r.ccn));
+  for (const ccn of hub.scored) assert.ok(ccns.has(ccn));
+  const scoredEstimated = hub.dollars.hospitals.filter((r) => r.status === 'estimated' && hub.scored.has(r.ccn)).length;
+  assert.equal(scoredEstimated, hub.dollars.headline.hospitals);
+});
+
+test('scoredCcns: the CCNs with a numeric Total HAC Score, from a file of the dollar estimates\' year only', () => {
+  const file = { fy: 2026, hospitals: [{ ccn: '990001', total: 0.1 }, { ccn: '990002', total: null }, { ccn: '990003', total: -0.2 }] };
+  assert.deepEqual([...scoredCcns(file, 2026)], ['990001', '990003']);
+  assert.throws(() => scoredCcns(file, 2027), /FY2026 but the dollar estimates are FY2027/);
 });
 
 test('hubModel works out the hub\'s hospitals and their story facts from loadHub\'s files once, for the build and the hub\'s pages', () => {

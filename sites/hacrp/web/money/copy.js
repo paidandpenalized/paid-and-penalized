@@ -285,6 +285,8 @@ export const COPY = {
   threeRangeOverZero: { text: 'over {lo} to {hi}', claim: null },
   threeRangeUnderZero: { text: '{lo} to under {hi}', claim: null },
   threeNote: { text: 'Hospitals each file lists; the readmissions and value-based adjustments are shares of the base payment, the HAC cut of the whole payment.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-75', 'HACRP-79'] },
+  // Whose dollars the three totals add up, and why the family's front page shows slightly different totals.
+  threeWho: { text: 'The totals add up the {n} hospitals this program scored that this site estimates. The front page adds up all {all} hospitals this site estimates, so its totals differ slightly.', claim: null },
   threeColProgram: { text: 'Program', claim: null },
   threeColHospitals: { text: 'Hospitals adjusted', claim: null },
   threeColMoney: { text: 'Net estimated dollars (whole dollars)', claim: null },

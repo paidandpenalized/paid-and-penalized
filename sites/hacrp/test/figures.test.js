@@ -233,7 +233,7 @@ test('the US map (Figure 18): hospitals cut of hospitals with a decision, a stat
   // The wide map also draws every hospital as a dot over the states, and the figure says what the dots mean.
   assert.match(body, /usmap__sw--pen"><\/span>Cut</);
   assert.match(body, /class="chart-dots chart-dots--pen"/);
-  assert.ok(PAGE.includes('<p id="figure-18-keys" hidden>Arrow keys step through the states; Enter lists the state’s hospitals in the table below.</p>'));
+  assert.ok(PAGE.includes('<p id="figure-18-keys" hidden>Arrow keys step through the states; Enter opens the state’s page.</p>'));
   const [, takeaway] = captions(PAGE).find(([n]) => n === '18');
   assert.ok(takeaway.includes(pct(COUNTS.yes / COUNTS.decided, 1)));
 });

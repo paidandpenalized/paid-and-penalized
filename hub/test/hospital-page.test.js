@@ -33,7 +33,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn) });
+const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), tdr: HUB.tdr });
 // The markup of one element, from its opening tag's attribute to its closing tag (the first after it).
 const block = (text, attr, close) => {
   const at = text.indexOf(attr);
@@ -59,6 +59,7 @@ const NO_HRRP = pick((h) => h.est && !h.est.hrrpListed, 'an estimated hospital R
 const NO_TEACH = pick((h) => h.est && h.teach === null, 'an estimated hospital with no teaching status');
 const MARYLAND = pick((h) => h.status === 'maryland', 'a Maryland hospital');
 const NO_INPUTS = pick((h) => h.status === 'no-inputs', 'a hospital with no inputs');
+const NO_INPUTS_CUT = pick((h) => h.status === 'no-inputs' && h.cut, 'a hospital with no inputs that CMS cut');
 
 test('an estimated cut hospital: its record, the net with its tag, stamp and fiscal year note, and the rows adding to it', () => {
   const page = render(CUT);
@@ -139,7 +140,17 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   const { peers, group } = sameState(CUT);
   const hrrp = whatifRow(whatif, 'hrrp');
   assert.ok(hrrp.includes(`<span class="vh">Estimated FY${FY}: </span><span class="hh__num">${signed(CUT.est.hrrp)}</span> <span class="pill pill--pen">cut</span>`), 'Readmissions: its value and pill');
-  assert.ok(hrrp.includes(`Payment factor ${decimal(CUT.est.hrrpFactor, 4)}. Of the ${peers.length} ${esc(group)}: ${fig.hrrp.cut} with a cut, ${fig.hrrp.none} with no cut`), 'Readmissions: why, with the peer counts');
+  assert.ok(hrrp.includes(`FY${FY} payment factor ${decimal(CUT.est.hrrpFactor, 4)}. Of the ${peers.length} ${esc(group)}: ${fig.hrrp.cut} with a cut, ${fig.hrrp.none} with no cut`), 'Readmissions: why, with the fiscal year beside the factor and the peer counts');
+  // Its Readmissions page shows CMS's newer file's factor: the row names it, its year, and why this page's differs.
+  const record = HUB.tdr.hospitals.get(CUT.ccn);
+  assert.ok(hrrp.includes(esc(`Its Readmissions page shows CMS’s FY${HUB.tdr.fy} factor, ${decimal(record.paf, 4)}. This page uses FY${FY}’s, the latest year all three programs share.`)), 'Readmissions: the other year\'s factor and why');
+  // The HAC row counts the peers CMS didn't score apart, so its counts add up to the HACRP pages' (scored) ones.
+  const hac = whatifRow(whatif, 'hacrp');
+  assert.equal(fig.hacrp.cut + fig.hacrp.none + fig.hacrp.unscored, peers.length, 'the HAC counts add to the group');
+  assert.equal(fig.hacrp.unscored, peers.filter((x) => !x.scored && !x.est.cut).length, 'unscored: the peers CMS gave no score, none of them cut');
+  assert.ok(hac.includes(`${fig.hacrp.cut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut, ${fig.hacrp.none} with no cut`), 'HACRP: the peer counts');
+  if (fig.hacrp.unscored) assert.ok(hac.includes(esc(`, ${fig.hacrp.unscored} that CMS didn’t score.`)), 'HACRP: the unscored peers');
+  assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');
   // The deep links: a built hospital page, or the program's folder, which holds its placeholder page (page not built yet).
@@ -150,7 +161,7 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(!/hrrp\/hospital\//.test(outside), 'and no interim page link');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`<a class="hh__deep" href="${hospitalPathOf('hacrp', CUT.ccn)}">Hospital-acquired conditions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'HACRP: its hospital page');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`CMS’s FY${FY} decision: the flat ${pct(HAC_CUT_PCT / 100, 0)} cut.`), 'HACRP: CMS\'s decision');
-  assert.ok(whatifRow(whatif, 'hvbp').includes('<a class="hh__deep hh__deep--soon" href="/hvbp/">Value-based purchasing: page not built yet</a>'), 'HVBP: its placeholder page');
+  assert.ok(whatifRow(whatif, 'hvbp').includes('<a class="hh__deep hh__deep--soon" href="/hvbp/">Value-based purchasing: page under construction</a>'), 'HVBP: its placeholder page');
   // No empty row waits for another program: the net's row follows the last program's.
   assert.ok(!whatif.includes('hh__row--next') && !whatif.includes('hh__nextbox'), 'no empty row for another program');
   assert.match(whatif, /data-row="hvbp">[\s\S]*?<\/div>\n<\/div>\n<div class="hh__row hh__row--net" data-row="net">/, 'the net\'s row comes straight after the last program\'s');
@@ -179,7 +190,7 @@ test('the hooks the page\'s script uses, its script-only controls hidden, and th
   assert.ok(main.includes(`<p class="hh__err" data-load-error hidden>${esc('Couldn’t load the chart data. Reload to try again.')}</p>`), 'the one quiet load-error line, hidden');
   assert.ok(main.includes('<details class="hh__det" data-peer-table><summary>Every peer as a table <span>'), 'the peer table\'s fold');
   assert.ok(main.includes(esc(`Source: CMS FY${FY} program files (HRRP, HACRP, HVBP) and this site’s dollar model. Dollars are estimates of FY${FY} effects on Medicare inpatient pay; percentages are each hospital’s estimated change divided by its estimated Medicare inpatient pay.`)), 'the source line');
-  assert.ok(main.includes(esc('A cut is a program’s formula at work, not a verdict on a hospital’s care. Peers are listed alphabetically; nothing on this page ranks hospitals.')), 'the fairness line');
+  assert.ok(main.includes(`<p>${esc('A cut is a program’s formula at work, not a verdict on a hospital’s care.')}</p>`), 'the fairness line, whole');
 });
 
 // Scripts off, nothing offers what needs them (hub/styles.css's (scripting: none) block hides the button and the what-if's
@@ -253,6 +264,13 @@ test('Maryland\'s and a no-inputs hospital\'s pages are the variant: record, sta
     assert.ok(page.includes('<meta name="robots" content="noindex">'), `${status}: noindex`);
     assert.ok(chipOf(headerOf(page)) && !chipOf(headerOf(page)).includes('chip__v'), `${status}: the chip names it without a figure`);
   }
+  // Without an estimate, a no-inputs page still says what CMS decided in the HAC program, cut or not; Maryland's says
+  // nothing of it (exempt).
+  const decision = (h) => mainOf(render(h, 'noindex'));
+  assert.ok(decision(NO_INPUTS_CUT).includes(esc(`CMS’s FY${FY} hospital-acquired conditions decision: the flat ${pct(HAC_CUT_PCT / 100, 0)} cut. This site has no dollar estimate of it.`)), 'no inputs, cut: CMS cut it');
+  const uncut = pick((h) => h.status === 'no-inputs' && !h.cut, 'a hospital with no inputs that CMS did not cut');
+  assert.ok(decision(uncut).includes(esc(`CMS’s FY${FY} hospital-acquired conditions decision: no cut.`)), 'no inputs, not cut');
+  assert.ok(!decision(MARYLAND).includes('hospital-acquired conditions decision'), 'Maryland: no decision line');
 });
 
 test('the header follows the hospital: All programs is this page, the chip names it, Readmissions opens its interim page (the program\'s folder when Thirty Day Readmissions lacks the hospital)', () => {
