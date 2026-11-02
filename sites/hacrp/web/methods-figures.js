@@ -7,7 +7,7 @@ import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { absLogPct, capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
+import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';

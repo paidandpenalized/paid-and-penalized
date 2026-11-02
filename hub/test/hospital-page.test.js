@@ -161,10 +161,19 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   // The HAC row counts the peers CMS didn't score and decide apart (cut or not), so its counts are the HACRP pages' own.
   const hac = whatifRow(whatif, 'hacrp');
   assert.equal(fig.hacrp.cut, peers.filter((x) => x.decided && x.est.cut).length, 'cut: the decided peers CMS cut, as the HACRP pages count them');
-  assert.equal(fig.hacrp.cut + fig.hacrp.none + fig.hacrp.unscored, peers.length, 'the HAC counts add to the group');
-  assert.equal(fig.hacrp.unscored, peers.filter((x) => !x.decided).length, 'unscored: the peers CMS did not score and decide, cut or not');
+  assert.equal(fig.hacrp.cut + fig.hacrp.none + fig.hacrp.unscored + fig.hacrp.unscoredCut, peers.length, 'the HAC counts add to the group');
+  assert.equal(fig.hacrp.unscored, peers.filter((x) => !x.decided && !x.est.cut).length, 'unscored: the peers CMS did not score and decide, no cut');
+  assert.equal(fig.hacrp.unscoredCut, peers.filter((x) => !x.decided && x.est.cut).length, 'unscoredCut: those CMS cut all the same');
   assert.ok(hac.includes(`${fig.hacrp.cut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut, ${fig.hacrp.none} with no cut`), 'HACRP: the peer counts');
-  if (fig.hacrp.unscored) assert.ok(hac.includes(esc(`, ${fig.hacrp.unscored} that CMS didn’t score.`)), 'HACRP: the unscored peers');
+  if (fig.hacrp.unscored) assert.ok(hac.includes(esc(`, ${fig.hacrp.unscored} that CMS didn’t score`)), 'HACRP: the unscored peers');
+  // A group holding a hospital CMS cut without a score says it was cut.
+  const odd = pick((h) => h.est && h.cut && !h.decided, 'an estimated hospital CMS cut without a score');
+  const oddFig = peerFigures(peersOf(HOSPITALS, odd, 'state')).hacrp;
+  assert.ok(oddFig.unscoredCut >= 1);
+  assert.ok(whatifRow(block(mainOf(render(odd)), 'id="whatif"', '</section>'), 'hacrp').includes(`${oddFig.unscoredCut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut but no score`), 'said as cut');
+  // A hospital with a Readmissions page that FY's file did not list: its own words for the other year's factor.
+  const out = HOSPITALS.find((h) => h.est && h.inTdr && !h.est.hrrpListed && Number.isFinite(HUB.tdr.hospitals.get(h.ccn)?.paf));
+  if (out) assert.ok(whatifRow(block(mainOf(render(out)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`This page uses FY${FY}, the latest year all three programs share, whose file did not list it.`)), 'the unlisted hospital\'s year line');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');

@@ -35,7 +35,7 @@ test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Re
   const decidedEstimated = hub.dollars.hospitals.filter((r) => r.status === 'estimated' && hub.decided.has(r.ccn)).length;
   assert.equal(decidedEstimated, hub.dollars.headline.hospitals);
   assert.equal(hub.dollars.hospitals.filter((r) => r.cut && hub.decided.has(r.ccn)).length, hub.dollars.headline.yes);
-  assert.equal(hub.dollars.hospitals.filter((r) => r.cut && hub.decided.has(r.ccn)).length, hub.dollars.headline.yes);
+  assert.equal(hub.dollars.hospitals.filter((r) => r.cut && r.status === 'estimated' && hub.decided.has(r.ccn)).length, hub.dollars.headline.cut);
 });
 
 test('decidedCcns: the CCNs with a Total HAC Score and a Yes or No, from a file of the dollar estimates\' year only', () => {

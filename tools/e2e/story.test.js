@@ -410,7 +410,8 @@ describe('the states map speaks on a pick, not on a hover', () => {
     await scrollToStep(page, 6);
     const f = await first;
     assert.ok(f.opacity < 0.5, `the map is still fading in (opacity ${f.opacity})`);
-    assert.deepEqual([f.mapOff, f.barOff], [false, true], 'the map takes the pointer; the bar, fading out, does not');
+    assert.equal(f.mapOff, false, 'the map takes the pointer');
+    assert.equal(f.barOff, true, 'the bar (at rest out of sight) does not');
     await assertQuiet(seen, 'the map mid-fade');
   }));
 

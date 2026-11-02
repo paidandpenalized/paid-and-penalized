@@ -22,6 +22,8 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   // Whether the reader is in the box: a list typed for while the index loaded opens only then. A box that already has
   // the focus when this mounts is in it.
   let focused = document.activeElement === input;
+  // Words typed while the index loaded, left unlisted because the reader had left the box: listed on their return.
+  let pending = false;
 
   const ready = () => (loading ??= load().then((entries) => { index = entries; return true; }, () => {
     loading = null;
@@ -85,7 +87,11 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     }
     if (!index && !(await ready())) return;
     if (input.value !== query) return; // the reader typed on while the index loaded
-    if (!focused) return; // or left the box: the list would open with no one in it
+    if (!focused) { // or left the box: the list would open with no one in it, so it waits for their return
+      pending = true;
+      return;
+    }
+    pending = false;
     ({ results, total } = search(query, index, { limit: LIMIT }));
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);
@@ -96,7 +102,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   input.addEventListener('focus', () => {
     focused = true;
     ready();
-    if (index && input.value.trim() && list.hidden) update();
+    if (pending && index) update();
   });
   input.addEventListener('input', update);
   input.addEventListener('keydown', (e) => {

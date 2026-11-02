@@ -39,12 +39,11 @@ export const COPY = typesetCopy({
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut; {estN} of the {cmsN} scored hospitals CMS cut have an
-  // estimate (the HACRP pages' count); {more}: the hospitals with an estimate CMS cut without a score, counted ("one
-  // hospital"), which the chart holds too (hacUnscored, when there are any); {onlyN} on the chart cut by it alone.
+  // estimate (the HACRP pages' count); hacTextMore when the chart also holds hospitals CMS cut without a score ({more},
+  // counted: "one"); {onlyN} on the chart cut by it alone. Short enough to fit above the chart on a phone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacUnscored: 'The chart also holds {more} CMS cut without a score.',
-  hacText: 'The HAC program scores infections and other patient-safety events, and the quarter of hospitals with the highest scores lose {cut} of their Medicare inpatient pay. {estN} of the {cmsN} scored hospitals CMS cut have an estimate here.',
-  hacTall: 'The tall column: {onlyN} whose only cut is this one.',
+  hacText: 'The HAC program scores infections and other harms. The quarter with the highest scores lose {cut} of their pay: {estN} of the {cmsN} scored hospitals CMS cut have an estimate here. The tall column: {onlyN} whose only cut is this one.',
+  hacTextMore: 'The HAC program scores infections and other harms. The quarter with the highest scores lose {cut} of their pay: {estN} of the {cmsN} scored hospitals CMS cut have an estimate here, and {more} cut without a score. The tall column: {onlyN} whose only cut is this one.',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.
@@ -154,7 +153,7 @@ export const COPY = typesetCopy({
   dirOpenLabel: 'Open {ab}, {name}',
   // A program whose page here is under construction: its card's link (to the placeholder page) says so.
   dirBuilding: '{ab}: under construction',
-  dirBuildingLabel: '{ab}, {name}: page under construction',
+  dirBuildingLabel: '{ab}: under construction, {name}',
   // The programs under consideration, by what they do to payment (web/site.js `group`; the keys keep the registry's
   // internal stage, soon), and the words in each slip's empty band. Each group's name and each band's words fit one line
   // in the narrowest group (hub/styles.css).
@@ -168,10 +167,12 @@ export const COPY = typesetCopy({
   // {cut} the HAC cut.
   estKicker: 'Methods, in brief',
   estHead: 'Every dollar here is an estimate, labeled one and tested against hospitals’ cost reports.',
-  // {n}: the cut hospitals the back-test compared, in FY{bfy}; {miss}: how far its middle estimate ran above (estTextLow:
-  // below) their cost reports.
-  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} above what they recorded.',
-  estTextLow: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} below what they recorded.',
+  // {n}: the cut hospitals the back-test compared, in FY{bfy}; {miss}: how far its middle estimate ran from their cost
+  // reports, and {direction} which way (estAbove, estBelow).
+  estText: 'An estimate applies CMS’s published method to CMS’s public data, where an input CMS used is not public. It lands close to CMS’s own figure, not exactly on it. Every build holds its national sums to ranges set from CMS’s published figures, and stops if one falls outside. Tested against {n} cut hospitals’ FY{bfy} cost reports, the middle estimate of the HAC cut ran {miss} {direction} what they recorded.',
+  // The back-test's direction: its middle estimate ran above or below the cost reports.
+  estAbove: 'above',
+  estBelow: 'below',
   estStepPay: 'Start from each hospital’s {b} for FY{fy}.',
   estStepPayB: 'estimated Medicare inpatient pay',
   estStepRule: 'Apply each program’s {b} to the part of pay it covers.',

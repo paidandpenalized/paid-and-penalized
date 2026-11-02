@@ -106,9 +106,10 @@ export function storyFacts(hospitals) {
 // pages that state them count: CMS's cut (yes); the decided hospitals (scored, with a Yes or No: the HACRP pages'
 // population), those it cut (decidedYes, the HACRP pages' count) and those of them with an estimate here (priced); the
 // hospitals with an estimate (est) and the decided ones among them (headline, whose dollars the HACRP pages add up);
-// Maryland's and those with no inputs.
+// those with an estimate CMS cut without a score (unscoredCut, on the front page's chart but not the HACRP pages'
+// counts); Maryland's and those with no inputs.
 export function hacCounts(hospitals) {
-  const c = { yes: 0, decidedYes: 0, priced: 0, decided: 0, est: 0, headline: 0, maryland: 0, noInputs: 0 };
+  const c = { yes: 0, decidedYes: 0, priced: 0, decided: 0, est: 0, headline: 0, unscoredCut: 0, maryland: 0, noInputs: 0 };
   for (const h of hospitals) {
     if (h.cut) c.yes += 1;
     if (h.decided && h.cut) c.decidedYes += 1;
@@ -116,6 +117,7 @@ export function hacCounts(hospitals) {
     if (h.decided) c.decided += 1;
     if (h.est) c.est += 1;
     if (h.decided && h.est) c.headline += 1;
+    if (!h.decided && h.cut && h.est) c.unscoredCut += 1;
     if (h.status === 'maryland') c.maryland += 1;
     if (h.status === 'no-inputs') c.noInputs += 1;
   }

@@ -11,7 +11,7 @@ import { ASSETS, withTemp } from '../../pipeline/test/helpers.js';
 import { BUDGETS, pageWeight } from '../../tools/ci/size-budget.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { US_MAP_CODES } from '../../web/charts/geo.js';
-import { count, money, pct } from '../../web/render/format.js';
+import { count, money, numberWord, pct } from '../../web/render/format.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { HUB } from '../pages.js';
 import { loadHub } from '../data.js';
@@ -69,11 +69,10 @@ test('every number in the steps\' words is the data\'s, as the page formats it',
   // The HAC step counts as the HACRP pages do: the scored hospitals CMS cut, and those of them with an estimate, which
   // are the dollar file's headline counts.
   const hac = hacCounts(hospitals);
-  expect(3, `${count(hac.priced)} of the ${count(hac.decidedYes)} scored hospitals CMS cut have an estimate here.`, count(facts.hacOnly), '1%');
+  expect(3, `${count(hac.priced)} of the ${count(hac.decidedYes)} scored hospitals CMS cut have an estimate here`, count(facts.hacOnly), '1%');
   // The chart holds every cut hospital with an estimate: the step says how many of them CMS cut without a score.
-  const unscored = hospitals.filter((h) => h.est && h.cut && !h.decided).length;
-  assert.equal(hac.priced + unscored, facts.hacCut, 'the chart\'s cut hospitals: the decided ones and the rest');
-  if (unscored) expect(3, `The chart also holds ${unscored === 1 ? '1 hospital' : `${count(unscored)} hospitals`} CMS cut without a score.`);
+  assert.equal(hac.priced + hac.unscoredCut, facts.hacCut, 'the chart\'s cut hospitals: the decided ones and the rest');
+  if (hac.unscoredCut) expect(3, `have an estimate here, and ${numberWord(hac.unscoredCut)} cut without a score.`);
   assert.deepEqual([hac.priced, hac.decidedYes], [hub.dollars.headline.cut, hub.dollars.headline.yes]);
   // The scale line says what this site does: it estimates the pay.
   assert.ok(words(0).trim().startsWith(`This site estimates Medicare’s FY${hub.fy} inpatient pay to ${count(facts.n)} hospitals`), words(0));

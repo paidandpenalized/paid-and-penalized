@@ -175,6 +175,12 @@ test('the combobox: a slow first load does not open the list after the reader ha
   await s.input.listeners.focus();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(s.list.hidden, false, 'listed on return');
+  // A list the reader closed (Escape) stays closed when they come back: only words a load left unlisted reopen.
+  s.key('Escape');
+  s.input.listeners.blur();
+  await s.input.listeners.focus();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(s.list.hidden, true, 'closed by the reader, closed on return');
   // And the loaded index answers typing at once.
   await s.type('exam');
   assert.equal(s.list.hidden, false);

@@ -101,6 +101,8 @@ export const COPY = typesetCopy({
   whyFactor: 'FY{fy} payment factor {factor}.',
   // A hospital with a Readmissions page here (hub/hrrp/page.js), which shows CMS's newer file: why the factor there differs.
   whyHrrpYear: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.",
+  // The same for a hospital FY{fy}'s file did not list.
+  whyHrrpYearOut: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}, the latest year all three programs share, whose file did not list it.",
   whyHrrpOut: "Not in CMS's FY{fy} Readmissions file.",
   whyVbpOut: "Not in CMS's FY{fy} value-based purchasing file.",
   whyHacCut: "CMS's FY{fy} decision: the flat {rate} cut.",
@@ -115,6 +117,7 @@ export const COPY = typesetCopy({
   // Hospital-acquired conditions' peers CMS gave no Total HAC Score (and so no cut), which the HACRP pages leave out of
   // their counts.
   partUnscored: "{n} that CMS didn't score",
+  partUnscoredCut: '{n} with the {rate} cut but no score',
   partNoChange: '{n} with no change',
   partOut: '{n} not in the program',
   whyMedian: 'Peer median, among those in the program: {median} of pay.',

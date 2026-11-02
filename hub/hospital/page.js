@@ -195,8 +195,8 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 // factor (tdr: loadHub().tdr), so the row says which and why this page's differs; '' otherwise.
 function hrrpYearLine(h, { fy, tdr }) {
   const record = h.inTdr ? tdr?.hospitals.get(h.ccn) : null;
-  if (!record || String(tdr.fy) === fy) return '';
-  return html`<p class="hh__why">${fill('whyHrrpYear', { next: String(tdr.fy), factor: factor(record.paf), fy })}</p>`;
+  if (!record || !Number.isFinite(record.paf) || String(tdr.fy) === fy) return '';
+  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(tdr.fy), factor: factor(record.paf), fy })}</p>`;
 }
 
 function programRow(h, id, figures, ctx) {

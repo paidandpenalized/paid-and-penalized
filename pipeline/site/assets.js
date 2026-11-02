@@ -70,16 +70,17 @@ const assetName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name) && name !== 'site'
 // a bundle of this repository's code only. The d3 packages' ISC license asks for its notice in every copy, and a
 // bundle is one (NOTICE says which bundles carry them).
 export function licenseNotice(metafile) {
-  const packages = new Set();
+  const packages = new Map(); // folder, as esbuild names it -> package name
   for (const output of Object.values(metafile.outputs)) {
     for (const [input, { bytesInOutput }] of Object.entries(output.inputs)) {
-      const m = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(input);
-      if (m && bytesInOutput > 0) packages.add(m[1]);
+      // The last node_modules in the path: a nested copy is its own package.
+      const m = /^(.*node_modules\/((?:@[^/]+\/)?[^/]+))\//.exec(input);
+      if (m && bytesInOutput > 0) packages.set(m[1], m[2]);
     }
   }
   if (!packages.size) return '';
-  const parts = [...packages].sort().map((pkg) => {
-    const dirOf = REPO_ROOT + 'node_modules/' + pkg + '/';
+  const parts = [...packages].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(([folder, pkg]) => {
+    const dirOf = `${repoPath(folder)}/`;
     const { version, license } = JSON.parse(readFileSync(dirOf + 'package.json', 'utf8'));
     const file = readdirSync(dirOf).find((f) => /^licen[sc]e(\.(md|txt))?$/i.test(f));
     if (!file) throw new RangeError(`assets: ${pkg} has no LICENSE file to carry`);

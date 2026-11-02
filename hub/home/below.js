@@ -257,7 +257,7 @@ export function methodsBrief({ h, fy, src, bands }) {
   const { n, median } = bands.measures.hac.overall;
   return html`<section class="bsec ests" id="estimate" aria-labelledby="estimate-h">
 <div><p class="cap kicker">${COPY.estKicker}</p><h2 id="estimate-h">${COPY.estHead}</h2>
-<p>${fill(median >= 0 ? 'estText' : 'estTextLow', { n: count(n), bfy: String(bands.fy), miss: absLogPct(median, 1) })}</p>
+<p>${fill('estText', { n: count(n), bfy: String(bands.fy), miss: absLogPct(median, 1), direction: COPY[median >= 0 ? 'estAbove' : 'estBelow'] })}</p>
 <ol class="nsteps">${POINTS.map((key, i) => html`<li>${no(i + 1)}<span>${sentence(key, { b: html`<b>${COPY[`${key}B`]}</b>` }, key === 'estStepPay' ? { fy: fyText } : {})}</span></li>`)}</ol>
 <a class="more" href="${SITE.pages.methods}">${COPY.estMore}${arrow}</a></div>
 ${worksheet(h, { fy: fyText, src })}

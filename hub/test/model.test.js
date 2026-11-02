@@ -136,7 +136,7 @@ test('storyFacts on invented hospitals: a bonus, a cut, a HAC-only hospital, one
     vbpBonusN: 2, vbpCutN: 1, vbpZero: 1, vbpOut: 1, vbpNet: 25, netCut: 4, netBonus: 1, netZero: 0, vbpMax: 1.004,
   });
   // As the HACRP pages count: CMS cut three, two of them decided (one with an estimate, one without).
-  assert.deepEqual(hacCounts(list), { yes: 3, decidedYes: 2, priced: 1, decided: 5, est: 5, headline: 4, maryland: 0, noInputs: 1 });
+  assert.deepEqual(hacCounts(list), { yes: 3, decidedYes: 2, priced: 1, decided: 5, est: 5, headline: 4, unscoredCut: 1, maryland: 0, noInputs: 1 });
   // No hospital in HVBP: no highest factor.
   assert.equal(storyFacts([fake('990006', 'ZZ', { vbpListed: false })]).vbpMax, null);
 });

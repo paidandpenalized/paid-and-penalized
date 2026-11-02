@@ -64,7 +64,7 @@ export function whyText(fill, h, id, f, { fy, group }) {
   const part = (key, n, values = {}) => ({ n, text: fill(key, { n: count(n), ...values }) });
   const parts = {
     hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part('partOut', f.out)],
-    hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none), part('partUnscored', f.unscored)],
+    hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none), part('partUnscored', f.unscored), part('partUnscoredCut', f.unscoredCut, { rate: HAC_CUT_TEXT })],
     hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part('partOut', f.out)],
   }[id].filter((p, i) => i < 2 || p.n > 0);
   const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
