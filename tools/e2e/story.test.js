@@ -15,15 +15,18 @@ const drawn = (page) => page.waitForFunction(() => document.querySelector('.stor
 const lined = (page) => page.waitForFunction(() => document.querySelector('.readout')?.classList.contains('is-line'));
 const HOME_SCRIPT = /\/assets\/hub-home\.[^/]+\.js$/;
 
+// Scrolls step i to where the reader reads it (under the bar on a phone, a tenth down the window elsewhere).
+const scrollToStep = (page, i) => page.evaluate((k) => {
+  const el = document.querySelectorAll('.story .step')[k];
+  const phone = window.innerWidth <= 760;
+  const head = document.querySelector('.topbar').getBoundingClientRect().height;
+  window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - (phone ? head - 44 : window.innerHeight * 0.1));
+}, i);
+
 // The story's state after the reader has scrolled step i to where it is read: the step the page marks, the current
 // rail link or step name, the two drawings' opacities, whether the canvas has paint on it, and the sideways overflow.
 async function readStep(page, i) {
-  await page.evaluate((k) => {
-    const el = document.querySelectorAll('.story .step')[k];
-    const phone = window.innerWidth <= 760;
-    const head = document.querySelector('.topbar').getBoundingClientRect().height;
-    window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - (phone ? head - 44 : window.innerHeight * 0.1));
-  }, i);
+  await scrollToStep(page, i);
   await settle(page);
   await settle(page);
   return page.evaluate(() => {
@@ -384,11 +387,7 @@ describe('the states map speaks on a pick, not on a hover', () => {
   // pointer until half faded in, and the click went to the page, which scrolled.)
   it('the map takes the pointer as soon as its step begins, mid-fade', () => withPage(tabs, { path: '/', watched: true }, async (page, { seen }) => {
     await drawn(page);
-    const at = (i) => page.evaluate((k) => {
-      const el = document.querySelectorAll('.story .step')[k];
-      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.1);
-    }, i);
-    await at(5);
+    await scrollToStep(page, 5);
     await page.waitForFunction(() => document.querySelector('.story').dataset.step === '5');
     await page.waitForTimeout(1500);
     // The first frame of the step's change, read the moment the story marks step 6 (the map's).
@@ -404,7 +403,7 @@ describe('the states map speaks on a pick, not on a hover', () => {
         }));
       }).observe(story, { attributes: true, attributeFilter: ['data-step'] });
     }));
-    await at(6);
+    await scrollToStep(page, 6);
     const f = await first;
     assert.ok(f.opacity < 0.5, `the map is still fading in (opacity ${f.opacity})`);
     assert.deepEqual([f.mapOff, f.barOff], [false, true], 'the map takes the pointer; the bar, fading out, does not');

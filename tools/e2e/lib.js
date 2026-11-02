@@ -49,12 +49,12 @@ export function useBrowser(start = startSite) {
 }
 
 // A browser context for the tests of the describe that calls it: a window width px wide and height px tall (HEIGHT by
-// default), with scripts on or off (javaScript). { context, base, javaScript } (base: the site's origin), filled in before
+// default), with scripts on or off (javaScript), and any other Playwright context options (options: e.g. touch). { context, base, javaScript } (base: the site's origin), filled in before
 // its first test, and closed after its last. A tab takes its colour scheme from withPage, not from the context (newPage).
-export function useContext(shared, { width = 1280, height = HEIGHT, javaScript = true } = {}) {
+export function useContext(shared, { width = 1280, height = HEIGHT, javaScript = true, options = {} } = {}) {
   const held = { javaScript };
   before(async () => {
-    held.context = await shared.browser.newContext({ viewport: { width, height }, javaScriptEnabled: javaScript });
+    held.context = await shared.browser.newContext({ ...options, viewport: { width, height }, javaScriptEnabled: javaScript });
     held.base = shared.site.base;
   });
   after(() => held.context?.close());

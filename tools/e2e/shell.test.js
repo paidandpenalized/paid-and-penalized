@@ -11,7 +11,7 @@
 // desktop it fits whole).
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. CI's logs are public, so no message or assertion
 // here prints a hospital's name, CCN or figure: they say what was checked.
-import { after, before, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { STATUS_CODES } from '../../web/client/hub-asset.js';
 import { money } from '../../web/client/format.js';
@@ -452,15 +452,9 @@ describe('the family search on a hub page', () => {
 
 // A tap on an option picks it with no delay to wait on: the tap's own mousedown keeps the box's focus, as a click's does.
 // Touch is emulated in Chromium and WebKit (Playwright's Firefox has no touch).
-describe('the family search under touch', () => {
-  const held = {};
-  before(async () => {
-    held.context = ENGINE === 'firefox' ? null : await shared.browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: ENGINE === 'chromium' });
-    held.base = shared.site.base;
-    held.javaScript = true;
-  });
-  after(() => held.context?.close());
-  it('a tap on an option opens it', { skip: ENGINE === 'firefox' && 'no touch in Firefox' }, () => withPage(held, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
+describe('the family search under touch', { skip: ENGINE === 'firefox' && 'no touch in Firefox' }, () => {
+  const held = useContext(shared, { width: 390, height: 800, options: { hasTouch: true, isMobile: ENGINE === 'chromium' } });
+  it('a tap on an option opens it', () => withPage(held, { path: SITE.pages.about, watched: true }, async (page, { seen }) => {
     const form = page.locator('.topbar form#omni[data-hub]');
     const box = form.getByRole('combobox');
     if (!(await box.isVisible())) await page.locator('.fam__find').tap();
