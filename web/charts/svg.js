@@ -3,6 +3,7 @@
 // colors come from classes in web/styles/charts.css, never from here.
 import { cmsText } from '../render/format.js';
 import { html } from '../render/html.js';
+import { relativeD } from './pathd.js';
 
 // Charts are drawn narrower than a phone (300 units across a 288px column at 320 and 343px at 375), so their 12-unit
 // labels and 11-unit ticks read at about 11.5px and up on any phone (charts.css caps the drawn width at about 22rem).
@@ -37,7 +38,7 @@ export function lineD(points, x, y) {
     d += `${open ? 'L' : 'M'}${r2(x(pt.x))} ${r2(y(pt.y))}`;
     open = true;
   }
-  return d;
+  return relativeD(d);
 }
 
 // A silhouette of sorted scores, ranks a to b (b exclusive), as one closed path: up from the base at the run's left
@@ -55,7 +56,7 @@ export function silhouette(scores, a, b, { x, x0, x1, y, base }) {
       last = xi;
     }
   }
-  return `M${r2(x0)} ${r2(base)}L${r2(x0)} ${pts[0][1]}L${pts.map(([px, py]) => `${px} ${py}`).join('L')}L${r2(x1)} ${pts[pts.length - 1][1]}L${r2(x1)} ${r2(base)}Z`;
+  return relativeD(`M${r2(x0)} ${r2(base)}L${r2(x0)} ${pts[0][1]}L${pts.map(([px, py]) => `${px} ${py}`).join('L')}L${r2(x1)} ${pts[pts.length - 1][1]}L${r2(x1)} ${r2(base)}Z`);
 }
 
 // A value as the caller gave it: JavaScript's shortest digits (never re-rounded), with a true minus.

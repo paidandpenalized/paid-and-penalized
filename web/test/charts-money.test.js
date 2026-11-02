@@ -10,6 +10,7 @@ import { stateShapes, usBubbles } from '../charts/geo.js';
 import { WIDTH } from '../charts/svg.js';
 import { textWidth } from '../charts/text.js';
 import { treemap } from '../charts/treemap.js';
+import { absoluteD } from '../charts/pathd.js';
 
 const height = (svg) => Number(/viewBox="0 0 \d+ (\d+)"/.exec(svg)[1]);
 
@@ -65,7 +66,11 @@ test('the treemap: tiles are written in their own order (not by size) without mo
 test('the treemap: a box has a header only where its label is printed (one threshold), never a blank band; a box in the old gap between the two thresholds has none', () => {
   const group = { label: 'Only', sub: 'o', value: 10, tiles: [{ value: 6, tip: 'One' }, { value: 4, tip: 'Two' }] };
   // The top of the highest tile: a wide drawing writes each as a rect, a phone's (and any narrower than a page) as one path.
-  const tileTop = (svg) => Math.min(...[...svg.matchAll(/<rect data-mark x="[\d.]+" y="([\d.]+)"|M[\d.]+ ([\d.]+)h/g)].map((m) => Number(m[1] ?? m[2])));
+  // The path is written in relative commands (pathd.js): each tile's top is read back from its absolute moveto.
+  const tileTop = (svg) => Math.min(
+    ...[...svg.matchAll(/<rect data-mark x="[\d.]+" y="([\d.]+)"/g)].map((m) => Number(m[1])),
+    ...[...svg.matchAll(/<path class="chart-tree__tile" d="([^"]*)"/g)].flatMap((m) => [...absoluteD(m[1]).matchAll(/M[\d.]+ ([\d.]+)/g)].map((t) => Number(t[1]))),
+  );
   // One group fills the whole drawing, so its box is the drawing: every height and width from a sliver to a full header.
   const sizes = [];
   for (const height of [20, 33, 34, 35, 36, 37, 38, 39, 40, 60, 200]) sizes.push([PAGE, height]);

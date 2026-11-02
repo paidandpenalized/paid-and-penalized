@@ -7,6 +7,7 @@ import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
 import { dotsPath, spread, stackColumns, unitHistogram } from './dots.js';
+import { relativeD } from './pathd.js';
 import { frame, mark, r2, text } from './svg.js';
 
 // ---------- stacked columns ----------
@@ -70,7 +71,7 @@ export function silhouette(values, { x, lo, hi, bins, y, h, most = null }) {
     const yy = r2(base - (h * c) / top);
     d += `L${r2(x(lo + i * w))} ${yy}L${r2(x(lo + (i + 1) * w))} ${yy}`;
   });
-  return { d: `${d}L${r2(x(hi))} ${r2(base)}Z`, most: top };
+  return { d: relativeD(`${d}L${r2(x(hi))} ${r2(base)}Z`), most: top };
 }
 
 // ---------- pulled in to the floor and cap ----------
@@ -109,7 +110,7 @@ export function pullIn({ values, floor, cap, domain: [lo, hi], labels, format, w
 ${text({ x: left, y: y2 - 8, anchor: 'start', cls: 'chart-cap', body: labels.scored })}
 <path class="chart-sil" d="${top.d}"/>
 <path class="chart-sil" d="${bottom.d}"/>
-<path class="chart-pull__line" d="${lines.join('')}"/>
+<path class="chart-pull__line" d="${relativeD(lines.join(''))}"/>
 ${dotsPath(moved[0], 'chart-dots--ink', d)}${dotsPath(moved[1], 'chart-dots--ink', d)}
 <line class="chart-boundary" x1="${cx}" x2="${cx}" y1="${y1 - 4}" y2="${r2(end)}"/>
 ${floor > lo ? html`<line class="chart-boundary" x1="${fx}" x2="${fx}" y1="${y1 - 4}" y2="${r2(end)}"/>${text({ x: fx - 4, y: y1 + bandH + 16, anchor: 'end', cls: 'chart-cap chart-label--halo', body: labels.floor })}` : ''}
