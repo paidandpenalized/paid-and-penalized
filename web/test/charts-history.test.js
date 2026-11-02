@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readPinned } from '../../pipeline/files.js';
 import { barRows } from '../charts/barRows.js';
 import { dotsD } from '../charts/dots.js';
+import { absoluteD } from '../charts/pathd.js';
 import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../charts/geo.js';
 import { periodsChart } from '../charts/periods.js';
 import { proofBins, proofStrips } from '../charts/proofStrips.js';
@@ -174,7 +175,7 @@ test('ruleStack: decisions out of order with the scores show as extra runs of th
   const runs = (yes, ink) => {
     const s = String(ruleStack({ rows: [STACK_ROW({ yes, scores: [0, 1, 2, 3, 4, 5] })], width: 300 }));
     const d = tags(s, ink).map((t) => attr(t, 'd'))[0];
-    return d ? count(d, /Z/g) : 0;
+    return d ? count(d, /[Zz]/g) : 0;
   };
   assert.equal(runs([false, false, false, true, true, true], 'chart-rule__ink'), 1);
   assert.equal(runs([false, false, false, true, true, true], 'chart-rule__pen'), 1);
@@ -192,7 +193,7 @@ test('ruleStack: each row has its own height, so a year on another scale still s
     ],
     width: 300,
   }), 'rules');
-  const tops = tags(s, 'chart-rule__ink').map((t) => Math.min(...[...attr(t, 'd').matchAll(/L[\d.-]+ ([\d.-]+)/g)].map((m) => Number(m[1]))));
+  const tops = tags(s, 'chart-rule__ink').map((t) => Math.min(...pointYs(attr(t, 'd'))));
   assert.deepEqual(tops, [4 + 16, 4 + 78 + 16], 'the highest score reaches the top of its own row');
   // A year CMS scored no one: no scores, no line.
   const none = sound(ruleStack({ rows: [{ label: 'FY2023', note: 'none', scores: [], yes: [], line: null }], width: 300 }), 'rules');
@@ -203,7 +204,7 @@ test('ruleStack: each row has its own height, so a year on another scale still s
   assert.equal(tags(flat, 'chart-rule__ink').length, 1);
   // All-negative scores hang below the baseline.
   const below = sound(ruleStack({ rows: [STACK_ROW({ scores: [-3, -2, -1], yes: [false, false, false], line: null })], width: 300 }), 'rules');
-  assert.ok(Math.min(...[...attr(tags(below, 'chart-rule__ink')[0], 'd').matchAll(/L[\d.-]+ ([\d.-]+)/g)].map((m) => Number(m[1]))) >= 4 + 16 + 40, 'at or below the baseline');
+  assert.ok(Math.min(...pointYs(attr(tags(below, 'chart-rule__ink')[0], 'd'))) >= 4 + 16 + 40, 'at or below the baseline');
 });
 
 test('ruleStack escapes a row label and its note', () => {
@@ -277,13 +278,22 @@ test('rollCall refuses no hospitals, no years, and a record whose length is not 
 });
 
 // One path's cells: the M moves in it.
-const cells = (s, cls) => count(attr(tags(s, cls)[0], 'd'), /M/g);
+// A roll call's path of one ink, read back as absolute commands (rollCall writes them relative: pathd.js): one
+// "M x yH x2" per cell or run.
+const rollD = (s, cls) => absoluteD(attr(tags(s, cls)[0], 'd'));
+// Every point's y in a path of moves and lines (read back as absolute commands).
+function pointYs(d) {
+  return [...absoluteD(d).matchAll(/(?:[ML][\d.-]+ |V)([\d.-]+)/g)].map((m) => Number(m[1]));
+}
+const cells = (s, cls) => count(rollD(s, cls), /M/g);
 
 // ---------- the kit's shared pieces ----------
 
 test('lineD: a line through the points with a value, a point with none breaking it; capsWidth and isNarrow', () => {
   const pts = [{ x: 0, y: 1 }, { x: 1, y: 2 }, { x: 2, y: null }, { x: 3, y: 0.5 }];
-  assert.equal(lineD(pts, (v) => v * 10, (v) => 100 - v * 10), 'M0 90L10 80M30 95');
+  // Written in relative commands (pathd.js), read back as absolute.
+  assert.equal(lineD(pts, (v) => v * 10, (v) => 100 - v * 10), 'M0 90l10-10m20 15');
+  assert.equal(absoluteD(lineD(pts, (v) => v * 10, (v) => 100 - v * 10)), 'M0 90L10 80M30 95');
   assert.equal(lineD([{ x: 0, y: null }], (v) => v, (v) => v), '');
   assert.equal(capsWidth('abcde'), 32);
   assert.equal(capsWidth(12), 12.8, 'a number is measured as its text');
@@ -294,9 +304,11 @@ test('silhouette: up from the base at the left edge, along the scores (thinned, 
   const scores = [1, 2, 3, 4, 5];
   const at = { x: (i) => i + 0.5, x0: 0, x1: 5, y: (v) => 10 - v, base: 10 };
   // Hairlines a unit apart: under the thinning step, so only every other one is kept, with both ends.
-  assert.equal(silhouette(scores, 0, 5, at), 'M0 10L0 9L0.5 9L2.5 7L4.5 5L5 5L5 10Z');
+  // Written in relative commands (pathd.js; a line along one axis as h or v), read back as absolute.
+  assert.equal(silhouette(scores, 0, 5, at), 'M0 10v-1h.5l2-2 2-2h.5v5z');
+  assert.equal(absoluteD(silhouette(scores, 0, 5, at)), 'M0 10V9H0.5L2.5 7L4.5 5H5V10Z');
   // Wide apart, every one is kept.
-  assert.equal(silhouette(scores, 1, 3, { ...at, x: (i) => i * 2 }), 'M0 10L0 8L2 8L4 7L5 7L5 10Z');
+  assert.equal(absoluteD(silhouette(scores, 1, 3, { ...at, x: (i) => i * 2 })), 'M0 10V8H2L4 7H5V10Z');
   assert.equal(silhouette(scores, 2, 2, at), '', 'no ranks, no shape');
 });
 
@@ -309,7 +321,7 @@ test('rollCall: a cell for every hospital with a decision, in the ink of its dec
   assert.deepEqual(viewBox(s), [300, 4 + 3 * 16 + 6], 'no brackets, no room for them');
   // Each run is a stroke along its row's band (a row of 16 less the gap of 2), from its left edge to its right.
   assert.deepEqual(['chart-roll__no', 'chart-roll__yes'].map((cls) => attr(tags(s, cls)[0], 'stroke-width')), ['14', '14']);
-  assert.ok([...attr(tags(s, 'chart-roll__yes')[0], 'd').matchAll(/M[\d.]+ ([\d.]+)H[\d.]+/g)].every((m) => [11, 27, 43].includes(Number(m[1]))), 'every run along a band\'s middle');
+  assert.ok([...rollD(s, 'chart-roll__yes').matchAll(/M[\d.]+ ([\d.]+)H[\d.]+/g)].every((m) => [11, 27, 43].includes(Number(m[1]))), 'every run along a band\'s middle');
   assert.equal(String(rollCall({ records: ['YN.', 'YNN', 'NY.'], years: YEARS, width: 300 })), s, 'the same call gives the same markup');
 });
 
@@ -343,7 +355,7 @@ test('rollCall: brackets under the grid, the right margin kept clear, notes at t
   assert.deepEqual(texts(s, 'chart-roll__note'), ['12% · 10%', '', '33% · 30%']);
   assert.ok(viewBox(s)[1] > viewBox(plain)[1], 'a drawing with brackets is taller');
   // No cell reaches into the right margin (each H is a cell's right edge).
-  const right = Math.max(...[...attr(tags(s, 'chart-roll__no')[0], 'd').matchAll(/H([\d.]+)/g)].map((m) => Number(m[1])));
+  const right = Math.max(...[...rollD(s, 'chart-roll__no').matchAll(/H([\d.]+)/g)].map((m) => Number(m[1])));
   assert.ok(right <= 300 - 70, `${right}`);
 });
 
@@ -411,9 +423,9 @@ test('rankYears: a dot for each year with a score, in the cut ink when cut; a ye
   assert.equal(tags(s, 'chart-rank__dot chart-rank__dot--cut').length, 1);
   assert.deepEqual(marks(s).map((m) => m.tip), ['15 tip', '16 tip', '18 tip', '19 tip']);
   assert.deepEqual(marks(s).map((m) => /data-value="([^"]*)"/.exec(m.attrs)[1]), ['0.1', '0.5', '1', '0']);
-  const d = attr(tags(s, 'chart-rank__path')[0], 'd');
+  const d = absoluteD(attr(tags(s, 'chart-rank__path')[0], 'd'));
   assert.equal(count(d, /M/g), 2, 'two runs: 15-16 and 18-19');
-  assert.equal(count(d, /L/g), 2);
+  assert.equal(count(d, /[LHV]/g), 2);
   // The top of the scale is the highest share, the bottom the lowest.
   const dots = [...s.matchAll(/<circle class="chart-rank__dot[^"]*" cx="[\d.]+" cy="([\d.]+)" r="(\d+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
   assert.deepEqual(dots.map(([y]) => y), [22 + 150 * 0.9, 22 + 150 * 0.5, 22, 172]);
@@ -556,7 +568,7 @@ test('smallLines: a panel each, a dot for each year with a value, a gap in the l
   assert.equal(tags(s, 'chart-lines__dot').length, 4 + 5);
   assert.equal(tags(s, 'chart-hit').length, 0, 'a dot is its own hit area (charts.css gives it a wide transparent stroke)');
   const lines = [...s.matchAll(/<path class="chart-lines__line" d="([^"]*)"/g)].map((m) => m[1]);
-  assert.deepEqual(lines.map((d) => count(d, /M/g)), [2, 1, 0], 'the missing year breaks the first line in two; the empty panel has no line');
+  assert.deepEqual(lines.map((d) => count(d, /[Mm]/g)), [2, 1, 0], 'the missing year breaks the first line in two; the empty panel has no line');
   assert.deepEqual(texts(s, 'chart-label'), ['Measure A', 'Measure B', 'Measure C &lt;&amp;&gt;']);
   assert.deepEqual(texts(s, 'chart-value chart-value--mark'), ['−50%', '+80%'], 'an empty change prints nothing');
   assert.equal(tags(s, 'chart-lines__under').length, 1);

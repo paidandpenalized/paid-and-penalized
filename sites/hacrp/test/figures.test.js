@@ -269,16 +269,18 @@ test('the hospital table section: the controls for client/table.js, the asset, a
   const ccns = new Set(DATA.hospitals.map((h) => h.ccn));
   assert.deepEqual([...words.matchAll(/\b\d{6}\b/g)].map((m) => m[0]).filter((c) => ccns.has(c)), [], 'no hospital list inlined');
   // The weight of the page that ships: the program page as the build writes it, with every program year (HISTORY_ARGS),
-  // measured in bytes. Measured at 1,183,062 bytes of inline SVG (some 300 kB of it the money's Part, its treemap of every cut
-  // hospital the largest), 230,517 besides them (words, tables and the page's data), and 279,664 gzipped (level 9). Each
-  // budget is the measure plus about 5%: a change that adds weight raises it on purpose, with a reason.
+  // measured in bytes. Measured on 2026-11-02, after the drawings' paths went to relative commands (web/charts/pathd.js), at
+  // 1,060,552 bytes of inline SVG (the money's Part, its treemap of every cut hospital the largest), 234,846 besides them
+  // (words, tables and the page's data), and 229,754 gzipped (level 9). The drawings' and the gzipped limits are the
+  // measure plus about 5%; the limit besides the drawings is as it was (242,000). A change that adds weight raises a limit
+  // on purpose, with a reason.
   const shipped = renderProgram(HISTORY_ARGS);
   const bytes = Buffer.byteLength(shipped);
   const svg = drawingBytes(shipped);
-  assert.ok(svg < 1_240_000, `the drawings stay thinned (${svg} bytes)`);
+  assert.ok(svg < 1_114_000, `the drawings stay thinned (${svg} bytes)`);
   assert.ok(bytes - svg < 242_000, `the program page stays small (${bytes - svg} bytes besides its drawings)`);
   const gzipped = gzipSync(shipped, { level: 9 }).length;
-  assert.ok(gzipped < 292_000, `the program page stays light on the wire (${gzipped} bytes gzipped)`);
+  assert.ok(gzipped < 242_000, `the program page stays light on the wire (${gzipped} bytes gzipped)`);
 });
 
 // ---------- every takeaway's numbers ----------

@@ -35,7 +35,9 @@ export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27's starting number, as for hub pages (a test pins it).
   coming: 50 * KB, // The placeholder pages of the programs with no page here (hub/coming.js).
-  program: 360 * KB, // Over ARCH-27's 100 KB for a site's front page.
+  // Over ARCH-27's 100 KB for a site's front page. Re-set 2026-11-02 by the formula above (279.5 KB + 15%) after the
+  // drawings' paths went to relative commands (web/charts/pathd.js); it was 360 KB.
+  program: 330 * KB,
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
   place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
   methods: 100 * KB,

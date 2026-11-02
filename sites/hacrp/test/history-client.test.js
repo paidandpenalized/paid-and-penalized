@@ -18,6 +18,7 @@ import { historyData } from '../web/history-data.js';
 import { HIST_MAP_WIDE, placeMembers, placeYearsFigure, rollAsset, rollFigure, yearMapFigure } from '../web/history-figures.js';
 import { DATA, PLACES } from './pinned.js';
 import { rollParts } from '../../../web/charts/rollCall.js';
+import { absoluteD } from '../../../web/charts/pathd.js';
 import { placePath } from '../web/place-paths.js';
 
 const HD = historyData({ history: DATA.history, master: DATA.master });
@@ -185,10 +186,11 @@ function rigFromMarkup(markup) {
 }
 
 // The runs (or cells) the drawing paints in its first row, by ink: [start, end] in SVG units. Each run is a stroke
-// "M x y H x2" along its row's band; the first row's is the one highest up.
+// "M x y H x2" along its row's band (read back as absolute commands: the drawing writes them relative, pathd.js); the
+// first row's is the one highest up.
 function firstRowRuns(svg) {
   const moves = (cls) => {
-    const d = new RegExp(`<path class="${cls}" stroke-width="[\\d.]+" d="([^"]*)"`).exec(svg)[1];
+    const d = absoluteD(new RegExp(`<path class="${cls}" stroke-width="[\\d.]+" d="([^"]*)"`).exec(svg)[1]);
     return [...d.matchAll(/M([\d.]+) ([\d.]+)H([\d.]+)/g)].map((m) => m.slice(1).map(Number));
   };
   const all = { yes: moves('chart-roll__yes'), no: moves('chart-roll__no') };
@@ -412,7 +414,7 @@ test('mountRoll, a place page: the grid\'s order is on the page (the JSON script
 // ---------- the state picker ----------
 
 // The cells a drawing's body paints in each ink: one move each (a few columns are wide enough to be one cell each).
-const inkCells = (body, ink) => (new RegExp(`<path class="chart-roll__${ink}" stroke-width="[\\d.]+" d="([^"]*)"`).exec(body)?.[1].match(/M/g) ?? []).length;
+const inkCells = (body, ink) => (new RegExp(`<path class="chart-roll__${ink}" stroke-width="[\\d.]+" d="([^"]*)"`).exec(body)?.[1].match(/[Mm]/g) ?? []).length;
 const AL_PICK = [{ value: '', textContent: 'Every state' }, { value: 'AL', textContent: 'Alabama' }, { value: 'MD', textContent: 'Maryland' }];
 const pickIn = (rig) => async (value) => {
   rig.select.value = value;

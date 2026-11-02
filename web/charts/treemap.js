@@ -12,6 +12,7 @@
 //   width    the viewBox's width; height: its height (default: taller across a page than on a phone)
 import { html } from '../render/html.js';
 import { frame, isNarrow, mark, r1, r2, text } from './svg.js';
+import { relativeD } from './pathd.js';
 
 const HEAD = 30;
 // A group's box has a header, and its label, only if it is wider than LABEL_WIDTH and taller than the header plus
@@ -84,7 +85,7 @@ export function treemap({ groups, width, height = isNarrow(width) ? 420 : 520 })
     });
     const plain = isNarrow(width) || g.tiles.every((t) => !t.tip);
     const drawn = plain
-      ? html`<path class="chart-tree__tile" d="${tiles.map((t) => (t.w > 0 && t.h > 0 ? `M${r1(t.x)} ${r1(t.y)}h${r1(t.w)}v${r1(t.h)}h${r1(-t.w)}z` : '')).join('')}"/>`
+      ? html`<path class="chart-tree__tile" d="${relativeD(tiles.map((t) => (t.w > 0 && t.h > 0 ? `M${r1(t.x)} ${r1(t.y)}h${r1(t.w)}v${r1(t.h)}h${r1(-t.w)}z` : '')).join(''))}"/>`
       : html`<g class="chart-tree__tiles">${written.map((i) => { const t = tiles[i]; return t.w > 0 && t.h > 0 ? html`<rect data-mark x="${r1(t.x)}" y="${r1(t.y)}" width="${r1(t.w)}" height="${r1(t.h)}"><title>${g.tiles[i].tip}</title></rect>` : ''; })}</g>`;
     return html`<g class="chart-tree__g">${head}${drawn}
 ${sliver ? '' : text({ x: b.x + 6, y: b.y + 15, anchor: 'start', cls: 'chart-tree__label', body: g.label })}${!sliver && wide ? text({ x: b.x + b.w - 6, y: b.y + 15, anchor: 'end', cls: 'chart-tree__sub', body: g.sub }) : ''}</g>`;
