@@ -12,6 +12,7 @@
 //   #whatif [data-row]  hrrp, hacrp, hvbp and net, each with an empty [data-strip]; [data-result] (aria-live) in net's,
 //                       and its [data-match] and [data-reset] buttons (hidden until the script)
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
+import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, dotList, factor, money, placeText, unbroken } from '../../web/render/format.js';
@@ -134,10 +135,9 @@ const BACKTEST_HREF = `${SITE.sites.hacrp.path}methods/#backtest`;
 function band(h) {
   if (!h.netRange) return '';
   const [lo, hi] = h.netRange;
-  const from = Math.min(lo, h.est.net);
-  const to = Math.max(hi, h.est.net);
-  const at = (x) => (to === from ? 0.5 : (x - from) / (to - from)).toFixed(3);
-  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${fill('bandRange', { lo: signedMoney(lo), hi: signedMoney(hi) })}</span><span class="hh__rng-bar" style="--lo:${at(lo)};--hi:${at(hi)};--at:${at(h.est.net)}" aria-hidden="true"></span></p>`;
+  const places = rangeBar(h.netRange, h.est.net);
+  const bar = places ? html`<span class="hh__rng-bar" style="--lo:${places.lo};--hi:${places.hi};--at:${places.at}" aria-hidden="true"></span>` : '';
+  return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${fill('bandRange', { lo: signedMoney(lo), hi: signedMoney(hi) })}</span>${bar}</p>`;
 }
 
 // The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a

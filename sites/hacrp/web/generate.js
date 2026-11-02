@@ -1,6 +1,7 @@
 // The HACRP page generator: checks acceptance A1 on the emitted data (the build fails if it doesn't hold), then
 // emits the program page, one page per hospital, and the dataset CSV with its data dictionary through the build
 // context.
+import { lineScore } from '../../../web/whatif/marks.js';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
@@ -73,14 +74,14 @@ export function scoreRange(hospitals) {
 
 // CMS's line in each year before fy scored by today's formula (equal weights, the history's rule 'equal'), where CMS cut
 // some hospitals and not others: [{ fy, score }], the score midway between the highest it didn't cut and the lowest it
-// did, as the ramp draws this year's (web/whatif/marks.js lineScore). The what-if's ramp marks them faintly: the line
+// did, as the ramp draws this year's (lineScore). The what-if's ramp marks them faintly: the line
 // moves from year to year. hd: historyData(), or null without the history (none).
 export function pastLines(hd, fy) {
   if (!hd) return [];
   const rule = new Map(hd.years.map((y) => [y.fy, y.rule]));
   return hd.checks
     .filter((c) => c.fy < fy && rule.get(c.fy) === 'equal' && c.check.highestNo !== null && c.check.lowestYes !== null)
-    .map((c) => ({ fy: c.fy, score: (c.check.highestNo + c.check.lowestYes) / 2 }));
+    .map((c) => ({ fy: c.fy, score: lineScore(c.check) }));
 }
 
 // ctx: the build context (pipeline/site/context.js). released defaults to web/site.js; tests pass it, and may pass

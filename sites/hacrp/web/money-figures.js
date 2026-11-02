@@ -12,7 +12,7 @@ import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, REDUCTION_TEXT } from './constants.js';
 import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
-import { BASE_PARTS, OTHER_PARTS, cutCounts, hasMaTeaching, maKey } from './money.js';
+import { BASE_PARTS, OTHER_PARTS, cutCounts, hasMaTeaching, maKey, rangeBar } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
@@ -39,10 +39,8 @@ export const estTag = () => estTagShell({ href: DOLLARS_HREF, label: t('estimate
 // '' with no range: an estimate of $0 has none.
 export function rangeLine(range, { estimate = null } = {}) {
   if (!range) return '';
-  const [from, to] = estimate === null ? range : [Math.min(range[0], estimate), Math.max(range[1], estimate)];
-  const at = (x) => ((x - from) / (to - from)).toFixed(3);
-  const bar = estimate === null || to === from ? ''
-    : html`<span class="money__range-bar" style="--lo: ${at(range[0])}; --hi: ${at(range[1])}; --at: ${at(estimate)}" aria-hidden="true"></span>`;
+  const places = estimate === null ? null : rangeBar(range, estimate);
+  const bar = places ? html`<span class="money__range-bar" style="--lo: ${places.lo}; --hi: ${places.hi}; --at: ${places.at}" aria-hidden="true"></span>` : '';
   return html`<p class="money__range"><a class="money__range-k" href="${BACKTEST_HREF}">${t('rangeLikely')}</a> <span class="money__range-v">${moneyRange(...range)}</span>${bar}</p>`;
 }
 

@@ -45,3 +45,14 @@ export function sumRanges(ranges) {
   if (!some.length) return null;
   return [some.reduce((a, r) => a + r[0], 0), some.reduce((a, r) => a + r[1], 0)];
 }
+
+// A likely range drawn as a small bar with the estimate's tick: the range's two ends and the estimate as places along
+// the bar's span (fractions to three decimals, as a style's custom properties take them), the span stretched to hold
+// the estimate; null when it has no width (nothing to draw). range: [low, high]; estimate: dollars.
+export function rangeBar([lo, hi], estimate) {
+  const from = Math.min(lo, estimate);
+  const to = Math.max(hi, estimate);
+  if (to === from) return null;
+  const at = (x) => ((x - from) / (to - from)).toFixed(3);
+  return { lo: at(lo), hi: at(hi), at: at(estimate) };
+}
