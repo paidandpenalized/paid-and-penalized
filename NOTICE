@@ -11,21 +11,25 @@ Not covered by either license:
   made by pipeline/py/pp_pipeline/pos_extract.py (the manifest records the full file's SHA-256 and URLs).
   The Census Bureau's ZCTA gazetteer and the CMS county-to-CBSA crosswalk are unmodified copies too.
 - data/pinned/us-atlas-3.0.1/counties-10m.json is an unmodified copy of us-atlas 3.0.1 by Mike Bostock, TopoJSON
-  derived from the Census Bureau's cartographic boundary files, under the ISC license: "Permission to use, copy,
-  modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the
-  above copyright notice and this permission notice appear in all copies."
+  derived from the Census Bureau's cartographic boundary files, under the ISC license: "Copyright 2013-2019 Michael
+  Bostock. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is
+  hereby granted, provided that the above copyright notice and this permission notice appear in all copies."
 - data/pinned/tdr/hrrp.json is an unmodified copy of the data published by Thirty Day Readmissions, this
   project's MIT-licensed readmissions site, built from CMS files; it is re-pinned by hand at each of that
   site's refreshes. data/pinned/tdr/geocodes.csv, from the same site, holds its U.S. Census Bureau Geocoder
   results for hospital street addresses. data/pinned/census-geocodes-2026-10/geocodes.csv holds this project's own
   results from the same public service (U.S. Census Bureau Geocoder) for the remaining hospitals.
 - The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
-- Third-party fonts, which carry their own licenses next to the font files.
+- Third-party fonts, which carry their own licenses next to the font files. The favicon's "&" is a glyph outline from
+  Alfa Slab One, under the SIL Open Font License 1.1 (web/fonts/OFL-alfa-slab-one.txt).
 
 Build tools: the page build uses d3-scale, d3-array, d3-format and d3-geo by Mike Bostock, and topojson-client by
 Mike Bostock (with its own dependency commander, by TJ Holowaychuk, under the MIT license), each of the others under
-the ISC license, at build time only, to draw the charts and maps as SVG. None of their code is redistributed in the
-site's JavaScript. d3-geo includes code from GeographicLib by Charles Karney, under the MIT license.
+the ISC license, to draw the charts and maps as SVG. d3-geo includes code from GeographicLib by Charles Karney, under
+the MIT license. Parts of d3-array, d3-scale and d3-format, and of their dependencies d3-color and d3-interpolate (ISC,
+Mike Bostock), are also bundled into a page script that draws charts in the browser (today the HACRP program page's);
+each such script begins with those packages' license notices (pipeline/site/assets.js licenseNotice). The browser
+checks use Playwright (Apache-2.0) and axe-core (MPL-2.0); neither is part of the site.
 
 Never included in this repository: CPT codes' descriptors or other material licensed by the American Medical
 Association, copyrighted third-party guides, or proprietary measure specifications.

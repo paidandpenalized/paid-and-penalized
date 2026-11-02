@@ -65,6 +65,29 @@ const minifyCss = async (text) => (await transform(text, { loader: 'css', minify
 // An entry's or a sheet's name, which becomes its file's: a plain lowercase name, never the shared bundle's ("site").
 const assetName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name) && name !== 'site';
 
+// The licenses of the packages a bundle carries code from (esbuild's metafile: node_modules inputs with bytes in the
+// output), as one leading /*! */ comment, each package's name, version and LICENSE file verbatim, in name order; '' for
+// a bundle of this repository's code only. The d3 packages' ISC license asks for its notice in every copy, and a
+// bundle is one (NOTICE says which bundles carry them).
+export function licenseNotice(metafile) {
+  const packages = new Set();
+  for (const output of Object.values(metafile.outputs)) {
+    for (const [input, { bytesInOutput }] of Object.entries(output.inputs)) {
+      const m = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(input);
+      if (m && bytesInOutput > 0) packages.add(m[1]);
+    }
+  }
+  if (!packages.size) return '';
+  const parts = [...packages].sort().map((pkg) => {
+    const dirOf = REPO_ROOT + 'node_modules/' + pkg + '/';
+    const { version, license } = JSON.parse(readFileSync(dirOf + 'package.json', 'utf8'));
+    const file = readdirSync(dirOf).find((f) => /^licen[sc]e(\.(md|txt))?$/i.test(f));
+    if (!file) throw new RangeError(`assets: ${pkg} has no LICENSE file to carry`);
+    return `${pkg} ${version} (${license}):\n\n${readFileSync(dirOf + file, 'utf8').trim()}`;
+  });
+  return `/*! This file includes code from these packages, each under its license.\n\n${parts.join('\n\n').replaceAll('*/', '* /')}\n*/\n`;
+}
+
 // The shared stylesheet (stylesheet()) is /assets/site.<hash>.css. siteStyles: the sheets of their own, { name:
 // [stylesheet paths] }, each its files in order as /assets/<name>.<hash>.css (returned as sheets[name]), for a page to
 // link after the shared one (layout.js page()'s `sheets`). A sheet of its own gets no dark copy or print block: those are
@@ -88,9 +111,9 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     if (!assetName(name)) throw new RangeError(`bad JS entry name "${name}"`);
     const result = await esbuild({
       entryPoints: [repoPath(path)],
-      bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent',
+      bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
     });
-    js[name] = writeHashed(dir, name, 'js', result.outputFiles[0].text);
+    js[name] = writeHashed(dir, name, 'js', licenseNotice(result.metafile) + result.outputFiles[0].text);
   }
 
   const cards = Object.fromEntries(Object.keys(SHARE_CARDS).map((id) => [id, writeHashed(dir, `og-${id}`, 'png', readFileSync(REPO_ROOT + cardFile(id)))]));
