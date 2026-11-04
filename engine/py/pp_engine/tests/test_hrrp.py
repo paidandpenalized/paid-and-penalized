@@ -90,10 +90,12 @@ class DollarTest(unittest.TestCase):
 
     def test_mdh_addon_is_the_mdh_share_of_the_excess_times_the_year_share(self):
         self.assertEqual(MDH_SHARE, 0.75)
-        imp = {"cases": 100, "cmi": 1.5, "hsp": 10_000.0}
+        # The hospital-specific side uses cmi_hsp (CMIV), not the federal side's transfer-adjusted cmi.
+        imp = {"cases": 100, "cmi": 1.4, "cmi_hsp": 1.5, "hsp": 10_000.0}
         self.assertAlmostEqual(hrrp.est_mdh_addon(imp, 1_200_000, 0.25), 0.75 * (1_500_000 - 1_200_000) * 0.25, places=6)
         self.assertEqual(hrrp.est_mdh_addon(imp, 1_600_000, 0.25), 0.0)  # federal payment already higher
         self.assertEqual(hrrp.est_mdh_addon({**imp, "hsp": None}, 1_200_000, 0.25), 0.0)
+        self.assertEqual(hrrp.est_mdh_addon({**imp, "cmi_hsp": None}, 1_200_000, 0.25), 0.0)
         self.assertEqual(hrrp.est_mdh_addon(imp, None, 0.25), 0.0)
 
     def test_penalty_dollars(self):
@@ -329,7 +331,8 @@ class ProgramFieldsTest(unittest.TestCase):
                "HF": {"n": 22, "err": 1.0783, "flag": 0, "ratio": 0.05, "med": 1.0077},
                "PN": {"n": None, "err": None, "flag": 0, "ratio": None, "med": 1.0021},
                "CABG": {"n": 0, "err": None, "flag": 0, "ratio": None, "med": 1.0093}}}
-    IMP = {"cases": 1000, "cmi": 1.5, "wi": 1.1, "cola": 1.0, "qual_red": False, "ehr_red": False, "hsp": None}
+    IMP = {"cases": 1000, "cmi": 1.5, "cmi_hsp": 1.52, "wi": 1.1, "cola": 1.0, "qual_red": False, "ehr_red": False,
+           "hsp": None}
     FEDERAL = 1000 * 1.5 * (4000.0 * 1.1 + 2000.0)
 
     def test_fields_are_the_hrrp_part_of_the_record(self):
@@ -350,7 +353,7 @@ class ProgramFieldsTest(unittest.TestCase):
     def test_an_mdh_base_includes_the_add_on_and_the_triple_is_reported(self):
         imp = {**self.IMP, "hsp": 10_000.0}
         fields, addon = hrrp.program_fields(self.S, imp, ["MDH", "RRC"], RATES, 0.25)
-        excess = 10_000.0 * 1.5 * 1000 - self.FEDERAL
+        excess = 10_000.0 * 1.52 * 1000 - self.FEDERAL  # the HSP side's case mix, cmi_hsp
         self.assertGreater(excess, 0)
         want = (self.FEDERAL, 0.75 * excess * 0.25, 0.75 * excess)
         for got, exp in zip(addon, want):

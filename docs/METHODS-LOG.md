@@ -51,6 +51,19 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `history` (a test holds it). Names, locations, beds, teaching, ownership, provider types and Medicare status come
   from the hospital master, which already equals that site's values for every hospital.
 
+## hrrp methods_version 2 (2026-11-05)
+- What changed: the Medicare-dependent hospital (MDH) add-on now prices the hospital-specific side with the impact
+  file's `CMIV44`, the case mix its variable notes call "generally applicable for SCH and MDH providers paid under
+  their Hospital Specific Payment rate". Version 1 used the transfer-adjusted `TACMIV44` on both sides. The federal
+  side keeps `TACMIV44`, and both sides keep the transfer-adjusted case count `CASETA44`, as the family dollar
+  estimate does (`dollars._hsp_payment`).
+- Why: it is the case mix CMS gives for the payment being compared, so the add-on is estimated as CMS describes it.
+- Size: only MDHs' `base` and `pen` move, and the national totals they sum into. The modeled national penalty rises by
+  about $5 thousand of $342 million; no hospital's estimate moves by more than 0.7%. 101 of the 164 MDHs now get an
+  add-on, 5 more than in version 1.
+- Version 1 equals Thirty Day Readmissions' output on every field; a test holds that a build with `TACMIV44` in this one
+  place still does, so the case mix is the only difference.
+
 ## hospital methods_version 1 (2026-10-20)
 - `data/emitted/hospital/fy2027/hospital_master.json` holds one record per CCN listed in Care Compare's Hospital
   General Information, the FY2027 IPPS impact file, or a program file (HACRP FY2026; HRRP FY2027 from Thirty Day

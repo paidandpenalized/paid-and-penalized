@@ -78,11 +78,13 @@ def est_base_payment(imp, rates):
 
 def est_mdh_addon(imp, federal, share):
     """Medicare-dependent hospital add-on to the base (42 CFR 412.152, 412.108): 75% of the amount by which the
-    hospital-specific-rate payment (HSP rate x CMI x cases, the federal estimate's cases and CMI) exceeds the federal
-    payment, times `share`, the fraction of the fiscal year the hospital keeps MDH status. 0 without an HSP rate."""
-    if federal is None or not imp.get("hsp"):
+    hospital-specific-rate payment exceeds the federal payment, times `share`, the fraction of the fiscal year the
+    hospital keeps MDH status. The hospital-specific side is HSP rate x `cmi_hsp` x cases: the case mix the impact file
+    gives for hospitals paid on that rate, and the federal estimate's transfer-adjusted cases (the family dollar
+    estimate prices it the same way, `dollars._hsp_payment`). 0 without an HSP rate or its case mix."""
+    if federal is None or not imp.get("hsp") or imp.get("cmi_hsp") is None:
         return 0.0
-    return MDH_SHARE * max(0.0, imp["hsp"] * imp["cmi"] * imp["cases"] - federal) * share
+    return MDH_SHARE * max(0.0, imp["hsp"] * imp["cmi_hsp"] * imp["cases"] - federal) * share
 
 
 def est_penalty(base, paf):

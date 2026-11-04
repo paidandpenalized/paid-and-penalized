@@ -481,26 +481,26 @@ class OperatingRates(unittest.TestCase):
 
 class EstimateInputs(unittest.TestCase):
     HEADER = ["Provider Number", "FY 2027 Wage Index", "Cost of Living Adjustment", "CASETA44", "TACMIV44",
-              "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag", "HSP Rate"]
+              "CMIV44", "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag", "HSP Rate"]
 
     def read(self, *body):
         return read_estimate_inputs(tsv([self.HEADER, *body]), 2027, 44)
 
     def test_reads_the_payment_fields(self):
-        got = self.read(["990001", "1.0512", "1.05", "2500.5", "1.61", "1", "1", "y", "7200.25"])["990001"]
-        self.assertEqual(got, {"wi": 1.0512, "cola": 1.05, "cases": 2500.5, "cmi": 1.61, "qual_red": True,
+        got = self.read(["990001", "1.0512", "1.05", "2500.5", "1.61", "1.63", "1", "1", "y", "7200.25"])["990001"]
+        self.assertEqual(got, {"wi": 1.0512, "cola": 1.05, "cases": 2500.5, "cmi": 1.61, "cmi_hsp": 1.63, "qual_red": True,
                                "ehr_red": True, "hsp": 7200.25})
 
     def test_blank_cola_is_one_and_missing_values_are_none(self):
-        got = self.read(["990002", "", "", "", "", "0", "", "N", ""])["990002"]
-        self.assertEqual(got, {"wi": None, "cola": 1.0, "cases": None, "cmi": None, "qual_red": False,
+        got = self.read(["990002", "", "", "", "", "", "0", "", "N", ""])["990002"]
+        self.assertEqual(got, {"wi": None, "cola": 1.0, "cases": None, "cmi": None, "cmi_hsp": None, "qual_red": False,
                                "ehr_red": False, "hsp": None})
 
     def test_another_grouper_or_year_is_a_schema_error(self):
         with self.assertRaises(SchemaError):
-            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2026, 44)
+            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 9]), 2026, 44)
         with self.assertRaises(SchemaError):
-            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2027, 43)
+            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 9]), 2027, 43)
 
 
 if __name__ == "__main__":
