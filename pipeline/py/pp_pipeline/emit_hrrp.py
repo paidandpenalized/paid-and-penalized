@@ -14,11 +14,11 @@ import json
 import sys
 from datetime import datetime, timezone
 
-from pp_engine import geo, hrrp, hrrp_history
+from pp_engine import dollars, geo, hrrp, hrrp_history
 from pp_engine.contract import envelope
-from pp_engine.hrrp_read import CONDITIONS, read_supplemental, read_table15
+from pp_engine.hrrp_read import CONDITIONS, read_hgi_stars, read_supplemental, read_table15
 from pp_engine.ipps import read_estimate_inputs, read_operating_rates
-from pp_engine.parse import impact_fy, read_hgi, rows
+from pp_engine.parse import SchemaError, impact_fy, rows
 from pp_engine.xlsx import sheet_rows
 from pp_pipeline import emit_hospital
 from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, read_pinned_bytes,
@@ -80,7 +80,7 @@ def master_fields(m):
 
 
 def read_inputs():
-    """The pinned files, parsed: {supp, pub, t15, impact, rates, hgi, fy}."""
+    """The pinned files, parsed: {supp, pub, t15, impact, rates, stars, fy}."""
     impact_text = emit_hospital.impact_text()
     fy = impact_fy(impact_text)
     workbook = read_zip_member(SUPPLEMENTAL, SUPP_XLSX)
@@ -91,7 +91,7 @@ def read_inputs():
         "t15": read_table15(read_zip_text_cp1252(TABLE15, TABLE15_MEMBER), fy),
         "impact": read_estimate_inputs(impact_text, fy, GROUPER),
         "rates": read_operating_rates(read_zip_text_cp1252(RATES, RATES_MEMBER)),
-        "hgi": read_hgi(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")),
+        "stars": read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")),
     }
 
 
@@ -114,6 +114,11 @@ def stored_values(supp, pub, ties):
     peer_cut, peer_med = [], {}
     for p in range(1, 6):
         grp = [c for c in supp if supp[c]["peer"] == p]
+        if not grp:
+            raise hrrp.HrrpError(f"peer group {p} has no hospitals in the supplemental file")
+        blank = sorted(c for c in grp if supp[c]["dual"] is None)
+        if blank:
+            raise hrrp.HrrpError(f"peer group {p}: blank dual proportion for {blank[:10]}")
         peer_cut.append([hrrp.rnd(f(supp[c]["dual"] for c in grp), 4, half_up=True) for f in (min, max)])
         peer_med[str(p)] = {k: hrrp.stored_constant(grp, lambda c, k=k: supp[c]["c"][k]["med"],
                                                     lambda c, k=k: pub[c]["c"][k]["med"], f"peer {p} {k} median", ties)
@@ -135,7 +140,7 @@ def hospital_records(kept, inputs, master, mdh_share):
                                             inputs["rates"], mdh_share)
         if addon is not None:
             addons[ccn] = addon
-        rec = {"id": ccn, **master_fields(master[ccn]), "star": (inputs["hgi"].get(ccn) or {}).get("star"),
+        rec = {"id": ccn, **master_fields(master[ccn]), "star": inputs["stars"].get(ccn),
                **fields}
         records.append({k: v for k, v in rec.items() if v is not None or k not in OPTIONAL})
     return records, addons
@@ -146,7 +151,15 @@ def history_body(supp, fy):
     the published annual totals joined by fiscal year."""
     years, paf = hrrp_history.load_paf_history(read_pinned_bytes(HISTORY).decode("utf-8"), set(supp), HIST_FIRST_FY,
                                                fy - 1)
+    last = max((y for slot in paf.values() for y, v in zip(years, slot) if v is not None), default=None)
+    if last != fy - 1:
+        raise hrrp.HrrpError(f"the per-hospital history pin ends at FY{last}; FY{HIST_FIRST_FY} to FY{fy - 1} is "
+                             f"needed for FY{fy}: re-pin it ({HISTORY})")
     national = hrrp_history.load_national(read_pinned_bytes(SUMMARY).decode("utf-8"))
+    if [row["fy"] for row in national] != years:
+        raise hrrp.HrrpError(f"the national summary pin covers FY{national[0]['fy'] if national else '-'} to "
+                             f"FY{national[-1]['fy'] if national else '-'}; FY{HIST_FIRST_FY} to FY{fy - 1} is "
+                             f"needed for FY{fy}: re-pin it ({SUMMARY})")
     national.append({**hrrp_history.summarize_fy(fy, [s["paf"] for s in supp.values()], round(hrrp.CAP * 100)),
                      "perf": PERF})
     totals = {t["fy"]: t for t in json.loads(read_pinned_bytes(TOTALS))}
@@ -183,7 +196,7 @@ def _build(built_at):
     gates(supp, pub, inputs["t15"])
     ties = []
     nm, peer_cut, peer_med, kept = stored_values(supp, pub, ties)
-    mdh_share = hrrp.year_share(fy, hrrp.MDH_END)
+    mdh_share = hrrp.year_share(fy, dollars.MDH_END)
     hospitals, addons = hospital_records(kept, inputs, committed_master(), mdh_share)
     shortfall = hrrp.mdh_shortfall(addons)
     history = history_body(supp, fy)
@@ -202,7 +215,7 @@ def _build(built_at):
                        "cmsEst": history["national"][-1]["totalEst"], "cmsSrc": history["national"][-1]["totalSrc"]},
             "replication": {"exact": sum(1 for s in supp.values() if hrrp.replication_status(s) == "exact"),
                             "total": len(supp)},
-            "mdh": {"endDate": hrrp.MDH_END, "maxShortfall": round(max(shortfall.values(), default=0))},
+            "mdh": {"endDate": dollars.MDH_END, "maxShortfall": round(max(shortfall.values(), default=0))},
             "dollarCheck": dollar_check(fy),
             "geocode": {k: sum(1 for h in hospitals if h["geo"] == (None if k == "none" else k))
                         for k in ("address", "zip", "county", "none")},
@@ -248,7 +261,7 @@ def main():
         fresh, report = _build(now)
         path = emitted_path(fresh["fy"])
         out = write_emitted(path, fresh, SCHEMA)  # a build that fails its schema raises and writes nothing
-    except (hrrp.HrrpError, ValueError) as e:
+    except (hrrp.HrrpError, SchemaError, ValueError) as e:
         print(f"hrrp: not written; {e}", file=sys.stderr)
         return 1
     print_report(report, out["hospitals"])

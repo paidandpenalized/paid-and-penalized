@@ -11,6 +11,11 @@ SUMM_HEAD = ("fy,n_hospitals_comparable,n_penalized_comparable,pct_penalized_com
 
 
 class LoadPafHistory(unittest.TestCase):
+    def test_a_paf_that_is_not_finite_raises(self):
+        for bad in ("nan", "inf", "-inf"):
+            with self.assertRaisesRegex(SchemaError, "A1 FY2013.*non-numeric"):
+                h.load_paf_history(HIST + f"2013,A1,{bad},\n", {"A1"}, 2013, 2013)
+
     def test_keeps_wanted_ccns_in_range_and_rounds(self):
         text = HIST + "2013,A1,0.987654321,\n2015,A1,1.0,\n2012,A1,0.5,\n2017,A1,0.5,\n2014,B2,0.9,\n"
         years, out = h.load_paf_history(text, {"A1"}, 2013, 2015)
@@ -77,6 +82,12 @@ class LoadNational(unittest.TestCase):
                                    "meanRedPen": 0.4, "medianRedPen": 0.3, "nMax": 5, "cap": 1,
                                    "perf": ["2008-07-01", "2011-06-30"]})
         self.assertEqual(rows[1]["perf"], [None, None])
+
+    def test_a_national_float_that_is_not_finite_raises(self):
+        for bad in ("nan", "inf"):
+            cells = ["2013", "100", "60", bad, "0.25", "0.4", "0.3", "5", "1", "", ""]
+            with self.assertRaisesRegex(SchemaError, "FY2013.*non-numeric.*pct_penalized_comparable"):
+                h.load_national(SUMM_HEAD + ",".join(cells) + "\n")
 
     def test_a_non_numeric_field_names_fy_and_field(self):
         for field, col in (("n", 1), ("pctPen", 3), ("cap", 8)):

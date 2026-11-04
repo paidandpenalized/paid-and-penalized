@@ -4,7 +4,7 @@ import re
 import unittest
 from unittest import mock
 
-from pp_engine import hrrp
+from pp_engine import dollars, hrrp
 from pp_engine.dollars import MDH_SHARE
 from pp_engine.hrrp_read import CONDITIONS
 
@@ -109,8 +109,8 @@ class MdhShareTest(unittest.TestCase):
         self.assertEqual(hrrp.mdh_shortfall({}), {})
 
     def test_year_share_clamps(self):
-        self.assertEqual(hrrp.MDH_END, "2026-12-31")
-        self.assertEqual(hrrp.year_share(2027, hrrp.MDH_END), 92 / 365)  # Oct 1 - Dec 31, 2026
+        self.assertEqual(dollars.MDH_END, "2026-12-31")
+        self.assertEqual(hrrp.year_share(2027, dollars.MDH_END), 92 / 365)  # Oct 1 - Dec 31, 2026
         self.assertEqual(hrrp.year_share(2028, "2028-09-30"), 1)  # leap-year FY: 366 of 366
         self.assertEqual(hrrp.year_share(2027, "2026-09-30"), 0)  # the day before the fiscal year starts
         self.assertEqual(hrrp.year_share(2027, "2026-10-01"), 1 / 365)  # its first day

@@ -14,7 +14,7 @@ import re
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from pp_engine.dollars import MDH_SHARE
+from pp_engine.dollars import MDH_END, MDH_SHARE
 from pp_engine.hrrp_read import CONDITIONS
 
 
@@ -24,11 +24,6 @@ class HrrpError(ValueError):
 
 MIN_DISCHARGES = 25
 CAP = 0.03
-
-# Medicare-dependent hospital status ends on this date under current law (extended through Dec 31, 2026 by section
-# 6202 of the Consolidated Appropriations Act, 2026). The MDH add-on counts only for the fiscal-year days up to it;
-# move it if Congress extends the program again.
-MDH_END = "2026-12-31"
 
 # ERRs, DRG ratios, peer medians, and the neutrality modifier are written with at least this many decimals: the fewest
 # that still reproduce every FY2027 PAF from the JSON (5 leaves 7 hospitals 0.0001 off). The build fails if it stops

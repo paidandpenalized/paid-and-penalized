@@ -1,7 +1,7 @@
 """The HRRP readers, on synthetic files (synthetic CCNs)."""
 import unittest
 
-from pp_engine.hrrp_read import CONDITIONS, SUPP_LABELS, read_supplemental, read_table15
+from pp_engine.hrrp_read import CONDITIONS, SUPP_LABELS, read_hgi_stars, read_supplemental, read_table15
 from pp_engine.parse import SchemaError, rows
 
 
@@ -75,6 +75,22 @@ class Table15(unittest.TestCase):
     def test_table15_wrong_fy_raises(self):
         with self.assertRaises(SchemaError):
             read_table15(self.TEXT, 2026)
+
+
+class HgiStars(unittest.TestCase):
+    HEAD = '"Facility ID","Facility Name","Hospital overall rating"\n'
+
+    def test_star_is_an_int_when_digits_else_none(self):
+        text = "\ufeff" + self.HEAD + ('990001,A,Not Available\n990002,B,\n990003,C,5\n'
+                                      'Footnote row,,\n')
+        self.assertEqual(read_hgi_stars(text), {"990001": None, "990002": None, "990003": 5})
+
+    def test_only_the_id_and_rating_columns_are_needed(self):
+        self.assertEqual(read_hgi_stars(self.HEAD + "990001,A,3\n"), {"990001": 3})
+
+    def test_a_missing_rating_column_raises(self):
+        with self.assertRaisesRegex(SchemaError, "Hospital overall rating"):
+            read_hgi_stars('"Facility ID","Facility Name"\n990001,A\n')
 
 
 if __name__ == "__main__":

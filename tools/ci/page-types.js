@@ -44,7 +44,8 @@ export const placeKind = (path) => KINDS.find((kind) => {
 
 // The program sites with pages of their own (program, hospital, place, Methods and data dictionary), each with the
 // predicates that sort a path into those types. A program site joins by adding its entry when its pages exist; its
-// budgets join in size-budget.js (PROGRAM_BUDGETS), and a test holds the two lists to the same ids.
+// budgets join in size-budget.js (PROGRAM_BUDGETS). A test checks that every id here has budgets; a program's budgets
+// may exist before its pages do, as Readmissions' do.
 export const PROGRAM_SITES = [
   {
     id: 'hacrp',

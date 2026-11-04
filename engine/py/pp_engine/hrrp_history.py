@@ -3,10 +3,19 @@
 Ported from Thirty Day Readmissions (pipeline/hrrp/history.py at 33d1959). The readers take the file's text (the
 caller reads the bytes) and raise SchemaError naming a missing column.
 """
+import math
 import statistics
 
 from pp_engine import parse
 from pp_engine.parse import SchemaError
+
+
+def _finite(text):
+    """float(text), refusing nan and inf (ValueError, as for a non-numeric)."""
+    value = float(text)
+    if not math.isfinite(value):
+        raise ValueError(text)
+    return value
 
 
 def load_paf_history(text, keep_ids, first_fy, last_fy):
@@ -27,7 +36,7 @@ def load_paf_history(text, keep_ids, first_fy, last_fy):
         if not first_fy <= fy <= last_fy:
             continue
         try:
-            paf = round(float(r["paf"]), 4)
+            paf = round(_finite(r["paf"]), 4)
         except ValueError:
             raise SchemaError("HRRP history: %s FY%d has a blank or non-numeric paf %r" % (ccn, fy, r["paf"])) from None
         slot = out.setdefault(ccn, [None] * len(years))
@@ -63,8 +72,8 @@ _NATIONAL_COLUMNS = (
 
 _NATIONAL_FIELDS = (  # output key, column, reader
     ("n", "n_hospitals_comparable", int), ("nPen", "n_penalized_comparable", int),
-    ("pctPen", "pct_penalized_comparable", float), ("meanRed", "mean_reduction_pct_all_comparable", float),
-    ("meanRedPen", "mean_reduction_pct_penalized", float), ("medianRedPen", "median_reduction_pct_penalized", float),
+    ("pctPen", "pct_penalized_comparable", _finite), ("meanRed", "mean_reduction_pct_all_comparable", _finite),
+    ("meanRedPen", "mean_reduction_pct_penalized", _finite), ("medianRedPen", "median_reduction_pct_penalized", _finite),
     ("nMax", "n_at_max", int), ("cap", "max_cap_pct", int))
 
 

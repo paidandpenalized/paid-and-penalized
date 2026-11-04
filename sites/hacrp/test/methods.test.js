@@ -233,10 +233,16 @@ test('the changes and the sources: every changelog entry with its date and items
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
   // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
   // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
-  // A pin another site's emitted file names (its newest year's) is that site's to list, not this page's.
+  // Pins exclusive to another site: its emitted file names them and neither the hospital master, the dollars file nor
+  // HACRP's own files do. That site's Methods page lists its own pins (checked by that site's tests when its pages
+  // exist); every pin the HACRP pages read stays in pinsUsed.
+  const newestFile = (dir, name) => readJson(`${REPO_ROOT}data/emitted/${dir}/fy${newestYear(`data/emitted/${dir}`)}/${name}.json`);
+  const shared = new Set([['hospital', 'hospital_master'], ['dollars', 'dollars'], ['hacrp', 'hacrp'], ['hacrp-history', 'hacrp_history']]
+    .flatMap(([dir, name]) => newestFile(dir, name).sources));
   const otherSites = readdirSync(`${REPO_ROOT}sites`)
     .filter((site) => site !== 'hacrp' && existsSync(`${REPO_ROOT}data/emitted/${site}`))
-    .flatMap((site) => readJson(`${REPO_ROOT}data/emitted/${site}/fy${newestYear(`data/emitted/${site}`)}/${site}.json`).sources);
+    .flatMap((site) => newestFile(site, site).sources)
+    .filter((id) => !shared.has(id));
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   const listed = new Set([...used, ...otherSites]);
   assert.deepEqual(manifest.filter((e) => !listed.has(e.id)).map((e) => e.id), []);

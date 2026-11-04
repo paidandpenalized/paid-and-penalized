@@ -39,3 +39,12 @@ def read_table15(text, fy):
     columns = {"ccn": "Hospital CMS Certification Number (CCN)", "paf": f"FY {fy} Payment Adjustment Factor"}
     label = f"HRRP Table 15 FY {fy}"
     return index_by_ccn(table(rows(text, "\t"), columns["ccn"], columns, label), lambda r: num(r["paf"]), label)
+
+
+def read_hgi_stars(text):
+    """Care Compare Hospital General Information CSV -> {ccn: overall star rating as an int, None when not a number
+    ("Not Available")}. Reads only `Facility ID` and `Hospital overall rating`, so the hospital master's read of the
+    same file does not depend on the rating column."""
+    columns = {"ccn": "Facility ID", "star": "Hospital overall rating"}
+    return index_by_ccn(table(rows(text, ","), "Facility ID", columns, "HGI"),
+                        lambda r: int(r["star"]) if r["star"].isdigit() else None, "HGI")

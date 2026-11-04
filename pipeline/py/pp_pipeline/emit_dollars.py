@@ -28,11 +28,10 @@ SCHEMA_VERSION, METHODS_VERSION = 3, 4
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
 SCHEMA = "dollars.schema.json"
 
-# The last day of the extension of Medicare-dependent hospital status and of the expanded low-volume-hospital tiers
-# (Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's FY2025-extension columns,
-# which the estimate reads, model both in force for the whole year.
+# The last day of the extension of the expanded low-volume-hospital tiers, and of Medicare-dependent hospital status
+# (dollars.MDH_END; Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's
+# FY2025-extension columns, which the estimate reads, model both in force for the whole year.
 # Both fall after FY2026 ends (September 30, 2026), so the year is whole under either.
-MDH_END = "2026-12-31"
 LOW_VOLUME_END = "2026-12-31"
 NTAP = "excluded"  # new-technology add-on payments are in no figure (dollars.py, the ASSUMPTION at the federal payment)
 
@@ -124,7 +123,7 @@ def build_from_pins(built_at):
     checks = dollars.checks(national, hacrp_yes=site_yes_count(fy), rates=table) + backtest_dollars.checks(ranges)
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
-        "assumptions": {"ratesFy": FY, "volumeFy": ipps.rates_year(table).volume_fy, "mdhEnd": MDH_END,
+        "assumptions": {"ratesFy": FY, "volumeFy": ipps.rates_year(table).volume_fy, "mdhEnd": dollars.MDH_END,
                         "lowVolumeEnd": LOW_VOLUME_END, "ntap": NTAP},
         "national": totals_json(national),
         "headline": totals_json(dollars.national(headline)),

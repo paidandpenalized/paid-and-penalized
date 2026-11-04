@@ -3,11 +3,13 @@ Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every
 reference until the FY2028 refresh."""
 import copy
 import functools
+import io
 import json
 import unittest
 from unittest import mock
 
 from pp_engine import hrrp
+from pp_engine.parse import SchemaError
 from pp_pipeline import emit_hrrp
 from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, require_current
 
@@ -78,7 +80,7 @@ class Refusals(unittest.TestCase):
 
     def test_a_hospital_the_master_lacks_is_refused(self):
         # The refusal comes before any record is read, so the record and the inputs can be minimal.
-        inputs = {"impact": {}, "rates": fresh()["meta"]["rates"], "hgi": {}}
+        inputs = {"impact": {}, "rates": fresh()["meta"]["rates"], "stars": {}}
         with self.assertRaisesRegex(hrrp.HrrpError, "999999"):
             emit_hrrp.hospital_records({"999999": {}}, inputs, {}, 1.0)
 
@@ -88,6 +90,57 @@ class Refusals(unittest.TestCase):
         with mock.patch.object(emit_hrrp, "read_pinned_bytes", return_value=json.dumps(bad).encode()):
             with self.assertRaisesRegex(hrrp.HrrpError, r"dollar_check\.json: n should be"):
                 emit_hrrp.dollar_check(2027)
+
+
+class NamedFailures(unittest.TestCase):
+    def test_a_reader_failure_prints_not_written_and_returns_1(self):
+        # SchemaError subclasses Exception, not ValueError: main() still reports it and writes nothing.
+        with mock.patch.object(emit_hrrp, "_build", side_effect=SchemaError("HRRP history: invented")), \
+                mock.patch.object(emit_hrrp, "write_emitted") as write, \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            self.assertEqual(emit_hrrp.main(), 1)
+        write.assert_not_called()
+        self.assertIn("hrrp: not written; HRRP history: invented", err.getvalue())
+
+    def test_a_history_pin_that_stops_short_of_the_prior_year_is_refused(self):
+        supp = {c: {"paf": 1.0} for c in fresh()["history"]["paf"]}
+        fy = fresh()["meta"]["fy"]
+        emit_hrrp.history_body(supp, fy)  # today's pins cover FY2013 to fy - 1
+        with self.assertRaisesRegex(hrrp.HrrpError, f"ends at FY{fy - 1}.*FY{fy} is needed"):
+            emit_hrrp.history_body(supp, fy + 1)
+
+    def test_a_national_summary_ending_early_is_refused(self):
+        supp = {c: {"paf": 1.0} for c in fresh()["history"]["paf"]}
+        fy = fresh()["meta"]["fy"]
+        text = read_pinned_bytes(emit_hrrp.SUMMARY).decode("utf-8")
+        short = "\n".join(line for line in text.splitlines() if not line.startswith(f"{fy - 1},")) + "\n"
+        real = emit_hrrp.read_pinned_bytes
+        with mock.patch.object(emit_hrrp, "read_pinned_bytes",
+                               lambda i: short.encode() if i == emit_hrrp.SUMMARY else real(i)):
+            with self.assertRaisesRegex(hrrp.HrrpError, "national summary"):
+                emit_hrrp.history_body(supp, fy)
+
+    def _supp(self):
+        supp, pub = {}, {}
+        for i, peer in enumerate(range(1, 6)):
+            ccn = f"99000{i}"
+            rec = {"paf": 1.0, "dual": 0.1 * (i + 1), "peer": peer, "nm": 1.0,
+                   "c": {k: {"n": 30, "err": 1.0, "med": 1.0, "flag": 0, "ratio": 1.0} for k in emit_hrrp.CONDITIONS}}
+            supp[ccn], pub[ccn] = rec, copy.deepcopy(rec)
+        return supp, pub
+
+    def test_an_empty_peer_group_is_named(self):
+        supp, pub = self._supp()
+        for c in [c for c, s in supp.items() if s["peer"] == 3]:
+            del supp[c], pub[c]
+        with self.assertRaisesRegex(hrrp.HrrpError, "peer group 3"):
+            emit_hrrp.stored_values(supp, pub, [])
+
+    def test_a_blank_dual_proportion_names_its_peer_group(self):
+        supp, pub = self._supp()
+        next(s for s in supp.values() if s["peer"] == 2)["dual"] = None
+        with self.assertRaisesRegex(hrrp.HrrpError, "peer group 2"):
+            emit_hrrp.stored_values(supp, pub, [])
 
 
 if __name__ == "__main__":
