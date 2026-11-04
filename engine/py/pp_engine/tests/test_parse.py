@@ -55,7 +55,13 @@ class Hgi(unittest.TestCase):
         self.assertEqual(list(hgi), ["00001F"])
         self.assertEqual(hgi["00001F"], {"name": "INVENTED GENERAL HOSPITAL", "street": "1 MAIN ST", "city": "SPRINGFIELD",
                                          "state": "ZZ", "zip": "01234", "county": "X",
-                                         "type": "Acute Care Hospitals", "ownership": "Government - State"})
+                                         "type": "Acute Care Hospitals", "ownership": "Government - State",
+                                         "star": 4})
+
+    def test_star_is_an_int_when_digits_else_none(self):
+        row = '%s,A,B,C,ZZ,1,X,T,O,%s\n'
+        hgi = read_hgi(HGI_HEADER + row % ("990001", "Not Available") + row % ("990002", "") + row % ("990003", "5"))
+        self.assertEqual([hgi[c]["star"] for c in ("990001", "990002", "990003")], [None, None, 5])
 
     def test_malformed_and_duplicate_ccns_raise(self):
         with self.assertRaisesRegex(SchemaError, "malformed CCN '10001'"):

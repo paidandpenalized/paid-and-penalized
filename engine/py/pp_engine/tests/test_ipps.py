@@ -6,7 +6,8 @@ import re
 import unittest
 
 from pp_engine.ipps import (IMPACT_YEARS, MDH_TYPES, SCH_TYPES, rate_key, rates_year, read_hrrp_factors,
-                            read_payment_inputs, read_rates, read_vbp_factors)
+                            read_estimate_inputs, read_operating_rates, read_payment_inputs, read_rates,
+                            read_vbp_factors)
 from pp_engine.parse import SchemaError
 
 PAYMENT_COLUMNS = IMPACT_YEARS[2026].columns
@@ -469,3 +470,38 @@ class Factors(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OperatingRates(unittest.TestCase):
+    def test_equals_the_operating_part_of_read_rates(self):
+        self.assertEqual(read_operating_rates(rates_text()), read_rates(rates_text())["operating"])
+
+    def test_needs_no_registered_year_and_keeps_the_checks(self):
+        text = rates_text()
+        self.assertEqual(sorted(read_operating_rates(text)), ["1A", "1B"])
+        with self.assertRaisesRegex(SchemaError, "Table 1B not found"):
+            read_operating_rates(text.replace("TABLE 1B", "TABLE 9Z"))
+
+
+class EstimateInputs(unittest.TestCase):
+    HEADER = ["Provider Number", "FY 2027 Wage Index", "Cost of Living Adjustment", "CASETA44", "TACMIV44",
+              "Proxy Quality Reduction", "Proxy EHR Reduction", "MDH Flag", "HSP Rate"]
+
+    def read(self, *body):
+        return read_estimate_inputs(tsv([self.HEADER, *body]), 2027, 44)
+
+    def test_reads_the_payment_fields(self):
+        got = self.read(["990001", "1.0512", "1.05", "2500.5", "1.61", "1", "1", "y", "7200.25"])["990001"]
+        self.assertEqual(got, {"wi": 1.0512, "cola": 1.05, "cases": 2500.5, "cmi": 1.61, "qual_red": True,
+                               "ehr_red": True, "mdh": True, "hsp": 7200.25})
+
+    def test_blank_cola_is_one_and_missing_values_are_none(self):
+        got = self.read(["990002", "", "", "", "", "0", "", "N", ""])["990002"]
+        self.assertEqual(got, {"wi": None, "cola": 1.0, "cases": None, "cmi": None, "qual_red": False,
+                               "ehr_red": False, "mdh": False, "hsp": None})
+
+    def test_another_grouper_or_year_is_a_schema_error(self):
+        with self.assertRaises(SchemaError):
+            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2026, 44)
+        with self.assertRaises(SchemaError):
+            read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2027, 43)

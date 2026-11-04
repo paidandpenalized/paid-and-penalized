@@ -115,13 +115,15 @@ def index_by_ccn(records, build, label):
 
 def read_hgi(text):
     """Care Compare Hospital General Information CSV -> {ccn: {name, street, city, state, zip, county, type,
-    ownership}}."""
+    ownership, star}}. `star` is the overall rating as an int, None when not a number ("Not Available")."""
     columns = {"ccn": "Facility ID", "name": "Facility Name", "street": "Address", "city": "City/Town", "state": "State",
-               "zip": "ZIP Code", "county": "County/Parish", "type": "Hospital Type", "ownership": "Hospital Ownership"}
+               "zip": "ZIP Code", "county": "County/Parish", "type": "Hospital Type", "ownership": "Hospital Ownership",
+               "star": "Hospital overall rating"}
 
     def build(r):
         return {"name": r["name"], "street": squash(r["street"]), "city": r["city"], "state": r["state"],
-                "zip": zip5(r["zip"]), "county": r["county"], "type": r["type"], "ownership": r["ownership"]}
+                "zip": zip5(r["zip"]), "county": r["county"], "type": r["type"], "ownership": r["ownership"],
+                "star": int(r["star"]) if r["star"].isdigit() else None}
     return index_by_ccn(table(rows(text, ","), "Facility ID", columns, "HGI"), build, "HGI")
 
 

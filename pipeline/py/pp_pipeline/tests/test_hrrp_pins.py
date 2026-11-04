@@ -3,7 +3,7 @@ import io
 import unittest
 import zipfile
 
-from pp_engine import parse, xlsx
+from pp_engine import ipps, parse, xlsx
 from pp_engine.parse import SchemaError
 from pp_pipeline import files
 
@@ -42,6 +42,30 @@ class HrrpPins(unittest.TestCase):
         self.assertEqual(set(self.t15), set(self.book))
         for ccn, paf in self.t15.items():
             self.assertAlmostEqual(paf, self.book[ccn]["paf"], delta=0.00005)
+
+
+class RatesAndInputs(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import json
+        cls.golden = json.loads(files.read_pinned_bytes("tdr-hrrp-fy2027"))
+
+    def test_operating_rates_equal_the_golden(self):
+        got = ipps.read_operating_rates(files.read_zip_text_cp1252("ipps-rates-fy2027", "CMS-1849-CN Tables 1A - 1E.txt"))
+        norm = {t: {k: list(v) for k, v in d.items()} for t, d in got.items()}
+        self.assertEqual(norm, self.golden["meta"]["rates"])
+
+    def test_fy2026_operating_rates_are_what_read_rates_gave(self):
+        from pp_pipeline import ipps_pins
+        text = ipps_pins.pinned_text(2026, "rates")
+        self.assertEqual(ipps.read_operating_rates(text), ipps.read_rates(text, 2026)["operating"])
+
+    def test_estimate_inputs_cover_every_hospital_tdr_priced(self):
+        got = ipps.read_estimate_inputs(files.read_zip_text_cp1252(
+            "ipps-impact-fy2027", "FY 2027 IPPS Impact File - Correction Notice.txt"), 2027, 44)
+        priced = {h["id"] for h in self.golden["hospitals"] if h.get("base") is not None}
+        self.assertTrue(priced)
+        self.assertLessEqual(priced, set(got))
 
 
 class ZipGuard(unittest.TestCase):
