@@ -1,8 +1,8 @@
 """Python entry point: `python3 -I pipeline/py/run.py <command>`.
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
-here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, then the dollar
-estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
+here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
+then the dollar estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
 pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
 pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and two that call the
 network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
@@ -29,8 +29,8 @@ def emit():
     """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
     (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
     emitter first.)"""
-    from pp_pipeline import emit_dollars, emit_hospital
-    EMITTERS = (emit_hospital, emit_dollars)  # each has a main() that returns its exit code
+    from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp
+    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars)  # Readmissions reads the master's committed file  # each has a main() that returns its exit code
     return max([emitter.main() for emitter in EMITTERS])
 
 

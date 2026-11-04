@@ -1,0 +1,658 @@
+{
+  "schema": "hrrp.schema.json",
+  "def": null,
+  "description": "Each case applies its patch to a copy of base (ops as in hacrp.cases.json). Synthetic CCN, invented name and values; meta is the FY2027 file's but for its sources.",
+  "base": {
+    "schema_version": 1,
+    "methods_version": 1,
+    "source_manifest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sources": [
+      "synthetic"
+    ],
+    "built_at": "2026-11-05T00:00:00Z",
+    "fy": 2027,
+    "meta": {
+      "fy": 2027,
+      "fileDate": "2026-10-07",
+      "perf": [
+        "2023-07-01",
+        "2025-06-30"
+      ],
+      "nm": 0.962847,
+      "peerCutoffs": [
+        [
+          0,
+          0.137
+        ],
+        [
+          0.137,
+          0.1824
+        ],
+        [
+          0.1824,
+          0.2332
+        ],
+        [
+          0.2333,
+          0.3144
+        ],
+        [
+          0.3146,
+          1
+        ]
+      ],
+      "peerMedians": {
+        "1": {
+          "AMI": 0.995462,
+          "COPD": 0.995446,
+          "HF": 0.992834,
+          "PN": 0.994544,
+          "CABG": 0.983725,
+          "THA_TKA": 0.994171
+        },
+        "2": {
+          "AMI": 0.99684,
+          "COPD": 0.994356,
+          "HF": 0.994028,
+          "PN": 0.990896,
+          "CABG": 0.996091,
+          "THA_TKA": 0.998775
+        },
+        "3": {
+          "AMI": 0.996478,
+          "COPD": 0.99624,
+          "HF": 0.995025,
+          "PN": 0.995549,
+          "CABG": 0.989532,
+          "THA_TKA": 0.993646
+        },
+        "4": {
+          "AMI": 0.99632,
+          "COPD": 0.997597,
+          "HF": 1.002671,
+          "PN": 0.994094,
+          "CABG": 1.005565,
+          "THA_TKA": 0.99143
+        },
+        "5": {
+          "AMI": 1.004204,
+          "COPD": 1.002777,
+          "HF": 1.014286,
+          "PN": 1.009278,
+          "CABG": 1.003727,
+          "THA_TKA": 0.993055
+        }
+      },
+      "rates": {
+        "1A": {
+          "qe": [
+            4519.68,
+            2328.32
+          ],
+          "qn": [
+            4413.65,
+            2273.7
+          ],
+          "ne": [
+            4484.34,
+            2310.11
+          ],
+          "nn": [
+            4378.3,
+            2255.49
+          ]
+        },
+        "1B": {
+          "qe": [
+            4245.76,
+            2602.24
+          ],
+          "qn": [
+            4146.16,
+            2541.19
+          ],
+          "ne": [
+            4212.56,
+            2581.89
+          ],
+          "nn": [
+            4112.95,
+            2520.84
+          ]
+        }
+      },
+      "totals": {
+        "modelBase": 90960133936,
+        "modelPen": 341617701,
+        "cmsEst": 361347626,
+        "cmsSrc": {
+          "kind": "CMS",
+          "label": "CMS model of FY2027 penalties from preliminary Jan 2022–Dec 2023 data, current measure set (without sepsis), FY2027 IPPS final rule Table V.I.-05 (91 FR 49892)",
+          "url": "https://www.federalregister.gov/documents/2026/08/04/2026-15833"
+        }
+      },
+      "replication": {
+        "exact": 2912,
+        "total": 2912
+      },
+      "mdh": {
+        "endDate": "2026-12-31",
+        "maxShortfall": 33
+      },
+      "dollarCheck": {
+        "asOf": "2026-10-11",
+        "source": "Medicare cost reports (HCRIS) for cost-reporting periods beginning in FY2024, worksheet E part A lines 101-102",
+        "costFy": 2024,
+        "n": 2845,
+        "rateDrift": 1.066,
+        "within10": 73.4,
+        "within15": 85,
+        "within15Small": 73.7,
+        "within15Large": 89.6,
+        "note": "Share of hospitals whose modeled base payments fall within the stated percentage of their own cost report after removing the median 6.6% difference expected from payment-rate growth between FY2024 cost reports and FY2027 rates. Small = under 100 certified beds."
+      },
+      "geocode": {
+        "address": 2526,
+        "zip": 371,
+        "county": 15,
+        "none": 0
+      },
+      "states": {
+        "AK": "Alaska",
+        "AL": "Alabama",
+        "AR": "Arkansas",
+        "AZ": "Arizona",
+        "CA": "California",
+        "CO": "Colorado",
+        "CT": "Connecticut",
+        "DC": "District of Columbia",
+        "DE": "Delaware",
+        "FL": "Florida",
+        "GA": "Georgia",
+        "HI": "Hawaii",
+        "IA": "Iowa",
+        "ID": "Idaho",
+        "IL": "Illinois",
+        "IN": "Indiana",
+        "KS": "Kansas",
+        "KY": "Kentucky",
+        "LA": "Louisiana",
+        "MA": "Massachusetts",
+        "ME": "Maine",
+        "MI": "Michigan",
+        "MN": "Minnesota",
+        "MO": "Missouri",
+        "MS": "Mississippi",
+        "MT": "Montana",
+        "NC": "North Carolina",
+        "ND": "North Dakota",
+        "NE": "Nebraska",
+        "NH": "New Hampshire",
+        "NJ": "New Jersey",
+        "NM": "New Mexico",
+        "NV": "Nevada",
+        "NY": "New York",
+        "OH": "Ohio",
+        "OK": "Oklahoma",
+        "OR": "Oregon",
+        "PA": "Pennsylvania",
+        "RI": "Rhode Island",
+        "SC": "South Carolina",
+        "SD": "South Dakota",
+        "TN": "Tennessee",
+        "TX": "Texas",
+        "UT": "Utah",
+        "VA": "Virginia",
+        "VT": "Vermont",
+        "WA": "Washington",
+        "WI": "Wisconsin",
+        "WV": "West Virginia",
+        "WY": "Wyoming"
+      },
+      "divisions": [
+        {
+          "name": "New England",
+          "region": "Northeast",
+          "states": [
+            "CT",
+            "ME",
+            "MA",
+            "NH",
+            "RI",
+            "VT"
+          ]
+        },
+        {
+          "name": "Middle Atlantic",
+          "region": "Northeast",
+          "states": [
+            "NJ",
+            "NY",
+            "PA"
+          ]
+        },
+        {
+          "name": "East North Central",
+          "region": "Midwest",
+          "states": [
+            "IL",
+            "IN",
+            "MI",
+            "OH",
+            "WI"
+          ]
+        },
+        {
+          "name": "West North Central",
+          "region": "Midwest",
+          "states": [
+            "IA",
+            "KS",
+            "MN",
+            "MO",
+            "NE",
+            "ND",
+            "SD"
+          ]
+        },
+        {
+          "name": "South Atlantic",
+          "region": "South",
+          "states": [
+            "DE",
+            "DC",
+            "FL",
+            "GA",
+            "NC",
+            "SC",
+            "VA",
+            "WV"
+          ]
+        },
+        {
+          "name": "East South Central",
+          "region": "South",
+          "states": [
+            "AL",
+            "KY",
+            "MS",
+            "TN"
+          ]
+        },
+        {
+          "name": "West South Central",
+          "region": "South",
+          "states": [
+            "AR",
+            "LA",
+            "OK",
+            "TX"
+          ]
+        },
+        {
+          "name": "Mountain",
+          "region": "West",
+          "states": [
+            "AZ",
+            "CO",
+            "ID",
+            "MT",
+            "NV",
+            "NM",
+            "UT",
+            "WY"
+          ]
+        },
+        {
+          "name": "Pacific",
+          "region": "West",
+          "states": [
+            "AK",
+            "CA",
+            "HI",
+            "OR",
+            "WA"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "synthetic",
+          "name": "An invented source",
+          "url": "https://example.org/"
+        }
+      ]
+    },
+    "conditions": [
+      {
+        "key": "AMI",
+        "short": "Heart attack",
+        "label": "Acute myocardial infarction (AMI)"
+      },
+      {
+        "key": "COPD",
+        "short": "COPD",
+        "label": "Chronic obstructive pulmonary disease (COPD)"
+      },
+      {
+        "key": "HF",
+        "short": "Heart failure",
+        "label": "Heart failure (HF)"
+      },
+      {
+        "key": "PN",
+        "short": "Pneumonia",
+        "label": "Pneumonia (PN)"
+      },
+      {
+        "key": "CABG",
+        "short": "Bypass surgery",
+        "label": "Coronary artery bypass graft surgery (CABG)"
+      },
+      {
+        "key": "THA_TKA",
+        "short": "Hip/knee replacement",
+        "label": "Elective total hip or knee arthroplasty (THA/TKA)"
+      }
+    ],
+    "hospitals": [
+      {
+        "id": "990001",
+        "name": "Invented General Hospital",
+        "city": "Exampleton",
+        "st": "AL",
+        "county": "Example County",
+        "zip": "99999",
+        "lat": 40.0,
+        "lon": -100.0,
+        "geo": "address",
+        "cbsa": "99999",
+        "cbsaName": "Exampleton, ZZ",
+        "urban": true,
+        "region": "South",
+        "division": "East South Central",
+        "beds": 120,
+        "teach": "minor",
+        "own": "Government",
+        "ownDetail": "Voluntary non-profit - Private",
+        "types": [
+          "RRC"
+        ],
+        "star": 3,
+        "paf": 0.9951,
+        "red": 0.49,
+        "dual": 0.2001,
+        "peer": 3,
+        "base": 50000000,
+        "pen": 245000,
+        "c": {
+          "AMI": {
+            "n": 100,
+            "err": 1.01,
+            "flag": 0,
+            "ratio": 0.02
+          },
+          "COPD": {
+            "n": 101,
+            "err": 1.011,
+            "flag": 1,
+            "ratio": 0.03
+          },
+          "HF": {
+            "n": 102,
+            "err": 1.012,
+            "flag": 0,
+            "ratio": 0.04
+          },
+          "PN": {
+            "n": 103,
+            "err": 1.013,
+            "flag": 1,
+            "ratio": 0.05
+          },
+          "CABG": {
+            "n": 104,
+            "err": 1.014,
+            "flag": 0,
+            "ratio": 0.06
+          },
+          "THA_TKA": {
+            "n": 105,
+            "err": 1.015,
+            "flag": 1,
+            "ratio": 0.07
+          }
+        }
+      }
+    ],
+    "history": {
+      "years": [
+        2025,
+        2026
+      ],
+      "paf": {
+        "990001": [
+          0.998,
+          null
+        ]
+      },
+      "national": [
+        {
+          "fy": 2026,
+          "n": 2945,
+          "nPen": 2304,
+          "pctPen": 78.23,
+          "meanRed": 0.344,
+          "meanRedPen": 0.4397,
+          "medianRedPen": 0.3,
+          "nMax": 15,
+          "cap": 3,
+          "perf": [
+            "2021-07-01",
+            "2024-06-30"
+          ],
+          "totalEst": null,
+          "totalSrc": null
+        },
+        {
+          "fy": 2027,
+          "n": 2912,
+          "nPen": 2334,
+          "pctPen": 80.15,
+          "meanRed": 0.3543,
+          "meanRedPen": 0.442,
+          "medianRedPen": 0.3,
+          "nMax": 10,
+          "cap": 3,
+          "perf": [
+            "2023-07-01",
+            "2025-06-30"
+          ],
+          "totalEst": 361347626,
+          "totalSrc": {
+            "kind": "CMS",
+            "label": "CMS model of FY2027 penalties from preliminary Jan 2022–Dec 2023 data, current measure set (without sepsis), FY2027 IPPS final rule Table V.I.-05 (91 FR 49892)",
+            "url": "https://www.federalregister.gov/documents/2026/08/04/2026-15833"
+          }
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "the base document",
+      "valid": true,
+      "patch": []
+    },
+    {
+      "name": "an alias and an inactive hospital",
+      "valid": true,
+      "patch": [
+        {
+          "path": "/hospitals/0/alias",
+          "op": "create",
+          "value": "Invented Medical Center"
+        },
+        {
+          "path": "/hospitals/0/inactive",
+          "op": "create",
+          "value": {
+            "date": "2025-01-31",
+            "reason": "merger or closure"
+          }
+        }
+      ]
+    },
+    {
+      "name": "cost-report beds",
+      "valid": true,
+      "patch": [
+        {
+          "path": "/hospitals/0/bedsSrc",
+          "op": "create",
+          "value": "cr"
+        }
+      ]
+    },
+    {
+      "name": "no dollar estimate",
+      "valid": true,
+      "patch": [
+        {
+          "path": "/hospitals/0/base",
+          "op": "set",
+          "value": null
+        },
+        {
+          "path": "/hospitals/0/pen",
+          "op": "set",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "a numeric CCN",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/id",
+          "op": "set",
+          "value": 990001
+        }
+      ]
+    },
+    {
+      "name": "a factor below the 3% cap",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/paf",
+          "op": "set",
+          "value": 0.9699
+        }
+      ]
+    },
+    {
+      "name": "a factor above 1",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/paf",
+          "op": "set",
+          "value": 1.0001
+        }
+      ]
+    },
+    {
+      "name": "a penalty flag of 2",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/c/HF/flag",
+          "op": "set",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "an unknown condition",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/c/SEPSIS",
+          "op": "create",
+          "value": {
+            "n": 30,
+            "err": 1.0,
+            "flag": 0,
+            "ratio": 0.01
+          }
+        }
+      ]
+    },
+    {
+      "name": "peer group 6",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/peer",
+          "op": "set",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "an extra hospital key",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/hacScore",
+          "op": "create",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "certified beds marked as a source",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/hospitals/0/bedsSrc",
+          "op": "create",
+          "value": "pos"
+        }
+      ]
+    },
+    {
+      "name": "no history",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/history",
+          "op": "delete"
+        }
+      ]
+    },
+    {
+      "name": "a peer group without medians",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/meta/peerMedians/5",
+          "op": "delete"
+        }
+      ]
+    },
+    {
+      "name": "the old map geometry",
+      "valid": false,
+      "patch": [
+        {
+          "path": "/geo",
+          "op": "create",
+          "value": {}
+        }
+      ]
+    }
+  ]
+}

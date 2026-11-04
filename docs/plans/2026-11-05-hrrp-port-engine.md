@@ -92,18 +92,18 @@ before porting it; port its docstring too.
 - `files.check_zip_members(zf: zipfile.ZipFile, label: str) -> None`: `SchemaError` on a member whose name is absolute
   (`/`, a drive letter) or has a `..` part, or contains a backslash. `read_zip_member` calls it on every open.
 
-- [ ] Tests first (synthetic workbooks built in the test with `zipfile` + minimal XML; synthetic tab text):
+- [x] Tests first (synthetic workbooks built in the test with `zipfile` + minimal XML; synthetic tab text):
       `test_reads_shared_inline_and_numeric_cells`, `test_skipped_cells_are_blank`, `test_refuses_a_dtd`,
       `test_refuses_a_part_over_the_limit` (patch the limit small), `test_refuses_a_missing_sheet`,
       `test_refuses_cells_out_of_order`; `test_supplemental_full_precision_and_export_agree_on_shape`,
       `test_supplemental_flag_and_missing_values` (`.` → None, `Y` → 1), `test_supplemental_duplicate_column_raises`,
       `test_table15_reads_the_fy_column`, `test_table15_wrong_fy_raises`; `test_zip_member_escaping_refused` for
       `../x`, `/x`, `a/../../x`, `C:\\x`; `test_every_pinned_zip_passes_the_member_check`.
-- [ ] Pin test: `read_supplemental` over the pinned workbook (`FY2027_HRRP_Supplemental_File.xlsx`, sheet
+- [x] Pin test: `read_supplemental` over the pinned workbook (`FY2027_HRRP_Supplemental_File.xlsx`, sheet
       `FR FY 2027`) and the export (`FY2027_HRRP_Supplemental_File - FR FY 2027 Tab.txt`) yields 2,912 CCNs each,
       the same set as `tdr/hrrp.json`'s hospitals; Table 15 (`Section 508 version of FY2027_HRRP_Table_15.txt`)
       yields the same set with the same factors. (Counts and sets come from the pin, not typed.)
-- [ ] Implement, run `make test` → PASS, commit.
+- [x] Implement, run `make test` → PASS, commit.
 
 ### Task 3: Readers — rates, estimate inputs, star rating (Sonnet)
 
@@ -119,11 +119,11 @@ before porting it; port its docstring too.
   `HSP Rate`).
 - `parse.read_hgi` records gain `star`: `Hospital overall rating` as int when all digits, else None.
 
-- [ ] Tests: `read_operating_rates` over the pinned FY2027 rates member `CMS-1849-CN Tables 1A - 1E.txt` equals
+- [x] Tests: `read_operating_rates` over the pinned FY2027 rates member `CMS-1849-CN Tables 1A - 1E.txt` equals
       `tdr/hrrp.json` `meta.rates` (tuples vs lists normalized); FY2026's still equals what `read_rates` gave;
       `read_estimate_inputs` on synthetic tab text (blank COLA → 1.0, flags, missing → None); `star` digits/`Not
       Available`.
-- [ ] `make test` (hospital and dollars goldens unchanged) → PASS, commit.
+- [x] `make test` (hospital and dollars goldens unchanged) → PASS, commit.
 
 ### Task 4: `pp_engine/hrrp.py` — formula, stored decimals, gates, dollars (Sonnet; Opus reviewer)
 
@@ -145,13 +145,13 @@ before porting it; port its docstring too.
   `paf`, `red`, `dual`, `peer`, `base`, `pen`, `c` exactly as TDR's `hospital_record` computes them — and the
   `(federal, add-on, full-year add-on)` triple for an MDH with a base, else None.
 
-- [ ] Port TDR `tests/test_model.py` and the stored-decimals, gate, year-share, MDH and dollar-check tests from
+- [x] Port TDR `tests/test_model.py` and the stored-decimals, gate, year-share, MDH and dollar-check tests from
       `tests/test_build.py` (skip its location, geocode and county tests: those are the master's), on synthetic
       records. Must include: `test_cms_worked_example` (Hospital A, peer 4, NM 0.9458: reduction rounds to 0.0034, PAF
       0.9966; HF under 25 contributes 0); `test_cap`; `test_exact_tie_moves_one_unit` (0.06145 published 0.0615);
       `test_needs_more_decimals` (1.0248497… published 1.0248); `test_year_share_clamps` (end before Oct 1 → 0,
       after Sep 30 → 1, Dec 31 of FY2027 → 92/365); `test_dollar_check_names_each_bad_field`.
-- [ ] Implement; `make test` → PASS; commit.
+- [x] Implement; `make test` → PASS; commit.
 
 ### Task 5: `pp_engine/hrrp_history.py` (Sonnet)
 
@@ -160,14 +160,14 @@ before porting it; port its docstring too.
 **Produces:** `load_paf_history(text, keep_ids, first_fy, last_fy) -> (years, {ccn: [paf|None]})`,
 `summarize_fy(fy, pafs, cap_pct) -> dict`, `load_national(text) -> list[dict]` — TDR `hrrp/history.py` over text.
 
-- [ ] Synthetic-CSV tests: scope-flagged rows skipped, out-of-range years ignored, PAF rounded to 4; summary on an
+- [x] Synthetic-CSV tests: scope-flagged rows skipped, out-of-range years ignored, PAF rounded to 4; summary on an
       empty list; `nMax` at the cap. Implement; `make test`; commit.
 
 ### Milestone A checkpoint (Tasks 1–5)
 
-- [ ] `/simplify` on the diff since `main`, then `make test`.
-- [ ] `/code-review` on that diff; fix Critical/Important.
-- [ ] `/security-review` (zip, workbook and CSV parsing are external input); fix Critical/Important.
+- [x] `/simplify` on the diff since `main`, then `make test`.
+- [x] `/code-review` on that diff; fix Critical/Important.
+- [x] `/security-review` (zip, workbook and CSV parsing are external input); fix Critical/Important.
 
 ### Task 6: `emit_hrrp.py`, the schema, the methods log, the goldens (main thread)
 

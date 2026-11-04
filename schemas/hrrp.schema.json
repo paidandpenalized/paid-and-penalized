@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hrrp.schema.json",
+  "title": "Hospital Readmissions Reduction Program emitted data, one fiscal year",
+  "description": "CMS's payment adjustment factors and their inputs for every hospital in the supplemental file, stored so the formula reproduces each factor and prints CMS's 4-decimal values; the hospital's location and type from the hospital master; the dollar estimate; the FY2013-onward history. The body is Thirty Day Readmissions' data contract (meta, conditions, hospitals, history).",
+  "type": "object",
+  "required": ["schema_version", "methods_version", "source_manifest", "sources", "built_at", "fy", "meta", "conditions", "hospitals", "history"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "methods_version": { "$ref": "common.schema.json#/$defs/methodsVersion" },
+    "source_manifest": { "$ref": "common.schema.json#/$defs/sha256" },
+    "sources": { "$ref": "common.schema.json#/$defs/sources" },
+    "built_at": { "$ref": "common.schema.json#/$defs/builtAt" },
+    "fy": { "$ref": "common.schema.json#/$defs/fy" },
+    "meta": { "$ref": "#/$defs/meta" },
+    "conditions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/conditionInfo" } },
+    "hospitals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hospital" } },
+    "history": { "$ref": "#/$defs/history" }
+  },
+  "$defs": {
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "paf": { "description": "Payment adjustment factor: 1 minus the reduction, at most a 3% cut.", "type": "number", "minimum": 0.97, "maximum": 1 },
+    "conditionKey": { "enum": ["AMI", "COPD", "HF", "PN", "CABG", "THA_TKA"] },
+    "medians": {
+      "type": "object",
+      "required": ["AMI", "COPD", "HF", "PN", "CABG", "THA_TKA"],
+      "additionalProperties": false,
+      "properties": {
+        "AMI": { "type": "number" }, "COPD": { "type": "number" }, "HF": { "type": "number" },
+        "PN": { "type": "number" }, "CABG": { "type": "number" }, "THA_TKA": { "type": "number" }
+      }
+    },
+    "rateTable": {
+      "type": "object",
+      "required": ["qe", "qn", "ne", "nn"],
+      "additionalProperties": false,
+      "properties": {
+        "qe": { "$ref": "#/$defs/ratePair" }, "qn": { "$ref": "#/$defs/ratePair" },
+        "ne": { "$ref": "#/$defs/ratePair" }, "nn": { "$ref": "#/$defs/ratePair" }
+      }
+    },
+    "ratePair": { "description": "[labor, non-labor] standardized amount in dollars.", "type": "array", "minItems": 2, "items": { "type": "number", "minimum": 0 } },
+    "source": {
+      "type": "object",
+      "required": ["name", "url"],
+      "additionalProperties": false,
+      "properties": { "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 }, "url": { "type": "string", "pattern": "^https://" } }
+    },
+    "totalSource": {
+      "type": ["object", "null"],
+      "required": ["kind", "label", "url"],
+      "additionalProperties": false,
+      "properties": { "kind": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1 }, "url": { "type": "string", "pattern": "^https://" } }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["fy", "fileDate", "perf", "nm", "peerCutoffs", "peerMedians", "rates", "totals", "replication", "mdh", "dollarCheck", "geocode", "states", "divisions", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "fy": { "$ref": "common.schema.json#/$defs/fy" },
+        "fileDate": { "$ref": "#/$defs/date" },
+        "perf": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/date" } },
+        "nm": { "description": "Neutrality modifier, one value for every hospital.", "type": "number", "minimum": 0 },
+        "peerCutoffs": { "description": "[lowest, highest] dual proportion in each of the five peer groups.", "type": "array", "minItems": 5, "items": { "type": "array", "minItems": 2, "items": { "type": "number", "minimum": 0, "maximum": 1 } } },
+        "peerMedians": {
+          "type": "object",
+          "required": ["1", "2", "3", "4", "5"],
+          "additionalProperties": false,
+          "properties": { "1": { "$ref": "#/$defs/medians" }, "2": { "$ref": "#/$defs/medians" }, "3": { "$ref": "#/$defs/medians" }, "4": { "$ref": "#/$defs/medians" }, "5": { "$ref": "#/$defs/medians" } }
+        },
+        "rates": {
+          "description": "IPPS Tables 1A (wage index above 1) and 1B (1 or below): quality data submitted (q) or not (n), EHR user (e) or not (n).",
+          "type": "object",
+          "required": ["1A", "1B"],
+          "additionalProperties": false,
+          "properties": { "1A": { "$ref": "#/$defs/rateTable" }, "1B": { "$ref": "#/$defs/rateTable" } }
+        },
+        "totals": {
+          "type": "object",
+          "required": ["modelBase", "modelPen", "cmsEst", "cmsSrc"],
+          "additionalProperties": false,
+          "properties": {
+            "modelBase": { "type": "number", "minimum": 0 }, "modelPen": { "type": "number", "minimum": 0 },
+            "cmsEst": { "type": ["number", "null"] }, "cmsSrc": { "$ref": "#/$defs/totalSource" }
+          }
+        },
+        "replication": {
+          "type": "object",
+          "required": ["exact", "total"],
+          "additionalProperties": false,
+          "properties": { "exact": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 1 } }
+        },
+        "mdh": {
+          "type": "object",
+          "required": ["endDate", "maxShortfall"],
+          "additionalProperties": false,
+          "properties": { "endDate": { "$ref": "#/$defs/date" }, "maxShortfall": { "type": "number", "minimum": 0 } }
+        },
+        "dollarCheck": {
+          "description": "The dated cost-report check of the base-payment estimate (a pinned curated input).",
+          "type": "object",
+          "required": ["asOf", "source", "costFy", "n", "rateDrift", "within10", "within15", "within15Small", "within15Large"],
+          "properties": {
+            "asOf": { "$ref": "#/$defs/date" }, "source": { "type": "string", "minLength": 1 },
+            "costFy": { "type": "integer", "minimum": 2013 }, "n": { "type": "integer", "minimum": 1 },
+            "rateDrift": { "type": "number" }, "within10": { "type": "number" }, "within15": { "type": "number" },
+            "within15Small": { "type": "number" }, "within15Large": { "type": "number" }, "note": { "type": "string" }
+          }
+        },
+        "geocode": {
+          "type": "object",
+          "required": ["address", "zip", "county", "none"],
+          "additionalProperties": false,
+          "properties": { "address": { "type": "integer", "minimum": 0 }, "zip": { "type": "integer", "minimum": 0 }, "county": { "type": "integer", "minimum": 0 }, "none": { "type": "integer", "minimum": 0 } }
+        },
+        "states": { "description": "State abbreviation -> name, for the states with a hospital here.", "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } },
+        "divisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "region", "states"],
+            "additionalProperties": false,
+            "properties": { "name": { "type": "string", "minLength": 1 }, "region": { "type": "string", "minLength": 1 }, "states": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } } }
+          }
+        },
+        "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/source" } }
+      }
+    },
+    "conditionInfo": {
+      "type": "object",
+      "required": ["key", "short", "label"],
+      "additionalProperties": false,
+      "properties": { "key": { "$ref": "#/$defs/conditionKey" }, "short": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1 } }
+    },
+    "condition": {
+      "description": "One condition's eligible discharges (n), excess readmission ratio (err), CMS's penalty flag and DRG payment ratio.",
+      "type": "object",
+      "required": ["n", "err", "flag", "ratio"],
+      "additionalProperties": false,
+      "properties": {
+        "n": { "type": ["integer", "null"], "minimum": 0 },
+        "err": { "type": ["number", "null"], "minimum": 0 },
+        "flag": { "enum": [0, 1] },
+        "ratio": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "hospital": {
+      "type": "object",
+      "required": ["id", "name", "city", "st", "county", "zip", "lat", "lon", "geo", "cbsa", "cbsaName", "urban", "region", "division", "beds", "teach", "own", "ownDetail", "star", "types", "paf", "red", "dual", "peer", "base", "pen", "c"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/ccn" },
+        "name": { "type": "string", "minLength": 1 },
+        "alias": { "type": "string", "minLength": 1 },
+        "city": { "type": ["string", "null"] },
+        "st": { "type": ["string", "null"], "pattern": "^[A-Z]{2}$" },
+        "county": { "type": ["string", "null"] },
+        "zip": { "type": ["string", "null"] },
+        "lat": { "type": ["number", "null"], "minimum": -90, "maximum": 90 },
+        "lon": { "type": ["number", "null"], "minimum": -180, "maximum": 180 },
+        "geo": { "enum": ["address", "zip", "county", null] },
+        "cbsa": { "type": ["string", "null"], "pattern": "^\\d{5}$" },
+        "cbsaName": { "type": ["string", "null"] },
+        "urban": { "type": ["boolean", "null"] },
+        "region": { "type": ["string", "null"] },
+        "division": { "type": ["string", "null"] },
+        "beds": { "type": ["integer", "null"], "minimum": 1 },
+        "bedsSrc": { "const": "cr" },
+        "teach": { "enum": ["none", "minor", "major", null] },
+        "own": { "type": ["string", "null"] },
+        "ownDetail": { "type": ["string", "null"] },
+        "star": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+        "types": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "inactive": {
+          "type": "object",
+          "required": ["date", "reason"],
+          "additionalProperties": false,
+          "properties": { "date": { "type": ["string", "null"] }, "reason": { "type": "string", "minLength": 1 } }
+        },
+        "paf": { "$ref": "#/$defs/paf" },
+        "red": { "type": "number", "minimum": 0, "maximum": 3 },
+        "dual": { "type": "number", "minimum": 0, "maximum": 1 },
+        "peer": { "enum": [1, 2, 3, 4, 5] },
+        "base": { "type": ["integer", "null"], "minimum": 0 },
+        "pen": { "type": ["integer", "null"], "minimum": 0 },
+        "c": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "AMI": { "$ref": "#/$defs/condition" }, "COPD": { "$ref": "#/$defs/condition" }, "HF": { "$ref": "#/$defs/condition" },
+            "PN": { "$ref": "#/$defs/condition" }, "CABG": { "$ref": "#/$defs/condition" }, "THA_TKA": { "$ref": "#/$defs/condition" }
+          }
+        }
+      }
+    },
+    "nationalYear": {
+      "type": "object",
+      "required": ["fy", "n", "nPen", "pctPen", "meanRed", "meanRedPen", "medianRedPen", "nMax", "cap", "perf", "totalEst", "totalSrc"],
+      "additionalProperties": false,
+      "properties": {
+        "fy": { "$ref": "common.schema.json#/$defs/fy" },
+        "n": { "type": "integer", "minimum": 0 }, "nPen": { "type": "integer", "minimum": 0 },
+        "pctPen": { "type": "number", "minimum": 0, "maximum": 100 },
+        "meanRed": { "type": "number", "minimum": 0 }, "meanRedPen": { "type": "number", "minimum": 0 },
+        "medianRedPen": { "type": "number", "minimum": 0 },
+        "nMax": { "type": "integer", "minimum": 0 }, "cap": { "type": "integer", "minimum": 1 },
+        "perf": { "type": "array", "minItems": 2, "items": { "type": ["string", "null"] } },
+        "totalEst": { "type": ["number", "null"] },
+        "totalSrc": { "$ref": "#/$defs/totalSource" }
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": ["years", "paf", "national"],
+      "additionalProperties": false,
+      "properties": {
+        "years": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/fy" } },
+        "paf": { "description": "CCN -> one factor (or null) per year of `years`.", "type": "object", "additionalProperties": { "type": "array", "items": { "type": ["number", "null"] } } },
+        "national": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nationalYear" } }
+      }
+    }
+  }
+}

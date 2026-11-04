@@ -6,7 +6,7 @@ import json
 import zipfile
 from pathlib import Path
 
-from pp_engine.contract import format_emitted, keep_built_at
+from pp_engine.contract import format_emitted, keep_built_at, source_manifest_hash
 from pp_engine.parse import SchemaError
 from pp_engine.schema import validate
 from pp_engine.zipsafe import check_zip
@@ -112,3 +112,13 @@ def write_emitted(path, fresh, schema_name):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(format_emitted(out), encoding="utf-8")
     return out
+
+
+def require_current(emitted, manifest, label):
+    """Raise ValueError unless `emitted` (an emitted file, parsed) was built from the pins as `manifest` has them now:
+    every pin its `sources` names is in the manifest and its `source_manifest` is their hash. A file built before a
+    re-pin is refused, so nothing reads it half-trusted."""
+    by_id = {e["id"]: e for e in manifest}
+    unknown = [pin for pin in emitted["sources"] if pin not in by_id]
+    if unknown or emitted["source_manifest"] != source_manifest_hash([by_id[pin] for pin in emitted["sources"]]):
+        raise ValueError(f"{label} was not built from the current pins: run `make emit`")
