@@ -7,7 +7,8 @@
 data.cms.gov, one file per HCRIS year) or `nber` (NBER's HCRIS extract, `hcris2552_10_<year>.csv`). Only hospital-years
 built from one report are compared, matched to the reference on CCN and period (a report's record number is not
 stable: CMS gives a settled report a new one). A value counts as equal when it differs by less than 0.5 (the
-references round some cells) or both are blank or zero; `close` is within 1%.
+references round some cells), or by less than 0.0001 when both are under 1 in size (ratios such as the CCR), or both
+are blank or zero; `close` is within 1%.
 """
 import csv
 import datetime
@@ -59,7 +60,8 @@ def _iso(text, fmt):
 
 def verdict(ours, theirs):
     a, b = ours or Decimal(0), theirs or Decimal(0)
-    if abs(a - b) < Decimal("0.5"):
+    tolerance = Decimal("0.5") if max(abs(a), abs(b)) >= 1 else Decimal("0.0001")
+    if abs(a - b) < tolerance:
         return "equal"
     if b != 0 and abs(a - b) / abs(b) <= Decimal("0.01"):
         return "close"
@@ -128,14 +130,20 @@ def main(argv):
         print(__doc__.strip())
         return 2
     wide, year, ref, ref_path = argv[:4]
-    with open(wide, newline="", encoding="ascii") as f:
-        ours = [r for r in csv.DictReader(f) if r["year"] == year]
-    with open(ref_path, newline="", encoding="latin-1") as f:
-        theirs = list(csv.DictReader(f))
-    result, counts = compare(ours, theirs, ref)
-    out = {"year": int(year), "reference": ref, "counts": counts, "metrics": result}
-    if len(argv) == 5:
-        with open(argv[4], encoding="utf-8") as f:
-            out["master"] = master_join(ours, json.load(f))
+    try:
+        with open(wide, newline="", encoding="ascii") as f:
+            ours = [r for r in csv.DictReader(f) if r["year"] == year]
+        if not ours:
+            raise ValueError(f"no hospital-years for year {year!r} in {wide}")
+        with open(ref_path, newline="", encoding="latin-1") as f:
+            theirs = list(csv.DictReader(f))
+        result, counts = compare(ours, theirs, ref)
+        out = {"year": int(year), "reference": ref, "counts": counts, "metrics": result}
+        if len(argv) == 5:
+            with open(argv[4], encoding="utf-8") as f:
+                out["master"] = master_join(ours, json.load(f))
+    except (OSError, KeyError, ValueError, csv.Error) as err:  # a renamed column, a bad date, a missing file
+        print(f"hcris crosscheck: {err!r}")
+        return 1
     print(json.dumps(out, indent=2))
     return 0

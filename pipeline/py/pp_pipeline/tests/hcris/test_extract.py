@@ -63,6 +63,28 @@ class Extract(unittest.TestCase):
             with self.assertRaisesRegex(tidy.HcrisError, "no cells read"):
                 extract.read_year(z)
 
+    def test_refuses_two_zips_for_one_year_and_leaves_no_sources_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ("a", "b"):
+                (Path(tmp) / name).mkdir()
+                write_zip(Path(tmp) / name / "HOSP10FY2024.ZIP", 2024, [report("7", "990001")], [])
+            out = Path(tmp) / "out"
+            out.mkdir()
+            (out / "sources.json").write_text("{}")
+            with self.assertRaisesRegex(tidy.HcrisError, "two zips"):
+                extract.run([Path(tmp) / "a" / "HOSP10FY2024.ZIP", Path(tmp) / "b" / "HOSP10FY2024.ZIP"], out)
+            self.assertFalse((out / "sources.json").exists())
+
+    def test_crosscheck_main_reports_bad_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            wide = Path(tmp) / "w.csv"
+            wide.write_text("ccn,year,shape,period_begin,period_end\n990001,2024,one,2023-10-01,2024-09-30\n")
+            ref = Path(tmp) / "r.csv"
+            ref.write_text("prvdr_num,fy_bgn_dt,fy_end_dt\n990001,not a date,2024-09-30\n")
+            with unittest.mock.patch("builtins.print"):
+                self.assertEqual(crosscheck.main([str(wide), "2024", "nber", str(ref)]), 1)
+                self.assertEqual(crosscheck.main([str(wide), "FY2024", "nber", str(ref)]), 1)
+
     def test_main_reports_errors_without_a_traceback(self):
         with tempfile.TemporaryDirectory() as tmp:
             z = Path(tmp) / "HOSP10FY2024.ZIP"
@@ -80,6 +102,8 @@ class Crosscheck(unittest.TestCase):
         self.assertEqual(crosscheck.verdict(D("100"), D("100.9")), "close")
         self.assertEqual(crosscheck.verdict(D("100"), D("150")), "differ")
         self.assertEqual(crosscheck.verdict(None, D("150")), "one_blank")
+        self.assertEqual(crosscheck.verdict(D("0.21"), D("0.62")), "differ")  # ratios: a tight tolerance
+        self.assertEqual(crosscheck.verdict(D("0.21254"), D("0.2125")), "equal")
 
     def test_compare_matches_on_ccn_and_period_not_report_number(self):
         ours = [{"ccn": "990001", "shape": "one", "period_begin": "2023-10-01", "period_end": "2024-09-30",

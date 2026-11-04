@@ -55,6 +55,11 @@ class Collect(unittest.TestCase):
         self.assertEqual(collect(rows, self.reports), {"7": {"days_total": Decimal("1200"),
                                                              "s10_ccr": Decimal("0.2125")}})
 
+    def test_line_and_column_codes_are_read_trimmed(self):
+        c = next(c for c in cells.CELLS if c.metric == "days_total")
+        self.assertEqual(collect([["7", c.sheet, f" {c.line}", f"{c.column} ", "9"]], self.reports),
+                         {"7": {"days_total": Decimal("9")}})
+
     def test_the_old_s10_code_reads_as_part_one(self):
         c = next(c for c in cells.CELLS if c.metric == "uncompensated_cost")
         self.assertEqual(collect([["7", cells.S10_BEFORE_PARTS, c.line, c.column, "500"]], self.reports),
@@ -103,7 +108,7 @@ class HospitalYears(unittest.TestCase):
                          ("split", 2, "8 9", "2023-10-01", "2024-09-30"))
         self.assertEqual(r["days_total"], Decimal("1000"))
         self.assertEqual(r["beds"], Decimal("40"))
-        self.assertIsNone(r["fte_employees"])  # a stock the last period does not report
+        self.assertEqual(r["fte_employees"], Decimal("100.5"))  # a stock the last period lacks: the earlier one's
 
     def test_shapes(self):
         cases = {

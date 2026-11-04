@@ -88,7 +88,7 @@ def collect(number_rows, reports):
             raise HcrisError(f"numeric file: a row of {len(r)} fields, not {NMRC_FIELDS}")
         if r[1] not in SHEETS_READ:
             continue
-        cell = BY_KEY.get((r[1], r[2], r[3]))
+        cell = BY_KEY.get((r[1], r[2].strip(), r[3].strip()))
         if cell is None:
             continue
         rpt, text = r[0].strip(), r[4].strip()
@@ -111,7 +111,7 @@ def _days(report):
 
 
 def hospital_years(reports, values, year):
-    """One row per CCN for the year: its reports combined (flows added, stocks from the period that ends last), with
+    """One row per CCN for the year: its reports combined (flows added, stocks from the last period that has them), with
     what was combined. `shape` names the case: `one` (a single report), `split` (periods that meet end to start and
     cover at most 366 days: a change of ownership, say), `long` (more than 366 days in all: a change of fiscal year
     puts two periods' starts in one year), `gap` or `overlap` (periods that don't meet)."""
@@ -137,9 +137,11 @@ def hospital_years(reports, values, year):
                "reports": " ".join(r.rpt for r in reps), "status": " ".join(r.status for r in reps),
                "period_begin": reps[0].begin.isoformat(), "period_end": last.end.isoformat(), "period_days": days,
                "control": last.control}
+        newest_first = sorted(reps, key=lambda r: (r.end, int(r.rpt)), reverse=True)
         for cell in CELLS:
-            if cell.kind == "stock":
-                row[cell.metric] = values.get(last.rpt, {}).get(cell.metric)
+            if cell.kind == "stock":  # from the last period that reports it
+                row[cell.metric] = next((v for v in (values.get(r.rpt, {}).get(cell.metric) for r in newest_first)
+                                         if v is not None), None)
             else:
                 row[cell.metric] = _sum(*(values.get(r.rpt, {}).get(cell.metric) for r in reps))
         derive(row)
