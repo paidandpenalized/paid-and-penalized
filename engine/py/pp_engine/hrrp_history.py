@@ -9,30 +9,31 @@ from pp_engine import parse
 from pp_engine.parse import SchemaError
 
 
-def _records(text, columns, label):
-    """Dict records of a CSV text with a header row; every name in `columns` must be a header."""
-    it = parse.rows(text, ",")
-    header = next(it, None) or []
-    missing = [c for c in columns if c not in header]
-    if missing:
-        raise SchemaError("%s: missing column %s" % (label, ", ".join(missing)))
-    idx = {c: header.index(c) for c in columns}
-    for row in it:
-        if row:
-            yield {c: (row[i] if i < len(row) else "") for c, i in idx.items()}
-
-
 def load_paf_history(text, keep_ids, first_fy, last_fy):
-    """{ccn: [paf or None per FY first_fy..last_fy]} for hospitals in keep_ids; out-of-scope rows (MD/PR/no data) → None."""
+    """(years, {ccn: [paf or None per FY first_fy..last_fy]}) for hospitals in keep_ids; out-of-scope rows (MD/PR/no
+    data) → None. SchemaError naming the hospital and year for an in-scope row with a blank or non-numeric PAF or FY,
+    or for a hospital-year given twice."""
     years = list(range(first_fy, last_fy + 1))
     out = {}
-    for r in _records(text, ("ccn", "fy", "paf", "scope_flag"), "HRRP history"):
+    columns = {"fy": "fy", "ccn": "ccn", "paf": "paf", "scope": "scope_flag"}
+    for r in parse.table(parse.rows(text, ","), "fy", columns, "HRRP history"):
         ccn = r["ccn"]
-        if ccn not in keep_ids or r["scope_flag"]:
+        if ccn not in keep_ids or r["scope"]:
             continue
-        fy = int(r["fy"])
-        if first_fy <= fy <= last_fy:
-            out.setdefault(ccn, [None] * len(years))[fy - first_fy] = round(float(r["paf"]), 4)
+        try:
+            fy = int(r["fy"])
+        except ValueError:
+            raise SchemaError("HRRP history: %s has a non-numeric fy %r" % (ccn, r["fy"])) from None
+        if not first_fy <= fy <= last_fy:
+            continue
+        try:
+            paf = round(float(r["paf"]), 4)
+        except ValueError:
+            raise SchemaError("HRRP history: %s FY%d has a blank or non-numeric paf %r" % (ccn, fy, r["paf"])) from None
+        slot = out.setdefault(ccn, [None] * len(years))
+        if slot[fy - first_fy] is not None:
+            raise SchemaError("HRRP history: %s FY%d appears twice" % (ccn, fy))
+        slot[fy - first_fy] = paf
     return years, out
 
 
@@ -60,17 +61,27 @@ _NATIONAL_COLUMNS = (
     "n_at_max", "max_cap_pct", "performance_period_start", "performance_period_end")
 
 
+_NATIONAL_FIELDS = (  # output key, column, reader
+    ("n", "n_hospitals_comparable", int), ("nPen", "n_penalized_comparable", int),
+    ("pctPen", "pct_penalized_comparable", float), ("meanRed", "mean_reduction_pct_all_comparable", float),
+    ("meanRedPen", "mean_reduction_pct_penalized", float), ("medianRedPen", "median_reduction_pct_penalized", float),
+    ("nMax", "n_at_max", int), ("cap", "max_cap_pct", int))
+
+
 def load_national(text):
-    """Comparable-population national series FY2013-FY2026 from the historical summary CSV."""
-    return [{
-        "fy": int(r["fy"]),
-        "n": int(r["n_hospitals_comparable"]),
-        "nPen": int(r["n_penalized_comparable"]),
-        "pctPen": float(r["pct_penalized_comparable"]),
-        "meanRed": float(r["mean_reduction_pct_all_comparable"]),
-        "meanRedPen": float(r["mean_reduction_pct_penalized"]),
-        "medianRedPen": float(r["median_reduction_pct_penalized"]),
-        "nMax": int(r["n_at_max"]),
-        "cap": int(r["max_cap_pct"]),
-        "perf": [r["performance_period_start"] or None, r["performance_period_end"] or None],
-    } for r in _records(text, _NATIONAL_COLUMNS, "HRRP history summary")]
+    """Comparable-population national series FY2013-FY2026 from the historical summary CSV. SchemaError naming the
+    year and column for a non-numeric value."""
+    columns = {"fy": "fy", **{k: col for k, col, _ in _NATIONAL_FIELDS},
+               "start": "performance_period_start", "end": "performance_period_end"}
+    out = []
+    for r in parse.table(parse.rows(text, ","), "fy", columns, "HRRP history summary"):
+        def read(key, col, reader):
+            try:
+                return reader(r[key])
+            except ValueError:
+                raise SchemaError("HRRP history summary: FY%s has a non-numeric %s %r" % (r["fy"], col, r[key])) from None
+        row = {"fy": read("fy", "fy", int)}
+        row.update({k: read(k, col, reader) for k, col, reader in _NATIONAL_FIELDS})
+        row["perf"] = [r["start"] or None, r["end"] or None]
+        out.append(row)
+    return out

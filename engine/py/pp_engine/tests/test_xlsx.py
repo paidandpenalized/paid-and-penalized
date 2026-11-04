@@ -100,6 +100,11 @@ class SheetRowsTest(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "not UTF-8"):
             xlsx.sheet_rows(wb, "S", "w")
 
+    def test_refuses_a_declared_non_utf8_encoding_after_a_utf8_bom(self):
+        wb = make_xlsx({"S": [["a"]]}, doctype='\ufeff<?xml version="1.0" encoding="ISO-8859-1"?>')
+        with self.assertRaisesRegex(SchemaError, "not UTF-8"):
+            xlsx.sheet_rows(wb, "S", "w")
+
     def test_refuses_an_escaping_member_name(self):
         wb = make_xlsx({"S": [["a"]]})
         buf = io.BytesIO(wb)

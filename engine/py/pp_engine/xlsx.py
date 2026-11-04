@@ -27,7 +27,7 @@ def _part(zf, name, label):
         raise SchemaError(f"{label}: workbook has no part {name}") from None
     data = zf.read(info)
     # Only UTF-8 parts are read, so the byte search below cannot be dodged by a UTF-16/32 or other encoding.
-    decl = _XML_DECL.match(data)
+    decl = _XML_DECL.match(data[3:] if data.startswith(b"\xef\xbb\xbf") else data)
     if data.startswith(_WIDE_BOMS) or b"\x00" in data or (decl and decl.group(1).decode("ascii", "replace").lower()
                                                            not in ("utf-8", "utf8")):
         raise SchemaError(f"{label}: part {name} is not UTF-8")

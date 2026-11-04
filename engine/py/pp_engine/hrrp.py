@@ -135,6 +135,8 @@ def stored(v, published, label, ties=None):
     to 1.5 units of its last decimal; the replication gate still checks the PAFs."""
     if v is None:
         return None
+    if published is None:
+        raise HrrpError(f"{label} has no published 4-decimal value")
     want = Decimal(repr(published))
     places = range(DECIMALS, MAX_DECIMALS + 1)
 
@@ -177,9 +179,17 @@ def as_stored(ccn, s, pub, nm, peer_med, ties=None):
     med = peer_med.get(str(s.get("peer")))
     if med is None:
         raise HrrpError(f"{ccn}: peer group {s.get('peer')!r} is not one of 1-5")
-    return {**s, "nm": nm,
-            "c": {k: {**c, "med": med[k], **{f: stored(c[f], pub["c"][k][f], f"{ccn} {k}.{f}", ties) for f in ("err", "ratio")}}
-                  for k, c in s["c"].items()}}
+    if pub is None:
+        raise HrrpError(f"{ccn}: no published record")
+    conditions = {}
+    for k, c in s["c"].items():
+        if k not in med:
+            raise HrrpError(f"{ccn} {k}: peer {s['peer']} has no median")
+        if k not in pub["c"]:
+            raise HrrpError(f"{ccn} {k}: no published condition")
+        conditions[k] = {**c, "med": med[k],
+                         **{f: stored(c[f], pub["c"][k].get(f), f"{ccn} {k}.{f}", ties) for f in ("err", "ratio")}}
+    return {**s, "nm": nm, "c": conditions}
 
 
 def stored_constant(rows, full, published, label, ties=None):
@@ -214,13 +224,13 @@ def extra_places(hospitals, peer_med, nm):
 
 def table15_mismatches(t15, supp):
     """Hospitals on which Table 15 ({ccn: PAF}) and the supplemental file disagree: those in only one, then those whose
-    PAFs differ (compared exactly, as TDR did)."""
-    return sorted(set(t15) ^ set(supp)) + [c for c in supp if c in t15 and t15[c] != supp[c]["paf"]]
+    PAFs differ (compared exactly, as TDR did); a blank PAF on either side is a mismatch."""
+    return sorted(set(t15) ^ set(supp)) + [c for c in supp if c in t15 and (t15[c] is None or t15[c] != supp[c]["paf"])]
 
 
 def out_of_range(supp):
-    """Hospitals whose PAF is outside 1 - CAP to 1."""
-    return [c for c, s in supp.items() if not 1 - CAP <= s["paf"] <= 1.0]
+    """Hospitals whose PAF is outside 1 - CAP to 1, or blank."""
+    return [c for c, s in supp.items() if s["paf"] is None or not 1 - CAP <= s["paf"] <= 1.0]
 
 
 # --- the cost-report comparison Methods quotes ----------------------------------------------------------------------

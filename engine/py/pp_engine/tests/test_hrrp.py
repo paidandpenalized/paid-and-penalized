@@ -161,6 +161,22 @@ class PrecisionTest(unittest.TestCase):
             with self.subTest(peer=peer, absent=rec is absent), self.assertRaisesRegex(hrrp.HrrpError, f"^a: peer group {peer!r} is not one of 1-5$"):
                 hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
 
+    def test_a_value_without_a_published_value_names_its_label(self):
+        with self.assertRaisesRegex(hrrp.HrrpError, "a HF.err has no published 4-decimal value"):
+            hrrp.stored(1.0731, None, "a HF.err")
+
+    def test_a_missing_published_record_condition_or_peer_median_names_the_hospital_and_field(self):
+        peer = {"1": {"HF": 0.988462}}
+        pub = self.PUBLISHED["a"]
+        no_cond = {**pub, "c": {}}
+        no_field = {**pub, "c": {"HF": {**pub["c"]["HF"], "err": None}}}
+        for what, p, med, rx in (("record", None, peer, "a: no published record"),
+                                 ("condition", no_cond, peer, "a HF: no published"),
+                                 ("field", no_field, peer, "a HF.err has no published 4-decimal value"),
+                                 ("median", pub, {"1": {}}, "a HF: peer 1 has no median")):
+            with self.subTest(what), self.assertRaisesRegex(hrrp.HrrpError, rx):
+                hrrp.as_stored("a", self.FULL["a"], p, 0.951732, med)
+
     def test_group_constants_are_checked_at_full_precision_then_stored_once(self):
         full = {"a": 0.95173218450771123, "b": 0.95173218450771123}
         self.assertEqual(hrrp.stored_constant(["a", "b"], full.get, lambda c: 0.9517, "nm"), 0.951732)
@@ -237,6 +253,12 @@ class GateTest(unittest.TestCase):
     def test_out_of_range(self):
         self.assertEqual(hrrp.out_of_range(self.SUPP), [])
         self.assertEqual(hrrp.out_of_range({**self.SUPP, "x": {"paf": 0.9699}, "y": {"paf": 1.0001}}), ["x", "y"])
+
+    def test_a_blank_paf_is_out_of_range_and_a_table15_mismatch(self):
+        self.assertEqual(hrrp.out_of_range({**self.SUPP, "x": {"paf": None}}), ["x"])
+        self.assertEqual(hrrp.table15_mismatches({"a": None, "b": 0.97, "c": 1.0}, {**self.SUPP, "a": {"paf": 0.9966}}), ["a"])
+        self.assertEqual(hrrp.table15_mismatches({"a": 0.9966, "b": 0.97, "c": 1.0}, {**self.SUPP, "a": {"paf": None}}), ["a"])
+        self.assertEqual(hrrp.table15_mismatches({"a": None, "b": 0.97, "c": 1.0}, {**self.SUPP, "a": {"paf": None}}), ["a"])
 
 
 class DollarCheckTest(unittest.TestCase):

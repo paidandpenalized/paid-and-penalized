@@ -489,12 +489,12 @@ class EstimateInputs(unittest.TestCase):
     def test_reads_the_payment_fields(self):
         got = self.read(["990001", "1.0512", "1.05", "2500.5", "1.61", "1", "1", "y", "7200.25"])["990001"]
         self.assertEqual(got, {"wi": 1.0512, "cola": 1.05, "cases": 2500.5, "cmi": 1.61, "qual_red": True,
-                               "ehr_red": True, "mdh": True, "hsp": 7200.25})
+                               "ehr_red": True, "hsp": 7200.25})
 
     def test_blank_cola_is_one_and_missing_values_are_none(self):
         got = self.read(["990002", "", "", "", "", "0", "", "N", ""])["990002"]
         self.assertEqual(got, {"wi": None, "cola": 1.0, "cases": None, "cmi": None, "qual_red": False,
-                               "ehr_red": False, "mdh": False, "hsp": None})
+                               "ehr_red": False, "hsp": None})
 
     def test_another_grouper_or_year_is_a_schema_error(self):
         with self.assertRaises(SchemaError):
