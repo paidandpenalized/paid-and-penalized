@@ -10,6 +10,7 @@ stable: CMS gives a settled report a new one). A value counts as equal when it d
 references round some cells) or both are blank or zero; `close` is within 1%.
 """
 import csv
+import datetime
 import json
 from decimal import Decimal, InvalidOperation
 
@@ -36,13 +37,13 @@ REFERENCES = {
     },
     "nber": {
         "key": ("prvdr_num", "fy_bgn_dt", "fy_end_dt"),
-        "date": "%m/%d/%Y",
+        "date": "%Y-%m-%d",
         "columns": {"patient_revenue_gross": "g3_c1_1", "days_medicaid_managed": "s3_1_c7_2"},
     },
 }
 
 
-def _num(text):
+def _num(text):  # not pp_engine.parse.num: Decimal, for the 0.5 tolerance
     text = (text or "").strip().replace(",", "").replace("$", "")
     if text in ("", "."):
         return None
@@ -53,19 +54,12 @@ def _num(text):
 
 
 def _iso(text, fmt):
-    import datetime
-    text = text.strip()
-    for f in (fmt, "%Y-%m-%d", "%d%b%Y", "%m/%d/%y"):
-        try:
-            return datetime.datetime.strptime(text, f).date().isoformat()
-        except ValueError:
-            continue
-    return text
+    return datetime.datetime.strptime(text.strip(), fmt).date().isoformat()
 
 
 def verdict(ours, theirs):
     a, b = ours or Decimal(0), theirs or Decimal(0)
-    if abs(a - b) < Decimal("0.5") or (a == b):
+    if abs(a - b) < Decimal("0.5"):
         return "equal"
     if b != 0 and abs(a - b) / abs(b) <= Decimal("0.01"):
         return "close"
@@ -82,8 +76,11 @@ def compare(ours_rows, ref_rows, ref):
     for r in ref_rows:
         index.setdefault((r[k_ccn].strip(), _iso(r[k_begin], spec["date"]), _iso(r[k_end], spec["date"])), []).append(r)
     single = [r for r in ours_rows if r["shape"] == "one"]
-    matched = [(r, index[(r["ccn"], r["period_begin"], r["period_end"])][0]) for r in single
-               if len(index.get((r["ccn"], r["period_begin"], r["period_end"]), [])) == 1]
+    matched = []
+    for r in single:
+        hits = index.get((r["ccn"], r["period_begin"], r["period_end"]), [])
+        if len(hits) == 1:
+            matched.append((r, hits[0]))
     result = {}
     for metric, column in spec["columns"].items():
         counts = result.setdefault(metric, {})

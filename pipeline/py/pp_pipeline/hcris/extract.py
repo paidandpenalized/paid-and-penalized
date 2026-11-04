@@ -8,21 +8,24 @@ row per hospital, year and metric), `hcris_reports.csv` (one row per cost report
 `sources.json` (each zip's size and SHA-256, and each output's size and row count). The zips are CMS's and change as
 reports are filed and settled; `sources.json` is what pins a run.
 """
+import contextlib
 import csv
 import hashlib
-import io
 import json
 import re
 import zipfile
 from pathlib import Path
 
 from pp_engine.hcris import tidy
-from pp_engine.hcris.cells import S10_HOSPITAL, SHEET_OF, SHEETS
-
-S10_HOSPITAL_FROM = 2023  # S-10 Part II starts with periods beginning 2022-10-01, the FY2023 file
+from pp_engine.hcris.cells import SHEET_OF, sheets_expected
+from pp_pipeline.hcris_extract import _member_rows as member_rows
 
 MEMBER = re.compile(r"HOSP10_(\d{4})_(rpt|nmrc|alpha)\.csv", re.IGNORECASE)
 REPORT_COLUMNS = ("rpt_rec_num", "ccn", "year", "status", "period_begin", "period_end", "control", "util", "npr_date")
+# A file with fewer reports is the newest year's, a handful of short periods; it may lack a worksheet.
+MIN_REPORTS_FOR_SHEET_CHECK = 100
+OUTPUTS = {"hcris_wide.csv": tidy.WIDE_COLUMNS, "hcris_long.csv": ("ccn", "year", "metric", "value"),
+           "hcris_reports.csv": REPORT_COLUMNS}
 
 
 def members(zf):
@@ -35,12 +38,8 @@ def members(zf):
             found[m.group(2).lower()] = name
     if len(years) != 1 or not {"rpt", "nmrc"} <= set(found):
         raise tidy.HcrisError(f"not an HCRIS hospital zip (members: {zf.namelist()})")
-    return found, years.pop()
-
-
-def _rows(zf, member):
-    with zf.open(member) as raw:
-        yield from csv.reader(io.TextIOWrapper(raw, encoding="ascii", newline=""))
+    (year,) = years
+    return found, year
 
 
 def sha256(path):
@@ -53,16 +52,16 @@ def sha256(path):
 
 
 def read_year(zip_path):
-    """(year, reports, values) from one zip. Refuses a year in which a worksheet read yields no cell at all (a layout
-    change, such as padded codes, would otherwise drop it silently)."""
+    """(year, reports, values) from one zip. Refuses a full year in which a worksheet read yields no cell at all (a
+    layout change, such as padded codes, would otherwise drop it silently)."""
     with zipfile.ZipFile(zip_path) as zf:
         names, year = members(zf)
-        reports = tidy.parse_reports(_rows(zf, names["rpt"]), year)
-        values = tidy.collect(_rows(zf, names["nmrc"]), reports)
+        reports = tidy.parse_reports(member_rows(zf, names["rpt"]), year)
+        values = tidy.collect(member_rows(zf, names["nmrc"]), reports)
     seen = {SHEET_OF[m] for v in values.values() for m in v}
-    expected = SHEETS - ({S10_HOSPITAL} if year < S10_HOSPITAL_FROM else set())
-    if len(reports) > 100 and seen != expected:  # the newest year's file can hold a handful of reports
-        raise tidy.HcrisError(f"FY{year}: no cells read from {sorted(expected - seen)}")
+    missing = sheets_expected(year) - seen
+    if len(reports) >= MIN_REPORTS_FOR_SHEET_CHECK and missing:
+        raise tidy.HcrisError(f"FY{year}: no cells read from {sorted(missing)}")
     return year, reports, values
 
 
@@ -71,32 +70,29 @@ def report_rows(year, reports):
              r.npr.isoformat() if r.npr else ""] for r in sorted(reports.values(), key=lambda r: int(r.rpt))]
 
 
-def write_csv(path, header, rows):
-    with open(path, "w", newline="", encoding="ascii") as f:
-        w = csv.writer(f, lineterminator="\n")
-        w.writerow(header)
-        w.writerows(rows)
-    return {"bytes": path.stat().st_size, "rows": len(rows)}
-
-
 def run(zip_paths, out_dir):
+    """Writes each year's rows as soon as they are built, so a run holds one year at a time."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    wide, long_, reps, sources = [], [], [], []
-    for path in sorted(zip_paths):
-        year, reports, values = read_year(path)
-        rows = tidy.hospital_years(reports, values, year)
-        wide += tidy.wide_rows(rows)
-        long_ += tidy.long_rows(rows)
-        reps += report_rows(year, reports)
-        digest, size = sha256(path)
-        sources.append({"file": Path(path).name, "year": year, "bytes": size, "sha256": digest,
-                        "reports": len(reports), "hospital_years": len(rows)})
-    outputs = {
-        "hcris_wide.csv": write_csv(out_dir / "hcris_wide.csv", tidy.WIDE_COLUMNS, wide),
-        "hcris_long.csv": write_csv(out_dir / "hcris_long.csv", ("ccn", "year", "metric", "value"), long_),
-        "hcris_reports.csv": write_csv(out_dir / "hcris_reports.csv", REPORT_COLUMNS, reps),
-    }
+    sources, counts = [], dict.fromkeys(OUTPUTS, 0)
+    with contextlib.ExitStack() as stack:
+        writers = {}
+        for name, header in OUTPUTS.items():
+            w = csv.writer(stack.enter_context(open(out_dir / name, "w", newline="", encoding="ascii")),
+                           lineterminator="\n")
+            w.writerow(header)
+            writers[name] = w
+        for path in sorted(zip_paths):
+            year, reports, values = read_year(path)
+            rows = tidy.hospital_years(reports, values, year)
+            for name, out in (("hcris_wide.csv", tidy.wide_rows(rows)), ("hcris_long.csv", tidy.long_rows(rows)),
+                              ("hcris_reports.csv", report_rows(year, reports))):
+                writers[name].writerows(out)
+                counts[name] += len(out)
+            digest, size = sha256(path)
+            sources.append({"file": Path(path).name, "year": year, "bytes": size, "sha256": digest,
+                            "reports": len(reports), "hospital_years": len(rows)})
+    outputs = {name: {"bytes": (out_dir / name).stat().st_size, "rows": counts[name]} for name in OUTPUTS}
     (out_dir / "sources.json").write_text(json.dumps({"sources": sources, "outputs": outputs}, indent=2) + "\n")
     return sources, outputs
 

@@ -1,7 +1,8 @@
 """Entry point for the HCRIS layer until it has a `run.py` command:
 
     python3 -I pipeline/py/pp_pipeline/hcris/cli.py extract --out <dir> <HOSP10FY<YYYY>.ZIP> ...
-    python3 -I pipeline/py/pp_pipeline/hcris/cli.py crosscheck <hcris_wide.csv> <reference csv> <hospital master>
+    python3 -I pipeline/py/pp_pipeline/hcris/cli.py crosscheck <hcris_wide.csv> <year> <puf|nber> <reference csv> \
+        [<hospital master>]
 
 Puts the two package roots on the path the way run.py does (isolated mode keeps the script's folder off it).
 """
