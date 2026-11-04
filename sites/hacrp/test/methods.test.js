@@ -3,7 +3,7 @@
 // pipeline and the sources. Every total on the page is read back against the self-checks it summarizes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
@@ -233,8 +233,19 @@ test('the changes and the sources: every changelog entry with its date and items
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
   // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
   // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
+  // Pins exclusive to another site: its emitted file names them and neither the hospital master, the dollars file nor
+  // HACRP's own files do. That site's Methods page lists its own pins (checked by that site's tests when its pages
+  // exist); every pin the HACRP pages read stays in pinsUsed.
+  const newestFile = (dir, name) => readJson(`${REPO_ROOT}data/emitted/${dir}/fy${newestYear(`data/emitted/${dir}`)}/${name}.json`);
+  const shared = new Set([['hospital', 'hospital_master'], ['dollars', 'dollars'], ['hacrp', 'hacrp'], ['hacrp-history', 'hacrp_history']]
+    .flatMap(([dir, name]) => newestFile(dir, name).sources));
+  const otherSites = readdirSync(`${REPO_ROOT}sites`)
+    .filter((site) => site !== 'hacrp' && existsSync(`${REPO_ROOT}data/emitted/${site}`))
+    .flatMap((site) => newestFile(site, site).sources)
+    .filter((id) => !shared.has(id));
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
-  assert.deepEqual(manifest.filter((e) => !used.has(e.id)).map((e) => e.id), []);
+  const listed = new Set([...used, ...otherSites]);
+  assert.deepEqual(manifest.filter((e) => !listed.has(e.id)).map((e) => e.id), []);
   // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
   // was built from and is not held to the pages' list.
   const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;

@@ -18,21 +18,20 @@ import sys
 from datetime import datetime, timezone
 
 from pp_engine import dollars, ipps
-from pp_engine.contract import camel, envelope, source_manifest_hash
+from pp_engine.contract import camel, envelope
 from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
-from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, require_current, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows, rates
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 4
 SOURCES = (HACRP, IMPACT, RATES, HRRP, VBP, *backtest_dollars.SOURCES)  # the estimate's inputs, then the back-test's
 SCHEMA = "dollars.schema.json"
 
-# The last day of the extension of Medicare-dependent hospital status and of the expanded low-volume-hospital tiers
-# (Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's FY2025-extension columns,
-# which the estimate reads, model both in force for the whole year.
+# The last day of the extension of the expanded low-volume-hospital tiers, and of Medicare-dependent hospital status
+# (dollars.MDH_END; Consolidated Appropriations Act, 2026; CMS's MLN Matters MM14415). The impact file's
+# FY2025-extension columns, which the estimate reads, model both in force for the whole year.
 # Both fall after FY2026 ends (September 30, 2026), so the year is whole under either.
-MDH_END = "2026-12-31"
 LOW_VOLUME_END = "2026-12-31"
 NTAP = "excluded"  # new-technology add-on payments are in no figure (dollars.py, the ASSUMPTION at the federal payment)
 
@@ -90,18 +89,14 @@ def totals_json(nat):
 
 def yes_count(site, manifest):
     """The number of hospitals the HACRP site's emitted file `site` marks Yes, refused unless the file was built from
-    the HACRP pin as `manifest` now has it: its `source_manifest` must equal the hash of the current entries for the
-    sources it names, and one of them must be the HACRP pin. Otherwise the count is of an older file than the rows it
-    is held against."""
-    hint = "emit the HACRP site first (`make emit` does)"
-    known = {entry["id"] for entry in manifest}
-    unknown = [pin for pin in site["sources"] if pin not in known]
-    if unknown:  # a pin the file names that the manifest no longer has: the file is older than the pins
-        raise ValueError(f"the HACRP site's emitted file names the pin {unknown[0]!r}, which the manifest does not "
-                         f"have: {hint}")
-    if HACRP not in site["sources"] or site["source_manifest"] != source_manifest_hash(
-            [manifest_entry(pin, manifest) for pin in site["sources"]]):
-        raise ValueError(f"the HACRP site's emitted file was not built from the current HACRP pin: {hint}")
+    the HACRP pin as `manifest` now has it (`require_current`, and the HACRP pin is among its sources). Otherwise the
+    count is of an older file than the rows it is held against."""
+    try:
+        require_current(site, manifest, "the HACRP site's emitted file")
+        if HACRP not in site["sources"]:
+            raise ValueError("the HACRP site's emitted file does not name the HACRP pin")
+    except ValueError as e:
+        raise ValueError(f"{e}; emit the HACRP site first (`make emit` does)") from None
     return sum(h["paymentReduction"] == "Yes" for h in site["hospitals"])
 
 
@@ -128,7 +123,7 @@ def build_from_pins(built_at):
     checks = dollars.checks(national, hacrp_yes=site_yes_count(fy), rates=table) + backtest_dollars.checks(ranges)
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, read_manifest(), built_at, fy),
-        "assumptions": {"ratesFy": FY, "volumeFy": ipps.rates_year(table).volume_fy, "mdhEnd": MDH_END,
+        "assumptions": {"ratesFy": FY, "volumeFy": ipps.rates_year(table).volume_fy, "mdhEnd": dollars.MDH_END,
                         "lowVolumeEnd": LOW_VOLUME_END, "ntap": NTAP},
         "national": totals_json(national),
         "headline": totals_json(dollars.national(headline)),

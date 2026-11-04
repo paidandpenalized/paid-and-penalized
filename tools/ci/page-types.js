@@ -42,6 +42,25 @@ export const placeKind = (path) => KINDS.find((kind) => {
   return key !== null && placePath(kind, key) === path;
 }) ?? null;
 
+// The program sites with pages of their own (program, hospital, place, Methods and data dictionary), each with the
+// predicates that sort a path into those types. A program site joins by adding its entry when its pages exist; its
+// budgets join in size-budget.js (PROGRAM_BUDGETS). A test checks that every id here has budgets; a program's budgets
+// may exist before its pages do, as Readmissions' do.
+export const PROGRAM_SITES = [
+  {
+    id: 'hacrp',
+    pages: { program: (path) => path === PROGRAM_PATH, methods: (path) => path === METHODS_PATH, dictionary: (path) => path === DICTIONARY_PAGE, hospital: isHospital, place: (path) => placeKind(path) !== null },
+  },
+];
+// The program-keyed types: those of a program's own pages, budgeted per program.
+export const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
+// { program, type } for a program site's own page, or null.
+const programPage = (path) => {
+  for (const site of PROGRAM_SITES)
+    for (const type of PROGRAM_TYPES) if (site.pages[type]?.(path)) return { program: site.id, type };
+  return null;
+};
+
 // The type of the page at a site path: 'hub', 'policy', 'coming', 'program', 'methods', 'dictionary', 'hospital',
 // 'place', 'hubHospital', 'hrrp', 'hrrpHospital' or 'notFound'; null for a path that is none of them.
 export function pageType(path) {
@@ -49,13 +68,13 @@ export function pageType(path) {
   if (path === NOT_FOUND_ADDRESS) return 'notFound';
   if (POLICY.has(path)) return 'policy';
   if (PLACEHOLDERS.has(path)) return 'coming';
-  if (path === PROGRAM_PATH) return 'program';
   if (path === HRRP_PATH) return 'hrrp';
-  if (path === METHODS_PATH) return 'methods';
-  if (path === DICTIONARY_PAGE) return 'dictionary';
-  if (isHospital(path)) return 'hospital';
-  if (placeKind(path) !== null) return 'place';
+  const own = programPage(path);
+  if (own) return own.type;
   if (isHubHospital(path)) return 'hubHospital';
   if (isHrrpHospital(path)) return 'hrrpHospital';
   return null;
 }
+// The id of the program whose page is at a site path ('hacrp'), for the program-keyed types ('program', 'hospital',
+// 'place', 'methods', 'dictionary'); null for any other page.
+export const pageProgram = (path) => programPage(path)?.program ?? null;

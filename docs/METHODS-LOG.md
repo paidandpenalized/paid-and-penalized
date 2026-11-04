@@ -39,6 +39,18 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   (CY2017 to CY2019 and CY2021 to CY2024; extracts pinned by `pipeline/py/pp_pipeline/hai_extract.py`): per measure,
   the hospitals with an SIR and their median, and the observed and predicted infections over hospitals with both counts.
 
+## hrrp methods_version 1 (2026-11-05)
+- `data/emitted/hrrp/fy2027/hrrp.json` is the first emission of the Readmissions data. Its method is Thirty Day
+  Readmissions' at `33d1959` (`pipeline/build_data.py`), unchanged: CMS's FY2027 supplemental file at full precision
+  from the Excel workbook, checked against the tab-delimited export and Table 15; ratios, payment weights, the
+  neutrality modifier and the peer medians stored with the fewest decimals (at least 6) that reproduce every payment
+  adjustment factor and print CMS's 4-decimal values; the base-payment estimate from the impact file and Tables 1A-1B,
+  with the Medicare-dependent hospital add-on for the part of the year the status lasts; the FY2013-FY2026 history
+  from that site's derived files.
+- The body equals that site's own output on `meta` (less `sources` and `whatsNew`), `conditions`, every hospital and
+  `history` (a test holds it). Names, locations, beds, teaching, ownership, provider types and Medicare status come
+  from the hospital master, which already equals that site's values for every hospital.
+
 ## hospital methods_version 1 (2026-10-20)
 - `data/emitted/hospital/fy2027/hospital_master.json` holds one record per CCN listed in Care Compare's Hospital
   General Information, the FY2027 IPPS impact file, or a program file (HACRP FY2026; HRRP FY2027 from Thirty Day

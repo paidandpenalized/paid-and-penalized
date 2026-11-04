@@ -9,7 +9,8 @@ import { randomBytes } from 'node:crypto';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
-import { BLOCKING_JS_BUDGET, BUDGETS, JS_BUDGET, measure, overBudget, pageWeight } from '../ci/size-budget.js';
+import { PROGRAM_SITES } from '../ci/page-types.js';
+import { BLOCKING_JS_BUDGET, BUDGETS, JS_BUDGET, PROGRAM_BUDGETS, budgetOf, measure, overBudget, pageWeight } from '../ci/size-budget.js';
 
 // Brotli's size of the text; quality 5 is the one the budget counts.
 const br = (text, quality = 5) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
@@ -73,7 +74,7 @@ test('overBudget: a page whose blocking scripts pass the blocking budget (1 KB) 
     assert.equal(BLOCKING_JS_BUDGET, 1024);
     const heavy = noise(2000);
     writeTree(dir, { 'assets/early.1.js': heavy, 'index.html': page('<script src="/assets/early.1.js"></script>') });
-    assert.deepEqual(overBudget(measure(dir)), [{ path: '/', type: 'hub', part: 'blocking', bytes: br(heavy), budget: BLOCKING_JS_BUDGET }]);
+    assert.deepEqual(overBudget(measure(dir)), [{ path: '/', type: 'hub', program: null, part: 'blocking', bytes: br(heavy), budget: BLOCKING_JS_BUDGET }]);
     assert.deepEqual(overBudget(measure(dir), { blocking: 50000 }), []);
   }));
 
@@ -95,7 +96,7 @@ test('pageWeight: a referenced file that is not in dist throws, and so does a sc
   }));
 
 test('every page type has a budget; hub and policy start at 100 KB and scripts at 120 KB (ARCH-27)', () => {
-  assert.deepEqual(Object.keys(BUDGETS).sort(), ['coming', 'dictionary', 'hospital', 'hrrp', 'hrrpHospital', 'hub', 'hubHospital', 'methods', 'notFound', 'place', 'policy', 'program']);
+  assert.deepEqual(Object.keys(BUDGETS).sort(), ['coming', 'hrrp', 'hrrpHospital', 'hub', 'hubHospital', 'notFound', 'policy']);
   assert.ok(BUDGETS.coming <= 100 * 1024, 'a placeholder is a hub page (ARCH-27)');
   assert.ok(BUDGETS.hubHospital <= 150 * 1024, 'a hospital page (ARCH-27)');
   assert.ok(BUDGETS.hrrp <= 100 * 1024, 'the interim Readmissions page is a hub page (ARCH-27)');
@@ -104,6 +105,22 @@ test('every page type has a budget; hub and policy start at 100 KB and scripts a
   assert.equal(BUDGETS.policy, 100 * 1024);
   assert.equal(JS_BUDGET, 120 * 1024);
   for (const b of Object.values(BUDGETS)) assert.ok(Number.isInteger(b) && b > 0);
+});
+
+test('program budgets: HACRP\'s are unchanged, and every program site has budgets', () => {
+  const KB = 1024;
+  assert.deepEqual(PROGRAM_BUDGETS.hacrp, { program: 330 * KB, hospital: 120 * KB, place: 150 * KB, methods: 100 * KB, dictionary: 50 * KB });
+  for (const { id } of PROGRAM_SITES) assert.ok(PROGRAM_BUDGETS[id], id);
+  for (const budgets of Object.values(PROGRAM_BUDGETS)) for (const b of Object.values(budgets)) assert.ok(Number.isInteger(b) && b > 0);
+});
+
+test('budgetOf: a family type by type, a program-keyed type by type and program; a missing program or budgets throws', () => {
+  assert.equal(budgetOf({ type: 'hub', program: null }), BUDGETS.hub);
+  assert.equal(budgetOf({ type: 'hospital', program: 'hacrp' }), PROGRAM_BUDGETS.hacrp.hospital);
+  assert.equal(budgetOf({ type: 'methods', program: 'hrrp' }), PROGRAM_BUDGETS.hrrp.methods);
+  for (const type of ['program', 'hospital', 'place', 'methods', 'dictionary']) assert.throws(() => budgetOf({ type, program: null }), /needs a program/, type);
+  assert.throws(() => budgetOf({ type: 'hospital', program: 'nope' }), /no budgets for program "nope"/);
+  assert.throws(() => budgetOf({ type: 'bogus', program: null }), /no budget for page type "bogus"/);
 });
 
 test('overBudget: lists the pages over their type\'s budget, and only those', () =>
@@ -116,20 +133,20 @@ test('overBudget: lists the pages over their type\'s budget, and only those', ()
       'hacrp/state/ca/index.html': big,
       'index.html': small,
     });
-    const budgets = { hub: 1000, policy: 1000, coming: 1000, program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000, notFound: 1000, hubHospital: 1000, hrrp: 1000, hrrpHospital: 1000 };
-    const over = overBudget(measure(dir), { budgets });
-    assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', part: 'total', bytes: br(big), budget: 2000 }]);
+    const budgets = { hub: 1000, policy: 1000, coming: 1000, notFound: 1000, hubHospital: 1000, hrrp: 1000, hrrpHospital: 1000 };
+    const hacrp = { program: 1000, hospital: 2000, place: 10000, methods: 1000, dictionary: 1000 };
+    const over = overBudget(measure(dir), { budgets, programBudgets: { hacrp } });
+    assert.deepEqual(over, [{ path: '/hacrp/hospital/990001/', type: 'hospital', program: 'hacrp', part: 'total', bytes: br(big), budget: 2000 }]);
     // Everything fits a generous budget.
-    assert.deepEqual(overBudget(measure(dir), { budgets: { ...budgets, hospital: 50000 } }), []);
+    assert.deepEqual(overBudget(measure(dir), { budgets, programBudgets: { hacrp: { ...hacrp, hospital: 50000 } } }), []);
   }));
 
 test('overBudget: a page whose scripts alone pass the script budget is reported, whatever its total', () =>
   withTemp('size-', (dir) => {
     const heavy = noise(4000);
     writeTree(dir, { 'assets/big.1.js': heavy, 'hacrp/index.html': page(js('/assets/big.1.js')) });
-    const budgets = { ...BUDGETS };
-    const over = overBudget(measure(dir), { budgets, js: 1000 });
-    assert.deepEqual(over, [{ path: '/hacrp/', type: 'program', part: 'js', bytes: br(heavy), budget: 1000 }]);
+    const over = overBudget(measure(dir), { js: 1000 });
+    assert.deepEqual(over, [{ path: '/hacrp/', type: 'program', program: 'hacrp', part: 'js', bytes: br(heavy), budget: 1000 }]);
   }));
 
 test('measure: a page of no known type, or a build with no pages, throws', () =>
@@ -144,7 +161,9 @@ test('measure: one row per page, with its type and weight', () =>
     const p = page();
     writeTree(dir, { 'index.html': p, '404.html': p });
     const rows = measure(dir).sort((x, y) => x.path.localeCompare(y.path));
-    assert.deepEqual(rows.map((r) => [r.path, r.type, r.total]), [['/', 'hub', br(p)], ['/404', 'notFound', br(p)]]);
+    assert.deepEqual(rows.map((r) => [r.path, r.type, r.program, r.total]), [['/', 'hub', null, br(p)], ['/404', 'notFound', null, br(p)]]);
+    writeTree(dir, { 'hacrp/index.html': p });
+    assert.equal(measure(dir).find((r) => r.path === '/hacrp/').program, 'hacrp');
   }));
 
 test('CLI: exits 0 on a site within budget, and 1 naming each page over it', () =>

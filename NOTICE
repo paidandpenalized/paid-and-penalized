@@ -19,6 +19,12 @@ Not covered by either license:
   site's refreshes. data/pinned/tdr/geocodes.csv, from the same site, holds its U.S. Census Bureau Geocoder
   results for hospital street addresses. data/pinned/census-geocodes-2026-10/geocodes.csv holds this project's own
   results from the same public service (U.S. Census Bureau Geocoder) for the remaining hospitals.
+  data/pinned/hrrp-history-fy2013-2026/ (the FY2013-FY2026 payment adjustment factors, their national summary and
+  the note on how they were built) and data/pinned/hrrp-curated-fy2027/ (annual penalty totals with their sources,
+  and the dollar estimate's cost-report check) are unmodified copies of that site's files at commit 33d1959.
+- The Readmissions site's formulas, data pipeline, page copy and tests are ported from Thirty Day Readmissions
+  (github.com/daltonhaslam/thirty-day-readmissions, at 33d1959), under its MIT license, "Copyright (c) 2026 Dalton
+  Haslam", the same holder as this project's. Each ported file names its source in its header.
 - The names "Paid & Penalized" and "paidandpenalized", and any project logos or wordmarks.
 - Third-party fonts, which carry their own licenses next to the font files. The favicon's "&" is a glyph outline from
   Alfa Slab One, under the SIL Open Font License 1.1 (web/fonts/OFL-alfa-slab-one.txt).

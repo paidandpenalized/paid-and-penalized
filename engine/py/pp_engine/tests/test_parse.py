@@ -56,6 +56,10 @@ class Hgi(unittest.TestCase):
                                          "state": "ZZ", "zip": "01234", "county": "X",
                                          "type": "Acute Care Hospitals", "ownership": "Government - State"})
 
+    def test_the_master_read_does_not_need_the_star_column(self):
+        header = HGI_HEADER.replace(',"Hospital overall rating"', "")
+        self.assertEqual(list(read_hgi(header + "990001,A,B,C,ZZ,1,X,T,O\n")), ["990001"])
+
     def test_malformed_and_duplicate_ccns_raise(self):
         with self.assertRaisesRegex(SchemaError, "malformed CCN '10001'"):
             read_hgi(HGI_HEADER + "10001,A,B,C,ZZ,1,X,T,O,1\n")

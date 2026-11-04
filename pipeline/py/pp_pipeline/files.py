@@ -6,9 +6,10 @@ import json
 import zipfile
 from pathlib import Path
 
-from pp_engine.contract import format_emitted, keep_built_at
+from pp_engine.contract import format_emitted, keep_built_at, source_manifest_hash
 from pp_engine.parse import SchemaError
 from pp_engine.schema import validate
+from pp_engine.zipsafe import check_zip
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PINNED_DIR = REPO_ROOT / "data" / "pinned"
@@ -78,7 +79,10 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
 
 
 def read_zip_member(pin_id, member):
+    """A member of a pinned zip, read in memory after `zipsafe.check_zip` clears the zip's names, member count and
+    declared sizes."""
     with zipfile.ZipFile(io.BytesIO(read_pinned_bytes(pin_id))) as zf:
+        check_zip(zf, pin_id)
         return zf.read(member)
 
 
@@ -108,3 +112,13 @@ def write_emitted(path, fresh, schema_name):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(format_emitted(out), encoding="utf-8")
     return out
+
+
+def require_current(emitted, manifest, label):
+    """Raise ValueError unless `emitted` (an emitted file, parsed) was built from the pins as `manifest` has them now:
+    every pin its `sources` names is in the manifest and its `source_manifest` is their hash. A file built before a
+    re-pin is refused, so nothing reads it half-trusted."""
+    by_id = {e["id"]: e for e in manifest}
+    unknown = [pin for pin in emitted["sources"] if pin not in by_id]
+    if unknown or emitted["source_manifest"] != source_manifest_hash([by_id[pin] for pin in emitted["sources"]]):
+        raise ValueError(f"{label} was not built from the current pins: run `make emit`")

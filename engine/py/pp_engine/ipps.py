@@ -130,6 +130,31 @@ def _capital(section):
     return _rate(row[j] if j < len(row) else "", label)
 
 
+def _operating_tables(sections):
+    """Tables 1A and 1B of `_sections` -> (`{"1A": rates, "1B": rates}`, the scenarios' updates in percent). Raises
+    SchemaError for a missing table, a table without the four scenarios, or two tables stating different updates."""
+    for name in ("1A", "1B"):
+        if name not in sections:
+            raise SchemaError(f"Tables 1A-1E: Table {name} not found")
+    (rates_a, updates_a), (rates_b, updates_b) = _operating(sections["1A"], "1A"), _operating(sections["1B"], "1B")
+    operating = {"1A": rates_a, "1B": rates_b}
+    for name in ("1A", "1B"):
+        if sorted(operating[name]) != sorted(RATE_KEYS):
+            raise SchemaError(f"Tables 1A-1E, Table {name}: expected the four scenarios, found {sorted(operating[name])}")
+    for key, percent in updates_b.items():
+        if percent != updates_a[key]:
+            raise SchemaError(f"Tables 1A-1E, Table 1B: update {percent} for scenario {key!r}, "
+                              f"Table 1A states {updates_a[key]}")
+    return operating, updates_a
+
+
+def read_operating_rates(text):
+    """Tables 1A and 1B of a Tables 1A-1E file (read as `read_rates` reads it) -> `{"1A": {key: (labor, nonlabor)},
+    "1B": {...}}`, with `read_rates`' scenario-key and update-agreement checks but no `ImpactYear`: for a rule year
+    not registered in `IMPACT_YEARS` (the HRRP estimate reads FY2027's rates this way)."""
+    return _operating_tables(_sections(rows(text, "\t")))[0]
+
+
 def read_rates(text, fy=2026):
     """Tables 1A-1E (tab-delimited, read as CSV: one scenario heading is a quoted cell with a line break) ->
     `{"operating": {"1A": {key: (labor, nonlabor)}, "1B": {...}}, "capital": rate, "mdh_factor": {key: multiplier},
@@ -151,18 +176,9 @@ def read_rates(text, fy=2026):
     The layout is the same in FY2024's and FY2026's files; the labor shares are not (FY2024's Table 1A is 67.6% labor),
     and are not read."""
     sections = _sections(rows(text, "\t"))
-    for name in ("1A", "1B", "1D"):
-        if name not in sections:
-            raise SchemaError(f"Tables 1A-1E: Table {name} not found")
-    (rates_a, updates_a), (rates_b, updates_b) = _operating(sections["1A"], "1A"), _operating(sections["1B"], "1B")
-    operating = {"1A": rates_a, "1B": rates_b}
-    for name in ("1A", "1B"):
-        if sorted(operating[name]) != sorted(RATE_KEYS):
-            raise SchemaError(f"Tables 1A-1E, Table {name}: expected the four scenarios, found {sorted(operating[name])}")
-    for key, percent in updates_b.items():
-        if percent != updates_a[key]:
-            raise SchemaError(f"Tables 1A-1E, Table 1B: update {percent} for scenario {key!r}, "
-                              f"Table 1A states {updates_a[key]}")
+    if "1D" not in sections:
+        raise SchemaError("Tables 1A-1E: Table 1D not found")
+    operating, updates_a = _operating_tables(sections)
     year = impact_year(fy)
     mdh_factor = {key: ((1.0 + percent / 100.0) * math.prod(year.hsp_budget_neutrality)
                         if year.mdh_rate_prior_year else 1.0) for key, percent in updates_a.items()}
@@ -392,6 +408,27 @@ def read_payment_inputs(text, rates):
             out["mdh"] = out["ptype"] in MDH_TYPES
             out["hsp_mdh"] = out["hsp"] if out["mdh"] else None
         return out
+    return index_by_ccn(table(rows(text, "\t"), columns["ccn"], columns, label), build, label)
+
+
+def read_estimate_inputs(text, fy, grouper):
+    """A final-rule IPPS impact file (tab-delimited) -> {ccn: {wi, cola, cases, cmi, qual_red, ehr_red, hsp}}:
+    the payment inputs of the HRRP dollar estimate. Ported from Thirty Day Readmissions (pipeline/hrrp/parse.py
+    `read_impact` at 33d1959). It is Thirty Day Readmissions' base-payment model's reader, kept separate from
+    `read_payment_inputs` (the family estimate's, which reads a year through `IMPACT_YEARS`); retire it when the
+    Readmissions estimate moves to the family method with the FY2027 refresh. `grouper` is the MS-DRG grouper version of the year (44 for FY2027): the transfer-adjusted
+    case count and case mix are `CASETA<grouper>` / `TACMIV<grouper>`. A blank cost-of-living adjustment is 1.0;
+    `qual_red` and `ehr_red` are the proxy reduction flags equal to 1; `wi`, `cases`, `cmi` and `hsp` are None when
+    blank. MDH status is not read here: it has one source, the hospital master's provider types (`program_fields`)."""
+    columns = {"ccn": "Provider Number", "wi": f"FY {fy} Wage Index", "cola": "Cost of Living Adjustment",
+               "cases": f"CASETA{grouper}", "cmi": f"TACMIV{grouper}", "qual_red": "Proxy Quality Reduction",
+               "ehr_red": "Proxy EHR Reduction", "hsp": "HSP Rate"}
+
+    def build(r):
+        return {"wi": num(r["wi"]), "cola": num(r["cola"]) or 1.0, "cases": num(r["cases"]), "cmi": num(r["cmi"]),
+                "qual_red": num(r["qual_red"]) == 1, "ehr_red": num(r["ehr_red"]) == 1,
+                "hsp": num(r["hsp"])}
+    label = f"FY{fy} impact file"
     return index_by_ccn(table(rows(text, "\t"), columns["ccn"], columns, label), build, label)
 
 

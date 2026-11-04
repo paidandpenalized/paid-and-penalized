@@ -49,6 +49,10 @@ HAC_RATE = 0.01  # the HAC Reduction Program's payment reduction: 1% of the hosp
 # A Medicare-dependent hospital is paid 75% of the excess of its hospital-specific rate over the federal rate
 # (42 CFR 412.108).
 MDH_SHARE = 0.75
+# Medicare-dependent hospital status ends on this date under current law (extended through Dec 31, 2026 by section
+# 6202 of the Consolidated Appropriations Act, 2026). The Readmissions estimate counts the add-on only for the
+# fiscal-year days up to it; move it if Congress extends the program again.
+MDH_END = "2026-12-31"
 
 # The national checks. Each is a range the sums must land in; none is fitted to the estimate. If one fails, find the
 # cause; a range is not widened to make a check pass. The ranges that come from a year's final rule (the HRRP share, the

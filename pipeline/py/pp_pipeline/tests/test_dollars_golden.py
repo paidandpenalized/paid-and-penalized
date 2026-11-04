@@ -324,9 +324,9 @@ class SiteYesCount(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "emit the HACRP site first"):
             yes_count(site, self.manifest("aa" * 32))
 
-    def test_a_file_that_names_a_pin_the_manifest_lacks_raises_naming_the_pin_and_how_to_fix_it(self):
+    def test_a_file_that_names_a_pin_the_manifest_lacks_raises_and_says_how_to_fix_it(self):
         site = self.site("aa" * 32, sources=(HACRP, "retired-pin"))
-        with self.assertRaisesRegex(ValueError, r"names the pin 'retired-pin'.*emit the HACRP site first"):
+        with self.assertRaisesRegex(ValueError, r"not built from the current pins.*emit the HACRP site first"):
             yes_count(site, self.manifest("aa" * 32))
 
     def test_the_committed_site_file_is_fresh_and_its_count_is_the_csv_s(self):
