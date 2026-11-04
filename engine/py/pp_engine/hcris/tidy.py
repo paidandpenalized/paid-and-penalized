@@ -17,9 +17,9 @@ apart and leaves it blank.
 import datetime
 import re
 from collections import namedtuple
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
-from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, SHEET_ALIASES, SHEETS_READ
+from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, SHEETS_READ
 
 RPT_FIELDS = 18
 NMRC_FIELDS = 5
@@ -88,7 +88,7 @@ def collect(number_rows, reports):
             raise HcrisError(f"numeric file: a row of {len(r)} fields, not {NMRC_FIELDS}")
         if r[1] not in SHEETS_READ:
             continue
-        cell = BY_KEY.get((SHEET_ALIASES.get(r[1], r[1]), r[2], r[3]))
+        cell = BY_KEY.get((r[1], r[2], r[3]))
         if cell is None:
             continue
         rpt, text = r[0].strip(), r[4].strip()
@@ -99,11 +99,11 @@ def collect(number_rows, reports):
         row = values.setdefault(rpt, {})
         if cell.metric in row:
             raise HcrisError(f"numeric file: report {rpt}, {cell.metric} appears twice")
-        try:
-            row[cell.metric] = Decimal(text)
-        except InvalidOperation:  # pragma: no cover (NUMBER admits only what Decimal reads)
-            raise HcrisError(f"numeric file: report {rpt}, {cell.metric}: {text!r}")
+        row[cell.metric] = Decimal(text)
     return values
+
+
+MAX_YEAR_DAYS = 366  # periods adding up to more than this are a `long` year (two periods' starts in one year)
 
 
 def _days(report):
@@ -131,19 +131,17 @@ def hospital_years(reports, values, year):
             elif any(s > 1 for s in steps):
                 shape = "gap"
             else:
-                shape = "long" if days > 366 else "split"
+                shape = "long" if days > MAX_YEAR_DAYS else "split"
         last = max(reps, key=lambda r: (r.end, int(r.rpt)))
         row = {"ccn": ccn, "year": year, "n_reports": len(reps), "shape": shape,
                "reports": " ".join(r.rpt for r in reps), "status": " ".join(r.status for r in reps),
                "period_begin": reps[0].begin.isoformat(), "period_end": last.end.isoformat(), "period_days": days,
                "control": last.control}
         for cell in CELLS:
-            got = [values.get(r.rpt, {}).get(cell.metric) for r in reps]
             if cell.kind == "stock":
                 row[cell.metric] = values.get(last.rpt, {}).get(cell.metric)
             else:
-                present = [v for v in got if v is not None]
-                row[cell.metric] = sum(present, Decimal(0)) if present else None
+                row[cell.metric] = _sum(*(values.get(r.rpt, {}).get(cell.metric) for r in reps))
         derive(row)
         out.append(row)
     return out
@@ -163,19 +161,25 @@ def _sum(*parts):
     return sum(present, Decimal(0)) if present else None
 
 
+# The formulas behind `cells.DERIVED` (which names them in words), in its order; each reads the row as built so far.
+FORMULAS = {
+    "medicaid_days_all": lambda g: _sum(g("days_medicaid"), g("days_medicaid_managed")),
+    "medicaid_day_share": lambda g: _ratio(g("medicaid_days_all"), g("days_total")),
+    "medicare_day_share": lambda g: _ratio(_sum(g("days_medicare"), g("days_medicare_advantage")), g("days_total")),
+    "occupancy": lambda g: _ratio(g("days_total"), g("bed_days_available")),
+    "operating_margin": lambda g: _ratio(g("net_income_patients"), g("net_patient_revenue")),
+    "total_margin": lambda g: _ratio(g("net_income"), _sum(g("net_patient_revenue"), g("other_income"))),
+    "medicaid_payment_to_cost": lambda g: _ratio(_sum(g("medicaid_net_revenue"), g("medicaid_supplemental")),
+                                                 g("medicaid_cost")),
+    "medicaid_revenue_share": lambda g: _ratio(g("medicaid_net_revenue"), g("net_patient_revenue")),
+    "uncompensated_share_of_expenses": lambda g: _ratio(g("uncompensated_cost"), g("operating_expenses")),
+}
+
+
 def derive(row):
     """Adds `cells.DERIVED` to a hospital-year row, in place."""
-    g = row.get
-    row["medicaid_days_all"] = _sum(g("days_medicaid"), g("days_medicaid_managed"))
-    row["medicaid_day_share"] = _ratio(row["medicaid_days_all"], g("days_total"))
-    row["medicare_day_share"] = _ratio(_sum(g("days_medicare"), g("days_medicare_advantage")), g("days_total"))
-    row["occupancy"] = _ratio(g("days_total"), g("bed_days_available"))
-    row["operating_margin"] = _ratio(g("net_income_patients"), g("net_patient_revenue"))
-    row["total_margin"] = _ratio(g("net_income"), _sum(g("net_patient_revenue"), g("other_income")))
-    row["medicaid_payment_to_cost"] = _ratio(_sum(g("medicaid_net_revenue"), g("medicaid_supplemental")),
-                                             g("medicaid_cost"))
-    row["medicaid_revenue_share"] = _ratio(g("medicaid_net_revenue"), g("net_patient_revenue"))
-    row["uncompensated_share_of_expenses"] = _ratio(g("uncompensated_cost"), g("operating_expenses"))
+    for name, _ in DERIVED:
+        row[name] = FORMULAS[name](row.get)
     return row
 
 
@@ -190,10 +194,8 @@ def text(value):
     if value is None:
         return ""
     if isinstance(value, Decimal):
-        t = format(value, "f")
-        if "." in t:
-            t = t.rstrip("0").rstrip(".")
-        return "0" if t in ("-0", "") else t
+        t = format(value.normalize(), "f")
+        return "0" if t == "-0" else t
     return str(value)
 
 

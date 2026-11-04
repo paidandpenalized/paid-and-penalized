@@ -12,7 +12,8 @@ fiscal year splits the year into short periods): a `flow` (dollars, days, discha
 """
 from collections import namedtuple
 
-Cell = namedtuple("Cell", "metric sheet line column kind label")
+# `since`: the first HCRIS year whose reports carry the cell (None: every year of the form).
+Cell = namedtuple("Cell", "metric sheet line column kind label since", defaults=(None,))
 
 S3 = "S300001"  # Worksheet S-3, Part I: hospital and hospital health care complex statistical data
 S10 = "S100001"  # Worksheet S-10, Part I: uncompensated and indigent care, the whole hospital complex
@@ -82,17 +83,25 @@ CELLS = (
     Cell("unreimbursed_and_uncompensated", S10, "03100", "00100", "flow",
          "S-10 I line 31: unreimbursed and uncompensated care (lines 19 plus 30)"),
     # Worksheet S-10, Part II (hospital CCN only; periods beginning on or after 2022-10-01). A subset of Part I.
-    Cell("hospital_charity_cost", S10_HOSPITAL, "02300", "00300", "flow", "S-10 II line 23 col 3: charity care cost"),
-    Cell("hospital_bad_debt_cost", S10_HOSPITAL, "02900", "00100", "flow", "S-10 II line 29: bad debt cost"),
+    Cell("hospital_charity_cost", S10_HOSPITAL, "02300", "00300", "flow", "S-10 II line 23 col 3: charity care cost",
+         2023),
+    Cell("hospital_bad_debt_cost", S10_HOSPITAL, "02900", "00100", "flow", "S-10 II line 29: bad debt cost", 2023),
     Cell("hospital_uncompensated_cost", S10_HOSPITAL, "03000", "00100", "flow",
-         "S-10 II line 30: cost of uncompensated care"),
+         "S-10 II line 30: cost of uncompensated care", 2023),
 )
 
-BY_KEY = {(c.sheet, c.line, c.column): c for c in CELLS}
 METRICS = tuple(c.metric for c in CELLS)
-SHEETS = frozenset(c.sheet for c in CELLS)
-SHEETS_READ = SHEETS | frozenset(SHEET_ALIASES)
 SHEET_OF = {c.metric: c.sheet for c in CELLS}
+# Every (worksheet code, line, column) read, old codes included, to its cell: one lookup per numeric row.
+BY_KEY = {(c.sheet, c.line, c.column): c for c in CELLS}
+BY_KEY.update({(old, line, col): c for (sheet, line, col), c in list(BY_KEY.items())
+               for old, new in SHEET_ALIASES.items() if sheet == new})
+SHEETS_READ = frozenset(sheet for sheet, _, _ in BY_KEY)
+
+
+def sheets_expected(year):
+    """The worksheets a full year's file must yield cells from."""
+    return {c.sheet for c in CELLS if c.since is None or year >= c.since}
 
 # Metrics computed from the cells above, on the hospital-year row. Each: (name, formula in words). The formulas are
 # in tidy.derive. A ratio is blank when its denominator is missing or zero.

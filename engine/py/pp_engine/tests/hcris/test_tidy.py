@@ -131,13 +131,16 @@ class Text(unittest.TestCase):
 
 class Cells(unittest.TestCase):
     def test_each_cell_once_and_well_formed(self):
-        self.assertEqual(len(cells.BY_KEY), len(cells.CELLS))
+        self.assertEqual(len({(c.sheet, c.line, c.column) for c in cells.CELLS}), len(cells.CELLS))
         self.assertEqual(len(set(cells.METRICS)), len(cells.METRICS))
         for c in cells.CELLS:
             with self.subTest(metric=c.metric):
                 self.assertRegex(c.line + c.column, r"^\d{10}$")
                 self.assertIn(c.kind, ("flow", "stock"))
         self.assertFalse(set(cells.METRICS) & {name for name, _ in cells.DERIVED})
+        self.assertEqual([name for name, _ in cells.DERIVED], list(tidy.FORMULAS))
+        self.assertEqual(cells.sheets_expected(2022), {cells.S3, cells.G3, cells.S10})
+        self.assertEqual(cells.sheets_expected(2023), {cells.S3, cells.G3, cells.S10, cells.S10_HOSPITAL})
 
 
 if __name__ == "__main__":

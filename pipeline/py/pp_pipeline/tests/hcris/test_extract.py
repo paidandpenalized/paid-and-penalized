@@ -86,7 +86,7 @@ class Crosscheck(unittest.TestCase):
                  "patient_revenue_gross": "5000", "days_medicaid_managed": ""},
                 {"ccn": "990002", "shape": "split", "period_begin": "2023-10-01", "period_end": "2024-09-30",
                  "patient_revenue_gross": "1", "days_medicaid_managed": ""}]
-        ref = [{"prvdr_num": "990001", "fy_bgn_dt": "2023-10-01", "fy_end_dt": "09/30/2024", "g3_c1_1": "5000",
+        ref = [{"prvdr_num": "990001", "fy_bgn_dt": "2023-10-01", "fy_end_dt": "2024-09-30", "g3_c1_1": "5000",
                 "s3_1_c7_2": "40", "rpt_rec_num": "999"}]
         result, counts = crosscheck.compare(ours, ref, "nber")
         self.assertEqual(counts, {"ours": 2, "single_report": 1, "reference": 1, "matched": 1})
