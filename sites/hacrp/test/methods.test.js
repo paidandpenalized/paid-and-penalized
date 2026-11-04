@@ -233,7 +233,11 @@ test('the changes and the sources: every changelog entry with its date and items
   assert.equal([...sources.matchAll(/<tr><th scope="row">/g)].length, DATA.pinsUsed.length);
   // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
   // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
-  const used = new Set(DATA.pinsUsed.map((e) => e.id));
+  // Pins another site's emitted file names are that site's to list. PINS_AWAITING_EMIT are pinned ahead of the
+  // emitter that will name them (the Readmissions port); the list goes when it does.
+  const PINS_AWAITING_EMIT = ['hrrp-supplemental-fy2027', 'hrrp-table15-fy2027', 'ipps-rates-fy2027', 'hrrp-history-fy2013-2026',
+    'hrrp-history-summary-fy2013-2026', 'hrrp-history-provenance', 'hrrp-annual-totals', 'hrrp-dollar-check-fy2027'];
+  const used = new Set([...DATA.pinsUsed.map((e) => e.id), ...PINS_AWAITING_EMIT]);
   assert.deepEqual(manifest.filter((e) => !used.has(e.id)).map((e) => e.id), []);
   // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
   // was built from and is not held to the pages' list.

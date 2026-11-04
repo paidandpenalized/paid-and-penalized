@@ -35,6 +35,91 @@
     "retrieved": "2026-10-20"
   },
   {
+    "id": "hrrp-supplemental-fy2027",
+    "title": "FY2027 Hospital Readmissions Reduction Program supplemental data file (final, after review and correction; files dated 2026-10-07)",
+    "path": "hrrp-fy2027/fy-2027-hospital-readmissions-reduction-program-supplemental-data-file.zip",
+    "bytes": 1563804,
+    "sha256": "63b7b7b0827f6ceef6f0d50bfa93ddff07de4887137450a02135e86b0b02767f",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy-2027-hospital-readmissions-reduction-program-supplemental-data-file.zip",
+    "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/fy-2027-hospital-readmissions-reduction-program-supplemental-data-file.zip",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-table15-fy2027",
+    "title": "FY2027 Hospital Readmissions Reduction Program Table 15: payment adjustment factors",
+    "path": "hrrp-fy2027/fy-2027-hospital-readmissions-reduction-program-payment-adjustment-factors.zip",
+    "bytes": 83052,
+    "sha256": "8c1b2a254c768d6eda6287aff9a5748b55e3bf9570cc5119a61b422ca17e6ba8",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy-2027-hospital-readmissions-reduction-program-payment-adjustment-factors.zip",
+    "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/fy-2027-hospital-readmissions-reduction-program-payment-adjustment-factors.zip",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "ipps-rates-fy2027",
+    "title": "FY2027 IPPS final rule and correction notice Tables 1A-1E (standardized amounts)",
+    "path": "ipps-rates-fy2027/fy2027-ipps-fr-table-1a-1e.zip",
+    "bytes": 19779,
+    "sha256": "70a89efeeea4f8430ed8e8a1c50d40c4fab3a839e6a2358763835688c448d12c",
+    "downloadUrl": "https://www.cms.gov/files/zip/fy2027-ipps-fr-table-1a-1e.zip",
+    "archiveUrl": "https://github.com/daltonhaslam/thirty-day-readmissions/releases/download/fy2027-raw-inputs/fy2027-ipps-fr-table-1a-1e.zip",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-history-fy2013-2026",
+    "title": "Thirty Day Readmissions: HRRP payment adjustment factors per hospital, FY2013-FY2026, derived from CMS's archived final-rule supplemental files",
+    "path": "hrrp-history-fy2013-2026/hrrp_paf_history_fy2013_2026.csv",
+    "bytes": 931077,
+    "sha256": "c0e956b8188ec1410e9ae39025ff784ad06a750ef6fff261b23173c9071e6981",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/33d195927241514a671ca34073a7d7870c555baf/pipeline/history/hrrp_paf_history_fy2013_2026.csv",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "33d195927241514a671ca34073a7d7870c555baf",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-history-summary-fy2013-2026",
+    "title": "Thirty Day Readmissions: HRRP national summary per fiscal year, FY2013-FY2026, from the same files",
+    "path": "hrrp-history-fy2013-2026/hrrp_history_summary.csv",
+    "bytes": 1566,
+    "sha256": "4f188072b9223d28f7acde06443ac813e5470c7ac0024db172669ab5422e7df0",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/33d195927241514a671ca34073a7d7870c555baf/pipeline/history/hrrp_history_summary.csv",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "33d195927241514a671ca34073a7d7870c555baf",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-history-provenance",
+    "title": "Thirty Day Readmissions: how the FY2013-FY2026 HRRP history was built and checked",
+    "path": "hrrp-history-fy2013-2026/PROVENANCE.md",
+    "bytes": 39411,
+    "sha256": "7fb909ed37dc18a250389d888b76837670e95bfe18925e68f06659d943b10eb3",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/33d195927241514a671ca34073a7d7870c555baf/pipeline/history/PROVENANCE.md",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "33d195927241514a671ca34073a7d7870c555baf",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-annual-totals",
+    "title": "Thirty Day Readmissions: estimated total HRRP penalties per fiscal year, each with its published source",
+    "path": "hrrp-curated-fy2027/annual_totals.json",
+    "bytes": 2632,
+    "sha256": "88e437ddff77389ae77a4cc850834943238d841fae215e4ca5a14ea94946c36b",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/33d195927241514a671ca34073a7d7870c555baf/pipeline/content/annual_totals.json",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "33d195927241514a671ca34073a7d7870c555baf",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hrrp-dollar-check-fy2027",
+    "title": "Thirty Day Readmissions: the 2026-10-11 check of its FY2027 base-payment estimates against hospitals' Medicare cost reports",
+    "path": "hrrp-curated-fy2027/dollar_check.json",
+    "bytes": 571,
+    "sha256": "97687498ec136d8e9d5ff014bfa9fcaffec37f6a05ec9522d06bd7412eba42e7",
+    "downloadUrl": "https://raw.githubusercontent.com/daltonhaslam/thirty-day-readmissions/33d195927241514a671ca34073a7d7870c555baf/pipeline/content/dollar_check.json",
+    "landingPage": "https://github.com/daltonhaslam/thirty-day-readmissions",
+    "sourceCommit": "33d195927241514a671ca34073a7d7870c555baf",
+    "retrieved": "2026-11-04"
+  },
+  {
     "id": "hgi-2026-07",
     "title": "Hospital General Information (Care Compare), modified 2026-07-22",
     "path": "hgi-2026-07/Hospital_General_Information.csv",
