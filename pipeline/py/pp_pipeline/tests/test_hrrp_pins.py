@@ -3,7 +3,7 @@ import io
 import unittest
 import zipfile
 
-from pp_engine import ipps, parse, xlsx
+from pp_engine import hrrp_history, ipps, parse, xlsx
 from pp_engine.parse import SchemaError
 from pp_pipeline import files
 
@@ -66,6 +66,26 @@ class RatesAndInputs(unittest.TestCase):
         priced = {h["id"] for h in self.golden["hospitals"] if h.get("base") is not None}
         self.assertTrue(priced)
         self.assertLessEqual(priced, set(got))
+
+
+class HistoryPins(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import json
+        cls.golden = json.loads(files.read_pinned_bytes("tdr-hrrp-fy2027"))
+        cls.hist = cls.golden["history"]
+
+    def test_paf_history_is_the_golden(self):
+        text = files.read_pinned_bytes("hrrp-history-fy2013-2026").decode("utf-8")
+        years, paf = hrrp_history.load_paf_history(text, tdr_ccns(), 2013, 2026)
+        self.assertEqual(years, self.hist["years"])
+        self.assertEqual(paf, self.hist["paf"])
+
+    def test_national_series_is_the_golden_before_the_totals_join(self):
+        text = files.read_pinned_bytes("hrrp-history-summary-fy2013-2026").decode("utf-8")
+        want = [{k: v for k, v in r.items() if k not in ("totalEst", "totalSrc")}
+                for r in self.hist["national"] if 2013 <= r["fy"] <= 2026]
+        self.assertEqual(hrrp_history.load_national(text), want)
 
 
 class ZipGuard(unittest.TestCase):
