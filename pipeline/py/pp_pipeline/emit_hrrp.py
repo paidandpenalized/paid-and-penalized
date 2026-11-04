@@ -42,8 +42,8 @@ SUPP_TAB = "FY2027_HRRP_Supplemental_File - FR FY 2027 Tab.txt"
 TABLE15_MEMBER = "Section 508 version of FY2027_HRRP_Table_15.txt"
 RATES_MEMBER = "CMS-1849-CN Tables 1A - 1E.txt"
 # Everything else that changes when the next fiscal year's files arrive (the fiscal year itself is the impact file's).
-GROUPER = 44  # MS-DRG grouper version of the FY2027 impact file's case and case-mix columns
-FILE_DATE = "2026-10-07"  # the date on the supplemental file's members (CMS's final, post review-and-correction files)
+GROUPER = 44  # MS-DRG grouper version of the FY2027 impact file's CASETA44/TACMIV44 columns (a missing one fails)
+FILE_DATE = "2026-10-07"  # the date CMS's zip records for the supplemental file's members (its final, corrected files)
 PERF = ["2023-07-01", "2025-06-30"]  # the FY2027 performance period (CMS's supplemental file, variable description)
 HIST_FIRST_FY = 2013
 GEOCODER_SOURCE = {"name": "U.S. Census Bureau Geocoder, Public_AR_Current benchmark (hospital street addresses)",
@@ -245,12 +245,12 @@ def main():
     report = {}
     try:
         fresh = build_from_pins(now, report)
+        path = emitted_path(fresh["fy"])
+        out = write_emitted(path, fresh, SCHEMA)  # a build that fails its schema raises and writes nothing
     except (hrrp.HrrpError, ValueError) as e:
         print(f"hrrp: not written; {e}", file=sys.stderr)
         return 1
     print_report(report)
-    path = emitted_path(fresh["fy"])
-    out = write_emitted(path, fresh, SCHEMA)
     rep = out["meta"]["replication"]
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, "
           f"factor replication {rep['exact']} of {rep['total']} exact, built_at {out['built_at']}")

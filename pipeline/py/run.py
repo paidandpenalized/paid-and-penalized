@@ -30,7 +30,8 @@ def emit():
     (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
     emitter first.)"""
     from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp
-    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars)  # Readmissions reads the master's committed file  # each has a main() that returns its exit code
+    # Each has a main() that returns its exit code. Order matters: Readmissions reads the master's committed file.
+    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars)
     return max([emitter.main() for emitter in EMITTERS])
 
 

@@ -101,6 +101,7 @@
           "description": "The dated cost-report check of the base-payment estimate (a pinned curated input).",
           "type": "object",
           "required": ["asOf", "source", "costFy", "n", "rateDrift", "within10", "within15", "within15Small", "within15Large"],
+          "additionalProperties": false,
           "properties": {
             "asOf": { "$ref": "#/$defs/date" }, "source": { "type": "string", "minLength": 1 },
             "costFy": { "type": "integer", "minimum": 2013 }, "n": { "type": "integer", "minimum": 1 },
