@@ -77,8 +77,19 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     return 0
 
 
+def check_zip_members(zf, label):
+    """SchemaError on a zip member whose name could escape a folder it were extracted into: an absolute path, a drive
+    letter, a `..` part or a backslash. (Ported from the member check in Thirty Day Readmissions' pipeline/fetch.py at
+    33d1959; this pipeline reads members in memory, but a name like that is never a CMS file.)"""
+    for name in zf.namelist():
+        parts = name.replace("\\", "/").split("/")
+        if name.startswith("/") or "\\" in name or ".." in parts or (len(name) > 1 and name[1] == ":"):
+            raise SchemaError(f"{label}: unsafe zip member name {name!r}")
+
+
 def read_zip_member(pin_id, member):
     with zipfile.ZipFile(io.BytesIO(read_pinned_bytes(pin_id))) as zf:
+        check_zip_members(zf, pin_id)
         return zf.read(member)
 
 
