@@ -71,10 +71,12 @@ def report_rows(year, reports):
 
 
 def run(zip_paths, out_dir):
-    """Writes each year's rows as soon as they are built, so a run holds one year at a time."""
+    """Writes each year's rows as soon as they are built, so a run holds one year at a time. `sources.json` is written
+    last, and removed first: a run that stops partway leaves tables with no `sources.json` claiming them."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    sources, counts = [], dict.fromkeys(OUTPUTS, 0)
+    (out_dir / "sources.json").unlink(missing_ok=True)
+    sources, counts, years = [], dict.fromkeys(OUTPUTS, 0), set()
     with contextlib.ExitStack() as stack:
         writers = {}
         for name, header in OUTPUTS.items():
@@ -83,13 +85,16 @@ def run(zip_paths, out_dir):
             w.writerow(header)
             writers[name] = w
         for path in sorted(zip_paths):
+            digest, size = sha256(path)  # before parsing, so the pin is of the bytes read (and they are cached)
             year, reports, values = read_year(path)
+            if year in years:
+                raise tidy.HcrisError(f"two zips for FY{year}")
+            years.add(year)
             rows = tidy.hospital_years(reports, values, year)
             for name, out in (("hcris_wide.csv", tidy.wide_rows(rows)), ("hcris_long.csv", tidy.long_rows(rows)),
                               ("hcris_reports.csv", report_rows(year, reports))):
                 writers[name].writerows(out)
                 counts[name] += len(out)
-            digest, size = sha256(path)
             sources.append({"file": Path(path).name, "year": year, "bytes": size, "sha256": digest,
                             "reports": len(reports), "hospital_years": len(rows)})
     outputs = {name: {"bytes": (out_dir / name).stat().st_size, "rows": counts[name]} for name in OUTPUTS}
