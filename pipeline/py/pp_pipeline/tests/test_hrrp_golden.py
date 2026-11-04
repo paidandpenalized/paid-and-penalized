@@ -77,10 +77,10 @@ class Refusals(unittest.TestCase):
             emit_hrrp.committed_master()
 
     def test_a_hospital_the_master_lacks_is_refused(self):
-        inputs = emit_hrrp.read_inputs()
-        kept = {"999999": next(iter(emit_hrrp.stored_values(inputs["supp"], inputs["pub"], [])[3].values()))}
+        # The refusal comes before any record is read, so the record and the inputs can be minimal.
+        inputs = {"impact": {}, "rates": fresh()["meta"]["rates"], "hgi": {}}
         with self.assertRaisesRegex(hrrp.HrrpError, "999999"):
-            emit_hrrp.hospital_records(kept, inputs, {}, 1.0)
+            emit_hrrp.hospital_records({"999999": {}}, inputs, {}, 1.0)
 
     def test_a_malformed_dollar_check_names_the_file(self):
         bad = copy.deepcopy(site()["meta"]["dollarCheck"])

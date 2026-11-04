@@ -31,7 +31,8 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 // starting number, which they fit. Every other type got the heaviest page of that type, when the type was added, plus
 // 15%, rounded up to the next 10 KB, measured at quality 5; each run prints the heaviest page of each type against its
 // budget. Raising a budget is a decision to record, not a fix to slip in; lowering one is always fine.
-// The types that are the same for every program are here; the program-keyed ones are in PROGRAM_BUDGETS.
+// The types that are the same for every program are here; the program-keyed ones (page-types.js PROGRAM_TYPES) are in
+// PROGRAM_BUDGETS.
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27's starting number, as for hub pages (a test pins it).
@@ -49,7 +50,7 @@ export const BUDGETS = {
 // The program-keyed types' budgets (page-types.js PROGRAM_TYPES), by program id. Every program in PROGRAM_SITES needs an
 // entry, and a program-keyed page with no entry throws.
 const HACRP_BUDGETS = {
-  // Over ARCH-27's 100 KB for a site's front page. Re-set 2026-11-02 by the formula above (279.5 KB + 15%) after the
+  // Over ARCH-27's 100 KB for a site's front page. Re-set 2026-11-02 by the rule for the types above (279.5 KB + 15%) after the
   // drawings' paths went to relative commands (web/charts/pathd.js); it was 360 KB.
   program: 330 * KB,
   hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
@@ -130,7 +131,7 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
 export function measure(distDir) {
   const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: addressOf(htmlPath) }));
   for (const page of pages) {
-    // The type of the page (page-types.js); a type's budget is in BUDGETS (PROGRAM_BUDGETS for the program-keyed types).
+    // The type of the page (page-types.js); its budget is in BUDGETS, or in PROGRAM_BUDGETS for a program-keyed type.
     page.type = pageType(page.path);
     page.program = pageProgram(page.path);
     if (page.type === null) throw new RangeError(`no page type for "${page.path}": a new page type needs a budget in tools/ci/size-budget.js`);
@@ -139,14 +140,14 @@ export function measure(distDir) {
   return pages.map(({ htmlPath, path, type, program }) => ({ path, type, program, ...pageWeight(distDir, htmlPath, cache) }));
 }
 
-// The rows over a limit: a page over its type's budget (part 'total'), a page whose scripts alone pass the script
+// The rows over a limit (each carries its page's program, null for a family-wide type): a page over its type's budget (part 'total'), a page whose scripts alone pass the script
 // budget (part 'js') and a page whose blocking scripts pass theirs (part 'blocking'), each with the measured bytes of
 // that part.
 export function overBudget(rows, { budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS, js = JS_BUDGET, blocking = BLOCKING_JS_BUDGET } = {}) {
   const over = [];
   for (const row of rows) {
     const budget = budgetOf(row, budgets, programBudgets);
-    const id = { path: row.path, type: row.type, ...(row.program ? { program: row.program } : {}) };
+    const id = { path: row.path, type: row.type, program: row.program };
     if (row.total > budget) over.push({ ...id, part: 'total', bytes: row.total, budget });
     if (row.js > js) over.push({ ...id, part: 'js', bytes: row.js, budget: js });
     if (row.blocking > blocking) over.push({ ...id, part: 'blocking', bytes: row.blocking, budget: blocking });
@@ -159,9 +160,9 @@ const kb = (bytes) => (bytes / KB).toFixed(1) + ' KB';
 if (isMain(import.meta.url)) {
   const rows = measure(process.argv[2] ?? DIST_DIR);
   // One line per type, and per program for the program-keyed types ('hacrp program').
-  const groups = [...Object.keys(BUDGETS), ...Object.keys(PROGRAM_BUDGETS).flatMap((program) => PROGRAM_TYPES.map((type) => `${program} ${type}`))];
-  for (const group of groups) {
-    const [program, type] = group.includes(' ') ? group.split(' ') : [null, group];
+  const groups = [...Object.keys(BUDGETS).map((type) => [null, type]), ...Object.keys(PROGRAM_BUDGETS).flatMap((program) => PROGRAM_TYPES.map((type) => [program, type]))];
+  for (const [program, type] of groups) {
+    const group = program ? `${program} ${type}` : type;
     const ofType = rows.filter((row) => row.type === type && row.program === program);
     if (ofType.length === 0) continue;
     const heaviest = ofType.reduce((a, b) => (b.total > a.total ? b : a));

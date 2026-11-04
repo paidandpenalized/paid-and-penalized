@@ -75,10 +75,22 @@ test('condState and verdict classify conditions and hospitals', () => {
   assert.equal(verdict({ peer: 4, paf: 1, c: { AMI: HOSP_A.c.AMI } }, META_A).status, 'none-rounded');
 });
 
+test('a measured condition CMS flagged whose payment weight is not published is counted, and contributes 0', () => {
+  const h = { peer: 4, c: { AMI: { n: 42, err: 1.0259, flag: 1 } } };
+  assert.equal(condState(h, 'AMI', META_A), 'counted');
+  assert.equal(contrib(h, META_A).byCond.AMI, 0);
+});
+
+test('CONDS are the emitted file\'s conditions, in order', () => {
+  const d = readJson(REPO_ROOT + 'data/emitted/hrrp/fy2027/hrrp.json');
+  assert.deepEqual(CONDS, d.conditions.map((c) => c.key));
+});
+
 for (const [label, path] of [['TDR pin', 'data/pinned/tdr/hrrp.json'], ['emitted FY2027', 'data/emitted/hrrp/fy2027/hrrp.json']]) {
   test(`the formula reproduces CMS's factor for every hospital (${label})`, () => {
     const d = readJson(REPO_ROOT + path);
     assert.ok(d.hospitals.length > 0);
+    assert.ok(d.hospitals.every((h) => Number.isFinite(h.paf)), 'every paf is a finite number');
     const bad = d.hospitals.filter((h) => Math.abs(contrib(h, d.meta).paf - h.paf) > 1e-4 + 1e-12);
     assert.deepEqual(bad.map((h) => h.id), [], `${bad.length} of ${d.hospitals.length}`);
   });

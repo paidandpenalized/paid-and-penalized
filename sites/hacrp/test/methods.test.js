@@ -3,7 +3,7 @@
 // pipeline and the sources. Every total on the page is read back against the self-checks it summarizes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
@@ -234,7 +234,9 @@ test('the changes and the sources: every changelog entry with its date and items
   // Every pin is one a page declares (in a `sources` list that feeds pinsUsed): the dollar estimates' sources joined
   // when the pages began to load them. This does not catch a page that reads a pin without declaring it.
   // A pin another site's emitted file names (its newest year's) is that site's to list, not this page's.
-  const otherSites = ['hrrp'].flatMap((site) => readJson(`${REPO_ROOT}data/emitted/${site}/fy${newestYear(`data/emitted/${site}`)}/${site}.json`).sources);
+  const otherSites = readdirSync(`${REPO_ROOT}sites`)
+    .filter((site) => site !== 'hacrp' && existsSync(`${REPO_ROOT}data/emitted/${site}`))
+    .flatMap((site) => readJson(`${REPO_ROOT}data/emitted/${site}/fy${newestYear(`data/emitted/${site}`)}/${site}.json`).sources);
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   const listed = new Set([...used, ...otherSites]);
   assert.deepEqual(manifest.filter((e) => !listed.has(e.id)).map((e) => e.id), []);

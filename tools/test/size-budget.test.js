@@ -74,7 +74,7 @@ test('overBudget: a page whose blocking scripts pass the blocking budget (1 KB) 
     assert.equal(BLOCKING_JS_BUDGET, 1024);
     const heavy = noise(2000);
     writeTree(dir, { 'assets/early.1.js': heavy, 'index.html': page('<script src="/assets/early.1.js"></script>') });
-    assert.deepEqual(overBudget(measure(dir)), [{ path: '/', type: 'hub', part: 'blocking', bytes: br(heavy), budget: BLOCKING_JS_BUDGET }]);
+    assert.deepEqual(overBudget(measure(dir)), [{ path: '/', type: 'hub', program: null, part: 'blocking', bytes: br(heavy), budget: BLOCKING_JS_BUDGET }]);
     assert.deepEqual(overBudget(measure(dir), { blocking: 50000 }), []);
   }));
 
@@ -107,10 +107,9 @@ test('every page type has a budget; hub and policy start at 100 KB and scripts a
   for (const b of Object.values(BUDGETS)) assert.ok(Number.isInteger(b) && b > 0);
 });
 
-test('program budgets: HACRP\'s are unchanged, Readmissions starts equal to them, and every program site has budgets', () => {
+test('program budgets: HACRP\'s are unchanged, and every program site has budgets', () => {
   const KB = 1024;
   assert.deepEqual(PROGRAM_BUDGETS.hacrp, { program: 330 * KB, hospital: 120 * KB, place: 150 * KB, methods: 100 * KB, dictionary: 50 * KB });
-  assert.deepEqual(PROGRAM_BUDGETS.hrrp, PROGRAM_BUDGETS.hacrp);
   for (const { id } of PROGRAM_SITES) assert.ok(PROGRAM_BUDGETS[id], id);
   for (const budgets of Object.values(PROGRAM_BUDGETS)) for (const b of Object.values(budgets)) assert.ok(Number.isInteger(b) && b > 0);
 });

@@ -59,11 +59,9 @@ CONDITION_INFO = {
 assert tuple(CONDITION_INFO) == CONDITIONS
 # The master's fields copied into each hospital record, renamed as the record names them. Left out when None:
 # most hospitals have no alias, certified beds ("cr" marks the cost-report fallback) and an active Medicare agreement.
-MASTER_FIELDS = (("name", "name"), ("alias", "alias"), ("city", "city"), ("state", "st"), ("county", "county"),
-                 ("zip", "zip"), ("lat", "lat"), ("lon", "lon"), ("geo", "geo"), ("cbsa", "cbsa"),
-                 ("cbsaName", "cbsaName"), ("urban", "urban"), ("region", "region"), ("division", "division"),
-                 ("beds", "beds"), ("teach", "teach"), ("own", "own"), ("ownDetail", "ownDetail"), ("types", "types"),
-                 ("inactive", "inactive"))
+MASTER_FIELDS = ("name", "alias", "city", "state", "county", "zip", "lat", "lon", "geo", "cbsa", "cbsaName", "urban",
+                 "region", "division", "beds", "teach", "own", "ownDetail", "types", "inactive")
+RENAMED = {"state": "st"}  # the master's key -> the record's, where they differ (the record keeps the listed order)
 OPTIONAL = ("alias", "bedsSrc", "inactive")
 
 
@@ -74,16 +72,16 @@ def committed_master():
     return {h["ccn"]: h for h in master["hospitals"]}
 
 
-def master_fields(ccn, m):
+def master_fields(m):
     """One hospital's master fields under the record's names; `bedsSrc` is "cr" for the cost-report fallback."""
-    out = {name: m[key] for key, name in MASTER_FIELDS}
+    out = {RENAMED.get(key, key): m[key] for key in MASTER_FIELDS}
     out["bedsSrc"] = "cr" if m["bedsSource"] == "cr" else None
     return out
 
 
 def read_inputs():
     """The pinned files, parsed: {supp, pub, t15, impact, rates, hgi, fy}."""
-    impact_text = read_zip_text_cp1252(emit_hospital.IMPACT, emit_hospital.IMPACT_MEMBER)
+    impact_text = emit_hospital.impact_text()
     fy = impact_fy(impact_text)
     workbook = read_zip_member(SUPPLEMENTAL, SUPP_XLSX)
     return {
@@ -137,7 +135,7 @@ def hospital_records(kept, inputs, master, mdh_share):
                                             inputs["rates"], mdh_share)
         if addon is not None:
             addons[ccn] = addon
-        rec = {"id": ccn, **master_fields(ccn, master[ccn]), "star": (inputs["hgi"].get(ccn) or {}).get("star"),
+        rec = {"id": ccn, **master_fields(master[ccn]), "star": (inputs["hgi"].get(ccn) or {}).get("star"),
                **fields}
         records.append({k: v for k, v in rec.items() if v is not None or k not in OPTIONAL})
     return records, addons
@@ -173,9 +171,13 @@ def meta_sources(manifest):
             for s in SOURCES] + [GEOCODER_SOURCE]
 
 
-def build_from_pins(built_at, report=None):
-    """The emitted file. `report`, a dict, collects what the build report prints (ties, add-ons, the MDH share)."""
-    report = {} if report is None else report
+def build_from_pins(built_at):
+    """The emitted file."""
+    return _build(built_at)[0]
+
+
+def _build(built_at):
+    """(the emitted file, what the build report prints: ties, add-ons, the MDH share, shortfall and extra decimals)."""
     inputs = read_inputs()
     supp, pub, fy = inputs["supp"], inputs["pub"], inputs["fy"]
     gates(supp, pub, inputs["t15"])
@@ -187,8 +189,8 @@ def build_from_pins(built_at, report=None):
     history = history_body(supp, fy)
     states = {st: geo.STATE_NAMES[st] for st in sorted({h["st"] for h in hospitals if h["st"]})}
     manifest = read_manifest()
-    report.update(ties=ties, addons=addons, mdh_share=mdh_share, shortfall=shortfall, hospitals=hospitals,
-                  extra=hrrp.extra_places(hospitals, peer_med, nm))
+    report = {"ties": ties, "addons": addons, "mdh_share": mdh_share, "shortfall": shortfall,
+              "extra": hrrp.extra_places(hospitals, peer_med, nm)}
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, SOURCES, manifest, built_at, fy),
         "meta": {
@@ -212,7 +214,7 @@ def build_from_pins(built_at, report=None):
         "conditions": [{"key": k, "short": short, "label": label} for k, (short, label) in CONDITION_INFO.items()],
         "hospitals": hospitals,
         "history": history,
-    }
+    }, report
 
 
 def emitted_path(fy):
@@ -224,13 +226,13 @@ def committed_path():
     return emitted_path(impact_fy(emit_hospital.impact_text()))
 
 
-def print_report(report):
+def print_report(report, hospitals):
     """TDR's build report: values stored with extra decimals, ties moved, and the MDH add-on."""
     n_extra, n_shown = report["extra"]
     print(f"stored with more than {hrrp.DECIMALS} decimals so the site prints CMS's 4-decimal value: {n_extra} of {n_shown}")
     print(f"moved one unit of the last decimal off an exact tie ({len(report['ties'])}): "
           + ("; ".join(f"{label} {v!r} -> {s!r}" for label, v, s in report["ties"]) or "none"))
-    paf = {h["id"]: h["paf"] for h in report["hospitals"]}
+    paf = {h["id"]: h["paf"] for h in hospitals}
     got = {c: (fed, a, a * (1 - paf[c])) for c, (fed, a, _) in report["addons"].items() if fed and a > 0}
     print(f"MDH add-on ({report['mdh_share']:.4f} of the year): {len(got)} of {len(report['addons'])} MDHs, "
           f"base +${sum(v[1] for v in got.values()) / 1e6:.1f}M, "
@@ -242,15 +244,14 @@ def print_report(report):
 
 def main():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    report = {}
     try:
-        fresh = build_from_pins(now, report)
+        fresh, report = _build(now)
         path = emitted_path(fresh["fy"])
         out = write_emitted(path, fresh, SCHEMA)  # a build that fails its schema raises and writes nothing
     except (hrrp.HrrpError, ValueError) as e:
         print(f"hrrp: not written; {e}", file=sys.stderr)
         return 1
-    print_report(report)
+    print_report(report, out["hospitals"])
     rep = out["meta"]["replication"]
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, "
           f"factor replication {rep['exact']} of {rep['total']} exact, built_at {out['built_at']}")

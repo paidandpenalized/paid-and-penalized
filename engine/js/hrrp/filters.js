@@ -2,6 +2,8 @@
 
 export const TEACH_LABEL = { none: 'Non-teaching', minor: 'Minor teaching', major: 'Major teaching' };
 
+// `slug`, `BED_BANDS` and `bedBand` differ on purpose from engine/js/peers.js's size bands and the HACRP site's `slug`:
+// they are Thirty Day Readmissions' four bands and letters-only slugs, kept so the port behaves identically.
 export const slug = (s) => String(s ?? '').toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
 
 export function scopeFilter({ view, key }) {

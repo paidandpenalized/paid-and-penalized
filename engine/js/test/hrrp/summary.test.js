@@ -1,3 +1,4 @@
+// Ported, largely, from Thirty Day Readmissions (web/test/model.test.mjs at 33d1959).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { quantileSorted } from 'd3-array';

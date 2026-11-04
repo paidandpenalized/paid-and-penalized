@@ -1,3 +1,4 @@
+// Ported, largely, from Thirty Day Readmissions (web/test/model.test.mjs at 33d1959).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scopeFilter, applyFilters, bedBand, BED_BANDS, slug, TEACH_LABEL } from '../../hrrp/filters.js';

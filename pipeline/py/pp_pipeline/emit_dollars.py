@@ -18,10 +18,10 @@ import sys
 from datetime import datetime, timezone
 
 from pp_engine import dollars, ipps
-from pp_engine.contract import camel, envelope, source_manifest_hash
+from pp_engine.contract import camel, envelope
 from pp_pipeline import backtest_dollars
 from pp_pipeline.emit_hospital import HACRP, read_hacrp
-from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, write_emitted
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, require_current, write_emitted
 from pp_pipeline.ipps_pins import FY, HRRP, IMPACT, RATES, VBP, priced_rows, rates
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 4
@@ -90,18 +90,14 @@ def totals_json(nat):
 
 def yes_count(site, manifest):
     """The number of hospitals the HACRP site's emitted file `site` marks Yes, refused unless the file was built from
-    the HACRP pin as `manifest` now has it: its `source_manifest` must equal the hash of the current entries for the
-    sources it names, and one of them must be the HACRP pin. Otherwise the count is of an older file than the rows it
-    is held against."""
-    hint = "emit the HACRP site first (`make emit` does)"
-    known = {entry["id"] for entry in manifest}
-    unknown = [pin for pin in site["sources"] if pin not in known]
-    if unknown:  # a pin the file names that the manifest no longer has: the file is older than the pins
-        raise ValueError(f"the HACRP site's emitted file names the pin {unknown[0]!r}, which the manifest does not "
-                         f"have: {hint}")
-    if HACRP not in site["sources"] or site["source_manifest"] != source_manifest_hash(
-            [manifest_entry(pin, manifest) for pin in site["sources"]]):
-        raise ValueError(f"the HACRP site's emitted file was not built from the current HACRP pin: {hint}")
+    the HACRP pin as `manifest` now has it (`require_current`, and the HACRP pin is among its sources). Otherwise the
+    count is of an older file than the rows it is held against."""
+    try:
+        require_current(site, manifest, "the HACRP site's emitted file")
+        if HACRP not in site["sources"]:
+            raise ValueError("the HACRP site's emitted file does not name the HACRP pin")
+    except ValueError as e:
+        raise ValueError(f"{e}; emit the HACRP site first (`make emit` does)") from None
     return sum(h["paymentReduction"] == "Yes" for h in site["hospitals"])
 
 
