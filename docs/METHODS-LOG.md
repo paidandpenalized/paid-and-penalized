@@ -56,7 +56,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   file's `CMIV44`, the case mix its variable notes call "generally applicable for SCH and MDH providers paid under
   their Hospital Specific Payment rate". Version 1 used the transfer-adjusted `TACMIV44` on both sides. The federal
   side keeps `TACMIV44`, and both sides keep the transfer-adjusted case count `CASETA44`, as the family dollar
-  estimate does (`dollars._hsp_payment`).
+  estimate does (`dollars.hsp_payment`).
 - Why: it is the case mix CMS gives for the payment being compared, so the add-on is estimated as CMS describes it.
 - Size: only MDHs' `base` and `pen` move, and the national totals they sum into. The modeled national penalty rises by
   about $5 thousand of $342 million; no hospital's estimate moves by more than 0.7%. 101 of the 164 MDHs now get an

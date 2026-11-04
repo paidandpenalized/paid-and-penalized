@@ -1,11 +1,7 @@
 """The Readmissions data's goldens: a fresh build from the pins equals the committed file, and its body equals Thirty Day
 Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every field. The pinned site file is the
-reference until the FY2028 refresh.
-
-One method change since: methods_version 2 prices a Medicare-dependent hospital's add-on with the case mix CMS gives for
-hospitals paid on their hospital-specific rate (`CMIV`), where that site used the transfer-adjusted one (`TACMIV`). So the
-golden exempts only the MDHs' `base` and `pen` and the totals they sum into, and a build with `TACMIV` in that place must
-equal the site file everywhere: the case mix is the only difference."""
+reference until the FY2028 refresh. Since methods_version 2 the MDHs' base and pen differ by design (MDH case mix;
+`docs/METHODS-LOG.md`), and a test proves that is the only difference."""
 import copy
 import functools
 import io
@@ -43,15 +39,20 @@ def fresh_with_the_sites_case_mix():
         return emit_hrrp.build_from_pins("2000-01-01T00:00:00Z")
 
 
+@functools.lru_cache(maxsize=None)
 def mdh_ids():
     return {h["id"] for h in fresh()["hospitals"] if "MDH" in h["types"]}
 
 
-def differences(mine, theirs, exempt=lambda ccn, key: False):
-    """'ccn key: mine vs theirs' for every field that differs, less the exempt ones."""
+def differences(mine, theirs):
+    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs."""
     a, b = {h["id"]: h for h in mine}, {h["id"]: h for h in theirs}
-    return [f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}" for c, h in sorted(b.items())
-            for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent") and not exempt(c, k)]
+    return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
+            for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
+
+
+def assert_none(test, diffs):
+    test.assertEqual(diffs, [], f"{len(diffs)} differences:\n" + "\n".join(d[2] for d in diffs[:30]))
 
 
 def without(meta, totals=()):
@@ -80,9 +81,8 @@ class Golden(unittest.TestCase):
 
     def test_every_hospital_equals_the_site_file_but_the_mdhs_base_and_penalty(self):
         self.assertEqual(sorted(h["id"] for h in fresh()["hospitals"]), sorted(h["id"] for h in site()["hospitals"]))
-        mdh = mdh_ids()
-        diffs = differences(fresh()["hospitals"], site()["hospitals"], lambda c, k: c in mdh and k in MDH_FIELDS)
-        self.assertEqual(diffs, [], f"{len(diffs)} differences:\n" + "\n".join(diffs[:30]))
+        diffs = differences(fresh()["hospitals"], site()["hospitals"])
+        assert_none(self, [d for d in diffs if not (d[0] in mdh_ids() and d[1] in MDH_FIELDS)])
 
 
 class MdhCaseMix(unittest.TestCase):
@@ -91,12 +91,11 @@ class MdhCaseMix(unittest.TestCase):
     def test_with_the_sites_case_mix_every_hospital_and_the_meta_equal_the_site_file(self):
         theirs = site()
         mine = fresh_with_the_sites_case_mix()
-        diffs = differences(mine["hospitals"], theirs["hospitals"])
-        self.assertEqual(diffs, [], f"{len(diffs)} differences:\n" + "\n".join(diffs[:30]))
+        assert_none(self, differences(mine["hospitals"], theirs["hospitals"]))
         self.assertEqual(without(mine["meta"]), without(theirs["meta"]))
 
     def test_the_hsp_case_mix_moves_some_mdhs_and_nothing_else(self):
-        moved = {line.split()[0] for line in differences(fresh()["hospitals"], site()["hospitals"])}
+        moved = {c for c, _, _ in differences(fresh()["hospitals"], site()["hospitals"])}
         self.assertTrue(moved, "no MDH changed: is the add-on still on the transfer-adjusted case mix?")
         self.assertLessEqual(moved, mdh_ids())
 

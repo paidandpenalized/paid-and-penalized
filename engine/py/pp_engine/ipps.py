@@ -419,12 +419,12 @@ def read_estimate_inputs(text, fy, grouper):
     Readmissions estimate moves to the family method with the FY2027 refresh. `grouper` is the MS-DRG grouper version of the year (44 for FY2027): the transfer-adjusted
     case count and case mix are `CASETA<grouper>` / `TACMIV<grouper>`, and `cmi_hsp` is `CMIV<grouper>`, the case mix
     the file's variable notes call "generally applicable for SCH and MDH providers paid under their Hospital Specific
-    Payment rate" (it prices the MDH add-on's hospital-specific side). A blank cost-of-living adjustment is 1.0;
+    Payment rate" (the MDH add-on's hospital-specific side). A blank cost-of-living adjustment is 1.0;
     `qual_red` and `ehr_red` are the proxy reduction flags equal to 1; `wi`, `cases`, `cmi`, `cmi_hsp` and `hsp` are
     None when blank. MDH status is not read here: it has one source, the hospital master's provider types (`program_fields`)."""
     columns = {"ccn": "Provider Number", "wi": f"FY {fy} Wage Index", "cola": "Cost of Living Adjustment",
-               "cases": f"CASETA{grouper}", "cmi": f"TACMIV{grouper}", "cmi_hsp": f"CMIV{grouper}", "qual_red": "Proxy Quality Reduction",
-               "ehr_red": "Proxy EHR Reduction", "hsp": "HSP Rate"}
+               "cases": f"CASETA{grouper}", "cmi": f"TACMIV{grouper}", "cmi_hsp": f"CMIV{grouper}",
+               "qual_red": "Proxy Quality Reduction", "ehr_red": "Proxy EHR Reduction", "hsp": "HSP Rate"}
 
     def build(r):
         return {"wi": num(r["wi"]), "cola": num(r["cola"]) or 1.0, "cases": num(r["cases"]), "cmi": num(r["cmi"]),
