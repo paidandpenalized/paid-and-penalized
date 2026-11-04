@@ -54,6 +54,13 @@ class ZipGuard(unittest.TestCase):
                 with self.assertRaises(SchemaError, msg=name):
                     files.check_zip_members(zf, "z")
 
+    def test_oversized_member_refused_before_reading(self):
+        from unittest import mock
+        with mock.patch.object(files, "MAX_ZIP_MEMBER", 10), mock.patch.object(zipfile.ZipFile, "read") as read:
+            with self.assertRaisesRegex(SchemaError, "bytes"):
+                files.read_zip_member(SUPP, EXPORT)
+        read.assert_not_called()
+
     def test_ordinary_members_pass(self):
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:

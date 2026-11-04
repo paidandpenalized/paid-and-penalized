@@ -189,6 +189,12 @@ class Table15(unittest.TestCase):
     def test_table15_reads_the_fy_column(self):
         self.assertEqual(read_table15(self.TEXT, 2027), {"990001": 0.9951, "990002": 1.0})
 
+    def test_table15_duplicate_column_raises(self):
+        text = self.TEXT.replace("0.9951", "0.9951\t1").replace("\n", "\t\n", 1)
+        text = text.replace("Factor\t\n", "Factor\tFY 2027 Payment Adjustment Factor\n")
+        with self.assertRaisesRegex(SchemaError, "found 2"):
+            read_table15(text, 2027)
+
     def test_table15_wrong_fy_raises(self):
         with self.assertRaises(SchemaError):
             read_table15(self.TEXT, 2026)

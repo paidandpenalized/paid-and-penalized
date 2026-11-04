@@ -4,6 +4,7 @@ Ported from Thirty Day Readmissions (pipeline/hrrp/parse.py at 33d1959: `_xlsx_p
 taking the workbook's bytes instead of a path and raising SchemaError. Standard library only (zipfile + ElementTree).
 """
 import io
+import re
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -15,6 +16,17 @@ XLSX_MAX_PART = 100_000_000  # bytes; a larger XML part is refused rather than i
 XLSX_MAX_MEMBERS = 1000  # a workbook has a few dozen parts; far more is not a workbook
 
 
+_XML_DECL = re.compile(rb"^\s*<\?xml[^>]*?encoding\s*=\s*[\"']([^\"']+)[\"']", re.IGNORECASE)
+_WIDE_BOMS = (b"\xff\xfe", b"\xfe\xff", b"\x00\x00\xfe\xff")
+
+
+def unsafe_member_names(names):
+    """The zip member names that could escape a folder they were extracted into: absolute (`/`), a drive letter, a
+    `..` part or a backslash. Ported from the member check in Thirty Day Readmissions' pipeline/fetch.py (33d1959)."""
+    return [n for n in names
+            if n.startswith("/") or "\\" in n or ".." in n.split("/") or (len(n) > 1 and n[1] == ":")]
+
+
 def _part(zf, name, label):
     """One parsed XML part of a workbook. Refuses DTDs (the standard library parser expands entities) and huge parts."""
     try:
@@ -24,6 +36,11 @@ def _part(zf, name, label):
     if info.file_size > XLSX_MAX_PART:
         raise SchemaError(f"{label}: part {name} is {info.file_size:,} bytes")
     data = zf.read(info)
+    # Only UTF-8 parts are read, so the byte search below cannot be dodged by a UTF-16/32 or other encoding.
+    decl = _XML_DECL.match(data)
+    if data.startswith(_WIDE_BOMS) or b"\x00" in data or (decl and decl.group(1).decode("ascii", "replace").lower()
+                                                           not in ("utf-8", "utf8")):
+        raise SchemaError(f"{label}: part {name} is not UTF-8")
     if b"<!DOCTYPE" in data or b"<!ENTITY" in data:
         raise SchemaError(f"{label}: part {name} declares a DTD")
     try:
@@ -56,6 +73,9 @@ def sheet_rows(data, sheet, label):
         count = len(zf.infolist())
         if count > XLSX_MAX_MEMBERS:
             raise SchemaError(f"{label}: workbook has {count:,} members")
+        bad = unsafe_member_names(zf.namelist())
+        if bad:
+            raise SchemaError(f"{label}: unsafe zip member name {bad[0]!r}")
         rids = {s.get("name"): s.get(_XL_REL) for s in _part(zf, "xl/workbook.xml", label).iter(_XL + "sheet")}
         if sheet not in rids:
             raise SchemaError(f"{label}: no worksheet named {sheet!r} (found {sorted(rids)})")
@@ -84,7 +104,10 @@ def sheet_rows(data, sheet, label):
                 else:
                     val = "" if v is None or v.text is None else v.text
                     if kind == "s":
-                        val = shared[int(val)]
+                        try:
+                            val = shared[int(val)]
+                        except (ValueError, IndexError):
+                            raise SchemaError(f"{label}: cell {c.get('r')} has a bad shared-string index") from None
                 out += [""] * (j - len(out)) + [val]
             rows.append(out)
         return rows
