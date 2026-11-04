@@ -1,5 +1,6 @@
 """The HRRP formula, stored decimals, build gates, MDH share and dollar estimate, on synthetic records. Ported from
 Thirty Day Readmissions (pipeline/tests/test_model.py and test_build.py at 33d1959)."""
+import re
 import unittest
 from unittest import mock
 
@@ -113,14 +114,17 @@ class MdhShareTest(unittest.TestCase):
         self.assertEqual(hrrp.year_share(2027, "2026-06-30"), 0)  # before the fiscal year starts
         self.assertEqual(hrrp.year_share(2027, "2028-09-30"), 1)  # after it ends
         self.assertEqual(hrrp.year_share(2028, "2028-09-30"), 1)  # leap-year FY: 366 of 366
+        self.assertEqual(hrrp.year_share(2027, "2026-09-30"), 0)  # the day before the fiscal year starts
+        self.assertEqual(hrrp.year_share(2027, "2026-10-01"), 1 / 365)  # its first day
+        self.assertEqual(hrrp.year_share(2027, "2027-09-30"), 1)  # its last day
 
 
 class PrecisionTest(unittest.TestCase):
-    FULL = {"a": {"paf": 0.9863, "dual": 0.15625, "peer": 1, "nm": 0.96284743999129252,
-                  "c": {"HF": {"n": 601, "err": 1.08989959713565, "med": 0.99283380046303704, "flag": 1,
-                               "ratio": 0.032458421638130501}}}}
-    PUBLISHED = {"a": {"paf": 0.9863, "dual": 0.1563, "peer": 1, "nm": 0.9628,
-                       "c": {"HF": {"n": 601, "err": 1.0899, "med": 0.9928, "flag": 1, "ratio": 0.0325}}}}
+    FULL = {"a": {"paf": 0.9871, "dual": 0.15625, "peer": 1, "nm": 0.95173218450771123,
+                  "c": {"HF": {"n": 540, "err": 1.07309968120934, "med": 0.98846227301558842, "flag": 1,
+                               "ratio": 0.041873294017625}}}}
+    PUBLISHED = {"a": {"paf": 0.9871, "dual": 0.1563, "peer": 1, "nm": 0.9517,
+                       "c": {"HF": {"n": 540, "err": 1.0731, "med": 0.9885, "flag": 1, "ratio": 0.0419}}}}
 
     def test_cms_rounds_half_up(self):
         self.assertEqual([hrrp.rnd(v, 4, half_up=True) for v in (0.15625, 0.98625, None)], [0.1563, 0.9863, None])
@@ -148,39 +152,39 @@ class PrecisionTest(unittest.TestCase):
         self.assertEqual(hrrp.precision_mismatches(self.FULL, {}), [("a", "missing")])
 
     def test_stored_values_are_rounded_to_decimals(self):
-        s = hrrp.as_stored("a", self.FULL["a"], self.PUBLISHED["a"], 0.962847, {"1": {"HF": 0.992834}})
+        s = hrrp.as_stored("a", self.FULL["a"], self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
         self.assertEqual((s["nm"], s["c"]["HF"]["med"], s["c"]["HF"]["err"], s["c"]["HF"]["n"]),
-                         (0.962847, 0.992834, round(1.08989959713565, hrrp.DECIMALS), 601))
+                         (0.951732, 0.988462, round(1.07309968120934, hrrp.DECIMALS), 540))
 
     def test_a_peer_group_missing_or_outside_1_to_5_names_the_hospital(self):
         for peer in (None, 0, 6):
             rec = {**self.FULL["a"], "peer": peer}
             with self.subTest(peer=peer), self.assertRaisesRegex(hrrp.HrrpError, f"^a: peer group {peer!r} is not one of 1-5$"):
-                hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.962847, {"1": {"HF": 0.992834}})
+                hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
         rec = {k: v for k, v in self.FULL["a"].items() if k != "peer"}
         with self.assertRaisesRegex(hrrp.HrrpError, "^a: peer group None is not one of 1-5$"):
-            hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.962847, {"1": {"HF": 0.992834}})
+            hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
 
     def test_hrrp_error_is_a_value_error(self):
         self.assertTrue(issubclass(hrrp.HrrpError, ValueError))
 
     def test_group_constants_are_checked_at_full_precision_then_stored_once(self):
-        full = {"a": 0.96284743999129252, "b": 0.96284743999129252}
-        self.assertEqual(hrrp.stored_constant(["a", "b"], full.get, lambda c: 0.9628, "nm"), 0.962847)
+        full = {"a": 0.95173218450771123, "b": 0.95173218450771123}
+        self.assertEqual(hrrp.stored_constant(["a", "b"], full.get, lambda c: 0.9517, "nm"), 0.951732)
         ties = []
         self.assertEqual(hrrp.stored_constant(["a"], lambda c: 0.06145, lambda c: 0.0615, "peer 1 HF median", ties),
                          0.061450000001)
         self.assertEqual(ties, [("peer 1 HF median", 0.06145, 0.061450000001)])
         with self.assertRaisesRegex(hrrp.HrrpError, "peer 2 HF median is not constant"):
-            hrrp.stored_constant(["a", "b"], {"a": 0.9928, "b": 0.99280001}.get, lambda c: 0.9928, "peer 2 HF median")
+            hrrp.stored_constant(["a", "b"], {"a": 0.9885, "b": 0.98850001}.get, lambda c: 0.9885, "peer 2 HF median")
         with self.assertRaisesRegex(hrrp.HrrpError, "peer 3 AMI median is not constant: \\[\\]"):
-            hrrp.stored_constant([], full.get, lambda c: 0.9628, "peer 3 AMI median")
+            hrrp.stored_constant([], full.get, lambda c: 0.9517, "peer 3 AMI median")
 
     def test_needs_more_decimals(self):
         self.assertEqual((hrrp.DECIMALS, hrrp.MAX_DECIMALS), (6, 12))
         self.assertEqual(hrrp.stored(1.02484970123, 1.0248, "x"), 1.0248497)  # 1.02485 would print 1.0249
         self.assertEqual(hrrp.stored(0.06145012, 0.0615, "x"), 0.0614501)  # 0.06145 would print 0.0614
-        self.assertEqual(hrrp.stored(1.08989959713565, 1.0899, "x"), 1.0899)
+        self.assertEqual(hrrp.stored(1.07309968120934, 1.0731, "x"), 1.0731)
         self.assertIsNone(hrrp.stored(None, None, "x"))
         with self.assertRaisesRegex(hrrp.HrrpError, "a AMI.err: 1.0251 does not print as CMS's 1.0248"):
             hrrp.stored(1.0251, 1.0248, "a AMI.err")
@@ -206,13 +210,13 @@ class PrecisionTest(unittest.TestCase):
 
     def test_plain_roundings_stop_at_the_first_that_prints_right(self):
         with mock.patch.object(hrrp, "to_fixed4", wraps=hrrp.to_fixed4) as spy:
-            self.assertEqual(hrrp.stored(1.08989959713565, 1.0899, "x"), 1.0899)
+            self.assertEqual(hrrp.stored(1.07309968120934, 1.0731, "x"), 1.0731)
         self.assertEqual(spy.call_count, 1)  # DECIMALS decimals already print right: no finer rounding is tried
 
     def test_replication_gate_names_every_hospital_and_both_causes(self):
         none = {"n": None, "err": None, "med": None, "flag": 0, "ratio": None}
-        hf = {"n": 601, "err": 1.0899, "med": 0.9928, "flag": 1, "ratio": 0.0325}  # 0.9628 x 0.0325 x 0.0971 = 0.0030
-        ok = {"paf": 0.997, "nm": 0.9628, "c": {**{k: none for k in CONDITIONS}, "HF": hf}}
+        hf = {"n": 540, "err": 1.0731, "med": 0.9885, "flag": 1, "ratio": 0.0419}  # 0.9517 x 0.0419 x 0.0846 = 0.0034
+        ok = {"paf": 0.9966, "nm": 0.9517, "c": {**{k: none for k in CONDITIONS}, "HF": hf}}
         hrrp.replication_gate({"a": ok})
         no_weight = {**ok, "c": {**ok["c"], "HF": {**hf, "ratio": None}}}  # flagged, CMS counted it, no weight published
         with self.assertRaises(hrrp.HrrpError) as e:
@@ -223,8 +227,8 @@ class PrecisionTest(unittest.TestCase):
         self.assertIn("payment weight", msg)
 
     def test_extra_places_counts_values_stored_finer_than_decimals(self):
-        hospitals = [{"c": {"HF": {"err": 1.0248497, "ratio": 0.0325}, "AMI": {"err": None, "ratio": None}}}]
-        self.assertEqual(hrrp.extra_places(hospitals, {"1": {"HF": 0.992834}}, 0.962847), (1, 4))  # nm, one median, HF's err and ratio; AMI's None is not counted
+        hospitals = [{"c": {"HF": {"err": 1.0248497, "ratio": 0.0419}, "AMI": {"err": None, "ratio": None}}}]
+        self.assertEqual(hrrp.extra_places(hospitals, {"1": {"HF": 0.988462}}, 0.951732), (1, 4))  # nm, one median, HF's err and ratio; AMI's None is not counted
 
 
 class GateTest(unittest.TestCase):
@@ -279,6 +283,9 @@ class DollarCheckTest(unittest.TestCase):
             self.check({**{k: v for k, v in self.GOOD.items() if k != "n"}, "asOf": "2027-03-02"})
         with self.assertRaisesRegex(hrrp.HrrpError, r"\. It is a dated result of the cost-report comparison "):
             self.check({**self.GOOD, "asOf": "Oct 2026"})
+        with self.assertRaises(hrrp.HrrpError) as e:
+            self.check({**self.GOOD, "n": 0})
+        self.assertNotIn("October 2026", str(e.exception))
 
     def test_a_malformed_field_is_named(self):
         for field, bad, want in [("asOf", "Oct 2026", "a YYYY-MM-DD date"), ("asOf", "2026-02-30", "a YYYY-MM-DD date"),
@@ -293,8 +300,9 @@ class DollarCheckTest(unittest.TestCase):
                                  ("within10", float("nan"), "a percentage between 0 and 100"),
                                  ("within10", -0.1, "a percentage between 0 and 100"),
                                  ("within15", 100.5, "a percentage between 0 and 100"),
+                                 ("within15Small", 737, "a percentage between 0 and 100"),
                                  ("within15Large", float("inf"), "a percentage between 0 and 100")]:
-            with self.subTest(field=field, bad=bad), self.assertRaisesRegex(hrrp.HrrpError, f"{field} should be {want}.*, not "):
+            with self.subTest(field=field, bad=bad), self.assertRaisesRegex(hrrp.HrrpError, f"{field} should be {re.escape(want)}.*, not {re.escape(repr(bad))}"):
                 self.check({**self.GOOD, field: bad})
 
 
