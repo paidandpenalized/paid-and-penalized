@@ -182,21 +182,21 @@ before porting it; port its docstring too.
 label)` (raises `ValueError` "… run `make emit`" unless `emitted["source_manifest"]` is the hash of the manifest's
 entries for `emitted["sources"]`).
 
-- [ ] Golden tests first: `test_fresh_emit_equals_committed` (all but `built_at`);
+- [x] Golden tests first: `test_fresh_emit_equals_committed` (all but `built_at`);
       `test_body_equals_tdr_pin` — `meta` less `sources` and `whatsNew`, `conditions`, `hospitals`, `history`
       deep-equal `tdr/hrrp.json`; `test_every_factor_reproduces` (2,912 of 2,912 `exact` from the stored values);
       `test_stale_master_refused`; `test_unknown_ccn_refused` (a supplemental CCN with no master record).
-- [ ] Build: TDR `build()` order of gates (Table 15, PAF range, workbook vs export, stored constants and medians,
+- [x] Build: TDR `build()` order of gates (Table 15, PAF range, workbook vs export, stored constants and medians,
       `as_stored`, replication gate), then per CCN the master's fields renamed to TDR's (`ccn→id`, `state→st`,
       `bedsSource "cr"→bedsSrc "cr"`; `alias`, `bedsSrc`, `inactive` left out when None) plus HGI `star` and
       `program_fields`; `meta` as TDR's but `sources` = `[{id, name: title, url}]` per pin plus the Census Geocoder,
       no `whatsNew`; `history` from the pinned CSVs with FY2027's row from `summarize_fy` and the annual totals. The
       TDR build report prints (stored-decimals count, ties, MDH add-on).
-- [ ] Schema in the subset `engine/js/schema.js` supports; conformance cases (a valid record, a bad CCN, a PAF out of
+- [x] Schema in the subset `engine/js/schema.js` supports; conformance cases (a valid record, a bad CCN, a PAF out of
       range). `## hrrp methods_version 1 (2026-11-05)`: Thirty Day Readmissions' method at `33d1959`, unchanged.
-- [ ] `sites/hacrp/test/methods.test.js`: drop Task 1's `PINS_AWAITING_EMIT`; count the pins named by the other
+- [x] `sites/hacrp/test/methods.test.js`: drop Task 1's `PINS_AWAITING_EMIT`; count the pins named by the other
       sites' emitted files (`data/emitted/hrrp/`) as used.
-- [ ] `make emit`, `make test` → PASS; `node tools/ci/change-gate.js` against `main` reads the file as new. Commit.
+- [x] `make emit`, `make test` → PASS; `node tools/ci/change-gate.js` against `main` reads the file as new. Commit.
 
 ### Task 7: `engine/js/hrrp/` (Sonnet; Opus reviewer)
 
@@ -213,11 +213,11 @@ entries for `emitted["sources"]`).
 - Wording and formatting (`fmt*`, `plural`, `toCSV`, `noEstimateNote`, `penalizedOfMeasured`, …) stay out: they
   belong to the site (pages step).
 
-- [ ] Port the matching tests from `web/test/model.test.mjs`, incl. `reproduces the CMS worked example (0.34%)` and
+- [x] Port the matching tests from `web/test/model.test.mjs`, incl. `reproduces the CMS worked example (0.34%)` and
       `the formula reproduces CMS's factor for every hospital` over both `data/emitted/hrrp/fy2027/hrrp.json` and
       `data/pinned/tdr/hrrp.json` (2,912/2,912); add `peerBands` equals d3's on a synthetic list (d3-array is a dev
       dependency, so the test may import it).
-- [ ] Implement; `npm test` → PASS; commit.
+- [x] Implement; `npm test` → PASS; commit.
 
 ### Task 8: `engine/js/years.js` (Sonnet)
 
@@ -227,7 +227,7 @@ entries for `emitted["sources"]`).
 `hubYear(programs: { years: number[] }[]) -> number | null` (for each FY, the count of programs with it; the FY with
 the most, the later on a tie; null when none).
 
-- [ ] Tests: `shownYear({ years: [2026, 2027] })` is 2027; empty → null; `hubYear` with three programs on 2026 and one
+- [x] Tests: `shownYear({ years: [2026, 2027] })` is 2027; empty → null; `hubYear` with three programs on 2026 and one
       on 2027 → 2026; a 2–2 tie → the later; duplicates in one program count once; unsorted input. Implement; commit.
 
 ### Task 9: Program-keyed page types and budgets (Sonnet)
@@ -241,7 +241,7 @@ id for `program`, `hospital`, `place`, `methods`, `dictionary`; null otherwise),
 `PROGRAM_BUDGETS = { hacrp: { program: 330 KB, hospital: 120 KB, place: 150 KB, methods: 100 KB, dictionary: 50 KB },
 hrrp: { same } }`; `budgetOf({ type, program })` used by `overBudget`. The interim `hrrp`/`hrrpHospital` types stay.
 
-- [ ] Tests: every HACRP page's type and budget unchanged; `PROGRAM_BUDGETS.hrrp` deep-equals `.hacrp`; every
+- [x] Tests: every HACRP page's type and budget unchanged; `PROGRAM_BUDGETS.hrrp` deep-equals `.hacrp`; every
       `PROGRAM_SITES` id has budgets; a program-keyed type with no program throws. `make build` then
       `node tools/ci/size-budget.js` → within budget. Commit.
 
@@ -254,9 +254,9 @@ for its `fy`; each file is valid JSON. Commit.
 
 ### Milestone B checkpoint (Tasks 6–10) and final gate (full branch)
 
-- [ ] `/simplify` on the diff since Milestone A, then `make test`.
-- [ ] `/code-review`; `/security-review` (the emitter's reads and the new schema); fix Critical/Important; repeat
+- [x] `/simplify` on the diff since Milestone A, then `make test`.
+- [x] `/code-review`; `/security-review` (the emitter's reads and the new schema); fix Critical/Important; repeat
       until clean.
-- [ ] Final: `make test`, `make emit` leaves git clean, `make build` + size budget, `node tools/ci/change-gate.js`.
-- [ ] Thirty Day Readmissions: `git tag -a pre-foldin 33d1959` there, local only (not pushed).
-- [ ] Stop: report what landed; nothing pushed.
+- [x] Final: `make test`, `make emit` leaves git clean, `make build` + size budget, `node tools/ci/change-gate.js`.
+- [x] Thirty Day Readmissions: `git tag -a pre-foldin 33d1959` there, local only (not pushed).
+- [x] Stop: report what landed; nothing pushed. (Tag created locally; branch not pushed.)
