@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
-import { hospitalPath, pageType, placeKind } from '../ci/page-types.js';
+import { PROGRAM_SITES, hospitalPath, pageProgram, pageType, placeKind } from '../ci/page-types.js';
 
 test('pageType: every page of the site sorts into one type', () => {
   const sorted = {
@@ -66,4 +66,14 @@ test('placeKind: a place page\'s kind, from its address; null for any other page
   assert.equal(placeKind('/hacrp/state/ca/'), 'state');
   assert.equal(placeKind('/hacrp/metro/new-york-newark-jersey-city-ny-nj/'), 'metro');
   for (const path of ['/hacrp/', '/hacrp/state/', '/hacrp/state/CA/', '/hacrp/state/ca/extra/', '/hacrp/hospital/990001/']) assert.equal(placeKind(path), null, path);
+});
+
+test('pageProgram: the program id of a program-keyed page, null for every other page', () => {
+  for (const path of ['/hacrp/', '/hacrp/methods/', '/hacrp/data/', '/hacrp/hospital/990001/', '/hacrp/state/ca/']) assert.equal(pageProgram(path), 'hacrp', path);
+  for (const path of ['/', '/404', '/methods/', '/hvbp/', '/hrrp/', '/hrrp/hospital/990001/', '/hospital/990001/', '/new/', '/hacrp/state/CA/'])
+    assert.equal(pageProgram(path), null, path);
+  // Exactly the program-keyed types have a program.
+  for (const path of ['/hacrp/', '/hacrp/methods/', '/hacrp/data/', '/hacrp/hospital/990001/', '/hacrp/state/ca/'])
+    assert.ok(['program', 'methods', 'dictionary', 'hospital', 'place'].includes(pageType(path)), path);
+  assert.deepEqual(PROGRAM_SITES.map((s) => s.id), ['hacrp']);
 });

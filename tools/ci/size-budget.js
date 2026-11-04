@@ -21,7 +21,7 @@ import { brotliCompressSync, constants } from 'node:zlib';
 import { DIST_DIR, isMain } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages, tags } from '../../pipeline/site/html.js';
-import { pageType } from './page-types.js';
+import { PROGRAM_TYPES, pageProgram, pageType } from './page-types.js';
 
 const KB = 1024;
 const QUALITY = 5;
@@ -31,17 +31,11 @@ const brotliSize = (bytes) => brotliCompressSync(bytes, { params: { [constants.B
 // starting number, which they fit. Every other type got the heaviest page of that type, when the type was added, plus
 // 15%, rounded up to the next 10 KB, measured at quality 5; each run prints the heaviest page of each type against its
 // budget. Raising a budget is a decision to record, not a fix to slip in; lowering one is always fine.
+// The types that are the same for every program are here; the program-keyed ones are in PROGRAM_BUDGETS.
 export const BUDGETS = {
   hub: 100 * KB, // ARCH-27
   policy: 100 * KB, // ARCH-27's starting number, as for hub pages (a test pins it).
   coming: 50 * KB, // The placeholder pages of the programs with no page here (hub/coming.js).
-  // Over ARCH-27's 100 KB for a site's front page. Re-set 2026-11-02 by the formula above (279.5 KB + 15%) after the
-  // drawings' paths went to relative commands (web/charts/pathd.js); it was 360 KB.
-  program: 330 * KB,
-  hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
-  place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
-  methods: 100 * KB,
-  dictionary: 50 * KB, // HACRP's data dictionary (/hacrp/data/).
   notFound: 50 * KB,
   // A hospital's page across the programs (hub/hospital/page.js) with its script (hub/client/hospital.js): the exception
   // to the rule above. 70 KB is the owner's approved raise of 2026-10-28, past what the formula gave; it is not raised
@@ -52,6 +46,34 @@ export const BUDGETS = {
   hrrp: 50 * KB,
   hrrpHospital: 50 * KB,
 };
+// The program-keyed types' budgets (page-types.js PROGRAM_TYPES), by program id. Every program in PROGRAM_SITES needs an
+// entry, and a program-keyed page with no entry throws.
+const HACRP_BUDGETS = {
+  // Over ARCH-27's 100 KB for a site's front page. Re-set 2026-11-02 by the formula above (279.5 KB + 15%) after the
+  // drawings' paths went to relative commands (web/charts/pathd.js); it was 360 KB.
+  program: 330 * KB,
+  hospital: 120 * KB, // ARCH-27's 150 KB for these also holds.
+  place: 150 * KB, // ARCH-27 names no number; over its 100 KB for a hub.
+  methods: 100 * KB,
+  dictionary: 50 * KB, // HACRP's data dictionary (/hacrp/data/).
+};
+export const PROGRAM_BUDGETS = {
+  hacrp: HACRP_BUDGETS,
+  // Readmissions starts at HACRP's budgets; any raise is a decision to record here, as above.
+  hrrp: { ...HACRP_BUDGETS },
+};
+// The budget in bytes of a page of this type (and, for a program-keyed type, this program).
+export function budgetOf({ type, program }, budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS) {
+  if (PROGRAM_TYPES.includes(type)) {
+    if (!program) throw new RangeError(`page type "${type}" is program-keyed and needs a program`);
+    if (!programBudgets[program]) throw new RangeError(`no budgets for program "${program}"`);
+    const budget = programBudgets[program][type];
+    if (budget === undefined) throw new RangeError(`no budget for page type "${type}" of program "${program}"`);
+    return budget;
+  }
+  if (budgets[type] === undefined) throw new RangeError(`no budget for page type "${type}"`);
+  return budgets[type];
+}
 // ARCH-27: the JavaScript a page loads, brotli-compressed.
 export const JS_BUDGET = 120 * KB;
 // The scripts a page's parser stops for (a plain <script src>: no module, defer or async), brotli-compressed. They hold
@@ -103,30 +125,31 @@ export function pageWeight(distDir, htmlPath, cache = new Map()) {
   return { html, css: cssBytes, js: jsBytes, blocking: sum(blocking), total: html + cssBytes + jsBytes };
 }
 
-// Every page in distDir: { path, type, html, css, js, total }, in path order. Throws on a page of no known type
+// Every page in distDir: { path, type, program, html, css, js, total }, in path order. Throws on a page of no known type
 // or an empty build, before anything is measured.
 export function measure(distDir) {
   const pages = htmlPages(distDir).map((htmlPath) => ({ htmlPath, path: addressOf(htmlPath) }));
   for (const page of pages) {
-    // The type of the page (page-types.js); a type's budget is in BUDGETS.
+    // The type of the page (page-types.js); a type's budget is in BUDGETS (PROGRAM_BUDGETS for the program-keyed types).
     page.type = pageType(page.path);
+    page.program = pageProgram(page.path);
     if (page.type === null) throw new RangeError(`no page type for "${page.path}": a new page type needs a budget in tools/ci/size-budget.js`);
   }
   const cache = new Map();
-  return pages.map(({ htmlPath, path, type }) => ({ path, type, ...pageWeight(distDir, htmlPath, cache) }));
+  return pages.map(({ htmlPath, path, type, program }) => ({ path, type, program, ...pageWeight(distDir, htmlPath, cache) }));
 }
 
 // The rows over a limit: a page over its type's budget (part 'total'), a page whose scripts alone pass the script
 // budget (part 'js') and a page whose blocking scripts pass theirs (part 'blocking'), each with the measured bytes of
 // that part.
-export function overBudget(rows, { budgets = BUDGETS, js = JS_BUDGET, blocking = BLOCKING_JS_BUDGET } = {}) {
+export function overBudget(rows, { budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS, js = JS_BUDGET, blocking = BLOCKING_JS_BUDGET } = {}) {
   const over = [];
   for (const row of rows) {
-    const budget = budgets[row.type];
-    if (budget === undefined) throw new RangeError(`no budget for page type "${row.type}"`);
-    if (row.total > budget) over.push({ path: row.path, type: row.type, part: 'total', bytes: row.total, budget });
-    if (row.js > js) over.push({ path: row.path, type: row.type, part: 'js', bytes: row.js, budget: js });
-    if (row.blocking > blocking) over.push({ path: row.path, type: row.type, part: 'blocking', bytes: row.blocking, budget: blocking });
+    const budget = budgetOf(row, budgets, programBudgets);
+    const id = { path: row.path, type: row.type, ...(row.program ? { program: row.program } : {}) };
+    if (row.total > budget) over.push({ ...id, part: 'total', bytes: row.total, budget });
+    if (row.js > js) over.push({ ...id, part: 'js', bytes: row.js, budget: js });
+    if (row.blocking > blocking) over.push({ ...id, part: 'blocking', bytes: row.blocking, budget: blocking });
   }
   return over;
 }
@@ -135,18 +158,21 @@ const kb = (bytes) => (bytes / KB).toFixed(1) + ' KB';
 
 if (isMain(import.meta.url)) {
   const rows = measure(process.argv[2] ?? DIST_DIR);
-  for (const type of Object.keys(BUDGETS)) {
-    const ofType = rows.filter((row) => row.type === type);
+  // One line per type, and per program for the program-keyed types ('hacrp program').
+  const groups = [...Object.keys(BUDGETS), ...Object.keys(PROGRAM_BUDGETS).flatMap((program) => PROGRAM_TYPES.map((type) => `${program} ${type}`))];
+  for (const group of groups) {
+    const [program, type] = group.includes(' ') ? group.split(' ') : [null, group];
+    const ofType = rows.filter((row) => row.type === type && row.program === program);
     if (ofType.length === 0) continue;
     const heaviest = ofType.reduce((a, b) => (b.total > a.total ? b : a));
-    console.log(`${type.padEnd(10)} ${String(ofType.length).padStart(5)} pages  heaviest ${kb(heaviest.total).padStart(9)} of ${kb(BUDGETS[type])}  (scripts ${kb(heaviest.js)} of ${kb(JS_BUDGET)})  ${heaviest.path}`);
+    console.log(`${group.padEnd(16)} ${String(ofType.length).padStart(5)} pages  heaviest ${kb(heaviest.total).padStart(9)} of ${kb(budgetOf(heaviest))}  (scripts ${kb(heaviest.js)} of ${kb(JS_BUDGET)})  ${heaviest.path}`);
   }
   const blocking = rows.reduce((a, b) => (b.blocking > a.blocking ? b : a));
   console.log(`blocking scripts: heaviest ${kb(blocking.blocking)} of ${kb(BLOCKING_JS_BUDGET)}  ${blocking.path}`);
   const over = overBudget(rows);
   const PARTS = { total: '', js: ', scripts', blocking: ', blocking scripts' };
-  for (const { path, type, part, bytes, budget } of over)
-    console.error(`OVER BUDGET ${path} (${type}${PARTS[part]}): ${kb(bytes)} > ${kb(budget)}`);
+  for (const { path, type, program, part, bytes, budget } of over)
+    console.error(`OVER BUDGET ${path} (${program ? `${program} ` : ''}${type}${PARTS[part]}): ${kb(bytes)} > ${kb(budget)}`);
   if (over.length > 0) process.exit(1);
   console.log(`size budget: ${rows.length} pages within budget`);
 }
