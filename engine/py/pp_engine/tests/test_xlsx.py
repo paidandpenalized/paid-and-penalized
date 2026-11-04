@@ -2,7 +2,6 @@
 import io
 import unittest
 import zipfile
-from unittest import mock
 from xml.sax.saxutils import escape
 
 from pp_engine import xlsx
@@ -17,7 +16,7 @@ def _ref(j, r):
     return (chr(64 + j // 26) if j >= 26 else "") + chr(65 + j % 26) + str(r)
 
 
-def make_xlsx(sheets, doctype="", sheet_xml=None, extra_members=0):
+def make_xlsx(sheets, doctype="", sheet_xml=None):
     """A minimal workbook's bytes: text cells as shared strings, numeric text as numbers, empty cells skipped.
     `sheet_xml` replaces the generated <sheetData> body of every sheet."""
     shared, books, rels = [], [], []
@@ -48,8 +47,6 @@ def make_xlsx(sheets, doctype="", sheet_xml=None, extra_members=0):
         zf.writestr("xl/_rels/workbook.xml.rels", f'<Relationships xmlns="{PKG}">{"".join(rels)}</Relationships>')
         zf.writestr("xl/sharedStrings.xml",
                     f'<sst xmlns="{MAIN}">{"".join(f"<si><t>{escape(t)}</t></si>" for t in shared)}</sst>')
-        for k in range(extra_members):
-            zf.writestr(f"extra/{k}.txt", "x")
     return buf.getvalue()
 
 
@@ -74,18 +71,6 @@ class SheetRowsTest(unittest.TestCase):
         wb = make_xlsx({"S": [["a"]]}, doctype='<!DOCTYPE x [<!ENTITY a "aaaa">]>')
         with self.assertRaisesRegex(SchemaError, "DTD"):
             xlsx.sheet_rows(wb, "S", "w")
-
-    def test_refuses_a_part_over_the_limit(self):
-        wb = make_xlsx({"S": [["a"]]})
-        with mock.patch.object(xlsx, "XLSX_MAX_PART", 10):
-            with self.assertRaisesRegex(SchemaError, "bytes"):
-                xlsx.sheet_rows(wb, "S", "w")
-
-    def test_refuses_too_many_members(self):
-        wb = make_xlsx({"S": [["a"]]}, extra_members=5)
-        with mock.patch.object(xlsx, "XLSX_MAX_MEMBERS", 4):
-            with self.assertRaisesRegex(SchemaError, "members"):
-                xlsx.sheet_rows(wb, "S", "w")
 
     def test_refuses_a_missing_sheet(self):
         wb = make_xlsx({"S": [["a"]]})
@@ -122,10 +107,6 @@ class SheetRowsTest(unittest.TestCase):
             zf.writestr("../x", "x")
         with self.assertRaisesRegex(SchemaError, "unsafe zip member"):
             xlsx.sheet_rows(buf.getvalue(), "S", "w")
-
-    def test_unsafe_member_names(self):
-        self.assertEqual(xlsx.unsafe_member_names(["a/b.xml", "../x", "/x", "a/../../x", "C:\\x", "a\\b"]),
-                         ["../x", "/x", "a/../../x", "C:\\x", "a\\b"])
 
     def test_bad_shared_string_index_is_a_schema_error(self):
         for v in ("99", "x"):

@@ -468,10 +468,6 @@ class Factors(unittest.TestCase):
             read_vbp_factors(vbp_text(["99001", "1.0"]))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class OperatingRates(unittest.TestCase):
     def test_equals_the_operating_part_of_read_rates(self):
         self.assertEqual(read_operating_rates(rates_text()), read_rates(rates_text())["operating"])
@@ -505,3 +501,7 @@ class EstimateInputs(unittest.TestCase):
             read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2026, 44)
         with self.assertRaises(SchemaError):
             read_estimate_inputs(tsv([self.HEADER, ["990001"] + [""] * 8]), 2027, 43)
+
+
+if __name__ == "__main__":
+    unittest.main()

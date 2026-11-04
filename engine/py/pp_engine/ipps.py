@@ -414,7 +414,9 @@ def read_payment_inputs(text, rates):
 def read_estimate_inputs(text, fy, grouper):
     """A final-rule IPPS impact file (tab-delimited) -> {ccn: {wi, cola, cases, cmi, qual_red, ehr_red, mdh, hsp}}:
     the payment inputs of the HRRP dollar estimate. Ported from Thirty Day Readmissions (pipeline/hrrp/parse.py
-    `read_impact` at 33d1959). `grouper` is the MS-DRG grouper version of the year (44 for FY2027): the transfer-adjusted
+    `read_impact` at 33d1959). It is Thirty Day Readmissions' base-payment model's reader, kept separate from
+    `read_payment_inputs` (the family estimate's, which reads a year through `IMPACT_YEARS`); retire it when the
+    Readmissions estimate moves to the family method with the FY2027 refresh. `grouper` is the MS-DRG grouper version of the year (44 for FY2027): the transfer-adjusted
     case count and case mix are `CASETA<grouper>` / `TACMIV<grouper>`. A blank cost-of-living adjustment is 1.0;
     `qual_red` and `ehr_red` are the proxy reduction flags equal to 1; `mdh` is the MDH Flag being 'Y'; `wi`, `cases`,
     `cmi` and `hsp` are None when blank."""

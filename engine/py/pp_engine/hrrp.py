@@ -15,7 +15,7 @@ from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from pp_engine.dollars import MDH_SHARE
-from pp_engine.parse import CONDITIONS
+from pp_engine.hrrp_read import CONDITIONS
 
 
 class HrrpError(ValueError):
@@ -253,19 +253,17 @@ def _between(lo, hi):
 DOLLAR_CHECK_FIELDS = ("asOf", "source", "costFy", "n", "rateDrift", "within10", "within15", "within15Small", "within15Large")
 
 
-def _rule(field, fy):
-    """(check, what the field must be) for one of DOLLAR_CHECK_FIELDS; every field not named here is a percentage."""
-    if field == "asOf":
-        return _is_date, "a YYYY-MM-DD date"
-    if field == "source":
-        return (lambda v: isinstance(v, str) and v.strip() != ""), "a non-empty string"
-    if field == "costFy":
-        return (lambda v: _is_int(v) and 2013 <= v <= fy), f"a fiscal year from 2013 to {fy}"
-    if field == "n":
-        return (lambda v: _is_int(v) and v > 0), "a positive integer"
-    if field == "rateDrift":
-        return _between(0.5, 2), "a number between 0.5 and 2"
-    return _between(0, 100), "a percentage between 0 and 100"
+def _dollar_check_rules(fy):
+    """{field: (check, what the field must be)} for the fields of DOLLAR_CHECK_FIELDS, in that order; `fy` bounds costFy."""
+    pct = (_between(0, 100), "a percentage between 0 and 100")
+    return {
+        "asOf": (_is_date, "a YYYY-MM-DD date"),
+        "source": (lambda v: isinstance(v, str) and v.strip() != "", "a non-empty string"),
+        "costFy": (lambda v: _is_int(v) and 2013 <= v <= fy, f"a fiscal year from 2013 to {fy}"),
+        "n": (lambda v: _is_int(v) and v > 0, "a positive integer"),
+        "rateDrift": (_between(0.5, 2), "a number between 0.5 and 2"),
+        "within10": pct, "within15": pct, "within15Small": pct, "within15Large": pct,
+    }
 
 
 def dollar_check_about(rec):
@@ -280,7 +278,7 @@ def check_dollar_check(rec, fy):
     missing, of the wrong type, or out of range (`fy` bounds costFy). A record that is not an object is missing all."""
     rec_ = rec if isinstance(rec, dict) else {}
     bad = [f"{f} is missing" if f not in rec_ else f"{f} should be {want}, not {rec_[f]!r}"
-           for f, (ok, want) in ((f, _rule(f, fy)) for f in DOLLAR_CHECK_FIELDS) if not ok(rec_.get(f))]
+           for f, (ok, want) in _dollar_check_rules(fy).items() if not ok(rec_.get(f))]
     if bad:
         raise HrrpError(f"{'; '.join(bad)}. {dollar_check_about(rec_)}")
     return rec

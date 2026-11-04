@@ -40,7 +40,10 @@ def summarize_fy(fy, pafs, cap_pct):
     """National summary for one FY from its PAFs (same definitions as the historical summary CSV)."""
     reds = [(1 - p) * 100 for p in pafs]
     pen = [r for r in reds if r > 1e-9]
-    avg = lambda xs: sum(xs) / len(xs) if xs else 0  # noqa: E731
+
+    def avg(xs):
+        return sum(xs) / len(xs) if xs else 0
+
     return {
         "fy": fy, "n": len(reds), "nPen": len(pen),
         "pctPen": round(100 * len(pen) / len(reds), 2) if reds else 0,
@@ -59,18 +62,15 @@ _NATIONAL_COLUMNS = (
 
 def load_national(text):
     """Comparable-population national series FY2013-FY2026 from the historical summary CSV."""
-    rows = []
-    for r in _records(text, _NATIONAL_COLUMNS, "HRRP history summary"):
-        rows.append({
-            "fy": int(r["fy"]),
-            "n": int(r["n_hospitals_comparable"]),
-            "nPen": int(r["n_penalized_comparable"]),
-            "pctPen": float(r["pct_penalized_comparable"]),
-            "meanRed": float(r["mean_reduction_pct_all_comparable"]),
-            "meanRedPen": float(r["mean_reduction_pct_penalized"]),
-            "medianRedPen": float(r["median_reduction_pct_penalized"]),
-            "nMax": int(r["n_at_max"]),
-            "cap": int(r["max_cap_pct"]),
-            "perf": [r["performance_period_start"] or None, r["performance_period_end"] or None],
-        })
-    return rows
+    return [{
+        "fy": int(r["fy"]),
+        "n": int(r["n_hospitals_comparable"]),
+        "nPen": int(r["n_penalized_comparable"]),
+        "pctPen": float(r["pct_penalized_comparable"]),
+        "meanRed": float(r["mean_reduction_pct_all_comparable"]),
+        "meanRedPen": float(r["mean_reduction_pct_penalized"]),
+        "medianRedPen": float(r["median_reduction_pct_penalized"]),
+        "nMax": int(r["n_at_max"]),
+        "cap": int(r["max_cap_pct"]),
+        "perf": [r["performance_period_start"] or None, r["performance_period_end"] or None],
+    } for r in _records(text, _NATIONAL_COLUMNS, "HRRP history summary")]

@@ -9,7 +9,7 @@ from pathlib import Path
 from pp_engine.contract import format_emitted, keep_built_at
 from pp_engine.parse import SchemaError
 from pp_engine.schema import validate
-from pp_engine.xlsx import unsafe_member_names
+from pp_engine.zipsafe import check_zip
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PINNED_DIR = REPO_ROOT / "data" / "pinned"
@@ -78,24 +78,12 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     return 0
 
 
-MAX_ZIP_MEMBER = 100_000_000  # bytes; a larger declared member is refused before it is inflated
-
-
-def check_zip_members(zf, label):
-    """SchemaError on a zip member whose name could escape a folder it were extracted into (the rule is
-    `xlsx.unsafe_member_names`). This pipeline reads members in memory, but such a name is never a CMS file."""
-    bad = unsafe_member_names(zf.namelist())
-    if bad:
-        raise SchemaError(f"{label}: unsafe zip member name {bad[0]!r}")
-
-
 def read_zip_member(pin_id, member):
+    """A member of a pinned zip, read in memory after `zipsafe.check_zip` clears the zip's names, member count and
+    declared sizes."""
     with zipfile.ZipFile(io.BytesIO(read_pinned_bytes(pin_id))) as zf:
-        check_zip_members(zf, pin_id)
-        info = zf.getinfo(member)
-        if info.file_size > MAX_ZIP_MEMBER:
-            raise SchemaError(f"{pin_id}: member {member} is {info.file_size:,} bytes")
-        return zf.read(info)
+        check_zip(zf, pin_id)
+        return zf.read(member)
 
 
 def read_zip_text_cp1252(pin_id, member):

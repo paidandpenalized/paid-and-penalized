@@ -8,33 +8,23 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 
+from pp_engine import zipsafe
 from pp_engine.parse import SchemaError
 
 _XL = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 _XL_REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
-XLSX_MAX_PART = 100_000_000  # bytes; a larger XML part is refused rather than inflated
-XLSX_MAX_MEMBERS = 1000  # a workbook has a few dozen parts; far more is not a workbook
 
 
 _XML_DECL = re.compile(rb"^\s*<\?xml[^>]*?encoding\s*=\s*[\"']([^\"']+)[\"']", re.IGNORECASE)
 _WIDE_BOMS = (b"\xff\xfe", b"\xfe\xff", b"\x00\x00\xfe\xff")
 
 
-def unsafe_member_names(names):
-    """The zip member names that could escape a folder they were extracted into: absolute (`/`), a drive letter, a
-    `..` part or a backslash. Ported from the member check in Thirty Day Readmissions' pipeline/fetch.py (33d1959)."""
-    return [n for n in names
-            if n.startswith("/") or "\\" in n or ".." in n.split("/") or (len(n) > 1 and n[1] == ":")]
-
-
 def _part(zf, name, label):
-    """One parsed XML part of a workbook. Refuses DTDs (the standard library parser expands entities) and huge parts."""
+    """One parsed XML part of a workbook. Refuses DTDs (the standard library parser expands entities); size is checked by `zipsafe.check_zip`."""
     try:
         info = zf.getinfo(name)
     except KeyError:
         raise SchemaError(f"{label}: workbook has no part {name}") from None
-    if info.file_size > XLSX_MAX_PART:
-        raise SchemaError(f"{label}: part {name} is {info.file_size:,} bytes")
     data = zf.read(info)
     # Only UTF-8 parts are read, so the byte search below cannot be dodged by a UTF-16/32 or other encoding.
     decl = _XML_DECL.match(data)
@@ -70,12 +60,7 @@ def sheet_rows(data, sheet, label):
     except zipfile.BadZipFile:
         raise SchemaError(f"{label}: not a zip/xlsx file") from None
     with zf:
-        count = len(zf.infolist())
-        if count > XLSX_MAX_MEMBERS:
-            raise SchemaError(f"{label}: workbook has {count:,} members")
-        bad = unsafe_member_names(zf.namelist())
-        if bad:
-            raise SchemaError(f"{label}: unsafe zip member name {bad[0]!r}")
+        zipsafe.check_zip(zf, label)
         rids = {s.get("name"): s.get(_XL_REL) for s in _part(zf, "xl/workbook.xml", label).iter(_XL + "sheet")}
         if sheet not in rids:
             raise SchemaError(f"{label}: no worksheet named {sheet!r} (found {sorted(rids)})")
@@ -84,7 +69,7 @@ def sheet_rows(data, sheet, label):
             raise SchemaError(f"{label}: worksheet {sheet!r} has no relationship entry")
 
         def part(r):
-            return "xl/" + _strip(r.get("Target"))
+            return "xl/" + r.get("Target").removeprefix("/xl/")
 
         shared = []
         for r in rels.values():
@@ -112,6 +97,3 @@ def sheet_rows(data, sheet, label):
             rows.append(out)
         return rows
 
-
-def _strip(target):
-    return target[len("/xl/"):] if target.startswith("/xl/") else target

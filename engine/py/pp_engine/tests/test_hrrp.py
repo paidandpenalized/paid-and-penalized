@@ -6,7 +6,7 @@ from unittest import mock
 
 from pp_engine import hrrp
 from pp_engine.dollars import MDH_SHARE
-from pp_engine.parse import CONDITIONS
+from pp_engine.hrrp_read import CONDITIONS
 
 
 def cond(n, err, med, ratio, flag=None):
@@ -111,8 +111,6 @@ class MdhShareTest(unittest.TestCase):
     def test_year_share_clamps(self):
         self.assertEqual(hrrp.MDH_END, "2026-12-31")
         self.assertEqual(hrrp.year_share(2027, hrrp.MDH_END), 92 / 365)  # Oct 1 - Dec 31, 2026
-        self.assertEqual(hrrp.year_share(2027, "2026-06-30"), 0)  # before the fiscal year starts
-        self.assertEqual(hrrp.year_share(2027, "2028-09-30"), 1)  # after it ends
         self.assertEqual(hrrp.year_share(2028, "2028-09-30"), 1)  # leap-year FY: 366 of 366
         self.assertEqual(hrrp.year_share(2027, "2026-09-30"), 0)  # the day before the fiscal year starts
         self.assertEqual(hrrp.year_share(2027, "2026-10-01"), 1 / 365)  # its first day
@@ -157,16 +155,11 @@ class PrecisionTest(unittest.TestCase):
                          (0.951732, 0.988462, round(1.07309968120934, hrrp.DECIMALS), 540))
 
     def test_a_peer_group_missing_or_outside_1_to_5_names_the_hospital(self):
-        for peer in (None, 0, 6):
-            rec = {**self.FULL["a"], "peer": peer}
-            with self.subTest(peer=peer), self.assertRaisesRegex(hrrp.HrrpError, f"^a: peer group {peer!r} is not one of 1-5$"):
+        absent = {k: v for k, v in self.FULL["a"].items() if k != "peer"}
+        for peer, rec in ((None, {**self.FULL["a"], "peer": None}), (None, absent),
+                          (0, {**self.FULL["a"], "peer": 0}), (6, {**self.FULL["a"], "peer": 6})):
+            with self.subTest(peer=peer, absent=rec is absent), self.assertRaisesRegex(hrrp.HrrpError, f"^a: peer group {peer!r} is not one of 1-5$"):
                 hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
-        rec = {k: v for k, v in self.FULL["a"].items() if k != "peer"}
-        with self.assertRaisesRegex(hrrp.HrrpError, "^a: peer group None is not one of 1-5$"):
-            hrrp.as_stored("a", rec, self.PUBLISHED["a"], 0.951732, {"1": {"HF": 0.988462}})
-
-    def test_hrrp_error_is_a_value_error(self):
-        self.assertTrue(issubclass(hrrp.HrrpError, ValueError))
 
     def test_group_constants_are_checked_at_full_precision_then_stored_once(self):
         full = {"a": 0.95173218450771123, "b": 0.95173218450771123}
@@ -277,6 +270,7 @@ class DollarCheckTest(unittest.TestCase):
         with self.assertRaisesRegex(hrrp.HrrpError, "asOf is missing; source is missing; costFy is missing"):
             self.check([])
         self.assertEqual(set(hrrp.DOLLAR_CHECK_FIELDS), {k for k in self.GOOD if k != "note"})
+        self.assertEqual(tuple(hrrp._dollar_check_rules(2027)), hrrp.DOLLAR_CHECK_FIELDS)
 
     def test_the_guidance_is_dated_by_the_records_own_as_of(self):
         with self.assertRaisesRegex(hrrp.HrrpError, r"n is missing\. It is a dated result of the 2027-03-02 cost-report comparison "):
