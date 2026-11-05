@@ -195,3 +195,41 @@ On the build branch the new site owns `/hrrp/` and the hub stops drawing its sli
 the hub changes. Later steps: the browser features (explorer, search, what-if, worksheet picker, map switches), the
 hub reading the emitted file and linking the new pages, the browser checks for these rows, the 40-page comparison,
 and the old address's "moved" page.
+
+## Figures
+
+Drawn first with the real FY2027 data at both widths (about twenty forms for each figure whose form is new here),
+before any is built. The forms below are the recommended set; each is amended to the form picked before it is built.
+Every figure keeps the frame: "Fig. N", a title, a one-line takeaway built from the data, the source line, and a
+table holding every plotted value. Colors follow the family: the penalty ink only for what is over the line or cut,
+grays for the rest, never color alone (every encoding is labeled or keyed).
+
+What drawing the data showed, and the words must respect:
+
+- A 1.0 line misjudges 140 of 2,624 heart-failure hospitals (66 penalized sit under 1.0; 74 over 1.0 are not), which
+  is why Step 2 plots ratio − peer median.
+- CMS's peer medians are not the medians of the hospitals in this file, so the share over the line runs 43–58% by
+  group and condition: "about half", never "half".
+- The coin-flip reference (1 − 0.5^k) is not a model of the data. At one or two conditions the gap below it is the
+  lower flag rate; conditions moving together shows from three up. The words never claim independence and never
+  credit the whole gap to co-movement.
+- Each condition flags about half of its own measured hospitals by construction; the like-for-like pair for "which
+  conditions cost the most" is the share of all flags against the share of dollars (both sum to 100%).
+- "Are small hospitals let off?" depends on the condition: small hospitals are flagged less often on COPD and
+  pneumonia and more often on heart attack, bypass surgery and hip/knee replacement.
+- The roll call covers today's hospitals, so its yearly shares run above CMS's national share; its words say "of
+  today's hospitals". "Cut every year it was in the file" and "cut in all years" are different counts.
+- A condition under 25 cases can still carry a published ratio; it is not counted, and its dollars per 0.01 are blank.
+
+| Figure | Encodings | Takeaway (from data) | Table | Phone |
+|---|---|---|---|---|
+| Step 2: each hospital against its own peer median | A unit swarm of ratio − peer median for one condition (heart failure first), one dot per measured hospital, penalty ink past 0; the line named on the chart; a lens below magnifying ±0.01 (a dot per hospital) with the counts just over and just under; the closest gap at 4 decimals; the example hospital's ▲ | "Of N hospitals measured on <condition>, X are over their own peer group's median; Y sit within 0.01 of it" | Bins of the difference (0.05 wide) with counts over and at or under | The same swarm in fewer, taller bins; the lens under it full width; clipped tails counted in a note |
+| Step 5: the parts against the 3% cap (beside Worksheet R) | The worksheet's six lines as rows on a named zoomed scale, each zero row saying why (at or under the median, under 25 cases); the sum redrawn on the true 0–3% scale against the cap, with beams showing where the zoom sits; no broken axis | "N conditions add X%, about <fraction> of the 3% cap; <condition> alone is <share> of it" | Condition, part, running total; sum; cap; factor | Rows stacked with their words over the bars; the cap strip under them |
+| The size of the cuts | The Step 2 swarm form on the cut (0 to 3%), the pile at zero labeled with its count | "Half of hospitals lose less than X%; Y lose 1% or more; Z hit the 3% cap" | Bins of the cut | As Step 2 |
+| Is a penalty near-guaranteed? | Per number of conditions measured (1–6): the share cut as a dot (area = hospitals) with its 95% interval, the coin-flip share as a quiet tick | "Measured on one condition, X% are cut; on five or six, Y%. Every group sits below the coin-flip line" | k, hospitals, cut, share, coin-flip share | Rows with the words over each track |
+| Penalties by peer group | The kit's ridges (each group's cuts, the pile near zero, the thin tail) plus each group's share cut as a dot on its own 0–100% track | "X% to Y% of each peer group is cut; the lowest-dual group is cut least" | Group, dual range, hospitals, share cut, median cut | Words over each row, the share track under it |
+| Penalties by hospital type | Two panels: share cut as a dot (area = hospitals) against the national share; the average cut among the hospitals cut | "<type> are cut least often (X%) but deepest when cut (Y%)" or the largest gap the data holds | Group, hospitals, share cut, average cut when cut | The panels stacked |
+| Which conditions cost the most | A slope from each condition's share of all flags to its share of modeled dollars, the three heaviest lines labeled | "<condition> is X% of flags but Y% of the dollars" | Condition, flags, share of flags, dollars, share of dollars | The two columns closer, labels at the ends |
+| Hospital: where the penalty came from | One ruler per condition aligned on its own peer median (so the six medians are one line): the peer group's distribution, the gap drawn in the penalty ink when over, the ▲; the exact ratio, median, gap, dollars per 0.01 and the modeled cut in columns at the right | "<condition> costs the most: +X over its median, $Y, because each 0.01 of its ratio is worth $Z" | Built in (the columns) | Each ruler's numbers over it |
+| History | The share-cut line over the roll call on the same year columns (years across, a hair-thin row per hospital: cut, not cut, blank where absent), brackets for cut every year, some years and never; an aligned stack of small panels for the average cut and the dollars; the cap steps, the FY2019, FY2023 and FY2027 marks and the COVID years | "X% of hospitals are cut in FY<year>; Y of today's hospitals have never once escaped a cut" | Year, hospitals, share cut, average cut, estimated total and its source | 15 real year columns; the panels stacked |
+| Are small hospitals let off? (new analysis) | Six funnels on shared axes: ratio − peer median against discharges (log), the 25-case floor hatched and labeled, the line at 0, the share flagged in each size band under each panel; no interval drawn (CMS publishes none) | "Small hospitals are flagged less often on <conditions> and more often on <conditions>" | Condition, size band, hospitals, share flagged | Six short panels stacked |
