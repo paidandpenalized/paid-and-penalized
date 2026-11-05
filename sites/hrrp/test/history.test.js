@@ -61,7 +61,7 @@ test('the cap steps come from the data, and the three rule marks and the COVID b
   assert.deepEqual(s.marks.map((m) => [m.fy, m.key]), [[2019, 'histMarkPeer'], [2023, 'histMarkPn'], [2027, 'histMarkMa']]);
   assert.deepEqual(s.marks.map((m) => m.label), ['Peer groups begin', 'Pneumonia measure paused', 'Medicare Advantage stays counted']);
   assert.deepEqual(s.covid.fys, [2022, 2023, 2024]);
-  assert.match(s.covid.note, /^CMS left claims from 2020-01-01 through 2020-06-30 out of the program/);
+  assert.match(s.covid.note, /^CMS left claims from January 1, 2020 through June 30, 2020 out of the program/);
   const short = smallLines({ history: { ...HISTORY, national: NATIONAL.slice(0, 4) } });
   assert.deepEqual(short.marks.map((m) => m.fy), [], 'a mark outside the data\'s years is not placed');
   assert.deepEqual(short.covid.fys, []);
@@ -128,7 +128,7 @@ test('the figure: the axis start is said on the chart when it is not 0, and not 
 test('the figure: the pandemic years are shaded in every panel, with the note on hover, and named on the large panel', () => {
   const svg = svgOf(smallLines({ history: HISTORY }), WIDE);
   assert.equal((svg.match(/class="hist-covid"/g) ?? []).length, 3);
-  assert.match(svg, /<title>CMS left claims from 2020-01-01 through 2020-06-30/);
+  assert.match(svg, /<title>CMS left claims from January 1, 2020 through June 30, 2020/);
   assert.match(sharePanelOf(svg), />Pandemic years</);
 });
 
@@ -192,6 +192,19 @@ test('real data: the figure builds at both widths; FY2024 and FY2026 are listed 
     assert.match(panel, /Axis starts at 40%/);
   }
   assert.equal((svgOf(lines, WIDE).match(/hist-bar--/g) ?? []).length, lines.totals.length);
+});
+
+test('no raw ISO date reaches the History figure\'s words, tips or table; a year with no all-hospitals average still has a whole tip', () => {
+  const real = historyFigure(smallLines({ history: loadHrrpOnce().history }), { n: 1 }).text.replace(/<[^>]*>/g, ' ');
+  assert.doesNotMatch(real, /\d{4}-\d{2}-\d{2}/);
+  assert.match(real, /January 1, 2020 through June 30, 2020/);
+  const part = historyFigure(smallLines({ history: HISTORY }), { n: 1 }).text;
+  assert.doesNotMatch(part, /<title>[^<]*\d{4}-\d{2}-\d{2}/);
+  const gap = { ...HISTORY, national: HISTORY.national.map((r) => (r.fy === 2018 ? { ...r, meanRed: null } : r)) };
+  const svg = svgOf(smallLines({ history: gap }), WIDE);
+  assert.match(svg, /FY2018: average cut 0\.45% among penalized hospitals<\/title>/);
+  assert.ok(!/among all hospitals<\/title>/.test(svg.replace(/FY\d{4}: average cut [\d.]+% among penalized hospitals, [\d.]+% among all hospitals/g, '')));
+  assert.match(part, /hist-note__none">No total for FY2016 and FY2024\./);
 });
 
 // ---------- the roll call ----------

@@ -59,7 +59,8 @@ export function historyFigure(lines, { n }) {
   const known = lines.share.filter((s) => s.value !== null);
   if (!known.length) return '';
   const latest = known[known.length - 1];
-  const note = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null, lines.noTotalText].filter(Boolean).join(' ');
+  const prose = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null].filter(Boolean).join(' ');
+  const note = lines.noTotalText ? html`${prose}<span class="hist-note__none">${lines.noTotalText}</span>` : prose;
   const sourceOf = (r) => r.total && (r.total.label ?? t(r.total.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms'));
   return figure({
     n, takeaway: fill('histTakeaway', { share: pct1(latest.value), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',

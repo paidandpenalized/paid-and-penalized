@@ -1,11 +1,11 @@
 // The numbers behind the program page's History Part, as plain data (no markup). The small multiples (share penalized,
 // average cut, estimated totals; drawn by figures/history-draw.js) and the roll call (not drawn yet) are each a pure function returning its series,
 // marks and table rows; the timeline and the data windows are drawn (figures/history.js) from timelineData and windowRows.
-// Denominators: a year's share penalized is TDR's pctPen, over every hospital in that year's file (FY2027: 2,334 of 2,912, not the page's 83% of those measured on a condition);
+// Denominators: a year's share penalized is TDR's pctPen, over the hospitals in that year's file as the history pin holds them (n; FY2027: 2,334 of 2,912, not the page's 83% of the 2,798 measured on a condition; which hospitals the FY2013-FY2018 files leave out is not checked here);
 // the average cuts are over every hospital in that year's file (all) or over those cut (penalized). The roll call covers
 // today's hospitals only, so its per-year shares run above CMS's national share for the year (FY2021: 85% against 82.6%);
 // any words built from it say "of today's hospitals". Pure.
-import { listText } from '../../../../web/render/format.js';
+import { isoDate, listText } from '../../../../web/render/format.js';
 import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS } from '../constants.js';
 import { capMarks, pafByYear } from '../derive.js';
 import { httpsUrl } from '../links.js';
@@ -43,7 +43,7 @@ export function smallLines({ history }) {
     noTotalText: noTotalText(noTotal),
     caps: capMarks(national),
     marks: HISTORY_MARKS.filter((m) => years.includes(m.fy)).map(({ fy, key }) => ({ fy, key, label: t(key) })),
-    covid: { first, last, fys: years.filter((fy) => fy >= first && fy <= last), label: t('histCovid'), note: fill('histCovidNote', { from: COVID_EXCLUDED[0], to: COVID_EXCLUDED[1] }) },
+    covid: { first, last, fys: years.filter((fy) => fy >= first && fy <= last), label: t('histCovid'), note: fill('histCovidNote', { from: isoDate(COVID_EXCLUDED[0]), to: isoDate(COVID_EXCLUDED[1]) }) },
     table: national.map((r) => ({ fy: r.fy, n: r.n, share: r.pctPen ?? null, avgAll: r.meanRed ?? null, avgPen: r.meanRedPen ?? null, total: totalOf(r) })),
   };
 }

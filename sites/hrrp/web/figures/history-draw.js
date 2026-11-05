@@ -159,7 +159,7 @@ function avgPanel(lines, p, narrow) {
   const dots = pen.filter((q) => q.value !== null).map((q) => {
     const a = all.find((o) => o.fy === q.fy);
     return mark({
-      tip: fill('histTipAvg', { fy: fyLabel(q.fy), pen: cut2(q.value), all: a?.value == null ? '' : cut2(a.value) }), value: a?.value == null ? q.value : [q.value, a.value], data: { fy: q.fy }, hit: null,
+      tip: a?.value == null ? fill('histTipAvgPen', { fy: fyLabel(q.fy), pen: cut2(q.value) }) : fill('histTipAvg', { fy: fyLabel(q.fy), pen: cut2(q.value), all: cut2(a.value) }), value: a?.value == null ? q.value : [q.value, a.value], data: { fy: q.fy }, hit: null,
       body: html`<circle class="hist-dot--pen" cx="${r2(q.px)}" cy="${r2(q.py)}" r="${narrow ? 2 : 2.5}"/>`,
     });
   });

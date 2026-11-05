@@ -266,6 +266,7 @@
 .hist-name--pen { fill: var(--pen-ink); }
 .hist-name--all { fill: var(--ink-2); }
 .fig__swatch.hist-sw-cms, .fig__swatch.hist-sw-kff { width: 12px; height: 12px; }
+.hist-note__none { display: block; margin-top: 4px; font-weight: 600; }
 .hist-sw-cms { background: var(--pen-seq-4); }
 .hist-sw-kff { background: var(--pen-seq-1); border: 1px solid var(--pen-seq-3); }
 /* The timeline: dated entries down a rule, a year not yet in effect set apart by a dashed rule and a tag. */
