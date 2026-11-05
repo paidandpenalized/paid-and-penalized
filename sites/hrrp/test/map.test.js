@@ -1,6 +1,7 @@
 // The program page's "Map" Part: the four measures' bins (applied to the value as shown), the states left plain or hatched, the
 // hospital dots, "Every state" (sorted, 15 to a page, its CSV) and "Browse by region", on synthetic hospitals in real states
 // and on the whole file.
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { US_MAP_CODES } from '../../../web/charts/geo.js';
@@ -221,4 +222,13 @@ test('dollars: a state at $0 modeled takes the first step; no color only where n
   assert.equal(stepIn(html, 'dollars', 'TX'), 1);
   assert.equal(stepIn(html, 'dollars', 'OH'), null);
   assert.equal(stepIn(html, 'avg', 'TX'), 'zero', 'the other measures still draw a zero plain');
+});
+
+test('the dot layer shows only at the wide drawing\'s widths: its on-state rule sits only under the min-width query', () => {
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  const rule = '.usmap[data-dots="on"] .usmap__dots';
+  assert.equal(css.split(rule).length - 1, 1);
+  const line = css.split('\n').find((l) => l.includes(rule));
+  assert.match(line, /^@media \(min-width: 560px\)/);
+  assert.doesNotMatch(css, /max-width: 559px\) \{ \.usmap \.usmap__dots/);
 });
