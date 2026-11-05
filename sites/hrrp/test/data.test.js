@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REPO_ROOT, hrrpPath, readJson, readManifest } from '../../../pipeline/files.js';
-import { loadHrrp } from '../web/data.js';
+import { REPO_ROOT, hrrpPath, masterPath, readJson, readManifest } from '../../../pipeline/files.js';
+import { ATLAS_ID } from '../../../web/charts/geo.js';
+import { loadHrrp, changedOn, PIN_ID } from '../web/data.js';
 
-const PIN_ID = 'tdr-hrrp-fy2027';
 const emitted = loadHrrp();
 const pinned = loadHrrp({ exists: () => false });
 const keysOf = (o) => Object.keys(o).sort();
@@ -33,14 +33,29 @@ test("whatsNew, timeline and research come from the site's content files in both
   }
 });
 
-test('pinsUsed ids are in the manifest, and the pin is named only when it was read', () => {
-  const ids = new Set(readManifest().map((e) => e.id));
-  for (const d of [emitted, pinned]) {
-    assert.ok(d.pinsUsed.length > 0);
-    for (const e of d.pinsUsed) assert.ok(ids.has(e.id), e.id);
+test('pinsUsed lists every manifest pin the read file was built from', () => {
+  const manifestIds = new Set(readManifest().map((e) => e.id));
+  const emittedFile = readJson(REPO_ROOT + hrrpPath(2027));
+  const masterFile = readJson(REPO_ROOT + masterPath(2027));
+  const want = { emitted: [...emittedFile.sources, ...masterFile.sources, ATLAS_ID], pin: [PIN_ID, ...masterFile.sources, ATLAS_ID] };
+  for (const [mode, d] of [['emitted', emitted], ['pin', pinned]]) {
+    const got = new Set(d.pinsUsed.map((e) => e.id));
+    for (const e of d.pinsUsed) assert.ok(manifestIds.has(e.id), e.id);
+    assert.ok(got.has(PIN_ID), `${mode}: the pin`);
+    for (const id of want[mode].filter((i) => manifestIds.has(i))) assert.ok(got.has(id), `${mode}: ${id}`);
   }
-  assert.ok(!emitted.pinsUsed.some((e) => e.id === PIN_ID));
-  assert.ok(pinned.pinsUsed.some((e) => e.id === PIN_ID));
+});
+
+test('the pin is read when the emitted directory is absent, without looking in it', () => {
+  const asked = [];
+  const d = loadHrrp({ exists: (p) => { asked.push(p); return false; } });
+  assert.equal(d.source, 'pin');
+  assert.ok(asked.length > 0);
+  assert.ok(asked.every((p) => p.endsWith('data/emitted/hrrp')), 'only the directory was asked about');
+});
+
+test('a built_at that is not a timestamp stops the build and names the file', () => {
+  assert.throws(() => changedOn([['some/file.json', { built_at: 'yesterday' }]]), /some\/file\.json/);
 });
 
 test('cmsReleased is the file date, changedOn the newest built_at of the files read', () => {
@@ -52,7 +67,7 @@ test('cmsReleased is the file date, changedOn the newest built_at of the files r
 });
 
 test('the master is keyed by CCN and the shapes cover the states', () => {
-  assert.ok(emitted.master.has('010001'));
+  assert.ok(emitted.master.has(emitted.hospitals[0].id));
   assert.ok(emitted.shapes.size >= 50);
   assert.ok(emitted.manifest.length > 0);
 });

@@ -7,11 +7,12 @@ import { REPO_ROOT, hrrpPath, masterPath, newestYear, readJson, readManifest, re
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
 export const PIN_ID = 'tdr-hrrp-fy2027';
+const EMITTED_DIR = 'data/emitted/hrrp';
 const CONTENT = REPO_ROOT + 'sites/hrrp/content/';
 
 // The date (YYYY-MM-DD, UTC) the newest of these files was built: the newest built_at among them. files: [[repo
 // path, the parsed file]]. A built_at that is not a timestamp on the calendar stops the build and names the file.
-function changedOn(files) {
+export function changedOn(files) {
   const days = files.map(([path, file]) => {
     const day = builtOn(file.built_at);
     if (!day) throw new RangeError(`HRRP: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
@@ -22,8 +23,9 @@ function changedOn(files) {
 
 export function loadHrrp({ exists = existsSync } = {}) {
   const manifest = readManifest();
-  const emittedPath = hrrpPath(newestYear('data/emitted/hrrp'));
-  const source = exists(REPO_ROOT + emittedPath) ? 'emitted' : 'pin';
+  // The emitted directory may be absent (a fresh checkout): then there is no year to look for, and the pin is read.
+  const emittedPath = exists(REPO_ROOT + EMITTED_DIR) ? hrrpPath(newestYear(EMITTED_DIR)) : null;
+  const source = emittedPath && exists(REPO_ROOT + emittedPath) ? 'emitted' : 'pin';
   let data;
   let builtFiles;
   if (source === 'emitted') {
@@ -40,9 +42,8 @@ export function loadHrrp({ exists = existsSync } = {}) {
   const masterRel = masterPath(newestYear('data/emitted/hospital'));
   const masterFile = readJson(REPO_ROOT + masterRel);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
-  // The pin is named only when it was read; the emitted file lists it among its own sources.
+  // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
   const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ATLAS_ID]);
-  if (source === 'emitted') ids.delete(PIN_ID);
   return {
     source,
     fy,
