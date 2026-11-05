@@ -16,6 +16,7 @@ import { readPinned } from '../../../pipeline/files.js';
 import { build } from '../../../pipeline/site/build.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
+import { HRRP } from '../../hrrp/web/generate.js';
 import { HACRP, generateHacrp } from '../web/generate.js';
 import { hospitalMoney } from '../web/money.js';
 import { whatIfTexts } from '../web/whatif-text.js';
@@ -162,7 +163,8 @@ export function slicedHub(data) {
   return { ...HUB, generate: (ctx, options) => generateHub(ctx, { ...options, hospitals, master: hub.master }) };
 }
 
-// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub (slicedHub), in production: for the
+// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the Readmissions site (whole: its pages are
+// small, and the hub's links to them need them) and the hub (slicedHub), in production: for the
 // tests that read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
 // file's tests, so call this once, at the top of the test file. The getter resolves to the output folder.
 export function sliceBuild(data) {
@@ -172,7 +174,7 @@ export function sliceBuild(data) {
     if (!built) {
       const dir = mkdtempSync(join(tmpdir(), 'pp-slice-'));
       built = { dir, out: join(dir, 'dist') };
-      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), slicedHub(data)] });
+      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), HRRP, slicedHub(data)] });
     }
     return built.ready.then(() => built.out);
   };

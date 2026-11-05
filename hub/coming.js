@@ -1,6 +1,6 @@
 // The placeholder page at the folder of each program with no page here (web/site.js PLACEHOLDER_PROGRAMS), so the program
-// tabs, the footer and the front page's directory never link to a missing page. Laid out as the interim Readmissions page's
-// masthead is (hub/hrrp/page.js; its classes, hub/styles.css): the kicker, the program's name, its dek and two ways back,
+// tabs, the footer and the front page's directory never link to a missing page. Laid out as a masthead (its classes, .rd__*, in
+// hub/styles.css): the kicker, the program's name, its dek and two ways back,
 // beside a status card, a form waiting to be filled in: a hatched band saying the page isn't built (or, for a program the
 // dollar estimates include, that it is under construction), CMS's name for the program, and the figures (HVBP's estimate
 // from the dollar file, otherwise none) under a "Not built" (or "Under construction") stamp. It says what is so and

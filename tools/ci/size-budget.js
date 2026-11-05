@@ -42,10 +42,6 @@ export const BUDGETS = {
   // to the rule above. 70 KB is the owner's approved raise of 2026-10-28, past what the formula gave; it is not raised
   // again. ARCH-27's 150 KB for a hospital page holds.
   hubHospital: 70 * KB,
-  // The interim Readmissions pages (hub/hrrp/page.js), /hrrp/ and its hospitals'. ARCH-27's 100 KB for a hub page and
-  // 150 KB for a hospital page hold.
-  hrrp: 50 * KB,
-  hrrpHospital: 50 * KB,
 };
 // The program-keyed types' budgets (page-types.js PROGRAM_TYPES), by program id. Every program in PROGRAM_SITES needs an
 // entry, and a program-keyed page with no entry throws.

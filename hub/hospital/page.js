@@ -31,7 +31,7 @@ const FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-ple
 
 // The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
 // hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
-// Thirty Day Readmissions has (inTdr) has an interim Readmissions page (hub/hrrp/page.js).
+// Thirty Day Readmissions has (inTdr) has a Readmissions page (sites/hrrp/).
 const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
 
 // A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
@@ -73,9 +73,8 @@ function typeText(h, master) {
 }
 
 // The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,
-// beds } (the hub hospital, or the same fields from the master); master: its master record, or null. The interim
-// Readmissions pages (hub/hrrp/page.js) add their own fields after these.
-export function recordSpecs(h, master) {
+// beds } (the hub hospital, or the same fields from the master); master: its master record, or null.
+function recordSpecs(h, master) {
   const type = typeText(h, master);
   return [
     { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },

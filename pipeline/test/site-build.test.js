@@ -13,7 +13,7 @@ import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.j
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
-import { pageType } from '../../tools/ci/page-types.js';
+import { pageProgram, pageType } from '../../tools/ci/page-types.js';
 import { cardFile } from '../../web/share-card.js';
 import { SITE } from '../../web/site.js';
 import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
@@ -301,8 +301,8 @@ test('HACRP gives the build its two dates, which /corrections/ shows', async () 
   assert.ok(text.includes(`<time datetime="${newestBuilt(DATA)}">`));
 });
 
-// A rule for a hub page's own parts: the hospital page's (.hh), the home page's story (.story) or the interim Readmissions
-// pages' (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
+// A rule for a hub page's own parts: the hospital page's (.hh), the home page's story (.story) or the placeholder pages'
+// masthead (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
 const HUB_RULE = /\.(hh|story|rd)(__[\w-]+|--[\w-]+)?(?=[\s,{.:>+~[)])/;
 
 test('each page links the shared stylesheet and then its own site\'s alone: a HACRP page HACRP\'s, a hub page the hub\'s; the shared one holds neither\'s rules', async () => {
@@ -312,30 +312,32 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
   const seen = new Set();
   const shared = new Set();
-  const own = { hacrp: new Set(), hub: new Set() };
+  const own = { hacrp: new Set(), hrrp: new Set(), hub: new Set() };
   for (const file of htmlPages(out)) {
     const type = pageType(addressOf(file));
     const links = sheetsOf(file);
     seen.add(type);
     assert.equal(links.length, 2, file);
     shared.add(links[0]);
-    own[PROGRAM_TYPES.includes(type) ? 'hacrp' : 'hub'].add(links[1]);
+    own[pageProgram(addressOf(file)) ?? 'hub'].add(links[1]);
   }
   for (const type of [...PROGRAM_TYPES, 'hub', 'policy', 'coming', 'hubHospital', 'notFound']) assert.ok(seen.has(type), `the slice built a ${type} page`);
   assert.equal(shared.size, 1, 'one shared stylesheet');
-  assert.deepEqual([own.hacrp.size, own.hub.size], [1, 1], 'one stylesheet for each site');
+  assert.deepEqual([own.hacrp.size, own.hrrp.size, own.hub.size], [1, 1, 1], 'one stylesheet for each site');
   const [site] = shared;
-  const [[hacrp], [hub]] = [[...own.hacrp], [...own.hub]];
+  const [[hacrp], [hrrp], [hub]] = [[...own.hacrp], [...own.hrrp], [...own.hub]];
   assert.match(site, /^\/assets\/site\.[0-9a-f]{8}\.css$/);
   assert.match(hacrp, /^\/assets\/hacrp\.[0-9a-f]{8}\.css$/);
+  assert.match(hrrp, /^\/assets\/hrrp\.[0-9a-f]{8}\.css$/);
   assert.match(hub, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
   // (Each check is a yes or no: a failing match would print the whole stylesheet.)
   const css = (href) => readFileSync(join(out, href), 'utf8');
   assert.equal(HUB_RULE.exec(css(site))?.[0] ?? null, null, 'the shared stylesheet holds no hub page\'s rule');
   assert.equal(HUB_RULE.exec(css(hacrp))?.[0] ?? null, null, 'HACRP\'s stylesheet holds no hub page\'s rule');
+  assert.equal(HUB_RULE.exec(css(hrrp))?.[0] ?? null, null, 'Readmissions\' stylesheet holds no hub page\'s rule');
   for (const root of ['.prog__lede', '.step__n']) {
     assert.ok(css(hacrp).includes(root), `HACRP's stylesheet holds ${root}`);
-    assert.ok(!css(site).includes(root) && !css(hub).includes(root), `only HACRP's stylesheet holds ${root}`);
+    assert.ok(!css(site).includes(root) && !css(hub).includes(root) && !css(hrrp).includes(root), `only HACRP's stylesheet holds ${root}`);
   }
   for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
   // The chart and what-if kit (KIT_STYLES) rides in HACRP's sheet alone; the hub's keeps the scale bar's two dot rules.

@@ -329,7 +329,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     await generateHub(base, { hospitals: [], master: new Map() });
     const ctx = createContext({ outDir: join(dir, 'b'), env: 'production', assets: ASSETS });
     await generateHub(ctx, { released: true });
-    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + HUB.tdr.hospitals.size, 'one page per hospital in the dollar file, and one interim Readmissions page per hospital in the pinned file');
+    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length, 'one page per hospital in the dollar file');
     let bad = 0;
     let wrongCanonical = 0;
     for (const h of HOSPITALS) {

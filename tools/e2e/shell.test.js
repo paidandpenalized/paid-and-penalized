@@ -284,7 +284,7 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     assert.equal(await chip.isVisible(), true, 'the chip shows without waiting for a script');
     assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
     // The tabs and the wordmark carry the hospital to every program's folder and the front page; its HACRP tab is this
-    // page, All programs its page across the programs and Readmissions its interim page when Thirty Day Readmissions has the
+    // page, All programs its page across the programs and Readmissions its page when Thirty Day Readmissions has the
     // hospital (the hub's asset says). Compared as one answer, so a failure prints no CCN.
     const { fy, rows } = await hubRows(page);
     const row = rows.find((r) => r.ccn === ccn);

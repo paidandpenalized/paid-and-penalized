@@ -20,17 +20,22 @@ test('pageType: every page of the site sorts into one type', () => {
     // A hospital's page across the programs: its CCN, lowercase, under /hospital/.
     '/hospital/990001/': 'hubHospital',
     '/hospital/99a001/': 'hubHospital',
-    // The interim Readmissions pages: the program's folder, and a hospital's page under it.
-    '/hrrp/': 'hrrp',
-    '/hrrp/hospital/990001/': 'hrrpHospital',
-    '/hrrp/hospital/99a001/': 'hrrpHospital',
+    // Readmissions' own pages, typed as a program's are.
+    '/hrrp/': 'program',
+    '/hrrp/methods/': 'methods',
+    '/hrrp/data/': 'dictionary',
+    '/hrrp/hospital/990001/': 'hospital',
+    '/hrrp/hospital/99a001/': 'hospital',
+    '/hrrp/region/northeast/': 'place',
+    '/hrrp/division/south-atlantic/': 'place',
+    '/hrrp/state/ca/': 'place',
+    '/hrrp/metro/10180/': 'place',
   };
   for (const path of Object.values(SITE.pages)) sorted[path] = 'policy';
-  // Every program with no page here has a placeholder at its folder; Readmissions' folder holds the interim page, not a
-  // placeholder.
+  // Every program with no page here has a placeholder at its folder; Readmissions' folder holds its site, not a placeholder.
   for (const { path } of PLACEHOLDER_PROGRAMS) sorted[path] = 'coming';
   assert.equal(sorted['/hvbp/'], 'coming');
-  assert.equal(sorted['/hrrp/'], 'hrrp');
+  assert.equal(sorted['/hrrp/'], 'program');
   for (const [path, type] of Object.entries(sorted)) assert.equal(pageType(path), type, path);
   // The hub's methods page and the program's are different pages.
   assert.equal(pageType('/methods/'), 'policy');
@@ -43,9 +48,13 @@ test('pageType: a hospital\'s page across the programs is hubHospital only at a 
     assert.equal(pageType(path), null, path);
 });
 
-test('pageType: an interim Readmissions hospital page is hrrpHospital only at a valid CCN\'s lowercase folder under /hrrp/hospital/', () => {
-  for (const ccn of ['990001', '99A001']) assert.equal(pageType(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hrrpHospital', ccn);
-  for (const path of ['/hrrp/hospital/', '/hrrp/hospital/99A001/', '/hrrp/hospital/12345/', '/hrrp/hospital/9900011/', '/hrrp/hospital/990001/extra/', '/hrrp/hospital/990001', '/hrrp/hospitals/990001/', '/hrrp', '/hrrp/x/'])
+test('pageType: a Readmissions hospital page is a hospital only at a valid CCN\'s lowercase folder under /hrrp/hospital/, a place only at a known kind', () => {
+  for (const ccn of ['990001', '99A001']) {
+    assert.equal(pageType(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hospital', ccn);
+    assert.equal(pageProgram(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hrrp', ccn);
+  }
+  for (const path of ['/hrrp/hospital/', '/hrrp/hospital/99A001/', '/hrrp/hospital/12345/', '/hrrp/hospital/9900011/', '/hrrp/hospital/990001/extra/', '/hrrp/hospital/990001', '/hrrp/hospitals/990001/', '/hrrp', '/hrrp/x/',
+    '/hrrp/state/', '/hrrp/state/CA/', '/hrrp/county/x/', '/hrrp/state/ca/extra/'])
     assert.equal(pageType(path), null, path);
 });
 
@@ -70,10 +79,11 @@ test('placeKind: a place page\'s kind, from its address; null for any other page
 
 test('pageProgram: the program id of a program-keyed page, null for every other page', () => {
   for (const path of ['/hacrp/', '/hacrp/methods/', '/hacrp/data/', '/hacrp/hospital/990001/', '/hacrp/state/ca/']) assert.equal(pageProgram(path), 'hacrp', path);
-  for (const path of ['/', '/404', '/methods/', '/hvbp/', '/hrrp/', '/hrrp/hospital/990001/', '/hospital/990001/', '/new/', '/hacrp/state/CA/'])
+  for (const path of ['/hrrp/', '/hrrp/methods/', '/hrrp/data/', '/hrrp/hospital/990001/', '/hrrp/state/ca/']) assert.equal(pageProgram(path), 'hrrp', path);
+  for (const path of ['/', '/404', '/methods/', '/hvbp/', '/hospital/990001/', '/new/', '/hacrp/state/CA/'])
     assert.equal(pageProgram(path), null, path);
   // Exactly the program-keyed types have a program.
   for (const path of ['/hacrp/', '/hacrp/methods/', '/hacrp/data/', '/hacrp/hospital/990001/', '/hacrp/state/ca/'])
     assert.ok(['program', 'methods', 'dictionary', 'hospital', 'place'].includes(pageType(path)), path);
-  assert.deepEqual(PROGRAM_SITES.map((s) => s.id), ['hacrp']);
+  assert.deepEqual(PROGRAM_SITES.map((s) => s.id), ['hacrp', 'hrrp']);
 });

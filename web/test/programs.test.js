@@ -31,27 +31,29 @@ test('the registry\'s groups: listed (full tabs and the footer\'s figures), unli
   const ids = (list) => list.map((p) => p.id);
   assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp']);
   assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
-  // Readmissions' folder holds the hub's interim pages (hub/hrrp/page.js), so only the programs still to come have a placeholder.
+  // Readmissions' folder holds its own site, so only the programs still to come have a placeholder.
   assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
   assert.deepEqual(ids(SITE.programs.filter((p) => p.stage === 'interim')), ['hrrp']);
   for (const list of [LISTED_PROGRAMS, UNLISTED_PROGRAMS, PLACEHOLDER_PROGRAMS]) assert.ok(Object.isFrozen(list));
 });
 
-test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
-  assert.deepEqual(Object.keys(SITE.sites), ['hacrp']);
+test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
+  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp']);
+  assert.equal(SITE.sites.hrrp.path, programById('hrrp').path);
   assert.equal(SITE.sites.hacrp.path, programById('hacrp').path);
   assert.equal(siteOf('/hacrp/hospital/990001/'), SITE.sites.hacrp);
-  assert.equal(siteOf('/hrrp/'), null);
+  assert.equal(siteOf('/hrrp/'), SITE.sites.hrrp);
+  assert.equal(siteOf('/hrrp/hospital/990001/'), SITE.sites.hrrp);
 });
 
-test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no program that is not live (interim or soon) has one; every site is a live program', () => {
+test('the registry\'s stage and SITE.sites agree: every live or interim program has a site here at its folder, and no program still to come has one; every site is a live or interim program', () => {
   for (const p of SITE.programs) {
     const site = Object.hasOwn(SITE.sites, p.id) ? SITE.sites[p.id] : null;
-    if (p.stage === 'live') assert.equal(site?.path, p.path, `${p.id}: a live program has a site at its folder`);
-    else assert.equal(site, null, `${p.id}: a ${p.stage} program has no entry in SITE.sites`);
+    if (p.stage === 'soon') assert.equal(site, null, `${p.id}: a program still to come has no entry in SITE.sites`);
+    else assert.equal(site?.path, p.path, `${p.id}: a ${p.stage} program has a site at its folder`);
   }
   for (const p of PLACEHOLDER_PROGRAMS) assert.ok(!Object.hasOwn(SITE.sites, p.id), p.id);
-  for (const id of Object.keys(SITE.sites)) assert.equal(programById(id)?.stage, 'live', `SITE.sites.${id} is a live program`);
+  for (const id of Object.keys(SITE.sites)) assert.notEqual(programById(id)?.stage, 'soon', `SITE.sites.${id} is a live or interim program`);
 });
 
 test('programOf names the program whose folder holds the path, or null for the family\'s own pages', () => {

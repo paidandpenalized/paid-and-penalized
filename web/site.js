@@ -23,13 +23,14 @@ export const SITE = {
   hub: { released: true },
   sites: {
     hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
+    hrrp: { path: '/hrrp/', released: false, title: 'Readmissions', subtitle: 'HRRP' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
   //   name, ab, long   the tab's name, its short form, and CMS's name for the program
   //   path             the program's folder (a program not built here holds a placeholder page there)
-  //   stage            live (a site here), interim (a slim page here until Thirty Day Readmissions folds in), soon
-  //                    (no page here: not built; the id is internal)
+  //   stage            live (a site here), interim (a site here that the hub does not yet treat as live: Readmissions',
+  //                    until the hub's own switch), soon (no page here: not built; the id is internal)
   //   group            what the program does to payment: quality (a cut or bonus for scores), price (an adjustment to
   //                    the rate), reporting (a cut for not reporting), episode (a spending target)
   //   inData           whether the dollar estimates (hub/) include the program
@@ -67,8 +68,7 @@ export const programOf = (path) => SITE.programs.find((program) => path.startsWi
 // interim programs and the not-built ones the dollar estimates already include, the shell's tabs and the footer's
 // figures; unlisted: the rest, under consideration, the footer's "Under consideration:" line and the front page's
 // slips (no tab). Placeholder: every program with no page here (stage soon), whose folder holds the hub's placeholder
-// page (hub/coming.js). A live program's folder holds its site and an interim one's the hub's own Readmissions pages
-// (hub/hrrp/page.js).
+// page (hub/coming.js). A live or interim program's folder holds its site.
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
 export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));
@@ -77,7 +77,7 @@ export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.
 export const underConstruction = (p) => p.stage === 'soon' && p.inData;
 
 // The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' (that site's
-// hospital pages) or 'hrrp' (the slim Readmissions pages), each under its program's folder; null for any other program,
+// hospital pages) or 'hrrp' (that site's hospital pages), each under its program's folder; null for any other program,
 // which has none yet.
 export function hospitalFolderOf(programId) {
   if (programId === 'hub') return '/hospital/';
@@ -86,7 +86,8 @@ export function hospitalFolderOf(programId) {
 
 // The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: a hospital
 // in the dollar file (inHub, as every hospital the hub's pages and data hold is) has a hub page and a HACRP page, and one
-// Thirty Day Readmissions has (inTdr) a Readmissions page. Folders are lowercase, so the CCN is too.
+// Thirty Day Readmissions has (inTdr, which the hub marks from that site's pinned file) a Readmissions page, which the
+// Readmissions site writes for every one of them. Folders are lowercase, so the CCN is too.
 export function hospitalPathOf(programId, ccn, { inTdr = false, inHub = true } = {}) {
   const folder = hospitalFolderOf(programId);
   return folder && (programId === 'hrrp' ? inTdr : inHub) ? `${folder}${ccn.toLowerCase()}/` : null;

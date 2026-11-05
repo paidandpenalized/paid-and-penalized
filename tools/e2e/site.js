@@ -12,6 +12,9 @@ import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { nationalContext } from '../../sites/hacrp/web/compare.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { groupLabel } from '../../sites/hacrp/web/groups.js';
+import { loadHrrp } from '../../sites/hrrp/web/data.js';
+import { KINDS as HRRP_KINDS, METHODS_PATH as HRRP_METHODS_PATH, PROGRAM_PATH as HRRP_PROGRAM_PATH, hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { buildPlaces } from '../../sites/hrrp/web/places.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
@@ -85,21 +88,26 @@ const HUB_HOSPITALS = [
 // record }, from the emitted data alone.
 export const hubHospitalSample = (type, all = hubHospitals(loadHub())) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, all, (h) => hospitalPathOf('hub', h.ccn));
 
-// The sample interim Readmissions hospital pages (hub/hrrp/page.js), by type, each the first hospital in the pinned Thirty Day
-// Readmissions file with a payment cut and an estimate, with no cut, or that the dollar file does not have (no estimate, no
-// page across the programs): [type, what it is, the test]. test reads the pinned record and the hub hospital (null when the
-// dollar file does not have it).
+// The sample Readmissions hospital pages (sites/hrrp/), by type, each the first hospital in the newest Readmissions file
+// with a payment cut and an estimate of its dollars, with no cut, or with no estimate: [type, what it is, the test].
 const HRRP_HOSPITALS = [
-  ['hrrp-hospital-cut', 'with a payment cut and an estimate', (r, h) => r.paf < 1 && h?.est?.hrrpListed === true],
-  ['hrrp-hospital-no-cut', 'with no payment cut', (r) => r.paf >= 1],
-  ['hrrp-hospital-no-estimate', 'the dollar file does not have', (r, h) => h === null],
+  ['hrrp-hospital-cut', 'with a payment cut and an estimate', (h) => h.paf < 1 && h.pen != null],
+  ['hrrp-hospital-no-cut', 'with no payment cut', (h) => h.paf >= 1],
+  ['hrrp-hospital-no-estimate', 'with no estimate of its dollars', (h) => h.pen == null],
 ];
 
-// The sample interim Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its pinned
-// record }, from the pinned file and the emitted data alone.
-function hrrpHospitalSample(type, hub = loadHub(), all = hubHospitals(hub)) {
-  const byCcn = new Map(all.map((h) => [h.ccn, h]));
-  return sampleOf('hrrpHospitalSample', HRRP_HOSPITALS, type, [...hub.tdr.hospitals.values()], (r) => hospitalPathOf('hrrp', r.id, { inTdr: true }), (r) => byCcn.get(r.id) ?? null);
+// The sample Readmissions hospital page of a type (HRRP_HOSPITALS), { type, name, path, hospital: its record }, from the
+// newest Readmissions file alone.
+const hrrpHospitalSample = (type, all = loadHrrp().hospitals) => sampleOf('hrrpHospitalSample', HRRP_HOSPITALS, type, all, (h) => hrrpHospitalPath(h.id));
+
+// The Readmissions site's first place of each kind, [{ type, name, path }] ('hrrp-state', ...), in the order buildPlaces lists them.
+function hrrpPlaceSamples({ hospitals, meta } = loadHrrp()) {
+  const { list } = buildPlaces(hospitals, meta);
+  return HRRP_KINDS.map((kind) => {
+    const place = list.find((p) => p.kind === kind);
+    if (!place) throw new Error(`hrrpPlaceSamples: no ${kind} in the Readmissions data`);
+    return { type: `hrrp-${kind}`, name: `hrrp-${kind}`, path: place.path };
+  });
 }
 
 // The HACRP hospital pages whose peer chart ("among hospitals like it": one row per group the hospital belongs to, over
@@ -126,14 +134,15 @@ export function peerChartSamples() {
 // One page of every type, [{ type, name, path }]: the hub's home and each of its policy pages, a program's
 // placeholder page (value-based purchasing's, the one with a figure), the program page, its Methods and dictionary, the three sample hospitals
 // (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
-// programs (hubHospitalSample), the interim Readmissions page and its three sample hospitals' pages (hrrpHospitalSample), and
+// programs (hubHospitalSample), the Readmissions program page, its three sample hospitals' pages (hrrpHospitalSample), its
+// first place of each kind (hrrpPlaceSamples) and its Methods page, and
 // a path no page has (the not-found page, served with status 404). name is the page's
 // name in a test's title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the
 // emitted data, whichever site the browser visits.
 export function samplePages() {
   const all = readNewestEmitted().hospitals;
-  const hubData = loadHub();
-  const hub = hubHospitals(hubData);
+  const hub = hubHospitals(loadHub());
+  const hrrpData = loadHrrp();
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
   return [
@@ -146,8 +155,10 @@ export function samplePages() {
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
     ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
-    page('hrrp', programById('hrrp').path),
-    ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hubData, hub)),
+    page('hrrp-program', HRRP_PROGRAM_PATH),
+    ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hrrpData.hospitals)),
+    ...hrrpPlaceSamples(hrrpData),
+    page('hrrp-methods', HRRP_METHODS_PATH),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }
