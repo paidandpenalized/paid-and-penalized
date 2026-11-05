@@ -26,7 +26,7 @@ test('writes the program page and a page per hospital, noindex while unreleased,
   withTemp('pp-hrrp-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     const result = generateHrrp(ctx, { data: SLICE, released: false, ...quiet });
-    assert.equal(ctx.pages, SLICE.hospitals.length + buildPlaces(SLICE.hospitals, SLICE.meta).list.length + 2, 'the hospitals, the places, the program page and Methods');
+    assert.equal(ctx.pages, SLICE.hospitals.length + buildPlaces(SLICE.hospitals, SLICE.meta).list.length + 3, 'the hospitals, the places, the program page, the data dictionary page and Methods');
     assert.deepEqual(ctx.indexable, []);
     const program = readFileSync(join(dir, PROGRAM_PATH, 'index.html'), 'utf8');
     assert.match(program, /<meta name="robots" content="noindex">/);

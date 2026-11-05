@@ -18,6 +18,8 @@ export const placePath = (kind, key) => {
 };
 
 export const csvPath = (fy, name) => `/data/hrrp/fy${fy}/${name}.csv`;
+// The data dictionary (sites/hrrp/DATA-DICTIONARY.md) as a file beside the CSVs; DICTIONARY_PAGE is the same words as a page.
+export const dictionaryPath = (fy) => `/data/hrrp/fy${fy}/DATA-DICTIONARY.md`;
 
 // A link from a content file (the timeline, the research list): the address when it is an https one, else null, so a
 // javascript:, http:, data: or malformed address never becomes an href.

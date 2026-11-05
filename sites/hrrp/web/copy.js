@@ -84,6 +84,12 @@ export const COPY = {
   crumbsLabel: { text: 'Breadcrumb', claim: null },
   crumbNation: { text: 'Nation', claim: null },
 
+  // The data dictionary page (pages/dictionary.js): the Markdown file's words in the site's shell, then the files themselves.
+  dictKicker: { text: 'Data dictionary', claim: null },
+  dictFilesHeading: { text: 'The files', claim: null },
+  dictFileHospitals: { text: 'Download every hospital as a CSV', claim: null },
+  dictFileMarkdown: { text: 'Download this dictionary as Markdown', claim: null },
+
   // Area pages.
   deckShareNone: { text: 'it is {none}', claim: null },
   deckShare: { text: '{pct} of the {n} measured on at least one condition', claim: null },

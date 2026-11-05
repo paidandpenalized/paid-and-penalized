@@ -6,6 +6,13 @@
 // zero (Thirty Day Readmissions wrote ="010001", which the shared writer's formula guard does not allow).
 import { CONDS, isMeasured } from '../../../engine/js/hrrp/formula.js';
 import { toCsv } from '../../../engine/js/csv.js';
+import { fillCopy } from '../../../web/render/components.js';
+
+// Bump when a column is added, removed, renamed or changes meaning (sites/hrrp/DATA-DICTIONARY.md states it).
+export const CSV_SCHEMA_VERSION = 1;
+
+// The full hospitals file's name, without its extension (links.js csvPath adds the folder and the extension).
+export const hospitalsCsvName = (fy) => `hrrp-fy${fy}-hospitals`;
 
 const text = (name, get) => ({ name, numeric: false, get });
 const number = (name, get) => ({ name, numeric: true, get });
@@ -67,3 +74,12 @@ export const placeCsv = (rows, label = 'State') => {
   const columns = label === 'State' ? PLACE_COLUMNS : placeColumns(label);
   return toCsv(columns, rows.map((r) => columns.map((c) => c.get(r))));
 };
+
+// The dictionary file (sites/hrrp/DATA-DICTIONARY.md) with its edition, the files' names and the case minimum filled in, so
+// none of them is typed twice. fillCopy's rules hold: an unknown placeholder, a missing value, or a value the file doesn't
+// use throws.
+export function dictionaryText(raw, { edition, fy, minCases }) {
+  return fillCopy({ dictionary: raw }, 'dictionary', {
+    edition: String(edition), file: `${hospitalsCsvName(fy)}.csv`, minCases: String(minCases),
+  }, { plain: true });
+}

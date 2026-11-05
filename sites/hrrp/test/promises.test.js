@@ -25,8 +25,8 @@ test('every built page promises nothing', () =>
     const pages = [];
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     const emit = ctx.emit.bind(ctx);
-    // The data files (CSV) the build writes are not pages.
-    ctx.emit = (page) => { if (!page.path.endsWith('.csv')) pages.push(page.path); return emit(page); };
+    // The data files (CSV, Markdown) the build writes are not pages.
+    ctx.emit = (page) => { if (!/\.(csv|md)$/.test(page.path)) pages.push(page.path); return emit(page); };
     generateHrrp(ctx, { data: DATA, released: false, log: () => {} });
     assert.ok(pages.length > DATA.hospitals.length, 'the pages were built');
     assert.ok(readerWords(readFileSync(join(dir, pages[0], 'index.html'), 'utf8')).length > 500, 'the words are read');

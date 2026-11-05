@@ -9,7 +9,7 @@ import { fillAround, fillCopy } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { DOLLARS_HREF, METHODS_PATH } from '../links.js';
+import { DICTIONARY_PAGE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { printout } from '../../../../web/render/components.js';
 import { mediansTable } from '../figures/how.js';
 import { fill, t } from '../methods/copy.js';
@@ -87,7 +87,8 @@ ${printout(html`<table class="gb receipts">
 <thead><tr><th scope="col">${t('pinColFile')}</th><th scope="col" class="num">${t('pinColBytes')}</th><th scope="col">${t('pinColHash')}</th><th scope="col">${t('pinColGot')}</th></tr></thead>
 <tbody>${view.pins.map((p) => html`<tr><th scope="row">${p.url ? externalLink(p.url, p.title) : p.title}</th><td class="num">${p.bytes}</td><td><code>${p.hash}</code></td><td>${p.retrieved}</td></tr>`)}</tbody>
 </table>`)}`)}
-${section('reuse', t('reuseHeading'), html`<p>${view.reuse}</p>`)}
+${section('reuse', t('reuseHeading'), html`<p>${view.reuse}</p>
+<p>${fillAround((marks) => fill('reuseDictionary', marks), { link: html`<a href="${DICTIONARY_PAGE}">${t('reuseDictionaryLink')}</a>` })}</p>`)}
 </div>
 <aside class="meth__side">
 <h2>${t('sourcesHeading')}</h2>

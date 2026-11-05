@@ -196,6 +196,8 @@ export const COPY = {
     text: 'This site’s text, charts and derived data may be reused with credit to Paid & Penalized (CC BY); its code is MIT-licensed. CMS’s data are U.S. government works. Every table with a download is a CSV file. In those files the CCN is plain text, so open its column as text in a spreadsheet to keep the leading zero; headers name their units; and a condition’s penalized column is blank when the hospital had fewer than {minCases} cases of it.',
     claim: null,
   },
+  reuseDictionary: { text: 'Every column of these files, and the files themselves, are on the {link} page.', claim: null },
+  reuseDictionaryLink: { text: 'data dictionary', claim: null },
   sourcesHeading: { text: 'Sources', claim: null },
   sourceSupplemental: { text: 'CMS archived HRRP supplemental data files, {first} through {last}', claim: null },
   sourceRules: { text: 'Federal Register IPPS final rules, {span}', claim: null },

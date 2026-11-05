@@ -1,6 +1,6 @@
 // What the Readmissions pages read at build time: the newest emitted HRRP file (else the pinned Thirty Day Readmissions output), the site's content files, the newest hospital master and the state outlines.
 // File reads live here; views and pages stay pure.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
@@ -9,6 +9,7 @@ import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, rea
 export const PIN_ID = 'tdr-hrrp-fy2027';
 const EMITTED_DIR = 'data/emitted/hrrp';
 const CONTENT = REPO_ROOT + 'sites/hrrp/content/';
+const DICTIONARY_FILE = 'sites/hrrp/DATA-DICTIONARY.md';
 
 // The date (YYYY-MM-DD, UTC) the newest of these files was built: the newest built_at among them. files: [[repo
 // path, the parsed file]]. A built_at that is not a timestamp on the calendar stops the build and names the file.
@@ -72,6 +73,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     conditions: data.conditions,
     hospitals: data.hospitals,
     history: data.history,
+    dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     whatsNew: whatsNew.items,
     // The fiscal year the notes are for: the program page shows them only in that year's edition.
     whatsNewFy: whatsNew.fy,

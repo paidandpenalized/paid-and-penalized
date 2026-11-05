@@ -2,19 +2,20 @@
 // program page, one page for each hospital in the file, each place's page and Methods (last).
 // Before it writes anything it checks that the formula (engine/js/hrrp/formula.js) gives CMS's payment adjustment factor
 // for every hospital.
-import { contrib } from '../../../engine/js/hrrp/formula.js';
+import { MIN_DISCHARGES, contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
-import { hospitalCsv, placeCsv } from './csv.js';
+import { dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv } from './csv.js';
 import { hospitalsAsset } from './figures/explore-data.js';
 import { statesCsvRows } from './figures/map-data.js';
 import { loadHrrp } from './data.js';
+import { dictionaryPage } from './pages/dictionary.js';
 import { hospitalPage } from './pages/hospital.js';
 import { methodsPage } from './pages/methods.js';
 import { placePage } from './pages/place.js';
 import { programPage } from './pages/program.js';
-import { METHODS_PATH, PROGRAM_PATH, hospitalPath } from './links.js';
+import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH, csvPath, dictionaryPath, hospitalPath } from './links.js';
 import { buildPlaces } from './places.js';
 import { areaContext, hospitalContext, hospitalView, methodsView, placeView, programView } from './view.js';
 
@@ -42,13 +43,20 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl }) });
   ctx.emit({ path: program.picture.csvHref, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, text: placeCsv(statesCsvRows(program.map.pages)) });
+  // The full hospitals file and its dictionary: files, then the dictionary as a page.
+  const { fy } = meta;
+  const csvHref = csvPath(fy, hospitalsCsvName(fy));
+  const dictionaryFilled = dictionaryText(data.dictionary, { edition: program.edition, fy, minCases: MIN_DISCHARGES });
+  ctx.emit({ path: csvHref, text: hospitalCsv(hospitals) });
+  ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
+  ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets }) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }
   for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
   // Methods last, with the count of the pages under the program.
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
-  log(`HRRP: ${1 + hospitals.length + places.list.length + 1} pages under ${PROGRAM_PATH}`);
+  log(`HRRP: ${1 + hospitals.length + places.list.length + 2} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 
