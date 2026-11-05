@@ -21,11 +21,27 @@ export function changedOn(files) {
   return days.sort().at(-1);
 }
 
-export function loadHrrp({ exists = existsSync } = {}) {
+// The newest year's emitted file path, or null when there is no emitted Readmissions data at all (no folder, or no year
+// folder in it). A year folder without its file is a broken emit and stops the build.
+function emittedFile(exists, newest) {
+  if (!exists(REPO_ROOT + EMITTED_DIR)) return null;
+  let fy;
+  try {
+    fy = newest(EMITTED_DIR);
+  } catch (e) {
+    if (e instanceof RangeError) return null;
+    throw e;
+  }
+  const path = hrrpPath(fy);
+  if (!exists(REPO_ROOT + path)) throw new Error(`HRRP: ${path} is missing although its year folder exists; run \`make emit\``);
+  return path;
+}
+
+export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   const manifest = readManifest();
-  // The emitted directory may be absent (a fresh checkout): then there is no year to look for, and the pin is read.
-  const emittedPath = exists(REPO_ROOT + EMITTED_DIR) ? hrrpPath(newestYear(EMITTED_DIR)) : null;
-  const source = emittedPath && exists(REPO_ROOT + emittedPath) ? 'emitted' : 'pin';
+  // With no emitted data at all (a fresh checkout) the pin is read.
+  const emittedPath = emittedFile(exists, newest);
+  const source = emittedPath ? 'emitted' : 'pin';
   let data;
   let builtFiles;
   if (source === 'emitted') {

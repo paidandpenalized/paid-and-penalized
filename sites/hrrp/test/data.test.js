@@ -54,6 +54,16 @@ test('the pin is read when the emitted directory is absent, without looking in i
   assert.ok(asked.every((p) => p.endsWith('data/emitted/hrrp')), 'only the directory was asked about');
 });
 
+test('an emitted folder with a year but no file stops the build and says to run make emit', () => {
+  const asked = (p) => p.endsWith('data/emitted/hrrp');
+  assert.throws(() => loadHrrp({ exists: asked, newest: () => 2027 }), (e) => e.message.includes('data/emitted/hrrp/fy2027/hrrp.json') && /make emit/.test(e.message));
+});
+
+test('an emitted folder with no year folder in it falls back to the pin', () => {
+  const noYear = () => { throw new RangeError('no fy<YYYY> folder under data/emitted/hrrp'); };
+  assert.equal(loadHrrp({ exists: (p) => p.endsWith('data/emitted/hrrp'), newest: noYear }).source, 'pin');
+});
+
 test('a built_at that is not a timestamp stops the build and names the file', () => {
   assert.throws(() => changedOn([['some/file.json', { built_at: 'yesterday' }]]), /some\/file\.json/);
 });
