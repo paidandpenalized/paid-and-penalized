@@ -23,11 +23,9 @@ const edition = {
 };
 const hosp = (extra) => ({ id: '990001', name: NAME, peer: 1, st: 'ZZ', ...extra });
 
-test('copy has no digit characters and every claim is null for now', () => {
-  for (const [key, { text, claim }] of Object.entries(COPY)) {
-    assert.doesNotMatch(text, /\d/, key);
-    assert.equal(claim, null, key);
-  }
+// Claim ids are checked against sites/hrrp/CLAIMS.md by pipeline/test/copy-gate.test.js.
+test('copy has no digit characters', () => {
+  for (const [key, { text }] of Object.entries(COPY)) assert.doesNotMatch(text, /\d/, key);
 });
 
 test('plural, upFirst, ordinal', () => {

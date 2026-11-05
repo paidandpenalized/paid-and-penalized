@@ -1,6 +1,6 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/methods.js and views/explainer.js at 33d1959).
 // Figures the Readmissions pages state in words; each is passed to the copy through a placeholder.
-// The claims register (which row backs each) is attached by a later task.
+// CLAIMS (below) names the claims-register row (sites/hrrp/CLAIMS.md) behind each method constant.
 
 // CMS's upper-bound estimate of new-technology add-on payments, FY2027 IPPS final rule (FR doc 2026-15833), 91 FR 50423:
 // "Aggregate Estimated Total FY 2027 Impact $1,739,715,745.72". Against the ~$91B modeled base (and CMS's FY2027 HVBP
@@ -15,3 +15,13 @@ export const PARHM_END = '2026-12-31';
 
 // "About 2,900 hospitals": the hospital count rounded to the nearest hundred (Thirty Day Readmissions, views/explainer.js).
 export const ROUND_COUNT_TO = 100;
+
+// The claims-register row behind each method constant the gate checks (pipeline/test/copy-gate.test.js).
+// NTAP_FY and ROUND_COUNT_TO are not here: NTAP_FY is the year NTAP_TOTAL states, and ROUND_COUNT_TO is a rounding of how a
+// count is shown, not a claim about CMS's program. NTAP_SHARE is this site's own ratio of NTAP_TOTAL to the modeled base,
+// so it rests on the same row.
+export const CLAIMS = {
+  NTAP_TOTAL: 'HRRP-07',
+  NTAP_SHARE: 'HRRP-07',
+  PARHM_END: 'HRRP-08',
+};
