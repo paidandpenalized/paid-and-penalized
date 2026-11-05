@@ -89,7 +89,9 @@ def new_entry(year, data, source, last_modified, retrieved):
 def _parse(argv):
     parser = argparse.ArgumentParser(prog="cli.py pin", description="Derive the HCRIS layer's pinned cells tables.")
     parser.add_argument("--entries", help="write new manifest entries here (a first pin or a new posting)")
-    parser.add_argument("--posted", help="CMS's Last-Modified date for the zips (YYYY-MM-DD); with --entries")
+    parser.add_argument("--posted", help="CMS's Last-Modified date for the zips (YYYY-MM-DD); with --entries. One "
+                                         "posting per run: CMS posts every year's zip at once, so run each "
+                                         "posting's zips separately")
     parser.add_argument("--retrieved", help="the date the zips were downloaded (YYYY-MM-DD); with --entries")
     parser.add_argument("zips", nargs="+")
     args = parser.parse_args(argv)

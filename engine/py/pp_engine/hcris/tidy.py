@@ -31,8 +31,8 @@ NMRC_FIELDS = 5
 STATUS = {"1": "as submitted", "2": "settled without audit", "3": "settled with audit", "4": "reopened",
           "5": "amended"}
 STATUS_LABEL = {"1": "as filed", "2": "settled", "3": "settled", "4": "settled", "5": "as filed"}
-EARLY_BELOW = Decimal("0.80")
-RATIO_PLACES = Decimal("0.0001")  # method constant: a year under 80% settled is "early" on S-10 figures
+EARLY_BELOW = Decimal("0.80")  # method constant: a year under 80% settled is "early" on S-10 figures
+RATIO_PLACES = Decimal("0.0001")
 # The layer's facility scope, by the CCN's last four digits (CMS's HCRIS facility-numbering table, HCRIS_FACILITY_
 # NUMBERING.csv in HOSPITAL2010-DOCUMENTATION.ZIP): 0001-0879 short-term (general and specialty) hospitals; 1300-1399,
 # which the table still calls rural primary care hospitals, the program critical access hospitals replaced.
@@ -310,9 +310,12 @@ def pin_rows(reports, values):
 def _iso_date(text, what, rpt, required=True):
     if not text and not required:
         return None
-    if not ISO.fullmatch(text):
-        raise HcrisError(f"cells table: report {rpt}: {what} {text!r} is not YYYY-MM-DD")
-    return datetime.date.fromisoformat(text)
+    try:
+        if ISO.fullmatch(text):
+            return datetime.date.fromisoformat(text)
+    except ValueError:
+        pass
+    raise HcrisError(f"cells table: report {rpt}: {what} {text!r} is not a YYYY-MM-DD date")
 
 
 def from_pin_rows(rows, year):

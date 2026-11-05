@@ -4,7 +4,9 @@
 
 Each zip's report and numeric members are read as streams, never unzipped to disk (the numeric file is ~670 MB a
 year). Writes to `<dir>`: `hcris_wide.csv` (one row per hospital-year, a column per metric), `hcris_long.csv` (one
-row per hospital, year and metric), `hcris_reports.csv` (one row per cost report: identity, status and period) and
+row per hospital, year and metric), both under the layer's long-year rule (tidy.hospital_years: a year covering more
+than 366 days keeps its fullest report; the spike's first runs summed them), `hcris_reports.csv` (one row per cost
+report: identity, status and period) and
 `sources.json` (each zip's size and SHA-256, and each output's size and row count). The zips are CMS's and change as
 reports are filed and settled; `sources.json` is what pins a run.
 """

@@ -110,6 +110,7 @@ class PinnedTable(unittest.TestCase):
             good[:1] + [good[1][:-1]],  # a short row
             good[:1] + [[*good[1][:3], "2023-09-30", *good[1][4:]]],  # a period beginning in FY2023
             good[:1] + [[*good[1][:3], "10/01/2023", *good[1][4:]]],  # not ISO
+            good[:1] + [[*good[1][:4], "2024-02-30", *good[1][5:]]],  # no such day
             good[:1] + [[*good[1][:8], "1,200", *good[1][9:]]],  # not a number
         ]
         for rows in broken:
@@ -141,6 +142,7 @@ class Reader(unittest.TestCase):
         self.assertEqual((v.year, v.value, v.status_label, v.period_begin, v.early), (2024, 6, "as filed",
                                                                                       "2023-10-01", False))
         self.assertTrue(y.value("990001", "uncompensated_cost").early)  # an S-10 metric in an early year
+        self.assertTrue(y.value("990001", "medicaid_revenue_share").early)  # a ratio over an S-10 cell
         self.assertIsNone(y.value("990001", "uncompensated_cost").value)  # blank: zero or not reported
         self.assertIsNone(y.value("990009", "net_income"))  # no report this year
         with self.assertRaises(KeyError):
@@ -152,6 +154,8 @@ class Reader(unittest.TestCase):
         self.assertEqual(p.year(2024).row("990002")["year"], 2024)
         with self.assertRaises(ValueError):
             reader.Panel([self.y24, self.y24])
+        with self.assertRaises(ValueError):  # a row that doesn't match the columns
+            reader.Year({**self.y24, "hospitals": [self.y24["hospitals"][0][:-1]]})
 
     def test_every_column_has_a_unit(self):
         self.assertEqual(set(cells.UNITS), set(tidy.VALUE_COLUMNS))

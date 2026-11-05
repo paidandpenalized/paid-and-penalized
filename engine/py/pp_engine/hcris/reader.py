@@ -26,6 +26,9 @@ class Year:
         self.settled_share = doc["settledShare"]
         self.still_filing = doc["stillFiling"]
         self.methods_version = doc["methods_version"]
+        bad = next((r for r in doc["hospitals"] if len(r) != len(self.columns)), None)
+        if bad is not None:
+            raise ValueError(f"FY{self.year}: a row of {len(bad)} values, not {len(self.columns)} ({bad[:1]})")
         self.rows = [{"year": self.year, **dict(zip(self.columns, r))} for r in doc["hospitals"]]
         self._by_ccn = {r["ccn"]: r for r in self.rows}
 
