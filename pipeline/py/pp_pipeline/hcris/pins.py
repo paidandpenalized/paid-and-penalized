@@ -13,10 +13,12 @@ With a manifest entry, `pin` writes the table only when it is the entry's bytes 
 `--entries`, it writes the tables and the manifest entries they need to `<entries.json>`, for a first pin or a new
 posting; the entries then go into data/pinned/manifest.json.
 """
+import argparse
 import csv
 import hashlib
 import io
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -30,8 +32,16 @@ BUCKET = "pp-sources"  # ARCH-17 option (c): content-addressed objects, `sha256/
 DERIVED_BY = "pipeline/py/pp_pipeline/hcris/pins.py"
 
 
+PIN_ID = re.compile(r"hcris-fy(\d{4})-cells")
+
+
 def pin_id(year):
     return f"hcris-fy{year}-cells"
+
+
+def pinned_years(manifest):
+    """{year: manifest entry} for every pinned cells table."""
+    return {int(m.group(1)): e for e in manifest for m in [PIN_ID.fullmatch(e["id"])] if m}
 
 
 def pin_path(year):
@@ -76,40 +86,50 @@ def new_entry(year, data, source, last_modified, retrieved):
     }
 
 
+def _parse(argv):
+    parser = argparse.ArgumentParser(prog="cli.py pin", description="Derive the HCRIS layer's pinned cells tables.")
+    parser.add_argument("--entries", help="write new manifest entries here (a first pin or a new posting)")
+    parser.add_argument("--posted", help="CMS's Last-Modified date for the zips (YYYY-MM-DD); with --entries")
+    parser.add_argument("--retrieved", help="the date the zips were downloaded (YYYY-MM-DD); with --entries")
+    parser.add_argument("zips", nargs="+")
+    args = parser.parse_args(argv)
+    if args.entries and not (args.posted and args.retrieved):
+        parser.error("--entries needs --posted and --retrieved")
+    return args
+
+
+def _pin_existing(z, year, data, source, entry):
+    if entry is None:
+        print(f"{z}: no manifest entry {pin_id(year)}; run with --entries to make one")
+        return 1
+    if (source["bytes"], source["sha256"]) != (entry["derivedFrom"]["bytes"], entry["derivedFrom"]["sha256"]):
+        print(f"{z}: not the zip {pin_id(year)} names (sha256 {entry['derivedFrom']['sha256']}); a new posting "
+              "needs --entries")
+        return 1
+    return write_derived_pin(entry, data)
+
+
 def main(argv):
-    entries_out = None
-    if argv[:1] == ["--entries"] and len(argv) >= 6 and argv[2] == "--posted" and argv[4] == "--retrieved":
-        entries_out, posted, retrieved, zips = argv[1], argv[3], argv[5], argv[6:]
-    elif argv and argv[0] != "--entries":
-        zips = argv
-    else:
-        print(__doc__.strip() + "\n\n    (--entries <file> --posted <YYYY-MM-DD> --retrieved <YYYY-MM-DD> <zip> ...)")
-        return 2
+    try:
+        args = _parse(argv)
+    except SystemExit as stop:  # argparse's usage error (2) or --help (0)
+        return stop.code
     by_id = {e["id"]: e for e in read_manifest()}
     worst, entries = 0, []
-    for z in sorted(zips):
+    for z in sorted(args.zips):
         try:
             year, data, source = derive(z)
         except (tidy.HcrisError, zipfile.BadZipFile, UnicodeDecodeError, csv.Error, OSError) as err:
             print(f"{z}: {err}")
             worst = 1
             continue
-        if entries_out:
-            entry = new_entry(year, data, source, posted, retrieved)
+        if args.entries:
+            entry = new_entry(year, data, source, args.posted, args.retrieved)
             entries.append(entry)
             worst = max(worst, write_derived_pin(entry, data))
-            continue
-        entry = by_id.get(pin_id(year))
-        if entry is None:
-            print(f"{z}: no manifest entry {pin_id(year)}; run with --entries to make one")
-            worst = 1
-        elif (source["bytes"], source["sha256"]) != (entry["derivedFrom"]["bytes"], entry["derivedFrom"]["sha256"]):
-            print(f"{z}: not the zip {pin_id(year)} names (sha256 {entry['derivedFrom']['sha256']}); a new posting "
-                  "needs --entries")
-            worst = 1
         else:
-            worst = max(worst, write_derived_pin(entry, data))
-    if entries_out:
-        Path(entries_out).write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
-        print(f"wrote {len(entries)} manifest entries to {entries_out}")
+            worst = max(worst, _pin_existing(z, year, data, source, by_id.get(pin_id(year))))
+    if args.entries:
+        Path(args.entries).write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {len(entries)} manifest entries to {args.entries}")
     return worst

@@ -66,8 +66,8 @@ def read_year(zip_path):
 
 
 def report_rows(year, reports):
-    return [[r.rpt, r.ccn, str(year), r.status, r.begin.isoformat(), r.end.isoformat(), r.control, r.util,
-             r.npr.isoformat() if r.npr else ""] for r in sorted(reports.values(), key=lambda r: int(r.rpt))]
+    rows = (tidy.report_cells(r) for r in sorted(reports.values(), key=lambda r: int(r.rpt)))
+    return [[*r[:2], str(year), *r[2:]] for r in rows]
 
 
 def run(zip_paths, out_dir):

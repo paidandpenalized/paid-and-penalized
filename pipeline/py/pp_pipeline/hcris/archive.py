@@ -11,37 +11,41 @@ in the bucket, one per line (from `wrangler r2 object list`, when it exists).
 Prints, for each zip, upload or skip and why, the totals against R2's free 10 GB-month, and the exact wrangler
 commands it would run. It runs none of them: creating the bucket and uploading need Dalton's OK.
 """
-import hashlib
+import argparse
+import re
 from pathlib import Path
 
-from pp_pipeline.files import read_manifest
-from pp_pipeline.hcris.pins import BUCKET, archive_key, derive, pin_id
+from pp_pipeline.files import pin_matches, read_manifest
+from pp_pipeline.hcris.extract import sha256
+from pp_pipeline.hcris.pins import BUCKET, archive_key, derive, pinned_years
 
 WRANGLER = "npx --no-install wrangler@4.151.0"
+YEAR = re.compile(r"HOSP10FY(\d{4})\.ZIP")
 FREE_BYTES = 10 * 10**9  # R2's free tier: 10 GB-month of storage (developers.cloudflare.com/r2/pricing)
 
 
 def plan(zips, manifest, archived=frozenset(), derive_fn=derive):
-    """[(path, key, bytes, action, why)] for each zip, action `upload` or `skip`."""
-    by_id = {e["id"]: e for e in manifest}
+    """[(path, key, bytes, action, why)] for each zip, action `upload` or `skip`. A zip is hashed first; it is parsed
+    (`derive_fn`) only when neither the bucket nor the pin already settles it."""
+    pinned = pinned_years(manifest)
     out = []
     for z in sorted(zips):
-        year, data, source = derive_fn(z)
-        key = archive_key(source["sha256"])
-        entry = by_id.get(pin_id(year))
-        pin_sha = hashlib.sha256(data).hexdigest()
+        digest, size = sha256(z)
+        key = archive_key(digest)
+        year = int(YEAR.fullmatch(Path(z).name.upper()).group(1))
+        entry = pinned.get(year)
         if key in archived:
             action, why = "skip", "already in the bucket"
-        elif entry and entry["derivedFrom"]["sha256"] != source["sha256"] and entry["sha256"] == pin_sha:
+        elif entry is None:
+            action, why = "upload", f"FY{year} has no pin yet"
+        elif entry["derivedFrom"]["sha256"] == digest:
+            action, why = "upload", f"backs the FY{year} pin"
+        elif pin_matches(entry, derive_fn(z)[1]):
             action, why = "skip", (f"FY{year}'s cells table is unchanged: the archived zip "
                                    f"{entry['derivedFrom']['sha256'][:12]} reproduces it")
-        elif entry and entry["sha256"] == pin_sha:
-            action, why = "upload", f"backs the FY{year} pin"
-        elif entry:
-            action, why = "upload", f"FY{year}'s cells table changed: a new pin"
         else:
-            action, why = "upload", f"FY{year} has no pin yet"
-        out.append((str(z), key, source["bytes"], action, why))
+            action, why = "upload", f"FY{year}'s cells table changed: a new pin"
+        out.append((str(z), key, size, action, why))
     return out
 
 
@@ -57,15 +61,18 @@ def gb(n):
 
 
 def main(argv):
-    if not argv or (argv[1:2] == ["--archived"] and len(argv) != 3) or len(argv) not in (1, 3):
-        print(__doc__.strip())
-        return 2
-    archived = set()
-    if len(argv) == 3:
-        archived = {line.strip() for line in Path(argv[2]).read_text().splitlines() if line.strip()}
-    zips = sorted(p for p in Path(argv[0]).iterdir()
-                  if p.name.upper().startswith("HOSP10FY") and p.suffix.upper() == ".ZIP")
-    rows = plan(zips, read_manifest(), frozenset(archived))
+    parser = argparse.ArgumentParser(prog="cli.py archive-plan", description="Plan the R2 archive (a dry run).")
+    parser.add_argument("dir", help="a folder of HOSP10FY<YYYY>.ZIP files")
+    parser.add_argument("--archived", help="keys already in the bucket, one per line")
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as stop:
+        return stop.code
+    archived = frozenset()
+    if args.archived:
+        archived = frozenset(line.strip() for line in Path(args.archived).read_text().splitlines() if line.strip())
+    zips = sorted(p for p in Path(args.dir).iterdir() if YEAR.fullmatch(p.name.upper()))
+    rows = plan(zips, read_manifest(), archived)
     for path, key, size, action, why in rows:
         print(f"{action:6} {Path(path).name:20} {gb(size):>8}  {key[:19]}  {why}")
     up = sum(r[2] for r in rows if r[3] == "upload")

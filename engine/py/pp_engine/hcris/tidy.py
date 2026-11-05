@@ -31,7 +31,8 @@ NMRC_FIELDS = 5
 STATUS = {"1": "as submitted", "2": "settled without audit", "3": "settled with audit", "4": "reopened",
           "5": "amended"}
 STATUS_LABEL = {"1": "as filed", "2": "settled", "3": "settled", "4": "settled", "5": "as filed"}
-EARLY_BELOW = Decimal("0.80")  # method constant: a year under 80% settled is "early" on S-10 figures
+EARLY_BELOW = Decimal("0.80")
+RATIO_PLACES = Decimal("0.0001")  # method constant: a year under 80% settled is "early" on S-10 figures
 # The layer's facility scope, by the CCN's last four digits (CMS's HCRIS facility-numbering table, HCRIS_FACILITY_
 # NUMBERING.csv in HOSPITAL2010-DOCUMENTATION.ZIP): 0001-0879 short-term (general and specialty) hospitals; 1300-1399,
 # which the table still calls rural primary care hospitals, the program critical access hospitals replaced.
@@ -86,6 +87,18 @@ def federal_fy(day):
     return day.year + 1 if day.month >= 10 else day.year
 
 
+def _check_report(where, rpt, ccn, status, begin, end, year):
+    """The rules every report row meets, whichever file it comes from (the caller checks the number first)."""
+    if not CCN.fullmatch(ccn):
+        raise HcrisError(f"{where}: report {rpt}: malformed CCN")
+    if status not in STATUS:
+        raise HcrisError(f"{where}: report {rpt}: unknown status {status!r}")
+    if end < begin:
+        raise HcrisError(f"{where}: report {rpt}: period ends before it begins")
+    if federal_fy(begin) != year:
+        raise HcrisError(f"{where}: report {rpt}: period begins {begin}, not in FY{year}")
+
+
 def parse_reports(rows, year):
     """{report number: Report} from the report file's rows. Refuses a malformed row, a repeated report number, and a
     report whose period does not begin in `year` (the file's year)."""
@@ -93,20 +106,11 @@ def parse_reports(rows, year):
     for r in rows:
         if len(r) != RPT_FIELDS:
             raise HcrisError(f"report file: a row of {len(r)} fields, not {RPT_FIELDS}")
-        rpt = r[0].strip()
+        rpt, ccn, status = r[0].strip(), r[2].strip(), r[4].strip()
         if not rpt.isdigit() or rpt in reports:
             raise HcrisError(f"report file: report number {rpt!r} is not a number or appears twice")
-        ccn = r[2].strip()
-        if not CCN.fullmatch(ccn):
-            raise HcrisError(f"report {rpt}: malformed CCN")
-        status = r[4].strip()
-        if status not in STATUS:
-            raise HcrisError(f"report {rpt}: unknown status {status!r}")
         begin, end = _date(r[5], "FY_BGN_DT", rpt), _date(r[6], "FY_END_DT", rpt)
-        if end < begin:
-            raise HcrisError(f"report {rpt}: period ends before it begins")
-        if federal_fy(begin) != year:
-            raise HcrisError(f"report {rpt}: period begins {begin}, not in FY{year}")
+        _check_report("report file", rpt, ccn, status, begin, end, year)
         reports[rpt] = Report(rpt, ccn, status, begin, end, r[1].strip(), r[14].strip(),
                               _date(r[15], "NPR_DT", rpt, required=False))
     return reports
@@ -145,7 +149,8 @@ def _days(report):
     return (report.end - report.begin).days + 1
 
 
-def _shape(reps):
+def _shape(reps, days):
+    """`reps` sorted by period; `days`, the days they cover in all."""
     if len(reps) == 1:
         return "one"
     steps = [(b.begin - a.end).days for a, b in zip(reps, reps[1:])]
@@ -153,7 +158,7 @@ def _shape(reps):
         return "overlap"
     if any(s > 1 for s in steps):
         return "gap"
-    return "long" if sum(_days(r) for r in reps) > MAX_YEAR_DAYS else "split"
+    return "long" if days > MAX_YEAR_DAYS else "split"
 
 
 def _fullest(reps):
@@ -181,10 +186,11 @@ def hospital_years(reports, values, year, long_rule="fullest"):
     out = []
     for ccn in sorted(by_ccn):
         reps = sorted(by_ccn[ccn], key=lambda r: (r.begin, r.end, int(r.rpt)))
-        shape = _shape(reps)
+        days = sum(_days(r) for r in reps)
+        shape = _shape(reps, days)
         if len(reps) == 1:
             basis, used = "report", reps
-        elif long_rule == "sum" or (shape in ("split", "gap") and sum(_days(r) for r in reps) <= MAX_YEAR_DAYS):
+        elif long_rule == "sum" or (shape in ("split", "gap") and days <= MAX_YEAR_DAYS):
             basis, used = "sum", reps
         else:
             basis, used = "fullest", [_fullest(reps)]
@@ -193,7 +199,7 @@ def hospital_years(reports, values, year, long_rule="fullest"):
         row = {"ccn": ccn, "year": year, "n_reports": len(reps), "shape": shape,
                "reports": " ".join(r.rpt for r in used), "status": " ".join(codes),
                "period_begin": used[0].begin.isoformat(), "period_end": last.end.isoformat(),
-               "period_days": sum(_days(r) for r in used), "control": last.control,
+               "period_days": days if used is reps else _days(used[0]), "control": last.control,
                "kind": kind_of(ccn), "basis": basis, "status_label": status_label(codes)}
         newest_first = sorted(used, key=lambda r: (r.end, int(r.rpt)), reverse=True)
         for cell in CELLS:
@@ -213,9 +219,6 @@ def year_summary(rows):
     settled = sum(r["status_label"] == "settled" for r in rows)
     share = (Decimal(settled) / len(rows)).quantize(RATIO_PLACES) if rows else Decimal(0)
     return {"hospital_years": len(rows), "settled": settled, "settled_share": share, "early": share < EARLY_BELOW}
-
-
-RATIO_PLACES = Decimal("0.0001")
 
 
 def _ratio(num, den):
@@ -284,9 +287,15 @@ def long_rows(rows):
 
 # The per-report cells table: what the repo pins from each year's zip (pp_pipeline.hcris.pins), one row per report in
 # the layer's scope, sorted by report number, each cell as `text` writes it. The hospital-year table is rebuilt from it.
-REPORT_COLUMNS = ("rpt_rec_num", "ccn", "status", "period_begin", "period_end", "control", "util", "npr_date")
-PIN_COLUMNS = REPORT_COLUMNS + tuple(c.metric for c in CELLS)
+PIN_REPORT_COLUMNS = ("rpt_rec_num", "ccn", "status", "period_begin", "period_end", "control", "util", "npr_date")
+PIN_COLUMNS = PIN_REPORT_COLUMNS + tuple(c.metric for c in CELLS)
 ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def report_cells(r):
+    """A report's PIN_REPORT_COLUMNS, as text."""
+    return [r.rpt, r.ccn, r.status, r.begin.isoformat(), r.end.isoformat(), r.control, r.util,
+            r.npr.isoformat() if r.npr else ""]
 
 
 def pin_rows(reports, values):
@@ -294,8 +303,7 @@ def pin_rows(reports, values):
     out = [list(PIN_COLUMNS)]
     for rpt in sorted(reports, key=int):
         r, v = reports[rpt], values.get(rpt, {})
-        out.append([r.rpt, r.ccn, r.status, r.begin.isoformat(), r.end.isoformat(), r.control, r.util,
-                    r.npr.isoformat() if r.npr else "", *(text(v.get(c.metric)) for c in CELLS)])
+        out.append([*report_cells(r), *(text(v.get(c.metric)) for c in CELLS)])
     return out
 
 
@@ -316,19 +324,16 @@ def from_pin_rows(rows, year):
     if header != list(PIN_COLUMNS):
         raise HcrisError("cells table: the header is not the layer's columns (a new cell needs a re-derived pin)")
     reports, values = {}, {}
-    n = len(REPORT_COLUMNS)
+    n = len(PIN_REPORT_COLUMNS)
     for r in rows:
         if len(r) != len(PIN_COLUMNS):
             raise HcrisError(f"cells table: a row of {len(r)} fields, not {len(PIN_COLUMNS)}")
         rpt, ccn, status, begin, end, control, util, npr = r[:n]
         if not rpt.isdigit() or rpt in reports:
             raise HcrisError(f"cells table: report number {rpt!r} is not a number or appears twice")
-        if not CCN.fullmatch(ccn) or status not in STATUS:
-            raise HcrisError(f"cells table: report {rpt}: malformed CCN or status")
         rep = Report(rpt, ccn, status, _iso_date(begin, "period_begin", rpt), _iso_date(end, "period_end", rpt),
                      control, util, _iso_date(npr, "npr_date", rpt, required=False))
-        if rep.end < rep.begin or federal_fy(rep.begin) != year:
-            raise HcrisError(f"cells table: report {rpt}: period {begin} to {end} is not one beginning in FY{year}")
+        _check_report("cells table", rpt, ccn, status, rep.begin, rep.end, year)
         reports[rpt] = rep
         got = {}
         for cell, value in zip(CELLS, r[n:]):

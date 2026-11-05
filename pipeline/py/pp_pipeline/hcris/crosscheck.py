@@ -44,7 +44,7 @@ REFERENCES = {
 }
 
 
-def _num(text):  # not pp_engine.parse.num: Decimal, for the 0.5 tolerance
+def parse_num(text):  # not pp_engine.parse.num: Decimal, for the 0.5 tolerance
     text = (text or "").strip().replace(",", "").replace("$", "")
     if text in ("", "."):
         return None
@@ -54,7 +54,7 @@ def _num(text):  # not pp_engine.parse.num: Decimal, for the 0.5 tolerance
         return None
 
 
-def _iso(text, fmt):
+def parse_date(text, fmt):
     return datetime.datetime.strptime(text.strip(), fmt).date().isoformat()
 
 
@@ -76,7 +76,7 @@ def compare(ours_rows, ref_rows, ref):
     k_ccn, k_begin, k_end = spec["key"]
     index = {}
     for r in ref_rows:
-        index.setdefault((r[k_ccn].strip(), _iso(r[k_begin], spec["date"]), _iso(r[k_end], spec["date"])), []).append(r)
+        index.setdefault((r[k_ccn].strip(), parse_date(r[k_begin], spec["date"]), parse_date(r[k_end], spec["date"])), []).append(r)
     single = [r for r in ours_rows if r["shape"] == "one"]
     matched = []
     for r in single:
@@ -87,7 +87,7 @@ def compare(ours_rows, ref_rows, ref):
     for metric, column in spec["columns"].items():
         counts = result.setdefault(metric, {})
         for ours, theirs in matched:
-            v = verdict(_num(ours[metric]), _num(theirs[column]))
+            v = verdict(parse_num(ours[metric]), parse_num(theirs[column]))
             counts[v] = counts.get(v, 0) + 1
     return result, {"ours": len(ours_rows), "single_report": len(single), "reference": len(ref_rows),
                     "matched": len(matched)}

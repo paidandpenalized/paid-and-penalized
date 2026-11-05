@@ -50,11 +50,12 @@ class Panel:
 
     def __init__(self, docs):
         self.years = sorted((Year(d) for d in docs), key=lambda y: y.year)
-        if len({y.year for y in self.years}) != len(self.years):
+        self._by_year = {y.year: y for y in self.years}
+        if len(self._by_year) != len(self.years):
             raise ValueError("two files for one HCRIS year")
 
     def year(self, year):
-        return next((y for y in self.years if y.year == year), None)
+        return self._by_year.get(year)
 
     def series(self, ccn, metric):
         return [v for v in (y.value(ccn, metric) for y in self.years) if v is not None]
