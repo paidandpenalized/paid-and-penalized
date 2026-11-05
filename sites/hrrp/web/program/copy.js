@@ -119,11 +119,15 @@ export const COPY = {
   medsMissing: { text: 'none', claim: null },
 
   // Part 2, the picture: the lede, then the table of the largest cuts. The coin-flip's words are in figures/picture-data.js.
-  pictureLede: {
-    text: 'Half of the {nCut} hospitals with a cut lose {median} of their Medicare base payments or less. {nOnePlus} lose {one}% or more, and {nCap} reach the {cap}% maximum.',
-    claim: 'HRRP-09',
-  },
+  pictureLede: { text: 'Half of the {hospitals} with a cut lose {median} of their Medicare base payments or less.', claim: null },
+  pictureLedeOne: { text: 'The one hospital with a cut loses {median} of its Medicare base payments.', claim: null },
+  pictureLedeNone: { text: 'No hospital takes a cut.', claim: null },
+  pictureOnePlus: { text: '{hospitals} lose {one}% or more.', claim: null },
+  pictureOnePlusOne: { text: '{hospitals} loses {one}% or more.', claim: null },
+  pictureCap: { text: '{hospitals} reach the {cap}% maximum.', claim: 'HRRP-09' },
+  pictureCapOne: { text: '{hospitals} reaches the {cap}% maximum.', claim: 'HRRP-09' },
   penTakeaway: { text: 'The {words} largest cuts run from {hi} down to {lo} of base payments, ties ordered by modeled dollars.', claim: null },
+  penTakeawayOne: { text: 'The largest cut is {cut} of base payments.', claim: null },
   penTakeawayTie: { text: 'The {words} largest cuts are all {cut} of base payments, the maximum, ordered here by modeled dollars.', claim: 'HRRP-09' },
   penSource: { text: 'CMS {edition} Hospital Readmissions Reduction Program supplemental data file (payment adjustment factors); dollars are modeled here.', claim: null },
   penKey: {

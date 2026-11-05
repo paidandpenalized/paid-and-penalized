@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { CONDS } from '../../../engine/js/hrrp/formula.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { HOSPITAL_COLUMNS, hospitalCsv } from '../web/csv.js';
-import { COIN_WORDS, coinFlip, largestPenalties, pairedBars, pictureData, pictureLede, ridges, sizeSwarm, typeDots } from '../web/figures/picture-data.js';
-import { picturePart } from '../web/figures/picture.js';
+import { COIN_WORDS, coinFlip, coinMeasured, largestPenalties, pairedBars, pictureData, pictureLede, ridges, sizeSwarm, typeDots } from '../web/figures/picture-data.js';
+import { ledeText, picturePart } from '../web/figures/picture.js';
 import { programPage } from '../web/pages/program.js';
 import { programView } from '../web/view.js';
 import { ASSETS, META, areaOf, hospital, loadHrrpOnce } from './fixtures.js';
@@ -36,9 +36,13 @@ test('the size swarm: one item for each hospital, the zero pile counted, a table
   const s = sizeSwarm(POOL);
   assert.equal(s.items.length, POOL.length);
   assert.equal(s.zero, 3);
+  // denominators: 990024 and 990025 are measured on nothing, so the measured zero pile is one hospital
+  assert.equal(s.zeroMeasured, 1); assert.equal(s.zeroUnmeasured, 2);
+  assert.deepEqual(s.items.filter((i) => !i.measured).map((i) => i.id), ['990024', '990025']);
+  assert.equal(s.takeaway.zero, 1); assert.equal(s.takeaway.nMeasured, 4);
   assert.equal(s.table.reduce((a, r) => a + r.n, 0), POOL.length);
-  assert.deepEqual(s.items.find((i) => i.id === '990020'), { id: '990020', red: 3, peer: 1, cut: true });
-  assert.equal(s.table[0].lo, 0); assert.equal(s.table[0].hi, 0); assert.equal(s.table[0].n, 3);
+  assert.deepEqual(s.items.find((i) => i.id === '990020'), { id: '990020', red: 3, peer: 1, cut: true, measured: true });
+  assert.equal(s.table[0].n, 1); assert.equal(s.table[0].measured, true); assert.equal(s.table[1].n, 2); assert.equal(s.table[1].measured, false);
   assert.equal(s.takeaway.median, 1);
 });
 
@@ -54,6 +58,7 @@ test('the coin-flip: the observed share by number measured against 1 minus one h
   near(one.own, 1);
   // two-condition hospitals: HF flagged 2/3, AMI flagged 1/3; each hospital's chance 1 - (1/3)(2/3)
   near(two.own, 1 - (1 / 3) * (2 / 3));
+  assert.equal(c.rows.reduce((a, r) => a + r.n, 0), 4, 'hospitals measured on nothing are in no row');
   assert.equal(c.sixFlags.length, 7);
   assert.equal(c.sixFlags.reduce((a, r) => a + r.n, 0), 0);
 });
@@ -87,6 +92,9 @@ test('the ridges: a row for each peer group with its bins, share penalized and m
   assert.equal(g2.n, 2); assert.equal(g2.nCut, 2);
   near(g2.shareCut, 1); near(g2.median, 0.75);
   assert.equal(g2.bins.reduce((a, b) => a + b.n, 0), 2);
+  // shares are over the measured: peer 3 holds two hospitals, one measured; peer 5 holds one, measured on nothing
+  assert.equal(r.rows[2].n, 2); assert.equal(r.rows[2].nMeasured, 1);
+  assert.equal(r.rows[4].n, 1); assert.equal(r.rows[4].nMeasured, 0); assert.equal(r.rows[4].shareCut, null);
   assert.equal(r.rows[2].nCut, 0); assert.equal(r.rows[2].median, null);
   assert.equal(r.rows[3].n, 0);
 });
@@ -105,7 +113,27 @@ test('the type dots: four blocks, empty groups hidden, each against the national
   assert.equal(gov.nCut, 1); near(gov.avgCut, 3); near(gov.vsNation, 25);
   assert.deepEqual(d.blocks[3].rows.map((x) => x.key), ['Nonprofit', 'For-profit', 'Government']);
   assert.ok(d.blocks[2].rows.length === 2);
+  const np = d.blocks[3].rows.find((x) => x.key === 'Nonprofit');
+  assert.equal(np.n, 4); assert.equal(np.nMeasured, 2); near(np.share, 50);
   assert.equal(typeDots([hospital({ own: 'Government' })]).blocks[3].rows.length, 1);
+});
+
+test('singular forms: the lede, the table takeaway and the coin-flip words at a count of one', () => {
+  const one = ledeText({ lede: { nCut: 1, medianCut: 3, nOnePlus: 1, nCap: 1, onePlus: 1, cap: 3 } });
+  assert.match(one, /The one hospital with a cut loses 3\.00%/);
+  assert.match(one, /1 hospital loses 1% or more\./);
+  assert.match(one, /1 hospital reaches the 3% maximum\./);
+  assert.doesNotMatch(one, /1 hospitals|Half of/);
+  const many = ledeText({ lede: { nCut: 5, medianCut: 1, nOnePlus: 2, nCap: 0, onePlus: 1, cap: 3 } });
+  assert.match(many, /Half of the 5 hospitals/); assert.match(many, /2 hospitals lose/); assert.match(many, /0 hospitals reach/);
+  assert.equal(ledeText({ lede: { nCut: 0, medianCut: 0, nOnePlus: 0, nCap: 0, onePlus: 1, cap: 3 } }), 'No hospital takes a cut.');
+  const view = programView(areaOf([hospital({ id: '990040', red: 2 })]));
+  const html = picturePart(view.picture, { figure: () => 1, edition: view.edition }).text;
+  assert.match(html, /The largest cut is 2\.00% of base payments\./);
+  assert.doesNotMatch(html, /The one largest|1 largest/);
+  assert.equal(coinMeasured(1), '1 condition'); assert.equal(coinMeasured(2), '2 conditions');
+  assert.doesNotMatch(COIN_WORDS.coinLow, /conditions,/);
+  assert.match(html, /printout__scroll/);
 });
 
 test('the largest penalties: the top ten by cut, then by dollars, with each condition\'s state', () => {

@@ -113,3 +113,6 @@
 .wsr__totals li:last-child { border-bottom: 0; }
 .wsr__totals b { white-space: nowrap; }
 .wsr__check { background: var(--paper-2); }
+
+/* Part 2's largest-penalties table: wider than a phone, so it scrolls sideways inside its printout box. */
+.pen__table { min-width: 36rem; }
