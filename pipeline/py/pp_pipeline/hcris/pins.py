@@ -27,6 +27,7 @@ import zipfile
 from pathlib import Path
 
 from pp_engine.hcris import other_income, tidy
+from pp_engine.hcris.cells import G3
 from pp_pipeline.files import read_manifest, write_derived_pin
 from pp_pipeline.hcris.extract import members, read_year, sha256
 
@@ -38,7 +39,6 @@ DERIVED_BY = "pipeline/py/pp_pipeline/hcris/pins.py"
 
 PIN_ID = re.compile(r"hcris-fy(\d{4})-cells")
 ALPHA_FIELDS = 5
-G3 = "G300000"
 LABEL_COLUMN = "00000"  # the alphanumeric file's column for a line's label
 
 
@@ -73,33 +73,32 @@ def _csv_bytes(rows):
     return out.getvalue().encode("ascii")
 
 
-def table_bytes(reports, values):
-    """The cells table for the reports in scope, as the repo pins it: CSV, '\\n' line ends, ASCII."""
-    scoped = {k: r for k, r in reports.items() if tidy.kind_of(r.ccn)}
-    return _csv_bytes(tidy.pin_rows(scoped, values))
+def in_scope(reports):
+    """The reports from acute and critical access hospitals (tidy.kind_of)."""
+    return {k: r for k, r in reports.items() if tidy.kind_of(r.ccn)}
 
 
 def labels(alpha_rows, scoped):
     """{(report number, line code): label} for G-3 line 24 and its subscripts, from the alphanumeric file's rows, for
-    the reports in `scoped`. A label that isn't printable ASCII stops the pin (the table is ASCII)."""
+    the reports in `scoped`. A label that isn't printable ASCII, or a second label for one line, stops the pin."""
     out = {}
     for r in alpha_rows:
         if len(r) != ALPHA_FIELDS:
             raise tidy.HcrisError(f"alphanumeric file: a row of {len(r)} fields, not {ALPHA_FIELDS}")
         if r[1] != G3 or r[3].strip() != LABEL_COLUMN or not other_income.is_line24(r[2].strip()):
             continue
-        rpt, label = r[0].strip(), r[4].strip()
+        rpt, line, label = r[0].strip(), r[2].strip(), r[4].strip()
         if rpt in scoped:
-            if not (label.isascii() and label.isprintable()):
-                raise tidy.HcrisError(f"alphanumeric file: report {rpt}, G-3 line {r[2]}: a label that isn't ASCII")
-            out[(rpt, r[2].strip())] = label
+            if not (label.isascii() and label.isprintable()) or (rpt, line) in out:
+                raise tidy.HcrisError(f"alphanumeric file: report {rpt}, G-3 line {line}: a label that isn't ASCII, "
+                                      "or a second label")
+            out[(rpt, line)] = label
     return out
 
 
-def line24_bytes(reports, amounts, names):
-    """The line-24 table for the reports in scope: one row per entry with an amount (`amounts`, {(report, line):
-    text}), its label from `names` ("" when the hospital wrote none)."""
-    scoped = {k for k, r in reports.items() if tidy.kind_of(r.ccn)}
+def line24_bytes(scoped, amounts, names):
+    """The line-24 table for the reports in `scoped` (in_scope): one row per entry with an amount (`amounts`,
+    {(report, line): text}), its label from `names` ("" when the hospital wrote none)."""
     keys = sorted((k for k in amounts if k[0] in scoped), key=lambda k: (int(k[0]), k[1]))
     return _csv_bytes([other_income.PIN_COLUMNS, *([*k, names.get(k, ""), amounts[k]] for k in keys)])
 
@@ -121,13 +120,13 @@ def derive(zip_path):
         names, _ = members(zf)
         if "alpha" not in names:
             raise tidy.HcrisError(f"{Path(zip_path).name}: no alphanumeric member (G-3 line 24's labels)")
-        scoped = {k for k, r in reports.items() if tidy.kind_of(r.ccn)}
+        scoped = in_scope(reports)
         line_names = labels(_alpha_rows(zf, names["alpha"]), scoped)
     source = {"file": Path(zip_path).name, "bytes": size, "sha256": digest,
               "members": [names["rpt"], names["nmrc"], names["alpha"]],
               "downloadUrl": DOWNLOAD.format(year=year), "archive": f"r2://{BUCKET}/{archive_key(digest)}"}
-    return year, {pin_id(year): table_bytes(reports, values),
-                  line24_pin_id(year): line24_bytes(reports, amounts, line_names)}, source
+    return year, {pin_id(year): _csv_bytes(tidy.pin_rows(scoped, values)),  # the cells table
+                  line24_pin_id(year): line24_bytes(scoped, amounts, line_names)}, source
 
 
 def new_entry(year, data, source, last_modified, retrieved, line24=False):

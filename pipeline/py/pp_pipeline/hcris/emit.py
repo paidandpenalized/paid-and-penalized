@@ -131,9 +131,14 @@ def main():
         return 1
     worst = 0
     for year in sorted(years):
-        fresh = build(year, manifest, built_at)
-        problems = check(fresh)
         path = emitted_path(year)
+        try:
+            fresh = build(year, manifest, built_at)
+        except (tidy.HcrisError, other_income.RulesError, other_income.TableError, KeyError, OSError) as err:
+            print(f"not written ({path.relative_to(REPO_ROOT)}): {err}")
+            worst = 1
+            continue
+        problems = check(fresh)
         if problems:
             print(f"not written ({path.relative_to(REPO_ROOT)}): " + "; ".join(problems[:5]))
             worst = 1

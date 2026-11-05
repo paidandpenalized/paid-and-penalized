@@ -9,6 +9,10 @@ than 366 days keeps its fullest report; the spike's first runs summed them), `hc
 report: identity, status and period) and
 `sources.json` (each zip's size and SHA-256, and each output's size and row count). The zips are CMS's and change as
 reports are filed and settled; `sources.json` is what pins a run.
+
+This is the spike's table: it doesn't read G-3 line 24's labels, so its `line24_*` columns are blank and its
+`other_operating_income` and `operating_margin` count lines 8 to 22 only (the layer's v2 method). The layer itself is
+`cli.py emit`.
 """
 import contextlib
 import csv

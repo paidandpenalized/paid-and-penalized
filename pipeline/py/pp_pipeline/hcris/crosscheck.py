@@ -15,6 +15,8 @@ import datetime
 import json
 from decimal import Decimal, InvalidOperation
 
+from pp_engine.hcris import tidy
+
 REFERENCES = {
     "puf": {
         "key": ("Provider CCN", "Fiscal Year Begin Date", "Fiscal Year End Date"),
@@ -117,7 +119,8 @@ def ccn_range(ccn):
     if not tail.isdigit():
         return "lettered (subunit or other)"
     n = int(tail)
-    for lo, hi, name in ((1, 879, "short-term acute"), (1300, 1399, "critical access"),
+    (_, acute_lo, acute_hi), (_, cah_lo, cah_hi) = tidy.KINDS
+    for lo, hi, name in ((acute_lo, acute_hi, "short-term acute"), (cah_lo, cah_hi, "critical access"),
                          (2000, 2299, "long-term care"), (3025, 3099, "rehabilitation"),
                          (3300, 3399, "children's"), (4000, 4499, "psychiatric")):
         if lo <= n <= hi:

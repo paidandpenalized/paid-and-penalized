@@ -1,6 +1,6 @@
 family,class,pattern,why
-mixed,unclassified,OP\w* (AND |& )?NON ?OP\w*,the label names both operating and non-operating income
-mixed,unclassified,NON ?OP\w* (AND |& )?(OTHER )?OP\w*,
+mixed,unclassified,OP\w* (AND )?NON ?OP\w*,the label names both operating and non-operating income
+mixed,unclassified,NON ?OP\w* (AND )?(OTHER )?OP\w*,
 mixed,unclassified,AND NON ?OP\w*,
 relief_funding,non_operating,COVID\w*,"COVID-19 and disaster relief funding, outside the operating margin as G-3 lines 24.50 to 24.60 are"
 relief_funding,non_operating,CARES( ACT)?,
@@ -58,6 +58,24 @@ appropriations_taxes,non_operating,APPROP\w*,
 appropriations_taxes,non_operating,TAXATION,
 appropriations_taxes,non_operating,SUBSID\w*,
 labeled_non_operating,non_operating,NON ?OP\w*,the hospital's own label says non-operating
+medicaid_supplemental,unclassified,DSH,"Medicaid DSH, UPL, waiver and other supplemental or indigent-care payments: named, but not a kind the decision places"
+medicaid_supplemental,unclassified,DISPROPORTIONATE,
+medicaid_supplemental,unclassified,UPL,
+medicaid_supplemental,unclassified,SUPPLEMENTAL,
+medicaid_supplemental,unclassified,QIPP,
+medicaid_supplemental,unclassified,DPP,
+medicaid_supplemental,unclassified,LIP,
+medicaid_supplemental,unclassified,HAP,
+medicaid_supplemental,unclassified,IGT,
+medicaid_supplemental,unclassified,MEDICAID,
+medicaid_supplemental,unclassified,MCAID,
+medicaid_supplemental,unclassified,MEDI CAL,
+medicaid_supplemental,unclassified,INDIGENT,
+medicaid_supplemental,unclassified,UNCOMPENSATED CARE,
+medicaid_supplemental,unclassified,PROVIDER FEES?,
+medicaid_supplemental,unclassified,DSRIP,
+medicaid_supplemental,unclassified,1115,
+medicaid_supplemental,unclassified,WAIVER,
 other_services,unclassified,POISON( DRUG)?( CONTROL)? CENTERS?,"other services sold (clinics, laboratory, contracts, poison centers): named, but not a kind the decision places"
 pharmacy,operating,PHAR\w*,"pharmacy income, 340B and contract pharmacy among it (decided 2026-11-05; as G-3 line 17)"
 pharmacy,operating,PHRM\w*,
@@ -95,24 +113,6 @@ like_lines_8_22,operating,MEDICAL RECORDS,
 like_lines_8_22,operating,RENT(AL|ALS)?,
 like_lines_8_22,operating,LEASES?,
 like_lines_8_22,operating,TELEPHONE,
-medicaid_supplemental,unclassified,DSH,"Medicaid DSH, UPL, waiver and other supplemental or indigent-care payments: named, but not a kind the decision places"
-medicaid_supplemental,unclassified,DISPROPORTIONATE,
-medicaid_supplemental,unclassified,UPL,
-medicaid_supplemental,unclassified,SUPPLEMENTAL,
-medicaid_supplemental,unclassified,QIPP,
-medicaid_supplemental,unclassified,DPP,
-medicaid_supplemental,unclassified,LIP,
-medicaid_supplemental,unclassified,HAP,
-medicaid_supplemental,unclassified,IGT,
-medicaid_supplemental,unclassified,MEDICAID,
-medicaid_supplemental,unclassified,MCAID,
-medicaid_supplemental,unclassified,MEDI CAL,
-medicaid_supplemental,unclassified,INDIGENT,
-medicaid_supplemental,unclassified,UNCOMPENSATED CARE,
-medicaid_supplemental,unclassified,PROVIDER FEES?,
-medicaid_supplemental,unclassified,DSRIP,
-medicaid_supplemental,unclassified,1115,
-medicaid_supplemental,unclassified,WAIVER,
 health_plan,unclassified,CAPITATION,"capitation, premiums and shared savings: named, but not a kind the decision places"
 health_plan,unclassified,CAP REV\w*,
 health_plan,unclassified,PREMIUMS?,

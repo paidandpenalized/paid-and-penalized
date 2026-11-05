@@ -35,7 +35,11 @@ Rule = namedtuple("Rule", "family cls pattern")
 
 
 class RulesError(ValueError):
-    pass
+    """A rules file the classifier refuses."""
+
+
+class TableError(ValueError):
+    """A pinned line-24 table the layer refuses."""
 
 
 def is_line24(line):
@@ -96,14 +100,14 @@ def from_pin_rows(rows):
     rules: the header, line codes 02400 to 02449, a number in every amount, each (report, line) once."""
     rows = iter(rows)
     if next(rows, None) != PIN_COLUMNS:
-        raise RulesError("line-24 table: the header is not the layer's columns")
+        raise TableError("line-24 table: the header is not the layer's columns")
     out, seen = [], set()
     for r in rows:
         if len(r) != len(PIN_COLUMNS):
-            raise RulesError(f"line-24 table: a row of {len(r)} fields, not {len(PIN_COLUMNS)}")
+            raise TableError(f"line-24 table: a row of {len(r)} fields, not {len(PIN_COLUMNS)}")
         rpt, line, label, amount = r
         if not rpt.isdigit() or not is_line24(line) or not NUMBER.fullmatch(amount) or (rpt, line) in seen:
-            raise RulesError(f"line-24 table: report {rpt!r} line {line!r}: a bad or repeated row")
+            raise TableError(f"line-24 table: report {rpt!r} line {line!r}: a bad or repeated row")
         seen.add((rpt, line))
         out.append((rpt, line, label, Decimal(amount)))
     return out
