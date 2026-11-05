@@ -130,8 +130,12 @@ class Text(unittest.TestCase):
                 self.assertEqual(tidy.text(value), want)
 
     def test_long_rows_skip_blanks(self):
-        rows = [{"ccn": "990001", "year": 2024, **{m: None for m in tidy.VALUE_COLUMNS}, "beds": Decimal("12")}]
-        self.assertEqual(tidy.long_rows(rows), [["990001", "2024", "beds", "12"]])
+        rows = [{"ccn": "990001", "year": 2024, "period_begin": "2023-10-01", "period_end": "2024-09-30",
+                 "shape": "one", "basis": "report", "status_label": "settled",
+                 **{m: None for m in tidy.VALUE_COLUMNS}, "beds": Decimal("12")}]
+        self.assertEqual(tidy.long_rows(rows), [["990001", "2024", "2023-10-01", "2024-09-30", "one", "report",
+                                                 "settled", "beds", "12"]])
+        self.assertEqual(len(tidy.LONG_COLUMNS), len(tidy.long_rows(rows)[0]))
 
 
 class Cells(unittest.TestCase):

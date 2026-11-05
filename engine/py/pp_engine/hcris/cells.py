@@ -116,3 +116,17 @@ DERIVED = (
     ("medicaid_revenue_share", "medicaid_net_revenue / net_patient_revenue (S-10 I line 2 / G-3 line 3)"),
     ("uncompensated_share_of_expenses", "uncompensated_cost / operating_expenses (S-10 I line 30 / G-3 line 4)"),
 )
+
+# Each column's unit, for readers: dollars (whole or cents, as filed), days, discharges, beds, fte (full-time
+# equivalents), ratio (a fraction, 4 places: 0.0500 is 5%). Every metric and derived column has one.
+_UNIT_OF_CELL = {
+    "beds": "beds", "bed_days_available": "days", "fte_employees": "fte", "s10_ccr": "ratio",
+    **{m: "days" for m in ("days_medicare", "days_medicaid", "days_total", "days_medicare_advantage",
+                          "days_medicaid_managed")},
+    **{m: "discharges" for m in ("discharges_medicare", "discharges_medicaid", "discharges_total")},
+}
+UNITS = {**{c.metric: _UNIT_OF_CELL.get(c.metric, "dollars") for c in CELLS},
+         "medicaid_days_all": "days", **{name: "ratio" for name, _ in DERIVED if name != "medicaid_days_all"}}
+# S-10 cells: the ones settlement revises most (the spike's drift study), which a year's `early` flag is about.
+S10_METRICS = frozenset(c.metric for c in CELLS if c.sheet in (S10, S10_HOSPITAL)) | {
+    "medicaid_payment_to_cost", "uncompensated_share_of_expenses"}

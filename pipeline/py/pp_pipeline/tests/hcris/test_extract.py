@@ -40,8 +40,10 @@ class Extract(unittest.TestCase):
             meta = json.loads((Path(tmp) / "out" / "sources.json").read_text())
         self.assertEqual([r["ccn"] for r in wide], ["990001", "990002"])
         self.assertEqual((wide[0]["days_total"], wide[0]["net_income"], wide[0]["beds"]), ("1000", "-25", ""))
-        self.assertEqual(long_[1:], [["990001", "2024", "days_total", "1000"], ["990001", "2024", "net_income", "-25"],
-                                     ["990002", "2024", "beds", "12"]])
+        period = ["2023-10-01", "2024-09-30", "one", "report", "settled"]  # each value's period, shape and status
+        self.assertEqual(long_[1:], [["990001", "2024", *period, "days_total", "1000"],
+                                     ["990001", "2024", *period, "net_income", "-25"],
+                                     ["990002", "2024", *period, "beds", "12"]])
         self.assertEqual((sources[0]["year"], sources[0]["reports"], sources[0]["hospital_years"]), (2024, 2, 2))
         self.assertEqual(meta["outputs"]["hcris_wide.csv"]["rows"], 2)
         self.assertEqual(len(meta["sources"][0]["sha256"]), 64)
