@@ -18,14 +18,15 @@ const LETTER = { counted: 'c', below: 'b', few: 'f', none: 'n' };
 
 const byNameThenId = (a, b) => a[1].localeCompare(b[1], 'en') || byId(a[0], b[0]);
 
-// hospitals: the file's rows; meta: the file's meta. Rows come in the table's first order: name A to Z, then CCN.
-export function hospitalsAsset(hospitals, meta) {
+// hospitals: the file's rows; meta: the file's meta; places: the site's places, as [kind, key, name, path, hospitals] (the
+// search box finds them). Rows come in the table's first order: name A to Z, then CCN.
+export function hospitalsAsset(hospitals, meta, places = []) {
   const rows = hospitals.map((h) => {
     const { byCond } = contrib(h, meta);
     return [h.id, h.name, h.alias ?? null, h.city, h.st, h.zip ?? null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
       CONDS.map((k) => LETTER[condState(h, k, meta, byCond)]).join(''), h.inactive ? 1 : 0];
   }).sort(byNameThenId);
-  return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, conds: CONDS, pageSize: EXPLORE_PAGE_SIZE, rows };
+  return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, conds: CONDS, pageSize: EXPLORE_PAGE_SIZE, rows, places };
 }
 
 // The sorts the explorer offers (name A to Z first, the rest high to low, blanks last): the key is a FIELDS name.

@@ -45,6 +45,9 @@ const MARKS = [
   '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint',
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
   '.chart-periods__perf',
+  // the Readmissions peer groups' columns and key swatches, and the medians' shaded cells (sites/hrrp/web/styles.css)
+  '.chart-col--g1', '.chart-col--g2', '.chart-col--g3', '.chart-col--g4', '.chart-col--g5', '.swatch-g1', '.swatch-g2', '.swatch-g3', '.swatch-g4', '.swatch-g5',
+  '.meds__table td.hi',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

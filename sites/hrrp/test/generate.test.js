@@ -16,9 +16,9 @@ const DATA = loadHrrpOnce();
 const SLICE = { ...DATA, hospitals: DATA.hospitals.slice(0, 5) };
 const quiet = { log: () => {} };
 
-test('the manifest: id hrrp, no browser scripts, the kit and the site\'s own sheet', () => {
+test('the manifest: id hrrp, the program page\'s one script, the kit and the site\'s own sheet', () => {
   assert.equal(HRRP.id, 'hrrp');
-  assert.deepEqual(HRRP.entries, {});
+  assert.deepEqual(HRRP.entries, { 'hrrp-program': 'sites/hrrp/client/program.js' });
   assert.equal(HRRP.styles.at(-1), 'sites/hrrp/web/styles.css');
 });
 

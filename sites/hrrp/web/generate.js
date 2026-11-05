@@ -9,6 +9,7 @@ import { SITE } from '../../../web/site.js';
 import { dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv } from './csv.js';
 import { hospitalsAsset } from './figures/explore-data.js';
 import { statesCsvRows } from './figures/map-data.js';
+import { worksheetAsset } from './figures/worksheet-data.js';
 import { loadHrrp } from './data.js';
 import { dictionaryPage } from './pages/dictionary.js';
 import { hospitalPage } from './pages/hospital.js';
@@ -39,8 +40,11 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const area = areaContext({ ...data, places });  // data.shapes: the state outlines the map draws
   const program = programView(area);
   // The explorer's rows are a content-hashed asset the page reads, not part of the page.
-  const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, meta)));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl }) });
+  const placeRows = places.list.map((p) => [p.kind, p.key, p.name, p.path, p.hospitals.length]);
+  const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, meta, placeRows)));
+  // Worksheet R's hospital box reads every hospital's worksheet inputs, loaded when a hospital is picked.
+  const worksheetUrl = ctx.asset('hrrp-worksheet', 'json', JSON.stringify(worksheetAsset(hospitals, meta)));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl, worksheetUrl }) });
   ctx.emit({ path: program.picture.csvHref, noindex: robots !== null, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, noindex: robots !== null, text: placeCsv(statesCsvRows(program.map.pages)) });
   // The full hospitals file and its dictionary: files, then the dictionary as a page.
@@ -60,10 +64,10 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 
-// The Readmissions site's build manifest. No browser scripts yet.
+// The Readmissions site's build manifest. One browser script so far: the program page's (search, Worksheet R's box).
 export const HRRP = {
   id: 'hrrp',
-  entries: {},
+  entries: { 'hrrp-program': 'sites/hrrp/client/program.js' },
   styles: [...KIT_STYLES, 'sites/hrrp/web/styles.css'],
   generate: (ctx) => generateHrrp(ctx),
 };

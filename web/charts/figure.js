@@ -12,7 +12,8 @@
 //                name their own parts); alt is then not used, and its marks carry no data-value to check
 //   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
 //   key          optional: [{ swatch, label }], a one-line key above the chart naming marks it doesn't label itself;
-//                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words
+//                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words; or
+//                { cls, label }: a swatch the site draws itself, cls its class name (the site's CSS sizes and colors it)
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
 //   table        { columns: [{ name, numeric }], rows: [[cell]] }; the first cell of a row is its header. A cell is
 //                text, or { text, value, data }; a numeric cell's value is its raw text (CMS's, with a hyphen-minus),
@@ -50,8 +51,8 @@ function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table
   if (svgWide !== null && !isChart(svgWide)) throw new TypeError(`figure ${n}: svgWide must be a chart from web/charts`);
   if (!has(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
   if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
-  if (key !== null && !(Array.isArray(key) && key.length && key.every((k) => KEY_SWATCHES.includes(k?.swatch) && typeof k.label === 'string' && k.label))) {
-    throw new TypeError(`figure ${n}: a key is a list of { swatch, label } with swatch one of ${KEY_SWATCHES.join(', ')}`);
+  if (key !== null && !(Array.isArray(key) && key.length && key.every((k) => (KEY_SWATCHES.includes(k?.swatch) || (k?.swatch === undefined && NAME.test(k?.cls ?? ''))) && typeof k.label === 'string' && k.label))) {
+    throw new TypeError(`figure ${n}: a key is a list of { swatch, label } with swatch one of ${KEY_SWATCHES.join(', ')}, or { cls, label }`);
   }
   if (!NAME.test(csvName)) throw new RangeError(`figure ${n}: bad csvName "${csvName}"`);
   const { columns, rows } = table ?? {};
@@ -119,7 +120,7 @@ export function figure({ n, takeaway, svg, svgWide = null, chart = null, source,
   const image = chart ?? (svgWide ? imagePair({ svg, svgWide }, alt) : imageOf(svg, alt, null));
   return html`<figure class="fig" id="figure-${n}" data-figure>
 <figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
-${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
+${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch ${k.swatch ? `fig__swatch--${k.swatch}` : k.cls}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>

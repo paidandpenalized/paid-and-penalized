@@ -30,7 +30,7 @@ const labels = (text) => [...text.matchAll(/<div class="field([^"]*)">\n<p class
 test('the program page: the kicker, the name, the deck with the count, and the eight At-a-glance fields', () => {
   const text = program();
   assert.match(text, /<p class="cap kicker prog__kicker">FY2027 edition · Year 3 of Medicare readmission penalties<\/p>/);
-  assert.match(text, /<h1 class="prog__title">Readmissions<\/h1>/);
+  assert.match(text, /<h1 class="prog__title"><span class="prog__title-lead">Thirty Day<\/span> <span class="prog__title-pen">Readmissions<\/span><\/h1>/);
   assert.equal(text.match(/<h1/g).length, 1);
   assert.match(text, /Starting October 1, 2026, <strong>\d+ of the 9 hospitals<\/strong> CMS evaluated take a cut\. That is \d+% of the \d+ hospitals measured on at least one condition\./);
   assert.ok(text.includes('within thirty days of going home'));

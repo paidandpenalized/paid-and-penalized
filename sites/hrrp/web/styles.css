@@ -46,7 +46,14 @@
 @media (min-width: 960px) { .prog__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
 .prog__intro { display: grid; gap: 14px; align-content: start; container-type: inline-size; }
 .prog__kicker { color: var(--pen-ink); }
-.prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; color: var(--pen); }
+.prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
+/* Two lines, as the old site set it: "Thirty Day" in ink, the program's name in the penalty's ink. */
+.prog__title > span { display: block; }
+.prog__title-pen { color: var(--pen); }
+.prog__find { display: grid; gap: 10px; align-content: start; }
+.prog__find .omni { max-width: 640px; }
+/* The At-a-glance bar on one line when the card is wide enough for it. */
+@container (min-width: 430px) { .prog__summary > .form__title { flex-wrap: nowrap; justify-content: space-between; gap: 12px; letter-spacing: 0.04em; white-space: nowrap; font-size: 0.6875rem; } }
 .prog__deck { max-width: 24.8em; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
 .prog__deck strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
 .prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
@@ -63,10 +70,13 @@
 .part__intro { max-width: 52ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-md); line-height: 1.5; }
 /* Part 1's callouts: what is new this year beside who is in the program, each a sentence set apart by a rule. */
 .hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 28px; }
-@media (min-width: 760px) { .hgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
-.callout { display: grid; gap: 8px; padding: 12px 14px; border-left: 4px solid var(--pen); background: var(--pen-tint); line-height: 1.5; }
+@media (min-width: 760px) { .hgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
+.callout { display: grid; align-content: start; gap: 8px; padding: 12px 14px; border-left: 4px solid var(--pen); background: var(--pen-tint); line-height: 1.5; }
 .callout--ink { border-left-color: var(--ink); background: var(--paper-2); }
 .callout__title { color: var(--ink-2); }
+.srcs { margin-top: 8px; }
+.srcs summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; color: var(--ink-2); font: 600 var(--fs-xs)/1.4 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.srcs p { margin: 4px 0 0; max-width: 62ch; }
 .callout ul { display: grid; gap: 6px; margin: 0; padding-left: 1.1em; }
 /* Part 1's steps: a big red numeral and the heading over the words, left (sticky); the figure right, 5fr 7fr from
    980px; stacked under that. Each step opens on a red hairline. */
@@ -76,12 +86,19 @@
   .hstep { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
   .hstep__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
 }
+/* A wide step (the medians, the worksheet): the figure runs the page's width under the words, as the old site had them. */
+.hstep--wide { grid-template-columns: minmax(0, 1fr); }
+.hstep--wide .hstep__text { position: static; max-width: 62ch; }
 .hstep__n { color: var(--pen); font: 400 clamp(3rem, 6vw, 4.5rem)/0.85 var(--font-display); }
 .hstep__title { font: 700 clamp(1.3rem, 2.2vw, 1.6rem)/1.2 var(--font-body); }
 .hstep__text > p:not(.hstep__n) { line-height: 1.6; }
 .page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
 .page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
 .page--prog .fig .chart { max-width: none; }
+/* Step 4's medians: open under a title and a note; a median above one is shaded, as the old site did. */
+.meds__title { margin: 0; font: 700 var(--fs-md)/1.3 var(--font-body); }
+.meds__note { margin: 2px 0 8px; color: var(--ink-2); }
+.meds__table td.hi { background: var(--pen-tint); }
 .meds summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .place__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 8px 20px; }
 @media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
@@ -101,15 +118,33 @@
 .glossary dd { margin: 2px 0 0; }
 .sources { padding-left: 1.2em; }
 
+/* The peer groups' tones on Step 3's columns and in their key (tokens.css --grp-N); a label or the key names each group too. */
+.chart-col--g1 { fill: var(--grp-1); }
+.chart-col--g2 { fill: var(--grp-2); }
+.chart-col--g3 { fill: var(--grp-3); }
+.chart-col--g4 { fill: var(--grp-4); }
+.chart-col--g5 { fill: var(--grp-5); }
+.fig__swatch[class*="swatch-g"] { width: 12px; height: 12px; }
+.swatch-g1 { background: var(--grp-1); }
+.swatch-g2 { background: var(--grp-2); }
+.swatch-g3 { background: var(--grp-3); }
+.swatch-g4 { background: var(--grp-4); }
+.swatch-g5 { background: var(--grp-5); }
+
 /* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
 .wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; }
-.wsr__id { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); border-left: 0; }
+.wsr-holder { min-width: 0; }
+.omni#ws-pick { max-width: 640px; margin-bottom: 14px; }
+.wsr-pick__status { margin: 6px 0 0; }
+.wsr__id { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); border-left: 0; max-width: none; }
+.wsr__id > * { max-width: none; }
+@media (min-width: 700px) { .wsr__id { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .wsr__table tr.is-off td { color: var(--ink-3); }
 .wsr__table tr.is-on { background: var(--pen-tint); }
 .wsr__table .strong { font-weight: 700; }
 .wsr__note { margin: 0; padding: 8px 2px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
-.wsr__totals { list-style: none; margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); }
-.wsr__totals li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 4px; border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-type); }
+.wsr__totals { max-width: none; list-style: none; margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); }
+.wsr__totals li { max-width: none; display: flex; justify-content: space-between; gap: 16px; padding: 8px 4px; border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-type); }
 .wsr__totals li:last-child { border-bottom: 0; }
 .wsr__totals b { white-space: nowrap; }
 .wsr__check { background: var(--paper-2); }
@@ -188,6 +223,9 @@
 .ht select, .ht input[type="search"] { padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
 @media (max-width: 640px) { .ht__controls { display: grid; gap: 12px; } .ht__field, .ht select, .ht input[type="search"] { width: 100%; } }
 @media (forced-colors: active) {
+  .chart-col--g1, .chart-col--g2, .chart-col--g3, .chart-col--g4, .chart-col--g5 { fill: GrayText; }
+  .swatch-g1, .swatch-g2, .swatch-g3, .swatch-g4, .swatch-g5 { forced-color-adjust: none; background: GrayText; }
+  .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
   .chart-periods__perf { fill: CanvasText; }
   .tl__item--future { border-left-color: GrayText; }
 }

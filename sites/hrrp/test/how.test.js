@@ -7,7 +7,8 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { exampleHospital, withDerived } from '../web/derive.js';
 import { BAND, SWARM_ORDER, condSets, dualBins, exampleIdOf, howData, mediansRows, newFor, roundedCount, swarmData } from '../web/figures/how-data.js';
-import { NOTE_SOURCES, calloutNewFor, calloutWho, howPart, mediansTable } from '../web/figures/how.js';
+import { NOTE_SOURCES, calloutNewFor, calloutSources, calloutWho, howPart, mediansTable } from '../web/figures/how.js';
+import { COPY } from '../web/program/copy.js';
 import { programView } from '../web/view.js';
 import { programPage } from '../web/pages/program.js';
 import { ASSETS, CONDITIONS, META, areaOf, hospital, loadHrrpOnce } from './fixtures.js';
@@ -115,10 +116,11 @@ test('Step 4: five rows by six conditions', () => {
   assert.equal(rows[2].cells[2].value, 1.05);
 });
 
-test('Step 4: the table is collapsed, labeled with the dual range, six columns at four decimals', () => {
+test('Step 4: the table is open under a title and a note, labeled with the dual range, six columns at four decimals, a median above one shaded', () => {
   const text = mediansTable({ rows: mediansRows(META3), conditions: CONDITIONS, edition: 'FY2027' }).text;
-  assert.match(text, /^<details class="meds">/);
-  assert.ok(!/<details[^>]* open/.test(text), 'collapsed');
+  assert.match(text, /^<div class="meds">/);
+  assert.ok(!text.includes('<details'), 'nothing to open: the table shows');
+  assert.ok(text.includes('Peer-group medians for FY2027') && text.includes('Shaded cells are above 1.0.'));
   assert.equal(text.match(/<tbody>[\s\S]*<\/tbody>/)[0].match(/<tr>/g).length, 5);
   const heads = [...text.matchAll(/<th scope="col"[^>]*>([^<]+)<\/th>/g)].map((x) => x[1]);
   assert.deepEqual(heads, ['Peer group', ...CONDITIONS.map((c) => c.short)]);
@@ -127,6 +129,14 @@ test('Step 4: the table is collapsed, labeled with the dual range, six columns a
   assert.equal(cells.length, 30);
   assert.ok(cells.every((c) => /^\d\.\d{4}$/.test(c)), cells.join());
   assert.equal(cells[14], '1.0500', 'group 3, heart failure');
+  const shaded = [...text.matchAll(/<td class="num( hi)?">([^<]+)<\/td>/g)].filter((x) => x[1]).map((x) => x[2]);
+  assert.deepEqual(shaded, cells.filter((c) => Number(c) > 1), 'exactly the medians above one are shaded');
+});
+
+test('Step 4, collapsed (Methods): the same table in a disclosure', () => {
+  const text = mediansTable({ rows: mediansRows(META3), conditions: CONDITIONS, edition: 'FY2027', collapsed: true }).text;
+  assert.match(text, /^<details class="meds">/);
+  assert.ok(!/<details[^>]* open/.test(text));
 });
 
 test('"New for" shows only for the fiscal year the notes are for', () => {
@@ -143,9 +153,19 @@ test('"New for" shows only for the fiscal year the notes are for', () => {
 
 test('"New for" names its source from an item\'s claim field, not from its wording', () => {
   const line = 'payment methodology sheet';
-  assert.ok(!calloutNewFor({ items: [{ title: 'Medicare Advantage patients now count.', body: 'x' }], edition: 'FY2027' }).text.includes(line), 'wording alone adds no source line');
-  assert.ok(calloutNewFor({ items: [{ title: 'A note.', body: 'x', claim: 'HRRP-14' }], edition: 'FY2027' }).text.includes(line));
-  assert.ok(!calloutNewFor({ items: [{ title: 'A note.', body: 'x', claim: 'HRRP-99' }], edition: 'FY2027' }).text.includes(line));
+  const sources = (items) => calloutSources({ items, edition: 'FY2027' });
+  assert.ok(!calloutNewFor({ items: [{ title: 'A note.', body: 'x', claim: 'HRRP-14' }], edition: 'FY2027' }).text.includes(line), 'the callout itself holds no source line');
+  assert.equal(sources([{ title: 'Medicare Advantage patients now count.', body: 'x' }]), '', 'wording alone adds no source line');
+  assert.ok(sources([{ title: 'A note.', body: 'x', claim: 'HRRP-14' }]).text.includes(line));
+  assert.equal(sources([{ title: 'A note.', body: 'x', claim: 'HRRP-99' }]), '');
+  assert.equal(sources(null), '');
+  // One small disclosure for every note's source, each line a copy entry that carries its claim id.
+  const all = sources(Object.keys(NOTE_SOURCES).map((claim) => ({ title: 't', body: 'b', claim }))).text;
+  assert.equal(all.match(/<details/g).length, 1);
+  assert.match(all, /^<details class="srcs">\n<summary>Sources<\/summary>/);
+  assert.equal(all.match(/<p class="small muted">/g).length, Object.keys(NOTE_SOURCES).length);
+  assert.ok(!/<details[^>]* open/.test(all));
+  for (const key of Object.values(NOTE_SOURCES)) assert.ok(COPY[key].claim && COPY[key].claim !== null, `${key} carries its claim id`);
   const content = JSON.parse(readFileSync(`${REPO_ROOT}sites/hrrp/content/whats_new.json`, 'utf8'));
   for (const i of content.items) if (i.claim) assert.ok(i.claim in NOTE_SOURCES, `${i.claim} has a source line`);
   assert.ok(content.items.some((i) => i.claim === 'HRRP-14'));
@@ -173,11 +193,14 @@ test('the Part on the program page: callouts, steps 1 to 5, two figures and the 
   assert.equal(how.match(/<svg [^>]*chart--punch/g).length, 2, 'the punch card, phone and wide');
   assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
   assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
-  assert.ok(how.includes('>Group 1<') && how.includes('>5<'), 'a label that fits says Group n; one that does not fit its band says n');
-  assert.equal(how.match(/<section class="hstep"/g).length, 5, 'steps 1 to 5');
+  for (const n of [1, 2, 3, 4, 5]) assert.equal(how.match(new RegExp(`>Group ${n}<`, 'g')).length, 2, `Group ${n} is named in both drawings (phone and wide)`);
+  assert.equal(how.match(/<section class="hstep[ "]/g).length, 5, 'steps 1 to 5');
+  assert.equal(how.match(/<details class="srcs">/g).length, 1, 'one Sources disclosure for both callouts');
+  assert.ok(!how.slice(how.indexOf('class="hgrid"'), how.indexOf('class="srcs"')).includes('is from CMS'), 'no source line inside a callout');
   assert.ok(!how.includes('swarm'));
   assert.ok(how.includes(`New for ${view.edition}`) && how.includes('Who is in the program'));
-  assert.equal(how.match(/<details class="meds">/g).length, 1);
+  assert.ok(!how.includes('<details class="meds">'), 'the medians are open, not collapsed');
+  assert.equal(how.match(/<div class="meds">/g).length, 1);
   assert.equal([...how.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((x) => x[1]).join(), '1,2');
   const fresh = howPart(howData({ ...areaOf(), whatsNew: null }), { figure: (() => { let n = 0; return () => ++n; })(), edition: 'FY2027', sourceLine: 'x' });
   assert.ok(!fresh.text.includes('New for'), 'no notes for another year');

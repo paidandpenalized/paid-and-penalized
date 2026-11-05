@@ -48,7 +48,7 @@ ${section('formula', t('formulaHeading'), html`<p>${view.formula.intro}</p>
 <pre class="formula">${t('formulaCut')}</pre>
 <p>${t('formulaBelow')}</p>
 <p>${view.formula.cap}</p>
-${mediansTable({ rows: mediansRows(view.meta), conditions: view.conditions, edition: view.edition })}
+${mediansTable({ rows: mediansRows(view.meta), conditions: view.conditions, edition: view.edition, collapsed: true })}
 <p>${view.formula.replication}</p>`)}
 ${section(DOLLARS_ID, t('dollarsHeading'), html`<p>${t('dollarsIntro')}</p>
 <pre class="formula">${t('dollarsFormula')}</pre>

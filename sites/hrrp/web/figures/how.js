@@ -1,12 +1,13 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/explainer.js at 33d1959), after HACRP's program page (sites/hacrp/web/program-figures.js).
 // The program page's "How it works" Part: its line, the two callouts, then Steps 1 to 4. Step 1's punch card and Step 3's
 // columns are drawn with the chart kit inside figure(), a phone drawing and a wide one; Step 2's swarm is not drawn yet
-// (figures/how-data.js swarmData holds its numbers); Step 4's medians are a table, collapsed; Step 5 is Worksheet R for the example hospital, drawn on the server (the waterfall's
-// numbers are in worksheet.js waterfallData; it is not drawn yet).
+// (figures/how-data.js swarmData holds its numbers); Step 4's medians are a table, open, as the old site had it; Step 5 is Worksheet R for the example hospital, drawn on the server, with
+// a box that swaps the hospital in the browser (client/worksheet.js; the waterfall's numbers are in worksheet.js waterfallData, not drawn yet).
 import { CAP_PCT, CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { columns } from '../../../../web/charts/columns.js';
 import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
 import { punchCard } from '../../../../web/charts/punchCard.js';
+import { searchForm } from '../../../../web/render/shell.js';
 import { printout } from '../../../../web/render/components.js';
 import { capitalize, count, listText, noun, pct, shownAbove, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
@@ -24,12 +25,16 @@ const COLUMNS_HEIGHT = 150;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
+// A peer group's tone on the dual-share columns and in their key: the class's last part is the group's number (tokens.css --grp-N).
+const GROUP_CLASS = 'chart-col--g';
+const SWATCH_CLASS = 'swatch-g';
 
 // A condition's label on the punch card's rows: CMS's abbreviation (the key, with the slash of hip and knee).
 const abbr = (key) => key.replace('_', '/');
 
 // A step of the Part: its number, heading and words beside its figure (stacked on a phone).
-const step = ({ n, id, heading, text, fig = null }) => html`<section class="hstep" id="${id}" aria-labelledby="${id}-h">
+// wide: the figure runs the page's width under the words (a table or a worksheet, too wide for the right column).
+const step = ({ n, id, heading, text, fig = null, wide = false }) => html`<section class="hstep${wide ? ' hstep--wide' : ''}" id="${id}" aria-labelledby="${id}-h">
 <div class="hstep__text">
 <p class="hstep__n" aria-hidden="true">${String(n)}</p>
 <p class="hstep__label vh">${fill('stepLabel', { n: String(n) })}</p>
@@ -64,16 +69,17 @@ function punchFigure({ sets, conditions, edition, n }) {
     ...sets.sets.map((c) => [name(c.conds), num(count(c.n), c.n), num(count(c.yes), c.yes)]),
     ...(sets.none ? [[t('fig1None'), num(count(sets.none), sets.none), num('0', 0)]] : []),
   ];
-  return figure({
+  const fig = figure({
     n, source: fill('fig1Source', { edition }), alt: t('fig1Alt'), csvName: 'hrrp-measure-sets',
     takeaway: fill('fig1Takeaway', {
       top: conditionShort(conditions, top[0]), nTop: count(top[1]), bottom: inSentence(conditionShort(conditions, bottom[0])), nBottom: count(bottom[1]),
       measured: count(sets.measured), n: count(sets.measured + sets.none), none: count(sets.none),
     }),
     ...drawn((width) => punchCard({ rows, columns: cols, labels, width }), WIDE),
-    note: fill('fig1Key', { abbrs }),
     table: { columns: [{ name: t('fig1ColSet') }, { name: t('fig1ColN'), numeric: true }, { name: t('fig1ColYes'), numeric: true }], rows: tableRows },
   });
+  // The note on reading the holes goes with the step's words, not under the chart: it would stretch the figure's column.
+  return { fig, note: fill('fig1Key', { abbrs }) };
 }
 
 // ---------- Step 3 ----------
@@ -86,37 +92,50 @@ function labeled(ticks, top, width) {
   return out;
 }
 
+// The peer group (1 to 5) a one-point bin falls in, by its middle.
+const groupOf = (bands, bin) => bands.find((b) => bin.x0 + 0.5 < b.x1)?.peer ?? bands.length;
+
+// The figure and the line about its axis marks, which goes with the step's words (it would stretch the figure's column).
 function dualFigure({ dual, edition, n }) {
-  const bins = dual.bins.map((b) => ({ ...b, cls: BAR_CLASS, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
+  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${GROUP_CLASS}${groupOf(dual.bands, b)}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
-    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
-    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }), short: fill('fig2BandShort', { n: String(b.peer) }) })),
+    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT, stagger: true,
+    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }) })),
   });
   const sizes = dual.groups.map((g) => g.n);
-  return figure({
-    n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share',
+  const key = dual.groups.map((g) => ({ cls: `${SWATCH_CLASS}${g.peer}`, label: fill('fig2Key', { n: String(g.peer), from: fmtPct(g.lo * 100, 0), to: fmtPct(g.hi * 100, 0) }) }));
+  const fig = figure({
+    n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share', key,
     takeaway: fill('fig2Takeaway', { min: fmtInt(Math.min(...sizes)), max: fmtInt(Math.max(...sizes)), n: fmtInt(dual.n) }),
     ...drawn(draw, WIDE),
-    note: fill('fig2Note', { cutoffs: listText(dual.ticks.map((v) => `${Math.round(v)}%`)) }),
     table: {
       columns: [{ name: t('fig2ColShare') }, { name: t('fig2ColN'), numeric: true }],
       rows: dual.bins.map((b) => [fill('dualRange', { from: `${b.x0}%`, to: `${b.x1}%` }), num(count(b.n), b.n)]),
     },
   });
+  return { fig, note: fill('fig2Note', { cutoffs: listText(dual.ticks.map((v) => `${Math.round(v)}%`)) }) };
 }
 
 // ---------- Step 4 ----------
 
-// The peer-group medians in a collapsed table: a row for each group, labeled with its dual-share range, a column for each
-// condition at four decimals, as CMS publishes them. Methods shows the same table. rows: how-data.js mediansRows().
-export function mediansTable({ rows, conditions, edition }) {
-  return html`<details class="meds">
-<summary>${fill('medsSummary', { edition })}</summary>
-${printout(html`<table class="gb">
+// The peer-group medians: a row for each group, labeled with its dual-share range, a column for each condition at four
+// decimals, as CMS publishes them; a median above one is shaded. On the program page the table is open under its title
+// and the note; with collapsed (Methods) it sits in a disclosure. rows: how-data.js mediansRows().
+export function mediansTable({ rows, conditions, edition, collapsed = false }) {
+  const table = printout(html`<table class="gb meds__table">
 <thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
-<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: fmtPct(r.lo * 100, 0), to: fmtPct(r.hi * 100, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
-</table>`)}
-</details>`;
+<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: fmtPct(r.lo * 100, 0), to: fmtPct(r.hi * 100, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
+</table>`);
+  return collapsed
+    ? html`<details class="meds">
+<summary>${fill('medsSummary', { edition })}</summary>
+${table}
+</details>`
+    : html`<div class="meds">
+<p class="meds__title">${fill('medsTitle', { edition })}</p>
+<p class="meds__note">${fill('medsNote', { one: ratio(1, 1) })}</p>
+${table}
+</div>`;
 }
 
 // ---------- the callouts ----------
@@ -126,10 +145,20 @@ export const calloutNewFor = ({ items, edition }) => (items
   ? html`<aside class="callout" aria-labelledby="callout-new-h">
 <p class="callout__title cap" id="callout-new-h">${fill('newForTitle', { edition })}</p>
 <ul>${items.map((i) => html`<li><b>${i.title}</b> ${i.body}</li>`)}</ul>
-${[...new Set(items.map((i) => i.claim).filter((c) => Object.hasOwn(NOTE_SOURCES, c)))].map((c) => html`<p class="small muted">${fill(NOTE_SOURCES[c], { edition })}</p>
-`)}
 </aside>`
   : '');
+
+// The one "Sources" disclosure under the two callouts: a line for each note that names a claim (the lines carry the claim
+// ids, so the copy gate still ties them to CLAIMS.md). '' when there are none.
+export function calloutSources({ items, edition }) {
+  const lines = [...new Set((items ?? []).map((i) => i.claim).filter((c) => Object.hasOwn(NOTE_SOURCES, c)))];
+  return lines.length
+    ? html`<details class="srcs">
+<summary>${t('sourcesTitle')}</summary>
+${lines.map((c) => html`<p class="small muted">${fill(NOTE_SOURCES[c], { edition })}</p>
+`)}</details>`
+    : '';
+}
 
 // "Who is in the program": the hospital count rounded to the hundred, and who is out.
 export const calloutWho = ({ rounded }) => html`<aside class="callout callout--ink" aria-labelledby="callout-who-h">
@@ -139,20 +168,35 @@ export const calloutWho = ({ rounded }) => html`<aside class="callout callout--i
 
 // ---------- the Part ----------
 
+// The hospital box above Worksheet R (client/worksheet.js mounts it) and the sheet it swaps. src: the hospitals asset the
+// box searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src on the holder: fetched when
+// a hospital is picked). null: no box, only the example.
+function worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc }) {
+  const sheet = worksheetHtml(how.worksheet, { edition, conditions: how.conditions, dollars: { payShort: how.payShort, tag: estimateTag } });
+  return html`${hospitalsUrl && sheetSrc && searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') })}
+<div class="wsr-holder" id="worksheet"${sheetSrc ? html` data-src="${sheetSrc}" data-context="${JSON.stringify({ edition, conditions: how.conditions, payShort: how.payShort })}"` : ''}>
+${sheet}
+</div>`;
+}
+
 // how: view.how (how-data.js howData); figure: the page's figure counter; edition: the edition's label; estimateTag: the
-// estimate tag beside a modeled dollar figure.
-export function howPart(how, { figure: nextFigure, edition, estimateTag = '' }) {
+// estimate tag beside a modeled dollar figure; hospitalsUrl and worksheetUrl: the assets Worksheet R's box reads.
+export function howPart(how, { figure: nextFigure, edition, estimateTag = '', hospitalsUrl = null, worksheetUrl = null }) {
   const { conditions } = how;
   const words = capitalize(spelled(CONDS.length));
+  const punch = punchFigure({ sets: how.sets, conditions, edition, n: nextFigure() });
+  const dual = dualFigure({ dual: how.dual, edition, n: nextFigure() });
   return html`<p class="part__intro">${fill('howIntro', { edition })}</p>
 <div class="hgrid">
 ${calloutNewFor({ items: how.newFor, edition })}
 ${calloutWho({ rounded: how.rounded })}
 </div>
+${calloutSources({ items: how.newFor, edition })}
 ${step({
     n: 1, id: 'step-1', heading: fill('step1Title', { words }),
-    text: html`<p>${fill('step1Text', { words: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) })}</p>`,
-    fig: punchFigure({ sets: how.sets, conditions, edition, n: nextFigure() }),
+    text: html`<p>${fill('step1Text', { words: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) })}</p>
+<p class="small muted">${punch.note}</p>`,
+    fig: punch.fig,
   })}
 ${step({
     n: 2, id: 'step-2', heading: t('step2Title'),
@@ -161,18 +205,19 @@ ${step({
   })}
 ${step({
     n: 3, id: 'step-3', heading: t('step3Title'),
-    text: html`<p>${t('step3Text')}</p>`,
-    fig: dualFigure({ dual: how.dual, edition, n: nextFigure() }),
+    text: html`<p>${t('step3Text')}</p>
+<p class="small muted">${dual.note}</p>`,
+    fig: dual.fig,
   })}
 ${step({
-    n: 4, id: 'step-4', heading: t('step4Title'),
+    n: 4, id: 'step-4', heading: t('step4Title'), wide: true,
     text: html`<p>${t('step4Text')}</p>`,
     fig: mediansTable({ rows: how.medians, conditions, edition }),
   })}
 ${step({
-    n: 5, id: 'step-5', heading: t('step5Title'),
+    n: 5, id: 'step-5', heading: t('step5Title'), wide: true,
     text: html`<p>${fill('step5Text', { cap: String(CAP_PCT) })}</p>
 <p>${t('step5Which')}</p>`,
-    fig: worksheetHtml(how.worksheet, { edition, conditions, dollars: { payShort: how.payShort, tag: estimateTag } }),
+    fig: worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc: worksheetUrl }),
   })}`;
 }
