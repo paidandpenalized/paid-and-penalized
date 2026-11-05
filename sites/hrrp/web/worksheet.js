@@ -9,7 +9,7 @@ import { placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { conditionShort } from './derive.js';
 import { hospitalPath } from './links.js';
-import { fmtInt, fmtMoney, fmtPct, points, ratio } from './numbers.js';
+import { fmtInt, fmtMoney, fmtPct, points, ratio, roundTo } from './numbers.js';
 import { fill, t } from './program/copy.js';
 
 // The last digit can differ from a hand calculation (the note under the table); the note's words are in the copy.
@@ -112,7 +112,7 @@ const ZOOM_MAX_TICKS = 7;
 export function zoomOf(sum) {
   for (const step of ZOOM_STEPS) {
     const top = Math.ceil(sum / step + 0.05) * step;
-    if (top / step <= ZOOM_MAX_TICKS || step === ZOOM_STEPS[ZOOM_STEPS.length - 1]) return { step, top: Number(top.toFixed(6)) };
+    if (top / step <= ZOOM_MAX_TICKS || step === ZOOM_STEPS[ZOOM_STEPS.length - 1]) return { step, top: roundTo(top, 6) };
   }
   return null;
 }

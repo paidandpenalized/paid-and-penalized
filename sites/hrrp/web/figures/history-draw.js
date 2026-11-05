@@ -6,7 +6,7 @@
 // classes are reused where one fits, the few new ones (hist-*) are in sites/hrrp/web/styles.css. Words come from program/copy.js.
 import { scaleLinear } from 'd3-scale';
 import { html } from '../../../../web/render/html.js';
-import { capsWidth, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
+import { NOTE_PX, capsWidth, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
 import { textWidth, wrapText } from '../../../../web/charts/text.js';
 import { fyLabel } from '../copy.js';
 import { fmtPct } from '../numbers.js';
@@ -14,12 +14,12 @@ import { fill, t } from '../program/copy.js';
 
 const RIGHT = 8;
 const LINE_H = 12;
-const NOTE_PX = 11;
-const MONO = 0.6 * NOTE_PX;
 const SHARE_STEP = 20;
+// What a position costs when it leaves the plot, crosses a line, or lands on words already set.
+const OUTSIDE = 100;
+const CROSSES_LINE = 1;
+const OVERLAPS_WORDS = 10;
 
-export const pct1 = (v) => fmtPct(v, 1);
-export const cut2 = (v) => fmtPct(v, 2);
 export const usdM = (v) => `$${Math.round(v / 1e6)}M`;
 const yy = (fy) => `’${String(fy).slice(-2)}`;
 
@@ -37,31 +37,31 @@ function lineAt(pts, px) {
 
 // Each item is words at a point, set above or below it (a short leader joining them when the item asks), at the first position that stays
 // inside the plot, clear of every line and of the words already set; if none is clear, at the one that breaks the fewest rules.
-//   items  [{ at: [{ px, py }] (the points it may sit at, best first), lines: [{ text, cls, mono }], sides, anchors, gap, leader, cls, data }]
+//   items  [{ at: [{ px, py }] (the points it may sit at, best first), lines: [{ text, cls, mono }], sides, anchors, gap, leader, cls (a hook for tests, no style), data }]
 //   box    { x0, x1, top, bottom }: the plot's limits; polys: the lines to keep clear of, [[{ px, py }]]
 function place(items, { box, polys }) {
   const placed = [];
   return items.map((it) => {
-    const w = Math.max(...it.lines.map((l) => (l.mono ? l.text.length * MONO : l.caps ? capsWidth(l.text) : textWidth(l.text, NOTE_PX))));
+    const w = Math.max(...it.lines.map((l) => (l.mono ? textWidth(l.text, NOTE_PX, { mono: true }) : l.caps ? capsWidth(l.text) : textWidth(l.text, NOTE_PX))));
     const h = it.lines.length * LINE_H + 1;
-    let best = null;
-    for (const pt of it.at) {
-      for (const side of it.sides) {
-        for (const anchor of it.anchors) {
-          const [bx0, bx1] = { middle: [pt.px - w / 2, pt.px + w / 2], start: [pt.px - 3, pt.px - 3 + w], end: [pt.px + 3 - w, pt.px + 3] }[anchor];
-          const by0 = side === 'above' ? pt.py - it.gap - h : pt.py + it.gap;
-          const by1 = by0 + h;
-          let bad = 0;
-          if (bx0 < box.x0 || bx1 > box.x1 || by0 < box.top || by1 > box.bottom) bad += 100;
-          for (let px = bx0 - 2; px <= bx1 + 2; px += 3) {
-            if (polys.some((p) => { const y = lineAt(p, px); return y !== null && y >= by0 - 3 && y <= by1 + 3; })) { bad += 1; break; }
-          }
-          if (placed.some((q) => bx0 < q.bx1 + 3 && bx1 > q.bx0 - 3 && by0 < q.by1 + 2 && by1 > q.by0 - 2)) bad += 10;
-          if (!best || bad < best.bad) best = { bad, pt, side, anchor, bx0, bx1, by0, by1 };
-          if (bad === 0) break;
-        }
-        if (best.bad === 0) break;
+    // The positions in order of preference (points, then sides, then anchors); the first clear one wins, else the least bad.
+    const fits = ({ pt, side, anchor }) => {
+      const [bx0, bx1] = { middle: [pt.px - w / 2, pt.px + w / 2], start: [pt.px - 3, pt.px - 3 + w], end: [pt.px + 3 - w, pt.px + 3] }[anchor];
+      const by0 = side === 'above' ? pt.py - it.gap - h : pt.py + it.gap;
+      const by1 = by0 + h;
+      let bad = 0;
+      if (bx0 < box.x0 || bx1 > box.x1 || by0 < box.top || by1 > box.bottom) bad += OUTSIDE;
+      for (let px = bx0 - 2; px <= bx1 + 2; px += 3) {
+        if (polys.some((p) => { const y = lineAt(p, px); return y !== null && y >= by0 - 3 && y <= by1 + 3; })) { bad += CROSSES_LINE; break; }
       }
+      if (placed.some((q) => bx0 < q.bx1 + 3 && bx1 > q.bx0 - 3 && by0 < q.by1 + 2 && by1 > q.by0 - 2)) bad += OVERLAPS_WORDS;
+      return { bad, pt, side, anchor, bx0, bx1, by0, by1 };
+    };
+    const options = it.at.flatMap((pt) => it.sides.flatMap((side) => it.anchors.map((anchor) => ({ pt, side, anchor }))));
+    let best = null;
+    for (const option of options) {
+      const tried = fits(option);
+      if (!best || tried.bad < best.bad) best = tried;
       if (best.bad === 0) break;
     }
     placed.push(best);
@@ -70,9 +70,12 @@ function place(items, { box, polys }) {
     const leader = it.leader
       ? html`<line class="chart-axis__tick" x1="${r2(pt.px)}" x2="${r2(pt.px)}" y1="${r2(side === 'above' ? pt.py - 5 : pt.py + 5)}" y2="${r2(side === 'above' ? by1 + 1 : by0 - 1)}"/>` : '';
     const words = it.lines.map((l, k) => text({ x, y: by0 + 10 + k * LINE_H, anchor, cls: `${l.cls} chart-label--halo`, body: l.text }));
-    return html`<g class="${it.cls}"${it.data ? html` data-fy="${it.data.fy}" data-key="${it.data.key}"` : ''}>${leader}${words}</g>`;
+    return html`<g${it.cls ? html` class="${it.cls}"` : ''}${it.data ? html` data-fy="${it.data.fy}" data-key="${it.data.key}"` : ''}>${leader}${words}</g>`;
   });
 }
+
+// A series of panel points ({ px, py }, py null for a year with no value) as a path's d: a gap breaks the line.
+const lineOf = (pts) => lineD(pts.map((q) => ({ x: q.px, y: q.py })), (v) => v, (v) => v);
 
 // ---------- one panel's furniture ----------
 
@@ -113,18 +116,18 @@ function sharePanel(lines, p, narrow) {
   const words = (label) => wrapText(label, maxW, NOTE_PX).map((s) => ({ text: s.trimEnd(), cls: 'chart-note' }));
   const item = (fy, label, data) => {
     const q = at(fy);
-    return { at: [q], lines: [...words(label), { text: pct1(q.value), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above', 'below'], anchors: ['middle', 'start', 'end'], gap: 12, leader: true, cls: 'hist-ann', data };
+    return { at: [q], lines: [...words(label), { text: fmtPct(q.value, 1), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above', 'below'], anchors: ['middle', 'start', 'end'], gap: 12, leader: true, cls: 'hist-ann', data };
   };
   const notes = [
     ...lines.caps.filter((c) => at(c.fy)?.value != null).map((c) => item(c.fy, narrow ? c.short : c.label, { fy: c.fy, key: 'cap' })),
     ...lines.marks.filter((m) => at(m.fy)?.value != null).map((m) => item(m.fy, m.label, { fy: m.fy, key: m.key })),
   ];
   const dots = pts.filter((q) => q.value !== null).map((q) => mark({
-    tip: fill('histTipShare', { fy: fyLabel(q.fy), share: pct1(q.value) }), value: q.value, data: { fy: q.fy }, hit: null,
+    tip: fill('histTipShare', { fy: fyLabel(q.fy), share: fmtPct(q.value, 1) }), value: q.value, data: { fy: q.fy }, hit: null,
     body: html`<circle class="hist-dot--share" cx="${r2(q.px)}" cy="${r2(q.py)}" r="${narrow ? 2.5 : 3}"/>`,
   }));
   const ann = place(notes, { box: f.box, polys: [pts] });
-  return html`<g class="hist-panel hist-panel--share">${f.markup}<path class="hist-line hist-line--share" d="${lineD(lines.share.map((s) => ({ x: s.fy, y: s.value === null ? null : f.y(s.value) })), (v) => f.x(v), (v) => v)}"/>${dots}${ann}</g>`;
+  return html`<g class="hist-panel hist-panel--share">${f.markup}<path class="hist-line hist-line--share" d="${lineOf(pts)}"/>${dots}${ann}</g>`;
 }
 
 // The average cut: the penalized hospitals' line in the penalty ink, all hospitals' in gray; the first, the highest and the latest
@@ -140,12 +143,12 @@ function avgPanel(lines, p, narrow) {
   const known = pen.filter((q) => q.value !== null);
   const lastP = known[known.length - 1];
   const peak = known.reduce((a, q) => (q.value > a.value ? q : a), known[0]);
-  const lastA = poly(lines.avgAll).filter((q) => q.value !== null).pop();
-  const val = (q, side, anchors) => ({ at: [q], lines: [{ text: cut2(q.value), cls: 'chart-value chart-value--mark', mono: true }], sides: [side], anchors, gap: 6, leader: false, cls: 'hist-val' });
+  const lastA = all.filter((q) => q.value !== null).pop();
+  const val = (q, side, anchors) => ({ at: [q], lines: [{ text: fmtPct(q.value, 2), cls: 'chart-value chart-value--mark', mono: true }], sides: [side], anchors, gap: 6, leader: false });
   const name = (series, key, side, cls) => {
     const mid = Math.floor(series.length * 0.5);
     const order = [mid, mid - 1, mid + 1, mid - 2, mid + 2, mid - 3, mid + 3, mid - 4, mid + 4, mid + 5, mid + 6].filter((i) => series[i]?.value != null);
-    return { at: order.map((i) => series[i]), lines: [{ text: t(key), cls: `chart-cap ${cls}`, caps: true }], sides: [side, side === 'above' ? 'below' : 'above'], anchors: ['middle', 'start', 'end'], gap: 5, leader: false, cls: 'hist-name' };
+    return { at: order.map((i) => series[i]), lines: [{ text: t(key), cls: `chart-cap ${cls}`, caps: true }], sides: [side, side === 'above' ? 'below' : 'above'], anchors: ['middle', 'start', 'end'], gap: 5, leader: false };
   };
   const labeled = [
     ...(peak.fy !== lastP.fy ? [val(peak, 'above', ['middle', 'start', 'end'])] : []),
@@ -155,15 +158,15 @@ function avgPanel(lines, p, narrow) {
     name(all, 'histAvgAll', 'below', 'hist-name--all'),
   ];
   const words = place(labeled, { box: f.box, polys: [pen, all] });
-  const path = (series) => lineD(series.map((s) => ({ x: s.fy, y: s.value === null ? null : f.y(s.value) })), (v) => f.x(v), (v) => v);
   const dots = pen.filter((q) => q.value !== null).map((q) => {
     const a = all.find((o) => o.fy === q.fy);
+    const both = a?.value != null;
     return mark({
-      tip: a?.value == null ? fill('histTipAvgPen', { fy: fyLabel(q.fy), pen: cut2(q.value) }) : fill('histTipAvg', { fy: fyLabel(q.fy), pen: cut2(q.value), all: cut2(a.value) }), value: a?.value == null ? q.value : [q.value, a.value], data: { fy: q.fy }, hit: null,
+      tip: both ? fill('histTipAvg', { fy: fyLabel(q.fy), pen: fmtPct(q.value, 2), all: fmtPct(a.value, 2) }) : fill('histTipAvgPen', { fy: fyLabel(q.fy), pen: fmtPct(q.value, 2) }), value: both ? [q.value, a.value] : q.value, data: { fy: q.fy }, hit: null,
       body: html`<circle class="hist-dot--pen" cx="${r2(q.px)}" cy="${r2(q.py)}" r="${narrow ? 2 : 2.5}"/>`,
     });
   });
-  return html`<g class="hist-panel hist-panel--avg">${f.markup}<path class="hist-line hist-line--all" d="${path(all)}"/><path class="hist-line hist-line--pen" d="${path(pen)}"/>${dots}${words}</g>`;
+  return html`<g class="hist-panel hist-panel--avg">${f.markup}<path class="hist-line hist-line--all" d="${lineOf(all)}"/><path class="hist-line hist-line--pen" d="${lineOf(pen)}"/>${dots}${words}</g>`;
 }
 
 // The estimated totals: a bar for each year that has one, CMS's dark and KFF's light (a source for each bar, in its tip and the table),
@@ -189,7 +192,7 @@ function totalPanel(lines, p, narrow) {
   const lastR = lines.totals[lines.totals.length - 1];
   const picks = [...new Map([firstR, peak, lastR].map((r) => [r.fy, r])).values()];
   const anchors = (r) => (r === firstR ? ['start', 'middle'] : r === lastR ? ['end', 'middle'] : ['middle', 'start', 'end']);
-  const labeled = picks.map((r) => ({ at: [{ px: f.x(r.fy), py: f.y(r.value) }], lines: [{ text: usdM(r.value), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above'], anchors: anchors(r), gap: 4, leader: false, cls: 'hist-val' }));
+  const labeled = picks.map((r) => ({ at: [{ px: f.x(r.fy), py: f.y(r.value) }], lines: [{ text: usdM(r.value), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above'], anchors: anchors(r), gap: 4, leader: false }));
   return html`<g class="hist-panel hist-panel--total">${f.markup}${bars}${place(labeled, { box: { ...f.box, top: f.box.top - 14 }, polys: [] })}</g>`;
 }
 
@@ -199,20 +202,15 @@ function totalPanel(lines, p, narrow) {
 export function drawHistory({ lines, width }) {
   const narrow = isNarrow(width);
   const GAP = 28;
-  const titles = { share: t('histTitleShare'), avg: t('histTitleAvg'), total: t('histTitleTotal') };
-  if (narrow) {
-    const [hBig, hSmall] = [270, 150];
-    const body = html`${sharePanel(lines, { ox: 0, oy: 0, w: width, h: hBig, title: titles.share }, true)}
-${avgPanel(lines, { ox: 0, oy: hBig + 10, w: width, h: hSmall, title: titles.avg }, true)}
-${totalPanel(lines, { ox: 0, oy: hBig + hSmall + 20, w: width, h: hSmall, title: titles.total }, true)}`;
-    return frame({ kind: 'history', width, height: hBig + 2 * hSmall + 24, body });
-  }
+  // Each panel's place { ox, oy, w, h }: the phone stacks the three; the wide drawing sets the large one left and the two small ones stacked right.
+  const [hBig, hSmall] = narrow ? [270, 150] : [320, (320 - 14) / 2];
   const bigW = Math.round(width * 0.56);
   const smallW = width - bigW - GAP;
-  const hBig = 320;
-  const hSmall = (hBig - 14) / 2;
-  const body = html`${sharePanel(lines, { ox: 0, oy: 0, w: bigW, h: hBig, title: titles.share }, false)}
-${avgPanel(lines, { ox: bigW + GAP, oy: 0, w: smallW, h: hSmall, title: titles.avg }, false)}
-${totalPanel(lines, { ox: bigW + GAP, oy: hSmall + 14, w: smallW, h: hSmall, title: titles.total }, false)}`;
-  return frame({ kind: 'history', width, height: hBig + 4, body });
+  const slot = narrow
+    ? { share: { ox: 0, oy: 0, w: width, h: hBig }, avg: { ox: 0, oy: hBig + 10, w: width, h: hSmall }, total: { ox: 0, oy: hBig + hSmall + 20, w: width, h: hSmall } }
+    : { share: { ox: 0, oy: 0, w: bigW, h: hBig }, avg: { ox: bigW + GAP, oy: 0, w: smallW, h: hSmall }, total: { ox: bigW + GAP, oy: hSmall + 14, w: smallW, h: hSmall } };
+  const body = html`${sharePanel(lines, { ...slot.share, title: t('histTitleShare') }, narrow)}
+${avgPanel(lines, { ...slot.avg, title: t('histTitleAvg') }, narrow)}
+${totalPanel(lines, { ...slot.total, title: t('histTitleTotal') }, narrow)}`;
+  return frame({ kind: 'history', width, height: narrow ? hBig + 2 * hSmall + 24 : hBig + 4, body });
 }

@@ -8,27 +8,25 @@ import { html } from '../../../../web/render/html.js';
 import { axis } from '../../../../web/charts/axis.js';
 import { dotsPath, spread } from '../../../../web/charts/dots.js';
 import { scoreSwarm } from '../../../../web/charts/scoreSwarm.js';
-import { frame, isNarrow, mark, r2, text } from '../../../../web/charts/svg.js';
+import { NOTE_PX, frame, isNarrow, mark, r2, text } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
+import { clamp } from '../../../../engine/js/stats.js';
+import { dotsFor } from './swarm.js';
 
 // ---------- the size of the cuts ----------
 
-// The swarm's bins and the dot layout, as Step 2's swarm sets them (figures/swarm.js): the dots' columns across a bin and their pitch.
+// The drawing's margin on each side (scoreSwarm's); the dot layout is Step 2's swarm's (figures/swarm.js dotsFor).
 const MARGIN = 8;
 // A wide drawing's dots are a little larger than a phone's, which has the height to give.
 const DOT_PITCH = { wide: 3.4, narrow: 2.4 };
-const DOT_GAP = 0.8;
 
 // items: [{ score: the cut in percent }] of the measured hospitals; the no-cut pile sits in a bin of its own just left of zero.
 // edges: the bins' edges, the first one the pile's; cap: the axis's top (percent). labels: { below, above } the counts at the line.
 export function drawCuts({ items, edges, cap, labels, width, ticks, format }) {
-  const bins = edges.length - 1;
-  const binW = (width - 2 * MARGIN) / bins;
-  const cols = Math.max(2, Math.round(binW / DOT_PITCH[isNarrow(width) ? 'narrow' : 'wide']));
-  const pitch = Math.round(((binW - DOT_GAP) / cols) * 100) / 100;
+  const { cols, pitch } = dotsFor(width, edges.length - 1, DOT_PITCH[isNarrow(width) ? 'narrow' : 'wide']);
   return scoreSwarm({
     items: items.map((i) => ({ score: Math.min(cap, i.score), yes: i.score > 0 })), edges, band: [0, 0], line: 0, width, pitch, cols,
-    labels: { below: labels.below, above: labels.above }, ticks, format,
+    labels, ticks, format,
   });
 }
 
@@ -39,8 +37,7 @@ export function drawMeasured({ rows, width, axisFormat }) {
   const narrow = isNarrow(width);
   const left = narrow ? 8 : 150;
   const right = width - (narrow ? 44 : 56);
-  const floor = 0;
-  const x = scaleLinear().domain([floor, 1]).range([left, right]);
+  const x = scaleLinear().domain([0, 1]).range([left, right]);
   const most = Math.max(...rows.map((r) => r.n));
   const size = scaleSqrt().domain([0, most]).range([0, narrow ? 7 : 9]);
   const rowH = narrow ? 44 : 34;
@@ -59,7 +56,7 @@ ${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen'
     y += rowH;
     return row;
   });
-  const ticks = narrow ? [floor, (floor + 1) / 2, 1].map((v) => Math.round(v * 100) / 100) : Array.from({ length: Math.round((1 - floor) * 10) + 1 }, (_, i) => Math.round((floor + i / 10) * 100) / 100);
+  const ticks = narrow ? [0, 0.5, 1] : Array.from({ length: 11 }, (_, i) => r2(i / 10));
   return frame({
     kind: 'share', width, height: y + 30, body: html`${out}
 <g transform="translate(0 ${r2(y + 4)})">${axis({ scale: x, orient: 'bottom', ticks, format: axisFormat })}</g>`,
@@ -81,7 +78,7 @@ export function drawStrip({ rows, cap, width, labels, ticks, format }) {
   const rowH = narrow ? 56 : 46;
   const top = 26;
   const x = scaleLinear().domain([0, cap]).range([left, right]);
-  const shades = [[], [], [], [], [], []];
+  const shades = Array.from({ length: 6 }, () => []);
   const body = rows.map((r, row) => {
     const y0 = top + row * rowH;
     const pad = narrow ? 22 : 7;
@@ -100,9 +97,8 @@ ${mx === null ? '' : html`<line class="chart-median strip__median" x1="${mx}" x2
   });
   const dots = shades.map((pts, i) => dotsPath(pts, `strip-dot strip-dot--${i}`, STRIP_DOT));
   const base = top + rows.length * rowH;
-  const keyX = left;
   return frame({
-    kind: 'strip', width, height: base + 34, body: html`<line class="chart-median strip__median" x1="${keyX + 4}" x2="${keyX + 4}" y1="4" y2="18"/>${text({ x: keyX + 12, y: 15, anchor: 'start', cls: 'chart-note', body: labels.median })}${text({ x: right, y: 15, anchor: 'end', cls: 'chart-note', body: labels.shade })}
+    kind: 'strip', width, height: base + 34, body: html`<line class="chart-median strip__median" x1="${left + 4}" x2="${left + 4}" y1="4" y2="18"/>${text({ x: left + 12, y: 15, anchor: 'start', cls: 'chart-note', body: labels.median })}${text({ x: right, y: 15, anchor: 'end', cls: 'chart-note', body: labels.shade })}
 ${body}${dots}
 <g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks, format })}</g>`,
   });
@@ -127,15 +123,14 @@ export function drawSpread({ traits, national, width, format, head }) {
     const cy = y + (narrow ? 52 : 40);
     const taken = SLOTS.map(() => []);
     const dots = [...t.groups].sort((a, b) => a.share - b.share).map((g) => {
-      const label = g.label;
-      const w = textWidth(label, 11) + 16;
+      const w = textWidth(g.label, NOTE_PX) + 16;
       const [a0, a1] = [x(g.share) - w / 2, x(g.share) + w / 2];
       const k = taken.findIndex((spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1));
       const slot = k < 0 ? 0 : k;
       taken[slot].push([a0, a1]);
       return mark({
         tip: g.tip, value: g.share, hit: null,
-        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: Math.max(w / 2, Math.min(width - w / 2, x(g.share))), y: cy + SLOTS[slot] + 3, cls: 'chart-note chart-label--halo', body: label })}`,
+        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: clamp(x(g.share), w / 2, width - w / 2), y: cy + SLOTS[slot] + 3, cls: 'chart-note chart-label--halo', body: g.label })}`,
       });
     });
     const heading = narrow

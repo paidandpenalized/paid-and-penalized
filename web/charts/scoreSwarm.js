@@ -20,7 +20,8 @@ import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
 import { dotsPath, unitHistogram } from './dots.js';
-import { frame, r2, text, triangle } from './svg.js';
+import { clamp } from '../../engine/js/stats.js';
+import { NOTE_PX, frame, isNarrow, r2, text, triangle } from './svg.js';
 import { textWidth } from './text.js';
 
 const LOUPE_H = 112;
@@ -69,7 +70,7 @@ function loupeOf({ items, loupe, x: mainX, box, band: [highestNo, lowestYes], li
   const no = [];
   for (const it of inside) {
     const b = upper
-      ? Math.max(0, Math.min(bins - 1, Math.ceil((it.score - loupe.from) / loupe.step - 1e-9) - 1))
+      ? clamp(Math.ceil((it.score - loupe.from) / loupe.step - 1e-9) - 1, 0, bins - 1)
       : Math.min(bins - 1, Math.floor((it.score - loupe.from) / loupe.step + 1e-9));
     const k = stack.get(b) ?? 0;
     stack.set(b, k + 1);
@@ -98,7 +99,7 @@ ${ticks.map((v) => html`<line class="chart-axis__tick" x1="${r2(x(v))}" x2="${r2
 // The example's ▲ under the axis at y, its label to the right of it, or to the left where the right would run off the drawing.
 function markOf({ mark, x, y, right }) {
   const at = x(mark.score);
-  const w = textWidth(mark.label, 11);
+  const w = textWidth(mark.label, NOTE_PX);
   const toLeft = at + 9 + w > right;
   return html`${triangle(at, y, 'chart-this')}${text({ x: toLeft ? at - 9 : at + 9, y: y + 10, anchor: toLeft ? 'end' : 'start', cls: 'chart-label chart-label--halo', body: mark.label })}`;
 }
@@ -126,7 +127,7 @@ ${zone ? html`<rect class="chart-lens-zone" x="${r2(x(zone[0]))}" y="${top - 6}"
 <line class="chart-boundary" x1="${lx}" x2="${lx}" y1="${top - 30}" y2="${r2(base)}"/>
 ${labels.title ? text({ x: lx, y: 12, cls: 'chart-cap', body: labels.title }) : ''}${text({ x: lx - 6, y: top - 20, anchor: 'end', cls: side, body: labels.below })}
 ${text({ x: lx + 6, y: top - 20, anchor: 'start', cls: `${side} ${labels.title ? 'chart-label--pen' : 'chart-cap--pen'}`, body: labels.above })}
-<g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: ticks ?? (width < 400 ? 4 : 9), format })}</g>
+<g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: ticks ?? (isNarrow(width) ? 4 : 9), format })}</g>
 ${mark ? markOf({ mark, x, y: base + 22, right }) : ''}${box ? loupeOf({ items, loupe, x, box, band, line, labels, upper }) : ''}`,
   });
 }

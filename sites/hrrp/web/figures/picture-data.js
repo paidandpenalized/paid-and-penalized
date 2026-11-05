@@ -7,7 +7,7 @@
 import { CAP_PCT, CONDS, PEERS, condState, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
-import { median } from '../../../../engine/js/stats.js';
+import { clamp, median } from '../../../../engine/js/stats.js';
 import { r2 } from '../../../../web/charts/svg.js';
 import { GE_CUT_PCT } from '../constants.js';
 import { csvPath } from '../links.js';
@@ -65,7 +65,7 @@ export function wilson(nCut, n, z = 1.96) {
   const d = 1 + (z * z) / n;
   const centre = (p + (z * z) / (2 * n)) / d;
   const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
-  return [Math.max(0, centre - half), Math.min(1, centre + half)];
+  return [clamp(centre - half, 0, 1), clamp(centre + half, 0, 1)];
 }
 
 // For each k = 1..6 the hospitals measured on exactly k conditions (so every share is over measured hospitals, none over

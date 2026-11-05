@@ -6,16 +6,17 @@
 // figures/picture-draw.js the drawings the kit has no chart for; the words are in program/copy.js.
 import { CAP_PCT, CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
+import { isNarrow, r2 } from '../../../../web/charts/svg.js';
 import { miniCards } from '../../../../web/charts/miniCards.js';
 import { pairBars } from '../../../../web/charts/pairBars.js';
-import { capitalize, count, listText, noun, numberWord, placeText, spelled } from '../../../../web/render/format.js';
+import { capitalize, count, listText, noun, numberWord, pct, placeText, spelled } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
 import { hospitalPath } from '../links.js';
 import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
-import { inSentence, plural } from '../wording.js';
+import { hospitals, inSentence, plural } from '../wording.js';
 import { CUT_BIN } from './picture-data.js';
 import { drawCuts, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
 
@@ -84,14 +85,14 @@ function penFigure({ rows, conditions, edition, n }) {
 const PIC_WIDE = 720;
 // A figure kept at its drawing's size, or nothing when it has none.
 const pic = (fig) => (fig ? html`<div class="pic">${fig}</div>` : '');
-const pct0 = (fraction) => fmtPct(fraction * 100, 0);
+const pct0 = (fraction) => pct(fraction, 0);
 const CUT_TICKS = [0, 0.5, 1, 1.5, 2, 2.5, CAP_PCT];
-const cutTicks = (width) => (width < 400 ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
+const cutTicks = (width) => (isNarrow(width) ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
 const percent = (v) => `${v}%`;
 
 export function cutsTakeaway(sw) {
   const k = sw.takeaway;
-  const base = { hospitals: plural(k.nMeasured, t('nounHospital'), t('nounHospitals')), zero: fmtInt(k.zero), takes: k.zero === 1 ? 'takes' : 'take' };
+  const base = { hospitals: hospitals(k.nMeasured), zero: fmtInt(k.zero), takes: k.zero === 1 ? 'takes' : 'take' };
   if (!k.nCut) return fill('cutsTakeawayNone', { hospitals: base.hospitals });
   if (k.nCut === 1) return fill('cutsTakeawayOne', { ...base, median: fmtPct(k.median) });
   return fill('cutsTakeaway', {
@@ -104,19 +105,22 @@ function cutsFigure({ sw, edition, n }) {
   const measured = sw.items.filter((i) => i.measured);
   if (!measured.length) return '';
   // The pile has the bin just left of zero; empty bins before it leave room for its count's label (a phone's, a bin narrower, needs more).
-  const edgesFor = (width) => [
-    ...Array.from({ length: width < 400 ? 4 : 2 }, (_, i) => -((width < 400 ? 4 : 2) - i) * CUT_BIN),
-    ...Array.from({ length: Math.round(CAP_PCT / CUT_BIN) + 1 }, (_, i) => Math.round(i * CUT_BIN * 100) / 100),
-  ];
+  const edgesFor = (width) => {
+    const empty = isNarrow(width) ? 4 : 2;
+    return [
+      ...Array.from({ length: empty }, (_, i) => -(empty - i) * CUT_BIN),
+      ...Array.from({ length: Math.round(CAP_PCT / CUT_BIN) + 1 }, (_, i) => r2(i * CUT_BIN)),
+    ];
+  };
   const items = measured.map((i) => ({ score: i.cut ? i.red : -CUT_BIN / 2 }));
   const nCut = measured.length - sw.zeroMeasured;
   const draw = (width) => drawCuts({
     items, edges: edgesFor(width), cap: CAP_PCT, width, ticks: cutTicks(width), format: percent,
-    labels: { below: fill(width < 400 ? 'cutsNonePhone' : 'cutsNone', { n: fmtInt(sw.zeroMeasured) }), above: fill('cutsSome', { n: fmtInt(nCut) }) },
+    labels: { below: fill(isNarrow(width) ? 'cutsNonePhone' : 'cutsNone', { n: fmtInt(sw.zeroMeasured) }), above: fill('cutsSome', { n: fmtInt(nCut) }) },
   });
   const range = (b) => fill(b.hi >= CAP_PCT ? 'cutsRangeLast' : 'cutsRange', { from: fmtPct(b.lo), to: fmtPct(b.hi) });
   const noteLines = [fill('cutsKey', { step: String(CUT_BIN), cap: String(CAP_PCT) })];
-  if (sw.zeroUnmeasured) noteLines.push(fill('cutsUnmeasured', { hospitals: plural(sw.zeroUnmeasured, t('nounHospital'), t('nounHospitals')), are: sw.zeroUnmeasured === 1 ? 'is' : 'are' }));
+  if (sw.zeroUnmeasured) noteLines.push(fill('cutsUnmeasured', { hospitals: hospitals(sw.zeroUnmeasured), are: sw.zeroUnmeasured === 1 ? 'is' : 'are' }));
   return figure({
     n: n(), takeaway: cutsTakeaway(sw), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-size-of-cuts',
     chart: imagePair(drawn(draw, PIC_WIDE), fill('cutsAlt', { cap: String(CAP_PCT) })), note: noteLines.join(' '),
@@ -143,8 +147,8 @@ function measuredFigure({ m, edition, n }) {
   const rows = m.rows.filter((r) => r.n > 0);
   if (!rows.length) return '';
   const spec = rows.map((r) => ({
-    label: plural(r.k, 'condition'), sub: plural(r.n, t('nounHospital'), t('nounHospitals')), share: r.share, lo: r.interval[0], hi: r.interval[1], n: r.n, valueText: pct0(r.share),
-    tip: fill('measTip', { measured: plural(r.k, 'condition'), share: pct0(r.share), ci: CI, from: pct0(r.interval[0]), to: pct0(r.interval[1]), hospitals: plural(r.n, t('nounHospital'), t('nounHospitals')) }),
+    label: plural(r.k, 'condition'), sub: hospitals(r.n), share: r.share, lo: r.interval[0], hi: r.interval[1], n: r.n, valueText: pct0(r.share),
+    tip: fill('measTip', { measured: plural(r.k, 'condition'), share: pct0(r.share), ci: CI, from: pct0(r.interval[0]), to: pct0(r.interval[1]), hospitals: hospitals(r.n) }),
   }));
   const draw = (width) => drawMeasured({ rows: spec, width, axisFormat: (v) => `${Math.round(v * 100)}%` });
   return figure({
@@ -181,7 +185,7 @@ function peerFigure({ p, edition, n }) {
       reds: r.reds, median: r.median, shareText: share,
       label: fill('peerLabel', { n: String(r.peer) }),
       sub: r.lo === null ? '' : fill('peerSub', { from: pct0(r.lo), to: pct0(r.hi) }),
-      tip: fill('peerTip', { n: String(r.peer), hospitals: plural(r.n, t('nounHospital'), t('nounHospitals')), share: r.shareCut === null ? t('peerNoShare') : pct0(r.shareCut), median: r.median === null ? t('peerNoShare') : fmtPct(r.median) }),
+      tip: fill('peerTip', { n: String(r.peer), hospitals: hospitals(r.n), share: r.shareCut === null ? t('peerNoShare') : pct0(r.shareCut), median: r.median === null ? t('peerNoShare') : fmtPct(r.median) }),
     };
   });
   const draw = (width) => drawStrip({ rows: spec, cap: CAP_PCT, width, ticks: cutTicks(width), format: percent, labels: { median: t('peerKeyMedian'), shade: t('peerKeyShade') } });
@@ -258,7 +262,7 @@ function barsFigure({ b, conditions, edition, n }) {
       rows: b.rows.map((r) => {
         const name = conditionShort(conditions, r.cond);
         return {
-          label: width < 400 ? NARROW_NAME[name] ?? name : name, a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
+          label: isNarrow(width) ? NARROW_NAME[name] ?? name : name, a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
           tipA: fill('barsTipFlags', { cond: name, flags: fmtInt(r.flags), all: fmtInt(b.totalFlags), share: pct0(r.shareOfFlags) }),
           tipB: fill('barsTipDollars', { cond: name, dollars: fmtMoney(r.dollars), share: pct0(r.shareOfDollars) }),
         };

@@ -9,8 +9,8 @@ import { html } from '../../../../web/render/html.js';
 import { externalLink } from '../../../../web/render/layout.js';
 import { fyLabel } from '../copy.js';
 import { fill, t } from '../program/copy.js';
-import { fmtInt } from '../numbers.js';
-import { cut2, drawHistory, pct1, usdM } from './history-draw.js';
+import { fmtInt, fmtPct } from '../numbers.js';
+import { drawHistory, usdM } from './history-draw.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
 const span = (kind, fy, [start, end]) => ({ kind, start: ymd(start), end: ymd(end), tip: fill('winTip', { label: t(kind === 'perf' ? 'winPerf' : 'winPay'), fy: fyLabel(fy), start: isoDate(start), end: isoDate(end) }) });
@@ -63,7 +63,7 @@ export function historyFigure(lines, { n }) {
   const note = lines.noTotalText ? html`${prose}<span class="hist-note__none">${lines.noTotalText}</span>` : prose;
   const sourceOf = (r) => r.total && (r.total.label ?? t(r.total.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms'));
   return figure({
-    n, takeaway: fill('histTakeaway', { share: pct1(latest.value), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
+    n, takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
     alt: t('histAlt'), note: note || null,
     key: [{ swatch: 'bar-dark', label: t('histKeyCms') }, { swatch: 'bar-light', label: t('histKeyKff') }],
     ...drawn((width) => drawHistory({ lines, width }), HIST_WIDE),
@@ -71,8 +71,8 @@ export function historyFigure(lines, { n }) {
       columns: [{ name: t('histColFy') }, { name: t('histColN'), numeric: true }, { name: t('histColShare'), numeric: true }, { name: t('histColAvgPen'), numeric: true },
         { name: t('histColAvgAll'), numeric: true }, { name: t('histColTotal'), numeric: true }, { name: t('histColSource') }],
       rows: lines.table.map((r) => [
-        fyLabel(r.fy), num(fmtInt(r.n), r.n), r.share === null ? num('–', null) : num(pct1(r.share), r.share),
-        r.avgPen === null ? num('–', null) : num(cut2(r.avgPen), r.avgPen), r.avgAll === null ? num('–', null) : num(cut2(r.avgAll), r.avgAll),
+        fyLabel(r.fy), num(fmtInt(r.n), r.n), r.share === null ? num('–', null) : num(fmtPct(r.share, 1), r.share),
+        r.avgPen === null ? num('–', null) : num(fmtPct(r.avgPen, 2), r.avgPen), r.avgAll === null ? num('–', null) : num(fmtPct(r.avgAll, 2), r.avgAll),
         r.total ? num(usdM(r.total.value), r.total.value) : num(t('histCellNone'), null), sourceOf(r) ?? '',
       ]),
     },

@@ -19,7 +19,7 @@ import { html } from '../render/html.js';
 import { lineScore } from '../whatif/marks.js';
 import { axis } from './axis.js';
 import { textWidth } from './text.js';
-import { barPath, checkId, frame, hatchDefs, hatchFill, mark, r2, text } from './svg.js';
+import { LABEL_PX, NOTE_PX, barPath, checkId, frame, hatchDefs, hatchFill, mark, r2, text } from './svg.js';
 
 const LABEL_W = 62;
 const VALUE_W = 54;
@@ -58,10 +58,9 @@ export function waterfall({ id, rows, total, band = null, labels = {}, width = 3
   };
   // A part of zero says why, where its bar would be: after the label (stacked) or from the running total (to the value column's edge).
   const noteOf = (s, y) => {
-    const w = textWidth(s.note, 11);
-    if (stacked) return text({ x: labelX + textWidth(s.label, 12) + 8, y: labelY(y), anchor: 'start', cls: 'chart-note', body: s.note });
-    const at = scale(s.from) + 8;
-    return at + w > range[1] ? text({ x: range[1], y: labelY(y), anchor: 'end', cls: 'chart-note', body: s.note }) : text({ x: at, y: labelY(y), anchor: 'start', cls: 'chart-note', body: s.note });
+    const at = stacked ? labelX + textWidth(s.label, LABEL_PX) + 8 : scale(s.from) + 8;
+    const flip = !stacked && at + textWidth(s.note, NOTE_PX) > range[1];
+    return text({ x: flip ? range[1] : at, y: labelY(y), anchor: flip ? 'end' : 'start', cls: 'chart-note', body: s.note });
   };
   const drawn = steps.map((s, i) => {
     const y = yOf(i);
@@ -83,13 +82,14 @@ export function waterfall({ id, rows, total, band = null, labels = {}, width = 3
   }
   if (cap) {
     const stripY = bottom + (caption ? 44 : 34) + 18;
-    const capX = scaleLinear().domain([0, cap.max ?? cap.value]).range(range);
+    const capMax = cap.max ?? cap.value;
+    const capX = scaleLinear().domain([0, capMax]).range(range);
     const cx = (v) => r2(capX(v));
     const start = bottom + (caption ? 36 : 24);
     below = html`${below}<path class="chart-loupe__beam" d="M${x(scale.domain()[0])} ${r2(start)}L${cx(0)} ${r2(stripY)}M${x(scale.domain()[1])} ${r2(start)}L${cx(scale.domain()[1])} ${r2(stripY)}"/>
 ${mark({
     tip: cap.tip, value: [total.value, cap.value], hit: { x: left, y: stripY - 6, width: width - left, height: 30 },
-    body: html`${text({ x: stacked ? left + 8 : 0, y: stripY - (stacked ? 8 : -11), anchor: 'start', cls: 'chart-label', body: cap.title })}<rect class="chart-track" x="${cx(0)}" y="${stripY}" width="${cx(cap.max ?? cap.value) - cx(0)}" height="${BAR}"/>${steps.filter((s) => s.value > 0).map((s) => html`<rect class="chart-step chart-step--pen" x="${cx(s.from)}" y="${stripY}" width="${r2(Math.max(0, capX(s.to) - capX(s.from) - 1))}" height="${BAR}"/>`)}<line class="chart-line" x1="${cx(cap.value)}" x2="${cx(cap.value)}" y1="${stripY - 6}" y2="${stripY + BAR + 6}"/>${text({ x: cx(cap.value), y: stripY - 9, anchor: 'end', cls: 'chart-cap chart-cap--pen', body: cap.label })}${text({ x: width, y: stripY + BAR - 3, anchor: 'end', cls: 'chart-value chart-value--total', body: cap.share })}`,
+    body: html`${text({ x: stacked ? left + 8 : 0, y: stripY - (stacked ? 8 : -11), anchor: 'start', cls: 'chart-label', body: cap.title })}<rect class="chart-track" x="${cx(0)}" y="${stripY}" width="${cx(capMax) - cx(0)}" height="${BAR}"/>${steps.filter((s) => s.value > 0).map((s) => html`<rect class="chart-step chart-step--pen" x="${cx(s.from)}" y="${stripY}" width="${r2(Math.max(0, capX(s.to) - capX(s.from) - 1))}" height="${BAR}"/>`)}<line class="chart-line" x1="${cx(cap.value)}" x2="${cx(cap.value)}" y1="${stripY - 6}" y2="${stripY + BAR + 6}"/>${text({ x: cx(cap.value), y: stripY - 9, anchor: 'end', cls: 'chart-cap chart-cap--pen', body: cap.label })}${text({ x: width, y: stripY + BAR - 3, anchor: 'end', cls: 'chart-value chart-value--total', body: cap.share })}`,
   })}
 <g transform="translate(0 ${r2(stripY + BAR + 6)})">${axis({ scale: capX, orient: 'bottom', ticks: cap.ticks, format: cap.format })}</g>`;
     height = stripY + BAR + 6 + 24;

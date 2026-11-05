@@ -12,16 +12,15 @@
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
-import { columnPath, frame, mark, r2, text } from './svg.js';
+import { capsWidth, columnPath, frame, mark, r2, text } from './svg.js';
 
 const M = { left: 6, right: 6, top: 8, bottom: 26 };
 // The room above the columns for the bands' labels.
 const BAND_LABEL_H = 14;
-// A band label's width in drawing units, estimated from the label's length (the 10px semibold type, a little over 6 units a
-// character) plus a unit of room each side; a label is shown only where this fits the band.
-const BAND_CHAR_W = 6.4;
+// A band label's width in drawing units, estimated from the label's length (svg.js capsWidth: the 10px semibold type) plus a
+// unit of room each side; a label is shown only where this fits the band.
 const BAND_PAD = 2;
-const labelWidth = (s) => String(s).length * BAND_CHAR_W + BAND_PAD * 2;
+const labelWidth = (s) => capsWidth(s) + BAND_PAD * 2;
 const bandLabel = (b, room) => [b.label, b.short].find((s) => s != null && s !== '' && labelWidth(s) <= room) ?? null;
 
 const BAND_GAP = 4;

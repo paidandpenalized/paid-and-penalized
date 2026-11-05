@@ -8,14 +8,15 @@
 // The words are in program/copy.js; the numbers are how-data.js swarmData and swarmDomain.
 import { scoreSwarm } from '../../../../web/charts/scoreSwarm.js';
 import { WIDE, figure, imagePair, num } from '../../../../web/charts/figure.js';
-import { WIDTH } from '../../../../web/charts/svg.js';
+import { NOTE_PX, WIDTH, isNarrow, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
+import { clamp } from '../../../../engine/js/stats.js';
 import { html } from '../../../../web/render/html.js';
-import { count, listText, noun, signed } from '../../../../web/render/format.js';
+import { count, listText, signed } from '../../../../web/render/format.js';
 import { conditionShort } from '../derive.js';
-import { gapText, ratio } from '../numbers.js';
+import { gapText, ratio, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
-import { inSentence } from '../wording.js';
+import { hospitals, inSentence } from '../wording.js';
 import { BAND, SLIVER, SWARM_ORDER, swarmDomain } from './how-data.js';
 
 // How many columns each drawing holds at most (the narrowest bin that fits), and the share of dots a phone folds into each end column.
@@ -42,11 +43,12 @@ const TICK_GAP = 56;
 // A tick on the gap axis: "0", "+0.10", "−0.10".
 const tick = (dp) => (v) => (Math.abs(v) < 1e-9 ? '0' : signed(v, dp));
 
-// The dots' layout for a drawing: columns across a bin and the pitch between dots.
-function dotsFor(width, bins) {
+// The dots' layout for a drawing: columns across a bin and the pitch between dots (wanting at least `want` across a column).
+// The size-of-the-cuts swarm (picture-draw.js) lays its dots out by the same rule with its own pitch.
+export function dotsFor(width, bins, want = DOT_PITCH) {
   const binW = (width - 2 * MARGIN) / bins;
-  const cols = Math.max(2, Math.round(binW / DOT_PITCH));
-  return { cols, pitch: Math.round(((binW - DOT_GAP) / cols) * 100) / 100 };
+  const cols = Math.max(2, Math.round(binW / want));
+  return { cols, pitch: r2((binW - DOT_GAP) / cols) };
 }
 
 // The tallest stack of the lens's dots, in rows: bins (a, b] of the lens's step, the end values on the end bins.
@@ -54,7 +56,7 @@ function lensRows(items, { step, cols }) {
   const bins = Math.round((2 * BAND) / step);
   const stack = new Array(bins).fill(0);
   for (const { d } of items) {
-    if (Math.abs(d) <= BAND) stack[Math.max(0, Math.min(bins - 1, Math.ceil((d + BAND) / step - 1e-9) - 1))] += 1;
+    if (Math.abs(d) <= BAND) stack[clamp(Math.ceil((d + BAND) / step - 1e-9) - 1, 0, bins - 1)] += 1;
   }
   return Math.ceil(Math.max(...stack) / cols);
 }
@@ -62,15 +64,14 @@ function lensRows(items, { step, cols }) {
 // A swarm for one condition at one drawing width: sw is how-data.js swarmData(cond); name: the example hospital's name; cond:
 // the condition in a sentence. Returns the SVG and the end-column counts (dots past the drawing's ends).
 export function drawSwarm({ sw, width, name, cond }) {
-  const narrow = width < 400;
+  const narrow = isNarrow(width);
   const dom = swarmDomain(sw.items, { maxBins: narrow ? MAX_BINS.narrow : MAX_BINS.wide, trim: narrow ? TRIM_NARROW : 0 });
   const nBins = Math.round((dom.hi - dom.lo) / dom.bin);
-  const edges = Array.from({ length: nBins + 1 }, (_, i) => Math.round((dom.lo + i * dom.bin) * 1e6) / 1e6);
-  const items = sw.items.map((i) => ({ score: Math.max(dom.lo, Math.min(dom.hi, i.d)), yes: i.d > 0 }));
+  const edges = Array.from({ length: nBins + 1 }, (_, i) => roundTo(dom.lo + i * dom.bin, 6));
+  const items = sw.items.map((i) => ({ score: clamp(i.d, dom.lo, dom.hi), yes: i.d > 0 }));
   const { cols, pitch } = dotsFor(width, nBins);
   const lens = LENS[narrow ? 'narrow' : 'wide'];
   const lensH = Math.max(LENS_MIN, LENS_ABOVE + lensRows(sw.items, lens) * lens.pitch + LENS_BELOW);
-  const band = { n: sw.band.n, over: sw.band.over, under: sw.band.atOrUnder };
   const x = (v) => MARGIN + ((v - dom.lo) / (dom.hi - dom.lo)) * (width - 2 * MARGIN);
   const side = (n, full, short) => fill(narrow ? short : full, { n: count(n) });
   const ex = sw.example;
@@ -79,12 +80,13 @@ export function drawSwarm({ sw, width, name, cond }) {
     const full = fill(ex.d > 0 ? 'swarmMarkOver' : 'swarmMarkUnder', { name, gap });
     const label = narrow ? fill('swarmMarkPhone', { name, gap }) : full;
     // A name too long for either side of the ▲ is dropped for the gap alone.
-    const room = Math.max(x(Math.max(dom.lo, Math.min(dom.hi, ex.d))) - MARGIN, width - MARGIN - x(Math.max(dom.lo, Math.min(dom.hi, ex.d)))) - 12;
-    return { score: Math.max(dom.lo, Math.min(dom.hi, ex.d)), label: textWidth(label, 11) <= room ? label : fill('swarmMarkShort', { gap }) };
+    const score = clamp(ex.d, dom.lo, dom.hi);
+    const room = Math.max(x(score) - MARGIN, width - MARGIN - x(score)) - 12;
+    return { score, label: textWidth(label, NOTE_PX) <= room ? label : fill('swarmMarkShort', { gap }) };
   })();
   // Ticks the narrowest step apart that leaves their labels room, left off within an end label's width of either end so none is cut off.
   const tickStep = TICK_STEPS.find((step) => step * ((width - 2 * MARGIN) / (dom.hi - dom.lo)) >= TICK_GAP) ?? TICK_STEPS[TICK_STEPS.length - 1];
-  const ticks = Array.from({ length: Math.floor((dom.hi - dom.lo) / tickStep) + 2 }, (_, i) => Math.round((Math.ceil(dom.lo / tickStep) + i) * tickStep * 1e6) / 1e6)
+  const ticks = Array.from({ length: Math.floor((dom.hi - dom.lo) / tickStep) + 2 }, (_, i) => roundTo((Math.ceil(dom.lo / tickStep) + i) * tickStep, 6))
     .filter((v) => v <= dom.hi && x(v) - MARGIN >= TICK_EDGE && width - MARGIN - x(v) >= TICK_EDGE);
   const svg = scoreSwarm({
     items, edges, band: [sw.closestUnder ?? 0, sw.closestOver ?? 0], line: 0, upper: true, width, pitch, cols,
@@ -92,7 +94,7 @@ export function drawSwarm({ sw, width, name, cond }) {
       title: narrow ? t('swarmLinePhone') : fill('swarmLineWide', { one: ratio(1, 1) }),
       below: side(sw.atOrUnder, 'swarmUnderWide', 'swarmUnderPhone'), above: side(sw.over, 'swarmOverWide', 'swarmOverPhone'),
       loupe: narrow ? fill('swarmLensPhone', { band: ratio(BAND, 2) }) : fill('swarmLensWide', { band: ratio(BAND, 4), k: String(Math.round(((dom.hi - dom.lo) / (2 * BAND)) * ((width - 2 * MARGIN - 2 * LENS_PAD) / (width - 2 * MARGIN)))) }),
-      highestNo: fill('swarmJustUnder', { n: count(band.under) }), lowestYes: fill('swarmJustOver', { n: count(band.over) }),
+      highestNo: fill('swarmJustUnder', { n: count(sw.band.atOrUnder) }), lowestYes: fill('swarmJustOver', { n: count(sw.band.over) }),
     },
     loupe: { from: -BAND, to: BAND, step: lens.step, cols: lens.cols, pitch: lens.pitch, height: lensH, pad: LENS_PAD, ticks: narrow ? [-BAND, 0, BAND] : [-BAND, -BAND / 2, 0, BAND / 2, BAND], format: tick(narrow ? 2 : 4) },
     place: 'below', zone: [-BAND, BAND], mark, ticks, format: tick(2),
@@ -105,7 +107,7 @@ export function drawSwarm({ sw, width, name, cond }) {
 function notesOf({ sw, cond }) {
   const lines = [];
   if (sw.closestOver !== null) {
-    lines.push(`${fill('swarmClosest', { gap: gapText(sw.closestOver) })}${sw.sliver ? ` ${fill('swarmSliver', { hospitals: noun(sw.sliver, t('nounHospital'), t('nounHospitals')), tiny: ratio(SLIVER) })}` : ''}`);
+    lines.push(`${fill('swarmClosest', { gap: gapText(sw.closestOver) })}${sw.sliver ? ` ${fill('swarmSliver', { hospitals: hospitals(sw.sliver), tiny: ratio(SLIVER) })}` : ''}`);
   }
   lines.push(t('swarmKey'));
   if (!sw.example) lines.push(fill('swarmNoExample', { cond }));
@@ -121,7 +123,7 @@ function clipNote({ below, above, lo, hi }) {
 
 // The figure's takeaway for one condition: the hospitals measured, how many are over their own group's median, how many sit within BAND of it.
 export function swarmTakeaway({ sw, cond }) {
-  const base = { hospitals: noun(sw.items.length, t('nounHospital'), t('nounHospitals')), cond, over: count(sw.over), band: ratio(BAND, 2) };
+  const base = { hospitals: hospitals(sw.items.length), cond, over: count(sw.over), band: ratio(BAND, 2) };
   if (sw.band.n === 0) return fill('swarmTakeawayNone', base);
   if (sw.band.n === 1) return fill('swarmTakeawayOne', base);
   return fill('swarmTakeaway', { ...base, near: count(sw.band.n) });
@@ -132,9 +134,10 @@ function panel({ sw, conditions, name, first }) {
   const cond = inSentence(conditionShort(conditions, sw.cond));
   const narrow = drawSwarm({ sw, width: WIDTH, name, cond });
   const wide = drawSwarm({ sw, width: WIDE, name, cond });
+  const takeaway = swarmTakeaway({ sw, cond });
   return {
-    takeaway: swarmTakeaway({ sw, cond }),
-    html: html`<div class="swarm__m" data-cond="${sw.cond}" data-takeaway="${swarmTakeaway({ sw, cond })}"${first ? '' : html` hidden`}>
+    takeaway,
+    html: html`<div class="swarm__m" data-cond="${sw.cond}" data-takeaway="${takeaway}"${first ? '' : html` hidden`}>
 ${imagePair({ svg: narrow.svg, svgWide: wide.svg }, fill('swarmAlt', { cond, band: ratio(BAND, 2) }))}
 ${notesOf({ sw, cond }).map((line) => html`<p class="small muted swarm__note">${line}</p>
 `)}${clipNote(narrow)}</div>`,

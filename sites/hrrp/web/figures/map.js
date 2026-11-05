@@ -13,7 +13,7 @@ import { noun } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { GE_CUT_PCT, STATES_PAGE_SIZE } from '../constants.js';
-import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
+import { fmtInt, fmtMoney, fmtPct, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { DOT_TIERS, MILLION } from './map-data.js';
 
@@ -97,7 +97,7 @@ function legendOf(measure, states) {
   const ends = measure.ramp;
   const range = (i) => (i === 0 ? fill('mapLegendUnder', { value: edge(ends[0]) })
     : i === ends.length ? fill('mapLegendOver', { value: edge(ends[i - 1]) })
-      : fill('mapLegendRange', { lo: edge(ends[i - 1]), hi: edge(Number((ends[i] - unit).toFixed(measure.dp))) }));
+      : fill('mapLegendRange', { lo: edge(ends[i - 1]), hi: edge(roundTo(ends[i] - unit, measure.dp)) }));
   const all = Object.values(states);
   const labelsOf = (key) => [...new Set(all.filter((s) => s[key]).map((s) => s.label))];
   const others = [

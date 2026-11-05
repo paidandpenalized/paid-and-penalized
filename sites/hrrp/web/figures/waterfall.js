@@ -5,17 +5,17 @@
 // server and in the browser (client/worksheet.js redraws it when the hospital box swaps the sheet), from worksheetRows' output.
 import { CAP, CAP_PCT, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
+import { LABEL_PX, isNarrow } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { waterfall } from '../../../../web/charts/waterfall.js';
 import { capitalize, pct, spelled } from '../../../../web/render/format.js';
-import { factor4, fmtPct, points, ratio } from '../numbers.js';
+import { factor4, fmtPct, points, ratio, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
 import { waterfallData } from '../worksheet.js';
 
 // The wide drawing's width: the figure sits under the sheet at about this width, not the page's.
 export const WF_WIDE = 720;
-const LABEL_PX = 12;
 // The wide label column's room past the longest label.
 const LABEL_PAD = 12;
 // A phone's zoomed axis labels at most this many ticks.
@@ -57,13 +57,13 @@ export function waterfallTakeaway(wf) {
 function zoomTicks({ step, top }, narrow) {
   const every = narrow ? Math.ceil(top / step / PHONE_TICKS) : 1;
   const out = [];
-  for (let i = 0; i * step <= top + 1e-9; i += every) out.push(Number((i * step).toFixed(6)));
+  for (let i = 0; i * step <= top + 1e-9; i += every) out.push(roundTo(i * step, 6));
   return out;
 }
 
 // One drawing of the waterfall at a width. wf: waterfallData().
 function draw({ wf, width, id }) {
-  const narrow = width < 400;
+  const narrow = isNarrow(width);
   const { zoom } = wf;
   const rows = wf.parts.map((p) => ({
     label: p.label, value: p.part, valueText: p.part > 0 ? pointsText(p.part) : '0', pen: p.part > 0,
