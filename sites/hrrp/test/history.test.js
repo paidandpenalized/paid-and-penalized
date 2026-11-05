@@ -8,6 +8,7 @@ import { historyPart, timeline, windowsFigure } from '../web/figures/history.js'
 import { ROLL, noTotalText, researchData, rollCall, rollText, smallLines, timelineData, windowRows } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
+import { FUTURE_WORDS } from '../../../pipeline/test/helpers.js';
 import { META, hospital, loadHrrpOnce } from './fixtures.js';
 
 const cms = (label) => ({ kind: 'CMS', label, url: 'https://example.org/cms' });
@@ -171,7 +172,7 @@ test('the timeline: future years are marked (a year past the edition\'s, or a da
 
 test('httpsUrl: only an https address survives', () => {
   assert.equal(httpsUrl('https://example.org/a'), 'https://example.org/a');
-  for (const bad of ['javascript:alert(1)', 'http://example.org', 'data:text/html,x', '//example.org', 'ftp://example.org', '', null, undefined, 'not a url', ' javascript:1']) assert.equal(httpsUrl(bad), null, String(bad));
+  for (const bad of ['javascript:alert(1)', 'http://example.org', 'data:text/html,x', '//example.org', 'ftp://example.org', 'https://user:pw@example.org/', 'https://user@example.org/', '', null, undefined, 'not a url', ' javascript:1']) assert.equal(httpsUrl(bad), null, String(bad));
 });
 
 test('the timeline: a hostile entry is escaped and its non-https links are not links', () => {
@@ -194,7 +195,18 @@ test('the real timeline: every link is https and every entry has a date, a title
   const entries = timelineData(data.timeline, { edition: { fy: data.fy }, today: data.meta.fileDate });
   assert.ok(entries.length > 5);
   assert.ok(entries.every((e) => e.src.url !== null && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.title && e.src.label), 'a content link was dropped');
-  assert.ok(entries.some((e) => e.future));
+});
+
+test('the real timeline\'s words promise nothing: no future word, no fiscal year past the edition\'s, no "will"', () => {
+  const data = loadHrrpOnce();
+  for (const e of data.timeline) {
+    const text = `${e.title} ${e.body}`;
+    assert.doesNotMatch(text, FUTURE_WORDS, e.title);
+    assert.doesNotMatch(text, /\bwill\b|\bnext\b|\bstarting\b|\bbeginning in\b/i, e.title);
+    for (const [, year] of text.matchAll(/\b(?:FY\s?|fiscal year )(\d{4})\b/gi)) assert.ok(Number(year) <= data.fy, `${e.title}: FY${year} is past the edition`);
+    assert.ok(e.fy == null || e.fy <= data.fy, `${e.title}: a future fiscal year`);
+    assert.ok(e.date <= data.meta.fileDate, `${e.title}: dated after the file`);
+  }
 });
 
 // ---------- the data windows ----------

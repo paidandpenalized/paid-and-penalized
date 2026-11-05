@@ -28,10 +28,10 @@
   {"date": "2023-10-01", "fy": 2024, "title": "Pneumonia returns",
    "body": "Patients with a COVID-19 diagnosis stay out of every measure through FY2026.",
    "src": {"label": "FY2023 IPPS final rule; end date: FY2026 IPPS final rule, 90 FR 36930", "url": "https://www.federalregister.gov/documents/2022/08/10/2022-16472"}},
+  {"date": "2026-08-04", "fy": null, "title": "Sepsis readmission measure adopted",
+   "body": "The FY2027 final rule adds a seventh measure, readmission after sepsis. Hospitals receive confidential reports on it first.",
+   "src": {"label": "FY2027 IPPS final rule, 91 FR 49901", "url": "https://www.federalregister.gov/documents/2026/08/04/2026-15833"}},
   {"date": "2026-10-01", "fy": 2027, "title": "Medicare Advantage patients counted; two-year window",
    "body": "Adopted in the FY2026 rule: readmission ratios now include Medicare Advantage patients, the data window shrinks from three years to two, and the COVID-19 exclusion ends. The cut still applies only to traditional Medicare payments.",
-   "src": {"label": "FY2026 IPPS final rule, 90 FR 36923–36942", "url": "https://www.federalregister.gov/documents/2025/08/04/2025-14681"}},
-  {"date": "2029-10-01", "fy": 2030, "title": "Next: sepsis",
-   "body": "The FY2027 rule adds a seventh measure, readmission after sepsis. Hospitals get confidential reports for FY2028 and FY2029; it counts toward penalties starting FY2030.",
-   "src": {"label": "FY2027 IPPS final rule, 91 FR 49901", "url": "https://www.federalregister.gov/documents/2026/08/04/2026-15833"}}
+   "src": {"label": "FY2026 IPPS final rule, 90 FR 36923–36942", "url": "https://www.federalregister.gov/documents/2025/08/04/2025-14681"}}
 ]

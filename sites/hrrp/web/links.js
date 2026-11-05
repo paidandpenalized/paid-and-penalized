@@ -24,7 +24,7 @@ export const csvPath = (fy, name) => `/data/hrrp/fy${fy}/${name}.csv`;
 export function httpsUrl(url) {
   try {
     const u = new URL(String(url));
-    return u.protocol === 'https:' ? u.href : null;
+    return u.protocol === 'https:' && !u.username && !u.password ? u.href : null;
   } catch {
     return null;
   }
