@@ -3,8 +3,9 @@
 // named on the chart as the peer median (not 1.0); the dots over it are in the penalty ink. Under the swarm, a lens magnifies
 // the span within BAND of the line, a dot per hospital, with the counts just over and just under in words; the closest gap to
 // the line is at four decimals; the example hospital (the one Worksheet R shows) is marked with a ▲ where it is measured.
-// The old site's six-condition switch stays: one swarm for each condition, drawn at build time, heart failure shown (the other
-// five hidden until client/program.js shows them). Without that script the page reads whole with heart failure's swarm.
+// The old site's six-condition switch stays: one swarm for each condition, drawn at build time. Heart failure's is in the page; the
+// other five are in a content-hashed asset (swarmRest) that client/swarm.js fetches when one is first picked, so the page does not
+// carry ten drawings nobody has asked for. Without that script the page reads whole with heart failure's swarm.
 // The words are in program/copy.js; the numbers are how-data.js swarmData and swarmDomain.
 import { scoreSwarm } from '../../../../web/charts/scoreSwarm.js';
 import { WIDE, figure, imagePair, num } from '../../../../web/charts/figure.js';
@@ -39,6 +40,9 @@ const TICK_EDGE = 18;
 // The gap axis's tick steps, and the least room between two labeled ticks.
 const TICK_STEPS = [0.05, 0.1, 0.2, 0.25, 0.5];
 const TICK_GAP = 56;
+
+// A closest-hospital gap the lens can show (within BAND of the line), else null: its label and the gap line are left off.
+const inLens = (d) => (d !== null && d !== undefined && Math.abs(d) <= BAND ? d : null);
 
 // A tick on the gap axis: "0", "+0.10", "−0.10".
 const tick = (dp) => (v) => (Math.abs(v) < 1e-9 ? '0' : signed(v, dp));
@@ -89,7 +93,7 @@ export function drawSwarm({ sw, width, name, cond }) {
   const ticks = Array.from({ length: Math.floor((dom.hi - dom.lo) / tickStep) + 2 }, (_, i) => roundTo((Math.ceil(dom.lo / tickStep) + i) * tickStep, 6))
     .filter((v) => v <= dom.hi && x(v) - MARGIN >= TICK_EDGE && width - MARGIN - x(v) >= TICK_EDGE);
   const svg = scoreSwarm({
-    items, edges, band: [sw.closestUnder ?? 0, sw.closestOver ?? 0], line: 0, upper: true, width, pitch, cols,
+    items, edges, band: [inLens(sw.closestUnder), inLens(sw.closestOver)], line: 0, upper: true, width, pitch, cols,
     labels: {
       title: narrow ? t('swarmLinePhone') : fill('swarmLineWide', { one: ratio(1, 1) }),
       below: side(sw.atOrUnder, 'swarmUnderWide', 'swarmUnderPhone'), above: side(sw.over, 'swarmOverWide', 'swarmOverPhone'),
@@ -156,13 +160,23 @@ function tableOf({ swarms, conditions }) {
   };
 }
 
-// The figure: how: view.how (howData); n: its number; edition: the edition's label.
-export function swarmFigure({ how, n, edition }) {
+// The panels past heart failure's, as a map of condition to markup (each hidden until its button is pressed): the build writes them to
+// a content-hashed asset, which client/swarm.js fetches when a condition is first picked and inserts as they are here.
+export function swarmRest({ how }) {
+  const { conditions } = how;
+  const name = how.worksheet.fields[0].value;
+  return Object.fromEntries(SWARM_ORDER.slice(1).map((cond) => [cond, panel({ sw: how.swarm(cond), conditions, name, first: false }).html.text]));
+}
+
+// The figure: how: view.how (howData); n: its number; edition: the edition's label; restUrl: the asset swarmRest's panels are in
+// (null: every condition's panel is in the figure's markup).
+export function swarmFigure({ how, n, edition, restUrl = null }) {
   const { conditions } = how;
   const swarms = SWARM_ORDER.map((cond) => how.swarm(cond));
   const name = how.worksheet.fields[0].value;
-  const panels = swarms.map((sw, i) => panel({ sw, conditions, name, first: i === 0 }));
-  const chart = html`<div class="swarm" data-cond="${SWARM_ORDER[0]}">
+  const shown = restUrl ? swarms.slice(0, 1) : swarms;
+  const panels = shown.map((sw, i) => panel({ sw, conditions, name, first: i === 0 }));
+  const chart = html`<div class="swarm" data-cond="${SWARM_ORDER[0]}"${restUrl ? html` data-src="${restUrl}"` : ''}>
 <div class="swarm__controls" hidden>
 <div class="seg" role="group" aria-label="${t('swarmSwitch')}">${SWARM_ORDER.map((k, i) => html`<button type="button" class="btn" data-cond="${k}" aria-pressed="${i === 0 ? 'true' : 'false'}">${conditionShort(conditions, k)}</button>`)}</div>
 </div>

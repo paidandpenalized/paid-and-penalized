@@ -28,7 +28,6 @@ const COLUMNS_HEIGHT = 150;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
-// A peer group's tone on the dual-share columns (the kit's chart-cat-N) and in their key (swatch cat-N): N is the group's number.
 
 // A condition's label on the punch card's rows: CMS's abbreviation (the key, with the slash of hip and knee).
 const abbr = (key) => key.replace('_', '/');
@@ -98,6 +97,7 @@ const groupOf = (bands, bin) => bands.find((b) => bin.x0 + 0.5 < b.x1)?.peer ?? 
 
 // The figure and the line about its axis marks, which goes with the step's words (it would stretch the figure's column).
 function dualFigure({ dual, edition, n }) {
+  // A peer group's tone on the dual-share columns (the kit's chart-cat-N) and in their key (swatch cat-N): N is the group's number.
   const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} chart-cat-${groupOf(dual.bands, b)}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
     bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT, stagger: true,
@@ -186,12 +186,12 @@ ${fig}
 }
 
 // how: view.how (how-data.js howData); figure: the page's figure counter; edition: the edition's label; estimateTag: the
-// estimate tag beside a modeled dollar figure; hospitalsUrl and worksheetUrl: the assets Worksheet R's box reads.
-export function howPart(how, { figure: nextFigure, edition, estimateTag = '', hospitalsUrl = null, worksheetUrl = null }) {
+// estimate tag beside a modeled dollar figure; hospitalsUrl and worksheetUrl: the assets Worksheet R's box reads; swarmUrl: the asset of Step 2's other five conditions (null: all in the page).
+export function howPart(how, { figure: nextFigure, edition, estimateTag = '', hospitalsUrl = null, worksheetUrl = null, swarmUrl = null }) {
   const { conditions } = how;
   const words = capitalize(spelled(CONDS.length));
   const punch = punchFigure({ sets: how.sets, conditions, edition, n: nextFigure() });
-  const swarm = swarmFigure({ how, edition, n: nextFigure() });
+  const swarm = swarmFigure({ how, edition, n: nextFigure(), restUrl: swarmUrl });
   const dual = dualFigure({ dual: how.dual, edition, n: nextFigure() });
   const waterfallN = nextFigure();
   return html`<p class="part__intro">${fill('howIntro', { edition })}</p>

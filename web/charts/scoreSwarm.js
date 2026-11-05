@@ -5,7 +5,7 @@
 // between the highest score not cut and the lowest cut shows. The layout is exported (swarmLayout) so a page script
 // finds the hospital under the pointer and redraws the chart for a new group with the same arithmetic.
 //   items    [{ score, yes, hl }] (yes: at or past the line, as CMS decided; hl: in the highlighted group)
-//   edges    the bins' edges (the line, CMS's lowest Yes score, is one of them); band [highestNo, lowestYes]
+//   edges    the bins' edges (the line, CMS's lowest Yes score, is one of them); band [highestNo, lowestYes] (either may be null: its label and the gap line are left off)
 //   labels   { line, below, above, loupe, highestNo, lowestYes } (text)
 //   loupe    { from, to, step } in scores, or null for none; place: 'inset' (top right) or 'below'. Optional, for a loupe
 //            that must hold many dots: cols (dots across a bin, default 1), pitch (between dot centers), height (the glass),
@@ -77,8 +77,9 @@ function loupeOf({ items, loupe, x: mainX, box, band: [highestNo, lowestYes], li
     const cx = cols === 1 ? inner.left + (b + 0.5) * binW : inner.left + b * binW + (binW - cols * pitch) / 2 + ((k % cols) + 0.5) * pitch;
     (it.yes ? yes : no).push([cx, base - (cols === 1 ? k + 0.5 : Math.floor(k / cols) + 0.5) * pitch]);
   }
-  const hx = r2(x(highestNo));
-  const lx = r2(x(lowestYes));
+  // A null edge (a program passes null when the closest hospital lies outside the lens) draws neither its label nor the gap line.
+  const hx = highestNo === null ? null : r2(x(highestNo));
+  const lx = lowestYes === null ? null : r2(x(lowestYes));
   const bx = r2(x(line));
   const ticks = loupe.ticks ?? x.ticks(4);
   const tickText = loupe.format ?? String;
@@ -87,11 +88,11 @@ function loupeOf({ items, loupe, x: mainX, box, band: [highestNo, lowestYes], li
   return html`<path class="chart-loupe__beam" d="M${r2(a)} ${r2(box.axisY)}L${r2(box.x)} ${r2(box.y + box.h)}M${r2(b)} ${r2(box.axisY)}L${r2(box.x + box.w)} ${r2(box.y + box.h)}"/>
 <rect class="chart-loupe__glass" x="${r2(box.x)}" y="${r2(box.y)}" width="${r2(box.w)}" height="${r2(box.h)}" rx="6"/>
 ${text({ x: box.x + 10, y: box.y + 16, anchor: 'start', cls: 'chart-cap', body: labels.loupe })}
-<line class="chart-loupe__gap" x1="${hx}" x2="${lx}" y1="${r2(base + 6)}" y2="${r2(base + 6)}"/>
+${hx !== null && lx !== null ? html`<line class="chart-loupe__gap" x1="${hx}" x2="${lx}" y1="${r2(base + 6)}" y2="${r2(base + 6)}"/>` : ''}
 ${dotsPath(no, 'chart-dots--ink', pitch * 0.82)}${dotsPath(yes, 'chart-dots--pen', pitch * 0.82)}
 <line class="chart-boundary" x1="${bx}" x2="${bx}" y1="${r2(box.y + 24)}" y2="${r2(base + 4)}"/>
-${text({ x: hx - 4, y: box.y + 34, anchor: 'end', cls: 'chart-note', body: labels.highestNo })}
-${text({ x: lx + 4, y: box.y + 34, anchor: 'start', cls: 'chart-note chart-label--pen', body: labels.lowestYes })}
+${hx === null ? '' : text({ x: hx - 4, y: box.y + 34, anchor: 'end', cls: 'chart-note', body: labels.highestNo })}
+${lx === null ? '' : text({ x: lx + 4, y: box.y + 34, anchor: 'start', cls: 'chart-note chart-label--pen', body: labels.lowestYes })}
 <line class="chart-axis__line" x1="${r2(inner.left)}" x2="${r2(inner.right)}" y1="${r2(base)}" y2="${r2(base)}"/>
 ${ticks.map((v) => html`<line class="chart-axis__tick" x1="${r2(x(v))}" x2="${r2(x(v))}" y1="${r2(base)}" y2="${r2(base + 4)}"/>${text({ x: x(v), y: base + 16, cls: 'chart-axis__label', body: tickText(v) })}`)}`;
 }

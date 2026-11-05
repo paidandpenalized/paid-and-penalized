@@ -47,6 +47,8 @@ let sizes = null;
 
 // Every box's state is read before any box is written, so the page is laid out once, not once per box.
 function edges(boxes) {
+  // A box whose markup a script replaced is no longer watched.
+  boxes = boxes.filter((box) => box && (box.scroll.isConnected || (unmountScroll(box.scroll), false)));
   const states = boxes.map((box) => scrollState(box.scroll));
   boxes.forEach((box, i) => {
     const { region, more } = states[i];
@@ -61,6 +63,16 @@ function edges(boxes) {
       for (const name of ['tabindex', 'role', 'aria-labelledby']) box.scroll.removeAttribute(name);
     }
   });
+}
+
+// Stops watching a scroll box and its table; a script that replaces markup calls this on each box it is about to drop
+// (a box found disconnected at the next report is let go the same way).
+export function unmountScroll(scroll) {
+  const table = scroll.querySelector('table');
+  sizes?.unobserve(scroll);
+  if (table) sizes?.unobserve(table);
+  BOXES.delete(scroll);
+  if (table) BOXES.delete(table);
 }
 
 export function mountScroll(scroll) {
@@ -211,6 +223,13 @@ export function mountFigure(fig) {
   fig.append(live);
   mountTable(fig, live);
   for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg, live);
+}
+
+// Wires the charts of markup a script added to a figure already wired (tooltips and keys, as mountFigure did for the first).
+export function mountCharts(fig, root) {
+  const live = fig.querySelector(':scope > .vh[aria-live]');
+  if (!live) return;
+  for (const svg of root.querySelectorAll('svg.chart')) mountMarks(fig, svg, live);
 }
 
 if (typeof document !== 'undefined') {

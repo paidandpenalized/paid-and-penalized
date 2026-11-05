@@ -8,7 +8,7 @@ import { waterfall } from '../../../web/charts/waterfall.js';
 import { withDerived } from '../web/derive.js';
 import { BAND, SWARM_ORDER, howData, swarmData, swarmDomain } from '../web/figures/how-data.js';
 import { howPart } from '../web/figures/how.js';
-import { drawSwarm, swarmFigure, swarmTakeaway } from '../web/figures/swarm.js';
+import { drawSwarm, swarmFigure, swarmRest, swarmTakeaway } from '../web/figures/swarm.js';
 import { capShare, waterfallFigure, waterfallTakeaway } from '../web/figures/waterfall.js';
 import { gapText } from '../web/numbers.js';
 import { counter } from '../../../web/charts/figure.js';
@@ -303,4 +303,37 @@ test('waterfall: stacked rows put each label over its bar; a cap strip draws the
 test('the swarm and waterfall switch off nothing else: BAND is 0.01 and the six conditions are the switches', () => {
   assert.equal(BAND, 0.01);
   assert.equal(new Set(SWARM_ORDER).size, CONDS.length);
+});
+
+test('Step 2: the lens leaves off a closest gap that lies outside it (its label and the gap line), and keeps one inside', () => {
+  const { how } = data();
+  const hf = how.swarm('HF');
+  const draw = (sw) => drawSwarm({ sw, width: 560, name: 'Example', cond: 'heart failure' }).svg.text;
+  const inside = draw({ ...hf, closestUnder: -BAND / 2, closestOver: BAND / 2 });
+  assert.ok(inside.includes('just under') && inside.includes('just over') && inside.includes('chart-loupe__gap'));
+  for (const sw of [{ ...hf, closestUnder: -3 * BAND, closestOver: BAND / 2 }, { ...hf, closestUnder: -BAND / 2, closestOver: 3 * BAND }, { ...hf, closestUnder: null, closestOver: null }]) {
+    const out = draw(sw);
+    assert.ok(!out.includes('chart-loupe__gap'), 'no gap line when an end is outside the lens');
+    assert.equal(out.includes('just under'), sw.closestUnder !== null && Math.abs(sw.closestUnder) <= BAND);
+    assert.equal(out.includes('just over'), sw.closestOver !== null && Math.abs(sw.closestOver) <= BAND);
+  }
+});
+
+test('Step 2: with an asset address the page holds heart failure only; the other five come from the asset, drawn the same', () => {
+  const { how } = data();
+  const whole = swarmFigure({ how, n: 2, edition: 'FY2027' }).text;
+  const lean = swarmFigure({ how, n: 2, edition: 'FY2027', restUrl: '/assets/hrrp-swarm.x.json' }).text;
+  const rest = swarmRest({ how });
+  assert.deepEqual(Object.keys(rest), SWARM_ORDER.slice(1));
+  assert.equal((whole.match(/class="swarm__m"/g) ?? []).length, 6);
+  assert.equal((lean.match(/class="swarm__m"/g) ?? []).length, 1);
+  assert.match(lean, /<div class="swarm" data-cond="HF" data-src="\/assets\/hrrp-swarm\.x\.json">/);
+  assert.match(lean, /<div class="swarm__controls" hidden>/);
+  assert.ok(!/<div class="swarm__m"[^>]*data-cond="HF"[^>]*hidden/.test(lean), 'heart failure shows without the script');
+  for (const k of SWARM_ORDER.slice(1)) {
+    assert.match(rest[k], new RegExp(`^<div class="swarm__m" data-cond="${k}" data-takeaway="[^"]+" hidden>`));
+    assert.ok(whole.includes(rest[k]), `${k}: the asset's markup is the page's own`);
+    assert.ok(!lean.includes(rest[k]));
+  }
+  assert.ok(lean.includes('Hip/knee replacement') && /<th scope="row">Pneumonia/.test(lean), 'the switch and the table still name every condition');
 });

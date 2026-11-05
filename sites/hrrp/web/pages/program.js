@@ -56,11 +56,11 @@ ${body}
 
 // view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
 // hospitalsUrl: the hospitals asset's path the search and the explorer read (null: the shell has no source); worksheetUrl:
-// the worksheet asset Worksheet R's hospital box reads (null: no box).
-export function programPage({ view, robots, assets, hospitalsUrl = null, worksheetUrl = null }) {
+// the worksheet asset Worksheet R's hospital box reads (null: no box); swarmUrl: the asset holding Step 2's other five swarms (null: in the page).
+export function programPage({ view, robots, assets, hospitalsUrl = null, worksheetUrl = null, swarmUrl = null }) {
   const figure = counter();
   const bodies = {
-    how: howPart(view.how, { figure, edition: view.edition, estimateTag, hospitalsUrl, worksheetUrl }),
+    how: howPart(view.how, { figure, edition: view.edition, estimateTag, hospitalsUrl, worksheetUrl, swarmUrl }),
     picture: picturePart(view.picture, { figure, edition: view.edition }),
     map: mapPart(view.map, { figure, edition: view.edition }),
     history: historyPart(view.history, { figure }),
