@@ -123,9 +123,9 @@ def _rate_pair(inp, rates):
 
 def hsp_payment(rate, inp):
     """What the hospital-specific rate would pay for the year's cases, or None when there is no usable rate.
-    ASSUMPTION: a blank or zero rate is "no usable rate" (the file has zero in three rows). The comparison uses CMIV43
-    (`cmi_hsp`), which the impact file's README says applies to hospitals paid on their hospital-specific rate, and the
-    same transfer-adjusted `cases` as the federal side."""
+    ASSUMPTION: a blank or zero rate is "no usable rate" (the file has zero in three rows). The comparison uses
+    CMIV<grouper> (`cmi_hsp`), which the impact file's README says applies to hospitals paid on their hospital-specific
+    rate, and the same transfer-adjusted `cases` as the federal side."""
     if _missing(rate):
         return None
     return rate * inp["cmi_hsp"] * inp["cases"]

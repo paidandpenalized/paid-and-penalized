@@ -39,7 +39,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   (CY2017 to CY2019 and CY2021 to CY2024; extracts pinned by `pipeline/py/pp_pipeline/hai_extract.py`): per measure,
   the hospitals with an SIR and their median, and the observed and predicted infections over hospitals with both counts.
 
-## hrrp methods_version 1 (2026-11-05)
+## hrrp methods_version 1 (2026-11-04)
 - `data/emitted/hrrp/fy2027/hrrp.json` is the first emission of the Readmissions data. Its method is Thirty Day
   Readmissions' at `33d1959` (`pipeline/build_data.py`), unchanged: CMS's FY2027 supplemental file at full precision
   from the Excel workbook, checked against the tab-delimited export and Table 15; ratios, payment weights, the
@@ -51,16 +51,21 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `history` (a test holds it). Names, locations, beds, teaching, ownership, provider types and Medicare status come
   from the hospital master, which already equals that site's values for every hospital.
 
-## hrrp methods_version 2 (2026-11-05)
+## hrrp methods_version 2 (2026-11-04)
 - What changed: the Medicare-dependent hospital (MDH) add-on now prices the hospital-specific side with the impact
   file's `CMIV44`, the case mix its variable notes call "generally applicable for SCH and MDH providers paid under
   their Hospital Specific Payment rate". Version 1 used the transfer-adjusted `TACMIV44` on both sides. The federal
-  side keeps `TACMIV44`, and both sides keep the transfer-adjusted case count `CASETA44`, as the family dollar
-  estimate does (`dollars.hsp_payment`).
-- Why: it is the case mix CMS gives for the payment being compared, so the add-on is estimated as CMS describes it.
+  side keeps `TACMIV44`.
+- Why: `CMIV44` is the case mix the impact file gives for the payment being compared.
+- What did not change: both sides still use the transfer-adjusted case count `CASETA44` (the family dollar estimate
+  makes the same assumption, `dollars.hsp_payment`), and the hospital-specific payment is still compared with the
+  federal DRG payment alone, as in version 1. The family dollar estimate compares it with the full federal operating
+  payment (with IME, DSH and outliers); moving this site to that method is a later change.
 - Size: only MDHs' `base` and `pen` move, and the national totals they sum into. The modeled national penalty rises by
-  about $5 thousand of $342 million; no hospital's estimate moves by more than 0.7%. 101 of the 164 MDHs now get an
-  add-on, 5 more than in version 1.
+  about $5 thousand of $342 million. Of the 101 MDHs whose base moves, 100 rise and one falls; no MDH's base or
+  penalty moves by more than 0.7%. 101 of the 164 MDHs now get an add-on, 5 more than in version 1.
+- `meta.dollarCheck` is unchanged: Thirty Day Readmissions ran that check on version 1's base estimates, and no base
+  has moved by more than 0.7% since.
 - Version 1 equals Thirty Day Readmissions' output on every field; a test holds that a build with `TACMIV44` in this one
   place still does, so the case mix is the only difference.
 
