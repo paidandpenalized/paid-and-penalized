@@ -7,17 +7,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../files.js';
+import { PROGRAM_SITES } from '../../tools/ci/page-types.js';
 import { copyFiles } from './helpers.js';
 
-// Each site's claim-id prefix.
-const CLAIM_PREFIX = { hacrp: 'HACRP', hrrp: 'HRRP' };
-// Each site's method constants (named in its web/constants.js, with the type each has): each carries a claim id in that
-// file's CLAIMS. Not listed on purpose: a constant that is presentation, not a claim (HRRP's ROUND_COUNT_TO).
-const METHOD_CONSTANTS = {
-  hacrp: { REDUCTION_PCT: 'number', CUTOFF_PERCENTILE: 'number', WINSOR_LOW: 'number', WINSOR_HIGH: 'number' },
-  hrrp: { NTAP_TOTAL: 'string', NTAP_SHARE: 'number', PARHM_END: 'string' },
-};
-const SITES = Object.keys(CLAIM_PREFIX);
+const importRepo = (path) => import(pathToFileURL(REPO_ROOT + path));
+const constantsOf = (site) => importRepo(`sites/${site}/web/constants.js`);
+
+// Each program site (tools/ci/page-types.js PROGRAM_SITES) names, in its web/constants.js, its claim-id prefix (CLAIM_PREFIX)
+// and the method constants the gate checks (METHOD_CONSTANTS: name and type), each with a claim id in that file's CLAIMS.
+const SITES = PROGRAM_SITES.map((site) => site.id);
+const CONSTANTS = Object.fromEntries(await Promise.all(SITES.map(async (site) => [site, await constantsOf(site)])));
+const CLAIM_PREFIX = Object.fromEntries(SITES.map((site) => [site, CONSTANTS[site].CLAIM_PREFIX]));
 const siteOfPrefix = (id) => SITES.find((site) => id.startsWith(`${CLAIM_PREFIX[site]}-`));
 const CLAIM = new RegExp(`^(${Object.values(CLAIM_PREFIX).join('|')})-\\d{2}$`);
 
@@ -35,8 +35,6 @@ export const unusedRows = (rowIds, used) => [...rowIds].filter((id) => !used.has
 const entries = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? { text: v, claim: null } : v]);
 // An entry's claim ids: none, one, or a list.
 const idsOf = (claim) => (claim === null ? [] : [claim].flat());
-const importRepo = (path) => import(pathToFileURL(REPO_ROOT + path));
-const constantsOf = (site) => importRepo(`sites/${site}/web/constants.js`);
 
 test('the gate finds the shared copy and each site\'s copy', () => {
   const files = copyFiles();
@@ -85,7 +83,7 @@ const registerRows = (site) => registerText(site)
 
 // Every claim id a site uses: copy entries in its own copy files and in the shared ones, and its method constants.
 async function usedClaims(site) {
-  const { CLAIMS } = await constantsOf(site);
+  const { CLAIMS } = CONSTANTS[site];
   const used = new Set(Object.values(CLAIMS));
   for (const file of copyFiles()) {
     const { COPY } = await importRepo(file);
@@ -100,8 +98,8 @@ for (const site of SITES) {
   const prefix = CLAIM_PREFIX[site];
 
   test(`${site}: every method constant carries a well-formed claim id of its own`, async () => {
-    const constants = await constantsOf(site);
-    for (const [name, type] of Object.entries(METHOD_CONSTANTS[site])) {
+    const constants = CONSTANTS[site];
+    for (const [name, type] of Object.entries(constants.METHOD_CONSTANTS)) {
       assert.equal(typeof constants[name], type, name);
       assert.match(constants.CLAIMS[name], CLAIM, name);
     }
