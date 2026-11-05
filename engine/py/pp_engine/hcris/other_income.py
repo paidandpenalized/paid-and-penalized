@@ -9,11 +9,11 @@ first match wins, after `normalize` (capitals, digits, single spaces). The rules
 `why` is filled on the family's first row.
 
 Classes: `operating` counts in the operating margin (physician and professional income, pharmacy income with 340B and
-contract pharmacy among it, grant income, and the kinds of income lines 8 to 22 already hold); `non_operating` stays
-out (investment-type income, contributions, appropriations and taxes, relief funding, labels the hospital itself calls
-non-operating); `unclassified` stays out too: a label too generic to sort ("other revenue", "other operating
-revenue"), a blank one, or a named kind the decision doesn't place (Medicaid supplemental payments, capitation,
-services sold, transfers from affiliates).
+contract pharmacy among it, grant income, the kinds of income lines 8 to 22 already hold, and labels the hospital
+itself calls operating, "other operating revenue" among them); `non_operating` stays out (investment-type income,
+contributions, appropriations and taxes, relief funding, labels the hospital calls non-operating); `unclassified`
+stays out too: a label too generic to sort ("other revenue", "miscellaneous income"), a blank one, or a named kind the
+decision doesn't place (Medicaid supplemental payments, capitation, services sold, transfers from affiliates).
 """
 import re
 from collections import namedtuple

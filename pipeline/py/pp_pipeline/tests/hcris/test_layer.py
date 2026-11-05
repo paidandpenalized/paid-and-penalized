@@ -169,6 +169,7 @@ class RulesFile(unittest.TestCase):
             "PROVIDER RELIEF FUND": "relief_funding", "PROPERTY TAX REVENUE": "appropriations_taxes",
             "NON-OPERATING INCOME": "labeled_non_operating", "OTHER OP AND NON OP INC": "mixed",
             "OTHER OPERATING REVENUE": "generic_operating", "MEDICAID DSH": "medicaid_supplemental",
+            "SUPPLEMENTAL OPERATING REVENUE": "medicaid_supplemental",  # Medicaid supplemental stays out (11-05)
             "PHYSICIAN UPL": "medicaid_supplemental", "IGT GRANTS": "medicaid_supplemental",  # before the operating kinds
             "CAPITATION REVENUE": "health_plan", "POISON DRUG CENTER CONTRACTS": "other_services",
             "INTERCOMPANY REVENUE": "intercompany", "MALPRACTICE REVENUE": "other", "OTHER REVENUE": "other",
@@ -178,7 +179,8 @@ class RulesFile(unittest.TestCase):
                 self.assertEqual(other_income.classify(label, rules)[0], family)
         classes = {r.family: r.cls for r in rules}
         self.assertEqual({f for f, c in classes.items() if c == "operating"},
-                         {"pharmacy", "physician_professional", "grants_research", "like_lines_8_22"})
+                         {"pharmacy", "physician_professional", "grants_research", "like_lines_8_22",
+                          "generic_operating"})
 
 
 class Puf(unittest.TestCase):
