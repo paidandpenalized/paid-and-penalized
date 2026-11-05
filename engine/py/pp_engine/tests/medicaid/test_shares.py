@@ -48,6 +48,14 @@ class StateShares(unittest.TestCase):
         self.assertEqual((s.basis, s.first, s.last), ("latest4", "2024-03-31", "2024-12-31"))
         self.assertAlmostEqual(s.share, 60 / 400)
 
+    def test_net_of_a_deduction_only_in_the_base_year(self):
+        base = shares.Share(0.25, 100.0, 400.0, "ffy2023", "", "")
+        self.assertAlmostEqual(shares.net_of(base, 80.0, 2023), 100 / 320)
+        late = shares.Share(0.2, 80.0, 400.0, "latest4", "", "")
+        self.assertEqual(shares.net_of(late, 80.0, 2023), 0.2)
+        with self.assertRaises(SharesError):
+            shares.net_of(base, 400.0, 2023)
+
     def test_too_few_quarters_or_repeats_fail(self):
         with self.assertRaises(SharesError):
             shares.state_shares([row("Stated", FY[0], "100", "N/A"), row("Stated", "12/31/2023", "100", "4")], 2023)

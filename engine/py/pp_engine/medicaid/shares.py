@@ -98,3 +98,14 @@ def state_share(quarters, fy):
 def state_shares(rows, fy):
     """{state name: Share or None} for every state in the rows."""
     return {state: state_share(qs, fy) for state, qs in by_state(rows).items()}
+
+
+def net_of(share, deduction, fy):
+    """A sensitivity: the share with `deduction` (DSH payments, say, which no eligibility group drives) taken out of
+    the state's total. Only a base-year share can be netted against a base-year deduction; a `latest4` share is
+    returned unchanged, so the sensitivity leaves those states as they are rather than dropping them."""
+    if share.basis != f"ffy{fy}":
+        return share.share
+    if share.total - deduction <= 0:
+        raise SharesError(f"deduction {deduction} leaves no spending")
+    return share.viii / (share.total - deduction)

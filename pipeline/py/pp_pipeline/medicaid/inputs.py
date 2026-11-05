@@ -1,10 +1,10 @@
 """The pinned state inputs (`inputs/`, listed with their SHA-256 in `inputs/sources.json`), each checked before it is
 read."""
 import csv
-import hashlib
 import io
-import json
 from pathlib import Path
+
+from pp_pipeline import files
 
 INPUTS_DIR = Path(__file__).resolve().parent / "inputs"
 
@@ -14,7 +14,7 @@ class PinError(ValueError):
 
 
 def sources(root=INPUTS_DIR):
-    return json.loads((Path(root) / "sources.json").read_text(encoding="utf-8"))["files"]
+    return files.read_json(Path(root) / "sources.json")["files"]
 
 
 def entry(pin_id, root=INPUTS_DIR):
@@ -27,7 +27,7 @@ def entry(pin_id, root=INPUTS_DIR):
 def read_bytes(pin_id, root=INPUTS_DIR):
     e = entry(pin_id, root)
     data = (Path(root) / e["path"]).read_bytes()
-    if len(data) != e["bytes"] or hashlib.sha256(data).hexdigest() != e["sha256"]:
+    if not files.pin_matches(e, data):
         raise PinError(f"{e['path']}: size or SHA-256 differs from sources.json")
     return data
 

@@ -13,6 +13,7 @@ import argparse
 import csv
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 from pp_engine import geo
@@ -43,9 +44,7 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
     Urban's three declines as fractions and their enrollment counts, and the state's class."""
     base = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy).items() if code_of(n)}
     later = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy + 1).items() if code_of(n)}
-    dsh = {r["state"]: float(r["dsh_inpatient_hospital"] or 0) + float(r["dsh_mental_health_facility"] or 0)
-           for r in fmr_rows}
-    fmr_total = {r["state"]: float(r["map_total_net_expenditures"]) for r in fmr_rows}
+    fmr = {r["state"]: r for r in fmr_rows}
     urban = {r["state"]: r for r in urban_rows}
     out = {}
     for code in sorted(set(base) | set(urban)):
@@ -55,11 +54,15 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
             entry.update(share=s.share, basis=s.basis, first=s.first, last=s.last, viii=s.viii, total=s.total)
             nxt = later.get(code)
             entry["share_next_year"] = nxt.share if nxt else None
-            # Net of DSH only where the FMR covers the same year; elsewhere the base share stands in.
-            entry["share_net_of_dsh"] = (s.viii / (s.total - dsh[code]) if s.basis == f"ffy{fy}" and code in dsh
-                                         else s.share)
-            if code in fmr_total:
-                entry["total_vs_fmr"] = s.total / fmr_total[code] if s.basis == f"ffy{fy}" else None
+            f = fmr.get(code)
+            if f is None:
+                entry["share_net_of_dsh"] = s.share
+            else:
+                dsh = float(f["dsh_inpatient_hospital"] or 0) + float(f["dsh_mental_health_facility"] or 0)
+                entry["share_net_of_dsh"] = shares.net_of(s, dsh, fy)
+                # The CMS-64 file's total over the FMR's, a vintage check (states revise for about two years).
+                entry["total_vs_fmr"] = (s.total / float(f["map_total_net_expenditures"]) if s.basis == f"ffy{fy}"
+                                         else None)
         if u is None:
             entry["class"] = NOT_EXPANSION
         else:
@@ -71,9 +74,14 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
 
 
 def read_hcris(path, year=params.BASE_YEAR):
-    """{ccn: row} for the year's rows of the HCRIS wide table."""
+    """{ccn: row} for the year's rows of the HCRIS wide table (other years' rows are skipped before they become
+    dicts: the table holds every year)."""
     with open(path, newline="", encoding="utf-8") as f:
-        return {r["ccn"]: r for r in csv.DictReader(f) if r["year"] == str(year)}
+        reader = csv.reader(f)
+        header = next(reader)
+        at, want = header.index("year"), str(year)
+        rows = (dict(zip(header, row)) for row in reader if row[at] == want)
+        return {r["ccn"]: r for r in rows}
 
 
 def program_dollars(dollars):
@@ -94,64 +102,48 @@ def _r(value, places=0):
     return int(v) if places == 0 else v
 
 
-def _operating_margin(row):
-    """A raw row's operating margin (G-3 line 5 over line 3), for the outlier fence; None without one."""
-    if row is None or not row.get("net_patient_revenue") or not row.get("net_income_patients"):
-        return None
-    npr = float(row["net_patient_revenue"])
-    return float(row["net_income_patients"]) / npr if npr > 0 else None
+def score(rec, st, scenario_id, share_key="share", use=params.USE_DEFAULT, line2_5=False):
+    """Steps 1 to 4 for one record under its state's inputs `st`: only a scenario state's hospitals get a share."""
+    share = st.get(share_key) if rec["cls"] == SCENARIO else None
+    return exposure.scenario(rec["base"], share, (st.get("declines") or {}).get(scenario_id, 0.0), use, line2_5)
 
 
 def hospital_records(master, hcris, states, programs, fence=None):
     """One record per active acute-care or critical access hospital: identity, base, class, each scenario's result.
-    `fence`: the operating-margin outlier range (default: exposure.margin_fence over these hospitals)."""
-    universe = [h for h in master["hospitals"] if h["kind"] in KINDS and h["inactive"] is None]
-    fence = fence or exposure.margin_fence(_operating_margin(hcris.get(h["ccn"])) for h in universe)
+    `fence`: the operating-margin outlier range (default: exposure.margin_fence over these hospitals' bases)."""
     out = []
-    for h in universe:
-        st = states.get(h["state"], {"class": NOT_EXPANSION, "share": None})
-        rec = {"ccn": h["ccn"], "name": h["name"], "city": h["city"], "state": h["state"], "kind": h["kind"],
-               "urban": h["urban"], "beds": h["beds"], "own": h["own"], "teach": h["teach"], "lat": h["lat"],
-               "lon": h["lon"], "programs": programs.get(h["ccn"])}
-        row = hcris.get(h["ccn"])
-        if row is None:
-            rec.update(cls=NO_REPORT, base=None, results=None)
-            out.append(rec)
+    for h in master["hospitals"]:
+        if h["kind"] not in KINDS or h["inactive"] is not None:
             continue
-        base = exposure.hospital_base(row)
-        margin = _operating_margin(row)
-        if margin is not None and base["has_margin"] and not fence[0] <= margin <= fence[1]:
-            base["margin_outlier"] = True
-            base["flags"].append("margin_outlier")
-        share = st["share"] if st["class"] == SCENARIO else None
-        declines = st.get("declines") or {}
-        rec.update(cls=st["class"], base=base, share=share,
-                   results={sid: exposure.scenario(base, share, declines.get(sid, 0.0)) for sid in params.SCENARIO_IDS})
+        row = hcris.get(h["ccn"])
+        rec = {"ccn": h["ccn"], "name": h["name"], "city": h["city"], "state": h["state"], "kind": h["kind"],
+               "urban": h["urban"], "beds": h["beds"], "own": h["own"], "lat": h["lat"], "lon": h["lon"],
+               "programs": programs.get(h["ccn"]), "base": None, "results": None, "share": None,
+               "cls": NO_REPORT if row is None else states.get(h["state"], {}).get("class", NOT_EXPANSION)}
+        if row is not None:
+            rec["base"] = exposure.hospital_base(row)
         out.append(rec)
+    exposure.flag_margin_outliers((r["base"] for r in out if r["base"]), fence)
+    for rec in out:
+        if rec["base"] is not None:
+            st = states.get(rec["state"], {})
+            rec["share"] = st.get("share") if rec["cls"] == SCENARIO else None
+            rec["results"] = {sid: score(rec, st, sid) for sid in params.SCENARIO_IDS}
     return out
 
 
-def settled_share(records):
-    with_base = [r for r in records if r["base"] is not None]
-    return sum(r["base"]["status"] == "settled" for r in with_base) / len(with_base)
-
-
-def roll(records, scenario_id, share_key="share", line2_5=False, use=params.USE_DEFAULT, states=None, where=None):
-    """National (and by-state) roll-ups for one scenario, optionally with another share, revenue base or use multiple,
-    over the records `where` keeps."""
-    pairs, by_state = [], {}
+def roll(records, scenario_id, states=None, where=None, by_state=False, **override):
+    """The national roll-up for one scenario over the records `where` keeps (and by state, with `by_state`).
+    `override` (share_key, use, line2_5) reruns steps 1 to 4 for a sensitivity; without it the stored results stand."""
+    pairs, groups = [], {}
     for r in records:
         if r["base"] is None or (where and not where(r)):
             continue
-        if share_key == "share" and not line2_5 and use == params.USE_DEFAULT:
-            res = r["results"][scenario_id]
-        else:
-            st = states[r["state"]] if r["state"] in states else {}
-            share = st.get(share_key) if r["cls"] == SCENARIO else None
-            res = exposure.scenario(r["base"], share, (st.get("declines") or {}).get(scenario_id, 0.0), use, line2_5)
+        res = score(r, states.get(r["state"], {}), scenario_id, **override) if override else r["results"][scenario_id]
         pairs.append((r["base"], res))
-        by_state.setdefault(r["state"], []).append((r["base"], res))
-    return rollup.roll_up(pairs), {s: rollup.roll_up(p) for s, p in sorted(by_state.items())}
+        if by_state:
+            groups.setdefault(r["state"], []).append((r["base"], res))
+    return rollup.roll_up(pairs), {s: rollup.roll_up(p) for s, p in sorted(groups.items())}
 
 
 def _clean(d, places=6):
@@ -161,7 +153,7 @@ def _clean(d, places=6):
 def results(records, states):
     nat, by_state, sens = {}, {}, {}
     for sid in params.SCENARIO_IDS:
-        n, s = roll(records, sid)
+        n, s = roll(records, sid, by_state=True)
         nat[sid] = _clean(n)
         for code, v in s.items():
             by_state.setdefault(code, {})[sid] = _clean(v)
@@ -179,6 +171,8 @@ def results(records, states):
     return nat, by_state, sens, groups
 
 
+SCENARIO_COLUMNS = ("lost", "added_uncompensated", "uncompensated_change", "operating_margin_after",
+                    "total_margin_after")
 HOSPITAL_COLUMNS = ("ccn", "name", "city", "state", "kind", "cls", "status", "period_begin", "period_end",
                     "period_days", "factor", "flags", "share", "medicaid_net_revenue", "medicaid_supplemental",
                     "medicaid_cost", "cost_ratio", "net_patient_revenue", "net_income_patients", "net_income",
@@ -186,26 +180,18 @@ HOSPITAL_COLUMNS = ("ccn", "name", "city", "state", "kind", "cls", "status", "pe
 
 
 def hospital_rows(records):
-    """Flat rows for hospitals.csv: identity, base and, per scenario, revenue lost, added uncompensated care and the
-    margins after."""
-    cols = list(HOSPITAL_COLUMNS)
-    for sid in params.SCENARIO_IDS:
-        cols += [f"{sid}_{k}" for k in ("lost", "added_uncompensated", "uncompensated_change", "operating_margin_after",
-                                        "total_margin_after")]
-    cols += ["operating_margin", "total_margin"]
+    """Flat rows for hospitals.csv: identity, base, the margins as filed and, per scenario, SCENARIO_COLUMNS."""
+    cols = list(HOSPITAL_COLUMNS) + ["operating_margin", "total_margin"] + [
+        f"{sid}_{k}" for sid in params.SCENARIO_IDS for k in SCENARIO_COLUMNS]
     rows = []
     for r in records:
         b, res = r["base"] or {}, r["results"] or {}
-        flat = {"ccn": r["ccn"], "name": r["name"], "city": r["city"], "state": r["state"], "kind": r["kind"],
-                "cls": r["cls"], "share": r.get("share"), "flags": " ".join(b.get("flags", []))}
-        for k in HOSPITAL_COLUMNS:
-            if k not in flat:
-                flat[k] = b.get(k)
-        for sid, v in res.items():
-            for k in ("lost", "added_uncompensated", "uncompensated_change", "operating_margin_after",
-                      "total_margin_after"):
-                flat[f"{sid}_{k}"] = v[k]
-            flat["operating_margin"], flat["total_margin"] = v["operating_margin"], v["total_margin"]
+        flat = {**b, **{k: r[k] for k in ("ccn", "name", "city", "state", "kind", "cls", "share")},
+                "flags": " ".join(b.get("flags", []))}
+        if res:
+            flat["operating_margin"] = res["middle"]["operating_margin"]
+            flat["total_margin"] = res["middle"]["total_margin"]
+            flat.update({f"{sid}_{k}": v[k] for sid, v in res.items() for k in SCENARIO_COLUMNS})
         rows.append([("" if flat.get(c) is None else (round(flat[c], 6) if isinstance(flat[c], float) else flat[c]))
                      for c in cols])
     return cols, rows
@@ -215,7 +201,7 @@ def explorer_record(r):
     """The compact record the explorer recomputes from: its inputs, not its results (the page reruns steps 1 to 4)."""
     b = r["base"]
     out = {"c": r["ccn"], "n": r["name"], "ci": r["city"], "s": r["state"], "k": "C" if r["kind"] == "critical_access"
-           else "A", "u": r["urban"], "bd": r["beds"], "o": r["own"], "t": r["teach"], "cl": r["cls"],
+           else "A", "u": r["urban"], "bd": r["beds"], "o": r["own"], "cl": r["cls"],
            "la": r["lat"], "lo": r["lon"], "p": r["programs"]}
     if b is not None:
         out.update(st=b["status"], pb=b["period_begin"], pe=b["period_end"], pd=b["period_days"], f=_r(b["factor"], 4),
@@ -223,7 +209,7 @@ def explorer_record(r):
                    mc=_r(b["medicaid_cost"]), cr=_r(b["cost_ratio"], 4), cr5=_r(b["cost_ratio_line2_5"], 4),
                    npr=_r(b["net_patient_revenue"]), nip=_r(b["net_income_patients"]), ni=_r(b["net_income"]),
                    oi=_r(b["other_income"]), uc=_r(b["uncompensated_cost"]), md=_r(b["medicaid_days_all"]),
-                   dt=_r(b["days_total"]), sf=_r(b["medicaid_shortfall"]), hm=b["has_margin"],
+                   dt=_r(b["days_total"]), hm=b["has_margin"],
                    sc=b["scored"], mo=b["margin_outlier"])
     return out
 
@@ -254,14 +240,9 @@ def main(argv):
     dollars = json.loads(Path(a.dollars).read_text(encoding="utf-8"))
     records = hospital_records(master, read_hcris(a.hcris), states, program_dollars(dollars))
     nat, by_state, sens, groups = results(records, states)
-    settled = settled_share(records)
-    counts = {}
-    for r in records:
-        counts[r["cls"]] = counts.get(r["cls"], 0) + 1
-    flags = {}
-    for r in records:
-        for fl in (r["base"] or {}).get("flags", []):
-            flags[fl] = flags.get(fl, 0) + 1
+    settled = rollup.settled_share(r["base"] for r in records if r["base"])
+    counts = dict(Counter(r["cls"] for r in records))
+    flags = dict(Counter(fl for r in records if r["base"] for fl in r["base"]["flags"]))
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     cols, rows = hospital_rows(records)
@@ -272,7 +253,7 @@ def main(argv):
     (out / "hospitals.json").write_text(json.dumps([explorer_record(r) for r in records], separators=(",", ":")),
                                         encoding="utf-8")
     meta = {"base_year": params.BASE_YEAR, "settled_share": round(settled, 4),
-            "early": settled < params.EARLY_SETTLED_SHARE,
+            "early": rollup.early(settled),
             "params": {"uninsured_share": params.UNINSURED_SHARE, "care_still_used": params.CARE_STILL_USED,
                        "use_min": params.USE_MIN, "use_default": params.USE_DEFAULT, "use_max": params.USE_MAX,
                        "max_cost_ratio": params.MAX_COST_RATIO, "scenarios": dict(params.SCENARIOS)},

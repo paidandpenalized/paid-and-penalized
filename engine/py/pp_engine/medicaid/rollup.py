@@ -1,6 +1,6 @@
 """State and national roll-ups of the per-hospital results: dollars add up; margins and percent changes are recomputed
 from the sums (a group's margin is its total income over its total revenue, not an average of hospitals' margins)."""
-from pp_engine.medicaid import exposure
+from pp_engine.medicaid import exposure, params
 
 DOLLARS = ("at_risk", "lost", "lost_cost", "added_uncompensated", "care_avoided", "other_coverage", "income_change")
 
@@ -43,16 +43,30 @@ def roll_up(pairs):
             ni_after += base["net_income"] + res["income_change"]
             if into_red(res):
                 out["into_red"] += 1
-            change = exposure.margin_change(res, "operating_margin")
+            change = exposure.margin_change(res)
             if change is not None and change <= -1:
                 out["falls_1pp"] += 1
-    out["operating_margin"] = nip / npr if npr > 0 else None
-    out["operating_margin_after"] = nip_after / npr_after if npr_after > 0 else None
-    out["total_margin"] = ni / (npr + oth) if npr + oth > 0 else None
-    out["total_margin_after"] = ni_after / (npr_after + oth) if npr_after + oth > 0 else None
+    out["operating_margin"] = _ratio(nip, npr)
+    out["operating_margin_after"] = _ratio(nip_after, npr_after)
+    out["total_margin"] = _ratio(ni, npr + oth)
+    out["total_margin_after"] = _ratio(ni_after, npr_after + oth)
     out["net_patient_revenue"] = npr
-    out["lost_share_of_medicaid"] = out["lost"] / out["medicaid_revenue"] if out["medicaid_revenue"] else None
-    out["lost_share_of_at_risk"] = out["lost"] / out["at_risk"] if out["at_risk"] else None
-    out["uncompensated_change"] = (out["uc_added_where_reported"] / out["uncompensated_cost"]
-                                   if out["uncompensated_cost"] else None)
+    out["lost_share_of_medicaid"] = _ratio(out["lost"], out["medicaid_revenue"])
+    out["lost_share_of_at_risk"] = _ratio(out["lost"], out["at_risk"])
+    out["uncompensated_change"] = _ratio(out["uc_added_where_reported"], out["uncompensated_cost"])
     return out
+
+
+def _ratio(num, den):
+    return num / den if den > 0 else None
+
+
+def settled_share(bases):
+    """The share of hospital-years whose reports are all settled."""
+    bases = list(bases)
+    return sum(b["status"] == "settled" for b in bases) / len(bases) if bases else None
+
+
+def early(share):
+    """Whether a year with this settled share is "early" on uncompensated-care figures (DATA-B-04)."""
+    return share is None or share < params.EARLY_SETTLED_SHARE

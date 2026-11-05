@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pp_engine.medicaid import shares
+from pp_engine.medicaid import rollup, shares
 from pp_pipeline.medicaid import build, inputs
 
 FY2023 = ("12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
@@ -129,7 +129,8 @@ class Records(unittest.TestCase):
         self.assertAlmostEqual(sens["share_net_of_dsh"]["low"]["lost"], 1000000 * (1000 / 3600) * 0.1, places=4)
         self.assertEqual(groups["critical_access"]["low"]["hospitals"], 1)
         self.assertEqual(set(by_state), {"AK", "WI", "TX"})
-        self.assertEqual(build.settled_share(self.records), 0.0)
+        self.assertEqual(rollup.settled_share(r["base"] for r in self.records if r["base"]), 0.0)
+        self.assertTrue(rollup.early(0.0))
         cols, rows = build.hospital_rows(self.records)
         self.assertEqual(len(rows), 5)
         self.assertEqual(len(cols), len(rows[0]))

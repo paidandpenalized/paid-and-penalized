@@ -118,6 +118,14 @@ class Scenario(unittest.TestCase):
         with self.assertRaises(ExposureError):
             exposure.margin_fence([0.1, None])
 
+    def test_flag_margin_outliers(self):
+        bases = [exposure.hospital_base(hcris_row(ccn=f"99000{i}", net_income_patients=str(v)))
+                 for i, v in enumerate((1000000, 2000000, 3000000, -90000000))]
+        exposure.flag_margin_outliers(bases, fence=(-0.5, 0.5))
+        self.assertEqual([b["margin_outlier"] for b in bases], [False, False, False, True])
+        self.assertIn("margin_outlier", bases[3]["flags"])
+        self.assertAlmostEqual(exposure.operating_margin(bases[0]), 0.01)
+
     def test_no_margin_without_patient_revenue(self):
         r = exposure.scenario(exposure.hospital_base(hcris_row(net_patient_revenue="")), 0.25, 0.4)
         self.assertIsNone(r["operating_margin_after"])

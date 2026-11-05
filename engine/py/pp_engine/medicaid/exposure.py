@@ -19,8 +19,7 @@ from pp_engine.medicaid import params
 
 # The tidy table's columns this module reads (HCRIS layer names; S-10 Part I and G-3).
 FLOWS = ("medicaid_net_revenue", "medicaid_supplemental", "medicaid_cost", "net_patient_revenue",
-         "net_income_patients", "net_income", "other_income", "uncompensated_cost", "charity_cost", "bad_debt_cost",
-         "medicaid_shortfall", "operating_expenses", "medicaid_days_all", "days_total")
+         "net_income_patients", "net_income", "other_income", "uncompensated_cost", "medicaid_days_all", "days_total")
 
 
 class ExposureError(ValueError):
@@ -51,17 +50,18 @@ def annual_factor(period_days):
     return 1.0 if lo <= days <= hi else params.YEAR_DAYS / days
 
 
-def _cost_ratio(cost, revenue, flags, flag_prefix):
+def _cost_ratio(cost, revenue, flags=None):
     """Medicaid cost per dollar of Medicaid revenue for one revenue base; 1 (cost equals payment) when the cost is
-    missing, capped at MAX_COST_RATIO."""
+    missing, capped at MAX_COST_RATIO. Notes either case in `flags` when given."""
     if revenue is None or revenue <= 0:
         return None
+    flags = [] if flags is None else flags
     if cost is None or cost <= 0:
-        flags.append(flag_prefix + "cost_missing")
+        flags.append("cost_missing")
         return 1.0
     ratio = cost / revenue
     if ratio > params.MAX_COST_RATIO:
-        flags.append(flag_prefix + "cost_ratio_capped")
+        flags.append("cost_ratio_capped")
         return params.MAX_COST_RATIO
     return ratio
 
@@ -98,12 +98,30 @@ def hospital_base(row):
     scored = rev is not None and rev > 0 and "medicaid_exceeds_patient_revenue" not in flags
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
-        factor=factor, shape=row.get("shape", "one"), status=status_label(row["status"]),
+        factor=factor, status=status_label(row["status"]),
         revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
-        cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags, ""),
-        cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25, [], ""),
+        cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
+        cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25),
         flags=flags)
     return base
+
+
+def operating_margin(base):
+    """The base's operating margin (G-3 line 5 over line 3); None without usable patient revenue."""
+    return base["net_income_patients"] / base["net_patient_revenue"] if base["has_margin"] else None
+
+
+def flag_margin_outliers(bases, fence=None):
+    """Marks, in place, each base whose operating margin falls outside `fence` (default: margin_fence over these
+    bases' margins). An outlier stays in the dollar sums but leaves the margin roll-ups. Returns the fence used."""
+    bases = list(bases)
+    fence = fence or margin_fence(operating_margin(b) for b in bases)
+    for b in bases:
+        m = operating_margin(b)
+        if m is not None and not fence[0] <= m <= fence[1]:
+            b["margin_outlier"] = True
+            b["flags"].append("margin_outlier")
+    return fence
 
 
 def revenue_at_risk(base, share, line2_5=False):
@@ -163,7 +181,7 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     return out
 
 
-def margin_change(result, which="operating_margin"):
-    """The scenario's change in a margin, in percentage points; None without one."""
-    before, after = result[which], result[which + "_after"]
+def margin_change(result):
+    """The scenario's change in operating margin, in percentage points; None without one."""
+    before, after = result["operating_margin"], result["operating_margin_after"]
     return None if before is None or after is None else (after - before) * 100
