@@ -56,3 +56,20 @@ export const NOT_IN_PROGRAM_STATE = 'MD';
 
 // The "Every state" table shows this many rows to a page.
 export const STATES_PAGE_SIZE = 15;
+
+// The history's rule marks (figures/history-data.js): the fiscal year each took effect and the copy entry that words it
+// (its claim id is on that entry): peer groups HRRP-05 (FY2019, the FY2018 final rule's recap), the pneumonia measure's
+// suppression HRRP-17 (FY2023), Medicare Advantage stays in the ratios HRRP-14 (FY2027).
+export const HISTORY_MARKS = Object.freeze([
+  Object.freeze({ fy: 2019, key: 'histMarkPeer' }),
+  Object.freeze({ fy: 2023, key: 'histMarkPn' }),
+  Object.freeze({ fy: 2027, key: 'histMarkMa' }),
+]);
+
+// The fiscal years shaded as the COVID-19 years (first, last): the years whose data windows CMS shortened or cut around the
+// claims it left out (HRRP-18), which are those left out, January 1 to June 30, 2020. The data test checks the windows.
+export const COVID_FYS = Object.freeze([2022, 2024]);
+export const COVID_EXCLUDED = Object.freeze(['2020-01-01', '2020-06-30']);
+
+// The explorer's table shows this many rows to a page (design: 25).
+export const EXPLORE_PAGE_SIZE = 25;

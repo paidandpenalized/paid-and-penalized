@@ -26,6 +26,9 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-14 | Beginning in fiscal year 2027, CMS works out the excess readmission ratios from Medicare Advantage stays as well as fee-for-service stays; the payment cut still applies only to fee-for-service payments (HRRP-06). | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "Beginning in fiscal year (FY) 2027, CMS is calculating excess readmission ratios (ERRs) using both Medicare Advantage (MA) and fee-for-service (FFS) data" | 2026-11-05 |
 | HRRP-15 | A hospital's excess readmission ratio for a condition is its predicted 30-day readmission rate divided by the rate expected at an average hospital with a similar mix of patients; above 1.0 is more readmissions than expected. | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "predicted 30-day readmission rate for a hospital" … "readmission rates at an average hospital with a similar patient case mix" | 2026-11-05 |
 | HRRP-16 | A subsection (d) hospital, the kind the program cuts (HRRP-11), is a hospital in one of the fifty states or the District of Columbia, so a hospital in Puerto Rico is not in the program. | https://www.law.cornell.edu/uscode/text/42/1395ww | "located in one of the fifty States or the District of Columbia" | 2026-11-05 |
+| HRRP-17 | CMS suppressed the pneumonia readmission measure for the FY2023 program year, so no pneumonia ratio counted toward the FY2023 cuts. | https://www.federalregister.gov/documents/2021/08/13/2021-16519 | "to suppress the Hospital 30-Day, All-Cause, Risk- Standardized Readmission Rate (RSRR) following Pneumonia Hospitalization measure (NQF #0506) for the FY 2023 program year" | 2026-11-05 |
+| HRRP-18 | CMS left claims for services from January 1 to June 30, 2020 out of the program's calculations because of the COVID-19 public health emergency. | https://www.federalregister.gov/documents/2020/09/18/2020-19637 | "no claims data reflecting services provided January 1, 2020-June 30, 2020 will be used in calculations for the Hospital Readmissions Reduction Program" | 2026-11-05 |
+
 
 ## Notes on the sources
 
@@ -87,6 +90,13 @@ A claim marked `unverified` may not be used in copy.
   Maryland Health Services Cost Review Commission's pages call its own readmissions program a separate one with "an all-payer
   focus", but do not say that Maryland is exempt from the federal program in words found.
 
+- **HRRP-17** is the FY2022 IPPS/LTCH PPS final rule's summary of its policies (item 2), and the rule's section "Suppression of
+  the CMS 30-Day Pneumonia Readmission Measure (NQF #0506) for the FY 2023 Program Year". The quote keeps the text file's line break
+  after "Risk-". Read from the Federal Register's text file.
+- **HRRP-18** is footnote 434 of the FY2021 IPPS/LTCH PPS final rule (85 FR 54832), quoting the August 25th COVID-19 interim
+  final rule. The history's shaded years (FY2022 to FY2024, constants.js COVID_FYS) are the years whose data windows are
+  cut short or run across those months; web/ tests check the windows in the data file. Read from the Federal Register's text file.
+
 ## Link check (2026-11-04)
 
 Each source above, fetched with redirects followed. The Federal Register addresses redirect once to the same
@@ -105,3 +115,5 @@ document's page; no source needed an archive copy.
 | https://www.law.cornell.edu/uscode/text/42/1395ww | 200 (about 590,000 characters; the definition is in the second 100,000, read 2026-11-05) | direct |
 | https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |
+| https://www.federalregister.gov/documents/2021/08/13/2021-16519 | 200 | direct (one redirect) |
+| https://www.federalregister.gov/documents/2020/09/18/2020-19637 | 200 | direct (one redirect) |

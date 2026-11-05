@@ -163,3 +163,31 @@
   .usmap__sw--faint { background: GrayText; opacity: 1; }
   .mtoggle__b[aria-pressed="true"] { background: Highlight; color: HighlightText; }
 }
+
+/* The data windows (the kit's periods chart): the window the ratios come from is dark, the payment year is the penalty's color. */
+.chart-periods__perf { fill: var(--ink); }
+/* The timeline: dated entries down a rule, a year not yet in effect set apart by a dashed rule and a tag. */
+.tl { margin: 12px 0 0; padding: 0 0 0 16px; list-style: none; border-left: 2px solid var(--ink); display: grid; gap: 18px; max-width: 62ch; }
+.tl__item--future { border-left: 2px dashed var(--ink-3); margin-left: -18px; padding-left: 16px; }
+.tl__date { margin: 0; font: 600 var(--fs-sm)/1.3 var(--font-type); letter-spacing: 0.04em; color: var(--ink-2); }
+.tl__tag { margin-left: 6px; padding: 1px 6px; border: 1.5px solid var(--ink-3); font-size: var(--fs-xs, 0.75rem); text-transform: uppercase; }
+.tl__title { margin: 2px 0 4px; font: 400 var(--fs-lg)/1.2 var(--font-display); }
+.tl__body, .tl__src { margin: 0; }
+/* The research list: a theme, then its findings. */
+.rs { display: grid; gap: 10px; }
+.rs__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; max-width: 62ch; }
+.rs__cite, .rs__finding { margin: 0; }
+/* The explorer's shell: the filters wrap on a phone; the whole thing stays hidden until the page's script has the rows. */
+.ht { display: grid; gap: 12px; }
+.ht[hidden], .ht-empty[hidden] { display: none; }
+.ht-nojs { margin-top: 12px; max-width: 52ch; color: var(--ink-2); }
+.ht-retry:empty { display: none; }
+.ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }
+.ht__field { display: grid; gap: 4px; margin: 0; }
+.ht__field label { font-weight: 600; }
+.ht select, .ht input[type="search"] { padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
+@media (max-width: 640px) { .ht__controls { display: grid; gap: 12px; } .ht__field, .ht select, .ht input[type="search"] { width: 100%; } }
+@media (forced-colors: active) {
+  .chart-periods__perf { fill: CanvasText; }
+  .tl__item--future { border-left-color: GrayText; }
+}

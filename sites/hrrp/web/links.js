@@ -18,3 +18,14 @@ export const placePath = (kind, key) => {
 };
 
 export const csvPath = (fy, name) => `/data/hrrp/fy${fy}/${name}.csv`;
+
+// A link from a content file (the timeline, the research list): the address when it is an https one, else null, so a
+// javascript:, http:, data: or malformed address never becomes an href.
+export function httpsUrl(url) {
+  try {
+    const u = new URL(String(url));
+    return u.protocol === 'https:' ? u.href : null;
+  } catch {
+    return null;
+  }
+}

@@ -8,9 +8,12 @@ import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { SITE } from '../../../../web/site.js';
+import { explorePart } from '../figures/explore.js';
+import { historyPart } from '../figures/history.js';
 import { howPart } from '../figures/how.js';
 import { mapPart } from '../figures/map.js';
 import { picturePart } from '../figures/picture.js';
+import { researchPart } from '../figures/research.js';
 import { PROGRAM_PATH } from '../links.js';
 import { fill, t } from '../program/copy.js';
 import { SECTIONS, estimateTag, labelOf, recordCard, shellOf } from './parts.js';
@@ -47,13 +50,17 @@ const part = (id, n, label, body = '') => html`<section class="part" id="${id}" 
 ${body}
 </section>`;
 
-// view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
-export function programPage({ view, robots, assets }) {
+// view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
+// hospitalsUrl: the hospitals asset's path the explorer reads (null: the shell has no source).
+export function programPage({ view, robots, assets, hospitalsUrl = null }) {
   const figure = counter();
   const bodies = {
     how: howPart(view.how, { figure, edition: view.edition, estimateTag }),
     picture: picturePart(view.picture, { figure, edition: view.edition }),
     map: mapPart(view.map, { figure, edition: view.edition }),
+    history: historyPart(view.history, { figure }),
+    explore: explorePart(view.explore, { url: hospitalsUrl }),
+    research: researchPart(view.research),
   };
   const body = html`<article class="wrap page page--prog prog">
 ${top(view)}

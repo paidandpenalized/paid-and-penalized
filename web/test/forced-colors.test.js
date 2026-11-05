@@ -43,6 +43,8 @@ const MARKS = [
   '.st--md', '.dkey__hatch', '.sb',
   // the Readmissions map's dot key (sites/hrrp/web/styles.css)
   '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint',
+  // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
+  '.chart-periods__perf',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

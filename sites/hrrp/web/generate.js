@@ -7,6 +7,7 @@ import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { hospitalCsv, placeCsv } from './csv.js';
+import { hospitalsAsset } from './figures/explore-data.js';
 import { statesCsvRows } from './figures/map-data.js';
 import { loadHrrp } from './data.js';
 import { hospitalPage } from './pages/hospital.js';
@@ -36,7 +37,9 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const places = buildPlaces(hospitals, meta);
   const area = areaContext({ ...data, places });  // data.shapes: the state outlines the map draws
   const program = programView(area);
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets }) });
+  // The explorer's rows are a content-hashed asset the page reads, not part of the page.
+  const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, meta)));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl }) });
   ctx.emit({ path: program.picture.csvHref, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, text: placeCsv(statesCsvRows(program.map.pages)) });
   for (const hospital of hospitals) {
