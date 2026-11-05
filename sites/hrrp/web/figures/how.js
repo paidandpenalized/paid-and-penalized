@@ -10,6 +10,7 @@ import { punchCard } from '../../../../web/charts/punchCard.js';
 import { printout } from '../../../../web/render/components.js';
 import { capitalize, count, listText, pct, shownAbove, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
+import { conditionShort } from '../derive.js';
 import { fmtInt, fmtPct, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
@@ -24,7 +25,6 @@ const COLUMNS_HEIGHT = 150;
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
 
-const shortOf = (conditions, key) => conditions.find((c) => c.key === key).short;
 // A condition's label on the punch card's rows: CMS's abbreviation (the key, with the slash of hip and knee).
 const abbr = (key) => key.replace('_', '/');
 
@@ -48,7 +48,7 @@ function punchFigure({ sets, conditions, edition, n }) {
   const rest = sets.sets.slice(KEEP);
   const sum = (list, k) => list.reduce((s, c) => s + c[k], 0);
   const nation = sets.yes / sets.measured;
-  const name = (conds) => listText(conds.map((k) => shortOf(conditions, k)));
+  const name = (conds) => listText(conds.map((k) => conditionShort(conditions, k)));
   const shareOf = (yes, total) => ({ shareText: pct(yes / total, 0), hot: shownAbove(yes / total, nation, 0) });
   const cols = [
     ...kept.map((c) => ({ holes: c.conds.map((k) => CONDS.indexOf(k)), n: c.n, yes: c.yes, nText: count(c.n), ...shareOf(c.yes, c.n), tip: fill('fig1Tip', { set: name(c.conds), n: count(c.n), yes: count(c.yes) }) })),
@@ -59,7 +59,7 @@ function punchFigure({ sets, conditions, edition, n }) {
   const labels = { other: t('fig1Other'), none: t('fig1None'), totals: t('fig1Totals'), share: t('fig1Share') };
   const byRows = Object.entries(sets.rows).sort((a, b) => b[1] - a[1]);
   const [top, bottom] = [byRows[0], byRows[byRows.length - 1]];
-  const abbrs = listText(CONDS.filter((k) => abbr(k) !== shortOf(conditions, k)).map((k) => `${abbr(k)} is ${inSentence(shortOf(conditions, k))}`));
+  const abbrs = listText(CONDS.filter((k) => abbr(k) !== conditionShort(conditions, k)).map((k) => `${abbr(k)} is ${inSentence(conditionShort(conditions, k))}`));
   const tableRows = [
     ...sets.sets.map((c) => [name(c.conds), num(count(c.n), c.n), num(count(c.yes), c.yes)]),
     ...(sets.none ? [[t('fig1None'), num(count(sets.none), sets.none), num('0', 0)]] : []),
@@ -67,7 +67,7 @@ function punchFigure({ sets, conditions, edition, n }) {
   return figure({
     n, source: fill('fig1Source', { edition }), alt: t('fig1Alt'), csvName: 'hrrp-measure-sets',
     takeaway: fill('fig1Takeaway', {
-      top: shortOf(conditions, top[0]), nTop: count(top[1]), bottom: inSentence(shortOf(conditions, bottom[0])), nBottom: count(bottom[1]),
+      top: conditionShort(conditions, top[0]), nTop: count(top[1]), bottom: inSentence(conditionShort(conditions, bottom[0])), nBottom: count(bottom[1]),
       measured: count(sets.measured), n: count(sets.measured + sets.none), none: count(sets.none),
     }),
     ...drawn((width) => punchCard({ rows, columns: cols, labels, width }), WIDE),
@@ -108,14 +108,13 @@ function dualFigure({ dual, edition, n }) {
 // ---------- Step 4 ----------
 
 // The peer-group medians in a collapsed table: a row for each group, labeled with its dual-share range, a column for each
-// condition at four decimals, as CMS publishes them. Methods shows the same table.
-export function mediansTable({ meta, conditions, edition = fill('editionLabel', { fy: String(meta.fy) }) }) {
-  const rows = meta.peerCutoffs.map(([lo, hi], i) => ({ peer: i + 1, lo, hi, cells: CONDS.map((k) => meta.peerMedians[i + 1]?.[k] ?? null) }));
+// condition at four decimals, as CMS publishes them. Methods shows the same table. rows: how-data.js mediansRows().
+export function mediansTable({ rows, conditions, edition }) {
   return html`<details class="meds">
 <summary>${fill('medsSummary', { edition })}</summary>
 ${printout(html`<table class="gb">
-<thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${shortOf(conditions, k)}</th>`)}</tr></thead>
-<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: fmtPct(r.lo * 100, 0), to: fmtPct(r.hi * 100, 0) })}</th>${r.cells.map((v) => html`<td class="num">${v === null ? t('medsMissing') : ratio(v)}</td>`)}</tr>`)}</tbody>
+<thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
+<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: fmtPct(r.lo * 100, 0), to: fmtPct(r.hi * 100, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
 </table>`)}
 </details>`;
 }
@@ -127,7 +126,7 @@ export const calloutNewFor = ({ items, edition }) => (items
   ? html`<aside class="callout" aria-labelledby="callout-new-h">
 <p class="callout__title cap" id="callout-new-h">${fill('newForTitle', { edition })}</p>
 <ul>${items.map((i) => html`<li><b>${i.title}</b> ${i.body}</li>`)}</ul>
-${[...new Set(items.map((i) => i.claim).filter((c) => c in NOTE_SOURCES))].map((c) => html`<p class="small muted">${fill(NOTE_SOURCES[c], { edition })}</p>
+${[...new Set(items.map((i) => i.claim).filter((c) => Object.hasOwn(NOTE_SOURCES, c)))].map((c) => html`<p class="small muted">${fill(NOTE_SOURCES[c], { edition })}</p>
 `)}
 </aside>`
   : '');
@@ -168,7 +167,7 @@ ${step({
 ${step({
     n: 4, id: 'step-4', heading: t('step4Title'),
     text: html`<p>${t('step4Text')}</p>`,
-    fig: mediansTable({ meta: how.meta, conditions, edition }),
+    fig: mediansTable({ rows: how.medians, conditions, edition }),
   })}
 ${step({
     n: 5, id: 'step-5', heading: t('step5Title'),

@@ -12,9 +12,9 @@
 import { CONDS, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { summarize } from '../../../../engine/js/hrrp/summary.js';
 import { csvPath } from '../links.js';
-import { GE_CUT_PCT, MAP_RAMPS, NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '../constants.js';
+import { MAP_RAMPS, NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '../constants.js';
 
-const MILLION = 1e6;
+export const MILLION = 1e6;
 
 // The four measures in the order the map's switch lists them: ramp, the decimals a value is shown to (it is binned at that
 // precision), value(row), the unrounded value in the measure's unit (null: nothing to measure), and zeroBin: the bin a shown
@@ -107,7 +107,5 @@ export function mapData(ctx) {
     csvHref: csvPath(ctx.meta.fy, STATES_CSV),
     // The state HRRP-01 leaves out, when the file has none of its hospitals (hatched).
     notInProgram: inFile.has(NOT_IN_PROGRAM_STATE) ? null : NOT_IN_PROGRAM_STATE,
-    inFile,
-    geCut: GE_CUT_PCT,
   };
 }

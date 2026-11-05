@@ -116,7 +116,7 @@ test('Step 4: five rows by six conditions', () => {
 });
 
 test('Step 4: the table is collapsed, labeled with the dual range, six columns at four decimals', () => {
-  const text = mediansTable({ meta: META3, conditions: CONDITIONS }).text;
+  const text = mediansTable({ rows: mediansRows(META3), conditions: CONDITIONS, edition: 'FY2027' }).text;
   assert.match(text, /^<details class="meds">/);
   assert.ok(!/<details[^>]* open/.test(text), 'collapsed');
   assert.equal(text.match(/<tbody>[\s\S]*<\/tbody>/)[0].match(/<tr>/g).length, 5);

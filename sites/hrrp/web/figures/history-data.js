@@ -65,26 +65,30 @@ export function rollCall({ hospitals, history, meta }) {
       const v = paf(h, i);
       return v == null ? ROLL.absent : v < 1 ? ROLL.cut : ROLL.kept;
     }).join('');
-    return { id: h.id, marks, first: marks.indexOf(ROLL.cut) };
+    const present = [...marks].filter((c) => c !== ROLL.absent).length;
+    const cut = [...marks].filter((c) => c === ROLL.cut).length;
+    return { id: h.id, marks, first: marks.indexOf(ROLL.cut), present, cut };
   });
-  const present = (r) => [...r.marks].filter((c) => c !== ROLL.absent).length;
-  const cutOf = (r) => [...r.marks].filter((c) => c === ROLL.cut).length;
-  const seen = records.filter((r) => present(r) > 0);
+  const seen = records.filter((r) => r.present > 0);
+  const byYear = years.map((fy) => ({ fy, present: 0, cut: 0, share: null }));
+  for (const { marks } of records) {
+    byYear.forEach((y, i) => {
+      if (marks[i] !== ROLL.absent) y.present += 1;
+      if (marks[i] === ROLL.cut) y.cut += 1;
+    });
+  }
+  for (const y of byYear) y.share = y.present ? y.cut / y.present : null;
   const counts = {
     n: records.length,
     nYears: years.length,
-    neverCut: seen.filter((r) => cutOf(r) === 0).length,
-    everCut: seen.filter((r) => cutOf(r) > 0).length,
-    cutEveryYearInFile: seen.filter((r) => cutOf(r) === present(r)).length,
-    cutAllYears: seen.filter((r) => cutOf(r) === years.length).length,
-    byYear: years.map((fy, i) => {
-      const here = records.filter((r) => r.marks[i] !== ROLL.absent).length;
-      const cut = records.filter((r) => r.marks[i] === ROLL.cut).length;
-      return { fy, present: here, cut, share: here ? cut / here : null };
-    }),
+    neverCut: seen.filter((r) => r.cut === 0).length,
+    everCut: seen.filter((r) => r.cut > 0).length,
+    cutEveryYearInFile: seen.filter((r) => r.cut === r.present).length,
+    cutAllYears: seen.filter((r) => r.cut === years.length).length,
+    byYear,
   };
   const order = (r) => (r.first < 0 ? years.length : r.first);
-  const sorted = records.map(({ id, marks, first }) => ({ id, marks, first })).sort((a, b) => order(a) - order(b) || byId(a.id, b.id));
+  const sorted = [...records].sort((a, b) => order(a) - order(b) || byId(a.id, b.id));
   return { years, records: sorted.map(({ id, marks }) => ({ id, marks })), counts };
 }
 

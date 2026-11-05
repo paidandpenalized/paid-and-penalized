@@ -56,7 +56,8 @@ function typeText(h) {
   return parts.length ? dotList(parts) : t('typeNone');
 }
 
-const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${ccn}`;
+// A hospital's page on Care Compare, by its CCN, encoded as HACRP's is (sites/hacrp/web/links.js; a site does not import the other).
+const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${encodeURIComponent(ccn)}`;
 
 function starsOf(h) {
   const href = careCompareHref(h.id);
@@ -142,13 +143,14 @@ export function hospitalView(h, ctx) {
 }
 
 // What the program page and the place pages share, built once: the edition's phrases, the nation's summary and the states'
-// average cuts (descending, for a state's rank among them). places: buildPlaces()'s result.
-export function areaContext({ hospitals, meta, history, conditions, places, whatsNew = null, whatsNewFy = null, shapes = null, timeline = null, research = null, pinsUsed = [] }) {
+// average cuts (descending, for a state's rank among them). places: buildPlaces()'s result. conditions are kept on the edition;
+// the rest (the content files, the state outlines) passes through as given.
+export function areaContext({ hospitals, meta, history, conditions, places, pinsUsed = [], ...content }) {
   const edition = { ...editionOf(meta, history), conditions };
   const states = places.list.filter((p) => p.kind === 'state');
   const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
   const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
-  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, whatsNew, whatsNewFy, shapes, history, conditions, timeline, research, pinsUsed };
+  return { ...content, hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, history, pinsUsed };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -200,7 +202,7 @@ export function programView(ctx) {
     picture: pictureData(ctx),
     map: mapData(ctx),
     history: { lines: smallLines(ctx), windows: windowRows(ctx), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
-    explore: exploreControls(ctx.hospitals, ctx.conditions),
+    explore: exploreControls(ctx.hospitals, edition.conditions),
     research: researchData(ctx.research),
   };
 }
@@ -314,6 +316,8 @@ function assumptionRows(ctx) {
   const { edition, meta, hospitals: list } = ctx;
   const dc = meta.dollarCheck;
   const f = (a, e, av = {}, ev = {}) => [methodsFill(a, av), methodsFill(e, ev)];
+  // The copy keys for a count: the 'One' form for one hospital, else 'Many'.
+  const form = (n) => (n === 1 ? 'One' : 'Many');
   const nMdh = list.filter((h) => h.types?.includes('MDH')).length;
   const nInactive = list.filter((h) => h.inactive).length;
   const nNoEst = list.filter((h) => h.pen == null).length;
@@ -321,7 +325,7 @@ function assumptionRows(ctx) {
   const parhmMonths = monthsBefore(edition.fy, PARHM_END);
   const share = meta.totals?.modelBase ? pct(NTAP_AMOUNT / meta.totals.modelBase, 1) : null;
   const rates = dc?.rateDrift == null
-    ? [methodsFill('assumeRates', { edition: edition.label }), methodsFill('assumeRatesENone', {})]
+    ? f('assumeRates', 'assumeRatesENone', { edition: edition.label })
     : f('assumeRates', 'assumeRatesE', { edition: edition.label }, { drift: pct(Math.abs(dc.rateDrift - 1), 1), direction: methodsT(dc.rateDrift >= 1 ? 'directionAbove' : 'directionBelow'), costFy: fyLabel(dc.costFy) });
   return [
     f('assumeBase', 'assumeBaseE', { edition: edition.label }),
@@ -336,8 +340,8 @@ function assumptionRows(ctx) {
       ? f('assumeParhm', 'assumeParhmE', {}, { date: fmtDate(PARHM_END, 'long'), months: parhmMonths })
       : f('assumeParhm', 'assumeParhmYearE', {}, { date: fmtDate(PARHM_END, 'long') })),
     f('assumeNew', 'assumeNewE'),
-    nInactive > 0 && f(nInactive === 1 ? 'assumeInactiveOne' : 'assumeInactiveMany', nInactive === 1 ? 'assumeInactiveOneE' : 'assumeInactiveManyE', { hospitals: noun(nInactive, 'hospital') }),
-    nNoEst > 0 && f(nNoEst === 1 ? 'assumeNoEstOne' : 'assumeNoEstMany', 'assumeNoEstE', { hospitals: noun(nNoEst, 'hospital') }),
+    nInactive > 0 && f(`assumeInactive${form(nInactive)}`, `assumeInactive${form(nInactive)}E`, { hospitals: noun(nInactive, 'hospital') }),
+    nNoEst > 0 && f(`assumeNoEst${form(nNoEst)}`, 'assumeNoEstE', { hospitals: noun(nNoEst, 'hospital') }),
   ].filter(Boolean);
 }
 
@@ -406,7 +410,7 @@ export function methodsView(ctx) {
       teach: methodsFill('defTeach', { major: String(TEACH_MAJOR) }),
     },
     sources: {
-      files: meta.sources.map((s) => ({ name: s.name, url: /^https:\/\//.test(s.url) ? s.url : null })),
+      files: meta.sources.map((s) => ({ name: s.name, url: httpsUrl(s.url) })),
       supplemental: methodsFill('sourceSupplemental', span),
       rules: methodsFill('sourceRules', { span: edition.span }),
     },

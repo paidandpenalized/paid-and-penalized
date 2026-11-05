@@ -197,9 +197,6 @@ export const COPY = {
   wfSum: { text: 'Sum (line {n})', claim: null },
   wfCap: { text: 'The {cap}% cap', claim: 'HRRP-09' },
   wfCut: { text: 'Cut after the cap (line {n})', claim: 'HRRP-09' },
-  wfColStep: { text: 'Step', claim: null },
-  wfColPart: { text: 'Adds, in percentage points', claim: null },
-  wfColRunning: { text: 'Running total, in percentage points', claim: null },
 
   // Part 3, the map: the state map's four measures, the dots, "Every state" and "Browse by region". Shares are over the
   // hospitals measured on at least one condition (the picture Part's denominator); the average cut is over every hospital.

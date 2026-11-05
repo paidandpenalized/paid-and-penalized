@@ -39,11 +39,10 @@ function cutBins(reds) {
 // zeroMeasured (measured, not cut) and zeroUnmeasured (measured on nothing); zero is both. table: a row with lo = hi = 0 for
 // each part of the pile (measured: true/false), then the bins of the cuts above it (percent). takeaway: the numbers its
 // sentence uses, over the measured (nMeasured) hospitals.
-export function sizeSwarm(hospitals) {
+export function sizeSwarm(hospitals, lede = pictureLede(hospitals)) {
   const items = hospitals.map((h) => ({ id: h.id, red: h.red, peer: h.peer, cut: h.red > 0, measured: measuredAny(h) }));
   const zeroMeasured = items.filter((i) => !i.cut && i.measured).length;
   const zeroUnmeasured = items.filter((i) => !i.cut && !i.measured).length;
-  const lede = pictureLede(hospitals);
   return {
     items,
     zero: zeroMeasured + zeroUnmeasured,
@@ -79,21 +78,22 @@ const ks = CONDS.map((_, i) => i + 1);
 // 1 - the product of (1 - rate) over the hospital's measured conditions, averaged over the group; no claim that real flags
 // behave that way). sixFlags: for the k = 6 group, hospitals by number of flags 0..6.
 export function coinFlip(hospitals) {
-  const rows = ks.map((k) => {
-    const group = hospitals.filter((h) => CONDS.filter((c) => isMeasured(h.c[c])).length === k);
+  const measuredOf = hospitals.map((h) => ({ h, measured: CONDS.filter((c) => isMeasured(h.c[c])) }));
+  const groups = ks.map((k) => measuredOf.filter((x) => x.measured.length === k));
+  const rows = ks.map((k, i) => {
+    const group = groups[i];
     const rate = Object.fromEntries(CONDS.map((c) => {
-      const m = group.filter((h) => isMeasured(h.c[c]));
-      return [c, m.length ? m.filter((h) => h.c[c].flag === 1).length / m.length : 0];
+      const m = group.filter((x) => x.measured.includes(c));
+      return [c, m.length ? m.filter((x) => x.h.c[c].flag === 1).length / m.length : 0];
     }));
-    const own = group.length ? mean(group.map((h) => 1 - CONDS.filter((c) => isMeasured(h.c[c])).reduce((p, c) => p * (1 - rate[c]), 1))) : null;
-    const nCut = group.filter((h) => h.red > 0).length;
-    const nFlag = group.filter((h) => CONDS.some((c) => isMeasured(h.c[c]) && h.c[c].flag === 1)).length;
-    return { k, n: group.length, nCut, observed: group.length ? nCut / group.length : null, anyFlag: group.length ? nFlag / group.length : null, coin: 1 - 0.5 ** k, own, group };
+    const own = group.length ? mean(group.map((x) => 1 - x.measured.reduce((p, c) => p * (1 - rate[c]), 1))) : null;
+    const nCut = group.filter((x) => x.h.red > 0).length;
+    const nFlag = group.filter((x) => x.measured.some((c) => x.h.c[c].flag === 1)).length;
+    return { k, n: group.length, nCut, observed: group.length ? nCut / group.length : null, anyFlag: group.length ? nFlag / group.length : null, coin: 1 - 0.5 ** k, own };
   });
-  const six = rows[5].group;
-  const sixFlags = Array.from({ length: CONDS.length + 1 }, (_, flags) => ({ flags, n: six.filter((h) => CONDS.filter((c) => isMeasured(h.c[c]) && h.c[c].flag === 1).length === flags).length }));
+  const sixFlags = Array.from({ length: CONDS.length + 1 }, (_, flags) => ({ flags, n: groups[5].filter((x) => x.measured.filter((c) => x.h.c[c].flag === 1).length === flags).length }));
   return {
-    rows: rows.map(({ group, ...r }) => r),
+    rows,
     sixFlags,
     table: rows.map((r) => ({ k: r.k, n: r.n, nCut: r.nCut, observed: r.observed, coin: r.coin, own: r.own })),
     variants: [{ key: 'coinLow', ks: [1, 2] }, { key: 'coinAll', ks: [6] }],
@@ -196,12 +196,13 @@ export function largestPenalties(hospitals, meta, n = LARGEST_N) {
 // off the result as functions, computed when asked.
 export function pictureData(ctx) {
   const { hospitals, meta } = ctx;
+  const lede = pictureLede(hospitals);
   return {
-    lede: pictureLede(hospitals),
+    lede,
     largest: largestPenalties(hospitals, meta),
     csvHref: csvPath(meta.fy, LARGEST_CSV),
     conditions: ctx.edition.conditions,
-    size: () => sizeSwarm(hospitals),
+    size: () => sizeSwarm(hospitals, lede),
     coin: () => coinFlip(hospitals),
     bars: () => pairedBars(hospitals, meta),
     ridges: () => ridges(hospitals),

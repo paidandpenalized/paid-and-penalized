@@ -3,10 +3,11 @@
 // fields A to C, lines 1 to 6 for each condition (with the reason a row does not count), lines 7 to 9, CMS's own factor and
 // whether the two agree, and the dollars line. worksheetRows is pure; worksheetHtml draws it on the server. waterfallData
 // is the numbers for the figure that shows the parts adding up to the cap (not drawn yet).
-import { CAP, CONDS, MIN_DISCHARGES, PEERS, WEIGHT_MISSING, condState, contrib, peerMedian, round4, weightPublished } from '../../../engine/js/hrrp/formula.js';
+import { CAP, CAP_PCT, CONDS, MIN_DISCHARGES, PEERS, WEIGHT_MISSING, condState, contrib, peerMedian, round4, weightPublished } from '../../../engine/js/hrrp/formula.js';
 import { formField, formTitle, printout } from '../../../web/render/components.js';
 import { placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
+import { conditionShort } from './derive.js';
 import { hospitalPath } from './links.js';
 import { fmtInt, fmtMoney, fmtPct, points, ratio } from './numbers.js';
 import { fill, t } from './program/copy.js';
@@ -21,13 +22,9 @@ export const excessText = (err, med) => {
   return s === '0.0000' ? `< ${ratio(0.0001)}` : `+${s}`;
 };
 
-// The worksheet's last check: does line 9 match CMS's factor.
-export function factorCheck(h, recomputed) {
-  const gap = Math.abs(recomputed - h.paf);
-  return gap < 1e-9 ? t('wsMatches') : fill('wsDiffers', { gap: gap.toFixed(4) });
-}
+// The worksheet's last check: does line 9 match CMS's factor. cms: worksheetRows().cms.
+export const factorCheck = ({ matches, diff }) => (matches ? t('wsMatches') : fill('wsDiffers', { gap: diff.toFixed(4) }));
 
-const labelOf = (conditions, cond) => conditions.find((c) => c.key === cond)?.short ?? cond;
 
 // h: a hospital row with withDerived's place.
 // -> { fields: [A, B, C], lines, totals: { sum, capped, reduction, factor }, cms: { factor, matches, diff }, dollars }
@@ -70,7 +67,7 @@ export function worksheetHtml(rows, { compact = false, dollars = null, edition =
   const [fa, fb, fc] = rows.fields;
   const head = (n, label) => html`<th scope="col" class="num">${fill('wsLine', { n: String(n) })}<br>${label}</th>`;
   const body = lines.map((l) => html`<tr class="${l.reason === null ? 'is-on' : 'is-off'}">
-<th scope="row">${labelOf(conditions, l.cond)}</th>
+<th scope="row">${conditionShort(conditions, l.cond)}</th>
 <td class="num">${l.n ? fmtInt(l.n) : '—'}</td>
 <td class="num">${ratio(l.err)}</td>
 <td class="num">${ratio(l.med)}</td>
@@ -97,9 +94,9 @@ ${body}
 <p class="wsr__note">${WORKSHEET_NOTE}</p>
 <ol class="wsr__totals">
 <li><span>${fill('wsLineSum', { n: '7', m: '6' })}</span><b>${points(totals.sum)}%</b></li>
-<li><span>${fill('wsLineCap', { n: '8', m: '7', cap: String(CAP * 100) })}</span><b>${fmtPct(totals.reduction * 100)}</b></li>
+<li><span>${fill('wsLineCap', { n: '8', m: '7', cap: String(CAP_PCT) })}</span><b>${fmtPct(totals.reduction * 100)}</b></li>
 <li><span>${fill('wsLineFactor', { n: '9', m: '8', one: '1' })}</span><b>${ratio(totals.factor)}</b></li>
-<li class="wsr__check"><span>${t('wsCms')}</span><b>${ratio(cms.factor)} ${factorCheck({ paf: cms.factor }, totals.factor)}</b></li>
+<li class="wsr__check"><span>${t('wsCms')}</span><b>${ratio(cms.factor)} ${factorCheck(cms)}</b></li>
 ${pay}
 </ol>
 </div>`;
@@ -111,13 +108,13 @@ export function waterfallData(rows, conditions = []) {
   let running = 0;
   const parts = rows.lines.map((l) => {
     running += l.part;
-    return { cond: l.cond, label: labelOf(conditions, l.cond), part: l.part, why: l.reason, running };
+    return { cond: l.cond, label: conditionShort(conditions, l.cond), part: l.part, why: l.reason, running };
   });
   const { sum, capped, reduction } = rows.totals;
   const table = [
     ...parts.map((p) => [p.label, p.why ?? points(p.part), points(p.running)]),
     [fill('wfSum', { n: '7' }), '', points(sum)],
-    [fill('wfCap', { cap: String(CAP * 100) }), '', points(CAP)],
+    [fill('wfCap', { cap: String(CAP_PCT) }), '', points(CAP)],
     [fill('wfCut', { n: '8' }), '', points(reduction)],
   ];
   return { parts, sum, cap: CAP, binds: capped, line8: reduction, rows: table };

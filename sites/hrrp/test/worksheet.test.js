@@ -25,9 +25,8 @@ test('line 4 is the stored excess to four decimals, and a sliver above zero read
 });
 
 test('the check against CMS: matches, or differs by the gap', () => {
-  const h = { paf: 0.9948 };
-  assert.equal(factorCheck(h, 0.9948), '· matches');
-  assert.equal(factorCheck(h, 0.9949), '· differs by 0.0001');
+  assert.equal(factorCheck({ matches: true, diff: 0 }), '· matches');
+  assert.equal(factorCheck({ matches: false, diff: 0.0001 }), '· differs by 0.0001');
 });
 
 test('each reason a condition does not count, and none for one that does', () => {

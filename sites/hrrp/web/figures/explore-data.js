@@ -4,6 +4,7 @@
 import { CONDS, condState, contrib } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL } from '../../../../engine/js/hrrp/filters.js';
 import { EXPLORE_PAGE_SIZE } from '../constants.js';
+import { conditionShort } from '../derive.js';
 import { HOSPITALS_PATH } from '../links.js';
 import { byId } from '../numbers.js';
 
@@ -42,5 +43,5 @@ export function exploreControls(hospitals, conditions) {
   const states = [...new Set(hospitals.map((h) => h.st))].sort();
   const peers = [...new Set(hospitals.map((h) => h.peer).filter((p) => p != null))].sort((a, b) => a - b);
   const teach = Object.keys(TEACH_LABEL).filter((k) => hospitals.some((h) => h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
-  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditions.find((c) => c.key === key)?.short ?? key })), pageSize: EXPLORE_PAGE_SIZE, sorts: SORTS };
+  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: EXPLORE_PAGE_SIZE, sorts: SORTS };
 }

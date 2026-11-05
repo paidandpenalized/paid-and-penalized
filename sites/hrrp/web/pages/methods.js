@@ -5,12 +5,12 @@
 // penalty, places, history with the annual totals and their sources, feedback and privacy (the family's page holds the
 // privacy claims), accessibility, the pinned files and reuse; the sources list and the 14-term glossary sit beside them.
 import { COPY as SHARED } from '../../../../web/copy.js';
-import { fillAround, fillCopy } from '../../../../web/render/components.js';
+import { fillAround, fillCopy, printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { DICTIONARY_PAGE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
-import { printout } from '../../../../web/render/components.js';
+import { mediansRows } from '../figures/how-data.js';
 import { mediansTable } from '../figures/how.js';
 import { fill, t } from '../methods/copy.js';
 import { shellOf } from './parts.js';
@@ -48,7 +48,7 @@ ${section('formula', t('formulaHeading'), html`<p>${view.formula.intro}</p>
 <pre class="formula">${t('formulaCut')}</pre>
 <p>${t('formulaBelow')}</p>
 <p>${view.formula.cap}</p>
-${mediansTable({ meta: view.meta, conditions: view.conditions, edition: view.edition })}
+${mediansTable({ rows: mediansRows(view.meta), conditions: view.conditions, edition: view.edition })}
 <p>${view.formula.replication}</p>`)}
 ${section(DOLLARS_ID, t('dollarsHeading'), html`<p>${t('dollarsIntro')}</p>
 <pre class="formula">${t('dollarsFormula')}</pre>

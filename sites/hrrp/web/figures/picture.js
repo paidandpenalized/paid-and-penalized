@@ -8,6 +8,7 @@ import { miniCards } from '../../../../web/charts/miniCards.js';
 import { listText, noun, placeText, spelled } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
+import { conditionShort } from '../derive.js';
 import { hospitalPath } from '../links.js';
 import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
@@ -17,8 +18,6 @@ const GLYPH_WIDTH = 96;
 // A condition's state in the glyph: counted fills the box, below hatches it, few and none leave it empty.
 const CELL = { counted: 'm', below: 'a', few: '', none: '' };
 const TIP = { counted: 'penTipCounted', below: 'penTipBelow', few: 'penTipNone', none: 'penTipNone' };
-
-const shortOf = (conditions, key) => conditions.find((c) => c.key === key).short;
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -33,11 +32,11 @@ export function ledeText({ lede }) {
 
 // One row's glyph: the six boxes in program order, a tooltip on the card naming each condition's state.
 function glyph(row, rank, conditions) {
-  const tip = CONDS.map((k, i) => fill(TIP[row.states[i]], { c: shortOf(conditions, k) })).join('; ');
+  const tip = CONDS.map((k, i) => fill(TIP[row.states[i]], { c: conditionShort(conditions, k) })).join('; ');
   return miniCards({ id: `pen-${rank}`, width: GLYPH_WIDTH, cols: 1, cards: [{ cells: row.states.map((s) => CELL[s]), yes: row.h.red > 0, tip }] });
 }
 
-const countedNames = (row, conditions) => CONDS.filter((_, i) => row.states[i] === 'counted').map((k) => shortOf(conditions, k));
+const countedNames = (row, conditions) => CONDS.filter((_, i) => row.states[i] === 'counted').map((k) => conditionShort(conditions, k));
 
 // The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page, then its cut, its
 // modeled dollars and the glyph (with the conditions in words for a screen reader).
@@ -62,7 +61,7 @@ function penFigure({ rows, conditions, edition, n }) {
   return figure({
     n, takeaway, source: fill('penSource', { edition }), claimLevel: 'estimate', csvName: 'hrrp-largest-penalties',
     chart: penTable(rows, conditions),
-    note: fill('penKey', { names: listText(CONDS.map((k) => shortOf(conditions, k))) }),
+    note: fill('penKey', { names: listText(CONDS.map((k) => conditionShort(conditions, k))) }),
     table: {
       columns: [{ name: t('penColHospital') }, { name: t('penColPlace') }, { name: t('penColCut'), numeric: true }, { name: t('penColDollars'), numeric: true }, { name: t('penColConds') }],
       rows: rows.map((r) => [

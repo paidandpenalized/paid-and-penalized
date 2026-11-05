@@ -6,6 +6,7 @@ import { CONDS, MIN_DISCHARGES, verdict } from '../../../engine/js/hrrp/formula.
 import { noEstimate, rankPct } from '../../../engine/js/hrrp/summary.js';
 import { capitalize, spelled } from '../../../web/render/format.js';
 import { fill, t } from './copy.js';
+import { conditionShort } from './derive.js';
 import { fmtDate, fmtInt, fmtPct } from './numbers.js';
 
 // "1 hospital", "2,912 hospitals". one and many are words (read them from copy); many defaults to one plus s.
@@ -84,7 +85,7 @@ export function summarySentence(h, meta, edition) {
     return fill('sumNoneMeasured', { ...base, conditions: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) });
   }
   if (v.status === 'none-below') return fill('sumNoneBelow', { ...base, nMeasured: String(v.nMeasured) });
-  const short = (k) => inSentence(edition.conditions.find((c) => c.key === k).short);
+  const short = (k) => inSentence(conditionShort(edition.conditions, k));
   if (v.status === 'none-rounded') {
     const names = v.above.map(short).join(t('and'));
     return fill('sumNoneRounded', { ...base, names: capitalize(names), share: t(v.above.length > 1 ? 'shareMany' : 'shareOne') });

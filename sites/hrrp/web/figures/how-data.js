@@ -114,9 +114,9 @@ export const mediansRows = (meta) => PEERS.map((peer, i) => ({
   cells: CONDS.map((cond) => ({ cond, value: peerMedian(meta, peer, cond) })),
 }));
 
-// The lowest and highest median over every group and condition.
-export function medianSpan(meta) {
-  const values = mediansRows(meta).flatMap((r) => r.cells.map((c) => c.value)).filter((v) => v != null);
+// The lowest and highest median over every group and condition. rows: mediansRows().
+export function medianSpan(rows) {
+  const values = rows.flatMap((r) => r.cells.map((c) => c.value)).filter((v) => v != null);
   return { lo: Math.min(...values), hi: Math.max(...values) };
 }
 
@@ -133,6 +133,7 @@ export function howData(ctx) {
   const { hospitals, meta } = ctx;
   const exampleId = exampleIdOf(hospitals, meta);
   const example = hospitals.find((h) => h.id === exampleId);
+  const medians = mediansRows(meta);
   return {
     exampleId,
     // Step 5's Worksheet R for the example hospital, the one Step 2 marks; payShort is the dollars line's payment year.
@@ -142,12 +143,11 @@ export function howData(ctx) {
     swarm: (cond) => swarmData(hospitals, meta, cond, exampleId),
     sets: condSets(hospitals),
     dual: dualBins(hospitals, meta.peerCutoffs),
-    medians: mediansRows(meta),
-    span: medianSpan(meta),
+    medians,
+    span: medianSpan(medians),
     n: hospitals.length,
     rounded: roundedCount(hospitals.length),
     newFor: newFor({ whatsNew: ctx.whatsNew, whatsNewFy: ctx.whatsNewFy, fy: meta.fy }),
     conditions: ctx.edition.conditions,
-    meta,
   };
 }

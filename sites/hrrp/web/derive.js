@@ -34,6 +34,9 @@ export function edition(meta, history) {
   };
 }
 
+// A condition's short name from the data file's condition list ([{ key, short }]); the key itself when the list lacks it.
+export const conditionShort = (conditions, key) => conditions.find((c) => c.key === key)?.short ?? key;
+
 // The row with each condition's part of the cut (cx), the conditions CMS flagged and its place line. The row itself is not changed.
 export function withDerived(h, meta) {
   return {
