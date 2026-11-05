@@ -45,7 +45,7 @@ export function worksheetRows(h, meta) {
       counted: weightPublished(c) ? t('wsRounds') : WEIGHT_MISSING,
     };
     return {
-      cond, n: c?.n ?? 0, err: c?.err ?? null, med, excess: counted ? c.err - med : null,
+      cond, state, n: c?.n ?? 0, err: c?.err ?? null, med, excess: counted ? c.err - med : null,
       weight: c?.ratio ?? null, part: counted ? r.byCond[cond] : 0, reason: counted ? null : reasons[state],
     };
   });
@@ -117,9 +117,11 @@ export function zoomOf(sum) {
   return null;
 }
 
-// Why a part is zero: kind 'none' (no cases), 'few' (under 25 cases), 'below' (the ratio is at or under its median) or 'other'
-// (counted by CMS but rounds to nothing, or the weight is not published); null for a part that adds.
-const zeroKind = (l) => (l.reason === null ? null : !l.n ? 'none' : l.n < MIN_DISCHARGES ? 'few' : l.err != null && l.med != null && l.err <= l.med ? 'below' : 'other');
+// Why a part is zero, from the worksheet line's own state (the one its reason words come from, so the two always agree): kind 'none'
+// (no cases), 'few' (under 25 cases), 'below' (the ratio is at or under its median) or 'other' (counted by CMS but rounds to nothing,
+// or the weight is not published); null for a part that adds.
+const ZERO_KIND = { none: 'none', few: 'few', below: 'below', counted: 'other' };
+const zeroKind = (l) => (l.reason === null ? null : ZERO_KIND[l.state]);
 
 // The waterfall's numbers: each condition's part in order with the running total, the sum (line 7), the cap and whether it
 // binds, the rounded line 8, and the figure's table. conditions (optional): { key, short } for the labels. For each part, why

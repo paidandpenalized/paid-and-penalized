@@ -54,6 +54,11 @@ test('a flagged condition that rounds to its median is counted by CMS but adds n
   const rows = worksheetRows(withDerived(h, META), META, CONDITIONS);
   assert.equal(line(rows, 'HF').reason, 'rounds to the median; CMS counted it');
   assert.equal(line(rows, 'HF').part, 0);
+  assert.equal(line(rows, 'HF').state, 'counted');
+  // The waterfall's note follows the worksheet row: counted but nothing to add is 'other', never 'below the median'.
+  const wf = waterfallData(rows, CONDITIONS);
+  assert.equal(wf.parts.find((p) => p.cond === 'HF').zero, 'other');
+  for (const p of wf.parts) assert.equal(p.zero, p.part > 0 ? null : { none: 'none', few: 'few', below: 'below', counted: 'other' }[line(rows, p.cond).state]);
 });
 
 test('lines 7 to 9: the sum, the cap at 3 percent, the rounded cut and the factor', () => {

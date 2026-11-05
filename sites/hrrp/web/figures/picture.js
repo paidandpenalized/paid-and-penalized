@@ -239,8 +239,8 @@ function typeFigure({ ty, edition, n }) {
 
 // ---------- which conditions cost the most ----------
 
-// The condition names on the paired bars: a phone has the room for CMS's short names only.
-const NARROW_NAME = { 'Hip/knee replacement': 'Hip/knee', 'Bypass surgery': 'Bypass (CABG)' };
+// The condition names on the paired bars: a phone has the room for shorter names only, keyed by condition key (the display names are CMS's words and may change).
+const NARROW_NAME = { THA_TKA: 'Hip/knee', CABG: 'Bypass (CABG)' };
 
 export function barsTakeaway(b, conditions) {
   if (!b.takeaway) return '';
@@ -262,7 +262,7 @@ function barsFigure({ b, conditions, edition, n }) {
       rows: b.rows.map((r) => {
         const name = conditionShort(conditions, r.cond);
         return {
-          label: isNarrow(width) ? NARROW_NAME[name] ?? name : name, a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
+          label: isNarrow(width) ? NARROW_NAME[r.cond] ?? name : name, a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
           tipA: fill('barsTipFlags', { cond: name, flags: fmtInt(r.flags), all: fmtInt(b.totalFlags), share: pct0(r.shareOfFlags) }),
           tipB: fill('barsTipDollars', { cond: name, dollars: fmtMoney(r.dollars), share: pct0(r.shareOfDollars) }),
         };
