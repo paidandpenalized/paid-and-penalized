@@ -2,8 +2,9 @@
 // four measures, each drawn at build time (the first shown, the others hidden for the browser's switch) and a layer of hospital
 // dots, off by default, then "Every state" (a table of 15 to a page with its CSV) and "Browse by region". Nothing here needs a
 // browser script to read: without one the first measure shows, every row of the table shows and the links work.
-// Shares are of the hospitals measured on at least one condition (figures/map-data.js).
-import { US_MAP_CODES, usMap, usPaths } from '../../../../web/charts/geo.js';
+// Shares are of the hospitals measured on at least one condition, except the share cut 1% or more, which is over all the
+// state's hospitals (figures/map-data.js). The dot layer is drawn once, over whichever measure shows.
+import { US_MAP_CODES, usMap, usMapHeight, usPaths } from '../../../../web/charts/geo.js';
 import { dotsPath } from '../../../../web/charts/dots.js';
 import { figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { WIDTH } from '../../../../web/charts/svg.js';
@@ -43,7 +44,7 @@ const WORDS = {
   ge1: {
     switch: () => fill('mapMeasureGe1', { pct: String(GE_CUT_PCT) }), legend: () => fill('mapLegendGe1', { pct: String(GE_CUT_PCT) }), edge: (x) => pct(x, 0),
     alt: () => fill('mapMeasureGe1', { pct: String(GE_CUT_PCT) }).toLowerCase(),
-    tip: (r, c) => fill('mapTipGe1', { value: pct(c.value, 0), pct: String(GE_CUT_PCT), k: fmtInt(r.s.nGe1), nMeasured: fmtInt(r.s.nMeasured) }),
+    tip: (r, c) => fill('mapTipGe1', { value: pct(c.value, 0), pct: String(GE_CUT_PCT), k: fmtInt(r.s.nGe1), n: fmtInt(r.s.n) }),
   },
 };
 const NO_VALUE = { avg: 'mapNoMeasured', share: 'mapNoMeasured', dollars: 'mapNoEstimate', ge1: 'mapNoMeasured' };
@@ -58,12 +59,13 @@ function entriesOf(measure, { rows, notInProgram }) {
     const row = byCode.get(code);
     if (!row) return [code, code === notInProgram ? { hatched: true, label: t('mapNotInProgram') } : { empty: true, label: t('mapNoHospitals') }];
     const cell = row.m[measure.key];
-    return [code, cell ? { value: cell.value, label: words.tip(row, cell) } : { empty: true, label: t(NO_VALUE[measure.key]) }];
+    // A shown zero that takes a bin (dollars) is passed as the smallest positive number, so usMap shades it, not plain.
+    return [code, cell ? { value: cell.value === 0 && cell.bin > 0 ? Number.EPSILON : cell.value, label: words.tip(row, cell) } : { empty: true, label: t(NO_VALUE[measure.key]) }];
   }));
 }
 
 // The hospital dots over the map: one path for each kind and size, the largest first so a small dot is not hidden. A layer of
-// the wide drawing that CSS shows when the dots are on (class chart-us__points, as HACRP's).
+// the wide drawing's width that CSS shows when the dots are on (class chart-us__points, as HACRP's).
 function dotLayer(shapes, dots, width) {
   const { projection } = usPaths(shapes, width);
   const groups = new Map();
@@ -93,22 +95,24 @@ function mapFigure(data, { nextFigure, edition }) {
   const shaded = rows.filter((r) => r.m[first.key] && US_MAP_CODES.includes(r.code));
   if (!shapes || !shaded.length) return '';
   const n = nextFigure();
-  const overlay = dotLayer(shapes, dots, MAP_WIDE);
   const draw = (measure) => {
     const states = entriesOf(measure, data);
     const values = Object.values(states).filter((s) => s.value !== undefined).map((s) => s.value);
     const words = WORDS[measure.key];
     const legend = { title: words.legend(), high: words.edge(Math.max(...values)), zero: t('mapZero') };
     const one = (id, width, over) => usMap({ id, shapes, states, ramp: [...measure.ramp], format: words.edge, width, legend, overlay: over });
-    return imagePair({ svg: one(`map-${measure.key}`, WIDTH, ''), svgWide: one(`map-${measure.key}-wide`, MAP_WIDE, overlay) }, fill('mapAlt', { measure: words.alt() }));
+    return imagePair({ svg: one(`map-${measure.key}`, WIDTH, ''), svgWide: one(`map-${measure.key}-wide`, MAP_WIDE, '') }, fill('mapAlt', { measure: words.alt() }));
   };
   const chart = html`<div class="usmap" data-measure="${first.key}" data-dots="off">
 <div class="usmap__controls" hidden>
 <div class="mtoggle usmap__modes" role="group" aria-label="${t('mapMeasures')}">${measures.map((m) => html`<button type="button" class="mtoggle__b" data-measure="${m.key}" aria-pressed="${m.key === first.key ? 'true' : 'false'}">${WORDS[m.key].switch()}</button>`)}</div>
 <div class="mtoggle usmap__dotsbtn"><button type="button" class="mtoggle__b" data-dots aria-pressed="false">${t('mapDotsToggle')}</button></div>
 </div>
+<div class="usmap__stage">
 ${measures.map((m) => html`<div class="usmap__m" data-measure="${m.key}"${m.key === first.key ? '' : html` hidden`}>${draw(m)}</div>
-`)}${dotKey()}
+`)}<svg class="usmap__dots" viewBox="0 0 ${MAP_WIDE} ${usMapHeight(MAP_WIDE)}" aria-hidden="true" focusable="false">${dotLayer(shapes, dots, MAP_WIDE)}</svg>
+</div>
+${dotKey()}
 </div>`;
   const hi = shaded.reduce((a, b) => (b.s.meanRed > a.s.meanRed ? b : a));
   const lo = shaded.reduce((a, b) => (b.s.meanRed < a.s.meanRed ? b : a));
@@ -118,7 +122,7 @@ ${measures.map((m) => html`<div class="usmap__m" data-measure="${m.key}"${m.key 
   const cell = (row, key, text) => { const c = row.m[key]; return c ? num(text(c), c.raw) : num('—', null); };
   const byName = [...rows].sort((a, b) => a.name.localeCompare(b.name));
   return figure({
-    n, takeaway, chart, source: fill('mapSource', { edition }), claimLevel: 'estimate', csvName: 'hrrp-map-states', note: t('mapNote'),
+    n, takeaway, chart, source: fill('mapSource', { edition }), claimLevel: 'estimate', csvName: 'hrrp-map-states', note: fill('mapNote', { pct: String(GE_CUT_PCT) }),
     table: {
       columns: [
         { name: t('mapColState') }, { name: t('mapColHospitals'), numeric: true }, { name: t('mapColAvg'), numeric: true }, { name: t('mapColShare'), numeric: true },

@@ -123,6 +123,11 @@
 .usmap .chart { max-width: none; }
 .usmap .chart[data-fit="wide"] { max-width: 980px; margin-inline: auto; }
 .chart-us__points, .usmap__key { display: none; }
+.usmap__stage { position: relative; }
+.usmap__dots { display: none; position: absolute; top: 0; left: 0; width: 100%; height: auto; pointer-events: none; }
+.usmap[data-dots="on"] .usmap__dots { display: block; }
+@media (min-width: 560px) { .usmap__stage { max-width: 980px; margin-inline: auto; } }
+@media (max-width: 559px) { .usmap .usmap__dots { display: none; } }
 .usmap[data-dots="on"] .chart-us__points { display: inline; }
 .usmap[data-dots="on"] .usmap__key { display: flex; }
 .usmap[data-dots="on"] .chart--us-map .chart-tile, .usmap[data-dots="on"] .chart--us-map .chart-tile-na { fill: var(--paper-2); }

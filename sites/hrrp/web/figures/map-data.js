@@ -6,8 +6,9 @@
 //   avg      average cut over ALL the state's hospitals (summarize().meanRed; a hospital measured on nothing counts as 0)
 //   share    hospitals cut / hospitals MEASURED          (null where none is measured: no color)
 //   dollars  modeled penalties summed over the hospitals with a dollar estimate (null where none has one: no color)
-//   ge1      hospitals cut GE_CUT_PCT percent or more / hospitals MEASURED (null where none is measured: no color)
-// Thirty Day Readmissions divided the last by all hospitals; here it shares the picture Part's denominator.
+//   ge1      hospitals cut GE_CUT_PCT percent or more / ALL the state's hospitals, as Thirty Day Readmissions had it (the
+//            old site's printed numbers are the floor). This one share differs from the picture Part's shares, which
+//            are over hospitals measured on at least one condition.
 import { CONDS, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { summarize } from '../../../../engine/js/hrrp/summary.js';
 import { csvPath } from '../links.js';
@@ -16,12 +17,13 @@ import { GE_CUT_PCT, MAP_RAMPS, NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '.
 const MILLION = 1e6;
 
 // The four measures in the order the map's switch lists them: ramp, the decimals a value is shown to (it is binned at that
-// precision) and value(row), the unrounded value in the measure's unit (null: nothing to measure).
+// precision), value(row), the unrounded value in the measure's unit (null: nothing to measure), and zeroBin: the bin a shown
+// zero takes (Thirty Day Readmissions put a state with $0 modeled in the first step; the other measures draw a zero plain).
 export const MEASURES = Object.freeze([
   { key: 'avg', ramp: MAP_RAMPS.avg, dp: 2, value: (r) => r.s.meanRed },
   { key: 'share', ramp: MAP_RAMPS.share, dp: 0, value: (r) => r.s.pctPen },
-  { key: 'dollars', ramp: MAP_RAMPS.dollars, dp: 1, value: (r) => (r.nEstimated ? r.s.penTotal / MILLION : null) },
-  { key: 'ge1', ramp: MAP_RAMPS.ge1, dp: 0, value: (r) => (r.s.nMeasured ? (100 * r.s.nGe1) / r.s.nMeasured : null) },
+  { key: 'dollars', ramp: MAP_RAMPS.dollars, dp: 1, zeroBin: 1, value: (r) => (r.nEstimated ? r.s.penTotal / MILLION : null) },
+  { key: 'ge1', ramp: MAP_RAMPS.ge1, dp: 0, value: (r) => (r.s.n ? (100 * r.s.nGe1) / r.s.n : 0) },
 ]);
 
 // A value as the map prints it.
@@ -32,7 +34,7 @@ export const shownValue = (measure, v) => Number(v.toFixed(measure.dp));
 export function binOf(measure, v) {
   if (v == null) return null;
   const s = shownValue(measure, v);
-  return s === 0 ? 0 : 1 + measure.ramp.filter((c) => s >= c).length;
+  return s === 0 ? (measure.zeroBin ?? 0) : 1 + measure.ramp.filter((c) => s >= c).length;
 }
 
 // One row for each state (and DC) in the file: its place, summarize()'s result, the count of its hospitals with a dollar

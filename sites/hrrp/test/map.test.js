@@ -69,10 +69,10 @@ test('the shares are over the hospitals measured on a condition, and a state wit
   const oh = d.rows.find((r) => r.code === 'OH');
   assert.equal(tx.s.nMeasured, 2);
   assert.equal(tx.m.share.value, 50, '1 cut of 2 measured, not of 3');
-  assert.equal(tx.m.ge1.value, 50, '1 cut 1% or more of 2 measured');
+  assert.equal(tx.m.ge1.value, 33, '1 cut 1% or more of ALL 3 hospitals, as the old site (the other shares are of the 2 measured)');
   assert.equal(tx.m.avg.value, 0.67, 'the average cut counts all three');
   assert.equal(oh.m.share, null);
-  assert.equal(oh.m.ge1, null);
+  assert.equal(oh.m.ge1.value, 0, 'over all hospitals: 0 of 1, not nothing to measure');
   assert.equal(oh.m.dollars, null, 'no hospital with a dollar estimate');
   assert.ok(oh.m.avg);
   const html = partOf(hs);
@@ -103,7 +103,8 @@ test('four maps are drawn, the first shown and the other three hidden for the sw
   assert.match(html, /<div class="usmap__controls" hidden>/);
   assert.match(html, /<g class="chart-us__points">/);
   assert.match(html, /data-dots aria-pressed="false"/);
-  assert.equal((html.match(/<svg /g) ?? []).length, 8, 'a narrow and a wide drawing of each measure');
+  assert.equal((html.match(/<svg /g) ?? []).length, 9, 'a narrow and a wide drawing of each measure, and the dot layer once');
+  assert.equal((html.match(/<g class="chart-us__points">/g) ?? []).length, 1);
   // each measure's legend is its own
   for (const title of ['Average cut', 'Share penalized', 'Estimated dollars', 'Share cut 1% or more']) assert.ok(html.includes(title), title);
 });
@@ -191,4 +192,33 @@ test('on the whole file: the Part is on the program page, its numbers are the da
   assert.equal((page.match(/data-measure="\w+"( hidden)?>/g) ?? []).length >= 4, true);
   assert.equal(stepIn(page, 'avg', 'TX') != null, true);
   assert.equal(stepIn(page, 'avg', 'MD'), null);
+});
+
+test('the share cut 1% or more is over all the state\'s hospitals, an unmeasured one included, on the map, tip and table', () => {
+  const hs = [
+    hospital({ id: '990011', st: 'TX', red: 2, paf: 0.98, pen: 100, c: { HF: m(40, 1) } }),
+    hospital({ id: '990012', st: 'TX', red: 0, paf: 1, pen: 0, c: { HF: m(40, 0) } }),
+    hospital({ id: '990013', st: 'TX', red: 0, paf: 1, pen: 0, c: {} }),
+    hospital({ id: '990014', st: 'TX', red: 0, paf: 1, pen: 0, c: {} }),
+  ];
+  const tx = mapData(ctxOf(hs)).rows.find((r) => r.code === 'TX');
+  assert.equal(tx.s.nMeasured, 2);
+  assert.equal(tx.m.ge1.raw, 25, '1 of 4, not 1 of 2');
+  const html = partOf(hs);
+  assert.equal(stepIn(html, 'ge1', 'TX'), 5, '25% shown is past the 16 edge (it would be 50% over the 2 measured, also 5, so the tip pins the count)');
+  assert.match(html, /<title>Texas: 25% cut 1% or more: 1 of 4 hospitals<\/title>/);
+});
+
+test('dollars: a state at $0 modeled takes the first step; no color only where no hospital has an estimate', () => {
+  const hs = [
+    hospital({ id: '990011', st: 'TX', red: 0, paf: 1, pen: 0, c: { HF: m(40, 0) } }),
+    hospital({ id: '990021', st: 'OH', red: 0, paf: 1, pen: null, base: null, c: { HF: m(40, 0) } }),
+  ];
+  const d = mapData(ctxOf(hs));
+  assert.equal(d.rows.find((r) => r.code === 'TX').m.dollars.bin, 1);
+  assert.equal(d.rows.find((r) => r.code === 'OH').m.dollars, null);
+  const html = partOf(hs);
+  assert.equal(stepIn(html, 'dollars', 'TX'), 1);
+  assert.equal(stepIn(html, 'dollars', 'OH'), null);
+  assert.equal(stepIn(html, 'avg', 'TX'), 'zero', 'the other measures still draw a zero plain');
 });
