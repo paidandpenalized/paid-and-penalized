@@ -24,7 +24,7 @@ MEMBER = re.compile(r"HOSP10_(\d{4})_(rpt|nmrc|alpha)\.csv", re.IGNORECASE)
 REPORT_COLUMNS = ("rpt_rec_num", "ccn", "year", "status", "period_begin", "period_end", "control", "util", "npr_date")
 # A file with fewer reports is the newest year's, a handful of short periods; it may lack a worksheet.
 MIN_REPORTS_FOR_SHEET_CHECK = 100
-OUTPUTS = {"hcris_wide.csv": tidy.WIDE_COLUMNS, "hcris_long.csv": ("ccn", "year", "metric", "value"),
+OUTPUTS = {"hcris_wide.csv": tidy.WIDE_COLUMNS, "hcris_long.csv": tidy.LONG_COLUMNS,
            "hcris_reports.csv": REPORT_COLUMNS}
 
 
