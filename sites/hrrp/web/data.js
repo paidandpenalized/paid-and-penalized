@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs';
 import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, stateShapes } from '../../../web/charts/geo.js';
-import { REPO_ROOT, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
 export const PIN_ID = 'tdr-hrrp-fy2027';
@@ -55,11 +55,15 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     builtFiles = [[`data/pinned/${entry.path}`, { built_at: `${entry.retrieved}T00:00:00Z` }]];
   }
   const fy = data.meta.fy;
+  // The family's dollar estimates (the newest year's file), whose net the header chip shows; each hospital's row by CCN.
+  const dollarsRel = dollarsPath(newest('data/emitted/dollars'));
+  const dollarsFile = readJson(REPO_ROOT + dollarsRel);
+  builtFiles.push([dollarsRel, dollarsFile]);
   const masterRel = masterPath(newestYear('data/emitted/hospital'));
   const masterFile = readJson(REPO_ROOT + masterRel);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
-  const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ATLAS_ID]);
+  const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
   return {
     source,
     fy,
@@ -71,6 +75,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     timeline: readJson(CONTENT + 'timeline.json'),
     research: readJson(CONTENT + 'research.json'),
     master,
+    dollars: new Map(dollarsFile.hospitals.map((r) => [r.ccn, r])),
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
     manifest,
     pinsUsed: manifest.filter((e) => ids.has(e.id)),

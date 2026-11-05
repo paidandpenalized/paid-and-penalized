@@ -26,11 +26,11 @@ const shellParts = lastCall(({ edition, current }) => [edition, current], ({ edi
 }));
 export const shellOf = ({ edition, current = null, hospital = null }) => ({ ...shellParts({ edition, current }), hospital });
 
-// The hospital a Readmissions hospital page's header follows (render/shell.js familyHeader): its CCN and name; no
-// estimated net (the chip's figure is the family's dollars across programs). Every hospital with a page here is in
+// The hospital a Readmissions hospital page's header follows (render/shell.js familyHeader): its CCN, name and
+// estimated net across the programs (the hospital view's net, as HACRP's pages show it; null without an estimate). Every hospital with a page here is in
 // Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub and HACRP have no page for
 // it, so the tabs and the chip link none.
-export const followed = ({ ccn, name, inHub }) => ({ ccn, name, net: null, inTdr: true, inHub });
+export const followed = ({ ccn, name, net, inHub }) => ({ ccn, name, net, inTdr: true, inHub });
 
 // The "estimate" tag after a modeled dollar figure, linked to how the estimate is made.
 export const estimateTag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });

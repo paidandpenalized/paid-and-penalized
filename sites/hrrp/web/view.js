@@ -21,12 +21,14 @@ import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, r
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
 // which the verdict sentence uses), what the rank line ranks against (the cuts, nationally, by state and by peer group) and
-// the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital.
-export function hospitalContext({ hospitals, meta, history, conditions, master = null }) {
+// the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital, and
+// the family's dollar estimates (a Map of CCN to row; optional), whose net the header chip shows.
+export function hospitalContext({ hospitals, meta, history, conditions, master = null, dollars = null }) {
   return {
     meta,
     edition: { ...editionOf(meta, history), conditions },
     master,
+    dollars,
     rank: rankContext(hospitals, meta.states),
   };
 }
@@ -81,6 +83,12 @@ function crumbsOf(h, ctx) {
 // the hub. True only where the context has no master at all (a test's slice).
 const inHubOf = (h, ctx) => (ctx.master ? ctx.master.get(h.id)?.programs?.hacrp?.inProgram === true : true);
 
+// The hospital's estimated net from the dollar estimates, as HACRP's pages show it; null without an estimate.
+const netOf = (h, ctx) => {
+  const row = ctx.dollars?.get(h.id);
+  return row?.status === 'estimated' ? row.net : null;
+};
+
 // h: a hospital row of the data file; ctx: hospitalContext(). Returns plain strings (and numbers where a page needs one).
 export function hospitalView(h, ctx) {
   const { edition } = ctx;
@@ -93,6 +101,7 @@ export function hospitalView(h, ctx) {
     ccn: h.id,
     name: h.name,
     inHub: inHubOf(h, ctx),
+    net: netOf(h, ctx),
     edition: edition.label,
     heading: fill('pageTitle', where),
     description: fill('pageDescription', where),

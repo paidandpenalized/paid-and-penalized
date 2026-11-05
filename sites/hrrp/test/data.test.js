@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REPO_ROOT, hrrpPath, masterPath, readJson, readManifest } from '../../../pipeline/files.js';
+import { REPO_ROOT, hrrpPath, newestYear, masterPath, readJson, readManifest } from '../../../pipeline/files.js';
 import { ATLAS_ID } from '../../../web/charts/geo.js';
 import { loadHrrp, changedOn, PIN_ID } from '../web/data.js';
 
@@ -60,7 +60,7 @@ test('an emitted folder with a year but no file stops the build and says to run 
 });
 
 test('an emitted folder with no year folder in it falls back to the pin', () => {
-  const noYear = () => { throw new RangeError('no fy<YYYY> folder under data/emitted/hrrp'); };
+  const noYear = (dir) => { if (dir.endsWith('hrrp')) throw new RangeError('no fy<YYYY> folder under data/emitted/hrrp'); return newestYear(dir); };
   assert.equal(loadHrrp({ exists: (p) => p.endsWith('data/emitted/hrrp'), newest: noYear }).source, 'pin');
 });
 

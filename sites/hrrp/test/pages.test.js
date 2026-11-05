@@ -2,9 +2,10 @@
 // and (for the whole file) on the data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { footerOf, headerOf } from '../../../pipeline/test/helpers.js';
+import { chipOf, footerOf, headerOf } from '../../../pipeline/test/helpers.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { escapeHtml } from '../../../web/render/html.js';
+import { money } from '../../../web/render/format.js';
 import { feedbackFor } from '../../../web/render/layout.js';
 import { SITE } from '../../../web/site.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -142,6 +143,15 @@ test('on the data: the header links no hub or HACRP page the build lacks', () =>
   assert.ok(out, 'the data has a hospital the dollar file lacks');
   assert.ok(!/href="\/(hacrp\/)?hospital\//.test(headerOf(out[1])), 'its header links neither the hub\'s nor HACRP\'s page for it');
   assert.ok(/href="\/hrrp\/hospital\//.test(headerOf(out[1])));
+});
+
+test('on the data: the chip carries the net the dollar file estimates, and none for a hospital without an estimate', () => {
+  const rows = new Map(loadHub().dollars.hospitals.map((r) => [r.ccn, r]));
+  const estimated = PAGES.filter(([h]) => rows.get(h.id)?.status === 'estimated');
+  const without = PAGES.filter(([h]) => rows.get(h.id)?.status !== 'estimated');
+  assert.ok(estimated.length > 0 && without.length > 0, 'the data has both kinds');
+  for (const [h, text] of estimated) assert.ok(chipOf(headerOf(text)).includes(money(rows.get(h.id).net, { sign: true })), h.id);
+  for (const [h, text] of without) assert.ok(!chipOf(headerOf(text)).includes('chip__v'), h.id);
 });
 
 test('on the data: each page has its own title and description', () => {
