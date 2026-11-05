@@ -17,6 +17,7 @@ export const META = {
   fileDate: '2026-10-07',
   perf: ['2023-07-01', '2025-06-30'],
   nm: 1,
+  peerCutoffs: [[0, 0.14], [0.14, 0.18], [0.18, 0.23], [0.23, 0.31], [0.31, 1]],
   peerMedians: Object.fromEntries([1, 2, 3, 4, 5].map((p) => [p, { AMI: 1, COPD: 1, HF: 1, PN: 1, CABG: 1, THA_TKA: 1 }])),
   states: { ZZ: 'Zedland', ZY: 'Zyland' },
   totals: { modelPen: 341000000, cmsEst: 361000000 },

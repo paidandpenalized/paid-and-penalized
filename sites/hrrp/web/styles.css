@@ -60,6 +60,29 @@
 .part__head { display: grid; gap: 10px; }
 .part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
 .part__title { font: 400 clamp(2rem, 5vw, 3.4rem)/1.02 var(--font-display); letter-spacing: -0.005em; }
+.part__intro { max-width: 52ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-md); line-height: 1.5; }
+/* Part 1's callouts: what is new this year beside who is in the program, each a sentence set apart by a rule. */
+.hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 28px; }
+@media (min-width: 760px) { .hgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.callout { display: grid; gap: 8px; padding: 12px 14px; border-left: 4px solid var(--pen); background: var(--pen-tint); line-height: 1.5; }
+.callout--ink { border-left-color: var(--ink); background: var(--paper-2); }
+.callout__title { color: var(--ink-2); }
+.callout ul { display: grid; gap: 6px; margin: 0; padding-left: 1.1em; }
+/* Part 1's steps: a big red numeral and the heading over the words, left (sticky); the figure right, 5fr 7fr from
+   980px; stacked under that. Each step opens on a red hairline. */
+.hstep { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 56px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--pen); align-items: start; }
+.hstep__text, .hstep__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; align-content: start; }
+@media (min-width: 980px) {
+  .hstep { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .hstep__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+}
+.hstep__n { color: var(--pen); font: 400 clamp(3rem, 6vw, 4.5rem)/0.85 var(--font-display); }
+.hstep__title { font: 700 clamp(1.3rem, 2.2vw, 1.6rem)/1.2 var(--font-body); }
+.hstep__text > p:not(.hstep__n) { line-height: 1.6; }
+.page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
+.page--prog .fig .chart { max-width: none; }
+.meds summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .place__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 8px 20px; }
 @media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
 .place__intro { display: grid; gap: 14px; align-content: start; }

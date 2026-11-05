@@ -28,6 +28,7 @@ test("whatsNew, timeline and research come from the site's content files in both
   const content = (name) => readJson(`${REPO_ROOT}sites/hrrp/content/${name}.json`);
   for (const d of [emitted, pinned]) {
     assert.deepEqual(d.whatsNew, content('whats_new').items);
+    assert.equal(d.whatsNewFy, content('whats_new').fy, 'the year the notes are for travels with them');
     assert.deepEqual(d.timeline, content('timeline'));
     assert.deepEqual(d.research, content('research'));
   }

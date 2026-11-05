@@ -6,7 +6,9 @@
 import { fillAround, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
+import { counter } from '../../../../web/charts/figure.js';
 import { SITE } from '../../../../web/site.js';
+import { howPart } from '../figures/how.js';
 import { PROGRAM_PATH } from '../links.js';
 import { fill, t } from '../program/copy.js';
 import { SECTIONS, estimateTag, labelOf, recordCard, shellOf } from './parts.js';
@@ -34,19 +36,22 @@ ${stamp({ label: card.stamp })}
 </header>`;
 }
 
-// A Part: its number, its heading, and (later) its figures.
-const part = (id, n, label) => html`<section class="part" id="${id}" aria-labelledby="${id}-h">
+// A Part: its number, its heading, and its body (none until its figures are drawn).
+const part = (id, n, label, body = '') => html`<section class="part" id="${id}" aria-labelledby="${id}-h">
 <div class="part__head">
 <p class="part__tag">${fill('partTag', { n: String(n) })}</p>
 <h2 class="part__title" id="${id}-h">${label}</h2>
 </div>
+${body}
 </section>`;
 
 // view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
 export function programPage({ view, robots, assets }) {
+  const figure = counter();
+  const bodies = { how: howPart(view.how, { figure, edition: view.edition }) };
   const body = html`<article class="wrap page page--prog prog">
 ${top(view)}
-${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition)))}
+${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition), bodies[id]))}
 </article>`;
   return page({
     title: `${view.heading} · ${SITE.name}`,

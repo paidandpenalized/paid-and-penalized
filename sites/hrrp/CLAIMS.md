@@ -23,6 +23,8 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-11 | The program reduces payments to subsection (d) hospitals, the hospitals Medicare pays under its inpatient prospective payment system; a hospital paid another way is not in it. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "reduce payments to subsection (d) hospitals for excess readmissions beginning October 1, 2012 (that is, fiscal year [FY] 2013)" | 2026-11-05 |
 | HRRP-12 | Medicare pays children's, cancer, psychiatric, rehabilitation and long-term care hospitals outside the inpatient prospective payment system, so they are not subsection (d) hospitals in this program. | https://www.law.cornell.edu/cfr/text/42/412.23 | "Psychiatric hospitals" … "Rehabilitation hospitals" … "Children's hospitals" … "Long-term care hospitals" … "Cancer hospitals" … "excluded from the prospective payment systems" | 2026-11-05 |
 | HRRP-13 | Critical access hospitals are paid on their reasonable costs, not under the inpatient prospective payment system's DRG rates. | https://www.law.cornell.edu/cfr/text/42/413.70 | "payment for inpatient services of a CAH" … "reasonable costs of the CAH in providing CAH services to its inpatients" | 2026-11-05 |
+| HRRP-14 | Beginning in fiscal year 2027, CMS works out the excess readmission ratios from Medicare Advantage stays as well as fee-for-service stays; the payment cut still applies only to fee-for-service payments (HRRP-06). | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "Beginning in fiscal year (FY) 2027, CMS is calculating excess readmission ratios (ERRs) using both Medicare Advantage (MA) and fee-for-service (FFS) data" | 2026-11-05 |
+| HRRP-15 | A hospital's excess readmission ratio for a condition is its predicted 30-day readmission rate divided by the rate expected at an average hospital with a similar mix of patients; above 1.0 is more readmissions than expected. | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "predicted 30-day readmission rate for a hospital" … "readmission rates at an average hospital with a similar patient case mix" | 2026-11-05 |
 
 ## Notes on the sources
 
@@ -61,6 +63,23 @@ A claim marked `unverified` may not be used in copy.
 - **HRRP-13** is 42 CFR 413.70(a)(1) (a plus-one-percent-of-reasonable-cost payment); the text has a double space after
   "the" in "the  reasonable costs", which the quote runs past by splitting at the phrase.
 
+- **HRRP-14** is the first note of CMS's "Hospital Readmissions Reduction Program Payment Reduction Methodology" sheet for
+  FY2027 (CMS's infographic; it cites the FY2026 IPPS/LTCH PPS final rule, pages 36923 through 36929). The same note
+  says "The payment adjustment factor (PAF) will continue to only be applied to all Medicare FFS base operating diagnosis-related
+  group (DRG) payments during the FY. The PAF is not applied to MA payments," which is the second sentence of the program page's
+  note and what HRRP-06 already says. The quote is the first sentence only, to stay within 25 words. The source is a PDF; it
+  was read from a copy downloaded outside the repo, not stored. The program page's other two "New for" notes (two years of data
+  instead of three; the pandemic-era exclusion ended) come from Thirty Day Readmissions' content file and have no row here yet:
+  this sheet does not state them.
+- **HRRP-15** is the same sheet's Step 1a: "ERR = predicted readmission rate / expected readmission rate", with the predicted
+  and the expected rate defined as quoted (the two fragments are from the two definitions). The regulation's definition
+  (42 CFR 412.152, "Excess readmissions ratio") says the same in other words: actual readmissions, risk-adjusted, to
+  risk-adjusted expected readmissions.
+- **Who is in the program** (the program page's callout) rests on HRRP-11 to HRRP-13, and on HRRP-01 for Maryland ("non-Maryland
+  subsection (d) hospitals"). The Thirty Day Readmissions callout also said Maryland hospitals "run under their own payment model"
+  and "Puerto Rico hospitals are not subject to the cut"; no source in this register or reached while building the page says
+  either, so the page says neither.
+
 ## Link check (2026-11-04)
 
 Each source above, fetched with redirects followed. The Federal Register addresses redirect once to the same
@@ -77,3 +96,4 @@ document's page; no source needed an archive copy.
 | https://www.law.cornell.edu/cfr/text/42/412.23 | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/413.70 | 200 | direct |
 | https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
+| https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |

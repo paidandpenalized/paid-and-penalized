@@ -64,6 +64,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
   const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
+  const whatsNew = readJson(CONTENT + 'whats_new.json');
   return {
     source,
     fy,
@@ -71,7 +72,9 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     conditions: data.conditions,
     hospitals: data.hospitals,
     history: data.history,
-    whatsNew: readJson(CONTENT + 'whats_new.json').items,
+    whatsNew: whatsNew.items,
+    // The fiscal year the notes are for: the program page shows them only in that year's edition.
+    whatsNewFy: whatsNew.fy,
     timeline: readJson(CONTENT + 'timeline.json'),
     research: readJson(CONTENT + 'research.json'),
     master,
