@@ -160,7 +160,7 @@ test('"Who is in the program" rounds the count to the hundred and names who is o
   for (const w of ['critical access', 'children', 'cancer', 'psychiatric', 'rehabilitation', 'long-term care', 'Maryland', 'Puerto Rico']) assert.ok(box.includes(w), w);
 });
 
-test('the Part on the program page: callouts, steps 1 to 4, two figures and the medians table, no swarm', () => {
+test('the Part on the program page: callouts, steps 1 to 5, two figures and the medians table, no swarm', () => {
   const data = loadHrrpOnce();
   const places = buildPlaces(data.hospitals, data.meta);
   const area = areaContext({ ...data, places });
@@ -174,7 +174,7 @@ test('the Part on the program page: callouts, steps 1 to 4, two figures and the 
   assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
   assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
   assert.ok(how.includes('>Group 1<') && how.includes('>5<'), 'wide labels say Group n, the phone only n');
-  assert.equal(how.match(/<section class="hstep"/g).length, 4);
+  assert.equal(how.match(/<section class="hstep"/g).length, 5, 'steps 1 to 5');
   assert.ok(!how.includes('swarm'));
   assert.ok(how.includes(`New for ${view.edition}`) && how.includes('Who is in the program'));
   assert.equal(how.match(/<details class="meds">/g).length, 1);

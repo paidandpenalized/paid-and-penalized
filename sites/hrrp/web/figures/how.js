@@ -1,8 +1,9 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/explainer.js at 33d1959), after HACRP's program page (sites/hacrp/web/program-figures.js).
 // The program page's "How it works" Part: its line, the two callouts, then Steps 1 to 4. Step 1's punch card and Step 3's
 // columns are drawn with the chart kit inside figure(), a phone drawing and a wide one; Step 2's swarm is not drawn yet
-// (figures/how-data.js swarmData holds its numbers); Step 4's medians are a table, collapsed.
-import { CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
+// (figures/how-data.js swarmData holds its numbers); Step 4's medians are a table, collapsed; Step 5 is Worksheet R for the example hospital, drawn on the server (the waterfall's
+// numbers are in worksheet.js waterfallData; it is not drawn yet).
+import { CAP_PCT, CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { columns } from '../../../../web/charts/columns.js';
 import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
 import { punchCard } from '../../../../web/charts/punchCard.js';
@@ -12,6 +13,7 @@ import { html } from '../../../../web/render/html.js';
 import { fmtInt, fmtPct, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
+import { worksheetHtml } from '../worksheet.js';
 
 // Punch card: the largest sets each get a column; the rest are pooled.
 const KEEP = 12;
@@ -138,8 +140,9 @@ export const calloutWho = ({ rounded }) => html`<aside class="callout callout--i
 
 // ---------- the Part ----------
 
-// how: view.how (how-data.js howData); figure: the page's figure counter; edition: the edition's label.
-export function howPart(how, { figure: nextFigure, edition }) {
+// how: view.how (how-data.js howData); figure: the page's figure counter; edition: the edition's label; estimateTag: the
+// estimate tag beside a modeled dollar figure.
+export function howPart(how, { figure: nextFigure, edition, estimateTag = '' }) {
   const { conditions } = how;
   const words = capitalize(spelled(CONDS.length));
   return html`<p class="part__intro">${fill('howIntro', { edition })}</p>
@@ -166,5 +169,11 @@ ${step({
     n: 4, id: 'step-4', heading: t('step4Title'),
     text: html`<p>${t('step4Text')}</p>`,
     fig: mediansTable({ meta: how.meta, conditions, edition }),
+  })}
+${step({
+    n: 5, id: 'step-5', heading: t('step5Title'),
+    text: html`<p>${fill('step5Text', { cap: String(CAP_PCT) })}</p>
+<p>${t('step5Which')}</p>`,
+    fig: worksheetHtml(how.worksheet, { edition, conditions, dollars: { payShort: how.payShort, tag: estimateTag } }),
   })}`;
 }

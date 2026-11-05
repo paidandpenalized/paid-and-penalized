@@ -48,7 +48,7 @@ ${body}
 // view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
 export function programPage({ view, robots, assets }) {
   const figure = counter();
-  const bodies = { how: howPart(view.how, { figure, edition: view.edition }) };
+  const bodies = { how: howPart(view.how, { figure, edition: view.edition, estimateTag }) };
   const body = html`<article class="wrap page page--prog prog">
 ${top(view)}
 ${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition), bodies[id]))}

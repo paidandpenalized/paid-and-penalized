@@ -22,7 +22,8 @@ const placeOf = (kind, key, ctx = area) => ctx.places.list.find((p) => p.kind ==
 const placeHtml = (place, ctx = area) => placePage({ view: placeView(place, ctx), robots: null, assets: ASSETS });
 const methods = (ctx = area) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const main = (text) => text.slice(text.indexOf('<main'), text.indexOf('</main>'));
-const labels = (text) => [...text.matchAll(/<p class="field__label"><span class="field__no">([^<]+)<\/span>([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
+// The record cards' fields are numbered; Worksheet R's on the program page are lettered A to C.
+const labels = (text) => [...text.matchAll(/<p class="field__label"><span class="field__no">(\d+)<\/span>([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
 
 test('the program page: the kicker, the name, the deck with the count, and the eight At-a-glance fields', () => {
   const text = program();

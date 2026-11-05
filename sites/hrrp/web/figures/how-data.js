@@ -1,9 +1,10 @@
 // The numbers behind the program page's "How it works" Part, as plain data (no markup, no words): Step 1's sets of
 // measured conditions, Step 2's ratio-minus-median dots, Step 3's one-point bins of the dual share and Step 4's peer
-// medians, and the two callouts' facts. Pure; figures/how.js draws and words them.
+// medians, Step 5's worksheet rows (worksheet.js), and the two callouts' facts. Pure; figures/how.js draws and words them.
 import { CONDS, PEERS, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
 import { exampleHospital, withDerived } from '../derive.js';
 import { ROUND_COUNT_TO } from '../constants.js';
+import { worksheetRows } from '../worksheet.js';
 
 const round = (x, dp) => Math.round(x * 10 ** dp) / 10 ** dp;
 
@@ -132,8 +133,12 @@ export const newFor = ({ whatsNew, whatsNewFy, fy }) => (whatsNew?.length && wha
 export function howData(ctx) {
   const { hospitals, meta } = ctx;
   const exampleId = exampleIdOf(hospitals, meta);
+  const example = hospitals.find((h) => h.id === exampleId);
   return {
     exampleId,
+    // Step 5's Worksheet R for the example hospital, the one Step 2 marks; payShort is the dollars line's payment year.
+    worksheet: worksheetRows(withDerived(example, meta), meta),
+    payShort: ctx.edition.payShort,
     // Step 2's swarm for a condition, undrawn: the example is found once for the page, not for each condition.
     swarm: (cond) => swarmData(hospitals, meta, cond, exampleId),
     sets: condSets(hospitals),

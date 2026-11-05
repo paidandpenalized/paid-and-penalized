@@ -100,3 +100,16 @@
 .glossary dt { margin-top: 10px; font-weight: 700; }
 .glossary dd { margin: 2px 0 0; }
 .sources { padding-left: 1.2em; }
+
+/* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
+.wsr { display: grid; gap: 0; min-width: 0; }
+.wsr__id { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); border-left: 0; }
+.wsr__table tr.is-off td { color: var(--ink-3); }
+.wsr__table tr.is-on { background: var(--pen-tint); }
+.wsr__table .strong { font-weight: 700; }
+.wsr__note { margin: 0; padding: 8px 2px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.wsr__totals { list-style: none; margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); }
+.wsr__totals li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 4px; border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-type); }
+.wsr__totals li:last-child { border-bottom: 0; }
+.wsr__totals b { white-space: nowrap; }
+.wsr__check { background: var(--paper-2); }
