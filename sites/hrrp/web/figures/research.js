@@ -7,6 +7,7 @@ import { t } from '../program/copy.js';
 // groups: history-data.js researchData().
 export function researchPart(groups) {
   return html`<p class="part__intro">${t('researchIntro')}</p>
+<div class="rsgrid">
 ${groups.map((g, i) => html`<section class="rs" aria-labelledby="research-theme-${i + 1}">
 <h3 class="part__sub" id="research-theme-${i + 1}">${g.theme}</h3>
 <ul class="rs__list" role="list">
@@ -16,5 +17,5 @@ ${g.items.map((r) => html`<li class="rs__item">
 </li>
 `)}</ul>
 </section>
-`)}`;
+`)}</div>`;
 }

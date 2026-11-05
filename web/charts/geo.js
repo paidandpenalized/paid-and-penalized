@@ -203,10 +203,11 @@ function checkUsStates(states) {
 // tooltip and data-state, so web/client/figure.js steps through them by keyboard and a page script can act on one.
 // A value of zero takes the neutral mark; hatched is not in the program; empty is nothing to show; few gets a dashed
 // outline over the state. Every code in US_MAP_CODES must be given, and only those codes.
-export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WIDTH, format = plain, overlay = '' }) {
+// bare: draw no legend (the page prints its own under the map); the frame is then the map's height alone.
+export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WIDTH, format = plain, overlay = '', bare = false }) {
   checkId(id, 'usMap');
   checkUsStates(states);
-  checkLegend({ ramp, words, states, who: 'usMap' });
+  if (!bare) checkLegend({ ramp, words, states, who: 'usMap' });
   const { stepOf } = stepScale(ramp);
   const { height, paths } = usPaths(shapes, width);
   const marks = US_MAP_CODES.filter((code) => paths.get(code)).map((code) => {
@@ -221,7 +222,7 @@ export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WI
     return html`${mark({ tip: `${STATE_NAMES[code]}: ${s.label}`, value: none ? null : s.value, data: { state: code }, hit: null, body: shape })}
 `;
   });
-  const legend = stepLegend({ id, top: height, ramp, format, words, states });
+  const legend = bare ? { body: '', height } : stepLegend({ id, top: height, ramp, format, words, states });
   return frame({
     kind: 'us-map', width, height: legend.height, body: html`${hatchDefs(id)}
 ${marks}${overlay}${legend.body}`,

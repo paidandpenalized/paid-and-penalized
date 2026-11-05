@@ -244,6 +244,7 @@ test('the research findings are grouped by theme in the order each appears, each
   assert.deepEqual(groups.map((g) => [g.theme, g.items.length]), [['First question', 2], ['Second question', 1]]);
   const text = researchPart(groups).text;
   assert.equal((text.match(/<h3 /g) ?? []).length, 2);
+  assert.match(text, /<div class="rsgrid">/, 'the themes are columns of one grid');
   assert.ok(text.indexOf('Author A') < text.indexOf('Author C') && text.indexOf('Author C') < text.indexOf('Author B'));
   assert.match(text, /<strong>Author A et al\., Journal 2016<\/strong>\. <a href="https:\/\/doi\.org\/10\.1\/a" target="_blank" rel="noopener">A study<span class="vh">[^<]*<\/span><\/a>/);
 });

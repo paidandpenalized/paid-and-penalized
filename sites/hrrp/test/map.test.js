@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { US_MAP_CODES } from '../../../web/charts/geo.js';
+import { US_MAP_CODES, usMap } from '../../../web/charts/geo.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { placeColumns, placeCsv } from '../web/csv.js';
 import { DOT_TIERS, MEASURES, binOf, dotPoints, mapData, shownValue, statesCsvRows } from '../web/figures/map-data.js';
@@ -103,8 +103,9 @@ test('four maps are drawn, the first shown and the other three hidden for the sw
   assert.match(html, /<div class="usmap" data-measure="avg" data-dots="off">/);
   assert.match(html, /<div class="usmap__controls" hidden>/);
   assert.match(html, /<g class="chart-us__points">/);
-  assert.match(html, /data-dots aria-pressed="false"/);
-  assert.equal((html.match(/<svg /g) ?? []).length, 9, 'a narrow and a wide drawing of each measure, and the dot layer once');
+  assert.match(html, /<input type="checkbox" data-dots>/);
+  assert.equal((html.match(/<button type="button" class="btn" data-measure="/g) ?? []).length, 4);
+  assert.equal((html.match(/<svg (?!class="usmap__chip)/g) ?? []).length, 9, 'a narrow and a wide drawing of each measure, and the dot layer once');
   assert.equal((html.match(/<g class="chart-us__points">/g) ?? []).length, 1);
   // each measure's legend is its own
   for (const title of ['Average cut', 'Share penalized', 'Estimated dollars', 'Share cut 1% or more']) assert.ok(html.includes(title), title);
@@ -144,7 +145,7 @@ test('"Every state": average cut descending, 15 to a page, a link on each state'
   const html = partOf(hs);
   const bodies = [...html.matchAll(/<tbody data-page="(\d+)">(.*?)<\/tbody>/gs)];
   assert.deepEqual(bodies.map((b) => (b[2].match(/<tr>/g) ?? []).length), [15, 5]);
-  assert.match(html, /<nav class="states__pager"[^>]* hidden>/);
+  assert.match(html, /<nav class="seg states__pager"[^>]* hidden>/);
   for (const r of flat) assert.ok(bodies.map((b) => b[2]).join('').includes(`href="${r.path}"`));
   assert.match(html, /href="\/data\/hrrp\/fy2027\/states\.csv" download/);
 });
@@ -224,17 +225,52 @@ test('dollars: a state at $0 modeled takes the first step; no color only where n
   assert.equal(stepIn(html, 'avg', 'TX'), 'zero', 'the other measures still draw a zero plain');
 });
 
-test('the dot layer shows only at the wide drawing\'s widths: its on-state rule sits only under the min-width query', () => {
+test('the dot layer, the quiet state fills and the dot key all sit under the min-width query, so a phone never loses its shading', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  const rule = '.usmap[data-dots="on"] .usmap__dots';
-  assert.equal(css.split(rule).length - 1, 1);
-  const line = css.split('\n').find((l) => l.includes(rule));
-  assert.match(line, /^@media \(min-width: 560px\)/);
-  assert.doesNotMatch(css, /max-width: 559px\) \{ \.usmap \.usmap__dots/);
+  const from = css.indexOf('@media (min-width: 560px) {', css.indexOf('/* Part 3, the map'));
+  const block = css.slice(from, css.indexOf('\n}', from));
+  for (const rule of ['.usmap[data-dots="on"] .usmap__dots', '.usmap[data-dots="on"] .chart--us-map .chart-tile', '.usmap[data-dots="on"] .usmap__key', '.usmap[data-dots="on"] .usmap__lg']) {
+    assert.ok(block.includes(rule), `${rule} is inside the min-width block`);
+    assert.equal(css.split(rule).length, block.split(rule).length, `${rule} appears nowhere else`);
+  }
+  assert.match(css, /@media \(max-width: 559px\) \{ \.usmap__dotsbtn \{ display: none; \} \}/);
 });
 
 test('the sheet pins the map Part\'s grids to the column so the states table cannot widen the page', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  for (const sel of ['usmap', 'states', 'browse']) assert.match(css, new RegExp(`^\\.${sel} \\{[^}]*grid-template-columns: minmax\\(0, 1fr\\)`, 'm'), `.${sel} has an implicit grid column`);
-  assert.match(css, /^\.browse__regions \{[^}]*minmax\(min\(16rem, 100%\), 1fr\)/m);
+  for (const sel of ['usmap', 'states', 'browse', 'mapcols', 'rsgrid']) assert.match(css, new RegExp(`^\\.${sel} \\{[^}]*grid-template-columns: minmax\\(0, 1fr\\)`, 'm'), `.${sel} has an implicit grid column`);
+  assert.match(css, /^\.usmap__stage \{[^}]*width: 100%/m, 'the stage fills the column (an auto-margined grid item shrank the map to a third)');
+});
+
+test('the legend is HTML under the map: labeled swatches with ranges, the hatched state and the zero, no legend in the drawing', () => {
+  const tx = [hospital({ id: '990011', st: 'TX', red: 0.3, paf: 0.997, pen: 100, c: { HF: m(40, 1) } })];
+  const html = partOf([...tx, hospital({ id: '990021', st: 'OH', red: 0, paf: 1, pen: 5, c: { HF: m(40, 0) } })]);
+  assert.doesNotMatch(html, /chart-legend/);
+  const avg = /<ul class="usmap__lg" role="list" aria-label="Average cut">(.*?)<\/ul>/s.exec(html)[1];
+  const words = [...avg.matchAll(/<li[^>]*>(?:<svg.*?<\/svg>|<span.*?<\/span>)?([^<]+)<\/li>/gs)].map((x) => x[1]);
+  assert.deepEqual(words.slice(0, 6), ['Average cut', 'under 0.25%', '0.25% to 0.34%', '0.35% to 0.44%', '0.45% to 0.59%', '0.60% or more']);
+  assert.ok(words.includes('zero'));
+  assert.ok(words.includes('hospitals not in the program'));
+  assert.match(avg, /usmap__chip--hatch/);
+  const dollars = /aria-label="Estimated dollars">(.*?)<\/ul>/s.exec(html)[1];
+  assert.match(dollars, /under \$2\.0M/);
+  assert.match(dollars, /\$2\.0M to \$4\.9M/);
+  // one legend for each measure, each inside its own measure's block (so the switch swaps them)
+  assert.equal((html.match(/<ul class="usmap__lg"/g) ?? []).length, 4);
+});
+
+test('the Every state table and Browse by region sit side by side in one grid, table first', () => {
+  const html = partOf([hospital({ id: '990011', st: 'TX' })]);
+  const at = html.indexOf('<div class="mapcols">');
+  assert.ok(at > 0);
+  assert.ok(html.indexOf('id="map-states-h"') > at && html.indexOf('id="map-states-h"') < html.indexOf('id="map-browse-h"'));
+});
+
+test('the usMap kit draws no legend when bare, and the frame is the map\'s height', () => {
+  const states = Object.fromEntries(US_MAP_CODES.map((c) => [c, { empty: true, label: 'none' }]));
+  const bare = usMap({ id: 'bare', shapes: SHAPES, states, ramp: [1, 2, 3, 4], bare: true }).text;
+  const full = usMap({ id: 'full', shapes: SHAPES, states, ramp: [1, 2, 3, 4], legend: { title: 'T', high: 'H', zero: 'Z' } }).text;
+  assert.doesNotMatch(bare, /chart-legend/);
+  assert.match(full, /chart-legend/);
+  assert.ok(Number(/viewBox="0 0 300 (\d+)/.exec(bare)[1]) < Number(/viewBox="0 0 300 (\d+)/.exec(full)[1]));
 });

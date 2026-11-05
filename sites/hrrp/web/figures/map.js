@@ -8,6 +8,7 @@ import { US_MAP_CODES, usMap, usMapHeight, usPaths } from '../../../../web/chart
 import { dotsPath } from '../../../../web/charts/dots.js';
 import { figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { WIDTH } from '../../../../web/charts/svg.js';
+import { stepScale } from '../../../../web/charts/tileMap.js';
 import { noun } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
@@ -83,6 +84,30 @@ function dotLayer(shapes, dots, width) {
 
 const dotKey = () => html`<ul class="usmap__key" role="list"><li><span class="usmap__sw usmap__sw--pen"></span>${t('mapDotsCut')}</li><li><span class="usmap__sw usmap__sw--ring"></span>${t('mapDotsKept')}</li><li><span class="usmap__sw usmap__sw--faint"></span>${t('mapDotsNone')}</li></ul>`;
 
+// A measure's legend under the map, as the old site printed it: its title, a labeled swatch for each step with its range (a bin
+// is of the value as shown, so a step ends one unit of the measure's precision under the next edge), then zero, the hatched
+// state and any state left plain, each by the words its tooltip uses. The swatches are the map's own classes, so the colors
+// stay in one place.
+const swatch = (cls) => html`<svg class="usmap__chip" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><rect class="${cls}" width="14" height="14"/></svg>`;
+function legendOf(measure, states) {
+  const words = WORDS[measure.key];
+  const { edge } = words;
+  const { steps } = stepScale([...measure.ramp]);
+  const unit = 10 ** -measure.dp;
+  const ends = measure.ramp;
+  const range = (i) => (i === 0 ? fill('mapLegendUnder', { value: edge(ends[0]) })
+    : i === ends.length ? fill('mapLegendOver', { value: edge(ends[i - 1]) })
+      : fill('mapLegendRange', { lo: edge(ends[i - 1]), hi: edge(Number((ends[i] - unit).toFixed(measure.dp))) }));
+  const all = Object.values(states);
+  const labelsOf = (key) => [...new Set(all.filter((s) => s[key]).map((s) => s.label))];
+  const others = [
+    ...(all.some((s) => s.value === 0) ? [[swatch('chart-tile chart-tile-zero'), t('mapZero')]] : []),
+    ...labelsOf('hatched').map((l) => [html`<span class="usmap__chip usmap__chip--hatch" aria-hidden="true"></span>`, l]),
+    ...labelsOf('empty').map((l) => [swatch('chart-tile-empty'), l]),
+  ];
+  return html`<ul class="usmap__lg" role="list" aria-label="${words.legend}"><li class="usmap__lgt">${words.legend}</li>${steps.map((step, i) => html`<li>${swatch(`chart-tile chart-seq-${step}`)}${range(i)}</li>`)}${others.map(([sw, label]) => html`<li>${sw}${label}</li>`)}</ul>`;
+}
+
 // The map figure, or '' when the page has no outlines or no state has a value to shade (and then no figure number is used).
 // data: view.map; nextFigure: the page's figure counter.
 function mapFigure(data, { nextFigure, edition }) {
@@ -93,16 +118,16 @@ function mapFigure(data, { nextFigure, edition }) {
   const n = nextFigure();
   const draw = (measure) => {
     const states = entriesOf(measure, data);
-    const values = Object.values(states).filter((s) => s.value !== undefined).map((s) => s.value);
     const words = WORDS[measure.key];
-    const legend = { title: words.legend, high: words.edge(Math.max(...values)), zero: t('mapZero') };
-    const one = (id, width, over) => usMap({ id, shapes, states, ramp: [...measure.ramp], format: words.edge, width, legend, overlay: over });
-    return imagePair({ svg: one(`map-${measure.key}`, WIDTH, ''), svgWide: one(`map-${measure.key}-wide`, MAP_WIDE, '') }, fill('mapAlt', { measure: words.switch.toLowerCase() }));
+    const one = (id, width) => usMap({ id, shapes, states, ramp: [...measure.ramp], format: words.edge, width, bare: true });
+    return html`${imagePair({ svg: one(`map-${measure.key}`, WIDTH), svgWide: one(`map-${measure.key}-wide`, MAP_WIDE) }, fill('mapAlt', { measure: words.switch.toLowerCase() }))}
+${legendOf(measure, states)}`;
   };
+  // The old site's controls: the measures as a row of buttons, "Show hospitals" as a checkbox beside them. A script unhides them.
   const chart = html`<div class="usmap" data-measure="${first.key}" data-dots="off">
 <div class="usmap__controls" hidden>
-<div class="mtoggle usmap__modes" role="group" aria-label="${t('mapMeasures')}">${measures.map((m) => html`<button type="button" class="mtoggle__b" data-measure="${m.key}" aria-pressed="${m.key === first.key ? 'true' : 'false'}">${WORDS[m.key].switch}</button>`)}</div>
-<div class="mtoggle usmap__dotsbtn"><button type="button" class="mtoggle__b" data-dots aria-pressed="false">${t('mapDotsToggle')}</button></div>
+<div class="seg usmap__modes" role="group" aria-label="${t('mapMeasures')}">${measures.map((m) => html`<button type="button" class="btn" data-measure="${m.key}" aria-pressed="${m.key === first.key ? 'true' : 'false'}">${WORDS[m.key].switch}</button>`)}</div>
+<label class="check usmap__dotsbtn"><input type="checkbox" data-dots>${t('mapDotsToggle')}</label>
 </div>
 <div class="usmap__stage">
 ${measures.map((m) => html`<div class="usmap__m" data-measure="${m.key}"${m.key === first.key ? '' : html` hidden`}>${draw(m)}</div>
@@ -143,7 +168,7 @@ ${printout(html`<table class="gb states__table" data-page-size="${STATES_PAGE_SI
 <thead><tr><th scope="col">${t('statesColState')}</th><th scope="col" class="num">${t('statesColHospitals')}</th><th scope="col" class="num" title="${t('statesPenalizedTitle')}">${t('statesColPenalized')}</th><th scope="col" class="num">${t('statesColAvg')}</th><th scope="col" class="num">${ge}</th><th scope="col" class="num">${t('statesColDollars')}</th></tr></thead>
 ${data.pages.map((page, i) => html`<tbody data-page="${i + 1}">${page.map((r) => html`<tr><th scope="row"><a href="${r.path}">${r.name}</a></th><td class="num">${fmtInt(r.s.n)}</td><td class="num">${r.s.pctPen == null ? '—' : fmtPct(r.s.pctPen, 0)}</td><td class="num">${fmtPct(r.s.meanRed, 2)}</td><td class="num">${fmtInt(r.s.nGe1)}</td><td class="num">${r.nEstimated ? fmtMoney(r.s.penTotal) : '—'}</td></tr>`)}</tbody>
 `)}</table>`)}
-<nav class="states__pager" aria-label="${t('statesPager')}" hidden>${data.pages.map((_, i) => html`<button type="button" class="mtoggle__b" data-to-page="${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">${fill('statesPage', { n: String(i + 1) })}</button>`)}</nav>
+<nav class="seg states__pager" aria-label="${t('statesPager')}" hidden>${data.pages.map((_, i) => html`<button type="button" class="btn" data-to-page="${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">${fill('statesPage', { n: String(i + 1) })}</button>`)}</nav>
 <p class="small states__csv"><a href="${data.csvHref}" download>${t('statesDownload')}</a></p>
 </div>`;
 }
@@ -163,6 +188,8 @@ export function mapPart(map, { figure: nextFigure, edition }) {
   const drawn = mapFigure(map, { nextFigure, edition });
   return html`<p class="part__intro">${fill('mapIntro', { pct: String(GE_CUT_PCT) })} ${map.notInProgram ? t('mapMaryland') : ''}</p>
 ${drawn}
-${map.rows.length ? everyStateBlock(map) : ''}
-${map.rows.length ? browseBlock(map) : ''}`;
+${map.rows.length ? html`<div class="mapcols">
+${everyStateBlock(map)}
+${browseBlock(map)}
+</div>` : ''}`;
 }

@@ -42,7 +42,7 @@ const MARKS = [
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',
   // the Readmissions map's dot key (sites/hrrp/web/styles.css)
-  '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint',
+  '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint', '.usmap__chip--hatch',
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
   '.chart-periods__perf',
   // the Readmissions peer groups' columns and key swatches, and the medians' shaded cells (sites/hrrp/web/styles.css)
