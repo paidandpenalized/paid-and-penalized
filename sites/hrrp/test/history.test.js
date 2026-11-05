@@ -165,8 +165,8 @@ test('the figure: frame, takeaway from the latest year, no-total words and the t
   const text = historyFigure(lines, { n: 3 }).text;
   assert.match(text, /74\.0% of hospitals are cut in FY2027\./);
   assert.match(text, /No total for FY2016 and FY2024\./);
-  assert.match(text, /hist-sw-cms/);
-  assert.match(text, /hist-sw-kff/);
+  assert.match(text, /fig__swatch--bar-dark/);
+  assert.match(text, /fig__swatch--bar-light/);
   assert.match(text, /<th scope="row">FY2016<\/th>[^]*?No total found/);
   assert.match(text, /<th scope="row">FY2022<\/th>[^]*?KFF estimate/);
   assert.equal(historyFigure(smallLines({ history: { ...HISTORY, national: [] } }), { n: 1 }), '');

@@ -13,7 +13,7 @@ import { printout } from '../../../../web/render/components.js';
 import { capitalize, count, listText, noun, pct, shownAbove, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
-import { fmtInt, fmtPct, ratio } from '../numbers.js';
+import { fmtInt, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence } from '../wording.js';
 import { worksheetHtml } from '../worksheet.js';
@@ -28,9 +28,7 @@ const COLUMNS_HEIGHT = 150;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
-// A peer group's tone on the dual-share columns and in their key: the class's last part is the group's number (tokens.css --grp-N).
-const GROUP_CLASS = 'chart-col--g';
-const SWATCH_CLASS = 'swatch-g';
+// A peer group's tone on the dual-share columns (the kit's chart-cat-N) and in their key (swatch cat-N): N is the group's number.
 
 // A condition's label on the punch card's rows: CMS's abbreviation (the key, with the slash of hip and knee).
 const abbr = (key) => key.replace('_', '/');
@@ -100,13 +98,13 @@ const groupOf = (bands, bin) => bands.find((b) => bin.x0 + 0.5 < b.x1)?.peer ?? 
 
 // The figure and the line about its axis marks, which goes with the step's words (it would stretch the figure's column).
 function dualFigure({ dual, edition, n }) {
-  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${GROUP_CLASS}${groupOf(dual.bands, b)}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
+  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} chart-cat-${groupOf(dual.bands, b)}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
     bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT, stagger: true,
     bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }) })),
   });
   const sizes = dual.groups.map((g) => g.n);
-  const key = dual.groups.map((g) => ({ cls: `${SWATCH_CLASS}${g.peer}`, label: fill('fig2Key', { n: String(g.peer), from: fmtPct(g.lo * 100, 0), to: fmtPct(g.hi * 100, 0) }) }));
+  const key = dual.groups.map((g) => ({ swatch: `cat-${g.peer}`, label: fill('fig2Key', { n: String(g.peer), from: pct(g.lo, 0), to: pct(g.hi, 0) }) }));
   const fig = figure({
     n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share', key,
     takeaway: fill('fig2Takeaway', { min: fmtInt(Math.min(...sizes)), max: fmtInt(Math.max(...sizes)), n: fmtInt(dual.n) }),
@@ -127,7 +125,7 @@ function dualFigure({ dual, edition, n }) {
 export function mediansTable({ rows, conditions, edition, collapsed = false }) {
   const table = printout(html`<table class="gb meds__table">
 <thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
-<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: fmtPct(r.lo * 100, 0), to: fmtPct(r.hi * 100, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
+<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: pct(r.lo, 0), to: pct(r.hi, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
 </table>`);
   return collapsed
     ? html`<details class="meds">

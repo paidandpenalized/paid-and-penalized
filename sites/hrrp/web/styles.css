@@ -145,19 +145,6 @@
 .glossary dd { margin: 2px 0 0; }
 .sources { padding-left: 1.2em; }
 
-/* The peer groups' tones on Step 3's columns and in their key (tokens.css --grp-N); a label or the key names each group too. */
-.chart-col--g1 { fill: var(--grp-1); }
-.chart-col--g2 { fill: var(--grp-2); }
-.chart-col--g3 { fill: var(--grp-3); }
-.chart-col--g4 { fill: var(--grp-4); }
-.chart-col--g5 { fill: var(--grp-5); }
-.fig__swatch[class*="swatch-g"] { width: 12px; height: 12px; }
-.swatch-g1 { background: var(--grp-1); }
-.swatch-g2 { background: var(--grp-2); }
-.swatch-g3 { background: var(--grp-3); }
-.swatch-g4 { background: var(--grp-4); }
-.swatch-g5 { background: var(--grp-5); }
-
 /* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
 .wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; }
 .wsr-holder { min-width: 0; }
@@ -265,10 +252,7 @@
 .hist-none { stroke: var(--ink-3); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .hist-name--pen { fill: var(--pen-ink); }
 .hist-name--all { fill: var(--ink-2); }
-.fig__swatch.hist-sw-cms, .fig__swatch.hist-sw-kff { width: 12px; height: 12px; }
 .hist-note__none { display: block; margin-top: 4px; font-weight: 600; }
-.hist-sw-cms { background: var(--pen-seq-4); }
-.hist-sw-kff { background: var(--pen-seq-1); border: 1px solid var(--pen-seq-3); }
 /* The timeline: dated entries down a rule, a year not yet in effect set apart by a dashed rule and a tag. */
 .tl { margin: 12px 0 0; padding: 0 0 0 16px; list-style: none; border-left: 2px solid var(--ink); display: grid; gap: 18px; max-width: 62ch; }
 .tl__item--future { border-left: 2px dashed var(--ink-3); margin-left: -18px; padding-left: 16px; }
@@ -295,8 +279,6 @@
 .ht select, .ht input[type="search"] { padding: 6px 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; }
 @media (max-width: 640px) { .ht__controls { display: grid; gap: 12px; } .ht__field, .ht select, .ht input[type="search"] { width: 100%; } }
 @media (forced-colors: active) {
-  .chart-col--g1, .chart-col--g2, .chart-col--g3, .chart-col--g4, .chart-col--g5 { fill: GrayText; }
-  .swatch-g1, .swatch-g2, .swatch-g3, .swatch-g4, .swatch-g5 { forced-color-adjust: none; background: GrayText; }
   .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
   .chart-periods__perf { fill: CanvasText; }
   .hist-covid { fill: GrayText; fill-opacity: 0.15; }
@@ -304,7 +286,5 @@
   .hist-line--all { stroke: GrayText; }
   .hist-dot--share, .hist-dot--pen, .hist-bar--cms { fill: CanvasText; }
   .hist-bar--kff { fill: Canvas; stroke: CanvasText; }
-  .hist-sw-cms { forced-color-adjust: none; background: CanvasText; }
-  .hist-sw-kff { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .tl__item--future { border-left-color: GrayText; }
 }

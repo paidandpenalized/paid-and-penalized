@@ -65,7 +65,7 @@ export function historyFigure(lines, { n }) {
   return figure({
     n, takeaway: fill('histTakeaway', { share: pct1(latest.value), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
     alt: t('histAlt'), note: note || null,
-    key: [{ cls: 'hist-sw-cms', label: t('histKeyCms') }, { cls: 'hist-sw-kff', label: t('histKeyKff') }],
+    key: [{ swatch: 'bar-dark', label: t('histKeyCms') }, { swatch: 'bar-light', label: t('histKeyKff') }],
     ...drawn((width) => drawHistory({ lines, width }), HIST_WIDE),
     table: {
       columns: [{ name: t('histColFy') }, { name: t('histColN'), numeric: true }, { name: t('histColShare'), numeric: true }, { name: t('histColAvgPen'), numeric: true },

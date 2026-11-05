@@ -11,6 +11,7 @@ const MARKS = [
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
   '.chart-boundary', '.chart-zone', '.chart-hatch', '.chart-dead__end', '.chart-tile', '.chart-tile-na', '.chart-tile-empty',
   '.chart-tile-zero', '.chart-tile-few', '.chart-geo-state', '.chart-geo-few', '.chart-geo-dot', '.chart-geo-halo', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
+  '.chart-cat-1', '.chart-cat-2', '.chart-cat-3', '.chart-cat-4', '.chart-cat-5', '.fig__swatch--cat-1', '.fig__swatch--cat-2', '.fig__swatch--cat-3', '.fig__swatch--cat-4', '.fig__swatch--cat-5', '.fig__swatch--bar-dark', '.fig__swatch--bar-light',
   // the money's charts (treemap, acrossLine, pairBars, geo usBubbles, columns)
   '.chart-tree__group', '.chart-tree__tile', '.chart-across__dot', '.chart-across__dot--over', '.chart-across__dot--faint', '.chart-pair__a',
   '.chart-pair__b', '.chart-land', '.chart-bubble', '.chart-col--rew', '.chart-band--tint',
@@ -46,11 +47,10 @@ const MARKS = [
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
   '.chart-periods__perf',
   // the History figure's small multiples (sites/hrrp/web/styles.css)
-  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-none', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff', '.hist-sw-cms', '.hist-sw-kff',
+  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-none', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff',
   // Step 2's lens zone on the swarm's main axis (sites/hrrp/web/styles.css)
   '.chart-lens-zone',
-  // the Readmissions peer groups' columns and key swatches, and the medians' shaded cells (sites/hrrp/web/styles.css)
-  '.chart-col--g1', '.chart-col--g2', '.chart-col--g3', '.chart-col--g4', '.chart-col--g5', '.swatch-g1', '.swatch-g2', '.swatch-g3', '.swatch-g4', '.swatch-g5',
+  // the Readmissions medians' shaded cells (sites/hrrp/web/styles.css)
   '.meds__table td.hi',
   // the picture's figures: the interval line, the strip plot's dots, bands and median tick, the trait ranges' rule (sites/hrrp/web/styles.css)
   '.cond-ci', '.strip-dot--0', '.strip-dot--1', '.strip-dot--2', '.strip-dot--3', '.strip-dot--4', '.strip-dot--5', '.strip__band', '.strip__median', '.spread__rule',

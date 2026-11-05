@@ -16,6 +16,7 @@ import { ASSETS, loadHrrpOnce } from './fixtures.js';
 
 const CSS = readFileSync(`${REPO_ROOT}sites/hrrp/web/styles.css`, 'utf8');
 const TOKENS = readFileSync(`${REPO_ROOT}web/styles/tokens.css`, 'utf8');
+const KIT_CSS = readFileSync(`${REPO_ROOT}web/styles/charts.css`, 'utf8');
 const rule = (selector) => new RegExp(`(^|\\n)${selector.replace(/[.[\]*#]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(CSS)?.[2] ?? null;
 
 function page({ hospitalsUrl = '/assets/hrrp-hospitals.test.json', worksheetUrl = '/assets/hrrp-worksheet.test.json' } = {}) {
@@ -140,17 +141,17 @@ test('Fig. 2: each group\'s columns carry the group\'s tone, keyed, and every la
   const text = page();
   const step3 = between(text, 'id="step-3"', 'id="step-4"');
   for (const n of [1, 2, 3, 4, 5]) {
-    assert.ok(step3.includes(`class="chart-col chart-col--g${n}"`), `columns in group ${n}`);
-    assert.match(step3, new RegExp(`<span class="fig__swatch swatch-g${n}" aria-hidden="true"></span>Group ${n} · \\d+%–\\d+% dual`), `key for group ${n}`);
+    assert.ok(step3.includes(`class="chart-col chart-cat-${n}"`), `columns in group ${n}`);
+    assert.match(step3, new RegExp(`<span class="fig__swatch fig__swatch--cat-${n}" aria-hidden="true"></span>Group ${n} · \\d+%–\\d+% dual`), `key for group ${n}`);
   }
   assert.ok(!step3.includes('class="chart-col"'), 'every column has a group');
   // The tones are tokens in both themes and none is the penalty or reward ink.
   for (const n of [1, 2, 3, 4, 5]) {
-    assert.equal(TOKENS.match(new RegExp(`--grp-${n}:`, 'g')).length, 2, `--grp-${n} in the light and dark blocks`);
-    assert.match(rule(`.chart-col--g${n}`), new RegExp(`fill: var\\(--grp-${n}\\)`));
-    assert.match(rule(`.swatch-g${n}`), new RegExp(`background: var\\(--grp-${n}\\)`));
+    assert.equal(TOKENS.match(new RegExp(`--cat-${n}:`, 'g')).length, 2, `--cat-${n} in the light and dark blocks`);
+    assert.match(KIT_CSS.match(new RegExp(`\\.chart-cat-${n} \\{([^}]*)\\}`))?.[1] ?? '', new RegExp(`fill: var\\(--cat-${n}\\)`));
+    assert.match(KIT_CSS.match(new RegExp(`\\.fig__swatch--cat-${n} \\{([^}]*)\\}`))?.[1] ?? '', new RegExp(`background: var\\(--cat-${n}\\)`));
   }
-  const tones = [...TOKENS.matchAll(/--grp-\d: (#[0-9a-f]{6})/g)].map((m) => m[1]);
+  const tones = [...TOKENS.matchAll(/--cat-\d: (#[0-9a-f]{6})/g)].map((m) => m[1]);
   assert.equal(new Set(tones).size, tones.length, 'ten different values');
   const pen = [...TOKENS.matchAll(/--(?:pen|pen-ink|rew|pen-scar): (#[0-9a-f]{6})/g)].map((m) => m[1]);
   assert.ok(tones.every((t) => !pen.includes(t)));
@@ -175,8 +176,8 @@ test('columns: staggered labels never touch, stay inside the drawing, and none i
   }
 });
 
-test('figure: a key swatch the site draws itself ({ cls, label }), and a bad one is refused', () => {
+test('figure: a categorical key swatch, and a free class or a bad swatch is refused', () => {
   const FIG = { n: 1, takeaway: 't', source: 's', alt: 'a', table: { columns: [{ name: 'x' }, { name: 'n', numeric: true }], rows: [['r', '1']] }, svg: columns({ bins: [{ x0: 0, x1: 1, n: 1, cls: 'chart-col', tip: 'x' }], domain: [0, 1], ticks: [0], format: String, width: 300, height: 100 }) };
-  assert.ok(String(figure({ ...FIG, key: [{ cls: 'swatch-g1', label: 'One' }] })).includes('<li><span class="fig__swatch swatch-g1" aria-hidden="true"></span>One</li>'));
-  for (const key of [[{ cls: 'Bad Name', label: 'x' }], [{ cls: 'ok', label: '' }], [{ swatch: 'this', cls: 'x' }]]) assert.throws(() => figure({ ...FIG, key }), TypeError);
+  assert.ok(String(figure({ ...FIG, key: [{ swatch: 'cat-1', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--cat-1" aria-hidden="true"></span>One</li>'));
+  for (const key of [[{ cls: 'swatch-g1', label: 'x' }], [{ swatch: 'cat-9', label: 'x' }], [{ swatch: 'this', label: '' }]]) assert.throws(() => figure({ ...FIG, key }), TypeError);
 });
