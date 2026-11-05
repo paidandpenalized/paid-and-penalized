@@ -138,4 +138,4 @@ intercompany,unclassified,TRANSFERS?,
 intercompany,unclassified,INTERHOSPITAL,
 intercompany,unclassified,HOME OFFICE,
 intercompany,unclassified,AFFL,
-generic_operating,unclassified,OP(ER)?(ATING|ATIG|TING|ATIONAL|ATION)?,"the label says only ""operating"", not what the income is"
+generic_operating,operating,OP(ER)?(ATING|ATIG|TING|ATIONAL|ATION)?,"the hospital's own label calls it operating (""other operating revenue"" and its variants; decided 2026-11-05, last)"

@@ -79,7 +79,8 @@ trend = panel.series(ccn, "total_margin")            # one Value per year the ho
   (line 3 + the same). Other operating income is lines 8 to 22, the hospital's own ancillary income (cafeteria,
   parking, drug sales to non-patients, space rental...), plus the entries on line 24 and its subscripts 24.01 to
   24.49 ("other (specify)") whose label sorts as operating: physician and professional, pharmacy (340B and contract
-  pharmacy among it), grant income, and the kinds lines 8 to 22 hold. The labels are in the alphanumeric file;
+  pharmacy among it), grant income, the kinds lines 8 to 22 hold, and labels the hospital calls operating ("other
+  operating revenue" and its variants). The labels are in the alphanumeric file;
   `pp_pipeline/hcris/other_income_rules.csv` is the keyword rules, in order, first match wins
   (`pp_engine/hcris/other_income.py`), and each emitted file records its SHA-256. Investment-type income, donations
   (6), investment income (7), governmental appropriations (23), unclassified line-24 entries and COVID-19 funding
