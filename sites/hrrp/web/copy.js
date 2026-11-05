@@ -100,3 +100,6 @@ export const COPY = {
 };
 
 export const { fill, fillKeep, t } = copyOf(COPY);
+
+// "FY2027", from a fiscal year.
+export const fyLabel = (fy) => fill('editionLabel', { fy: String(fy) });

@@ -17,11 +17,11 @@ import { mapData } from './figures/map-data.js';
 import { pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
-import { factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
+import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
-import { fill as siteFill } from './copy.js';
+import { fyLabel } from './copy.js';
 import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, rankContext, rankLine, summarySentence, vsLabel } from './wording.js';
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
@@ -239,17 +239,10 @@ function childRows(place) {
   return rows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 }
 
-// How many of list fall under each value of key(h), as a Map.
-const countBy = (list, key) => {
-  const n = new Map();
-  for (const h of list) n.set(key(h), (n.get(key(h)) ?? 0) + 1);
-  return n;
-};
-
 // The codes of the states a place reaches, the one with the most of its hospitals first (ties: by code), as the source listed them.
 const statesByCount = (place) => {
   const n = countBy(place.hospitals, (h) => h.st);
-  return [...place.states].sort((a, b) => n.get(b) - n.get(a) || (a < b ? -1 : 1));
+  return [...place.states].sort((a, b) => n.get(b) - n.get(a) || byId(a, b));
 };
 
 // place: a buildPlaces() entry; ctx: areaContext(). The place page's head, deck and six-field card.
@@ -308,16 +301,16 @@ function checkPhrase(asOf) {
 }
 
 // How the estimates compare with hospitals' cost reports; null when the data has no dollar check.
-function accuracyLine(dc, edition, label) {
+function accuracyLine(dc, edition) {
   if (dc?.within15 == null) return null;
   const small = dc.within15Small == null ? '' : methodsFill('accuracySmall', { share: fmtPct(dc.within15Small, 0), beds: String(SMALL_HOSPITAL_BEDS) });
-  return methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: label(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: label(edition.fy), small });
+  return methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: fyLabel(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: fyLabel(edition.fy), small });
 }
 
 // The assumptions as [assumption, effect] rows of words: the fixed ones, then those the data calls for (the Medicare-dependent
 // row with its end date and largest shortfall, the Pennsylvania model while it runs into the payment year, hospitals CMS lists
 // as inactive, hospitals with no estimate).
-function assumptionRows(ctx, label) {
+function assumptionRows(ctx) {
   const { edition, meta, hospitals: list } = ctx;
   const dc = meta.dollarCheck;
   const f = (a, e, av = {}, ev = {}) => [methodsFill(a, av), methodsFill(e, ev)];
@@ -329,16 +322,16 @@ function assumptionRows(ctx, label) {
   const share = meta.totals?.modelBase ? pct(NTAP_AMOUNT / meta.totals.modelBase, 1) : null;
   const rates = dc?.rateDrift == null
     ? [methodsFill('assumeRates', { edition: edition.label }), methodsFill('assumeRatesENone', {})]
-    : f('assumeRates', 'assumeRatesE', { edition: edition.label }, { drift: pct(Math.abs(dc.rateDrift - 1), 1), direction: methodsT(dc.rateDrift >= 1 ? 'directionAbove' : 'directionBelow'), costFy: label(dc.costFy) });
+    : f('assumeRates', 'assumeRatesE', { edition: edition.label }, { drift: pct(Math.abs(dc.rateDrift - 1), 1), direction: methodsT(dc.rateDrift >= 1 ? 'directionAbove' : 'directionBelow'), costFy: fyLabel(dc.costFy) });
   return [
     f('assumeBase', 'assumeBaseE', { edition: edition.label }),
     rates,
-    f('assumeVolume', 'assumeVolumeE', { volumeFy: label(edition.fy - 2) }, { edition: edition.label }),
+    f('assumeVolume', 'assumeVolumeE', { volumeFy: fyLabel(edition.fy - 2) }, { edition: edition.label }),
     f('assumeFfs', 'assumeFfsE'),
     meta.mdh && (mdhMonths
       ? f('assumeMdh', 'assumeMdhE', { months: mdhMonths, date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') }, { max: `${meta.mdh.maxShortfall}%` })
       : f('assumeMdhYear', 'assumeMdhYearE', { date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') })),
-    share && f('assumeNtap', 'assumeNtapE', {}, { share, ntapFy: label(NTAP_FY), total: money(NTAP_AMOUNT) }),
+    share && f('assumeNtap', 'assumeNtapE', {}, { share, ntapFy: fyLabel(NTAP_FY), total: money(NTAP_AMOUNT) }),
     PARHM_END >= `${edition.fy - 1}-10-01` && (parhmMonths
       ? f('assumeParhm', 'assumeParhmE', {}, { date: fmtDate(PARHM_END, 'long'), months: parhmMonths })
       : f('assumeParhm', 'assumeParhmYearE', {}, { date: fmtDate(PARHM_END, 'long') })),
@@ -349,13 +342,13 @@ function assumptionRows(ctx, label) {
 }
 
 // The history's annual totals as table rows with their sources, and the sentence about where they come from.
-function historyTotals(history, label) {
+function historyTotals(history) {
   const rows = history.national.map((r) => ({
-    fy: label(r.fy),
+    fy: fyLabel(r.fy),
     total: r.totalEst == null ? null : money(r.totalEst),
     source: r.totalEst == null ? null : { name: r.totalSrc?.label ?? null, url: httpsUrl(r.totalSrc?.url) },
   }));
-  const simulated = history.national.filter((r) => /simulation/i.test(r.totalSrc?.label ?? '')).map((r) => label(r.fy));
+  const simulated = history.national.filter((r) => /simulation/i.test(r.totalSrc?.label ?? '')).map((r) => fyLabel(r.fy));
   return {
     text: simulated.length ? methodsFill('historyTotalsSim', { simulated: listText(simulated) }) : methodsT('historyTotals'),
     noTotal: noTotalText(history.national.filter((r) => r.totalEst == null).map((r) => r.fy)),
@@ -368,8 +361,7 @@ function historyTotals(history, label) {
 export function methodsView(ctx) {
   const { edition, meta } = ctx;
   const rep = meta.replication;
-  const label = (fy) => siteFill('editionLabel', { fy: String(fy) });
-  const span = { first: label(edition.firstFy), last: label(edition.fy - 1) };
+  const span = { first: fyLabel(edition.firstFy), last: fyLabel(edition.fy - 1) };
   const totals = meta.totals;
   const cmsLabel = totals?.cmsSrc?.label ?? null;
   return {
@@ -391,8 +383,8 @@ export function methodsView(ctx) {
       text: methodsFill('dollarsTotals', { base: fmtMoney(totals.modelBase), pen: fmtMoney(totals.modelPen), cms: fmtMoney(totals.cmsEst), source: cmsLabel ?? methodsT('cmsSourceNone') }),
       url: httpsUrl(totals.cmsSrc?.url),
     },
-    accuracy: accuracyLine(meta.dollarCheck, edition, label),
-    assumptions: assumptionRows(ctx, label),
+    accuracy: accuracyLine(meta.dollarCheck, edition),
+    assumptions: assumptionRows(ctx),
     read: {
       readmission: methodsT('readReadmission'),
       small: methodsFill('readSmall', { minCases: String(MIN_DISCHARGES) }),
@@ -404,8 +396,8 @@ export function methodsView(ctx) {
         + (meta.geocode.none ? methodsFill('placesNone', { none: fmtInt(meta.geocode.none) }) : '')
       : null,
     history: methodsFill('historyText', span),
-    historyListed: methodsFill('historyListed', { first: label(HISTORY_LISTED_FYS[0]), last: label(HISTORY_LISTED_FYS[1]) }),
-    historyTotals: historyTotals(ctx.history, label),
+    historyListed: methodsFill('historyListed', { first: fyLabel(HISTORY_LISTED_FYS[0]), last: fyLabel(HISTORY_LISTED_FYS[1]) }),
+    historyTotals: historyTotals(ctx.history),
     feedback: methodsT('feedbackText'),
     reuse: methodsFill('reuseText', { minCases: String(MIN_DISCHARGES) }),
     pins: ctx.pinsUsed.map((p) => ({ title: p.title, url: httpsUrl(p.landingPage || p.downloadUrl), bytes: fmtInt(p.bytes), hash: `${p.sha256.slice(0, 16)}…`, retrieved: fmtDate(p.retrieved, 'long') })),

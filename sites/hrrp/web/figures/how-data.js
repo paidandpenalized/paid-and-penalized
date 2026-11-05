@@ -4,9 +4,8 @@
 import { CONDS, PEERS, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
 import { exampleHospital, withDerived } from '../derive.js';
 import { ROUND_COUNT_TO } from '../constants.js';
+import { binIndex, byId, roundTo } from '../numbers.js';
 import { worksheetRows } from '../worksheet.js';
-
-const round = (x, dp) => Math.round(x * 10 ** dp) / 10 ** dp;
 
 // ---------- Step 1: which conditions each hospital is measured on ----------
 
@@ -31,7 +30,7 @@ export function condSets(hospitals) {
     if (h.red > 0) set.yes += 1;
     sets.set(key, set);
   }
-  const list = [...sets.values()].sort((a, b) => b.n - a.n || CONDS.indexOf(a.conds[0]) - CONDS.indexOf(b.conds[0]) || (a.conds.join() < b.conds.join() ? -1 : 1));
+  const list = [...sets.values()].sort((a, b) => b.n - a.n || CONDS.indexOf(a.conds[0]) - CONDS.indexOf(b.conds[0]) || byId(a.conds.join(), b.conds.join()));
   return { sets: list, none, rows, measured: list.reduce((s, c) => s + c.n, 0), yes: list.reduce((s, c) => s + c.yes, 0) };
 }
 
@@ -61,14 +60,14 @@ export function swarmData(hospitals, meta, cond, exampleId = exampleIdOf(hospita
     if (!isMeasured(c)) continue;
     const med = peerMedian(meta, h.peer, cond);
     if (med == null) continue;
-    items.push({ id: h.id, d: round(c.err - med, 6), flag: c.flag === 1, peer: h.peer, example: h.id === exampleId });
+    items.push({ id: h.id, d: roundTo(c.err - med, 6), flag: c.flag === 1, peer: h.peer, example: h.id === exampleId });
   }
   const over = items.filter((i) => i.d > 0).length;
   const near = items.filter((i) => Math.abs(i.d) <= BAND);
   const bins = new Map();
   for (const i of items) {
-    const k = Math.ceil(round(i.d / SWARM_BIN, 9)) - 1;
-    const b = bins.get(k) ?? { lo: round(k * SWARM_BIN, 2), hi: round((k + 1) * SWARM_BIN, 2), n: 0, flagged: 0 };
+    const k = Math.ceil(roundTo(i.d / SWARM_BIN, 9)) - 1;
+    const b = bins.get(k) ?? { lo: roundTo(k * SWARM_BIN, 2), hi: roundTo((k + 1) * SWARM_BIN, 2), n: 0, flagged: 0 };
     b.n += 1;
     if (i.flag) b.flagged += 1;
     bins.set(k, b);
@@ -95,9 +94,9 @@ export function dualBins(hospitals, cutoffs) {
   const duals = hospitals.map((h) => h.dual).filter((d) => d != null);
   const top = Math.max(5, Math.ceil((Math.max(...duals) * 100 - 1e-9) / 5) * 5);
   const bins = Array.from({ length: top }, (_, i) => ({ x0: i, x1: i + 1, n: 0 }));
-  for (const d of duals) bins[Math.min(top - 1, Math.floor(d * 100 + 1e-9))].n += 1;
+  for (const d of duals) bins[Math.min(top - 1, binIndex(d * 100, 0, 1))].n += 1;
   const groups = PEERS.map((peer, i) => ({ peer, lo: cutoffs[i][0], hi: cutoffs[i][1], n: hospitals.filter((h) => h.peer === peer).length }));
-  const ticks = groups.slice(0, -1).map((g) => round(g.hi * 100, 2));
+  const ticks = groups.slice(0, -1).map((g) => roundTo(g.hi * 100, 2));
   // The groups' bands across the axis: from zero to the first cutoff, between cutoffs, and from the last to the axis's end.
   const edges = [0, ...ticks, top];
   const bands = groups.map((g, i) => ({ peer: g.peer, x0: edges[i], x1: edges[i + 1] }));

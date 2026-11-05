@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { US_MAP_CODES } from '../../../web/charts/geo.js';
 import { parseCsv } from '../../../engine/js/csv.js';
-import { PLACE_COLUMNS, placeCsv } from '../web/csv.js';
+import { placeColumns, placeCsv } from '../web/csv.js';
 import { DOT_TIERS, MEASURES, binOf, dotPoints, mapData, shownValue, statesCsvRows } from '../web/figures/map-data.js';
 import { mapPart } from '../web/figures/map.js';
 import { programPage } from '../web/pages/program.js';
@@ -157,7 +157,7 @@ test('the states CSV has the eight columns with the counts behind each share', (
   ];
   const rows = statesCsvRows(mapData(ctxOf(hs)).pages);
   const text = placeCsv(rows);
-  assert.equal(PLACE_COLUMNS.length, 8);
+  assert.equal(placeColumns('State').length, 8);
   const parsed = parseCsv(text);
   assert.deepEqual(Object.keys(parsed[0]), ['State', 'Hospitals', 'Hospitals measured', 'Hospitals penalized', 'Penalized (% of measured)', 'Average cut (%)', 'Cut 1% or more (hospitals)', 'Estimated penalties ($, modeled)']);
   const tx = parsed.find((r) => r.State === 'TX');

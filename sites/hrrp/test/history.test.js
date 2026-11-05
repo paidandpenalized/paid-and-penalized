@@ -167,7 +167,7 @@ test('the timeline: future years are marked (a year past the edition\'s, or a da
   assert.equal((text.match(/tl__item--future/g) ?? []).length, 2);
   assert.equal((text.match(/Not yet in effect/g) ?? []).length, 2);
   assert.match(text, /<time datetime="2010-03-23">March 23, 2010<\/time>/);
-  assert.match(text, /<a href="https:\/\/www\.govinfo\.gov\/x" rel="noopener noreferrer" target="_blank">Pub\. L\. 111-148<\/a>/);
+  assert.match(text, /<a href="https:\/\/www\.govinfo\.gov\/x" target="_blank" rel="noopener">Pub\. L\. 111-148<span class="vh">[^<]*<\/span><\/a>/);
 });
 
 test('httpsUrl: only an https address survives', () => {
@@ -245,7 +245,7 @@ test('the research findings are grouped by theme in the order each appears, each
   const text = researchPart(groups).text;
   assert.equal((text.match(/<h3 /g) ?? []).length, 2);
   assert.ok(text.indexOf('Author A') < text.indexOf('Author C') && text.indexOf('Author C') < text.indexOf('Author B'));
-  assert.match(text, /<strong>Author A et al\., Journal 2016<\/strong>\. <a href="https:\/\/doi\.org\/10\.1\/a" rel="noopener noreferrer" target="_blank">A study<\/a>/);
+  assert.match(text, /<strong>Author A et al\., Journal 2016<\/strong>\. <a href="https:\/\/doi\.org\/10\.1\/a" target="_blank" rel="noopener">A study<span class="vh">[^<]*<\/span><\/a>/);
 });
 
 test('research: a hostile entry is escaped and its non-https link is not a link', () => {

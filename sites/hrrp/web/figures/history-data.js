@@ -9,9 +9,9 @@ import { listText } from '../../../../web/render/format.js';
 import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS } from '../constants.js';
 import { capMarks, pafByYear } from '../derive.js';
 import { httpsUrl } from '../links.js';
+import { fyLabel } from '../copy.js';
+import { byId } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
-
-const fyLabel = (fy) => fill('editionLabel', { fy: String(fy) });
 
 // ---------- the small multiples ----------
 
@@ -84,7 +84,7 @@ export function rollCall({ hospitals, history, meta }) {
     }),
   };
   const order = (r) => (r.first < 0 ? years.length : r.first);
-  const sorted = records.map(({ id, marks, first }) => ({ id, marks, first })).sort((a, b) => order(a) - order(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const sorted = records.map(({ id, marks, first }) => ({ id, marks, first })).sort((a, b) => order(a) - order(b) || byId(a.id, b.id));
   return { years, records: sorted.map(({ id, marks }) => ({ id, marks })), counts };
 }
 

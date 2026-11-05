@@ -5,6 +5,7 @@ import { CONDS, condState, contrib } from '../../../../engine/js/hrrp/formula.js
 import { BED_BANDS, TEACH_LABEL } from '../../../../engine/js/hrrp/filters.js';
 import { EXPLORE_PAGE_SIZE } from '../constants.js';
 import { HOSPITALS_PATH } from '../links.js';
+import { byId } from '../numbers.js';
 
 // An asset row's fields, in order. name: the hospital as CMS lists it; alias: its former or other name, or null; red: the
 // cut in percent; pen: modeled dollars, or null (no estimate); peer: 1-5; teach: none, minor, major or null; urban: true,
@@ -14,7 +15,7 @@ import { HOSPITALS_PATH } from '../links.js';
 export const FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'zip', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive']);
 const LETTER = { counted: 'c', below: 'b', few: 'f', none: 'n' };
 
-const byNameThenId = (a, b) => a[1].localeCompare(b[1], 'en') || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+const byNameThenId = (a, b) => a[1].localeCompare(b[1], 'en') || byId(a[0], b[0]);
 
 // hospitals: the file's rows; meta: the file's meta. Rows come in the table's first order: name A to Z, then CCN.
 export function hospitalsAsset(hospitals, meta) {

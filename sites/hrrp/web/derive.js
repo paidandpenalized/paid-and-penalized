@@ -5,7 +5,7 @@ import { CONDS, contrib, cutPct } from '../../../engine/js/hrrp/formula.js';
 import { mean } from '../../../engine/js/stats.js';
 import { capitalize, placeText, spelled } from '../../../web/render/format.js';
 import { EXAMPLE_MIN_BEDS, EXAMPLE_MIN_FLAGS } from './constants.js';
-import { fill } from './copy.js';
+import { fill, fyLabel } from './copy.js';
 import { fmtDate } from './numbers.js';
 
 // A count of years is written in words up to this many ("Fifteen"), in digits after.
@@ -22,7 +22,7 @@ export function edition(meta, history) {
   const range = (start, end) => fill('editionRange', { start: fmtDate(start, 'long'), end: fmtDate(end, 'long') });
   return {
     fy,
-    label: fill('editionLabel', { fy: String(fy) }),
+    label: fyLabel(fy),
     firstFy,
     nYears,
     yearsWord: nYears <= WORDS_UP_TO ? capitalize(spelled(nYears)) : String(nYears),

@@ -7,6 +7,7 @@
 import { CONDS, isMeasured } from '../../../engine/js/hrrp/formula.js';
 import { toCsv } from '../../../engine/js/csv.js';
 import { fillCopy } from '../../../web/render/components.js';
+import { roundTo } from './numbers.js';
 
 // Bump when a column is added, removed, renamed or changes meaning (sites/hrrp/DATA-DICTIONARY.md states it).
 export const CSV_SCHEMA_VERSION = 1;
@@ -56,22 +57,20 @@ export const hospitalCsv = (hospitals) => toCsv(HOSPITAL_COLUMNS, hospitals.map(
 // here is over the hospitals measured on at least one condition (a hospital measured on nothing cannot be cut). A row is
 // summarize()'s result (engine/js/hrrp/summary.js) plus its label. Shares are written to a tenth of a percent, the average
 // cut to two decimals, dollars to whole dollars.
-const rounded = (v, dp) => (Number.isFinite(v) ? Number(v.toFixed(dp)) : null);
 export const placeColumns = (label) => Object.freeze([
   text(label, (r) => r.label),
   number('Hospitals', (r) => r.n),
   number('Hospitals measured', (r) => r.nMeasured),
   number('Hospitals penalized', (r) => r.nPen),
-  number('Penalized (% of measured)', (r) => rounded(r.pctPen, 1)),
-  number('Average cut (%)', (r) => rounded(r.meanRed, 2)),
+  number('Penalized (% of measured)', (r) => roundTo(r.pctPen, 1)),
+  number('Average cut (%)', (r) => roundTo(r.meanRed, 2)),
   number('Cut 1% or more (hospitals)', (r) => r.nGe1),
-  number('Estimated penalties ($, modeled)', (r) => rounded(r.penTotal, 0)),
+  number('Estimated penalties ($, modeled)', (r) => roundTo(r.penTotal, 0)),
 ]);
-export const PLACE_COLUMNS = placeColumns('State');
 
 // The CSV text for places (rows as above), in the order given; label names the first column ("State", "Metro area").
 export const placeCsv = (rows, label = 'State') => {
-  const columns = label === 'State' ? PLACE_COLUMNS : placeColumns(label);
+  const columns = placeColumns(label);
   return toCsv(columns, rows.map((r) => columns.map((c) => c.get(r))));
 };
 

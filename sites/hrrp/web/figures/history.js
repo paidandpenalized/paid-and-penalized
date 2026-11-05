@@ -4,17 +4,18 @@
 // numbers.
 import { drawn, figure } from '../../../../web/charts/figure.js';
 import { periodsChart } from '../../../../web/charts/periods.js';
-import { html } from '../../../../web/render/html.js';
 import { isoDate } from '../../../../web/render/format.js';
+import { html } from '../../../../web/render/html.js';
+import { externalLink } from '../../../../web/render/layout.js';
+import { fyLabel } from '../copy.js';
 import { fill, t } from '../program/copy.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
-const fyLabel = (fy) => fill('editionLabel', { fy: String(fy) });
 const span = (kind, fy, [start, end]) => ({ kind, start: ymd(start), end: ymd(end), tip: fill('winTip', { label: t(kind === 'perf' ? 'winPerf' : 'winPay'), fy: fyLabel(fy), start: isoDate(start), end: isoDate(end) }) });
 const range = ([start, end]) => `${isoDate(start)} – ${isoDate(end)}`;
 
 // The source line of an entry: a link when the address is https, else the label as plain text.
-const sourceOf = ({ label, url }) => (url ? html`<a href="${url}" rel="noopener noreferrer" target="_blank">${label}</a>` : label);
+const sourceOf = ({ label, url }) => (url ? externalLink(url, label) : label);
 
 // entries: history-data.js timelineData().
 export function timeline(entries) {

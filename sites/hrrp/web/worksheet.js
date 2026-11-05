@@ -3,7 +3,7 @@
 // fields A to C, lines 1 to 6 for each condition (with the reason a row does not count), lines 7 to 9, CMS's own factor and
 // whether the two agree, and the dollars line. worksheetRows is pure; worksheetHtml draws it on the server. waterfallData
 // is the numbers for the figure that shows the parts adding up to the cap (not drawn yet).
-import { CAP, CONDS, MIN_DISCHARGES, PEERS, WEIGHT_MISSING, condState, contrib, peerMedian, weightPublished } from '../../../engine/js/hrrp/formula.js';
+import { CAP, CONDS, MIN_DISCHARGES, PEERS, WEIGHT_MISSING, condState, contrib, peerMedian, round4, weightPublished } from '../../../engine/js/hrrp/formula.js';
 import { formField, formTitle, printout } from '../../../web/render/components.js';
 import { placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
@@ -28,7 +28,6 @@ export function factorCheck(h, recomputed) {
 }
 
 const labelOf = (conditions, cond) => conditions.find((c) => c.key === cond)?.short ?? cond;
-const round4 = (v) => Math.round(v * 1e4) / 1e4;
 
 // h: a hospital row with withDerived's place.
 // -> { fields: [A, B, C], lines, totals: { sum, capped, reduction, factor }, cms: { factor, matches, diff }, dollars }

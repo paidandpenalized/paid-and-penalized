@@ -8,9 +8,11 @@ import { CAP_PCT, CONDS, condState, contrib, isMeasured } from '../../../../engi
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
 import { mean, median } from '../../../../engine/js/stats.js';
+import { r2 } from '../../../../web/charts/svg.js';
 import { noun } from '../../../../web/render/format.js';
 import { GE_CUT_PCT } from '../constants.js';
 import { csvPath } from '../links.js';
+import { binIndex, byId, countBy } from '../numbers.js';
 
 // ---------- the lede ----------
 
@@ -26,13 +28,10 @@ export function pictureLede(hospitals) {
 // A cut's bins are this wide (percentage points); a bin holds [lo, hi), the last one holds the cap too.
 export const CUT_BIN = 0.25;
 const CUT_BINS = CAP_PCT / CUT_BIN;
-const binOf = (red) => Math.min(Math.floor(red / CUT_BIN + 1e-9), CUT_BINS - 1);
-const r2 = (x) => Math.round(x * 100) / 100;
+const binOf = (red) => Math.min(binIndex(red, 0, CUT_BIN), CUT_BINS - 1);
 // The bins of the cuts above zero: [{ lo, hi, n }], the empty ones left out.
 function cutBins(reds) {
-  const counts = new Map();
-  for (const red of reds) if (red > 0) counts.set(binOf(red), (counts.get(binOf(red)) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => a[0] - b[0]).map(([i, n]) => ({ lo: r2(i * CUT_BIN), hi: r2((i + 1) * CUT_BIN), n }));
+  return [...countBy(reds.filter((red) => red > 0), binOf).entries()].sort((a, b) => a[0] - b[0]).map(([i, n]) => ({ lo: r2(i * CUT_BIN), hi: r2((i + 1) * CUT_BIN), n }));
 }
 
 // One item for each hospital (red: its cut in percent, cut: above zero, measured: measured on at least one condition; a
@@ -183,7 +182,7 @@ export const LARGEST_CSV = 'largest-penalties';
 export function largestPenalties(hospitals, meta, n = LARGEST_N) {
   const dollars = (h) => h.pen ?? -1;
   return hospitals.filter((h) => h.red > 0)
-    .sort((a, b) => b.red - a.red || dollars(b) - dollars(a) || (a.id < b.id ? -1 : 1))
+    .sort((a, b) => b.red - a.red || dollars(b) - dollars(a) || byId(a.id, b.id))
     .slice(0, n)
     .map((h) => {
       const { byCond } = contrib(h, meta);

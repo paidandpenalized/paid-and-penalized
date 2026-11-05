@@ -13,12 +13,11 @@ import { createContext } from '../../../pipeline/site/context.js';
 import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
 import { COPY as METHODS_COPY } from '../web/methods/copy.js';
 import {
-  CSV_SCHEMA_VERSION, HOSPITAL_COLUMNS, PLACE_COLUMNS, dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv, placeColumns,
+  CSV_SCHEMA_VERSION, HOSPITAL_COLUMNS, dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv, placeColumns,
 } from '../web/csv.js';
 import { generateHrrp } from '../web/generate.js';
 import { DICTIONARY_PAGE, METHODS_PATH, csvPath, dictionaryPath } from '../web/links.js';
-import { hospital, NAME } from './fixtures.js';
-import { loadHrrpOnce } from './fixtures.js';
+import { hospital, loadHrrpOnce, NAME } from './fixtures.js';
 
 const DATA = loadHrrpOnce();
 const DICTIONARY = readFileSync(join(REPO_ROOT, 'sites/hrrp/DATA-DICTIONARY.md'), 'utf8');
@@ -43,7 +42,7 @@ test('header names carry units', () => {
   }
   for (const k of CONDS) assert.ok(names.includes(`${k} penalized (Y/N)`) && names.includes(`${k} discharges`) && names.includes(`${k} ERR`), k);
   assert.ok(placeColumns('State').map((c) => c.name).includes('Penalized (% of measured)'));
-  assert.ok(PLACE_COLUMNS.map((c) => c.name).includes('Estimated penalties ($, modeled)'));
+  assert.ok(placeColumns('State').map((c) => c.name).includes('Estimated penalties ($, modeled)'));
 });
 
 test('the CCN is plain text: no ="..." wrapper, a leading zero kept in the file', () => {
@@ -118,13 +117,13 @@ test('hostile text is safe in a spreadsheet: a leading =, +, -, @, tab or CR get
 });
 
 test('the area files: 8 columns with the counts behind each share, the first named for the kind of area', () => {
-  assert.equal(PLACE_COLUMNS.length, 8);
+  assert.equal(placeColumns('State').length, 8);
   const row = { label: '=EVIL', n: 10, nMeasured: 8, nPen: 5, pctPen: 62.5, meanRed: 0.4567, nGe1: 2, penTotal: 1234567.8 };
   for (const label of ['State', 'Metro area', 'Division', 'Region']) {
     const rows = parseCsv(placeCsv([row], label));
     assert.equal(Object.keys(rows[0]).length, 8);
     assert.equal(Object.keys(rows[0])[0], label);
-    assert.deepEqual(Object.keys(rows[0]).slice(1), PLACE_COLUMNS.slice(1).map((c) => c.name));
+    assert.deepEqual(Object.keys(rows[0]).slice(1), placeColumns('State').slice(1).map((c) => c.name));
     assert.equal(rows[0][label], "'=EVIL");
     assert.equal(rows[0]['Penalized (% of measured)'], '62.5');
     assert.equal(rows[0]['Average cut (%)'], '0.46');
@@ -148,7 +147,7 @@ test('the dictionary lists every hospital column in file order, and nothing else
 
 test('the dictionary lists every area column (the first by the kinds of area it is named for)', () => {
   const area = documented('Area files');
-  assert.deepEqual(area.slice(1), PLACE_COLUMNS.slice(1).map((c) => c.name));
+  assert.deepEqual(area.slice(1), placeColumns('State').slice(1).map((c) => c.name));
   for (const kind of ['State', 'Metro area', 'Division', 'Region']) assert.ok(DICTIONARY.includes(`\`${kind}\``), kind);
   assert.equal(area[0], 'State');
 });
@@ -197,8 +196,8 @@ test('the build writes the hospitals file and the dictionary beside the other do
     const page = readFileSync(join(dir, DICTIONARY_PAGE, 'index.html'), 'utf8');
     assert.equal(DICTIONARY_PAGE, '/hrrp/data/');
     assert.match(page, /<h1>[^<]*[Dd]ata dictionary[^<]*<\/h1>/);
-    for (const c of HOSPITAL_COLUMNS) assert.ok(page.includes(`<th scope="row"><code>${c.name.replace(/&/g, '&amp;')}</code></th>`) || page.includes(c.name), c.name);
-    assert.equal([...page.matchAll(/<th scope="row">/g)].length >= HOSPITAL_COLUMNS.length + PLACE_COLUMNS.length, true);
+    for (const c of HOSPITAL_COLUMNS) assert.ok(page.includes(`<th scope="row"><code>${c.name.replace(/&/g, '&amp;')}</code></th>`), c.name);
+    assert.equal([...page.matchAll(/<th scope="row">/g)].length, HOSPITAL_COLUMNS.length + placeColumns('State').length);
     assert.ok(page.includes(`href="${csvPath(fy, hospitalsCsvName(fy).replace(/\.csv$/, ''))}"`), 'the page links the file');
     assert.ok(page.includes(`href="${dictionaryPath(fy)}"`), 'and the Markdown dictionary');
     assert.doesNotMatch(page, /undefined|NaN|\{[a-z]+\}/);

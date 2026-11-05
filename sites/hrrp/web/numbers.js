@@ -24,6 +24,19 @@ export const roundTo = (v, dp) => (Number.isFinite(v) ? Number(v.toFixed(dp)) : 
 // Histogram bin for value v, bins of width w starting at lo; [lower, upper) and robust to float error.
 export const binIndex = (v, lo, w) => Math.floor((v - lo) / w + 1e-9);
 
+// How many of list fall under each value of key(item), as a Map.
+export const countBy = (list, key) => {
+  const n = new Map();
+  for (const item of list) {
+    const k = key(item);
+    n.set(k, (n.get(k) ?? 0) + 1);
+  }
+  return n;
+};
+
+// The tie-break every sort here ends on: ids (CCNs, codes) in order, 0 only for equal ones.
+export const byId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
 // A payment adjustment factor to four decimals, as CMS publishes it: 0.9988, 1.0000.
 export const factor4 = (x) => (missing(x) ? DASH : decimal(x, 4));
 

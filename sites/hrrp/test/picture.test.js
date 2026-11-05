@@ -190,6 +190,8 @@ test('the whole file: the reference counts and shares', () => {
   assert.equal(sizeSwarm(hospitals).items.length, 2912);
   assert.equal(ridges(hospitals).rows.length, 5);
   assert.equal(largestPenalties(hospitals, meta).length, 10);
-  assert.ok(typeDots(hospitals).blocks.every((b) => b.rows.length > 0));
+  const { blocks } = typeDots(hospitals);
+  assert.deepEqual(blocks.map((b) => b.block), ['teaching', 'beds', 'setting', 'ownership']);
+  assert.ok(blocks.every((b) => b.rows.length > 0 && b.rows.every((r) => r.nMeasured > 0 && r.nMeasured <= r.n)));
   assert.equal(pictureData({ hospitals, meta, edition: { conditions: [] } }).lede.nCut, 2334);
 });
