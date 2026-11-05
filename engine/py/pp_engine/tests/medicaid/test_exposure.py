@@ -62,7 +62,8 @@ class HospitalShare(unittest.TestCase):
         self.assertEqual(exposure.medicaid_days(self.days("900", "100", "300")), (1000.0, 700.0))
         self.assertIsNone(exposure.medicaid_days(self.days("", "", "")))
         self.assertIsNone(exposure.medicaid_days(self.days("", "50", "50")))  # labor and delivery alone: a gap
-        self.assertEqual(exposure.medicaid_days(self.days("10", "", "40")), (10.0, 0.0))  # never below zero
+        self.assertEqual(exposure.medicaid_days(self.days("10", "", "10")), (10.0, 0.0))  # all maternity
+        self.assertIsNone(exposure.medicaid_days(self.days("10", "", "40")))  # more maternity than all: a gap
 
     def test_the_factor_is_the_hospitals_share_over_its_states(self):
         a, b = self.days("900", "100", "300"), self.days("1000", "", "")  # 70% and 100% non-maternity
@@ -169,6 +170,11 @@ class Scenario(unittest.TestCase):
         self.assertIn("margin_outlier", bases[3]["flags"])
         self.assertAlmostEqual(exposure.operating_margin(bases[0]), 0.01)
         self.assertIsNone(exposure.operating_margin(exposure.hospital_base(hcris_row(net_patient_revenue=""))))
+
+    def test_no_margin_when_lines_8_to_22_leave_no_operating_revenue(self):
+        b = exposure.hospital_base(hcris_row(net_patient_revenue="1000000", other_operating_income="-1000000"))
+        self.assertIn("no_margin", b["flags"])
+        self.assertIsNone(exposure.scenario(b, 0.25, 0.4)["operating_margin_after"])
 
     def test_no_margin_without_patient_revenue(self):
         r = exposure.scenario(exposure.hospital_base(hcris_row(net_patient_revenue="")), 0.25, 0.4)

@@ -43,13 +43,15 @@ def medicaid_days(base):
     """(all Medicaid inpatient days, the non-maternity part) from a base's day cells, or None without Medicaid days on
     lines 14 and 2 (hospital_base stores it as `medicaid_days`). All
     days: S-3 I line 14 col 7 + line 2 col 7 (managed care and other eligible days) + line 32 col 7 (labor and
-    delivery, outside line 14). Maternity: line 13 col 7 (nursery, inside line 14) + line 32 col 7. Labor and delivery
-    days with no other Medicaid day (no postpartum or nursery day on lines 14 or 2) are a filing gap, read as none."""
+    delivery, outside line 14). Maternity: line 13 col 7 (nursery, inside line 14) + line 32 col 7. Two filing gaps
+    read as none: labor and delivery days with no other Medicaid day (no postpartum or nursery day on lines 14 or 2),
+    and maternity days above all Medicaid days (nursery days are part of line 14)."""
     routine = base["medicaid_days_all"]
     if routine is None or routine <= 0:
         return None
     every = routine + (base["days_medicaid_labor_delivery"] or 0.0)
-    return every, max(0.0, every - (base["medicaid_days_maternity"] or 0.0))
+    nonmat = every - (base["medicaid_days_maternity"] or 0.0)
+    return None if nonmat < 0 else (every, nonmat)
 
 
 def nonmaternity_ratio(bases):
@@ -116,7 +118,9 @@ def hospital_base(row):
     rev25 = None if rev is None and base["medicaid_supplemental"] is None else (
         (rev or 0.0) + (base["medicaid_supplemental"] or 0.0))
     npr = base["net_patient_revenue"]
-    has_margin = npr is not None and npr > 0 and base["net_income_patients"] is not None
+    # A usable margin needs positive patient revenue, and positive operating revenue once lines 8 to 22 are added.
+    has_margin = (npr is not None and npr > 0 and base["net_income_patients"] is not None
+                  and npr + base["other_operating_income"] > 0)
     if not has_margin:
         flags.append("no_margin")
     elif rev is not None and rev > npr:

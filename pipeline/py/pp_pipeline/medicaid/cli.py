@@ -1,7 +1,7 @@
 """Entry point for the Medicaid exposure scenarios until they have a `run.py` command:
 
     python3 -I pipeline/py/pp_pipeline/medicaid/cli.py build --out <dir> [--hcris <hcris.json>]
-    python3 -I pipeline/py/pp_pipeline/medicaid/cli.py safety-net-pin <HOSP10FY2023.ZIP> <out.csv>
+    python3 -I pipeline/py/pp_pipeline/medicaid/cli.py safety-net-pin <HOSP10FY2023.ZIP> <hosp10-reports.zip> <out.csv>
 
 Puts the two package roots on the path the way run.py does (isolated mode keeps the script's folder off it).
 """

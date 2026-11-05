@@ -6,7 +6,7 @@ A hospital is flagged when either holds:
   line 2 col 7 over line 14 col 8) is at least one standard deviation above the mean MIUR of the hospitals in its
   state that have Medicaid days. The statute's pool is "hospitals receiving medicaid payments in the State": every
   hospital in CMS's HCRIS hospital file for the state, psychiatric, long-term care and others included, which the
-  pipeline pins as `state_stats` rows (a state is a CCN's first two digits, CMS's state code);
+  pipeline pins as `state_stats` rows by postal state (CMS's provider file);
 - its Medicaid revenue (S-10 I lines 2 + 5) is more than 25% of its net patient revenue (G-3 line 3): the statute's
   low-income utilization rate without its charity term, which the form doesn't split by inpatient and outpatient.
 """

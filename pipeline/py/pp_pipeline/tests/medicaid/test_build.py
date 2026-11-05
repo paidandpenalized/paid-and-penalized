@@ -108,7 +108,7 @@ class Records(unittest.TestCase):
         rows["990001"].update(medicaid_days_maternity="50", medicaid_day_share="0.5")  # half maternity; high MIUR
         rows["990003"] = hcris("990003", medicaid_days_all="300")  # no maternity days
         progs = {"990001": {"hrrp": -10, "hac": 0, "hvbp": 1, "net": -9, "hrrp_factor": 0.99, "hac_cut": False}}
-        self.records = build.hospital_records(m, rows, STATES, progs, {"99": 0.4}, fence=(-0.5, 0.5))
+        self.records = build.hospital_records(m, rows, STATES, progs, {"AK": 0.4}, fence=(-0.5, 0.5))
 
     def test_universe_and_classes(self):
         self.assertEqual([(r["ccn"], r["cls"]) for r in self.records],
@@ -180,14 +180,16 @@ class LayerAndPins(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build.read_hcris(path)
 
-    def test_state_pools_by_cms_state_code(self):
+    def test_state_pools_by_postal_state(self):
         rows = [{"ccn": c, "medicaid_day_share": v} for c, v in
-                (("990001", "0.1"), ("990002", "0.3"), ("994001", "0.2"), ("990003", None), ("980001", "0.5"))]
-        out = safety_net.state_rows(rows)
+                (("990001", "0.1"), ("980002", "0.3"), ("994001", "0.2"), ("990003", None), ("970001", "0.5"),
+                 ("960001", "0.9"))]
+        state_of = {"990001": "AK", "980002": "AK", "994001": "AK", "990003": "AK", "970001": "WI"}
+        out = safety_net.state_rows(rows, state_of)  # two CCN codes, one state; 960001 has no state: left out
         self.assertEqual(out[0], list(safety_net.COLUMNS))
-        self.assertEqual(out[1], ["99", "3", "0.200000", "0.100000", "0.300000"])
-        self.assertEqual(len(out), 2)  # code 98 has one hospital: no pool
-        self.assertEqual(safety_net.read_cuts([{"state_code": "99", "cut": "0.3"}]), {"99": 0.3})
+        self.assertEqual(out[1], ["AK", "3", "0.200000", "0.100000", "0.300000"])
+        self.assertEqual(len(out), 2)  # WI has one hospital: no pool
+        self.assertEqual(safety_net.read_cuts([{"state": "AK", "cut": "0.3"}]), {"AK": 0.3})
 
 
 if __name__ == "__main__":

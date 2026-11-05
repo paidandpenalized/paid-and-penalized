@@ -85,7 +85,7 @@ def read_hcris(path=None, year=params.BASE_YEAR):
     data = (Path(path) if path else emitted_path(year)).read_bytes()
     y = reader.Year(json.loads(data))
     if y.year != year:
-        raise ValueError(f"{path}: FY{y.year}, not the base year FY{year}")
+        raise ValueError(f"{path or emitted_path(year)}: FY{y.year}, not the base year FY{year}")
     return y, hashlib.sha256(data).hexdigest()
 
 
@@ -124,7 +124,7 @@ def score(rec, st, scenario_id, share_key="share", use=params.USE_DEFAULT, line2
 
 def hospital_records(master, hcris, states, programs, cuts, fence=None):
     """One record per active acute-care or critical access hospital: identity, base, class, each scenario's result.
-    `hcris`: {ccn: HCRIS layer row} for the base year. `cuts`: the safety-net flag's MIUR cut by CMS state code.
+    `hcris`: {ccn: HCRIS layer row} for the base year. `cuts`: the safety-net flag's MIUR cut by state.
     `fence`: the operating-margin outlier range (default: exposure.margin_fence over these hospitals' bases).
     Each base's `share_factor` is set from its state's non-maternity day ratio, over the state's hospitals here."""
     out = []
@@ -139,7 +139,7 @@ def hospital_records(master, hcris, states, programs, cuts, fence=None):
                "cls": NO_REPORT if row is None else states.get(h["state"], {}).get("class", NOT_EXPANSION)}
         if row is not None:
             b = rec["base"] = exposure.hospital_base(row)
-            rec["safety_net"] = safety_net.reasons(b["miur"], cuts.get(h["ccn"][:2]), safety_net.low_income_share(b))
+            rec["safety_net"] = safety_net.reasons(b["miur"], cuts.get(h["state"]), safety_net.low_income_share(b))
         out.append(rec)
     exposure.flag_margin_outliers((r["base"] for r in out if r["base"]), fence)
     ratios = state_ratios(out)
