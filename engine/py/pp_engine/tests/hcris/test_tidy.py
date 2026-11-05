@@ -120,8 +120,8 @@ class HospitalYears(unittest.TestCase):
             cell("7", "days_medicaid", "300"), cell("7", "days_medicaid_nursery", "40"),
             cell("7", "days_medicaid_labor_delivery", "10")])
         self.assertEqual(rows["990001"]["medicaid_days_maternity"], Decimal("50"))
-        self.assertEqual(cells.OPERATING_OTHER_INCOME[0], "income_telephone")
-        self.assertEqual(len(cells.OPERATING_OTHER_INCOME), 15)  # lines 8 through 22
+        lines = sorted(int(c.line) // 100 for c in cells.CELLS if c.metric in cells.OPERATING_OTHER_INCOME)
+        self.assertEqual(lines, list(range(8, 23)))  # G-3 lines 8 through 22, each once
 
     def test_a_split_year_adds_flows_and_takes_stocks_from_the_last_period(self):
         rows = self.build([report("8", "990002", end="03/31/2024"), report("9", "990002", "04/01/2024", "09/30/2024")],
