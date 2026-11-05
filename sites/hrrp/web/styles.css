@@ -119,7 +119,7 @@
 
 /* Part 3, the map (figures/map.js): the family's state map as HACRP draws it. Without a script the first measure shows, the
    dots and the switches stay hidden; a script unhides the controls, shows one measure and turns the dots on. */
-.usmap { display: grid; gap: 12px; }
+.usmap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .usmap .chart { max-width: none; }
 .usmap .chart[data-fit="wide"] { max-width: 980px; margin-inline: auto; }
 .chart-us__points, .usmap__key { display: none; }
@@ -147,12 +147,12 @@
 /* The dots need room: on a phone the map shows its shading only. */
 @media (max-width: 559px) { .usmap__dotsbtn { display: none; } }
 .part__sub { margin-top: 36px; font: 400 clamp(1.4rem, 3vw, 1.9rem)/1.1 var(--font-display); }
-.states { display: grid; gap: 10px; }
+.states { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
 .states__table { min-width: 34rem; }
 .states__pager { display: flex; flex-wrap: wrap; gap: 6px; }
-.browse { display: grid; gap: 8px; }
+.browse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
 .browse ul { margin: 0; padding: 0; list-style: none; }
-.browse__regions { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.browse__regions { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); }
 .browse__region { font: 400 var(--fs-lg)/1.2 var(--font-display); }
 .browse__divs { display: grid; gap: 8px; margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--line); }
 .browse__div { font-weight: 600; }

@@ -232,3 +232,9 @@ test('the dot layer shows only at the wide drawing\'s widths: its on-state rule 
   assert.match(line, /^@media \(min-width: 560px\)/);
   assert.doesNotMatch(css, /max-width: 559px\) \{ \.usmap \.usmap__dots/);
 });
+
+test('the sheet pins the map Part\'s grids to the column so the states table cannot widen the page', () => {
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  for (const sel of ['usmap', 'states', 'browse']) assert.match(css, new RegExp(`^\\.${sel} \\{[^}]*grid-template-columns: minmax\\(0, 1fr\\)`, 'm'), `.${sel} has an implicit grid column`);
+  assert.match(css, /^\.browse__regions \{[^}]*minmax\(min\(16rem, 100%\), 1fr\)/m);
+});
