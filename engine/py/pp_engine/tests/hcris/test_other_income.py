@@ -55,18 +55,14 @@ class Rules(unittest.TestCase):
 
 class Table(unittest.TestCase):
     ROWS = [oi.PIN_COLUMNS, ["7", "02400", "Other operating revenue", "100"], ["7", "02401", "340B", "250.5"],
-            ["7", "02402", "Unrealized gains", "-40"], ["7", "02403", "Retail pharmacy", "49.5"], ["8", "02400", "", "9"]]
+            ["7", "02402", "Unrealized gains", "-40"], ["7", "02403", "Retail pharmacy", "49.5"],
+            ["8", "02400", "", "9"]]
 
     def test_sums_by_class(self):
         sums = oi.report_sums(oi.from_pin_rows(self.ROWS), RULES)
         self.assertEqual(sums, {"7": {"line24_unclassified": Decimal("100"), "line24_operating": Decimal("300.0"),
                                       "line24_non_operating": Decimal("-40")},
                                 "8": {"line24_unclassified": Decimal("9")}})
-
-    def test_coverage(self):
-        cov = oi.coverage(oi.from_pin_rows(self.ROWS), RULES)
-        self.assertEqual(cov[("operating", "pharmacy")], [2, Decimal("300.0")])
-        self.assertEqual(cov[("unclassified", "unlabeled")], [1, Decimal("9")])
 
     def test_refuses_a_bad_table(self):
         bad = [[["rpt", "line", "label", "amount"]],
@@ -96,9 +92,9 @@ class InTheRow(unittest.TestCase):
                                  report("9", "990002", "04/01/2024", "09/30/2024")], 2024)
         values = collect([cell("8", "net_patient_revenue", "600"), cell("9", "net_patient_revenue", "400"),
                           cell("8", "net_income_patients", "-150"), cell("9", "income_parking", "20")], reports)
-        values["8"].update({"line24_operating": Decimal("50"), "line24_unclassified": Decimal("70")})
-        values["9"].update({"line24_operating": Decimal("30"), "line24_non_operating": Decimal("900")})
-        r = hospital_years(reports, values, 2024)[0]
+        line24 = {"8": {"line24_operating": Decimal("50"), "line24_unclassified": Decimal("70")},
+                  "9": {"line24_operating": Decimal("30"), "line24_non_operating": Decimal("900")}}
+        r = hospital_years(reports, values, 2024, line24=line24)[0]
         self.assertEqual((r["line24_operating"], r["line24_non_operating"], r["line24_unclassified"]),
                          (Decimal("80"), Decimal("900"), Decimal("70")))
         self.assertEqual(r["other_operating_income"], Decimal("100"))  # line 12's 20 + line 24's operating 80

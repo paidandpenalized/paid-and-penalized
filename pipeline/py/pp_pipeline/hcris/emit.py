@@ -5,9 +5,10 @@
 
 `emit` rebuilds every year whose cells table is pinned (manifest ids `hcris-fy<YYYY>-cells`, pins.py), with the
 year's line-24 table (`hcris-fy<YYYY>-g3-line24`) sorted by the rules in `other_income_rules.csv` (other_income.py),
-whose path and SHA-256 each file records (`otherIncomeRules`). Each file is the data contract's envelope, the year's facts (CMS's label, the posting, whether CMS is still receiving the year's
-reports, the settled share and the "early" flag) and the hospital-year table as `columns` plus one array per hospital
-(`hospitals`, one line each, so a refresh's diff shows each hospital that moved). A rebuild that changes nothing keeps
+whose path and SHA-256 each file records (`otherIncomeRules`). Each file is the data contract's envelope, the
+year's facts (CMS's label, the posting, whether CMS is still receiving the year's reports, the settled share and the
+"early" flag) and the hospital-year table as `columns` plus one array per hospital (`hospitals`, one line each, so a
+refresh's diff shows each hospital that moved). A rebuild that changes nothing keeps
 the committed built_at. A file of 10 MiB or more is refused (the repo's limit).
 
 `downloads` writes the build-time download files to <dir> (never committed): `hcris_wide.csv` (every year, a column
@@ -16,6 +17,7 @@ the layer use pp_engine.hcris.reader on `load_years()`.
 """
 import csv
 import datetime
+import functools
 import hashlib
 from datetime import timezone
 from decimal import Decimal
@@ -35,11 +37,14 @@ COLUMNS = tuple(c for c in tidy.WIDE_COLUMNS if c != "year")
 RULES_PATH = Path(__file__).with_name("other_income_rules.csv")
 
 
+@functools.cache
 def rules_bytes():
     return RULES_PATH.read_bytes()
 
 
+@functools.cache
 def rules():
+    """The parsed rules, once per process."""
     return other_income.parse_rules(csv.reader(rules_bytes().decode("ascii").splitlines()))
 
 
@@ -52,15 +57,15 @@ def line24_entries(year):
     return other_income.from_pin_rows(_pinned_rows(line24_pin_id(year)))
 
 
-def year_rows(entry, year, rule_set=None):
+def year_rows(entry, year):
     """The year's hospital-year rows from its pinned cells table and line-24 table, the line-24 entries summed by the
     class their label sorts into."""
     reports, values = tidy.from_pin_rows(_pinned_rows(entry["id"]), year)
-    for rpt, sums in other_income.report_sums(line24_entries(year), rule_set or rules()).items():
-        if rpt not in reports:
-            raise tidy.HcrisError(f"FY{year} line-24 table: report {rpt} is not in the cells table")
-        values.setdefault(rpt, {}).update(sums)
-    return tidy.hospital_years(reports, values, year, long_rule=LONG_RULE)
+    line24 = other_income.report_sums(line24_entries(year), rules())
+    stray = next((rpt for rpt in line24 if rpt not in reports), None)
+    if stray is not None:
+        raise tidy.HcrisError(f"FY{year} line-24 table: report {stray} is not in the cells table")
+    return tidy.hospital_years(reports, values, year, long_rule=LONG_RULE, line24=line24)
 
 
 def _json(value):
@@ -155,9 +160,8 @@ def write_downloads(out_dir):
         wide, long_ = csv.writer(fw, lineterminator="\n"), csv.writer(fl, lineterminator="\n")
         wide.writerow(tidy.WIDE_COLUMNS)
         long_.writerow(tidy.LONG_COLUMNS)
-        rule_set = rules()
         for year, entry in sorted(pinned_years(read_manifest()).items()):
-            rows = year_rows(entry, year, rule_set)
+            rows = year_rows(entry, year)
             wide.writerows(tidy.wide_rows(rows))
             long_.writerows(tidy.long_rows(rows))
             counts[year] = len(rows)

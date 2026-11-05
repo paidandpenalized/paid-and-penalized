@@ -111,21 +111,12 @@ def from_pin_rows(rows):
 
 def report_sums(entries, rules):
     """{report number: {METRICS column: Decimal}}: each report's line-24 amounts summed by class. A class with no
-    entry is absent (blank in the layer: zero or not reported)."""
-    out = {}
+    entry is absent (blank in the layer: zero or not reported). Each distinct label is classified once."""
+    out, metric_of = {}, {}
     for rpt, _, label, amount in entries:
-        metric = METRICS[classify(label, rules)[1]]
+        if label not in metric_of:
+            metric_of[label] = METRICS[classify(label, rules)[1]]
+        metric = metric_of[label]
         row = out.setdefault(rpt, {})
         row[metric] = row.get(metric, Decimal(0)) + amount
-    return out
-
-
-def coverage(entries, rules):
-    """{(class, family): [entries, dollars]} over line-24 entries: what the rules sorted, for the coverage report."""
-    out = {}
-    for _, _, label, amount in entries:
-        family, cls = classify(label, rules)
-        tally = out.setdefault((cls, family), [0, Decimal(0)])
-        tally[0] += 1
-        tally[1] += amount
     return out

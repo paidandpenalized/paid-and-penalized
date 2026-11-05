@@ -44,7 +44,7 @@ RATIO_PLACES = Decimal("0.0001")
 KINDS = (("acute", 1, 899), ("critical_access", 1300, 1399))
 CCN = re.compile(r"[0-9A-Z]{6}")
 DATE = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
-NUMBER = re.compile(r"-?(\d+(\.\d*)?|\.\d+)")
+NUMBER = other_income.NUMBER
 
 Report = namedtuple("Report", "rpt ccn status begin end control util npr")
 
@@ -137,7 +137,8 @@ def collect(number_rows, reports, line24=None):
         if line24 is not None and r[1] == G3 and column == "00100" and other_income.is_line24(line):
             rpt, text = r[0].strip(), r[4].strip()
             if rpt not in reports or not NUMBER.fullmatch(text) or (rpt, line) in line24:
-                raise HcrisError(f"numeric file: report {rpt!r}, G-3 line {line}: unknown report, not a number or twice")
+                raise HcrisError(f"numeric file: report {rpt!r}, G-3 line {line}: unknown report, not a number, "
+                                 "or twice")
             line24[(rpt, line)] = text
         cell = BY_KEY.get((r[1], line, column))
         if cell is None:
@@ -179,7 +180,7 @@ def _fullest(reps):
     return max(reps, key=lambda r: (_days(r), r.end, int(r.rpt)))
 
 
-def hospital_years(reports, values, year, long_rule="fullest"):
+def hospital_years(reports, values, year, long_rule="fullest", line24=None):
     """One row per CCN for the year, from its reports, with what was combined. `shape` names the case: `one` (a single
     report), `split` (periods that meet end to start and cover at most 366 days: a change of ownership, say), `long`
     (more than 366 days in all: a change of fiscal year puts two periods' starts in one year), `gap` or `overlap`
@@ -190,7 +191,9 @@ def hospital_years(reports, values, year, long_rule="fullest"):
     `overlap`, a `gap` over 366 days) adding would count more than a year, up to ~90% more, so the row keeps the
     fullest report alone (`fullest`): real filed numbers for one period, one status. `long_rule="sum"` adds them up
     anyway (the spike's table; the raw sum). `reports`, `status` and the period describe the reports used;
-    `n_reports` counts every report the CCN filed in the year."""
+    `n_reports` counts every report the CCN filed in the year. `line24`: {report number: {LINE24_METRICS column:
+    Decimal}} (other_income.report_sums), added up like flows; without it those columns are blank."""
+    line24 = line24 or {}
     if long_rule not in LONG_RULES:
         raise ValueError(f"long_rule {long_rule!r} is not one of {LONG_RULES}")
     by_ccn = {}
@@ -221,8 +224,8 @@ def hospital_years(reports, values, year, long_rule="fullest"):
                                          if v is not None), None)
             else:
                 row[cell.metric] = _sum(*(values.get(r.rpt, {}).get(cell.metric) for r in used))
-        for metric in LINE24_METRICS:  # flows from the line-24 table (other_income.report_sums), when given
-            row[metric] = _sum(*(values.get(r.rpt, {}).get(metric) for r in used))
+        for metric in LINE24_METRICS:
+            row[metric] = _sum(*(line24.get(r.rpt, {}).get(metric) for r in used))
         derive(row)
         out.append(row)
     return out
