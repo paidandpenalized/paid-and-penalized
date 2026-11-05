@@ -2,11 +2,11 @@
 // same code as the server's (worksheet.js), from the worksheet asset (figures/worksheet-data.js), which is fetched when
 // the first hospital is picked; the waterfall under the sheet (figures/waterfall.js) is drawn again from the same rows.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
-import { mountFigure, mountScroll } from '../../../web/client/figure.js';
+import { mountFigure, mountScroll, unmountScroll } from '../../../web/client/figure.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { CCN } from '../../../engine/js/ccn.js';
-import { fill } from '../web/program/copy.js';
+import { fill, t } from '../web/program/copy.js';
 import { hospitalOf } from '../web/figures/worksheet-data.js';
 import { estimateTag } from '../web/pages/parts.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
@@ -49,14 +49,20 @@ export function mountWorksheet() {
     try {
       const next = sheetFor(await loadSheets(holder.dataset.src), ccn, context, Number(waterfall?.dataset.figureN));
       if (next) {
+        // The scroll boxes about to be replaced stop being watched; the new ones are wired the way the page's were.
+        for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(unmountScroll);
         holder.innerHTML = next.sheet; // markup from worksheetHtml and figure(), which escape every value they write
         if (waterfall) {
           waterfall.innerHTML = next.waterfall;
           // The figure client wires a figure once at load: wire the new one the same way (tooltips, sort, CSV, scroll box).
           for (const fig of waterfall.querySelectorAll('figure[data-figure]')) mountFigure(fig);
-          for (const scroll of waterfall.querySelectorAll('.printout__scroll')) mountScroll(scroll);
         }
+        for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(mountScroll);
         status.hidden = true;
+      } else {
+        // A CCN the asset does not hold: the example stays, and the status says so (a stale failure message is replaced).
+        status.textContent = t('wsPickMissing');
+        status.hidden = false;
       }
     } catch {
       status.textContent = fill('wsPickFailed');
