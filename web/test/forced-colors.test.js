@@ -45,6 +45,8 @@ const MARKS = [
   '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint', '.usmap__chip--hatch',
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
   '.chart-periods__perf',
+  // the History figure's small multiples (sites/hrrp/web/styles.css)
+  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-none', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff', '.hist-sw-cms', '.hist-sw-kff',
   // Step 2's lens zone on the swarm's main axis (sites/hrrp/web/styles.css)
   '.chart-lens-zone',
   // the Readmissions peer groups' columns and key swatches, and the medians' shaded cells (sites/hrrp/web/styles.css)

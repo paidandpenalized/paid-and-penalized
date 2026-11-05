@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COVID_FYS } from '../web/constants.js';
 import { capMarks } from '../web/derive.js';
-import { historyPart, timeline, windowsFigure } from '../web/figures/history.js';
+import { historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
+import { drawHistory } from '../web/figures/history-draw.js';
 import { ROLL, noTotalText, researchData, rollCall, rollText, smallLines, timelineData, windowRows } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
@@ -85,6 +86,112 @@ test('real data: the history has three marks, a source kind on every total and a
   for (const fy of COVID_FYS) assert.ok(win[fy][1] >= '2019-12-01' && win[fy][0] <= '2020-06-30', `FY${fy}'s window meets the excluded months`);
   assert.ok(win[2021][1] < '2020-01-01', 'FY2021\'s window ends before them');
   assert.ok(win[2025][0] > '2020-06-30', 'FY2025\'s window starts after them');
+});
+
+// ---------- the History figure [HI-09] ----------
+
+const PHONE = 300;
+const WIDE = 860;
+const svgOf = (lines, width) => drawHistory({ lines, width }).text;
+const attr = (markup, name) => [...markup.matchAll(new RegExp(`${name}="([^"]*)"`, 'g'))].map((m) => m[1]);
+// The share panel's markup: from its group to the next panel's.
+const sharePanelOf = (svg) => svg.slice(svg.indexOf('hist-panel--share'), svg.indexOf('hist-panel--avg'));
+
+test('the figure: each cap step and rule mark is written in words at its own year, on both drawings', () => {
+  const lines = smallLines({ history: HISTORY });
+  for (const width of [PHONE, WIDE]) {
+    const panel = sharePanelOf(svgOf(lines, width));
+    const groups = [...panel.matchAll(/<g class="hist-ann" data-fy="(\d+)" data-key="([^"]+)">(.*?)<\/g>/g)];
+    assert.deepEqual(groups.map((g) => [Number(g[1]), g[2]]), [[2013, 'cap'], [2014, 'cap'], [2015, 'cap'], [2019, 'histMarkPeer'], [2023, 'histMarkPn'], [2027, 'histMarkMa']]);
+    const dotX = Object.fromEntries([...panel.matchAll(/data-fy="(\d+)"[^>]*><title>[^<]*<\/title><circle class="hist-dot--share" cx="([\d.]+)"/g)].map((m) => [m[1], Number(m[2])]));
+    for (const [, fy, , body] of groups) {
+      const leader = body.match(/<line class="chart-axis__tick" x1="([\d.]+)"/);
+      assert.ok(leader, `FY${fy} has a leader`);
+      assert.ok(Math.abs(Number(leader[1]) - dotX[fy]) < 0.02, `FY${fy}'s words hang from its own point`);
+    }
+    const words = groups.map((g) => g[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '));
+    assert.match(words[3], /Peer groups begin/);
+    assert.match(words[4], /Pneumonia\s+measure paused|Pneumonia measure paused|Pneumonia\s+measure\s+paused/);
+    assert.match(words[5], /Medicare\s+Advantage\s+stays\s+counted/);
+    assert.match(words[0], width === PHONE ? /1%/ : /1% cap/);
+  }
+});
+
+test('the figure: the axis start is said on the chart when it is not 0, and not when it is', () => {
+  const lines = smallLines({ history: HISTORY });
+  assert.match(svgOf(lines, PHONE), /AXIS STARTS AT|Axis starts at 40%/i);
+  assert.match(sharePanelOf(svgOf(lines, WIDE)), />Axis starts at 40%</);
+  const low = { ...HISTORY, national: NATIONAL.map((r) => ({ ...r, pctPen: 5 + (r.fy - 2013), nPen: 100 })) };
+  assert.doesNotMatch(svgOf(smallLines({ history: low }), WIDE), /Axis starts at/);
+});
+
+test('the figure: the pandemic years are shaded in every panel, with the note on hover, and named on the large panel', () => {
+  const svg = svgOf(smallLines({ history: HISTORY }), WIDE);
+  assert.equal((svg.match(/class="hist-covid"/g) ?? []).length, 3);
+  assert.match(svg, /<title>CMS left claims from 2020-01-01 through 2020-06-30/);
+  assert.match(sharePanelOf(svg), />Pandemic years</);
+});
+
+test('the figure: totals are CMS dark and KFF light, a source on each bar, and a year with none is a dash, never a bar or a zero', () => {
+  const svg = svgOf(smallLines({ history: HISTORY }), WIDE);
+  const bars = [...svg.matchAll(/<g class="chart-mark" data-mark data-fy="(\d+)" data-kind="(CMS|KFF)" data-value="([^"]+)"><title>([^<]*)<\/title><rect class="hist-bar hist-bar--(cms|kff)"/g)];
+  assert.equal(bars.length, 13);
+  const by = Object.fromEntries(bars.map((b) => [b[1], b]));
+  assert.equal(by[2022][2], 'KFF');
+  assert.equal(by[2022][5], 'kff');
+  assert.equal(by[2014][5], 'cms');
+  assert.match(by[2022][4], /KFF estimate/);
+  assert.match(by[2014][4], /CMS 2014/);
+  assert.ok(!by[2016] && !by[2024], 'no bar for a year with no total');
+  assert.equal((svg.match(/class="hist-none"/g) ?? []).length, 2);
+  assert.match(svg, /FY2016: no published total/);
+  assert.ok(!/data-value="0"/.test(svg), 'nothing is plotted as zero');
+});
+
+test('the figure: a year with no share draws no dot and breaks the line; no value is drawn as zero', () => {
+  const gap = { ...HISTORY, national: NATIONAL.map((r) => (r.fy === 2018 ? { ...r, pctPen: null, meanRed: null, meanRedPen: null } : r)) };
+  const lines = smallLines({ history: gap });
+  const svg = svgOf(lines, WIDE);
+  assert.equal((svg.match(/class="hist-dot--share"/g) ?? []).length, 14);
+  assert.ok(!/hist-dot--share" cx="[\d.]+" cy="[\d.]+" r="3"\/><\/g>[^]*FY2018: \d/.test(svg) && !svg.includes('FY2018: 0'));
+  const d = [...svg.matchAll(/class="hist-line hist-line--share" d="([^"]*)"/g)][0][1];
+  assert.equal((d.match(/[Mm]/g) ?? []).length, 2, 'two strokes around the gap');
+  const fig = historyFigure(lines, { n: 1 }).text;
+  assert.match(fig, /<th scope="row">FY2018<\/th><td class="num" data-value="3005">3,005<\/td><td class="num">–<\/td>/);
+});
+
+test('the figure: frame, takeaway from the latest year, no-total words and the table of every plotted value', () => {
+  const lines = smallLines({ history: HISTORY });
+  const text = historyFigure(lines, { n: 3 }).text;
+  assert.match(text, /74\.0% of hospitals are cut in FY2027\./);
+  assert.match(text, /No total for FY2016 and FY2024\./);
+  assert.match(text, /hist-sw-cms/);
+  assert.match(text, /hist-sw-kff/);
+  assert.match(text, /<th scope="row">FY2016<\/th>[^]*?No total found/);
+  assert.match(text, /<th scope="row">FY2022<\/th>[^]*?KFF estimate/);
+  assert.equal(historyFigure(smallLines({ history: { ...HISTORY, national: [] } }), { n: 1 }), '');
+  assert.match(historyPart({ lines, windows: windowRows({ history: HISTORY }), timeline: [] }, { figure: (() => { let n = 0; return () => ++n; })() }).text, /id="figure-1"[^]*id="figure-2"/);
+});
+
+test('the figure: a hostile source label is escaped in the tip and the table', () => {
+  const hostile = { ...HISTORY, national: HISTORY.national.map((r) => (r.fy === 2013 ? { ...r, totalSrc: { kind: 'CMS', label: '<img src=x onerror=alert(1)>', url: 'https://example.org/' } } : r)) };
+  const text = historyFigure(smallLines({ history: hostile }), { n: 1 }).text;
+  assert.ok(!text.includes('<img'), 'no image tag');
+  assert.ok(text.includes('&lt;img src=x onerror=alert(1)&gt;'));
+});
+
+test('real data: the figure builds at both widths; FY2024 and FY2026 are listed as having no published total; every mark is placed', () => {
+  const { history } = loadHrrpOnce();
+  const lines = smallLines({ history });
+  const fig = historyFigure(lines, { n: 1 }).text;
+  assert.match(fig, /No total for FY2024 and FY2026\./);
+  assert.match(fig, /80\.2% of hospitals are cut in FY2027\./);
+  for (const width of [PHONE, WIDE]) {
+    const panel = sharePanelOf(svgOf(lines, width));
+    assert.equal((panel.match(/class="hist-ann"/g) ?? []).length, lines.caps.length + lines.marks.length);
+    assert.match(panel, /Axis starts at 40%/);
+  }
+  assert.equal((svgOf(lines, WIDE).match(/hist-bar--/g) ?? []).length, lines.totals.length);
 });
 
 // ---------- the roll call ----------
@@ -224,11 +331,11 @@ test('the data windows: a row for each fiscal year, newest first, the payment ye
   assert.match(text, /id="figure-4"/);
 });
 
-test('the History Part holds the windows figure (numbered from the counter) and the timeline, and no small-multiples placeholder', () => {
-  const text = historyPart({ windows: windowRows({ history: HISTORY }), timeline: timelineData(ENTRIES, { edition: EDITION, today: '2026-10-07' }) }, { figure: () => 9 }).text;
+test('the History Part holds the small multiples, the windows figure (both numbered from the counter) and the timeline', () => {
+  const text = historyPart({ lines: smallLines({ history: HISTORY }), windows: windowRows({ history: HISTORY }), timeline: timelineData(ENTRIES, { edition: EDITION, today: '2026-10-07' }) }, { figure: () => 9 }).text;
   assert.match(text, /id="figure-9"/);
   assert.match(text, /<ol class="tl"/);
-  assert.equal((text.match(/<figure /g) ?? []).length, 1);
+  assert.equal((text.match(/<figure /g) ?? []).length, 2);
 });
 
 // ---------- the research ----------

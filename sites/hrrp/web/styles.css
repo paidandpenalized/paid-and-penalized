@@ -253,6 +253,21 @@
 
 /* The data windows (the kit's periods chart): the window the ratios come from is dark, the payment year is the penalty's color. */
 .chart-periods__perf { fill: var(--ink); }
+/* The History figure's small multiples [HI-09]: the share cut and the penalized hospitals' average in the penalty ink, all hospitals in gray,
+   the totals in the penalty ramp (CMS's dark, KFF's light, with an edge), the pandemic years a quiet band behind every panel. */
+.hist-covid { fill: var(--ink); fill-opacity: 0.07; }
+.hist-line { fill: none; stroke-width: 2px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.hist-line--share, .hist-line--pen { stroke: var(--pen); }
+.hist-line--all { stroke: var(--ink-3); }
+.hist-dot--share, .hist-dot--pen { fill: var(--pen); }
+.hist-bar--cms { fill: var(--pen-seq-4); }
+.hist-bar--kff { fill: var(--pen-seq-1); stroke: var(--pen-seq-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.hist-none { stroke: var(--ink-3); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.hist-name--pen { fill: var(--pen-ink); }
+.hist-name--all { fill: var(--ink-2); }
+.fig__swatch.hist-sw-cms, .fig__swatch.hist-sw-kff { width: 12px; height: 12px; }
+.hist-sw-cms { background: var(--pen-seq-4); }
+.hist-sw-kff { background: var(--pen-seq-1); border: 1px solid var(--pen-seq-3); }
 /* The timeline: dated entries down a rule, a year not yet in effect set apart by a dashed rule and a tag. */
 .tl { margin: 12px 0 0; padding: 0 0 0 16px; list-style: none; border-left: 2px solid var(--ink); display: grid; gap: 18px; max-width: 62ch; }
 .tl__item--future { border-left: 2px dashed var(--ink-3); margin-left: -18px; padding-left: 16px; }
@@ -283,5 +298,12 @@
   .swatch-g1, .swatch-g2, .swatch-g3, .swatch-g4, .swatch-g5 { forced-color-adjust: none; background: GrayText; }
   .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
   .chart-periods__perf { fill: CanvasText; }
+  .hist-covid { fill: GrayText; fill-opacity: 0.15; }
+  .hist-line--share, .hist-line--pen, .hist-line--all, .hist-none { stroke: CanvasText; }
+  .hist-line--all { stroke: GrayText; }
+  .hist-dot--share, .hist-dot--pen, .hist-bar--cms { fill: CanvasText; }
+  .hist-bar--kff { fill: Canvas; stroke: CanvasText; }
+  .hist-sw-cms { forced-color-adjust: none; background: CanvasText; }
+  .hist-sw-kff { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .tl__item--future { border-left-color: GrayText; }
 }
