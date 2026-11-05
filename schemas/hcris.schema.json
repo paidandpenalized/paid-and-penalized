@@ -21,13 +21,14 @@
     "settledShare",
     "earlyBelow",
     "early",
+    "otherIncomeRules",
     "columns",
     "hospitals"
   ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": 2
+      "const": 3
     },
     "methods_version": {
       "$ref": "common.schema.json#/$defs/methodsVersion"
@@ -92,6 +93,24 @@
     "early": {
       "description": "settledShare, rounded to a whole percent, < earlyBelow: S-10 (uncompensated-care) figures for the year are early and move most at settlement (79.86% rounds to 80%: not early).",
       "type": "boolean"
+    },
+    "otherIncomeRules": {
+      "description": "The rules file that sorted G-3 line 24's entries (line 24 and 24.01 to 24.49) by label into the line24_* columns: its repo path and SHA-256. A change to the rules is a methods change.",
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^pipeline/py/pp_pipeline/hcris/[a-z0-9_]+\\.csv$"
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        }
+      }
     },
     "columns": {
       "const": [
@@ -168,6 +187,9 @@
         "hospital_charity_cost",
         "hospital_bad_debt_cost",
         "hospital_uncompensated_cost",
+        "line24_operating",
+        "line24_non_operating",
+        "line24_unclassified",
         "medicaid_days_all",
         "medicaid_day_share",
         "medicare_day_share",
@@ -195,9 +217,9 @@
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     },
     "row": {
-      "description": "85 values in `columns` order (the emitter checks the length and that each CCN appears once). Units by column are pp_engine.hcris.cells.UNITS.",
+      "description": "88 values in `columns` order (the emitter checks the length and that each CCN appears once). Units by column are pp_engine.hcris.cells.UNITS.",
       "type": "array",
-      "minItems": 85,
+      "minItems": 88,
       "items": {
         "type": [
           "string",

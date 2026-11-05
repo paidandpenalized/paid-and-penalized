@@ -19,11 +19,11 @@ def csv_bytes(rows):
     return out.getvalue().encode("ascii")
 
 
-def write_zip(path, year, reports, numbers):
+def write_zip(path, year, reports, numbers, alpha=()):
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr(f"HOSP10_{year}_rpt.csv", csv_bytes(reports))
         zf.writestr(f"HOSP10_{year}_nmrc.csv", csv_bytes(numbers))
-        zf.writestr(f"HOSP10_{year}_alpha.csv", b"")
+        zf.writestr(f"HOSP10_{year}_alpha.csv", csv_bytes(alpha))
 
 
 class Extract(unittest.TestCase):

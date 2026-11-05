@@ -53,13 +53,14 @@ def sha256(path):
     return digest.hexdigest(), size
 
 
-def read_year(zip_path):
+def read_year(zip_path, line24=None):
     """(year, reports, values) from one zip. Refuses a full year in which a worksheet read yields no cell at all (a
-    layout change, such as padded codes, would otherwise drop it silently)."""
+    layout change, such as padded codes, would otherwise drop it silently). With a dict `line24`, fills it with G-3
+    line 24's amounts in the same pass (tidy.collect)."""
     with zipfile.ZipFile(zip_path) as zf:
         names, year = members(zf)
         reports = tidy.parse_reports(member_rows(zf, names["rpt"]), year)
-        values = tidy.collect(member_rows(zf, names["nmrc"]), reports)
+        values = tidy.collect(member_rows(zf, names["nmrc"]), reports, line24)
     seen = {SHEET_OF[m] for v in values.values() for m in v}
     missing = sheets_expected(year) - seen
     if len(reports) >= MIN_REPORTS_FOR_SHEET_CHECK and missing:

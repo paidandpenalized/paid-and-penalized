@@ -11,10 +11,12 @@ pure) and `pipeline/py/pp_pipeline/hcris/` (files). Stdlib Python; CSV and JSON 
 2. **Pinned cells table**, `data/pinned/hcris-fy<YYYY>/hcris_fy<YYYY>_cells.csv` (~1.6 MB a year). One row per
    report from an acute or critical access hospital, with the report's identity and every cell in
    `pp_engine/hcris/cells.py`. `cli.py pin` derives it; the manifest's `derivedFrom` names the zip. Anyone with the
-   zip gets the same bytes.
+   zip gets the same bytes. Beside it, the **line-24 table**, `hcris_fy<YYYY>_g3_line24.csv`: each entry on G-3 line
+   24 and 24.01 to 24.49 with an amount (report, line, the hospital's label, amount), from the same zip's numeric and
+   alphanumeric files.
 3. **Emitted year**, `data/emitted/hcris/fy<YYYY>/hcris.json` (~2.6 MB a year, ~38 MB for FY2011 to FY2026). The data
    contract's envelope, the year's facts, `columns`, and one array per hospital. The golden test rebuilds it from
-   the pin, offline.
+   the pins and the line-24 rules, offline.
 4. **Downloads** (`cli.py downloads <dir>`): `hcris_wide.csv` and `hcris_long.csv` for readers. Build-time only,
    never committed.
 
@@ -23,9 +25,12 @@ pure) and `pipeline/py/pp_pipeline/hcris/` (files). Stdlib Python; CSV and JSON 
 - **Year.** A year's file holds the reports whose period *begins* in that federal fiscal year. Pages say "cost
   reports beginning in FY2024" (`reader.label`) and show each hospital's period dates beside its numbers, since one
   year spans periods ending from late 2023 to late 2025.
-- **Scope.** Acute (CCN ending 0001 to 0879) and critical access (1300 to 1399) hospitals, per CMS's HCRIS
+- **Scope.** Acute (CCN ending 0001 to 0899) and critical access (1300 to 1399) hospitals, per CMS's HCRIS
   facility-numbering table. These are the hospitals that fill in S-10; psychiatric, rehabilitation and
-  long-term care hospitals barely do.
+  long-term care hospitals barely do. The table (and the State Operations Manual, ch. 2, sec. 2779A1) reserves 0880
+  to 0899 for "hospitals participating in ORD demonstration project"; only Texas has any, CMS's provider file codes
+  each a short-term hospital and the FY2026 IPPS final rule's impact file pays those still open under the IPPS, so
+  methods_version 3 counts them as acute (DATA-B-03, decided 2026-11-05).
 - **Identity.** A hospital-year is (CCN, year). A report is (CCN, period begin, period end). CMS gives a report a new
   `rpt_rec_num` when it settles it, so record numbers are kept for audit only, never as a key.
 - **More than one report in a year.**
@@ -70,10 +75,15 @@ trend = panel.series(ccn, "total_margin")            # one Value per year the ho
 - **Stable columns.** `columns` is fixed by `schemas/hcris.schema.json` (a `const`). Adding a cell changes the schema
   version and the methods version, and re-derives every pin. Names never change meaning once a site reads them
   (methods_version 2 renamed v1's `operating_margin`, line 5 over line 3, to `patient_margin` before any did).
-- **Margins** (DATA-B-03, decided 2026-11-05): `operating_margin` is G-3 (line 5 + lines 8 to 22) over (line 3 +
-  lines 8 to 22): the hospital's own ancillary income (cafeteria, parking, drug sales to non-patients, space
-  rental...) counts as operating; donations (6), investment income (7), governmental appropriations (23) and line 24
-  with its subscripts (COVID-19 funding among them) don't. `total_margin` is line 29 over (line 3 + line 25);
+- **Margins** (DATA-B-03, decided 2026-11-05): `operating_margin` is G-3 (line 5 + other operating income) over
+  (line 3 + the same). Other operating income is lines 8 to 22, the hospital's own ancillary income (cafeteria,
+  parking, drug sales to non-patients, space rental...), plus the entries on line 24 and its subscripts 24.01 to
+  24.49 ("other (specify)") whose label sorts as operating: physician and professional, pharmacy (340B and contract
+  pharmacy among it), grant income, and the kinds lines 8 to 22 hold. The labels are in the alphanumeric file;
+  `pp_pipeline/hcris/other_income_rules.csv` is the keyword rules, in order, first match wins
+  (`pp_engine/hcris/other_income.py`), and each emitted file records its SHA-256. Investment-type income, donations
+  (6), investment income (7), governmental appropriations (23), unclassified line-24 entries and COVID-19 funding
+  (24.50 to 24.60) don't count. The `line24_*` columns hold each report's line-24 dollars by class. `total_margin` is line 29 over (line 3 + line 25);
   `patient_margin`, line 5 over line 3.
 - **Units** (`cells.UNITS`): `dollars` (as filed, nominal), `days`, `discharges`, `beds`, `fte`, `ratio` (a fraction
   to 4 places: 0.0500 is 5%).
@@ -100,7 +110,7 @@ from PRM-II chapter 40 (Transmittal 25); section numbers are given.
 | Cost and charges by department; total cost, total charges | Worksheet C Part I lines 200 to 202, cols 3 and 8 (4023.1); Worksheet A line 200 (4013), cost centers by code in the alpha file (A000000, col 0) | "What does each department cost against what it charges? Where do markups come from?" This needs the alpha file. |
 | Medicare Advantage negotiated charges by MS-DRG (weighted medians) | S-12 lines 1 to 997, col 1 (4012.50); periods ending on or after 2026-01-01 | "What do Medicare Advantage plans pay this hospital compared with traditional Medicare?" |
 | CAH Medicare inpatient cost and 101% payment | E-3 Part V lines 4, 6 (4033.5) | "What does Medicare's cost-based payment mean for a critical access hospital's margin?" |
-| COVID-19 funding beyond line 24.50, and line 24's other subscripts | G-3 lines 24.01 to 24.49, 24.51 to 24.60 (4040.4) | "How much did relief funds prop up 2020 and 2021 margins?" |
+| COVID-19 funding beyond line 24.50 | G-3 lines 24.51 to 24.60 (4040.4) | "How much did relief funds prop up 2020 and 2021 margins?" |
 | Observation days; CAH outpatient visits | S-3 Part I line 28 col 8; line 15 (4005.1) | "Is observation replacing admissions?" |
 | S-10 detail: charity care uninsured vs insured; Medicare bad debt | S-10 Part I lines 20 to 23 cols 1 and 2; lines 27, 27.01 (4012.1) | "How much charity care goes to insured patients' deductibles?" |
 
