@@ -231,13 +231,20 @@ test('Step 5: the takeaway for no part, one part, several parts and a sum over t
   assert.match(waterfallTakeaway(one), /^One condition, heart failure, adds 1\.000%, about 33% of the 3% cap\.$/);
   const several = waterfallData(rowsOf({ HF: m(40, 1.1, 1, 0.01), AMI: m(30, 1.2, 1, 0.01), PN: m(30, 1.05, 1, 0.01) }), CONDITIONS);
   assert.equal(several.counted, 3);
-  assert.match(waterfallTakeaway(several), /^Three conditions add [\d.]+%, about \d+% of the 3% cap; heart attack alone is \d+% of it\.$/);
+  assert.match(waterfallTakeaway(several), /^Three conditions add [\d.]+%, about \d+% of the 3% cap; heart attack alone is \d+% of the sum\.$/);
   const big = { ...hospital({ peer: 2, c: { HF: m(40, 1.1, 1, 0.5), AMI: m(30, 1.2, 1, 0.5) } }) };
   const over = waterfallData(worksheetRows(withDerived(big, META), META, CONDITIONS), CONDITIONS);
   assert.equal(over.binds, true);
   assert.match(waterfallTakeaway(over), /^Two conditions add [\d.]+%, over the 3% cap, so the cut stops at 3%; heart attack alone is \d+% of the sum\.$/);
   const figure = waterfallFigure({ rows: worksheetRows(withDerived(big, META), META, CONDITIONS), conditions: CONDITIONS, n: 4, edition: 'FY2027' }).text;
   assert.match(figure, /the sum is over the cap, so the cut stops at 3% and the factor is 0\.9700/);
+});
+
+test('Step 5: a sum under a tenth of a percent of the cap reads "under", not "about under"', () => {
+  const rows = rowsOf({ HF: m(40, 1.001, 1, 0.01) });
+  const wf = waterfallData(rows, CONDITIONS);
+  assert.ok(wf.ofCap > 0 && wf.ofCap < 0.001);
+  assert.match(waterfallTakeaway(wf), /^One condition, heart failure, adds [\d.]+%, under 0\.1% of the 3% cap\.$/);
 });
 
 test('Step 5: the share of the cap reads in whole percents, tenths under ten percent, and never as a false zero', () => {

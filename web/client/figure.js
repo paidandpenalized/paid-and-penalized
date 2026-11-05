@@ -65,7 +65,8 @@ function edges(boxes) {
 
 export function mountScroll(scroll) {
   const table = scroll.querySelector('table');
-  if (!table) return;
+  if (!table || scroll.hasAttribute('data-wired')) return;
+  scroll.setAttribute('data-wired', '');
   const label = table.getAttribute('aria-labelledby') ?? table.caption?.id;
   if (!label || !('ResizeObserver' in window)) return;
   const box = { scroll, frame: scroll.parentElement, label, region: false };
@@ -196,7 +197,11 @@ function mountMarks(fig, svg, live) {
   });
 }
 
-function mountFigure(fig) {
+// Idempotent (a page script that redraws a figure calls it on the new one; a second copy of this module in another bundle
+// finds the mark and leaves the figure alone).
+export function mountFigure(fig) {
+  if (fig.hasAttribute('data-wired')) return;
+  fig.setAttribute('data-wired', '');
   const live = document.createElement('p');
   live.className = 'vh';
   live.setAttribute('aria-live', 'polite');

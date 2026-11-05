@@ -2,6 +2,7 @@
 // same code as the server's (worksheet.js), from the worksheet asset (figures/worksheet-data.js), which is fetched when
 // the first hospital is picked; the waterfall under the sheet (figures/waterfall.js) is drawn again from the same rows.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
+import { mountFigure, mountScroll } from '../../../web/client/figure.js';
 import { buildIndex } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
@@ -52,7 +53,12 @@ export function mountWorksheet() {
       const next = sheetFor(await loadSheets(holder.dataset.src), ccn, context, Number(waterfall?.dataset.figureN));
       if (next) {
         holder.innerHTML = next.sheet; // markup from worksheetHtml and figure(), which escape every value they write
-        if (waterfall) waterfall.innerHTML = next.waterfall;
+        if (waterfall) {
+          waterfall.innerHTML = next.waterfall;
+          // The figure client wires a figure once at load: wire the new one the same way (tooltips, sort, CSV, scroll box).
+          for (const fig of waterfall.querySelectorAll('figure[data-figure]')) mountFigure(fig);
+          for (const scroll of waterfall.querySelectorAll('.printout__scroll')) mountScroll(scroll);
+        }
         status.hidden = true;
       }
     } catch {

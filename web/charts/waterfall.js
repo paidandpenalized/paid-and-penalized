@@ -101,7 +101,7 @@ ${labels.zone ? text({ x: width - VALUE_W - 4, y: TOP + 4, anchor: 'end', cls: '
 ` : ''}<line class="chart-zero" x1="${x(0)}" x2="${x(0)}" y1="${TOP - 6}" y2="${bottom}"/>
 ${drawn}<line class="chart-rule" x1="${left}" x2="${width - VALUE_W}" y1="${ruleY}" y2="${ruleY}"/>
 ${mark({
-    tip: total.tip, value: total.value, hit: { x: left, y: yt - 4, width: width - left, height: ROW },
+    tip: total.tip, value: total.value, hit: { x: left, y: stacked ? yt - STACK_BAR_Y : yt - 4, width: width - left, height: stacked ? rowH : ROW },
     body: html`${bar(0, total.value, yt, total.pen ? 'chart-step chart-step--pen chart-step--total' : 'chart-step chart-step--total')}${text({ x: labelX, y: labelY(yt), anchor: 'start', cls: 'chart-label', body: total.label })}${text({ x: width, y: yt + BAR - 3, anchor: 'end', cls: 'chart-value chart-value--total', body: total.valueText })}`,
   })}
 ${band ? html`${mark({

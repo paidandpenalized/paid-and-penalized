@@ -23,10 +23,9 @@ const PHONE_TICKS = 4;
 
 // The sum's share of the cap: whole percents, one decimal under ten percent (a small sum is "0.5%", not "0%"), "under 0.1%" for a
 // share that would still print as zero.
-export const capShare = (share) => {
-  if (share > 0 && share < 0.001) return fill('wfShareTiny', { tiny: '0.1%' });
-  return pct(share, share < 0.1 ? 1 : 0);
-};
+const TINY_SHARE = 0.001;
+const tinyText = pct(TINY_SHARE, 1);
+export const capShare = (share) => (share > 0 && share < TINY_SHARE ? fill('wfShareTiny', { tiny: tinyText }) : pct(share, share < 0.1 ? 1 : 0));
 
 // A part or a sum in percent of base payments to three decimals, as Worksheet R prints line 6: 0.00126 is "0.126%".
 const pointsText = (v) => `${points(v)}%`;
@@ -46,6 +45,10 @@ export function waterfallTakeaway(wf) {
   const [name, cap, share] = [inSentence(biggest.label), String(CAP_PCT), capShare(wf.ofCap)];
   const count = capitalize(spelled(counted));
   const big = pct(biggest.part / sum, 0);
+  if (wf.ofCap < TINY_SHARE) {
+    const tiny = { sum: pointsText(sum), tiny: tinyText, cap, biggest: name, big };
+    return counted === 1 ? fill('wfTakeawayTinyOne', { biggest: name, sum: tiny.sum, tiny: tinyText, cap }) : fill('wfTakeawayTiny', { count, ...tiny });
+  }
   if (counted === 1) return binds ? fill('wfTakeawayCappedOne', { biggest: name, sum: pointsText(sum), cap }) : fill('wfTakeawayOne', { biggest: name, sum: pointsText(sum), share, cap });
   return binds ? fill('wfTakeawayCapped', { count, sum: pointsText(sum), cap, biggest: name, big }) : fill('wfTakeaway', { count, sum: pointsText(sum), share, cap, biggest: name, big });
 }
