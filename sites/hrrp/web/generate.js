@@ -6,7 +6,8 @@ import { contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
-import { hospitalCsv } from './csv.js';
+import { hospitalCsv, placeCsv } from './csv.js';
+import { statesCsvRows } from './figures/map-data.js';
 import { loadHrrp } from './data.js';
 import { hospitalPage } from './pages/hospital.js';
 import { methodsPage } from './pages/methods.js';
@@ -33,10 +34,11 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const { assets } = ctx;
   const shared = hospitalContext(data);
   const places = buildPlaces(hospitals, meta);
-  const area = areaContext({ ...data, places });
+  const area = areaContext({ ...data, places });  // data.shapes: the state outlines the map draws
   const program = programView(area);
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets }) });
   ctx.emit({ path: program.picture.csvHref, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
+  ctx.emit({ path: program.map.csvHref, text: placeCsv(statesCsvRows(program.map.pages)) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }

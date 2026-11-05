@@ -11,6 +11,7 @@ import { capitalize, dotList, ordinal, placeText, spelled } from '../../../web/r
 import { GE_CUT_PCT, STARS_MAX } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { howData } from './figures/how-data.js';
+import { mapData } from './figures/map-data.js';
 import { pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, placePath } from './links.js';
@@ -140,12 +141,12 @@ export function hospitalView(h, ctx) {
 
 // What the program page and the place pages share, built once: the edition's phrases, the nation's summary and the states'
 // average cuts (descending, for a state's rank among them). places: buildPlaces()'s result.
-export function areaContext({ hospitals, meta, history, conditions, places, whatsNew = null, whatsNewFy = null }) {
+export function areaContext({ hospitals, meta, history, conditions, places, whatsNew = null, whatsNewFy = null, shapes = null }) {
   const edition = { ...editionOf(meta, history), conditions };
   const states = places.list.filter((p) => p.kind === 'state');
   const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
   const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
-  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, whatsNew, whatsNewFy };
+  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, whatsNew, whatsNewFy, shapes };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -195,6 +196,7 @@ export function programView(ctx) {
     },
     how: howData(ctx),
     picture: pictureData(ctx),
+    map: mapData(ctx),
   };
 }
 

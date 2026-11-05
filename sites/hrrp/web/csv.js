@@ -40,3 +40,30 @@ export const HOSPITAL_COLUMNS = Object.freeze([
 
 // The CSV text for hospitals (rows of the data file), in the order given.
 export const hospitalCsv = (hospitals) => toCsv(HOSPITAL_COLUMNS, hospitals.map((h) => HOSPITAL_COLUMNS.map((c) => c.get(h))));
+
+// ---------- the place CSV ----------
+
+// The place CSV's columns, defined once (Ported from Thirty Day Readmissions, web/src/js/views/columns.js summaryCsvColumns
+// at 33d1959): the "Every state" file and the area pages' files are built on them. Eight columns, units in the headers,
+// with the counts behind each share: the hospitals, those measured on at least one condition, those penalized. Every share
+// here is over the hospitals measured on at least one condition (a hospital measured on nothing cannot be cut). A row is
+// summarize()'s result (engine/js/hrrp/summary.js) plus its label. Shares are written to a tenth of a percent, the average
+// cut to two decimals, dollars to whole dollars.
+const rounded = (v, dp) => (Number.isFinite(v) ? Number(v.toFixed(dp)) : null);
+export const placeColumns = (label) => Object.freeze([
+  text(label, (r) => r.label),
+  number('Hospitals', (r) => r.n),
+  number('Hospitals measured', (r) => r.nMeasured),
+  number('Hospitals penalized', (r) => r.nPen),
+  number('Penalized (% of measured)', (r) => rounded(r.pctPen, 1)),
+  number('Average cut (%)', (r) => rounded(r.meanRed, 2)),
+  number('Cut 1% or more (hospitals)', (r) => r.nGe1),
+  number('Estimated penalties ($, modeled)', (r) => rounded(r.penTotal, 0)),
+]);
+export const PLACE_COLUMNS = placeColumns('State');
+
+// The CSV text for places (rows as above), in the order given; label names the first column ("State", "Metro area").
+export const placeCsv = (rows, label = 'State') => {
+  const columns = label === 'State' ? PLACE_COLUMNS : placeColumns(label);
+  return toCsv(columns, rows.map((r) => columns.map((c) => c.get(r))));
+};

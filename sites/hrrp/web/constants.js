@@ -37,3 +37,22 @@ export const GE_CUT_PCT = 1;
 // reproduce Thirty Day Readmissions' worksheet-example rule (views/explainer.js at 33d1959); they are not claims.
 export const EXAMPLE_MIN_FLAGS = 3;
 export const EXAMPLE_MIN_BEDS = 150;
+
+// The state map's shading (figures/map-data.js): each measure's four thresholds, ascending, which split its values into five
+// bins; a value at a threshold takes the bin above. They are Thirty Day Readmissions' (web/src/js/charts/usmap.js METRICS at
+// 33d1959), display choices and not CMS's. Average cut in percent; share penalized and share cut 1% or more in percent;
+// dollars in millions. A value is binned as the map prints it (average cut to two decimals, the shares to a whole percent,
+// dollars to a tenth of a million), so a color never disagrees with its label.
+export const MAP_RAMPS = Object.freeze({
+  avg: Object.freeze([0.25, 0.35, 0.45, 0.6]),
+  share: Object.freeze([70, 80, 85, 90]),
+  dollars: Object.freeze([2, 5, 10, 20]),
+  ge1: Object.freeze([4, 8, 12, 16]),
+});
+
+// The state HRRP-01 leaves out of the program ("non-Maryland subsection (d) hospitals"); the map hatches it, and says
+// only that its hospitals are not in the program. HRRP-01 gives no reason, so the page gives none.
+export const NOT_IN_PROGRAM_STATE = 'MD';
+
+// The "Every state" table shows this many rows to a page.
+export const STATES_PAGE_SIZE = 15;

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'hub/styles.css'];
+const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'sites/hrrp/web/styles.css', 'hub/styles.css'];
 const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
@@ -41,6 +41,8 @@ const MARKS = [
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',
+  // the Readmissions map's dot key (sites/hrrp/web/styles.css)
+  '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.
