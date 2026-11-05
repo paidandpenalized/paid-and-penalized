@@ -76,6 +76,16 @@ class HospitalShare(unittest.TestCase):
         self.assertEqual(exposure.share_factor(a, None), 1.0)
         self.assertIsNone(exposure.nonmaternity_ratio([]))
 
+    def test_too_few_medicaid_days_keep_the_states_share(self):
+        floor = params.MIN_MEDICAID_DAYS
+        few = self.days(str(floor - 1), "", str(floor - 1))  # all maternity, but too few days to say so
+        enough = self.days(str(floor), "", str(floor // 2))  # half maternity, at the floor
+        self.assertEqual(exposure.share_factor(few, 0.9), 1.0)
+        self.assertIn("few_medicaid_days", few["flags"])
+        self.assertAlmostEqual(exposure.share_factor(enough, 0.9), 0.5 / 0.9)
+        self.assertNotIn("few_medicaid_days", enough["flags"])
+        self.assertAlmostEqual(exposure.nonmaternity_ratio([few, enough]), (0 + floor / 2) / (2 * floor - 1))
+
     def test_the_share_is_capped_at_one(self):
         self.assertAlmostEqual(exposure.hospital_share(0.3, 0.5), 0.15)
         self.assertEqual(exposure.hospital_share(0.95, 1.1), 1.0)

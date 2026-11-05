@@ -32,6 +32,15 @@ SCENARIO_IDS = tuple(s for s, _ in SCENARIOS)
 # flag is the layer's (DATA-B-04).
 PART_YEAR_DAYS = 360
 
+# The day-count floor on the hospital-specific expansion share (DATA-B-03, decided 2026-11-05, later): a hospital with
+# fewer Medicaid inpatient days than this (S-3 I lines 14 + 2 + 32, column 7) keeps its state's VIII share unchanged,
+# flagged `few_medicaid_days`. Chosen from the layer's FY2021 to FY2023 files: among hospitals with maternity Medicaid
+# days in either year, the median year-to-year move in a hospital's non-maternity share of its Medicaid days is over 5
+# points in at least one of the two year pairs in every bin below 200 days (up to 20 points under 25 days), about the
+# factor's whole interquartile range (0.98 to 1.04); from 200 days up it is under 5 points in both pairs and falls
+# with size (4.9, 3.8 to 4.7, 2.5 to 2.8, 1.6 and 0.7 points for 200-299, 300-499, 500-999, 1,000-4,999 and 5,000+).
+MIN_MEDICAID_DAYS = 200
+
 # Medicaid cost (S-10 line 7) per dollar of Medicaid net revenue (line 2) above this is treated as a data error and
 # capped here (about the 98th percentile of FY2023 acute and critical access hospitals); the hospital is flagged.
 MAX_COST_RATIO = 5.0

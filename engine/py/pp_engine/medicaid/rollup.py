@@ -23,7 +23,7 @@ def roll_up(pairs):
     out.update(hospitals=0, exposed=0, medicaid_revenue=0.0, uncompensated_cost=0.0, uc_added_where_reported=0.0,
                margin_hospitals=0, into_red=0, falls_1pp=0)
     npr = 0.0  # net patient revenue (G-3 line 3) of the margin hospitals
-    rev = inc = rev_after = inc_after = 0.0  # operating margin: G-3 lines 3 and 5, each plus lines 8 to 22
+    rev = inc = rev_after = inc_after = 0.0  # operating margin: G-3 lines 3 and 5, each plus other operating income
     npr_t = ni = oth = npr_t_after = ni_after = 0.0  # total margin
     for base, res in pairs:
         out["hospitals"] += 1

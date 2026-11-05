@@ -87,7 +87,7 @@ def master(*hospitals):
 def hcris(ccn, **over):
     row = {"ccn": ccn, "year": "2023", "shape": "one", "status": "1", "status_label": "as filed",
            "period_begin": "2023-01-01", "period_end": "2023-12-31", "period_days": "365",
-           "medicaid_days_all": "100", "medicaid_day_share": "0.1", "medicaid_net_revenue": "1000000",
+           "medicaid_days_all": "1000", "medicaid_day_share": "0.1", "medicaid_net_revenue": "1000000",
            "medicaid_cost": "1200000", "net_patient_revenue": "10000000", "net_income_patients": "100000",
            "net_income": "300000", "other_income": "500000", "uncompensated_cost": "400000"}
     row.update(over)
@@ -105,8 +105,8 @@ class Records(unittest.TestCase):
                    {"ccn": "990005", "state": "TX", "kind": "acute"})
         rows = {c: hcris(c) for c in ("990001", "991301", "990002", "994001")}
         rows["990005"] = hcris("990005", net_income_patients="-9000000")  # a -90% margin: outside the fence
-        rows["990001"].update(medicaid_days_maternity="50", medicaid_day_share="0.5")  # half maternity; high MIUR
-        rows["990003"] = hcris("990003", medicaid_days_all="300")  # no maternity days
+        rows["990001"].update(medicaid_days_maternity="500", medicaid_day_share="0.5")  # half maternity; high MIUR
+        rows["990003"] = hcris("990003", medicaid_days_all="3000")  # no maternity days
         progs = {"990001": {"hrrp": -10, "hac": 0, "hvbp": 1, "net": -9, "hrrp_factor": 0.99, "hac_cut": False}}
         self.records = build.hospital_records(m, rows, STATES, progs, {"AK": 0.4}, fence=(-0.5, 0.5))
 
@@ -121,7 +121,7 @@ class Records(unittest.TestCase):
 
     def test_the_expansion_share_is_scaled_by_non_maternity_days(self):
         by = {r["ccn"]: r for r in self.records}
-        ratio = (50 + 300) / (100 + 300)  # Alaska's two hospitals with a report, weighted by Medicaid days
+        ratio = (500 + 3000) / (1000 + 3000)  # Alaska's two hospitals with a report, weighted by Medicaid days
         self.assertAlmostEqual(by["990001"]["state_ratio"], ratio)
         self.assertAlmostEqual(by["990001"]["base"]["share_factor"], 0.5 / ratio)
         self.assertAlmostEqual(by["990001"]["share"], 0.25 * 0.5 / ratio)

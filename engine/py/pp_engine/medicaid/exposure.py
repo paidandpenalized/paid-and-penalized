@@ -4,7 +4,7 @@
    VIII share of Medicaid spending, scaled by how much of the hospital's Medicaid inpatient care is outside maternity
    relative to its state's (`share_factor`, DATA-B-03, decided 2026-11-05). The adult group's enrollees are not
    pregnant when they enroll (42 CFR 435.119(b)) and are not infants, so most maternity and newborn care is other
-   groups' spending.
+   groups' spending. Below params.MIN_MEDICAID_DAYS Medicaid days the state's share is used unchanged.
 2. Revenue lost: step 1 times the state's percentage decline in expansion enrollment for the scenario, times the
    reader's use multiple (1 by default).
 3. The cost of the lost patients' care, at the hospital's Medicaid cost per dollar of Medicaid revenue, splits three
@@ -14,7 +14,8 @@
 4. Margins after: revenue loses step 2 and gains the other coverage's payment; expenses lose the cost of care no
    longer delivered; uncompensated care stays as expense.
 
-Margins (DATA-B-03): the operating margin is G-3 (line 5 + lines 8 to 22) over (line 3 + lines 8 to 22); the total
+Margins (DATA-B-03): the operating margin is G-3 (line 5 + other operating income) over (line 3 + the same), other
+operating income being the layer's: lines 8 to 22 and line 24's entries labeled operating (methods_version 3); the total
 margin, line 29 over (line 3 + line 25); the patient margin, line 5 over line 3, is for Methods. Dollars are the cost
 report's as filed (base-year dollars, no projection, no annualizing).
 """
@@ -67,9 +68,10 @@ def nonmaternity_ratio(bases):
 
 def share_factor(base, state_ratio):
     """The hospital's non-maternity Medicaid day share over its state's: what its state's VIII share is scaled by. 1
-    (the state share unchanged) when the hospital has no Medicaid days or the state has no ratio."""
+    (the state share unchanged) when the hospital has no Medicaid days, fewer than params.MIN_MEDICAID_DAYS, or the
+    state has no ratio."""
     d = base["medicaid_days"]
-    if d is None or not state_ratio:
+    if d is None or d[0] < params.MIN_MEDICAID_DAYS or not state_ratio:
         return 1.0
     return (d[1] / d[0]) / state_ratio
 
@@ -109,7 +111,7 @@ def hospital_base(row):
         raise ExposureError(f"status label {row.get('status_label')!r}")
     flags = ["part_year"] if days < params.PART_YEAR_DAYS else []
     base = {k: _number(row.get(k)) for k in FLOWS}
-    base["other_operating_income"] = base["other_operating_income"] or 0.0  # blank lines 8 to 22 count as zero
+    base["other_operating_income"] = base["other_operating_income"] or 0.0  # blank counts as zero
     rev = base["medicaid_net_revenue"]
     if rev is None:
         flags.append("no_medicaid_revenue")
@@ -118,7 +120,7 @@ def hospital_base(row):
     rev25 = None if rev is None and base["medicaid_supplemental"] is None else (
         (rev or 0.0) + (base["medicaid_supplemental"] or 0.0))
     npr = base["net_patient_revenue"]
-    # A usable margin needs positive patient revenue, and positive operating revenue once lines 8 to 22 are added.
+    # A usable margin needs positive patient revenue, and positive operating revenue with other operating income.
     has_margin = (npr is not None and npr > 0 and base["net_income_patients"] is not None
                   and npr + base["other_operating_income"] > 0)
     if not has_margin:
@@ -132,6 +134,8 @@ def hospital_base(row):
     base["medicaid_days"] = medicaid_days(base)
     if base["medicaid_days"] is None:
         flags.append("no_medicaid_days")
+    elif base["medicaid_days"][0] < params.MIN_MEDICAID_DAYS:
+        flags.append("few_medicaid_days")
     # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
     # at risk, but its line 5 can be in the lines 2 + 5 comparison.
@@ -146,7 +150,7 @@ def hospital_base(row):
 
 
 def operating_margin(base):
-    """The base's operating margin, G-3 (line 5 + lines 8 to 22) over (line 3 + lines 8 to 22); None without usable
+    """The base's operating margin, G-3 (line 5 + other operating income) over (line 3 + the same); None without usable
     patient revenue."""
     if not base["has_margin"]:
         return None
