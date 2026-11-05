@@ -1,8 +1,9 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/explainer.js at 33d1959), after HACRP's program page (sites/hacrp/web/program-figures.js).
 // The program page's "How it works" Part: its line, the two callouts, then Steps 1 to 4. Step 1's punch card and Step 3's
-// columns are drawn with the chart kit inside figure(), a phone drawing and a wide one; Step 2's swarm is not drawn yet
-// (figures/how-data.js swarmData holds its numbers); Step 4's medians are a table, open, as the old site had it; Step 5 is Worksheet R for the example hospital, drawn on the server, with
-// a box that swaps the hospital in the browser (client/worksheet.js; the waterfall's numbers are in worksheet.js waterfallData, not drawn yet).
+// columns are drawn with the chart kit inside figure(), a phone drawing and a wide one; Step 2's swarm (figures/swarm.js) has the old
+// site's condition switch (client/program.js); Step 4's medians are a table, open, as the old site had it; Step 5 is Worksheet R for the example
+// hospital, drawn on the server, with a box that swaps the hospital in the browser (client/worksheet.js), and the waterfall under it
+// (figures/waterfall.js), which the box redraws with the sheet.
 import { CAP_PCT, CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { columns } from '../../../../web/charts/columns.js';
 import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
@@ -16,6 +17,8 @@ import { fmtInt, fmtPct, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence } from '../wording.js';
 import { worksheetHtml } from '../worksheet.js';
+import { swarmFigure } from './swarm.js';
+import { waterfallFigure } from './waterfall.js';
 
 // Punch card: the largest sets each get a column; the rest are pooled.
 const KEEP = 12;
@@ -168,14 +171,19 @@ export const calloutWho = ({ rounded }) => html`<aside class="callout callout--i
 
 // ---------- the Part ----------
 
-// The hospital box above Worksheet R (client/worksheet.js mounts it) and the sheet it swaps. src: the hospitals asset the
-// box searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src on the holder: fetched when
-// a hospital is picked). null: no box, only the example.
-function worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc }) {
+// The hospital box above Worksheet R (client/worksheet.js mounts it), the sheet it swaps and the waterfall under the sheet, which it
+// redraws too. src: the hospitals asset the box searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src
+// on the holder: fetched when a hospital is picked). null: no box, only the example. figureN: the waterfall's figure number, kept on
+// its holder for the redraw.
+function worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc, figureN }) {
   const sheet = worksheetHtml(how.worksheet, { edition, conditions: how.conditions, dollars: { payShort: how.payShort, tag: estimateTag } });
+  const fig = waterfallFigure({ rows: how.worksheet, conditions: how.conditions, n: figureN, edition });
   return html`${hospitalsUrl && sheetSrc && searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') })}
 <div class="wsr-holder" id="worksheet"${sheetSrc ? html` data-src="${sheetSrc}" data-context="${JSON.stringify({ edition, conditions: how.conditions, payShort: how.payShort })}"` : ''}>
 ${sheet}
+</div>
+<div class="wf-holder" data-figure-n="${String(figureN)}">
+${fig}
 </div>`;
 }
 
@@ -185,7 +193,9 @@ export function howPart(how, { figure: nextFigure, edition, estimateTag = '', ho
   const { conditions } = how;
   const words = capitalize(spelled(CONDS.length));
   const punch = punchFigure({ sets: how.sets, conditions, edition, n: nextFigure() });
+  const swarm = swarmFigure({ how, edition, n: nextFigure() });
   const dual = dualFigure({ dual: how.dual, edition, n: nextFigure() });
+  const waterfallN = nextFigure();
   return html`<p class="part__intro">${fill('howIntro', { edition })}</p>
 <div class="hgrid">
 ${calloutNewFor({ items: how.newFor, edition })}
@@ -201,7 +211,9 @@ ${step({
 ${step({
     n: 2, id: 'step-2', heading: t('step2Title'),
     text: html`<p>${fill('step2Text', { one: ratio(1, 1) })}</p>
-<p>${fill('step2Medians', { lo: ratio(how.span.lo), hi: ratio(how.span.hi) })}</p>`,
+<p>${fill('step2Medians', { lo: ratio(how.span.lo), hi: ratio(how.span.hi) })}</p>
+<p>${t('step2Line')}</p>`,
+    fig: swarm,
   })}
 ${step({
     n: 3, id: 'step-3', heading: t('step3Title'),
@@ -218,6 +230,6 @@ ${step({
     n: 5, id: 'step-5', heading: t('step5Title'), wide: true,
     text: html`<p>${fill('step5Text', { cap: String(CAP_PCT) })}</p>
 <p>${t('step5Which')}</p>`,
-    fig: worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc: worksheetUrl }),
+    fig: worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc: worksheetUrl, figureN: waterfallN }),
   })}`;
 }

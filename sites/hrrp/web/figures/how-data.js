@@ -41,6 +41,9 @@ export const BAND = 0.01;
 // The figure table's bins are this wide; a bin holds (lo, hi], so a ratio exactly at its median falls in the bin that ends at 0.
 export const SWARM_BIN = 0.05;
 
+// A gap smaller than this prints "< 0.0001" (the worksheet's rule for line 4).
+export const SLIVER = 0.0001;
+
 // The condition switches' order: heart failure first (the one on when the page opens), then the rest as the program lists them.
 export const SWARM_ORDER = ['HF', ...CONDS.filter((k) => k !== 'HF')];
 
@@ -78,10 +81,33 @@ export function swarmData(hospitals, meta, cond, exampleId = exampleIdOf(hospita
     over,
     atOrUnder: items.length - over,
     band: { half: BAND, n: near.length, over: near.filter((i) => i.d > 0).length, atOrUnder: near.filter((i) => i.d <= 0).length },
+    // The closest ratios to the line on each side (null where a side is empty), the dots over it by less than a sliver, and
+    // the example's dot (null where the example is not measured on cond).
+    closestOver: items.reduce((m, i) => (i.d > 0 && (m === null || i.d < m) ? i.d : m), null),
+    closestUnder: items.reduce((m, i) => (i.d <= 0 && (m === null || i.d > m) ? i.d : m), null),
+    sliver: items.filter((i) => i.d > 0 && i.d < SLIVER).length,
+    example: items.find((i) => i.example) ?? null,
     conds: SWARM_ORDER.map((key) => ({ key, on: key === cond })),
     exampleId,
     table: [...bins.entries()].sort((a, b) => a[0] - b[0]).map(([, b]) => b),
   };
+}
+
+// The nice bin widths for the swarm's columns, narrowest first.
+const SWARM_BINS = [0.005, 0.01, 0.02, 0.025, 0.05];
+
+// The span of ratio-minus-median a swarm draws, in columns that each hold (lo, hi] and put zero on an edge: the narrowest bin in
+// SWARM_BINS that fits the span in maxBins columns, the ends rounded outward to a column edge. trim: the share of dots left past each
+// end to fold into the end columns (0: the whole span). below / above: how many dots fall past the ends (drawn in the end columns).
+// items: swarmData().items.
+export function swarmDomain(items, { maxBins, trim = 0 }) {
+  const d = items.map((i) => i.d).sort((a, b) => a - b);
+  const at = (q) => d[Math.round(q * (d.length - 1))] ?? 0;
+  const [a, b] = [Math.min(at(trim), -0.0001), Math.max(at(1 - trim), 0.0001)];
+  const bin = SWARM_BINS.find((w) => Math.ceil(roundTo((b - a) / w, 9)) <= maxBins) ?? SWARM_BINS[SWARM_BINS.length - 1];
+  const lo = roundTo(Math.floor(roundTo(a / bin, 9)) * bin, 6);
+  const hi = roundTo(Math.ceil(roundTo(b / bin, 9)) * bin, 6);
+  return { lo, hi, bin, below: d.filter((v) => v < lo).length, above: d.filter((v) => v > hi).length };
 }
 
 // ---------- Step 3: the dual share in one-point bins, and the five peer groups ----------

@@ -105,13 +105,31 @@ ${pay}
 </div>`;
 }
 
+// The zoomed scale's top for a sum: the sum plus a little room, rounded up to a tick, the tick step coarsened until the scale
+// holds at most this many steps (a sum of 0.52% zooms to 0.6% in tenths of a point; one over 1.5% to 2% in half points).
+const ZOOM_STEPS = [0.001, 0.002, 0.005, 0.01];
+const ZOOM_MAX_TICKS = 7;
+export function zoomOf(sum) {
+  for (const step of ZOOM_STEPS) {
+    const top = Math.ceil(sum / step + 0.05) * step;
+    if (top / step <= ZOOM_MAX_TICKS || step === ZOOM_STEPS[ZOOM_STEPS.length - 1]) return { step, top: Number(top.toFixed(6)) };
+  }
+  return null;
+}
+
+// Why a part is zero: kind 'none' (no cases), 'few' (under 25 cases), 'below' (the ratio is at or under its median) or 'other'
+// (counted by CMS but rounds to nothing, or the weight is not published); null for a part that adds.
+const zeroKind = (l) => (l.reason === null ? null : !l.n ? 'none' : l.n < MIN_DISCHARGES ? 'few' : l.err != null && l.med != null && l.err <= l.med ? 'below' : 'other');
+
 // The waterfall's numbers: each condition's part in order with the running total, the sum (line 7), the cap and whether it
-// binds, the rounded line 8, and the figure's table. conditions (optional): { key, short } for the labels.
+// binds, the rounded line 8, and the figure's table. conditions (optional): { key, short } for the labels. For each part, why
+// (the worksheet's words for a zero) and zero (its kind, above) with the line's n, err and med; biggest: the largest part (null
+// when none adds), counted: how many add, ofCap: the sum as a share of the cap, zoom: the zoomed scale's top and tick step.
 export function waterfallData(rows, conditions = []) {
   let running = 0;
   const parts = rows.lines.map((l) => {
     running += l.part;
-    return { cond: l.cond, label: conditionShort(conditions, l.cond), part: l.part, why: l.reason, running };
+    return { cond: l.cond, label: conditionShort(conditions, l.cond), part: l.part, why: l.reason, running, zero: zeroKind(l), n: l.n, err: l.err, med: l.med };
   });
   const { sum, capped, reduction } = rows.totals;
   const table = [
@@ -120,5 +138,9 @@ export function waterfallData(rows, conditions = []) {
     [fill('wfCap', { cap: String(CAP_PCT) }), '', points(CAP)],
     [fill('wfCut', { n: '8' }), '', points(reduction)],
   ];
-  return { parts, sum, cap: CAP, binds: capped, line8: reduction, rows: table };
+  const adding = parts.filter((p) => p.part > 0);
+  return {
+    parts, sum, cap: CAP, binds: capped, line8: reduction, rows: table, factor: rows.totals.factor,
+    counted: adding.length, biggest: adding.reduce((m, p) => (m === null || p.part > m.part ? p : m), null), ofCap: sum / CAP, zoom: zoomOf(sum),
+  };
 }

@@ -68,6 +68,8 @@
 .part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
 .part__title { font: 400 clamp(2rem, 5vw, 3.4rem)/1.02 var(--font-display); letter-spacing: -0.005em; }
 .part__intro { max-width: 52ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-md); line-height: 1.5; }
+/* A figure straight after the lede (the map): the same 28px the callouts' grid keeps under it. */
+.part__intro + .fig { margin-top: 28px; }
 /* Part 1's callouts: what is new this year beside who is in the program, each a sentence set apart by a rule. */
 .hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 28px; }
 @media (min-width: 760px) { .hgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
@@ -95,6 +97,15 @@
 .page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
 .page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
 .page--prog .fig .chart { max-width: none; }
+/* Step 2's swarm: the condition switch over the drawing (a script unhides it; the old site's .seg look), the lens's shaded span on the
+   main axis, and the notes under the drawing. */
+.swarm__controls { margin-bottom: 12px; }
+.swarm__controls[hidden], .swarm__m[hidden] { display: none; }
+.swarm__note { margin: 4px 0 0; max-width: 62ch; }
+@media (min-width: 560px) { .swarm__note--phone { display: none; } }
+.chart-lens-zone { fill: var(--ink); fill-opacity: 0.06; }
+/* Step 5's waterfall under Worksheet R: about the width its drawing is made for, not the whole page. */
+.wf-holder { margin-top: 28px; max-width: 760px; }
 /* Step 4's medians: open under a title and a note; a median above one is shaded, as the old site did. */
 .meds__title { margin: 0; font: 700 var(--fs-md)/1.3 var(--font-body); }
 .meds__note { margin: 2px 0 8px; color: var(--ink-2); }
@@ -217,6 +228,7 @@
   .usmap__sw--faint { background: GrayText; opacity: 1; }
   .usmap__chip--hatch { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .btn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
+  .chart-lens-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
 }
 
 /* The data windows (the kit's periods chart): the window the ratios come from is dark, the payment year is the penalty's color. */

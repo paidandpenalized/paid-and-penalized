@@ -1,7 +1,7 @@
 // Ported from Thirty Day Readmissions (web/src/js/model.js at 33d1959).
 // The Readmissions site's number formatting. Built on web/render/format.js where the output is identical; "—" for a
 // missing or non-finite value, as the source printed it.
-import { count, decimal, isoDate, money, shortIsoDate } from '../../../web/render/format.js';
+import { count, decimal, isoDate, money, shortIsoDate, signed } from '../../../web/render/format.js';
 
 const DASH = '—';
 const missing = (v) => v == null || !Number.isFinite(v);
@@ -45,3 +45,12 @@ export const ratio = (x, dp = 4) => (missing(x) ? DASH : decimal(x, dp));
 
 // A condition's share of the cut, a fraction, in percentage points to dp decimals and without the unit: 0.00342 is "0.342".
 export const points = (x, dp = 3) => (missing(x) ? DASH : decimal(x * 100, dp));
+
+// A ratio's gap from its peer median, as the worksheet's line 4 prints it but signed: "+0.0321", "−0.0173", "0.0000" for none, and
+// "< 0.0001" (or "> −0.0001") for a sliver that would print as zero but is not.
+export const gapText = (d, sliver = 0.0001) => {
+  if (missing(d)) return DASH;
+  if (d === 0) return ratio(0);
+  if (Math.abs(d) < sliver) return d > 0 ? `< ${ratio(sliver)}` : `> −${ratio(sliver)}`;
+  return signed(d, 4);
+};

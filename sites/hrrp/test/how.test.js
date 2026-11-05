@@ -180,7 +180,7 @@ test('"Who is in the program" rounds the count to the hundred and names who is o
   for (const w of ['critical access', 'children', 'cancer', 'psychiatric', 'rehabilitation', 'long-term care', 'Maryland', 'Puerto Rico']) assert.ok(box.includes(w), w);
 });
 
-test('the Part on the program page: callouts, steps 1 to 5, two figures and the medians table, no swarm', () => {
+test('the Part on the program page: callouts, steps 1 to 5, the four figures and the medians table', () => {
   const data = loadHrrpOnce();
   const places = buildPlaces(data.hospitals, data.meta);
   const area = areaContext({ ...data, places });
@@ -189,7 +189,7 @@ test('the Part on the program page: callouts, steps 1 to 5, two figures and the 
   assert.equal(view.how.newFor?.length, data.whatsNew.length);
   const text = programPage({ view, robots: null, assets: ASSETS });
   const how = /<section class="part" id="how"[\s\S]*?<\/section>\s*<section class="part" id="picture"/.exec(text)[0];
-  assert.equal(how.match(/<figure class="fig"/g).length, 2, 'the punch card and the dual-share columns');
+  assert.equal(how.match(/<figure class="fig"/g).length, 4, 'the punch card, the swarm, the dual-share columns and the waterfall');
   assert.equal(how.match(/<svg [^>]*chart--punch/g).length, 2, 'the punch card, phone and wide');
   assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
   assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
@@ -197,11 +197,12 @@ test('the Part on the program page: callouts, steps 1 to 5, two figures and the 
   assert.equal(how.match(/<section class="hstep[ "]/g).length, 5, 'steps 1 to 5');
   assert.equal(how.match(/<details class="srcs">/g).length, 1, 'one Sources disclosure for both callouts');
   assert.ok(!how.slice(how.indexOf('class="hgrid"'), how.indexOf('class="srcs"')).includes('is from CMS'), 'no source line inside a callout');
-  assert.ok(!how.includes('swarm'));
+  assert.equal(how.match(/<svg [^>]*chart--swarm/g).length, 12, 'the swarm for each of six conditions, phone and wide');
+  assert.equal(how.match(/<svg [^>]*chart--waterfall/g).length, 2, 'the waterfall, phone and wide');
   assert.ok(how.includes(`New for ${view.edition}`) && how.includes('Who is in the program'));
   assert.ok(!how.includes('<details class="meds">'), 'the medians are open, not collapsed');
   assert.equal(how.match(/<div class="meds">/g).length, 1);
-  assert.equal([...how.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((x) => x[1]).join(), '1,2');
+  assert.equal([...how.matchAll(/<figure class="fig" id="figure-(\d+)"/g)].map((x) => x[1]).join(), '1,2,3,4');
   const fresh = howPart(howData({ ...areaOf(), whatsNew: null }), { figure: (() => { let n = 0; return () => ++n; })(), edition: 'FY2027', sourceLine: 'x' });
   assert.ok(!fresh.text.includes('New for'), 'no notes for another year');
 });
