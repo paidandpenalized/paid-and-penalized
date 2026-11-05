@@ -11,6 +11,7 @@ import { capitalize, dotList, ordinal, placeText, spelled } from '../../../web/r
 import { GE_CUT_PCT, STARS_MAX } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { howData } from './figures/how-data.js';
+import { pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, placePath } from './links.js';
 import { factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
@@ -193,6 +194,7 @@ export function programView(ctx) {
       stamp: programFill('glanceStamp', { date: fmtDate(meta.fileDate) }),
     },
     how: howData(ctx),
+    picture: pictureData(ctx),
   };
 }
 

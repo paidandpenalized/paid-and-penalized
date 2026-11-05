@@ -118,6 +118,30 @@ export const COPY = {
   medsRow: { text: 'Group {n} · {from}–{to} dual', claim: null },
   medsMissing: { text: 'none', claim: null },
 
+  // Part 2, the picture: the lede, then the table of the largest cuts. The coin-flip's words are in figures/picture-data.js.
+  pictureLede: {
+    text: 'Half of the {nCut} hospitals with a cut lose {median} of their Medicare base payments or less. {nOnePlus} lose {one}% or more, and {nCap} reach the {cap}% maximum.',
+    claim: 'HRRP-09',
+  },
+  penTakeaway: { text: 'The {words} largest cuts run from {hi} down to {lo} of base payments, ties ordered by modeled dollars.', claim: null },
+  penTakeawayTie: { text: 'The {words} largest cuts are all {cut} of base payments, the maximum, ordered here by modeled dollars.', claim: 'HRRP-09' },
+  penSource: { text: 'CMS {edition} Hospital Readmissions Reduction Program supplemental data file (payment adjustment factors); dollars are modeled here.', claim: null },
+  penKey: {
+    text: 'The six boxes follow {names}. Filled: the condition adds to the cut. Hatched: measured, adds nothing. Empty: too few cases to be measured.',
+    claim: 'HRRP-04',
+  },
+  penColHospital: { text: 'Hospital', claim: null },
+  penColPlace: { text: 'Place', claim: null },
+  penColCut: { text: 'Cut (% of base payments)', claim: null },
+  penColDollars: { text: 'Estimated dollars (modeled)', claim: null },
+  penColConds: { text: 'Conditions that add to the cut', claim: null },
+  penTipCounted: { text: '{c}: adds to the cut', claim: null },
+  penTipBelow: { text: '{c}: measured, adds nothing', claim: null },
+  penTipNone: { text: '{c}: too few cases to be measured', claim: null },
+  penCondsSpoken: { text: 'Adds to the cut: {list}', claim: null },
+  penCondsNone: { text: 'No single condition shown as adding to the cut', claim: null },
+  penDownload: { text: 'Download these hospitals as a CSV', claim: null },
+
   // Step 5: Worksheet R, CMS's calculation for one hospital, line by line (kept as Thirty Day Readmissions had it).
   step5Title: { text: 'The worksheet', claim: 'HRRP-09' },
   step5Text: {

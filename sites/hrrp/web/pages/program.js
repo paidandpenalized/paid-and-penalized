@@ -9,6 +9,7 @@ import { page } from '../../../../web/render/layout.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { SITE } from '../../../../web/site.js';
 import { howPart } from '../figures/how.js';
+import { picturePart } from '../figures/picture.js';
 import { PROGRAM_PATH } from '../links.js';
 import { fill, t } from '../program/copy.js';
 import { SECTIONS, estimateTag, labelOf, recordCard, shellOf } from './parts.js';
@@ -48,7 +49,10 @@ ${body}
 // view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
 export function programPage({ view, robots, assets }) {
   const figure = counter();
-  const bodies = { how: howPart(view.how, { figure, edition: view.edition, estimateTag }) };
+  const bodies = {
+    how: howPart(view.how, { figure, edition: view.edition, estimateTag }),
+    picture: picturePart(view.picture, { figure, edition: view.edition }),
+  };
   const body = html`<article class="wrap page page--prog prog">
 ${top(view)}
 ${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition), bodies[id]))}

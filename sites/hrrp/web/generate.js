@@ -6,6 +6,7 @@ import { contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
+import { hospitalCsv } from './csv.js';
 import { loadHrrp } from './data.js';
 import { hospitalPage } from './pages/hospital.js';
 import { methodsPage } from './pages/methods.js';
@@ -33,7 +34,9 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const shared = hospitalContext(data);
   const places = buildPlaces(hospitals, meta);
   const area = areaContext({ ...data, places });
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: programView(area), robots, assets }) });
+  const program = programView(area);
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets }) });
+  ctx.emit({ path: program.picture.csvHref, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }
