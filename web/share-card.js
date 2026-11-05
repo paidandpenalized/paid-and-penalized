@@ -15,6 +15,7 @@ export const CARD_STAMP = 'web/og/stamp.json';
 export const SHARE_CARDS = Object.freeze({
   family: typeset(`${SITE.name}: a map of U.S. hospitals, each a dot, red where Medicare's quality programs cut its pay on net, green where they raised it, gray where neither or where the site has no estimate.`),
   hacrp: typeset(`${SITE.name}, ${SITE.sites.hacrp.title}: a map of U.S. hospitals, each a dot, red where Medicare's ${programById('hacrp').long} cut its pay, gray elsewhere.`),
+  hrrp: typeset(`${SITE.name}, ${SITE.sites.hrrp.title}: a map of U.S. hospitals, each a dot, red where Medicare's ${programById('hrrp').long} cut its pay, gray elsewhere; beside it, how many hospitals were penalized, the average cut among them and how many reached the maximum.`),
 });
 
 // The card a page's links show, by the page's path: its site's own card when it has one, else the family's.

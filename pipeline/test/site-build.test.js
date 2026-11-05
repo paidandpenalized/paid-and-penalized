@@ -386,9 +386,9 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   assert.doesNotMatch('.hhx{margin:0}.history{margin:0}.rdx{margin:0}', HUB_RULE);
 });
 
-test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, every other page the family\'s, each a copy of its committed PNG', async () => {
+test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, Readmissions\' its own, every other page the family\'s, each a copy of its committed PNG', async () => {
   const out = await builtSlice();
-  const shown = { hacrp: new Set(), family: new Set() };
+  const shown = { hacrp: new Set(), hrrp: new Set(), family: new Set() };
   for (const file of htmlPages(out)) {
     const metas = [...tags(readFileSync(join(out, file), 'utf8'), { names: ['meta'] })].map(({ attrs }) => attrs);
     const content = (key) => metas.filter((a) => (a.property ?? a.name) === key).map((a) => a.content);
@@ -398,7 +398,7 @@ test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s car
     assert.ok(image.startsWith(`${SITE.origin}/assets/`), file);
     const path = image.slice(SITE.origin.length);
     assert.ok(existsSync(join(out, path)), `${file}: ${path} is not in dist/`);
-    const id = addressOf(file).startsWith(SITE.sites.hacrp.path) ? 'hacrp' : 'family';
+    const id = ['hacrp', 'hrrp'].find((key) => addressOf(file).startsWith(SITE.sites[key].path)) ?? 'family';
     assert.match(path, new RegExp(`^/assets/og-${id}\\.[0-9a-f]{8}\\.png$`), file);
     shown[id].add(path);
   }

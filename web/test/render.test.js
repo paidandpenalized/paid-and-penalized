@@ -622,7 +622,11 @@ test('page: a page under a program site with a card of its own shows that card; 
     assert.equal(shareCardOf(path), 'hacrp', path);
     assert.equal(cardOf(path), SITE.origin + ASSETS.cards.hacrp, path);
   }
-  for (const path of ['/', '/hospital/990001/', '/hrrp/', '/hvbp/', '/methods/', '/about/', '/404.html']) {
+  for (const path of ['/hrrp/', '/hrrp/hospital/990001/', '/hrrp/methods/']) {
+    assert.equal(shareCardOf(path), 'hrrp', path);
+    assert.equal(cardOf(path), SITE.origin + ASSETS.cards.hrrp, path);
+  }
+  for (const path of ['/', '/hospital/990001/', '/hvbp/', '/methods/', '/about/', '/404.html']) {
     assert.equal(shareCardOf(path), 'family', path);
     assert.equal(cardOf(path), SITE.origin + ASSETS.cards.family, path);
   }

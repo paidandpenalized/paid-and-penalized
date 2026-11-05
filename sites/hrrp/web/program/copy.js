@@ -42,6 +42,10 @@ export const COPY = {
   glanceWindow: { text: 'Data window', claim: null },
   glanceWindowValue: { text: '{start} – {end}', claim: null },
   glancePay: { text: 'Payment year', claim: null },
+  // The share card's three labels (tools/og/card.js), shorter than the card's own.
+  cardPenalized: { text: 'Penalized, {pct} of {nMeasured} measured', claim: null },
+  cardMeanPen: { text: 'Average cut, penalized only', claim: null },
+  cardMax: { text: 'At the {cap}% maximum', claim: 'HRRP-09' },
   glanceStamp: { text: 'Final · posted {date}', claim: null },
 
   // The Parts the section menu opens (their figures come with the batches that draw them).
