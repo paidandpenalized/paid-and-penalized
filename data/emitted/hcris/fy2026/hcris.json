@@ -6,7 +6,7 @@
 "hcris-fy2026-cells",
 "hcris-fy2026-g3-line24"
 ],
-"built_at": "2026-11-05T19:56:49Z",
+"built_at": "2026-11-05T20:13:58Z",
 "fy": 2026,
 "label": "cost reports beginning in FY2026",
 "periodsBegin": [
@@ -24,7 +24,7 @@
 "settledShare": 0.125,
 "earlyBelow": 0.8,
 "early": true,
-"otherIncomeRules": {"path":"pipeline/py/pp_pipeline/hcris/other_income_rules.csv","sha256":"42f43afcee1adfabec866d87233508c41b526959dff5013bb84c4bab3e81fc63"},
+"otherIncomeRules": {"path":"pipeline/py/pp_pipeline/hcris/other_income_rules.csv","sha256":"2539aaab59e65be0283561b51456a91ea334dbc24ed28d269406c6fc7f48ec48"},
 "columns": [
 "ccn",
 "n_reports",

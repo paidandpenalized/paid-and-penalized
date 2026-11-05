@@ -71,6 +71,13 @@ class Pins(unittest.TestCase):
                                 ["7", "02401", "INVESTMENT INCOME, NET", "200"],
                                 ["7", "02402", "", "50"]])  # an amount with no label; report 9 is out of scope
 
+    def test_a_second_label_for_one_line_stops_the_pin(self):
+        scoped = {"7": None}
+        row = ["7", cells.G3, "02401", "00000", "GRANTS"]
+        self.assertEqual(pins.labels([row], scoped), {("7", "02401"): "GRANTS"})
+        with self.assertRaises(tidy.HcrisError):
+            pins.labels([row, [*row[:4], "PHARMACY"]], scoped)
+
     def test_the_same_zip_gives_the_same_bytes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a = synthetic_pin(tmp)[1]
@@ -162,6 +169,7 @@ class RulesFile(unittest.TestCase):
             "PROVIDER RELIEF FUND": "relief_funding", "PROPERTY TAX REVENUE": "appropriations_taxes",
             "NON-OPERATING INCOME": "labeled_non_operating", "OTHER OP AND NON OP INC": "mixed",
             "OTHER OPERATING REVENUE": "generic_operating", "MEDICAID DSH": "medicaid_supplemental",
+            "PHYSICIAN UPL": "medicaid_supplemental", "IGT GRANTS": "medicaid_supplemental",  # before the operating kinds
             "CAPITATION REVENUE": "health_plan", "POISON DRUG CENTER CONTRACTS": "other_services",
             "INTERCOMPANY REVENUE": "intercompany", "MALPRACTICE REVENUE": "other", "OTHER REVENUE": "other",
             "PHYSICAL THERAPY": "other", "": "unlabeled"}

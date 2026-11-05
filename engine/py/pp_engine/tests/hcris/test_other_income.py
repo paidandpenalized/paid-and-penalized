@@ -71,7 +71,7 @@ class Table(unittest.TestCase):
                [oi.PIN_COLUMNS, ["7", "02401", "x", "1"], ["7", "02401", "y", "2"]],
                [oi.PIN_COLUMNS, ["7", "02401", "x"]]]
         for rows in bad:
-            with self.subTest(rows=rows), self.assertRaises(oi.RulesError):
+            with self.subTest(rows=rows), self.assertRaises(oi.TableError):
                 oi.from_pin_rows(rows)
 
 

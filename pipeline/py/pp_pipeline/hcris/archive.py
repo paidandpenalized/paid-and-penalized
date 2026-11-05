@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pp_pipeline.files import pin_matches, read_manifest
 from pp_pipeline.hcris.extract import sha256
-from pp_pipeline.hcris.pins import BUCKET, archive_key, derive, pinned_years
+from pp_pipeline.hcris.pins import BUCKET, archive_key, derive, line24_pin_id, pinned_years
 
 WRANGLER = "npx --no-install wrangler@4.151.0"
 YEAR = re.compile(r"HOSP10FY(\d{4})\.ZIP")
@@ -44,7 +44,8 @@ def plan(zips, manifest, archived=frozenset(), derive_fn=derive):
             action, why = "upload", f"backs the FY{year} pin"
         elif not all(pid in by_id and pin_matches(by_id[pid], data) for pid, data in derive_fn(z)[1].items()):
             action, why = "upload", f"FY{year}'s tables changed: a new pin"
-        elif archive_key(entry["derivedFrom"]["sha256"]) in archived:
+        elif all(archive_key(e["derivedFrom"]["sha256"]) in archived
+                 for e in (entry, by_id.get(line24_pin_id(year))) if e is not None):
             action, why = "skip", (f"FY{year}'s tables are unchanged: the archived zip "
                                    f"{entry['derivedFrom']['sha256'][:12]} reproduces it")
         else:  # the pin's own zip is not in the bucket; this one gives the same table
