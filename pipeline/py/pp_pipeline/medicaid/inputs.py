@@ -44,3 +44,4 @@ def read_csv(pin_id, root=INPUTS_DIR):
 VIII = "cms64-viii-2026-02"
 FMR = "cms64-fmr-fy2023-map"
 URBAN = "urban-2026-a2-wr"
+STATE_MIUR = "hcris-fy2023-state-miur"

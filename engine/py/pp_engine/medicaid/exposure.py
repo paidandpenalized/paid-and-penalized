@@ -1,7 +1,10 @@
-"""Per-hospital exposure: steps 1 to 4 of the method, on one hospital-year row of the HCRIS tidy table.
+"""Per-hospital exposure: steps 1 to 4 of the method, on one hospital-year row of the HCRIS layer.
 
-1. Expansion revenue at risk: Medicaid net revenue (S-10 I line 2) times the state's VIII share of Medicaid spending.
-   This assumes the hospital's Medicaid revenue mix mirrors its state's: the method's largest assumption.
+1. Expansion revenue at risk: Medicaid net revenue (S-10 I line 2) times the hospital's expansion share: its state's
+   VIII share of Medicaid spending, scaled by how much of the hospital's Medicaid inpatient care is outside maternity
+   relative to its state's (`share_factor`, DATA-B-03, decided 2026-11-05). The adult group's enrollees are not
+   pregnant when they enroll (42 CFR 435.119(b)) and are not infants, so most maternity and newborn care is other
+   groups' spending.
 2. Revenue lost: step 1 times the state's percentage decline in expansion enrollment for the scenario, times the
    reader's use multiple (1 by default).
 3. The cost of the lost patients' care, at the hospital's Medicaid cost per dollar of Medicaid revenue, splits three
@@ -11,15 +14,19 @@
 4. Margins after: revenue loses step 2 and gains the other coverage's payment; expenses lose the cost of care no
    longer delivered; uncompensated care stays as expense.
 
-Dollars are the cost report's (base-year dollars, no projection), put on a 365-day basis when the period isn't a year.
+Margins (DATA-B-03): the operating margin is G-3 (line 5 + lines 8 to 22) over (line 3 + lines 8 to 22); the total
+margin, line 29 over (line 3 + line 25); the patient margin, line 5 over line 3, is for Methods. Dollars are the cost
+report's as filed (base-year dollars, no projection, no annualizing).
 """
 import statistics
 
 from pp_engine.medicaid import params
 
-# The tidy table's columns this module reads (HCRIS layer names; S-10 Part I and G-3).
+# The HCRIS layer's columns this module reads (S-10 Part I, G-3, S-3 Part I).
 FLOWS = ("medicaid_net_revenue", "medicaid_supplemental", "medicaid_cost", "net_patient_revenue",
-         "net_income_patients", "net_income", "other_income", "uncompensated_cost", "medicaid_days_all", "days_total")
+         "net_income_patients", "net_income", "other_income", "other_operating_income", "uncompensated_cost",
+         "medicaid_days_all", "days_medicaid_labor_delivery", "medicaid_days_maternity", "days_total")
+STATUS_LABELS = ("settled", "as filed")
 
 
 class ExposureError(ValueError):
@@ -32,22 +39,44 @@ def _number(value):
     return float(value)
 
 
-def status_label(status):
-    """`settled` when every report behind the row is settled (or reopened after settlement), else `as filed`. `status`
-    is the tidy table's space-separated list of HCRIS status codes."""
-    codes = (status or "").split()
-    if not codes:
-        raise ExposureError("no report status")
-    return "settled" if all(c in params.SETTLED_STATUSES for c in codes) else "as filed"
+def medicaid_days(base):
+    """(all Medicaid inpatient days, the non-maternity part), or None without Medicaid days on lines 14 and 2. All
+    days: S-3 I line 14 col 7 + line 2 col 7 (managed care and other eligible days) + line 32 col 7 (labor and
+    delivery, outside line 14). Maternity: line 13 col 7 (nursery, inside line 14) + line 32 col 7. Labor and delivery
+    days with no other Medicaid day (no postpartum or nursery day on lines 14 or 2) are a filing gap, read as none."""
+    routine = base["medicaid_days_all"]
+    if routine is None or routine <= 0:
+        return None
+    every = routine + (base["days_medicaid_labor_delivery"] or 0.0)
+    return every, max(0.0, every - (base["medicaid_days_maternity"] or 0.0))
 
 
-def annual_factor(period_days):
-    """The multiple that puts a period's flows on a 365-day basis: 1 for a period of 360 to 366 days."""
-    days = int(period_days)
-    if days <= 0:
-        raise ExposureError(f"period of {days} days")
-    lo, hi = params.FULL_YEAR_DAYS
-    return 1.0 if lo <= days <= hi else params.YEAR_DAYS / days
+def nonmaternity_ratio(bases):
+    """The Medicaid-days-weighted non-maternity share of Medicaid days over `bases` (a state's hospitals), or None."""
+    every = nonmat = 0.0
+    for b in bases:
+        d = medicaid_days(b)
+        if d is not None:
+            every += d[0]
+            nonmat += d[1]
+    return nonmat / every if every > 0 else None
+
+
+def share_factor(base, state_ratio):
+    """The hospital's non-maternity Medicaid day share over its state's: what its state's VIII share is scaled by. 1
+    (the state share unchanged) when the hospital has no Medicaid days or the state has no ratio."""
+    d = medicaid_days(base)
+    if d is None or not state_ratio:
+        return 1.0
+    return (d[1] / d[0]) / state_ratio
+
+
+def hospital_share(state_share, factor):
+    """Step 1's expansion share for one hospital: its state's VIII share times its factor, at most 1; None without a
+    state share."""
+    if state_share is None:
+        return None
+    return min(1.0, state_share * factor)
 
 
 def _cost_ratio(cost, revenue, flags=None):
@@ -67,17 +96,16 @@ def _cost_ratio(cost, revenue, flags=None):
 
 
 def hospital_base(row):
-    """The measured base for one hospital-year row (a dict of the tidy table's text or numbers): flows on a 365-day
-    basis, the cost ratios for both revenue bases, the report status label and flags naming anything unusual."""
+    """The measured base for one hospital-year row of the HCRIS layer (a dict; numbers, or text as in the CSV
+    download): flows as filed, the cost ratios for both revenue bases, the report's status label and flags naming
+    anything unusual. `share_factor` starts at 1; the caller sets it from its state's ratio."""
     days = int(row["period_days"])
-    factor = annual_factor(days)
-    flags = []
-    if factor != 1.0:
-        flags.append("annualized")
-        if days < params.SHORT_PERIOD_DAYS:
-            flags.append("short_period")
-    raw = {k: _number(row.get(k)) for k in FLOWS}
-    base = {k: (None if v is None else v * factor) for k, v in raw.items()}
+    if days <= 0:
+        raise ExposureError(f"period of {days} days")
+    if row.get("status_label") not in STATUS_LABELS:
+        raise ExposureError(f"status label {row.get('status_label')!r}")
+    flags = ["part_year"] if days < params.PART_YEAR_DAYS else []
+    base = {k: _number(row.get(k)) for k in FLOWS}
     rev = base["medicaid_net_revenue"]
     if rev is None:
         flags.append("no_medicaid_revenue")
@@ -95,22 +123,35 @@ def hospital_base(row):
         flags.append("no_uncompensated_cost")
     if base["uncompensated_cost"] is not None and base["uncompensated_cost"] < 0:
         flags.append("negative_uncompensated_cost")
+    if medicaid_days(base) is None:
+        flags.append("no_medicaid_days")
     # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
     # at risk, but its line 5 can be in the lines 2 + 5 comparison.
     scored = not {"negative_medicaid_revenue", "medicaid_exceeds_patient_revenue"} & set(flags)
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
-        factor=factor, status=status_label(row["status"]),
-        revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
-        cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
-        cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25),
-        flags=flags)
+        status=row["status_label"], miur=_number(row.get("medicaid_day_share")), revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
+        share_factor=1.0, cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
+        cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25), flags=flags)
     return base
 
 
+def _operating_other(base):
+    return base["other_operating_income"] or 0.0
+
+
 def operating_margin(base):
-    """The base's operating margin (G-3 line 5 over line 3); None without usable patient revenue."""
+    """The base's operating margin, G-3 (line 5 + lines 8 to 22) over (line 3 + lines 8 to 22); None without usable
+    patient revenue."""
+    if not base["has_margin"]:
+        return None
+    oo = _operating_other(base)
+    return _margin(base["net_income_patients"] + oo, base["net_patient_revenue"] + oo)
+
+
+def patient_margin(base):
+    """The base's patient margin, G-3 line 5 over line 3 (Methods only); None without usable patient revenue."""
     return base["net_income_patients"] / base["net_patient_revenue"] if base["has_margin"] else None
 
 
@@ -128,7 +169,8 @@ def flag_margin_outliers(bases, fence=None):
 
 
 def revenue_at_risk(base, share, line2_5=False):
-    """Step 1: the Medicaid revenue base times the state's VIII share; 0 when the base is missing or not positive."""
+    """Step 1: the Medicaid revenue base times the hospital's expansion share; 0 when the base is missing or not
+    positive."""
     revenue = base["revenue_line2_5"] if line2_5 else base["medicaid_net_revenue"]
     if share is None or not base["scored"] or revenue is None or revenue <= 0:
         return 0.0
@@ -152,7 +194,8 @@ def _margin(income, revenue):
 
 
 def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
-    """Steps 1 to 4 for one hospital. `share`: the state's VIII share (None: no expansion group); `decline`: the
+    """Steps 1 to 4 for one hospital. `share`: its expansion share (`hospital_share`; None: no expansion group);
+    `decline`: the
     state's expansion-enrollment decline for the scenario, a fraction (0.32 for Urban's -32%); `use`: the reader's
     use multiple. Returns the step results; margins are None when the base has no usable patient revenue."""
     if not params.USE_MIN <= use <= params.USE_MAX:
@@ -170,11 +213,12 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     income_change = -lost + replaced + avoided
     out = {"at_risk": at_risk, "lost": lost, "lost_cost": lost_cost, "added_uncompensated": added_uc,
            "care_avoided": avoided, "other_coverage": replaced, "income_change": income_change}
-    npr, oth = base["net_patient_revenue"], base["other_income"] or 0.0
+    npr, oth, oo = base["net_patient_revenue"], base["other_income"] or 0.0, _operating_other(base)
     if base["has_margin"]:
         npr_after = npr - lost + replaced
         nip, ni = base["net_income_patients"], base["net_income"]
-        out.update(operating_margin=_margin(nip, npr), operating_margin_after=_margin(nip + income_change, npr_after),
+        out.update(operating_margin=operating_margin(base),
+                   operating_margin_after=_margin(nip + oo + income_change, npr_after + oo),
                    total_margin=_margin(ni, npr + oth),
                    total_margin_after=None if ni is None else _margin(ni + income_change, npr_after + oth))
     else:

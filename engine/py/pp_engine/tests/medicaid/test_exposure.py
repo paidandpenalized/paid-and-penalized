@@ -8,42 +8,36 @@ from pp_engine.medicaid.exposure import ExposureError
 
 def hcris_row(**over):
     """A synthetic tidy-table row: a full-year settled report with round numbers."""
-    row = {"ccn": "990001", "shape": "one", "status": "2", "period_begin": "2023-01-01", "period_end": "2023-12-31",
-           "period_days": "365", "medicaid_net_revenue": "10000000", "medicaid_supplemental": "2000000",
+    row = {"ccn": "990001", "shape": "one", "status": "2", "status_label": "settled", "period_begin": "2023-01-01",
+           "period_end": "2023-12-31", "period_days": "365", "medicaid_net_revenue": "10000000", "medicaid_supplemental": "2000000",
            "medicaid_cost": "15000000", "net_patient_revenue": "100000000", "net_income_patients": "2000000",
-           "net_income": "5000000", "other_income": "4000000", "uncompensated_cost": "6000000"}
+           "net_income": "5000000", "other_income": "4000000", "uncompensated_cost": "6000000",
+           "medicaid_days_all": "1000"}
     row.update(over)
     return row
 
 
 class Base(unittest.TestCase):
-    def test_status_labels(self):
-        self.assertEqual(exposure.status_label("2"), "settled")
-        self.assertEqual(exposure.status_label("3 4"), "settled")
-        self.assertEqual(exposure.status_label("2 1"), "as filed")
-        self.assertEqual(exposure.status_label("5"), "as filed")
+    def test_the_layer_status_label_is_used(self):
+        self.assertEqual(exposure.hospital_base(hcris_row(status="4", status_label="settled"))["status"], "settled")
+        self.assertEqual(exposure.hospital_base(hcris_row(status="5", status_label="as filed"))["status"], "as filed")
         with self.assertRaises(ExposureError):
-            exposure.status_label("")
+            exposure.hospital_base(hcris_row(status_label=""))
 
     def test_a_full_year_is_left_as_filed(self):
         b = exposure.hospital_base(hcris_row())
-        self.assertEqual((b["factor"], b["flags"], b["status"]), (1.0, [], "settled"))
+        self.assertEqual((b["share_factor"], b["flags"], b["status"]), (1.0, [], "settled"))
         self.assertAlmostEqual(b["cost_ratio"], 1.5)
         self.assertAlmostEqual(b["cost_ratio_line2_5"], 1.25)
         self.assertEqual(b["revenue_line2_5"], 12000000.0)
 
-    def test_long_and_short_periods_are_annualized(self):
-        b = exposure.hospital_base(hcris_row(period_days="730", shape="long"))
-        self.assertEqual(b["factor"], 0.5)
-        self.assertEqual(b["medicaid_net_revenue"], 5000000.0)
-        self.assertEqual(b["flags"], ["annualized"])
-        self.assertAlmostEqual(b["cost_ratio"], 1.5)  # ratios don't move
-        short = exposure.hospital_base(hcris_row(period_days="73"))
-        self.assertEqual(short["factor"], 5.0)
-        self.assertEqual(short["flags"], ["annualized", "short_period"])
-        self.assertEqual(exposure.annual_factor(366), 1.0)
+    def test_nothing_is_annualized_a_part_year_is_flagged(self):
+        b = exposure.hospital_base(hcris_row(period_days="200", shape="long"))  # the layer's fullest report
+        self.assertEqual(b["medicaid_net_revenue"], 10000000.0)  # as filed
+        self.assertIn("part_year", b["flags"])
+        self.assertNotIn("part_year", exposure.hospital_base(hcris_row(period_days="360"))["flags"])
         with self.assertRaises(ExposureError):
-            exposure.annual_factor(0)
+            exposure.hospital_base(hcris_row(period_days="0"))
 
     def test_flags_for_missing_or_odd_cells(self):
         self.assertIn("no_medicaid_revenue", exposure.hospital_base(hcris_row(medicaid_net_revenue=""))["flags"])
@@ -57,6 +51,34 @@ class Base(unittest.TestCase):
         self.assertIn("medicaid_exceeds_patient_revenue",
                       exposure.hospital_base(hcris_row(net_patient_revenue="9000000"))["flags"])
         self.assertIn("no_uncompensated_cost", exposure.hospital_base(hcris_row(uncompensated_cost=""))["flags"])
+
+
+class HospitalShare(unittest.TestCase):
+    def days(self, routine, ld, maternity):
+        return exposure.hospital_base(hcris_row(medicaid_days_all=routine, days_medicaid_labor_delivery=ld,
+                                                medicaid_days_maternity=maternity))
+
+    def test_medicaid_days_add_labor_and_delivery_and_split_out_maternity(self):
+        self.assertEqual(exposure.medicaid_days(self.days("900", "100", "300")), (1000.0, 700.0))
+        self.assertIsNone(exposure.medicaid_days(self.days("", "", "")))
+        self.assertIsNone(exposure.medicaid_days(self.days("", "50", "50")))  # labor and delivery alone: a gap
+        self.assertEqual(exposure.medicaid_days(self.days("10", "", "40")), (10.0, 0.0))  # never below zero
+
+    def test_the_factor_is_the_hospitals_share_over_its_states(self):
+        a, b = self.days("900", "100", "300"), self.days("1000", "", "")  # 70% and 100% non-maternity
+        ratio = exposure.nonmaternity_ratio([a, b, self.days("", "", "")])
+        self.assertAlmostEqual(ratio, 1700 / 2000)
+        self.assertAlmostEqual(exposure.share_factor(a, ratio), 0.7 / 0.85)
+        self.assertAlmostEqual(exposure.share_factor(b, ratio), 1 / 0.85)
+        self.assertEqual(exposure.share_factor(self.days("", "", ""), ratio), 1.0)  # no days: the state's share
+        self.assertIn("no_medicaid_days", self.days("", "", "")["flags"])
+        self.assertEqual(exposure.share_factor(a, None), 1.0)
+        self.assertIsNone(exposure.nonmaternity_ratio([]))
+
+    def test_the_share_is_capped_at_one(self):
+        self.assertAlmostEqual(exposure.hospital_share(0.3, 0.5), 0.15)
+        self.assertEqual(exposure.hospital_share(0.95, 1.1), 1.0)
+        self.assertIsNone(exposure.hospital_share(None, 1.2))
 
 
 class Scenario(unittest.TestCase):
@@ -73,13 +95,22 @@ class Scenario(unittest.TestCase):
         self.assertAlmostEqual(r["other_coverage"], 1500000 * 0.07)
         income = -1000000 + 1500000 * (1 - 0.93 * 0.56)
         self.assertAlmostEqual(r["income_change"], income)
-        self.assertAlmostEqual(r["operating_margin"], 0.02)
+        self.assertAlmostEqual(r["operating_margin"], 0.02)  # no lines 8 to 22: the patient margin
         npr_after = 100000000 - 1000000 + 1500000 * 0.07
         self.assertAlmostEqual(r["operating_margin_after"], (2000000 + income) / npr_after)
         self.assertAlmostEqual(r["total_margin"], 5000000 / 104000000)
         self.assertAlmostEqual(r["total_margin_after"], (5000000 + income) / (npr_after + 4000000))
         self.assertAlmostEqual(r["uncompensated_change"], 1500000 * 0.93 * 0.56 / 6000000)
         self.assertAlmostEqual(exposure.margin_change(r), (r["operating_margin_after"] - 0.02) * 100)
+
+    def test_the_operating_margin_counts_lines_8_to_22(self):
+        b = exposure.hospital_base(hcris_row(other_operating_income="1000000"))
+        self.assertAlmostEqual(exposure.patient_margin(b), 0.02)
+        self.assertAlmostEqual(exposure.operating_margin(b), 3000000 / 101000000)
+        r = exposure.scenario(b, 0.25, 0.4)
+        npr_after = 100000000 - r["lost"] + r["other_coverage"]
+        self.assertAlmostEqual(r["operating_margin_after"], (3000000 + r["income_change"]) / (npr_after + 1000000))
+        self.assertAlmostEqual(r["total_margin"], 5000000 / 104000000)  # line 25 already holds lines 8 to 22
 
     def test_the_use_multiple_scales_dollars_proportionally(self):
         one, more = exposure.scenario(self.base, 0.25, 0.4), exposure.scenario(self.base, 0.25, 0.4, use=1.25)
@@ -137,6 +168,7 @@ class Scenario(unittest.TestCase):
         self.assertEqual([b["margin_outlier"] for b in bases], [False, False, False, True])
         self.assertIn("margin_outlier", bases[3]["flags"])
         self.assertAlmostEqual(exposure.operating_margin(bases[0]), 0.01)
+        self.assertIsNone(exposure.operating_margin(exposure.hospital_base(hcris_row(net_patient_revenue=""))))
 
     def test_no_margin_without_patient_revenue(self):
         r = exposure.scenario(exposure.hospital_base(hcris_row(net_patient_revenue="")), 0.25, 0.4)
@@ -154,11 +186,18 @@ class RollUp(unittest.TestCase):
         self.assertEqual((t["hospitals"], t["exposed"], t["margin_hospitals"]), (2, 2, 2))
         self.assertAlmostEqual(t["lost"], ra["lost"] + rb["lost"])
         self.assertAlmostEqual(t["operating_margin"], 1000000 / 120000000)
+        self.assertAlmostEqual(t["net_patient_revenue"], 120000000)
         self.assertAlmostEqual(t["total_margin"], 5100000 / 124000000)
         self.assertAlmostEqual(t["uncompensated_change"], (ra["added_uncompensated"] * 2) / 12000000)
         self.assertEqual(t["into_red"], 1)  # b's total margin goes from 0.5% to below zero
         self.assertTrue(rollup.into_red(rb))
         self.assertFalse(rollup.into_red(ra))
+
+    def test_operating_margin_sums_add_lines_8_to_22_to_both_sides(self):
+        a = exposure.hospital_base(hcris_row(other_operating_income="5000000"))
+        t = rollup.roll_up([(a, exposure.scenario(a, 0.0, 0.0))])
+        self.assertAlmostEqual(t["operating_margin"], 7000000 / 105000000)
+        self.assertAlmostEqual(t["net_patient_revenue"], 100000000)
 
     def test_margin_outliers_stay_in_dollars_but_not_margins(self):
         a = exposure.hospital_base(hcris_row())

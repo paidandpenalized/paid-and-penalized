@@ -26,21 +26,22 @@ USE_MAX = 1.25
 SCENARIOS = (("low", "wr_high_mitigation"), ("middle", "wr_medium_mitigation"), ("high", "wr_low_mitigation"))
 SCENARIO_IDS = tuple(s for s, _ in SCENARIOS)
 
-# A cost-report year with fewer than this share of its reports settled is "early" on uncompensated-care figures,
-# which change most on settlement (DATA-B-04).
-EARLY_SETTLED_SHARE = 0.80
-
-# HCRIS status codes: 1 as submitted, 2 settled without audit, 3 settled with audit, 4 reopened, 5 amended. A
-# reopened report was settled first; an amended one is the hospital's own correction, not yet settled.
-SETTLED_STATUSES = frozenset({"2", "3", "4"})
-
-# Flows from a period of other than a year (a change of fiscal year puts two periods' starts in one HCRIS year, or a
-# hospital files one short period) are put on a 365-day basis. Periods of 360 to 366 days are left as filed.
-YEAR_DAYS = 365
-FULL_YEAR_DAYS = (360, 366)
-# A period this short is annualized but flagged: a few months' flows scaled to a year are unreliable.
-SHORT_PERIOD_DAYS = 180
+# A hospital-year's values are the HCRIS layer's as filed: a change of fiscal year keeps the fullest single report,
+# and nothing is annualized (ARCH-16, decided 2026-11-05). A period shorter than this many days is flagged
+# `part_year`: its dollars are that period's, not a year's. Reopened reports count as settled, and the year's "early"
+# flag is the layer's (DATA-B-04).
+PART_YEAR_DAYS = 360
 
 # Medicaid cost (S-10 line 7) per dollar of Medicaid net revenue (line 2) above this is treated as a data error and
 # capped here (about the 98th percentile of FY2023 acute and critical access hospitals); the hospital is flagged.
 MAX_COST_RATIO = 5.0
+
+# The safety-net flag (ours, not an official list): the Medicaid DSH deeming criteria, SSA sec. 1923(b)(1) as read from
+# the cost report (research note b1-safety-net, 2026-11-04). A hospital is flagged when its Medicaid inpatient
+# utilization rate (S-3 I line 14 col 7 + line 2 col 7, over line 14 col 8) is at least MIUR_SDS standard deviations
+# above the mean of every hospital in its state with Medicaid days (all facility types in the HCRIS hospital file),
+# or when its Medicaid revenue (S-10 I lines 2 + 5) is more than LOW_INCOME_SHARE of net patient revenue (G-3 line 3).
+# The statute's charity term is left out: the form has no inpatient charity split. 87% of Commonwealth Fund's 2025
+# safety-net hospitals are flagged, and 87% of flagged hospitals are theirs (FY2023, expansion states).
+MIUR_SDS = 1.0
+LOW_INCOME_SHARE = 0.25

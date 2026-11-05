@@ -38,6 +38,21 @@
       "retrieved": "2026-11-04",
       "bytes": 1733,
       "sha256": "279fad9416f0decd3f524ccf9b6af4d7378ab04887e7c19ea3a8550889248743"
+    },
+    {
+      "id": "hcris-fy2023-state-miur",
+      "path": "hcris-fy2023-state-miur.csv",
+      "kind": "derived",
+      "title": "The safety-net flag's state pools: for each CMS state code (a CCN's first two digits), the hospitals in the HCRIS FY2023 hospital file of every facility type with Medicaid days, and the mean, sample standard deviation and mean + 1 SD of their Medicaid inpatient utilization rate (S-3 I line 14 col 7 + line 2 col 7, over line 14 col 8)",
+      "publisher": "Centers for Medicare & Medicaid Services (HCRIS); derived by pipeline/py/pp_pipeline/medicaid/safety_net.py",
+      "url": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
+      "source_file": "HOSP10FY2023.ZIP",
+      "source_bytes": 136799140,
+      "source_sha256": "fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "source_last_modified": "2026-10-05",
+      "retrieved": "2026-11-04",
+      "bytes": 1902,
+      "sha256": "f9498028edabd1ebd6668c5b009e289104260e49ae66729a2e4a2b22afe4280a"
     }
   ]
 }
