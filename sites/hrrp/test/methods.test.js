@@ -42,11 +42,11 @@ test('the assumptions: the fixed rows, the Medicare-dependent row with its end d
   assert.deepEqual(rows[1], ['Payments are priced at FY2027 rates.', 'They run about 6.6% above FY2024 cost reports, by design.']);
   assert.equal(rows[2][0], 'Medicare volume is taken from FY2025.');
   assert.ok(a.includes('Traditional Medicare only.') && a.includes('New hospitals use partial-year volume.'));
-  const mdh = rows.find((r) => r[0].startsWith('The Medicare-dependent add-on'));
-  assert.equal(mdh[0], 'The Medicare-dependent add-on counts for Oct–Dec 2026 only, assuming that status ends December 31, 2026, as current law says (0 hospitals).'.replace('0 hospitals', '0 hospitals'));
+  const mdh = rows.find((r) => r[0].startsWith('The Medicare-dependent'));
+  assert.equal(mdh[0], 'The Medicare-dependent hospital-specific rate counts for Oct–Dec 2026 only, assuming that status ends December 31, 2026, as current law says (0 hospitals).'.replace('0 hospitals', '0 hospitals'));
   assert.ok(mdh[1].includes('up to about 33% for some'));
   // An end date after the year's last day: the whole year counts and the shortfall line is gone.
-  const whole = assumptions(page(ctxOf({ meta: { ...DOLLAR_META, mdh: { endDate: '2027-12-31', maxShortfall: 33 } } }))).find((r) => r[0].startsWith('The Medicare-dependent add-on'));
+  const whole = assumptions(page(ctxOf({ meta: { ...DOLLAR_META, mdh: { endDate: '2027-12-31', maxShortfall: 33 } } }))).find((r) => r[0].startsWith('The Medicare-dependent'));
   assert.ok(whole[0].includes('for the whole year') && !whole[1].includes('33'));
   assert.ok(!assumptions(page(ctxOf({ meta: { ...DOLLAR_META, mdh: undefined } }))).some((r) => r[0].startsWith('The Medicare-dependent')));
 });

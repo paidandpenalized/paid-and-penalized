@@ -87,13 +87,13 @@ export const COPY = {
   assumeFfs: { text: 'Traditional Medicare only.', claim: ['HRRP-06', 'HRRP-14'] },
   assumeFfsE: { text: 'Medicare Advantage stays enter the ratios, but the cut does not apply to them.', claim: null },
   assumeMdh: {
-    text: 'The Medicare-dependent add-on counts for {months} only, assuming that status ends {date}, as current law says ({hospitals}).',
-    claim: 'HRRP-22',
+    text: 'The Medicare-dependent hospital-specific rate counts for {months} only, assuming that status ends {date}, as current law says ({hospitals}).',
+    claim: ['HRRP-22', 'HRRP-25'],
   },
   assumeMdhE: { text: 'If Congress extends it, estimates for these hospitals run low, by up to about {max} for some.', claim: null },
   assumeMdhYear: {
-    text: 'The Medicare-dependent add-on counts for the whole year, because current law runs it through {date} ({hospitals}).',
-    claim: 'HRRP-22',
+    text: 'The Medicare-dependent hospital-specific rate counts for the whole year, because current law runs the program through {date} ({hospitals}).',
+    claim: ['HRRP-22', 'HRRP-25'],
   },
   assumeMdhYearE: { text: 'No effect on the year’s estimate.', claim: null },
   assumeNtap: { text: 'New-technology add-on payments are left out.', claim: 'HRRP-21' },
@@ -121,7 +121,7 @@ export const COPY = {
   assumeNoEstE: { text: 'Totals note the count instead of adding zero dollars.', claim: null },
   assumeClosing: {
     text: 'Teaching, low-income-patient, low-volume and outlier payments are left out because the cut does not apply to them.',
-    claim: 'HRRP-21',
+    claim: 'HRRP-24',
   },
   readHeading: { text: 'How to read a penalty', claim: null },
   readRelative: {
@@ -240,7 +240,7 @@ export const COPY = {
   termBase: { text: 'Base operating DRG payment', claim: null },
   defBase: {
     text: 'The standard Medicare inpatient payment for a stay, plus any new-technology add-on, before teaching, low-income-patient, low-volume and outlier payments. The cut applies only to this amount.',
-    claim: 'HRRP-21',
+    claim: ['HRRP-21', 'HRRP-24'],
   },
   termIpps: { text: 'IPPS', claim: null },
   defIpps: {

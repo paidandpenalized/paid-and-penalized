@@ -20,6 +20,13 @@ test("whats_new.json's items are the pinned Thirty Day Readmissions output's met
   const { meta } = readJson(REPO_ROOT + 'data/pinned/tdr/hrrp.json');
   assert.equal(whatsNew.fy, meta.fy, 'the copy is for a different fiscal year than the pin; update one');
   // An item may carry a `claim` id (the claims register row behind it), which the pin does not have.
-  assert.deepEqual(whatsNew.items.map(({ claim, ...item }) => item), meta.whatsNew.filter((i) => !LATER.test(i.title)));
+  // One item is reworded on purpose: the pin says the pandemic-era exclusion "ended", but the register's source (HRRP-20) is CMS's
+  // notice that it would stop excluding COVID-19 patients, and no FY2027 source confirming it was found. Matched by position.
+  const REWORDED = 'COVID-19 patients are back in.';
+  const reworded = whatsNew.items.filter((i) => i.claim === 'HRRP-20');
+  assert.equal(reworded.length, 1);
+  const pinned = meta.whatsNew.filter((i) => !LATER.test(i.title));
+  assert.equal(pinned.filter((i) => i.title === REWORDED).length, 1, 'the pin still holds the item this one rewords');
+  assert.deepEqual(whatsNew.items.filter((i) => i.claim !== 'HRRP-20').map(({ claim, ...item }) => item), pinned.filter((i) => i.title !== REWORDED));
   assert.ok(whatsNew.items.every((i) => !LATER.test(i.title)));
 });

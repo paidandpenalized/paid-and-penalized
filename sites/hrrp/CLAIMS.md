@@ -30,7 +30,9 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-18 | CMS left claims for services from January 1 to June 30, 2020 out of the program's calculations because of the COVID-19 public health emergency. | https://www.federalregister.gov/documents/2020/09/18/2020-19637 | "no claims data reflecting services provided January 1, 2020-June 30, 2020 will be used in calculations for the Hospital Readmissions Reduction Program" | 2026-11-05 |
 | HRRP-19 | Beginning with fiscal year 2027, CMS works out the readmission ratios from two years of data instead of three; the FY2027 period is July 1, 2023 through June 30, 2025. | https://www.cms.gov/files/document/fy-2027-hrrp-fact-sheet-pdf.pdf | "CMS is reducing the performance period from 3-years to 2-years." … "The FY 2027 performance period is July 1, 2023, to June 30, 2025." | 2026-11-05 |
 | HRRP-20 | CMS gave notice in the FY2026 final rule that it would stop excluding patients with a COVID-19 diagnosis from the readmission measures beginning with the FY2027 program year. | https://www.federalregister.gov/documents/2025/08/04/2025-14681 | "we intend to remove the COVID-19 exclusion from the readmission measures beginning with the FY 2027 program year" | 2026-11-05 |
-| HRRP-21 | The base operating DRG payment the cut applies to is the wage-adjusted DRG operating payment plus new-technology add-on payments; it leaves out teaching, low-income-patient, outlier and low-volume payments. | https://www.law.cornell.edu/cfr/text/42/412.152 | "plus any applicable new technology add-on payments under subpart F of this part" | 2026-11-05 |
+| HRRP-21 | The base operating DRG payment the cut applies to is the wage-adjusted DRG operating payment plus new-technology add-on payments. | https://www.law.cornell.edu/cfr/text/42/412.152 | "plus any applicable new technology add-on payments under subpart F of this part" | 2026-11-05 |
+| HRRP-24 | The base operating DRG payment leaves out additional payments for indirect medical education, disproportionate share, outliers and low volume of discharges. | https://www.law.cornell.edu/cfr/text/42/412.152 | "does not include any additional payments for indirect medical education" … "disproportionate share" … "outliers" … "low volume of discharges" | 2026-11-05 |
+| HRRP-25 | For a Medicare-dependent, small rural hospital, the base operating DRG payment amount includes the difference between its hospital-specific payment rate and the Federal payment rate. | https://www.law.cornell.edu/cfr/text/42/412.152 | "includes the difference between the hospital-specific payment rate and the Federal payment rate" | 2026-11-05 |
 | HRRP-22 | Congress extended the Medicare-dependent hospital program through December 31, 2026, which falls inside fiscal year 2027. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" | 2026-11-05 |
 | HRRP-23 | The readmission measures count unplanned readmissions within 30 days of discharge. | https://www.federalregister.gov/documents/2026/08/04/2026-15833 | "assesses unplanned readmissions occurring within 30 days of discharge" | 2026-11-05 |
 
@@ -115,8 +117,14 @@ A claim marked `unverified` may not be used in copy.
 - **HRRP-21** is the regulation's definition of "base operating DRG payment amount" (42 CFR 412.152): the wage-adjusted DRG
   operating payment plus new-technology add-ons, determined without regard to the value-based program's adjustments, and
   not including indirect medical education, disproportionate share, outlier or low-volume payments.
-- **HRRP-22** is the same MLN Matters article as HACRP-88 (MM14415). That the add-on is in the base payment is this
-  register's reading (the Medicare-dependent hospital rate is part of the DRG operating payment); no source quoted says so.
+- **HRRP-22** is the same MLN Matters article as HACRP-88 (MM14415). That the hospital-specific rate counts in the
+  base payment is HRRP-25, the regulation's own sentence (42 CFR 412.152, "Base operating DRG payment amount", for a
+  Medicare-dependent, small rural hospital paid under 412.108(c); a sole community hospital's does not include it).
+- **HRRP-24** is the same definition's closing sentence (indirect medical education under 412.105, disproportionate share
+  under 412.106, outliers under subpart F, low volume under 412.101).
+- **HRRP-20, checked again 2026-11-05 for an FY2027 confirmation:** the FY2027 final rule text (2026-15833), CMS's FY2027
+  HRRP fact sheet and methodology infographic, and the CMS program page do not mention the COVID-19 exclusion; secondary
+  summaries repeat the FY2026 notice. So the register and the "New for" note say what CMS gave notice of.
 - **HRRP-23** is FR 2026-15833, 91 FR 49900 (a paragraph about the sepsis measure that says it is "consistent with other
   Hospital Readmissions Reduction Program measures").
 - **42 CFR 412.152, "not less than 1.0"** (checked 2026-11-05): the definition of "excess readmissions ratio" reads "the ratio
