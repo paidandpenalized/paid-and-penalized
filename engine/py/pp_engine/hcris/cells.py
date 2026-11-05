@@ -130,7 +130,12 @@ METRICS = tuple(c.metric for c in CELLS)
 # G-3 lines 8 to 22, the other income from the hospital's own operations that the operating margin counts (DATA-B-03,
 # decided 2026-11-05). Left out: contributions (6), investments (7), governmental appropriations (23), line 24 and its
 # subscripts, COVID-19 funding among them (24.50 to 24.60).
-OPERATING_OTHER_INCOME = tuple(c.metric for c in CELLS if c.sheet == G3 and 800 <= int(c.line) <= 2200)
+OPERATING_OTHER_INCOME = ("income_telephone", "income_tv_radio", "income_purchase_discounts", "income_rebates_refunds",
+                          "income_parking", "income_laundry", "income_meals", "income_quarters_rental",
+                          "income_supplies_sales", "income_drug_sales", "income_records_sales", "income_tuition",
+                          "income_gift_shop", "income_vending", "income_space_rental")
+if not set(OPERATING_OTHER_INCOME) <= set(METRICS):
+    raise ValueError("OPERATING_OTHER_INCOME names a cell not in CELLS")
 SHEET_OF = {c.metric: c.sheet for c in CELLS}
 # Every (worksheet code, line, column) read, old codes included, to its cell: one lookup per numeric row.
 BY_KEY = {(c.sheet, c.line, c.column): c for c in CELLS}
