@@ -1,0 +1,17 @@
+// Ported from Thirty Day Readmissions (web/src/js/views/methods.js and views/explainer.js at 33d1959).
+// Figures the Readmissions pages state in words; each is passed to the copy through a placeholder.
+// The claims register (which row backs each) is attached by a later task.
+
+// CMS's upper-bound estimate of new-technology add-on payments, FY2027 IPPS final rule (FR doc 2026-15833), 91 FR 50423:
+// "Aggregate Estimated Total FY 2027 Impact $1,739,715,745.72". Against the ~$91B modeled base (and CMS's FY2027 HVBP
+// pool, ~$1.9B = 2% of base operating DRG payments), that is about 2%.
+export const NTAP_FY = 2027;
+export const NTAP_TOTAL = '$1.7 billion';
+export const NTAP_SHARE = 2;
+
+// Medicare pays Pennsylvania Rural Health Model hospitals a global budget through this date: CMS Transmittal 12622
+// (CR 13595, May 2, 2024) extended the model's termination date to 12/31/2026. The row drops out of later editions.
+export const PARHM_END = '2026-12-31';
+
+// "About 2,900 hospitals": the hospital count rounded to the nearest hundred (Thirty Day Readmissions, views/explainer.js).
+export const ROUND_COUNT_TO = 100;
